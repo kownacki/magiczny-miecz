@@ -1,9 +1,21 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/polymerfire/firebase-app.html">
+<link rel="import" href="mm-game/mm-game.html">
 
 <dom-module id="mm-app">
   <template>
+    <firebase-app
+      api-key = "AIzaSyDFwIT-lyn-JO-XHBDEJyzF78xfSjACFIk"
+      auth-domain = "magiczny-miecz.firebaseapp.com"
+      database-url = "https://magiczny-miecz.firebaseio.com"
+      storage-bucket = "magiczny-miecz.appspot.com"
+      messaging-sender-id = "950105063399">
+    </firebase-app>
 
+    <paper-button hidden$="[[gameStarted]]" on-tap="_startGame">Rozpocznij grę</paper-button>
+
+    <mm-game hidden$="[[!gameStarted]]"></mm-game>
   </template>
 
   <script>
@@ -15,7 +27,17 @@
       }
       static get properties() {
         return {
+          gameStarted: {
+            type: Boolean,
+            value: false,
+          },
         };
+      }
+      _startGame() {
+        const randLetter = () => String.fromCharCode(_.random('A'.charCodeAt(), 'Z'.charCodeAt()));
+        const randLetters = _.flow(_.times(randLetter), _.join(''));
+        console.log(randLetters(4));
+        this.gameStarted = true;
       }
     }
     customElements.define(MmApp.is, MmApp);
