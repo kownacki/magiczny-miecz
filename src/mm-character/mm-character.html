@@ -1,0 +1,25 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+
+<dom-module id="mm-character">
+  <template>
+    <h3>Rycerz</h3>
+    Miecz: [[_sword]]
+
+  </template>
+
+  <script>
+    'use strict';
+
+    class MmCharacter extends Polymer.Element {
+      static get is() {
+        return 'mm-character';
+      }
+      static get properties() {
+        return {
+          code: String,
+        };
+      }
+    }
+    customElements.define(MmCharacter.is, MmCharacter);
+  </script>
+</dom-module>

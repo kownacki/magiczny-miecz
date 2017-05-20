@@ -13,9 +13,9 @@
       messaging-sender-id = "950105063399">
     </firebase-app>
 
-    <paper-button hidden$="[[gameStarted]]" on-tap="_startGame">Rozpocznij grę</paper-button>
+    <paper-button hidden$="[[_gameStarted]]" on-tap="_startGame">Rozpocznij grę</paper-button>
 
-    <mm-game hidden$="[[!gameStarted]]"></mm-game>
+    <mm-game hidden$="[[!_gameStarted]]" started="[[_gameStarted]]"></mm-game>
   </template>
 
   <script>
@@ -27,17 +27,14 @@
       }
       static get properties() {
         return {
-          gameStarted: {
+          _gameStarted: {
             type: Boolean,
             value: false,
           },
         };
       }
       _startGame() {
-        const randLetter = () => String.fromCharCode(_.random('A'.charCodeAt(), 'Z'.charCodeAt()));
-        const randLetters = _.flow(_.times(randLetter), _.join(''));
-        console.log(randLetters(4));
-        this.gameStarted = true;
+        this._gameStarted = true;
       }
     }
     customElements.define(MmApp.is, MmApp);

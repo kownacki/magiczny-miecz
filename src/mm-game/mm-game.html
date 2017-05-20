@@ -1,7 +1,12 @@
 <link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/polymerfire/firebase-document.html">
+<link rel="import" href="../mm-character/mm-character.html">
 
 <dom-module id="mm-game">
   <template>
+    <firebase-document path="[[_code]]" data="{{_data}}"></firebase-document>
+
+    <mm-character code="[[_code]]"></mm-character>
   </template>
 
   <script>
@@ -13,7 +18,25 @@
       }
       static get properties() {
         return {
+          started: {
+            type: Boolean,
+            observer: '_startedChanged',
+          },
+          _code: String,
+          _data: Object,
         };
+      }
+      _startedChanged(started) {
+        const randLetter = () => String.fromCharCode(_.random('A'.charCodeAt(), 'Z'.charCodeAt()));
+        const randLetters = _.flow(_.times(randLetter), _.join(''));
+
+        if (started) {
+          this._code = 'DEV';//randLetters(4);
+          this.set('_data.sword', 3);
+          this.set('_data.magic', 3);
+          this.set('_data.gold', 1);
+          this.set('_data.lifes', 4);
+        }
       }
     }
     customElements.define(MmGame.is, MmGame);
