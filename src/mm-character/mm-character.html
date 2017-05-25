@@ -3,8 +3,10 @@
 <dom-module id="mm-character">
   <template>
     <h3>Rycerz</h3>
-    Miecz: [[_sword]]
-
+    Miecz: [[data.sword]]<br>
+    Magic: [[data.magic]]<br>
+    Gold: [[data.gold]]<br>
+    Lifes: [[data.lifes]]<br>
   </template>
 
   <script>
@@ -16,6 +18,7 @@
       }
       static get properties() {
         return {
+          data: Object,
           code: String,
         };
       }
