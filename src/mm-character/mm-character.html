@@ -1,4 +1,5 @@
 <link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
 
 <dom-module id="mm-character">
   <template>
@@ -7,22 +8,49 @@
     Magic: [[data.magic]]<br>
     Gold: [[data.gold]]<br>
     Lifes: [[data.lifes]]<br>
+    Region: [[data.region]]<br>
+    <paper-button on-tap="_roll">Roll the dice</paper-button>
   </template>
 
   <script>
     'use strict';
 
-    class MmCharacter extends Polymer.Element {
-      static get is() {
-        return 'mm-character';
+    (function() {
+      const regions = {
+        crag1: {left: 'strongholdRuins', right: 'wolvenRavine'},
+        strongholdRuins: {left: 'tolemanTemple', right: 'crag1'},
+        tolemanTemple: {left: 'skullValley', right: 'strongholdRuins'},
+        skullValley: {left: 'swamps1'},
+        swamps1: {left: 'movingRocks1'},
+        movingRocks1: {left: 'crag2'},
+        crag2: {left: 'grassPlain'},
+        grassPlain: {left: 'crossroads1'},
+        crossroads1: {left: 'castle'},
+        castle: {left: 'ghostTown'},
+        ghostTown: {left: 'movingRocks2'},
+        movingRocks2: {left: 'swamps2'},
+        swamps2: {left: 'specterCrypt'},
+        specterCrypt: {left: 'sleepPlain'},
+        sleepPlain: {left: 'crossroads2'},
+        crossroads2: {left: 'stoneForest'},
+        stoneForest: {left: 'wolvenRavine'},
+        wolvenRavine: {left: 'crag1'},
+      };
+      class MmCharacter extends Polymer.Element {
+        static get is() {
+          return 'mm-character';
+        }
+        static get properties() {
+          return {
+            data: Object,
+            code: String,
+          };
+        }
+        _roll() {
+          this.set('data.region', regions[this.data.region].left);
+        }
       }
-      static get properties() {
-        return {
-          data: Object,
-          code: String,
-        };
-      }
-    }
-    customElements.define(MmCharacter.is, MmCharacter);
+      customElements.define(MmCharacter.is, MmCharacter);
+    })();
   </script>
 </dom-module>

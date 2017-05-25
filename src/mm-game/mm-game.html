@@ -6,7 +6,7 @@
   <template>
     <firebase-document path="[[_code]]" data="{{_data}}"></firebase-document>
 
-    <mm-character code="[[_code]]" data="[[_data]]"></mm-character>
+    <mm-character code="[[_code]]" data="{{_data}}"></mm-character>
   </template>
 
   <script>
@@ -32,10 +32,10 @@
 
         if (started) {
           this._code = 'DEV';//randLetters(4);
-          this.set('_data.sword', 3);
+          /*this.set('_data.sword', 3);
           this.set('_data.magic', 3);
           this.set('_data.gold', 1);
-          this.set('_data.lifes', 4);
+          this.set('_data.lifes', 4);*/
         }
       }
     }
