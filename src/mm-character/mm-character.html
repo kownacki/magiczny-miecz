@@ -9,6 +9,7 @@
     Gold: [[data.gold]]<br>
     Lifes: [[data.lifes]]<br>
     Region: [[data.region]]<br>
+    Card: [[data.card]]<br>
     <paper-button on-tap="_roll">Roll the dice</paper-button>
   </template>
 
@@ -36,18 +37,34 @@
         stoneForest: {left: 'wolvenRavine'},
         wolvenRavine: {left: 'crag1'},
       };
+
+      const cards = {
+        godsMessangers: {
+          title: 'Posłańcy Bogów',
+          description: 'Spotkałeś potężne Dobre Duchy, wędrujące po tej Krainie. Jeżeli ty także jesteś Dobry, Duchy obdarują cię 1 punktem Życia, jeżeli jesteś Zły, tracisz 1 Życie. Posłańcy ignorują Chaotyczne Postacie. Po spotkaniu odłuż tę Kartę.',
+        },
+        enchantedSpring: {
+          title: "Zaklęte Źródło",
+          description: 'Po znalezieniu Źródła połóż przy nim 4 punkty Magii. Każdy, kto tu trafi, bedzie mógł napić się wody zyskując 1 punkt Magii i zmniejszając tym samym liczbę punktów przy źródle.',
+        }
+      };
+
       class MmCharacter extends Polymer.Element {
         static get is() {
           return 'mm-character';
         }
+
         static get properties() {
           return {
             data: Object,
             code: String,
           };
         }
+
         _roll() {
           this.set('data.region', regions[this.data.region].left);
+          const cardsKeys = _.keys(cards);
+          this.set('data.card', cardsKeys[_.random(0, cardsKeys.length - 1)]);
         }
       }
       customElements.define(MmCharacter.is, MmCharacter);
