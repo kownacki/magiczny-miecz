@@ -17,6 +17,8 @@
     'use strict';
 
     (function() {
+      const regions = imports.regions;
+
       /*
        I - Encounter
        II - Enemy (Beast)
@@ -51,10 +53,38 @@
         }
 
         _roll() {
-          this.set('data.region', imports.regions[this.data.region].left);
-          const cardsKeys = _.keys(cards);
-          this.set('data.card', cardsKeys[_.random(0, cardsKeys.length - 1)]);
+          const newRegionKey = regions[this.data.region].left;
+          const newRegion = regions[newRegionKey];
+
+          this.set('data.region', newRegionKey);
+          if (newRegion.actions) {
+            _.map(this._performAction.bind(this), newRegion.actions)
+          }
         }
+
+        _performAction(action) {
+          console.log(action.type);
+          if (action.type === 'roll') {
+            const roll = _.random(1, 6);
+            console.log(roll);
+            _.map(this._performAction.bind(this), action.results[roll])
+          }
+          if (action.type === 'doubleRoll') {
+            const roll = _.random(2, 12);
+            console.log(roll);
+            _.map(this._performAction.bind(this), action.results[roll])
+          }
+          if (action.type === 'addAttr') {
+            console.log(action.attr, action.value);
+            this.set(`data.${action.attr}`, this.data[action.attr] + action.value);
+          }
+          if (action.type === 'cards') {
+            const cardsKeys = _.keys(cards);
+            const card = cardsKeys[_.random(0, cardsKeys.length - 1)];
+            console.log(card);
+            this.set('data.card', card);
+          }
+        };
       }
       customElements.define(MmCharacter.is, MmCharacter);
     })();

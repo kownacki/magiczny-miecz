@@ -4,11 +4,13 @@ imports.regions = {
       type: 'roll',
       results: {
         1: [{
-          type: 'addLifes',
+          type: 'addAttr',
+          attr: 'lifes',
           value: -1,
         }],
         2: [{
-          type: 'addLifes',
+          type: 'addAttr',
+          attr: 'lifes',
           value: -1,
         }],
       },
@@ -30,14 +32,17 @@ imports.regions = {
       type: 'doubleRoll',
       results: {
         2: [{
-          type: 'addLifes',
+          type: 'addAttr',
+          attr: 'lifes',
           value: -1,
         }],
         3: [{
-          type: 'addMagic',
+          type: 'addAttr',
+          attr: 'magic',
           value: -1,
         }, {
-          type: 'addSword',
+          type: 'addAttr',
+          attr: 'sword',
           value: -1,
         }],
         4: [{
@@ -52,10 +57,12 @@ imports.regions = {
         7: [{
           type: 'choose',
           options: [{
-            type: 'addMagic',
+            type: 'addAttr',
+            attr: 'magic',
             value: 1,
           }, {
-            type: 'addSword',
+            type: 'addAttr',
+            attr: 'sword',
             value: 1,
           }]
         }],
@@ -70,21 +77,24 @@ imports.regions = {
           item: 'tolimanShield',
         }],
         11:  [{
-          type: 'addLifes',
+          type: 'addAttr',
+          attr: 'lifes',
           value: 1,
         }],
         12:  [{
-          type: 'addLifes',
+          type: 'addAttr',
+          attr: 'lifes',
           value: -1,
         }, {
-          type: 'addMagic',
+          type: 'addAttr',
+          attr: 'magic',
           value: -1,
         }, {
-          type: 'addSword',
+          type: 'addAttr',
+          attr: 'sword',
           value: -1,
         }],
       },
-      includeFriends: true,
     }],
     left: 'skullValley',
     right: 'strongholdRuins',
