@@ -5,11 +5,11 @@
   <template>
     <h3>Rycerz</h3>
     Miecz: [[data.sword]]<br>
-    Magic: [[data.magic]]<br>
-    Gold: [[data.gold]]<br>
-    Lifes: [[data.lifes]]<br>
-    Region: [[data.region]]<br>
-    Card: [[data.card]]<br>
+    Magia: [[data.magic]]<br>
+    Złoto: [[data.gold]]<br>
+    Życia: [[data.lifes]]<br>
+    Obszar: [[data.region]]<br>
+    Karta: [[data.card]]<br>
     <paper-button on-tap="_roll">Roll the dice</paper-button>
   </template>
 
@@ -17,33 +17,22 @@
     'use strict';
 
     (function() {
-      const regions = {
-        crag1: {left: 'strongholdRuins', right: 'wolvenRavine'},
-        strongholdRuins: {left: 'tolemanTemple', right: 'crag1'},
-        tolemanTemple: {left: 'skullValley', right: 'strongholdRuins'},
-        skullValley: {left: 'swamps1'},
-        swamps1: {left: 'movingRocks1'},
-        movingRocks1: {left: 'crag2'},
-        crag2: {left: 'grassPlain'},
-        grassPlain: {left: 'crossroads1'},
-        crossroads1: {left: 'castle'},
-        castle: {left: 'ghostTown'},
-        ghostTown: {left: 'movingRocks2'},
-        movingRocks2: {left: 'swamps2'},
-        swamps2: {left: 'specterCrypt'},
-        specterCrypt: {left: 'sleepPlain'},
-        sleepPlain: {left: 'crossroads2'},
-        crossroads2: {left: 'stoneForest'},
-        stoneForest: {left: 'wolvenRavine'},
-        wolvenRavine: {left: 'crag1'},
-      };
-
+      /*
+       I - Encounter
+       II - Enemy (Beast)
+       III - Enemy (Demon)
+       IV - Stranger
+       V - Friend
+       VI - Place
+       */
       const cards = {
         godsMessangers: {
+          type: 'encounter',
           title: 'Posłańcy Bogów',
           description: 'Spotkałeś potężne Dobre Duchy, wędrujące po tej Krainie. Jeżeli ty także jesteś Dobry, Duchy obdarują cię 1 punktem Życia, jeżeli jesteś Zły, tracisz 1 Życie. Posłańcy ignorują Chaotyczne Postacie. Po spotkaniu odłuż tę Kartę.',
         },
         enchantedSpring: {
+          type: 'place',
           title: "Zaklęte Źródło",
           description: 'Po znalezieniu Źródła połóż przy nim 4 punkty Magii. Każdy, kto tu trafi, bedzie mógł napić się wody zyskując 1 punkt Magii i zmniejszając tym samym liczbę punktów przy źródle.',
         }
@@ -62,7 +51,7 @@
         }
 
         _roll() {
-          this.set('data.region', regions[this.data.region].left);
+          this.set('data.region', imports.regions[this.data.region].left);
           const cardsKeys = _.keys(cards);
           this.set('data.card', cardsKeys[_.random(0, cardsKeys.length - 1)]);
         }
