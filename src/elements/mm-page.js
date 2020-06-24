@@ -3,6 +3,7 @@ import {unsafeHTML} from 'lit-html/directives/unsafe-html.js';
 import dbSyncMixin from 'mkwc/dbSyncMixin.js';
 import fb from '../utils/firebase.js';
 import fields from '../fields.js';
+import {d6 as rollD6} from '../utils/roll.js';
 
 export default class MmPage extends dbSyncMixin('_page', LitElement) {
   static get properties() {
@@ -41,15 +42,32 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
     return position;
   }
   _doMoveRoll() {
-    this._roll = _.random(1, 6);
+    this._roll = rollD6('move');
     this._counterClockwiseMove = this._getDestination(this._page.field, this._roll, true);
     this._clockwiseMove = this._getDestination(this._page.field, this._roll, false);
-    console.log(`Rolling for move: ${this._roll}`);
+  }
+  _modifyGold(byAmount) {
+    const oldGold = this._page.gold;
+    this._page = _.set('gold', Math.max(0, oldGold + byAmount), this._page);
+    console.log(`Gold changed from ${oldGold} to ${this._page.gold}`);
+    return fb.update(this.path.extend('gold'), this._page.gold);
+  }
+  _visitField(field) {
+    if (field === 1) { // karczma
+      const result = rollD6('karczma');
+      if (result === 1) {
+        this._modifyGold(-1);
+      }
+      if (result === 2) {
+        this._modifyGold(1);
+      }
+    }
   }
   _move(counter) {
     const destination = counter ? this._counterClockwiseMove : this._clockwiseMove;
     console.log(`Moving from ${this._page.field} (${fields[this._page.field].name}) to ${destination} (${fields[destination].name})`);
     this._updateField(destination);
+    this._visitField(destination);
     this._doMoveRoll();
   }
   static get styles() {
@@ -63,6 +81,8 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
     return html`
       ${!this.ready ? '' : html`
         Jesteś w: ${this._page.field} ${fields[this._page.field].name}
+        <br>
+        Złoto: ${this._page.gold}
         <br>
         Rzut na ruch: ${this._roll}
         <br>
