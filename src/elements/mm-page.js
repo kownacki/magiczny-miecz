@@ -23,7 +23,7 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   }
   updated(changedProperties) {
     if (changedProperties.has('ready') && this.ready) {
-      this._doRoll();
+      this._doMoveRoll();
     }
     super.updated(changedProperties);
   }
@@ -40,15 +40,17 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
     }
     return position;
   }
-  _doRoll() {
+  _doMoveRoll() {
     this._roll = _.random(1, 6);
     this._counterClockwiseMove = this._getDestination(this._page.field, this._roll, true);
     this._clockwiseMove = this._getDestination(this._page.field, this._roll, false);
+    console.log(`Rolling for move: ${this._roll}`);
   }
   _move(counter) {
     const destination = counter ? this._counterClockwiseMove : this._clockwiseMove;
+    console.log(`Moving from ${this._page.field} (${fields[this._page.field].name}) to ${destination} (${fields[destination].name})`);
     this._updateField(destination);
-    this._doRoll();
+    this._doMoveRoll();
   }
   static get styles() {
     return css`
@@ -60,9 +62,9 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   render() {
     return html`
       ${!this.ready ? '' : html`
-        ${this._page.field} ${fields[this._page.field].name}
+        Jesteś w: ${this._page.field} ${fields[this._page.field].name}
         <br>
-        ${this._roll}
+        Rzut na ruch: ${this._roll}
         <br>
         ${!this._counterClockwiseMove ? '' : html`
           <button @click=${() => this._move(true)}>${fields[this._counterClockwiseMove].name}</button>
