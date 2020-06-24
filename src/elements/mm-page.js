@@ -2,7 +2,7 @@ import {LitElement, html, css} from 'lit-element';
 import {unsafeHTML} from 'lit-html/directives/unsafe-html.js';
 import dbSyncMixin from 'mkwc/dbSyncMixin.js';
 import fb from '../utils/firebase.js';
-import fields from '../fields.js';
+import {list as fieldsList, eventTypes} from '../fields.js';
 import {d6 as rollD6} from '../utils/roll.js';
 
 export default class MmPage extends dbSyncMixin('_page', LitElement) {
@@ -37,7 +37,7 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   }
   _getDestination(position, steps, counter) {
     while (steps--) {
-      position = fields[position].adjacent[counter ? 0 : 1];
+      position = fieldsList[position].adjacent[counter ? 0 : 1];
     }
     return position;
   }
@@ -62,10 +62,16 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
         this._modifyGold(1);
       }
     }
+    if (fieldsList[field].event === eventTypes.CARD_1) {
+      console.log(`Karta zdarzenia x1`);
+    }
+    if (fieldsList[field].event === eventTypes.CARD_2) {
+      console.log(`Karta zdarzenia x2`);
+    }
   }
   _move(counter) {
     const destination = counter ? this._counterClockwiseMove : this._clockwiseMove;
-    console.log(`Moving from ${this._page.field} (${fields[this._page.field].name}) to ${destination} (${fields[destination].name})`);
+    console.log(`Moving from ${this._page.field} (${fieldsList[this._page.field].name}) to ${destination} (${fieldsList[destination].name})`);
     this._updateField(destination);
     this._visitField(destination);
     this._doMoveRoll();
@@ -80,20 +86,20 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   render() {
     return html`
       ${!this.ready ? '' : html`
-        Jesteś w: ${this._page.field} ${fields[this._page.field].name}
+        Jesteś w: ${this._page.field} ${fieldsList[this._page.field].name}
         <br>
         Złoto: ${this._page.gold}
         <br>
         Rzut na ruch: ${this._roll}
         <br>
         ${!this._counterClockwiseMove ? '' : html`
-          <button @click=${() => this._move(true)}>${fields[this._counterClockwiseMove].name}</button>
+          <button @click=${() => this._move(true)}>${fieldsList[this._counterClockwiseMove].name}</button>
           <br>
-          ${unsafeHTML(_.replace(/\n/g, '<br>', fields[this._counterClockwiseMove].description))}
+          ${unsafeHTML(_.replace(/\n/g, '<br>', fieldsList[this._counterClockwiseMove].description))}
           <br>
-          <button @click=${() => this._move(false)}>${fields[this._clockwiseMove].name}</button>
+          <button @click=${() => this._move(false)}>${fieldsList[this._clockwiseMove].name}</button>
           <br>
-          ${unsafeHTML(_.replace(/\n/g, '<br>', fields[this._clockwiseMove].description))}
+          ${unsafeHTML(_.replace(/\n/g, '<br>', fieldsList[this._clockwiseMove].description))}
           <br>
         `}
       `}
