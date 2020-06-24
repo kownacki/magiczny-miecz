@@ -1,0 +1,9 @@
+.firebase/
+dist/
+node_modules/
+
+# Logsindex.html
+logs
+*.log
+npm-debug.log*
+firebase-debug.log*

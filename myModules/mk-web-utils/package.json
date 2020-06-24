@@ -1,0 +1,8 @@
+{
+  "name": "mk-web-utils",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "mk-utils": "file:../mk-utils"
+  }
+}

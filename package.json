@@ -1,0 +1,38 @@
+{
+  "name": "magiczny-miecz",
+  "type": "module",
+  "scripts": {
+    "build": "rollup --config rollupConfigs/rollup.config.js",
+    "dev": "es-dev-server --app-index index.html --node-resolve",
+    "deploy": "npm run deploy-hosting && npm run deploy-functions",
+    "deploy-hosting": "firebase deploy --only hosting",
+    "deploy-functions": "firebase deploy --only functions",
+    "generate-index": "node utils/generateIndex.js",
+    "bundle-lodash": "rollup --config rollupConfigs/rollup.lodashBuildConfig.js"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=13",
+    "npm": ">=6"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^11.0.2",
+    "es-dev-server": "^1.19.0",
+    "firebase": "^7.15.4",
+    "firebase-tools": "^7.16.2",
+    "lodash": "^4.17.15",
+    "rollup": "^2.3.2",
+    "rollup-plugin-copy": "^3.1.0",
+    "rollup-plugin-delete": "^1.1.0",
+    "rollup-plugin-minify-html-literals": "^1.2.3",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-terser": "^5.1.2"
+  },
+  "dependencies": {
+    "lit-element": "^2.3.1",
+    "lit-html": "^1.2.1",
+    "mk-utils": "file:myModules/mk-utils",
+    "mk-web-utils": "file:myModules/mk-web-utils",
+    "mkwc": "file:myModules/mkwc"
+  }
+}
