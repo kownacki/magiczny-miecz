@@ -31,6 +31,12 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   getData(path) {
     return fb.get(path);
   }
+  _nothingHappens() {
+    console.log(`Nic się nie dzieje`);
+  }
+  _loseTurns(count) {
+    console.log(`Tracisz ${count} rund${count === 1 ? 'ę' : ''}`);
+  }
   _updateField(newField) {
     this._page = _.set('field', newField, this._page);
     return fb.update(this.path.extend('field'), newField);
@@ -55,12 +61,12 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   }
   _visitField(field) {
     console.log(`Visiting ${field.name}`);
-    if (field.id === fieldIds.INN) { // karczma
-      const result = rollD6('karczma');
-      if (result === 1) {
+    if (field.id === fieldIds.INN) {
+      const innRoll = rollD6(field.name);
+      if (innRoll === 1) {
         this._modifyAttr(-1, 'gold');
       }
-      if (result === 2) {
+      else if (innRoll === 2) {
         this._modifyAttr(1, 'gold');
       }
     }
@@ -74,7 +80,24 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
       }
       else { // this._page.nature === natureTypes.EVIL
         const devilsMillRollEvil = rollD6(field.name);
+        console.log('choice (unimplemented)')
         // todo implement choice
+      }
+    }
+    if (field.id === fieldIds.BARROW) {
+      const barrowRoll = rollD6(field.name);
+      if (barrowRoll === 1) {
+        this._modifyAttr(1, 'sword');
+      }
+      else if (barrowRoll === 2 || barrowRoll === 3) {
+        this._nothingHappens();
+      }
+      else if (barrowRoll === 4 || barrowRoll === 5) {
+        this._loseTurns(1);
+      }
+      else { // barrowRoll === 6
+        console.log('fight (unimplemented)')
+        // todo implement fight
       }
     }
     if (field.event === eventTypes.CARD_1) {
