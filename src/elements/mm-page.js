@@ -2,7 +2,7 @@ import {LitElement, html, css} from 'lit-element';
 import {unsafeHTML} from 'lit-html/directives/unsafe-html.js';
 import dbSyncMixin from 'mkwc/dbSyncMixin.js';
 import fb from '../utils/firebase.js';
-import {list as fieldsList, eventTypes} from '../fields.js';
+import {list as fieldsList, eventTypes, natureTypes, fieldIds} from '../fields.js';
 import {d6 as rollD6} from '../utils/roll.js';
 
 export default class MmPage extends dbSyncMixin('_page', LitElement) {
@@ -46,26 +46,41 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
     this._counterClockwiseMove = this._getDestination(this._page.field, this._roll, true);
     this._clockwiseMove = this._getDestination(this._page.field, this._roll, false);
   }
-  _modifyGold(byAmount) {
-    const oldGold = this._page.gold;
-    this._page = _.set('gold', Math.max(0, oldGold + byAmount), this._page);
-    console.log(`Gold changed from ${oldGold} to ${this._page.gold}`);
-    return fb.update(this.path.extend('gold'), this._page.gold);
+  _modifyAttr(byAmount, attr) { // gold / lifes / sword / magic
+    const oldAmount = this._page.attr[attr];
+    const newAmount = Math.max(0, oldAmount + byAmount);
+    this._page = _.set(`attr.${attr}`, newAmount, this._page);
+    console.log(`Changing ${attr} from ${oldAmount} to ${newAmount}`);
+    return fb.update(this.path.extend(`attr.${attr}`), newAmount);
   }
   _visitField(field) {
-    if (field === 1) { // karczma
+    console.log(`Visiting ${field.name}`);
+    if (field.id === fieldIds.INN) { // karczma
       const result = rollD6('karczma');
       if (result === 1) {
-        this._modifyGold(-1);
+        this._modifyAttr(-1, 'gold');
       }
       if (result === 2) {
-        this._modifyGold(1);
+        this._modifyAttr(1, 'gold');
       }
     }
-    if (fieldsList[field].event === eventTypes.CARD_1) {
+    if (field.id === fieldIds.DEVILS_MILL) {
+      if (this._page.nature === natureTypes.GOOD) {
+        this._modifyAttr(-1, 'lifes');
+      }
+      else if (this._page.nature === natureTypes.CHAOTIC) {
+        const devilsMillRollChaotic = rollD6(field.name);
+        this._modifyAttr(devilsMillRollChaotic <= 3 ? 1 : -1, 'lifes')
+      }
+      else { // this._page.nature === natureTypes.EVIL
+        const devilsMillRollEvil = rollD6(field.name);
+        // todo implement choice
+      }
+    }
+    if (field.event === eventTypes.CARD_1) {
       console.log(`Karta zdarzenia x1`);
     }
-    if (fieldsList[field].event === eventTypes.CARD_2) {
+    if (field.event === eventTypes.CARD_2) {
       console.log(`Karta zdarzenia x2`);
     }
   }
@@ -73,7 +88,7 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
     const destination = counter ? this._counterClockwiseMove : this._clockwiseMove;
     console.log(`Moving from ${this._page.field} (${fieldsList[this._page.field].name}) to ${destination} (${fieldsList[destination].name})`);
     this._updateField(destination);
-    this._visitField(destination);
+    this._visitField(fieldsList[destination]);
     this._doMoveRoll();
   }
   static get styles() {
@@ -86,9 +101,17 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   render() {
     return html`
       ${!this.ready ? '' : html`
-        Jesteś w: ${this._page.field} ${fieldsList[this._page.field].name}
+        Jesteś w: (${fieldsList[this._page.field].name}) ${this._page.field}
         <br>
-        Złoto: ${this._page.gold}
+        Natura: ${this._page.nature}
+        <br>
+        Złoto: ${this._page.attr.gold}
+        <br>
+        Życia: ${this._page.attr.lifes}
+        <br>
+        Sword: ${this._page.attr.sword}
+        <br>
+        Magic: ${this._page.attr.magic}
         <br>
         Rzut na ruch: ${this._roll}
         <br>

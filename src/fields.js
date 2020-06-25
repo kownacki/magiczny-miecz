@@ -1,24 +1,99 @@
+import {mapValuesAndKeys} from 'mk-utils/general.js';
+
 export const eventTypes = {
   CARD_1: 1,
   CARD_2: 2,
 };
 
-export const list = {
-  1: {adjacent: [2, 14], name: 'Karczma'},
-  2: {adjacent: [3, 1], name: 'Mroźne Pustkowie', event: eventTypes.CARD_1},
-  3: {adjacent: [4, 2], name: 'Gród'},
-  4: {adjacent: [5, 3], name: 'Bezdroża', event: eventTypes.CARD_2},
-  5: {adjacent: [6, 4], name: 'Studnia Wieczności'},
-  6: {adjacent: [7, 5], name: 'Krąg Mocy'},
-  7: {adjacent: [8, 6], name: 'Czarci Młyn'},
-  8: {adjacent: [9, 7], name: 'Mokradła', event: eventTypes.CARD_1},
-  9: {adjacent: [10, 8], name: 'Step', event: eventTypes.CARD_1},
-  10: {adjacent: [11, 9], name: 'Osada'},
-  11: {adjacent: [12, 10], name: 'Kurhan'},
-  12: {adjacent: [13, 11], name: 'Mokradła', event: eventTypes.CARD_1},
-  13: {adjacent: [14, 12], name: 'Step', event: eventTypes.CARD_1},
-  14: {adjacent: [1, 13], name: 'Uroczysko', event: eventTypes.CARD_1},
+export const natureTypes = {
+  GOOD: 0,
+  EVIL: 1,
+  CHAOTIC: 2,
 };
+
+
+export const fieldIds = {
+  INN: 1,
+  FROSTY_WASTELAND: 2,
+  TOWN: 3,
+  ROADLESS_TRACK: 4,
+  WELL_OF_ETERNITY: 5,
+  CIRCLE_OF_POWER: 6,
+  DEVILS_MILL: 7,
+  WETLANDS_1: 8,
+  STEPPE_1: 9,
+  SETTLEMENT: 10,
+  BARROW: 11,
+  WETLANDS_2: 12,
+  STEPPE_2: 13,
+  WILDERNESS: 14,
+};
+
+export const list = mapValuesAndKeys(_, (val, id) => [{id: Number(id), ...val}, id], {
+  [fieldIds.INN]: {
+    adjacent: [fieldIds.FROSTY_WASTELAND, fieldIds.WILDERNESS],
+    name: 'Karczma',
+  },
+  [fieldIds.FROSTY_WASTELAND]: {
+    adjacent: [fieldIds.TOWN, fieldIds.INN],
+    name: 'Mroźne Pustkowie',
+    event: eventTypes.CARD_1,
+  },
+  [fieldIds.TOWN]: {
+    adjacent: [fieldIds.ROADLESS_TRACK, fieldIds.FROSTY_WASTELAND],
+    name: 'Gród',
+  },
+  [fieldIds.ROADLESS_TRACK]: {
+    adjacent: [fieldIds.WELL_OF_ETERNITY, fieldIds.TOWN],
+    name: 'Bezdroża',
+    event: eventTypes.CARD_2,
+  },
+  [fieldIds.WELL_OF_ETERNITY]: {
+    adjacent: [fieldIds.CIRCLE_OF_POWER, fieldIds.ROADLESS_TRACK],
+    name: 'Studnia Wieczności',
+  },
+  [fieldIds.CIRCLE_OF_POWER]: {
+    adjacent: [fieldIds.DEVILS_MILL, fieldIds.WELL_OF_ETERNITY],
+    name: 'Krąg Mocy',
+  },
+  [fieldIds.DEVILS_MILL]: {
+    adjacent: [fieldIds.WETLANDS_1, fieldIds.CIRCLE_OF_POWER],
+    name: 'Czarci Młyn',
+  },
+  [fieldIds.WETLANDS_1]: {
+    adjacent: [fieldIds.STEPPE_1, fieldIds.DEVILS_MILL],
+    name: 'Mokradła',
+    event: eventTypes.CARD_1,
+  },
+  [fieldIds.STEPPE_1]: {
+    adjacent: [fieldIds.SETTLEMENT, fieldIds.WETLANDS_1],
+    name: 'Step',
+    event: eventTypes.CARD_1,
+  },
+  [fieldIds.SETTLEMENT]: {
+    adjacent: [fieldIds.BARROW, fieldIds.STEPPE_1],
+    name: 'Osada',
+  },
+  [fieldIds.BARROW]: {
+    adjacent: [fieldIds.WETLANDS_2, fieldIds.SETTLEMENT],
+    name: 'Kurhan',
+  },
+  [fieldIds.WETLANDS_2]: {
+    adjacent: [fieldIds.STEPPE_2, fieldIds.BARROW],
+    name: 'Mokradła',
+    event: eventTypes.CARD_1,
+  },
+  [fieldIds.STEPPE_2]: {
+    adjacent: [fieldIds.WILDERNESS, fieldIds.WETLANDS_2],
+    name: 'Step',
+    event: eventTypes.CARD_1,
+  },
+  [fieldIds.WILDERNESS]: {
+    adjacent: [fieldIds.INN, fieldIds.STEPPE_2],
+    name: 'Uroczysko',
+    event: eventTypes.CARD_1,
+  },
+});
 
 const descriptions = {
   1: `MUSISZ RZUCIĆ KOSTKĄ:
