@@ -1,8 +1,8 @@
 import {mapValuesAndKeys} from 'mk-utils/general.js';
 
 export const eventTypes = {
-  CARD_1: 1,
-  CARD_2: 2,
+  DRAW_CARD_1: 1,
+  DRAW_CARD_2: 2,
 };
 
 export const natureTypes = {
@@ -37,7 +37,7 @@ export const list = mapValuesAndKeys(_, (val, id) => [{id: Number(id), ...val}, 
   [fieldIds.FROSTY_WASTELAND]: {
     adjacent: [fieldIds.TOWN, fieldIds.INN],
     name: 'Mroźne Pustkowie',
-    event: eventTypes.CARD_1,
+    event: eventTypes.DRAW_CARD_1,
   },
   [fieldIds.TOWN]: {
     adjacent: [fieldIds.ROADLESS_TRACK, fieldIds.FROSTY_WASTELAND],
@@ -46,7 +46,7 @@ export const list = mapValuesAndKeys(_, (val, id) => [{id: Number(id), ...val}, 
   [fieldIds.ROADLESS_TRACK]: {
     adjacent: [fieldIds.WELL_OF_ETERNITY, fieldIds.TOWN],
     name: 'Bezdroża',
-    event: eventTypes.CARD_2,
+    event: eventTypes.DRAW_CARD_2,
   },
   [fieldIds.WELL_OF_ETERNITY]: {
     adjacent: [fieldIds.CIRCLE_OF_POWER, fieldIds.ROADLESS_TRACK],
@@ -63,12 +63,12 @@ export const list = mapValuesAndKeys(_, (val, id) => [{id: Number(id), ...val}, 
   [fieldIds.WETLANDS_1]: {
     adjacent: [fieldIds.STEPPE_1, fieldIds.DEVILS_MILL],
     name: 'Mokradła',
-    event: eventTypes.CARD_1,
+    event: eventTypes.DRAW_CARD_1,
   },
   [fieldIds.STEPPE_1]: {
     adjacent: [fieldIds.SETTLEMENT, fieldIds.WETLANDS_1],
     name: 'Step',
-    event: eventTypes.CARD_1,
+    event: eventTypes.DRAW_CARD_1,
   },
   [fieldIds.SETTLEMENT]: {
     adjacent: [fieldIds.BARROW, fieldIds.STEPPE_1],
@@ -81,17 +81,17 @@ export const list = mapValuesAndKeys(_, (val, id) => [{id: Number(id), ...val}, 
   [fieldIds.WETLANDS_2]: {
     adjacent: [fieldIds.STEPPE_2, fieldIds.BARROW],
     name: 'Mokradła',
-    event: eventTypes.CARD_1,
+    event: eventTypes.DRAW_CARD_1,
   },
   [fieldIds.STEPPE_2]: {
     adjacent: [fieldIds.WILDERNESS, fieldIds.WETLANDS_2],
     name: 'Step',
-    event: eventTypes.CARD_1,
+    event: eventTypes.DRAW_CARD_1,
   },
   [fieldIds.WILDERNESS]: {
     adjacent: [fieldIds.INN, fieldIds.STEPPE_2],
     name: 'Uroczysko',
-    event: eventTypes.CARD_1,
+    event: eventTypes.DRAW_CARD_1,
   },
 });
 

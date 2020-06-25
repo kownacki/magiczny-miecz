@@ -100,10 +100,10 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
         // todo implement fight
       }
     }
-    if (field.event === eventTypes.CARD_1) {
+    if (field.event === eventTypes.DRAW_CARD_1) {
       console.log(`Karta zdarzenia x1`);
     }
-    if (field.event === eventTypes.CARD_2) {
+    if (field.event === eventTypes.DRAW_CARD_2) {
       console.log(`Karta zdarzenia x2`);
     }
   }
