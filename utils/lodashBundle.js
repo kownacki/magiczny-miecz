@@ -26,6 +26,7 @@ window._ = Object.assign(require('lodash/fp/placeholder.js'), {
   mapKeys: require('lodash/fp/mapKeys.js'),
   mapValues: require('lodash/fp/mapValues.js'),
   memoize: require('lodash/fp/memoize.js'),
+  merge: require('lodash/fp/merge.js'),
   negate: require('lodash/fp/negate.js'),
   method: require('lodash/fp/method.js'),
   omit: require('lodash/fp/omit.js'),

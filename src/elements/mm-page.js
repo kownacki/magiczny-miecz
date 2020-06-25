@@ -2,7 +2,9 @@ import {LitElement, html, css} from 'lit-element';
 import {unsafeHTML} from 'lit-html/directives/unsafe-html.js';
 import dbSyncMixin from 'mkwc/dbSyncMixin.js';
 import fb from '../utils/firebase.js';
-import {list as fieldsList, eventTypes, natureTypes, fieldIds} from '../fields.js';
+import {ids as fieldIds, list as fieldsList} from '../fields.js';
+import {ids as eventsIds} from '../events.js';
+import {ids as naturesIds, list as naturesList} from '../natures.js';
 import {d6 as rollD6} from '../utils/roll.js';
 
 export default class MmPage extends dbSyncMixin('_page', LitElement) {
@@ -71,10 +73,10 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
       }
     }
     if (field.id === fieldIds.DEVILS_MILL) {
-      if (this._page.nature === natureTypes.GOOD) {
+      if (this._page.nature === naturesIds.GOOD) {
         this._modifyAttr(-1, 'lifes');
       }
-      else if (this._page.nature === natureTypes.CHAOTIC) {
+      else if (this._page.nature === naturesIds.CHAOTIC) {
         const devilsMillRollChaotic = rollD6(field.name);
         this._modifyAttr(devilsMillRollChaotic <= 3 ? 1 : -1, 'lifes')
       }
@@ -100,10 +102,10 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
         // todo implement fight
       }
     }
-    if (field.event === eventTypes.DRAW_CARD_1) {
+    if (field.event === eventsIds.DRAW_CARD_1) {
       console.log(`Karta zdarzenia x1`);
     }
-    if (field.event === eventTypes.DRAW_CARD_2) {
+    if (field.event === eventsIds.DRAW_CARD_2) {
       console.log(`Karta zdarzenia x2`);
     }
   }
@@ -124,9 +126,9 @@ export default class MmPage extends dbSyncMixin('_page', LitElement) {
   render() {
     return html`
       ${!this.ready ? '' : html`
-        Jesteś w: (${fieldsList[this._page.field].name}) ${this._page.field}
+        Jesteś w: ${fieldsList[this._page.field].name} (${this._page.field})
         <br>
-        Natura: ${this._page.nature}
+        Natura: ${naturesList[this._page.nature].name}
         <br>
         Złoto: ${this._page.attr.gold}
         <br>
