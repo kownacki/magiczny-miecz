@@ -1,13 +1,24 @@
-import {assignKeys} from './utils/general.js';
 import {ids as eventsIds} from './events.js';
 import ids from './fieldsIds.js';
 import descriptions from './fieldsDescriptions.js';
 
 export {ids};
 
+export class Field {
+  constructor(id, name, description, adjacent) {
+    this.id = id;
+    this.name = name;
+    this.description = description;
+    this.adjacent = adjacent;
+  }
+}
+
+const replaceAdjacentFieldsIdsWithRefs = (fieldsList) =>
+  _.forOwn(_.update.convert({immutable: false})('adjacent', _.map(_.get(_, fieldsList))), fieldsList);
+
 export const list = _.flow(
-  _.merge(_.mapValues((description) => ({description}), descriptions)),
-  _.partial(assignKeys, ['id', Number]),
+  _.mapValues.convert({cap: false})((data, id) => new Field(Number(id), data.name, descriptions[id], data.adjacent)),
+  replaceAdjacentFieldsIdsWithRefs,
 )({
   [ids.INN]: {
     adjacent: [ids.FROSTY_WASTELAND, ids.WILDERNESS],
@@ -73,5 +84,3 @@ export const list = _.flow(
     event: eventsIds.DRAW_CARD_1,
   },
 });
-
-console.log(list);

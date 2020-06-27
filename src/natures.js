@@ -17,5 +17,3 @@ export const list = assignKeys('id', Number, {
     name: 'Chaotyczny',
   },
 });
-
-console.log(list);
