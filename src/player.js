@@ -1,4 +1,5 @@
 import {ids as fieldIds, list as fieldsList} from './fields.js';
+import {getRandomMeetingCard, executeCard} from './eventsCards.js';
 import {d6 as rollD6} from './utils/roll.js';
 import {ids as naturesIds} from './natures.js';
 import {ids as eventsIds} from './events.js';
@@ -71,7 +72,8 @@ export class Player {
       }
     }
     if (field.event === eventsIds.DRAW_CARD_1) {
-      console.log(`Karta zdarzenia x1`);
+      const card = getRandomMeetingCard();
+      executeCard(card, this);
     }
     if (field.event === eventsIds.DRAW_CARD_2) {
       console.log(`Karta zdarzenia x2`);

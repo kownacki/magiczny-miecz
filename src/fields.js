@@ -5,11 +5,12 @@ import descriptions from './fieldsDescriptions.js';
 export {ids};
 
 export class Field {
-  constructor(id, name, description, adjacent) {
+  constructor(id, name, description, adjacent, event) {
     this.id = id;
     this.name = name;
     this.description = description;
     this.adjacent = adjacent;
+    this.event = event;
   }
 }
 
@@ -17,7 +18,7 @@ const replaceAdjacentFieldsIdsWithRefs = (fieldsList) =>
   _.forOwn(_.update.convert({immutable: false})('adjacent', _.map(_.get(_, fieldsList))), fieldsList);
 
 export const list = _.flow(
-  _.mapValues.convert({cap: false})((data, id) => new Field(Number(id), data.name, descriptions[id], data.adjacent)),
+  _.mapValues.convert({cap: false})((data, id) => new Field(Number(id), data.name, descriptions[id], data.adjacent, data.event)),
   replaceAdjacentFieldsIdsWithRefs,
 )({
   [ids.INN]: {
