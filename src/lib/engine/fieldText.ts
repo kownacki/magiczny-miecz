@@ -1,6 +1,7 @@
 /** Attaches the instructions printed on the board to the fields the engine knows about. */
 
 import dolnyTexts from "@/data/dolny-fields.json";
+import mostTexts from "@/data/most-fields.json";
 import ringTexts from "@/data/ring-fields.json";
 import { FIELDS, type BoardField } from "./board";
 
@@ -10,14 +11,20 @@ interface FieldText {
   draw?: number;
 }
 
-// The lower ring and the other two were transcribed in separate passes, from
-// different crops of the scan, and are checked by different build scripts. They
-// are merged here rather than in the data so each pass keeps its own provenance.
+// The three rings and the bridge were transcribed in separate passes, from
+// different sources — the rings off the board scan, the bridge off the back of
+// the rulebook. They are merged here rather than in the data so each pass keeps
+// its own provenance.
 const TEXTS = new Map(
-  [...(dolnyTexts as FieldText[]), ...(ringTexts as FieldText[])].map((entry) => [
-    entry.id,
-    entry,
-  ]),
+  [
+    ...(dolnyTexts as FieldText[]),
+    ...(ringTexts as FieldText[]),
+    // The Kamienny Most's nine fields are printed at the back of the rulebook
+    // rather than on the board's face, which is why they were transcribed with
+    // the rules and then never loaded — nine fields, including the Zamek
+    // Bestii, that the app knew the name of and nothing else.
+    ...(mostTexts as FieldText[]),
+  ].map((entry) => [entry.id, entry]),
 );
 
 /**

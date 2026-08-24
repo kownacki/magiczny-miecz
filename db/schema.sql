@@ -80,6 +80,9 @@ create table if not exists magiczny_miecz.seats (
   -- next turn. A turn number rather than a counter, so skipped turns cannot
   -- make the block drift.
   bridge_blocked_until_turn integer,
+  -- 7.3: at most one Natura change per turn, so the turn it happened on is
+  -- recorded rather than a flag that would need clearing.
+  nature_changed_turn integer,
   eliminated boolean not null default false,
 
   unique (game_id, seat_index)

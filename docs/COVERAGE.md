@@ -84,7 +84,7 @@ screen next to every drawn card.
 |---|---|---|---|
 | 7.1 | every character is Dobra, Zła or Chaotyczna | ✅ | |
 | 7.2 | Natura can change mid-game | ✅ | `changeNature` |
-| 7.3 | at most one change per turn | ❌ | not enforced |
+| 7.3 | at most one change per turn | ✅ | `nature_changed_turn`; Magog is exempt by 8.2 |
 | 7.4 | an item forbidden by the new Natura must be dropped | ◐ | the app names them; dropping is left to the player |
 
 ## 8. Charakterystyki Postaci
@@ -154,7 +154,7 @@ screen next to every drawn card.
 |---|---|---|---|
 | 14.1 | characters may meet only at the two Wejścia | ❌ | not enforced |
 | 14.2 | meetings resolve as elsewhere | ✅ | `attackSeat` |
-| 14.3 | each Most field's printed instruction | ❌ | **the Most fields have no text in the app** |
+| 14.3 | each Most field's printed instruction | ✅ | `most-fields.json` — all nine |
 | 14.4 | no spells and no escape on the Most | ◐ | escape is blocked (19.3); spells do not exist |
 | 14.5 | Pułapka / Magiczna Pułapka: 3 dice less Miecz or Magia, then a roll per item | ❌ | |
 | 14.6 | Demon Zagłady / Monstrum: roll for its strength, fight until beaten | ❌ | |
@@ -218,10 +218,10 @@ screen next to every drawn card.
 | | rule | status | where |
 |---|---|---|---|
 | 20.1 | three turns as stone | ✅ | `stone_until_turn` |
-| 20.2 | a stone character keeps no items, gold or friends | ❌ | nothing is dropped |
+| 20.2 | a stone character keeps no items, gold or friends | ✅ | `turnToStone` — items and gold to the field, friends discarded |
 | 20.3 | Miecz and Magia are kept but unusable | ◐ | kept; the ban is not enforced |
 | 20.4 | cannot move for three turns | ✅ | `nextSeat` |
-| 20.5 | cannot lose Życie, cannot be targeted; keeps its spells | ❌ | |
+| 20.5 | cannot lose Życie, cannot be targeted; keeps its spells | ◐ | the spells are kept; the two prohibitions are not enforced |
 
 ## 21. Magiczne Miecze, Tarcze Tolimana i Karty Wyposażenia
 
@@ -256,6 +256,5 @@ descending order of what they cost a table:
    what previous characters left behind, the map marks which fields are holding
    something, and a field draws only up to its printed count.
 
-After those: the Most's own fields (14.3, 14.5, 14.6) have no text in the app at
-all, which is odd given the rulebook prints them and the transcription is in
-RULES.md.
+After those: the two Pułapki and the Demon Zagłady / Monstrum (14.5, 14.6) print
+their own procedures and the app shows them but does not run them.

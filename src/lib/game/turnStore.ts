@@ -948,7 +948,19 @@ export async function changeNature(
   if (!seat) throw new Error("Nieznane miejsce.");
   if (seat.nature === nature) return { nowForbidden: [] };
 
-  await db.from("seats").update({ nature }).eq("id", seatId);
+  // 7.3: "Żadna Postać nie może zmienić swojej Natury częściej niż raz w
+  // trakcie tury gry." Magog is the exception — its own card says the Natura
+  // may be changed freely, and 8.2 puts a Charakterystyka above the general
+  // rule.
+  const freely = seat.character_id === "magog";
+  if (!freely && seat.nature_changed_turn === game.turn) {
+    throw new Error("Naturę można zmienić najwyżej raz na turę (7.3).");
+  }
+
+  await db
+    .from("seats")
+    .update({ nature, nature_changed_turn: game.turn })
+    .eq("id", seatId);
 
   const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seatId);
   const nowForbidden = holdings
@@ -998,11 +1010,55 @@ export const STONE_TURNS = 3;
 
 export async function turnToStone(gameId: string, seatId: string): Promise<void> {
   const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  // 20.2: stone carries nothing. Przedmioty and gold are left on the field the
+  // change happened on and can be picked up by whoever passes (12.1); the
+  // Przyjaciele simply leave — "wszyscy Przyjaciele opuszczają Zamienionego w
+  // Kamień, odłóż ich Karty na stos Kart zużytych" — and are not recoverable.
+  //
+  // Zaklęcia stay: 20.5 is explicit that the character keeps them and may use
+  // them once it is flesh again.
+  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seatId);
+  const dropped = held.filter((h) => h.kind === "item");
+  const friends = held.filter((h) => h.kind === "friend");
+
+  if (held.length > 0) {
+    await db
+      .from("holdings")
+      .delete()
+      .in("id", [...dropped, ...friends].map((h) => h.id));
+  }
+
+  if (seat.field_id) {
+    // Gold is left there too, and the deck already has a card that *is* one
+    // Sztuka Złota — so a purse of three becomes three of them lying on the
+    // field, which is exactly what 12.1 lets the next character pick up.
+    const gold = Array.from({ length: seat.zloto }, () => "1-sztuka-zlota");
+    const onField = [...dropped.map((h) => h.card_id), ...gold];
+    if (onField.length > 0) {
+      await db.from("field_cards").insert(
+        onField.map((cardId) => ({
+          game_id: gameId,
+          field_id: seat.field_id,
+          card_id: cardId,
+        })),
+      );
+    }
+  }
+
   await db
     .from("seats")
-    .update({ stone_until_turn: game.turn + STONE_TURNS })
+    .update({ stone_until_turn: game.turn + STONE_TURNS, zloto: 0 })
     .eq("id", seatId);
-  await journal(gameId, seatId, game.turn, "kamien", { until: game.turn + STONE_TURNS });
+  await journal(gameId, seatId, game.turn, "kamien", {
+    until: game.turn + STONE_TURNS,
+    left: dropped.length,
+    zloto: seat.zloto,
+    friendsLost: friends.length,
+  });
   await bumpRevision(gameId);
 }
 
