@@ -153,7 +153,7 @@ export function Lobby({
               changing that halfway through setting up is not a thing anybody
               does. */}
           <span
-            className="text-[11px] text-muted"
+            className="text-[12px] text-muted"
             title={
               mode === "companion"
                 ? "Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
@@ -169,7 +169,7 @@ export function Lobby({
             out across a table had to lean in. */}
         <JoinCode code={code} />
 
-        <div className="flex items-center gap-3 text-[11px]">
+        <div className="flex items-center gap-3 text-[12px]">
           <button onClick={onLibrary} className="text-ochre/80 hover:text-ochre">
             Karty
           </button>
@@ -248,7 +248,7 @@ export function Lobby({
 
       <section className="shrink-0 border-t border-edge px-4 py-2">
         <div className="mb-1 flex items-baseline justify-between">
-          <h2 className="text-[11px] uppercase tracking-widest text-muted">
+          <h2 className="text-[12px] uppercase tracking-widest text-muted">
             {target && target.seatIndex !== mySeatIndex
               ? `Postać dla: ${target.playerName ?? `miejsce ${target.seatIndex + 1}`}`
               : "Postacie"}
@@ -262,7 +262,7 @@ export function Lobby({
                 onClick={onDeal}
                 disabled={busy}
                 title="Potasuj Karty Postaci i rozłóż po jednej — tak, jak każe Instrukcja"
-                className="text-[11px] text-ochre/80 underline transition hover:text-ochre disabled:opacity-40"
+                className="text-[12px] text-ochre/80 underline transition hover:text-ochre disabled:opacity-40"
               >
                 rozlosuj postacie
               </button>
@@ -270,7 +270,7 @@ export function Lobby({
             {pickingFor && (
               <button
                 onClick={() => onPickFor(null)}
-                className="text-[11px] text-muted underline hover:text-ink"
+                className="text-[12px] text-muted underline hover:text-ink"
               >
                 anuluj wybór
               </button>
@@ -323,8 +323,24 @@ export function Lobby({
             // carrying information — whose it is — and the only reason the
             // colour is there at all. Yours a shade brighter than the rest,
             // since "which did I pick?" is the one you go looking for.
-            const dim =
-              owner && !isPending && !waiting ? (isTargets ? "opacity-70" : "opacity-35") : "";
+            // Every opacity in this tile lives here, on the picture.
+            //
+            // It used to be split: the owner-dimming on the picture and the
+            // waiting-dimming on the button. Clicking a character dropped the
+            // first instantly and faded the second in over the transition, so
+            // every already-taken card flashed to full brightness for a moment
+            // and then sank — which is exactly what it looked like.
+            const dim = isPending
+              ? "opacity-100"
+              : waiting
+                ? "opacity-20"
+                : owner
+                  ? isTargets
+                    ? "opacity-70"
+                    : "opacity-35"
+                  : target
+                    ? "opacity-100"
+                    : "opacity-40";
             return (
               // Pointing at a card reads it, and that has to work for cards
               // nobody can choose. A disabled button fires no mouse events at
@@ -351,11 +367,9 @@ export function Lobby({
                 className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
                   isPending
                     ? "animate-pulse border-ochre"
-                    : waiting
-                      ? "border-edge opacity-20"
-                      : owner
-                        ? "" // the border colour is set inline, and stays lit
-                        : "border-edge hover:border-ochre disabled:opacity-40"
+                    : owner
+                      ? "" // the border colour is set inline, and stays lit
+                      : "border-edge hover:border-ochre"
                 }`}
               >
                 {standee ? (
@@ -364,11 +378,11 @@ export function Lobby({
                     alt={character.name}
                     width={114}
                     height={190}
-                    className={`h-auto w-full ${dim}`}
+                    className={`h-auto w-full transition-opacity ${dim}`}
                   />
                 ) : (
                   <span
-                    className={`flex aspect-[114/190] items-center p-2 text-center text-[10px] text-ink ${dim}`}
+                    className={`flex aspect-[114/190] items-center p-2 text-center text-[12px] text-ink transition-opacity ${dim}`}
                   >
                     {character.name}
                   </span>
@@ -380,7 +394,7 @@ export function Lobby({
                 {ownerSeat && (
                   <span
                     style={{ background: owner ?? undefined }}
-                    className="absolute inset-x-0 bottom-0 flex h-[14.3%] min-h-[19px] items-center justify-center overflow-hidden px-0.5 text-[11px] font-medium leading-none text-night"
+                    className="absolute inset-x-0 bottom-0 flex h-[14.3%] min-h-[21px] items-center justify-center overflow-hidden px-0.5 text-[13px] font-medium leading-none text-night"
                   >
                     <span className="truncate">
                       {ownerSeat.playerName ?? `miejsce ${ownerSeat.seatIndex + 1}`}
@@ -404,9 +418,9 @@ export function Lobby({
             — while the settings are touched once, at the start, and then never
             again. */}
         <aside className="hidden w-[300px] shrink-0 flex-col gap-4 border-l border-edge p-3 lg:flex xl:w-[380px]">
-          <h2 className="text-[11px] uppercase tracking-widest text-muted">Ustawienia</h2>
+          <h2 className="text-[12px] uppercase tracking-widest text-muted">Ustawienia</h2>
           {me && (
-            <label className="flex flex-col gap-1 text-[11px] text-muted">
+            <label className="flex flex-col gap-1 text-[12px] text-muted">
               Twoje imię
               {/* The *saved* name, not the one on screen. Handing it the
                   drafted name would tell it nothing had changed — the draft is
@@ -431,7 +445,7 @@ export function Lobby({
             {reading ? (
               <BigCard character={byId.get(reading) ?? null} />
             ) : (
-              <p className="max-w-[16rem] text-center text-[11px] leading-relaxed text-muted/70">
+              <p className="max-w-[16rem] text-center text-[12px] leading-relaxed text-muted/70">
                 Najedź na postać, żeby przeczytać jej Kartę.
               </p>
             )}
@@ -448,7 +462,7 @@ function BigCard({ character }: { character: Character | null }) {
   const src = characterImageUrl(character.id);
   if (!src) {
     return (
-      <p className="text-center text-[11px] text-muted">
+      <p className="text-center text-[12px] text-muted">
         {character.name} — brak skanu Karty
       </p>
     );
@@ -544,7 +558,7 @@ function SeatSlot({
         />
         <span className="truncate">{seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}</span>
       </p>
-      <p className="mb-1 h-4 truncate text-[10px]">
+      <p className="mb-1 h-4 truncate text-[12px]">
         {seat.isHost && <span className="text-ochre">gospodarz</span>}
         {seat.isHost && (seat.abandoned || seat.away || isMine) && (
           <span className="text-muted"> · </span>
@@ -595,7 +609,7 @@ function SeatSlot({
             className="h-full w-full object-contain"
           />
         ) : (
-          <span className="flex h-full items-center justify-center p-2 text-center text-[11px] leading-snug text-muted">
+          <span className="flex h-full items-center justify-center p-2 text-center text-[12px] leading-snug text-muted">
             postać jeszcze niewybrana
           </span>
         )}
@@ -610,7 +624,7 @@ function SeatSlot({
           disabled={busy || !seat.characterId}
           onClick={() => onReady(!seat.ready)}
           title={seat.characterId ? undefined : "Najpierw wybierz postać"}
-          className={`mt-1 rounded border px-2 py-1 text-[11px] transition disabled:opacity-40 ${
+          className={`mt-1 rounded border px-2 py-1 text-[12px] transition disabled:opacity-40 ${
             seat.ready
               ? "border-verdigris bg-verdigris/10 text-verdigris"
               : "border-edge text-ink hover:border-ochre"
@@ -620,7 +634,7 @@ function SeatSlot({
         </button>
       ) : (
         <p
-          className={`mt-1 h-[27px] truncate pt-1 text-[11px] ${
+          className={`mt-1 h-[27px] truncate pt-1 text-[12px] ${
             seat.ready ? "text-verdigris" : "text-muted/60"
           }`}
         >
@@ -638,7 +652,7 @@ function SeatSlot({
         <button
           onClick={onMakeHost}
           disabled={busy}
-          className="mt-1 rounded border border-edge px-1 py-0.5 text-[9px] text-muted transition hover:border-ochre hover:text-ochre disabled:opacity-40"
+          className="mt-1 rounded border border-edge px-1 py-0.5 text-[12px] text-muted transition hover:border-ochre hover:text-ochre disabled:opacity-40"
         >
           zrób gospodarzem
         </button>
@@ -660,7 +674,7 @@ function EmptySlot({
 
   if (!canAdd) {
     return (
-      <div className="flex h-full max-h-[340px] w-[190px] shrink-0 items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[11px] leading-snug text-muted/60">
+      <div className="flex h-full max-h-[340px] w-[190px] shrink-0 items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[12px] leading-snug text-muted/60">
         wolne miejsce — dołączcie kodem
       </div>
     );
@@ -676,7 +690,7 @@ function EmptySlot({
       }}
       className="flex h-full max-h-[340px] w-[190px] shrink-0 flex-col justify-center gap-2 rounded-lg border border-dashed border-edge p-2"
     >
-      <span className="text-center text-[10px] uppercase tracking-widest text-muted">
+      <span className="text-center text-[12px] uppercase tracking-widest text-muted">
         Dodaj gracza
       </span>
       <input
@@ -747,7 +761,7 @@ function RenameField({
       }}
       placeholder="twoje imię"
       maxLength={24}
-      className="min-w-0 rounded border border-edge bg-night px-2 py-1 text-[11px] text-ink outline-none focus:border-ochre"
+      className="min-w-0 rounded border border-edge bg-night px-2 py-1 text-[12px] text-ink outline-none focus:border-ochre"
     />
   );
 }
@@ -820,7 +834,7 @@ export function JoinGate({
       </form>
 
       {here.length > 0 && (
-        <p className="max-w-sm text-center text-[11px] leading-relaxed text-muted">
+        <p className="max-w-sm text-center text-[12px] leading-relaxed text-muted">
           Przy stole:{" "}
           {here.map((seat) => seat.playerName).join(", ")}
         </p>
@@ -885,7 +899,7 @@ function JoinCode({ code }: { code: string }) {
 
   return (
     <div className="flex flex-col items-center leading-none">
-      <span className="mb-1 text-[10px] uppercase tracking-widest text-muted">
+      <span className="mb-1 text-[12px] uppercase tracking-widest text-muted">
         Kod stołu
       </span>
       <button
@@ -900,7 +914,7 @@ function JoinCode({ code }: { code: string }) {
       >
         {code}
       </button>
-      <span className="mt-1 h-3 text-[10px] text-muted">
+      <span className="mt-1 h-3 text-[12px] text-muted">
         {copied ? "skopiowano link" : ""}
       </span>
     </div>
@@ -972,7 +986,7 @@ export function TakeOverGate({
               <span className="block font-[family-name:var(--font-display)] text-ochre">
                 {seat.characterName}
               </span>
-              <span className="block text-[11px] text-muted">
+              <span className="block text-[12px] text-muted">
                 {seat.playerName ? `grał(a) ${seat.playerName} · ` : ""}
                 {seat.why}
               </span>
@@ -988,7 +1002,7 @@ export function TakeOverGate({
 
       <button
         onClick={onWatch}
-        className="text-[11px] text-muted underline transition hover:text-ink"
+        className="text-[12px] text-muted underline transition hover:text-ink"
       >
         oglądaj stół
       </button>

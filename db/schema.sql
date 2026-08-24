@@ -93,6 +93,12 @@ create table if not exists magiczny_miecz.seats (
   abandoned_at timestamptz,
   eliminated boolean not null default false,
 
+  -- Join order. `seat_index` used to stand in for it, but places freed in the
+  -- middle are refilled by the next arrival, so a low index now means "sat in a
+  -- gap" rather than "got here first" — and host migration hands the table to
+  -- whoever has been at it longest.
+  created_at timestamptz not null default now(),
+
   unique (game_id, seat_index)
 );
 

@@ -33,6 +33,8 @@ export interface SeatRow {
   ready: boolean;
   /** Seated by the host in companion mode; nobody behind it holds a device. */
   no_device: boolean;
+  /** When this seat joined. Join order, now that seat_index no longer records it. */
+  created_at: string;
   /** 7.3: the turn this seat last changed its Natura on. */
   nature_changed_turn: number | null;
   eliminated: boolean;
@@ -63,7 +65,7 @@ const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,no_device,eliminated,is_host";
+  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,no_device,eliminated,is_host,created_at";
 
 /**
  * Creates a table and returns the host's seat token.
@@ -225,13 +227,21 @@ export async function joinGame(
   // seat; it never adopts one.
   if (existing.length >= MAX_SEATS) throw new Error("Stół jest pełny — gra jest na 2-6 graczy.");
 
+  // The lowest place nobody is in, rather than one past the end. Seats are
+  // deleted from the middle now — the host removes somebody, or a tab closes in
+  // the poczekalnia — so counting them gives an index that is already taken and
+  // the insert fails on the unique constraint. Which it did.
+  const taken = new Set(existing.map((seat) => seat.seat_index));
+  let seatIndex = 0;
+  while (taken.has(seatIndex)) seatIndex++;
+
   const token = makeClaimToken();
 
   const { data, error } = await db
     .from("seats")
     .insert({
       game_id: gameId,
-      seat_index: existing.length,
+      seat_index: seatIndex,
       claim_token: token,
       player_name: playerName,
       no_device: noDevice,
@@ -734,14 +744,22 @@ export async function markSeen(seatId: string): Promise<void> {
  */
 async function promoteHostIfNeeded(gameId: string, leaving: SeatRow): Promise<void> {
   if (!leaving.is_host) return;
-  // The longest-standing player takes over. Seats are appended in join order,
-  // so the lowest index is whoever has been at the table longest — a stable,
+  // Whoever has been at the table longest of those left takes over — a stable,
   // explicable rule, which matters because nobody chose it in the moment.
+  //
+  // By `created_at` and not by `seat_index`: places freed in the middle are
+  // filled by the next person to arrive, so a low index now means "sat in a
+  // gap", not "got here first". Ties break on index, which is the old rule and
+  // is what every seat that predates the column will do.
+  //
   // Somebody who has themselves walked away is skipped; handing the role to an
   // empty chair is how a table ends up unstartable.
   const candidate = (await seatsFor(gameId))
     .filter((seat) => seat.id !== leaving.id && !seat.eliminated && !seat.abandoned_at)
-    .sort((a, b) => a.seat_index - b.seat_index)[0];
+    .sort(
+      (a, b) =>
+        Date.parse(a.created_at) - Date.parse(b.created_at) || a.seat_index - b.seat_index,
+    )[0];
   if (!candidate) return;
 
   await db.from("seats").update({ is_host: true }).eq("id", candidate.id);
