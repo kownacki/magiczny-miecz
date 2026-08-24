@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterImageUrl } from "@/lib/engine/cardImages";
+import { SEAT_COLOURS } from "@/lib/engine/boardMap";
 
 export interface LobbySeat {
   id: string;
@@ -17,6 +18,8 @@ export interface LobbySeat {
   away: boolean;
   /** Said they are ready to start. */
   ready: boolean;
+  /** Seated by the host in companion mode; has no device of their own. */
+  noDevice: boolean;
 }
 
 const MAX_SEATS = 6;
@@ -46,7 +49,6 @@ export function Lobby({
   busy,
   onMode,
   onAddLocal,
-  onJoin,
   onPickFor,
   onChooseCharacter,
   onRemove,
@@ -68,7 +70,6 @@ export function Lobby({
   busy: boolean;
   onMode: (mode: "simulation" | "companion") => void;
   onAddLocal: (name: string) => void;
-  onJoin: (name: string) => void;
   onPickFor: (seat: LobbySeat | null) => void;
   onChooseCharacter: (seat: LobbySeat, characterId: string) => void;
   onRemove: (seat: LobbySeat) => void;
@@ -86,9 +87,21 @@ export function Lobby({
   const waitingOn = chosen.filter((seat) => !seat.ready && !seat.abandoned);
   const byId = new Map(characters.map((character) => [character.id, character]));
 
-  // Whose character the strip at the bottom is choosing. Your own unless the
-  // host has aimed it at somebody they are filling in for.
-  const target = pickingFor ?? me;
+  /**
+   * Whose character you may choose.
+   *
+   * Your own, always — and it is what the strip is aimed at unless you say
+   * otherwise. The one exception is companion mode, where the host seats people
+   * who have no device of their own and so has to choose for them.
+   *
+   * Nobody else's. An earlier version let any visitor aim at any slot, which
+   * meant a stranger could hand you a Kat.
+   */
+  const mayChooseFor = (seat: LobbySeat) =>
+    seat.seatIndex === mySeatIndex ||
+    (canAdminister && mode === "companion" && seat.noDevice);
+
+  const target = pickingFor && mayChooseFor(pickingFor) ? pickingFor : me;
 
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
@@ -125,9 +138,6 @@ export function Lobby({
           <button onClick={onLibrary} className="text-ochre/80 hover:text-ochre">
             Karty
           </button>
-          {/* Somebody who opened the link without joining. The name is required
-              — a table of "Miejsce 2" and "Miejsce 4" is nobody's game. */}
-          {!me && <JoinForm busy={busy} onJoin={onJoin} />}
           {me && <RenameField name={me.playerName} busy={busy} onRename={onRename} />}
           {me && (
             <button
@@ -143,24 +153,31 @@ export function Lobby({
               {me.ready ? "Gotów ✓" : "Jestem gotów"}
             </button>
           )}
-          {canAdminister &&
-            (chosen.length >= 2 && waitingOn.length === 0 ? (
-              <button
-                onClick={onStart}
-                disabled={busy}
-                className="rounded border border-ochre bg-ochre/10 px-4 py-1 font-[family-name:var(--font-display)] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
-              >
-                Rozpocznij grę
-              </button>
-            ) : (
-              <span className="text-muted">
-                {chosen.length < 2
-                  ? `brakuje ${2 - chosen.length} postaci`
-                  : `czekamy na: ${waitingOn
-                      .map((seat) => seat.playerName ?? `miejsce ${seat.seatIndex + 1}`)
-                      .join(", ")}`}
-              </span>
-            ))}
+          {/* Always on screen for the host, disabled with the reason on it.
+              A button that only appears once the conditions are met leaves
+              everybody hunting for it and nobody knowing what is missing. */}
+          {canAdminister && (
+            <button
+              onClick={onStart}
+              disabled={busy || chosen.length < 2 || waitingOn.length > 0}
+              title={
+                chosen.length < 2
+                  ? `Brakuje ${2 - chosen.length} postaci`
+                  : waitingOn.length > 0
+                    ? `Czekamy na: ${waitingOn
+                        .map((seat) => seat.playerName ?? `miejsce ${seat.seatIndex + 1}`)
+                        .join(", ")}`
+                    : undefined
+              }
+              className="rounded border border-ochre bg-ochre/10 px-4 py-1 font-[family-name:var(--font-display)] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
+            >
+              {chosen.length < 2
+                ? `Rozpocznij grę — brakuje ${2 - chosen.length} postaci`
+                : waitingOn.length > 0
+                  ? `Rozpocznij grę — czekamy na ${waitingOn.length}`
+                  : "Rozpocznij grę"}
+            </button>
+          )}
         </div>
       </header>
 
@@ -190,6 +207,7 @@ export function Lobby({
               character={character ?? null}
               isMine={seat.seatIndex === mySeatIndex}
               isTarget={target?.id === seat.id}
+              selectable={mayChooseFor(seat)}
               canAdminister={canAdminister}
               busy={busy}
               onSelect={() => onPickFor(target?.id === seat.id ? null : seat)}
@@ -203,7 +221,7 @@ export function Lobby({
       <section className="shrink-0 border-t border-edge px-4 py-2">
         <div className="mb-1 flex items-baseline justify-between">
           <h2 className="text-[11px] uppercase tracking-widest text-muted">
-            {target
+            {target && target.seatIndex !== mySeatIndex
               ? `Postać dla: ${target.playerName ?? `miejsce ${target.seatIndex + 1}`}`
               : "Postacie"}
           </h2>
@@ -216,7 +234,11 @@ export function Lobby({
             </button>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* Two rows deep: one row of 27 needed a long horizontal drag to reach
+            the far half of the roster, and the characters at the end were the
+            ones nobody ever looked at. Height is left to the content — a cap
+            here silently cut the second row's names off. */}
+        <div className="grid grid-flow-col grid-rows-2 gap-2 overflow-x-auto pb-1">
           {characters.map((character) => {
             const used = taken.has(character.id) && character.id !== target?.characterId;
             const isTargets = target?.characterId === character.id;
@@ -261,6 +283,7 @@ function SeatSlot({
   character,
   isMine,
   isTarget,
+  selectable,
   canAdminister,
   busy,
   onSelect,
@@ -271,6 +294,7 @@ function SeatSlot({
   character: Character | null;
   isMine: boolean;
   isTarget: boolean;
+  selectable: boolean;
   canAdminister: boolean;
   busy: boolean;
   onSelect: () => void;
@@ -278,15 +302,21 @@ function SeatSlot({
   onMakeHost: () => void;
 }) {
   const portrait = character ? characterImageUrl(character.id) : null;
+  // The same colour this player's dot has on the board, and it never changes:
+  // it comes from the seat index, so "the blue one" means one person all game.
+  const colour = SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
 
   return (
     <div
-      className={`relative flex max-h-full w-[190px] shrink-0 flex-col rounded-lg border p-2 ${
+      style={{ borderTopColor: colour, borderTopWidth: 3 }}
+      className={`relative flex h-full max-h-[340px] w-[190px] shrink-0 flex-col rounded-lg border p-2 ${
         isTarget
           ? "border-ochre bg-panel"
-          : isMine
-            ? "border-ochre/50 bg-panel"
-            : "border-edge bg-panel/50"
+          : seat.ready
+            ? "border-verdigris/60 bg-panel"
+            : isMine
+              ? "border-ochre/50 bg-panel"
+              : "border-edge bg-panel/50"
       }`}
     >
       {canAdminister && (
@@ -300,8 +330,13 @@ function SeatSlot({
         </button>
       )}
 
-      <p className="truncate pr-4 font-[family-name:var(--font-display)] text-base text-ink">
-        {seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}
+      <p className="flex items-center gap-1.5 truncate pr-4 font-[family-name:var(--font-display)] text-base text-ink">
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: colour }}
+          aria-hidden
+        />
+        <span className="truncate">{seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}</span>
       </p>
       <p className="mb-1 h-4 truncate text-[10px]">
         {seat.isHost && <span className="text-ochre">gospodarz</span>}
@@ -318,13 +353,16 @@ function SeatSlot({
       </p>
 
       {/* Tapping the slot aims the character strip at it. */}
-      {/* A fixed portrait box rather than a stretched one: the card is what a
-          character card is, and a slot that grows to whatever height is left
-          over turns an empty seat into a very tall grey rectangle. */}
+      {/* The portrait gives height back on a short screen but is capped, since
+          a slot that grows to whatever is left over turns an empty seat into a
+          very tall grey rectangle. */}
       <button
         onClick={onSelect}
-        disabled={busy}
-        className="h-[270px] w-full shrink-0 overflow-hidden rounded border border-edge/60 transition hover:border-ochre disabled:opacity-50"
+        disabled={busy || !selectable}
+        title={selectable ? "Wybierz postać dla tego miejsca" : "Tylko właściciel miejsca wybiera swoją postać"}
+        className={`max-h-[270px] min-h-[120px] w-full flex-1 overflow-hidden rounded border transition ${
+          selectable ? "border-edge/60 hover:border-ochre" : "cursor-default border-edge/40"
+        }`}
       >
         {portrait && character ? (
           <Image
@@ -341,13 +379,16 @@ function SeatSlot({
         )}
       </button>
 
+      {/* The three states a player is ever in: still choosing, chosen, ready. */}
       <div className="mt-1 flex items-baseline justify-between gap-1">
-        <span className="truncate text-[10px] text-muted">{character?.name ?? "—"}</span>
+        <span className="truncate text-[10px] text-muted">
+          {character?.name ?? "wybiera postać…"}
+        </span>
         {seat.characterId && !seat.abandoned && (
           <span
             className={seat.ready ? "text-[10px] text-verdigris" : "text-[10px] text-muted/60"}
           >
-            {seat.ready ? "gotów" : "czeka"}
+            {seat.ready ? "gotów ✓" : "czeka"}
           </span>
         )}
       </div>
@@ -365,35 +406,6 @@ function SeatSlot({
   );
 }
 
-function JoinForm({ busy, onJoin }: { busy: boolean; onJoin: (name: string) => void }) {
-  const [name, setName] = useState("");
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (name.trim()) onJoin(name);
-      }}
-      className="flex items-center gap-1"
-    >
-      <input
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        placeholder="twoje imię"
-        maxLength={24}
-        autoFocus
-        className="w-32 rounded border border-ochre/50 bg-night px-2 py-1 text-[11px] text-ink outline-none focus:border-ochre"
-      />
-      <button
-        type="submit"
-        disabled={busy || !name.trim()}
-        className="rounded border border-ochre bg-ochre/10 px-3 py-1 text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
-      >
-        Usiądź
-      </button>
-    </form>
-  );
-}
-
 function EmptySlot({
   canAdd,
   busy,
@@ -407,7 +419,7 @@ function EmptySlot({
 
   if (!canAdd) {
     return (
-      <div className="flex h-[340px] w-[190px] shrink-0 items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[11px] leading-snug text-muted/60">
+      <div className="flex h-full max-h-[340px] w-[190px] shrink-0 items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[11px] leading-snug text-muted/60">
         wolne miejsce — dołączcie kodem
       </div>
     );
@@ -421,7 +433,7 @@ function EmptySlot({
         onAdd(name);
         setName("");
       }}
-      className="flex h-[340px] w-[190px] shrink-0 flex-col justify-center gap-2 rounded-lg border border-dashed border-edge p-2"
+      className="flex h-full max-h-[340px] w-[190px] shrink-0 flex-col justify-center gap-2 rounded-lg border border-dashed border-edge p-2"
     >
       <span className="text-center text-[10px] uppercase tracking-widest text-muted">
         Dodaj gracza
@@ -510,5 +522,82 @@ function ModeButton({
     >
       {label}
     </button>
+  );
+}
+
+/**
+ * The door.
+ *
+ * There used to be a two-step way in: open the table as a spectator, then press
+ * "Usiądź" to take a seat. That second step was invented for nobody. Everyone
+ * plays on their own device and opens the link for exactly one reason, so the
+ * link *is* the joining — and the only thing still missing at that point is a
+ * name, which the table needs and which nobody ever supplies later if asked
+ * later.
+ *
+ * So there is no seatless state to be in any more: you give a name and you are
+ * at the table, with a character still to choose. (The host seating somebody
+ * device-less in companion mode is the one way a seat appears without this.)
+ */
+export function JoinGate({
+  code,
+  seats,
+  busy,
+  onJoin,
+}: {
+  code: string;
+  seats: LobbySeat[];
+  busy: boolean;
+  onJoin: (name: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const here = seats.filter((seat) => seat.playerName);
+
+  return (
+    <main className="flex h-[100dvh] flex-col items-center justify-center gap-6 px-6">
+      <header className="text-center">
+        <h1 className="font-[family-name:var(--font-display)] text-3xl text-ochre">
+          Magiczny Miecz
+        </h1>
+        <p className="mt-2 text-xs text-muted">
+          stół <span className="tnum tracking-[0.25em] text-ink">{code}</span>
+        </p>
+      </header>
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (name.trim()) onJoin(name);
+        }}
+        className="flex w-full max-w-xs flex-col gap-2"
+      >
+        <label htmlFor="join-name" className="text-xs uppercase tracking-widest text-muted">
+          Twoje imię
+        </label>
+        <input
+          id="join-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="np. Michał"
+          maxLength={24}
+          autoFocus
+          className="rounded border border-edge bg-panel px-3 py-2 text-center text-lg text-ink outline-none focus:border-ochre"
+        />
+        <button
+          type="submit"
+          disabled={busy || !name.trim() || seats.length >= MAX_SEATS}
+          className="rounded-lg border border-ochre bg-ochre/10 px-6 py-3 font-[family-name:var(--font-display)] text-lg tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
+        >
+          {seats.length >= MAX_SEATS ? "Stół jest pełny" : "Dołącz do stołu"}
+        </button>
+      </form>
+
+      {here.length > 0 && (
+        <p className="max-w-sm text-center text-[11px] leading-relaxed text-muted">
+          Przy stole:{" "}
+          {here.map((seat) => seat.playerName).join(", ")}
+        </p>
+      )}
+    </main>
   );
 }

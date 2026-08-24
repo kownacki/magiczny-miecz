@@ -60,7 +60,7 @@ const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,eliminated,is_host";
+  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,no_device,eliminated,is_host";
 
 /**
  * Creates a table and returns the host's seat token.
@@ -187,6 +187,8 @@ export const MAX_SEATS = 6;
 export async function joinGame(
   gameId: string,
   playerName: string | null,
+  /** True when the host is seating somebody who has no device of their own. */
+  noDevice = false,
 ): Promise<{ seat: SeatRow; token: string }> {
   const existing = await seatsFor(gameId);
 
@@ -206,6 +208,7 @@ export async function joinGame(
       seat_index: existing.length,
       claim_token: token,
       player_name: playerName,
+      no_device: noDevice,
     })
     .select(SEAT_COLUMNS)
     .single();

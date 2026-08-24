@@ -16,7 +16,7 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
-import { Lobby, type LobbySeat } from "./lobby";
+import { JoinGate, Lobby, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
@@ -77,6 +77,7 @@ interface Seat {
   /** Device has not checked in recently — a closed tab, not a decision. */
   away: boolean;
   ready: boolean;
+  no_device: boolean;
   is_host: boolean;
   holdings: Held[];
   /** Cards this viewer is not allowed to see the faces of (9.3). */
@@ -214,23 +215,26 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }
 
   /**
-   * Claims a seat for THIS device. Only offered when it holds none — joining
-   * twice from one browser used to overwrite its identity.
-   *
-   * The name arrives from a field in the page. A native `prompt` blocked
-   * everything behind it, could not be styled, and on a phone interrupts the
-   * game with a system alert.
+   * Claims a seat for THIS device, from the join gate. Only reachable when the
+   * device holds none — joining twice from one browser used to overwrite its
+   * identity.
    */
   async function join(name: string) {
-    const response = await fetch(`/api/games/${code}/join`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: name.trim() || null }),
-    });
-    const data = await response.json();
-    if (!response.ok) return setError(data.error);
-    localStorage.setItem(`mm:${code}`, data.token);
-    refresh();
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/games/${code}/join`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || null }),
+      });
+      const data = await response.json();
+      if (!response.ok) return setError(data.error);
+      localStorage.setItem(`mm:${code}`, data.token);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   /**
@@ -263,7 +267,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const response = await fetch(`/api/games/${code}/join`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: name.trim() || null }),
+      // `local` marks a seat the host is filling for somebody at the table with
+      // no device — the only seat anybody may choose a character for but their
+      // own.
+      body: JSON.stringify({ name: name.trim() || null, local: true }),
     });
     if (!response.ok) return setError((await response.json()).error);
     refresh();
@@ -282,14 +289,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const tableScreenHolder = seats.find((seat) => seat.is_host)?.player_name ?? null;
 
   // Whose character is being chosen. Left to the app until somebody says
-  // otherwise: this device's own seat first, then any seat with no device of
-  // its own, so a locally-added player is not stranded without one. Once a
-  // player picks a seat explicitly — or closes the picker — that choice wins.
+  // otherwise: this device's own seat first, then — only where the host is
+  // choosing on behalf of people with no device — a companion seat still
+  // without one. It used to fall through to *any* characterless seat, which is
+  // why opening a table could leave you aiming at a stranger's slot.
   const pickingFor =
     picking === "auto"
       ? mySeat && !mySeat.character_id
         ? mySeat
-        : (seats.find((seat) => !seat.character_id) ?? null)
+        : mySeat?.is_host && game.mode === "companion"
+          ? (seats.find((seat) => seat.no_device && !seat.character_id) ?? null)
+          : null
       : (seats.find((seat) => seat.id === picking) ?? null);
 
   // Cards in play this turn. A fight keeps the stack it interrupted, so the
@@ -323,6 +333,27 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   );
 
   if (!playing) {
+    // No name, no seat, no lobby. Everyone joins on their own device, so a
+    // visitor standing in the lobby without a seat was never a state worth
+    // having — it just deferred the one question the table needs answered.
+    if (mySeatIndex === null) {
+      return (
+        <>
+          {error && (
+            <p className="fixed inset-x-0 top-0 z-30 bg-vermilion/20 px-4 py-2 text-center text-sm text-vermilion">
+              {error}
+            </p>
+          )}
+          <JoinGate
+            code={game.join_code}
+            seats={seats.map(asLobbySeat)}
+            busy={busy}
+            onJoin={join}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         {overlays}
@@ -342,7 +373,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           busy={busy}
           onMode={(mode) => post("mode", { mode })}
           onAddLocal={addLocalPlayer}
-          onJoin={join}
           onPickFor={(seat) => setPicking(seat ? seat.id : null)}
           onChooseCharacter={(seat, characterId) => {
             post("character", { characterId, seatId: seat.id });
@@ -558,6 +588,7 @@ function asLobbySeat(seat: Seat): LobbySeat {
     abandoned: seat.abandoned_at !== null,
     away: seat.away,
     ready: seat.ready,
+    noDevice: seat.no_device,
   };
 }
 

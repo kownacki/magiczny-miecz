@@ -48,6 +48,24 @@ ten are banked for the expansions' Gród and Jaskinia.
 - [ ] Source audio: MM6's Music folder from a GOG copy into `assets/music/`
 - [ ] `npm run music`, then commit `public/music` (~14 MB for the five)
 
+Playback, built standalone in `src/lib/music/` and wired to nothing yet:
+
+- [x] `director.ts` — pure. Which zone owns the speakers, and a hold so that
+      turn order alternating between two rings does not crossfade every minute.
+      Same zone in means the identical state object out, so the caller can drive
+      it from every render without detecting changes itself.
+- [x] `player.ts` — equal-power crossfade behind a `MusicPort`, tested headless.
+      Linear would dip audibly at the midpoint; the curve keeps summed power at
+      1 throughout, asserted in the tests.
+- [x] `browserPort.ts` — Web Audio, not `audio.volume`: iOS ignores writes to
+      that property, so a volume-based fade is a hard cut on every iPhone.
+- [x] `useMusic.ts` — the connection point. Defaults to `enabled: false`; one
+      device makes noise, and which one is the caller's decision.
+- [x] `/music` — bench with the zone by hand and the hold on a slider, because
+      how long a zone should keep the room can only be settled by listening.
+- [ ] Pick a hold length at a real table, then connect: the active seat's field
+      to its `region`, which is already the `MusicZone` shape.
+
 ## Phase 2 — Transcription
 
 Every scan is image-only with no text layer, so all of this is read visually.

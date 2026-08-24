@@ -17,9 +17,16 @@ setup and the administration of the table.
 
 **Gracz (player)** — everyone else. Plays their own character and nothing else.
 
-There is no third role. Somebody who opens the table without joining is a
-spectator by consequence rather than by design: they see everything public and
-can act on nothing.
+There is no third role, and — in the lobby — no unseated state either. Opening
+the link *is* joining: the door asks for a name and puts you at the table, with
+a character still to choose. There was once a two-step way in (arrive, then
+press "Usiądź" to claim a seat), which existed for nobody: everyone plays on
+their own device and opens the link for exactly one reason.
+
+During play the seatless state does still exist — somebody who opens a table
+already in progress is a spectator by consequence rather than by design. They
+see everything public, can act on nothing, and can take over any seat nobody is
+behind.
 
 ### What only the host may do
 
@@ -34,7 +41,7 @@ can act on nothing.
 
 ### What any player may do
 
-Take a seat, choose their own character, say they are ready, change the name
+Choose their own character, say they are ready, change the name
 they are shown under, leave, take over an abandoned seat, adjust their own
 tracked values, and — during play — everything the rules give
 their character. Corrections to *other* seats' points stay open to everyone
@@ -147,9 +154,14 @@ middle of a real table and nobody else has a device. In *pełna symulacja*
 everybody has their own and joins with the code, so a slot the host filled in
 would be a way of taking somebody's seat before they arrived.
 
-**A name is required** to open a table or to join one. A table of "Miejsce 2"
-and "Miejsce 4" is nobody's game, and asking afterwards never happens — though
-it can be changed at any time.
+**A name is required** to open a table or to join one, and it is asked at the
+one moment somebody will answer it: on the way in. A table of "Miejsce 2" and
+"Miejsce 4" is nobody's game, and asking afterwards never happens — though it
+can be changed at any time.
+
+**A player is in one of three states**, and the lobby says which at a glance:
+still choosing a character, chosen, or ready. Nothing else about a seat matters
+before the start.
 
 **No password, and every table is public.** The five-character code is the only
 lock, and the list of tables shows them all. Anyone who can see the list is

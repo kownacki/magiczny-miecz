@@ -93,6 +93,39 @@ export default function Home() {
     }
   }
 
+  /**
+   * Joining by code, with the name already typed above.
+   *
+   * Doing the join here rather than routing and asking again saves the one
+   * person who filled the field in from being asked twice for the same thing.
+   * Leaving it blank is fine — the table's own door asks, and it insists.
+   */
+  async function joinTable() {
+    const clean = normaliseJoinCode(code);
+    if (clean.length < 4) return;
+    if (!name.trim()) return router.push(`/g/${clean}`);
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/games/${clean}/join`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error ?? "Nie udało się dołączyć.");
+        setBusy(false);
+        return;
+      }
+      localStorage.setItem(`mm:${clean}`, data.token);
+      router.push(`/g/${clean}`);
+    } catch {
+      setError("Nie udało się dołączyć.");
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-10 px-6 py-16">
       <header className="text-center">
@@ -135,8 +168,7 @@ export default function Home() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          const clean = normaliseJoinCode(code);
-          if (clean.length >= 4) router.push(`/g/${clean}`);
+          joinTable();
         }}
         className="flex flex-col gap-3"
       >
@@ -155,7 +187,8 @@ export default function Home() {
           />
           <button
             type="submit"
-            className="rounded-lg border border-edge bg-raised px-5 text-sm text-ink transition hover:border-ochre"
+            disabled={busy}
+            className="rounded-lg border border-edge bg-raised px-5 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
           >
             Dołącz
           </button>

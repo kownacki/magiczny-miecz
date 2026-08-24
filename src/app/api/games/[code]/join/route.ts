@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       return NextResponse.json({ seatIndex: claimed?.seat_index ?? null, token });
     }
 
-    const { seat, token } = await joinGame(game.id, name);
+    const { seat, token } = await joinGame(game.id, name, body.local === true);
     await bumpRevision(game.id);
     return NextResponse.json({ seatIndex: seat.seat_index, token });
   } catch (error) {
