@@ -178,7 +178,15 @@ characters out and the server refuses them, because two devices can reach for
 the same one in the same second and only the server sees both.
 
 **A name is required** to open a table or to join one, and it is asked at the
-one moment somebody will answer it: on the way in. A table of "Miejsce 2" and
+one moment somebody will answer it: on the way in — in a dialog, not as a field
+on the entry page. Opening a table and joining one need different things (the
+first also has to settle the mode), and a page carrying the union of both asks
+most people for something irrelevant to what they came to do. The entry page is
+therefore three things in the order they are wanted: join by code, open a table,
+and the list of tables that already exist. A device that already holds a seat at
+a table walks straight in from either of the last two — being asked your name at
+a table you are sitting at is the app forgetting who you are, and a join without
+a token would take a *second* seat and strand the first. A table of "Miejsce 2" and
 "Miejsce 4" is nobody's game, and asking afterwards never happens — though it
 can be changed at any time.
 

@@ -43,22 +43,35 @@ const STATUS_LABEL: Record<string, string> = {
   finished: "zakończona",
 };
 
-/** Entry point: start a new table, or join one whose code is being read out across it. */
+/** Which dialog is open, and what it is about to do. */
+type Intent = { kind: "create" } | { kind: "join"; code: string } | null;
+
+/**
+ * Entry point, in the order the questions actually arrive.
+ *
+ * Joining comes first because it is the commonest thing anybody does here: five
+ * people are in a room, one of them opened a table, and the other four are
+ * typing the code being read out. Opening a table is the rarer act, and the
+ * list of existing ones is what you scroll to when you cannot remember which
+ * table last night's game was on.
+ *
+ * Both routes go through a dialog rather than fields on this page. The name is
+ * required, and the mode has to be settled before a table exists; asking for
+ * both inline meant a page of fields most of which were irrelevant to whichever
+ * of the two things you had come to do.
+ */
 export default function Home() {
   const router = useRouter();
   const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  /** What kind of evening this is. Decided here, and never again. */
-  const [mode, setMode] = useState<"simulation" | "companion">("simulation");
+  const [intent, setIntent] = useState<Intent>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [games, setGames] = useState<GameSummary[] | null>(null);
   /** Which table is one more click from being deleted. */
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  // A game of this length spans several sittings, so the first question on
-  // opening the app is usually "which table were we on?" rather than "start a
-  // new one".
+  // A game of this length spans several sittings, so "which table were we on?"
+  // is a real question and the list is worth having before it is asked.
   useEffect(() => {
     fetch("/api/games")
       .then((response) => response.json())
@@ -72,17 +85,14 @@ export default function Home() {
     setGames((current) => (current ?? []).filter((game) => game.joinCode !== joinCode));
   }
 
-  async function startTable() {
-    // The name is required. A table of "Miejsce 2" and "Miejsce 4" is nobody's
-    // game, and asking later never happens.
-    if (!name.trim()) return;
+  async function createTable(name: string, mode: "simulation" | "companion") {
     setBusy(true);
     setError(null);
     try {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), mode }),
+        body: JSON.stringify({ name, mode }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -91,45 +101,58 @@ export default function Home() {
       router.push(`/g/${joinCode}`);
     } catch (problem) {
       setError((problem as Error).message);
+      setIntent(null);
+      setBusy(false);
+    }
+  }
+
+  async function joinTable(joinCode: string, name: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/games/${joinCode}/join`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Nie udało się dołączyć.");
+      localStorage.setItem(`mm:${joinCode}`, data.token);
+      router.push(`/g/${joinCode}`);
+    } catch (problem) {
+      setError((problem as Error).message);
+      setIntent(null);
       setBusy(false);
     }
   }
 
   /**
-   * Joining by code, with the name already typed above.
+   * Going to a table, from the list or from the code field.
    *
-   * Doing the join here rather than routing and asking again saves the one
-   * person who filled the field in from being asked twice for the same thing.
-   * Leaving it blank is fine — the table's own door asks, and it insists.
+   * A device that already holds a seat there walks straight in. Being asked
+   * your name again at a table you are already sitting at is the app forgetting
+   * who you are — and worse than forgetting, since a join with no token takes a
+   * *second* seat and strands the first one. Everybody else gets the dialog.
    */
-  async function joinTable() {
-    const clean = normaliseJoinCode(code);
-    if (clean.length < 4) return;
-    if (!name.trim()) return router.push(`/g/${clean}`);
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/games/${clean}/join`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setError(data.error ?? "Nie udało się dołączyć.");
-        setBusy(false);
-        return;
-      }
-      localStorage.setItem(`mm:${clean}`, data.token);
-      router.push(`/g/${clean}`);
-    } catch {
-      setError("Nie udało się dołączyć.");
-      setBusy(false);
-    }
+  function open(joinCode: string) {
+    if (localStorage.getItem(`mm:${joinCode}`)) return router.push(`/g/${joinCode}`);
+    setIntent({ kind: "join", code: joinCode });
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-10 px-6 py-16">
+    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-8 px-6 py-16">
+      {intent?.kind === "create" && (
+        <CreateDialog busy={busy} onCancel={() => setIntent(null)} onCreate={createTable} />
+      )}
+      {intent?.kind === "join" && (
+        <JoinDialog
+          code={intent.code}
+          busy={busy}
+          onCancel={() => setIntent(null)}
+          onJoin={(name) => joinTable(intent.code, name)}
+        />
+      )}
+
       <header className="text-center">
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold tracking-wide text-ochre">
           Magiczny Miecz
@@ -140,29 +163,284 @@ export default function Home() {
         </p>
       </header>
 
+      {/* First, because it is what most people came here to do: somebody is
+          reading a code out and four other people are typing it. */}
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          startTable();
+          const clean = normaliseJoinCode(code);
+          if (clean.length >= 4) open(clean);
+        }}
+        className="flex flex-col gap-3"
+      >
+        <label htmlFor="code" className="text-xs uppercase tracking-widest text-muted">
+          Dołącz kodem
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="code"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="np. K7DQM"
+            autoCapitalize="characters"
+            autoComplete="off"
+            className="tnum flex-1 rounded-lg border border-edge bg-panel px-4 py-3 text-center text-2xl uppercase tracking-[0.3em] text-ink placeholder:text-muted/50 focus:border-ochre focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={busy || normaliseJoinCode(code).length < 4}
+            className="rounded-lg border border-ochre bg-ochre/10 px-5 font-[family-name:var(--font-display)] text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
+          >
+            Dołącz
+          </button>
+        </div>
+      </form>
+
+      <button
+        onClick={() => setIntent({ kind: "create" })}
+        disabled={busy}
+        className="rounded-lg border border-edge bg-raised px-6 py-4 font-[family-name:var(--font-display)] text-lg font-medium text-ink transition hover:border-ochre hover:bg-edge disabled:opacity-50"
+      >
+        Otwórz nowy stół
+      </button>
+
+      {error && <p className="text-center text-sm text-vermilion">{error}</p>}
+
+      {games !== null && games.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-xs uppercase tracking-widest text-muted">Stoły</h2>
+          {games.map((game) => (
+            <div
+              key={game.joinCode}
+              className="rounded-lg border border-edge bg-panel/50 transition hover:border-ochre"
+            >
+              <button
+                onClick={() => open(game.joinCode)}
+                className="block w-full px-3 py-2 text-left"
+              >
+                <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <span className="tnum font-[family-name:var(--font-display)] tracking-[0.2em] text-ink">
+                    {game.joinCode}
+                  </span>
+                  <span className="text-[11px] text-muted">
+                    {/* The mode is fixed at creation, so it is a property of the
+                        table worth seeing before you open it. */}
+                    {game.mode === "companion" ? "przy planszy" : "symulacja"} ·{" "}
+                    {STATUS_LABEL[game.status] ?? game.status}
+                    {game.status === "playing" ? ` · tura ${game.turn}` : ""} ·{" "}
+                    {whenPlayed(game.lastPlayedAt)}
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-[11px] text-muted">
+                  {game.players.length === 0
+                    ? "nikogo jeszcze nie ma"
+                    : game.players
+                        .map((player) => {
+                          const who =
+                            player.name ??
+                            (player.characterId
+                              ? (CHARACTER_NAMES.get(player.characterId) ?? "?")
+                              : "wolne");
+                          // A seat somebody walked away from still holds its
+                          // character, so it is listed — and marked, because
+                          // that is the thing worth knowing before you sit down.
+                          return player.abandoned ? `${who} (bez gracza)` : who;
+                        })
+                        .join(" · ")}
+                </span>
+              </button>
+              {/* Deleting is final and there is no undo, so it takes two clicks
+                  and says what it is doing. Every table here is public — the code
+                  is the only lock — so the guard is the confirmation, not a
+                  permission check the server could not meaningfully make. */}
+              <div className="flex justify-end border-t border-edge/50 px-3 py-1">
+                {deleting === game.joinCode ? (
+                  <span className="flex items-center gap-2 text-[11px]">
+                    <span className="text-vermilion">Skasować stół bez śladu?</span>
+                    <button
+                      onClick={() => remove(game.joinCode)}
+                      className="rounded border border-vermilion/60 px-1.5 text-vermilion"
+                    >
+                      tak
+                    </button>
+                    <button onClick={() => setDeleting(null)} className="text-muted hover:text-ink">
+                      nie
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setDeleting(game.joinCode)}
+                    className="text-[11px] text-muted/70 hover:text-vermilion"
+                  >
+                    skasuj
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+    </main>
+  );
+}
+
+/**
+ * The frame both dialogs share.
+ *
+ * Deliberately not a `<dialog>` and never a `confirm()`: a native modal cannot
+ * be styled to match the rest of this, and on a phone it interrupts with a
+ * system alert. The backdrop and Escape both close it, which is what anybody
+ * who opened it by accident will try.
+ */
+function Dialog({
+  title,
+  onCancel,
+  children,
+}: {
+  title: React.ReactNode;
+  onCancel: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-night/85 p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-lg border border-edge bg-panel p-5"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onCancel();
+        }}
+      >
+        <h2 className="mb-4 text-center font-[family-name:var(--font-display)] text-xl text-ochre">
+          {title}
+        </h2>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Both dialogs ask this first, and neither will proceed without it. */
+function NameField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <>
+      <label htmlFor="dialog-name" className="text-xs uppercase tracking-widest text-muted">
+        Twoje imię
+      </label>
+      <input
+        id="dialog-name"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="np. Michał"
+        maxLength={24}
+        autoFocus
+        className="rounded border border-edge bg-night px-3 py-2 text-center text-lg text-ink outline-none focus:border-ochre"
+      />
+    </>
+  );
+}
+
+function Actions({
+  busy,
+  disabled,
+  label,
+  onCancel,
+}: {
+  busy: boolean;
+  disabled: boolean;
+  label: string;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="mt-4 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="rounded border border-edge px-3 py-2 text-sm text-muted transition hover:text-ink"
+      >
+        Anuluj
+      </button>
+      <button
+        type="submit"
+        disabled={busy || disabled}
+        className="flex-1 rounded border border-ochre bg-ochre/10 px-4 py-2 font-[family-name:var(--font-display)] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
+      >
+        {label}
+      </button>
+    </div>
+  );
+}
+
+function JoinDialog({
+  code,
+  busy,
+  onCancel,
+  onJoin,
+}: {
+  code: string;
+  busy: boolean;
+  onCancel: () => void;
+  onJoin: (name: string) => void;
+}) {
+  const [name, setName] = useState("");
+  return (
+    <Dialog
+      title={
+        <>
+          Dołączasz do stołu <span className="tnum tracking-[0.2em] text-ink">{code}</span>
+        </>
+      }
+      onCancel={onCancel}
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (name.trim()) onJoin(name.trim());
         }}
         className="flex flex-col gap-2"
       >
-        <label className="text-xs uppercase tracking-widest text-muted" htmlFor="name">
-          Twoje imię
-        </label>
-        <input
-          id="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="np. Michał"
-          maxLength={24}
-          className="rounded border border-edge bg-panel px-3 py-2 text-ink outline-none focus:border-ochre"
+        <NameField value={name} onChange={setName} />
+        <Actions
+          busy={busy}
+          disabled={!name.trim()}
+          label={busy ? "Dołączam…" : "Dołącz"}
+          onCancel={onCancel}
         />
-        {/* The mode belongs to the table, so it is chosen before the table
+      </form>
+    </Dialog>
+  );
+}
+
+function CreateDialog({
+  busy,
+  onCancel,
+  onCreate,
+}: {
+  busy: boolean;
+  onCancel: () => void;
+  onCreate: (name: string, mode: "simulation" | "companion") => void;
+}) {
+  const [name, setName] = useState("");
+  const [mode, setMode] = useState<"simulation" | "companion">("simulation");
+
+  return (
+    <Dialog title="Nowy stół" onCancel={onCancel}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (name.trim()) onCreate(name.trim(), mode);
+        }}
+        className="flex flex-col gap-2"
+      >
+        <NameField value={name} onChange={setName} />
+
+        {/* The mode belongs to the table, so it is settled before the table
             exists rather than toggled in the lobby afterwards. It decides
             whether there is a board in the room, which is not a preference
             anybody changes their mind about between clicking twice. */}
-        <fieldset className="mt-2 flex flex-col gap-2">
+        <fieldset className="mt-3 flex flex-col gap-2">
           <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
             Jak gracie
           </legend>
@@ -179,122 +457,15 @@ export default function Home() {
             hint="Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
           />
         </fieldset>
-        <button
-          type="submit"
-          disabled={busy || !name.trim()}
-          className="mt-2 rounded-lg border border-edge bg-raised px-6 py-4 font-[family-name:var(--font-display)] text-lg font-medium text-ink transition hover:border-ochre hover:bg-edge disabled:opacity-50"
-        >
-          {busy ? "Otwieram stół…" : "Otwórz nowy stół"}
-        </button>
+
+        <Actions
+          busy={busy}
+          disabled={!name.trim()}
+          label={busy ? "Otwieram…" : "Otwórz stół"}
+          onCancel={onCancel}
+        />
       </form>
-
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          joinTable();
-        }}
-        className="flex flex-col gap-3"
-      >
-        <label htmlFor="code" className="text-xs uppercase tracking-widest text-muted">
-          albo dołącz kodem
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="code"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="np. K7DQM"
-            autoCapitalize="characters"
-            autoComplete="off"
-            className="tnum flex-1 rounded-lg border border-edge bg-panel px-4 py-3 text-center text-2xl tracking-[0.3em] text-ink uppercase placeholder:text-muted/50 focus:border-ochre focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-lg border border-edge bg-raised px-5 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
-          >
-            Dołącz
-          </button>
-        </div>
-      </form>
-
-      {error && <p className="text-center text-sm text-vermilion">{error}</p>}
-
-      {games !== null && games.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-xs uppercase tracking-widest text-muted">Stoły</h2>
-          {games.map((game) => (
-            <div
-              key={game.joinCode}
-              className="rounded-lg border border-edge bg-panel/50 transition hover:border-ochre"
-            >
-            <button
-              onClick={() => router.push(`/g/${game.joinCode}`)}
-              className="block w-full px-3 py-2 text-left"
-            >
-              <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <span className="tnum font-[family-name:var(--font-display)] tracking-[0.2em] text-ink">
-                  {game.joinCode}
-                </span>
-                <span className="text-[11px] text-muted">
-                  {/* The mode is fixed at creation, so it is a property of the
-                      table worth seeing before you open it. */}
-                  {game.mode === "companion" ? "przy planszy" : "symulacja"} ·{" "}
-                  {STATUS_LABEL[game.status] ?? game.status}
-                  {game.status === "playing" ? ` · tura ${game.turn}` : ""} ·{" "}
-                  {whenPlayed(game.lastPlayedAt)}
-                </span>
-              </span>
-              <span className="mt-0.5 block text-[11px] text-muted">
-                {game.players.length === 0
-                  ? "nikogo jeszcze nie ma"
-                  : game.players
-                      .map((player) => {
-                        const who =
-                          player.name ??
-                          (player.characterId
-                            ? (CHARACTER_NAMES.get(player.characterId) ?? "?")
-                            : "wolne");
-                        // A seat somebody walked away from still holds its
-                        // character, so it is listed — and marked, because
-                        // that is the thing worth knowing before you sit down.
-                        return player.abandoned ? `${who} (bez gracza)` : who;
-                      })
-                      .join(" · ")}
-              </span>
-            </button>
-            {/* Deleting is final and there is no undo, so it takes two clicks
-                and says what it is doing. Every table here is public — the code
-                is the only lock — so the guard is the confirmation, not a
-                permission check the server could not meaningfully make. */}
-            <div className="flex justify-end border-t border-edge/50 px-3 py-1">
-              {deleting === game.joinCode ? (
-                <span className="flex items-center gap-2 text-[11px]">
-                  <span className="text-vermilion">Skasować stół bez śladu?</span>
-                  <button
-                    onClick={() => remove(game.joinCode)}
-                    className="rounded border border-vermilion/60 px-1.5 text-vermilion"
-                  >
-                    tak
-                  </button>
-                  <button onClick={() => setDeleting(null)} className="text-muted hover:text-ink">
-                    nie
-                  </button>
-                </span>
-              ) : (
-                <button
-                  onClick={() => setDeleting(game.joinCode)}
-                  className="text-[11px] text-muted/70 hover:text-vermilion"
-                >
-                  skasuj
-                </button>
-              )}
-            </div>
-            </div>
-          ))}
-        </section>
-      )}
-    </main>
+    </Dialog>
   );
 }
 
@@ -315,9 +486,7 @@ function ModeChoice({
       onClick={onPick}
       aria-pressed={active}
       className={`rounded-lg border px-3 py-2 text-left transition ${
-        active
-          ? "border-ochre bg-ochre/10"
-          : "border-edge bg-panel/40 hover:border-ochre/60"
+        active ? "border-ochre bg-ochre/10" : "border-edge bg-panel/40 hover:border-ochre/60"
       }`}
     >
       <span
