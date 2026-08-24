@@ -32,6 +32,7 @@ interface Seat {
 interface Game {
   id: string;
   join_code: string;
+  mode: string;
   status: string;
   active_seat: number | null;
   turn: number;
@@ -150,6 +151,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   if (!game) return <Centered>Wczytuję stół…</Centered>;
 
   const mySeat = seats.find((seat) => seat.seat_index === mySeatIndex);
+  // The shared screen in the middle of the table. Whoever's turn it is reaches
+  // over and taps it, so it drives the active player rather than sitting idle
+  // saying "waiting".
+  const isTableScreen = mySeat?.is_host === true && game.mode === "companion";
   const active = seats.find((seat) => seat.seat_index === game.active_seat);
   const seated = seats.filter((seat) => seat.character_id);
   const taken = new Set(seats.map((seat) => seat.character_id).filter(Boolean));
@@ -171,6 +176,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           <p className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.25em] text-ink">
             {game.join_code}
           </p>
+          {mySeatIndex !== null && !isTableScreen && (
+            <button
+              onClick={() => post("host", {})}
+              disabled={busy}
+              className="mt-1 mr-3 text-[11px] text-muted underline underline-offset-2 transition hover:text-ochre disabled:opacity-50"
+            >
+              Przejmij ekran stołu
+            </button>
+          )}
           {mySeatIndex !== null && (
             <button
               onClick={leave}
@@ -189,7 +203,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <div className="mb-8">
           <TurnPanel
             phase={game.turn_state}
-            isMine={mySeatIndex !== null && active.seat_index === mySeatIndex}
+            isMine={
+              (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
+            }
+            actingForOther={isTableScreen && active.seat_index !== mySeatIndex}
             playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
             fieldName={
               active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
@@ -217,7 +234,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onAdjust={(stat, delta) => post("adjust", { seatId: seat.id, stat, delta })}
           />
         ))}
-        {seats.length < 6 && !playing && (
+        {seats.length < 6 && !playing && mySeatIndex === null && (
           <button
             onClick={join}
             className="rounded-lg border border-dashed border-edge px-4 py-8 text-sm text-muted transition hover:border-ochre hover:text-ink"

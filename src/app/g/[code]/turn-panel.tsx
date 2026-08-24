@@ -55,6 +55,8 @@ interface Props {
   fieldName: string;
   /** The instruction printed on the board for the field, if it has been transcribed. */
   fieldText: string | null;
+  /** True when this is the shared table screen driving somebody else's turn. */
+  actingForOther?: boolean;
   dieSource: string;
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
@@ -68,6 +70,7 @@ export function TurnPanel({
   playerName,
   fieldName,
   fieldText,
+  actingForOther = false,
   dieSource,
   busy,
   onAction,
@@ -98,6 +101,12 @@ export function TurnPanel({
           )}
           <RollTable text={fieldText} />
         </div>
+      )}
+
+      {actingForOther && (
+        <p className="mb-3 text-xs text-ochre/80">
+          To urządzenie prowadzi turę gracza {playerName}.
+        </p>
       )}
 
       {!isMine ? (

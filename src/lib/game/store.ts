@@ -264,6 +264,29 @@ export async function leaveGame(
 }
 
 /**
+ * Moves the table-screen role to a seat.
+ *
+ * At a physical table the shared device changes hands — someone's laptop goes
+ * flat, or the person who opened the table is not the one sitting in front of
+ * it. Any seated player may claim it, which is the right trust model here:
+ * they are all in the same room, and in companion mode the app holds nothing
+ * the others cannot already see.
+ *
+ * It also recovers a table whose host seat became unreachable, which is easy to
+ * do by joining twice from one browser and overwriting the stored token.
+ */
+export async function claimTableScreen(gameId: string, seatId: string): Promise<void> {
+  const seats = await seatsFor(gameId);
+  for (const seat of seats) {
+    if (seat.is_host && seat.id !== seatId) {
+      await db.from("seats").update({ is_host: false }).eq("id", seat.id);
+    }
+  }
+  const { error } = await db.from("seats").update({ is_host: true }).eq("id", seatId);
+  if (error) throw new Error(`claimTableScreen: ${error.message}`);
+}
+
+/**
  * Keeps a table hosted. The host flag only decides who sees the lobby controls,
  * but a table whose host walked away with it would strand everyone else.
  */

@@ -13,9 +13,16 @@ import {
 import type { CardClass } from "@/data/types";
 
 /**
- * Every turn action funnels through here. The seat token is required even
- * though the table screen could act without one: it is what stops a player
- * taking someone else's turn from their own phone.
+ * Every turn action funnels through here.
+ *
+ * Two devices may act for the current player: the one holding that seat, and —
+ * in companion mode — the host's, which is the shared screen sitting in the
+ * middle of the table. That is not a hole in the secrecy model: in companion
+ * mode every hidden thing is a physical card in somebody's hand, and the app
+ * holds nothing worth protecting from the people already sitting there.
+ *
+ * Simulation mode is excluded, because there the app *does* hold each player's
+ * concealed spells (9.3) and one device acting for everyone would expose them.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -25,7 +32,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const body = await request.json().catch(() => ({}));
   const seat = await verifySeat(game.id, String(body.token ?? ""));
   if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
-  if (seat.seat_index !== game.active_seat) {
+  const isActiveSeat = seat.seat_index === game.active_seat;
+  const isTableScreen = game.mode === "companion" && seat.is_host;
+  if (!isActiveSeat && !isTableScreen) {
     return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
   }
 
