@@ -132,12 +132,29 @@ how it comes back.
 utworzony ──> poczekalnia ──> w trakcie ──> zakończona
                    │              │
                    │              └─ gracz odchodzi ─> miejsce bez gracza ─> ktoś je przejmuje
-                   └─ gospodarz usuwa miejsce ─> miejsce znika
+                   ├─ gospodarz usuwa miejsce ─> miejsce znika
+                   └─ gracz zamyka kartę ─────> miejsce znika ─> (ostatnie) stół znika
 ```
 
 **Poczekalnia.** Seats are intentions, not characters. Leaving deletes the seat
 and the host may remove any of them. Nothing is lost because nothing has
 happened yet.
+
+Closing the tab is the same act without the click, so it has the same effect:
+a seat nobody has been heard from for `LOBBY_GONE_AFTER_MS` is deleted. The
+threshold is deliberately much longer than the one for *nieobecny* — browsers
+throttle timers in a background tab to roughly once a minute, and evicting
+somebody for reading something else in another tab would be worse than leaving
+a ghost on screen for two minutes.
+
+When the last seat goes, so does the table. An empty poczekalnia is not a game
+anybody can join; it is a code taking up space in the list. A table left holding
+only seats the host filled in by hand counts as empty too — those have no device
+behind them, so nobody can choose a character or start it.
+
+Nobody polls a table everybody has closed, so it never hears that it is empty.
+The sweep therefore runs in two places: when anybody opens the table, and when
+anybody loads the list of tables.
 
 Arriving at a table already in progress is not joining — the Karty Postaci were
 dealt at setup and there is no 27th player. What the newcomer is offered is the

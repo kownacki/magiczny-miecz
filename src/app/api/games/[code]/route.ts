@@ -7,6 +7,7 @@ import {
   holdingsFor,
   markSeen,
   seatsFor,
+  sweepLobby,
   verifySeat,
 } from "@/lib/game/store";
 import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
@@ -26,6 +27,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   const { code } = await params;
   const game = await findGame(code.toUpperCase());
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
+
+  // Everybody in the poczekalnia is polling, so this is where a table finds out
+  // that somebody closed their tab — and clears their seat, or itself if there
+  // is nobody left.
+  if (await sweepLobby(game.id, game.status)) {
+    return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
+  }
 
   const token = new URL(request.url).searchParams.get("token");
   const mine = token ? await verifySeat(game.id, token) : null;

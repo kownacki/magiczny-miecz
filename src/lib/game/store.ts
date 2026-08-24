@@ -144,7 +144,18 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
     .limit(limit);
   if (error) throw new Error(`listGames: ${error.message}`);
 
-  const games = data ?? [];
+  // A poczekalnia everybody closed their tab on has nobody polling it, so it
+  // never hears that it is empty. This is the other place anybody looks, and
+  // the list is precisely where an abandoned table does its damage: it reads as
+  // a game you could join.
+  const swept = new Set<string>();
+  for (const game of data ?? []) {
+    if (await sweepLobby(game.id as string, game.status as string)) {
+      swept.add(game.id as string);
+    }
+  }
+
+  const games = (data ?? []).filter((game) => !swept.has(game.id as string));
   if (games.length === 0) return [];
 
   const { data: seats } = await db
@@ -647,9 +658,69 @@ export const AWAY_AFTER_MS = 45_000;
  * A seat that has *never* checked in is not quiet — it is either brand new or a
  * player the host seated by hand, and neither is free for the taking.
  */
-export function isQuiet(seat: Pick<SeatRow, "seen_at">): boolean {
+export function isQuiet(seat: Pick<SeatRow, "seen_at">, after = AWAY_AFTER_MS): boolean {
   if (!seat.seen_at) return false;
-  return Date.now() - new Date(seat.seen_at).getTime() > AWAY_AFTER_MS;
+  return Date.now() - new Date(seat.seen_at).getTime() > after;
+}
+
+/**
+ * How long a seat in the poczekalnia may go unheard-from before it is taken off
+ * the table.
+ *
+ * Much longer than `AWAY_AFTER_MS`, because a hidden tab is not a closed one.
+ * Browsers throttle timers in background tabs to roughly once a minute, so
+ * somebody who switched away to read something else is still checking in —
+ * just slowly. Anything under two minutes evicts them for looking away.
+ */
+export const LOBBY_GONE_AFTER_MS = 150_000;
+
+/**
+ * Clears out a poczekalnia that people have closed their tabs on.
+ *
+ * Before the game starts a seat is an intention, not a character: nothing has
+ * happened to it, nobody has acted on anything it owns, and a table showing
+ * four names when one person is present is worse than a table showing one. So
+ * a seat nobody has been heard from is deleted outright rather than marked —
+ * which is what leaving does too (see `leaveGame`), and closing the tab is the
+ * same act without the click.
+ *
+ * The host role moves on the same rule it always does: to whoever has been at
+ * the table longest of those remaining. And when the last seat goes the table
+ * goes with it, because an empty poczekalnia is not a game anybody can join —
+ * it is a code taking up space in the list.
+ *
+ * Returns true when the game itself was removed.
+ */
+export async function sweepLobby(gameId: string, status: string): Promise<boolean> {
+  if (status !== "lobby") return false;
+
+  const seats = await seatsFor(gameId);
+  // A seat the host filled in by hand has no device and never checks in; it is
+  // driven from the shared screen, and sweeping it would delete players sitting
+  // at the table.
+  const gone = seats.filter(
+    (seat) => !seat.no_device && isQuiet(seat, LOBBY_GONE_AFTER_MS),
+  );
+  if (gone.length === 0) return false;
+
+  const { error } = await db
+    .from("seats")
+    .delete()
+    .in("id", gone.map((seat) => seat.id));
+  if (error) throw new Error(`sweepLobby: ${error.message}`);
+
+  // Nobody left who could do anything. Seats the host filled in by hand have no
+  // device of their own, so a table holding only those is a table with nobody
+  // able to choose a character or start it — an empty room with figures set
+  // out, not a game waiting for anybody.
+  const left = seats.filter((seat) => !gone.includes(seat));
+  if (left.every((seat) => seat.no_device)) {
+    await deleteGame(gameId);
+    return true;
+  }
+  for (const seat of gone) await promoteHostIfNeeded(gameId, seat);
+  await bumpRevision(gameId);
+  return false;
 }
 
 /** Records that this seat's device is still there. */
