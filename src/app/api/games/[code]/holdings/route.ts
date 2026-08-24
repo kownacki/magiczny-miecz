@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { dropCard, takeCard, tradeTrophies } from "@/lib/game/turnStore";
+import { drawSpell, dropCard, takeCard, tradeTrophies } from "@/lib/game/turnStore";
 
 /**
  * Taking, dropping and trading in cards.
@@ -27,6 +27,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "drop":
         await dropCard(game.id, String(body.holdingId));
         break;
+      case "spell":
+        return NextResponse.json({
+          spellId: await drawSpell(game.id, String(body.seatId ?? actor.id)),
+        });
       case "trade":
         return NextResponse.json({
           gained: await tradeTrophies(game.id, String(body.seatId ?? actor.id)),

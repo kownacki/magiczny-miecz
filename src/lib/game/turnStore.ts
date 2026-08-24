@@ -42,10 +42,42 @@ const BY_REF = new Map(EVENTS.map((card) => [cardRef(card.source), card]));
  */
 const shuffle = shuffleWith(Math.random);
 
-export function freshDeck(): DeckState {
-  return buildDeck(EVENTS.map((card) => cardRef(card.source)), shuffle);
+import spellsData from "@/data/spells.json";
+import type { Spell } from "@/data/types";
+
+const SPELLS = spellsData as Spell[];
+const SPELL_BY_REF = new Map(SPELLS.map((s) => [cardRef(s.source), s]));
+
+/**
+ * Both piles a simulated game deals from.
+ *
+ * Kept separate because they recycle separately: rule 9.5 says the Spell pile
+ * is reshuffled from used spells when it runs out, and the event deck does the
+ * same for its own discards. Merging them would let a spent Zaklęcie come back
+ * as a Karta Zdarzeń.
+ */
+export interface Decks {
+  events: DeckState;
+  spells: DeckState;
 }
-import { bumpRevision, seatsFor, type GameRow, type SeatRow } from "./store";
+
+export function freshDecks(): Decks {
+  return {
+    events: buildDeck(EVENTS.map((card) => cardRef(card.source)), shuffle),
+    spells: buildDeck(SPELLS.map((card) => cardRef(card.source)), shuffle),
+  };
+}
+
+/** Reads the stored decks, tolerating a game started before spells existed. */
+function decksOf(game: { deck: unknown }): Decks {
+  const stored = game.deck as Partial<Decks> | null;
+  if (!stored?.events) return freshDecks();
+  return { events: stored.events, spells: stored.spells ?? buildDeck(SPELLS.map((c) => cardRef(c.source)), shuffle) };
+}
+import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
+import { bonusFromHoldings } from "@/lib/engine/holdings";
+import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
+import { spellCapacity } from "@/lib/engine/derive";
 
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
   const { data, error } = await db
@@ -98,7 +130,7 @@ export async function startGame(gameId: string): Promise<void> {
       started_at: new Date().toISOString(),
       // Only a simulation needs a deck. In companion mode the deck is the
       // physical one on the table and the app must not pretend to own it.
-      deck: game.mode === "simulation" ? freshDeck() : null,
+      deck: game.mode === "simulation" ? freshDecks() : null,
     })
     .eq("id", gameId);
   await journal(gameId, null, 1, "start", { seats: ready.length });
@@ -188,8 +220,8 @@ export async function drawCard(
     return { card: EVENTS.find((c) => c.id === named.cardId) ?? null, recycled: false };
   }
 
-  const deck: DeckState = (game.deck as DeckState | null) ?? freshDeck();
-  const { deck: after, drawn, recycled } = drawFrom(deck, 1, shuffle);
+  const decks = decksOf(game);
+  const { deck: after, drawn, recycled } = drawFrom(decks.events, 1, shuffle);
   if (drawn.length === 0) throw new Error("Talia Kart Zdarzeń jest pusta.");
 
   const card = BY_REF.get(drawn[0]);
@@ -200,7 +232,10 @@ export async function drawCard(
     cardClass: card.cardClass,
     ref: drawn[0],
   });
-  await db.from("games").update({ turn_state: next, deck: after }).eq("id", gameId);
+  await db
+    .from("games")
+    .update({ turn_state: next, deck: { ...decks, events: after } })
+    .eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "karta", {
     cardId: card.id,
     ref: drawn[0],
@@ -215,8 +250,74 @@ export async function drawCard(
 export async function discardDrawn(gameId: string, refs: string[]): Promise<void> {
   const game = await loadGame(gameId);
   if (game.mode !== "simulation" || refs.length === 0) return;
-  const deck: DeckState = (game.deck as DeckState | null) ?? freshDeck();
-  await db.from("games").update({ deck: discardTo(deck, refs) }).eq("id", gameId);
+  const decks = decksOf(game);
+  await db
+    .from("games")
+    .update({ deck: { ...decks, events: discardTo(decks.events, refs) } })
+    .eq("id", gameId);
+}
+
+/**
+ * Deals a spell to a seat, if its Magia allows one more (2.6, 9.2).
+ *
+ * The capacity check is the rule that actually bites: a character with Magia 1
+ * may hold no spells at all, and one that gains a spell it cannot hold must
+ * shed the excess immediately (9.4).
+ */
+export async function drawSpell(gameId: string, seatId: string): Promise<string> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  const held = await db
+    .from("holdings")
+    .select("id")
+    .eq("seat_id", seatId)
+    .eq("kind", "spell");
+  const holdings = await holdingsFor(gameId);
+  const mine = holdings
+    .filter((h) => h.seat_id === seatId)
+    .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
+  const bonus = bonusFromHoldings(mine);
+  const capacity = spellCapacity(seat.magia_own + bonus.magia);
+
+  if ((held.data?.length ?? 0) >= capacity) {
+    // Polish numerals agree with the noun: 2-4 take "Zaklęcia", 5 and up take
+    // "Zaklęć". The capacity table tops out at 3, so both forms occur.
+    const noun = capacity >= 2 && capacity <= 4 ? "Zaklęcia" : "Zaklęć";
+    throw new Error(
+      capacity === 0
+        ? "Magia tej Postaci nie pozwala na żadne Zaklęcia (2.6)."
+        : `Ta Postać może mieć najwyżej ${capacity} ${noun} (2.6).`,
+    );
+  }
+
+  if (game.mode === "companion") {
+    throw new Error("Przy planszy Zaklęcia ciągnie się z fizycznego stosu.");
+  }
+
+  const decks = decksOf(game);
+  const { deck: after, drawn } = drawFrom(decks.spells, 1, shuffle);
+  if (drawn.length === 0) throw new Error("Stos Kart Zaklęć jest pusty.");
+  const spell = SPELL_BY_REF.get(drawn[0]);
+  if (!spell) throw new Error(`Nieznane Zaklęcie: ${drawn[0]}`);
+
+  await db.from("holdings").insert({
+    game_id: gameId,
+    seat_id: seatId,
+    card_id: spell.id,
+    kind: "spell",
+    // Concealed from the other players (9.3).
+    face: "hidden",
+  });
+  await db
+    .from("games")
+    .update({ deck: { ...decks, spells: after } })
+    .eq("id", gameId);
+  await journal(gameId, seatId, game.turn, "zaklecie", { spellId: spell.id });
+  await bumpRevision(gameId);
+  return spell.id;
 }
 
 /**
@@ -333,6 +434,21 @@ export async function takeCard(
 
   const kind = kindForCard(card);
   if (!kind) throw new Error("Tej karty nie można zabrać ze sobą.");
+
+  // Rule 5.4: four Przedmioty at a time unless the character has transport.
+  // Friends and trophies are not Przedmioty and do not count (6.3 puts no limit
+  // on Friends at all), and Sztuki Złota never count (3.5).
+  if (kind === "item") {
+    const holdings = await holdingsFor(gameId);
+    const mine = holdings
+      .filter((h) => h.seat_id === seatId)
+      .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
+    if (carriedCount(mine) >= carryLimit(mine)) {
+      throw new Error(
+        `Postać może nieść najwyżej ${BASE_CARRY_LIMIT} Przedmioty (5.4). Odrzuć coś najpierw.`,
+      );
+    }
+  }
 
   await db.from("holdings").insert({
     game_id: gameId,
@@ -462,7 +578,46 @@ export async function adjust(
     { stat, delta, from: current, to: next, reason },
     true,
   );
+
+  if (stat === "zycie" && next === 0 && !seat.eliminated) await killSeat(gameId, seatId);
   await bumpRevision(gameId);
+}
+
+/**
+ * Rule 4.4: a character that has lost all its Życie is dead.
+ *
+ * It comes off the board, and its Przedmioty and Przyjaciele stay on the field
+ * where it died — which is why they are dropped rather than deleted silently.
+ * Its Zaklęcia go to the used pile, and its Miecz and Magia tokens go back to
+ * the reserve, which is what clearing the seat's own points represents.
+ *
+ * The player is not out of the game: 4.4 lets them start again with a new
+ * character. Choosing one is left to them rather than done automatically.
+ */
+async function killSeat(gameId: string, seatId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seatId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+
+  const left = holdings.filter((h) => h.kind === "item" || h.kind === "friend");
+  if (left.length > 0 && seat?.field_id) {
+    await db.from("field_cards").insert(
+      left.map((h) => ({ game_id: gameId, field_id: seat.field_id, card_id: h.card_id })),
+    );
+  }
+  await db.from("holdings").delete().eq("seat_id", seatId);
+
+  const spells = holdings.filter((h) => h.kind === "spell").length;
+  await db.from("seats").update({ eliminated: true }).eq("id", seatId);
+  await journal(gameId, seatId, game.turn, "smierc", {
+    droppedOnField: left.map((h) => h.card_id),
+    spellsDiscarded: spells,
+    field: seat?.field_id ?? null,
+  });
+
+  // With the character gone, play must move on if it was their turn.
+  if (game.active_seat === seat?.seat_index) await finishTurn(gameId);
 }
 
 /**
