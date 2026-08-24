@@ -48,6 +48,8 @@ export default function Home() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  /** What kind of evening this is. Decided here, and never again. */
+  const [mode, setMode] = useState<"simulation" | "companion">("simulation");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [games, setGames] = useState<GameSummary[] | null>(null);
@@ -80,7 +82,7 @@ export default function Home() {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: name.trim(), mode }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -156,10 +158,31 @@ export default function Home() {
           maxLength={24}
           className="rounded border border-edge bg-panel px-3 py-2 text-ink outline-none focus:border-ochre"
         />
+        {/* The mode belongs to the table, so it is chosen before the table
+            exists rather than toggled in the lobby afterwards. It decides
+            whether there is a board in the room, which is not a preference
+            anybody changes their mind about between clicking twice. */}
+        <fieldset className="mt-2 flex flex-col gap-2">
+          <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
+            Jak gracie
+          </legend>
+          <ModeChoice
+            active={mode === "simulation"}
+            onPick={() => setMode("simulation")}
+            label="Pełna symulacja"
+            hint="Wszystko dzieje się tutaj — plansza i karty nie są potrzebne."
+          />
+          <ModeChoice
+            active={mode === "companion"}
+            onPick={() => setMode("companion")}
+            label="Sędzia przy planszy"
+            hint="Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
+          />
+        </fieldset>
         <button
           type="submit"
           disabled={busy || !name.trim()}
-          className="rounded-lg border border-edge bg-raised px-6 py-4 font-[family-name:var(--font-display)] text-lg font-medium text-ink transition hover:border-ochre hover:bg-edge disabled:opacity-50"
+          className="mt-2 rounded-lg border border-edge bg-raised px-6 py-4 font-[family-name:var(--font-display)] text-lg font-medium text-ink transition hover:border-ochre hover:bg-edge disabled:opacity-50"
         >
           {busy ? "Otwieram stół…" : "Otwórz nowy stół"}
         </button>
@@ -214,6 +237,9 @@ export default function Home() {
                   {game.joinCode}
                 </span>
                 <span className="text-[11px] text-muted">
+                  {/* The mode is fixed at creation, so it is a property of the
+                      table worth seeing before you open it. */}
+                  {game.mode === "companion" ? "przy planszy" : "symulacja"} ·{" "}
                   {STATUS_LABEL[game.status] ?? game.status}
                   {game.status === "playing" ? ` · tura ${game.turn}` : ""} ·{" "}
                   {whenPlayed(game.lastPlayedAt)}
@@ -269,5 +295,39 @@ export default function Home() {
         </section>
       )}
     </main>
+  );
+}
+
+function ModeChoice({
+  active,
+  onPick,
+  label,
+  hint,
+}: {
+  active: boolean;
+  onPick: () => void;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      aria-pressed={active}
+      className={`rounded-lg border px-3 py-2 text-left transition ${
+        active
+          ? "border-ochre bg-ochre/10"
+          : "border-edge bg-panel/40 hover:border-ochre/60"
+      }`}
+    >
+      <span
+        className={`block font-[family-name:var(--font-display)] text-sm ${
+          active ? "text-ochre" : "text-ink"
+        }`}
+      >
+        {label}
+      </span>
+      <span className="block text-[11px] leading-snug text-muted">{hint}</span>
+    </button>
   );
 }

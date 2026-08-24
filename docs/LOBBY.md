@@ -32,7 +32,6 @@ behind.
 
 | | |
 |---|---|
-| change the mode (symulacja / sędzia przy planszy) | before the start only |
 | remove a player | in the lobby, and during play |
 | choose a character *for another seat* | companion mode, for players with no device |
 | add a player by hand | companion mode only |
@@ -148,6 +147,14 @@ opened — which matters for a game that takes several sittings.
 room a ban is a solution to a problem nobody has.
 
 **No chat.** They are in the same room.
+
+**The mode is chosen before the table exists** and never changes. It is not a
+setting but a description of the evening: whether the board is in the room or
+only in the app. Everything downstream branches on it — whether the host seats
+people by hand, whether a deck is shuffled, who is asked to roll — so a table
+that does not know yet is a table nothing can be decided about, and a table that
+changes its mind halfway through setting up has to unpick all of it. The lobby
+shows which mode it is and offers no way to switch.
 
 **Adding a player by hand is companion-only.** There, one screen sits in the
 middle of a real table and nobody else has a device. In *pełna symulacja*

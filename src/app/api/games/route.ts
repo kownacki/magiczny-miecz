@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createGame, listGames } from "@/lib/game/store";
+import { createGame, listGames, type GameMode } from "@/lib/game/store";
 
 /** The tables that exist, so a game can be found again without its code. */
 export async function GET() {
@@ -13,6 +13,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
-  const { game, hostToken } = await createGame(name);
+  // Anything but the one other legal value means simulation, which is the mode
+  // that needs nothing on the table.
+  const mode: GameMode = body.mode === "companion" ? "companion" : "simulation";
+  const { game, hostToken } = await createGame(name, mode);
   return NextResponse.json({ joinCode: game.join_code, token: hostToken });
 }

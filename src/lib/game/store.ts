@@ -69,14 +69,26 @@ const SEAT_COLUMNS =
  * five characters from a 28-glyph alphabet, and a collision would otherwise
  * surface as a unique-constraint error in front of the players.
  */
+export type GameMode = "simulation" | "companion";
+
+/**
+ * Opens a table.
+ *
+ * The mode is decided here and not later. It is not a setting — it is what kind
+ * of evening this is: whether the board is on the table in front of you or only
+ * in the app. Everything downstream branches on it (whether the host seats
+ * people by hand, whether a deck is shuffled, who is asked to roll), so a table
+ * that does not know yet is a table nothing can be decided about.
+ */
 export async function createGame(
   hostName: string | null = null,
+  mode: GameMode = "simulation",
 ): Promise<{ game: GameRow; hostToken: string }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const joinCode = makeJoinCode();
     const { data, error } = await db
       .from("games")
-      .insert({ join_code: joinCode })
+      .insert({ join_code: joinCode, mode })
       .select(GAME_COLUMNS)
       .single();
 

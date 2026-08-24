@@ -47,7 +47,6 @@ export function Lobby({
   taken,
   pickingFor,
   busy,
-  onMode,
   onAddLocal,
   onPickFor,
   onChooseCharacter,
@@ -68,7 +67,6 @@ export function Lobby({
   taken: Set<string | null>;
   pickingFor: LobbySeat | null;
   busy: boolean;
-  onMode: (mode: "simulation" | "companion") => void;
   onAddLocal: (name: string) => void;
   onPickFor: (seat: LobbySeat | null) => void;
   onChooseCharacter: (seat: LobbySeat, characterId: string) => void;
@@ -115,44 +113,26 @@ export function Lobby({
           </span>
         </div>
 
-        {canAdminister && (
-          <div className="flex items-center gap-1 text-[11px]">
-            <ModeButton
-              active={mode === "simulation"}
-              disabled={busy}
-              onPick={() => onMode("simulation")}
-              label="Pełna symulacja"
-              hint="Aplikacja prowadzi całą grę — plansza i karty nie są potrzebne."
-            />
-            <ModeButton
-              active={mode === "companion"}
-              disabled={busy}
-              onPick={() => onMode("companion")}
-              label="Sędzia przy planszy"
-              hint="Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
-            />
-          </div>
-        )}
+        {/* Stated, not offered. The mode was settled when the table was
+            opened — it decides whether there is a board in the room, and
+            changing that halfway through setting up is not a thing anybody
+            does. */}
+        <span
+          className="text-[11px] text-muted"
+          title={
+            mode === "companion"
+              ? "Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
+              : "Wszystko dzieje się tutaj — plansza i karty nie są potrzebne."
+          }
+        >
+          {mode === "companion" ? "Sędzia przy planszy" : "Pełna symulacja"}
+        </span>
 
         <div className="flex items-center gap-3 text-[11px]">
           <button onClick={onLibrary} className="text-ochre/80 hover:text-ochre">
             Karty
           </button>
           {me && <RenameField name={me.playerName} busy={busy} onRename={onRename} />}
-          {me && (
-            <button
-              disabled={busy || !me.characterId}
-              onClick={() => onReady(!me.ready)}
-              title={me.characterId ? undefined : "Najpierw wybierz postać"}
-              className={`rounded border px-3 py-1 transition disabled:opacity-40 ${
-                me.ready
-                  ? "border-verdigris bg-verdigris/10 text-verdigris"
-                  : "border-edge text-ink hover:border-ochre"
-              }`}
-            >
-              {me.ready ? "Gotów ✓" : "Jestem gotów"}
-            </button>
-          )}
           {/* Always on screen for the host, disabled with the reason on it.
               A button that only appears once the conditions are met leaves
               everybody hunting for it and nobody knowing what is missing. */}
@@ -213,6 +193,7 @@ export function Lobby({
               onSelect={() => onPickFor(target?.id === seat.id ? null : seat)}
               onRemove={() => onRemove(seat)}
               onMakeHost={() => onMakeHost(seat)}
+              onReady={seat.seatIndex === mySeatIndex ? onReady : undefined}
             />
           );
         })}
@@ -238,7 +219,12 @@ export function Lobby({
             the far half of the roster, and the characters at the end were the
             ones nobody ever looked at. Height is left to the content — a cap
             here silently cut the second row's names off. */}
-        <div className="grid grid-flow-col grid-rows-2 gap-2 overflow-x-auto pb-1">
+        {/* `w-fit` + `mx-auto`: a full-width grid pushed the columns apart, so
+            27 cards sat in a thin spread across the whole screen instead of
+            side by side with margins either side of them. When they do not fit,
+            the margins collapse to nothing and this scrolls. */}
+        <div className="overflow-x-auto pb-1">
+          <div className="mx-auto grid w-fit grid-flow-col grid-rows-2 gap-2">
           {characters.map((character) => {
             const used = taken.has(character.id) && character.id !== target?.characterId;
             const isTargets = target?.characterId === character.id;
@@ -268,6 +254,7 @@ export function Lobby({
               </button>
             );
           })}
+          </div>
         </div>
       </section>
     </main>
@@ -289,6 +276,7 @@ function SeatSlot({
   onSelect,
   onRemove,
   onMakeHost,
+  onReady,
 }: {
   seat: LobbySeat;
   character: Character | null;
@@ -300,6 +288,8 @@ function SeatSlot({
   onSelect: () => void;
   onRemove: () => void;
   onMakeHost: () => void;
+  /** Only your own slot gets this. */
+  onReady?: (ready: boolean) => void;
 }) {
   const portrait = character ? characterImageUrl(character.id) : null;
   // The same colour this player's dot has on the board, and it never changes:
@@ -379,19 +369,40 @@ function SeatSlot({
         )}
       </button>
 
-      {/* The three states a player is ever in: still choosing, chosen, ready. */}
-      <div className="mt-1 flex items-baseline justify-between gap-1">
-        <span className="truncate text-[10px] text-muted">
-          {character?.name ?? "wybiera postać…"}
-        </span>
-        {seat.characterId && !seat.abandoned && (
-          <span
-            className={seat.ready ? "text-[10px] text-verdigris" : "text-[10px] text-muted/60"}
-          >
-            {seat.ready ? "gotów ✓" : "czeka"}
-          </span>
-        )}
-      </div>
+      {/* The three states a player is ever in: still choosing, chosen, ready —
+          and the same line says which, for you and for everybody else. Yours is
+          a button because saying you are ready is the only thing left to do
+          once you have a character; theirs is a word because it is news. */}
+      <p className="mt-1 truncate text-[10px] text-muted">{character?.name ?? "—"}</p>
+
+      {onReady ? (
+        <button
+          disabled={busy || !seat.characterId}
+          onClick={() => onReady(!seat.ready)}
+          title={seat.characterId ? undefined : "Najpierw wybierz postać"}
+          className={`mt-1 rounded border px-2 py-1 text-[11px] transition disabled:opacity-40 ${
+            seat.ready
+              ? "border-verdigris bg-verdigris/10 text-verdigris"
+              : "border-edge text-ink hover:border-ochre"
+          }`}
+        >
+          {seat.ready ? "Gotów ✓" : "Jestem gotów"}
+        </button>
+      ) : (
+        <p
+          className={`mt-1 h-[27px] truncate pt-1 text-[11px] ${
+            seat.ready ? "text-verdigris" : "text-muted/60"
+          }`}
+        >
+          {seat.abandoned
+            ? ""
+            : !seat.characterId
+              ? "wybiera postać…"
+              : seat.ready
+                ? "gotów ✓"
+                : "czeka"}
+        </p>
+      )}
 
       {canAdminister && !seat.isHost && !seat.abandoned && (
         <button
@@ -495,33 +506,6 @@ function RenameField({
         zmień
       </button>
     </form>
-  );
-}
-
-function ModeButton({
-  active,
-  disabled,
-  onPick,
-  label,
-  hint,
-}: {
-  active: boolean;
-  disabled: boolean;
-  onPick: () => void;
-  label: string;
-  hint: string;
-}) {
-  return (
-    <button
-      onClick={onPick}
-      disabled={disabled}
-      title={hint}
-      className={`rounded border px-2 py-1 transition disabled:opacity-50 ${
-        active ? "border-ochre bg-ochre/10 text-ochre" : "border-edge text-muted hover:text-ink"
-      }`}
-    >
-      {label}
-    </button>
   );
 }
 
