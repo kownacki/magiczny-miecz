@@ -59,11 +59,15 @@ const SHEETS = [
     kind: "character",
     slice: true,
   })),
+  // The małe Karty Postaci — illustration and name only, the ones that go in
+  // the plastic stands. Sliced like any other sheet: the teal ground between
+  // them is dark enough to read as a gutter, so the same cut-line detection
+  // that finds printed rules elsewhere finds the gaps here.
   {
     file: "Postacie/MM - MAGICZNY MIECZ - Piony Postaci.pdf",
     id: "piony",
     kind: "standee",
-    slice: false,
+    slice: true,
   },
 ];
 

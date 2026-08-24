@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
-import { characterImageUrl } from "@/lib/engine/cardImages";
+import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
 
 export interface LobbySeat {
@@ -105,6 +105,13 @@ export function Lobby({
 
   const target = pickingFor && mayChooseFor(pickingFor) ? pickingFor : me;
 
+  // Which character the reading column shows. Whatever the cursor is over wins
+  // — running along the strip and reading each one is how you choose — falling
+  // back to the character of whoever you are choosing for, so the column is
+  // never blank once anything has been picked.
+  const [preview, setPreview] = useState<string | null>(null);
+  const reading = preview ?? target?.characterId ?? me?.characterId ?? null;
+
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-edge px-4 py-2">
@@ -167,6 +174,8 @@ export function Lobby({
         </div>
       </header>
 
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col">
       <section className="flex min-h-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-4 py-3">
         {Array.from({ length: MAX_SEATS }, (_, index) => {
           const seat = seats[index];
@@ -249,14 +258,22 @@ export function Lobby({
           {characters.map((character) => {
             const used = taken.has(character.id) && character.id !== target?.characterId;
             const isTargets = target?.characterId === character.id;
-            const portrait = characterImageUrl(character.id);
+            // The mała Karta — the one that goes in a plastic stand. It carries
+            // its own name in print and is a figure rather than a page, which
+            // is what makes 27 of them scannable at this size where 27 pages of
+            // small type were not.
+            const standee = characterStandeeUrl(character.id);
             return (
               <button
                 key={character.id}
                 disabled={busy || used || !target}
                 onClick={() => target && onChooseCharacter(target, character.id)}
+                onMouseEnter={() => setPreview(character.id)}
+                onMouseLeave={() => setPreview(null)}
+                onFocus={() => setPreview(character.id)}
+                onBlur={() => setPreview(null)}
                 title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
-                className={`w-[78px] shrink-0 overflow-hidden rounded border transition disabled:cursor-default ${
+                className={`w-[76px] shrink-0 overflow-hidden rounded border transition disabled:cursor-default ${
                   isTargets
                     ? "border-ochre"
                     : used
@@ -264,21 +281,62 @@ export function Lobby({
                       : "border-edge hover:border-ochre disabled:opacity-40"
                 }`}
               >
-                {portrait ? (
-                  <Image src={portrait} alt={character.name} width={78} height={111} />
+                {standee ? (
+                  <Image src={standee} alt={character.name} width={76} height={127} />
                 ) : (
-                  <span className="block p-2 text-[10px] text-ink">{character.name}</span>
+                  <span className="flex h-[127px] items-center p-2 text-center text-[10px] text-ink">
+                    {character.name}
+                  </span>
                 )}
-                <span className="block truncate px-1 py-0.5 text-[9px] text-muted">
-                  {character.name}
-                </span>
               </button>
             );
           })}
           </div>
         </div>
       </section>
+        </div>
+
+        {/* The Karta Postaci, big enough to read. A character is four numbered
+            clauses of Charakterystyka and two numbers, and every one of them
+            matters to the choice being made two feet to the left — but at strip
+            size the print is a grey smudge, and a player picking Kat has no way
+            to find out what Kat does without picking it first. */}
+        <aside className="hidden w-[300px] shrink-0 flex-col items-center justify-center border-l border-edge p-3 lg:flex xl:w-[380px]">
+          {reading ? (
+            <BigCard character={byId.get(reading) ?? null} />
+          ) : (
+            <p className="max-w-[16rem] text-center text-[11px] leading-relaxed text-muted/70">
+              Najedź na postać, żeby przeczytać jej Kartę.
+            </p>
+          )}
+        </aside>
+      </div>
     </main>
+  );
+}
+
+/** The big card, filling the column and never overflowing it. */
+function BigCard({ character }: { character: Character | null }) {
+  if (!character) return null;
+  const src = characterImageUrl(character.id);
+  if (!src) {
+    return (
+      <p className="text-center text-[11px] text-muted">
+        {character.name} — brak skanu Karty
+      </p>
+    );
+  }
+  return (
+    <Image
+      src={src}
+      alt={`Karta Postaci: ${character.name}`}
+      width={780}
+      height={972}
+      className="max-h-full w-auto rounded border border-edge object-contain"
+      // The one image on the page somebody actually reads, so it is worth
+      // fetching before it is asked for rather than after.
+      priority
+    />
   );
 }
 
@@ -312,7 +370,9 @@ function SeatSlot({
   /** Only your own slot gets this. */
   onReady?: (ready: boolean) => void;
 }) {
-  const portrait = character ? characterImageUrl(character.id) : null;
+  // The small card, because that is the piece standing on the board for this
+  // player — it is what "which one are you?" is answered with at a table.
+  const portrait = character ? characterStandeeUrl(character.id) : null;
   // The same colour this player's dot has on the board, and it never changes:
   // it comes from the seat index, so "the blue one" means one person all game.
   const colour = SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
@@ -384,7 +444,10 @@ function SeatSlot({
             alt={character.name}
             width={174}
             height={270}
-            className="h-full w-full object-cover"
+            // Contained, not cropped: the small card is a whole illustration
+            // with its name printed at the top, and cropping it cuts the name
+            // off — which is the one thing on it.
+            className="h-full w-full object-contain"
           />
         ) : (
           <span className="flex h-full items-center justify-center p-2 text-center text-[11px] leading-snug text-muted">

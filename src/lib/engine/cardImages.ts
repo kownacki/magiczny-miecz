@@ -5,6 +5,7 @@ import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import manifest from "@/data/card-images.json";
 import portraits from "@/data/character-images.json";
+import standees from "@/data/character-standees.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { cardRef } from "./deck";
 
@@ -69,6 +70,23 @@ function fileNameFor(slice: string): string {
  */
 export function characterImageUrl(characterId: string): string | null {
   const slice = (portraits as Record<string, string>)[characterId];
+  if (!slice) return null;
+  return `/cards/${fileNameFor(slice)}.jpg`;
+}
+
+/**
+ * The mała Karta Postaci — the illustration-only card that goes in a plastic
+ * stand and stands on the board.
+ *
+ * The rulebook makes this a separate object from the big card: «Kartę Postaci
+ * […] w dwóch formach: dużych Kart, zawierających ilustrację i opis oraz małych
+ * Kart, na których znajduje się tylko ilustracja», and it is the small one that
+ * a player points at to mean "me". So anywhere a character appears at thumbnail
+ * size, this is the right picture: the big card at that size is a page of
+ * unreadable print, and the small one is a figure you recognise at a glance.
+ */
+export function characterStandeeUrl(characterId: string): string | null {
+  const slice = (standees as Record<string, string>)[characterId];
   if (!slice) return null;
   return `/cards/${fileNameFor(slice)}.jpg`;
 }

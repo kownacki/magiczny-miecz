@@ -14,6 +14,16 @@ const OUT = "public/cards";
  */
 const WIDTH = 420;
 
+/**
+ * Character cards are read, not glanced at.
+ *
+ * A player sits with their own Karta Postaci open beside them for the whole
+ * game and reads four numbered clauses of Charakterystyka off it. At 420 the
+ * print is a grey suggestion, and the scan has 777 to give — so it gives it.
+ * Nothing else on any sheet is looked at for that long.
+ */
+const WIDTH_BY_SHEET = { "postacie-1": 780, "postacie-2": 780, "postacie-3": 780 };
+
 /** JPEG quality. Above ~75 the files grow faster than the scans deserve. */
 const QUALITY = 72;
 
@@ -21,7 +31,8 @@ const QUALITY = 72;
  * Sheets worth exporting. Boards, rulebook pages and standee sheets are not
  * cards and would each be megabytes.
  */
-const CARD_SHEETS = /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|postacie-\d)$/;
+const CARD_SHEETS =
+  /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|postacie-\d|piony)$/;
 
 /**
  * Uses macOS `sips` for the resize and JPEG encode.
@@ -31,11 +42,11 @@ const CARD_SHEETS = /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|po
  * generation step whose *output* is committed, so nobody needs a Mac to run the
  * app — only to regenerate the images.
  */
-function convert(source, destination) {
+function convert(source, destination, width) {
   execFileSync("sips", [
     "-s", "format", "jpeg",
     "-s", "formatOptions", String(QUALITY),
-    "-Z", String(WIDTH),
+    "-Z", String(width),
     source,
     "--out", destination,
   ], { stdio: "ignore" });
@@ -66,7 +77,7 @@ function run() {
       const [, sheetId, index] = match;
 
       const destination = path.join(OUT, `${sheetId}-${index}.jpg`);
-      convert(path.join(dir, file), destination);
+      convert(path.join(dir, file), destination, WIDTH_BY_SHEET[sheetId] ?? WIDTH);
       bytes += fs.statSync(destination).size;
       written++;
       manifest.push(`${sheetId}#${Number(index)}`);
@@ -98,6 +109,44 @@ function run() {
     JSON.stringify(portraits, null, 2) + "\n",
   );
   console.log(`${Object.keys(portraits).length} character portraits mapped`);
+
+  // The małe Karty Postaci — "na których znajduje się tylko ilustracja"
+  // (Przygotowanie do gry). These are the ones that go in the plastic stands
+  // and stand on the board, so they are what a player recognises their piece
+  // by, and what belongs anywhere a character is shown small.
+  //
+  // The publisher split them across two sheets: the first twenty on the Piony
+  // Postaci sheet, in the same alphabetical order as characters.json, and the
+  // last seven tacked onto the end of Zdarzenia 9 after the Dobry/Zły markers.
+  // Both facts are about the scans and so live here.
+  const TRAILING_STANDEES = {
+    pustelnik: "zdarzenia-9#14",
+    quark: "zdarzenia-9#15",
+    "rycerz-ciemnosci": "zdarzenia-9#16",
+    spryciarz: "zdarzenia-9#17",
+    troll: "zdarzenia-9#18",
+    wiedzma: "zdarzenia-9#19",
+    zdobywca: "zdarzenia-9#20",
+  };
+  const PIONY_COUNT = 20;
+  const onPiony = characters.slice(0, PIONY_COUNT);
+  if (!manifest.includes(`piony#${PIONY_COUNT}`)) {
+    // Loud rather than silent: a shifted slice count would otherwise hand every
+    // character the wrong picture of itself, which reads as a data-entry bug
+    // somewhere else entirely.
+    console.warn(`piony sheet did not yield ${PIONY_COUNT} slices — standees skipped`);
+  }
+  const standees = Object.fromEntries(
+    [
+      ...onPiony.map((character, i) => [character.id, `piony#${i + 1}`]),
+      ...Object.entries(TRAILING_STANDEES),
+    ].filter(([, ref]) => manifest.includes(ref)),
+  );
+  fs.writeFileSync(
+    path.join("src/data", "character-standees.json"),
+    JSON.stringify(standees, null, 2) + "\n",
+  );
+  console.log(`${Object.keys(standees).length} character standees mapped`);
 
   console.log(`\n${written} images, ${(bytes / 1024 / 1024).toFixed(1)} MB -> ${OUT}`);
 }

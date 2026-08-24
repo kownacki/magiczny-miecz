@@ -28,6 +28,7 @@ they are rules, and one of them was missing.
 
 | | rule | status | where |
 |---|---|---|---|
+| 0.0 | the Karty Postaci come in two forms: the big card with the description, and the small illustration-only one for the stand | ✅ | `characterImageUrl` / `characterStandeeUrl` |
 | 0.1 | shuffle the Karty Postaci and deal one at random to each player | ✅ | `dealCharacters` — "rozlosuj postacie" in the lobby |
 | 0.2 | by unanimous agreement, free choice instead of the random deal | ✅ | the character strip; this is the variant, offered as the default |
 | 0.3 | one character per player — 27 cards, one figure each, no duplicates | ✅ | `chooseCharacter` rejects a taken character; the strip greys it out |

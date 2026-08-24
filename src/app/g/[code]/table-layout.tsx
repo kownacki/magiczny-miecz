@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
-import { characterImageUrl } from "@/lib/engine/cardImages";
+import { characterStandeeUrl } from "@/lib/engine/cardImages";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
 
@@ -108,7 +108,9 @@ export function OtherPlayers({
       <div className="flex flex-col gap-2">
         {seats.map((seat) => {
           const character = seat.characterId ? byId.get(seat.characterId) : null;
-          const portrait = character ? characterImageUrl(character.id) : null;
+          // The small card: a thumbnail of the big one is a page of print too
+          // small to read, where the standee is the figure on the board.
+          const portrait = character ? characterStandeeUrl(character.id) : null;
           const expanded = open === seat.id;
           const colour = SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
 
@@ -179,7 +181,7 @@ export function OtherPlayers({
                           src={portrait}
                           alt={character.name}
                           width={56}
-                          height={80}
+                          height={94}
                           className="rounded"
                         />
                       </button>
