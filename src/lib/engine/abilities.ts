@@ -1,5 +1,7 @@
 /** What a card does while you are holding it, as a typed vocabulary rather than prose to be re-read every time. */
 
+import type { Nature } from "@/data/types";
+
 /**
  * Why this exists, and why it is not one big "effect" type.
  *
@@ -34,7 +36,18 @@ export type Ability =
    * would cost (Rękawice on Ruchome Skały); `utrata` keeps the Przedmiot or
    * Przyjaciel it would take (Kij i Sznur on Bagna).
    */
-  | { kind: "bezpieczny"; fields: readonly string[]; from: "rzut" | "zycie" | "utrata" }
+  | {
+      kind: "bezpieczny";
+      fields: readonly string[];
+      from: "rzut" | "zycie" | "utrata";
+      /**
+       * Some protections are conditional on who is holding them: the Relikwiarz
+       * spares a Dobra Postać at the Czarci Młyn and a Zła one at the Studnia
+       * Wieczności, and nobody at the other. Without this the card would have to
+       * be encoded as sparing everyone at both fields, or not at all.
+       */
+      natura?: readonly Nature[];
+    }
   /** Reliably slips away from Wrogowie on named fields (Elflin, Rusałka). */
   | { kind: "ucieczka"; fields: readonly string[] }
   /**
@@ -62,6 +75,31 @@ export type Ability =
   | { kind: "wymagany"; place: "most" | "zamek-bestii" }
   /** "nie będziesz musiał płacić 1 Sztuki Złota za Przeprawę" (Przewoźnik). */
   | { kind: "przeprawa-gratis" }
+  /**
+   * Shifts a die roll, either at named fields or in a kind of fight.
+   *
+   * Seven cards want this and they vary along exactly two axes: what the roll is
+   * for, and by how much. The Talizman Ognia adds one in an ordinary fight and
+   * the Talizman Powietrza in a magical one; the Gliniana Tabliczka takes two
+   * off the Pułapka. The Jabłko Natchnienia is the odd one that lets the holder
+   * choose the sign, and is eaten in the using.
+   */
+  | {
+      kind: "modyfikator-rzutu";
+      gdzie:
+        | { na: "pola"; fields: readonly string[] }
+        | { na: "walke"; rodzaj: "zwykla" | "magiczna" };
+      delta: number;
+      /** "odjąć lub dodać 1 ... jeśli taka jest wola gracza" — the holder picks. */
+      dowolnyZnak?: boolean;
+      /** "Karta Jabłka może być wykorzystana tylko raz". */
+      jednorazowy?: boolean;
+    }
+  /**
+   * Raises the spell limit of 2.6 by a stated amount, exactly as `udzwig` raises
+   * the item limit of 5.4. Only the Różdżka Zaklęć does it.
+   */
+  | { kind: "zaklecia-ponad-limit"; count: number }
   /** Rusałka: one die at the Trzęsawiska instead of the usual two. */
   | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
   /**
@@ -144,6 +182,65 @@ export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
   ],
   /** The same key as the Tarcza Tolimana, printed again on the Zdarzenia sheets. */
   "tarcza-boga-tolimana": [{ kind: "wymagany", place: "zamek-bestii" }],
+  "gliniana-tabliczka": [
+    { kind: "modyfikator-rzutu", gdzie: { na: "pola", fields: ["pulapka"] }, delta: -2 },
+  ],
+  "magiczny-manuskrypt": [
+    {
+      kind: "modyfikator-rzutu",
+      gdzie: { na: "pola", fields: ["magiczna-pulapka"] },
+      delta: -2,
+    },
+  ],
+  // Only the second half of the Kość is here. Its first half adds a point of
+  // Miecza or Magii *in the two Pułapki*, which is a stat bonus limited to two
+  // fields and has no variant; that clause stays on the card.
+  "czarodziejska-kosc": [
+    {
+      kind: "modyfikator-rzutu",
+      gdzie: {
+        na: "pola",
+        fields: [
+          "wejscie-na-most-a",
+          "gra-ze-smiercia",
+          "demon-zaglady",
+          "zamek-bestii",
+          "monstrum",
+          "cerber",
+          "wejscie-na-most-b",
+        ],
+      },
+      delta: 1,
+    },
+  ],
+  /** The immunity to Krąg Płomieni is a spell rule, and stays on the card. */
+  "talizman-ognia": [
+    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "zwykla" }, delta: 1 },
+  ],
+  /** Likewise its immunity to Siedem Wichrów and Władca Gromu. */
+  "talizman-powietrza": [
+    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "magiczna" }, delta: 1 },
+  ],
+  "jablko-natchnienia": [
+    {
+      kind: "modyfikator-rzutu",
+      gdzie: {
+        na: "pola",
+        fields: ["swiatynia-bogini-nemed", "swiatynia-tolimana"],
+      },
+      delta: 1,
+      dowolnyZnak: true,
+      jednorazowy: true,
+    },
+  ],
+  // Two protections in one card, each for the opposite Natura. The third
+  // clause — beating every Demon without a fight — has no variant and stays on
+  // the card.
+  relikwiarz: [
+    { kind: "bezpieczny", fields: ["czarci-mlyn"], from: "zycie", natura: ["dobra"] },
+    { kind: "bezpieczny", fields: ["studnia-wiecznosci"], from: "zycie", natura: ["zla"] },
+  ],
+  "rozdzka-zaklec": [{ kind: "zaklecia-ponad-limit", count: 1 }],
 
   // --- friends --------------------------------------------------------------
   pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
@@ -224,12 +321,50 @@ export function isSpared(
   abilities: readonly Ability[],
   fieldId: string,
   from: "zycie" | "utrata",
+  /** The holder's Natura, for the protections that depend on it. */
+  natura?: Nature | null,
 ): boolean {
   return abilities.some(
     (ability) =>
       ability.kind === "bezpieczny" &&
       ability.from === from &&
-      ability.fields.includes(fieldId),
+      ability.fields.includes(fieldId) &&
+      (!ability.natura || (natura != null && ability.natura.includes(natura))),
+  );
+}
+
+/**
+ * How much a character may shift a die roll here.
+ *
+ * Returns the total and whether the holder may choose its sign. Modifiers add:
+ * nothing in the texts says two of them cannot apply at once, and the two
+ * Talizmany are for different kinds of fight anyway.
+ */
+export function rollModifier(
+  abilities: readonly Ability[],
+  at: { fieldId?: string; walka?: "zwykla" | "magiczna" },
+): { delta: number; dowolnyZnak: boolean } {
+  let delta = 0;
+  let dowolnyZnak = false;
+  for (const ability of abilities) {
+    if (ability.kind !== "modyfikator-rzutu") continue;
+    const applies =
+      ability.gdzie.na === "pola"
+        ? at.fieldId !== undefined && ability.gdzie.fields.includes(at.fieldId)
+        : at.walka !== undefined && ability.gdzie.rodzaj === at.walka;
+    if (!applies) continue;
+    delta += ability.delta;
+    if (ability.dowolnyZnak) dowolnyZnak = true;
+  }
+  return { delta, dowolnyZnak };
+}
+
+/** Extra Zaklęcia allowed over the limit rule 2.6 sets from Magia. */
+export function spellsOverLimit(abilities: readonly Ability[]): number {
+  return abilities.reduce(
+    (extra, ability) =>
+      ability.kind === "zaklecia-ponad-limit" ? extra + ability.count : extra,
+    0,
   );
 }
 

@@ -16,6 +16,8 @@ import {
   isSpared,
   moveBonusRange,
   opensTheWayTo,
+  rollModifier,
+  spellsOverLimit,
   skipsRollAt,
   wardThreshold,
 } from "./abilities";
@@ -209,5 +211,65 @@ describe("who dies in your place", () => {
     expect(abilitiesOf("poszukiwacz-przygod")).toEqual([
       { kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true },
     ]);
+  });
+});
+
+describe("shifting a die roll", () => {
+  it("applies the Talizmany to the kind of fight each names", () => {
+    const ognia = abilitiesOf("talizman-ognia");
+    expect(rollModifier(ognia, { walka: "zwykla" }).delta).toBe(1);
+    // "podczas walki (lecz nie magicznej)" — the parenthesis is the whole point.
+    expect(rollModifier(ognia, { walka: "magiczna" }).delta).toBe(0);
+    expect(rollModifier(abilitiesOf("talizman-powietrza"), { walka: "magiczna" }).delta).toBe(1);
+  });
+
+  it("takes two off the Pułapka it names and nothing off the other", () => {
+    const tabliczka = abilitiesOf("gliniana-tabliczka");
+    expect(rollModifier(tabliczka, { fieldId: "pulapka" }).delta).toBe(-2);
+    expect(rollModifier(tabliczka, { fieldId: "magiczna-pulapka" }).delta).toBe(0);
+    expect(rollModifier(abilitiesOf("magiczny-manuskrypt"), { fieldId: "magiczna-pulapka" }).delta).toBe(-2);
+  });
+
+  it("keeps the Czarodziejska Kość off the two Pułapki", () => {
+    // Its bonus there is a point of Miecza or Magii, not a roll shift, and is
+    // deliberately not encoded — so the roll modifier must not leak onto them.
+    const kosc = abilitiesOf("czarodziejska-kosc");
+    expect(rollModifier(kosc, { fieldId: "cerber" }).delta).toBe(1);
+    expect(rollModifier(kosc, { fieldId: "pulapka" }).delta).toBe(0);
+    expect(rollModifier(kosc, { fieldId: "magiczna-pulapka" }).delta).toBe(0);
+  });
+
+  it("lets the Jabłko's holder choose the sign", () => {
+    const jablko = abilitiesOf("jablko-natchnienia");
+    const at = rollModifier(jablko, { fieldId: "swiatynia-tolimana" });
+    expect(at).toEqual({ delta: 1, dowolnyZnak: true });
+  });
+
+  it("adds two modifiers that both apply", () => {
+    const both = heldAbilities(["talizman-ognia", "czarodziejska-kosc"]);
+    expect(rollModifier(both, { walka: "zwykla", fieldId: "cerber" }).delta).toBe(2);
+  });
+});
+
+describe("protections that depend on who holds them", () => {
+  it("spares the Relikwiarz's holder only where their Natura says", () => {
+    const r = abilitiesOf("relikwiarz");
+    expect(isSpared(r, "czarci-mlyn", "zycie", "dobra")).toBe(true);
+    expect(isSpared(r, "czarci-mlyn", "zycie", "zla")).toBe(false);
+    expect(isSpared(r, "studnia-wiecznosci", "zycie", "zla")).toBe(true);
+    expect(isSpared(r, "studnia-wiecznosci", "zycie", "dobra")).toBe(false);
+    // A Chaotyczna Postać gets nothing from it at either field.
+    expect(isSpared(r, "czarci-mlyn", "zycie", "chaotyczna")).toBe(false);
+  });
+
+  it("still spares unconditionally where a card sets no condition", () => {
+    expect(isSpared(abilitiesOf("rekawice"), "ruchome-skaly-1", "zycie")).toBe(true);
+  });
+});
+
+describe("carrying more Zaklęcia than Magia allows", () => {
+  it("counts the Różdżka and nothing else", () => {
+    expect(spellsOverLimit(abilitiesOf("rozdzka-zaklec"))).toBe(1);
+    expect(spellsOverLimit(abilitiesOf("pierscien-mocy"))).toBe(0);
   });
 });

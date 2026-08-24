@@ -914,6 +914,20 @@ function describeAbility(ability: Ability): string {
       return `walczy za ciebie (Miecz ${ability.miecz}, Magia ${ability.magia})`;
     case "niedostepny":
       return "nie do zdobycia w Dolnym Kręgu";
+    case "modyfikator-rzutu": {
+      const sign = ability.dowolnyZnak
+        ? `±${Math.abs(ability.delta)}`
+        : `${ability.delta > 0 ? "+" : "−"}${Math.abs(ability.delta)}`;
+      const where =
+        ability.gdzie.na === "walke"
+          ? ability.gdzie.rodzaj === "magiczna"
+            ? "w walce magicznej"
+            : "w walce zwykłej"
+          : `na: ${ability.gdzie.fields.map(fieldName).join(", ")}`;
+      return `${sign} do rzutu ${where}${ability.jednorazowy ? " (raz)" : ""}`;
+    }
+    case "zaklecia-ponad-limit":
+      return `+${ability.count} Zaklęcie ponad limit (2.6)`;
   }
 }
 

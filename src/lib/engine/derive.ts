@@ -2,7 +2,11 @@
 
 import type { Item, Nature } from "@/data/types";
 import type { Holding, Seat } from "./state";
-import { carryLimit as abilityCarryLimit, heldAbilities } from "./abilities";
+import {
+  carryLimit as abilityCarryLimit,
+  heldAbilities,
+  spellsOverLimit,
+} from "./abilities";
 
 /**
  * Rule 2.6, read straight off the printed table:
@@ -74,10 +78,15 @@ export function totalsFor(
 ): Totals {
   const bonus = bonusesFrom(seat.holdings, items, options);
   const magia = seat.magiaOwn + bonus.magia;
+  // The Różdżka Zaklęć raises 2.6's limit the way the Koń raises 5.4's, so the
+  // capacity is asked for rather than read straight off the table.
+  const extraSpells = spellsOverLimit(
+    heldAbilities(seat.holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
+  );
   return {
     miecz: seat.mieczOwn + bonus.miecz,
     magia,
-    spellCapacity: spellCapacity(magia),
+    spellCapacity: spellCapacity(magia) + extraSpells,
   };
 }
 
