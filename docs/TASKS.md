@@ -191,12 +191,12 @@ Now the primary mode; companion is the opt-in.
       left is data. Encoded so far: the equipment sheet and the Przyjaciele. The
       44 magic Przedmiot cards in the event deck (Excalibur, Święty Graal,
       Talizman Ognia, …) are not, and neither is anything one-shot.
-- [ ] **One-shot and fixture cards have no vocabulary yet.** Spotkanie, Miejsce
-      and most Nieznajomy are a different shape from a standing rule — an
-      ordered list of operations, and a *disposition* saying where the card goes
-      afterwards (odłóż / zostaje na Obszarze / do wyczerpania punktów / do
-      pierwszej Postaci). The corpus survey is in this file's history; the type
-      is not written.
+- [x] **One-shot and fixture cards have a vocabulary** — `cardScript.ts`, with
+      disposition as a field of its own (odłóż / zostaje na Obszarze / zostaje z
+      pulą punktów / do pierwszej Postaci / po N turach / wraca do stosu). About
+      thirty cards are encoded, covering every variant; the rest is data.
+      Encoded cards take precedence over the prose reader in `cardEffects.ts`,
+      which stays as the fallback for everything unencoded.
 
 The rest came out of playing a real game through the browser. Each is a rule
 the engine gets wrong or does not have, not a missing feature.

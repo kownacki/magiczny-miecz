@@ -5,6 +5,12 @@ import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
+import {
+  describeDisposition,
+  scriptFor,
+  type CardScript,
+  type Effect,
+} from "@/lib/engine/cardScript";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom } from "@/lib/engine/rings";
@@ -986,7 +992,9 @@ function DrawnCards({
             {card && (
               <p className="mt-1 text-xs leading-relaxed text-muted">{card.text}</p>
             )}
-            {card && (
+            {/* The prose reader and the script would otherwise print the same
+                die table twice, in two different wordings. The script wins. */}
+            {card && !scriptFor(card.id) && (
               <RollTable text={card.text} busy={busy} onSuggestion={onSuggestion} />
             )}
             {card && combatValueOf(card) && (
@@ -1038,11 +1046,12 @@ function DrawnCards({
                   Walcz
                 </button>
               )}
-              {/* Offered only where the card's text says one thing without
-                  branching. Tapping applies it through the same journalled
-                  correction path as the manual +/-, so a wrong suggestion is
-                  visible afterwards rather than silently baked in. */}
+              {/* An encoded card wins over the prose reader: the script says
+                  what the card does because someone read it, where
+                  suggestActions is regular expressions guessing at 1993 Polish.
+                  Only unscripted cards fall back to the guess. */}
               {card &&
+                !scriptFor(card.id) &&
                 suggestActions(card).map((suggestion) => (
                   <button
                     key={suggestion.label}
@@ -1056,9 +1065,259 @@ function DrawnCards({
                   </button>
                 ))}
             </div>
+            {card && scriptFor(card.id) && (
+              <ScriptedCard
+                script={scriptFor(card.id)!}
+                cardName={card.name}
+                busy={busy}
+                onSuggestion={onSuggestion}
+              />
+            )}
           </li>
         );
       })}
     </ol>
   );
+}
+
+/**
+ * A card whose rules have been read and typed, rather than guessed at.
+ *
+ * Two jobs. It offers the outcomes the card actually has — including the ones
+ * a regular expression could never find, like the six-way wish or a face of a
+ * die table — and it says where the card goes afterwards, which is the part a
+ * table skips and the part the app is best placed to remember.
+ *
+ * Nothing here applies itself. Every button goes through the same journalled
+ * correction path as the manual plus and minus, so a wrong reading of a card is
+ * visible in the log afterwards rather than silently baked into the game.
+ */
+function ScriptedCard({
+  script,
+  cardName,
+  busy,
+  onSuggestion,
+}: {
+  script: CardScript;
+  cardName: string;
+  busy: boolean;
+  onSuggestion: Props["onSuggestion"];
+}) {
+  return (
+    <div className="mt-2 rounded border border-edge/60 bg-night/40 p-2">
+      {script.optional && (
+        <p className="mb-1 text-[10px] uppercase tracking-wide text-muted">
+          Możesz z tego nie skorzystać
+        </p>
+      )}
+      <EffectControls
+        effect={script.effect}
+        cardName={cardName}
+        busy={busy}
+        onSuggestion={onSuggestion}
+      />
+      <p className="mt-2 border-t border-edge/60 pt-1 text-[11px] text-ochre/80">
+        {describeDisposition(script.disposition)}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The buttons for one effect.
+ *
+ * Recursive, because the effects are: a die table's face can be a fight, a
+ * wish's option can be a teleport. Anything the app cannot apply on its own —
+ * a move, a fight, a Nature change — is stated rather than offered, since those
+ * already have their own controls elsewhere in the turn.
+ */
+function EffectControls({
+  effect,
+  cardName,
+  busy,
+  onSuggestion,
+  prefix = "",
+}: {
+  effect: Effect;
+  cardName: string;
+  busy: boolean;
+  onSuggestion: Props["onSuggestion"];
+  prefix?: string;
+}) {
+  const stated = (text: string) => (
+    <p className="text-[11px] text-muted">
+      {prefix}
+      {text}
+    </p>
+  );
+
+  switch (effect.op) {
+    case "nic":
+      return stated("nic się nie dzieje");
+    case "po-kolei":
+      return (
+        <div className="flex flex-col gap-1">
+          {effect.steps.map((step, i) => (
+            <EffectControls
+              key={i}
+              effect={step}
+              cardName={cardName}
+              busy={busy}
+              onSuggestion={onSuggestion}
+              prefix={prefix}
+            />
+          ))}
+        </div>
+      );
+    case "wybor":
+      return (
+        <div>
+          <p className="mb-1 text-[11px] text-muted">{prefix}Wybierz jedno:</p>
+          <div className="flex flex-wrap gap-1">
+            {effect.options.map((option) => (
+              <EffectControls
+                key={option.label}
+                effect={option.effect}
+                cardName={cardName}
+                busy={busy}
+                onSuggestion={onSuggestion}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    case "rzut":
+      return (
+        <div>
+          <p className="mb-1 text-[11px] text-muted">{prefix}Rzuć kostką:</p>
+          <ol className="flex flex-col gap-0.5">
+            {[1, 2, 3, 4, 5, 6].map((face) => (
+              <li key={face} className="flex items-baseline gap-2">
+                <span className="tnum w-3 text-[11px] text-ochre">{face}</span>
+                <EffectControls
+                  effect={effect.faces[face]}
+                  cardName={cardName}
+                  busy={busy}
+                  onSuggestion={onSuggestion}
+                />
+              </li>
+            ))}
+          </ol>
+        </div>
+      );
+    case "punkty": {
+      const label = `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${STAT_LABEL[effect.stat]}`;
+      if (effect.target && effect.target !== "ty") {
+        return stated(`${label} — ${TARGET_LABEL[effect.target]}`);
+      }
+      return (
+        <button
+          disabled={busy}
+          onClick={() => onSuggestion(effect.stat, effect.delta, cardName)}
+          className="rounded border border-verdigris/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+        >
+          {label}
+        </button>
+      );
+    }
+    case "uzdrow":
+      return stated(`uzdrowienie do ${effect.upTo} punktów Życia (nie ponad start, 4.7)`);
+    case "tura-stracona":
+      return effect.target && effect.target !== "ty" ? (
+        stated(`−${effect.turns} tura — ${TARGET_LABEL[effect.target]}`)
+      ) : (
+        <button
+          disabled={busy}
+          onClick={() => onSuggestion("tury", effect.turns, cardName)}
+          className="rounded border border-vermilion/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+        >
+          −{effect.turns} tura
+        </button>
+      );
+    case "ruch-dodatkowy":
+      return stated("dodatkowy ruch");
+    case "zaklecie":
+      return stated(`+${effect.count} Zaklęcie`);
+    case "zaklecia-do-limitu":
+      return stated("Zaklęcia do limitu twojej Magii (2.6)");
+    case "przenies":
+      return stated(
+        effect.to.kind === "pole"
+          ? `przenieś się na: ${FIELDS.get(effect.to.fieldId)?.name ?? effect.to.fieldId}`
+          : effect.to.kind === "dowolne-w-kregu"
+            ? "przenieś się na dowolny Obszar w tym Kręgu"
+            : "wracasz tam, skąd zacząłeś ruch",
+      );
+    case "wyciagnij":
+      return stated(`wyciągnij ${effect.count} Karty`);
+    case "walka":
+      return stated(
+        `walka: ${effect.nazwa} (${effect.miecz !== undefined ? `Miecz ${effect.miecz}` : `Magia ${effect.magia}`})`,
+      );
+    case "strata":
+      return stated(LOSS_LABEL(effect));
+    case "kamien":
+      return stated("Zamiana w Kamień (20.1)");
+    case "natura":
+      return stated(`zmiana Natury na: ${effect.na === "zla" ? "zła" : effect.na}`);
+    case "gdy":
+      return (
+        <div className="flex flex-col gap-1">
+          <EffectControls
+            effect={effect.to}
+            cardName={cardName}
+            busy={busy}
+            onSuggestion={onSuggestion}
+            prefix={`${conditionLabel(effect.warunek)}: `}
+          />
+          {effect.inaczej && (
+            <EffectControls
+              effect={effect.inaczej}
+              cardName={cardName}
+              busy={busy}
+              onSuggestion={onSuggestion}
+              prefix="w przeciwnym razie: "
+            />
+          )}
+        </div>
+      );
+  }
+}
+
+const STAT_LABEL = {
+  miecz: "Miecza",
+  magia: "Magii",
+  zycie: "Życia",
+  zloto: "Złota",
+} as const;
+
+const TARGET_LABEL = {
+  ty: "ty",
+  wszyscy: "wszystkie Postacie",
+  "wszyscy-w-kregu": "wszystkie Postacie w tym Kręgu",
+  "kazdy-kto-tu-trafi": "każdy, kto tu trafi",
+} as const;
+
+function LOSS_LABEL(effect: Extract<Effect, { op: "strata" }>): string {
+  const what = {
+    przedmiot: "Przedmiot",
+    przyjaciel: "Przyjaciela",
+    zaklecie: "Zaklęcie",
+    zloto: "całe złoto",
+    "wszystkie-przedmioty": "wszystkie Przedmioty",
+  }[effect.co];
+  const how = effect.wybor === "losowo" ? " (losowo)" : "";
+  const count = effect.count && effect.count > 1 ? `${effect.count} ` : "";
+  return `tracisz ${count}${what}${how}`;
+}
+
+function conditionLabel(condition: Extract<Effect, { op: "gdy" }>["warunek"]): string {
+  switch (condition.is) {
+    case "natura":
+      return `jeśli ${condition.jedna_z.map((n) => (n === "zla" ? "zła" : n)).join(" lub ")}`;
+    case "prog":
+      return `jeśli ${condition.stat === "miecz" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
+    case "ma-zloto":
+      return "jeśli masz złoto";
+  }
 }
