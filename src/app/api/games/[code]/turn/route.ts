@@ -5,6 +5,7 @@ import {
   beginFight,
   crossRing,
   drawCard,
+  enterBridge,
   escape,
   fightBeast,
   fightRoll,
@@ -78,6 +79,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "cross":
         return NextResponse.json(await crossRing(game.id, body.succeeded !== false));
+      case "bridge":
+        return NextResponse.json(await enterBridge(game.id, body.succeeded !== false));
       case "escape":
         await escape(game.id, body.succeeded !== false);
         break;

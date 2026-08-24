@@ -796,6 +796,76 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
 }
 
 /**
+ * The two fields the Kamienny Most can be entered from, and what guards each.
+ *
+ * Rule 11.9: only from Wymarłe Miasto or Ruiny Twierdzy, and each has its own
+ * guardian to beat first — Duch Skał at the dead city, Kamienny Potwór at the
+ * ruins. The "CEL GRY" section adds that a Magiczny Miecz is needed to set foot
+ * on the bridge at all.
+ */
+const BRIDGE_ENTRANCES: Record<string, { guardian: string; entersAt: string }> = {
+  "wymarle-miasto": { guardian: "Duch Skał", entersAt: "wejscie-na-most-a" },
+  "ruiny-twierdzy": { guardian: "Kamienny Potwór", entersAt: "wejscie-na-most-b" },
+};
+
+/**
+ * Steps onto the Kamienny Most (11.9-11.11).
+ *
+ * A failed attempt costs a point — Magii at the dead city, Miecza at the ruins
+ * (11.11) — and the character must carry on round the Górny Krąg, forbidden
+ * from trying again next turn. Succeeding ends the turn at the entrance (11.10).
+ */
+export async function enterBridge(
+  gameId: string,
+  succeeded: boolean,
+): Promise<{ at: string | null }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+
+  const entrance = BRIDGE_ENTRANCES[seat.field_id];
+  if (!entrance) {
+    throw new Error("Na Kamienny Most można wejść tylko z Wymarłego Miasta lub Ruin Twierdzy (11.9).");
+  }
+
+  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const { hasSword } = bridgeRequirements(holdings.map((h) => ({ cardId: h.card_id })));
+  if (!hasSword) {
+    throw new Error("Aby wejść na Most musisz mieć Magiczny Miecz.");
+  }
+
+  if (!succeeded) {
+    // 11.11: Magii at Wymarłe Miasto, Miecza at Ruiny Twierdzy.
+    const stat = seat.field_id === "wymarle-miasto" ? "magia_own" : "miecz_own";
+    const floor = stat === "magia_own" ? seat.magia_floor : seat.miecz_floor;
+    const current = stat === "magia_own" ? seat.magia_own : seat.miecz_own;
+    await db
+      .from("seats")
+      .update({ [stat]: Math.max(floor, current - 1) })
+      .eq("id", seat.id);
+    await journal(gameId, seat.id, game.turn, "most-nieudane", {
+      from: seat.field_id,
+      guardian: entrance.guardian,
+    });
+    await bumpRevision(gameId);
+    return { at: null };
+  }
+
+  const field = FIELDS.get(entrance.entersAt);
+  if (!field) throw new Error(`Nieznane pole: ${entrance.entersAt}`);
+  await db.from("seats").update({ field_id: entrance.entersAt }).eq("id", seat.id);
+  // 11.10: the turn ends at the entrance, so the field is not resolved yet.
+  await db.from("games").update({ turn_state: { phase: "koniec" } }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "wejscie-na-most", {
+    from: seat.field_id,
+    guardian: entrance.guardian,
+  });
+  await bumpRevision(gameId);
+  return { at: entrance.entersAt };
+}
+
+/**
  * Crosses between rings (11.1-11.8).
  *
  * Only two places on the whole board allow it, and each demands something

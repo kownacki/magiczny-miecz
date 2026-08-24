@@ -152,6 +152,39 @@ export function TurnPanel({
           Rycerz Wiecznych Śniegów for the Lodowy Las — which the board text
           above spells out. Both outcomes are offered because the app cannot
           adjudicate a fight it is not running. */}
+      {/* Rule 11.9: only these two fields, and only with a Magiczny Miecz. The
+          guardian is a real fight the players resolve, so both outcomes are
+          offered rather than the app rolling for it. */}
+      {isMine &&
+        (fieldId === "wymarle-miasto" || fieldId === "ruiny-twierdzy") &&
+        phase.phase === "pole" && (
+          <div className="mb-4 rounded border border-ochre/40 bg-night/60 p-3">
+            <p className="mb-2 text-xs text-muted">
+              Stąd można wejść na Kamienny Most — po pokonaniu{" "}
+              <span className="text-ink">
+                {fieldId === "wymarle-miasto" ? "Ducha Skał" : "Kamiennego Potwora"}
+              </span>
+              . Potrzebny Magiczny Miecz.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                disabled={busy}
+                onClick={() => onAction({ action: "bridge", succeeded: true })}
+                className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+              >
+                Pokonany — wchodzę na Most
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => onAction({ action: "bridge", succeeded: false })}
+                className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+              >
+                Przegrana (11.11)
+              </button>
+            </div>
+          </div>
+        )}
+
       {isMine && fieldId && crossingFrom(fieldId) && phase.phase === "pole" && (
         <div className="mb-4 rounded border border-ochre/40 bg-night/60 p-3">
           <p className="mb-2 text-xs text-muted">

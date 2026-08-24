@@ -87,7 +87,9 @@ Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 - [x] Nature changes (7.2) and Turned to Stone (20)
 - [x] Bridge movement (10.3, 10.4) — one field per turn, die ignored, may turn back
 - [x] Ring crossings (11.1-11.8) — the two the rules allow, and nothing else
-- [ ] Stepping onto the bridge from Górny Krąg (11.9-11.11)
+- [x] Stepping onto the bridge from Górny Krąg (11.9-11.11) — only from Wymarłe
+      Miasto or Ruiny Twierdzy, only with a Magiczny Miecz, guardian first
+- [x] The whole route start-to-Beast is asserted end to end in playthrough.test.ts
 - [x] Vitest coverage — 53 tests green; caught a real bug where healing
       drained a character who was above four Życie
 
