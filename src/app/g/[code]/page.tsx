@@ -155,6 +155,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // over and taps it, so it drives the active player rather than sitting idle
   // saying "waiting".
   const isTableScreen = mySeat?.is_host === true && game.mode === "companion";
+  const tableScreenHolder = seats.find((seat) => seat.is_host)?.player_name ?? null;
   const active = seats.find((seat) => seat.seat_index === game.active_seat);
   const seated = seats.filter((seat) => seat.character_id);
   const taken = new Set(seats.map((seat) => seat.character_id).filter(Boolean));
@@ -176,15 +177,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           <p className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.25em] text-ink">
             {game.join_code}
           </p>
-          {mySeatIndex !== null && !isTableScreen && (
-            <button
-              onClick={() => post("host", {})}
-              disabled={busy}
-              className="mt-1 mr-3 text-[11px] text-muted underline underline-offset-2 transition hover:text-ochre disabled:opacity-50"
-            >
-              Przejmij ekran stołu
-            </button>
-          )}
           {mySeatIndex !== null && (
             <button
               onClick={leave}
@@ -198,6 +190,35 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       </header>
 
       {error && <p className="mb-4 text-sm text-vermilion">{error}</p>}
+
+      {mySeatIndex !== null && game.mode === "companion" && (
+        <section className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-edge/60 bg-panel/50 px-3 py-2 text-xs">
+          {isTableScreen ? (
+            <>
+              <span className="text-ochre">To urządzenie obsługuje wszystkich graczy.</span>
+              <span className="text-muted">
+                Podaj je dookoła stołu — każdy gra na nim w swojej turze.
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-muted">
+                Wszystkich graczy obsługuje urządzenie gracza{" "}
+                <span className="text-ink">{tableScreenHolder ?? "—"}</span>. To urządzenie
+                gra tylko w turze gracza{" "}
+                <span className="text-ink">{mySeat?.player_name ?? "—"}</span>.
+              </span>
+              <button
+                onClick={() => post("host", {})}
+                disabled={busy}
+                className="rounded border border-edge px-2 py-1 text-ink transition hover:border-ochre disabled:opacity-50"
+              >
+                Graj tu za wszystkich
+              </button>
+            </>
+          )}
+        </section>
+      )}
 
       {playing && active && (
         <div className="mb-8">
