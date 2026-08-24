@@ -26,15 +26,16 @@ can act on nothing.
 | | |
 |---|---|
 | change the mode (symulacja / sędzia przy planszy) | before the start only |
-| remove a seat from the lobby | before the start only |
+| remove a player | in the lobby, and during play |
 | choose a character *for another seat* | for seats with no device of their own |
 | start the game | when at least two characters are chosen |
 | hand the host role to another player | any time |
 
 ### What any player may do
 
-Take a seat, choose their own character, leave, take over an abandoned seat,
-adjust their own tracked values, and — during play — everything the rules give
+Take a seat, choose their own character, say they are ready, change the name
+they are shown under, leave, take over an abandoned seat, adjust their own
+tracked values, and — during play — everything the rules give
 their character. Corrections to *other* seats' points stay open to everyone
 during play on purpose: at a table people fix each other's mistakes out loud,
 and a rule that only the owner may correct a value is unusable at the moment
@@ -79,6 +80,15 @@ A seat is in one of three states.
 | **nieobecny** | the device has stopped checking in — closed tab, flat battery, walked off |
 | **bez gracza** | the player left deliberately, or the seat was taken over |
 
+A player also carries a **gotów** flag. Choosing a character and being ready are
+different things — the first is a decision you may still be mulling over — so
+the host cannot start until everyone with a character has said so. Swapping
+character clears it again, or a player who changed their mind at the last moment
+would still be counted.
+
+Only you can set your own ready flag, and only you can change your own name. A
+host who could mark everybody ready would have a start button with extra steps.
+
 Absence is never death. **A character is not removed when its player goes.** It
 stays on its Obszar with its points, its Przedmioty and its Przyjaciele, because
 the other players may already have acted on all of them, and because 4.4's death
@@ -107,7 +117,12 @@ utworzony ──> poczekalnia ──> w trakcie ──> zakończona
 and the host may remove any of them. Nothing is lost because nothing has
 happened yet.
 
-**W trakcie.** Seats are characters. Nothing is deleted; leaving abandons.
+**W trakcie.** Seats are characters. *Leaving* abandons — the character plays
+on. *Being removed by the host* is different and really does take the character
+out, freeing the seat for somebody new. What it was carrying stays: the
+Przedmioty, Przyjaciele and gold are left face up on its Obszar for whoever
+stops there next (12.1), because a character vanishing with four items in its
+hands makes the whole table quietly poorer.
 
 **Zakończona.** Reached by somebody beating the Bestia (22), or by the table
 falling to a single remaining player.
@@ -121,22 +136,19 @@ opened — which matters for a game that takes several sittings.
 
 ## Decisions taken, and what was left out
 
-**No ready-up.** The usual lobby has players mark themselves ready and blocks
-the start until all are. Here, choosing a character *is* being ready, and the
-start is already gated on two characters being chosen. A second flag would be
-ceremony for people who can see each other.
-
 **No ban list.** Kicking exists only before the start, and among friends in one
 room a ban is a solution to a problem nobody has.
 
 **No chat.** They are in the same room.
 
-**No password.** The five-character code is the lock. Anyone who has it was told
-it by somebody at the table.
+**No password, and every table is public.** The five-character code is the only
+lock, and the list of tables shows them all. Anyone who can see the list is
+somebody sitting in the room.
 
-**Removal is lobby-only.** During play there is nothing a host should be able to
-do to another player's character. Their seat can be abandoned, taken over, or
-eliminated by the rules — never by a person.
+**Deleting a table is unguarded.** It takes two clicks and says what it does,
+but the server does not ask who you are — there is no identity here that a
+check could mean anything against. Without it the list becomes a graveyard of
+abandoned experiments nobody can clear.
 
 **Corrections stay open to everyone during play.** See above; this is
 deliberate, and the journal records who changed what so an abuse would be

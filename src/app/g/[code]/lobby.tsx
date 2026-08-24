@@ -15,6 +15,8 @@ export interface LobbySeat {
   abandoned: boolean;
   /** Device has gone quiet, which is not the same as having left. */
   away: boolean;
+  /** Said they are ready to start. */
+  ready: boolean;
 }
 
 /**
@@ -42,6 +44,8 @@ export function Lobby({
   onChooseCharacter,
   onRemove,
   onMakeHost,
+  onReady,
+  onRename,
   isHost,
   hostAway,
   onStart,
@@ -63,6 +67,8 @@ export function Lobby({
   onChooseCharacter: (seat: LobbySeat, characterId: string) => void;
   onRemove: (seat: LobbySeat) => void;
   onMakeHost: (seat: LobbySeat) => void;
+  onReady: (ready: boolean) => void;
+  onRename: (name: string) => void;
   /** Whether THIS device is the host — see docs/LOBBY.md. */
   isHost: boolean;
   /** The host walked away, so anybody may take the role. */
@@ -79,6 +85,9 @@ export function Lobby({
   // Administration belongs to the host (docs/LOBBY.md). The one exception is a
   // host who has walked away: without it a table can never be started again.
   const canAdminister = isHost || hostAway;
+  const me = seats.find((seat) => seat.seatIndex === mySeatIndex) ?? null;
+  // Only players with a character are asked; an empty chair cannot answer.
+  const waitingOn = ready.filter((seat) => !seat.ready && !seat.abandoned);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -140,6 +149,27 @@ export function Lobby({
         </p>
       </section>
 
+      {me && (
+        <section className="mb-6 rounded-lg border border-ochre/40 bg-panel p-3">
+          <h2 className="mb-2 text-xs uppercase tracking-widest text-muted">To ty</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <RenameField name={me.playerName} busy={busy} onRename={onRename} />
+            <button
+              disabled={busy || !me.characterId}
+              onClick={() => onReady(!me.ready)}
+              title={me.characterId ? undefined : "Najpierw wybierz postać"}
+              className={`rounded border px-3 py-1 text-sm transition disabled:opacity-40 ${
+                me.ready
+                  ? "border-verdigris bg-verdigris/10 text-verdigris"
+                  : "border-edge text-ink hover:border-ochre"
+              }`}
+            >
+              {me.ready ? "Jestem gotów ✓" : "Jestem gotów"}
+            </button>
+          </div>
+        </section>
+      )}
+
       <section className="mb-8">
         <h2 className="mb-3 text-xs uppercase tracking-widest text-muted">
           Przy stole ({seats.length}/6)
@@ -181,6 +211,11 @@ export function Lobby({
                     <p className="truncate text-xs text-muted">
                       {character ? character.name : "wybiera postać…"}
                       {seat.isHost && <span className="ml-1 text-ochre/80">· gospodarz</span>}
+                      {seat.characterId && !seat.abandoned && (
+                        <span className={seat.ready ? "ml-1 text-verdigris" : "ml-1 text-muted/70"}>
+                          · {seat.ready ? "gotów" : "jeszcze nie"}
+                        </span>
+                      )}
                       {seat.abandoned ? (
                         <span className="ml-1 text-vermilion/80">· bez gracza</span>
                       ) : seat.away ? (
@@ -297,6 +332,16 @@ export function Lobby({
           <p className="text-sm text-muted">
             Czekacie na gospodarza — to on rozpoczyna grę.
           </p>
+        ) : ready.length >= 2 && waitingOn.length > 0 ? (
+          <p className="text-sm text-muted">
+            Czekamy na:{" "}
+            <span className="text-ink">
+              {waitingOn
+                .map((seat) => seat.playerName ?? `miejsce ${seat.seatIndex + 1}`)
+                .join(", ")}
+            </span>
+            .
+          </p>
         ) : ready.length >= 2 ? (
           <button
             onClick={onStart}
@@ -358,6 +403,49 @@ function JoinTile({
         className="rounded border border-edge px-2 py-1 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
       >
         {seated ? "+ Dodaj" : "+ Usiądź"}
+      </button>
+    </form>
+  );
+}
+
+/**
+ * Changing the name you are shown under.
+ *
+ * People join in a hurry and type nothing, or type it wrong; a table where the
+ * only fix is to leave and rejoin is a table where somebody plays the whole
+ * evening as "Miejsce 3".
+ */
+function RenameField({
+  name,
+  busy,
+  onRename,
+}: {
+  name: string | null;
+  busy: boolean;
+  onRename: (name: string) => void;
+}) {
+  const [value, setValue] = useState(name ?? "");
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onRename(value);
+      }}
+      className="flex items-center gap-2"
+    >
+      <input
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        placeholder="twoje imię"
+        maxLength={24}
+        className="w-40 rounded border border-edge bg-night px-2 py-1 text-sm text-ink outline-none focus:border-ochre"
+      />
+      <button
+        type="submit"
+        disabled={busy || value.trim() === (name ?? "")}
+        className="rounded border border-edge px-2 py-1 text-[11px] text-muted transition hover:border-ochre hover:text-ink disabled:opacity-40"
+      >
+        zmień
       </button>
     </form>
   );

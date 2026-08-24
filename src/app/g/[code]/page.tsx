@@ -76,6 +76,7 @@ interface Seat {
   abandoned_at: string | null;
   /** Device has not checked in recently — a closed tab, not a decision. */
   away: boolean;
+  ready: boolean;
   is_host: boolean;
   holdings: Held[];
   /** Cards this viewer is not allowed to see the faces of (9.3). */
@@ -349,6 +350,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           }}
           onRemove={(seat) => post("leave", { seatId: seat.id })}
           onMakeHost={(seat) => post("host", { seatId: seat.id })}
+          onReady={(ready) => post("seat", { ready })}
+          onRename={(name) => post("seat", { name })}
           isHost={mySeat?.is_host === true}
           hostAway={seats.find((seat) => seat.is_host)?.abandoned_at !== null}
           onStart={() => post("start", {})}
@@ -532,6 +535,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               // Only offered to a device with no seat of its own; sitting at two
               // at once is the bug that stranded a player early on.
               onClaim={mySeatIndex === null ? claimSeat : undefined}
+              onKick={
+                mySeat?.is_host
+                  ? (seat) => post("leave", { seatId: seat.id })
+                  : undefined
+              }
             />
           </div>
         }
@@ -549,6 +557,7 @@ function asLobbySeat(seat: Seat): LobbySeat {
     isHost: seat.is_host,
     abandoned: seat.abandoned_at !== null,
     away: seat.away,
+    ready: seat.ready,
   };
 }
 

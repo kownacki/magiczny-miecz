@@ -28,6 +28,8 @@ export interface SeatRow {
   abandoned_at: string | null;
   /** When this seat's device was last heard from (see `AWAY_AFTER_MS`). */
   seen_at: string | null;
+  /** The player has said they are ready to start (docs/LOBBY.md). */
+  ready: boolean;
   /** 7.3: the turn this seat last changed its Natura on. */
   nature_changed_turn: number | null;
   eliminated: boolean;
@@ -58,7 +60,7 @@ const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,eliminated,is_host";
+  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,eliminated,is_host";
 
 /**
  * Creates a table and returns the host's seat token.
@@ -220,6 +222,10 @@ export async function joinGame(
  * otherwise, and those are already the column defaults.
  */
 export async function chooseCharacter(seatId: string, characterId: string): Promise<void> {
+  // Swapping character un-readies you. Otherwise a player who said they were
+  // ready and then changed their mind is still counted, and the host starts a
+  // game somebody was still deciding about.
+  await db.from("seats").update({ ready: false }).eq("id", seatId);
   const character = CHARACTERS.find((c) => c.id === characterId);
   if (!character) throw new Error(`Nieznana postać: ${characterId}`);
 
@@ -250,6 +256,23 @@ function startingFieldId(name: string): string {
     .replace(/ł/g, "l")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/**
+ * Says whether a player is ready to start (docs/LOBBY.md).
+ *
+ * Only ever your own seat: readiness is a statement about yourself, and a host
+ * who could mark everyone ready would have a start button with extra steps.
+ */
+export async function setReady(seatId: string, ready: boolean): Promise<void> {
+  const { error } = await db.from("seats").update({ ready }).eq("id", seatId);
+  if (error) throw new Error(`setReady: ${error.message}`);
+}
+
+/** Changes the name shown for a seat. Only ever your own. */
+export async function renameSeat(seatId: string, name: string | null): Promise<void> {
+  const { error } = await db.from("seats").update({ player_name: name }).eq("id", seatId);
+  if (error) throw new Error(`renameSeat: ${error.message}`);
 }
 
 export async function verifySeat(gameId: string, token: string): Promise<SeatRow | null> {
@@ -424,9 +447,6 @@ export async function removeSeat(
   status: string,
   by: SeatRow,
 ): Promise<void> {
-  if (status !== "lobby") {
-    throw new Error("Gracza można usunąć tylko przed rozpoczęciem gry.");
-  }
   // Removing somebody else is the host's job. Removing yourself is not — that
   // is just leaving, and nobody should need permission for it.
   if (!by.is_host && by.id !== seatId) {
@@ -436,9 +456,49 @@ export async function removeSeat(
   const seat = seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nie ma takiego miejsca.");
 
+  // Mid-game the character goes with the player, and the seat is free for
+  // somebody new. What it was carrying does not vanish with it: the Przedmioty,
+  // Przyjaciele and gold are left face up on its Obszar, where 12.1 lets the
+  // next character to stop there pick them up. Deleting the row would take them
+  // out of the game silently, and the board would be quietly poorer for it.
+  if (status === "playing" && seat.field_id) {
+    const held = await holdingsFor(gameId);
+    const mine = held.filter((holding) => holding.seat_id === seatId);
+    const dropped = [
+      ...mine.filter((holding) => holding.kind !== "spell").map((holding) => holding.card_id),
+      ...Array.from({ length: seat.zloto }, () => "1-sztuka-zlota"),
+    ];
+    if (dropped.length > 0) {
+      await db.from("field_cards").insert(
+        dropped.map((cardId) => ({
+          game_id: gameId,
+          field_id: seat.field_id,
+          card_id: cardId,
+        })),
+      );
+    }
+  }
+
   const { error } = await db.from("seats").delete().eq("id", seatId);
   if (error) throw new Error(`removeSeat: ${error.message}`);
   await promoteHostIfNeeded(gameId, seat);
+}
+
+/**
+ * Removes a table and everything on it.
+ *
+ * Every other table in this app survives its players walking away, because a
+ * game of this length is played over several sittings. This is the one way one
+ * ends on purpose — and it has to exist, or the list of tables becomes a
+ * graveyard of abandoned experiments nobody can clear.
+ *
+ * Not guarded by a token. All tables are public here, the code is the only lock
+ * there is, and everybody who can see the list is somebody who was told a code
+ * by a person. The guard is the confirmation in the interface, not the server.
+ */
+export async function deleteGame(gameId: string): Promise<void> {
+  const { error } = await db.from("games").delete().eq("id", gameId);
+  if (error) throw new Error(`deleteGame: ${error.message}`);
 }
 
 /**

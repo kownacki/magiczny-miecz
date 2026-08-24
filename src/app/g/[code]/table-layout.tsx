@@ -85,6 +85,7 @@ export function OtherPlayers({
   characters,
   onInspect,
   onClaim,
+  onKick,
 }: {
   seats: PublicSeat[];
   activeSeatIndex: number | null;
@@ -92,6 +93,8 @@ export function OtherPlayers({
   onInspect: (card: TileCard) => void;
   /** Offered only when this device holds no seat of its own. */
   onClaim?: (seatId: string) => void;
+  /** Offered only to the host: removes the character and frees the seat. */
+  onKick?: (seat: PublicSeat) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const byId = new Map(characters.map((character) => [character.id, character]));
@@ -198,6 +201,8 @@ export function OtherPlayers({
                     </dl>
                   </div>
 
+                  {onKick && <KickButton seat={seat} onKick={onKick} />}
+
                   {seat.abandoned && onClaim && (
                     <button
                       onClick={() => onClaim(seat.id)}
@@ -226,6 +231,52 @@ export function OtherPlayers({
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * The host removing a player mid-game.
+ *
+ * Unlike leaving, this really does take the character out — but not what it was
+ * carrying: the Przedmioty, Przyjaciele and gold are left on its Obszar for
+ * whoever stops there next (12.1), because a character vanishing with four
+ * items in its hands quietly makes the whole table poorer.
+ *
+ * Two clicks, and the second one says what it does.
+ */
+function KickButton({
+  seat,
+  onKick,
+}: {
+  seat: PublicSeat;
+  onKick: (seat: PublicSeat) => void;
+}) {
+  const [armed, setArmed] = useState(false);
+  if (!armed) {
+    return (
+      <button
+        onClick={() => setArmed(true)}
+        className="mb-2 mr-2 rounded border border-edge px-2 py-1 text-[11px] text-muted transition hover:border-vermilion hover:text-vermilion"
+      >
+        Usuń ze stołu
+      </button>
+    );
+  }
+  return (
+    <span className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
+      <span className="text-vermilion">
+        Postać zniknie, rzeczy zostaną na Obszarze. Na pewno?
+      </span>
+      <button
+        onClick={() => onKick(seat)}
+        className="rounded border border-vermilion/60 px-1.5 text-vermilion"
+      >
+        tak
+      </button>
+      <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+        nie
+      </button>
+    </span>
   );
 }
 

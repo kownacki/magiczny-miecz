@@ -26,6 +26,9 @@ const BITRATE = "96k";
 const LUFS = -20;
 const TRUE_PEAK = -2;
 
+/** Seconds a file may differ from the published tracklist before it counts as misaligned. */
+const TOLERANCE = 3;
+
 function ffmpeg(args) {
   return execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", ...args], {
     encoding: "utf8",
@@ -103,13 +106,18 @@ function encode(source, destination, codec) {
   return stats !== null;
 }
 
+function clock(seconds) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
 function run() {
   const args = process.argv.slice(2);
   const all = args.includes("--all");
+  const force = args.includes("--force");
   const from = args.find((arg) => !arg.startsWith("--"));
 
   if (!from) {
-    console.error("usage: node scripts/export-music.mjs <music-folder> [--all]\n");
+    console.error("usage: node scripts/export-music.mjs <music-folder> [--all] [--force]\n");
     console.error("Point it at the Music folder of a Might and Magic VI install. On a GOG");
     console.error("offline installer you can pull that folder out without installing:");
     console.error("  brew install innoextract");
@@ -121,11 +129,12 @@ function run() {
     process.exit(1);
   }
 
-  const manifest = JSON.parse(fs.readFileSync(MANIFEST, "utf8"));
-  const tracks = manifest.tracks;
+  const { tracks } = JSON.parse(fs.readFileSync(MANIFEST, "utf8"));
 
   // CD order. The OST tracklist and the ripped folder are both the disc read
-  // start to finish, so position is the mapping — durations only confirm it.
+  // start to finish, so position is the mapping. MM6 puts game data on track 1,
+  // so the files typically start at 2 — which is why this sorts on the number
+  // in the name rather than the name, and why nothing keys off the number.
   const files = fs.readdirSync(from)
     .filter((file) => AUDIO.test(file))
     .sort((a, b) => {
@@ -134,61 +143,67 @@ function run() {
       return Number.isNaN(na) || Number.isNaN(nb) ? a.localeCompare(b) : na - nb;
     });
 
-  if (files.length !== tracks.length) {
-    console.error(`Found ${files.length} audio files in ${from}, expected ${tracks.length}.`);
-    console.error("Listing them against the manifest so you can see where they diverge:\n");
+  /**
+   * Everything is checked against the tracklist before a single file is
+   * encoded. One missing or extra file shifts every later track by one, and a
+   * half-written public/music of confidently-named wrong music is far worse
+   * than no music: the names would still look right in the diff.
+   */
+  const plan = tracks.map((track, at) => {
+    const file = files[at];
+    if (!file) return { track, file: null, drift: null };
+    const actual = duration(path.join(from, file));
+    // The last track has no published end time, so there is nothing to check.
+    const drift = track.duration === null ? 0 : actual - track.duration;
+    return { track, file, actual, drift };
+  });
+
+  let suspect = 0;
+  for (const { track, file, actual, drift } of plan) {
+    const label = `${String(track.index).padStart(2)}. ${track.title.padEnd(36)}`;
+    if (!file) {
+      console.log(`  ${label} — no file`);
+      suspect += 1;
+      continue;
+    }
+    const off = Math.abs(drift) > TOLERANCE;
+    if (off) suspect += 1;
+    console.log(
+      `  ${label} — ${file.padEnd(10)} ${clock(actual)}` +
+      `${off ? `  ⚠ ${drift > 0 ? "+" : ""}${drift}s vs tracklist` : ""}` +
+      `${track.zone ? `  [${track.zone}]` : ""}`,
+    );
+  }
+  if (files.length > tracks.length) {
+    console.log(`  ${files.length - tracks.length} extra file(s): ${files.slice(tracks.length).join(", ")}`);
+    suspect += 1;
+  }
+
+  if (suspect > 0 && !force) {
+    console.error(
+      `\n${suspect} track(s) do not match the published tracklist, so nothing was written.\n` +
+      `The folder is probably in a different order, or is not the base MM6 disc.\n` +
+      `Re-run with --force once you have checked the list above by ear.`,
+    );
+    process.exit(1);
   }
 
   fs.mkdirSync(OUT, { recursive: true });
   const codec = encoder();
   let written = 0;
   let bytes = 0;
-  let suspect = 0;
 
-  for (const [at, track] of tracks.entries()) {
-    const file = files[at];
-    if (!file) {
-      console.log(`  ${String(track.index).padStart(2)}. ${track.title} — no file`);
-      suspect += 1;
-      continue;
-    }
-
-    const source = path.join(from, file);
-    const actual = duration(source);
-    // The last track has no published end time, so it has nothing to check against.
-    const drift = track.duration === null ? 0 : actual - track.duration;
-    const off = Math.abs(drift) > 3;
-    if (off) suspect += 1;
-
-    const label = `${String(track.index).padStart(2)}. ${track.title}`;
-    const clock = `${Math.floor(actual / 60)}:${String(actual % 60).padStart(2, "0")}`;
-    const mark = off ? `  ⚠ ${drift > 0 ? "+" : ""}${drift}s vs tracklist` : "";
-
-    if (!track.zone && !all) {
-      console.log(`  ${label} — ${file} (${clock}) skipped, no zone${mark}`);
-      continue;
-    }
-
+  for (const { track, file } of plan) {
+    if (!file || (!track.zone && !all)) continue;
     const destination = path.join(OUT, `${track.id}.m4a`);
-    const normalised = encode(source, destination, codec);
-    const size = fs.statSync(destination).size;
+    const normalised = encode(path.join(from, file), destination, codec);
+    bytes += fs.statSync(destination).size;
     written += 1;
-    bytes += size;
-    console.log(
-      `  ${label} — ${file} (${clock}) → ${track.id}.m4a ` +
-      `${(size / 1e6).toFixed(1)} MB${normalised ? "" : " (loudness unmeasured)"}` +
-      `${track.zone ? `  [${track.zone}]` : ""}${mark}`,
-    );
+    console.log(`  wrote ${track.id}.m4a${normalised ? "" : "  (loudness unmeasured)"}`);
   }
 
   console.log(`\n${written} tracks, ${(bytes / 1e6).toFixed(1)} MB, ${codec} @ ${BITRATE}, ${LUFS} LUFS.`);
-  if (suspect > 0) {
-    console.log(
-      `${suspect} track(s) do not match the published tracklist. The folder is probably in a\n` +
-      `different order, or is not the base MM6 disc — check before committing public/music.`,
-    );
-    process.exit(1);
-  }
+  if (!all) console.log("Only zoned tracks were encoded; pass --all for the whole disc.");
 }
 
 run();

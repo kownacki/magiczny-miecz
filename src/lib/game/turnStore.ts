@@ -144,8 +144,22 @@ async function journal(
 
 export async function startGame(gameId: string): Promise<void> {
   const seats = await seatsFor(gameId);
-  const ready = seats.filter((seat) => seat.character_id);
-  if (ready.length < 2) throw new Error("Do gry potrzeba co najmniej 2 postaci.");
+  // `chosen`, not `ready`: having picked a character and having said you are
+  // ready are two different things, and conflating them is what let a game
+  // start while somebody was still deciding.
+  const chosen = seats.filter((seat) => seat.character_id);
+  if (chosen.length < 2) throw new Error("Do gry potrzeba co najmniej 2 postaci.");
+
+  // Everybody with a character has to have said so (docs/LOBBY.md). A seat
+  // nobody is behind cannot say anything, so it is not asked.
+  const dithering = chosen.filter((seat) => !seat.ready && !seat.abandoned_at);
+  if (dithering.length > 0) {
+    throw new Error(
+      `Nie wszyscy są gotowi: ${dithering
+        .map((seat) => seat.player_name ?? `miejsce ${seat.seat_index + 1}`)
+        .join(", ")}.`,
+    );
+  }
 
   const game = await loadGame(gameId);
   await db
@@ -153,7 +167,7 @@ export async function startGame(gameId: string): Promise<void> {
     .update({
       status: "playing",
       turn: 1,
-      active_seat: ready[0].seat_index,
+      active_seat: chosen[0].seat_index,
       turn_state: startTurn(),
       started_at: new Date().toISOString(),
       // Only a simulation needs a deck. In companion mode the deck is the
@@ -166,11 +180,11 @@ export async function startGame(gameId: string): Promise<void> {
   // Miecz and a Tarcza. Dealing everyone one Sztuka Złota and nothing else is
   // wrong from the first turn, and wrong in the direction that flattens the
   // characters into each other.
-  for (const seat of ready) {
+  for (const seat of chosen) {
     await dealStartingKit(gameId, seat);
   }
 
-  await journal(gameId, null, 1, "start", { seats: ready.length });
+  await journal(gameId, null, 1, "start", { seats: chosen.length });
   await bumpRevision(gameId);
 }
 

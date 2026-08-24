@@ -51,6 +51,8 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [games, setGames] = useState<GameSummary[] | null>(null);
+  /** Which table is one more click from being deleted. */
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   // A game of this length spans several sittings, so the first question on
   // opening the app is usually "which table were we on?" rather than "start a
@@ -61,6 +63,12 @@ export default function Home() {
       .then((data) => setGames(data.games ?? []))
       .catch(() => setGames([]));
   }, []);
+
+  async function remove(joinCode: string) {
+    await fetch(`/api/games/${joinCode}`, { method: "DELETE" });
+    setDeleting(null);
+    setGames((current) => (current ?? []).filter((game) => game.joinCode !== joinCode));
+  }
 
   async function startTable() {
     // The name is typed into the page rather than a browser prompt: a native
@@ -160,10 +168,13 @@ export default function Home() {
         <section className="flex flex-col gap-2">
           <h2 className="text-xs uppercase tracking-widest text-muted">Stoły</h2>
           {games.map((game) => (
-            <button
+            <div
               key={game.joinCode}
+              className="rounded-lg border border-edge bg-panel/50 transition hover:border-ochre"
+            >
+            <button
               onClick={() => router.push(`/g/${game.joinCode}`)}
-              className="rounded-lg border border-edge bg-panel/50 px-3 py-2 text-left transition hover:border-ochre"
+              className="block w-full px-3 py-2 text-left"
             >
               <span className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <span className="tnum font-[family-name:var(--font-display)] tracking-[0.2em] text-ink">
@@ -193,6 +204,34 @@ export default function Home() {
                       .join(" · ")}
               </span>
             </button>
+            {/* Deleting is final and there is no undo, so it takes two clicks
+                and says what it is doing. Every table here is public — the code
+                is the only lock — so the guard is the confirmation, not a
+                permission check the server could not meaningfully make. */}
+            <div className="flex justify-end border-t border-edge/50 px-3 py-1">
+              {deleting === game.joinCode ? (
+                <span className="flex items-center gap-2 text-[11px]">
+                  <span className="text-vermilion">Skasować stół bez śladu?</span>
+                  <button
+                    onClick={() => remove(game.joinCode)}
+                    className="rounded border border-vermilion/60 px-1.5 text-vermilion"
+                  >
+                    tak
+                  </button>
+                  <button onClick={() => setDeleting(null)} className="text-muted hover:text-ink">
+                    nie
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => setDeleting(game.joinCode)}
+                  className="text-[11px] text-muted/70 hover:text-vermilion"
+                >
+                  skasuj
+                </button>
+              )}
+            </div>
+            </div>
           ))}
         </section>
       )}

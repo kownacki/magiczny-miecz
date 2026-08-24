@@ -32,6 +32,22 @@ Turning 689 MB of image-only PDFs into files the system can be built on.
 - [x] Verify counts against the rulebook — all six match exactly
 - [x] Web-optimised card images into `public/` — 267 slices, 9.8 MB, committed
 
+### Music
+
+Might and Magic VI (1998, Paul Romero / Rob King / Steve Baca). Its redbook CD
+tracks are long, quiet, loop cleanly, and were written for exactly this — a
+party crossing terrain, one screen at a time. Base-game board has four ambient
+zones plus the lobby, so five of the fifteen tracks are assigned and the other
+ten are banked for the expansions' Gród and Jaskinia.
+
+- [x] `src/data/music.json` — all 15 tracks, published timings, zone assignments
+- [x] `scripts/export-music.mjs` (`npm run music`) — 96 kbps AAC, two-pass
+      EBU R128 to -20 LUFS so crossing a ring never changes the volume.
+      Verified end to end on synthetic sources: five files at -20.0 ±0.1 LUFS,
+      `moov` ahead of `mdat`, misaligned input writes nothing and exits 1.
+- [ ] Source audio: MM6's Music folder from a GOG copy into `assets/music/`
+- [ ] `npm run music`, then commit `public/music` (~14 MB for the five)
+
 ## Phase 2 — Transcription
 
 Every scan is image-only with no text layer, so all of this is read visually.

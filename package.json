@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "assets": "node scripts/extract-assets.mjs",
     "cards": "node scripts/export-card-images.mjs",
+    "music": "node scripts/export-music.mjs",
     "data": "node scripts/build-data.mjs && node scripts/build-fields.mjs"
   },
   "dependencies": {

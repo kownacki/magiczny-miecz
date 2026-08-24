@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   AWAY_AFTER_MS,
+  deleteGame,
   fieldCardsFor,
   findGame,
   holdingsFor,
@@ -77,4 +78,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       };
     }),
   });
+}
+
+/**
+ * Removes a table for good.
+ *
+ * See `deleteGame`: unguarded on purpose, because every table here is public
+ * and the code is the only lock. The confirmation lives in the interface, where
+ * the person doing it can read what it says.
+ */
+export async function DELETE(request: Request, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  const game = await findGame(code.toUpperCase());
+  if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
+
+  try {
+    await deleteGame(game.id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+  }
 }
