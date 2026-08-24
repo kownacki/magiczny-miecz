@@ -7,8 +7,12 @@ import { DOLNY_KRAG, KAMIENNY_MOST } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
+import { CardView, type ShownCard } from "./card-view";
+import events from "@/data/events.json";
+import type { EventCard } from "@/data/types";
 
 const CHARACTERS = characters as Character[];
+const EVENTS = events as EventCard[];
 const FIELD_NAMES = new Map(
   [...DOLNY_KRAG, ...KAMIENNY_MOST].map((field) => [field.id, field.name]),
 );
@@ -156,6 +160,24 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // saying "waiting".
   const isTableScreen = mySeat?.is_host === true && game.mode === "companion";
   const tableScreenHolder = seats.find((seat) => seat.is_host)?.player_name ?? null;
+
+  // Cards in play this turn. A fight keeps the stack it interrupted, so the
+  // panel does not empty out mid-combat.
+  const shown: ShownCard[] = (() => {
+    const state = game.turn_state;
+    const drawn =
+      state?.phase === "pole"
+        ? state.drawn
+        : state?.phase === "walka"
+          ? state.fight.drawn
+          : [];
+    return drawn.map((entry) => ({
+      cardId: entry.cardId,
+      cardClass: entry.cardClass,
+      ref: entry.ref,
+      name: EVENTS.find((c) => c.id === entry.cardId)?.name ?? entry.cardId,
+    }));
+  })();
   const active = seats.find((seat) => seat.seat_index === game.active_seat);
   const seated = seats.filter((seat) => seat.character_id);
   const taken = new Set(seats.map((seat) => seat.character_id).filter(Boolean));
@@ -246,7 +268,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       )}
 
       {playing && active && (
-        <div className="mb-8">
+        <div className="mb-8 grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
           <TurnPanel
             phase={game.turn_state}
             isMine={
@@ -268,6 +290,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               post("adjust", { seatId: active.id, stat, delta, reason })
             }
           />
+          <CardView cards={shown} />
         </div>
       )}
 

@@ -1,6 +1,6 @@
 /** The game state the engine reads and returns, independent of how it is stored or rendered. */
 
-import type { CardClass, Nature } from "@/data/types";
+import { CARD_CLASS, type CardClass, type Nature } from "@/data/types";
 
 export type SeatId = string;
 
@@ -94,13 +94,5 @@ export interface TurnCard {
  * Ties keep draw order, which is why this is a stable sort by class alone.
  */
 export function resolutionOrder(cards: readonly TurnCard[]): TurnCard[] {
-  const rank: Record<CardClass, number> = {
-    spotkanie: 1,
-    wrog: 2,
-    nieznajomy: 3,
-    przyjaciel: 4,
-    przedmiot: 5,
-    miejsce: 6,
-  };
-  return [...cards].sort((a, b) => rank[a.cardClass] - rank[b.cardClass]);
+  return [...cards].sort((a, b) => CARD_CLASS[a.cardClass] - CARD_CLASS[b.cardClass]);
 }

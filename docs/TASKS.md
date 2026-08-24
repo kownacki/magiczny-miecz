@@ -30,7 +30,7 @@ Turning 689 MB of image-only PDFs into files the system can be built on.
 - [x] Extract every base-game sheet to individual card images (267)
 - [x] `assets/extracted/catalogue.json` — every source PDF, what it holds, how many
 - [x] Verify counts against the rulebook — all six match exactly
-- [ ] Web-optimised card images into `public/`
+- [x] Web-optimised card images into `public/` — 267 slices, 9.8 MB, committed
 
 ## Phase 2 — Transcription
 
@@ -99,6 +99,19 @@ The primary mode: physical board and cards, app as referee.
 - [ ] Nature-dependent cards — the seat's Nature is known, so these are
       resolvable once Kat's setup choice is handled
 
+## Card display
+
+- [ ] Show a seat's own character card and the cards it holds
+
+Show the actual scanned card beside the turn, in both modes. In simulation it
+is the only way to see what you drew; at a physical table it settles "what does
+this one do again?" without passing the card round.
+
+- [x] Export card slices to web-sized images keyed by slice reference
+- [x] Side panel showing the drawn card, or the whole stack when a field draws
+      several (Bezdroża draws 2, Płaskowyż Mgieł draws 3)
+- [x] Fall back to text when a card has no image
+
 ## Phase 5 — Full simulation
 
 Secondary. Same engine, virtual ports.
@@ -128,3 +141,9 @@ Secondary. Same engine, virtual ports.
   print files were never finished. Named from their body text in overrides.json.
 - Event class split: przedmiot 63, wrog 32, spotkanie 20, przyjaciel 20,
   nieznajomy 17, miejsce 13 = 165.
+
+- The resolution numerals printed on the cards are **I Spotkanie, II Wróg,
+  IV Nieznajomy, V Przedmiot, V Przyjaciel, VI Miejsce** — verified against the
+  card headers. Przedmiot and Przyjaciel share V, matching rule 16.6 which names
+  them in one clause. III is unused by any base-game card. An earlier guess of
+  III/IV for Nieznajomy/Przyjaciel resolved turns in the wrong order.

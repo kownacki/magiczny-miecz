@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "assets": "node scripts/extract-assets.mjs",
+    "cards": "node scripts/export-card-images.mjs",
+    "data": "node scripts/build-data.mjs && node scripts/build-fields.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

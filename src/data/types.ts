@@ -9,8 +9,15 @@
 export const CARD_CLASS = {
   spotkanie: 1,
   wrog: 2,
-  nieznajomy: 3,
-  przyjaciel: 4,
+  // III is not used by any base-game card. Rule 16.3 singles out the Demon as a
+  // second kind of Wróg, which is the likeliest owner of the gap; no card was
+  // found printing it.
+  nieznajomy: 4,
+  // Przedmiot and Przyjaciel BOTH print V — verified against the card headers,
+  // and matching rule 16.6, which names "Przedmioty, Przedmioty Magiczne i
+  // Przyjaciele" together in a single clause. They resolve as equals, and the
+  // sort is stable, so cards of equal rank keep the order they were drawn in.
+  przyjaciel: 5,
   przedmiot: 5,
   miejsce: 6,
 } as const;

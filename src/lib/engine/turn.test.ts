@@ -12,6 +12,7 @@ import {
   type TurnOrderSeat,
   type TurnPhase,
 } from "./turn";
+import { resolutionOrder } from "./state";
 
 const seat = (index: number, over: Partial<TurnOrderSeat> = {}): TurnOrderSeat => ({
   index,
@@ -174,5 +175,40 @@ describe("turn order", () => {
   it("gives up rather than looping forever when nobody can act", () => {
     const none = [seat(0, { eliminated: true }), seat(1, { eliminated: true })];
     expect(nextSeat(none, 0, 1).seat).toBeNull();
+  });
+});
+
+describe("resolution numerals (15.2, 16.6)", () => {
+  it("puts Nieznajomy (IV) after Wróg (II) and before Przedmiot (V)", () => {
+    const drawn = [
+      { cardId: "zloto", cardClass: "przedmiot" as const },
+      { cardId: "cudotworca", cardClass: "nieznajomy" as const },
+      { cardId: "cyklop", cardClass: "wrog" as const },
+    ];
+    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual([
+      "cyklop",
+      "cudotworca",
+      "zloto",
+    ]);
+  });
+
+  it("treats Przedmiot and Przyjaciel as equals, both printing V", () => {
+    // Rule 16.6 names them in one clause and the cards agree, so drawing order
+    // decides between them rather than an invented precedence.
+    const drawn = [
+      { cardId: "alchemik", cardClass: "przyjaciel" as const },
+      { cardId: "zloto", cardClass: "przedmiot" as const },
+    ];
+    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["alchemik", "zloto"]);
+    const reversed = [drawn[1], drawn[0]];
+    expect(resolutionOrder(reversed).map((c) => c.cardId)).toEqual(["zloto", "alchemik"]);
+  });
+
+  it("still puts Miejsce (VI) last", () => {
+    const drawn = [
+      { cardId: "swiatynia", cardClass: "miejsce" as const },
+      { cardId: "mgla", cardClass: "spotkanie" as const },
+    ];
+    expect(resolutionOrder(drawn)[0].cardId).toBe("mgla");
   });
 });
