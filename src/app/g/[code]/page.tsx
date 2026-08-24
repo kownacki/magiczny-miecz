@@ -292,6 +292,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   async function chooseCharacter(seatId: string, characterId: string) {
     if (pendingCharacter) return; // one at a time; a double-click is not two choices
+    // Choosing what is already chosen is not a choice. The strip disables the
+    // card too, but the rule belongs here as well: `chooseCharacter` resets the
+    // seat, ready flag included, so a no-op request is not harmless.
+    if (seats.find((seat) => seat.id === seatId)?.character_id === characterId) return;
     setPendingCharacter(characterId);
     try {
       await fetch(`/api/games/${code}/character`, {

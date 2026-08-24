@@ -275,7 +275,11 @@ export function Lobby({
             return (
               <button
                 key={character.id}
-                disabled={busy || used || !target || pendingCharacterId !== null}
+                // Already theirs: nothing to ask for. Re-sending it would
+                // rewrite the seat with the values it already has and, worse,
+                // clear the ready flag — so the one thing a second click on
+                // your own character could do is un-ready you.
+                disabled={busy || used || isTargets || !target || pendingCharacterId !== null}
                 onClick={() => target && onChooseCharacter(target, character.id)}
                 onMouseEnter={() => setPreview(character.id)}
                 onMouseLeave={() => setPreview(null)}
