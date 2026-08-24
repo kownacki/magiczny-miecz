@@ -34,19 +34,44 @@ function fold(text: string): string {
     .replace(/ł/g, "l");
 }
 
+/**
+ * How well a card name matches what was typed. Lower sorts first.
+ *
+ * Substring matching alone ranks badly in Polish, where "czar-" opens a whole
+ * family of words: typing "zar" put SABAT CZAROWNIC and CZARODZIEJ above
+ * ZARAZA, because "czarownic" and "czarodziej" both contain "zar" mid-word. A
+ * player types the opening letters of the card in their hand and expects it
+ * first, so a name that starts with the query beats one where a *word* starts
+ * with it, which beats a match buried inside a word.
+ */
+function matchRank(name: string, needle: string): number {
+  const folded = fold(name);
+  if (folded.startsWith(needle)) return 0;
+  if (folded.split(/\s+/).some((word) => word.startsWith(needle))) return 1;
+  return folded.includes(needle) ? 2 : 3;
+}
+
 function searchCards(query: string): EventCard[] {
   const needle = fold(query.trim());
   if (needle.length < 2) return [];
   const seen = new Set<string>();
   return EVENTS.filter((card) => {
-    if (!fold(card.name).includes(needle)) return false;
+    if (matchRank(card.name, needle) === 3) return false;
     // The deck holds real duplicates; the player only needs to find the card
     // once, so identical names collapse to one row.
     if (seen.has(card.id)) return false;
     seen.add(card.id);
     return true;
-  }).slice(0, 8);
+  })
+    .sort(
+      (a, b) =>
+        matchRank(a.name, needle) - matchRank(b.name, needle) ||
+        a.name.localeCompare(b.name, "pl"),
+    )
+    .slice(0, 8);
 }
+
+export { matchRank };
 
 interface Props {
   phase: TurnPhase;
