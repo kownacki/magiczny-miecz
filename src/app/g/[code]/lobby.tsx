@@ -356,7 +356,7 @@ export function Lobby({
                 {ownerSeat && (
                   <span
                     style={{ background: owner ?? undefined }}
-                    className="absolute inset-x-0 bottom-0 flex h-[11%] min-h-[13px] items-center justify-center overflow-hidden px-0.5 text-[9px] font-medium leading-none text-night"
+                    className="absolute inset-x-0 bottom-0 flex h-[13%] min-h-[17px] items-center justify-center overflow-hidden px-0.5 text-[11px] font-medium leading-none text-night"
                   >
                     <span className="truncate">
                       {ownerSeat.playerName ?? `miejsce ${ownerSeat.seatIndex + 1}`}
