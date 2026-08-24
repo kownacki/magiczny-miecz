@@ -32,5 +32,19 @@ for (const card of events as EventCard[]) {
 export function cardImageUrl(cardId: string, ref?: string): string | null {
   const slice = ref && AVAILABLE.has(ref) ? ref : FIRST_SLICE_BY_ID.get(cardId);
   if (!slice || !AVAILABLE.has(slice)) return null;
-  return `/cards/${slice.replace("#", "-")}.jpg`;
+  return `/cards/${fileNameFor(slice)}.jpg`;
+}
+
+/**
+ * A slice reference names its index bare ("zdarzenia-8#5") but the exported
+ * files zero-pad it ("zdarzenia-8-05.jpg"), because they are named after the
+ * slices the extractor wrote and it pads for sortability.
+ *
+ * Forgetting the padding broke the image for every card with an index below
+ * ten — nine of every twenty — while leaving the rest working, which is exactly
+ * the sort of half-broken that survives a spot check.
+ */
+function fileNameFor(slice: string): string {
+  const [sheet, index] = slice.split("#");
+  return `${sheet}-${index.padStart(2, "0")}`;
 }
