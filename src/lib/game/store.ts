@@ -24,6 +24,8 @@ export interface SeatRow {
   stone_until_turn: number | null;
   /** 11.11: the turn a failed bridge attempt stops barring another. */
   bridge_blocked_until_turn: number | null;
+  /** Set when the player behind this seat walked away; the character stays. */
+  abandoned_at: string | null;
   /** 7.3: the turn this seat last changed its Natura on. */
   nature_changed_turn: number | null;
   eliminated: boolean;
@@ -54,7 +56,7 @@ const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,eliminated,is_host";
+  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,eliminated,is_host";
 
 /**
  * Creates a table and returns the host's seat token.
@@ -92,6 +94,61 @@ export async function createGame(
     return { game: data as GameRow, hostToken };
   }
   throw new Error("createGame: could not find a free join code");
+}
+
+export interface GameSummary {
+  joinCode: string;
+  status: string;
+  mode: string;
+  turn: number;
+  lastPlayedAt: string;
+  createdAt: string;
+  players: { name: string | null; characterId: string | null; abandoned: boolean }[];
+}
+
+/**
+ * The tables that exist, most recently played first.
+ *
+ * A game of this length is not finished in one sitting — the box is a two-hour
+ * game and it takes longer — so "which table were we on?" is a real question,
+ * and until now the only answer was a five-character code somebody had to have
+ * written down.
+ *
+ * Everything here is already public to anyone holding the code, and this is a
+ * private, unpublished app on a table people are sitting at together.
+ */
+export async function listGames(limit = 20): Promise<GameSummary[]> {
+  const { data, error } = await db
+    .from("games")
+    .select("id,join_code,status,mode,turn,last_played_at,created_at")
+    .order("last_played_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`listGames: ${error.message}`);
+
+  const games = data ?? [];
+  if (games.length === 0) return [];
+
+  const { data: seats } = await db
+    .from("seats")
+    .select("game_id,seat_index,player_name,character_id,abandoned_at")
+    .in("game_id", games.map((game) => game.id))
+    .order("seat_index");
+
+  return games.map((game) => ({
+    joinCode: game.join_code as string,
+    status: game.status as string,
+    mode: game.mode as string,
+    turn: game.turn as number,
+    lastPlayedAt: game.last_played_at as string,
+    createdAt: game.created_at as string,
+    players: (seats ?? [])
+      .filter((seat) => seat.game_id === game.id)
+      .map((seat) => ({
+        name: seat.player_name as string | null,
+        characterId: seat.character_id as string | null,
+        abandoned: seat.abandoned_at !== null,
+      })),
+  }));
 }
 
 export async function findGame(joinCode: string): Promise<GameRow | null> {
@@ -271,6 +328,7 @@ export async function leaveGame(
   status: string,
   activeSeat: number | null,
 ): Promise<LeaveResult> {
+  // Before the game starts a seat is just an intention, so leaving deletes it.
   if (status === "lobby") {
     const { error } = await db.from("seats").delete().eq("id", seat.id);
     if (error) throw new Error(`leaveGame: ${error.message}`);
@@ -278,36 +336,61 @@ export async function leaveGame(
     return { removed: true, passedTo: null, gameFinished: false };
   }
 
+  // Once play has begun it is not. A player walking away is not a character
+  // dying: the figure stays on its Obszar with its points, its Przedmioty and
+  // its Przyjaciele, because other players may already have acted on all of
+  // them and 4.4's death is a different event with different consequences.
+  //
+  // What is released is the *claim*. The token is rotated so the departing
+  // device cannot act as this seat any more, and the seat is marked as having
+  // nobody behind it — free for somebody to take over, and shown as such.
   const { error } = await db
     .from("seats")
-    .update({ eliminated: true })
+    .update({ abandoned_at: new Date().toISOString(), claim_token: makeClaimToken() })
     .eq("id", seat.id);
   if (error) throw new Error(`leaveGame: ${error.message}`);
   await promoteHostIfNeeded(gameId, seat);
 
-  const remaining = (await seatsFor(gameId)).filter(
-    (other) => other.character_id && !other.eliminated,
-  );
-
-  // A table with nobody left in it is over. One player left is not a game
-  // either — the box says two to six — so it ends there rather than leaving
-  // someone rolling against themselves.
-  if (remaining.length <= 1) {
-    await db.from("games").update({ status: "finished", active_seat: null }).eq("id", gameId);
-    return { removed: false, passedTo: null, gameFinished: true };
-  }
-
+  // Play does not stop for an empty chair, but it must not wait on one either:
+  // if it was their turn, it moves on.
   if (activeSeat !== seat.seat_index) {
     return { removed: false, passedTo: null, gameFinished: false };
   }
-
-  // The leaver was mid-turn, so play has to move on or the table deadlocks.
-  const next = remaining.find((other) => other.seat_index > seat.seat_index) ?? remaining[0];
+  const others = (await seatsFor(gameId)).filter(
+    (other) => other.character_id && !other.eliminated && other.id !== seat.id,
+  );
+  if (others.length === 0) {
+    return { removed: false, passedTo: null, gameFinished: false };
+  }
+  const next = others.find((other) => other.seat_index > seat.seat_index) ?? others[0];
   await db
     .from("games")
     .update({ active_seat: next.seat_index, turn_state: { phase: "rzut" } })
     .eq("id", gameId);
   return { removed: false, passedTo: next.seat_index, gameFinished: false };
+}
+
+/**
+ * Picks up a seat nobody is behind.
+ *
+ * The counterpart to leaving: a fresh token is issued for that seat and handed
+ * to the device asking, which then plays that character exactly as its previous
+ * player did. This is also how somebody rejoins after closing the tab, which is
+ * the commonest way a seat is abandoned in the first place.
+ */
+export async function claimSeat(gameId: string, seatId: string): Promise<string> {
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nie ma takiego miejsca.");
+  if (!seat.abandoned_at) throw new Error("To miejsce ma już swojego gracza.");
+
+  const token = makeClaimToken();
+  const { error } = await db
+    .from("seats")
+    .update({ abandoned_at: null, claim_token: token })
+    .eq("id", seatId);
+  if (error) throw new Error(`claimSeat: ${error.message}`);
+  return token;
 }
 
 /**
@@ -388,6 +471,11 @@ export async function bumpRevision(gameId: string): Promise<number> {
     .single();
   if (error) throw new Error(`bumpRevision: ${error.message}`);
   const next = (data.revision as number) + 1;
-  await db.from("games").update({ revision: next }).eq("id", gameId);
+  // Every change is a moment the table was being played, which is what a list
+  // of games needs to sort by — not when it was opened.
+  await db
+    .from("games")
+    .update({ revision: next, last_played_at: new Date().toISOString() })
+    .eq("id", gameId);
   return next;
 }

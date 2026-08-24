@@ -39,6 +39,9 @@ create table if not exists magiczny_miecz.games (
   -- Bumped on every state change. Clients hold the last value they rendered and
   -- refetch when a Realtime ping carries a higher one.
   revision bigint not null default 0,
+  -- Touched on every change, so a list of tables can be ordered by what was
+  -- actually being played rather than by when it was opened.
+  last_played_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
 
@@ -83,6 +86,11 @@ create table if not exists magiczny_miecz.seats (
   -- 7.3: at most one Natura change per turn, so the turn it happened on is
   -- recorded rather than a flag that would need clearing.
   nature_changed_turn integer,
+  -- A player walking away is not a character dying (4.4): the seat, its
+  -- character and everything it carries stay put and only the claim is
+  -- released, so somebody else — or the same person on a new device — can pick
+  -- it up. Null means somebody is behind it.
+  abandoned_at timestamptz,
   eliminated boolean not null default false,
 
   unique (game_id, seat_index)

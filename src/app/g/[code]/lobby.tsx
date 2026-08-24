@@ -11,6 +11,8 @@ export interface LobbySeat {
   playerName: string | null;
   characterId: string | null;
   isHost: boolean;
+  /** Nobody is behind this seat — see `leaveGame`. */
+  abandoned: boolean;
 }
 
 /**
@@ -164,6 +166,9 @@ export function Lobby({
                     </p>
                     <p className="truncate text-xs text-muted">
                       {character ? character.name : "wybiera postać…"}
+                      {seat.abandoned && (
+                        <span className="ml-1 text-vermilion/80">· bez gracza</span>
+                      )}
                     </p>
                     {character && (
                       <p className="text-[11px] text-muted/80">

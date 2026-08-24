@@ -1,8 +1,47 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { normaliseJoinCode } from "@/lib/game/codes";
+import characters from "@/data/characters.json";
+import type { Character } from "@/data/types";
+
+interface GameSummary {
+  joinCode: string;
+  status: string;
+  mode: string;
+  turn: number;
+  lastPlayedAt: string;
+  players: { name: string | null; characterId: string | null; abandoned: boolean }[];
+}
+
+const CHARACTER_NAMES = new Map(
+  (characters as Character[]).map((character) => [character.id, character.name]),
+);
+
+/**
+ * "Wczoraj", "3 dni temu" — a date is not what anybody is asking.
+ *
+ * The question behind this list is "which of these were we playing?", and the
+ * answer is almost always in terms of how long ago rather than of a calendar.
+ */
+function whenPlayed(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) {
+    const hours = Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000);
+    if (hours <= 0) return "przed chwilą";
+    return `${hours} godz. temu`;
+  }
+  if (days === 1) return "wczoraj";
+  if (days < 7) return `${days} dni temu`;
+  return new Date(iso).toLocaleDateString("pl-PL");
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  lobby: "poczekalnia",
+  playing: "w trakcie",
+  finished: "zakończona",
+};
 
 /** Entry point: start a new table, or join one whose code is being read out across it. */
 export default function Home() {
@@ -11,6 +50,17 @@ export default function Home() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [games, setGames] = useState<GameSummary[] | null>(null);
+
+  // A game of this length spans several sittings, so the first question on
+  // opening the app is usually "which table were we on?" rather than "start a
+  // new one".
+  useEffect(() => {
+    fetch("/api/games")
+      .then((response) => response.json())
+      .then((data) => setGames(data.games ?? []))
+      .catch(() => setGames([]));
+  }, []);
 
   async function startTable() {
     // The name is typed into the page rather than a browser prompt: a native
@@ -105,6 +155,47 @@ export default function Home() {
       </form>
 
       {error && <p className="text-center text-sm text-vermilion">{error}</p>}
+
+      {games !== null && games.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-xs uppercase tracking-widest text-muted">Stoły</h2>
+          {games.map((game) => (
+            <button
+              key={game.joinCode}
+              onClick={() => router.push(`/g/${game.joinCode}`)}
+              className="rounded-lg border border-edge bg-panel/50 px-3 py-2 text-left transition hover:border-ochre"
+            >
+              <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span className="tnum font-[family-name:var(--font-display)] tracking-[0.2em] text-ink">
+                  {game.joinCode}
+                </span>
+                <span className="text-[11px] text-muted">
+                  {STATUS_LABEL[game.status] ?? game.status}
+                  {game.status === "playing" ? ` · tura ${game.turn}` : ""} ·{" "}
+                  {whenPlayed(game.lastPlayedAt)}
+                </span>
+              </span>
+              <span className="mt-0.5 block text-[11px] text-muted">
+                {game.players.length === 0
+                  ? "nikogo jeszcze nie ma"
+                  : game.players
+                      .map((player) => {
+                        const who =
+                          player.name ??
+                          (player.characterId
+                            ? (CHARACTER_NAMES.get(player.characterId) ?? "?")
+                            : "wolne");
+                        // A seat somebody walked away from still holds its
+                        // character, so it is listed — and marked, because
+                        // that is the thing worth knowing before you sit down.
+                        return player.abandoned ? `${who} (bez gracza)` : who;
+                      })
+                      .join(" · ")}
+              </span>
+            </button>
+          ))}
+        </section>
+      )}
     </main>
   );
 }

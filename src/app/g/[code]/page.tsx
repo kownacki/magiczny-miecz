@@ -72,6 +72,8 @@ interface Seat {
   nature: string | null;
   turns_lost: number;
   eliminated: boolean;
+  /** Set when the player behind this seat walked away; the character stays. */
+  abandoned_at: string | null;
   is_host: boolean;
   holdings: Held[];
   /** Cards this viewer is not allowed to see the faces of (9.3). */
@@ -179,9 +181,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /**
    * Gives up this device's seat.
    *
-   * Confirmation is a second click on the same button rather than a native
-   * dialog — see the note on `join`. Mid-game the button says what it costs,
-   * because 4.4 makes leaving an elimination and there is no undo.
+   * Mid-game this does not remove anybody: the character stays on its Obszar
+   * with everything it owns and is marked as having no player, so it can be
+   * taken over later — by somebody else, or by this player on a new device.
+   * Only in the lobby does leaving actually delete the seat.
    */
   async function leave() {
     const seated = mySeatIndex !== null;
@@ -236,6 +239,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * one is the bug that stranded a player earlier. The table screen acts for
    * them the same way it acts for anyone whose turn it is.
    */
+  /**
+   * Sits down at a seat nobody is behind — including your own, after you closed
+   * the tab. The character, its points and everything it carries are exactly as
+   * the last player left them.
+   */
+  async function claimSeat(seatId: string) {
+    const response = await fetch(`/api/games/${code}/join`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seatId }),
+    });
+    const data = await response.json();
+    if (!response.ok) return setError(data.error);
+    localStorage.setItem(`mm:${code}`, data.token);
+    refresh();
+  }
+
   async function addLocalPlayer(name: string) {
     const response = await fetch(`/api/games/${code}/join`, {
       method: "POST",
@@ -504,6 +524,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               activeSeatIndex={game.active_seat}
               characters={CHARACTERS}
               onInspect={setInspectingCard}
+              // Only offered to a device with no seat of its own; sitting at two
+              // at once is the bug that stranded a player early on.
+              onClaim={mySeatIndex === null ? claimSeat : undefined}
             />
           </div>
         }
@@ -519,6 +542,7 @@ function asLobbySeat(seat: Seat): LobbySeat {
     playerName: seat.player_name,
     characterId: seat.character_id,
     isHost: seat.is_host,
+    abandoned: seat.abandoned_at !== null,
   };
 }
 
@@ -545,6 +569,7 @@ function asPublicSeat(seat: Seat): PublicSeat {
     zloto: seat.zloto,
     nature: seat.nature,
     eliminated: seat.eliminated,
+    abandoned: seat.abandoned_at !== null,
     turnsLost: seat.turns_lost,
     cards: seat.holdings
       .filter((held) => held.kind !== "spell")
@@ -1028,8 +1053,9 @@ function rollSkippedBy(seat: Seat): string | null {
 /**
  * Leaving, confirmed by a second click rather than a browser dialog.
  *
- * Mid-game it says what it costs: 4.4 makes leaving an elimination, the
- * character's things stay on the board, and there is no undo.
+ * It says what actually happens, which is much less than it used to: the
+ * character stays in the game exactly as it is and somebody can pick it up
+ * again. Only this device stops speaking for it.
  */
 function LeaveButton({
   playing,
@@ -1051,7 +1077,7 @@ function LeaveButton({
   return (
     <span className="flex items-center gap-2">
       <span className="text-vermilion">
-        {playing ? "Postać wypada z gry — na pewno?" : "Na pewno?"}
+        {playing ? "Postać zostanie w grze bez gracza — na pewno?" : "Na pewno?"}
       </span>
       <button
         onClick={onLeave}

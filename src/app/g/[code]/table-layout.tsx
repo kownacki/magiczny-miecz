@@ -59,6 +59,8 @@ export interface PublicSeat {
   zloto: number;
   nature: string | null;
   eliminated: boolean;
+  /** Nobody is behind this seat; the character plays on (see leaveGame). */
+  abandoned: boolean;
   turnsLost: number;
   cards: TileCard[];
   hiddenSpells: number;
@@ -79,11 +81,14 @@ export function OtherPlayers({
   activeSeatIndex,
   characters,
   onInspect,
+  onClaim,
 }: {
   seats: PublicSeat[];
   activeSeatIndex: number | null;
   characters: Character[];
   onInspect: (card: TileCard) => void;
+  /** Offered only when this device holds no seat of its own. */
+  onClaim?: (seatId: string) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const byId = new Map(characters.map((character) => [character.id, character]));
@@ -122,6 +127,12 @@ export function OtherPlayers({
                   <span className="ml-2 text-[11px] text-muted">
                     {character?.name ?? "—"}
                   </span>
+                  {/* The character is still in the game; only its player is
+                      gone. Worth saying plainly, because whoever is left has to
+                      decide whether to play it or leave it standing. */}
+                  {seat.abandoned && (
+                    <span className="ml-2 text-[11px] text-vermilion/80">bez gracza</span>
+                  )}
                 </span>
                 <span className="tnum shrink-0 text-[11px]">
                   <span className="text-miecz">{seat.miecz}</span>
@@ -175,6 +186,15 @@ export function OtherPlayers({
                       )}
                     </dl>
                   </div>
+
+                  {seat.abandoned && onClaim && (
+                    <button
+                      onClick={() => onClaim(seat.id)}
+                      className="mb-2 rounded border border-ochre/60 px-2 py-1 text-[11px] text-ochre transition hover:bg-ochre/10"
+                    >
+                      Przejmij tę postać
+                    </button>
+                  )}
 
                   {(seat.cards.length > 0 || seat.hiddenSpells > 0) && (
                     <div className="flex flex-wrap gap-2">

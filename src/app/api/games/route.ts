@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
-import { createGame } from "@/lib/game/store";
+import { createGame, listGames } from "@/lib/game/store";
+
+/** The tables that exist, so a game can be found again without its code. */
+export async function GET() {
+  try {
+    return NextResponse.json({ games: await listGames() });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
