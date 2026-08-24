@@ -1,0 +1,26 @@
+{
+  "source": {
+    "game": "Might and Magic VI: The Mandate of Heaven",
+    "year": 1998,
+    "publisher": "3DO / New World Computing",
+    "composers": ["Paul Romero", "Rob King", "Steve Baca"],
+    "note": "Redbook CD audio. The GOG release ships these as already-split files in the game's Music folder, cut at the loop seams the game itself uses — which is why they can be looped without a crossfade. The start/duration fields below come from the published OST tracklist and exist only so scripts/export-music.mjs can prove the files it found line up with the tracks named here."
+  },
+  "tracks": [
+    { "index": 1, "id": "town-exploration-1", "title": "Adventuring, Town Exploration 1", "start": "00:00", "duration": 192, "zone": "lobby" },
+    { "index": 2, "id": "town-exploration-2", "title": "Adventuring, Town Exploration 2", "start": "03:12", "duration": 241, "zone": "dolny" },
+    { "index": 3, "id": "town-exploration-3", "title": "Adventuring, Town Exploration 3", "start": "07:13", "duration": 241, "zone": null },
+    { "index": 4, "id": "dungeon-exploration-1", "title": "Dungeon Exploration 1", "start": "11:14", "duration": 131, "zone": null },
+    { "index": 5, "id": "dungeon-exploration-2", "title": "Dungeon Exploration 2", "start": "13:25", "duration": 241, "zone": null },
+    { "index": 6, "id": "dungeon-exploration-3", "title": "Dungeon Exploration 3", "start": "17:26", "duration": 186, "zone": null },
+    { "index": 7, "id": "dungeon-exploration-4", "title": "Dungeon Exploration 4", "start": "20:32", "duration": 175, "zone": null },
+    { "index": 8, "id": "dungeon-exploration-5", "title": "Dungeon Exploration 5", "start": "23:27", "duration": 179, "zone": null },
+    { "index": 9, "id": "the-hive", "title": "The Hive", "start": "26:26", "duration": 256, "zone": "most" },
+    { "index": 10, "id": "tomb-of-varn", "title": "Tomb of Varn", "start": "30:42", "duration": 187, "zone": null },
+    { "index": 11, "id": "sunlit-snow-journey", "title": "Sunlit Snow Journey", "start": "33:49", "duration": 241, "zone": "srodkowy" },
+    { "index": 12, "id": "moonlit-journey", "title": "Moonlit Journey, Main Titles", "start": "37:50", "duration": 186, "zone": null },
+    { "index": 13, "id": "temple-of-baa-1", "title": "Exploring the Temple of Baa", "start": "40:56", "duration": 200, "zone": null },
+    { "index": 14, "id": "temple-of-baa-2", "title": "Further Exploring the Temple of Baa", "start": "44:16", "duration": 198, "zone": null },
+    { "index": 15, "id": "moonlit-snow-journey", "title": "Moonlit Snow Journey", "start": "47:34", "duration": null, "zone": "gorny" }
+  ]
+}

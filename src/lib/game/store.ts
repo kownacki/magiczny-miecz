@@ -26,6 +26,8 @@ export interface SeatRow {
   bridge_blocked_until_turn: number | null;
   /** Set when the player behind this seat walked away; the character stays. */
   abandoned_at: string | null;
+  /** When this seat's device was last heard from (see `AWAY_AFTER_MS`). */
+  seen_at: string | null;
   /** 7.3: the turn this seat last changed its Natura on. */
   nature_changed_turn: number | null;
   eliminated: boolean;
@@ -56,7 +58,7 @@ const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,eliminated,is_host";
+  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,eliminated,is_host";
 
 /**
  * Creates a table and returns the host's seat token.
@@ -416,9 +418,19 @@ export async function claimSeat(gameId: string, seatId: string): Promise<string>
  * Removing yourself is allowed and behaves exactly the same; a lobby where the
  * host cannot drop out is worse than one where anybody can tidy up.
  */
-export async function removeSeat(gameId: string, seatId: string, status: string): Promise<void> {
+export async function removeSeat(
+  gameId: string,
+  seatId: string,
+  status: string,
+  by: SeatRow,
+): Promise<void> {
   if (status !== "lobby") {
     throw new Error("Gracza można usunąć tylko przed rozpoczęciem gry.");
+  }
+  // Removing somebody else is the host's job. Removing yourself is not — that
+  // is just leaving, and nobody should need permission for it.
+  if (!by.is_host && by.id !== seatId) {
+    throw new Error("Tylko gospodarz może usuwać graczy.");
   }
   const seats = await seatsFor(gameId);
   const seat = seats.find((s) => s.id === seatId);
@@ -429,8 +441,31 @@ export async function removeSeat(gameId: string, seatId: string, status: string)
   await promoteHostIfNeeded(gameId, seat);
 }
 
-export async function claimTableScreen(gameId: string, seatId: string): Promise<void> {
+/**
+ * Hands the host role to a seat.
+ *
+ * Two ways in, and only two. The host may give it away deliberately, and any
+ * player may take it when the host's own seat has been abandoned — without that
+ * second door, a table whose host closed their laptop can never be configured
+ * or started again, which is the whole reason host migration exists.
+ *
+ * Taking it from a host who is present is not a door. There is no co-host.
+ */
+export async function claimTableScreen(
+  gameId: string,
+  seatId: string,
+  by: SeatRow,
+): Promise<void> {
   const seats = await seatsFor(gameId);
+  const host = seats.find((seat) => seat.is_host);
+
+  if (host && host.id !== by.id && !host.abandoned_at) {
+    throw new Error("Rolę gospodarza może przekazać tylko obecny gospodarz.");
+  }
+  const target = seats.find((seat) => seat.id === seatId);
+  if (!target) throw new Error("Nie ma takiego miejsca.");
+  if (target.abandoned_at) throw new Error("To miejsce nie ma gracza.");
+
   for (const seat of seats) {
     if (seat.is_host && seat.id !== seatId) {
       await db.from("seats").update({ is_host: false }).eq("id", seat.id);
@@ -441,14 +476,33 @@ export async function claimTableScreen(gameId: string, seatId: string): Promise<
 }
 
 /**
+ * How long a seat may go unheard-from before it is shown as away.
+ *
+ * The browser polls every two seconds, so this is generous: a tab in the
+ * background, a phone that slept, or a slow network should not make somebody
+ * look like they have left the table.
+ */
+export const AWAY_AFTER_MS = 45_000;
+
+/** Records that this seat's device is still there. */
+export async function markSeen(seatId: string): Promise<void> {
+  await db.from("seats").update({ seen_at: new Date().toISOString() }).eq("id", seatId);
+}
+
+/**
  * Keeps a table hosted. The host flag only decides who sees the lobby controls,
  * but a table whose host walked away with it would strand everyone else.
  */
 async function promoteHostIfNeeded(gameId: string, leaving: SeatRow): Promise<void> {
   if (!leaving.is_host) return;
-  const candidate = (await seatsFor(gameId)).find(
-    (seat) => seat.id !== leaving.id && !seat.eliminated,
-  );
+  // The longest-standing player takes over. Seats are appended in join order,
+  // so the lowest index is whoever has been at the table longest — a stable,
+  // explicable rule, which matters because nobody chose it in the moment.
+  // Somebody who has themselves walked away is skipped; handing the role to an
+  // empty chair is how a table ends up unstartable.
+  const candidate = (await seatsFor(gameId))
+    .filter((seat) => seat.id !== leaving.id && !seat.eliminated && !seat.abandoned_at)
+    .sort((a, b) => a.seat_index - b.seat_index)[0];
   if (!candidate) return;
 
   await db.from("seats").update({ is_host: true }).eq("id", candidate.id);

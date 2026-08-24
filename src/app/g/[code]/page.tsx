@@ -74,6 +74,8 @@ interface Seat {
   eliminated: boolean;
   /** Set when the player behind this seat walked away; the character stays. */
   abandoned_at: string | null;
+  /** Device has not checked in recently — a closed tab, not a decision. */
+  away: boolean;
   is_host: boolean;
   holdings: Held[];
   /** Cards this viewer is not allowed to see the faces of (9.3). */
@@ -346,6 +348,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             setPicking("auto");
           }}
           onRemove={(seat) => post("leave", { seatId: seat.id })}
+          onMakeHost={(seat) => post("host", { seatId: seat.id })}
+          isHost={mySeat?.is_host === true}
+          hostAway={seats.find((seat) => seat.is_host)?.abandoned_at !== null}
           onStart={() => post("start", {})}
           onLibrary={() => setLibraryOpen(true)}
         />
@@ -543,6 +548,7 @@ function asLobbySeat(seat: Seat): LobbySeat {
     characterId: seat.character_id,
     isHost: seat.is_host,
     abandoned: seat.abandoned_at !== null,
+    away: seat.away,
   };
 }
 
@@ -570,6 +576,8 @@ function asPublicSeat(seat: Seat): PublicSeat {
     nature: seat.nature,
     eliminated: seat.eliminated,
     abandoned: seat.abandoned_at !== null,
+    away: seat.away,
+    isHost: seat.is_host,
     turnsLost: seat.turns_lost,
     cards: seat.holdings
       .filter((held) => held.kind !== "spell")

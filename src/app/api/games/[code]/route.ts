@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { fieldCardsFor, findGame, holdingsFor, seatsFor, verifySeat } from "@/lib/game/store";
+import {
+  AWAY_AFTER_MS,
+  fieldCardsFor,
+  findGame,
+  holdingsFor,
+  markSeen,
+  seatsFor,
+  verifySeat,
+} from "@/lib/game/store";
 import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
 
 /**
@@ -20,6 +28,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
   const token = new URL(request.url).searchParams.get("token");
   const mine = token ? await verifySeat(game.id, token) : null;
+
+  // The poll is the heartbeat. A device asking for the state is a device still
+  // at the table, so no separate ping is needed — and a seat that stops asking
+  // goes quiet by itself, which is the difference between somebody who left and
+  // somebody whose tab was closed.
+  if (mine) await markSeen(mine.id);
 
   const seats = await seatsFor(game.id);
   const holdings = await holdingsFor(game.id);
@@ -48,8 +62,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       const seen = visibleTo(own, { own: mine?.id === seat.id, mode: game.mode });
       const bonus = bonusFromHoldings(own);
 
+      const lastSeen = seat.seen_at ? Date.parse(seat.seen_at) : 0;
       return {
         ...seat,
+        // Worked out here rather than in the browser so every device agrees on
+        // who is present, whatever its own clock says.
+        away:
+          seat.abandoned_at === null &&
+          (seat.seen_at === null || Date.now() - lastSeen > AWAY_AFTER_MS),
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
         miecz_total: seat.miecz_own + bonus.miecz,

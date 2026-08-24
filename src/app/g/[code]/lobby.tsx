@@ -13,6 +13,8 @@ export interface LobbySeat {
   isHost: boolean;
   /** Nobody is behind this seat — see `leaveGame`. */
   abandoned: boolean;
+  /** Device has gone quiet, which is not the same as having left. */
+  away: boolean;
 }
 
 /**
@@ -39,6 +41,9 @@ export function Lobby({
   onPickFor,
   onChooseCharacter,
   onRemove,
+  onMakeHost,
+  isHost,
+  hostAway,
   onStart,
   onLibrary,
 }: {
@@ -57,6 +62,11 @@ export function Lobby({
   onPickFor: (seat: LobbySeat | null) => void;
   onChooseCharacter: (seat: LobbySeat, characterId: string) => void;
   onRemove: (seat: LobbySeat) => void;
+  onMakeHost: (seat: LobbySeat) => void;
+  /** Whether THIS device is the host — see docs/LOBBY.md. */
+  isHost: boolean;
+  /** The host walked away, so anybody may take the role. */
+  hostAway: boolean;
   onStart: () => void;
   onLibrary: () => void;
 }) {
@@ -66,6 +76,9 @@ export function Lobby({
   // not joined yet gets one thing to do — join — rather than a row of buttons
   // the server will refuse.
   const seated = mySeatIndex !== null;
+  // Administration belongs to the host (docs/LOBBY.md). The one exception is a
+  // host who has walked away: without it a table can never be started again.
+  const canAdminister = isHost || hostAway;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -108,14 +121,14 @@ export function Lobby({
         <div className="flex flex-col gap-2 sm:flex-row">
           <ModeChoice
             active={mode === "simulation"}
-            disabled={busy}
+            disabled={busy || !canAdminister}
             onPick={() => onMode("simulation")}
             title="Pełna symulacja"
             blurb="Aplikacja prowadzi całą grę: tasuje talię, ciągnie Karty Zdarzeń i rzuca kostką. Plansza i karty nie są potrzebne."
           />
           <ModeChoice
             active={mode === "companion"}
-            disabled={busy}
+            disabled={busy || !canAdminister}
             onPick={() => onMode("companion")}
             title="Sędzia przy planszy"
             blurb="Gracie na prawdziwej planszy prawdziwymi kartami. Aplikacja liczy, pilnuje kolejności i podpowiada."
@@ -123,6 +136,7 @@ export function Lobby({
         </div>
         <p className="mt-2 text-[11px] text-muted">
           Trybu nie można zmienić po rozpoczęciu gry.
+          {!canAdminister && " Tryb i start ustala gospodarz."}
         </p>
       </section>
 
@@ -166,9 +180,12 @@ export function Lobby({
                     </p>
                     <p className="truncate text-xs text-muted">
                       {character ? character.name : "wybiera postać…"}
-                      {seat.abandoned && (
+                      {seat.isHost && <span className="ml-1 text-ochre/80">· gospodarz</span>}
+                      {seat.abandoned ? (
                         <span className="ml-1 text-vermilion/80">· bez gracza</span>
-                      )}
+                      ) : seat.away ? (
+                        <span className="ml-1 text-muted/70">· nieobecny</span>
+                      ) : null}
                     </p>
                     {character && (
                       <p className="text-[11px] text-muted/80">
@@ -178,7 +195,10 @@ export function Lobby({
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                  {seated && (
+                  {/* Choosing for yourself needs no permission; choosing for
+                      somebody else is the host filling in for a player with no
+                      device of their own. */}
+                  {seated && (canAdminister || seat.seatIndex === mySeatIndex) && (
                   <button
                     disabled={busy}
                     onClick={() => onPickFor(seat)}
@@ -191,13 +211,22 @@ export function Lobby({
                       themselves. Before a game starts there is nothing to
                       protect, and a lobby you cannot correct is the thing that
                       sends people back to the home page to start over. */}
-                  {seated && (
+                  {seated && (canAdminister || seat.seatIndex === mySeatIndex) && (
                     <button
                       disabled={busy}
                       onClick={() => onRemove(seat)}
                       className="rounded border border-edge px-2 py-0.5 text-muted transition hover:border-vermilion hover:text-vermilion disabled:opacity-50"
                     >
-                      usuń
+                      {seat.seatIndex === mySeatIndex ? "wyjdź" : "usuń"}
+                    </button>
+                  )}
+                  {canAdminister && !seat.isHost && !seat.abandoned && (
+                    <button
+                      disabled={busy}
+                      onClick={() => onMakeHost(seat)}
+                      className="rounded border border-edge px-2 py-0.5 text-muted transition hover:border-ochre hover:text-ochre disabled:opacity-50"
+                    >
+                      zrób gospodarzem
                     </button>
                   )}
                 </div>
@@ -263,6 +292,10 @@ export function Lobby({
         {!seated ? (
           <p className="text-sm text-muted">
             Nie masz jeszcze miejsca przy tym stole — dołącz, żeby wybrać postać.
+          </p>
+        ) : !canAdminister ? (
+          <p className="text-sm text-muted">
+            Czekacie na gospodarza — to on rozpoczyna grę.
           </p>
         ) : ready.length >= 2 ? (
           <button

@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // A seatId means "remove that one" — the lobby's tidy-up, available to
     // anyone already at the table. Without it, you are giving up your own.
     if (body.seatId && body.seatId !== seat.id) {
-      await removeSeat(game.id, String(body.seatId), game.status);
+      await removeSeat(game.id, String(body.seatId), game.status, seat);
       await bumpRevision(game.id);
       return NextResponse.json({ removed: true, passedTo: null, gameFinished: false });
     }

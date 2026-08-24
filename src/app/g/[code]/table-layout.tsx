@@ -61,6 +61,9 @@ export interface PublicSeat {
   eliminated: boolean;
   /** Nobody is behind this seat; the character plays on (see leaveGame). */
   abandoned: boolean;
+  /** Device has gone quiet — a closed tab rather than a decision. */
+  away: boolean;
+  isHost: boolean;
   turnsLost: number;
   cards: TileCard[];
   hiddenSpells: number;
@@ -130,9 +133,17 @@ export function OtherPlayers({
                   {/* The character is still in the game; only its player is
                       gone. Worth saying plainly, because whoever is left has to
                       decide whether to play it or leave it standing. */}
-                  {seat.abandoned && (
-                    <span className="ml-2 text-[11px] text-vermilion/80">bez gracza</span>
+                  {seat.isHost && (
+                    <span className="ml-2 text-[11px] text-ochre/80">gospodarz</span>
                   )}
+                  {seat.abandoned ? (
+                    <span className="ml-2 text-[11px] text-vermilion/80">bez gracza</span>
+                  ) : seat.away ? (
+                    // Quiet, not gone. Says so differently because the two mean
+                    // different things at a table: one is a closed tab, the
+                    // other is somebody who said they were leaving.
+                    <span className="ml-2 text-[11px] text-muted">nieobecny</span>
+                  ) : null}
                 </span>
                 <span className="tnum shrink-0 text-[11px]">
                   <span className="text-miecz">{seat.miecz}</span>
