@@ -81,3 +81,38 @@ describe("suggested actions", () => {
     });
   });
 });
+
+describe("board die-table outcomes", () => {
+  it("reads the Karczma abbreviation for winning gold", () => {
+    expect(suggestActions({ text: "wygrałeś 1 Sz. Z." })).toEqual([
+      { label: "+1 Złota", stat: "zloto", delta: 1 },
+    ]);
+  });
+
+  it("reads losing at dice", () => {
+    expect(suggestActions({ text: "przegrałeś w kości 1 Sz. Z." })).toEqual([
+      { label: "−1 Złota", stat: "zloto", delta: -1 },
+    ]);
+  });
+
+  it("reads a lost turn, which is a tracked value too", () => {
+    expect(suggestActions({ text: "musisz tu nocować, tracisz 1 turę" })).toEqual([
+      { label: "−1 tura", stat: "tury", delta: 1 },
+    ]);
+  });
+
+  it("still refuses an outcome that leaves a choice open", () => {
+    // Karczma face 5 offers a free move — a decision, not bookkeeping.
+    expect(
+      suggestActions({
+        text: "poczęstowano cię eliksirem, dzięki któremu możesz przenieść się do dowolnego miejsca w tym Kręgu",
+      }),
+    ).toEqual([]);
+  });
+
+  it("suggests nothing for an outcome that starts a fight", () => {
+    expect(
+      suggestActions({ text: "musisz stawić czoła miejscowemu osiłkowi (Miecz 4)" }),
+    ).toEqual([]);
+  });
+});

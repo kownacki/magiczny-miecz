@@ -15,16 +15,41 @@ import {
   type TurnPhase,
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
-import type { EventCard } from "@/data/types";
+import type { CardClass, EventCard } from "@/data/types";
+import { combatValueOf } from "@/lib/engine/cards";
+import {
+  buildDeck,
+  cardRef,
+  discardTo,
+  drawFrom,
+  shuffleWith,
+  type DeckState,
+} from "@/lib/engine/deck";
 
 const EVENTS = events as EventCard[];
-import type { CardClass } from "@/data/types";
+
+/** Card lookup by slice reference — the only key that distinguishes duplicates. */
+const BY_REF = new Map(EVENTS.map((card) => [cardRef(card.source), card]));
+
+/**
+ * The shuffle bound to real randomness.
+ *
+ * This is the whole of what simulation mode adds over companion mode: the app
+ * decides which card comes up instead of a human naming the one they drew. The
+ * rules either side of it are identical, which is why the engine never learns
+ * which mode it is running in.
+ */
+const shuffle = shuffleWith(Math.random);
+
+export function freshDeck(): DeckState {
+  return buildDeck(EVENTS.map((card) => cardRef(card.source)), shuffle);
+}
 import { bumpRevision, seatsFor, type GameRow, type SeatRow } from "./store";
 
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
   const { data, error } = await db
     .from("games")
-    .select("id,join_code,mode,die_source,status,active_seat,turn,revision,turn_state")
+    .select("id,join_code,mode,die_source,status,active_seat,turn,revision,turn_state,deck")
     .eq("id", gameId)
     .single();
   if (error) throw new Error(`loadGame: ${error.message}`);
@@ -61,6 +86,7 @@ export async function startGame(gameId: string): Promise<void> {
   const ready = seats.filter((seat) => seat.character_id);
   if (ready.length < 2) throw new Error("Do gry potrzeba co najmniej 2 postaci.");
 
+  const game = await loadGame(gameId);
   await db
     .from("games")
     .update({
@@ -69,6 +95,9 @@ export async function startGame(gameId: string): Promise<void> {
       active_seat: ready[0].seat_index,
       turn_state: startTurn(),
       started_at: new Date().toISOString(),
+      // Only a simulation needs a deck. In companion mode the deck is the
+      // physical one on the table and the app must not pretend to own it.
+      deck: game.mode === "simulation" ? freshDeck() : null,
     })
     .eq("id", gameId);
   await journal(gameId, null, 1, "start", { seats: ready.length });
@@ -132,21 +161,61 @@ export async function moveTo(gameId: string, fieldId: string): Promise<void> {
   await bumpRevision(gameId);
 }
 
-/** Records which card the player drew from the physical deck. */
+/**
+ * Records a drawn card.
+ *
+ * Companion mode is told which card came up, because the physical deck decided.
+ * Simulation mode draws one itself. Both end in the same place — a card added
+ * to the turn's stack in rule 15.2 order — which is the DeckPort distinction
+ * made concrete.
+ */
 export async function drawCard(
   gameId: string,
-  cardId: string,
-  cardClass: CardClass,
-): Promise<void> {
+  named: { cardId: string; cardClass: CardClass } | null,
+): Promise<{ card: EventCard | null; recycled: boolean }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
   if (game.turn_state.phase !== "pole") throw new Error("Nie czas na ciągnięcie kart.");
 
-  const next = afterDraw(game.turn_state, { cardId, cardClass });
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "karta", { cardId, cardClass });
+  if (game.mode === "companion") {
+    if (!named) throw new Error("Podaj nazwę wyciągniętej karty.");
+    const next = afterDraw(game.turn_state, named);
+    await db.from("games").update({ turn_state: next }).eq("id", gameId);
+    await journal(gameId, seat.id, game.turn, "karta", { ...named, source: "fizyczna" });
+    await bumpRevision(gameId);
+    return { card: EVENTS.find((c) => c.id === named.cardId) ?? null, recycled: false };
+  }
+
+  const deck: DeckState = (game.deck as DeckState | null) ?? freshDeck();
+  const { deck: after, drawn, recycled } = drawFrom(deck, 1, shuffle);
+  if (drawn.length === 0) throw new Error("Talia Kart Zdarzeń jest pusta.");
+
+  const card = BY_REF.get(drawn[0]);
+  if (!card) throw new Error(`Nieznana karta w talii: ${drawn[0]}`);
+
+  const next = afterDraw(game.turn_state, {
+    cardId: card.id,
+    cardClass: card.cardClass,
+    ref: drawn[0],
+  });
+  await db.from("games").update({ turn_state: next, deck: after }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "karta", {
+    cardId: card.id,
+    ref: drawn[0],
+    source: "talia",
+    recycled,
+  });
   await bumpRevision(gameId);
+  return { card, recycled };
+}
+
+/** Sets this turn's resolved cards aside, so the deck can recycle them later. */
+export async function discardDrawn(gameId: string, refs: string[]): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.mode !== "simulation" || refs.length === 0) return;
+  const deck: DeckState = (game.deck as DeckState | null) ?? freshDeck();
+  await db.from("games").update({ deck: discardTo(deck, refs) }).eq("id", gameId);
 }
 
 /**
@@ -165,13 +234,18 @@ export async function beginFight(gameId: string, cardId: string): Promise<void> 
 
   const card = EVENTS.find((c) => c.id === cardId);
   if (!card) throw new Error(`Nieznana karta: ${cardId}`);
-  if (card.miecz === undefined && card.magia === undefined) {
-    throw new Error("Ta karta nie ma parametru walki.");
-  }
+  // Only a Wróg fights. The Miecz on Excalibur and the Magia on Pierścień Mocy
+  // are bonuses to their holder (1.5, 2.5), not creatures to be rolled against.
+  const foe = combatValueOf(card);
+  if (!foe) throw new Error("Ta karta nie jest Wrogiem.");
 
   const next = startFight(
     game.turn_state,
-    { cardId: card.id, cardName: card.name, miecz: card.miecz, magia: card.magia },
+    {
+      cardId: card.id,
+      cardName: card.name,
+      ...(foe.kind === "magiczna" ? { magia: foe.total } : { miecz: foe.total }),
+    },
     { miecz: seat.miecz_own, magia: seat.magia_own },
   );
   await db.from("games").update({ turn_state: next }).eq("id", gameId);
@@ -254,6 +328,9 @@ const ADJUSTABLE = {
   magia: "magia_own",
   zycie: "zycie",
   zloto: "zloto",
+  // Turns owed. Spent one per pass in finishTurn, so "tracisz 1 turę" costs
+  // exactly one trip round the table.
+  tury: "turns_lost",
 } as const;
 
 export type Adjustable = keyof typeof ADJUSTABLE;

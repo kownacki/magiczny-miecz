@@ -5,6 +5,7 @@ import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
+import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 
@@ -83,6 +84,8 @@ interface Props {
   /** True when this is the shared table screen driving somebody else's turn. */
   actingForOther?: boolean;
   dieSource: string;
+  /** "simulation" means the app owns the deck and deals cards itself. */
+  mode: string;
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
   /** Applies a card's suggested bookkeeping to the active player's own seat. */
@@ -97,6 +100,7 @@ export function TurnPanel({
   fieldText,
   actingForOther = false,
   dieSource,
+  mode,
   busy,
   onAction,
   onSuggestion,
@@ -124,7 +128,7 @@ export function TurnPanel({
               {fieldText}
             </p>
           )}
-          <RollTable text={fieldText} />
+          <RollTable text={fieldText} busy={busy} onSuggestion={isMine ? onSuggestion : undefined} />
         </div>
       )}
 
@@ -140,6 +144,7 @@ export function TurnPanel({
         <PhaseControls
           phase={phase}
           dieSource={dieSource}
+          mode={mode}
           busy={busy}
           onAction={onAction}
           onSuggestion={onSuggestion}
@@ -152,10 +157,11 @@ export function TurnPanel({
 function PhaseControls({
   phase,
   dieSource,
+  mode,
   busy,
   onAction,
   onSuggestion,
-}: Pick<Props, "phase" | "dieSource" | "busy" | "onAction" | "onSuggestion">) {
+}: Pick<Props, "phase" | "dieSource" | "mode" | "busy" | "onAction" | "onSuggestion">) {
   switch (phase.phase) {
     case "rzut":
       return <RollControls dieSource={dieSource} busy={busy} onAction={onAction} />;
@@ -192,6 +198,7 @@ function PhaseControls({
       return (
         <FieldControls
           phase={phase}
+          mode={mode}
           busy={busy}
           onAction={onAction}
           onSuggestion={onSuggestion}
@@ -250,11 +257,13 @@ function RollControls({
 
 function FieldControls({
   phase,
+  mode,
   busy,
   onAction,
   onSuggestion,
 }: {
   phase: Extract<TurnPhase, { phase: "pole" }>;
+  mode: string;
   busy: boolean;
   onAction: Props["onAction"];
   onSuggestion: Props["onSuggestion"];
@@ -275,7 +284,19 @@ function FieldControls({
         </p>
       )}
 
-      {outstanding > 0 && (
+      {outstanding > 0 && mode === "simulation" && (
+        // The app owns the deck here, so there is nothing to identify — the
+        // only question is whether to deal the next card.
+        <button
+          disabled={busy}
+          onClick={() => onAction({ action: "draw" })}
+          className="self-start rounded border border-ochre/50 bg-raised px-4 py-2 text-sm text-ink transition hover:bg-edge disabled:opacity-50"
+        >
+          Wyciągnij kartę
+        </button>
+      )}
+
+      {outstanding > 0 && mode !== "simulation" && (
         <div>
           <input
             value={query}
@@ -524,15 +545,32 @@ function DrawnCards({
             {card && (
               <p className="mt-1 text-xs leading-relaxed text-muted">{card.text}</p>
             )}
-            {card && <RollTable text={card.text} />}
-            {card?.miecz !== undefined && (
-              <p className="tnum mt-1 text-xs text-miecz">Miecz przeciwnika: {card.miecz}</p>
+            {card && (
+              <RollTable text={card.text} busy={busy} onSuggestion={onSuggestion} />
             )}
-            {card?.magia !== undefined && (
-              <p className="tnum mt-1 text-xs text-magia">Magia przeciwnika: {card.magia}</p>
+            {card && combatValueOf(card) && (
+              <p
+                className={`tnum mt-1 text-xs ${
+                  combatValueOf(card)!.kind === "magiczna" ? "text-magia" : "text-miecz"
+                }`}
+              >
+                {combatValueOf(card)!.kind === "magiczna" ? "Magia" : "Miecz"} przeciwnika:{" "}
+                {combatValueOf(card)!.total}
+              </p>
+            )}
+            {card && bonusOf(card) && (
+              <p className="tnum mt-1 text-xs text-verdigris">
+                Dodaje:{" "}
+                {[
+                  bonusOf(card)!.miecz ? `+${bonusOf(card)!.miecz} Miecza` : null,
+                  bonusOf(card)!.magia ? `+${bonusOf(card)!.magia} Magii` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
-              {card && (card.miecz !== undefined || card.magia !== undefined) && (
+              {card && combatValueOf(card) && (
                 <button
                   disabled={busy}
                   onClick={() => onAction({ action: "fight", cardId: card.id })}

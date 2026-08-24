@@ -25,8 +25,10 @@ create table if not exists magiczny_miecz.games (
   id uuid primary key default gen_random_uuid(),
   -- Short human-typed code; players join by reading it off the table's screen.
   join_code text not null unique,
-  -- 'companion' drives a physical board; 'simulation' owns the board too.
-  mode text not null default 'companion' check (mode in ('companion', 'simulation')),
+  -- 'simulation' means the app owns the deck and dice and the game can be
+  -- played with nothing else; 'companion' is the opt-in for a table that has
+  -- the physical board out and wants the app only as a referee.
+  mode text not null default 'simulation' check (mode in ('companion', 'simulation')),
   -- Where randomness comes from. 'physical' means a human types in what they
   -- rolled; this is the RandomPort's binding, stored so it survives a reload.
   die_source text not null default 'app' check (die_source in ('app', 'physical')),

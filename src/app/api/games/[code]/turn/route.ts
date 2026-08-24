@@ -47,7 +47,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         await moveTo(game.id, String(body.fieldId));
         break;
       case "draw":
-        await drawCard(game.id, String(body.cardId), body.cardClass as CardClass);
+        // A named card means the physical deck decided; nothing named means
+        // the app draws one itself.
+        await drawCard(
+          game.id,
+          body.cardId
+            ? { cardId: String(body.cardId), cardClass: body.cardClass as CardClass }
+            : null,
+        );
         break;
       case "fight":
         await beginFight(game.id, String(body.cardId));

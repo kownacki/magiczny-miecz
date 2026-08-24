@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { parseRollTable } from "@/lib/engine/rollTable";
+import { suggestActions } from "@/lib/engine/cardEffects";
 
 /**
  * A printed die table, rolled in place.
@@ -12,7 +13,16 @@ import { parseRollTable } from "@/lib/engine/rollTable";
  * text says so. Recording the lookup as a game action would imply the referee
  * had applied it.
  */
-export function RollTable({ text }: { text: string }) {
+export function RollTable({
+  text,
+  busy = false,
+  onSuggestion,
+}: {
+  text: string;
+  busy?: boolean;
+  /** Applies an outcome's bookkeeping. Omitted for viewers who cannot act. */
+  onSuggestion?: (stat: string, delta: number, reason: string) => void;
+}) {
   const table = parseRollTable(text);
   const [rolled, setRolled] = useState<number | null>(null);
 
@@ -65,10 +75,32 @@ export function RollTable({ text }: { text: string }) {
           ))}
         </ol>
       ) : (
-        <p className="text-sm text-ink">
-          <span className="tnum mr-2 text-2xl font-medium text-ochre">{rolled}</span>
-          {table.outcomes[rolled]}
-        </p>
+        <div>
+          <p className="text-sm text-ink">
+            <span className="tnum mr-2 text-2xl font-medium text-ochre">{rolled}</span>
+            {table.outcomes[rolled]}
+          </p>
+          {/* Once the die has settled the outcome is a single unconditional
+              instruction, so the same suggestion rules that read card text
+              apply to it — and this is where the friction was: the table would
+              say "wygrałeś 1 Sz. Z." and leave you to find the +/- yourself. */}
+          {onSuggestion && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {suggestActions({ text: table.outcomes[rolled] }).map((suggestion) => (
+                <button
+                  key={suggestion.label}
+                  disabled={busy}
+                  onClick={() =>
+                    onSuggestion(suggestion.stat, suggestion.delta, table.label || "rzut")
+                  }
+                  className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+                >
+                  {suggestion.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -191,7 +191,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
 
       {error && <p className="mb-4 text-sm text-vermilion">{error}</p>}
 
-      {mySeatIndex !== null && game.mode === "companion" && (
+      {!playing && mySeatIndex !== null && (
+        <section className="mb-6 rounded border border-edge/60 bg-panel/50 p-3">
+          <p className="mb-2 text-xs uppercase tracking-widest text-muted">Tryb gry</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <ModeChoice
+              active={game.mode === "simulation"}
+              disabled={busy}
+              onPick={() => post("mode", { mode: "simulation" })}
+              title="Pełna symulacja"
+              blurb="Aplikacja prowadzi całą grę: tasuje talię, ciągnie Karty Zdarzeń i rzuca kostką. Plansza i karty nie są potrzebne."
+            />
+            <ModeChoice
+              active={game.mode === "companion"}
+              disabled={busy}
+              onPick={() => post("mode", { mode: "companion" })}
+              title="Sędzia przy planszy"
+              blurb="Gracie na prawdziwej planszy prawdziwymi kartami. Aplikacja liczy, pilnuje kolejności i podpowiada — mówicie jej, co wyciągnęliście."
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-muted">
+            Tryb można zmienić tylko przed rozpoczęciem gry.
+          </p>
+        </section>
+      )}
+
+      {playing && mySeatIndex !== null && game.mode === "companion" && (
         <section className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-edge/60 bg-panel/50 px-3 py-2 text-xs">
           {isTableScreen ? (
             <>
@@ -236,6 +261,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               active.field_id ? (fieldWithText(active.field_id)?.text ?? null) : null
             }
             dieSource={game.die_source}
+            mode={game.mode}
             busy={busy}
             onAction={(body) => post("turn", body)}
             onSuggestion={(stat, delta, reason) =>
@@ -299,6 +325,34 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         </button>
       )}
     </main>
+  );
+}
+
+/** One of the two ways to play, stated in full rather than as a label on a switch. */
+function ModeChoice({
+  active,
+  disabled,
+  onPick,
+  title,
+  blurb,
+}: {
+  active: boolean;
+  disabled: boolean;
+  onPick: () => void;
+  title: string;
+  blurb: string;
+}) {
+  return (
+    <button
+      onClick={onPick}
+      disabled={disabled}
+      className={`flex-1 rounded border px-3 py-2 text-left transition disabled:opacity-50 ${
+        active ? "border-ochre bg-raised" : "border-edge hover:border-ochre/60"
+      }`}
+    >
+      <span className={`block text-sm ${active ? "text-ochre" : "text-ink"}`}>{title}</span>
+      <span className="mt-1 block text-[11px] leading-relaxed text-muted">{blurb}</span>
+    </button>
   );
 }
 

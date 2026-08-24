@@ -5,7 +5,7 @@ import type { EventCard } from "@/data/types";
 export interface SuggestedAction {
   /** What the button says, in Polish. */
   label: string;
-  stat: "miecz" | "magia" | "zycie" | "zloto";
+  stat: "miecz" | "magia" | "zycie" | "zloto" | "tury";
   delta: number;
 }
 
@@ -61,6 +61,22 @@ const RULES: { pattern: RegExp; build: (n: number) => SuggestedAction }[] = [
     // "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
     pattern: new RegExp(`Zamień\\s+tę\\s+Kartę\\s+na\\s+(\\d+)\\s+Sztuk${LETTERS}*\\s+Złota`, "iu"),
     build: (n) => ({ label: `+${n} Złota`, stat: "zloto", delta: n }),
+  },
+  {
+    // The board's own tables abbreviate: "wygrałeś 1 Sz. Z." at Karczma.
+    pattern: /wygrałeś\s+(\d+)\s*Sz\.?\s*Z\.?/iu,
+    build: (n) => ({ label: `+${n} Złota`, stat: "zloto", delta: n }),
+  },
+  {
+    pattern: /przegrałeś\s+(?:w\s+kości\s+)?(\d+)\s*Sz\.?\s*Z\.?/iu,
+    build: (n) => ({ label: `−${n} Złota`, stat: "zloto", delta: -n }),
+  },
+  {
+    // Losing turns is a tracked value like any other, and several fields and
+    // cards cost one. Without this the only unautomatable outcome on Karczma's
+    // table would be the one that happens on a third of rolls.
+    pattern: /tracisz\s+(\d+)\s+tur\p{L}*/iu,
+    build: (n) => ({ label: `−${n} tura`, stat: "tury", delta: n }),
   },
   {
     pattern: new RegExp(`tracisz\\s+(\\d+)\\s+(?:punkt${LETTERS}*\\s+)?Życi${LETTERS}*`, "iu"),

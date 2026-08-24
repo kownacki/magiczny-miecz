@@ -36,6 +36,8 @@ export interface GameRow {
   turn: number;
   revision: number;
   turn_state: unknown;
+  /** Shuffled event deck; null in companion mode, where the table holds it. */
+  deck: unknown;
 }
 
 /**
@@ -44,7 +46,7 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 const GAME_COLUMNS =
-  "id,join_code,mode,die_source,status,active_seat,turn,revision,turn_state";
+  "id,join_code,mode,die_source,status,active_seat,turn,revision,turn_state,deck";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
