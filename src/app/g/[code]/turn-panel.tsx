@@ -7,6 +7,8 @@ import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
+import { crossingFrom } from "@/lib/engine/rings";
+import { FIELDS } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 
@@ -82,6 +84,8 @@ interface Props {
   fieldName: string;
   /** The instruction printed on the board for the field, if it has been transcribed. */
   fieldText: string | null;
+  /** The field the active character is standing on, for the ring crossing. */
+  fieldId: string | null;
   /** True when this is the shared table screen driving somebody else's turn. */
   actingForOther?: boolean;
   dieSource: string;
@@ -101,6 +105,7 @@ export function TurnPanel({
   playerName,
   fieldName,
   fieldText,
+  fieldId,
   actingForOther = false,
   dieSource,
   mode,
@@ -140,6 +145,38 @@ export function TurnPanel({
         <p className="mb-3 text-xs text-ochre/80">
           To urządzenie prowadzi turę gracza {playerName}.
         </p>
+      )}
+
+      {/* Only four fields on the whole board allow it (11.1, 11.5), and each
+          demands something first — Magia for the Trzęsawiska, beating the
+          Rycerz Wiecznych Śniegów for the Lodowy Las — which the board text
+          above spells out. Both outcomes are offered because the app cannot
+          adjudicate a fight it is not running. */}
+      {isMine && fieldId && crossingFrom(fieldId) && phase.phase === "pole" && (
+        <div className="mb-4 rounded border border-ochre/40 bg-night/60 p-3">
+          <p className="mb-2 text-xs text-muted">
+            Stąd można przejść do:{" "}
+            <span className="text-ink">
+              {FIELDS.get(crossingFrom(fieldId)!.to)?.name ?? crossingFrom(fieldId)!.to}
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "cross", succeeded: true })}
+              className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+            >
+              Przeprawa udana
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "cross", succeeded: false })}
+              className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+            >
+              Nieudana (−1 Życie)
+            </button>
+          </div>
+        </div>
       )}
 
       {!isMine ? (

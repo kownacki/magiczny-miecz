@@ -1,6 +1,9 @@
 /** The board graph: which field neighbours which, and how movement runs around a ring. */
 
 import type { Region } from "@/data/types";
+import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
+
+export { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
 
 export interface BoardField {
   id: string;
@@ -74,7 +77,10 @@ export const KAMIENNY_MOST: readonly BoardField[] = [
 
 /** Every field the engine knows about, by id. */
 export const FIELDS: ReadonlyMap<string, BoardField> = new Map(
-  [...DOLNY_KRAG, ...KAMIENNY_MOST].map((field) => [field.id, field]),
+  [...DOLNY_KRAG, ...SRODKOWY_KRAG, ...GORNY_KRAG, ...KAMIENNY_MOST].map((field) => [
+    field.id,
+    field,
+  ]),
 );
 
 export function fieldByName(name: string): BoardField | undefined {
@@ -140,6 +146,8 @@ export function moveOptions(
 /** The ring a field belongs to, for movement purposes. */
 export function ringOf(fieldId: string): readonly BoardField[] | null {
   if (DOLNY_KRAG.some((f) => f.id === fieldId)) return DOLNY_KRAG;
+  if (SRODKOWY_KRAG.some((f) => f.id === fieldId)) return SRODKOWY_KRAG;
+  if (GORNY_KRAG.some((f) => f.id === fieldId)) return GORNY_KRAG;
   if (KAMIENNY_MOST.some((f) => f.id === fieldId)) return KAMIENNY_MOST;
   return null;
 }

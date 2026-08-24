@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/supabase";
 import { FIELDS, KAMIENNY_MOST, ringOf } from "@/lib/engine/board";
+import { crossingFrom } from "@/lib/engine/rings";
 import {
   afterDraw,
   afterMove,
@@ -792,6 +793,57 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
     field: attacker.field_id,
   });
   await bumpRevision(gameId);
+}
+
+/**
+ * Crosses between rings (11.1-11.8).
+ *
+ * Only two places on the whole board allow it, and each demands something
+ * first: the Trzęsawiska are crossed with Magia (two dice, at or under your
+ * Magia succeeds), the Lodowy Las by beating the Rycerz Wiecznych Śniegów —
+ * and 11.7 only makes him attack when going from the middle ring outward, not
+ * the other way.
+ *
+ * Failure costs a point of Życie and stops the journey (11.4, 11.8); the
+ * character stays where it is and may try again next turn.
+ */
+export async function crossRing(
+  gameId: string,
+  succeeded: boolean,
+): Promise<{ to: string | null }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+
+  const crossing = crossingFrom(seat.field_id);
+  if (!crossing) {
+    throw new Error("Z tego Obszaru nie można przejść do innego Kręgu (11.1, 11.5).");
+  }
+
+  if (!succeeded) {
+    const left = Math.max(0, seat.zycie - 1);
+    await db.from("seats").update({ zycie: left }).eq("id", seat.id);
+    await journal(gameId, seat.id, game.turn, "przeprawa-nieudana", {
+      from: crossing.from,
+      obstacle: crossing.obstacle,
+    });
+    if (left === 0) await killSeat(gameId, seat.id);
+    await bumpRevision(gameId);
+    return { to: null };
+  }
+
+  const field = FIELDS.get(crossing.to);
+  if (!field) throw new Error(`Nieznane pole: ${crossing.to}`);
+  await db.from("seats").update({ field_id: crossing.to }).eq("id", seat.id);
+  await db.from("games").update({ turn_state: afterMove(field) }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "przeprawa", {
+    from: crossing.from,
+    to: crossing.to,
+    obstacle: crossing.obstacle,
+  });
+  await bumpRevision(gameId);
+  return { to: crossing.to };
 }
 
 /**

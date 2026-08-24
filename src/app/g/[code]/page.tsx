@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useState } from "react";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
-import { DOLNY_KRAG, KAMIENNY_MOST } from "@/lib/engine/board";
+import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
@@ -15,7 +15,7 @@ import type { EventCard } from "@/data/types";
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
 const FIELD_NAMES = new Map(
-  [...DOLNY_KRAG, ...KAMIENNY_MOST].map((field) => [field.id, field.name]),
+  [...FIELDS.values()].map((field) => [field.id, field.name]),
 );
 
 interface Held {
@@ -296,6 +296,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             fieldText={
               active.field_id ? (fieldWithText(active.field_id)?.text ?? null) : null
             }
+            fieldId={active.field_id}
             dieSource={game.die_source}
             mode={game.mode}
             busy={busy}

@@ -3,6 +3,7 @@ import { findGame, verifySeat } from "@/lib/game/store";
 import {
   attackSeat,
   beginFight,
+  crossRing,
   drawCard,
   escape,
   fightBeast,
@@ -75,6 +76,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "attack":
         await attackSeat(game.id, String(body.targetSeatId));
         break;
+      case "cross":
+        return NextResponse.json(await crossRing(game.id, body.succeeded !== false));
       case "escape":
         await escape(game.id, body.succeeded !== false);
         break;
