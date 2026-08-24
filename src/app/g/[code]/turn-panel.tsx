@@ -4,6 +4,7 @@ import { useState } from "react";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
+import { suggestActions } from "@/lib/engine/cardEffects";
 
 const EVENTS = events as EventCard[];
 
@@ -45,6 +46,8 @@ interface Props {
   dieSource: string;
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
+  /** Applies a card's suggested bookkeeping to the active player's own seat. */
+  onSuggestion: (stat: string, delta: number, reason: string) => void;
 }
 
 export function TurnPanel({
@@ -56,6 +59,7 @@ export function TurnPanel({
   dieSource,
   busy,
   onAction,
+  onSuggestion,
 }: Props) {
   return (
     <section className="rounded-lg border border-ochre/40 bg-panel p-5">
@@ -83,6 +87,7 @@ export function TurnPanel({
           dieSource={dieSource}
           busy={busy}
           onAction={onAction}
+          onSuggestion={onSuggestion}
         />
       )}
     </section>
@@ -94,7 +99,8 @@ function PhaseControls({
   dieSource,
   busy,
   onAction,
-}: Pick<Props, "phase" | "dieSource" | "busy" | "onAction">) {
+  onSuggestion,
+}: Pick<Props, "phase" | "dieSource" | "busy" | "onAction" | "onSuggestion">) {
   switch (phase.phase) {
     case "rzut":
       return <RollControls dieSource={dieSource} busy={busy} onAction={onAction} />;
@@ -128,7 +134,14 @@ function PhaseControls({
         </div>
       );
     case "pole":
-      return <FieldControls phase={phase} busy={busy} onAction={onAction} />;
+      return (
+        <FieldControls
+          phase={phase}
+          busy={busy}
+          onAction={onAction}
+          onSuggestion={onSuggestion}
+        />
+      );
     case "walka":
       return <FightControls fight={phase.fight} busy={busy} onAction={onAction} />;
     case "koniec":
@@ -184,10 +197,12 @@ function FieldControls({
   phase,
   busy,
   onAction,
+  onSuggestion,
 }: {
   phase: Extract<TurnPhase, { phase: "pole" }>;
   busy: boolean;
   onAction: Props["onAction"];
+  onSuggestion: Props["onSuggestion"];
 }) {
   const [query, setQuery] = useState("");
   const results = searchCards(query);
@@ -238,7 +253,12 @@ function FieldControls({
       )}
 
       {phase.drawn.length > 0 && (
-        <DrawnCards drawn={phase.drawn} busy={busy} onAction={onAction} />
+        <DrawnCards
+          drawn={phase.drawn}
+          busy={busy}
+          onAction={onAction}
+          onSuggestion={onSuggestion}
+        />
       )}
 
       <button
@@ -427,10 +447,12 @@ function DrawnCards({
   drawn,
   busy,
   onAction,
+  onSuggestion,
 }: {
   drawn: { cardId: string; cardClass: string }[];
   busy: boolean;
   onAction: Props["onAction"];
+  onSuggestion: Props["onSuggestion"];
 }) {
   return (
     <ol className="flex flex-col gap-2 border-l-2 border-ochre/30 pl-3">
@@ -453,15 +475,34 @@ function DrawnCards({
             {card?.magia !== undefined && (
               <p className="tnum mt-1 text-xs text-magia">Magia przeciwnika: {card.magia}</p>
             )}
-            {card && (card.miecz !== undefined || card.magia !== undefined) && (
-              <button
-                disabled={busy}
-                onClick={() => onAction({ action: "fight", cardId: card.id })}
-                className="mt-2 rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
-              >
-                Walcz
-              </button>
-            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {card && (card.miecz !== undefined || card.magia !== undefined) && (
+                <button
+                  disabled={busy}
+                  onClick={() => onAction({ action: "fight", cardId: card.id })}
+                  className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+                >
+                  Walcz
+                </button>
+              )}
+              {/* Offered only where the card's text says one thing without
+                  branching. Tapping applies it through the same journalled
+                  correction path as the manual +/-, so a wrong suggestion is
+                  visible afterwards rather than silently baked in. */}
+              {card &&
+                suggestActions(card).map((suggestion) => (
+                  <button
+                    key={suggestion.label}
+                    disabled={busy}
+                    onClick={() =>
+                      onSuggestion(suggestion.stat, suggestion.delta, card.name)
+                    }
+                    className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+                  >
+                    {suggestion.label}
+                  </button>
+                ))}
+            </div>
           </li>
         );
       })}

@@ -160,6 +160,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             dieSource={game.die_source}
             busy={busy}
             onAction={(body) => post("turn", body)}
+            onSuggestion={(stat, delta, reason) =>
+              post("adjust", { seatId: active.id, stat, delta, reason })
+            }
           />
         </div>
       )}

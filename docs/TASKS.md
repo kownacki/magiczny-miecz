@@ -86,6 +86,17 @@ The primary mode: physical board and cards, app as referee.
 - [x] Physical-die input alongside the app rolling, everywhere a die is needed
 - [~] Sync — 2s polling; the Realtime revision ping drops into the same seam
 
+## Card effects
+
+- [x] Suggested actions: unconditional card text becomes a one-tap button,
+      applied through the same journalled correction path as the manual +/-
+- [x] Conditional text (Nature, die roll, choice, all-players) suggests nothing
+      at all, deliberately — a plausible wrong button is worse than none
+- [ ] Roll-table cards ("rzuć kostką: 1 - ...") — offer the roll, then the
+      matching outcome
+- [ ] Nature-dependent cards — the seat's Nature is known, so these are
+      resolvable once Kat's setup choice is handled
+
 ## Phase 5 — Full simulation
 
 Secondary. Same engine, virtual ports.
