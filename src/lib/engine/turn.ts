@@ -33,6 +33,8 @@ export type TurnPhase =
 export interface Fight {
   cardId: string;
   cardName: string;
+  /** Seat index of the opponent when this is a duel between characters (17.6). */
+  opponentSeat?: number;
   kind: CombatKind;
   enemyTotal: number;
   playerTotal: number;
@@ -111,7 +113,13 @@ export function endTurn(): TurnPhase {
  */
 export function startFight(
   phase: TurnPhase,
-  card: { cardId: string; cardName: string; miecz?: number; magia?: number },
+  card: {
+    cardId: string;
+    cardName: string;
+    miecz?: number;
+    magia?: number;
+    opponentSeat?: number;
+  },
   playerTotals: { miecz: number; magia: number },
 ): TurnPhase {
   if (phase.phase !== "pole") return phase;
@@ -122,6 +130,7 @@ export function startFight(
     fight: {
       cardId: card.cardId,
       cardName: card.cardName,
+      ...(card.opponentSeat !== undefined ? { opponentSeat: card.opponentSeat } : {}),
       kind,
       enemyTotal,
       playerTotal: kind === "magiczna" ? playerTotals.magia : playerTotals.miecz,

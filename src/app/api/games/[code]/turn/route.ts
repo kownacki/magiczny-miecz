@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
 import {
+  attackSeat,
   beginFight,
   drawCard,
   fightBeast,
@@ -69,6 +70,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           body.side === "enemy" ? "enemy" : "player",
           typeof body.value === "number" ? body.value : null,
         );
+        break;
+      case "attack":
+        await attackSeat(game.id, String(body.targetSeatId));
         break;
       case "beast":
         await fightBeast(

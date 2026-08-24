@@ -117,6 +117,37 @@ this one do again?" without passing the card round.
 - [x] A seat's hand listed on its card, with concealment applied server-side
 - [ ] The seat's character card as an image
 
+## Card effect vocabulary — the next big piece
+
+Every card's text is transcribed, but the app only *reads* it back. To resolve
+cards without a human interpreting each one, they need a small set of typed
+effects the engine can apply — and the vocabulary has to be derived from what
+the 165 cards actually say, not invented up front.
+
+The shape the cards suggest so far:
+
+- **what happens**: adjust a stat, move the character, draw more cards, take or
+  lose a card, lose a turn, change Nature, turn to stone, start a fight
+- **on whom**: the drawer, every player, players of one Nature, players in one
+  ring
+- **under what condition**: a Nature, a die roll, a choice, holding some item
+- **what becomes of the card afterwards** — this is its own axis and the deck
+  leans on it heavily: discarded ("odłóż Kartę"), left lying on the field until
+  someone deals with it ("Pozostanie tu, aż ktoś go pokona"), kept by the player,
+  or moved to a named field ("Połóż tam Kartę")
+
+Jednorożec is the worked example: it moves the character to any field in the
+ring, then the card is discarded whether or not the offer was taken.
+
+- [ ] Derive the vocabulary from the transcribed corpus rather than guessing
+- [ ] Type it, with an exhaustive `Record` per behaviour so a new effect kind
+      fails the build at every site that must handle it
+- [ ] Encode cards against it, leaving unencoded cards falling back to today's
+      "show the text and let a human apply it" — the progressive-enhancement
+      rule stays
+- [ ] Card disposition as a first-class field, since where a card ends up is
+      what makes fields accumulate cards over a game
+
 ## Phase 5 — Full simulation
 
 Now the primary mode; companion is the opt-in.

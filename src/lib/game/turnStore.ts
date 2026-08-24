@@ -402,11 +402,20 @@ export async function resolveFight(gameId: string): Promise<void> {
   const { fight } = game.turn_state;
   if (!fight.result) throw new Error("Walka nie jest rozstrzygnięta.");
 
-  if (fight.result.outcome === "przegrana") {
-    await db
-      .from("seats")
-      .update({ zycie: Math.max(0, seat.zycie - 1) })
-      .eq("id", seat.id);
+  // In a duel the loser may be either side; against a card only the character
+  // can lose. Rule 17.9 gives the winner a choice of spoils, so only the life
+  // is applied automatically and the rest is left to the players.
+  const loserSeat =
+    fight.result.outcome === "przegrana"
+      ? seat
+      : fight.result.outcome === "wygrana" && fight.opponentSeat !== undefined
+        ? seats.find((s) => s.seat_index === fight.opponentSeat)
+        : undefined;
+
+  if (loserSeat) {
+    const left = Math.max(0, loserSeat.zycie - 1);
+    await db.from("seats").update({ zycie: left }).eq("id", loserSeat.id);
+    if (left === 0) await killSeat(gameId, loserSeat.id);
   }
 
   await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
@@ -619,6 +628,58 @@ async function killSeat(gameId: string, seatId: string): Promise<void> {
 
   // With the character gone, play must move on if it was their turn.
   if (game.active_seat === seat?.seat_index) await finishTurn(gameId);
+}
+
+/**
+ * Attacks another character standing on the same field (13.3, 17.6).
+ *
+ * Rule 13.1 restricts encounters to the field a move ENDED on, so an attack is
+ * only legal against someone actually standing there — passing through does not
+ * count. Both sides fight with their full totals (1.5, 2.5), and rule 17.9 lets
+ * the winner take a point of Życie, an item, or a Sztuka Złota, which is a
+ * choice and so is left to the player.
+ */
+export async function attackSeat(gameId: string, targetSeatId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const attacker = activeSeatOf(seats, game);
+  const target = seats.find((s) => s.id === targetSeatId);
+  if (!target) throw new Error("Nieznane miejsce.");
+  if (target.id === attacker.id) throw new Error("Postać nie walczy sama ze sobą.");
+  if (target.eliminated) throw new Error("Ta Postać nie żyje.");
+  if (target.field_id !== attacker.field_id) {
+    throw new Error("Spotkanie jest możliwe tylko na tym samym Obszarze (13.1).");
+  }
+  if (game.turn_state.phase !== "pole") throw new Error("Nie czas na spotkanie.");
+
+  const holdings = await holdingsFor(gameId);
+  const totalsOf = (seatId: string, own: { miecz: number; magia: number }) => {
+    const mine = holdings
+      .filter((h) => h.seat_id === seatId)
+      .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
+    const bonus = bonusFromHoldings(mine);
+    return { miecz: own.miecz + bonus.miecz, magia: own.magia + bonus.magia };
+  };
+
+  const mine = totalsOf(attacker.id, { miecz: attacker.miecz_own, magia: attacker.magia_own });
+  const theirs = totalsOf(target.id, { miecz: target.miecz_own, magia: target.magia_own });
+
+  const next = startFight(
+    game.turn_state,
+    {
+      cardId: `seat:${target.seat_index}`,
+      cardName: target.player_name ?? `Miejsce ${target.seat_index + 1}`,
+      miecz: theirs.miecz,
+      opponentSeat: target.seat_index,
+    },
+    mine,
+  );
+  await db.from("games").update({ turn_state: next }).eq("id", gameId);
+  await journal(gameId, attacker.id, game.turn, "pojedynek", {
+    target: target.seat_index,
+    field: attacker.field_id,
+  });
+  await bumpRevision(gameId);
 }
 
 /**
