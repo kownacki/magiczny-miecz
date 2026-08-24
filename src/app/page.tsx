@@ -71,16 +71,16 @@ export default function Home() {
   }
 
   async function startTable() {
-    // The name is typed into the page rather than a browser prompt: a native
-    // dialog blocks everything behind it, cannot be styled, and on a phone
-    // arrives as a system alert in the middle of a game.
+    // The name is required. A table of "Miejsce 2" and "Miejsce 4" is nobody's
+    // game, and asking later never happens.
+    if (!name.trim()) return;
     setBusy(true);
     setError(null);
     try {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || null }),
+        body: JSON.stringify({ name: name.trim() }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -125,7 +125,7 @@ export default function Home() {
         />
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || !name.trim()}
           className="rounded-lg border border-edge bg-raised px-6 py-4 font-[family-name:var(--font-display)] text-lg font-medium text-ink transition hover:border-ochre hover:bg-edge disabled:opacity-50"
         >
           {busy ? "Otwieram stół…" : "Otwórz nowy stół"}

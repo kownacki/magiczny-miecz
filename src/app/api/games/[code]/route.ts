@@ -68,9 +68,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         ...seat,
         // Worked out here rather than in the browser so every device agrees on
         // who is present, whatever its own clock says.
+        // Only a seat that has been heard from and then went quiet is away. A
+        // seat that never checked in has no device behind it by design — the
+        // host added it in companion mode — and calling that "nieobecny" made
+        // a fresh lobby look like a room everybody had walked out of.
         away:
-          seat.abandoned_at === null &&
-          (seat.seen_at === null || Date.now() - lastSeen > AWAY_AFTER_MS),
+          seat.abandoned_at === null && lastSeen > 0 && Date.now() - lastSeen > AWAY_AFTER_MS,
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
         miecz_total: seat.miecz_own + bonus.miecz,

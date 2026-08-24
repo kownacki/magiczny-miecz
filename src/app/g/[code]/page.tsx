@@ -341,8 +341,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           pickingFor={pickingFor ? asLobbySeat(pickingFor) : null}
           busy={busy}
           onMode={(mode) => post("mode", { mode })}
-          onJoin={join}
           onAddLocal={addLocalPlayer}
+          onJoin={join}
           onPickFor={(seat) => setPicking(seat ? seat.id : null)}
           onChooseCharacter={(seat, characterId) => {
             post("character", { characterId, seatId: seat.id });

@@ -27,7 +27,8 @@ can act on nothing.
 |---|---|
 | change the mode (symulacja / sędzia przy planszy) | before the start only |
 | remove a player | in the lobby, and during play |
-| choose a character *for another seat* | for seats with no device of their own |
+| choose a character *for another seat* | companion mode, for players with no device |
+| add a player by hand | companion mode only |
 | start the game | when at least two characters are chosen |
 | hand the host role to another player | any time |
 
@@ -140,6 +141,15 @@ opened — which matters for a game that takes several sittings.
 room a ban is a solution to a problem nobody has.
 
 **No chat.** They are in the same room.
+
+**Adding a player by hand is companion-only.** There, one screen sits in the
+middle of a real table and nobody else has a device. In *pełna symulacja*
+everybody has their own and joins with the code, so a slot the host filled in
+would be a way of taking somebody's seat before they arrived.
+
+**A name is required** to open a table or to join one. A table of "Miejsce 2"
+and "Miejsce 4" is nobody's game, and asking afterwards never happens — though
+it can be changed at any time.
 
 **No password, and every table is public.** The five-character code is the only
 lock, and the list of tables shows them all. Anyone who can see the list is
