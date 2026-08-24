@@ -151,7 +151,6 @@ export function Lobby({
           <button onClick={onLibrary} className="text-ochre/80 hover:text-ochre">
             Karty
           </button>
-          {me && <RenameField name={me.playerName} busy={busy} onRename={onRename} />}
           {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
           {/* Always on screen for the host, disabled with the reason on it.
               A button that only appears once the conditions are met leaves
@@ -372,19 +371,36 @@ export function Lobby({
       </section>
         </div>
 
-        {/* The Karta Postaci, big enough to read. A character is four numbered
-            clauses of Charakterystyka and two numbers, and every one of them
-            matters to the choice being made two feet to the left — but at strip
-            size the print is a grey smudge, and a player picking Kat has no way
-            to find out what Kat does without picking it first. */}
-        <aside className="hidden w-[300px] shrink-0 flex-col items-center justify-center border-l border-edge p-3 lg:flex xl:w-[380px]">
-          {reading ? (
-            <BigCard character={byId.get(reading) ?? null} />
-          ) : (
-            <p className="max-w-[16rem] text-center text-[11px] leading-relaxed text-muted/70">
-              Najedź na postać, żeby przeczytać jej Kartę.
-            </p>
+        {/* Settings at the top, the card at the foot, and the space between
+            them belongs to whatever else turns out to need a home here.
+
+            The card is pinned to the bottom because it is the thing your eye
+            goes back to — it sits directly above the roster it is read against
+            — while the settings are touched once, at the start, and then never
+            again. */}
+        <aside className="hidden w-[300px] shrink-0 flex-col gap-4 border-l border-edge p-3 lg:flex xl:w-[380px]">
+          <h2 className="text-[11px] uppercase tracking-widest text-muted">Ustawienia</h2>
+          {me && (
+            <label className="flex flex-col gap-1 text-[11px] text-muted">
+              Twoje imię
+              <RenameField name={me.playerName} busy={busy} onRename={onRename} />
+            </label>
           )}
+
+          {/* The Karta Postaci, big enough to read. A character is four numbered
+              clauses of Charakterystyka and two numbers, and every one of them
+              matters to the choice being made to the left of it — but at strip
+              size the print is a grey smudge, and a player picking Kat has no
+              way to find out what Kat does without picking it first. */}
+          <div className="mt-auto flex min-h-0 flex-col items-center justify-end">
+            {reading ? (
+              <BigCard character={byId.get(reading) ?? null} />
+            ) : (
+              <p className="max-w-[16rem] text-center text-[11px] leading-relaxed text-muted/70">
+                Najedź na postać, żeby przeczytać jej Kartę.
+              </p>
+            )}
+          </div>
         </aside>
       </div>
     </main>
@@ -677,7 +693,7 @@ function RenameField({
         onChange={(event) => setValue(event.target.value)}
         placeholder="twoje imię"
         maxLength={24}
-        className="w-28 rounded border border-edge bg-night px-2 py-1 text-[11px] text-ink outline-none focus:border-ochre"
+        className="min-w-0 flex-1 rounded border border-edge bg-night px-2 py-1 text-[11px] text-ink outline-none focus:border-ochre"
       />
       <button
         type="submit"
