@@ -49,10 +49,15 @@ export type Ability =
   /** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */
   | { kind: "magia-do-miecza" }
   /**
-   * Dies in your place rather than you losing the point — the Rumak always, the
-   * Giermek on a roll of one, the Poszukiwacz whenever he is the one attacking.
+   * Dies in your place rather than you losing the point — the Bojowy Rumak
+   * whenever you are beaten, the Giermek on a roll of one.
+   *
+   * `onlyWhenRaiding` is the Poszukiwacz Przygód, who is different in kind: he
+   * dies only on the raid *he* was sent out on, not in your own fights. Without
+   * the flag the engine would offer his life every time anyone lost anything,
+   * which is a good deal more friend than the card describes.
    */
-  | { kind: "ginie-zamiast-ciebie"; onRollUpTo?: number }
+  | { kind: "ginie-zamiast-ciebie"; onRollUpTo?: number; onlyWhenRaiding?: boolean }
   /** A key rather than a bonus: no Magiczny Miecz, no Kamienny Most. */
   | { kind: "wymagany"; place: "most" | "zamek-bestii" }
   /** "nie będziesz musiał płacić 1 Sztuki Złota za Przeprawę" (Przewoźnik). */
@@ -112,6 +117,34 @@ export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
   ],
   "tarcza-tolimana": [{ kind: "wymagany", place: "zamek-bestii" }],
 
+  // --- magic items ----------------------------------------------------------
+  //
+  // Several of these print an ownership restriction as well — the Miecz Chaosu
+  // is closed to a Dobra Postać, the Graal and the Włócznia to a Zła one, the
+  // Topór to a Chaotyczna. There is no variant for "who may hold this", so that
+  // line stays on the card where the players can read it; what is encoded here
+  // is only what the card does once it is held.
+  //
+  // The Arondight and the Topór print a second line too: two points of Miecza
+  // rather than one when the fight is against a Wilkołak. The bonus below is
+  // the one that applies in every other fight; the exception is left to the
+  // text rather than half-encoded.
+  arondight: [{ kind: "punkty", miecz: 1 }],
+  "topor-swiatla-i-ciemnosci": [{ kind: "punkty", miecz: 1 }],
+  /** Excalibur also takes a point of Życie off each beaten opponent — not encodable. */
+  excalibur: [{ kind: "punkty", miecz: 1 }],
+  "swieta-wlocznia": [{ kind: "punkty", miecz: 1 }],
+  "miecz-chaosu": [{ kind: "punkty", miecz: 2 }],
+  "pierscien-mocy": [{ kind: "punkty", magia: 2 }],
+  "srebrna-strzala": [{ kind: "punkty", miecz: 1, magia: 1 }],
+  /** "zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały" — the second half is the Rękawice's rule. */
+  "swiety-graal": [
+    { kind: "punkty", magia: 1 },
+    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "zycie" },
+  ],
+  /** The same key as the Tarcza Tolimana, printed again on the Zdarzenia sheets. */
+  "tarcza-boga-tolimana": [{ kind: "wymagany", place: "zamek-bestii" }],
+
   // --- friends --------------------------------------------------------------
   pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
   strzyga: [{ kind: "punkty", magia: 1 }],
@@ -124,6 +157,16 @@ export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
   tragarz: [{ kind: "udzwig", items: 4 }],
   przewoznika: [{ kind: "przeprawa-gratis" }],
   rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
+  /**
+   * Deliberately no `punkty`: the Poszukiwacz "posiada 3 punkty Miecza" of his
+   * own and spends them on the raid you send him on, unlike the Giermek and the
+   * Krzyżowiec who "dodają ci" theirs. And no `walczy-za-ciebie` either — he
+   * does not stand in for you in your fights, he goes out up to three Obszary
+   * and attacks something, which nothing here can say. What is left, and what
+   * the printed text is unambiguous about, is that his failure costs him rather
+   * than you.
+   */
+  "poszukiwacz-przygod": [{ kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true }],
   opiekun: [
     { kind: "bezpieczny", fields: ["wieza-przeznaczenia", "urwisko-1", "urwisko-2"], from: "rzut" },
   ],

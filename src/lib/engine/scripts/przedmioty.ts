@@ -8,4 +8,17 @@ import type { CardScript } from "../cardScript";
  * for the ones that resolve and go: gold you simply take, a card that must be
  * shuffled back, an item consumed on use.
  */
-export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {};
+export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
+  // "Zamień tę Kartę na N Sztuk Złota, a następnie ją odłóż." Not a Przedmiot in
+  // any sense that matters — it never reaches the character's hand, so it costs
+  // nothing against the four-item limit of 5.4 and there is nothing to lose on
+  // the Bagna later. The card is the gold, and then it is gone.
+  "1-sztuka-zlota": {
+    effect: { op: "punkty", stat: "zloto", delta: 1 },
+    disposition: { kind: "odloz" },
+  },
+  "2-sztuki-zlota": {
+    effect: { op: "punkty", stat: "zloto", delta: 2 },
+    disposition: { kind: "odloz" },
+  },
+};

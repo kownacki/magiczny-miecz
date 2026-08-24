@@ -3,6 +3,7 @@
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { bonusOf } from "./cards";
+import { ABILITIES } from "./abilities";
 import type { Holding } from "./state";
 
 const EVENTS = events as EventCard[];
@@ -33,11 +34,29 @@ export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | n
   }
 }
 
-/** Bonuses conferred by each card that grants one, by card id. */
+/**
+ * Bonuses conferred by each card that grants one, by card id.
+ *
+ * Two sources, and the order between them matters. A card may print its bonus
+ * as a number in the corner (Excalibur, Miecz Chaosu) or state it only in its
+ * text (Srebrna Strzała, Święty Graal), and the encoded `punkty` ability is the
+ * one that can express both. So the ability wins where there is one, and the
+ * printed number fills in for every card nobody has encoded yet.
+ *
+ * Taking the sum of the two instead would double every card that has both,
+ * which is the natural mistake here and an invisible one — Excalibur would
+ * quietly be worth two points of Miecza rather than one.
+ */
 const BONUS_BY_ID = new Map<string, { miecz: number; magia: number }>();
 for (const card of EVENTS) {
-  const bonus = bonusOf(card);
-  if (bonus) BONUS_BY_ID.set(card.id, bonus);
+  const printed = bonusOf(card);
+  if (printed) BONUS_BY_ID.set(card.id, printed);
+}
+for (const [cardId, abilities] of Object.entries(ABILITIES)) {
+  const points = abilities.find((ability) => ability.kind === "punkty");
+  if (points && points.kind === "punkty") {
+    BONUS_BY_ID.set(cardId, { miecz: points.miecz ?? 0, magia: points.magia ?? 0 });
+  }
 }
 
 export interface HeldTotals {

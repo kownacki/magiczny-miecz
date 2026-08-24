@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
+import { bonusOf } from "./cards";
+import { bonusFromHoldings } from "./holdings";
 import { FIELDS } from "./board";
 import {
   ABILITIES,
@@ -162,5 +164,50 @@ describe("carrying and moving", () => {
     expect(moveBonusRange(abilitiesOf("wierzchowiec"))).toEqual({ min: 1, max: 3 });
     expect(moveBonusRange(abilitiesOf("zaprzeg"))).toEqual({ min: 1, max: 1 });
     expect(moveBonusRange(abilitiesOf("miecz"))).toBeNull();
+  });
+});
+
+describe("the two places a bonus can come from", () => {
+  it("counts a card that has both a printed number and an encoded one only once", () => {
+    // Excalibur prints 1 in the corner and is encoded as punkty miecz 1. Summing
+    // the two sources instead of preferring one would silently make it worth
+    // two, and nothing on screen would say so.
+    const held = [{ cardId: "excalibur", kind: "item" as const, face: "open" as const }];
+    expect(bonusFromHoldings(held)).toEqual({ miecz: 1, magia: 0 });
+  });
+
+  it("counts a card whose bonus is only in its text", () => {
+    // Srebrna Strzała prints no numbers at all; before it was encoded it added
+    // nothing, which was an undercount rather than a safe default.
+    const held = [{ cardId: "srebrna-strzala", kind: "item" as const, face: "open" as const }];
+    expect(bonusFromHoldings(held)).toEqual({ miecz: 1, magia: 1 });
+  });
+
+  it("keeps the encoded value and the printed value in step", () => {
+    // Where a card has both, they must agree — otherwise whichever source wins
+    // is a coin toss nobody reviewed. This fails loudly if one is edited alone.
+    for (const [cardId, abilities] of Object.entries(ABILITIES)) {
+      const points = abilities.find((a) => a.kind === "punkty");
+      if (!points || points.kind !== "punkty") continue;
+      const card = (events as EventCard[]).find((c) => c.id === cardId);
+      const printed = card ? bonusOf(card) : null;
+      if (!printed) continue;
+      expect({ miecz: points.miecz ?? 0, magia: points.magia ?? 0 }, cardId).toEqual(printed);
+    }
+  });
+});
+
+describe("who dies in your place", () => {
+  it("lets the Bojowy Rumak take any defeat", () => {
+    const rumak = abilitiesOf("bojowy-rumak").find((a) => a.kind === "ginie-zamiast-ciebie");
+    expect(rumak).toEqual({ kind: "ginie-zamiast-ciebie" });
+  });
+
+  it("limits the Poszukiwacz to the raid he was sent on", () => {
+    // "W przypadku porażki ty nie tracisz punktu Życia, ale twój Przyjaciel
+    // ginie" — of the raid, not of your own fights.
+    expect(abilitiesOf("poszukiwacz-przygod")).toEqual([
+      { kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true },
+    ]);
   });
 });
