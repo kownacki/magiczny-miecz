@@ -90,5 +90,49 @@ export const MIEJSCA: Readonly<Record<string, CardScript>> = {
     optional: true,
     effect: { op: "wyciagnij", count: 3 },
     disposition: { kind: "odloz" },
-  }
+  },
+  "nieznana-swiatynia": {
+    optional: true,
+    effect: {
+      op: "rzut",
+      faces: {
+        1: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
+        2: { op: "punkty", stat: "zycie", delta: 1 },
+        3: { op: "zaklecie", count: 1 },
+        4: { op: "punkty", stat: "zloto", delta: 2 },
+        5: { op: "punkty", stat: "zloto", delta: 1 },
+        6: { op: "nic" },
+      },
+    },
+    disposition: { kind: "zostaje" },
+  },
+  targowisko: {
+    optional: true,
+    effect: {
+      op: "kup",
+      towar: [
+        { co: "Miecz", cena: 1 },
+        { co: "Hełm", cena: 1 },
+        { co: "Kij i Sznur", cena: 1 },
+        { co: "Latarnia", cena: 2 },
+        { co: "Tarcza", cena: 2 },
+        { co: "Rękawice", cena: 2 },
+        { co: "Koń", cena: 2 },
+        { co: "Łódź", cena: 3 },
+      ],
+    },
+    disposition: { kind: "zostaje" },
+  },
+  // Both Kapliczki borrow their temple's table rather than reprinting it, and
+  // then close for good — which is what separates them from the temple itself.
+  "kapliczka-nemed": {
+    optional: true,
+    effect: { op: "jak-pole", fieldId: "swiatynia-bogini-nemed" },
+    disposition: { kind: "odloz" },
+  },
+  "kapliczka-tolimana": {
+    optional: true,
+    effect: { op: "jak-pole", fieldId: "swiatynia-tolimana" },
+    disposition: { kind: "odloz" },
+  },
 };

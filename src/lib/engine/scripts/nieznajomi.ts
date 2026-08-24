@@ -96,5 +96,39 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       to: { op: "zaklecie", count: 1 },
     },
     disposition: { kind: "zostaje" },
-  }
+  },
+  // A standing shop rather than a one-off gift, which is why he stays.
+  sztukmistrz: {
+    optional: true,
+    effect: { op: "kup", towar: [{ co: "Zaklęcie", cena: 1 }] },
+    disposition: { kind: "zostaje" },
+  },
+  // Two rolls' worth of card in one: where he settles, and what he hands the
+  // first Postać to find him. Both named items are finite ("jeśli jeszcze są").
+  eremita: {
+    effect: {
+      op: "po-kolei",
+      steps: [
+        {
+          op: "rzut",
+          faces: {
+            1: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "bezdroza" } },
+            2: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "uroczysko" } },
+            3: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "pustelnia" } },
+            4: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "wieza-przeznaczenia" } },
+            5: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "rozstajne-drogi-1" } },
+            6: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "ruiny-twierdzy" } },
+          },
+        },
+        {
+          op: "wybor",
+          options: [
+            { label: "Magiczny Miecz", effect: { op: "otrzymaj", co: "Magiczny Miecz" } },
+            { label: "Tarcza Tolimana", effect: { op: "otrzymaj", co: "Tarcza Tolimana" } },
+          ],
+        },
+      ],
+    },
+    disposition: { kind: "do-pierwszej" },
+  },
 };

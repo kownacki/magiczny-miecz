@@ -109,5 +109,10 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
   "uklad-planet": {
     effect: { op: "nic" },
     disposition: { kind: "po-turach", turns: 1 },
-  }
+  },
+  // Every Zaklęcie in the game goes, in every Krąg — not just the drawer's.
+  przesilenie: {
+    effect: { op: "strata", co: "zaklecie", target: "wszyscy" },
+    disposition: { kind: "odloz" },
+  },
 };

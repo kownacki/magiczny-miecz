@@ -3,6 +3,20 @@
 import type { CardScript } from "../cardScript";
 
 /**
+ * "Pozostanie tu, aż ktoś go pokona" — the fight is the whole card, and it
+ * stays until someone wins it.
+ *
+ * A function rather than a shared constant, following WISH: each card owns its
+ * own object tree, so an edit meant for one cannot silently change eighteen.
+ */
+function STRAZUJE(): CardScript {
+  return {
+    effect: { op: "nic" },
+    disposition: { kind: "zostaje" },
+  };
+}
+
+/**
  * A Wróg's numbers live on the card itself (its printed Miecz or Magia) and are
  * read by `combatValueOf`, so nothing here repeats them. What belongs here is
  * everything else the card says: what beating it gives you, what losing costs
@@ -10,4 +24,75 @@ import type { CardScript } from "../cardScript";
  * these say "pozostanie tu, aż ktoś go pokona", which is a fixture, not a
  * discard.
  */
-export const WROGOWIE: Readonly<Record<string, CardScript>> = {};
+export const WROGOWIE: Readonly<Record<string, CardScript>> = {
+  cyklop: STRAZUJE(),
+  "czarna-hybryda": STRAZUJE(),
+  "czerwona-hybryda": STRAZUJE(),
+  fomoraig: STRAZUJE(),
+  hadron: STRAZUJE(),
+  los: STRAZUJE(),
+  niedzwiedz: STRAZUJE(),
+  nobbin: STRAZUJE(),
+  smok: STRAZUJE(),
+  // "Będzie napadał na Postacie, aż któraś z nich go pokona" — same fixture,
+  // different wording.
+  "sniezne-monstrum": STRAZUJE(),
+  wilk: STRAZUJE(),
+  wilkolak: STRAZUJE(),
+  // Beating him is not the only thing that matters: every Postać he beats pays
+  // a Sztuka Złota or a Przedmiot on top of the usual point of Życie.
+  zloczynca: {
+    effect: {
+      op: "wybor",
+      options: [
+        { label: "Oddaj 1 Sztukę Złota", effect: { op: "punkty", stat: "zloto", delta: -1 } },
+        {
+          label: "Oddaj jeden Przedmiot",
+          effect: { op: "strata", co: "przedmiot", count: 1, wybor: "ty" },
+        },
+      ],
+    },
+    disposition: { kind: "zostaje" },
+  },
+  "duch-ciemnosci": STRAZUJE(),
+  "duch-zaglady": STRAZUJE(),
+  "ksiaze-demonow": STRAZUJE(),
+  demon: STRAZUJE(),
+  widmo: STRAZUJE(),
+  zjawa: STRAZUJE(),
+  // The card is rolled onto one of six fields and haunts it — the drawer stays
+  // exactly where they are.
+  upior: {
+    effect: {
+      op: "rzut",
+      faces: {
+        1: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "osada" } },
+        2: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "grod" } },
+        3: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "dolina-cienia" } },
+        4: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "mroczna-polana" } },
+        5: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "krypta-upiorow" } },
+        6: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "wymarle-miasto" } },
+      },
+    },
+    disposition: { kind: "zostaje" },
+  },
+  // Whichever of the three is free. Both printed copies of each are listed
+  // because the card names the places, not one of their two halves.
+  lewiatan: {
+    effect: {
+      op: "poloz-karte",
+      gdzie: {
+        kind: "jedno-z",
+        fieldIds: [
+          "mokradla-1",
+          "mokradla-2",
+          "przeprawa-1",
+          "przeprawa-2",
+          "bagna-1",
+          "bagna-2",
+        ],
+      },
+    },
+    disposition: { kind: "zostaje" },
+  },
+};

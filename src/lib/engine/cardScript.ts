@@ -82,7 +82,13 @@ export type Destination =
   | { kind: "pole"; fieldId: string }
   | { kind: "dowolne-w-kregu" }
   /** Straight back where the move began (Straż). */
-  | { kind: "poczatek-ruchu" };
+  | { kind: "poczatek-ruchu" }
+  /**
+   * One of a listed set, whichever is free — the Lewiatan settles on whichever
+   * of the Mokradła, Przeprawa or Bagna is unoccupied. The choice among them is
+   * the players'; what matters is that it is these fields and no others.
+   */
+  | { kind: "jedno-z"; fieldIds: readonly string[] };
 
 /**
  * What a card does, as an ordered list of operations.
@@ -125,6 +131,37 @@ export type Effect =
     }
   | { op: "kamien" }
   | { op: "natura"; na: Nature }
+  /**
+   * A shop. Targowisko lists eight Przedmioty with prices, the Sztukmistrz
+   * sells Zaklęcia at one Sztuka Złota each, and the Gród and Osada do the same
+   * from the board itself — so this is a shape the game uses repeatedly rather
+   * than a special case for one card.
+   */
+  | { op: "kup"; towar: { co: string; cena: number }[] }
+  /**
+   * "Możesz modlić się na takich samych zasadach, jak w Świątyni Nemed."
+   *
+   * Both Kapliczki borrow a temple's table wholesale rather than reprinting it.
+   * Pointing at the field is more faithful than copying its outcomes, and it
+   * cannot drift out of step with the field it borrows from.
+   */
+  | { op: "jak-pole"; fieldId: string }
+  /**
+   * Puts the *card* somewhere, which is not the same as moving a character.
+   *
+   * The Upiór rolls for which of six fields he haunts; the Eremita rolls for
+   * where he settles; the Lewiatan takes whichever crossing is free. Encoding
+   * any of these as `przenies` would teleport the player who drew the card,
+   * which is a different and wrong game.
+   */
+  | { op: "poloz-karte"; gdzie: Destination }
+  /**
+   * A specific named thing rather than a point: the Eremita offers a Magiczny
+   * Miecz or a Tarcza Tolimana, and two temples give the same two away. Both
+   * are finite — "jeśli jeszcze są" — which is why the name matters and a
+   * generic "+1 Przedmiot" would not do.
+   */
+  | { op: "otrzymaj"; co: string }
   /** Only happens to some characters (Posłańcy Bogów, Sabat Czarownic). */
   | { op: "gdy"; warunek: Condition; to: Effect; inaczej?: Effect };
 
@@ -162,6 +199,14 @@ export function fieldsNamedBy(effect: Effect): string[] {
   switch (effect.op) {
     case "przenies":
       return effect.to.kind === "pole" ? [effect.to.fieldId] : [];
+    case "jak-pole":
+      return [effect.fieldId];
+    case "poloz-karte":
+      return effect.gdzie.kind === "pole"
+        ? [effect.gdzie.fieldId]
+        : effect.gdzie.kind === "jedno-z"
+          ? [...effect.gdzie.fieldIds]
+          : [];
     case "po-kolei":
       return effect.steps.flatMap(fieldsNamedBy);
     case "wybor":

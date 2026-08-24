@@ -1260,6 +1260,39 @@ function EffectControls({
       return stated("Zamiana w Kamień (20.1)");
     case "natura":
       return stated(`zmiana Natury na: ${effect.na === "zla" ? "zła" : effect.na}`);
+    case "kup":
+      return (
+        <div>
+          <p className="text-[11px] text-muted">{prefix}Możesz kupić:</p>
+          <ul className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+            {effect.towar.map((towar) => (
+              <li key={towar.co} className="text-[11px] text-ink">
+                {towar.co}{" "}
+                <span className="text-zloto">
+                  {towar.cena} Sz. Z.
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    case "jak-pole":
+      return stated(
+        `modlisz się na zasadach z: ${FIELDS.get(effect.fieldId)?.name ?? effect.fieldId}`,
+      );
+    case "poloz-karte":
+      return stated(
+        effect.gdzie.kind === "pole"
+          ? `połóż Kartę na: ${FIELDS.get(effect.gdzie.fieldId)?.name ?? effect.gdzie.fieldId}`
+          : effect.gdzie.kind === "jedno-z"
+            ? `połóż Kartę na wolnym z: ${effect.gdzie.fieldIds
+                .map((id) => FIELDS.get(id)?.name ?? id)
+                .filter((name, i, all) => all.indexOf(name) === i)
+                .join(", ")}`
+            : "połóż Kartę",
+      );
+    case "otrzymaj":
+      return stated(`otrzymujesz: ${effect.co}`);
     case "gdy":
       return (
         <div className="flex flex-col gap-1">
