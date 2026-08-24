@@ -98,8 +98,18 @@ export function adjustOwn(seat: Seat, stat: "miecz" | "magia", delta: number): S
  */
 export const HEAL_CEILING = 4;
 
+/**
+ * The outer `Math.max` is not redundant. Życie can legitimately sit above four,
+ * because gains from encounters and exploration are uncapped (4.6) while only
+ * *healing* is limited to the starting level (4.7). Clamping with `min` alone
+ * would let a heal on a character at six quietly drain them to four — healing
+ * must never be able to take life away.
+ */
 export function heal(seat: Seat, amount: number): Seat {
-  return { ...seat, zycie: Math.min(HEAL_CEILING, seat.zycie + amount) };
+  return {
+    ...seat,
+    zycie: Math.max(seat.zycie, Math.min(HEAL_CEILING, seat.zycie + amount)),
+  };
 }
 
 export function gainLife(seat: Seat, amount: number): Seat {

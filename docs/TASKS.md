@@ -15,9 +15,9 @@ their scans are deliberately untouched.
 - [x] Strip the repo to `assets/` and rebuild as Next 16 + TS + Tailwind 4
 - [x] Configs: `package.json`, `tsconfig`, `next.config`, `postcss`, `eslint`
 - [x] `.env.example` documenting every credential
-- [ ] `npm install` and a booting dev server
-- [ ] `db/schema.sql` for the `magiczny_miecz` schema in `biggerfish`
-- [ ] `CLAUDE.md`
+- [x] `npm install` (dev server not yet booted)
+- [x] `db/schema.sql`, applied and smoke-tested; anon confirmed locked out
+- [x] `CLAUDE.md`
 
 ## Phase 1 — Asset pipeline
 
@@ -26,10 +26,10 @@ Turning 689 MB of image-only PDFs into files the system can be built on.
 - [x] Native-resolution image extraction from the scans (`scripts/lib/pdf-images.mjs`)
       — the scans are 2480×3508; rasterising the page instead gives 595×841
 - [x] Dependency-free PNG encoder + cropper (`scripts/lib/png.mjs`)
-- [ ] Automatic grid detection and card slicing
-- [ ] Extract every base-game sheet to individual card images
-- [ ] `assets/catalogue.json` — every source PDF, what it holds, how many
-- [ ] Verify counts against the rulebook (165 / 30 / 30 / 27 / 4 / 4)
+- [x] Automatic grid detection and card slicing
+- [x] Extract every base-game sheet to individual card images (267)
+- [x] `assets/extracted/catalogue.json` — every source PDF, what it holds, how many
+- [x] Verify counts against the rulebook — all six match exactly
 - [ ] Web-optimised card images into `public/`
 
 ## Phase 2 — Transcription
@@ -38,27 +38,30 @@ Every scan is image-only with no text layer, so all of this is read visually.
 
 - [x] Rulebook read end to end (9 pages)
 - [ ] `docs/RULES.md` — full rulebook transcribed to structured markdown
+      (read end to end already; not yet written down)
 - [ ] Board fields: names, ring membership, adjacency, printed instructions
-- [ ] 165 event cards → typed data
-- [ ] 30 spells → typed data
-- [ ] 30 items (swords / shields / equipment) → typed data
-- [ ] 27 characters → typed data
-- [ ] Resolve the rule 2.6 discrepancy (spell table vs. the worked example)
+- [x] 165 event cards → typed data
+- [x] 30 spells → typed data
+- [x] 30 items → typed data (14 unnamed in the print files, named in overrides.json)
+- [x] 27 characters → typed data
+- [x] Rule 2.6 read at full resolution: 1->0 2->1 3->2 4->2 5->3 6+->3, capped at 3.
+      The worked example beneath it is garbled in the scan; the table wins.
 
 ## Phase 3 — Engine
 
 Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 
-- [ ] State and move types
-- [ ] Board topology — Dolny Krąg + Kamienny Most are verified; the middle and
-      upper rings still need reading off the board
-- [ ] Effects ports: `RandomPort` (physical die vs. RNG), `DeckPort`
-- [ ] Derived stats: total Miecz/Magia, spell capacity, nature gating
+- [x] State and move types
+- [~] Board topology — Dolny Krąg (14 fields) and Kamienny Most (9) verified
+      against the scan; middle and upper rings being read now
+- [x] Effects ports: `RandomPort`, `DeckPort`, `ChoicePort`
+- [x] Derived stats: totals, spell capacity, carrying limit, nature gating
 - [ ] Legal-move computation
-- [ ] Card resolution ordering (15.1–15.2, 16.1–16.8)
-- [ ] Combat and magic combat (17, 18)
+- [x] Card resolution ordering (15.2, 16.4)
+- [x] Combat and magic combat (17, 18) incl. the Beast (14.7)
 - [ ] Ring crossings (11) and the bridge (14)
-- [ ] Vitest coverage for the above
+- [x] Vitest coverage — 32 tests green; caught a real bug where healing
+      drained a character who was above four Życie
 
 ## Phase 4 — Companion app
 
@@ -86,3 +89,17 @@ Secondary. Same engine, virtual ports.
 - The number at the top of each card is a **Roman numeral for the card class**
   (I Spotkanie, II Wróg, V Przedmiot), used for resolution ordering in 15.2 —
   it is *not* a unique card id. Cards cannot be identified by number.
+
+
+## Findings worth keeping
+
+- The deck contains genuine **duplicates** (4x "1 SZTUKA ZŁOTA", 2x "UPIÓR",
+  4x "MAGICZNY MIECZ"), so a card id is not unique. `sheet + index` is the key.
+- **Kat** prints `natura: dowolna` and chooses at setup — the only character the
+  three-value Nature enum cannot hold. Hence `StartingNature`.
+- **Tragarz** is filed as a Przyjaciel, not a Przedmiot, so the rule 5.4
+  carrying-limit check cannot key off item-ness.
+- Fourteen cards shipped with the placeholder title **"NAZWA KARTY"** — the
+  print files were never finished. Named from their body text in overrides.json.
+- Event class split: przedmiot 63, wrog 32, spotkanie 20, przyjaciel 20,
+  nieznajomy 17, miejsce 13 = 165.
