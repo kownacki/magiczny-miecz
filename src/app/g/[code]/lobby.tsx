@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
@@ -41,7 +41,7 @@ const MAX_SEATS = 6;
 export function Lobby({
   code,
   mode,
-  seats,
+  seats: seatsFromServer,
   mySeatIndex,
   characters,
   pickingFor,
@@ -85,6 +85,28 @@ export function Lobby({
   onLibrary: () => void;
 }) {
   const canAdminister = isHost || hostAway;
+
+  /**
+   * What you have typed into the name field but the server has not been told
+   * about yet.
+   *
+   * Your name appears above your character and across the foot of the card you
+   * took, and it should follow the keystrokes — waiting for a round trip to see
+   * your own typing is what makes a field feel broken. What the server hears is
+   * debounced; what you see is not.
+   */
+  const [draftName, setDraftName] = useState<string | null>(null);
+  const seats =
+    draftName === null
+      ? seatsFromServer
+      : seatsFromServer.map((seat) =>
+          seat.seatIndex === mySeatIndex
+            ? // An empty field keeps showing the saved name rather than
+              // flashing "Miejsce 2" at somebody who is only retyping it.
+              { ...seat, playerName: draftName.trim() || seat.playerName }
+            : seat,
+        );
+
   const me = seats.find((seat) => seat.seatIndex === mySeatIndex) ?? null;
   const chosen = seats.filter((seat) => seat.characterId);
   const waitingOn = chosen.filter((seat) => !seat.ready && !seat.abandoned);
@@ -383,7 +405,17 @@ export function Lobby({
           {me && (
             <label className="flex flex-col gap-1 text-[11px] text-muted">
               Twoje imię
-              <RenameField name={me.playerName} busy={busy} onRename={onRename} />
+              {/* The *saved* name, not the one on screen. Handing it the
+                  drafted name would tell it nothing had changed — the draft is
+                  its own output — and it would never save anything. */}
+              <RenameField
+                name={
+                  seatsFromServer.find((seat) => seat.seatIndex === mySeatIndex)?.playerName ??
+                  null
+                }
+                onDraft={setDraftName}
+                onSave={onRename}
+              />
             </label>
           )}
 
@@ -570,8 +602,6 @@ function SeatSlot({
           and the same line says which, for you and for everybody else. Yours is
           a button because saying you are ready is the only thing left to do
           once you have a character; theirs is a word because it is news. */}
-      <p className="mt-1 truncate text-[10px] text-muted">{character?.name ?? "—"}</p>
-
       {onReady ? (
         <button
           disabled={busy || !seat.characterId}
@@ -670,39 +700,52 @@ function EmptySlot({
  * People join in a hurry and type it wrong, and a table where the only fix is to
  * leave and rejoin is one where somebody plays the whole evening as "Miejsce 3".
  */
+/** Long enough that a name is typed rather than transmitted letter by letter. */
+const RENAME_DEBOUNCE_MS = 600;
+
 function RenameField({
   name,
-  busy,
-  onRename,
+  onDraft,
+  onSave,
 }: {
   name: string | null;
-  busy: boolean;
-  onRename: (name: string) => void;
+  /** Every keystroke, so the table shows the name as it is being typed. */
+  onDraft: (name: string) => void;
+  /** Once the typing stops. */
+  onSave: (name: string) => void;
 }) {
   const [value, setValue] = useState(name ?? "");
+
+  // Held in a ref so the effect below depends on what was typed and not on the
+  // identity of a callback the parent rebuilds every render — which would reset
+  // the timer on every render and save nothing, ever. Kept current in an effect
+  // rather than during render, which is where refs are allowed to be written.
+  const save = useRef(onSave);
+  useEffect(() => {
+    save.current = onSave;
+  });
+
+  // A confirm button for your own name was a step that existed only to be
+  // forgotten: people type it, see it appear on their card, and move on —
+  // leaving the server still calling them what they were called before.
+  useEffect(() => {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === (name ?? "")) return;
+    const timer = setTimeout(() => save.current(trimmed), RENAME_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [value, name]);
+
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (value.trim()) onRename(value);
+    <input
+      value={value}
+      onChange={(event) => {
+        setValue(event.target.value);
+        onDraft(event.target.value);
       }}
-      className="flex items-center gap-1"
-    >
-      <input
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder="twoje imię"
-        maxLength={24}
-        className="min-w-0 flex-1 rounded border border-edge bg-night px-2 py-1 text-[11px] text-ink outline-none focus:border-ochre"
-      />
-      <button
-        type="submit"
-        disabled={busy || !value.trim() || value.trim() === (name ?? "")}
-        className="text-muted transition hover:text-ink disabled:opacity-30"
-      >
-        zmień
-      </button>
-    </form>
+      placeholder="twoje imię"
+      maxLength={24}
+      className="min-w-0 rounded border border-edge bg-night px-2 py-1 text-[11px] text-ink outline-none focus:border-ochre"
+    />
   );
 }
 
