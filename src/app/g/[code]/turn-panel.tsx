@@ -5,6 +5,8 @@ import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
+import { RollTable } from "./roll-table";
+import { parseRollTable } from "@/lib/engine/rollTable";
 
 const EVENTS = events as EventCard[];
 
@@ -14,6 +16,16 @@ const EVENTS = events as EventCard[];
  * the player finds the card they drew by name instead. Diacritics are folded on
  * both sides so "zaraza" finds "ZARAZA" without a Polish keyboard.
  */
+/** True when a die table accounts for nearly all of a field's printed text. */
+function isTableOnly(text: string): boolean {
+  const table = parseRollTable(text);
+  if (!table) return false;
+  const covered = new Set(Object.values(table.outcomes)).size
+    ? Object.values(table.outcomes).join(" ").length
+    : 0;
+  return covered >= text.length * 0.6;
+}
+
 function fold(text: string): string {
   return text
     .toLowerCase()
@@ -74,9 +86,18 @@ export function TurnPanel({
           read the field aloud and argue about it, and the board itself is
           usually under somebody's elbow. */}
       {fieldText && (phase.phase === "pole" || phase.phase === "walka") && (
-        <p className="mb-4 whitespace-pre-line rounded border-l-2 border-ochre/40 bg-night/60 px-3 py-2 text-xs leading-relaxed text-muted">
-          {fieldText}
-        </p>
+        <div className="mb-4">
+          {/* A field like Karczma is nothing but its die table, so printing the
+              prose above the parsed version says everything twice. Where the
+              table does not account for most of the text — Gród, Osada — the
+              prose carries rules the table does not, and is kept. */}
+          {!isTableOnly(fieldText) && (
+            <p className="whitespace-pre-line rounded border-l-2 border-ochre/40 bg-night/60 px-3 py-2 text-xs leading-relaxed text-muted">
+              {fieldText}
+            </p>
+          )}
+          <RollTable text={fieldText} />
+        </div>
       )}
 
       {!isMine ? (
@@ -469,6 +490,7 @@ function DrawnCards({
             {card && (
               <p className="mt-1 text-xs leading-relaxed text-muted">{card.text}</p>
             )}
+            {card && <RollTable text={card.text} />}
             {card?.miecz !== undefined && (
               <p className="tnum mt-1 text-xs text-miecz">Miecz przeciwnika: {card.miecz}</p>
             )}
