@@ -1,0 +1,158 @@
+{
+  "natureChange": [
+    {
+      "kind": "nature-change",
+      "id": "zly",
+      "name": "Zły",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 10
+      },
+      "text": ""
+    },
+    {
+      "kind": "nature-change",
+      "id": "zly",
+      "name": "Zły",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 11
+      },
+      "text": ""
+    },
+    {
+      "kind": "nature-change",
+      "id": "zly",
+      "name": "Zły",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 12
+      },
+      "text": ""
+    },
+    {
+      "kind": "nature-change",
+      "id": "zly",
+      "name": "Zły",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 13
+      },
+      "text": ""
+    }
+  ],
+  "stone": [
+    {
+      "kind": "stone",
+      "id": "zaklety-w-kamien",
+      "name": "ZAKLĘTY W KAMIEŃ",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 6
+      },
+      "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+    },
+    {
+      "kind": "stone",
+      "id": "zaklety-w-kamien",
+      "name": "ZAKLĘTY W KAMIEŃ",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 7
+      },
+      "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+    },
+    {
+      "kind": "stone",
+      "id": "zaklety-w-kamien",
+      "name": "ZAKLĘTY W KAMIEŃ",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 8
+      },
+      "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+    },
+    {
+      "kind": "stone",
+      "id": "zaklety-w-kamien",
+      "name": "ZAKLĘTY W KAMIEŃ",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 9
+      },
+      "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+    }
+  ],
+  "standees": [
+    {
+      "kind": "standee",
+      "id": "pustelnik",
+      "name": "Pustelnik",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 14
+      },
+      "text": ""
+    },
+    {
+      "kind": "standee",
+      "id": "quark",
+      "name": "Quark",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 15
+      },
+      "text": ""
+    },
+    {
+      "kind": "standee",
+      "id": "rycerz-ciemnosci",
+      "name": "Rycerz Ciemności",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 16
+      },
+      "text": ""
+    },
+    {
+      "kind": "standee",
+      "id": "spryciarz",
+      "name": "Spryciarz",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 17
+      },
+      "text": ""
+    },
+    {
+      "kind": "standee",
+      "id": "troll",
+      "name": "Troll",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 18
+      },
+      "text": ""
+    },
+    {
+      "kind": "standee",
+      "id": "wiedzma",
+      "name": "Wiedźma",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 19
+      },
+      "text": ""
+    },
+    {
+      "kind": "standee",
+      "id": "zdobywca",
+      "name": "Zdobywca",
+      "source": {
+        "sheet": "zdarzenia-9",
+        "index": 20
+      },
+      "text": ""
+    }
+  ]
+}

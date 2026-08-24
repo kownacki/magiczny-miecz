@@ -1,0 +1,133 @@
+[
+  {
+    "id": "awanturnik",
+    "name": "AWANTURNIK",
+    "source": { "sheet": "postacie-1", "index": 1 },
+    "nature": "chaotyczna",
+    "miecz": 3,
+    "magia": 3,
+    "start": "Karczma",
+    "abilities": [
+      "Zamiast atakować spotkaną Postać możesz - jeśli pozwalają ci na to posiadane punkty Magii - zabrać jej 1 Zaklęcie. Nie możesz oglądać jej Zaklęć - wybierasz 1 losowo.",
+      "W czasie walki możesz rzucać kostką dwa razy i użyć wyższego wyniku do określenia twojej całkowitej liczby punktów Miecza."
+    ]
+  },
+  {
+    "id": "barbarzynca",
+    "name": "BARBARZYŃCA",
+    "source": { "sheet": "postacie-1", "index": 2 },
+    "nature": "chaotyczna",
+    "miecz": 5,
+    "magia": 1,
+    "start": "Kurhan",
+    "abilities": [
+      "Nie musisz rzucać kostką na Urwisku i w Wilczym Parowie (jesteś tam bezpieczny).",
+      "Na Bagnach nie nie stracisz Przedmiotu ani Przyjaciela, jeśli rzucając kostką uzyskasz 1 lub 2 oczka.",
+      "Jeżeli zaatakujesz inną Postać (lecz nie w sytuacji, gdy sam zostałeś zaatakowany) i zwyciężysz nie zabierając jej 1 punktu Życia, możesz natychmiast w tej samej turze zaatakować ją po raz drugi."
+    ]
+  },
+  {
+    "id": "bledny-rycerz",
+    "name": "BŁĘDNY RYCERZ",
+    "source": { "sheet": "postacie-1", "index": 3 },
+    "nature": "dobra",
+    "miecz": 3,
+    "magia": 3,
+    "start": "Bezdroża",
+    "abilities": [
+      "Rozpoczynasz grę posiadając Miecz i Zbroję.",
+      "Jeżeli przegrasz walkę (lecz nie walkę magiczną) możesz zignorować jej rezultat i walczyć ponownie. Podczas drugiej walki działać będą wszystkie Zaklęcia i Magiczne Przedmioty użyte w pierwszej walce. Musisz zaakceptować wynik drugiej walki.",
+      "Jeżeli w twoim posiadaniu znajdzie się Excalibur, lub Święty Graal, możesz wziąć o jedną Kartę Zaklęć więcej niż powinieneś i odrzucić to, które ci mniej odpowiada.",
+      "Każdej napotkanej Postaci możesz odebrać Krzyżowca i Giermka."
+    ]
+  },
+  {
+    "id": "czarodziej",
+    "name": "CZARODZIEJ",
+    "source": { "sheet": "postacie-1", "index": 4 },
+    "nature": "dobra",
+    "miecz": 2,
+    "magia": 4,
+    "start": "Studnia Wieczności",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 2 Zaklęcia.",
+      "W każdym momencie gry musisz mieć co najmniej 2 Zaklęcia. Natychmiast po rzuceniu przedostatniego, możesz wziąć następne.",
+      "Zdolność przewidywania przyszłości pozwala ci ignorować Nieznajomych i Spotkania, które wyciągniesz jako Kartę Zdarzenia.",
+      "Możesz ignorować Uroczą Diablicę."
+    ]
+  },
+  {
+    "id": "demon",
+    "name": "DEMON",
+    "source": { "sheet": "postacie-1", "index": 5 },
+    "nature": "zla",
+    "miecz": 2,
+    "magia": 4,
+    "start": "Czarci Młyn",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 1 Zaklęcie.",
+      "Ignorujesz wszelkie napotkane Demony.",
+      "Masz szansę zignorować każde skierowane ku tobie Zaklęcie, jeśli rzucając kostką uzyskasz 1 lub 2 oczka.",
+      "Jeżeli zwyciężysz inną Postać w walce magicznej i zdecydujesz się zabrać jej punkt Życia, możesz dodać ten punkt do swojego Życia."
+    ]
+  },
+  {
+    "id": "elf",
+    "name": "ELF",
+    "source": { "sheet": "postacie-1", "index": 6 },
+    "nature": "dobra",
+    "miecz": 3,
+    "magia": 4,
+    "start": "Uroczysko",
+    "abilities": [
+      "Nie musisz rzucać kostką na Urwisku – jesteś tam bezpieczny.",
+      "Możesz wymykać się Wrogom na Równinach.",
+      "Jeżeli kończysz ruch na Równinie możesz natychmiast iść dalej - zyskujesz dodatkowy ruch. W takim wypadku nie musisz wypełniać instrukcji związanej z Równiną, na której zakończyłeś ruch i spotykać znajdujące się tam Postacie. Dodatkowy ruch możesz wykorzystać tylko raz na turę."
+    ]
+  },
+  {
+    "id": "goblin",
+    "name": "GOBLIN",
+    "source": { "sheet": "postacie-1", "index": 7 },
+    "nature": "chaotyczna",
+    "miecz": 3,
+    "magia": 3,
+    "start": "Mokradła",
+    "abilities": [
+      "Nie musisz rzucać kostką w Kręgu Mocy i Wilczym Parowie - jesteś tam bezpieczny.",
+      "Jeżeli spotkasz Nobbina, możesz go wziąć jako swojego Przyjaciela - podczas walki będzie dodawał swoje punkty Miecza do twoich.",
+      "Napotkanego Hadrona możesz przesunąć na dowolny, nie zajęty przez inną Postać Obszar w Kręgu, po którym wędrujesz. Niezależnie od tego, czy go przesuniesz, czy nie, Hadron nie będzie cię atakował (lecz ty możesz go zaatakować)."
+    ]
+  },
+  {
+    "id": "hobgoblin",
+    "name": "HOBGOBLIN",
+    "source": { "sheet": "postacie-1", "index": 8 },
+    "nature": "zla",
+    "miecz": 3,
+    "magia": 3,
+    "start": "Step",
+    "abilities": [
+      "Nie musisz rzucać kostką przy Kurhanie i w Krypcie Upiorów - jesteś tam bezpieczny.",
+      "Możesz wymykać się Wrogom na Stepie.",
+      "Określając Miecz Kamiennego Potwora w Ruinach Twierdzy, możesz odjąć 1 od wyniku rzutu.",
+      "Jeżeli spotkasz Hadrona, możesz go wziąć jako swojego Przyjaciela - podczas walki będzie dodawał swoje punkty Miecza do twoich."
+    ]
+  },
+  {
+    "id": "hummit",
+    "name": "HUMMIT",
+    "source": { "sheet": "postacie-1", "index": 9 },
+    "nature": "dobra",
+    "miecz": 2,
+    "magia": 3,
+    "start": "Bezdroża",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 1 Zaklęcie.",
+      "Nie musisz rzucać kostką w Kręgu Mocy i na Urwisku – jesteś tam bezpieczny.",
+      "Możesz dodać 1 do wyniku rzutu kostką podczas rozstrzygania walk na Stepie i w Dolinach.",
+      "Jeżeli chcesz, możesz ignorować Zaklętą Ścieżkę.",
+      "Możesz wziąć Wilka lub Łosia za Przyjaciela (lecz nie oba zwierzęta na raz) i dosiąść ich. W takim wypadku rzucasz dwoma kostkami określając ruch."
+    ]
+  }
+]

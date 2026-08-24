@@ -1,0 +1,127 @@
+[
+  {
+    "id": "obbol",
+    "name": "OBBOL",
+    "source": { "sheet": "postacie-3", "index": 1 },
+    "nature": "chaotyczna",
+    "miecz": 2,
+    "magia": 3,
+    "start": "Mokradła",
+    "abilities": [
+      "Możesz wymykać się Wrogom na Mokradłach.",
+      "Określając Magię Ducha Skał w Wymarłym Mieście możesz odjąć 1 od wyniku rzutu kostką.",
+      "Ponieważ jesteś wyjątkowo gruboskórny, możesz zostać pokonany (w obu rodzajach walki) różnicą przynajmniej 2 punktów (przy różnicy jednopunktowej wynik walki jest nie rozstrzygnięty)."
+    ]
+  },
+  {
+    "id": "olbrzym",
+    "name": "OLBRZYM",
+    "source": { "sheet": "postacie-3", "index": 2 },
+    "nature": "chaotyczna",
+    "miecz": 4,
+    "magia": 2,
+    "start": "Step",
+    "abilities": [
+      "Ze względu na swój wzrost, twoje kroki są o wiele dłuższe, niż kroki innych - jeśli twój ruch kończy się na Obszarze zajętym przez inną Postać, możesz przejść ten Obszar i zatrzymać się na pierwszym wolnym.",
+      "W czasie walki z Postacią, której całkowity Miecz przewyższa twój całkowity Miecz o wyniku starcia decyduje jedynie wynik rzutu kostką.",
+      "Ponieważ patrzysz na wszystko z wysoka, ciągnąc Karty Zdarzeń możesz wziąć o jedną więcej niż zaleca instrukcja i odrzucić tę, która ci nie odpowiada."
+    ]
+  },
+  {
+    "id": "pustelnik",
+    "name": "PUSTELNIK",
+    "source": { "sheet": "postacie-3", "index": 3 },
+    "nature": "dobra",
+    "miecz": 2,
+    "magia": 3,
+    "start": "Uroczysko",
+    "abilities": [
+      "Podczas walki (lecz nie walki magicznej) możesz dodawać do punktów Miecza punkty Magii.",
+      "Nie możesz używać Miecza, Sztyletu, Hełmu ani Zbroi.",
+      "Zamiast walczyć z napotkanym Demonem, możesz go odpędzić słowami \"Zgiń, przepadnij!\". Przesuwasz wtedy jego Kartę na dowolny Obszar Kręgu, po którym wędrujesz, nie zajęty przez inną Postać."
+    ]
+  },
+  {
+    "id": "quark",
+    "name": "QUARK",
+    "source": { "sheet": "postacie-3", "index": 4 },
+    "nature": "chaotyczna",
+    "miecz": 3,
+    "magia": 3,
+    "start": "Mroźne Pustkowie",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 1 Zaklęcie.",
+      "Zamiast atakować spotkaną Postać, możesz rzucić na nią urok. W następnej turze ofiara nie może nic zrobić, ty zaś wykorzystujesz jej ruch (nie możesz korzystać z tej umiejętności na Kamiennym Moście).",
+      "Jeśli w rzucie dotyczącym ruchu uzyskasz 6 oczek, możesz przenieść się do dowolnego Obszaru w Kręgu, po którym podróżujesz."
+    ]
+  },
+  {
+    "id": "rycerz-ciemnosci",
+    "name": "RYCERZ CIEMNOŚCI",
+    "source": { "sheet": "postacie-3", "index": 5 },
+    "nature": "zla",
+    "miecz": 3,
+    "magia": 3,
+    "start": "Czarci Młyn",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 1 Zaklęcie i Miecz.",
+      "Atakując możesz wybrać formę walki (zwykłą lub magiczną) - nie masz takiej możliwości, gdy sam zostaniesz zaatakowany.",
+      "Za każde 10 punktów Magii pokonanych przez ciebie Demonów zyskujesz do wyboru: 1 Zaklęcie lub 1 punkt Magii.",
+      "Podczas Turnieju Rycerskiego możesz stoczyć dwa pojedynki, pod warunkiem, że wygrasz pierwszą walkę."
+    ]
+  },
+  {
+    "id": "spryciarz",
+    "name": "SPRYCIARZ",
+    "source": { "sheet": "postacie-3", "index": 6 },
+    "nature": "dobra",
+    "miecz": 4,
+    "magia": 3,
+    "start": "Gród",
+    "abilities": [
+      "Od napotkanej Postaci możesz próbować wyłudzić 1 Sz. Z. Sztuczka uda się jeśli wyrzucisz kostką 1.",
+      "Jeżeli inna Postać rozpoczyna ruch z Obszaru, na którym się znajdujesz, możesz jej towarzyszyć w drodze i zakończyć ruch na Obszarze, na którym i ona go zakończy. Nie możesz badać tego Obszaru, a podczas swojej kolejki poruszasz się w zwykły sposób.",
+      "Jeżeli nie atakujesz Bestii, możesz je oswoić. Bestia staje się twoim Przyjacielem i podczas walki dodaje swój Miecz do twojego. W trakcie gry możesz oswoić tylko 1 Bestię."
+    ]
+  },
+  {
+    "id": "troll",
+    "name": "TROLL",
+    "source": { "sheet": "postacie-3", "index": 7 },
+    "nature": "chaotyczna",
+    "miecz": 6,
+    "magia": 1,
+    "start": "Mroźne Pustkowie",
+    "abilities": [
+      "Nie musisz rzucać kostką w Kręgu Mocy i przy Kurhanie - jesteś tam bezpieczny.",
+      "Możesz przepędzić zwyciężoną Postać z Obszaru, na którym toczyła się walka. Rzuć kostką i po zaaplikowaniu pokonanemu kary wynikającej z przegranej walki, przesuń go w dowolnym kierunku o liczbę Obszarów zgodną z liczbą wyrzuconych oczek. Nie możesz tego zrobić na Kamiennym Moście."
+    ]
+  },
+  {
+    "id": "wiedzma",
+    "name": "WIEDŹMA",
+    "source": { "sheet": "postacie-3", "index": 8 },
+    "nature": "zla",
+    "miecz": 2,
+    "magia": 4,
+    "start": "Gród",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 1 Zaklęcie.",
+      "Możesz rzucić urok na napotkaną Postać lub z nią walczyć (nigdy jedno i drugie). Ofiara musi jak najszybciej, lecz w zwykły sposób udać się do Świątyni Nemed albo Świątyni Tolimana, gdzie urok zostanie z niej zdjęty. Dopiero później będzie mogła kontynuować wędrówkę."
+    ]
+  },
+  {
+    "id": "zdobywca",
+    "name": "ZDOBYWCA",
+    "source": { "sheet": "postacie-3", "index": 9 },
+    "nature": "chaotyczna",
+    "miecz": 4,
+    "magia": 3,
+    "start": "Osada",
+    "abilities": [
+      "Rozpoczynasz grę posiadając Miecz i Tarczę.",
+      "Zawsze wolno ci wymienić Kartę Przyjaciela na 1 punkt Życia.",
+      "Po wygraniu zwykłej walki możesz odebrać pokonanej Postaci 2 punkty Życia."
+    ]
+  }
+]

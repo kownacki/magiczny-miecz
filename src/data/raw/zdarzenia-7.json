@@ -1,0 +1,142 @@
+[
+  {
+    "id": "relikwiarz",
+    "name": "RELIKWIARZ",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 1 },
+    "text": "Jeżeli właściciel Relikwiarza jest Dobry, nie traci punktu Życia w Czarcim Młynie, jeśli jest Zły - nie traci punktu Życia przy Studni Wieczności. Postać mająca Relikwiarz pokonuje wszystkie Demony, bez konieczności walki z nimi."
+  },
+  {
+    "id": "rozdzka-przeznaczenia",
+    "name": "RÓŻDŻKA PRZEZNACZENIA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 2 },
+    "text": "Z pomocą Różdżki można zyskać władzę nad jednym z napotkanych Wrogów. Poddany jego mocy Wróg staje się Przyjacielem i podczas jednej, najbliższej walki dodaje swoje punkty Miecza lub Magii do punktów Postaci. Po walce Wróg uwalnia się (Kartę Różdżki należy odłożyć)."
+  },
+  {
+    "id": "rozdzka-zaklec",
+    "name": "RÓŻDŻKA ZAKLĘĆ",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 3 },
+    "text": "Właściciel Różdżki może posiadać conajmniej 1 Zaklęcie więcej, niż liczba Zaklęć, z jaką rozpoczął grę (może wziąć nowe Zaklęcie, gdy ma tyle Zaklęć, ile na początku gry lub mniej)."
+  },
+  {
+    "id": "srebrna-strzala",
+    "name": "SREBRNA STRZAŁA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 4 },
+    "text": "Strzała dodaje właścicielowi 1 punkt Miecza i 1 punkt Magii."
+  },
+  {
+    "id": "swiety-graal",
+    "name": "ŚWIĘTY GRAAL",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 5 },
+    "text": "Graala nie może posiadać Zła Postać. Jego właściciel zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały."
+  },
+  {
+    "id": "swieta-wlocznia",
+    "name": "ŚWIĘTA WŁÓCZNIA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 6 },
+    "text": "Włóczni nie mogą posiadać Złe Postacie. Użyta w walce dodaje właścicielowi 1 punkt Miecza."
+  },
+  {
+    "id": "talizman-ognia",
+    "name": "TALIZMAN OGNIA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 7 },
+    "text": "Talizman Ognia pozwala dodać 1 do wyniku rzutu kostką podczas walki (lecz nie magicznej). Właściciel Talizmanu jest odporny na działanie Zaklęcia Krąg Płomieni."
+  },
+  {
+    "id": "talizman-powietrza",
+    "name": "TALIZMAN POWIETRZA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 8 },
+    "text": "Talizman Powietrza pozwala dodać 1 do wyniku rzutu kostką podczas walki magicznej. Właściciel Talizmanu jest odporny na działanie Zaklęć: Siedem Wichrów i Władca Gromu."
+  },
+  {
+    "id": "tarcza-boga-tolimana",
+    "name": "TARCZA BOGA TOLIMANA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 9 },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "tarcza-boga-tolimana",
+    "name": "TARCZA BOGA TOLIMANA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 10 },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "topor-swiatla-i-ciemnosci",
+    "name": "TOPÓR ŚWIATŁA I CIEMNOŚCI",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 11 },
+    "text": "Topór Światła i Ciemności nie może być w posiadaniu Chaotycznych Postaci. Użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce z Wilkołakiem - 2 punkty Miecza."
+  },
+  {
+    "id": "zwierciadlo-zniszczenia",
+    "name": "ZWIERCIADŁO ZNISZCZENIA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-7", "index": 12 },
+    "text": "Zwierciadło użyte przeciw innej Postaci pozbawi ją 2 punktów Magii lub Miecza, albo 1 punktu Magii i 1 punktu Miecza (oprócz tych z którymi rozpoczął on grę i uzyskanych dzięki Przedmiotom i Przyjaciołom). Zwierciadła można użyć tylko raz - następnie należy odłożyć jego Kartę."
+  },
+  {
+    "id": "alchemik",
+    "name": "ALCHEMIK",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 13 },
+    "text": "Alchemik, jako twój Przyjaciel, może zamienić każdy z twoich Przedmiotów w złoto (1 Przedmiot zamienia się w 1 Sztukę cennego kruszcu). Proces ten jest nieodwracalny."
+  },
+  {
+    "id": "chochlik",
+    "name": "CHOCHLIK",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 14 },
+    "text": "Chochlik zostanie twoim Przyjacielem, jeżeli poświęcisz mu 1 punkt twojego Życia. Gdy to uczynisz, Chochlik będzie dodawał 2 punkty do twojej Magii. Ponadto, gdy będziesz chciał wziąć Zaklęcie, Przyjaciel pozwoli ci obejrzeć pierwsze 2 Karty ze stosu i wybrać tę, która najbardziej ci odpowiada."
+  },
+  {
+    "id": "elflin",
+    "name": "ELFLIN",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 15 },
+    "text": "Dzięki Elflinowi będziesz zawsze bezpieczny na Urwisku i nie będziesz musiał tam rzucać kostką. Będziesz także mógł skutecznie wymykać się Wrogom na Bezdrożach, Wrzosowiskach, Równinie Samotnych Skał i w Kamiennym Lesie."
+  },
+  {
+    "id": "giermek",
+    "name": "GIERMEK",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 16 },
+    "text": "Giermek będzie dodawał ci 2 punkty Miecza podczas każdej walki, tak długo, jak będzie twoim Przyjacielem. Ilekroć poniesiesz porażkę i stracisz punkt Życia, rzuć kostką. Wynik równy 1 oznacza, że zginął Giermek (odłóż jego Kartę), ty zaś nie utraciłeś punktu."
+  },
+  {
+    "id": "gnom",
+    "name": "GNOM",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 17 },
+    "text": "Gnom posiada 1 Zaklęcie (weź Kartę Zaklęcia i połóż ją razem z Kartą Gnoma - wolno ci ją obejrzeć). Gnom wypowie Zaklęcie, gdy ofiarujesz mu 1 Sztukę Złota, a następnie zniknie zabierając swoją zapłatę - należy odłożyć jego Kartę i złoto."
+  },
+  {
+    "id": "krzyzowiec",
+    "name": "KRZYŻOWIEC",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 18 },
+    "text": "Ten nieustraszony rycerz będzie dodawał ci 2 punkty Miecza podczas każdej walki, tak długo, jak będzie twoim Przyjacielem. Krzyżowiec posiada również 1 Zaklęcie, którego użyje, gdy sobie tego zażyczysz (weź Kartę Zaklęcia i połóż ją z Kartą Krzyżowca)."
+  },
+  {
+    "id": "ksiezniczka",
+    "name": "KSIĘŻNICZKA",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 19 },
+    "text": "Dzięki przyjaźni Księżniczki będziesz mógł odzyskać do 2 punktów Życia, podczas każdej wizyty w Zamku. Jeżeli zrezygnujesz tam z jej Karty, otrzymasz 3 Sztuki Złota (lecz będziesz musiał odłożyć Kartę Księżniczki)."
+  },
+  {
+    "id": "najemnik",
+    "name": "NAJEMNIK",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-7", "index": 20 },
+    "text": "Najemnik będzie twoim Przyjacielem, jeżeli zapłacisz mu 1 Sztukę Złota. Jeśli odmówisz zapłaty, będzie czekał tu na bardziej hojną Postać. Jako Przyjaciel, Najemnik dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1 Sztukę Złota. Płacić Najemnikowi można tylko raz na turę."
+  }
+]

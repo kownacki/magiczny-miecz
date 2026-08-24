@@ -72,5 +72,39 @@ function cellsFromLines(hits, extent, keep) {
 
   const gaps = bounds.slice(1).map((b, i) => [bounds[i], b - bounds[i]]);
   const largest = Math.max(...gaps.map(([, size]) => size));
-  return gaps.filter(([, size]) => size >= largest * keep);
+  const cells = gaps.filter(([, size]) => size >= largest * keep);
+  return padIntoGutters(cells, extent);
+}
+
+/**
+ * Grows each cell halfway into the space separating it from its neighbours.
+ *
+ * On the character plates the detected cell is only the white body of the card:
+ * the title bar sits above it and the rotated "Miecz 3" / "Magia 3" bands sit
+ * beside it, all in the coloured surround that reads as a gap. Slicing the bare
+ * cell silently drops the character's name and both of its starting stats.
+ *
+ * On the tightly-gridded sheets neighbouring cells already touch, so the gap is
+ * zero and this is a no-op — which is why it can be applied unconditionally
+ * instead of branching per sheet.
+ */
+function padIntoGutters(cells, extent) {
+  if (cells.length < 2) return cells;
+  const gutters = cells
+    .slice(1)
+    .map(([start], i) => start - (cells[i][0] + cells[i][1]))
+    .filter((g) => g > 0);
+  if (gutters.length === 0) return cells;
+  const pad = Math.floor(median(gutters) / 2);
+
+  return cells.map(([start, size]) => {
+    const from = Math.max(0, start - pad);
+    const to = Math.min(extent, start + size + pad);
+    return [from, to - from];
+  });
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
 }

@@ -1,0 +1,148 @@
+[
+  {
+    "id": "sztylet",
+    "name": "SZTYLET",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 1 },
+    "text": "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "tajemna-sakwa",
+    "name": "TAJEMNA SAKWA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 2 },
+    "text": "W Sakwie możesz umieścić 1 Przedmiot. Przedmiot ten i Sakwę będziesz mógł utracić jedynie w wypadku użycia Zaklęcia \"Pan Bogactwa\" (nikt nie może go zażądać jako okupu za przegraną walkę, nie stracisz go na Bagnach, etc.)."
+  },
+  {
+    "id": "tajemnicza-szkatula",
+    "name": "TAJEMNICZA SZKATUŁA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 3 },
+    "text": "Możesz zabrać Szkatułę i otworzyć ją w dowolnym momencie. Rzuć kostką, by określić, co znalazłeś w środku, a następnie odłóż Kartę: 1. Tarczę Tolimana, 2. Zaklęcie, 3. Dwie Sz.Z., 4. Ducha który opęta cię na 1 turę (tracisz ją), 5. Truciznę - tracisz 1 punkt Życia, 6. Demona - tracisz 2 punkty Życia."
+  },
+  {
+    "id": "tarcza",
+    "name": "TARCZA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 4 },
+    "text": "Posiadacz Tarczy, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 lub 2 oznacza, że zdołał zasłonić się Tarczą. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "wierzchowiec",
+    "name": "WIERZCHOWIEC",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 5 },
+    "text": "Wierzchowiec pozwala ci dodać od 1 do 3 punktów do wyniku rzutu kostką w trakcie wykonywania ruchu. Twoi Przyjaciele muszą poruszać się w zwykły sposób, bez tego dodatku. Jeśli zostawisz ich w tyle, w następnej turze możesz do nich wrócić zamiast wykonywania zwykłego ruchu."
+  },
+  {
+    "id": "zaprzeg",
+    "name": "ZAPRZĘG",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 6 },
+    "text": "Dzięki Zaprzęgowi możesz przewozić dowolną liczbę Przedmiotów. Możesz także dodać 1 do wyniku rzutu kostką podczas wykonywania ruchu. Jeśli stracisz Zaprzęg, będziesz musiał pozostawić Przedmioty, których nie możesz unieść. Przedmioty pozostaną tam, gdzie straciłeś Zaprzęg."
+  },
+  {
+    "id": "zbroja",
+    "name": "ZBROJA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 7 },
+    "text": "Posiadacz Zbroi, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1, 2 lub 3 oznacza, że Zbroja go ochroniła. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "arondight",
+    "name": "ARONDIGHT",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 8 },
+    "text": "Miecz Lancelota użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce z Wilkłakiem - 2 punkty Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "czarodziejska-kosc",
+    "name": "CZARODZIEJSKA KOŚĆ",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 9 },
+    "text": "Właściciel Kości ma prawo dodać sobie 1 punkt Miecza lub Magii w Pułapce albo Magicznej Pułapce. Może również dodać 1 do każdego wyniku rzutu w pozostałych Obszarach na Kamiennym Moście."
+  },
+  {
+    "id": "eliksir-sily",
+    "name": "ELIKSIR SIŁY",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 10 },
+    "text": "Po wypiciu Eliksiru, Postać zyskuje na 1 turę dodatkowe 2 punkty Miecza. Po użyciu Kartę należy odłożyć.",
+    "miecz": 2
+  },
+  {
+    "id": "excalibur",
+    "name": "EXCALIBUR",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 11 },
+    "text": "Miecz króla Artura użyty w walce dodaje swojemu właścicielowi 1 punkt Miecza. Po każdej zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając ten punkt pokonanemu przeciwnikowi).",
+    "miecz": 1
+  },
+  {
+    "id": "jablko-natchnienia",
+    "name": "JABŁKO NATCHNIENIA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 12 },
+    "text": "Karta Jabłka może być wykorzystana tylko raz - następnie należy ją odłożyć. Zjedzenie jabłka przed wykonaniem rzutu kostkami w Świątyni Nemed lub Świątyni Tolimana pozwala odjąć lub dodać 1 do wyniku (jeśli taka jest wola gracza)."
+  },
+  {
+    "id": "krysztal-losu",
+    "name": "KRYSZTAŁ LOSU",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 13 },
+    "text": "Jeśli chcesz użyć go w walce, rzuć kostką: 1. Kryształ staje w płomieniach i zamienia cię w popiół - tracisz 1 Życie, 2. Kryształ ulega zniszczeniu, 3. Nic się nie dzieje, 4. Dodaj 1 do wyniku rzutu kostką (w tej walce), 5. Dodaj 2 do wyniku rzutu (w tej walce), 6. Dodaj 3 do wyniku (w tej walce)."
+  },
+  {
+    "id": "krysztal-magow",
+    "name": "KRYSZTAŁ MAGÓW",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 14 },
+    "text": "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może walcząc z nim użyć Zaklęcia Odrodzenie."
+  },
+  {
+    "id": "magiczna-sakwa",
+    "name": "MAGICZNA SAKWA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 15 },
+    "text": "Sakwa pozwala nieść Postaci do 5 Przedmiotów ponad jej zwykłe możliwości (sama Sakwa nie jest liczona jako Przedmiot). Utrata Sakwy oznacza jednocześnie utratę wszystkich niesionych w niej Przedmiotów."
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 16 },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart."
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 17 },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart."
+  },
+  {
+    "id": "miecz-chaosu",
+    "name": "MIECZ CHAOSU",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 18 },
+    "text": "Miecza Chaosu nie może posiadać Dobra Postać. Użyty w walce dodaje właścicielowi 2 punkty Miecza.",
+    "miecz": 2
+  },
+  {
+    "id": "owoc-jarzebiny-wiedzy",
+    "name": "OWOC JARZĘBINY WIEDZY",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 19 },
+    "text": "Karta Jarzębiny może być wykorzystana tylko raz - potem należy ją odłożyć. Zjedzenie owocu przed ciągnięciem nowych Kart Zdarzeń, pozwala wziąć jedną Kartę więcej i odrzucić tę, która graczowi najmniej odpowiada."
+  },
+  {
+    "id": "pierscien-mocy",
+    "name": "PIERŚCIEŃ MOCY",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-6", "index": 20 },
+    "text": "Pierścień dodaje właścicielowi 2 punkty Magii.",
+    "magia": 2
+  }
+]

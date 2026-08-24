@@ -1,0 +1,144 @@
+[
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 1 },
+    "text": "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 2 },
+    "text": "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 3 },
+    "text": "Posiadacz Tarczy, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 lub 2 oznacza, że zdołał zasłonić się Tarczą. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 4 },
+    "text": "Posiadacz Tarczy, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 lub 2 oznacza, że zdołał zasłonić się Tarczą. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 5 },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 6 },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 7 },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 8 },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 9 },
+    "text": "Posiadacz Zbroi, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1, 2 lub 3 oznacza, że Zbroja go ochroniła. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "nazwa-karty",
+    "name": "NAZWA KARTY",
+    "kind": "item",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 10 },
+    "text": "Posiadacz Zbroi, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1, 2 lub 3 oznacza, że Zbroja go ochroniła. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "wladca-zaklec",
+    "name": "WŁADCA ZAKLĘĆ",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 11 },
+    "text": "Zaklęcie może być wykorzystane w dowolnej chwili. Neguje działanie każdego innego (bez wyjątku) Zaklęcia, rzuconego bezpośrednio przed nim."
+  },
+  {
+    "id": "wladca-zaklec",
+    "name": "WŁADCA ZAKLĘĆ",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 12 },
+    "text": "Zaklęcie może być wykorzystane w dowolnej chwili. Neguje działanie każdego innego (bez wyjątku) Zaklęcia, rzuconego bezpośrednio przed nim."
+  },
+  {
+    "id": "wladca-zdarzen",
+    "name": "WŁADCA ZDARZEŃ",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 13 },
+    "text": "Możesz rzucić to Zaklęcie na początku swojej tury, lub po zakończeniu ruchu. Dzięki niemu będzie ci wolno zdjąć z planszy odkrytą Kartę Zdarzeń i położyć ją na innym Obszarze w tym samym Kręgu. Nowy Obszar nie może być zajęty przez inną Postać."
+  },
+  {
+    "id": "wojna-zywiolow",
+    "name": "WOJNA ŻYWIOŁÓW",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 14 },
+    "text": "Możesz wypowiedzieć Zaklęcie podczas swojej tury, przed wykonaniem ruchu. Pod jego wpływem żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i Magicznych Przedmiotów ani ciągnąć z nich żadnych korzyści, aż do początku twojej następnej tury."
+  },
+  {
+    "id": "zwierciadlo",
+    "name": "ZWIERCIADŁO",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 15 },
+    "text": "Zaklęcie Zwierciadła można wypowiedzieć w dowolnej chwili. Odbije ono każde inne Zaklęcie rzucone na Postać na tego, kto je rzucił. W ten sposób, Postać, która rzuciła Zaklęcie na posiadacza Zwierciadła znajdzie się pod wpływem rzuconego przez siebie Zaklęcia."
+  },
+  {
+    "id": "fatum",
+    "name": "FATUM",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 16 },
+    "text": "Zaklęcie może być wykorzystane w dowolne chwili. Objęta jego działaniem Postać musi rzucić kostką: 1. Ofiara zostaje Zaklęta w Kamień, 2. Traci całe złoto, 3. Traci 1 punkt Miecza, 4. Traci 1 punkt Magii, 5. Zyskuje do wyboru: 1 punkt Miecza lub 1 punkt Magii, 6. Zyskuje 1 Życie."
+  },
+  {
+    "id": "formula-czasu",
+    "name": "FORMUŁA CZASU",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 17 },
+    "text": "Zaklęcie można rzucić w trakcie tury, przed wykonaniem ruchu. Pozwala postaci na wykorzystanie 3 kolejnych tur zamiast jednej. Inne Postacie nie mogą w tym czasie podjąć żadnych działań oprócz walki jeżeli zostały zaatakowane."
+  },
+  {
+    "id": "formula-przestrzeni",
+    "name": "FORMUŁA PRZESTRZENI",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 18 },
+    "text": "Zaklęcie możesz rzucić w dowolnej chwili. Pod jego wpływem prędkość Postaci (twoja lub kogokolwiek innego) podwoi się (wynik rzutu kostką przy wykonywaniu ruchu należy pomnożyć przez 2)."
+  },
+  {
+    "id": "golem",
+    "name": "GOLEM",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 19 },
+    "text": "Zaklęcie można wypowiedzieć przed wykonaniem ruchu. Stworzony przez nie Golem (Miecz 3) atakuje wybraną Postać lub Wroga (w granicach Kręgu). Ofiara musi walczyć na zwykłych zasadach. Jeśli zwycięży - nic się nie dzieje. Gdy przegra, Postać traci jedno Życie, a Wróg jest zdejmowany z planszy."
+  },
+  {
+    "id": "homunculus",
+    "name": "HOMUNCULUS",
+    "kind": "spell",
+    "source": { "sheet": "wyposazenie-zaklecia", "index": 20 },
+    "text": "Możesz rzucić Zaklęcie przed wykonaniem ruchu. Stworzony przez nie Homunculus (Miecz 5) atakuje wybraną Postać lub Wroga (w tym samym Kręgu). Ofiara musi bronić się na zwykłych zasadach. Gdy zwycięży, nic się nie dzieje. Jeśli przegra, Postać traci 1 punkt Życia. Wróg jest zdejmowany z planszy."
+  }
+]

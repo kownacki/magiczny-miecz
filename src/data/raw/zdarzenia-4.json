@@ -1,0 +1,142 @@
+[
+  {
+    "id": "kuglarz",
+    "name": "KUGLARZ",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 1 },
+    "text": "Jeśli chcesz, Kuglarz może zamienić twoje punkty Miecza na punkty Magii lub odwrotnie. Bez względu na to, czy skorzystasz z propozycji Kuglarza, czy też nie. Nieznajomy oddala się - odłóż jego Kartę."
+  },
+  {
+    "id": "medrzec",
+    "name": "MĘDRZEC",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 2 },
+    "text": "Mędrzec zadaje ci zagadkę. Wybierz cyfrę od 1 do 6 (musisz ją głośno powiedzieć), a następnie rzuć kostką. Jeżeli wynikiem jest cyfra, którą wybrałeś, otrzymujesz 1 Zaklęcie. Niezależnie od tego, czy rozwiązałeś zagadkę, czy nie, Mędrzec odchodzi zatopiony w rozmyślaniach - odłóż jego Kartę."
+  },
+  {
+    "id": "polbog",
+    "name": "PÓŁBÓG",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 3 },
+    "text": "Półbóg ofiaruje ci 1 Zaklęcie. Możesz je wybrać ze stosu. Po wybraniu Karty Zaklęcia, potasuj resztę Kart. Gdy to zrobisz, Nieznajomy zniknie - odłóż jego Kartę."
+  },
+  {
+    "id": "sztukmistrz",
+    "name": "SZTUKMISTRZ",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 4 },
+    "text": "Sztukmistrz będzie mieszkał tu do końca rozgrywki. Postacie, którym pozwala na to ich Magia, mogą podczas każdej wizyty kupić u niego 1 Zaklęcie za 1 Sztukę Złota."
+  },
+  {
+    "id": "urocza-diablica",
+    "name": "UROCZA DIABLICA",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 5 },
+    "text": "Urocza Diablica będzie mieszkać na tym Obszarze do końca rozgrywki. Jeżeli do niej trafisz, będziesz musiał rzucić kostką: 1. Zyskasz 1 Zaklęcie, 2. Zyskasz 1 punkt Magii, 3. Zyskasz punkt Miecza, 4. Stracisz 1 Przedmiot, 5. Stracisz 1 Życie, 6. Zostaniesz zamieniony w Kamień."
+  },
+  {
+    "id": "wielkolud",
+    "name": "WIELKOLUD",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 6 },
+    "text": "Wielkolud odprawia obrzędy swojego kultu. Rzuć kostką, jak się zachowa: 1-2. Nie zwraca uwagi, 3-4. Niszczy jeden (wybrany losowo) z twoich Przedmiotów, 5-6. Składa w ofierze jednego (wybranego losowo) z twoich Przyjaciół. Po zakończeniu obrzędów Nieznajomy odchodzi - odłóż jego Kartę."
+  },
+  {
+    "id": "wrozka",
+    "name": "WRÓŻKA",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 7 },
+    "text": "W okolicy, po której wędrujesz zamieszkała dobra Wróżka. Pierwszej Dobrej Postaci, która do niej zawita ofiaruje do wyboru: 1 punkt Miecza, Magii lub Życia, 1 Zaklęcie, 1 Sz.Z. albo przeniesienie do dowolnego Obszaru w tym Kręgu. Po spełnieniu życzenia Wróżka znika - odłóż jej Kartę."
+  },
+  {
+    "id": "zaklinacz-czasu",
+    "name": "ZAKLINACZ CZASU",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 8 },
+    "text": "Zaklinacz Czasu gra na swoim flecie. Wszystkie Postacie z wyjątkiem Elfa, Hummita, Spryciarza, Czarodziejki i Szczęściarza tracą 1 turę. Dźwięki fletu milkną po upływie jednej tury - odłóż tę Kartę."
+  },
+  {
+    "id": "zlodziej-dobroczynca",
+    "name": "ZŁODZIEJ DOBROCZYŃCA",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-4", "index": 9 },
+    "text": "Złodziej Dobroczyńca to dziwna Postać. Jeżeli masz złoto, ukradnie ci 1 Sztukę, lecz jeśli go nie masz, włoży ci 1 Sztukę do kieszeni. Jest tak sprawny, że w ogóle nie spostrzegasz, kiedy go spotkałeś - odłóż Kartę."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 10 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 11 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 12 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 13 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 14 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 15 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 16 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 17 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 18 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 19 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": { "sheet": "zdarzenia-4", "index": 20 },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  }
+]

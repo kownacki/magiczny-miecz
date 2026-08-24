@@ -1,0 +1,154 @@
+[
+  {
+    "id": "wilkolak",
+    "name": "WILKOŁAK",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 1 },
+    "text": "Potężny Wilkołak sieje spustoszenie w tej okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 10
+  },
+  {
+    "id": "zloczynca",
+    "name": "ZŁOCZYŃCA",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 2 },
+    "text": "W tej okolicy zaczaił się żądny łupów Złoczyńca. Pozostanie tu, aż ktoś go pokona. Każdej pokonanej Postaci, Złoczyńca zabiera do wyboru: 1 Sztukę Złota lub jeden Przedmiot (należy odłożyć żeton lub Kartę Przedmiotu).",
+    "miecz": 3
+  },
+  {
+    "id": "duch-ciemnosci",
+    "name": "DUCH CIEMNOŚCI",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 3 },
+    "text": "Duch Ciemności będzie niepodzielnie władał tym Obszarem, aż ktoś go pokona.",
+    "magia": 3
+  },
+  {
+    "id": "duch-zaglady",
+    "name": "DUCH ZAGŁADY",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 4 },
+    "text": "Duch Zagłady będzie siał zniszczenie w tej okolicy, aż ktoś go pokona.",
+    "magia": 2
+  },
+  {
+    "id": "ksiaze-demonow",
+    "name": "KSIĄŻĘ DEMONÓW",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 5 },
+    "text": "Nad okolicą zapanował niepodzielnie Książę Demonów. Pozostanie tu, aż ktoś go pokona.",
+    "magia": 10
+  },
+  {
+    "id": "ksiaze-demonow",
+    "name": "KSIĄŻĘ DEMONÓW",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 6 },
+    "text": "Nad okolicą zapanował niepodzielnie Książę Demonów. Pozostanie tu, aż ktoś go pokona.",
+    "magia": 10
+  },
+  {
+    "id": "demon",
+    "name": "DEMON",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 7 },
+    "text": "W okolicy pojawił się potężny Demon. Pozostanie tu, aż ktoś go pokona.",
+    "magia": 6
+  },
+  {
+    "id": "upior",
+    "name": "UPIÓR",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 8 },
+    "text": "Rzuć kostką, by określić, gdzie pojawi się Upiór: 1. w Osadzie, 2. w Grodzie, 3. w Dolinie Cienia, 4. na Mrocznej Polanie, 5. w Krypcie Upiorów, 6. w Wymarłym Mieście. Połóż tam Kartę. Upiór pozostanie tam, aż ktoś go pokona.",
+    "magia": 4
+  },
+  {
+    "id": "upior",
+    "name": "UPIÓR",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 9 },
+    "text": "Rzuć kostką, by określić, gdzie pojawi się Upiór: 1. w Osadzie, 2. w Grodzie, 3. w Dolinie Cienia, 4. na Mrocznej Polanie, 5. w Krypcie Upiorów, 6. w Wymarłym Mieście. Połóż tam Kartę. Upiór pozostanie tam, aż ktoś go pokona.",
+    "magia": 4
+  },
+  {
+    "id": "wampir",
+    "name": "WAMPIR",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 10 },
+    "text": "Wampir będzie zamieszkiwał tę okolicę, aż zostanie pokonany tracąc wszystkie punkty Życia (jeżeli Wampir pokona Postać, zabiera jej Życie i dodaje je do swoich punktów - zaznacz to kładąc na Karcie właściwy żeton).",
+    "magia": 4
+  },
+  {
+    "id": "widmo",
+    "name": "WIDMO",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 11 },
+    "text": "W okolicy pojawiło się straszliwe Widmo. Pozostanie tu, aż ktoś je pokona.",
+    "magia": 3
+  },
+  {
+    "id": "zjawa",
+    "name": "ZJAWA",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-3", "index": 12 },
+    "text": "Mroczna Zjawa budzi przerażenie i popłoch wśród mieszkańców tej okolicy. Pozostanie tu, aż ktoś ją pokona.",
+    "magia": 5
+  },
+  {
+    "id": "cudotworca",
+    "name": "CUDOTWÓRCA",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 13 },
+    "text": "Cudotwórca będzie mieszkał na tym Obszarze do końca rozgrywki. Każdej Postaci przywróci 2 punkty Życia, podczas każdych odwiedzin tylko do wysokości startowej - 4 punktów."
+  },
+  {
+    "id": "czarodziej",
+    "name": "CZARODZIEJ",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 14 },
+    "text": "Ten Obszar do końca rozgrywki będzie siedzibą dobrego Czarodzieja. Każda Dobra Postać, która tu zawita, otrzyma 1 Zaklęcie, jeżeli tylko pozwala na to jej Magia."
+  },
+  {
+    "id": "dziki-rumak",
+    "name": "DZIKI RUMAK",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 15 },
+    "text": "Dzięki temu spotkaniu możesz natychmiast zyskać dodatkowy ruch. Niezależnie od tego, czy uczynisz tak, czy nie, Rumak po chwili zniknie ci z oczu - odłóż jego Kartę."
+  },
+  {
+    "id": "dobre-bostwo",
+    "name": "DOBRE BÓSTWO",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 16 },
+    "text": "Dobre Bóstwo osądza twoje uczynki. Jeśli podczas tej rozgrywki zaatakowałeś inną Postać lub użyłeś swoich zdolności na jej niekorzyść, musisz złożyć w ofierze 1 Sz.Z. Jeśli nie chcesz będziesz uwięziony na tym Obszarze przez 1 turę. Po osądzeniu cię, Bóstwo znika - odłóż jego Kartę."
+  },
+  {
+    "id": "eremita",
+    "name": "EREMITA",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 17 },
+    "text": "Rzuć kostką i umieść Kartę Eremity na odpowiednim Obszarze: 1. Bezdroża, 2. Uroczysko, 3. Pustelnia, 4. Wieża Przeznaczenia, 5. Rozstajne Drogi, 6. Ruiny Twierdzy. Pierwszej Postaci, Eremita ofiaruje do wyboru: Magiczny Miecz lub Tarczę Tolimana (jeśli jeszcze są). Następnie odłóż jego Kartę."
+  },
+  {
+    "id": "jednorozec",
+    "name": "JEDNOROŻEC",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 18 },
+    "text": "Jednorożec może natychmiast przewieźć cię do dowolnego Obszaru w tym Kręgu. Bez względu na to, czy skorzystasz z propozycji, Jednorożec oddala się - odłóż jego Kartę."
+  },
+  {
+    "id": "koszmar",
+    "name": "KOSZMAR",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 19 },
+    "text": "Okolica, po której wędrujesz jest nawiedzana przez Upiora Snu. Pierwszej Złej Postaci, Upiór spełni do wyboru jedno życzenie: 1 punkt Miecza, Magii lub Życia, 1 Zaklęcie, 1 Sz.Z. albo przeniesienie do dowolnego Obszaru w tym Kręgu. Po spełnieniu życzenia, Nieznajomy zniknie, odłóż jego Kartę."
+  },
+  {
+    "id": "krol-lasu",
+    "name": "KRÓL LASU",
+    "cardClass": "nieznajomy",
+    "source": { "sheet": "zdarzenia-3", "index": 20 },
+    "text": "Król Lasu spełni jedno życzenie pierwszej Postaci, która zawita do jego siedziby, ofiarując jej do wyboru: 1 punkt Miecza, Magii lub Życia, 1 Zaklęcie, 1 Sztukę Złota albo przeniesienie do dowolnego Obszaru w tym Kręgu. Po spełnieniu życzenia, Król Lasu odchodzi - odłóż jego Kartę."
+  }
+]

@@ -1,0 +1,161 @@
+[
+  {
+    "id": "cyklop",
+    "name": "CYKLOP",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 1 },
+    "text": "Bezlitosny Cyklop obraca tę okolicę w ruinę. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 6
+  },
+  {
+    "id": "czarna-hybryda",
+    "name": "CZARNA HYBRYDA",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 2 },
+    "text": "Hybryda stworzona niegdyś przez magów w walce z bogiem Tolimanem stanęła na straży tego Obszaru. Pozostanie tu, aż ktoś ją pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "czerwona-hybryda",
+    "name": "CZERWONA HYBRYDA",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 3 },
+    "text": "Hybryda stworzona ongiś przez czarnoksiężników walczących z boginią Nemed stoi na straży tego Obszaru. Pozostanie tu, aż ktoś ją pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "fomoraig",
+    "name": "FOMORAIG",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 4 },
+    "text": "Zawędrował tu okrutny rycerz o koziej głowie z rodu Fomoraigów. Pozosanie w okolicy, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "hadron",
+    "name": "HADRON",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 5 },
+    "text": "Bezlitosny Hadron narzucił swoje panowanie tej okolicy. Będzie nią władał, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "hadron",
+    "name": "HADRON",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 6 },
+    "text": "Bezlitosny Hadron narzucił swoje panowanie tej okolicy. Będzie nią władał, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "lewiatan",
+    "name": "LEWIATAN",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 7 },
+    "text": "Lewiatan może pojawić się na Mokradłach, przy Przeprawie lub na Bagnach - połóż jego Kartę na którymś z tych Obszarów, nie zajętym przez inną Postać (jeśli nie ma takiego Obszaru, odłóż Kartę). Potwór pozostanie tam, aż ktoś go pokona.",
+    "miecz": 4
+  },
+  {
+    "id": "los",
+    "name": "ŁOŚ",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 8 },
+    "text": "Zły duch zaklęty w Łosia sieje spustoszenie w okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 1
+  },
+  {
+    "id": "los",
+    "name": "ŁOŚ",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 9 },
+    "text": "Zły duch zaklęty w Łosia sieje spustoszenie w okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 1
+  },
+  {
+    "id": "niedzwiedz",
+    "name": "NIEDŹWIEDŹ",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 10 },
+    "text": "Tajemnicze siły zła przyjęły postać budzącego przerażenie Niedźwiedzia, który rozszarpuje każdą napotkaną istotę. Niedźwiedź pozostanie na tym Obszarze, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "nobbin",
+    "name": "NOBBIN",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 11 },
+    "text": "Okrutny Nobbin zawładnął tą okolicą. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "nobbin",
+    "name": "NOBBIN",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 12 },
+    "text": "Okrutny Nobbin zawładnął tą okolicą. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "przybysz-z-krainy-cieni",
+    "name": "PRZYBYSZ Z KRAINY CIENI",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 13 },
+    "text": "Potworny Przybysz z Krainy Cieni będzie wyniszczał ten Obszar, dopóki ktoś go nie pokona. Przeciw Przybyszowi nie można używać Zaklęć, Magicznych Przedmiotów ani Broni.",
+    "miecz": 5
+  },
+  {
+    "id": "smok",
+    "name": "SMOK",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 14 },
+    "text": "Krwawy Smok zamieszkuje tę okolicę. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 5
+  },
+  {
+    "id": "sobowtor",
+    "name": "SOBOWTÓR",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 15 },
+    "text": "Sobowtór to monstrum, które tworzy sama Postać, ponieważ powstaje z jej lęku i nienawiści. Posiada zawsze tyle punktów Miecza, ile jego przeciwnik. Pozostanie tu, aż ktoś go pokona."
+  },
+  {
+    "id": "sniezne-monstrum",
+    "name": "ŚNIEŻNE MONSTRUM",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 16 },
+    "text": "Na tym Obszarze pojawił się nagle Śnieżny Potwór. Będzie napadał na Postacie, aż któraś z nich go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "trogglowy-smok",
+    "name": "TRÓGGŁOWY SMOK",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 17 },
+    "text": "Nad całą okolicą roztoczył panowanie Trójgłowy Smok. Postać, która podejmie z nim walkę, będzie musiała pokonać jego trzy głowy (każda głowa ma 2 punkty Miecza). Jeśli przegra, głowy, które odcięła odrastają. Smok pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "wedrowiec",
+    "name": "WĘDROWIEC",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 18 },
+    "text": "Po okolicy wędruje potwór pod postacią Wędrowca. Rzuć kostką: 1,2 lub 3 oznacza, że nie dałeś się zwieść i w porę umknąłeś potworowi. Inny wynik: musisz rozpocząć walkę. Potwór pozostanie tu, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "wilk",
+    "name": "WILK",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 19 },
+    "text": "Upiorny Wilk każdej nocy poluje w tej okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "wilkolak",
+    "name": "WILKOŁAK",
+    "cardClass": "wrog",
+    "source": { "sheet": "zdarzenia-2", "index": 20 },
+    "text": "Potężny Wilkołak sieje spustoszenie w tej okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 10
+  }
+]

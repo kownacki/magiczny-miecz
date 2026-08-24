@@ -1,0 +1,142 @@
+[
+  {
+    "id": "kamien-filozoficzny",
+    "name": "KAMIEŃ FILOZOFICZNY",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 1 },
+    "text": "Zaklęcie musi być rzucone na początku tury jego posiadacza. Kamień Filozoficzny zamieni dowolną liczbę należących do Postaci Przedmiotów w złoto. Należy odłożyć Karty Przedmiotów biorąc za każdą z nich 1 Sztukę Złota."
+  },
+  {
+    "id": "krag-plomieni",
+    "name": "KRĄG PŁOMIENI",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 2 },
+    "text": "To Zaklęcie możesz rzucić w dowolnej chwili na inną Postać lub Wroga. Ofiara zostaje otoczona płomieniami, i nie może zrobić nic poza użyciem Władcy Zaklęć (co zaneguje działanie Kręgu Płomieni). Ofiary nie można zaatakować, jednak można się jej wymknąć."
+  },
+  {
+    "id": "magia-i-miecz",
+    "name": "MAGIA I MIECZ",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 3 },
+    "text": "Jeżeli rzucisz na siebie to Zaklęcie przed rozpoczęciem walki, będziesz mógł dodać swoje punkty Magii do punktów Miecza. Zaklęciem tym możesz posłużyć się tylko w jednej walce (lecz nie w walce magicznej)."
+  },
+  {
+    "id": "magia-i-miecz-2",
+    "name": "MAGIA I MIECZ",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 4 },
+    "text": "Jeżeli rzucisz na siebie to Zaklęcie przed rozpoczęciem walki, będziesz mógł dodać swoje punkty Magii do punktów Miecza. Zaklęciem tym możesz posłużyć się tylko w jednej walce (lecz nie w walce magicznej)."
+  },
+  {
+    "id": "magiczna-wedrowka",
+    "name": "MAGICZNA WĘDRÓWKA",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 5 },
+    "text": "Zaklęcie można rzucić na siebie zamiast wykonywania zwykłego ruchu. Umożliwia natychmiastowe przeniesienie się do dowolnego Obszaru w tym samym Kręgu. Magicznej Wędrówki nie można użyć na Kamiennym Moście."
+  },
+  {
+    "id": "ocalony",
+    "name": "OCALONY",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 6 },
+    "text": "Możesz rzucić to Zaklęcie w dowolnej chwili na siebie, inną Postać, Przyjaciela lub Wroga. Dla Postaci oznacza ocalenie przed stratą punktu Życia jeżeli taka strata ma nastąpić, dla innych – ocalenie przed śmiercią. Użyty w walce sprawia, że rezultat starcia pozostanie nierozstrzygnięty."
+  },
+  {
+    "id": "odmiana-losu",
+    "name": "ODMIANA LOSU",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 7 },
+    "text": "Zaklęcie można wypowiedzieć natychmiast po wzięciu Karty Zdarzenia. Pozwala na odrzucenie jednej z wyciągniętych Kart i wyciągnięcie w zamian innej."
+  },
+  {
+    "id": "odrodzenie",
+    "name": "ODRODZENIE",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 8 },
+    "text": "Zaklęcie może być rzucone w dowolnym momencie, na jego właściciela lub inną Postać. Odrodzenie przywraca punkty Życia z początku rozgrywki (czyli 4 punkty)."
+  },
+  {
+    "id": "olsnienie",
+    "name": "OLŚNIENIE",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 9 },
+    "text": "Zaklęcie musi być wypowiedziane podczas własnej tury, przed wykonaniem ruchu. Pozwoli Postaci obejrzeć w tajemnicy 5 pierwszych Kart Zdarzeń ze stosu."
+  },
+  {
+    "id": "pan-bogactwa",
+    "name": "PAN BOGACTWA",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 10 },
+    "text": "Możesz wypowiedzieć to Zaklęcie w dowolnej chwili. Pozwala zabrać wybranej Postaci jeden Przedmiot lub jedną Sztukę Złota."
+  },
+  {
+    "id": "pan-przyjaciol",
+    "name": "PAN PRZYJACIÓŁ",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 11 },
+    "text": "Możesz wypowiedzieć to Zaklęcie w dowolnej chwili. Pozwala zabrać wybranej Postaci jednego z Przyjaciół i dołączyć go do swoich Przyjaciół."
+  },
+  {
+    "id": "pan-trzesawisk",
+    "name": "PAN TRZĘSAWISK",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 12 },
+    "text": "Zaklęcie można rzucić na siebie lub inną Postać przed wykonaniem ruchu. Dzięki niemu będzie można (zamiast zwykłego ruchu) przebyć w dowolnym miejscu Trzęsawiska, przechodząc z Krainy Dolnego Kręgu do Krainy Środkowego Kręgu lub odwrotnie."
+  },
+  {
+    "id": "powiew-smierci",
+    "name": "POWIEW ŚMIERCI",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 13 },
+    "text": "Zaklęcie można wypowiedzieć podczas spotkania z inną Postacią lub Wrogiem. Zabija natychmiast każdego Wroga (oprócz Demonów), a Postaci odbiera 2 punkty Życia. Nie trzeba toczyć walki, by użyć Powiewu Śmierci, jednak przeciwnik może wymknąć się, jeśli to on spotkał rzucającego Zaklęcie."
+  },
+  {
+    "id": "siedem-wichrow",
+    "name": "SIEDEM WICHRÓW",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 14 },
+    "text": "Możesz rzucić to Zaklęcie w dowolnej chwili, na inną Postać wędrującą po tej samej Krainie. Rzuć raz kostką dla każdego Przedmiotu będącego w posiadaniu ofiary. Jeśli wynikiem jest 1, Wichry niszczą Przedmiot – jego Kartę należy odłożyć na stos użytych Kart."
+  },
+  {
+    "id": "siedem-wichrow-2",
+    "name": "SIEDEM WICHRÓW",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 15 },
+    "text": "Możesz rzucić to Zaklęcie w dowolnej chwili, na inną Postać wędrującą po tej samej Krainie. Rzuć raz kostką dla każdego Przedmiotu będącego w posiadaniu ofiary. Jeśli wynikiem jest 1, Wichry niszczą Przedmiot – jego Kartę należy odłożyć na stos użytych Kart."
+  },
+  {
+    "id": "siewca-spustoszenia",
+    "name": "SIEWCA SPUSTOSZENIA",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 16 },
+    "text": "Możesz wypowiedzieć Zaklęcie na początku swojej tury lub po zakończeniu ruchu. Dzięki jego działaniu będziesz mógł zdjąć z planszy jedną odkrytą Kartę Zdarzeń."
+  },
+  {
+    "id": "szalenstwo",
+    "name": "SZALEŃSTWO",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 17 },
+    "text": "Zaklęcie można wypowiedzieć w dowolnej chwili. Pozwala zabrać innej Postaci jedno z należących do niej Zaklęć. Najpierw należy zdecydować, kto padnie ofiarą Szaleństwa, a dopiero następnie obejrzeć Zaklęcia i wybrać jedno z nich."
+  },
+  {
+    "id": "wladca-czarow",
+    "name": "WŁADCA CZARÓW",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 18 },
+    "text": "Zaklęcie możesz rzucić w dowolne chwili na każdą inną Postać. Powoduje unicestwienie wszystkich posiadanych przez ofiarę Zaklęć (należy odłożyć ich Karty)."
+  },
+  {
+    "id": "wladca-gromu",
+    "name": "WŁADCA GROMU",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 19 },
+    "text": "Możesz wypowiedzieć to Zaklęcie w dowolnej chwili na Obszar w Kręgu, po którym wędrujesz. Wszystkie istoty w tym Obszarze (także Postacie) zostaną sparaliżowane lękiem. Istot tych nie wolno atakować, lecz można im się wymknąć. Postacie tracą następną turę."
+  },
+  {
+    "id": "wladca-lodu",
+    "name": "WŁADCA LODU",
+    "kind": "spell",
+    "source": { "sheet": "zaklecia", "index": 20 },
+    "text": "Zaklęcie można rzucić na siebie lub inną Postać przed wykonaniem ruchu. Dzięki jego mocy, Postać będzie mogła (zamiast zwykłego ruchu) przebyć w dowolnym miejscu Lodowy Las, przechodząc z Krainy Środkowego Kręgu do Krainy Górnego Kręgu lub odwrotnie."
+  }
+]

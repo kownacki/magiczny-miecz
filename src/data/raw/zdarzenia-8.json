@@ -1,0 +1,148 @@
+[
+  {
+    "id": "opiekun",
+    "name": "OPIEKUN",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 1 },
+    "text": "Mając Opiekuna za Przyjaciela nie musisz wykonywać rzutów kostką w Wieży Przeznaczenia i na Urwisku. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "opiekun",
+    "name": "OPIEKUN",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 2 },
+    "text": "Mając Opiekuna za Przyjaciela nie musisz wykonywać rzutów kostką w Wieży Przeznaczenia i na Urwisku. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "pasterz",
+    "name": "PASTERZ",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 3 },
+    "text": "Pasterz jako Przyjaciel doda ci 1 punkt Miecza i 1 punkt Magii. Utracisz te punkty, gdy utracisz Pasterza.",
+    "miecz": 1,
+    "magia": 1
+  },
+  {
+    "id": "poszukiwacz-przygod",
+    "name": "POSZUKIWACZ PRZYGÓD",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 4 },
+    "text": "Po zakończeniu ruchu możesz zlecić temu Przyjacielowi, by zaatakował Postać lub Wroga, oddalonego najwyżej o 3 Obszary. Poszukiwacz Przygód posiada 3 punkty Miecza. W przypadku porażki ty nie tracisz punktu Życia, ale twój Przyjaciel ginie. Odłóż jego Kartę.",
+    "miecz": 3
+  },
+  {
+    "id": "przewodnik",
+    "name": "PRZEWODNIK",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 5 },
+    "text": "Mając Przewodnika za Przyjaciela nie musisz wykonywać rzutów kostką w Kręgu Mocy, w Wilczym Parowie i Krypcie Upiorów. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "przewodnik",
+    "name": "PRZEWODNIK",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 6 },
+    "text": "Mając Przewodnika za Przyjaciela nie musisz wykonywać rzutów kostką w Kręgu Mocy, w Wilczym Parowie i Krypcie Upiorów. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "przewoznika",
+    "name": "PRZEWOŹNIKA",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 7 },
+    "text": "Dzięki temu Przyjacielowi nie będziesz musiał płacić 1 Sztuki Złota za Przeprawę."
+  },
+  {
+    "id": "rusalka",
+    "name": "RUSAŁKA",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 8 },
+    "text": "Przyjaźń Rusałki pozwoli ci na wykonanie rzutu jedną kostką, gdy będziesz przechodzić z Uroczyska do Lasu Błędnych Ogni. Na Mokradłach i w Lesie Błędnych Ogni będziesz mógł skutecznie wymykać się Wrogom i nie będziesz musiał rzucać kostką przy Kurhanie - zawsze będziesz tam bezpieczny."
+  },
+  {
+    "id": "rycerz",
+    "name": "RYCERZ",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 9 },
+    "text": "Rycerz będzie walczył zamiast ciebie w każdej walce (również magicznej). Nie może jednak używać twoich Zaklęć ani Przedmiotów.",
+    "miecz": 3,
+    "magia": 3
+  },
+  {
+    "id": "strzyga",
+    "name": "STRZYGA",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 10 },
+    "text": "Strzyga jako Przyjaciel dodaje 1 punkt do twojej Magii. Jeżeli utracisz Strzygę, utracisz także ten punkt.",
+    "magia": 1
+  },
+  {
+    "id": "tragarz",
+    "name": "TRAGARZ",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 11 },
+    "text": "Tragarz do końca gry będzie niósł twoje 4 Przedmioty, jeśli zapłacisz mu przedtem 1 Sztukę Złota. Jeśli mu nie zapłacisz, odejdzie na stos użytych Kart. Jeśli stracisz go w jakiś sposób, przepadną również niesione przez niego Przedmioty."
+  },
+  {
+    "id": "wladca",
+    "name": "WŁADCA",
+    "cardClass": "przyjaciel",
+    "source": { "sheet": "zdarzenia-8", "index": 12 },
+    "text": "Dzięki Władcy będziesz mógł odzyskać do 2 punktów Życia, podczas każdej wizyty w Twierdzy Strzegącej Dróg. Jeżeli zrezygnujesz tam z jego Karty, otrzymasz 3 Sztuki Złota (lecz będziesz musiał odłożyć Kartę Władcy)."
+  },
+  {
+    "id": "drzewo-zycia",
+    "name": "DRZEWO ŻYCIA",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 13 },
+    "text": "Po znalezieniu Drzewa, połóż przy nim 4 punkty Życia. Każdy, kto tu trafi, będzie mógł zjeść owoc odzyskując 1 punkt Życia i zmniejszając tym samym liczbę punktów przy Drzewie. Po wykorzystaniu 4 punktów, Drzewo usycha, należy odłożyć jego Kartę."
+  },
+  {
+    "id": "grota",
+    "name": "GROTA",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 14 },
+    "text": "Grota pozostanie na tym Obszarze do końca gry. Jeżeli chcesz do niej wejść, rzuć kostką: 1. Znalazłeś 3 Sztuki Złota, 2. Znalazłeś 2 Sztuki Złota, 3. Znalazłeś 1 Sztukę Złota, 4. Straciłeś 1 turę, 5. Zaatakował cię Hadron (Miecz 3), 6. Zaatakował cieWilkołak (Miecz 10)."
+  },
+  {
+    "id": "jezioro-magiczne",
+    "name": "JEZIORO MAGICZNE",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 15 },
+    "text": "Po znalezieniu Jeziora, połóż przy nim 4 punkty Miecza. Każdy, kto tu trafi, będzie mógł wykąpać się w Jeziorze, zyskując 1 punkt Miecza i zmniejszając tym samym liczbę znajdujących się tam punktów. Gdy wszystkie punkty zostaną wykorzystane, Jezioro wysycha, należy odłożyć jego Kartę."
+  },
+  {
+    "id": "kapliczka-nemed",
+    "name": "KAPLICZKA NEMED",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 16 },
+    "text": "Możesz modlić się na takich samych zasadach, jak w Świątyni Nemed. Jeżeli zostaniesz opętany, pozostaniesz na tym Obszarze do chwili uwolnienia. Po modlitwie Kapliczka zamyka się na zawsze, odłóż jej Kartę."
+  },
+  {
+    "id": "kapliczka-tolimana",
+    "name": "KAPLICZKA TOLIMANA",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 17 },
+    "text": "Możesz modlić się na takich samych zasadach, jak w Świątyni Tolimana. Jeżeli zostaniesz opętany, pozostaniesz na tym Obszarze do chwili uwolnienia. Po modlitwie Kapliczka zamyka się na zawsze, odłóż jej Kartę."
+  },
+  {
+    "id": "labirynt",
+    "name": "LABIRYNT",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 18 },
+    "text": "Labirynt pozostanie tu do końca rozgrywki. Każdy, kto tu trafi o Magii mniejszej niż 5, gubi się w nim i traci 1 turę."
+  },
+  {
+    "id": "nieznana-swiatynia",
+    "name": "NIEZNANA ŚWIĄTYNIA",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 19 },
+    "text": "Świątynia pozostanie tu do końca rozgrywki. Możesz się w niej modlić (rzuć kostką) : 1. Możesz przenieść się do dowolnego Obszaru w tym Kręgu, 2. Zyskujesz 1 Życie, 3. Zyskujesz 1 Zaklęcie, 4. Zyskujesz 2 Sztuki Złota, 5. Zyskujesz 1 Sztukę Złota, 6. Zostałeś zignorowany."
+  },
+  {
+    "id": "sidh",
+    "name": "SIDH",
+    "cardClass": "miejsce",
+    "source": { "sheet": "zdarzenia-8", "index": 20 },
+    "text": "Grobowiec pozostanie na tym Obszarze do końca rozgrywki. Jeżeli chcesz wejść do środka, rzuć kostką: 1. Znalazłeś 3 Sztuki Złota, 2. Znalazłeś 2 Sztuki Złota, 3. Znalazłeś 1 Sztukę Złota, 4. Zaatakowało cię Widmo (Magia 3), 5. Zaatakowała cię Zjawa (Magia 5), 6. Zaatakował cię Demon (Magia 10)."
+  }
+]

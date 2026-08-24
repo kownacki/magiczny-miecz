@@ -1,0 +1,132 @@
+[
+  {
+    "id": "kaplan",
+    "name": "KAPŁAN",
+    "source": { "sheet": "postacie-2", "index": 1 },
+    "nature": "chaotyczna",
+    "miecz": 2,
+    "magia": 4,
+    "start": "Krąg Mocy",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 1 Zaklęcie.",
+      "Podczas modlitw możesz powtórzyć rzut kostką, jeśli wynik pierwszego rzutu cię nie zadowoli (wynik drugiego rzutu musisz zaakceptować).",
+      "W spotkaniach z Demonami możesz zamiast walki próbować pokonać je przy pomocy egzorcyzmów. W takim przypadku wykonujesz rzut kostką: gdy wynikiem jest 1,2 lub 3, zwyciężasz. Jeżeli wynik jest inny, Demon atakuje cię w zwykły sposób."
+    ]
+  },
+  {
+    "id": "kaplanka",
+    "name": "KAPŁANKA",
+    "source": { "sheet": "postacie-2", "index": 2 },
+    "nature": "dobra",
+    "miecz": 1,
+    "magia": 5,
+    "start": "Uroczysko",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 2 Zaklęcia.",
+      "W każdym momencie gry musisz posiadać conajmniej 2 Zaklęcia - możesz wziąć następne natychmiast po rzuceniu przedostatniego.",
+      "Nie atakują cię Bestie (lecz ty możesz je atakować). Napotkany Łoś, Wilk lub Niedźwiedź stanie się twoim Przyjacielem i będzie dodawał swój Miecz do twojego w walce, jeżeli rzucając kostką uzyskasz 1,2 lub 3 oczka."
+    ]
+  },
+  {
+    "id": "karzel",
+    "name": "KARZEŁ",
+    "source": { "sheet": "postacie-2", "index": 3 },
+    "nature": "zla",
+    "miecz": 2,
+    "magia": 5,
+    "start": "Mokradła",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 2 Zaklęcia.",
+      "W każdym momencie gry musisz posiadać conajmniej 2 Zaklęcia (możesz wziąć następne po rzuceniu przedostatniego).",
+      "Nie musisz płacić za przejście Strażnikowi Magicznych Wrót."
+    ]
+  },
+  {
+    "id": "kat",
+    "name": "KAT",
+    "source": { "sheet": "postacie-2", "index": 4 },
+    "nature": "dowolna",
+    "miecz": 2,
+    "magia": 4,
+    "start": "Gród",
+    "abilities": [
+      "Swój charakter określasz sam na początku rozgrywki. Możesz to zrobić dopiero gdy wszyscy inni uczestnicy wybiorą swoje Postacie.",
+      "Rozpoczynasz grę posiadając 1 Zaklęcie i Miecz.",
+      "Atakując inną Postać (lecz nie w sytuacji, gdy sam zostałeś zaatakowany) możesz próbować ściąć jej głowę. Uda ci się to, gdy w rzucie kostką uzyskasz 1 lub 2 oczka. Jeżeli ci się nie powiedzie, masz obowiązek kontynuować walkę w zwykły sposób.",
+      "Atakując Postać (lecz nie jeśli to ona atakuje ciebie) możesz wybrać rodzaj walki - zwykłą lub magiczną."
+    ]
+  },
+  {
+    "id": "krasnolud",
+    "name": "KRASNOLUD",
+    "source": { "sheet": "postacie-2", "index": 5 },
+    "nature": "chaotyczna",
+    "miecz": 3,
+    "magia": 3,
+    "start": "Osada",
+    "abilities": [
+      "Rozpoczynasz grę posiadając Tarczę i Sztylet.",
+      "W każdej sytuacji, gdy wykonujesz rzut kostką, możesz zignorować pierwszy wynik i rzucić ponownie. Musisz jednak zaakceptować wynik drugiego rzutu.",
+      "Możesz zignorować każde, rzucone na ciebie Zaklęcie, jeśli rzucając kostką uzyskasz 1 lub 2 oczka."
+    ]
+  },
+  {
+    "id": "ksiaze",
+    "name": "KSIĄŻĘ",
+    "source": { "sheet": "postacie-2", "index": 6 },
+    "nature": "chaotyczna",
+    "miecz": 4,
+    "magia": 3,
+    "start": "Gród",
+    "abilities": [
+      "Rozpoczynasz grę mając 5 Sztuk Złota.",
+      "Rozpoczynasz grę posiadając Hełm i Miecz. Jeżeli je w jakikolwiek sposób utracisz, możesz je zawsze odzyskać odwiedzając Zamek.",
+      "Masz prawo nie badać Obszaru, na którym się znajdziesz, jednak - jeśli wymaga tego instrukcja - musisz wyciągnąć Karty Zdarzeń. Jeżeli nie chcesz badać Obszaru, nie oglądasz ich i zostawiasz zakryte na planszy."
+    ]
+  },
+  {
+    "id": "lotr",
+    "name": "ŁOTR",
+    "source": { "sheet": "postacie-2", "index": 7 },
+    "nature": "zla",
+    "miecz": 5,
+    "magia": 1,
+    "start": "Karczma",
+    "abilities": [
+      "Rozpoczynasz grę posiadając Sztylet.",
+      "Nie możesz mieć żadnych Przyjaciół.",
+      "Ilekroć pokonasz inną Postać, możesz odebrać jej 1 punkt Miecza albo Magii zamiast punktu Życia. Zabranych punktów nie możesz dodać do swoich. Nie możesz tak postąpić jeżeli walczyłeś nieuczciwie.",
+      "Jeżeli atakując inną Postać zadeklarujesz, że walczysz nieuczciwie, przeciwnik określając swój całkowity Miecz, nie dodaje do niego wyniku rzutu kostką. Nie możesz tak postępować, jeśli sam zostałeś zaatakowany."
+    ]
+  },
+  {
+    "id": "mag",
+    "name": "MAG",
+    "source": { "sheet": "postacie-2", "index": 8 },
+    "nature": "chaotyczna",
+    "miecz": 2,
+    "magia": 5,
+    "start": "Krąg Mocy",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 2 Zaklęcia.",
+      "W każdym momencie gry musisz posiadać conajmniej 1 Zaklęcie - natychmiast po rzuceniu ostatniego możesz wziąć następne.",
+      "Nie atakuje cię Golem ani Homunculus.",
+      "Możesz wskrzesić pokonaną Bestię, która stanie się twoim Przyjacielem i podczas jednej walki doda swoje punkty do twoich. Po jednej walce nieodwracalnie umiera - musisz odłożyć jej Kartę (nie możesz wymienić jej na dodatkowe punkty Miecza)."
+    ]
+  },
+  {
+    "id": "magog",
+    "name": "MAGOG",
+    "source": { "sheet": "postacie-2", "index": 9 },
+    "nature": "chaotyczna",
+    "miecz": 3,
+    "magia": 4,
+    "start": "Step",
+    "abilities": [
+      "Rozpoczynasz grę posiadając 1 Zaklęcie.",
+      "Możesz dowolnie zmieniać swoją naturę, jednak musi być ona określona w każdym momencie gry (na przykład: posiadasz Świętą Włócznię, a masz zamiar zmienić naturę na złą, będziesz musiał odrzucić Przedmiot Magiczny i pozostawić go tam, gdzie nastąpi zmiana twojej natury).",
+      "Możesz dodać 1 do wyniku rzutu kostką w walkach rozgrywanych na Równinach.",
+      "Możesz ignorować Mgłę."
+    ]
+  }
+]

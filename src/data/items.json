@@ -1,0 +1,282 @@
+[
+  {
+    "id": "helm",
+    "name": "HEŁM",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 1
+    },
+    "text": "Posiadacz Hełmu, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 oznacza, że Hełm go ochronił. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "helm",
+    "name": "HEŁM",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 2
+    },
+    "text": "Posiadacz Hełmu, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 oznacza, że Hełm go ochronił. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "kij-i-sznur",
+    "name": "KIJ I SZNUR",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 3
+    },
+    "text": "Mając kij i mocny sznur możesz bezpiecznie przejść przez Bagna. Nie tracisz tam Przedmiotu ani Przyjaciela."
+  },
+  {
+    "id": "kij-i-sznur",
+    "name": "KIJ I SZNUR",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 4
+    },
+    "text": "Mając kij i mocny sznur możesz bezpiecznie przejść przez Bagna. Nie tracisz tam Przedmiotu ani Przyjaciela."
+  },
+  {
+    "id": "kij-i-sznur",
+    "name": "KIJ I SZNUR",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 5
+    },
+    "text": "Mając kij i mocny sznur możesz bezpiecznie przejść przez Bagna. Nie tracisz tam Przedmiotu ani Przyjaciela."
+  },
+  {
+    "id": "kon",
+    "name": "KOŃ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 6
+    },
+    "text": "Koń może nieść 8 twoich Przedmiotów. Jeżeli go utracisz będziesz musiał pozostawić wszystkie Przedmioty, których nie możesz sam unieść. Przedmioty te pozostaną na Obszarze, na którym utraciłeś Konia."
+  },
+  {
+    "id": "kon",
+    "name": "KOŃ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 7
+    },
+    "text": "Koń może nieść 8 twoich Przedmiotów. Jeżeli go utracisz będziesz musiał pozostawić wszystkie Przedmioty, których nie możesz sam unieść. Przedmioty te pozostaną na Obszarze, na którym utraciłeś Konia."
+  },
+  {
+    "id": "latarnia",
+    "name": "LATARNIA",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 8
+    },
+    "text": "Latarnia pozwoli ci odnaleźć drogę w ciemnościach Lodowego Lasu. Możesz przeprawić się w następnej turze po jej znalezieniu. Z lasu wyjdziesz na Obszarze graniczącym z tym, z którego wszedłeś. Bez względu na to, czy użyłeś Latarni, czy też nie, odłóż tę Kartę. Olej w jej wnętrzu szybko się wypala."
+  },
+  {
+    "id": "lodz",
+    "name": "ŁÓDŹ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 9
+    },
+    "text": "W następnej turze po znalezieniu Łodzi możesz przeprawić się przez Trzęsawiska. Przeprawisz się do Obszaru graniczącego z tym, z którego wyruszyłeś. Bez względu na to, czy użyłeś Łodzi, czy też nie, odłóż tę Kartę. Nie możesz nieść Łodzi, zaś pozostawiona na brzegu szybko gnije."
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 10
+    },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart.",
+    "magical": true
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 11
+    },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart.",
+    "magical": true
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 12
+    },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart.",
+    "magical": true
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 13
+    },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart.",
+    "magical": true
+  },
+  {
+    "id": "miecz",
+    "name": "MIECZ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 14
+    },
+    "text": "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "miecz",
+    "name": "MIECZ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 15
+    },
+    "text": "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "miecz",
+    "name": "MIECZ",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 16
+    },
+    "text": "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "rekawice",
+    "name": "RĘKAWICE",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 17
+    },
+    "text": "Dzięki Rękawicom zaopatrzonym w pazury orła nie stracisz 1 punktu Życia na Ruchomych Skałach."
+  },
+  {
+    "id": "rekawice",
+    "name": "RĘKAWICE",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 18
+    },
+    "text": "Dzięki Rękawicom zaopatrzonym w pazury orła nie stracisz 1 punktu Życia na Ruchomych Skałach."
+  },
+  {
+    "id": "rekawice",
+    "name": "RĘKAWICE",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 19
+    },
+    "text": "Dzięki Rękawicom zaopatrzonym w pazury orła nie stracisz 1 punktu Życia na Ruchomych Skałach."
+  },
+  {
+    "id": "sztylet",
+    "name": "SZTYLET",
+    "source": {
+      "sheet": "wyposazenie",
+      "index": 20
+    },
+    "text": "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "sztylet",
+    "name": "SZTYLET",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 1
+    },
+    "text": "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "sztylet",
+    "name": "SZTYLET",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 2
+    },
+    "text": "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "tarcza",
+    "name": "TARCZA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 3
+    },
+    "text": "Posiadacz Tarczy, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 lub 2 oznacza, że zdołał zasłonić się Tarczą. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "tarcza",
+    "name": "TARCZA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 4
+    },
+    "text": "Posiadacz Tarczy, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 lub 2 oznacza, że zdołał zasłonić się Tarczą. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "tarcza-tolimana",
+    "name": "TARCZA TOLIMANA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 5
+    },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "tarcza-tolimana",
+    "name": "TARCZA TOLIMANA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 6
+    },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "tarcza-tolimana",
+    "name": "TARCZA TOLIMANA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 7
+    },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "tarcza-tolimana",
+    "name": "TARCZA TOLIMANA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 8
+    },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "zbroja",
+    "name": "ZBROJA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 9
+    },
+    "text": "Posiadacz Zbroi, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1, 2 lub 3 oznacza, że Zbroja go ochroniła. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "zbroja",
+    "name": "ZBROJA",
+    "source": {
+      "sheet": "wyposazenie-zaklecia",
+      "index": 10
+    },
+    "text": "Posiadacz Zbroi, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1, 2 lub 3 oznacza, że Zbroja go ochroniła. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  }
+]

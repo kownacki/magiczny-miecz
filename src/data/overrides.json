@@ -1,0 +1,19 @@
+{
+  "_why": "Fourteen cards in the print files were never given a title and carry the literal placeholder 'NAZWA KARTY'. The transcriptions in src/data/raw are kept verbatim on purpose, so the real names are supplied here instead, keyed by the slice each card came from. Every name below is taken from the card's own body text, which names the object outright ('Sztylet podczas walki...', 'Posiadacz Zbroi...').",
+  "names": {
+    "wyposazenie#16": { "name": "MIECZ", "id": "miecz" },
+    "wyposazenie#17": { "name": "RĘKAWICE", "id": "rekawice" },
+    "wyposazenie#18": { "name": "RĘKAWICE", "id": "rekawice" },
+    "wyposazenie#19": { "name": "RĘKAWICE", "id": "rekawice" },
+    "wyposazenie-zaklecia#1": { "name": "SZTYLET", "id": "sztylet" },
+    "wyposazenie-zaklecia#2": { "name": "SZTYLET", "id": "sztylet" },
+    "wyposazenie-zaklecia#3": { "name": "TARCZA", "id": "tarcza" },
+    "wyposazenie-zaklecia#4": { "name": "TARCZA", "id": "tarcza" },
+    "wyposazenie-zaklecia#5": { "name": "TARCZA TOLIMANA", "id": "tarcza-tolimana" },
+    "wyposazenie-zaklecia#6": { "name": "TARCZA TOLIMANA", "id": "tarcza-tolimana" },
+    "wyposazenie-zaklecia#7": { "name": "TARCZA TOLIMANA", "id": "tarcza-tolimana" },
+    "wyposazenie-zaklecia#8": { "name": "TARCZA TOLIMANA", "id": "tarcza-tolimana" },
+    "wyposazenie-zaklecia#9": { "name": "ZBROJA", "id": "zbroja" },
+    "wyposazenie-zaklecia#10": { "name": "ZBROJA", "id": "zbroja" }
+  }
+}

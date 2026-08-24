@@ -1,0 +1,147 @@
+[
+  {
+    "kind": "event",
+    "id": "skalne-wrota",
+    "name": "SKALNE WROTA",
+    "source": { "sheet": "zdarzenia-9", "index": 1 },
+    "cardClass": "miejsce",
+    "text": "Jeżeli chcesz przejść przez Skalne Wrota, wyciągnij 3 nowe Karty Zdarzeń i odłóż Kartę Wrót. Jeśli nie chcesz ryzykować, Wrota będą czekać na tym Obszarze na kogoś odważniejszego."
+  },
+  {
+    "kind": "event",
+    "id": "spalona-ziemia",
+    "name": "SPALONA ZIEMIA",
+    "source": { "sheet": "zdarzenia-9", "index": 2 },
+    "cardClass": "miejsce",
+    "text": "Spalona Ziemia pozostanie na tym Obszarze do końca rozgrywki. Każdy, kto trafi na ten bezludny i bezwodny teren traci 1 turę, jeżeli jego Miecz jest mniejszy niż 5 punktów."
+  },
+  {
+    "kind": "event",
+    "id": "tajemne-przejscie",
+    "name": "TAJEMNE PRZEJŚCIE",
+    "source": { "sheet": "zdarzenia-9", "index": 3 },
+    "cardClass": "miejsce",
+    "text": "Tajemne Przejście pozostanie na tym Obszarze do końca rozgrywki. Jeżeli chcesz z niego skorzystać, rzuć kostką, by stwierdzić, gdzie wyszedłeś: 1. Gród, 2. Osada, 3. Twierdza Strzegąca Dróg, 4. Świątynia Nemed, 5. Wymarłe Miasto, 6. Krypta Upiorów."
+  },
+  {
+    "kind": "event",
+    "id": "targowisko",
+    "name": "TARGOWISKO",
+    "source": { "sheet": "zdarzenia-9", "index": 4 },
+    "cardClass": "miejsce",
+    "text": "Targowisko pozostanie tu do końca rozgrywki. Każdy, kto tu zawędruje, może kupić następujące Przedmioty:\n\nMiecz 1 Sz.z. Latarnia 2 Sz.z.\nTarcza 2 Sz.z. Łódź 3 Sz.z.\nHełm 1 Sz.z. Rękawice 2 Sz.z.\nKoń 2 Sz.z. Kij i Sznur 1 Sz.z."
+  },
+  {
+    "kind": "event",
+    "id": "zaklete-zrodlo",
+    "name": "ZAKLĘTE ŹRÓDŁO",
+    "source": { "sheet": "zdarzenia-9", "index": 5 },
+    "cardClass": "miejsce",
+    "text": "Po znalezieniu Źródła połóż przy nim 4 punkty Magii. Każdy, kto tu trafi, będzie mógł napić się wody zyskując 1 punkt Magii i zmniejszając tym samym liczbę punktów przy Źródle. Po wykorzystaniu 4 punktów, Źródło wysycha, należy odłożyć jego Kartę."
+  },
+  {
+    "kind": "stone",
+    "id": "zaklety-w-kamien",
+    "name": "ZAKLĘTY W KAMIEŃ",
+    "source": { "sheet": "zdarzenia-9", "index": 6 },
+    "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+  },
+  {
+    "kind": "stone",
+    "id": "zaklety-w-kamien",
+    "name": "ZAKLĘTY W KAMIEŃ",
+    "source": { "sheet": "zdarzenia-9", "index": 7 },
+    "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+  },
+  {
+    "kind": "stone",
+    "id": "zaklety-w-kamien",
+    "name": "ZAKLĘTY W KAMIEŃ",
+    "source": { "sheet": "zdarzenia-9", "index": 8 },
+    "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+  },
+  {
+    "kind": "stone",
+    "id": "zaklety-w-kamien",
+    "name": "ZAKLĘTY W KAMIEŃ",
+    "source": { "sheet": "zdarzenia-9", "index": 9 },
+    "text": "Postać zostaje Zaklęta w Kamień na 3 tury. Przez ten czas nie może poruszać się, nie działają na nią Zaklęcia (nie może też używać swoich Zaklęć), nie może posiadać Przyjaciół (odłóż ich Karty na stos zużytych), Przedmiotów i Przedmiotów Magicznych oraz złota."
+  },
+  {
+    "kind": "nature-change",
+    "id": "zly",
+    "name": "Zły",
+    "source": { "sheet": "zdarzenia-9", "index": 10 },
+    "text": ""
+  },
+  {
+    "kind": "nature-change",
+    "id": "zly",
+    "name": "Zły",
+    "source": { "sheet": "zdarzenia-9", "index": 11 },
+    "text": ""
+  },
+  {
+    "kind": "nature-change",
+    "id": "zly",
+    "name": "Zły",
+    "source": { "sheet": "zdarzenia-9", "index": 12 },
+    "text": ""
+  },
+  {
+    "kind": "nature-change",
+    "id": "zly",
+    "name": "Zły",
+    "source": { "sheet": "zdarzenia-9", "index": 13 },
+    "text": ""
+  },
+  {
+    "kind": "standee",
+    "id": "pustelnik",
+    "name": "Pustelnik",
+    "source": { "sheet": "zdarzenia-9", "index": 14 },
+    "text": ""
+  },
+  {
+    "kind": "standee",
+    "id": "quark",
+    "name": "Quark",
+    "source": { "sheet": "zdarzenia-9", "index": 15 },
+    "text": ""
+  },
+  {
+    "kind": "standee",
+    "id": "rycerz-ciemnosci",
+    "name": "Rycerz Ciemności",
+    "source": { "sheet": "zdarzenia-9", "index": 16 },
+    "text": ""
+  },
+  {
+    "kind": "standee",
+    "id": "spryciarz",
+    "name": "Spryciarz",
+    "source": { "sheet": "zdarzenia-9", "index": 17 },
+    "text": ""
+  },
+  {
+    "kind": "standee",
+    "id": "troll",
+    "name": "Troll",
+    "source": { "sheet": "zdarzenia-9", "index": 18 },
+    "text": ""
+  },
+  {
+    "kind": "standee",
+    "id": "wiedzma",
+    "name": "Wiedźma",
+    "source": { "sheet": "zdarzenia-9", "index": 19 },
+    "text": ""
+  },
+  {
+    "kind": "standee",
+    "id": "zdobywca",
+    "name": "Zdobywca",
+    "source": { "sheet": "zdarzenia-9", "index": 20 },
+    "text": ""
+  }
+]

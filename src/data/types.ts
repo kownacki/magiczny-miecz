@@ -19,6 +19,15 @@ export type CardClass = keyof typeof CARD_CLASS;
 
 export type Nature = "dobra" | "zla" | "chaotyczna";
 
+/**
+ * What a character card prints in its `natura:` slot. Kat is the exception the
+ * three-value enum cannot express: its card reads `natura: dowolna` and its
+ * first ability lets the player pick a Nature at setup. So the *card* carries
+ * this wider type and the *seat* carries the narrow `Nature`, resolved once the
+ * choice is made.
+ */
+export type StartingNature = Nature | "dowolna";
+
 /** Which of the three rings a board field belongs to, or the bridge across them. */
 export type Region = "dolny" | "srodkowy" | "gorny" | "most";
 
@@ -67,7 +76,8 @@ export interface Character {
   id: string;
   name: string;
   source: { sheet: string; index: number };
-  nature: Nature;
+  /** Kat prints "dowolna" — the player chooses at setup. See StartingNature. */
+  nature: StartingNature;
   /** Starting Miecz and Magia, printed down the card's left edge. */
   miecz: number;
   magia: number;

@@ -1,0 +1,1695 @@
+[
+  {
+    "id": "burza-siedmiu-slonc",
+    "name": "BURZA SIEDMIU SŁOŃC",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 1
+    },
+    "text": "Nad Krąg, w którym jesteś dotarły wiry czasu spowodowane przez gwałtowną Burzę Słoneczną. Wszystkie Postacie tracą 1 turę. Potem nagły wybuch aktywności Słońc ustaje, należy odłożyć Kartę."
+  },
+  {
+    "id": "danina",
+    "name": "DANINA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 2
+    },
+    "text": "Bestia postanowiła nałożyć daninę wysokości 1 Sz.Z. Rzuć kostką, by stwierdzić kto złoży opłatę: 1. Dobrzy, 2. Chaotyczni, 3. Źli, 4. Wędrujący po Dolnym Kręgu, 5. Wędrujący po Środkowym Kręgu, 6. Wędrujący po Górnym Kręgu. Nie posiadający złota tracą 1 Życie. Po ściągnięciu daniny odłóż Kartę."
+  },
+  {
+    "id": "godzina-duchow",
+    "name": "GODZINA DUCHÓW",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 3
+    },
+    "text": "Nadeszła Godzina Duchów. Może je wezwać każda Zła Postać. Rzuć kostką, by określić skutek wezwania: 1-2. Zyskuje 1 Zaklęcie, 3-4. Odzyskuje 1 punkt Życia, 5-6. Traci 1 turę."
+  },
+  {
+    "id": "kometa",
+    "name": "KOMETA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 4
+    },
+    "text": "Na Krainę, po której wędrujesz spada apokaliptyczna Gwiazda. W katastrofie giną wszyscy Nieznajomi - należy odłożyć ich Karty."
+  },
+  {
+    "id": "magiczna-tablica",
+    "name": "MAGICZNA TABLICA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 5
+    },
+    "text": "Znalazłeś kamienną Tablicę, na której wyryte zostały magiczne formuły z zamierzchłych czasów. Natychmiast uzyskujesz taką liczbę Zaklęć, na jaką pozwala ci twoja Magia. Zaklęcia nabiorą mocy, gdy roztrzaskasz Tablicę - odłóż jej Kartę."
+  },
+  {
+    "id": "mgla",
+    "name": "MGŁA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 6
+    },
+    "text": "Z Płaskowyżu zeszła gęsta Mgła, okrywając nieprzeniknioną bielą wszystkie Krainy. Przez 2 tury Postacie mogą przebywać tylko 2 Obszary (1 Obszar na turę). Potem Mgła rozpływa się - odłóż jej Kartę."
+  },
+  {
+    "id": "poludnica",
+    "name": "POŁUDNICA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 7
+    },
+    "text": "Od pewnego czasu towarzyszy ci Południca. Musisz ją zabrać jako Przyjaciela chociaż jej obecność osłabia cię, że możesz poruszać się tylko o 1 Obszar na turę. Jedynym sposobem pozbycia się Południcy jest przeprawa przez Trzęsawiska lub Lodowy Las. Gdy to zrobisz, odłóż jej Kartę."
+  },
+  {
+    "id": "poslancy-bogow",
+    "name": "POSŁAŃCY BOGÓW",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 8
+    },
+    "text": "Spotkałeś potężne Dobre Duchy, wędrujące po tej Krainie. Jeżeli ty także jesteś Dobry, Duchy obdarują cię 1 punktem Życia, jeżeli jesteś Zły, tracisz 1 Życie. Posłańcy ignorują Chaotyczne Postacie. Po spotkaniu odłóż tę Kartę."
+  },
+  {
+    "id": "przesilenie",
+    "name": "PRZESILENIE",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 9
+    },
+    "text": "Potężny Żywioł Magii rozpętał nad Światem gwałtowną burzę. Wszystkie Zaklęcia utraciły swoją moc. Burza kończy się tak nagle, jak się rozpoczęła. Odłóż tę Kartę i wszystkie Karty Zaklęć, znajdujące się w posiadaniu Postaci (we wszystkich Kręgach)."
+  },
+  {
+    "id": "sabat-czarownic",
+    "name": "SABAT CZAROWNIC",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 10
+    },
+    "text": "Natknąłeś się na Czarownice tańczące w księżycowej poświacie. Jeżeli jesteś Zły, otrzymujesz 1 punkt Magii, jeśli jesteś Dobry lub Chaotyczny zamieniasz się w Złego. Potem Czarownice kończą swój taniec - odłóż Kartę."
+  },
+  {
+    "id": "slup-ognia",
+    "name": "SŁUP OGNIA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 11
+    },
+    "text": "Stanąłeś przed ogromnym Słupem Ognia, od którego emanuje potężna siłą Dobra. Jeżeli jesteś Dobry, otrzymujesz 1 punkt Magii, jeżeli jesteś Zły lub Chaotyczny, zamieniasz się w Dobrego. Potem Słup Ognia znika - odłóż tę Kartę."
+  },
+  {
+    "id": "straz",
+    "name": "STRAŻ",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 12
+    },
+    "text": "Niespodziewanie spotykasz wędrujący po okolicy oddział straży z Zamku Bestii. Strażnicy natychmiast zawracają cię na Obszar, z którego rozpocząłeś wędrówkę. Potem ruszają w dalszą drogę - odłóż Kartę."
+  },
+  {
+    "id": "turniej-rycerski",
+    "name": "TURNIEJ RYCERSKI",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 13
+    },
+    "text": "Możesz wyzwać na pojedynek każdą Postać, jeśli tylko nie znajduje się na Moście. Zostaje ona natychmiast przeniesiona do twojego Obszaru. Walka odbywa się według zwykłych zasad. Po jej zakończeniu, odłóż tę Kartę."
+  },
+  {
+    "id": "uklad-planet",
+    "name": "UKŁAD PLANET",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 14
+    },
+    "text": "Przy tym szczególnym układzie planet, na czas 1 tury podwojona zostaje Magia wszystkich Demonów. Po zakończeniu tury należy odłożyć Kartę."
+  },
+  {
+    "id": "zacmienie-slonc",
+    "name": "ZAĆMIENIE SŁOŃC",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 15
+    },
+    "text": "Zaćmienie Słońc otworzyło Siłom Ciemności drogę do Świata. Dobre i Chaotyczne Postacie tracą 1 turę. Potem Zaćmienie kończy się - odłóż tę Kartę."
+  },
+  {
+    "id": "zakleta-sciezka",
+    "name": "ZAKLĘTA ŚCIEŻKA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 16
+    },
+    "text": "Wszedłeś na Zaklętą Ścieżkę, nie wiedząc, dokąd cię zaprowadzi. Rzuć kostką, by się tego dowiedzieć: 1. do Równiny Snu, 2. do Równiny Traw, 3. do Doliny Cienia, 4. do Mrocznej Polany, 5. do Osady, 6. do Karczmy. Po zejściu ze ścieżki odłóż Kartę."
+  },
+  {
+    "id": "zaraza",
+    "name": "ZARAZA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 17
+    },
+    "text": "W Kręgu, w którym jesteś wybuchła Zaraza. Wszystkie znajdujące się w nim Postacie włącznie z tobą tracą 1 Życie. Następnie Zaraza wygasa, odłóż tę Kartę."
+  },
+  {
+    "id": "zasadzka",
+    "name": "ZASADZKA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 18
+    },
+    "text": "Wpadłeś w Zasadzkę żądnego łupów złoczyńcy. Tracisz całe złoto i wszystkie Przedmioty. Łupieżca ukrywa swoją zdobycz na Wrzosowiskach (połóż tam Karty i żetony), potem odchodzi w inne strony - odłóż jego Kartę."
+  },
+  {
+    "id": "zatrute-ziola",
+    "name": "ZATRUTE ZIOŁA",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 19
+    },
+    "text": "Trafiłeś na Łąkę Zatrutych Ziół. Jeżeli jesteś Zły, ich zapach pozwoli ci zyskać 1 Życie, jeśli jesteś Dobry - tracisz 1 Życie. Zapach Ziół nie działa na Chaotyczne Postacie. Natychmiast opuszczasz to miejsce - odłóż Kartę."
+  },
+  {
+    "id": "zly-duch",
+    "name": "ZŁY DUCH",
+    "cardClass": "spotkanie",
+    "source": {
+      "sheet": "zdarzenia-1",
+      "index": 20
+    },
+    "text": "Od pewnego czasu towarzyszy ci Zły Duch. Musisz zabrać go jako Przyjaciela. Natychmiast opuszczą cię wszyscy dotychczasowi Przyjaciele (z wyjątkiem Południcy). Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od niego, odwiedzając Pustelnię. Po wizycie u Pustelnika odłóż Kartę."
+  },
+  {
+    "id": "cyklop",
+    "name": "CYKLOP",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 1
+    },
+    "text": "Bezlitosny Cyklop obraca tę okolicę w ruinę. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 6
+  },
+  {
+    "id": "czarna-hybryda",
+    "name": "CZARNA HYBRYDA",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 2
+    },
+    "text": "Hybryda stworzona niegdyś przez magów w walce z bogiem Tolimanem stanęła na straży tego Obszaru. Pozostanie tu, aż ktoś ją pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "czerwona-hybryda",
+    "name": "CZERWONA HYBRYDA",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 3
+    },
+    "text": "Hybryda stworzona ongiś przez czarnoksiężników walczących z boginią Nemed stoi na straży tego Obszaru. Pozostanie tu, aż ktoś ją pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "fomoraig",
+    "name": "FOMORAIG",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 4
+    },
+    "text": "Zawędrował tu okrutny rycerz o koziej głowie z rodu Fomoraigów. Pozosanie w okolicy, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "hadron",
+    "name": "HADRON",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 5
+    },
+    "text": "Bezlitosny Hadron narzucił swoje panowanie tej okolicy. Będzie nią władał, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "hadron",
+    "name": "HADRON",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 6
+    },
+    "text": "Bezlitosny Hadron narzucił swoje panowanie tej okolicy. Będzie nią władał, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "lewiatan",
+    "name": "LEWIATAN",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 7
+    },
+    "text": "Lewiatan może pojawić się na Mokradłach, przy Przeprawie lub na Bagnach - połóż jego Kartę na którymś z tych Obszarów, nie zajętym przez inną Postać (jeśli nie ma takiego Obszaru, odłóż Kartę). Potwór pozostanie tam, aż ktoś go pokona.",
+    "miecz": 4
+  },
+  {
+    "id": "los",
+    "name": "ŁOŚ",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 8
+    },
+    "text": "Zły duch zaklęty w Łosia sieje spustoszenie w okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 1
+  },
+  {
+    "id": "los",
+    "name": "ŁOŚ",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 9
+    },
+    "text": "Zły duch zaklęty w Łosia sieje spustoszenie w okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 1
+  },
+  {
+    "id": "niedzwiedz",
+    "name": "NIEDŹWIEDŹ",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 10
+    },
+    "text": "Tajemnicze siły zła przyjęły postać budzącego przerażenie Niedźwiedzia, który rozszarpuje każdą napotkaną istotę. Niedźwiedź pozostanie na tym Obszarze, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "nobbin",
+    "name": "NOBBIN",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 11
+    },
+    "text": "Okrutny Nobbin zawładnął tą okolicą. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "nobbin",
+    "name": "NOBBIN",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 12
+    },
+    "text": "Okrutny Nobbin zawładnął tą okolicą. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "przybysz-z-krainy-cieni",
+    "name": "PRZYBYSZ Z KRAINY CIENI",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 13
+    },
+    "text": "Potworny Przybysz z Krainy Cieni będzie wyniszczał ten Obszar, dopóki ktoś go nie pokona. Przeciw Przybyszowi nie można używać Zaklęć, Magicznych Przedmiotów ani Broni.",
+    "miecz": 5
+  },
+  {
+    "id": "smok",
+    "name": "SMOK",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 14
+    },
+    "text": "Krwawy Smok zamieszkuje tę okolicę. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 5
+  },
+  {
+    "id": "sobowtor",
+    "name": "SOBOWTÓR",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 15
+    },
+    "text": "Sobowtór to monstrum, które tworzy sama Postać, ponieważ powstaje z jej lęku i nienawiści. Posiada zawsze tyle punktów Miecza, ile jego przeciwnik. Pozostanie tu, aż ktoś go pokona."
+  },
+  {
+    "id": "sniezne-monstrum",
+    "name": "ŚNIEŻNE MONSTRUM",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 16
+    },
+    "text": "Na tym Obszarze pojawił się nagle Śnieżny Potwór. Będzie napadał na Postacie, aż któraś z nich go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "trogglowy-smok",
+    "name": "TRÓGGŁOWY SMOK",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 17
+    },
+    "text": "Nad całą okolicą roztoczył panowanie Trójgłowy Smok. Postać, która podejmie z nim walkę, będzie musiała pokonać jego trzy głowy (każda głowa ma 2 punkty Miecza). Jeśli przegra, głowy, które odcięła odrastają. Smok pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "wedrowiec",
+    "name": "WĘDROWIEC",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 18
+    },
+    "text": "Po okolicy wędruje potwór pod postacią Wędrowca. Rzuć kostką: 1,2 lub 3 oznacza, że nie dałeś się zwieść i w porę umknąłeś potworowi. Inny wynik: musisz rozpocząć walkę. Potwór pozostanie tu, aż ktoś go pokona.",
+    "miecz": 3
+  },
+  {
+    "id": "wilk",
+    "name": "WILK",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 19
+    },
+    "text": "Upiorny Wilk każdej nocy poluje w tej okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 2
+  },
+  {
+    "id": "wilkolak",
+    "name": "WILKOŁAK",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-2",
+      "index": 20
+    },
+    "text": "Potężny Wilkołak sieje spustoszenie w tej okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 10
+  },
+  {
+    "id": "wilkolak",
+    "name": "WILKOŁAK",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 1
+    },
+    "text": "Potężny Wilkołak sieje spustoszenie w tej okolicy. Pozostanie tu, aż ktoś go pokona.",
+    "miecz": 10
+  },
+  {
+    "id": "zloczynca",
+    "name": "ZŁOCZYŃCA",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 2
+    },
+    "text": "W tej okolicy zaczaił się żądny łupów Złoczyńca. Pozostanie tu, aż ktoś go pokona. Każdej pokonanej Postaci, Złoczyńca zabiera do wyboru: 1 Sztukę Złota lub jeden Przedmiot (należy odłożyć żeton lub Kartę Przedmiotu).",
+    "miecz": 3
+  },
+  {
+    "id": "duch-ciemnosci",
+    "name": "DUCH CIEMNOŚCI",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 3
+    },
+    "text": "Duch Ciemności będzie niepodzielnie władał tym Obszarem, aż ktoś go pokona.",
+    "magia": 3
+  },
+  {
+    "id": "duch-zaglady",
+    "name": "DUCH ZAGŁADY",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 4
+    },
+    "text": "Duch Zagłady będzie siał zniszczenie w tej okolicy, aż ktoś go pokona.",
+    "magia": 2
+  },
+  {
+    "id": "ksiaze-demonow",
+    "name": "KSIĄŻĘ DEMONÓW",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 5
+    },
+    "text": "Nad okolicą zapanował niepodzielnie Książę Demonów. Pozostanie tu, aż ktoś go pokona.",
+    "magia": 10
+  },
+  {
+    "id": "ksiaze-demonow",
+    "name": "KSIĄŻĘ DEMONÓW",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 6
+    },
+    "text": "Nad okolicą zapanował niepodzielnie Książę Demonów. Pozostanie tu, aż ktoś go pokona.",
+    "magia": 10
+  },
+  {
+    "id": "demon",
+    "name": "DEMON",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 7
+    },
+    "text": "W okolicy pojawił się potężny Demon. Pozostanie tu, aż ktoś go pokona.",
+    "magia": 6
+  },
+  {
+    "id": "upior",
+    "name": "UPIÓR",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 8
+    },
+    "text": "Rzuć kostką, by określić, gdzie pojawi się Upiór: 1. w Osadzie, 2. w Grodzie, 3. w Dolinie Cienia, 4. na Mrocznej Polanie, 5. w Krypcie Upiorów, 6. w Wymarłym Mieście. Połóż tam Kartę. Upiór pozostanie tam, aż ktoś go pokona.",
+    "magia": 4
+  },
+  {
+    "id": "upior",
+    "name": "UPIÓR",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 9
+    },
+    "text": "Rzuć kostką, by określić, gdzie pojawi się Upiór: 1. w Osadzie, 2. w Grodzie, 3. w Dolinie Cienia, 4. na Mrocznej Polanie, 5. w Krypcie Upiorów, 6. w Wymarłym Mieście. Połóż tam Kartę. Upiór pozostanie tam, aż ktoś go pokona.",
+    "magia": 4
+  },
+  {
+    "id": "wampir",
+    "name": "WAMPIR",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 10
+    },
+    "text": "Wampir będzie zamieszkiwał tę okolicę, aż zostanie pokonany tracąc wszystkie punkty Życia (jeżeli Wampir pokona Postać, zabiera jej Życie i dodaje je do swoich punktów - zaznacz to kładąc na Karcie właściwy żeton).",
+    "magia": 4
+  },
+  {
+    "id": "widmo",
+    "name": "WIDMO",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 11
+    },
+    "text": "W okolicy pojawiło się straszliwe Widmo. Pozostanie tu, aż ktoś je pokona.",
+    "magia": 3
+  },
+  {
+    "id": "zjawa",
+    "name": "ZJAWA",
+    "cardClass": "wrog",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 12
+    },
+    "text": "Mroczna Zjawa budzi przerażenie i popłoch wśród mieszkańców tej okolicy. Pozostanie tu, aż ktoś ją pokona.",
+    "magia": 5
+  },
+  {
+    "id": "cudotworca",
+    "name": "CUDOTWÓRCA",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 13
+    },
+    "text": "Cudotwórca będzie mieszkał na tym Obszarze do końca rozgrywki. Każdej Postaci przywróci 2 punkty Życia, podczas każdych odwiedzin tylko do wysokości startowej - 4 punktów."
+  },
+  {
+    "id": "czarodziej",
+    "name": "CZARODZIEJ",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 14
+    },
+    "text": "Ten Obszar do końca rozgrywki będzie siedzibą dobrego Czarodzieja. Każda Dobra Postać, która tu zawita, otrzyma 1 Zaklęcie, jeżeli tylko pozwala na to jej Magia."
+  },
+  {
+    "id": "dziki-rumak",
+    "name": "DZIKI RUMAK",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 15
+    },
+    "text": "Dzięki temu spotkaniu możesz natychmiast zyskać dodatkowy ruch. Niezależnie od tego, czy uczynisz tak, czy nie, Rumak po chwili zniknie ci z oczu - odłóż jego Kartę."
+  },
+  {
+    "id": "dobre-bostwo",
+    "name": "DOBRE BÓSTWO",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 16
+    },
+    "text": "Dobre Bóstwo osądza twoje uczynki. Jeśli podczas tej rozgrywki zaatakowałeś inną Postać lub użyłeś swoich zdolności na jej niekorzyść, musisz złożyć w ofierze 1 Sz.Z. Jeśli nie chcesz będziesz uwięziony na tym Obszarze przez 1 turę. Po osądzeniu cię, Bóstwo znika - odłóż jego Kartę."
+  },
+  {
+    "id": "eremita",
+    "name": "EREMITA",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 17
+    },
+    "text": "Rzuć kostką i umieść Kartę Eremity na odpowiednim Obszarze: 1. Bezdroża, 2. Uroczysko, 3. Pustelnia, 4. Wieża Przeznaczenia, 5. Rozstajne Drogi, 6. Ruiny Twierdzy. Pierwszej Postaci, Eremita ofiaruje do wyboru: Magiczny Miecz lub Tarczę Tolimana (jeśli jeszcze są). Następnie odłóż jego Kartę."
+  },
+  {
+    "id": "jednorozec",
+    "name": "JEDNOROŻEC",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 18
+    },
+    "text": "Jednorożec może natychmiast przewieźć cię do dowolnego Obszaru w tym Kręgu. Bez względu na to, czy skorzystasz z propozycji, Jednorożec oddala się - odłóż jego Kartę."
+  },
+  {
+    "id": "koszmar",
+    "name": "KOSZMAR",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 19
+    },
+    "text": "Okolica, po której wędrujesz jest nawiedzana przez Upiora Snu. Pierwszej Złej Postaci, Upiór spełni do wyboru jedno życzenie: 1 punkt Miecza, Magii lub Życia, 1 Zaklęcie, 1 Sz.Z. albo przeniesienie do dowolnego Obszaru w tym Kręgu. Po spełnieniu życzenia, Nieznajomy zniknie, odłóż jego Kartę."
+  },
+  {
+    "id": "krol-lasu",
+    "name": "KRÓL LASU",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-3",
+      "index": 20
+    },
+    "text": "Król Lasu spełni jedno życzenie pierwszej Postaci, która zawita do jego siedziby, ofiarując jej do wyboru: 1 punkt Miecza, Magii lub Życia, 1 Zaklęcie, 1 Sztukę Złota albo przeniesienie do dowolnego Obszaru w tym Kręgu. Po spełnieniu życzenia, Król Lasu odchodzi - odłóż jego Kartę."
+  },
+  {
+    "id": "kuglarz",
+    "name": "KUGLARZ",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 1
+    },
+    "text": "Jeśli chcesz, Kuglarz może zamienić twoje punkty Miecza na punkty Magii lub odwrotnie. Bez względu na to, czy skorzystasz z propozycji Kuglarza, czy też nie. Nieznajomy oddala się - odłóż jego Kartę."
+  },
+  {
+    "id": "medrzec",
+    "name": "MĘDRZEC",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 2
+    },
+    "text": "Mędrzec zadaje ci zagadkę. Wybierz cyfrę od 1 do 6 (musisz ją głośno powiedzieć), a następnie rzuć kostką. Jeżeli wynikiem jest cyfra, którą wybrałeś, otrzymujesz 1 Zaklęcie. Niezależnie od tego, czy rozwiązałeś zagadkę, czy nie, Mędrzec odchodzi zatopiony w rozmyślaniach - odłóż jego Kartę."
+  },
+  {
+    "id": "polbog",
+    "name": "PÓŁBÓG",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 3
+    },
+    "text": "Półbóg ofiaruje ci 1 Zaklęcie. Możesz je wybrać ze stosu. Po wybraniu Karty Zaklęcia, potasuj resztę Kart. Gdy to zrobisz, Nieznajomy zniknie - odłóż jego Kartę."
+  },
+  {
+    "id": "sztukmistrz",
+    "name": "SZTUKMISTRZ",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 4
+    },
+    "text": "Sztukmistrz będzie mieszkał tu do końca rozgrywki. Postacie, którym pozwala na to ich Magia, mogą podczas każdej wizyty kupić u niego 1 Zaklęcie za 1 Sztukę Złota."
+  },
+  {
+    "id": "urocza-diablica",
+    "name": "UROCZA DIABLICA",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 5
+    },
+    "text": "Urocza Diablica będzie mieszkać na tym Obszarze do końca rozgrywki. Jeżeli do niej trafisz, będziesz musiał rzucić kostką: 1. Zyskasz 1 Zaklęcie, 2. Zyskasz 1 punkt Magii, 3. Zyskasz punkt Miecza, 4. Stracisz 1 Przedmiot, 5. Stracisz 1 Życie, 6. Zostaniesz zamieniony w Kamień."
+  },
+  {
+    "id": "wielkolud",
+    "name": "WIELKOLUD",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 6
+    },
+    "text": "Wielkolud odprawia obrzędy swojego kultu. Rzuć kostką, jak się zachowa: 1-2. Nie zwraca uwagi, 3-4. Niszczy jeden (wybrany losowo) z twoich Przedmiotów, 5-6. Składa w ofierze jednego (wybranego losowo) z twoich Przyjaciół. Po zakończeniu obrzędów Nieznajomy odchodzi - odłóż jego Kartę."
+  },
+  {
+    "id": "wrozka",
+    "name": "WRÓŻKA",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 7
+    },
+    "text": "W okolicy, po której wędrujesz zamieszkała dobra Wróżka. Pierwszej Dobrej Postaci, która do niej zawita ofiaruje do wyboru: 1 punkt Miecza, Magii lub Życia, 1 Zaklęcie, 1 Sz.Z. albo przeniesienie do dowolnego Obszaru w tym Kręgu. Po spełnieniu życzenia Wróżka znika - odłóż jej Kartę."
+  },
+  {
+    "id": "zaklinacz-czasu",
+    "name": "ZAKLINACZ CZASU",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 8
+    },
+    "text": "Zaklinacz Czasu gra na swoim flecie. Wszystkie Postacie z wyjątkiem Elfa, Hummita, Spryciarza, Czarodziejki i Szczęściarza tracą 1 turę. Dźwięki fletu milkną po upływie jednej tury - odłóż tę Kartę."
+  },
+  {
+    "id": "zlodziej-dobroczynca",
+    "name": "ZŁODZIEJ DOBROCZYŃCA",
+    "cardClass": "nieznajomy",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 9
+    },
+    "text": "Złodziej Dobroczyńca to dziwna Postać. Jeżeli masz złoto, ukradnie ci 1 Sztukę, lecz jeśli go nie masz, włoży ci 1 Sztukę do kieszeni. Jest tak sprawny, że w ogóle nie spostrzegasz, kiedy go spotkałeś - odłóż Kartę."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 10
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 11
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 12
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 13
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 14
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 15
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 16
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 17
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 18
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 19
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-4",
+      "index": 20
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 1
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 2
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 3
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "1-sztuka-zlota",
+    "name": "1 SZTUKA ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 4
+    },
+    "text": "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "2-sztuki-zlota",
+    "name": "2 SZTUKI ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 5
+    },
+    "text": "Zamień tę Kartę na 2 Sztuki Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "2-sztuki-zlota",
+    "name": "2 SZTUKI ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 6
+    },
+    "text": "Zamień tę Kartę na 2 Sztuki Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "2-sztuki-zlota",
+    "name": "2 SZTUKI ZŁOTA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 7
+    },
+    "text": "Zamień tę Kartę na 2 Sztuki Złota, a następnie ją odłóż."
+  },
+  {
+    "id": "bojowy-rumak",
+    "name": "BOJOWY RUMAK",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 8
+    },
+    "text": "Rumak znacznie zwiększa twoją skuteczność w walce. Oznacza to, że do punktów Miecza możesz dodać swoje punkty Magii. Jeżeli zostaniesz pokonany zginie tylko twój Rumak (odłożysz jego Kartę), ty zaś nie utracisz punktu Życia."
+  },
+  {
+    "id": "diament-krolow",
+    "name": "DIAMENT KRÓLÓW",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 9
+    },
+    "text": "Najcenniejszy ze znalezionych kiedykolwiek diamentów może zostać sprzedany w Zamku za 5 Sztuk Złota. Jeżeli przegrasz walkę z inną Postacią, będzie ci musiała odebrać Diament, dzięki czemu nie utracisz 1 punktu Życia."
+  },
+  {
+    "id": "gliniana-tabliczka",
+    "name": "GLINIANA TABLICZKA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 10
+    },
+    "text": "Tablica zdradzi ci tajemnicę Pułapki na Kamiennym Moście. Dzięki niej będziesz mógł odjąć 2 od wyniku rzutu kostkami w Pułapce."
+  },
+  {
+    "id": "helm",
+    "name": "HEŁM",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 11
+    },
+    "text": "Posiadacz Hełmu, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 oznacza, że Hełm go ochronił. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "kij-i-sznur",
+    "name": "KIJ I SZNUR",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 12
+    },
+    "text": "Mając kij i mocny sznur możesz bezpiecznie przejść przez Bagna. Nie tracisz tam Przedmiotu ani Przyjaciela."
+  },
+  {
+    "id": "kon",
+    "name": "KOŃ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 13
+    },
+    "text": "Koń może nieść 8 twoich Przedmiotów. Jeżeli go utracisz będziesz musiał pozostawić wszystkie Przedmioty, których nie możesz sam unieść. Przedmioty te pozostaną na Obszarze, na którym utraciłeś Konia."
+  },
+  {
+    "id": "latarnia",
+    "name": "LATARNIA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 14
+    },
+    "text": "Latarnia pozwoli ci odnaleźć drogę w ciemnościach Lodowego Lasu. Możesz przeprawić się w następnej turze po jej znalezieniu. Z lasu wyjdziesz na Obszarze graniczącym z tym, z którego wszedłeś. Bez względu na to, czy użyłeś Latarni, czy też nie, odłóż tę Kartę. Olej w jej wnętrzu szybko się wypala."
+  },
+  {
+    "id": "lodz",
+    "name": "ŁÓDŹ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 15
+    },
+    "text": "W następnej turze po znalezieniu Łodzi możesz przeprawić się przez Trzęsawiska. Przeprawisz się do Obszaru graniczącego z tym, z którego wyruszyłeś. Bez względu na to, czy użyłeś Łodzi, czy też nie, odłóż tę Kartę. Nie możesz nieść Łodzi, zaś pozostawiona na brzegu szybko gnije."
+  },
+  {
+    "id": "magiczny-manuskrypt",
+    "name": "MAGICZNY MANUSKRYPT",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 16
+    },
+    "text": "Manuskrypt zdradzi ci tajemnicę Magicznej Pułapki na Kamiennym Moście. Dzięki niemu będziesz mógł odjąć 2 od wyniku rzutu kostkami w Magicznej Pułapce."
+  },
+  {
+    "id": "miecz",
+    "name": "MIECZ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 17
+    },
+    "text": "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza."
+  },
+  {
+    "id": "miecz",
+    "name": "MIECZ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 18
+    },
+    "text": "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza."
+  },
+  {
+    "id": "mul",
+    "name": "MUŁ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 19
+    },
+    "text": "Muł będzie do końca gry niósł twoje 4 Przedmioty. Jeżeli go utracisz, będziesz musiał pozostawić Przedmioty na Obszarze, na którym utraciłeś Muła."
+  },
+  {
+    "id": "rekawice",
+    "name": "RĘKAWICE",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-5",
+      "index": 20
+    },
+    "text": "Dzięki Rękawicom zaopatrzonym w pazury orła nie stracisz 1 punktu Życia na Ruchomych Skałach."
+  },
+  {
+    "id": "sztylet",
+    "name": "SZTYLET",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 1
+    },
+    "text": "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "tajemna-sakwa",
+    "name": "TAJEMNA SAKWA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 2
+    },
+    "text": "W Sakwie możesz umieścić 1 Przedmiot. Przedmiot ten i Sakwę będziesz mógł utracić jedynie w wypadku użycia Zaklęcia \"Pan Bogactwa\" (nikt nie może go zażądać jako okupu za przegraną walkę, nie stracisz go na Bagnach, etc.)."
+  },
+  {
+    "id": "tajemnicza-szkatula",
+    "name": "TAJEMNICZA SZKATUŁA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 3
+    },
+    "text": "Możesz zabrać Szkatułę i otworzyć ją w dowolnym momencie. Rzuć kostką, by określić, co znalazłeś w środku, a następnie odłóż Kartę: 1. Tarczę Tolimana, 2. Zaklęcie, 3. Dwie Sz.Z., 4. Ducha który opęta cię na 1 turę (tracisz ją), 5. Truciznę - tracisz 1 punkt Życia, 6. Demona - tracisz 2 punkty Życia."
+  },
+  {
+    "id": "tarcza",
+    "name": "TARCZA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 4
+    },
+    "text": "Posiadacz Tarczy, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 lub 2 oznacza, że zdołał zasłonić się Tarczą. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "wierzchowiec",
+    "name": "WIERZCHOWIEC",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 5
+    },
+    "text": "Wierzchowiec pozwala ci dodać od 1 do 3 punktów do wyniku rzutu kostką w trakcie wykonywania ruchu. Twoi Przyjaciele muszą poruszać się w zwykły sposób, bez tego dodatku. Jeśli zostawisz ich w tyle, w następnej turze możesz do nich wrócić zamiast wykonywania zwykłego ruchu."
+  },
+  {
+    "id": "zaprzeg",
+    "name": "ZAPRZĘG",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 6
+    },
+    "text": "Dzięki Zaprzęgowi możesz przewozić dowolną liczbę Przedmiotów. Możesz także dodać 1 do wyniku rzutu kostką podczas wykonywania ruchu. Jeśli stracisz Zaprzęg, będziesz musiał pozostawić Przedmioty, których nie możesz unieść. Przedmioty pozostaną tam, gdzie straciłeś Zaprzęg."
+  },
+  {
+    "id": "zbroja",
+    "name": "ZBROJA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 7
+    },
+    "text": "Posiadacz Zbroi, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1, 2 lub 3 oznacza, że Zbroja go ochroniła. Nie traci punktu Życia, aczkolwiek przegrał walkę."
+  },
+  {
+    "id": "arondight",
+    "name": "ARONDIGHT",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 8
+    },
+    "text": "Miecz Lancelota użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce z Wilkłakiem - 2 punkty Miecza.",
+    "miecz": 1
+  },
+  {
+    "id": "czarodziejska-kosc",
+    "name": "CZARODZIEJSKA KOŚĆ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 9
+    },
+    "text": "Właściciel Kości ma prawo dodać sobie 1 punkt Miecza lub Magii w Pułapce albo Magicznej Pułapce. Może również dodać 1 do każdego wyniku rzutu w pozostałych Obszarach na Kamiennym Moście."
+  },
+  {
+    "id": "eliksir-sily",
+    "name": "ELIKSIR SIŁY",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 10
+    },
+    "text": "Po wypiciu Eliksiru, Postać zyskuje na 1 turę dodatkowe 2 punkty Miecza. Po użyciu Kartę należy odłożyć.",
+    "miecz": 2
+  },
+  {
+    "id": "excalibur",
+    "name": "EXCALIBUR",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 11
+    },
+    "text": "Miecz króla Artura użyty w walce dodaje swojemu właścicielowi 1 punkt Miecza. Po każdej zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając ten punkt pokonanemu przeciwnikowi).",
+    "miecz": 1
+  },
+  {
+    "id": "jablko-natchnienia",
+    "name": "JABŁKO NATCHNIENIA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 12
+    },
+    "text": "Karta Jabłka może być wykorzystana tylko raz - następnie należy ją odłożyć. Zjedzenie jabłka przed wykonaniem rzutu kostkami w Świątyni Nemed lub Świątyni Tolimana pozwala odjąć lub dodać 1 do wyniku (jeśli taka jest wola gracza)."
+  },
+  {
+    "id": "krysztal-losu",
+    "name": "KRYSZTAŁ LOSU",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 13
+    },
+    "text": "Jeśli chcesz użyć go w walce, rzuć kostką: 1. Kryształ staje w płomieniach i zamienia cię w popiół - tracisz 1 Życie, 2. Kryształ ulega zniszczeniu, 3. Nic się nie dzieje, 4. Dodaj 1 do wyniku rzutu kostką (w tej walce), 5. Dodaj 2 do wyniku rzutu (w tej walce), 6. Dodaj 3 do wyniku (w tej walce)."
+  },
+  {
+    "id": "krysztal-magow",
+    "name": "KRYSZTAŁ MAGÓW",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 14
+    },
+    "text": "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może walcząc z nim użyć Zaklęcia Odrodzenie."
+  },
+  {
+    "id": "magiczna-sakwa",
+    "name": "MAGICZNA SAKWA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 15
+    },
+    "text": "Sakwa pozwala nieść Postaci do 5 Przedmiotów ponad jej zwykłe możliwości (sama Sakwa nie jest liczona jako Przedmiot). Utrata Sakwy oznacza jednocześnie utratę wszystkich niesionych w niej Przedmiotów."
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 16
+    },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart."
+  },
+  {
+    "id": "magiczny-miecz",
+    "name": "MAGICZNY MIECZ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 17
+    },
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart."
+  },
+  {
+    "id": "miecz-chaosu",
+    "name": "MIECZ CHAOSU",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 18
+    },
+    "text": "Miecza Chaosu nie może posiadać Dobra Postać. Użyty w walce dodaje właścicielowi 2 punkty Miecza.",
+    "miecz": 2
+  },
+  {
+    "id": "owoc-jarzebiny-wiedzy",
+    "name": "OWOC JARZĘBINY WIEDZY",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 19
+    },
+    "text": "Karta Jarzębiny może być wykorzystana tylko raz - potem należy ją odłożyć. Zjedzenie owocu przed ciągnięciem nowych Kart Zdarzeń, pozwala wziąć jedną Kartę więcej i odrzucić tę, która graczowi najmniej odpowiada."
+  },
+  {
+    "id": "pierscien-mocy",
+    "name": "PIERŚCIEŃ MOCY",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-6",
+      "index": 20
+    },
+    "text": "Pierścień dodaje właścicielowi 2 punkty Magii.",
+    "magia": 2
+  },
+  {
+    "id": "relikwiarz",
+    "name": "RELIKWIARZ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 1
+    },
+    "text": "Jeżeli właściciel Relikwiarza jest Dobry, nie traci punktu Życia w Czarcim Młynie, jeśli jest Zły - nie traci punktu Życia przy Studni Wieczności. Postać mająca Relikwiarz pokonuje wszystkie Demony, bez konieczności walki z nimi."
+  },
+  {
+    "id": "rozdzka-przeznaczenia",
+    "name": "RÓŻDŻKA PRZEZNACZENIA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 2
+    },
+    "text": "Z pomocą Różdżki można zyskać władzę nad jednym z napotkanych Wrogów. Poddany jego mocy Wróg staje się Przyjacielem i podczas jednej, najbliższej walki dodaje swoje punkty Miecza lub Magii do punktów Postaci. Po walce Wróg uwalnia się (Kartę Różdżki należy odłożyć)."
+  },
+  {
+    "id": "rozdzka-zaklec",
+    "name": "RÓŻDŻKA ZAKLĘĆ",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 3
+    },
+    "text": "Właściciel Różdżki może posiadać conajmniej 1 Zaklęcie więcej, niż liczba Zaklęć, z jaką rozpoczął grę (może wziąć nowe Zaklęcie, gdy ma tyle Zaklęć, ile na początku gry lub mniej)."
+  },
+  {
+    "id": "srebrna-strzala",
+    "name": "SREBRNA STRZAŁA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 4
+    },
+    "text": "Strzała dodaje właścicielowi 1 punkt Miecza i 1 punkt Magii."
+  },
+  {
+    "id": "swiety-graal",
+    "name": "ŚWIĘTY GRAAL",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 5
+    },
+    "text": "Graala nie może posiadać Zła Postać. Jego właściciel zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały."
+  },
+  {
+    "id": "swieta-wlocznia",
+    "name": "ŚWIĘTA WŁÓCZNIA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 6
+    },
+    "text": "Włóczni nie mogą posiadać Złe Postacie. Użyta w walce dodaje właścicielowi 1 punkt Miecza."
+  },
+  {
+    "id": "talizman-ognia",
+    "name": "TALIZMAN OGNIA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 7
+    },
+    "text": "Talizman Ognia pozwala dodać 1 do wyniku rzutu kostką podczas walki (lecz nie magicznej). Właściciel Talizmanu jest odporny na działanie Zaklęcia Krąg Płomieni."
+  },
+  {
+    "id": "talizman-powietrza",
+    "name": "TALIZMAN POWIETRZA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 8
+    },
+    "text": "Talizman Powietrza pozwala dodać 1 do wyniku rzutu kostką podczas walki magicznej. Właściciel Talizmanu jest odporny na działanie Zaklęć: Siedem Wichrów i Władca Gromu."
+  },
+  {
+    "id": "tarcza-boga-tolimana",
+    "name": "TARCZA BOGA TOLIMANA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 9
+    },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "tarcza-boga-tolimana",
+    "name": "TARCZA BOGA TOLIMANA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 10
+    },
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+  },
+  {
+    "id": "topor-swiatla-i-ciemnosci",
+    "name": "TOPÓR ŚWIATŁA I CIEMNOŚCI",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 11
+    },
+    "text": "Topór Światła i Ciemności nie może być w posiadaniu Chaotycznych Postaci. Użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce z Wilkołakiem - 2 punkty Miecza."
+  },
+  {
+    "id": "zwierciadlo-zniszczenia",
+    "name": "ZWIERCIADŁO ZNISZCZENIA",
+    "cardClass": "przedmiot",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 12
+    },
+    "text": "Zwierciadło użyte przeciw innej Postaci pozbawi ją 2 punktów Magii lub Miecza, albo 1 punktu Magii i 1 punktu Miecza (oprócz tych z którymi rozpoczął on grę i uzyskanych dzięki Przedmiotom i Przyjaciołom). Zwierciadła można użyć tylko raz - następnie należy odłożyć jego Kartę."
+  },
+  {
+    "id": "alchemik",
+    "name": "ALCHEMIK",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 13
+    },
+    "text": "Alchemik, jako twój Przyjaciel, może zamienić każdy z twoich Przedmiotów w złoto (1 Przedmiot zamienia się w 1 Sztukę cennego kruszcu). Proces ten jest nieodwracalny."
+  },
+  {
+    "id": "chochlik",
+    "name": "CHOCHLIK",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 14
+    },
+    "text": "Chochlik zostanie twoim Przyjacielem, jeżeli poświęcisz mu 1 punkt twojego Życia. Gdy to uczynisz, Chochlik będzie dodawał 2 punkty do twojej Magii. Ponadto, gdy będziesz chciał wziąć Zaklęcie, Przyjaciel pozwoli ci obejrzeć pierwsze 2 Karty ze stosu i wybrać tę, która najbardziej ci odpowiada."
+  },
+  {
+    "id": "elflin",
+    "name": "ELFLIN",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 15
+    },
+    "text": "Dzięki Elflinowi będziesz zawsze bezpieczny na Urwisku i nie będziesz musiał tam rzucać kostką. Będziesz także mógł skutecznie wymykać się Wrogom na Bezdrożach, Wrzosowiskach, Równinie Samotnych Skał i w Kamiennym Lesie."
+  },
+  {
+    "id": "giermek",
+    "name": "GIERMEK",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 16
+    },
+    "text": "Giermek będzie dodawał ci 2 punkty Miecza podczas każdej walki, tak długo, jak będzie twoim Przyjacielem. Ilekroć poniesiesz porażkę i stracisz punkt Życia, rzuć kostką. Wynik równy 1 oznacza, że zginął Giermek (odłóż jego Kartę), ty zaś nie utraciłeś punktu."
+  },
+  {
+    "id": "gnom",
+    "name": "GNOM",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 17
+    },
+    "text": "Gnom posiada 1 Zaklęcie (weź Kartę Zaklęcia i połóż ją razem z Kartą Gnoma - wolno ci ją obejrzeć). Gnom wypowie Zaklęcie, gdy ofiarujesz mu 1 Sztukę Złota, a następnie zniknie zabierając swoją zapłatę - należy odłożyć jego Kartę i złoto."
+  },
+  {
+    "id": "krzyzowiec",
+    "name": "KRZYŻOWIEC",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 18
+    },
+    "text": "Ten nieustraszony rycerz będzie dodawał ci 2 punkty Miecza podczas każdej walki, tak długo, jak będzie twoim Przyjacielem. Krzyżowiec posiada również 1 Zaklęcie, którego użyje, gdy sobie tego zażyczysz (weź Kartę Zaklęcia i połóż ją z Kartą Krzyżowca)."
+  },
+  {
+    "id": "ksiezniczka",
+    "name": "KSIĘŻNICZKA",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 19
+    },
+    "text": "Dzięki przyjaźni Księżniczki będziesz mógł odzyskać do 2 punktów Życia, podczas każdej wizyty w Zamku. Jeżeli zrezygnujesz tam z jej Karty, otrzymasz 3 Sztuki Złota (lecz będziesz musiał odłożyć Kartę Księżniczki)."
+  },
+  {
+    "id": "najemnik",
+    "name": "NAJEMNIK",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-7",
+      "index": 20
+    },
+    "text": "Najemnik będzie twoim Przyjacielem, jeżeli zapłacisz mu 1 Sztukę Złota. Jeśli odmówisz zapłaty, będzie czekał tu na bardziej hojną Postać. Jako Przyjaciel, Najemnik dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1 Sztukę Złota. Płacić Najemnikowi można tylko raz na turę."
+  },
+  {
+    "id": "opiekun",
+    "name": "OPIEKUN",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 1
+    },
+    "text": "Mając Opiekuna za Przyjaciela nie musisz wykonywać rzutów kostką w Wieży Przeznaczenia i na Urwisku. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "opiekun",
+    "name": "OPIEKUN",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 2
+    },
+    "text": "Mając Opiekuna za Przyjaciela nie musisz wykonywać rzutów kostką w Wieży Przeznaczenia i na Urwisku. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "pasterz",
+    "name": "PASTERZ",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 3
+    },
+    "text": "Pasterz jako Przyjaciel doda ci 1 punkt Miecza i 1 punkt Magii. Utracisz te punkty, gdy utracisz Pasterza.",
+    "miecz": 1,
+    "magia": 1
+  },
+  {
+    "id": "poszukiwacz-przygod",
+    "name": "POSZUKIWACZ PRZYGÓD",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 4
+    },
+    "text": "Po zakończeniu ruchu możesz zlecić temu Przyjacielowi, by zaatakował Postać lub Wroga, oddalonego najwyżej o 3 Obszary. Poszukiwacz Przygód posiada 3 punkty Miecza. W przypadku porażki ty nie tracisz punktu Życia, ale twój Przyjaciel ginie. Odłóż jego Kartę.",
+    "miecz": 3
+  },
+  {
+    "id": "przewodnik",
+    "name": "PRZEWODNIK",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 5
+    },
+    "text": "Mając Przewodnika za Przyjaciela nie musisz wykonywać rzutów kostką w Kręgu Mocy, w Wilczym Parowie i Krypcie Upiorów. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "przewodnik",
+    "name": "PRZEWODNIK",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 6
+    },
+    "text": "Mając Przewodnika za Przyjaciela nie musisz wykonywać rzutów kostką w Kręgu Mocy, w Wilczym Parowie i Krypcie Upiorów. Zawsze możesz tamtędy bezpiecznie przejść."
+  },
+  {
+    "id": "przewoznika",
+    "name": "PRZEWOŹNIKA",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 7
+    },
+    "text": "Dzięki temu Przyjacielowi nie będziesz musiał płacić 1 Sztuki Złota za Przeprawę."
+  },
+  {
+    "id": "rusalka",
+    "name": "RUSAŁKA",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 8
+    },
+    "text": "Przyjaźń Rusałki pozwoli ci na wykonanie rzutu jedną kostką, gdy będziesz przechodzić z Uroczyska do Lasu Błędnych Ogni. Na Mokradłach i w Lesie Błędnych Ogni będziesz mógł skutecznie wymykać się Wrogom i nie będziesz musiał rzucać kostką przy Kurhanie - zawsze będziesz tam bezpieczny."
+  },
+  {
+    "id": "rycerz",
+    "name": "RYCERZ",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 9
+    },
+    "text": "Rycerz będzie walczył zamiast ciebie w każdej walce (również magicznej). Nie może jednak używać twoich Zaklęć ani Przedmiotów.",
+    "miecz": 3,
+    "magia": 3
+  },
+  {
+    "id": "strzyga",
+    "name": "STRZYGA",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 10
+    },
+    "text": "Strzyga jako Przyjaciel dodaje 1 punkt do twojej Magii. Jeżeli utracisz Strzygę, utracisz także ten punkt.",
+    "magia": 1
+  },
+  {
+    "id": "tragarz",
+    "name": "TRAGARZ",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 11
+    },
+    "text": "Tragarz do końca gry będzie niósł twoje 4 Przedmioty, jeśli zapłacisz mu przedtem 1 Sztukę Złota. Jeśli mu nie zapłacisz, odejdzie na stos użytych Kart. Jeśli stracisz go w jakiś sposób, przepadną również niesione przez niego Przedmioty."
+  },
+  {
+    "id": "wladca",
+    "name": "WŁADCA",
+    "cardClass": "przyjaciel",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 12
+    },
+    "text": "Dzięki Władcy będziesz mógł odzyskać do 2 punktów Życia, podczas każdej wizyty w Twierdzy Strzegącej Dróg. Jeżeli zrezygnujesz tam z jego Karty, otrzymasz 3 Sztuki Złota (lecz będziesz musiał odłożyć Kartę Władcy)."
+  },
+  {
+    "id": "drzewo-zycia",
+    "name": "DRZEWO ŻYCIA",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 13
+    },
+    "text": "Po znalezieniu Drzewa, połóż przy nim 4 punkty Życia. Każdy, kto tu trafi, będzie mógł zjeść owoc odzyskując 1 punkt Życia i zmniejszając tym samym liczbę punktów przy Drzewie. Po wykorzystaniu 4 punktów, Drzewo usycha, należy odłożyć jego Kartę."
+  },
+  {
+    "id": "grota",
+    "name": "GROTA",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 14
+    },
+    "text": "Grota pozostanie na tym Obszarze do końca gry. Jeżeli chcesz do niej wejść, rzuć kostką: 1. Znalazłeś 3 Sztuki Złota, 2. Znalazłeś 2 Sztuki Złota, 3. Znalazłeś 1 Sztukę Złota, 4. Straciłeś 1 turę, 5. Zaatakował cię Hadron (Miecz 3), 6. Zaatakował cieWilkołak (Miecz 10)."
+  },
+  {
+    "id": "jezioro-magiczne",
+    "name": "JEZIORO MAGICZNE",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 15
+    },
+    "text": "Po znalezieniu Jeziora, połóż przy nim 4 punkty Miecza. Każdy, kto tu trafi, będzie mógł wykąpać się w Jeziorze, zyskując 1 punkt Miecza i zmniejszając tym samym liczbę znajdujących się tam punktów. Gdy wszystkie punkty zostaną wykorzystane, Jezioro wysycha, należy odłożyć jego Kartę."
+  },
+  {
+    "id": "kapliczka-nemed",
+    "name": "KAPLICZKA NEMED",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 16
+    },
+    "text": "Możesz modlić się na takich samych zasadach, jak w Świątyni Nemed. Jeżeli zostaniesz opętany, pozostaniesz na tym Obszarze do chwili uwolnienia. Po modlitwie Kapliczka zamyka się na zawsze, odłóż jej Kartę."
+  },
+  {
+    "id": "kapliczka-tolimana",
+    "name": "KAPLICZKA TOLIMANA",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 17
+    },
+    "text": "Możesz modlić się na takich samych zasadach, jak w Świątyni Tolimana. Jeżeli zostaniesz opętany, pozostaniesz na tym Obszarze do chwili uwolnienia. Po modlitwie Kapliczka zamyka się na zawsze, odłóż jej Kartę."
+  },
+  {
+    "id": "labirynt",
+    "name": "LABIRYNT",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 18
+    },
+    "text": "Labirynt pozostanie tu do końca rozgrywki. Każdy, kto tu trafi o Magii mniejszej niż 5, gubi się w nim i traci 1 turę."
+  },
+  {
+    "id": "nieznana-swiatynia",
+    "name": "NIEZNANA ŚWIĄTYNIA",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 19
+    },
+    "text": "Świątynia pozostanie tu do końca rozgrywki. Możesz się w niej modlić (rzuć kostką) : 1. Możesz przenieść się do dowolnego Obszaru w tym Kręgu, 2. Zyskujesz 1 Życie, 3. Zyskujesz 1 Zaklęcie, 4. Zyskujesz 2 Sztuki Złota, 5. Zyskujesz 1 Sztukę Złota, 6. Zostałeś zignorowany."
+  },
+  {
+    "id": "sidh",
+    "name": "SIDH",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-8",
+      "index": 20
+    },
+    "text": "Grobowiec pozostanie na tym Obszarze do końca rozgrywki. Jeżeli chcesz wejść do środka, rzuć kostką: 1. Znalazłeś 3 Sztuki Złota, 2. Znalazłeś 2 Sztuki Złota, 3. Znalazłeś 1 Sztukę Złota, 4. Zaatakowało cię Widmo (Magia 3), 5. Zaatakowała cię Zjawa (Magia 5), 6. Zaatakował cię Demon (Magia 10)."
+  },
+  {
+    "id": "skalne-wrota",
+    "name": "SKALNE WROTA",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-9",
+      "index": 1
+    },
+    "text": "Jeżeli chcesz przejść przez Skalne Wrota, wyciągnij 3 nowe Karty Zdarzeń i odłóż Kartę Wrót. Jeśli nie chcesz ryzykować, Wrota będą czekać na tym Obszarze na kogoś odważniejszego."
+  },
+  {
+    "id": "spalona-ziemia",
+    "name": "SPALONA ZIEMIA",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-9",
+      "index": 2
+    },
+    "text": "Spalona Ziemia pozostanie na tym Obszarze do końca rozgrywki. Każdy, kto trafi na ten bezludny i bezwodny teren traci 1 turę, jeżeli jego Miecz jest mniejszy niż 5 punktów."
+  },
+  {
+    "id": "tajemne-przejscie",
+    "name": "TAJEMNE PRZEJŚCIE",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-9",
+      "index": 3
+    },
+    "text": "Tajemne Przejście pozostanie na tym Obszarze do końca rozgrywki. Jeżeli chcesz z niego skorzystać, rzuć kostką, by stwierdzić, gdzie wyszedłeś: 1. Gród, 2. Osada, 3. Twierdza Strzegąca Dróg, 4. Świątynia Nemed, 5. Wymarłe Miasto, 6. Krypta Upiorów."
+  },
+  {
+    "id": "targowisko",
+    "name": "TARGOWISKO",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-9",
+      "index": 4
+    },
+    "text": "Targowisko pozostanie tu do końca rozgrywki. Każdy, kto tu zawędruje, może kupić następujące Przedmioty:\n\nMiecz 1 Sz.z. Latarnia 2 Sz.z.\nTarcza 2 Sz.z. Łódź 3 Sz.z.\nHełm 1 Sz.z. Rękawice 2 Sz.z.\nKoń 2 Sz.z. Kij i Sznur 1 Sz.z."
+  },
+  {
+    "id": "zaklete-zrodlo",
+    "name": "ZAKLĘTE ŹRÓDŁO",
+    "cardClass": "miejsce",
+    "source": {
+      "sheet": "zdarzenia-9",
+      "index": 5
+    },
+    "text": "Po znalezieniu Źródła połóż przy nim 4 punkty Magii. Każdy, kto tu trafi, będzie mógł napić się wody zyskując 1 punkt Magii i zmniejszając tym samym liczbę punktów przy Źródle. Po wykorzystaniu 4 punktów, Źródło wysycha, należy odłożyć jego Kartę."
+  }
+]
