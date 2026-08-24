@@ -100,6 +100,37 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     [code, refresh],
   );
 
+  async function leave() {
+    const seated = mySeatIndex !== null;
+    if (!seated) return;
+    const confirmed = confirm(
+      playing
+        ? "Opuścić stół? Twoja postać wypada z gry — tego nie da się cofnąć."
+        : "Opuścić stół?",
+    );
+    if (!confirmed) return;
+
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/games/${code}/leave`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: localStorage.getItem(`mm:${code}`) }),
+      });
+      if (!response.ok) {
+        setError((await response.json()).error);
+        return;
+      }
+      // Forget the seat locally too, or this browser keeps showing the
+      // controls for a seat it no longer holds.
+      localStorage.removeItem(`mm:${code}`);
+      setMySeatIndex(null);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function join() {
     const name = prompt("Twoje imię?");
     const response = await fetch(`/api/games/${code}/join`, {
@@ -140,6 +171,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           <p className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.25em] text-ink">
             {game.join_code}
           </p>
+          {mySeatIndex !== null && (
+            <button
+              onClick={leave}
+              disabled={busy}
+              className="mt-1 text-[11px] text-muted underline underline-offset-2 transition hover:text-vermilion disabled:opacity-50"
+            >
+              Opuść stół
+            </button>
+          )}
         </div>
       </header>
 

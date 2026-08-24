@@ -198,6 +198,89 @@ export async function verifySeat(gameId: string, token: string): Promise<SeatRow
   return (data as SeatRow) ?? null;
 }
 
+export interface LeaveResult {
+  removed: boolean;
+  /** Set when the leaver was the active player and the turn had to move on. */
+  passedTo: number | null;
+  gameFinished: boolean;
+}
+
+/**
+ * Gives up a seat.
+ *
+ * Before the game starts the seat is deleted outright — nothing references it
+ * and someone who joined the wrong table should leave no trace. Once play has
+ * begun it is retired instead, by marking it eliminated: the journal holds
+ * `seat_id` references to everything that seat did, and deleting the row would
+ * cascade those away and take the game's history with them.
+ *
+ * Seat indexes are deliberately not compacted. `nextSeat` walks the seat array
+ * rather than counting indexes, so a gap is harmless, whereas renumbering would
+ * silently change who `active_seat` points at.
+ */
+export async function leaveGame(
+  gameId: string,
+  seat: SeatRow,
+  status: string,
+  activeSeat: number | null,
+): Promise<LeaveResult> {
+  if (status === "lobby") {
+    const { error } = await db.from("seats").delete().eq("id", seat.id);
+    if (error) throw new Error(`leaveGame: ${error.message}`);
+    await promoteHostIfNeeded(gameId, seat);
+    return { removed: true, passedTo: null, gameFinished: false };
+  }
+
+  const { error } = await db
+    .from("seats")
+    .update({ eliminated: true })
+    .eq("id", seat.id);
+  if (error) throw new Error(`leaveGame: ${error.message}`);
+  await promoteHostIfNeeded(gameId, seat);
+
+  const remaining = (await seatsFor(gameId)).filter(
+    (other) => other.character_id && !other.eliminated,
+  );
+
+  // A table with nobody left in it is over. One player left is not a game
+  // either — the box says two to six — so it ends there rather than leaving
+  // someone rolling against themselves.
+  if (remaining.length <= 1) {
+    await db.from("games").update({ status: "finished", active_seat: null }).eq("id", gameId);
+    return { removed: false, passedTo: null, gameFinished: true };
+  }
+
+  if (activeSeat !== seat.seat_index) {
+    return { removed: false, passedTo: null, gameFinished: false };
+  }
+
+  // The leaver was mid-turn, so play has to move on or the table deadlocks.
+  const next = remaining.find((other) => other.seat_index > seat.seat_index) ?? remaining[0];
+  await db
+    .from("games")
+    .update({ active_seat: next.seat_index, turn_state: { phase: "rzut" } })
+    .eq("id", gameId);
+  return { removed: false, passedTo: next.seat_index, gameFinished: false };
+}
+
+/**
+ * Keeps a table hosted. The host flag only decides who sees the lobby controls,
+ * but a table whose host walked away with it would strand everyone else.
+ */
+async function promoteHostIfNeeded(gameId: string, leaving: SeatRow): Promise<void> {
+  if (!leaving.is_host) return;
+  const candidate = (await seatsFor(gameId)).find(
+    (seat) => seat.id !== leaving.id && !seat.eliminated,
+  );
+  if (!candidate) return;
+
+  await db.from("seats").update({ is_host: true }).eq("id", candidate.id);
+  // Hand the flag over rather than copying it. A retired seat keeps its row so
+  // the journal's references survive, and leaving it marked host would leave
+  // the table with two — the outgoing one being a seat nobody is sitting in.
+  await db.from("seats").update({ is_host: false }).eq("id", leaving.id);
+}
+
 /**
  * Bumps the revision counter. Clients hold the last value they rendered and
  * refetch when they see a higher one, which is why every mutation must call
