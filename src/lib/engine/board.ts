@@ -36,22 +36,31 @@ export interface BoardField {
  * Where the Kamienny Most crosses this ring the fields are Step and Mroźne
  * Pustkowie: walking the Dolny Krąg you ignore the bridge squares and use those
  * instead (rulebook p3).
+ *
+ * Stored CLOCKWISE, as printed. It used to be stored the other way round, which
+ * left the cycle correct — every adjacency and every distance still came out
+ * right — but inverted the one thing that depends on the sense: `destination`
+ * treats a rising index as "zgodnie ze wskazówkami zegara", so the app told
+ * players to walk the lower ring the wrong way. Harmless in simulation, wrong
+ * on a table where a hand moves the figure. The scan settles it: the top edge
+ * of this ring reads Osada, Step, Mokradła from left to right, which is the
+ * order below.
  */
 export const DOLNY_KRAG: readonly BoardField[] = [
   { id: "karczma", name: "Karczma", region: "dolny" },
-  { id: "mrozne-pustkowie", name: "Mroźne Pustkowie", region: "dolny", draw: 1 },
-  { id: "grod", name: "Gród", region: "dolny" },
-  { id: "bezdroza", name: "Bezdroża", region: "dolny", draw: 2 },
-  { id: "studnia-wiecznosci", name: "Studnia Wieczności", region: "dolny" },
-  { id: "krag-mocy", name: "Krąg Mocy", region: "dolny" },
-  { id: "czarci-mlyn", name: "Czarci Młyn", region: "dolny" },
-  { id: "mokradla-1", name: "Mokradła", region: "dolny", draw: 1 },
-  { id: "step-1", name: "Step", region: "dolny", draw: 1 },
-  { id: "osada", name: "Osada", region: "dolny" },
-  { id: "kurhan", name: "Kurhan", region: "dolny" },
-  { id: "mokradla-2", name: "Mokradła", region: "dolny", draw: 1 },
-  { id: "step-2", name: "Step", region: "dolny", draw: 1 },
   { id: "uroczysko", name: "Uroczysko", region: "dolny", draw: 1 },
+  { id: "step-2", name: "Step", region: "dolny", draw: 1 },
+  { id: "mokradla-2", name: "Mokradła", region: "dolny", draw: 1 },
+  { id: "kurhan", name: "Kurhan", region: "dolny" },
+  { id: "osada", name: "Osada", region: "dolny" },
+  { id: "step-1", name: "Step", region: "dolny", draw: 1 },
+  { id: "mokradla-1", name: "Mokradła", region: "dolny", draw: 1 },
+  { id: "czarci-mlyn", name: "Czarci Młyn", region: "dolny" },
+  { id: "krag-mocy", name: "Krąg Mocy", region: "dolny" },
+  { id: "studnia-wiecznosci", name: "Studnia Wieczności", region: "dolny" },
+  { id: "bezdroza", name: "Bezdroża", region: "dolny", draw: 2 },
+  { id: "grod", name: "Gród", region: "dolny" },
+  { id: "mrozne-pustkowie", name: "Mroźne Pustkowie", region: "dolny", draw: 1 },
 ];
 
 /**

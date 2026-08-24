@@ -1,0 +1,188 @@
+[
+  {
+    "id": "bagna-1",
+    "name": "Bagna",
+    "text": "Tracisz 1 z Przedmiotów (również Magicznych) lub 1 z Przyjaciół, wedle własnego wyboru."
+  },
+  {
+    "id": "bagna-2",
+    "name": "Bagna",
+    "text": "Tracisz 1 z Przedmiotów (również Magicznych) lub 1 z Przyjaciół, wedle własnego wyboru."
+  },
+  {
+    "id": "dolina-cienia",
+    "name": "Dolina Cienia",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij karty jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się w Dolinie dodaje 1 punkt do swojej Magii lub Miecza."
+  },
+  {
+    "id": "dolina-czaszek",
+    "name": "Dolina Czaszek",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. TYLKO TĘDY MOŻNA PRZEDOSTAĆ SIĘ DO PRZEŁĘCZY WICHRÓW."
+  },
+  {
+    "id": "kamienny-las",
+    "name": "Kamienny Las",
+    "draw": 2,
+    "text": "WYCIĄGNIJ 2 KARTY. Ciągniesz tylko 1 Kartę jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się w Kamiennym Lesie dodaje 3 punkty do swojej Magii lub Miecza."
+  },
+  {
+    "id": "krypta-upiorow",
+    "name": "Krypta Upiorów",
+    "text": "MUSISZ RZUCIĆ KOSTKĄ: 1, 2, 3 - udało ci się bezpiecznie przemknąć; 4 - zaatakował cię Upiór (Magia 4); 5 - zaatakował cię Upiór (Magia 5); 6 - zaatakował cię Upiór (Magia 6)."
+  },
+  {
+    "id": "las-blednych-ogni",
+    "name": "Las Błędnych Ogni",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli już jakaś tu jest. TYLKO TĘDY MOŻNA PRZEPRAWIĆ SIĘ NA UROCZYSKO (nie rzucając kostką)."
+  },
+  {
+    "id": "magiczne-wrota",
+    "name": "Magiczne Wrota",
+    "text": "Wypowiedz życzenie! Możesz zyskać do wyboru: 1 punkt Miecza, 1 punkt Magii, 1 Zaklęcie lub 1 Sztukę Złota."
+  },
+  {
+    "id": "mroczna-polana",
+    "name": "Mroczna Polana",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się na Polanie dodaje 1 punkt do swojej Magii lub Miecza."
+  },
+  {
+    "id": "plaskowyz-mgiel",
+    "name": "Płaskowyż Mgieł",
+    "draw": 3,
+    "text": "WYCIĄGNIJ 3 KARTY. Jeżeli jakieś Karty znajdują się już na tym Obszarze, ciągniesz tylko tyle, by ich liczba równała się 3."
+  },
+  {
+    "id": "przelecz-wichrow",
+    "name": "Przełęcz Wichrów",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest lub przechodzisz do Doliny Czaszek. TYLKO TU MOŻNA PRZEPRAWIĆ SIĘ PRZEZ LODOWY LAS. Nim przeprawisz się przez Lodowy Las musisz pokonać strzegącego Przełęczy Rycerza Wiecznych Śniegów (Miecz 10). Nie możesz kontynuować podróży, dopóki walka nie zostanie rozstrzygnięta. Rycerz pozostanie tu nawet pokonany, lecz nie atakuje jeżeli przechodzisz z Doliny Czaszek."
+  },
+  {
+    "id": "przeprawa-1",
+    "name": "Przeprawa",
+    "text": "Musisz przeprawić się przez rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego rozpocząłeś ruch."
+  },
+  {
+    "id": "przeprawa-2",
+    "name": "Przeprawa",
+    "text": "Musisz przeprawić się przez rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego rozpocząłeś ruch."
+  },
+  {
+    "id": "pustelnia",
+    "name": "Pustelnia",
+    "text": "Pustelnik może z pomocą ziół przywrócić ci punkty Życia z początku wędrówki pod warunkiem, że wyrzekniesz się bogactwa. Musisz odrzucić 1 Sz. Z. za każdą wyleczoną ranę."
+  },
+  {
+    "id": "rownina-samotnych-skal",
+    "name": "Równina Samotnych Skał",
+    "draw": 2,
+    "text": "WYCIĄGNIJ 2 KARTY. Ciągniesz tylko 1 Kartę, jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się na Równinie dodaje 2 punkty do swojej Magii lub Miecza."
+  },
+  {
+    "id": "rownina-snu",
+    "name": "Równina Snu",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się na Równinie dodaje 2 punkty do swojej Magii lub Miecza."
+  },
+  {
+    "id": "rownina-traw",
+    "name": "Równina Traw",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Każdy Wróg, z którym spotkasz się na Równinie dodaje 3 punkty do swojej Magii lub Miecza."
+  },
+  {
+    "id": "rozstajne-drogi-1",
+    "name": "Rozstajne Drogi",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Nie możesz liczyć na Magię i Miecz czerpane z Przedmiotów i Przedmiotów Magicznych."
+  },
+  {
+    "id": "rozstajne-drogi-2",
+    "name": "Rozstajne Drogi",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Nie możesz tu używać Zaklęć."
+  },
+  {
+    "id": "ruchome-skaly-1",
+    "name": "Ruchome Skały",
+    "text": "Tracisz 1 Życie."
+  },
+  {
+    "id": "ruchome-skaly-2",
+    "name": "Ruchome Skały",
+    "text": "Tracisz 1 Życie."
+  },
+  {
+    "id": "ruiny-twierdzy",
+    "name": "Ruiny Twierdzy",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest lub wchodzisz na Kamienny Most. Nim wkroczysz na Most musisz pokonać Kamiennego Potwora. Rzuć kostką aby przekonać się, jaką siłę Miecza ma Potwór: 1 - 5; 2 - 6; 3 - 7; 4 - 8; 5 - 9; 6 - 10. jeżeli przegrasz będziesz musiał kontynuować podróż w tym samym Kręgu. Potwór zostanie tu nawet pokonany. Przegrana oznacza dla ciebie utratę 1 punktu Miecza. Potwór nie atakuje jeśli schodzisz z Mostu. ABY WEJŚĆ NA MOST MUSISZ MIEĆ MAGICZNY MIECZ!"
+  },
+  {
+    "id": "straznik-magicznych-wrot",
+    "name": "Strażnik Magicznych Wrót",
+    "text": "Aby przejść przez Wrota musisz wykupić się 1 Sz. Z. W przeciwnym wypadku tracisz 1 Życie."
+  },
+  {
+    "id": "swiatynia-bogini-nemed",
+    "name": "Świątynia Bogini Nemed",
+    "text": "MOŻESZ MODLIĆ SIĘ RZUCAJĄC 2 KOSTKAMI: 2 - zyskujesz 2 punkty Życia; 3 - tracisz 1 punkt Życia; 4 - tracisz do wyboru: 1 punkt Życia lub 1 z Przyjaciół; 5 - zyskujesz 1 punkt Miecza; 6 - zyskujesz 1 punkt Magii; 7 - zyskujesz 1 Zaklęcie; 8 - zyskujesz 1 punkt Życia; 9 - zostałeś opętany, pozostaniesz tu, dopóki nie wyrzucisz podczas swojej tury 1, 2 lub 3 oczek (na 1 kostce); 10 - tracisz do wyboru: 1 punkt Magii lub Miecza; 11 - otrzymujesz Magiczny Miecz (jeżeli jeszcze jakieś są); 12 - tracisz 2 punkty Życia."
+  },
+  {
+    "id": "swiatynia-tolimana",
+    "name": "Świątynia Tolimana",
+    "text": "MOŻESZ MODLIĆ SIĘ DO GROŹNEGO BÓSTWA. Rzuć dwoma kostkami: 2 - tracisz 1 punkt Życia; 3 - tracisz po 1 punkcie Magii i Miecza; 4 - tracisz 1 Zaklęcie; 5 - tracisz jednego z Przyjaciół; 6 - zyskujesz jedno Zaklęcie; 7 - zyskujesz 1 punkt Magii lub 1 punkt Miecza; 8 - zyskujesz dodatkowy ruch; 9 - zostałeś opętany, pozostaniesz tu dopóki nie wyrzucisz 1, 2 lub 3 oczka na jednej kostce; 10 - otrzymujesz Tarczę Tolimana (jeśli jeszcze jakaś jest); 11 - zyskujesz 1 punkt Życia; 12 - tracisz 1 punkt Życia i po 1 punkcie Magii i Miecza."
+  },
+  {
+    "id": "twierdza-strzegaca-drog",
+    "name": "Twierdza Strzegąca Dróg",
+    "text": "Władca Twierdzy może wyznaczyć ci misję. Jeżeli się zdecydowałeś rzuć kostką: 1 - pokonasz Wroga; 2-3 pokonasz inną Postać (po wypełnieniu misji zostaniesz natychmiast przeniesiony do Twierdzy); 4-5 przyniesiesz 3 Sz. Z. (odłóż je); 6 - przyniesiesz 2 Sz. Z. (odłóż je). Po wypełnieniu misji, Władca ofiaruje ci Tarczę Tolimana."
+  },
+  {
+    "id": "urwisko-1",
+    "name": "Urwisko",
+    "text": "Rzuć kostką: 1 lub 2 oczka oznaczają, że tracisz 1 Życie. Rzuć także za każdego z Przyjaciół: 1 lub 2 oczka Przyjaciel traci Życie (odłóż jego kartę)."
+  },
+  {
+    "id": "urwisko-2",
+    "name": "Urwisko",
+    "text": "Rzuć kostką: 1-2 tracisz Życie. Rzuć także kostką za każdego z Przyjaciół, 1-2 Przyjaciel traci Życie (odłóż jego kartę)."
+  },
+  {
+    "id": "wieza-przeznaczenia",
+    "name": "Wieża Przeznaczenia",
+    "text": "Znalazłeś się pod wpływem potężnych sił Wieży. Rzuć kostką: 1 - tracisz 1 turę; 2-3 zostajesz Zamieniony w Kamień; 4-5 zyskujesz dodatkowy ruch; 6 - zostałeś zignorowany."
+  },
+  {
+    "id": "wilczy-parow",
+    "name": "Wilczy Parów",
+    "text": "Musisz rzucić kostką: 1, 2, 3 - udało ci się bezpiecznie przemknąć; 4 - zaatakował cię mieszkający tu Wilkołak (Miecz 4); 5 - zaatakował cię Wilkołak (Miecz 5); 6 - zaatakował cię Wilkołak (Miecz 6)."
+  },
+  {
+    "id": "wrzosowiska",
+    "name": "Wrzosowiska",
+    "draw": 2,
+    "text": "WYCIĄGNIJ 2 KARTY. Ciągniesz tylko 1 Kartę, jeżeli jakaś już tu jest."
+  },
+  {
+    "id": "wymarle-miasto",
+    "name": "Wymarłe Miasto",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest lub gdy wchodzisz na Kamienny Most. Nim wkroczysz na Most musisz pokonać Ducha Skał. Rzuć kostką, by dowiedzieć się jaką mocą Magii dysponuje Duch: 1 - 5; 2 - 6; 3 - 7; 4 - 8; 5 - 9; 6 - 10. Jeżeli przegrasz będziesz musiał kontynuować podróż w tym samym Kręgu. Duch pozostanie tu nawet pokonany. Przegrana oznacza dla ciebie utratę 1 punktu Magii. Duch nie atakuje jeżeli schodzisz z Mostu. ABY WEJŚĆ NA MOST MUSISZ MIEĆ MAGICZNY MIECZ!"
+  },
+  {
+    "id": "zaczarowane-wzgorza",
+    "name": "Zaczarowane Wzgórza",
+    "draw": 1,
+    "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij karty, jeżeli jakaś już tu jest. Na tym Obszarze nie możesz liczyć na Miecz i Magię czerpane z Przedmiotów i Przedmiotów Magicznych. Nie możesz też rzucać Zaklęć."
+  },
+  {
+    "id": "zamek",
+    "name": "Zamek",
+    "text": "Nadworny Medyk przywróci ci punkty Życia z początku rozgrywki jeżeli zapłacisz mu 1 Sz. Z. za każdy zyskany punkt. Określ ilość punktów, a następnie po uiszczeniu opłaty rzuć kostką: 1-4 zostałeś wyleczony; 5 - niestety twój stan się nie zmienił; 6 - wybrałeś fatalnego Medyka, tracisz 1 Życie."
+  }
+]

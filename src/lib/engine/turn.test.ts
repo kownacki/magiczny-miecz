@@ -28,13 +28,16 @@ describe("the ring (10.2)", () => {
   });
 
   it("walks clockwise and anticlockwise from the same square", () => {
-    expect(destination(DOLNY_KRAG, "osada", 3, "zgodnie")?.id).toBe("step-2");
-    expect(destination(DOLNY_KRAG, "osada", 3, "przeciwnie")?.id).toBe("czarci-mlyn");
+    // Clockwise from Osada runs along the top edge of the ring and down its
+    // right-hand side, which is the direction the board is printed in.
+    expect(destination(DOLNY_KRAG, "osada", 3, "zgodnie")?.id).toBe("czarci-mlyn");
+    expect(destination(DOLNY_KRAG, "osada", 3, "przeciwnie")?.id).toBe("step-2");
   });
 
   it("wraps round the ring", () => {
-    expect(destination(DOLNY_KRAG, "uroczysko", 1, "zgodnie")?.id).toBe("karczma");
-    expect(destination(DOLNY_KRAG, "karczma", 1, "przeciwnie")?.id).toBe("uroczysko");
+    // Karczma is index 0, so stepping back off it has to wrap to the far end.
+    expect(destination(DOLNY_KRAG, "mrozne-pustkowie", 1, "zgodnie")?.id).toBe("karczma");
+    expect(destination(DOLNY_KRAG, "karczma", 1, "przeciwnie")?.id).toBe("mrozne-pustkowie");
   });
 
   it("returns to the start after a full lap", () => {
@@ -43,8 +46,8 @@ describe("the ring (10.2)", () => {
 
   it("reports the fields walked through, excluding the landing square", () => {
     const [clockwise] = moveOptions(DOLNY_KRAG, "karczma", 3);
-    expect(clockwise.through.map((f) => f.id)).toEqual(["mrozne-pustkowie", "grod"]);
-    expect(clockwise.field.id).toBe("bezdroza");
+    expect(clockwise.through.map((f) => f.id)).toEqual(["uroczysko", "step-2"]);
+    expect(clockwise.field.id).toBe("mokradla-2");
   });
 
   it("offers both directions even when a roll of seven lands on the same field", () => {
@@ -239,9 +242,9 @@ describe("the Kamienny Most (10.3, 10.4)", () => {
   });
 
   it("still uses the die on an ordinary ring", () => {
-    // Karczma is index 0, so three steps back wraps to index 11, Mokradła.
+    // Karczma is index 0, so three steps back wraps round to Bezdroża.
     const phase = afterRoll("karczma", 3);
     if (phase.phase !== "ruch") throw new Error("expected ruch");
-    expect(phase.options.map((o) => o.fieldId)).toEqual(["bezdroza", "mokradla-2"]);
+    expect(phase.options.map((o) => o.fieldId)).toEqual(["mokradla-2", "bezdroza"]);
   });
 });

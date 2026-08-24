@@ -11,6 +11,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
 import { CardView, type ShownCard } from "./card-view";
 import { SeatActions } from "./seat-actions";
+import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import items from "@/data/items.json";
@@ -81,6 +82,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const { code } = use(params);
   const [game, setGame] = useState<Game | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
+  /** A field the player tapped on the map, to read what it says. */
+  const [inspecting, setInspecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -167,6 +170,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     }
   }
 
+  /**
+   * Claims a seat for THIS device. Only offered when it holds none — joining
+   * twice from one browser used to overwrite its identity.
+   */
   async function join() {
     const name = prompt("Twoje imię?");
     const response = await fetch(`/api/games/${code}/join`, {
@@ -177,6 +184,27 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const data = await response.json();
     if (!response.ok) return setError(data.error);
     localStorage.setItem(`mm:${code}`, data.token);
+    refresh();
+  }
+
+  /**
+   * Adds a player who is sitting at this table but has no device of their own.
+   *
+   * This is the ordinary case, not an edge case: one laptop in the middle and
+   * everyone playing on it. The seat's token is deliberately discarded rather
+   * than stored — this device already has an identity, and taking on a second
+   * one is the bug that stranded a player earlier. The table screen acts for
+   * them the same way it acts for anyone whose turn it is.
+   */
+  async function addLocalPlayer() {
+    const name = prompt("Imię gracza?");
+    if (name === null) return;
+    const response = await fetch(`/api/games/${code}/join`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) return setError((await response.json()).error);
     refresh();
   }
 
@@ -191,6 +219,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // saying "waiting".
   const isTableScreen = mySeat?.is_host === true && game.mode === "companion";
   const tableScreenHolder = seats.find((seat) => seat.is_host)?.player_name ?? null;
+
+  // Whose character is being chosen. This device's own seat first, then any
+  // seat with no device of its own — otherwise a locally-added player could
+  // never be given a character.
+  const pickingFor =
+    mySeat && !mySeat.character_id
+      ? mySeat
+      : (seats.find((seat) => !seat.character_id) ?? null);
 
   // Cards in play this turn. A fight keeps the stack it interrupted, so the
   // panel does not empty out mid-combat.
@@ -298,6 +334,35 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         </section>
       )}
 
+      {playing && (
+        <section className="mb-8 flex flex-col items-center gap-3 lg:flex-row lg:items-start lg:gap-6">
+          <BoardMap
+            seats={seats.map((seat) => ({
+              id: seat.id,
+              seatIndex: seat.seat_index,
+              name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
+              fieldId: seat.field_id,
+              eliminated: seat.eliminated,
+            }))}
+            activeSeatIndex={game.active_seat}
+            // While the active character is choosing a direction, both landing
+            // squares are lit so the choice is made by looking at the board
+            // rather than by reading two field names.
+            highlight={
+              game.turn_state.phase === "ruch"
+                ? game.turn_state.options.map((option) => option.fieldId)
+                : []
+            }
+            onPick={(fieldId) => setInspecting(fieldId)}
+          />
+          <FieldNote
+            fieldId={inspecting ?? active?.field_id ?? null}
+            pinned={inspecting !== null}
+            onClear={() => setInspecting(null)}
+          />
+        </section>
+      )}
+
       {playing && active && (
         <div className="mb-8 grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
           <TurnPanel
@@ -360,27 +425,31 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onTrade={() => post("holdings", { action: "trade", seatId: seat.id })}
           />
         ))}
-        {seats.length < 6 && !playing && mySeatIndex === null && (
+        {seats.length < 6 && !playing && (
           <button
-            onClick={join}
+            onClick={mySeatIndex === null ? join : addLocalPlayer}
             className="rounded-lg border border-dashed border-edge px-4 py-8 text-sm text-muted transition hover:border-ochre hover:text-ink"
           >
-            + Dołącz do stołu
+            {mySeatIndex === null ? "+ Dołącz do stołu" : "+ Dodaj gracza"}
           </button>
         )}
       </section>
 
-      {!playing && mySeat && !mySeat.character_id && (
+      {!playing && pickingFor && (
         <section className="mt-12">
           <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg text-ink">
-            Wybierz postać
+            Wybierz postać{pickingFor.seat_index !== mySeatIndex
+              ? ` — ${pickingFor.player_name ?? `miejsce ${pickingFor.seat_index + 1}`}`
+              : ""}
           </h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {CHARACTERS.map((character) => (
               <button
                 key={character.id}
                 disabled={taken.has(character.id) || busy}
-                onClick={() => post("character", { characterId: character.id })}
+                onClick={() =>
+                  post("character", { characterId: character.id, seatId: pickingFor.id })
+                }
                 className="rounded border border-edge bg-panel px-3 py-2 text-left text-sm transition hover:border-ochre disabled:opacity-30"
               >
                 <span className="block font-medium text-ink">{character.name}</span>
@@ -691,6 +760,47 @@ function Stat({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * What the field under the pointer says.
+ *
+ * The map can only ever show a field's name, and half the board's rules are
+ * printed on the fields themselves — so tapping one has to produce the text, or
+ * the map would send players back to squinting at the physical board for
+ * something the app already knows.
+ */
+function FieldNote({
+  fieldId,
+  pinned,
+  onClear,
+}: {
+  fieldId: string | null;
+  pinned: boolean;
+  onClear: () => void;
+}) {
+  const field = fieldId ? fieldWithText(fieldId) : null;
+  if (!field) return null;
+  return (
+    <div className="w-full rounded-lg border border-edge/60 bg-panel/50 p-4 lg:max-w-xs">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <h3 className="font-display text-lg text-ochre">{field.name}</h3>
+        {pinned && (
+          <button onClick={onClear} className="text-[11px] text-muted hover:text-ink">
+            wróć do pola gracza
+          </button>
+        )}
+      </div>
+      {field.draw ? (
+        <p className="mb-2 text-[11px] uppercase tracking-wide text-verdigris">
+          Wyciągnij {field.draw} {field.draw === 1 ? "kartę" : "karty"}
+        </p>
+      ) : null}
+      <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
+        {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
+      </p>
     </div>
   );
 }

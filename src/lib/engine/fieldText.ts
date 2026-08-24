@@ -1,6 +1,7 @@
 /** Attaches the instructions printed on the board to the fields the engine knows about. */
 
-import fieldTexts from "@/data/dolny-fields.json";
+import dolnyTexts from "@/data/dolny-fields.json";
+import ringTexts from "@/data/ring-fields.json";
 import { FIELDS, type BoardField } from "./board";
 
 interface FieldText {
@@ -9,7 +10,15 @@ interface FieldText {
   draw?: number;
 }
 
-const TEXTS = new Map((fieldTexts as FieldText[]).map((entry) => [entry.id, entry]));
+// The lower ring and the other two were transcribed in separate passes, from
+// different crops of the scan, and are checked by different build scripts. They
+// are merged here rather than in the data so each pass keeps its own provenance.
+const TEXTS = new Map(
+  [...(dolnyTexts as FieldText[]), ...(ringTexts as FieldText[])].map((entry) => [
+    entry.id,
+    entry,
+  ]),
+);
 
 /**
  * A field with whatever board text has been transcribed for it.

@@ -17,8 +17,8 @@ describe("a character can reach the Beast from where it starts", () => {
   });
 
   it("walks the inner ring to its only crossing", () => {
-    // Karczma to Uroczysko is one step back round the ring.
-    expect(destination(DOLNY_KRAG, "karczma", 1, "przeciwnie")?.id).toBe("uroczysko");
+    // Karczma to Uroczysko is one step clockwise, up the left-hand side.
+    expect(destination(DOLNY_KRAG, "karczma", 1, "zgodnie")?.id).toBe("uroczysko");
     expect(crossingFrom("uroczysko")).toBeDefined();
   });
 

@@ -9,11 +9,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const body = await request.json().catch(() => ({}));
   // The token is what proves this device owns the seat it is editing; without
   // it any player could assign characters to anyone.
-  const seat = await verifySeat(game.id, String(body.token ?? ""));
-  if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  const actor = await verifySeat(game.id, String(body.token ?? ""));
+  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+
+  // A seated player may choose for another seat, because players added at the
+  // table have no device of their own to choose from.
+  const target = body.seatId ? String(body.seatId) : actor.id;
 
   try {
-    await chooseCharacter(seat.id, String(body.characterId ?? ""));
+    await chooseCharacter(target, String(body.characterId ?? ""));
     await bumpRevision(game.id);
     return NextResponse.json({ ok: true });
   } catch (error) {

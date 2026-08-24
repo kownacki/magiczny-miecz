@@ -82,3 +82,78 @@ export function isBlank(img, { darkness = 0.75, minInk = 0.002 } = {}) {
   }
   return seen === 0 || ink / seen < minInk;
 }
+
+/**
+ * Decodes an 8-bit non-interlaced PNG into the same `{width, height, comps, data}`
+ * shape the rest of this pipeline passes around.
+ *
+ * The pipeline normally never needs this — images arrive as raw XObjects straight
+ * out of the PDFs, already decompressed. The board is the exception: it is only
+ * kept as a PNG, and deriving the map geometry means reading its printed grid
+ * lines back out. Supports colour types 0 (grey), 2 (RGB), 4 (grey+alpha) and 6
+ * (RGBA); the scans are all type 2, the others are here so a surprise fails
+ * loudly rather than silently misreading.
+ */
+export function decodePng(buffer) {
+  if (buffer.readUInt32BE(0) !== 0x89504e47) throw new Error("not a PNG");
+
+  let width = 0;
+  let height = 0;
+  let comps = 0;
+  const idat = [];
+
+  for (let at = 8; at < buffer.length; ) {
+    const length = buffer.readUInt32BE(at);
+    const type = buffer.toString("latin1", at + 4, at + 8);
+    const body = buffer.subarray(at + 8, at + 8 + length);
+    if (type === "IHDR") {
+      width = body.readUInt32BE(0);
+      height = body.readUInt32BE(4);
+      const depth = body[8];
+      const colourType = body[9];
+      if (depth !== 8) throw new Error(`unsupported bit depth ${depth}`);
+      if (body[12] !== 0) throw new Error("interlaced PNGs are not supported");
+      comps = { 0: 1, 2: 3, 4: 2, 6: 4 }[colourType];
+      if (!comps) throw new Error(`unsupported colour type ${colourType}`);
+    } else if (type === "IDAT") {
+      idat.push(body);
+    } else if (type === "IEND") {
+      break;
+    }
+    at += 12 + length;
+  }
+
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const stride = width * comps;
+  const data = Buffer.alloc(stride * height);
+
+  // Un-filter in place, row by row. Each row is prefixed with its filter byte and
+  // refers back to the row above, so this cannot be parallelised or skipped.
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    const from = y * (stride + 1) + 1;
+    const to = y * stride;
+    const up = (y - 1) * stride;
+    for (let i = 0; i < stride; i++) {
+      const x = raw[from + i];
+      const a = i >= comps ? data[to + i - comps] : 0;
+      const b = y > 0 ? data[up + i] : 0;
+      const c = y > 0 && i >= comps ? data[up + i - comps] : 0;
+      let value;
+      if (filter === 0) value = x;
+      else if (filter === 1) value = x + a;
+      else if (filter === 2) value = x + b;
+      else if (filter === 3) value = x + ((a + b) >> 1);
+      else if (filter === 4) {
+        const p = a + b - c;
+        const pa = Math.abs(p - a);
+        const pb = Math.abs(p - b);
+        const pc = Math.abs(p - c);
+        value = x + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c);
+      } else throw new Error(`unknown filter ${filter} on row ${y}`);
+      data[to + i] = value & 0xff;
+    }
+  }
+
+  return { width, height, comps, data };
+}

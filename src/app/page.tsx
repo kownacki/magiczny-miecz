@@ -41,8 +41,8 @@ export default function Home() {
           Magiczny Miecz
         </h1>
         <p className="mt-3 text-sm text-muted">
-          Sędzia do gry planszowej. Grasz na planszy — liczenie, rzuty i kolejność kart
-          bierze na siebie aplikacja.
+          Zagraj całą partię tutaj albo przy planszy — liczenie, rzuty i kolejność
+          kart aplikacja bierze na siebie w obu trybach.
         </p>
       </header>
 
