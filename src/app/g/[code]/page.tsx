@@ -7,6 +7,7 @@ import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
 import { manualNote } from "@/lib/engine/coverage";
+import { abilitiesOfCharacter, notesForCharacter } from "@/lib/engine/characters";
 import { characterImageUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
@@ -732,7 +733,22 @@ function SeatCard({
             <details className="mt-2">
               <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted">
                 Zdolności ({character.abilities.length})
+                {abilitiesOfCharacter(seat.character_id).length > 0 && (
+                  <span className="ml-2 normal-case tracking-normal text-verdigris/80">
+                    {abilitiesOfCharacter(seat.character_id).map(describeAbility).join(" · ")}
+                  </span>
+                )}
               </summary>
+              {/* Which of them the app is watching for, and which the player has
+                  to remember. A Charakterystyka overrides the general rules
+                  (8.2), so a power nobody applies is a rule quietly dropped. */}
+              {notesForCharacter(seat.character_id).length > 0 && (
+                <ul className="mt-1 flex flex-col gap-0.5 border-l-2 border-ochre/40 pl-2 text-[10px] leading-snug text-ochre/80">
+                  {notesForCharacter(seat.character_id).map((note) => (
+                    <li key={note}>↳ {note}</li>
+                  ))}
+                </ul>
+              )}
               <ol className="mt-1 flex list-decimal flex-col gap-1 pl-4 text-[11px] leading-relaxed text-muted">
                 {character.abilities.map((ability, index) => (
                   <li key={index}>{ability}</li>
@@ -921,8 +937,10 @@ function describeAbility(ability: Ability): string {
         : "ginie zamiast ciebie";
     case "wymagany":
       return ability.place === "most" ? "wstęp na Kamienny Most" : "wstęp do Zamku Bestii";
-    case "przeprawa-gratis":
-      return "Przeprawa za darmo";
+    case "bez-oplaty":
+      return `bez opłaty: ${ability.fields.map(fieldName).filter((n, i, all) => all.indexOf(n) === i).join(", ")}`;
+    case "zakazane":
+      return `nie możesz używać: ${ability.cardIds.map((id) => CARD_NAMES.get(id) ?? id).join(", ")}`;
     case "przeprawa-kostki":
       return `Trzęsawiska na ${ability.dice} kostkę`;
     case "przeprawa-wszedzie":

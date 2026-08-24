@@ -43,7 +43,7 @@ screen next to every drawn card.
 | | rule | status | where |
 |---|---|---|---|
 | 3.1 | gold buys things | ✅ | `payFerry`; shops are ◐, see 21.2 |
-| 3.2 | each character starts with 1 | ✅ | column default |
+| 3.2 | each character starts with 1, unless its card says otherwise | ✅ | `STARTING_KIT` (the Książę's five) |
 | 3.3 | prices are in Sztuki Złota | — | |
 | 3.4 | payments go back to the supply | — | no token supply to model |
 | 3.5 | gold never counts against the item limit | ✅ | `carriedCount` |
@@ -91,8 +91,8 @@ screen next to every drawn card.
 
 | | rule | status | where |
 |---|---|---|---|
-| 8.1 | each character has special abilities and limits | ❌ | **all 27 are shown as text and consulted by nothing** |
-| 8.2 | an ability overrides the general rules | ❌ | there is no mechanism for it |
+| 8.1 | each character has special abilities and limits | ◐ | the mechanical ones are encoded in the card vocabulary (`characters.ts`); the rest are named on screen |
+| 8.2 | an ability overrides the general rules | ◐ | encoded abilities join the seat's own, so they win where they apply |
 
 ## 9. Zaklęcia
 
@@ -102,7 +102,7 @@ screen next to every drawn card.
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side |
 | 9.4 | may not be discarded unless over the limit | ❌ | |
-| 9.5 | drawn from the top; the pile is reshuffled when empty | ✅ | `drawSpell` |
+| 9.5 | drawn from the top; the pile is reshuffled when empty; some characters start holding one | ✅ | `drawSpell`, `STARTING_KIT` |
 | 9.6 | **casting** | ❌ | **there is no way to cast a spell** |
 | 9.7 | no spell works on the Most or the Bestia | ❌ | nothing to enforce yet |
 
@@ -247,8 +247,10 @@ descending order of what they cost a table:
 1. **9.6 — spells cannot be cast.** Thirty transcribed cards that do nothing.
    17.3 and 17.7 depend on it, and 17.7 (both sides casting mid-fight) is the
    rule that decided this game could not be played asynchronously.
-2. **8.1 — character abilities are inert.** Every player has two or three
-   printed on the card in front of them, and the engine consults none.
+2. **8.1 — character abilities are only half alive.** The mechanical ones now
+   work; the ones that bend a rule rather than add a number (the Krasnolud's
+   reroll, the Łotr's dirty fighting, the Olbrzym's extra card) are named on
+   screen for the player to apply.
 3. ~~**12.1 / 13.4 / 16.8 — cards on fields.**~~ Done. The board accumulates
    what previous characters left behind, the map marks which fields are holding
    something, and a field draws only up to its printed count.

@@ -11,7 +11,7 @@ import {
   canEscapeAt,
   carryLimit,
   crossingDice,
-  ferryIsFree,
+  tollIsWaived,
   heldAbilities,
   isSpared,
   moveBonusRange,
@@ -133,9 +133,13 @@ describe("crossings and tolls", () => {
     expect(crossingDice(abilitiesOf("rusalka"), "lodowy-las", 2)).toBe(2);
   });
 
-  it("waives the ferryman's Sztuka Złota for the Przewoźnik", () => {
-    expect(ferryIsFree(abilitiesOf("przewoznika"))).toBe(true);
-    expect(ferryIsFree(abilitiesOf("rusalka"))).toBe(false);
+  it("waives the ferryman's Sztuka Złota for the Przewoźnik, at both Przeprawy", () => {
+    const p = abilitiesOf("przewoznika");
+    expect(tollIsWaived(p, "przeprawa-1")).toBe(true);
+    expect(tollIsWaived(p, "przeprawa-2")).toBe(true);
+    // His help is the ferry, not every toll on the board.
+    expect(tollIsWaived(p, "straznik-magicznych-wrot")).toBe(false);
+    expect(tollIsWaived(abilitiesOf("rusalka"), "przeprawa-1")).toBe(false);
   });
 });
 

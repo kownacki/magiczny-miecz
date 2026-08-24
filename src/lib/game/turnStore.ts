@@ -11,7 +11,8 @@ import {
   ringOf,
 } from "@/lib/engine/board";
 import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
-import { crossingDice, ferryIsFree, heldAbilities } from "@/lib/engine/abilities";
+import { crossingDice, heldAbilities, tollIsWaived } from "@/lib/engine/abilities";
+import { abilitiesOfCharacter, startingKit } from "@/lib/engine/characters";
 import {
   afterDraw,
   afterMove,
@@ -154,8 +155,53 @@ export async function startGame(gameId: string): Promise<void> {
       deck: game.mode === "simulation" ? freshDecks() : null,
     })
     .eq("id", gameId);
+  // Ten of the twenty-seven characters own something before anyone rolls: the
+  // Książę his purse of five and a Hełm, the Mag two Zaklęcia, the Zdobywca a
+  // Miecz and a Tarcza. Dealing everyone one Sztuka Złota and nothing else is
+  // wrong from the first turn, and wrong in the direction that flattens the
+  // characters into each other.
+  for (const seat of ready) {
+    await dealStartingKit(gameId, seat);
+  }
+
   await journal(gameId, null, 1, "start", { seats: ready.length });
   await bumpRevision(gameId);
+}
+
+async function dealStartingKit(gameId: string, seat: SeatRow): Promise<void> {
+  if (!seat.character_id) return;
+  const kit = startingKit(seat.character_id);
+
+  if (kit.items?.length) {
+    await db.from("holdings").insert(
+      kit.items.map((cardId) => ({
+        game_id: gameId,
+        seat_id: seat.id,
+        card_id: cardId,
+        kind: "item",
+        face: "open",
+      })),
+    );
+  }
+
+  // 3.2: everyone starts on one "chyba, że jej Karta daje w tym względzie inne
+  // instrukcje" — so the column default stands unless the character overrides.
+  if (kit.zloto !== undefined) {
+    await db.from("seats").update({ zloto: kit.zloto }).eq("id", seat.id);
+  }
+
+  // Spells go through the ordinary draw so the deck stays honest about what has
+  // left it, and so 2.6's capacity is checked the same way as at any other time.
+  for (let i = 0; i < (kit.spells ?? 0); i++) {
+    await drawSpell(gameId, seat.id);
+  }
+
+  if (kit.items?.length || kit.zloto !== undefined || kit.spells) {
+    await journal(gameId, seat.id, 1, "wyposazenie-poczatkowe", {
+      character: seat.character_id,
+      ...kit,
+    });
+  }
 }
 
 function activeSeatOf(seats: SeatRow[], game: GameRow): SeatRow {
@@ -1031,12 +1077,17 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
   if (pay) {
     // The Przewoźnik among your Przyjaciele is the ferryman's colleague: "nie
     // będziesz musiał płacić 1 Sztuki Złota za Przeprawę".
-    const abilities = heldAbilities(
-      (await holdingsFor(gameId))
-        .filter((h) => h.seat_id === seat.id)
-        .map((h) => h.card_id),
-    );
-    const toll = ferryIsFree(abilities) ? 0 : FERRY_TOLL;
+    const abilities = [
+      ...heldAbilities(
+        (await holdingsFor(gameId))
+          .filter((h) => h.seat_id === seat.id)
+          .map((h) => h.card_id),
+      ),
+      // 8.2: a character's own powers sit alongside what it is carrying, and
+      // override the general rules where they disagree.
+      ...abilitiesOfCharacter(seat.character_id),
+    ];
+    const toll = tollIsWaived(abilities, here) ? 0 : FERRY_TOLL;
     if (seat.zloto < toll) {
       throw new Error("Nie masz czym zapłacić przewoźnikowi.");
     }
@@ -1239,7 +1290,10 @@ export async function crossRing(
     // knows, so there is nothing for a player to adjudicate. A physical die
     // still overrides, which is what die_source is for.
     const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-    const abilities = heldAbilities(held.map((h) => h.card_id));
+    const abilities = [
+      ...heldAbilities(held.map((h) => h.card_id)),
+      ...abilitiesOfCharacter(seat.character_id),
+    ];
     // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
     // of two, which is the difference between a hard crossing and a likely one.
     const count = crossingDice(abilities, crossing.obstacle, crossing.test.dice);

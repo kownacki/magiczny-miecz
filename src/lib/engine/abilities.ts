@@ -73,8 +73,14 @@ export type Ability =
   | { kind: "ginie-zamiast-ciebie"; onRollUpTo?: number; onlyWhenRaiding?: boolean }
   /** A key rather than a bonus: no Magiczny Miecz, no Kamienny Most. */
   | { kind: "wymagany"; place: "most" | "zamek-bestii" }
-  /** "nie będziesz musiał płacić 1 Sztuki Złota za Przeprawę" (Przewoźnik). */
-  | { kind: "przeprawa-gratis" }
+  /**
+   * Passes a field's toll without paying it. The Przewoźnik waives the
+   * ferryman's Sztuka Złota; the Karzeł walks past the Strażnik Magicznych Wrót
+   * without buying his way through. One shape, two tolls.
+   */
+  | { kind: "bez-oplaty"; fields: readonly string[] }
+  /** Cards this character may not hold at all — the Pustelnik bears no blade. */
+  | { kind: "zakazane"; cardIds: readonly string[] }
   /**
    * Shifts a die roll, either at named fields or in a kind of fight.
    *
@@ -252,7 +258,7 @@ export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
   ],
   krzyzowiec: [{ kind: "punkty", miecz: 2 }],
   tragarz: [{ kind: "udzwig", items: 4 }],
-  przewoznika: [{ kind: "przeprawa-gratis" }],
+  przewoznika: [{ kind: "bez-oplaty", fields: ["przeprawa-1", "przeprawa-2"] }],
   rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
   /**
    * Deliberately no `punkty`: the Poszukiwacz "posiada 3 punkty Miecza" of his
@@ -374,8 +380,18 @@ export function canEscapeAt(abilities: readonly Ability[], fieldId: string): boo
   );
 }
 
-export function ferryIsFree(abilities: readonly Ability[]): boolean {
-  return abilities.some((ability) => ability.kind === "przeprawa-gratis");
+/** Whether this character walks past the toll charged on a given field. */
+export function tollIsWaived(abilities: readonly Ability[], fieldId: string): boolean {
+  return abilities.some(
+    (ability) => ability.kind === "bez-oplaty" && ability.fields.includes(fieldId),
+  );
+}
+
+/** Cards this character may never hold (its own Charakterystyka, 8.1). */
+export function isForbidden(abilities: readonly Ability[], cardId: string): boolean {
+  return abilities.some(
+    (ability) => ability.kind === "zakazane" && ability.cardIds.includes(cardId),
+  );
 }
 
 /**

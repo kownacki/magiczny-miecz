@@ -1,0 +1,238 @@
+/** What each of the 27 characters brings to the table, and what its own Charakterystyka does (8.1, 8.2). */
+
+import type { Ability } from "./abilities";
+
+/**
+ * Rule 8.1 gives every character two to five printed powers, and until now the
+ * app showed them and consulted none. They are the most visible thing in the
+ * game — each player has theirs face up in front of them all evening.
+ *
+ * They are expressed in the *same* vocabulary as the cards, because most of
+ * them are the same shapes: the Barbarzyńca is safe at the Urwisko exactly as
+ * the Opiekun makes you safe there, the Karzeł walks past the Strażnik's toll
+ * exactly as the Przewoźnik walks past the ferryman's. A separate character
+ * vocabulary would have duplicated all of it and then drifted.
+ *
+ * What does not fit is left out and named in `CHARACTER_NOTES`, on the same
+ * terms as the cards: the app says which powers it is carrying and which the
+ * player has to remember, rather than going quiet and hoping.
+ */
+export const CHARACTER_ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
+  barbarzynca: [
+    {
+      kind: "bezpieczny",
+      fields: ["urwisko-1", "urwisko-2", "wilczy-parow"],
+      from: "rzut",
+    },
+  ],
+  elf: [
+    { kind: "bezpieczny", fields: ["urwisko-1", "urwisko-2"], from: "rzut" },
+    // "na Równinach" — all three of them.
+    {
+      kind: "ucieczka",
+      fields: ["rownina-traw", "rownina-snu", "rownina-samotnych-skal"],
+    },
+  ],
+  goblin: [
+    { kind: "bezpieczny", fields: ["krag-mocy", "wilczy-parow"], from: "rzut" },
+  ],
+  hobgoblin: [
+    { kind: "bezpieczny", fields: ["kurhan", "krypta-upiorow"], from: "rzut" },
+    { kind: "ucieczka", fields: ["step-1", "step-2"] },
+    // "Określając Miecz Kamiennego Potwora ... możesz odjąć 1 od wyniku rzutu."
+    {
+      kind: "modyfikator-rzutu",
+      gdzie: { na: "pola", fields: ["ruiny-twierdzy"] },
+      delta: -1,
+    },
+  ],
+  hummit: [
+    {
+      kind: "bezpieczny",
+      fields: ["krag-mocy", "urwisko-1", "urwisko-2"],
+      from: "rzut",
+    },
+  ],
+  troll: [{ kind: "bezpieczny", fields: ["krag-mocy", "kurhan"], from: "rzut" }],
+  obbol: [
+    { kind: "ucieczka", fields: ["mokradla-1", "mokradla-2"] },
+    // The mirror of the Hobgoblin's, at the other bridge entrance.
+    {
+      kind: "modyfikator-rzutu",
+      gdzie: { na: "pola", fields: ["wymarle-miasto"] },
+      delta: -1,
+    },
+  ],
+  karzel: [{ kind: "bez-oplaty", fields: ["straznik-magicznych-wrot"] }],
+  pustelnik: [
+    { kind: "magia-do-miecza" },
+    { kind: "zakazane", cardIds: ["miecz", "sztylet", "helm", "zbroja"] },
+  ],
+  magog: [
+    // "Możesz dodać 1 ... w walkach rozgrywanych na Równinach."
+    {
+      kind: "modyfikator-rzutu",
+      gdzie: {
+        na: "pola",
+        fields: ["rownina-traw", "rownina-snu", "rownina-samotnych-skal"],
+      },
+      delta: 1,
+    },
+  ],
+};
+
+/**
+ * What a character owns before anybody rolls anything.
+ *
+ * Ten of the twenty-seven start with equipment, a spell or two, or a purse, and
+ * the app gave every one of them a single Sztuka Złota and nothing else — which
+ * is wrong from the first turn of every game, and wrong in the direction that
+ * quietly flattens the characters into each other.
+ *
+ * `zloto` overrides rule 3.2's single coin ("chyba, że jej Karta daje w tym
+ * względzie inne instrukcje"); leaving it out means the default stands.
+ */
+export interface StartingKit {
+  /** Card ids from the equipment sheet, taken as items. */
+  items?: readonly string[];
+  /** Zaklęcia dealt at setup (9.5). */
+  spells?: number;
+  zloto?: number;
+}
+
+export const STARTING_KIT: Readonly<Record<string, StartingKit>> = {
+  "bledny-rycerz": { items: ["miecz", "zbroja"] },
+  czarodziej: { spells: 2 },
+  demon: { spells: 1 },
+  hummit: { spells: 1 },
+  kaplan: { spells: 1 },
+  kaplanka: { spells: 2 },
+  karzel: { spells: 2 },
+  kat: { spells: 1, items: ["miecz"] },
+  krasnolud: { items: ["tarcza", "sztylet"] },
+  ksiaze: { items: ["helm", "miecz"], zloto: 5 },
+  lotr: { items: ["sztylet"] },
+  mag: { spells: 2 },
+  magog: { spells: 1 },
+  quark: { spells: 1 },
+  "rycerz-ciemnosci": { spells: 1, items: ["miecz"] },
+  wiedzma: { spells: 1 },
+  zdobywca: { items: ["miecz", "tarcza"] },
+};
+
+/**
+ * The powers the app is NOT carrying, per character, in the words a player
+ * needs to act on.
+ *
+ * Same bargain as the cards: silence would let a table assume the referee has
+ * a power it does not have. Almost every character has at least one of these,
+ * because the interesting half of a Charakterystyka is usually the half that
+ * bends a rule rather than adds a number.
+ */
+export const CHARACTER_NOTES: Readonly<Record<string, readonly string[]>> = {
+  awanturnik: [
+    "Zamiast atakować Postać możesz zabrać jej 1 losowe Zaklęcie.",
+    "W walce rzucasz dwa razy i bierzesz wyższy wynik.",
+  ],
+  barbarzynca: [
+    "Na Bagnach rzuć kostką: 1 lub 2 — nie tracisz Przedmiotu ani Przyjaciela.",
+    "Wygrywając zaczepkę bez odbierania Życia możesz zaatakować tę Postać drugi raz.",
+  ],
+  "bledny-rycerz": [
+    "Przegraną zwykłą walkę możesz powtórzyć raz; drugi wynik jest ostateczny.",
+    "Z Excaliburem lub Świętym Graalem bierzesz o 1 Zaklęcie więcej i odrzucasz jedno.",
+    "Każdej napotkanej Postaci możesz odebrać Krzyżowca i Giermka.",
+  ],
+  czarodziej: [
+    "Musisz mieć zawsze co najmniej 2 Zaklęcia — dobierasz po rzuceniu przedostatniego.",
+    "Możesz ignorować wyciągnięte Spotkania i Nieznajomych.",
+    "Możesz ignorować Uroczą Diablicę.",
+  ],
+  demon: [
+    "Ignorujesz napotkane Demony.",
+    "Rzuć kostką przeciw każdemu Zaklęciu na ciebie: 1 lub 2 — ignorujesz je.",
+    "Wygrywając walkę magiczną z Postacią możesz dodać zabrane Życie do swojego.",
+  ],
+  elf: [
+    "Kończąc ruch na Równinie możesz iść dalej — raz na turę, bez badania Obszaru.",
+  ],
+  goblin: [
+    "Nobbina możesz wziąć jako Przyjaciela; dodaje swój Miecz do twojego.",
+    "Hadrona możesz przesunąć na wolny Obszar w swoim Kręgu; nie zaatakuje cię.",
+  ],
+  hobgoblin: ["Hadrona możesz wziąć jako Przyjaciela; dodaje swój Miecz do twojego."],
+  hummit: [
+    "W walkach na Stepie i w Dolinach dodajesz 1 do rzutu.",
+    "Możesz ignorować Zaklętą Ścieżkę.",
+    "Wilka albo Łosia możesz dosiąść — wtedy ruch określasz dwoma kostkami.",
+  ],
+  kaplan: [
+    "Podczas modlitw możesz powtórzyć rzut; drugi wynik jest ostateczny.",
+    "Demona możesz próbować pokonać egzorcyzmem: 1, 2 lub 3 — zwyciężasz.",
+  ],
+  kaplanka: [
+    "Musisz mieć zawsze co najmniej 2 Zaklęcia.",
+    "Bestie cię nie atakują.",
+    "Łoś, Wilk lub Niedźwiedź zostaje Przyjacielem przy rzucie 1, 2 lub 3.",
+  ],
+  karzel: ["Musisz mieć zawsze co najmniej 2 Zaklęcia."],
+  kat: [
+    "Naturę wybierasz sam, po wszystkich innych graczach.",
+    "Atakując możesz ścinać głowę: 1 lub 2 — udaje się. Inaczej walczysz normalnie.",
+    "Atakując wybierasz rodzaj walki — zwykłą albo magiczną.",
+  ],
+  krasnolud: [
+    "Każdy swój rzut możesz powtórzyć raz; drugi wynik jest ostateczny.",
+    "Rzuć kostką przeciw każdemu Zaklęciu na ciebie: 1 lub 2 — ignorujesz je.",
+  ],
+  ksiaze: [
+    "Hełm i Miecz odzyskasz w Zamku, jeśli je stracisz.",
+    "Możesz nie badać Obszaru — Karty ciągniesz, ale zostawiasz zakryte.",
+  ],
+  lotr: [
+    "Nie możesz mieć żadnych Przyjaciół.",
+    "Pokonanej Postaci możesz odebrać 1 punkt Miecza lub Magii zamiast Życia.",
+    "Atakując możesz walczyć nieuczciwie — przeciwnik nie dodaje rzutu do Miecza.",
+  ],
+  mag: ["Musisz mieć zawsze co najmniej 1 Zaklęcie.", "Golem i Homunculus cię nie atakują."],
+  magog: ["Naturę możesz zmieniać dowolnie, ale zawsze musi być określona.", "Możesz ignorować Mgłę."],
+  obbol: ["Przegrywasz dopiero przy różnicy 2 punktów; różnica 1 to remis."],
+  olbrzym: [
+    "Kończąc ruch na zajętym Obszarze idziesz dalej, na pierwszy wolny.",
+    "Przeciw silniejszej Postaci liczy się wyłącznie wynik rzutu kostką.",
+    "Ciągniesz o 1 Kartę Zdarzeń więcej i jedną odrzucasz.",
+  ],
+  pustelnik: ["Zamiast walki możesz odpędzić Demona na wolny Obszar w swoim Kręgu."],
+  quark: [
+    "Zamiast ataku możesz rzucić urok — ofiara traci turę, ty wykorzystujesz jej ruch.",
+    "Rzut 6 na ruch pozwala przenieść się na dowolny Obszar w twoim Kręgu.",
+  ],
+  "rycerz-ciemnosci": [
+    "Atakując wybierasz rodzaj walki — zwykłą albo magiczną.",
+    "Za każde 10 punktów Magii pokonanych Demonów: 1 Zaklęcie albo 1 punkt Magii.",
+    "W Turnieju Rycerskim możesz stoczyć dwa pojedynki, jeśli wygrasz pierwszy.",
+  ],
+  spryciarz: [
+    "Od napotkanej Postaci możesz wyłudzić 1 Sz. Z. przy rzucie 1.",
+    "Możesz towarzyszyć Postaci ruszającej z twojego Obszaru, bez badania celu.",
+    "Możesz oswoić 1 Bestię — zostaje Przyjacielem i dodaje swój Miecz.",
+  ],
+  troll: ["Pokonaną Postać możesz przepędzić o tyle Obszarów, ile wyrzucisz."],
+  wiedzma: ["Zamiast walki możesz rzucić urok — ofiara musi iść do Świątyni, by go zdjąć."],
+  zdobywca: [
+    "Kartę Przyjaciela możesz zawsze wymienić na 1 punkt Życia.",
+    "Po wygranej zwykłej walce możesz odebrać 2 punkty Życia.",
+  ],
+};
+
+export function abilitiesOfCharacter(characterId: string | null): readonly Ability[] {
+  return characterId ? (CHARACTER_ABILITIES[characterId] ?? []) : [];
+}
+
+export function notesForCharacter(characterId: string | null): readonly string[] {
+  return characterId ? (CHARACTER_NOTES[characterId] ?? []) : [];
+}
+
+export function startingKit(characterId: string): StartingKit {
+  return STARTING_KIT[characterId] ?? {};
+}
