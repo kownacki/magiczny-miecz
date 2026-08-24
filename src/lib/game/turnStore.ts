@@ -12,6 +12,7 @@ import {
 } from "@/lib/engine/board";
 import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
 import { crossingDice, heldAbilities, tollIsWaived } from "@/lib/engine/abilities";
+import { spellScript } from "@/lib/engine/spells";
 import { abilitiesOfCharacter, startingKit } from "@/lib/engine/characters";
 import {
   afterDraw,
@@ -68,6 +69,11 @@ import type { Spell } from "@/data/types";
 
 const SPELLS = spellsData as Spell[];
 const SPELL_BY_REF = new Map(SPELLS.map((s) => [cardRef(s.source), s]));
+// Duplicated spells share an id, so first-wins is the right and only sensible
+// reading — the copies are the same card.
+const SPELL_BY_ID = new Map<string, (typeof SPELLS)[number]>(
+  SPELLS.map((s) => [s.id, s] as const),
+);
 
 /**
  * Both piles a simulated game deals from.
@@ -506,6 +512,80 @@ export async function beginFight(gameId: string, cardId: string): Promise<void> 
   await db.from("games").update({ turn_state: next }).eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "walka-start", { cardId });
   await bumpRevision(gameId);
+}
+
+/**
+ * Speaks a Zaklęcie (9.6).
+ *
+ * The card leaves the caster's hand for the used pile and the table is told
+ * what was cast and at whom. What the spell *does* is not applied: these are
+ * the most interconnected cards in the box — Zwierciadło reflects whatever was
+ * just cast, Władca Zaklęć negates it, Wojna Żywiołów switches every spell and
+ * magic item off until the caster's next turn — and a referee that got one of
+ * those subtly wrong would be worse than one that stayed out of it.
+ *
+ * What the app does own is the bookkeeping a table actually loses: whose hand
+ * it left, that it is spent, and that everybody heard.
+ *
+ * 9.7 is the one hard prohibition and is enforced: nothing works on the
+ * creatures of the Kamienny Most, nor on the Bestia.
+ */
+export async function castSpell(
+  gameId: string,
+  seatId: string,
+  holdingId: string,
+  target: { seatIndex?: number; note?: string } = {},
+): Promise<{ spell: string; effect: string }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const caster = seats.find((s) => s.id === seatId);
+  if (!caster) throw new Error("Nie ma takiego gracza.");
+
+  const held = (await holdingsFor(gameId)).find(
+    (h) => h.id === holdingId && h.seat_id === seatId && h.kind === "spell",
+  );
+  if (!held) throw new Error("Ta Postać nie ma tego Zaklęcia.");
+
+  const script = spellScript(held.card_id);
+  const spell = SPELL_BY_ID.get(held.card_id);
+
+  // 9.7: "Żadne Zaklęcie nie działa na istoty napotkane na Kamiennym Moście ani
+  // na samą Bestię." Where the caster stands is what decides it.
+  const onTheBridge = caster.field_id ? ringOf(caster.field_id) === KAMIENNY_MOST : false;
+  const aimedAtSomethingThere =
+    script?.target === "wrog" || script?.target === "postac-lub-wrog";
+  if (onTheBridge && aimedAtSomethingThere) {
+    throw new Error("Na Kamiennym Moście Zaklęcia nie działają na tutejsze istoty (9.7).");
+  }
+
+  await db.from("holdings").delete().eq("id", holdingId);
+
+  // Back to the used pile, so the spell deck can be reshuffled honestly (9.5).
+  if (game.mode === "simulation") {
+    const decks = decksOf(game);
+    await db
+      .from("games")
+      .update({ deck: { ...decks, spells: discardTo(decks.spells, [held.card_id]) } })
+      .eq("id", gameId);
+  }
+
+  const victim =
+    target.seatIndex !== undefined
+      ? (seats.find((s) => s.seat_index === target.seatIndex)?.player_name ?? null)
+      : null;
+
+  await journal(gameId, caster.id, game.turn, "zaklecie", {
+    cardId: held.card_id,
+    name: spell?.name ?? held.card_id,
+    ...(victim ? { target: victim } : {}),
+    ...(target.note ? { note: target.note } : {}),
+  });
+  await bumpRevision(gameId);
+
+  return {
+    spell: spell?.name ?? held.card_id,
+    effect: script?.effect ?? spell?.text ?? "",
+  };
 }
 
 export async function setFightPlayerTotal(gameId: string, total: number): Promise<void> {

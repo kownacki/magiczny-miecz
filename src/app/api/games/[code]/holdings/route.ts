@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
 import {
+  castSpell,
   changeNature,
   drawSpell,
   dropCard,
@@ -35,6 +36,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "drop":
         await dropCard(game.id, String(body.holdingId));
         break;
+      case "cast":
+        // Casting is the caster's own act (9.6), but the table screen plays for
+        // whoever is sitting there, so the seat is taken from the body like
+        // every other action here.
+        return NextResponse.json(
+          await castSpell(
+            game.id,
+            String(body.seatId ?? actor.id),
+            String(body.holdingId),
+            {
+              ...(typeof body.targetSeat === "number" ? { seatIndex: body.targetSeat } : {}),
+              ...(body.note ? { note: String(body.note) } : {}),
+            },
+          ),
+        );
       case "spell":
         return NextResponse.json({
           spellId: await drawSpell(game.id, String(body.seatId ?? actor.id)),

@@ -14,6 +14,8 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
 import { CardView, type ShownCard } from "./card-view";
 import { SeatActions } from "./seat-actions";
+import { SpellHand } from "./spell-hand";
+import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
@@ -421,6 +423,33 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           />
           <CardView cards={shown} />
         </div>
+      )}
+
+      {/* 9.3 keeps a hand secret, so this renders only for the seat that holds
+          it — and 17.7 means a spell can be spoken during somebody else's
+          fight, so it is not gated on whose turn it is. */}
+      {playing && mySeat && (
+        <SpellHand
+          spells={mySeat.holdings
+            .filter((held) => held.kind === "spell")
+            .map((held) => ({ holdingId: held.id, cardId: held.cardId }))}
+          moment={momentOf(game.turn_state.phase, game.turn_state.phase !== "rzut")}
+          opponents={seats
+            .filter((seat) => seat.character_id && seat.seat_index !== mySeat.seat_index)
+            .map((seat) => ({
+              seatIndex: seat.seat_index,
+              name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
+            }))}
+          busy={busy}
+          onCast={(holdingId, targetSeat) =>
+            post("holdings", {
+              action: "cast",
+              seatId: mySeat.id,
+              holdingId,
+              ...(targetSeat !== undefined ? { targetSeat } : {}),
+            })
+          }
+        />
       )}
 
       {playing && active && (mySeatIndex === active.seat_index || isTableScreen) && (
@@ -884,7 +913,12 @@ function describeResult(result: unknown): string | null {
     dice?: number[];
     magia?: number;
     outcome?: string;
+    spell?: string;
+    effect?: string;
   };
+  // A spell has to be announced loudly: 9.6 reaches its victim anywhere on the
+  // board, so the person it lands on may not be looking at this turn at all.
+  if (data.spell) return `Rzucono Zaklęcie: ${data.spell}. ${data.effect ?? ""}`.trim();
   if (!Array.isArray(data.dice) || typeof data.magia !== "number") return null;
   const total = data.dice.reduce((sum, die) => sum + die, 0);
   const verdict =
@@ -914,13 +948,13 @@ function describeAbility(ability: Ability): string {
     case "oslona":
       return `osłona przy przegranej (rzut ≤ ${ability.upTo})`;
     case "bezpieczny": {
-      const where = ability.fields.map(fieldName).join(", ");
+      const where = fieldNames(ability.fields);
       if (ability.from === "rzut") return `bez rzutu: ${where}`;
       if (ability.from === "zycie") return `bez straty Życia: ${where}`;
       return `bez straty Przedmiotu: ${where}`;
     }
     case "ucieczka":
-      return `ucieczka przed Wrogiem: ${ability.fields.map(fieldName).join(", ")}`;
+      return `ucieczka przed Wrogiem: ${fieldNames(ability.fields)}`;
     case "udzwig":
       return ability.items === "bez-limitu"
         ? "niesie dowolną liczbę Przedmiotów"
@@ -972,6 +1006,17 @@ function describeAbility(ability: Ability): string {
 
 function fieldName(fieldId: string): string {
   return FIELDS.get(fieldId)?.name ?? fieldId;
+}
+
+/**
+ * Field names for a list, without saying "Urwisko, Urwisko".
+ *
+ * Six places on the board are printed twice and carry suffixed ids, and a card
+ * that names one almost always names both — so the ids are right and the label
+ * is what needs to collapse.
+ */
+function fieldNames(fieldIds: readonly string[]): string {
+  return [...new Set(fieldIds.map(fieldName))].join(", ");
 }
 
 /**

@@ -98,13 +98,13 @@ screen next to every drawn card.
 
 | | rule | status | where |
 |---|---|---|---|
-| 9.1 | a spell's effect is on its card | ◐ | text shown; no effect encoded |
+| 9.1 | a spell's effect is on its card | ◐ | every spell's timing, target and effect are typed; the effect is stated, not applied |
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side |
 | 9.4 | may not be discarded unless over the limit | ❌ | |
 | 9.5 | drawn from the top; the pile is reshuffled when empty; some characters start holding one | ✅ | `drawSpell`, `STARTING_KIT` |
-| 9.6 | **casting** | ❌ | **there is no way to cast a spell** |
-| 9.7 | no spell works on the Most or the Bestia | ❌ | nothing to enforce yet |
+| 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ◐ | `castSpell` — the window is enforced, the card is spent and the table is told; the effect is the players' |
+| 9.7 | no spell works on the Most or the Bestia | ✅ | refused in `castSpell` |
 
 ## 10. Tury
 
@@ -187,12 +187,12 @@ screen next to every drawn card.
 |---|---|---|---|
 | 17.1 | when a fight happens | ✅ | |
 | 17.2 | flight is decided before any dice | ✅ | `escape` |
-| 17.3 | spells must be used before the roll | ❌ | no casting |
+| 17.3 | spells must be used before the roll | ◐ | the fight window offers them; nothing forces the order |
 | 17.4 | one die each, added to total Miecz; loser loses 1 Życie | ✅ | `compareCombat` |
 | 17.4 | an item or spell may prevent that loss | ❌ | `oslona` is encoded but nothing consumes it |
 | 17.5 | several enemies at once add their Miecze together | ❌ | one opponent at a time |
 | 17.6 | the attacked character may try to slip away | ✅ | |
-| 17.7 | **both** characters may cast before the roll | ❌ | no casting |
+| 17.7 | **both** characters may cast before the roll | ◐ | a hand is castable during anyone's fight, not only its owner's turn; there is no explicit reaction pause |
 | 17.8 | attacker's Miecz worked out first | ✅ | |
 | 17.9 | the winner takes a Życie, an item, or a Sztuka Złota | ◐ | the Życie is applied; the choice is the players' |
 | 17.10 | a draw costs nobody anything | ✅ | |
@@ -244,9 +244,10 @@ screen next to every drawn card.
 Counting rules is misleading — 20.5 and 9.6 are not the same size of hole. In
 descending order of what they cost a table:
 
-1. **9.6 — spells cannot be cast.** Thirty transcribed cards that do nothing.
-   17.3 and 17.7 depend on it, and 17.7 (both sides casting mid-fight) is the
-   rule that decided this game could not be played asynchronously.
+1. **9.6 — spells are cast but not applied.** All 27 have a typed window and
+   target, the card leaves the hand and the table is told; what the spell does
+   is still the players'. The remaining piece is 17.7's explicit reaction pause
+   before combat dice.
 2. **8.1 — character abilities are only half alive.** The mechanical ones now
    work; the ones that bend a rule rather than add a number (the Krasnolud's
    reroll, the Łotr's dirty fighting, the Olbrzym's extra card) are named on
