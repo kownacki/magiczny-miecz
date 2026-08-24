@@ -67,9 +67,11 @@ mode behind the same engine.
 scan is image-only with **no text layer**, so all transcription is done by
 reading images. `node scripts/extract-assets.mjs` rebuilds `assets/extracted/`
 (also gitignored) at native resolution — 2480x3508 per sheet, sliced into cards
-by detecting the printed cut lines. Then `node scripts/build-standees.mjs`
-gathers the 27 małe Karty Postaci off the two sheets they are split across and
-cuts them to one size, and `node scripts/export-card-images.mjs` writes the
+by detecting the printed cut lines. That slicer cannot handle either Karta
+Postaci — the small ones sit in teal gutters it cuts only roughly, and the big
+ones butt together with the same teal printed *on* them — so
+`node scripts/build-character-cards.mjs` re-cuts both sets to one size each.
+Then `node scripts/export-card-images.mjs` writes the
 web-sized JPEGs into `public/cards/` — those *are* committed, so a fresh
 checkout has the pictures without needing the scans.
 

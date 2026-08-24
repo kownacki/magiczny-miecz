@@ -113,10 +113,10 @@ export function Lobby({
   const [preview, setPreview] = useState<string | null>(null);
   const reading = preview ?? target?.characterId ?? me?.characterId ?? null;
 
-  /** characterId -> the seat index holding it, which is also its colour. */
-  const ownerOf = new Map<string, number>();
+  /** characterId -> the seat holding it. */
+  const ownerOf = new Map<string, LobbySeat>();
   for (const seat of seats) {
-    if (seat.characterId) ownerOf.set(seat.characterId, seat.seatIndex);
+    if (seat.characterId) ownerOf.set(seat.characterId, seat);
   }
 
   return (
@@ -281,8 +281,10 @@ export function Lobby({
             // the stripe on their slot. Who took Kapłanka is a question people
             // ask out loud, and the answer was only readable by comparing the
             // strip against six seat cards one at a time.
-            const ownerSeat = ownerOf.get(character.id);
-            const owner = ownerSeat === undefined ? null : SEAT_COLOURS[ownerSeat % SEAT_COLOURS.length];
+            const ownerSeat = ownerOf.get(character.id) ?? null;
+            const owner = ownerSeat
+              ? SEAT_COLOURS[ownerSeat.seatIndex % SEAT_COLOURS.length]
+              : null;
             const isTargets = target?.characterId === character.id;
             // While a request is out, the one card it is about stays lit and
             // the rest step back. Anything else — dimming all of them, or
@@ -310,7 +312,7 @@ export function Lobby({
                 onBlur={() => setPreview(null)}
                 title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
                 style={owner && !isPending && !waiting ? { borderColor: owner, borderWidth: 2 } : undefined}
-                className={`min-w-0 overflow-hidden rounded border transition disabled:cursor-default ${
+                className={`relative min-w-0 overflow-hidden rounded border transition disabled:cursor-default ${
                   isPending
                     ? "animate-pulse border-ochre opacity-100"
                     : waiting
@@ -339,13 +341,20 @@ export function Lobby({
                     {character.name}
                   </span>
                 )}
-                {/* Set again underneath, because the name *printed* on the card
-                    shrinks with the card and two rows beside a reading column
-                    leave it about eight pixels tall. This one does not shrink,
-                    and reading the name is the whole reason for looking here. */}
-                <span className="block truncate px-0.5 py-1 text-center text-[11px] leading-none text-muted">
-                  {character.name}
-                </span>
+                {/* Whose it is, written across the foot of the card in their
+                    colour. The colour alone says somebody has it; six people
+                    round a table need it to say *who*, and the seat cards are
+                    too far from the strip to answer that by comparison. */}
+                {ownerSeat && (
+                  <span
+                    style={{ background: owner ?? undefined }}
+                    className="absolute inset-x-0 bottom-0 flex h-[11%] min-h-[13px] items-center justify-center overflow-hidden px-0.5 text-[9px] font-medium leading-none text-night"
+                  >
+                    <span className="truncate">
+                      {ownerSeat.playerName ?? `miejsce ${ownerSeat.seatIndex + 1}`}
+                    </span>
+                  </span>
+                )}
               </button>
             );
           })}

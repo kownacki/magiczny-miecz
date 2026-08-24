@@ -22,7 +22,7 @@ const WIDTH = 420;
  * print is a grey suggestion, and the scan has 777 to give — so it gives it.
  * Nothing else on any sheet is looked at for that long.
  */
-const WIDTH_BY_SHEET = { "postacie-1": 780, "postacie-2": 780, "postacie-3": 780 };
+const WIDTH_BY_SHEET = { karta: 780 };
 
 /** JPEG quality. Above ~75 the files grow faster than the scans deserve. */
 const QUALITY = 72;
@@ -32,7 +32,7 @@ const QUALITY = 72;
  * cards and would each be megabytes.
  */
 const CARD_SHEETS =
-  /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|postacie-\d|standee)$/;
+  /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|karta|standee)$/;
 
 /**
  * Uses macOS `sips` for the resize and JPEG encode.
@@ -94,15 +94,16 @@ function run() {
 
   // Characters are looked up by id rather than by slice — a player picks
   // "krasnolud", not "postacie-2#5" — so they get their own map.
+  // Both sets come from `scripts/build-character-cards.mjs`, which re-cuts them
+  // off sheets the generic slicer could not handle and puts them in character
+  // order — so the Nth character is the Nth card of each kind. `character.source`
+  // still records which printed sheet it came from; it is provenance, not a
+  // lookup.
   const characters = JSON.parse(fs.readFileSync("src/data/characters.json", "utf8"));
   const portraits = Object.fromEntries(
     characters
-      .map((character) => {
-        const { sheet, index } = character.source;
-        const ref = `${sheet}#${index}`;
-        return manifest.includes(ref) ? [character.id, ref] : null;
-      })
-      .filter(Boolean),
+      .map((character, i) => [character.id, `karta#${i + 1}`])
+      .filter(([, ref]) => manifest.includes(ref)),
   );
   fs.writeFileSync(
     path.join("src/data", "character-images.json"),
@@ -114,10 +115,6 @@ function run() {
   // (Przygotowanie do gry). These are the ones that go in the plastic stands
   // and stand on the board, so they are what a player recognises their piece
   // by, and what belongs anywhere a character is shown small.
-  //
-  // They come from `scripts/build-standees.mjs`, which gathers them off the two
-  // sheets the publisher split them across and cuts them all to one size. In
-  // character order, so the Nth character is the Nth standee.
   const standees = Object.fromEntries(
     characters
       .map((character, i) => [character.id, `standee#${i + 1}`])
@@ -129,7 +126,7 @@ function run() {
     // which reads as a data-entry bug somewhere else entirely.
     console.warn(
       `only ${Object.keys(standees).length}/${characters.length} standees found` +
-        " — run scripts/build-standees.mjs",
+        " — run scripts/build-character-cards.mjs",
     );
   }
   fs.writeFileSync(
