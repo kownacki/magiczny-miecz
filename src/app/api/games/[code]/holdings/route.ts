@@ -4,6 +4,7 @@ import {
   changeNature,
   drawSpell,
   dropCard,
+  healSeat,
   takeCard,
   tradeTrophies,
   turnToStone,
@@ -47,6 +48,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           await changeNature(game.id, String(body.seatId ?? actor.id), nature),
         );
       }
+      case "heal":
+        return NextResponse.json({
+          zycie: await healSeat(game.id, String(body.seatId ?? actor.id)),
+        });
       case "stone":
         await turnToStone(game.id, String(body.seatId ?? actor.id));
         break;

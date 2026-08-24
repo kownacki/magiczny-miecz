@@ -8,6 +8,7 @@ import { fieldWithText } from "@/lib/engine/fieldText";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
 import { CardView, type ShownCard } from "./card-view";
+import { SeatActions } from "./seat-actions";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 
@@ -305,6 +306,26 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onTake={(cardId) => post("holdings", { action: "take", seatId: active.id, cardId })}
           />
           <CardView cards={shown} />
+        </div>
+      )}
+
+      {playing && active && (mySeatIndex === active.seat_index || isTableScreen) && (
+        <div className="mb-8">
+          <SeatActions
+            busy={busy}
+            nature={active.nature}
+            canFightBeast={active.field_id === "zamek-bestii"}
+            onSpell={() => post("holdings", { action: "spell", seatId: active.id })}
+            onNature={(nature) =>
+              post("holdings", { action: "nature", seatId: active.id, nature })
+            }
+            onStone={() => post("holdings", { action: "stone", seatId: active.id })}
+            // Healing is not the same as gaining Życie: 4.7 caps it at the
+            // starting four while 4.6 leaves gains uncapped, so it goes through
+            // its own endpoint rather than the generic adjustment.
+            onHeal={() => post("holdings", { action: "heal", seatId: active.id })}
+            onBeast={() => post("turn", { action: "beast" })}
+          />
         </div>
       )}
 

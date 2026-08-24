@@ -78,7 +78,8 @@ function decksOf(game: { deck: unknown }): Decks {
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
 import { bonusFromHoldings } from "@/lib/engine/holdings";
 import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
-import { mayHold, spellCapacity } from "@/lib/engine/derive";
+import { HEAL_CEILING, heal, mayHold, spellCapacity } from "@/lib/engine/derive";
+import type { Seat } from "@/lib/engine/state";
 
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
   const { data, error } = await db
@@ -628,6 +629,40 @@ async function killSeat(gameId: string, seatId: string): Promise<void> {
 
   // With the character gone, play must move on if it was their turn.
   if (game.active_seat === seat?.seat_index) await finishTurn(gameId);
+}
+
+/**
+ * Heals a character (4.7).
+ *
+ * Distinct from adding Życie with the +/-, and the distinction is a rule:
+ * healing restores only up to the four a character started with (4.2), while
+ * gains from encounters and exploration are uncapped (4.6). Routing this
+ * through the engine's `heal` keeps the ceiling in one place — an earlier
+ * version of this button used the generic adjustment and would have healed a
+ * character past four.
+ */
+export async function healSeat(gameId: string, seatId: string, amount = 1): Promise<number> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  const healed = heal(
+    {
+      ...(seat as unknown as Seat),
+      zycie: seat.zycie,
+    },
+    amount,
+  ).zycie;
+
+  if (healed === seat.zycie) {
+    throw new Error(`Uzdrowienie przywraca punkty tylko do ${HEAL_CEILING} (4.7).`);
+  }
+
+  await db.from("seats").update({ zycie: healed }).eq("id", seatId);
+  await journal(gameId, seatId, game.turn, "uzdrowienie", { from: seat.zycie, to: healed });
+  await bumpRevision(gameId);
+  return healed;
 }
 
 /**
