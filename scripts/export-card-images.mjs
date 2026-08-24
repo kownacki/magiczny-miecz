@@ -32,7 +32,7 @@ const QUALITY = 72;
  * cards and would each be megabytes.
  */
 const CARD_SHEETS =
-  /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|postacie-\d|piony)$/;
+  /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|postacie-\d|standee)$/;
 
 /**
  * Uses macOS `sips` for the resize and JPEG encode.
@@ -115,33 +115,23 @@ function run() {
   // and stand on the board, so they are what a player recognises their piece
   // by, and what belongs anywhere a character is shown small.
   //
-  // The publisher split them across two sheets: the first twenty on the Piony
-  // Postaci sheet, in the same alphabetical order as characters.json, and the
-  // last seven tacked onto the end of Zdarzenia 9 after the Dobry/Zły markers.
-  // Both facts are about the scans and so live here.
-  const TRAILING_STANDEES = {
-    pustelnik: "zdarzenia-9#14",
-    quark: "zdarzenia-9#15",
-    "rycerz-ciemnosci": "zdarzenia-9#16",
-    spryciarz: "zdarzenia-9#17",
-    troll: "zdarzenia-9#18",
-    wiedzma: "zdarzenia-9#19",
-    zdobywca: "zdarzenia-9#20",
-  };
-  const PIONY_COUNT = 20;
-  const onPiony = characters.slice(0, PIONY_COUNT);
-  if (!manifest.includes(`piony#${PIONY_COUNT}`)) {
-    // Loud rather than silent: a shifted slice count would otherwise hand every
-    // character the wrong picture of itself, which reads as a data-entry bug
-    // somewhere else entirely.
-    console.warn(`piony sheet did not yield ${PIONY_COUNT} slices — standees skipped`);
-  }
+  // They come from `scripts/build-standees.mjs`, which gathers them off the two
+  // sheets the publisher split them across and cuts them all to one size. In
+  // character order, so the Nth character is the Nth standee.
   const standees = Object.fromEntries(
-    [
-      ...onPiony.map((character, i) => [character.id, `piony#${i + 1}`]),
-      ...Object.entries(TRAILING_STANDEES),
-    ].filter(([, ref]) => manifest.includes(ref)),
+    characters
+      .map((character, i) => [character.id, `standee#${i + 1}`])
+      .filter(([, ref]) => manifest.includes(ref)),
   );
+  if (Object.keys(standees).length !== characters.length) {
+    // Loud rather than silent: a short sheet would otherwise hand some
+    // characters no picture and — worse, if the order slipped — the wrong one,
+    // which reads as a data-entry bug somewhere else entirely.
+    console.warn(
+      `only ${Object.keys(standees).length}/${characters.length} standees found` +
+        " — run scripts/build-standees.mjs",
+    );
+  }
   fs.writeFileSync(
     path.join("src/data", "character-standees.json"),
     JSON.stringify(standees, null, 2) + "\n",

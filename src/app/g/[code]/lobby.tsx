@@ -182,7 +182,10 @@ export function Lobby({
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 flex-1 flex-col">
+        {/* `min-w-0`: a flex child defaults to `min-width: auto`, so this column
+            refused to shrink below the width of the character strip and pushed
+            the reading column clean off the screen. */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <section className="flex min-h-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-4 py-3">
         {Array.from({ length: MAX_SEATS }, (_, index) => {
           const seat = seats[index];
@@ -262,7 +265,16 @@ export function Lobby({
             side by side with margins either side of them. When they do not fit,
             the margins collapse to nothing and this scrolls. */}
         <div className="overflow-x-auto pb-1">
-          <div className="mx-auto grid w-fit grid-flow-col grid-rows-2 gap-2">
+          {/* The columns share whatever width is left, so all 27 are on screen
+              at once and each is as large as that allows — capped, because past
+              a point they stop being easier to read and start being a poster.
+              Sizing them in fixed pixels instead pushed five characters off the
+              right-hand edge, which is the drag-to-find problem that put them
+              in two rows in the first place. */}
+          <div
+            style={{ gridAutoColumns: "minmax(0, 1fr)" }}
+            className="mx-auto grid w-full max-w-[1708px] grid-flow-col grid-rows-2 gap-2"
+          >
           {characters.map((character) => {
             // Every character somebody holds is out, and wears the colour of
             // whoever holds it — the same colour as their dot on the board and
@@ -298,7 +310,7 @@ export function Lobby({
                 onBlur={() => setPreview(null)}
                 title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
                 style={owner && !isPending && !waiting ? { borderColor: owner, borderWidth: 2 } : undefined}
-                className={`w-[76px] shrink-0 overflow-hidden rounded border transition disabled:cursor-default ${
+                className={`min-w-0 overflow-hidden rounded border transition disabled:cursor-default ${
                   isPending
                     ? "animate-pulse border-ochre opacity-100"
                     : waiting
@@ -315,12 +327,25 @@ export function Lobby({
                 }`}
               >
                 {standee ? (
-                  <Image src={standee} alt={character.name} width={76} height={127} />
+                  <Image
+                    src={standee}
+                    alt={character.name}
+                    width={114}
+                    height={190}
+                    className="h-auto w-full"
+                  />
                 ) : (
-                  <span className="flex h-[127px] items-center p-2 text-center text-[10px] text-ink">
+                  <span className="flex aspect-[114/190] items-center p-2 text-center text-[10px] text-ink">
                     {character.name}
                   </span>
                 )}
+                {/* Set again underneath, because the name *printed* on the card
+                    shrinks with the card and two rows beside a reading column
+                    leave it about eight pixels tall. This one does not shrink,
+                    and reading the name is the whole reason for looking here. */}
+                <span className="block truncate px-0.5 py-1 text-center text-[11px] leading-none text-muted">
+                  {character.name}
+                </span>
               </button>
             );
           })}
@@ -468,12 +493,25 @@ function SeatSlot({
       {/* The portrait gives height back on a short screen but is capped, since
           a slot that grows to whatever is left over turns an empty seat into a
           very tall grey rectangle. */}
+      {/* Your own slot is not a button. The strip is already aimed at you, so
+          clicking it could only un-aim it, and lighting up under the cursor
+          promised something there was nothing behind. The host aiming at a
+          player they seated by hand is the one case where tapping a slot does
+          anything, so that one keeps the affordance. */}
       <button
         onClick={onSelect}
-        disabled={busy || !selectable}
-        title={selectable ? "Wybierz postać dla tego miejsca" : "Tylko właściciel miejsca wybiera swoją postać"}
+        disabled={busy || !selectable || isMine}
+        title={
+          isMine
+            ? undefined
+            : selectable
+              ? "Wybierz postać dla tego miejsca"
+              : "Tylko właściciel miejsca wybiera swoją postać"
+        }
         className={`max-h-[270px] min-h-[120px] w-full flex-1 overflow-hidden rounded border transition ${
-          selectable ? "border-edge/60 hover:border-ochre" : "cursor-default border-edge/40"
+          selectable && !isMine
+            ? "border-edge/60 hover:border-ochre"
+            : "cursor-default border-edge/40"
         }`}
       >
         {portrait && character ? (
