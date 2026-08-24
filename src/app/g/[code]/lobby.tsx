@@ -298,21 +298,29 @@ export function Lobby({
             // small type were not.
             const standee = characterStandeeUrl(character.id);
             return (
-              <button
+              // Pointing at a card reads it, and that has to work for cards
+              // nobody can choose. A disabled button fires no mouse events at
+              // all, so with the handlers on the button itself every character
+              // somebody had already taken became unreadable — which is exactly
+              // when you most want to know what it does.
+              <div
                 key={character.id}
+                className="min-w-0"
+                onMouseEnter={() => setPreview(character.id)}
+                onMouseLeave={() => setPreview(null)}
+              >
+              <button
                 // Already theirs: nothing to ask for. Re-sending it would
                 // rewrite the seat with the values it already has and, worse,
                 // clear the ready flag — so the one thing a second click on
                 // your own character could do is un-ready you.
                 disabled={busy || owner !== null || !target || pendingCharacterId !== null}
                 onClick={() => target && onChooseCharacter(target, character.id)}
-                onMouseEnter={() => setPreview(character.id)}
-                onMouseLeave={() => setPreview(null)}
                 onFocus={() => setPreview(character.id)}
                 onBlur={() => setPreview(null)}
                 title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
                 style={owner && !isPending && !waiting ? { borderColor: owner, borderWidth: 2 } : undefined}
-                className={`relative min-w-0 overflow-hidden rounded border transition disabled:cursor-default ${
+                className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
                   isPending
                     ? "animate-pulse border-ochre opacity-100"
                     : waiting
@@ -356,6 +364,7 @@ export function Lobby({
                   </span>
                 )}
               </button>
+              </div>
             );
           })}
           </div>
