@@ -6,7 +6,6 @@ import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
-import { manualNote } from "@/lib/engine/coverage";
 import { abilitiesOfCharacter, notesForCharacter } from "@/lib/engine/characters";
 import { characterImageUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
@@ -15,6 +14,8 @@ import { TurnPanel } from "./turn-panel";
 import { CardView, type ShownCard } from "./card-view";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
+import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
+import { CardLibrary } from "./card-library";
 import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
@@ -36,6 +37,11 @@ const CARD_NAMES = new Map<string, string>([
   ...EVENTS.map((c) => [c.id, c.name] as const),
   ...(spells as Spell[]).map((c) => [c.id, c.name] as const),
   ...(items as Item[]).map((c) => [c.id, c.name] as const),
+]);
+const CARD_TEXTS = new Map<string, string>([
+  ...EVENTS.map((c) => [c.id, c.text] as const),
+  ...(spells as Spell[]).map((c) => [c.id, c.text] as const),
+  ...(items as Item[]).map((c) => [c.id, c.text ?? ""] as const),
 ]);
 const FIELD_NAMES = new Map(
   [...FIELDS.values()].map((field) => [field.id, field.name]),
@@ -98,6 +104,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [inspecting, setInspecting] = useState<string | null>(null);
   /** What the app just decided by itself, shown until the next action. */
   const [notice, setNotice] = useState<string | null>(null);
+  /** A card somebody tapped, shown large with its full text. */
+  const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
+  /** The reference drawer of every card in the box. */
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -289,6 +299,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           <p className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.25em] text-ink">
             {game.join_code}
           </p>
+          {/* Available to anyone at the table, seated or not: looking a card up
+              is what the rulebook is for, and nothing here reveals who holds
+              what. */}
+          <button
+            onClick={() => setLibraryOpen(true)}
+            className="mt-1 block text-[11px] text-ochre/80 underline underline-offset-2 transition hover:text-ochre"
+          >
+            Karty do wglądu
+          </button>
           {mySeatIndex !== null && (
             <button
               onClick={leave}
@@ -301,6 +320,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         </div>
       </header>
 
+      {inspectingCard && (
+        <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
+      )}
+      {libraryOpen && <CardLibrary onClose={() => setLibraryOpen(false)} />}
       {error && <p className="mb-4 text-sm text-vermilion">{error}</p>}
       {notice && !error && (
         <p className="mb-4 rounded border border-ochre/30 bg-panel/60 px-3 py-2 text-sm text-ochre">
@@ -441,6 +464,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
             }))}
           busy={busy}
+          onInspect={setInspectingCard}
           onCast={(holdingId, targetSeat) =>
             post("holdings", {
               action: "cast",
@@ -483,6 +507,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onAdjust={(stat, delta) => post("adjust", { seatId: seat.id, stat, delta })}
             onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
             onTrade={() => post("holdings", { action: "trade", seatId: seat.id })}
+            onInspect={setInspectingCard}
           />
         ))}
         {seats.length < 6 && !playing && (
@@ -557,6 +582,7 @@ function Hand({
   trophies,
   onDrop,
   onTrade,
+  onInspect,
 }: {
   seat: Seat;
   isMine: boolean;
@@ -564,72 +590,64 @@ function Hand({
   trophies: number;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
+  onInspect: (card: TileCard) => void;
 }) {
-  if (seat.holdings.length === 0 && seat.hidden_count === 0) return null;
+  const shown = seat.holdings.filter((held) => held.kind !== "spell");
+  if (shown.length === 0 && seat.hidden_count === 0) return null;
 
   return (
-    <div className="mt-3 border-t border-edge pt-2">
-      <ul className="flex flex-col gap-1">
-        {seat.holdings.map((held) => (
-          <li key={held.id} className="text-xs">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="truncate text-ink">
-                {CARD_NAMES.get(held.cardId) ?? held.cardId}
-              </span>
-              <span className="flex shrink-0 items-baseline gap-2">
-                <span className="text-[10px] uppercase text-muted">
-                  {KIND_LABEL[held.kind]}
-                </span>
-                {canAct && (
-                  <button
-                    onClick={() => onDrop(held.id)}
-                    className="text-[10px] text-muted underline hover:text-vermilion"
-                  >
-                    odrzuć
-                  </button>
-                )}
-              </span>
-            </div>
-            {/* What the card actually does, for the ones whose rule the app is
-                holding to. Worth the line: half of these change what happens
-                three fields away, and a player cannot be expected to remember
-                which of their four Przyjaciele covers the Krypta Upiorów. */}
-            {describeAbilities(held.cardId).length > 0 && (
-              <p className="text-[10px] leading-snug text-verdigris/80">
-                {describeAbilities(held.cardId).join(" · ")}
-              </p>
+    <div className="mt-3 border-t border-edge pt-3">
+      {/* Cards, as cards. A player at a table recognises their Miecz by its
+          picture long before they read the word, and the ability text that used
+          to sit under every line now lives one tap away in the detail view. */}
+      <div className="flex flex-wrap gap-2">
+        {/* Your own Zaklęcia are not repeated here: they have their own panel
+            above, face up and with the cast controls on them. What belongs on a
+            seat card is what the *table* can see. */}
+        {seat.holdings
+          .filter((held) => held.kind !== "spell")
+          .map((held) => (
+          <CardTile
+            key={held.id}
+            card={tileFor(held)}
+            badge={held.kind === "trophy" ? "trofeum" : undefined}
+            dimmed={held.kind === "trophy"}
+            onClick={() => onInspect(tileFor(held))}
+          >
+            {canAct && (
+              <button
+                onClick={() => onDrop(held.id)}
+                className="text-[9px] text-muted underline hover:text-vermilion"
+              >
+                odrzuć
+              </button>
             )}
-            {/* And what it does that the app is NOT watching for. A held card
-                is exactly where this matters: its rule fires somewhere else,
-                turns later, when nobody is looking at the card any more. */}
-            {manualNote(held.cardId) && (
-              <p className="text-[10px] leading-snug text-ochre/70">
-                ↳ {manualNote(held.cardId)}
-              </p>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {seat.hidden_count > 0 && (
-        <p className="mt-1 text-[11px] text-muted">
-          {seat.hidden_count} zakryt{seat.hidden_count === 1 ? "e Zaklęcie" : "ych Zaklęć"}
-        </p>
-      )}
+          </CardTile>
+          ))}
+        {seat.hidden_count > 0 && <CardBack count={seat.hidden_count} />}
+      </div>
 
       {isMine && trophies > 0 && (
         <button
           onClick={onTrade}
           className="mt-2 rounded border border-edge px-2 py-1 text-[11px] text-ink transition hover:border-ochre"
         >
-          Wymień trofea na Miecz (1.4)
+          Wymień trofea na punkty Miecza (1.4)
         </button>
       )}
     </div>
   );
 }
 
-/** One of the two ways to play, stated in full rather than as a label on a switch. */
+function tileFor(held: Held): TileCard {
+  return {
+    cardId: held.cardId,
+    name: CARD_NAMES.get(held.cardId) ?? held.cardId,
+    text: CARD_TEXTS.get(held.cardId),
+    kindLabel: KIND_LABEL[held.kind],
+  };
+}
+
 function ModeChoice({
   active,
   disabled,
@@ -673,6 +691,7 @@ function SeatCard({
   onAdjust,
   onDrop,
   onTrade,
+  onInspect,
 }: {
   seat: Seat;
   active: boolean;
@@ -681,6 +700,7 @@ function SeatCard({
   onAdjust: (stat: string, delta: number) => void;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
+  onInspect: (card: TileCard) => void;
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
   const trophies = seat.holdings.filter((h) => h.kind === "trophy");
@@ -754,6 +774,7 @@ function SeatCard({
             trophies={trophies.length}
             onDrop={onDrop}
             onTrade={onTrade}
+            onInspect={onInspect}
           />
           <p className="mt-3 text-xs text-muted">
             {seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—"}
@@ -926,16 +947,6 @@ function describeResult(result: unknown): string | null {
   return `Trzęsawiska: ${data.dice.join(" + ")} = ${total} przeciw Magii ${data.magia} — ${verdict}.`;
 }
 
-/**
- * A card's standing rules, in the fewest words that still say what changes.
- *
- * Only the encoded ones appear. A card with no entry shows nothing here rather
- * than a placeholder, because its printed text is the authority and inventing a
- * summary for it would be the referee overstepping.
- */
-function describeAbilities(cardId: string): string[] {
-  return abilitiesOf(cardId).map(describeAbility);
-}
 
 function describeAbility(ability: Ability): string {
   switch (ability.kind) {

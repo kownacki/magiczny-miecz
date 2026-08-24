@@ -1,9 +1,11 @@
 /** Resolves a drawn card to the picture of it, whether the card is known by slice or only by name. */
 
 import events from "@/data/events.json";
+import spells from "@/data/spells.json";
+import items from "@/data/items.json";
 import manifest from "@/data/card-images.json";
 import portraits from "@/data/character-images.json";
-import type { EventCard } from "@/data/types";
+import type { EventCard, Item, Spell } from "@/data/types";
 import { cardRef } from "./deck";
 
 const AVAILABLE = new Set(manifest as string[]);
@@ -17,7 +19,15 @@ const AVAILABLE = new Set(manifest as string[]);
  * exactly which slice came off the deck and says so.
  */
 const FIRST_SLICE_BY_ID = new Map<string, string>();
-for (const card of events as EventCard[]) {
+// Events, spells and equipment all live on different sheets and were being
+// looked up in only the first of the three — so every Zaklęcie in a player's
+// hand and every bought Przedmiot came back without a picture, despite all
+// sixty of them having been exported.
+for (const card of [
+  ...(events as EventCard[]),
+  ...(spells as Spell[]),
+  ...(items as Item[]),
+]) {
   const ref = cardRef(card.source);
   if (!FIRST_SLICE_BY_ID.has(card.id)) FIRST_SLICE_BY_ID.set(card.id, ref);
 }
