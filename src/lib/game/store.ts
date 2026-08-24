@@ -322,6 +322,30 @@ export async function leaveGame(
  * It also recovers a table whose host seat became unreachable, which is easy to
  * do by joining twice from one browser and overwriting the stored token.
  */
+/**
+ * Takes a seat out of the table before the game starts.
+ *
+ * Only in the lobby, and only by someone already seated. Once play has begun a
+ * character cannot simply be deleted — its Przedmioty and Przyjaciele are on
+ * the board and other players may have acted on them — so leaving mid-game is
+ * `leaveGame`, which eliminates rather than erases (4.4).
+ *
+ * Removing yourself is allowed and behaves exactly the same; a lobby where the
+ * host cannot drop out is worse than one where anybody can tidy up.
+ */
+export async function removeSeat(gameId: string, seatId: string, status: string): Promise<void> {
+  if (status !== "lobby") {
+    throw new Error("Gracza można usunąć tylko przed rozpoczęciem gry.");
+  }
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nie ma takiego miejsca.");
+
+  const { error } = await db.from("seats").delete().eq("id", seatId);
+  if (error) throw new Error(`removeSeat: ${error.message}`);
+  await promoteHostIfNeeded(gameId, seat);
+}
+
 export async function claimTableScreen(gameId: string, seatId: string): Promise<void> {
   const seats = await seatsFor(gameId);
   for (const seat of seats) {

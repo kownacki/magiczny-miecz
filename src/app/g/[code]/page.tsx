@@ -16,6 +16,8 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
+import { Lobby, type LobbySeat } from "./lobby";
+import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
@@ -108,6 +110,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
   /** The reference drawer of every card in the box. */
   const [libraryOpen, setLibraryOpen] = useState(false);
+  /** Which seat is choosing a character; "auto" lets the app decide. */
+  const [picking, setPicking] = useState<string | "auto" | null>("auto");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -172,16 +176,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     [code, refresh],
   );
 
+  /**
+   * Gives up this device's seat.
+   *
+   * Confirmation is a second click on the same button rather than a native
+   * dialog — see the note on `join`. Mid-game the button says what it costs,
+   * because 4.4 makes leaving an elimination and there is no undo.
+   */
   async function leave() {
     const seated = mySeatIndex !== null;
     if (!seated) return;
-    const confirmed = confirm(
-      playing
-        ? "Opuścić stół? Twoja postać wypada z gry — tego nie da się cofnąć."
-        : "Opuścić stół?",
-    );
-    if (!confirmed) return;
-
     setBusy(true);
     try {
       const response = await fetch(`/api/games/${code}/leave`, {
@@ -206,13 +210,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /**
    * Claims a seat for THIS device. Only offered when it holds none — joining
    * twice from one browser used to overwrite its identity.
+   *
+   * The name arrives from a field in the page. A native `prompt` blocked
+   * everything behind it, could not be styled, and on a phone interrupts the
+   * game with a system alert.
    */
-  async function join() {
-    const name = prompt("Twoje imię?");
+  async function join(name: string) {
     const response = await fetch(`/api/games/${code}/join`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name: name.trim() || null }),
     });
     const data = await response.json();
     if (!response.ok) return setError(data.error);
@@ -229,13 +236,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * one is the bug that stranded a player earlier. The table screen acts for
    * them the same way it acts for anyone whose turn it is.
    */
-  async function addLocalPlayer() {
-    const name = prompt("Imię gracza?");
-    if (name === null) return;
+  async function addLocalPlayer(name: string) {
     const response = await fetch(`/api/games/${code}/join`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name: name.trim() || null }),
     });
     if (!response.ok) return setError((await response.json()).error);
     refresh();
@@ -253,13 +258,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const isTableScreen = mySeat?.is_host === true && game.mode === "companion";
   const tableScreenHolder = seats.find((seat) => seat.is_host)?.player_name ?? null;
 
-  // Whose character is being chosen. This device's own seat first, then any
-  // seat with no device of its own — otherwise a locally-added player could
-  // never be given a character.
+  // Whose character is being chosen. Left to the app until somebody says
+  // otherwise: this device's own seat first, then any seat with no device of
+  // its own, so a locally-added player is not stranded without one. Once a
+  // player picks a seat explicitly — or closes the picker — that choice wins.
   const pickingFor =
-    mySeat && !mySeat.character_id
-      ? mySeat
-      : (seats.find((seat) => !seat.character_id) ?? null);
+    picking === "auto"
+      ? mySeat && !mySeat.character_id
+        ? mySeat
+        : (seats.find((seat) => !seat.character_id) ?? null)
+      : (seats.find((seat) => seat.id === picking) ?? null);
 
   // Cards in play this turn. A fight keeps the stack it interrupted, so the
   // panel does not empty out mid-combat.
@@ -279,114 +287,85 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     }));
   })();
   const active = seats.find((seat) => seat.seat_index === game.active_seat);
-  const seated = seats.filter((seat) => seat.character_id);
   const taken = new Set(seats.map((seat) => seat.character_id).filter(Boolean));
   const playing = game.status === "playing";
 
-  return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-edge pb-6">
-        <div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-ochre">
-            Magiczny Miecz
-          </h1>
-          <p className="text-sm text-muted">
-            {playing ? `Tura ${game.turn}` : "Poczekalnia"} · {seated.length} postaci
-          </p>
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="text-xs uppercase tracking-widest text-muted">Kod stołu</p>
-          <p className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.25em] text-ink">
-            {game.join_code}
-          </p>
-          {/* Available to anyone at the table, seated or not: looking a card up
-              is what the rulebook is for, and nothing here reveals who holds
-              what. */}
-          <button
-            onClick={() => setLibraryOpen(true)}
-            className="mt-1 block text-[11px] text-ochre/80 underline underline-offset-2 transition hover:text-ochre"
-          >
-            Karty do wglądu
-          </button>
-          {mySeatIndex !== null && (
-            <button
-              onClick={leave}
-              disabled={busy}
-              className="mt-1 text-[11px] text-muted underline underline-offset-2 transition hover:text-vermilion disabled:opacity-50"
-            >
-              Opuść stół
-            </button>
-          )}
-        </div>
-      </header>
-
+  const overlays = (
+    <>
       {inspectingCard && (
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
       {libraryOpen && <CardLibrary onClose={() => setLibraryOpen(false)} />}
-      {error && <p className="mb-4 text-sm text-vermilion">{error}</p>}
-      {notice && !error && (
-        <p className="mb-4 rounded border border-ochre/30 bg-panel/60 px-3 py-2 text-sm text-ochre">
-          {notice}
-        </p>
-      )}
+    </>
+  );
 
-      {!playing && mySeatIndex !== null && (
-        <section className="mb-6 rounded border border-edge/60 bg-panel/50 p-3">
-          <p className="mb-2 text-xs uppercase tracking-widest text-muted">Tryb gry</p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <ModeChoice
-              active={game.mode === "simulation"}
-              disabled={busy}
-              onPick={() => post("mode", { mode: "simulation" })}
-              title="Pełna symulacja"
-              blurb="Aplikacja prowadzi całą grę: tasuje talię, ciągnie Karty Zdarzeń i rzuca kostką. Plansza i karty nie są potrzebne."
-            />
-            <ModeChoice
-              active={game.mode === "companion"}
-              disabled={busy}
-              onPick={() => post("mode", { mode: "companion" })}
-              title="Sędzia przy planszy"
-              blurb="Gracie na prawdziwej planszy prawdziwymi kartami. Aplikacja liczy, pilnuje kolejności i podpowiada — mówicie jej, co wyciągnęliście."
-            />
-          </div>
-          <p className="mt-2 text-[11px] text-muted">
-            Tryb można zmienić tylko przed rozpoczęciem gry.
+  if (!playing) {
+    return (
+      <>
+        {overlays}
+        {error && (
+          <p className="fixed inset-x-0 top-0 z-30 bg-vermilion/20 px-4 py-2 text-center text-sm text-vermilion">
+            {error}
           </p>
-        </section>
-      )}
+        )}
+        <Lobby
+          code={game.join_code}
+          mode={game.mode}
+          seats={seats.map(asLobbySeat)}
+          mySeatIndex={mySeatIndex}
+          characters={CHARACTERS}
+          taken={taken}
+          pickingFor={pickingFor ? asLobbySeat(pickingFor) : null}
+          busy={busy}
+          onMode={(mode) => post("mode", { mode })}
+          onJoin={join}
+          onAddLocal={addLocalPlayer}
+          onPickFor={(seat) => setPicking(seat ? seat.id : null)}
+          onChooseCharacter={(seat, characterId) => {
+            post("character", { characterId, seatId: seat.id });
+            setPicking("auto");
+          }}
+          onRemove={(seat) => post("leave", { seatId: seat.id })}
+          onStart={() => post("start", {})}
+          onLibrary={() => setLibraryOpen(true)}
+        />
+      </>
+    );
+  }
 
-      {playing && mySeatIndex !== null && game.mode === "companion" && (
-        <section className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-edge/60 bg-panel/50 px-3 py-2 text-xs">
-          {isTableScreen ? (
-            <>
-              <span className="text-ochre">To urządzenie obsługuje wszystkich graczy.</span>
-              <span className="text-muted">
-                Podaj je dookoła stołu — każdy gra na nim w swojej turze.
+  const mine = mySeat;
+  const others = seats.filter((seat) => seat.id !== mine?.id && seat.character_id);
+
+  return (
+    <>
+      {overlays}
+      <TableLayout
+        header={
+          <>
+            <div className="flex items-baseline gap-3">
+              <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
+                Magiczny Miecz
+              </h1>
+              <span className="text-xs text-muted">
+                Tura {game.turn} · {active ? (active.player_name ?? "—") : "—"}
               </span>
-            </>
-          ) : (
-            <>
-              <span className="text-muted">
-                Wszystkich graczy obsługuje urządzenie gracza{" "}
-                <span className="text-ink">{tableScreenHolder ?? "—"}</span>. To urządzenie
-                gra tylko w turze gracza{" "}
-                <span className="text-ink">{mySeat?.player_name ?? "—"}</span>.
-              </span>
-              <button
-                onClick={() => post("host", {})}
-                disabled={busy}
-                className="rounded border border-edge px-2 py-1 text-ink transition hover:border-ochre disabled:opacity-50"
-              >
-                Graj tu za wszystkich
+            </div>
+            <div className="flex items-center gap-4 text-[11px]">
+              <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
+              <button onClick={() => setLibraryOpen(true)} className="text-ochre/80 hover:text-ochre">
+                Karty
               </button>
-            </>
-          )}
-        </section>
-      )}
-
-      {playing && (
-        <section className="mb-8 flex flex-col items-center gap-3 lg:flex-row lg:items-start lg:gap-6">
+              {mySeatIndex !== null && (
+                <LeaveButton
+                  playing
+                  busy={busy}
+                  onLeave={leave}
+                />
+              )}
+            </div>
+          </>
+        }
+        map={
           <BoardMap
             seats={seats.map((seat) => ({
               id: seat.id,
@@ -400,9 +379,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               count[card.fieldId] = (count[card.fieldId] ?? 0) + 1;
               return count;
             }, {})}
-            // While the active character is choosing a direction, both landing
-            // squares are lit so the choice is made by looking at the board
-            // rather than by reading two field names.
             highlight={
               game.turn_state.phase === "ruch"
                 ? game.turn_state.options.map((option) => option.fieldId)
@@ -410,155 +386,177 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             }
             onPick={(fieldId) => setInspecting(fieldId)}
           />
-          <FieldNote
-            fieldId={inspecting ?? active?.field_id ?? null}
-            pinned={inspecting !== null}
-            onClear={() => setInspecting(null)}
-          />
-        </section>
-      )}
+        }
+        right={
+          <div className="flex flex-col gap-3">
+            {error && <p className="text-sm text-vermilion">{error}</p>}
+            {notice && !error && (
+              <p className="rounded border border-ochre/30 bg-panel/60 px-3 py-2 text-sm text-ochre">
+                {notice}
+              </p>
+            )}
 
-      {playing && active && (
-        <div className="mb-8 grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
-          <TurnPanel
-            phase={game.turn_state}
-            isMine={
-              (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
-            }
-            actingForOther={isTableScreen && active.seat_index !== mySeatIndex}
-            playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
-            fieldName={
-              active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
-            }
-            fieldText={
-              active.field_id ? (fieldWithText(active.field_id)?.text ?? null) : null
-            }
-            fieldId={active.field_id}
-            rollSkippedBy={rollSkippedBy(active)}
-            dieSource={game.die_source}
-            mode={game.mode}
-            busy={busy}
-            onAction={(body) => post("turn", body)}
-            onSuggestion={(stat, delta, reason) =>
-              post("adjust", { seatId: active.id, stat, delta, reason })
-            }
-            onTake={(cardId) => post("holdings", { action: "take", seatId: active.id, cardId })}
-          />
-          <CardView cards={shown} />
-        </div>
-      )}
+            {game.mode === "companion" && mySeatIndex !== null && (
+              <p className="rounded border border-edge/60 bg-panel/50 px-2 py-1 text-[11px] text-muted">
+                {isTableScreen ? (
+                  <span className="text-ochre">To urządzenie prowadzi wszystkich graczy.</span>
+                ) : (
+                  <>
+                    Prowadzi: <span className="text-ink">{tableScreenHolder ?? "—"}</span>.{" "}
+                    <button onClick={() => post("host", {})} className="underline hover:text-ink">
+                      graj tu za wszystkich
+                    </button>
+                  </>
+                )}
+              </p>
+            )}
 
-      {/* 9.3 keeps a hand secret, so this renders only for the seat that holds
-          it — and 17.7 means a spell can be spoken during somebody else's
-          fight, so it is not gated on whose turn it is. */}
-      {playing && mySeat && (
-        <SpellHand
-          spells={mySeat.holdings
-            .filter((held) => held.kind === "spell")
-            .map((held) => ({ holdingId: held.id, cardId: held.cardId }))}
-          moment={momentOf(game.turn_state.phase, game.turn_state.phase !== "rzut")}
-          opponents={seats
-            .filter((seat) => seat.character_id && seat.seat_index !== mySeat.seat_index)
-            .map((seat) => ({
-              seatIndex: seat.seat_index,
-              name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
-            }))}
-          busy={busy}
-          onInspect={setInspectingCard}
-          onCast={(holdingId, targetSeat) =>
-            post("holdings", {
-              action: "cast",
-              seatId: mySeat.id,
-              holdingId,
-              ...(targetSeat !== undefined ? { targetSeat } : {}),
-            })
-          }
-        />
-      )}
+            {inspecting && (
+              <FieldNote fieldId={inspecting} pinned onClear={() => setInspecting(null)} />
+            )}
 
-      {playing && active && (mySeatIndex === active.seat_index || isTableScreen) && (
-        <div className="mb-8">
-          <SeatActions
-            busy={busy}
-            nature={active.nature}
-            canFightBeast={active.field_id === "zamek-bestii"}
-            onSpell={() => post("holdings", { action: "spell", seatId: active.id })}
-            onNature={(nature) =>
-              post("holdings", { action: "nature", seatId: active.id, nature })
-            }
-            onStone={() => post("holdings", { action: "stone", seatId: active.id })}
-            // Healing is not the same as gaining Życie: 4.7 caps it at the
-            // starting four while 4.6 leaves gains uncapped, so it goes through
-            // its own endpoint rather than the generic adjustment.
-            onHeal={() => post("holdings", { action: "heal", seatId: active.id })}
-            onBeast={() => post("turn", { action: "beast" })}
-          />
-        </div>
-      )}
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {seats.map((seat) => (
-          <SeatCard
-            key={seat.id}
-            seat={seat}
-            active={playing && seat.seat_index === game.active_seat}
-            canAdjust={mySeatIndex !== null}
-            isMine={seat.seat_index === mySeatIndex}
-            onAdjust={(stat, delta) => post("adjust", { seatId: seat.id, stat, delta })}
-            onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
-            onTrade={() => post("holdings", { action: "trade", seatId: seat.id })}
-            onInspect={setInspectingCard}
-          />
-        ))}
-        {seats.length < 6 && !playing && (
-          <button
-            onClick={mySeatIndex === null ? join : addLocalPlayer}
-            className="rounded-lg border border-dashed border-edge px-4 py-8 text-sm text-muted transition hover:border-ochre hover:text-ink"
-          >
-            {mySeatIndex === null ? "+ Dołącz do stołu" : "+ Dodaj gracza"}
-          </button>
-        )}
-      </section>
-
-      {!playing && pickingFor && (
-        <section className="mt-12">
-          <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg text-ink">
-            Wybierz postać{pickingFor.seat_index !== mySeatIndex
-              ? ` — ${pickingFor.player_name ?? `miejsce ${pickingFor.seat_index + 1}`}`
-              : ""}
-          </h2>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {CHARACTERS.map((character) => (
-              <button
-                key={character.id}
-                disabled={taken.has(character.id) || busy}
-                onClick={() =>
-                  post("character", { characterId: character.id, seatId: pickingFor.id })
+            {active && (
+              <TurnPanel
+                phase={game.turn_state}
+                isMine={
+                  (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
                 }
-                className="rounded border border-edge bg-panel px-3 py-2 text-left text-sm transition hover:border-ochre disabled:opacity-30"
-              >
-                <span className="block font-medium text-ink">{character.name}</span>
-                <span className="tnum text-xs text-muted">
-                  Miecz {character.miecz} · Magia {character.magia} · {character.nature}
-                </span>
-                <span className="block text-[11px] text-muted/70">start: {character.start}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+                actingForOther={isTableScreen && active.seat_index !== mySeatIndex}
+                playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
+                fieldName={
+                  active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
+                }
+                fieldText={
+                  active.field_id ? (fieldWithText(active.field_id)?.text ?? null) : null
+                }
+                fieldId={active.field_id}
+                rollSkippedBy={rollSkippedBy(active)}
+                dieSource={game.die_source}
+                mode={game.mode}
+                busy={busy}
+                onAction={(body) => post("turn", body)}
+                onSuggestion={(stat, delta, reason) =>
+                  post("adjust", { seatId: active.id, stat, delta, reason })
+                }
+                onTake={(cardId) =>
+                  post("holdings", { action: "take", seatId: active.id, cardId })
+                }
+              />
+            )}
 
-      {!playing && seated.length >= 2 && (
-        <button
-          disabled={busy}
-          onClick={() => post("start", {})}
-          className="mt-10 rounded-lg border border-ochre/50 bg-raised px-6 py-3 font-[family-name:var(--font-display)] text-ink transition hover:bg-edge disabled:opacity-50"
-        >
-          Rozpocznij grę
-        </button>
-      )}
-    </main>
+            <CardView cards={shown} />
+
+            {active && (mySeatIndex === active.seat_index || isTableScreen) && (
+              <SeatActions
+                busy={busy}
+                nature={active.nature}
+                canFightBeast={active.field_id === "zamek-bestii"}
+                onSpell={() => post("holdings", { action: "spell", seatId: active.id })}
+                onNature={(nature) =>
+                  post("holdings", { action: "nature", seatId: active.id, nature })
+                }
+                onStone={() => post("holdings", { action: "stone", seatId: active.id })}
+                onHeal={() => post("holdings", { action: "heal", seatId: active.id })}
+                onBeast={() => post("turn", { action: "beast" })}
+              />
+            )}
+
+            {/* Your own seat, in full. 9.3 hides a hand from the others, not
+                from its owner, so this is the one place spells are face up. */}
+            {mine && (
+              <SeatCard
+                seat={mine}
+                active={mine.seat_index === game.active_seat}
+                canAdjust
+                isMine
+                onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
+                onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
+                onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
+                onInspect={setInspectingCard}
+              />
+            )}
+
+            {mine && (
+              <SpellHand
+                spells={mine.holdings
+                  .filter((held) => held.kind === "spell")
+                  .map((held) => ({ holdingId: held.id, cardId: held.cardId }))}
+                moment={momentOf(game.turn_state.phase, game.turn_state.phase !== "rzut")}
+                opponents={others.map((seat) => ({
+                  seatIndex: seat.seat_index,
+                  name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
+                }))}
+                busy={busy}
+                onInspect={setInspectingCard}
+                onCast={(holdingId, targetSeat) =>
+                  post("holdings", {
+                    action: "cast",
+                    seatId: mine.id,
+                    holdingId,
+                    ...(targetSeat !== undefined ? { targetSeat } : {}),
+                  })
+                }
+              />
+            )}
+
+            <OtherPlayers
+              seats={others.map(asPublicSeat)}
+              activeSeatIndex={game.active_seat}
+              characters={CHARACTERS}
+              onInspect={setInspectingCard}
+            />
+          </div>
+        }
+      />
+    </>
   );
+}
+
+function asLobbySeat(seat: Seat): LobbySeat {
+  return {
+    id: seat.id,
+    seatIndex: seat.seat_index,
+    playerName: seat.player_name,
+    characterId: seat.character_id,
+    isHost: seat.is_host,
+  };
+}
+
+/**
+ * A seat as the rest of the table is allowed to see it.
+ *
+ * Everything the rulebook lays out face up (5.2, 6.2, and the tokens beside a
+ * character card) is copied across in full. Concealed spells never reach the
+ * browser at all — the server already replaced them with a count (9.3) — so
+ * there is nothing here that could leak by being careless.
+ */
+function asPublicSeat(seat: Seat): PublicSeat {
+  return {
+    id: seat.id,
+    seatIndex: seat.seat_index,
+    playerName: seat.player_name,
+    characterId: seat.character_id,
+    fieldName: seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—",
+    miecz: seat.miecz_total,
+    mieczOwn: seat.miecz_own,
+    magia: seat.magia_total,
+    magiaOwn: seat.magia_own,
+    zycie: seat.zycie,
+    zloto: seat.zloto,
+    nature: seat.nature,
+    eliminated: seat.eliminated,
+    turnsLost: seat.turns_lost,
+    cards: seat.holdings
+      .filter((held) => held.kind !== "spell")
+      .map((held) => ({
+        cardId: held.cardId,
+        name: CARD_NAMES.get(held.cardId) ?? held.cardId,
+        text: CARD_TEXTS.get(held.cardId),
+        kindLabel: KIND_LABEL[held.kind],
+      })),
+    hiddenSpells:
+      seat.hidden_count + seat.holdings.filter((held) => held.kind === "spell").length,
+  };
 }
 
 const KIND_LABEL: Record<Held["kind"], string> = {
@@ -648,33 +646,6 @@ function tileFor(held: Held): TileCard {
   };
 }
 
-function ModeChoice({
-  active,
-  disabled,
-  onPick,
-  title,
-  blurb,
-}: {
-  active: boolean;
-  disabled: boolean;
-  onPick: () => void;
-  title: string;
-  blurb: string;
-}) {
-  return (
-    <button
-      onClick={onPick}
-      disabled={disabled}
-      className={`flex-1 rounded border px-3 py-2 text-left transition disabled:opacity-50 ${
-        active ? "border-ochre bg-raised" : "border-edge hover:border-ochre/60"
-      }`}
-    >
-      <span className={`block text-sm ${active ? "text-ochre" : "text-ink"}`}>{title}</span>
-      <span className="mt-1 block text-[11px] leading-relaxed text-muted">{blurb}</span>
-    </button>
-  );
-}
-
 function Centered({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex min-h-dvh items-center justify-center px-6 text-muted">
@@ -712,7 +683,14 @@ function SeatCard({
     >
       <header className="mb-3 flex items-baseline justify-between gap-2">
         <h3 className="font-[family-name:var(--font-display)] text-ink">
-          {seat.player_name ?? <span className="text-muted">wolne miejsce</span>}
+          {/* A seat with a character but no name is somebody who joined without
+              typing one, not an empty chair — calling it "wolne" made a player
+              look absent at their own table. */}
+          {seat.player_name ?? (
+            <span className="text-muted">
+              {seat.character_id ? `Miejsce ${seat.seat_index + 1}` : "wolne miejsce"}
+            </span>
+          )}
         </h3>
         {seat.turns_lost > 0 && (
           <span className="text-[10px] uppercase text-vermilion">
@@ -1045,4 +1023,46 @@ function rollSkippedBy(seat: Seat): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Leaving, confirmed by a second click rather than a browser dialog.
+ *
+ * Mid-game it says what it costs: 4.4 makes leaving an elimination, the
+ * character's things stay on the board, and there is no undo.
+ */
+function LeaveButton({
+  playing,
+  busy,
+  onLeave,
+}: {
+  playing: boolean;
+  busy: boolean;
+  onLeave: () => void;
+}) {
+  const [armed, setArmed] = useState(false);
+  if (!armed) {
+    return (
+      <button onClick={() => setArmed(true)} className="text-muted hover:text-vermilion">
+        Opuść stół
+      </button>
+    );
+  }
+  return (
+    <span className="flex items-center gap-2">
+      <span className="text-vermilion">
+        {playing ? "Postać wypada z gry — na pewno?" : "Na pewno?"}
+      </span>
+      <button
+        onClick={onLeave}
+        disabled={busy}
+        className="rounded border border-vermilion/60 px-1.5 text-vermilion disabled:opacity-50"
+      >
+        tak
+      </button>
+      <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+        nie
+      </button>
+    </span>
+  );
 }

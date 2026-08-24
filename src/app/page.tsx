@@ -8,20 +8,21 @@ import { normaliseJoinCode } from "@/lib/game/codes";
 export default function Home() {
   const router = useRouter();
   const [code, setCode] = useState("");
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function startTable() {
-    // Asked before the table exists, so the host is never left showing as an
-    // empty seat on the shared screen while holding a character.
-    const name = prompt("Twoje imię?");
+    // The name is typed into the page rather than a browser prompt: a native
+    // dialog blocks everything behind it, cannot be styled, and on a phone
+    // arrives as a system alert in the middle of a game.
     setBusy(true);
     setError(null);
     try {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name: name.trim() || null }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -46,13 +47,32 @@ export default function Home() {
         </p>
       </header>
 
-      <button
-        onClick={startTable}
-        disabled={busy}
-        className="rounded-lg border border-edge bg-raised px-6 py-4 font-[family-name:var(--font-display)] text-lg font-medium text-ink transition hover:border-ochre hover:bg-edge disabled:opacity-50"
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          startTable();
+        }}
+        className="flex flex-col gap-2"
       >
-        {busy ? "Otwieram stół…" : "Otwórz nowy stół"}
-      </button>
+        <label className="text-xs uppercase tracking-widest text-muted" htmlFor="name">
+          Twoje imię
+        </label>
+        <input
+          id="name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="np. Michał"
+          maxLength={24}
+          className="rounded border border-edge bg-panel px-3 py-2 text-ink outline-none focus:border-ochre"
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="rounded-lg border border-edge bg-raised px-6 py-4 font-[family-name:var(--font-display)] text-lg font-medium text-ink transition hover:border-ochre hover:bg-edge disabled:opacity-50"
+        >
+          {busy ? "Otwieram stół…" : "Otwórz nowy stół"}
+        </button>
+      </form>
 
       <form
         onSubmit={(event) => {

@@ -61,7 +61,9 @@ export function BoardMap({
   return (
     <svg
       viewBox={`0 0 ${VIEW.width} ${VIEW.height}`}
-      className="w-full max-w-[560px] select-none"
+      // Sized by its container rather than by a fixed width: on the game
+      // screen the board gets half the viewport and the height runs out first.
+      className="h-full max-h-full w-full select-none"
       role="img"
       aria-label="Mapa planszy"
     >
