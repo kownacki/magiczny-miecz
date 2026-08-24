@@ -1,0 +1,165 @@
+{
+  "srodkowy": [
+    {
+      "name": "Twierdza Strzegąca Dróg",
+      "text": "Władca Twierdzy może wyznaczyć ci misję. Jeżeli się zdecydowałeś rzucić kostką: 1 - pokonasz Wroga; 2-3 pokonasz inną Postać (po wypełnieniu misji zostaniesz natychmiast przeniesiony do Twierdzy); 4-5 przyniesiesz 3 Sz. Z. (odłóż je); 6 - przyniesiesz 2 Sz. Z. (odłóż je). Po wypełnieniu misji, Władca ofiaruje ci Tarczę Tolimana."
+    },
+    {
+      "name": "Wilczy Parów",
+      "text": "Musisz rzucić kostką: 1, 2, 3 - udało ci się bezpiecznie przemknąć; 4 - zaatakował cię mieszkający tu Wilkołak (Miecz 4); 5 - zaatakował cię Wilkołak (Miecz 5); 6 - zaatakował cię Wilkołak (Miecz 6)."
+    },
+    {
+      "name": "Kamienny Las",
+      "text": "WYCIĄGNIJ 2 KARTY. Ciągniesz tylko 1 Kartę jeżeli jakaś już jest. [fragment nieczytelny, prawdopodobnie: Każdy Wróg, z którym zmierzysz się w Kamiennym Lesie dodaje ... punkt(y) do swojej Magii lub Miecza.]",
+      "draw": 2
+    },
+    {
+      "name": "Mroźna Polana",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się na Polanie dodaje 1 punkt do swojej Magii lub Miecza.",
+      "draw": 1
+    },
+    {
+      "name": "Przeprawa",
+      "text": "Musisz przeprawić się przez rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego rozpocząłeś ruch."
+    },
+    {
+      "name": "Przełęcz Wichrów",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest lub przechodzisz do Doliny Czaszek. TYLKO TU MOŻNA PRZEPRAWIĆ SIĘ PRZEZ LODOWY LAS. Nim przeprawisz się przez Lodowy Las musisz pokonać strzegącego Przełęczy Rycerza Wiecznych Śniegów (Miecz 10). Nie możesz kontynuować podróży, dopóki walka nie zostanie rozstrzygnięta. Rycerz pozostanie tu nawet pokonany, lecz nie atakuje jeżeli przechodzisz z Doliny Czaszek.",
+      "draw": 1
+    },
+    {
+      "name": "Przeprawa",
+      "text": "Musisz przeprawić się przez rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego rozpocząłeś ruch."
+    },
+    {
+      "name": "Świątynia Tolimana",
+      "text": "Możesz modlić się do groźnego Bóstwa. Rzuć dwoma kostkami: 2 - tracisz 1 punkt Życia; 3 - tracisz po 1 punkcie Magii i Miecza; 4 - tracisz 1 Zaklęcie; 5 - tracisz jednego z Przyjaciół; 6 - zyskujesz jedno Zaklęcie; 7 - zyskujesz 1 punkt Magii lub 1 punkt Miecza; 8 - zyskujesz dodatkowy ruch; 9 - zostałeś opętany, pozostaniesz tu dopóki nie wyrzucisz 1, 2 lub 3 oczka na jednej kostce; 10 - otrzymujesz Tarczę Tolimana (jeśli jeszcze jakaś jest); 11 - zyskujesz 1 punkt Życia; 12 - tracisz 1 punkt Życia i po 1 punkcie Magii i Miecza."
+    },
+    {
+      "name": "Magiczne Wrota",
+      "text": "Wypowiedz życzenie! Możesz zyskać do wyboru: 1 punkt Miecza, 1 punkt Magii, 1 Zaklęcie lub 1 Sztukę Złota."
+    },
+    {
+      "name": "Strażnik Magicznych Wrót",
+      "text": "Aby przejść przez Wrota musisz wykupić się [kwota nieczytelna, prawdopodobnie 1 Sz. Z.]. W przeciwnym wypadku tracisz 1 Życie."
+    },
+    {
+      "name": "Wieża Przeznaczenia",
+      "text": "Znalazłeś się pod wpływem potężnych sił Wieży. Rzuć kostką: 1 - tracisz 1 turę; 2-3 zostajesz Zamieniony w Kamień; 4-5 zyskujesz dodatkowy ruch; 6 - zostałeś zignorowany."
+    },
+    {
+      "name": "Wrzosowiska",
+      "text": "WYCIĄGNIJ 2 KARTY. Ciągniesz tylko 1 Kartę, jeżeli jakaś już tu jest.",
+      "draw": 2
+    },
+    {
+      "name": "Dolina Cienia",
+      "text": "WYCIĄGNIJ 1 KARTĘ [niepewne]. Nie ciągnij karty jeżeli jakaś już tu jest. [fragment nieczytelny: Wróg, z którym zmierzysz się w ... dodaje 1 punkt do swojej Magii lub Miecza.]",
+      "draw": 1
+    },
+    {
+      "name": "Płaskowyż Mgieł",
+      "text": "WYCIĄGNIJ 3 KARTY. Jeżeli jakieś Karty znajdują się już na tym Obszarze, ciągniesz tylko tyle, by ich liczba równała się 3.",
+      "draw": 3
+    },
+    {
+      "name": "Zaczarowane Wzgórza",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij karty, jeżeli jakaś już tu jest. Na tym Obszarze nie możesz liczyć na Miecz i Magię czerpane z Przedmiotów i Przedmiotów Magicznych. Nie możesz też rzucać Zaklęć.",
+      "draw": 1
+    },
+    {
+      "name": "Świątynia Bogini Nemed",
+      "text": "MOŻESZ MODLIĆ SIĘ RZUCAJĄC 2 KOSTKAMI: 2 - zyskujesz 2 punkty Życia; 3 - tracisz 1 punkt Życia; [wyniki 4-6 nieczytelne w całości, fragmenty: 'tracisz do wyboru: 1 punkt Miecza', 'zyskujesz 1 punkt Miecza', 'zyskujesz 1 punkt Magii']; 7 - zyskujesz 1 punkt Magii; 8 - zyskujesz 1 z Przyjaciół; 9 - zostałeś opętany, pozostaniesz tu, dopóki nie wyrzucisz 1, 2 lub 3 oczek (na 1 kostce) podczas swojej tury; 10 - tracisz do wyboru: 1 punkt Magii lub Miecza; 11 - otrzymujesz Magiczny Miecz (jeżeli jeszcze jakieś są); 12 - tracisz 2 punkty Życia."
+    },
+    {
+      "name": "Las Błędnych Ogni",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli już jakaś tu jest. TYLKO TĘDY MOŻNA PRZEPRAWIĆ SIĘ NA DRUGĄ STRONĘ UROCZYSKA (nie rzucając kostką).",
+      "draw": 1
+    },
+    {
+      "name": "Pustelnia",
+      "text": "Pustelnik może z pomocą ziół przywrócić ci punkty Życia z początku wędrówki pod warunkiem, że wyrzekniesz się bogactwa. Musisz odrzucić 1 Sz. Z. za każdą wyleczoną ranę."
+    },
+    {
+      "name": "Równina Samotnych Skał",
+      "text": "WYCIĄGNIJ 2 KARTY. Ciągniesz tylko 1 Kartę, jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się na Równinie dodaje 2 punkty do swojej Magii lub Miecza.",
+      "draw": 2
+    },
+    {
+      "name": "Przeprawa",
+      "text": "Musisz przeprawić się przez rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego rozpocząłeś ruch."
+    }
+  ],
+  "gorny": [
+    {
+      "name": "Ruiny Twierdzy",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest lub wchodzisz na Kamienny Most. Nim wkroczysz na Most musisz pokonać Kamiennego Potwora. Rzuć kostką aby przekonać się, jaką siłę Miecza ma Potwór: 1-5; 2-6; 3-7; 4-8; 5-9; 6-10. Jeżeli przegrasz będziesz musiał kontynuować podróż w tym samym Kręgu. Potwór zostanie tu nawet pokonany. Przegrana oznacza dla ciebie utratę 1 punktu Miecza. Potwór nie atakuje jeśli schodzisz z Mostu. ABY WEJŚĆ NA MOST MUSISZ MIEĆ MAGICZNY MIECZ!",
+      "draw": 1
+    },
+    {
+      "name": "Dolina Czaszek",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. [fragment nieczytelny, prawdopodobnie: Każdy Wróg, z którym zmierzysz się w Dolinie dodaje ... punkt(y) do swojej Magii lub Miecza.] TYLKO TĘDY MOŻNA PRZEDOSTAĆ SIĘ DO PRZEŁĘCZY WICHRÓW.",
+      "draw": 1
+    },
+    {
+      "name": "Urwisko",
+      "text": "Rzuć kostką: 1-2 tracisz Życie. Rzuć także kostką za każdego z Przyjaciół, 1-2 Przyjaciel traci Życie (odłóż jego kartę)."
+    },
+    {
+      "name": "Ruchome Skały",
+      "text": "Tracisz 1 Życie."
+    },
+    {
+      "name": "Bagna",
+      "text": "Tracisz 1 z Przedmiotów (również Magicznych) lub 1 z Przyjaciół, wedle własnego wyboru. [tekst przyjęty przez analogię z instancją tego pola przy narożniku dolny-lewy; nie odczytany w pełni bezpośrednio dla tej instancji]"
+    },
+    {
+      "name": "Zamek",
+      "text": "Nadworny Medyk przywróci ci punkty Życia z początku rozgrywki jeżeli zapłacisz mu 1 Sz. Z. za każdy zyskany punkt. Określ ilość punktów, a następnie po uiszczeniu opłaty rzuć kostką: 1-4 zostałeś wyleczony; 5 - niestety twój stan się nie zmienił; 6 - wybrałeś fatalnego Medyka, tracisz 1 Życie."
+    },
+    {
+      "name": "Rozstajne Drogi",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Nie możesz liczyć na Magię i Miecz czerpane z Przedmiotów i Przedmiotów Magicznych.",
+      "draw": 1
+    },
+    {
+      "name": "Równina Traw",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Każdy Wróg, z którym spotkasz się na Równinie dodaje 3 punkty do swojej Magii lub Miecza.",
+      "draw": 1
+    },
+    {
+      "name": "Wymarłe Miasto",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już jest tu lub gdy wchodzisz na Kamienny Most. Nim wkroczysz na Most musisz pokonać Ducha Skał. Rzuć kostką, by dowiedzieć się jaką mocą Magii dysponuje Duch: 1-5; 2-6; 3-7; 4-8; 5-9; 6-10. Jeżeli przegrasz będziesz musiał kontynuować podróż w tym samym Kręgu. Duch pozostanie tu nawet pokonany. Przegrana oznacza dla ciebie utratę 1 punktu Magii. Duch nie atakuje jeżeli schodzisz z Mostu. ABY WEJŚĆ NA MOST MUSISZ MIEĆ MAGICZNY MIECZ!",
+      "draw": 1
+    },
+    {
+      "name": "Krypta Upiorów",
+      "text": "MUSISZ RZUCIĆ KOSTKĄ: 1, 2, 3 - udało ci się bezpiecznie przemknąć; 4 - zaatakował cię Upiór (Magia 4); 5 - zaatakował cię Upiór (Magia 5); 6 - zaatakował cię Upiór (Magia 6). Nie możesz też rzucać Zaklęć."
+    },
+    {
+      "name": "Bagna",
+      "text": "Tracisz 1 z Przedmiotów (również Magicznych) lub 1 z Przyjaciół, wedle własnego wyboru."
+    },
+    {
+      "name": "Ruchome Skały",
+      "text": "Tracisz 1 Życie."
+    },
+    {
+      "name": "Rozstajne Drogi",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Nie możesz tu używać Zaklęć.",
+      "draw": 1
+    },
+    {
+      "name": "Równina Snu",
+      "text": "WYCIĄGNIJ 1 KARTĘ. Nie ciągnij Karty, jeżeli jakaś już tu jest. Każdy Wróg, z którym zmierzysz się na Równinie dodaje 2 punkty do swojej Magii lub Miecza.",
+      "draw": 1
+    },
+    {
+      "name": "Urwisko",
+      "text": "Rzuć kostką: 1 lub 2 oczka oznaczają, że tracisz 1 Życie. Rzuć także za każdego z Przyjaciół: 1 lub 2 oczka Przyjaciel traci Życie (odłóż jego kartę)."
+    }
+  ],
+  "notes": "GENERAL METHOD: All 12 tiles were read. Text on the physical board is printed at many different rotations (sideways/upside-down relative to a reader outside that edge); this made verbatim transcription of small rotated text blocks the main source of error, not tile legibility per se — no tile was wholly unreadable. Ring membership (środkowy vs górny) was inferred from: (a) the 5 given hard constraints, which are all satisfied — see below; (b) a consistent visual pattern in every multi-row tile where the row closest to the already-known inner ring (14 fields) contains 'WYCIĄGNIJ KARTĘ + Magia/Miecz bonus' style fields and the special crossing fields (these were classified środkowy), while the row closest to the physical board border contains short punishment fields (Urwisko, Ruchome Skały, Bagna, Krypta Upiorów) and the three named outer set-pieces (Ruiny Twierdzy, Wymarłe Miasto, Dolina Czaszek, Zamek, Równina Traw/Snu, Rozstajne Drogi) — these were classified górny. This pattern was corroborated independently across top-0/left-0, right-1, left-1/left-2, and bottom-1/2/right-2, so ring MEMBERSHIP is reasonably confident, but exact cyclic ORDER within and between the corner clusters is a best-effort reconstruction from local adjacency inside each tile image and could not be fully cross-validated against absolute board geometry (tile rotation scrambles absolute compass direction, so I relied on relative adjacency + shared/overlapping field names at tile-corner overlaps to stitch clusters together). Treat the ordering as 'locally adjacent pairs are solid, global loop direction/exact splice points are approximate'.\n\nCROSS-CHECKS: (1) Uroczysko -> Las Błędnych Ogni (środkowy): PASS — Uroczysko's card text explicitly names 'Lasu Błędnych Ogni' and 'BŁĘDNYCH OGNI' as the only crossing, and Las Błędnych Ogni (środkowy list) explicitly says crossing back is 'TYLKO TĘDY... UROCZYSKA'. (2) Przełęcz Wichrów (środkowy) <-> Dolina Czaszek (górny): PASS — each field's text explicitly cross-references the other as the only crossing. (3) Bridge crosses środkowy ring at Świątynia Bogini Nemed and Twierdza Strzegąca Dróg: PASS — both included in środkowy list, both are large 'crossing-point' style fields adjacent to bridge tiles in the source images (left-2 and top-0/left-0 respectively). (4) Bridge crosses inner ring at Step and Mroźne Pustkowie: PASS by construction (given, inner ring not re-derived) — also visually corroborated, both appear directly adjacent to bridge cells (Pułapka/Wejście na Most/Magiczna Pułapka) in top-1/right-0 and bottom-1. (5) Bridge entered from górny ring only, at Wymarłe Miasto and Ruiny Twierdzy: PASS — both included in górny list and both texts explicitly say entering requires defeating a guardian before 'wchodzisz na Kamienny Most' / crossing onto the bridge.\n\nDUPLICATE/SYMMETRIC FIELDS: The board reuses several field names twice on opposite sides, similarly to how Mokradła/Step repeat in the given inner ring. Confirmed duplicates (kept as separate array entries, in ring-order position, not merged): Urwisko (x2, słightly different wording between the two instances — both transcribed as seen), Ruchome Skały (x2, identical 'Tracisz 1 Życie.'), Bagna (x2 — only one instance's text was clearly legible directly; the second (right-1) was assumed identical by analogy and flagged in its 'text' field), Rozstajne Drogi (x2, with DIFFERENT restriction clauses — not a copy error, genuinely different text), Przeprawa (x3 confirmed instances in środkowy — top edge near top-0/top-1 boundary, top-2/right-0 corner, and left-1; a 4th symmetric instance near the bottom or right-1 may exist but was not located in the scanned tiles).\n\nUNCERTAIN / PARTIALLY ILLEGIBLE TEXT (flagged inline with bracketed notes in the 'text' fields above, summarized here): (a) Kamienny Las — the bonus-points sentence ('Każdy Wróg... dodaje N punkt(y) do swojej Magii lub Miecza') was visible as a separate rotated fragment adjacent to the main card but the exact point number could not be read with confidence. (b) Dolina Czaszek — same issue: an adjacent fragment clearly says '...w Dolinie dodaje ... swojej Magii lub Miecza' but the number is unreadable, and I am not 100% certain this fragment belongs to Dolina Czaszek rather than being a stray neighboring label; included conservatively. (c) Świątynia Bogini Nemed — the 2d6 table for rolls 4, 5, 6 was smeared across two overlapping rotated scans (bottom-1/left-2 do not actually both show it — only left-2 does) and could not be fully disambiguated; rolls 2, 3, 7, 8, 9, 11, 12 are confident, 4-6 and the exact 10/11 split are approximate/incomplete. (d) Strażnik Magicznych Wrót — reconstructed from two half-fragments (right-1 + right-2); the Sz.Z. amount required to pay off the guardian is not fully legible. (e) Dolina Cienia — right-1 tile cuts this field off at the tile's right edge; only a partial 'WYCIĄGNIJ ... / Nie ciągnij karty jeżeli jakaś już tu jest / ...dodaje 1 punkt...' could be read; the draw count of 1 is an assumption based on the common pattern elsewhere, not a direct read. No tile was fully unreadable, but small rotated corner-overlap text (as noted above) was the recurring weak point.\n\nADDITIONAL CAVEAT: I did not attempt to verify whether środkowy has exactly 20 fields or górny exactly 15 fields against any authoritative count — these counts are simply everything I was able to identify as belonging to each ring from the 12 tiles, given the duplicate-name fields kept separate. If the real board has fields hidden entirely within tile overlap regions I mis-attributed as duplicates (merged when they should be distinct, or vice versa), counts could be off by a small number.",
+  "verified": false,
+  "warning": "Ring MEMBERSHIP is corroborated (all five rule cross-checks pass) but the CYCLIC ORDER is a best-effort reconstruction from local tile adjacency and is NOT verified against board geometry. Two specific smells: the outer ring (gorny, 15) is shorter than the middle ring (srodkowy, 20), which is backwards for concentric rings, and 'Przeprawa' appears three times with a possible fourth unlocated. Movement depends on adjacency, so this must NOT be wired into the engine until the order is re-derived. Dolny Krag and Kamienny Most in src/lib/engine/board.ts are separately verified and are what the engine actually uses."
+}

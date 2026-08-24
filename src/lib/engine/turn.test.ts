@@ -1,0 +1,178 @@
+import { describe, expect, it } from "vitest";
+import { DOLNY_KRAG, destination, moveOptions, ringOf } from "./board";
+import {
+  afterDraw,
+  afterMove,
+  afterRoll,
+  endFight,
+  nextSeat,
+  recordFightRoll,
+  startFight,
+  startTurn,
+  type TurnOrderSeat,
+  type TurnPhase,
+} from "./turn";
+
+const seat = (index: number, over: Partial<TurnOrderSeat> = {}): TurnOrderSeat => ({
+  index,
+  eliminated: false,
+  turnsLost: 0,
+  stoneUntilTurn: null,
+  ...over,
+});
+
+describe("the ring (10.2)", () => {
+  it("has the fourteen Dolny Krąg fields", () => {
+    expect(DOLNY_KRAG).toHaveLength(14);
+  });
+
+  it("walks clockwise and anticlockwise from the same square", () => {
+    expect(destination(DOLNY_KRAG, "osada", 3, "zgodnie")?.id).toBe("step-2");
+    expect(destination(DOLNY_KRAG, "osada", 3, "przeciwnie")?.id).toBe("czarci-mlyn");
+  });
+
+  it("wraps round the ring", () => {
+    expect(destination(DOLNY_KRAG, "uroczysko", 1, "zgodnie")?.id).toBe("karczma");
+    expect(destination(DOLNY_KRAG, "karczma", 1, "przeciwnie")?.id).toBe("uroczysko");
+  });
+
+  it("returns to the start after a full lap", () => {
+    expect(destination(DOLNY_KRAG, "grod", 14, "zgodnie")?.id).toBe("grod");
+  });
+
+  it("reports the fields walked through, excluding the landing square", () => {
+    const [clockwise] = moveOptions(DOLNY_KRAG, "karczma", 3);
+    expect(clockwise.through.map((f) => f.id)).toEqual(["mrozne-pustkowie", "grod"]);
+    expect(clockwise.field.id).toBe("bezdroza");
+  });
+
+  it("offers both directions even when a roll of seven lands on the same field", () => {
+    // Seven steps either way round a fourteen-field ring meets at the far side.
+    const options = moveOptions(DOLNY_KRAG, "karczma", 7);
+    expect(options).toHaveLength(2);
+    expect(options[0].field.id).toBe(options[1].field.id);
+  });
+
+  it("does not place bridge squares on the ring", () => {
+    expect(DOLNY_KRAG.some((f) => f.id === "zamek-bestii")).toBe(false);
+    expect(ringOf("zamek-bestii")).not.toBe(DOLNY_KRAG);
+  });
+});
+
+describe("turn phases (10.1)", () => {
+  it("opens on the roll", () => {
+    expect(startTurn()).toEqual({ phase: "rzut" });
+  });
+
+  it("offers two destinations after a roll", () => {
+    const phase = afterRoll("karczma", 2);
+    expect(phase.phase).toBe("ruch");
+    if (phase.phase !== "ruch") return;
+    expect(phase.roll).toBe(2);
+    expect(phase.options).toHaveLength(2);
+  });
+
+  it("carries the field's draw count on landing (13.4)", () => {
+    const bezdroza = DOLNY_KRAG.find((f) => f.id === "bezdroza")!;
+    const phase = afterMove(bezdroza);
+    expect(phase).toMatchObject({ phase: "pole", fieldId: "bezdroza", draw: 2 });
+  });
+
+  it("keeps drawn cards in resolution order however they arrive (15.2)", () => {
+    let phase: TurnPhase = afterMove(DOLNY_KRAG.find((f) => f.id === "bezdroza")!);
+    phase = afterDraw(phase, { cardId: "zloto", cardClass: "przedmiot" });
+    phase = afterDraw(phase, { cardId: "wilk", cardClass: "wrog" });
+    phase = afterDraw(phase, { cardId: "mgla", cardClass: "spotkanie" });
+    if (phase.phase !== "pole") throw new Error("expected pole");
+    expect(phase.drawn.map((c) => c.cardId)).toEqual(["mgla", "wilk", "zloto"]);
+  });
+});
+
+describe("fights", () => {
+  const field = afterMove(DOLNY_KRAG.find((f) => f.id === "kurhan")!);
+
+  it("uses Miecz for an ordinary enemy", () => {
+    const phase = startFight(
+      field,
+      { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
+      { miecz: 3, magia: 5 },
+    );
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(phase.fight.kind).toBe("zwykla");
+    expect(phase.fight.enemyTotal).toBe(6);
+    expect(phase.fight.playerTotal).toBe(3);
+  });
+
+  it("switches to Magia when the card is a Demon (16.3, 18.2)", () => {
+    const phase = startFight(
+      field,
+      { cardId: "demon", cardName: "DEMON", magia: 7 },
+      { miecz: 3, magia: 5 },
+    );
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(phase.fight.kind).toBe("magiczna");
+    expect(phase.fight.enemyTotal).toBe(7);
+    expect(phase.fight.playerTotal).toBe(5);
+  });
+
+  it("settles only once both dice are in (17.8)", () => {
+    let phase = startFight(
+      field,
+      { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
+      { miecz: 3, magia: 5 },
+    );
+    phase = recordFightRoll(phase, "player", 6);
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(phase.fight.result).toBeNull();
+
+    phase = recordFightRoll(phase, "enemy", 1);
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(phase.fight.result).toMatchObject({ outcome: "wygrana" });
+  });
+
+  it("returns to the field it interrupted, drawn cards intact", () => {
+    let phase: TurnPhase = afterDraw(field, { cardId: "cyklop", cardClass: "wrog" });
+    phase = startFight(
+      phase,
+      { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
+      { miecz: 3, magia: 5 },
+    );
+    const back = endFight(phase);
+    expect(back).toMatchObject({ phase: "pole", fieldId: "kurhan" });
+    if (back.phase !== "pole") return;
+    expect(back.drawn).toHaveLength(1);
+  });
+});
+
+describe("turn order", () => {
+  it("passes to the next seat", () => {
+    expect(nextSeat([seat(0), seat(1), seat(2)], 0, 1).seat).toBe(1);
+  });
+
+  it("wraps back to the first", () => {
+    expect(nextSeat([seat(0), seat(1)], 1, 1).seat).toBe(0);
+  });
+
+  it("skips a seat that is sitting out a lost turn", () => {
+    const result = nextSeat([seat(0), seat(1, { turnsLost: 1 }), seat(2)], 0, 1);
+    expect(result.seat).toBe(2);
+    expect(result.skipped).toEqual([1]);
+  });
+
+  it("skips the dead entirely, without spending anything (4.4)", () => {
+    const result = nextSeat([seat(0), seat(1, { eliminated: true }), seat(2)], 0, 1);
+    expect(result.seat).toBe(2);
+    expect(result.skipped).toEqual([]);
+  });
+
+  it("skips a character turned to stone until its three turns are up (20.1)", () => {
+    const stone = [seat(0), seat(1, { stoneUntilTurn: 5 })];
+    expect(nextSeat(stone, 0, 3).seat).toBe(0);
+    expect(nextSeat(stone, 0, 5).seat).toBe(1);
+  });
+
+  it("gives up rather than looping forever when nobody can act", () => {
+    const none = [seat(0, { eliminated: true }), seat(1, { eliminated: true })];
+    expect(nextSeat(none, 0, 1).seat).toBeNull();
+  });
+});

@@ -6,10 +6,18 @@ import {
   afterDraw,
   afterMove,
   afterRoll,
+  endFight,
   nextSeat,
+  recordFightRoll,
+  setFightTotal,
+  startFight,
   startTurn,
   type TurnPhase,
 } from "@/lib/engine/turn";
+import events from "@/data/events.json";
+import type { EventCard } from "@/data/types";
+
+const EVENTS = events as EventCard[];
 import type { CardClass } from "@/data/types";
 import { bumpRevision, seatsFor, type GameRow, type SeatRow } from "./store";
 
@@ -138,6 +146,97 @@ export async function drawCard(
   const next = afterDraw(game.turn_state, { cardId, cardClass });
   await db.from("games").update({ turn_state: next }).eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "karta", { cardId, cardClass });
+  await bumpRevision(gameId);
+}
+
+/**
+ * Opens a fight against a card already drawn this turn.
+ *
+ * The player's total is seeded from their own points only. Items and friends
+ * count towards it under 1.5, but those are physical cards on the table that
+ * the referee does not track yet — so the number is seeded low and left
+ * editable rather than being quietly wrong.
+ */
+export async function beginFight(gameId: string, cardId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (game.turn_state.phase !== "pole") throw new Error("Nie czas na walkę.");
+
+  const card = EVENTS.find((c) => c.id === cardId);
+  if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+  if (card.miecz === undefined && card.magia === undefined) {
+    throw new Error("Ta karta nie ma parametru walki.");
+  }
+
+  const next = startFight(
+    game.turn_state,
+    { cardId: card.id, cardName: card.name, miecz: card.miecz, magia: card.magia },
+    { miecz: seat.miecz_own, magia: seat.magia_own },
+  );
+  await db.from("games").update({ turn_state: next }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "walka-start", { cardId });
+  await bumpRevision(gameId);
+}
+
+export async function setFightPlayerTotal(gameId: string, total: number): Promise<void> {
+  const game = await loadGame(gameId);
+  await db
+    .from("games")
+    .update({ turn_state: setFightTotal(game.turn_state, total) })
+    .eq("id", gameId);
+  await bumpRevision(gameId);
+}
+
+export async function fightRoll(
+  gameId: string,
+  side: "player" | "enemy",
+  value: number | null,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
+
+  const roll = value ?? 1 + Math.floor(Math.random() * 6);
+  if (!Number.isInteger(roll) || roll < 1 || roll > 6) {
+    throw new Error("Kostka daje wynik od 1 do 6.");
+  }
+  const next = recordFightRoll(game.turn_state, side, roll);
+  await db.from("games").update({ turn_state: next }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "walka-rzut", { side, roll }, value !== null);
+  await bumpRevision(gameId);
+}
+
+/**
+ * Closes a fight and applies its cost.
+ *
+ * A loss costs one point of Życie (17.4). A draw costs nothing at all (17.10) —
+ * which is the detail tables most often get wrong, so the referee is careful to
+ * apply literally nothing. What the *winner* takes is a choice under 17.9 and
+ * is left to the player rather than assumed.
+ */
+export async function resolveFight(gameId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
+
+  const { fight } = game.turn_state;
+  if (!fight.result) throw new Error("Walka nie jest rozstrzygnięta.");
+
+  if (fight.result.outcome === "przegrana") {
+    await db
+      .from("seats")
+      .update({ zycie: Math.max(0, seat.zycie - 1) })
+      .eq("id", seat.id);
+  }
+
+  await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "walka-koniec", {
+    cardId: fight.cardId,
+    outcome: fight.result.outcome,
+  });
   await bumpRevision(gameId);
 }
 

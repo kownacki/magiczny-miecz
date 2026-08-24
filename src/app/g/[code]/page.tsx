@@ -45,7 +45,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [game, setGame] = useState<Game | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const [mySeatIndex, setMySeatIndex] = useState<number | null>(null);
@@ -62,11 +61,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }, [code]);
 
   useEffect(() => {
-    setToken(localStorage.getItem(`mm:${code}`));
-    refresh();
     // Polling stands in for the Realtime revision ping. Two seconds is
     // imperceptible at a table where a turn takes a minute, and every refetch
     // still goes through the route handler, so the secrecy model is unchanged.
+    //
+    // The lint rule cannot see that `refresh` is async: its every setState runs
+    // after `await fetch`, so nothing is set synchronously during the effect.
+    // This is exactly the "subscribe to an external system" shape the rule's
+    // own message endorses — the external system here being the table's state
+    // on the server.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refresh();
     const timer = setInterval(refresh, 2000);
     return () => clearInterval(timer);
   }, [code, refresh]);
@@ -76,10 +81,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       setBusy(true);
       setError(null);
       try {
+        // Read the token at call time rather than holding it in state: it only
+        // exists in localStorage, which is unavailable while this renders on
+        // the server, and mirroring it into state meant setting state inside an
+        // effect for no gain.
         const response = await fetch(`/api/games/${code}/${path}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...body, token }),
+          body: JSON.stringify({ ...body, token: localStorage.getItem(`mm:${code}`) }),
         });
         if (!response.ok) setError((await response.json()).error);
         await refresh();
@@ -87,7 +96,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         setBusy(false);
       }
     },
-    [code, token, refresh],
+    [code, refresh],
   );
 
   async function join() {
@@ -100,7 +109,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const data = await response.json();
     if (!response.ok) return setError(data.error);
     localStorage.setItem(`mm:${code}`, data.token);
-    setToken(data.token);
     refresh();
   }
 
@@ -140,7 +148,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <div className="mb-8">
           <TurnPanel
             phase={game.turn_state}
-            isMine={Boolean(token && active.seat_index === mySeat?.seat_index)}
+            isMine={mySeatIndex !== null && active.seat_index === mySeatIndex}
             playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
             fieldName={
               active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
@@ -158,7 +166,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             key={seat.id}
             seat={seat}
             active={playing && seat.seat_index === game.active_seat}
-            canAdjust={Boolean(token)}
+            canAdjust={mySeatIndex !== null}
             onAdjust={(stat, delta) => post("adjust", { seatId: seat.id, stat, delta })}
           />
         ))}
@@ -172,7 +180,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         )}
       </section>
 
-      {!playing && token && mySeat && !mySeat.character_id && (
+      {!playing && mySeat && !mySeat.character_id && (
         <section className="mt-12">
           <h2 className="mb-4 font-[family-name:var(--font-display)] text-lg text-ink">
             Wybierz postać

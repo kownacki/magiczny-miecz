@@ -2,6 +2,7 @@
 
 import { DOLNY_KRAG, type BoardField, type Direction, moveOptions, ringOf } from "./board";
 import { resolutionOrder, type TurnCard } from "./state";
+import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 
 /**
  * A turn is rule 10.1's two steps — move, then deal with where you landed —
@@ -16,7 +17,33 @@ export type TurnPhase =
   | { phase: "rzut" }
   | { phase: "ruch"; roll: number; options: TurnMoveOption[] }
   | { phase: "pole"; fieldId: string; draw: number; drawn: TurnCard[] }
+  | { phase: "walka"; fight: Fight }
   | { phase: "koniec" };
+
+/**
+ * A fight in progress, kept in the turn state so every device at the table
+ * watches the same numbers appear rather than one player narrating them.
+ *
+ * `playerTotal` is seeded from the character's own points but stays editable,
+ * because rule 1.5 counts Przedmioty and Przyjaciele towards the total and
+ * those are physical cards lying on the table that the referee does not track
+ * yet. Guessing low and letting the player correct it is honest; silently
+ * fighting with the wrong number is not.
+ */
+export interface Fight {
+  cardId: string;
+  cardName: string;
+  kind: CombatKind;
+  enemyTotal: number;
+  playerTotal: number;
+  playerRoll: number | null;
+  enemyRoll: number | null;
+  result: CombatResult | null;
+  /** The field to return to once the fight is settled. */
+  fieldId: string;
+  draw: number;
+  drawn: TurnCard[];
+}
 
 export interface TurnMoveOption {
   direction: Direction;
@@ -73,6 +100,76 @@ export function afterDraw(phase: TurnPhase, card: TurnCard): TurnPhase {
 
 export function endTurn(): TurnPhase {
   return { phase: "koniec" };
+}
+
+/**
+ * Opens a fight against a drawn card.
+ *
+ * Rule 16.3: a Demon forces magical combat, which rule 18.2 resolves the same
+ * way but on Magia instead of Miecz — so which parameter is in play is decided
+ * here, once, by which value the card printed.
+ */
+export function startFight(
+  phase: TurnPhase,
+  card: { cardId: string; cardName: string; miecz?: number; magia?: number },
+  playerTotals: { miecz: number; magia: number },
+): TurnPhase {
+  if (phase.phase !== "pole") return phase;
+  const kind: CombatKind = card.magia !== undefined ? "magiczna" : "zwykla";
+  const enemyTotal = (kind === "magiczna" ? card.magia : card.miecz) ?? 0;
+  return {
+    phase: "walka",
+    fight: {
+      cardId: card.cardId,
+      cardName: card.cardName,
+      kind,
+      enemyTotal,
+      playerTotal: kind === "magiczna" ? playerTotals.magia : playerTotals.miecz,
+      playerRoll: null,
+      enemyRoll: null,
+      result: null,
+      fieldId: phase.fieldId,
+      draw: phase.draw,
+      drawn: phase.drawn,
+    },
+  };
+}
+
+export function setFightTotal(phase: TurnPhase, playerTotal: number): TurnPhase {
+  if (phase.phase !== "walka") return phase;
+  return { ...phase, fight: { ...phase.fight, playerTotal: Math.max(0, playerTotal) } };
+}
+
+/**
+ * Records one side's die. Rule 17.8 fixes the order — the attacker's Miecz is
+ * worked out first — so the player's roll is taken before the enemy's, and the
+ * comparison only runs once both are in.
+ */
+export function recordFightRoll(
+  phase: TurnPhase,
+  side: "player" | "enemy",
+  roll: number,
+): TurnPhase {
+  if (phase.phase !== "walka") return phase;
+  const fight = {
+    ...phase.fight,
+    ...(side === "player" ? { playerRoll: roll } : { enemyRoll: roll }),
+  };
+  if (fight.playerRoll !== null && fight.enemyRoll !== null) {
+    fight.result = compareCombat(
+      { label: "Postać", total: fight.playerTotal, roll: fight.playerRoll },
+      { label: fight.cardName, total: fight.enemyTotal, roll: fight.enemyRoll },
+      fight.kind,
+    );
+  }
+  return { ...phase, fight };
+}
+
+/** Closes the fight and returns to the field it interrupted. */
+export function endFight(phase: TurnPhase): TurnPhase {
+  if (phase.phase !== "walka") return phase;
+  const { fieldId, draw, drawn } = phase.fight;
+  return { phase: "pole", fieldId, draw, drawn };
 }
 
 /**

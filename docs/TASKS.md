@@ -39,7 +39,12 @@ Every scan is image-only with no text layer, so all of this is read visually.
 - [x] Rulebook read end to end (9 pages)
 - [ ] `docs/RULES.md` — full rulebook transcribed to structured markdown
       (read end to end already; not yet written down)
-- [ ] Board fields: names, ring membership, adjacency, printed instructions
+- [~] Board fields: 58 fields read off the scans. Names and ring membership are
+      corroborated — all five rule cross-checks pass (Uroczysko/Las Błędnych
+      Ogni, Przełęcz Wichrów/Dolina Czaszek, both bridge crossings, both bridge
+      entrances). **Cyclic order is NOT verified** and is deliberately not wired
+      into movement: the outer ring came out shorter than the middle ring, which
+      is backwards for concentric rings. Needs a geometry pass.
 - [x] 165 event cards → typed data
 - [x] 30 spells → typed data
 - [x] 30 items → typed data (14 unnamed in the print files, named in overrides.json)
@@ -56,23 +61,23 @@ Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
       against the scan; middle and upper rings being read now
 - [x] Effects ports: `RandomPort`, `DeckPort`, `ChoicePort`
 - [x] Derived stats: totals, spell capacity, carrying limit, nature gating
-- [ ] Legal-move computation
+- [x] Legal-move computation (both directions round a ring, with the route walked)
 - [x] Card resolution ordering (15.2, 16.4)
 - [x] Combat and magic combat (17, 18) incl. the Beast (14.7)
-- [ ] Ring crossings (11) and the bridge (14)
-- [x] Vitest coverage — 32 tests green; caught a real bug where healing
+- [ ] Ring crossings (11) and the bridge (14) — blocked on verifying ring order
+- [x] Vitest coverage — 53 tests green; caught a real bug where healing
       drained a character who was above four Życie
 
 ## Phase 4 — Companion app
 
 The primary mode: physical board and cards, app as referee.
 
-- [ ] Game + seat model, join code, no accounts
-- [ ] Table view (shared screen) and player view (phone)
-- [ ] Card identification by type-ahead on name
-- [ ] Manual override on every tracked value
-- [ ] Physical-die input as an alternative to the app rolling
-- [ ] Supabase Realtime sync
+- [x] Game + seat model, join code, no accounts
+- [x] Table view — responsive, so a phone gets the same page with only its own controls
+- [x] Card identification by type-ahead on name, diacritics folded
+- [x] Manual override on every tracked value, journalled as manual
+- [x] Physical-die input alongside the app rolling, everywhere a die is needed
+- [~] Sync — 2s polling; the Realtime revision ping drops into the same seam
 
 ## Phase 5 — Full simulation
 

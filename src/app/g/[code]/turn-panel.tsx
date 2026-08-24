@@ -3,7 +3,7 @@
 import { useState } from "react";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
-import { DIRECTION_LABEL, type TurnPhase } from "@/lib/engine/turn";
+import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 
 const EVENTS = events as EventCard[];
 
@@ -117,6 +117,8 @@ function PhaseControls({
       );
     case "pole":
       return <FieldControls phase={phase} busy={busy} onAction={onAction} />;
+    case "walka":
+      return <FightControls fight={phase.fight} busy={busy} onAction={onAction} />;
     case "koniec":
       return (
         <button
@@ -223,7 +225,9 @@ function FieldControls({
         </div>
       )}
 
-      {phase.drawn.length > 0 && <DrawnCards drawn={phase.drawn} />}
+      {phase.drawn.length > 0 && (
+        <DrawnCards drawn={phase.drawn} busy={busy} onAction={onAction} />
+      )}
 
       <button
         disabled={busy}
@@ -237,11 +241,179 @@ function FieldControls({
 }
 
 /**
+ * A fight, one die at a time.
+ *
+ * Both rolls are shown as they land rather than the result appearing at once,
+ * because at a table the tension is in watching the second die — and because
+ * every other player needs to be able to check the arithmetic.
+ */
+function FightControls({
+  fight,
+  busy,
+  onAction,
+}: {
+  fight: Fight;
+  busy: boolean;
+  onAction: Props["onAction"];
+}) {
+  const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-ink">
+        Walka {fight.kind === "magiczna" ? "magiczna" : "zwykła"} z{" "}
+        <span className="text-vermilion">{fight.cardName}</span>
+      </p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <FightSide
+          title="Ty"
+          total={fight.playerTotal}
+          roll={fight.playerRoll}
+          label={label}
+          editable
+          busy={busy}
+          onTotal={(total) => onAction({ action: "fight-total", total })}
+          onRoll={(value) => onAction({ action: "fight-roll", side: "player", value })}
+        />
+        <FightSide
+          title={fight.cardName}
+          total={fight.enemyTotal}
+          roll={fight.enemyRoll}
+          label={label}
+          editable={false}
+          busy={busy}
+          onTotal={() => {}}
+          onRoll={(value) => onAction({ action: "fight-roll", side: "enemy", value })}
+        />
+      </div>
+
+      {fight.result && (
+        <div className="rounded border border-edge bg-night p-3">
+          <p className="text-sm">
+            {fight.result.outcome === "remis" ? (
+              <span className="text-muted">
+                Remis — nikt nic nie traci (17.10).
+              </span>
+            ) : fight.result.outcome === "wygrana" ? (
+              <span className="text-verdigris">
+                Wygrywasz. Możesz odebrać 1 Życie, 1 Przedmiot albo 1 Sztukę Złota (17.9).
+              </span>
+            ) : (
+              <span className="text-vermilion">
+                Przegrywasz — tracisz 1 punkt Życia
+                {fight.kind === "magiczna" ? " (nie można temu zapobiec, 18.2)" : ""}.
+              </span>
+            )}
+          </p>
+          <button
+            disabled={busy}
+            onClick={() => onAction({ action: "fight-done" })}
+            className="mt-3 rounded border border-edge bg-raised px-4 py-2 text-sm text-ink hover:border-ochre disabled:opacity-50"
+          >
+            Zastosuj i wróć
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FightSide({
+  title,
+  total,
+  roll,
+  label,
+  editable,
+  busy,
+  onTotal,
+  onRoll,
+}: {
+  title: string;
+  total: number;
+  roll: number | null;
+  label: string;
+  editable: boolean;
+  busy: boolean;
+  onTotal: (total: number) => void;
+  onRoll: (value: number | null) => void;
+}) {
+  return (
+    <div className="rounded border border-edge bg-night p-3">
+      <p className="mb-2 truncate text-xs uppercase tracking-wide text-muted">{title}</p>
+      <div className="flex items-baseline gap-2">
+        <span className="tnum text-2xl text-ink">{total}</span>
+        <span className="text-xs text-muted">{label}</span>
+        {editable && (
+          <span className="ml-auto flex gap-1">
+            <button
+              disabled={busy}
+              onClick={() => onTotal(total - 1)}
+              className="h-5 w-5 rounded border border-edge text-[11px] text-muted hover:border-vermilion"
+            >
+              −
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onTotal(total + 1)}
+              className="h-5 w-5 rounded border border-edge text-[11px] text-muted hover:border-verdigris"
+            >
+              +
+            </button>
+          </span>
+        )}
+      </div>
+      {editable && (
+        <p className="mt-1 text-[10px] leading-tight text-muted/70">
+          + Przedmioty i Przyjaciele (1.5)
+        </p>
+      )}
+
+      <div className="mt-3">
+        {roll === null ? (
+          <div className="flex flex-wrap gap-1">
+            <button
+              disabled={busy}
+              onClick={() => onRoll(null)}
+              className="rounded border border-edge px-2 py-1 text-xs text-ink hover:border-ochre disabled:opacity-50"
+            >
+              Rzuć
+            </button>
+            {[1, 2, 3, 4, 5, 6].map((value) => (
+              <button
+                key={value}
+                disabled={busy}
+                onClick={() => onRoll(value)}
+                className="tnum h-6 w-6 rounded border border-edge text-xs text-muted hover:border-ochre disabled:opacity-50"
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="tnum text-sm text-muted">
+            rzut <span className="text-ink">{roll}</span> — razem{" "}
+            <span className="text-ochre">{total + roll}</span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * The drawn stack, already in the order rule 15.2 requires — lowest class
  * numeral first. Showing them pre-sorted is most of the point of the referee:
  * getting this order wrong by hand is the commonest mistake at the table.
  */
-function DrawnCards({ drawn }: { drawn: { cardId: string; cardClass: string }[] }) {
+function DrawnCards({
+  drawn,
+  busy,
+  onAction,
+}: {
+  drawn: { cardId: string; cardClass: string }[];
+  busy: boolean;
+  onAction: Props["onAction"];
+}) {
   return (
     <ol className="flex flex-col gap-2 border-l-2 border-ochre/30 pl-3">
       {drawn.map((entry, index) => {
@@ -260,6 +432,15 @@ function DrawnCards({ drawn }: { drawn: { cardId: string; cardClass: string }[] 
             )}
             {card?.magia !== undefined && (
               <p className="tnum mt-1 text-xs text-magia">Magia przeciwnika: {card.magia}</p>
+            )}
+            {card && (card.miecz !== undefined || card.magia !== undefined) && (
+              <button
+                disabled={busy}
+                onClick={() => onAction({ action: "fight", cardId: card.id })}
+                className="mt-2 rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+              >
+                Walcz
+              </button>
             )}
           </li>
         );

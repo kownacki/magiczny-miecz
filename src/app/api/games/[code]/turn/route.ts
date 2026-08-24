@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { drawCard, finishTurn, moveTo, rollForMove } from "@/lib/game/turnStore";
+import {
+  beginFight,
+  drawCard,
+  fightRoll,
+  finishTurn,
+  moveTo,
+  resolveFight,
+  rollForMove,
+  setFightPlayerTotal,
+} from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
 
 /**
@@ -30,6 +39,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "draw":
         await drawCard(game.id, String(body.cardId), body.cardClass as CardClass);
+        break;
+      case "fight":
+        await beginFight(game.id, String(body.cardId));
+        break;
+      case "fight-total":
+        await setFightPlayerTotal(game.id, Number(body.total));
+        break;
+      case "fight-roll":
+        await fightRoll(
+          game.id,
+          body.side === "enemy" ? "enemy" : "player",
+          typeof body.value === "number" ? body.value : null,
+        );
+        break;
+      case "fight-done":
+        await resolveFight(game.id);
         break;
       case "end":
         await finishTurn(game.id);
