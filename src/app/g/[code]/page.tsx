@@ -67,6 +67,11 @@ interface Seat {
   hidden_count: number;
 }
 
+interface FieldCard {
+  fieldId: string;
+  cardId: string;
+}
+
 interface Game {
   id: string;
   join_code: string;
@@ -84,6 +89,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const { code } = use(params);
   const [game, setGame] = useState<Game | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
+  /** Cards lying face up on the board (16.8) — public to every seat. */
+  const [fieldCards, setFieldCards] = useState<FieldCard[]>([]);
   /** A field the player tapped on the map, to read what it says. */
   const [inspecting, setInspecting] = useState<string | null>(null);
   /** What the app just decided by itself, shown until the next action. */
@@ -101,6 +108,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const data = await response.json();
     setGame(data.game);
     setSeats(data.seats);
+    setFieldCards(data.fieldCards ?? []);
     setMySeatIndex(data.mySeatIndex);
   }, [code]);
 
@@ -362,6 +370,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               eliminated: seat.eliminated,
             }))}
             activeSeatIndex={game.active_seat}
+            cardsOnFields={fieldCards.reduce<Record<string, number>>((count, card) => {
+              count[card.fieldId] = (count[card.fieldId] ?? 0) + 1;
+              return count;
+            }, {})}
             // While the active character is choosing a direction, both landing
             // squares are lit so the choice is made by looking at the board
             // rather than by reading two field names.

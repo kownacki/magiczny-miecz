@@ -32,11 +32,14 @@ export interface MapSeat {
 export function BoardMap({
   seats,
   activeSeatIndex,
+  cardsOnFields = {},
   highlight = [],
   onPick,
 }: {
   seats: MapSeat[];
   activeSeatIndex: number | null;
+  /** Fields with cards lying face up on them (16.8). */
+  cardsOnFields?: Record<string, number>;
   /** Fields the active character could move to, highlighted while choosing. */
   highlight?: string[];
   onPick?: (fieldId: string) => void;
@@ -94,6 +97,34 @@ export function BoardMap({
           onPick={onPick}
         />
       ))}
+
+      {/* A card waiting on a field changes what a move is worth, so it has to be
+          visible from the map rather than only once you land there. */}
+      {CELLS.map((cell) =>
+        cardsOnFields[cell.id] ? (
+          <g key={`cards-${cell.id}`} style={{ pointerEvents: "none" }}>
+            <rect
+              x={cell.x + cell.w - 26}
+              y={cell.y + 6}
+              width={20}
+              height={16}
+              rx={3}
+              fill="#d9a441"
+              stroke="#10131f"
+              strokeWidth={1.5}
+            />
+            <text
+              x={cell.x + cell.w - 16}
+              y={cell.y + 18}
+              textAnchor="middle"
+              fontSize={12}
+              fill="#10131f"
+            >
+              {cardsOnFields[cell.id]}
+            </text>
+          </g>
+        ) : null,
+      )}
 
       {[...occupants.entries()].map(([fieldId, here]) => {
         const cell = CELL_BY_ID.get(fieldId);

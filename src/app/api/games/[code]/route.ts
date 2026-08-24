@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findGame, holdingsFor, seatsFor, verifySeat } from "@/lib/game/store";
+import { fieldCardsFor, findGame, holdingsFor, seatsFor, verifySeat } from "@/lib/game/store";
 import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
 
 /**
@@ -23,10 +23,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
   const seats = await seatsFor(game.id);
   const holdings = await holdingsFor(game.id);
+  // Face up on the board by rule 16.8, so there is nothing to conceal and every
+  // seat is sent the same list.
+  const fieldCards = await fieldCardsFor(game.id);
 
   return NextResponse.json({
     game,
     mySeatIndex: mine?.seat_index ?? null,
+    fieldCards: fieldCards.map((row) => ({ fieldId: row.field_id, cardId: row.card_id })),
     seats: seats.map((seat) => {
       const own = holdings
         .filter((holding) => holding.seat_id === seat.id)

@@ -207,8 +207,26 @@ export function afterRoll(
  * character draw, and 13.1 restricts encounters and exploration to the field a
  * move *ended* on — never one merely passed through.
  */
-export function afterMove(field: BoardField, from: string | null = null): TurnPhase {
-  return { phase: "pole", fieldId: field.id, from, draw: field.draw ?? 0, drawn: [] };
+export function afterMove(
+  field: BoardField,
+  from: string | null = null,
+  /**
+   * Cards already lying face up on the field (16.8), which the arriving
+   * character has to deal with along with anything it draws.
+   *
+   * They count against the field's printed draw: 13.4 says "ciągnie się ich
+   * tylko tyle, by ich suma równała się liczbie Kart" — a Płaskowyż Mgieł with
+   * two cards on it is drawn down to one, not three.
+   */
+  waiting: readonly TurnCard[] = [],
+): TurnPhase {
+  return {
+    phase: "pole",
+    fieldId: field.id,
+    from,
+    draw: field.draw ?? 0,
+    drawn: resolutionOrder([...waiting]),
+  };
 }
 
 /**

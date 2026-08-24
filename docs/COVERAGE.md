@@ -136,7 +136,7 @@ screen next to every drawn card.
 
 | | rule | status | where |
 |---|---|---|---|
-| 12.1 | pick up gold, items and friends lying on your field, after any Wrogowie and drawn cards are dealt with | ❌ | **cards are written to the field and never shown again** |
+| 12.1 | pick up gold, items and friends lying on your field, after any Wrogowie and drawn cards are dealt with | ✅ | `liftFieldCards`, `takeCard` |
 
 ## 13. Spotkania i badanie Obszarów
 
@@ -145,7 +145,7 @@ screen next to every drawn card.
 | 13.1 | only on the field your move ended on | ✅ | |
 | 13.2 | meet another character *or* explore, not both | ◐ | both are offered; the choice is the players' |
 | 13.3 | attack, or use an ability on them | ◐ | attacking works; abilities do not exist (8.1) |
-| 13.4 | draw only enough to bring the field up to its printed count | ◐ | the count is applied; cards already lying there are not counted |
+| 13.4 | draw only enough to bring the field up to its printed count | ✅ | `afterMove(field, from, waiting)` |
 | 13.5 | obey the field's instruction; beat or flee Wrogowie first | ◐ | text and die tables shown; ordering is the players' |
 
 ## 14. Spotkania na Kamiennym Moście
@@ -179,7 +179,7 @@ screen next to every drawn card.
 | 16.6 | Przedmioty and Przyjaciele may be taken | ✅ | `takeCard` |
 | 16.6 | a drawn Magiczny Miecz / Tarcza Tolimana is swapped for the equipment copy | ❌ | |
 | 16.7 | Miejsce — obey it | ✅ | |
-| 16.8 | cards left behind stay face up on the field for the next character | ❌ | **written, never read back** |
+| 16.8 | cards left behind stay face up on the field for the next character | ✅ | `leaveCardsBehind` |
 
 ## 17. Walka
 
@@ -249,9 +249,9 @@ descending order of what they cost a table:
    rule that decided this game could not be played asynchronously.
 2. **8.1 — character abilities are inert.** Every player has two or three
    printed on the card in front of them, and the engine consults none.
-3. **12.1 / 13.4 / 16.8 — cards on fields.** The board is meant to accumulate
-   what previous characters left behind; half the printed fields say "nie ciągnij
-   Karty, jeżeli jakaś już tu jest" and the app cannot tell you whether one is.
+3. ~~**12.1 / 13.4 / 16.8 — cards on fields.**~~ Done. The board accumulates
+   what previous characters left behind, the map marks which fields are holding
+   something, and a field draws only up to its printed count.
 
 After those: the Most's own fields (14.3, 14.5, 14.6) have no text in the app at
 all, which is odd given the rulebook prints them and the transcription is in

@@ -220,6 +220,29 @@ export async function holdingsFor(gameId: string): Promise<HoldingRow[]> {
   return (data ?? []) as HoldingRow[];
 }
 
+/**
+ * A card lying face up on a field, waiting for whoever stops there next.
+ *
+ * Rule 16.8 makes these public — "koszulkami do dołu, tak, by ich treść była
+ * widoczna dla wszystkich graczy" — so unlike a hand of Zaklęcia there is
+ * nothing to conceal here and every seat sees the same list.
+ */
+export interface FieldCardRow {
+  id: string;
+  field_id: string;
+  card_id: string;
+}
+
+export async function fieldCardsFor(gameId: string): Promise<FieldCardRow[]> {
+  const { data, error } = await db
+    .from("field_cards")
+    .select("id,field_id,card_id")
+    .eq("game_id", gameId)
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FieldCardRow[];
+}
+
 export interface LeaveResult {
   removed: boolean;
   /** Set when the leaver was the active player and the turn had to move on. */

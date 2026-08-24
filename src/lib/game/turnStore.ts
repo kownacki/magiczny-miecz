@@ -1,6 +1,7 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
 import { db } from "@/lib/supabase";
+import { fieldCardsFor } from "./store";
 import {
   FERRY_TOLL,
   FIELDS,
@@ -33,6 +34,8 @@ import {
 import events from "@/data/events.json";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
+import { scriptFor } from "@/lib/engine/cardScript";
+import type { TurnCard } from "@/lib/engine/state";
 import { beastCombatKind, beastStrength, compareCombat } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import {
@@ -228,7 +231,9 @@ export async function moveTo(
       // Turning off the ring onto the bridge stops the walk at the entrance with
       // the guardian still to be faced (11.10); the field itself is not resolved,
       // and its card is not drawn ("nie ciągnij Karty ... gdy wchodzisz na Most").
-      turn_state: chosen.bridge ? atBridge(chosen.bridge) : afterMove(field, seat.field_id),
+      turn_state: chosen.bridge
+        ? atBridge(chosen.bridge)
+        : afterMove(field, seat.field_id, await liftFieldCards(gameId, field.id)),
     })
     .eq("id", gameId);
   await journal(gameId, seat.id, game.turn, chosen.bridge ? "proba-mostu" : "ruch", {
@@ -238,6 +243,62 @@ export async function moveTo(
     ...(chosen.bridge ? { guardian: chosen.bridge.guardian } : {}),
   });
   await bumpRevision(gameId);
+}
+
+/**
+ * Picks up whatever is lying face up on a field, into the arriving character's
+ * turn (12.1, 13.4, 16.8).
+ *
+ * They leave the board here and come back in `finishTurn` if they are still
+ * unclaimed then, which is what makes a field accumulate: a Wróg nobody beat
+ * and a Przedmiot nobody could carry are both waiting for the next character
+ * to stop there.
+ */
+async function liftFieldCards(gameId: string, fieldId: string): Promise<TurnCard[]> {
+  const waiting = (await fieldCardsFor(gameId)).filter((row) => row.field_id === fieldId);
+  if (waiting.length === 0) return [];
+  await db
+    .from("field_cards")
+    .delete()
+    .in("id", waiting.map((row) => row.id));
+  return waiting.flatMap((row) => {
+    const card = EVENTS.find((c) => c.id === row.card_id);
+    return card ? [{ cardId: card.id, cardClass: card.cardClass }] : [];
+  });
+}
+
+/**
+ * Leaves behind whatever the character did not take (16.8).
+ *
+ * "Karty, które pozostają na danym Obszarze ... muszą leżeć koszulkami do dołu"
+ * — cards that remain, remain, face up, for whoever stops here next. So the
+ * default is to leave everything.
+ *
+ * The exception is the cards that are used up by being read: a Spotkanie, a
+ * Nieznajomy or a Miejsce whose own text ends "a następnie ją odłóż" has done
+ * its work by the end of the turn, because 16.1 and 16.5 make obeying it
+ * compulsory. A Przedmiot is not like that. The gold card also says "odłóż",
+ * but only *after* you have converted it — leave it lying there and it is still
+ * a Sztuka Złota waiting for the next character, which is exactly what the
+ * first version of this got wrong.
+ */
+const CONSUMED_BY_READING = new Set(["spotkanie", "nieznajomy", "miejsce"]);
+
+async function leaveCardsBehind(
+  gameId: string,
+  fieldId: string,
+  remaining: readonly TurnCard[],
+): Promise<void> {
+  const stays = remaining.filter((card) => {
+    const spent =
+      CONSUMED_BY_READING.has(card.cardClass) &&
+      scriptFor(card.cardId)?.disposition.kind === "odloz";
+    return !spent;
+  });
+  if (stays.length === 0) return;
+  await db.from("field_cards").insert(
+    stays.map((card) => ({ game_id: gameId, field_id: fieldId, card_id: card.cardId })),
+  );
 }
 
 /**
@@ -531,6 +592,20 @@ export async function takeCard(
     kind,
     face: "open",
   });
+
+  // Taking a card lifts it off the field's stack, so what is still listed when
+  // the turn ends is exactly what nobody claimed — which is what 16.8 leaves
+  // lying there for the next character.
+  if (game.turn_state.phase === "pole") {
+    const at = game.turn_state.drawn.findIndex((entry) => entry.cardId === cardId);
+    if (at !== -1) {
+      const drawn = game.turn_state.drawn.filter((_, index) => index !== at);
+      await db
+        .from("games")
+        .update({ turn_state: { ...game.turn_state, drawn } })
+        .eq("id", gameId);
+    }
+  }
   await journal(gameId, seatId, game.turn, "zabranie", { cardId, kind });
   await bumpRevision(gameId);
 }
@@ -1339,6 +1414,11 @@ export async function finishTurn(gameId: string): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
+
+  // Whatever was drawn or found here and not taken stays on the field (16.8).
+  if (game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0) {
+    await leaveCardsBehind(gameId, game.turn_state.fieldId, game.turn_state.drawn);
+  }
 
   const order = seats
     .filter((s) => s.character_id)
