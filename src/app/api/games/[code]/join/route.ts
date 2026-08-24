@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // one. This is also how a player comes back after closing the tab, which is
     // the commonest way a seat ends up empty.
     if (body.seatId) {
-      const token = await claimSeat(game.id, String(body.seatId));
+      const token = await claimSeat(game.id, String(body.seatId), name);
       await bumpRevision(game.id);
       const seats = await seatsFor(game.id);
       const claimed = seats.find((s) => s.id === body.seatId);

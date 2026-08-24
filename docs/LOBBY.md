@@ -103,11 +103,26 @@ is a different event with different consequences. Only the claim on the seat is
 released.
 
 An abandoned seat can be **taken over** — by somebody else, or by the same
-person on a new device, which is the commonest case since the usual way a seat
-empties is a closed tab. The character continues exactly as it was left.
+person on a new tab, which is the commonest case since the usual way a seat
+empties is a closed tab. The character continues exactly as it was left, with
+its points, its cards and its position. The person taking over may give their
+own name or leave the seat under the one the table already knows it by.
 
-Taking over is offered only to a device holding no seat of its own. One device,
-one seat.
+A seat that has gone *quiet* — heard from once and then not for `AWAY_AFTER_MS`
+— can be taken over on the same terms. A player who closed their tab never said
+they were leaving, so the seat is never marked abandoned, and refusing it would
+strand the character for the rest of the evening. The people in the room settle
+who picks it up; the server only refuses a seat somebody is actively using, and
+a seat the host is driving on somebody else's behalf (`no_device`).
+
+Taking over is offered only to a tab holding no seat of its own. **One tab, one
+seat** — not one device. A seat's claim lives in `sessionStorage`, which is
+scoped to the window, so two tabs of one browser are two players. It used to be
+`localStorage` and they were the same player: opening a second tab arrived as
+whoever the first tab was, and neither could be anybody else. See
+`src/lib/game/seatToken.ts`. Reloading keeps the seat, which is the case that
+actually happens; closing the tab drops the claim, and the takeover above is
+how it comes back.
 
 ---
 
@@ -123,6 +138,10 @@ utworzony ──> poczekalnia ──> w trakcie ──> zakończona
 **Poczekalnia.** Seats are intentions, not characters. Leaving deletes the seat
 and the host may remove any of them. Nothing is lost because nothing has
 happened yet.
+
+Arriving at a table already in progress is not joining — the Karty Postaci were
+dealt at setup and there is no 27th player. What the newcomer is offered is the
+list of characters nobody is behind, and failing that, watching.
 
 **W trakcie.** Seats are characters. *Leaving* abandons — the character plays
 on. *Being removed by the host* is different and really does take the character

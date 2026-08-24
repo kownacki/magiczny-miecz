@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
@@ -17,7 +18,7 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
-import { JoinGate, LeaveButton, Lobby, type LobbySeat } from "./lobby";
+import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
@@ -117,6 +118,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
   /** The reference drawer of every card in the box. */
   const [libraryOpen, setLibraryOpen] = useState(false);
+  /** A seatless visitor who chose to watch rather than take a character over. */
+  const [watching, setWatching] = useState(false);
   /** Which seat is choosing a character; "auto" lets the app decide. */
   const [picking, setPicking] = useState<string | "auto" | null>("auto");
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +129,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const router = useRouter();
 
   const refresh = useCallback(async () => {
-    const stored = localStorage.getItem(`mm:${code}`);
+    const stored = readSeatToken(code);
     const query = stored ? `?token=${encodeURIComponent(stored)}` : "";
     const response = await fetch(`/api/games/${code}${query}`);
     if (!response.ok) return setError((await response.json()).error ?? "Błąd");
@@ -158,14 +161,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       setBusy(true);
       setError(null);
       try {
-        // Read the token at call time rather than holding it in state: it only
-        // exists in localStorage, which is unavailable while this renders on
-        // the server, and mirroring it into state meant setting state inside an
-        // effect for no gain.
+        // Read the token at call time rather than holding it in state: it
+        // only exists in this tab's sessionStorage, which is unavailable while
+        // this renders on the server, and mirroring it into state meant setting
+        // state inside an effect for no gain.
         const response = await fetch(`/api/games/${code}/${path}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...body, token: localStorage.getItem(`mm:${code}`) }),
+          body: JSON.stringify({ ...body, token: readSeatToken(code) }),
         });
         if (!response.ok) {
           setError((await response.json()).error);
@@ -200,7 +203,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       const response = await fetch(`/api/games/${code}/leave`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: localStorage.getItem(`mm:${code}`) }),
+        body: JSON.stringify({ token: readSeatToken(code) }),
       });
       if (!response.ok) {
         setError((await response.json()).error);
@@ -208,7 +211,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       }
       // Forget the seat locally too, or this browser keeps showing the
       // controls for a seat it no longer holds.
-      localStorage.removeItem(`mm:${code}`);
+      forgetSeatToken(code);
       // Leaving before the start means leaving, not standing in the doorway:
       // the seat is gone, and staying here would only show the join form again
       // as though the click had failed.
@@ -236,7 +239,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       });
       const data = await response.json();
       if (!response.ok) return setError(data.error);
-      localStorage.setItem(`mm:${code}`, data.token);
+      writeSeatToken(code, data.token);
       await refresh();
     } finally {
       setBusy(false);
@@ -257,15 +260,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * the tab. The character, its points and everything it carries are exactly as
    * the last player left them.
    */
-  async function claimSeat(seatId: string) {
+  async function claimSeat(seatId: string, name: string | null = null) {
     const response = await fetch(`/api/games/${code}/join`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seatId }),
+      body: JSON.stringify({ seatId, name }),
     });
     const data = await response.json();
     if (!response.ok) return setError(data.error);
-    localStorage.setItem(`mm:${code}`, data.token);
+    writeSeatToken(code, data.token);
     refresh();
   }
 
@@ -393,6 +396,40 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           hostAway={seats.find((seat) => seat.is_host)?.abandoned_at !== null}
           onStart={() => post("start", {})}
           onLibrary={() => setLibraryOpen(true)}
+        />
+      </>
+    );
+  }
+
+  // Somebody who opened a game already in progress. They cannot join — the
+  // characters were dealt at setup — but they can pick up one nobody is behind,
+  // which is exactly what the app does with a player who leaves or closes their
+  // tab. Offered up front rather than buried in a card somebody has to expand.
+  if (mySeatIndex === null && !watching) {
+    const free = seats
+      .filter((seat) => seat.character_id && !seat.eliminated && !seat.no_device)
+      .filter((seat) => seat.abandoned_at !== null || seat.away)
+      .map((seat) => ({
+        seatId: seat.id,
+        playerName: seat.player_name,
+        characterName:
+          CHARACTERS.find((character) => character.id === seat.character_id)?.name ?? "?",
+        why: seat.abandoned_at !== null ? "gracz odszedł od stołu" : "gracz się rozłączył",
+      }));
+    return (
+      <>
+        {error && (
+          <p className="fixed inset-x-0 top-0 z-30 bg-vermilion/20 px-4 py-2 text-center text-sm text-vermilion">
+            {error}
+          </p>
+        )}
+        <TakeOverGate
+          code={game.join_code}
+          free={free}
+          taken={seats.filter((seat) => seat.character_id && !seat.eliminated).length}
+          busy={busy}
+          onTakeOver={claimSeat}
+          onWatch={() => setWatching(true)}
         />
       </>
     );

@@ -31,6 +31,8 @@ export interface SeatRow {
   seen_at: string | null;
   /** The player has said they are ready to start (docs/LOBBY.md). */
   ready: boolean;
+  /** Seated by the host in companion mode; nobody behind it holds a device. */
+  no_device: boolean;
   /** 7.3: the turn this seat last changed its Natura on. */
   nature_changed_turn: number | null;
   eliminated: boolean;
@@ -476,16 +478,38 @@ export async function leaveGame(
  * player did. This is also how somebody rejoins after closing the tab, which is
  * the commonest way a seat is abandoned in the first place.
  */
-export async function claimSeat(gameId: string, seatId: string): Promise<string> {
+export async function claimSeat(
+  gameId: string,
+  seatId: string,
+  /** A new player's name; null keeps whoever the table already knows this seat as. */
+  playerName: string | null = null,
+): Promise<string> {
   const seats = await seatsFor(gameId);
   const seat = seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nie ma takiego miejsca.");
-  if (!seat.abandoned_at) throw new Error("To miejsce ma już swojego gracza.");
+  // Either nobody is behind it, or nobody has been for long enough that the
+  // difference stopped mattering. A player who closed their tab never said
+  // they were leaving, so the seat is only quiet — and refusing it would strand
+  // the character for the rest of the evening. The people in the room settle
+  // who picks it up; the server only refuses a seat somebody is actively using.
+  if (seat.no_device) {
+    throw new Error("Tym miejscem kieruje gospodarz przy wspólnym ekranie.");
+  }
+  if (!seat.abandoned_at && !isQuiet(seat)) {
+    throw new Error("To miejsce ma już swojego gracza.");
+  }
 
   const token = makeClaimToken();
   const { error } = await db
     .from("seats")
-    .update({ abandoned_at: null, claim_token: token })
+    .update({
+      abandoned_at: null,
+      claim_token: token,
+      // Left alone when nobody supplied one, because the commonest takeover by
+      // far is the same person on a new tab, and renaming them to nothing —
+      // or making them retype it — would be the app being obtuse.
+      ...(playerName ? { player_name: playerName } : {}),
+    })
     .eq("id", seatId);
   if (error) throw new Error(`claimSeat: ${error.message}`);
   return token;
@@ -616,6 +640,17 @@ export async function claimTableScreen(
  * look like they have left the table.
  */
 export const AWAY_AFTER_MS = 45_000;
+
+/**
+ * A seat that checked in once and then stopped.
+ *
+ * A seat that has *never* checked in is not quiet — it is either brand new or a
+ * player the host seated by hand, and neither is free for the taking.
+ */
+export function isQuiet(seat: Pick<SeatRow, "seen_at">): boolean {
+  if (!seat.seen_at) return false;
+  return Date.now() - new Date(seat.seen_at).getTime() > AWAY_AFTER_MS;
+}
 
 /** Records that this seat's device is still there. */
 export async function markSeen(seatId: string): Promise<void> {

@@ -687,3 +687,92 @@ function JoinCode({ code }: { code: string }) {
     </div>
   );
 }
+
+/**
+ * Arriving at a table that is already playing.
+ *
+ * There is no joining a game in progress — the characters were dealt at setup
+ * and the board is halfway round. What there *is* is picking up a character
+ * nobody is behind any more: somebody left, or closed the tab, and the figure
+ * is still standing on its Obszar with everything it owns. That is the game's
+ * own answer to a player disappearing, so it is the first thing offered rather
+ * than a button hidden inside somebody's card.
+ *
+ * Watching is the other option, and the honest one when every seat is taken.
+ */
+export function TakeOverGate({
+  code,
+  free,
+  taken,
+  busy,
+  onTakeOver,
+  onWatch,
+}: {
+  code: string;
+  /** Characters with nobody behind them. */
+  free: { seatId: string; playerName: string | null; characterName: string; why: string }[];
+  /** How many seats are being played, for when none are free. */
+  taken: number;
+  busy: boolean;
+  onTakeOver: (seatId: string, name: string | null) => void;
+  onWatch: () => void;
+}) {
+  // Blank by default: the commonest takeover by a long way is the same person
+  // on a new tab, and the table already knows what to call them. Somebody else
+  // picking the character up types over it.
+  const [name, setName] = useState("");
+
+  return (
+    <main className="flex h-[100dvh] flex-col items-center justify-center gap-6 px-6">
+      <header className="text-center">
+        <h1 className="font-[family-name:var(--font-display)] text-3xl text-ochre">
+          Magiczny Miecz
+        </h1>
+        <p className="mt-2 text-xs text-muted">
+          stół <span className="tnum tracking-[0.25em] text-ink">{code}</span> · gra już trwa
+        </p>
+      </header>
+
+      {free.length > 0 ? (
+        <div className="flex w-full max-w-sm flex-col gap-2">
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="twoje imię — puste zostawia dotychczasowe"
+            maxLength={24}
+            className="rounded border border-edge bg-panel px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-muted/60 focus:border-ochre"
+          />
+          <p className="text-xs uppercase tracking-widest text-muted">Wolne postacie</p>
+          {free.map((seat) => (
+            <button
+              key={seat.seatId}
+              onClick={() => onTakeOver(seat.seatId, name.trim() || null)}
+              disabled={busy}
+              className="rounded-lg border border-ochre/60 bg-ochre/5 px-3 py-2 text-left transition hover:bg-ochre/15 disabled:opacity-40"
+            >
+              <span className="block font-[family-name:var(--font-display)] text-ochre">
+                {seat.characterName}
+              </span>
+              <span className="block text-[11px] text-muted">
+                {seat.playerName ? `grał(a) ${seat.playerName} · ` : ""}
+                {seat.why}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="max-w-sm text-center text-sm text-muted">
+          Wszystkie {taken} postaci mają swoich graczy. Możesz oglądać — jeśli ktoś
+          odejdzie, jego postać pojawi się tutaj do przejęcia.
+        </p>
+      )}
+
+      <button
+        onClick={onWatch}
+        className="text-[11px] text-muted underline transition hover:text-ink"
+      >
+        oglądaj stół
+      </button>
+    </main>
+  );
+}

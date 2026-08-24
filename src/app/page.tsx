@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { normaliseJoinCode } from "@/lib/game/codes";
+import { readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 
@@ -97,7 +98,7 @@ export default function Home() {
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
       // The host's token is kept per-table so one device can sit at several.
-      localStorage.setItem(`mm:${joinCode}`, token);
+      writeSeatToken(joinCode, token);
       router.push(`/g/${joinCode}`);
     } catch (problem) {
       setError((problem as Error).message);
@@ -117,7 +118,7 @@ export default function Home() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "Nie udało się dołączyć.");
-      localStorage.setItem(`mm:${joinCode}`, data.token);
+      writeSeatToken(joinCode, data.token);
       router.push(`/g/${joinCode}`);
     } catch (problem) {
       setError((problem as Error).message);
@@ -129,13 +130,14 @@ export default function Home() {
   /**
    * Going to a table, from the list or from the code field.
    *
-   * A device that already holds a seat there walks straight in. Being asked
-   * your name again at a table you are already sitting at is the app forgetting
-   * who you are — and worse than forgetting, since a join with no token takes a
-   * *second* seat and strands the first one. Everybody else gets the dialog.
+   * A tab that already holds a seat there walks straight in. Being asked your
+   * name again at a table you are already sitting at is the app forgetting who
+   * you are — and worse than forgetting, since a join with no token takes a
+   * *second* seat and strands the first. A second tab holds no seat of its own,
+   * so it gets the dialog and becomes its own player.
    */
   function open(joinCode: string) {
-    if (localStorage.getItem(`mm:${joinCode}`)) return router.push(`/g/${joinCode}`);
+    if (readSeatToken(joinCode)) return router.push(`/g/${joinCode}`);
     setIntent({ kind: "join", code: joinCode });
   }
 
