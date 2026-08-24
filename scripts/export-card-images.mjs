@@ -81,6 +81,24 @@ function run() {
     JSON.stringify(manifest.sort(), null, 0) + "\n",
   );
 
+  // Characters are looked up by id rather than by slice — a player picks
+  // "krasnolud", not "postacie-2#5" — so they get their own map.
+  const characters = JSON.parse(fs.readFileSync("src/data/characters.json", "utf8"));
+  const portraits = Object.fromEntries(
+    characters
+      .map((character) => {
+        const { sheet, index } = character.source;
+        const ref = `${sheet}#${index}`;
+        return manifest.includes(ref) ? [character.id, ref] : null;
+      })
+      .filter(Boolean),
+  );
+  fs.writeFileSync(
+    path.join("src/data", "character-images.json"),
+    JSON.stringify(portraits, null, 2) + "\n",
+  );
+  console.log(`${Object.keys(portraits).length} character portraits mapped`);
+
   console.log(`\n${written} images, ${(bytes / 1024 / 1024).toFixed(1)} MB -> ${OUT}`);
 }
 

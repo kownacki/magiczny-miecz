@@ -27,7 +27,7 @@
     "text": "Jeżeli rzucisz na siebie to Zaklęcie przed rozpoczęciem walki, będziesz mógł dodać swoje punkty Magii do punktów Miecza. Zaklęciem tym możesz posłużyć się tylko w jednej walce (lecz nie w walce magicznej)."
   },
   {
-    "id": "magia-i-miecz-2",
+    "id": "magia-i-miecz",
     "name": "MAGIA I MIECZ",
     "source": {
       "sheet": "zaklecia",
@@ -126,7 +126,7 @@
     "text": "Możesz rzucić to Zaklęcie w dowolnej chwili, na inną Postać wędrującą po tej samej Krainie. Rzuć raz kostką dla każdego Przedmiotu będącego w posiadaniu ofiary. Jeśli wynikiem jest 1, Wichry niszczą Przedmiot – jego Kartę należy odłożyć na stos użytych Kart."
   },
   {
-    "id": "siedem-wichrow-2",
+    "id": "siedem-wichrow",
     "name": "SIEDEM WICHRÓW",
     "source": {
       "sheet": "zaklecia",

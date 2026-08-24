@@ -96,7 +96,11 @@ for (const sheet of ["zaklecia", "wyposazenie", "wyposazenie-zaklecia"]) {
   for (const card of readSheet(sheet)) {
     const base = { id: card.id, name: card.name, source: card.source, text: card.text };
     if (card.kind === "spell") {
-      spells.push(base);
+      // One transcription pass suffixed duplicate spells ("siedem-wichrow-2")
+      // to keep ids unique within its own file. That contradicts the rule the
+      // rest of the data follows: duplicates SHARE an id and are told apart by
+      // the slice they came from, because they are the same printed card.
+      spells.push({ ...base, id: base.id.replace(/-\d+$/, "") });
     } else if (card.kind === "item") {
       const item = { ...base };
       if (typeof card.miecz === "number") item.miecz = card.miecz;

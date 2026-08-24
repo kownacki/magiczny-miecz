@@ -5,15 +5,32 @@ import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
+import { characterImageUrl } from "@/lib/engine/cardImages";
+import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
 import { CardView, type ShownCard } from "./card-view";
 import { SeatActions } from "./seat-actions";
 import events from "@/data/events.json";
-import type { EventCard } from "@/data/types";
+import spells from "@/data/spells.json";
+import items from "@/data/items.json";
+import type { EventCard, Item, Spell } from "@/data/types";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
+
+/**
+ * Every card a seat can hold, by id, across all four decks.
+ *
+ * A hand mixes them: an item from the event deck, a Zaklęcie from the spell
+ * pile, a trophy that was a Wróg. Looking only in the event deck left spells
+ * showing their raw id.
+ */
+const CARD_NAMES = new Map<string, string>([
+  ...EVENTS.map((c) => [c.id, c.name] as const),
+  ...(spells as Spell[]).map((c) => [c.id, c.name] as const),
+  ...(items as Item[]).map((c) => [c.id, c.name] as const),
+]);
 const FIELD_NAMES = new Map(
   [...FIELDS.values()].map((field) => [field.id, field.name]),
 );
@@ -427,7 +444,7 @@ function Hand({
         {seat.holdings.map((held) => (
           <li key={held.id} className="flex items-baseline justify-between gap-2 text-xs">
             <span className="truncate text-ink">
-              {EVENTS.find((c) => c.id === held.cardId)?.name ?? held.cardId}
+              {CARD_NAMES.get(held.cardId) ?? held.cardId}
             </span>
             <span className="flex shrink-0 items-baseline gap-2">
               <span className="text-[10px] uppercase text-muted">
@@ -538,7 +555,27 @@ function SeatCard({
 
       {character ? (
         <>
-          <p className="mb-3 text-sm text-ochre">{character.name}</p>
+          <div className="mb-3 flex items-center gap-3">
+            {/* The character card itself, small. It carries the abilities,
+                which no amount of stat display replaces — half of what a
+                character can do is prose on this card. */}
+            {characterImageUrl(character.id) && (
+              <Image
+                src={characterImageUrl(character.id)!}
+                alt={character.name}
+                width={64}
+                height={92}
+                className="h-auto w-16 shrink-0 rounded border border-edge"
+                unoptimized
+              />
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm text-ochre">{character.name}</p>
+              <p className="text-[10px] text-muted">
+                {seat.nature ?? "natura nieustalona"}
+              </p>
+            </div>
+          </div>
           <dl className="tnum grid grid-cols-4 gap-2 text-center text-sm">
             <Stat
               label="Miecz"
@@ -573,6 +610,18 @@ function SeatCard({
           <p className="mt-3 text-xs text-muted">
             {seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—"}
           </p>
+          {character.abilities.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted">
+                Zdolności ({character.abilities.length})
+              </summary>
+              <ol className="mt-1 flex list-decimal flex-col gap-1 pl-4 text-[11px] leading-relaxed text-muted">
+                {character.abilities.map((ability, index) => (
+                  <li key={index}>{ability}</li>
+                ))}
+              </ol>
+            </details>
+          )}
         </>
       ) : (
         <p className="text-sm text-muted">bez postaci</p>

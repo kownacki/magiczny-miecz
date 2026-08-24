@@ -37,10 +37,18 @@ Turning 689 MB of image-only PDFs into files the system can be built on.
 Every scan is image-only with no text layer, so all of this is read visually.
 
 - [x] Rulebook read end to end (9 pages)
-- [ ] `docs/RULES.md` — full rulebook transcribed to structured markdown
-      (read end to end already; not yet written down)
+- [x] `docs/RULES.md` — the whole rulebook, verbatim, 109 numbered rules.
+      Every one of the 72 rules the engine cites is present.
 - [x] Dolny Krąg field instructions — all 14 transcribed and shown in the turn
       panel. Draw counts agree with the independently-read engine data.
+- [x] Board fields: all 58 read off the scans and ordered. Each edge was read as
+      ONE continuous strip so both corners fell in the same image, which forces
+      the splice. Corroborated two ways: reading down the left edge reproduces
+      Dolny Krąg indices 9-13 exactly, and the four twice-printed names land in
+      symmetric positions. **Not yet checked against the physical board** —
+      `RINGS_VERIFIED_AGAINST_PHYSICAL_BOARD` is false and rings.test.ts encodes
+      every constraint the rulebook places on them.
+<!-- superseded, kept for the record:
 - [~] Board fields: 58 fields read off the scans. Names and ring membership are
       corroborated — all five rule cross-checks pass (Uroczysko/Las Błędnych
       Ogni, Przełęcz Wichrów/Dolina Czaszek, both bridge crossings, both bridge
@@ -52,6 +60,7 @@ Every scan is image-only with no text layer, so all of this is read visually.
       symmetrically (Bagna, Ruchome Skały, Urwisko, Rozstajne Drogi), and the
       corners are ambiguous. **Fastest fix is to read the order off the physical
       board.**
+-->
 - [x] 165 event cards → typed data
 - [x] 30 spells → typed data
 - [x] 30 items → typed data (14 unnamed in the print files, named in overrides.json)
@@ -64,8 +73,8 @@ Every scan is image-only with no text layer, so all of this is read visually.
 Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 
 - [x] State and move types
-- [~] Board topology — Dolny Krąg (14 fields) and Kamienny Most (9) verified
-      against the scan; middle and upper rings being read now
+- [x] Board topology — all four rings: Dolny (14), Środkowy (16), Górny (18),
+      Kamienny Most (9)
 - [x] Effects ports: `RandomPort`, `DeckPort`, `ChoicePort`
 - [x] Derived stats: totals, spell capacity, carrying limit, nature gating
 - [x] Legal-move computation (both directions round a ring, with the route walked)
@@ -77,8 +86,8 @@ Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 - [x] Player-versus-player combat (17.6) and escape (17.2, 19)
 - [x] Nature changes (7.2) and Turned to Stone (20)
 - [x] Bridge movement (10.3, 10.4) — one field per turn, die ignored, may turn back
-- [ ] Ring crossings (11.1-11.8) — blocked on verifying the middle/outer ring order
-- [ ] Stepping onto the bridge from Górny Krąg (11.9-11.11) — same blocker
+- [x] Ring crossings (11.1-11.8) — the two the rules allow, and nothing else
+- [ ] Stepping onto the bridge from Górny Krąg (11.9-11.11)
 - [x] Vitest coverage — 53 tests green; caught a real bug where healing
       drained a character who was above four Życie
 
@@ -117,7 +126,7 @@ this one do again?" without passing the card round.
       several (Bezdroża draws 2, Płaskowyż Mgieł draws 3)
 - [x] Fall back to text when a card has no image
 - [x] A seat's hand listed on its card, with concealment applied server-side
-- [ ] The seat's character card as an image
+- [x] The seat's character card as an image, with its abilities
 
 ## Card effect vocabulary — the next big piece
 

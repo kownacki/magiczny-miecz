@@ -2,6 +2,7 @@
 
 import events from "@/data/events.json";
 import manifest from "@/data/card-images.json";
+import portraits from "@/data/character-images.json";
 import type { EventCard } from "@/data/types";
 import { cardRef } from "./deck";
 
@@ -47,4 +48,17 @@ export function cardImageUrl(cardId: string, ref?: string): string | null {
 function fileNameFor(slice: string): string {
   const [sheet, index] = slice.split("#");
   return `${sheet}-${index.padStart(2, "0")}`;
+}
+
+/**
+ * The portrait on a character's own card.
+ *
+ * Characters are addressed by id throughout — a player picks "krasnolud", not a
+ * slice — so this is a separate map rather than a special case of the card
+ * lookup.
+ */
+export function characterImageUrl(characterId: string): string | null {
+  const slice = (portraits as Record<string, string>)[characterId];
+  if (!slice) return null;
+  return `/cards/${fileNameFor(slice)}.jpg`;
 }
