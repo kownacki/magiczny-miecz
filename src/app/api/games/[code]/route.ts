@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { findGame, seatsFor, verifySeat } from "@/lib/game/store";
+import { findGame, holdingsFor, seatsFor, verifySeat } from "@/lib/game/store";
+import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
 
 /**
  * The table view's state.
@@ -20,9 +21,36 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   const token = new URL(request.url).searchParams.get("token");
   const mine = token ? await verifySeat(game.id, token) : null;
 
+  const seats = await seatsFor(game.id);
+  const holdings = await holdingsFor(game.id);
+
   return NextResponse.json({
     game,
-    seats: await seatsFor(game.id),
     mySeatIndex: mine?.seat_index ?? null,
+    seats: seats.map((seat) => {
+      const own = holdings
+        .filter((holding) => holding.seat_id === seat.id)
+        .map((holding) => ({
+          id: holding.id,
+          cardId: holding.card_id,
+          kind: holding.kind,
+          face: holding.face,
+        }));
+
+      // Concealment is applied HERE, on the server, and not by hiding things in
+      // the browser: a player's spells (9.3) must never be sent to another
+      // player's device at all. Totals are still reported in full, because a
+      // character's strength is public even when the source of it is not.
+      const seen = visibleTo(own, { own: mine?.id === seat.id, mode: game.mode });
+      const bonus = bonusFromHoldings(own);
+
+      return {
+        ...seat,
+        holdings: seen.cards,
+        hidden_count: seen.hiddenCount,
+        miecz_total: seat.miecz_own + bonus.miecz,
+        magia_total: seat.magia_own + bonus.magia,
+      };
+    }),
   });
 }

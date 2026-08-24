@@ -133,6 +133,12 @@ Secondary. Same engine, virtual ports.
 
 - The deck contains genuine **duplicates** (4x "1 SZTUKA ZŁOTA", 2x "UPIÓR",
   4x "MAGICZNY MIECZ"), so a card id is not unique. `sheet + index` is the key.
+  These are **deliberate design, not a transcription artefact**: the assets are
+  printed sheets the owner cuts up with scissors, and a card printed four times
+  is four times as likely to be drawn. The simulated deck holds every printed
+  copy, so draw odds match the physical game exactly. Asserted in deck.test.ts.
+  The game is reproduced 1:1 from the assets and the rulebook; any deliberate
+  deviation gets documented when it is made.
 - **Kat** prints `natura: dowolna` and chooses at setup — the only character the
   three-value Nature enum cannot hold. Hence `StartingNature`.
 - **Tragarz** is filed as a Przyjaciel, not a Przedmiot, so the rule 5.4

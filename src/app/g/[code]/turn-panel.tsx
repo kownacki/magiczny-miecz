@@ -6,6 +6,7 @@ import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
+import { kindForCard } from "@/lib/engine/holdings";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 
@@ -90,6 +91,8 @@ interface Props {
   onAction: (body: Record<string, unknown>) => void;
   /** Applies a card's suggested bookkeeping to the active player's own seat. */
   onSuggestion: (stat: string, delta: number, reason: string) => void;
+  /** Takes a drawn card into the active player's keeping. */
+  onTake: (cardId: string) => void;
 }
 
 export function TurnPanel({
@@ -104,6 +107,7 @@ export function TurnPanel({
   busy,
   onAction,
   onSuggestion,
+  onTake,
 }: Props) {
   return (
     <section className="rounded-lg border border-ochre/40 bg-panel p-5">
@@ -148,6 +152,7 @@ export function TurnPanel({
           busy={busy}
           onAction={onAction}
           onSuggestion={onSuggestion}
+          onTake={onTake}
         />
       )}
     </section>
@@ -161,7 +166,8 @@ function PhaseControls({
   busy,
   onAction,
   onSuggestion,
-}: Pick<Props, "phase" | "dieSource" | "mode" | "busy" | "onAction" | "onSuggestion">) {
+  onTake,
+}: Pick<Props, "phase" | "dieSource" | "mode" | "busy" | "onAction" | "onSuggestion" | "onTake">) {
   switch (phase.phase) {
     case "rzut":
       return <RollControls dieSource={dieSource} busy={busy} onAction={onAction} />;
@@ -202,6 +208,7 @@ function PhaseControls({
           busy={busy}
           onAction={onAction}
           onSuggestion={onSuggestion}
+          onTake={onTake}
         />
       );
     case "walka":
@@ -261,12 +268,14 @@ function FieldControls({
   busy,
   onAction,
   onSuggestion,
+  onTake,
 }: {
   phase: Extract<TurnPhase, { phase: "pole" }>;
   mode: string;
   busy: boolean;
   onAction: Props["onAction"];
   onSuggestion: Props["onSuggestion"];
+  onTake: Props["onTake"];
 }) {
   const [query, setQuery] = useState("");
   const results = searchCards(query);
@@ -334,6 +343,7 @@ function FieldControls({
           busy={busy}
           onAction={onAction}
           onSuggestion={onSuggestion}
+          onTake={onTake}
         />
       )}
 
@@ -524,11 +534,13 @@ function DrawnCards({
   busy,
   onAction,
   onSuggestion,
+  onTake,
 }: {
   drawn: { cardId: string; cardClass: string }[];
   busy: boolean;
   onAction: Props["onAction"];
   onSuggestion: Props["onSuggestion"];
+  onTake: Props["onTake"];
 }) {
   return (
     <ol className="flex flex-col gap-2 border-l-2 border-ochre/30 pl-3">
@@ -570,6 +582,24 @@ function DrawnCards({
               </p>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
+              {card && kindForCard(card) === "item" && (
+                <button
+                  disabled={busy}
+                  onClick={() => onTake(card.id)}
+                  className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+                >
+                  Weź Przedmiot
+                </button>
+              )}
+              {card && kindForCard(card) === "friend" && (
+                <button
+                  disabled={busy}
+                  onClick={() => onTake(card.id)}
+                  className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+                >
+                  Weź Przyjaciela
+                </button>
+              )}
               {card && combatValueOf(card) && (
                 <button
                   disabled={busy}

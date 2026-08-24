@@ -200,6 +200,24 @@ export async function verifySeat(gameId: string, token: string): Promise<SeatRow
   return (data as SeatRow) ?? null;
 }
 
+export interface HoldingRow {
+  id: string;
+  seat_id: string;
+  card_id: string;
+  kind: "spell" | "item" | "friend" | "trophy";
+  face: "open" | "hidden";
+}
+
+export async function holdingsFor(gameId: string): Promise<HoldingRow[]> {
+  const { data, error } = await db
+    .from("holdings")
+    .select("id,seat_id,card_id,kind,face")
+    .eq("game_id", gameId)
+    .order("created_at");
+  if (error) throw new Error(`holdingsFor: ${error.message}`);
+  return (data ?? []) as HoldingRow[];
+}
+
 export interface LeaveResult {
   removed: boolean;
   /** Set when the leaver was the active player and the turn had to move on. */

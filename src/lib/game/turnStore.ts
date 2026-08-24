@@ -17,6 +17,7 @@ import {
 import events from "@/data/events.json";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
+import { kindForCard } from "@/lib/engine/holdings";
 import {
   buildDeck,
   cardRef,
@@ -312,6 +313,103 @@ export async function resolveFight(gameId: string): Promise<void> {
     outcome: fight.result.outcome,
   });
   await bumpRevision(gameId);
+}
+
+/**
+ * Takes a drawn card into a seat's keeping.
+ *
+ * Which pile it joins comes from its class (16.6, 1.4), not from the caller, so
+ * a defeated Wróg cannot be filed as equipment and start adding its Miecz to
+ * its killer. Spells are the only kind held concealed (9.3).
+ */
+export async function takeCard(
+  gameId: string,
+  seatId: string,
+  cardId: string,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const card = EVENTS.find((c) => c.id === cardId);
+  if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+
+  const kind = kindForCard(card);
+  if (!kind) throw new Error("Tej karty nie można zabrać ze sobą.");
+
+  await db.from("holdings").insert({
+    game_id: gameId,
+    seat_id: seatId,
+    card_id: cardId,
+    kind,
+    face: "open",
+  });
+  await journal(gameId, seatId, game.turn, "zabranie", { cardId, kind });
+  await bumpRevision(gameId);
+}
+
+/**
+ * Drops a held card.
+ *
+ * Rule 5.5 lets a character discard an item at any moment, and 5.6 forces it
+ * when over the carrying limit. Either way the card leaves the hand; where it
+ * physically goes is the players' business at a table and not tracked yet.
+ */
+export async function dropCard(gameId: string, holdingId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  const { data } = await db
+    .from("holdings")
+    .select("seat_id,card_id,kind")
+    .eq("id", holdingId)
+    .maybeSingle();
+  await db.from("holdings").delete().eq("id", holdingId);
+  await journal(gameId, (data?.seat_id as string) ?? null, game.turn, "odrzucenie", {
+    cardId: data?.card_id,
+    kind: data?.kind,
+  });
+  await bumpRevision(gameId);
+}
+
+/**
+ * Trades trophies for a point of Miecz.
+ *
+ * Rule 1.4: seven points' worth of defeated Wrogowie buys one point of Miecz,
+ * and anything past a multiple of seven is lost. The traded cards go to the
+ * used pile.
+ */
+export const TROPHY_RATE = 7;
+
+export async function tradeTrophies(gameId: string, seatId: string): Promise<number> {
+  const game = await loadGame(gameId);
+  const { data } = await db
+    .from("holdings")
+    .select("id,card_id")
+    .eq("seat_id", seatId)
+    .eq("kind", "trophy");
+  const trophies = (data ?? []) as { id: string; card_id: string }[];
+
+  const points = trophies.reduce((sum, t) => {
+    const card = EVENTS.find((c) => c.id === t.card_id);
+    return sum + (combatValueOf(card ?? { cardClass: "wrog" })?.total ?? 0);
+  }, 0);
+  const gained = Math.floor(points / TROPHY_RATE);
+  if (gained < 1) throw new Error(`Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów.`);
+
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  // Everything is handed in: rule 1.4 says points above a multiple of seven are
+  // lost, not banked.
+  await db.from("holdings").delete().eq("seat_id", seatId).eq("kind", "trophy");
+  await db
+    .from("seats")
+    .update({ miecz_own: seat.miecz_own + gained })
+    .eq("id", seatId);
+  await journal(gameId, seatId, game.turn, "wymiana-trofeow", {
+    points,
+    gained,
+    lost: points - gained * TROPHY_RATE,
+  });
+  await bumpRevision(gameId);
+  return gained;
 }
 
 /**

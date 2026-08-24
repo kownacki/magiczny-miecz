@@ -77,3 +77,41 @@ describe("deck composition", () => {
     expect([...deck.draw].sort()).toEqual([...refs].sort());
   });
 });
+
+/**
+ * The duplicates are not a transcription artefact — the printed sheets are cut
+ * up with scissors, and a card appearing four times is the designer making it
+ * four times as likely to come up. The deck must preserve that exactly.
+ */
+describe("duplicate multiplicity is part of the design", () => {
+  const cards = events as EventCard[];
+
+  it("puts every printed copy in the deck, not one per distinct card", () => {
+    const deck = buildDeck(cards.map((c) => cardRef(c.source)), shuffleWith(Math.random));
+    const distinctNames = new Set(cards.map((c) => c.name)).size;
+    expect(remaining(deck)).toBe(165);
+    expect(remaining(deck)).toBeGreaterThan(distinctNames);
+  });
+
+  it("keeps each card's exact count, so draw odds match the printed sheets", () => {
+    const counts = new Map<string, number>();
+    for (const card of cards) counts.set(card.id, (counts.get(card.id) ?? 0) + 1);
+
+    const deck = buildDeck(cards.map((c) => cardRef(c.source)), shuffleWith(Math.random));
+    const dealt = new Map<string, number>();
+    for (const ref of deck.draw) {
+      const card = cards.find((c) => cardRef(c.source) === ref)!;
+      dealt.set(card.id, (dealt.get(card.id) ?? 0) + 1);
+    }
+    for (const [id, count] of counts) {
+      expect(dealt.get(id), `${id} should appear ${count}x`).toBe(count);
+    }
+  });
+
+  it("has a genuinely commoner card, which is the point", () => {
+    const counts = new Map<string, number>();
+    for (const card of cards) counts.set(card.name, (counts.get(card.name) ?? 0) + 1);
+    const commonest = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    expect(commonest[1]).toBeGreaterThan(3);
+  });
+});

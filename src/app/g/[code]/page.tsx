@@ -17,6 +17,13 @@ const FIELD_NAMES = new Map(
   [...DOLNY_KRAG, ...KAMIENNY_MOST].map((field) => [field.id, field.name]),
 );
 
+interface Held {
+  id: string;
+  cardId: string;
+  kind: "spell" | "item" | "friend" | "trophy";
+  face: "open" | "hidden";
+}
+
 interface Seat {
   id: string;
   seat_index: number;
@@ -25,12 +32,18 @@ interface Seat {
   field_id: string | null;
   miecz_own: number;
   magia_own: number;
+  /** Own points plus everything carried (1.5, 2.5), computed server-side. */
+  miecz_total: number;
+  magia_total: number;
   zycie: number;
   zloto: number;
   nature: string | null;
   turns_lost: number;
   eliminated: boolean;
   is_host: boolean;
+  holdings: Held[];
+  /** Cards this viewer is not allowed to see the faces of (9.3). */
+  hidden_count: number;
 }
 
 interface Game {
@@ -289,6 +302,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onSuggestion={(stat, delta, reason) =>
               post("adjust", { seatId: active.id, stat, delta, reason })
             }
+            onTake={(cardId) => post("holdings", { action: "take", seatId: active.id, cardId })}
           />
           <CardView cards={shown} />
         </div>
@@ -301,7 +315,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             seat={seat}
             active={playing && seat.seat_index === game.active_seat}
             canAdjust={mySeatIndex !== null}
+            isMine={seat.seat_index === mySeatIndex}
             onAdjust={(stat, delta) => post("adjust", { seatId: seat.id, stat, delta })}
+            onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
+            onTrade={() => post("holdings", { action: "trade", seatId: seat.id })}
           />
         ))}
         {seats.length < 6 && !playing && mySeatIndex === null && (
@@ -351,6 +368,80 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   );
 }
 
+const KIND_LABEL: Record<Held["kind"], string> = {
+  item: "Przedmiot",
+  friend: "Przyjaciel",
+  trophy: "Trofeum",
+  spell: "Zaklęcie",
+};
+
+/**
+ * What a seat is carrying.
+ *
+ * Another player's concealed spells never reach this component — the server
+ * strips them and sends a count instead (9.3) — so there is nothing here that
+ * could leak by rendering carelessly.
+ */
+function Hand({
+  seat,
+  isMine,
+  canAct,
+  trophies,
+  onDrop,
+  onTrade,
+}: {
+  seat: Seat;
+  isMine: boolean;
+  canAct: boolean;
+  trophies: number;
+  onDrop: (holdingId: string) => void;
+  onTrade: () => void;
+}) {
+  if (seat.holdings.length === 0 && seat.hidden_count === 0) return null;
+
+  return (
+    <div className="mt-3 border-t border-edge pt-2">
+      <ul className="flex flex-col gap-1">
+        {seat.holdings.map((held) => (
+          <li key={held.id} className="flex items-baseline justify-between gap-2 text-xs">
+            <span className="truncate text-ink">
+              {EVENTS.find((c) => c.id === held.cardId)?.name ?? held.cardId}
+            </span>
+            <span className="flex shrink-0 items-baseline gap-2">
+              <span className="text-[10px] uppercase text-muted">
+                {KIND_LABEL[held.kind]}
+              </span>
+              {canAct && (
+                <button
+                  onClick={() => onDrop(held.id)}
+                  className="text-[10px] text-muted underline hover:text-vermilion"
+                >
+                  odrzuć
+                </button>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {seat.hidden_count > 0 && (
+        <p className="mt-1 text-[11px] text-muted">
+          {seat.hidden_count} zakryt{seat.hidden_count === 1 ? "e Zaklęcie" : "ych Zaklęć"}
+        </p>
+      )}
+
+      {isMine && trophies > 0 && (
+        <button
+          onClick={onTrade}
+          className="mt-2 rounded border border-edge px-2 py-1 text-[11px] text-ink transition hover:border-ochre"
+        >
+          Wymień trofea na Miecz (1.4)
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** One of the two ways to play, stated in full rather than as a label on a switch. */
 function ModeChoice({
   active,
@@ -391,14 +482,21 @@ function SeatCard({
   seat,
   active,
   canAdjust,
+  isMine,
   onAdjust,
+  onDrop,
+  onTrade,
 }: {
   seat: Seat;
   active: boolean;
   canAdjust: boolean;
+  isMine: boolean;
   onAdjust: (stat: string, delta: number) => void;
+  onDrop: (holdingId: string) => void;
+  onTrade: () => void;
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
+  const trophies = seat.holdings.filter((h) => h.kind === "trophy");
   return (
     <article
       className={`rounded-lg border bg-panel p-4 transition ${
@@ -420,11 +518,36 @@ function SeatCard({
         <>
           <p className="mb-3 text-sm text-ochre">{character.name}</p>
           <dl className="tnum grid grid-cols-4 gap-2 text-center text-sm">
-            <Stat label="Miecz" value={seat.miecz_own} tone="text-miecz" stat="miecz" canAdjust={canAdjust} onAdjust={onAdjust} />
-            <Stat label="Magia" value={seat.magia_own} tone="text-magia" stat="magia" canAdjust={canAdjust} onAdjust={onAdjust} />
+            <Stat
+              label="Miecz"
+              value={seat.miecz_own}
+              total={seat.miecz_total}
+              tone="text-miecz"
+              stat="miecz"
+              canAdjust={canAdjust}
+              onAdjust={onAdjust}
+            />
+            <Stat
+              label="Magia"
+              value={seat.magia_own}
+              total={seat.magia_total}
+              tone="text-magia"
+              stat="magia"
+              canAdjust={canAdjust}
+              onAdjust={onAdjust}
+            />
             <Stat label="Życie" value={seat.zycie} tone="text-zycie" stat="zycie" canAdjust={canAdjust} onAdjust={onAdjust} />
             <Stat label="Złoto" value={seat.zloto} tone="text-zloto" stat="zloto" canAdjust={canAdjust} onAdjust={onAdjust} />
           </dl>
+
+          <Hand
+            seat={seat}
+            isMine={isMine}
+            canAct={canAdjust}
+            trophies={trophies.length}
+            onDrop={onDrop}
+            onTrade={onTrade}
+          />
           <p className="mt-3 text-xs text-muted">
             {seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—"}
           </p>
@@ -446,6 +569,7 @@ function SeatCard({
 function Stat({
   label,
   value,
+  total,
   tone,
   stat,
   canAdjust,
@@ -453,6 +577,8 @@ function Stat({
 }: {
   label: string;
   value: number;
+  /** Own points plus what is carried. Shown only when the two differ. */
+  total?: number;
   tone: string;
   stat: string;
   canAdjust: boolean;
@@ -461,7 +587,20 @@ function Stat({
   return (
     <div className="group">
       <dt className="text-[10px] uppercase tracking-wide text-muted">{label}</dt>
-      <dd className={`text-xl font-medium ${tone}`}>{value}</dd>
+      <dd className={`text-xl font-medium ${tone}`}>
+        {/* The +/- move OWN points, which are what the rules floor at the
+            starting value (1.3, 2.3). The total is derived from the cards on
+            the table and is not editable — correcting it means changing what is
+            held, not typing a different number. */}
+        {total !== undefined && total !== value ? (
+          <>
+            {total}
+            <span className="ml-1 text-[11px] text-muted">({value})</span>
+          </>
+        ) : (
+          value
+        )}
+      </dd>
       {canAdjust && (
         // Always visible rather than revealed on hover. Phones are the primary
         // device at a table and have no hover, so a hover-gated override is an
