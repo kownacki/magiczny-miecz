@@ -170,9 +170,53 @@ Now the primary mode; companion is the opt-in.
 - [x] Virtual dice everywhere a die is needed
 - [x] Hidden information per player — concealment applied on the server, so a
       rival's spells never reach the device at all
-- [ ] Board rendering from the scan
+- [x] Board rendering — a drawn map of all three rings and the bridge, one
+      shape per field, a coloured dot per character, fanned when several share a
+      field. Tapping a field shows its printed text. Serves simulation as the
+      board and companion mode as the position check.
+- [x] Middle and outer ring field text — 34 fields transcribed from the scan;
+      `scripts/build-ring-fields.mjs` checks every draw count against the count
+      the engine already carried from a separate pass. All 34 agree.
+- [x] Verify the middle/outer ring order — done from the scan rather than the
+      physical board. The whole board was read at once, which settled what three
+      earlier tile-by-tile passes could not, and boardMap.test.ts now holds the
+      two independent readings against each other.
 
 ---
+
+## Open, found while playing
+
+These came out of playing a real game through the browser. Each is a rule the
+engine gets wrong or does not have, not a missing feature.
+
+- [ ] **Guardians are still adjudicated by hand.** The board text gives their
+      strength exactly — Kamienny Potwór and Duch Skał are a die plus four,
+      Rycerz Wiecznych Śniegów is a flat Miecz 10 — so simulation can fight them
+      instead of asking the players who won. `BRIDGE_ENTRANCES` now carries the
+      stat and the offset; the fight itself is not wired up.
+- [ ] **11.10: the bridge is entered in passing, not on arrival.** "Postać,
+      której ruch kończy się dokładnie na Obszarze Wymarłego Miasta albo Ruin
+      Twierdzy, nie może podjąć próby wkroczenia na Most." The app offers the
+      attempt in exactly the case the rule forbids — when the move ends there —
+      and never in the case it allows. It belongs in `moveOptions`, as a third
+      destination when the walk passes an entrance with a step still to spend.
+- [ ] **11.11: no retry next turn.** A failed or drawn bridge attempt bars
+      another next turn. Not modelled.
+- [ ] **A crossing can only be attempted on the turn you land.** The button is
+      drawn in the "pole" phase only, so a character who fails at the Trzęsawiska
+      cannot try again — 11.4 says deciding whether to try again is exactly what
+      they do next turn.
+- [ ] **Cards are drawn while crossing.** Uroczysko, Przełęcz Wichrów, Ruiny
+      Twierdzy and Wymarłe Miasto all print "nie ciągnij Karty ... jeżeli
+      przeprawiasz się / wchodzisz na Most". The app draws anyway.
+- [ ] **Przeprawa does nothing.** Both copies read "Musisz przeprawić się przez
+      rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego
+      rozpocząłeś ruch." Neither the toll nor the bounce-back exists.
+- [ ] **11.4's draw outcome.** The rulebook allows a drawn crossing — no Życie
+      lost, but the character still stops. The Uroczysko card admits no draw
+      ("mniejszy lub równy" succeeds), so the two disagree; the card is followed
+      and the discrepancy is recorded here rather than silently resolved.
+
 
 ## Known corrections
 
@@ -182,6 +226,25 @@ Now the primary mode; companion is the opt-in.
 
 
 ## Findings worth keeping
+
+- **Dolny Krąg was stored counter-clockwise.** The cycle was right, so every
+  distance and adjacency was right, but `destination` reads a rising index as
+  "zgodnie ze wskazówkami zegara" — so the app named the two directions the
+  wrong way round on the lower ring. Harmless in simulation, wrong at a table
+  where a hand moves the figure. The scan settles it: that ring's top edge reads
+  Osada, Step, Mokradła left to right. All three rings are now stored clockwise
+  and boardMap.test.ts holds them to it.
+- **The two bridge entrances were crossed.** Ruiny Twierdzy sits on the outer
+  ring's top edge and opens onto the top of the bridge; Wymarłe Miasto is on the
+  bottom edge and opens onto the bottom. They were mapped to the opposite ends,
+  which walked a character the length of the bridge past the wrong creatures.
+- **Only one direction of each crossing is defended** (11.3, 11.7, and both
+  fields' printed text). Going back down costs nothing and needs no roll; the
+  app was charging a point of Życie for failing a test the rules do not set.
+- **Rycerz Wiecznych Śniegów stands on Przełęcz Wichrów, not Dolina Czaszek** —
+  Miecz 10, and he ignores anyone arriving from Dolina Czaszek.
+- The board's own draw counts agree with the ring arrays on **all 34** middle
+  and outer ring fields, which is two independent readings of the scan agreeing.
 
 - The deck contains genuine **duplicates** (4x "1 SZTUKA ZŁOTA", 2x "UPIÓR",
   4x "MAGICZNY MIECZ"), so a card id is not unique. `sheet + index` is the key.

@@ -104,3 +104,21 @@ export const CROSSINGS: readonly Crossing[] = [
 export function crossingFrom(fieldId: string): Crossing | undefined {
   return CROSSINGS.find((crossing) => crossing.from === fieldId);
 }
+
+/**
+ * Whether this crossing has to be earned, or is simply walked.
+ *
+ * Only one direction of each crossing is defended. 11.3: the Trzęsawiska are
+ * rolled for at Uroczysko, going up into the middle ring, and "idąc w przeciwnym
+ * kierunku, nie musi wykonywać rzutu" — the board says the same on Las Błędnych
+ * Ogni, "(nie rzucając kostką)". 11.7: the Rycerz Wiecznych Śniegów attacks only
+ * a character going from the middle ring outward, and Przełęcz Wichrów prints
+ * "nie atakuje jeżeli przechodzisz z Doliny Czaszek".
+ *
+ * So a character coming back down crosses for free. Asking them to roll — or
+ * worse, charging them a point of Życie for failing — is a toll the rules do
+ * not levy.
+ */
+export function crossingIsDefended(crossing: Crossing): boolean {
+  return crossing.from === "uroczysko" || crossing.from === "przelecz-wichrow";
+}

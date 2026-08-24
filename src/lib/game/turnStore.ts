@@ -1,8 +1,13 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
 import { db } from "@/lib/supabase";
-import { FIELDS, KAMIENNY_MOST, ringOf } from "@/lib/engine/board";
-import { crossingFrom } from "@/lib/engine/rings";
+import {
+  FIELDS,
+  KAMIENNY_MOST,
+  bridgeEntranceFrom,
+  ringOf,
+} from "@/lib/engine/board";
+import { crossingFrom, crossingIsDefended } from "@/lib/engine/rings";
 import {
   afterDraw,
   afterMove,
@@ -795,18 +800,6 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
   await bumpRevision(gameId);
 }
 
-/**
- * The two fields the Kamienny Most can be entered from, and what guards each.
- *
- * Rule 11.9: only from Wymarłe Miasto or Ruiny Twierdzy, and each has its own
- * guardian to beat first — Duch Skał at the dead city, Kamienny Potwór at the
- * ruins. The "CEL GRY" section adds that a Magiczny Miecz is needed to set foot
- * on the bridge at all.
- */
-const BRIDGE_ENTRANCES: Record<string, { guardian: string; entersAt: string }> = {
-  "wymarle-miasto": { guardian: "Duch Skał", entersAt: "wejscie-na-most-a" },
-  "ruiny-twierdzy": { guardian: "Kamienny Potwór", entersAt: "wejscie-na-most-b" },
-};
 
 /**
  * Steps onto the Kamienny Most (11.9-11.11).
@@ -824,7 +817,7 @@ export async function enterBridge(
   const seat = activeSeatOf(seats, game);
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
 
-  const entrance = BRIDGE_ENTRANCES[seat.field_id];
+  const entrance = bridgeEntranceFrom(seat.field_id);
   if (!entrance) {
     throw new Error("Na Kamienny Most można wejść tylko z Wymarłego Miasta lub Ruin Twierdzy (11.9).");
   }
@@ -837,7 +830,7 @@ export async function enterBridge(
 
   if (!succeeded) {
     // 11.11: Magii at Wymarłe Miasto, Miecza at Ruiny Twierdzy.
-    const stat = seat.field_id === "wymarle-miasto" ? "magia_own" : "miecz_own";
+    const stat = entrance.stat === "magia" ? "magia_own" : "miecz_own";
     const floor = stat === "magia_own" ? seat.magia_floor : seat.miecz_floor;
     const current = stat === "magia_own" ? seat.magia_own : seat.miecz_own;
     await db
@@ -891,7 +884,10 @@ export async function crossRing(
     throw new Error("Z tego Obszaru nie można przejść do innego Kręgu (11.1, 11.5).");
   }
 
-  if (!succeeded) {
+  // Coming back down is free (11.3, 11.7), so a reported failure on an
+  // undefended crossing is not a thing that can happen and is ignored rather
+  // than charged for.
+  if (!succeeded && crossingIsDefended(crossing)) {
     const left = Math.max(0, seat.zycie - 1);
     await db.from("seats").update({ zycie: left }).eq("id", seat.id);
     await journal(gameId, seat.id, game.turn, "przeprawa-nieudana", {

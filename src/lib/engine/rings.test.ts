@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CROSSINGS, GORNY_KRAG, SRODKOWY_KRAG, crossingFrom } from "./rings";
+import {
+  CROSSINGS,
+  GORNY_KRAG,
+  SRODKOWY_KRAG,
+  crossingFrom,
+  crossingIsDefended,
+} from "./rings";
 import { DOLNY_KRAG, KAMIENNY_MOST } from "./board";
 
 /**
@@ -95,6 +101,35 @@ describe("crossings (11.1, 11.5)", () => {
       expect(byId.get(crossing.to), crossing.to).toBeDefined();
       // A crossing must move between adjacent rings, never within one.
       expect(byId.get(crossing.from)!.region).not.toBe(byId.get(crossing.to)!.region);
+    }
+  });
+});
+
+describe("which way a crossing is defended (11.3, 11.7)", () => {
+  it("makes a character earn the way up, into the next ring out", () => {
+    // Trzęsawiska are rolled for at Uroczysko; the Rycerz waits at Przełęcz
+    // Wichrów. Both are the inward-facing side of their crossing.
+    expect(crossingIsDefended(crossingFrom("uroczysko")!)).toBe(true);
+    expect(crossingIsDefended(crossingFrom("przelecz-wichrow")!)).toBe(true);
+  });
+
+  it("lets a character walk back down for nothing", () => {
+    // "nie rzucając kostką" on Las Błędnych Ogni; "nie atakuje jeżeli
+    // przechodzisz z Doliny Czaszek" on Przełęcz Wichrów.
+    expect(crossingIsDefended(crossingFrom("las-blednych-ogni")!)).toBe(false);
+    expect(crossingIsDefended(crossingFrom("dolina-czaszek")!)).toBe(false);
+  });
+
+  it("defends exactly one direction of each crossing", () => {
+    const defended = CROSSINGS.filter(crossingIsDefended);
+    expect(defended).toHaveLength(CROSSINGS.length / 2);
+    // No crossing may be defended both ways, or free both ways.
+    for (const crossing of defended) {
+      const back = CROSSINGS.find(
+        (other) => other.from === crossing.to && other.to === crossing.from,
+      );
+      expect(back, `no way back from ${crossing.to}`).toBeDefined();
+      expect(crossingIsDefended(back!)).toBe(false);
     }
   });
 });

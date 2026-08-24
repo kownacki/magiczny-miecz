@@ -152,6 +152,50 @@ export function moveOptions(
   });
 }
 
+/**
+ * The two ways onto the Kamienny Most, and what stands in each (11.9-11.11).
+ *
+ * Both entrance fields print the same shape of rule: a guardian whose strength
+ * is rolled rather than fixed — "1 - 5; 2 - 6; 3 - 7; 4 - 8; 5 - 9; 6 - 10", so
+ * a die plus four — measured against a different stat at each end, and costing a
+ * point of that same stat to lose. The guardian stays put whether or not it is
+ * beaten, and ignores anyone walking off the bridge.
+ *
+ * `entersAt` is the end of the bridge each opens onto and is not
+ * interchangeable: KAMIENNY_MOST is written from the top of the board down,
+ * Ruiny Twierdzy sits on the outer ring's top edge and Wymarłe Miasto on its
+ * bottom edge.
+ */
+export interface BridgeEntrance {
+  from: string;
+  guardian: string;
+  entersAt: string;
+  /** The stat the guardian is fought with, and the one a loss costs (11.11). */
+  stat: "miecz" | "magia";
+}
+
+/** What a die roll makes the guardian worth: the board prints 1→5 through 6→10. */
+export const GUARDIAN_STRENGTH_OFFSET = 4;
+
+export const BRIDGE_ENTRANCES: readonly BridgeEntrance[] = [
+  {
+    from: "ruiny-twierdzy",
+    guardian: "Kamienny Potwór",
+    entersAt: "wejscie-na-most-a",
+    stat: "miecz",
+  },
+  {
+    from: "wymarle-miasto",
+    guardian: "Duch Skał",
+    entersAt: "wejscie-na-most-b",
+    stat: "magia",
+  },
+];
+
+export function bridgeEntranceFrom(fieldId: string): BridgeEntrance | undefined {
+  return BRIDGE_ENTRANCES.find((entrance) => entrance.from === fieldId);
+}
+
 /** The ring a field belongs to, for movement purposes. */
 export function ringOf(fieldId: string): readonly BoardField[] | null {
   if (DOLNY_KRAG.some((f) => f.id === fieldId)) return DOLNY_KRAG;

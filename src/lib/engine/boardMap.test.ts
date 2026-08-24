@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { DOLNY_KRAG, KAMIENNY_MOST } from "./board";
+import { BRIDGE_ENTRANCES, DOLNY_KRAG, KAMIENNY_MOST } from "./board";
 import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
 import {
+  BRIDGE_LINKS,
   CELLS,
   CELL_BY_ID,
   DOLNY_SIDES,
@@ -111,5 +112,38 @@ describe("player dots", () => {
         expect(spot.y).toBeLessThanOrEqual(cell.y + cell.h);
       }
     }
+  });
+});
+
+describe("the two ways onto the Kamienny Most (11.9)", () => {
+  it("sends each entrance to the end of the bridge it actually touches", () => {
+    // The bridge runs the length of the board and each entrance sits at one
+    // end of it. Crossing the wires here would walk a character the whole
+    // length of the bridge past the wrong creatures, while everything else
+    // about the move still looked correct.
+    for (const entrance of BRIDGE_ENTRANCES) {
+      const from = CELL_BY_ID.get(entrance.from)!;
+      const lands = CELL_BY_ID.get(entrance.entersAt)!;
+      const ends = [
+        CELL_BY_ID.get(KAMIENNY_MOST[0].id)!,
+        CELL_BY_ID.get(KAMIENNY_MOST[KAMIENNY_MOST.length - 1].id)!,
+      ];
+      const nearest = ends.reduce((best, end) =>
+        Math.abs(end.cy - from.cy) < Math.abs(best.cy - from.cy) ? end : best,
+      );
+      expect(lands.id, `${entrance.from} enters at the far end`).toBe(nearest.id);
+    }
+  });
+
+  it("puts the two entrances at opposite ends", () => {
+    const [a, b] = BRIDGE_ENTRANCES;
+    expect(a.entersAt).not.toBe(b.entersAt);
+    expect(a.stat).not.toBe(b.stat);
+  });
+
+  it("draws a link for each entrance", () => {
+    expect(BRIDGE_LINKS.map((l) => `${l.from}->${l.to}`).sort()).toEqual(
+      BRIDGE_ENTRANCES.map((e) => `${e.from}->${e.entersAt}`).sort(),
+    );
   });
 });
