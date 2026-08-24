@@ -35,7 +35,16 @@ export interface GameRow {
   active_seat: number | null;
   turn: number;
   revision: number;
+  turn_state: unknown;
 }
+
+/**
+ * Everything a client is allowed to know about the table. Listed once so a
+ * column added to the schema cannot silently go missing from the API — which is
+ * exactly how turn_state was absent from every response the first time.
+ */
+const GAME_COLUMNS =
+  "id,join_code,mode,die_source,status,active_seat,turn,revision,turn_state";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
@@ -54,7 +63,7 @@ export async function createGame(): Promise<{ game: GameRow; hostToken: string }
     const { data, error } = await db
       .from("games")
       .insert({ join_code: joinCode })
-      .select("id,join_code,mode,die_source,status,active_seat,turn,revision")
+      .select(GAME_COLUMNS)
       .single();
 
     if (error) {
@@ -79,7 +88,7 @@ export async function createGame(): Promise<{ game: GameRow; hostToken: string }
 export async function findGame(joinCode: string): Promise<GameRow | null> {
   const { data, error } = await db
     .from("games")
-    .select("id,join_code,mode,die_source,status,active_seat,turn,revision")
+    .select(GAME_COLUMNS)
     .eq("join_code", joinCode)
     .maybeSingle();
   if (error) throw new Error(`findGame: ${error.message}`);
