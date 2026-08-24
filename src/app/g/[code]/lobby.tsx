@@ -318,6 +318,13 @@ export function Lobby({
             // is what makes 27 of them scannable at this size where 27 pages of
             // small type were not.
             const standee = characterStandeeUrl(character.id);
+            // The dimming goes on the picture, not on the card. Fading the
+            // whole tile faded the border with it, which is the one part
+            // carrying information — whose it is — and the only reason the
+            // colour is there at all. Yours a shade brighter than the rest,
+            // since "which did I pick?" is the one you go looking for.
+            const dim =
+              owner && !isPending && !waiting ? (isTargets ? "opacity-70" : "opacity-35") : "";
             return (
               // Pointing at a card reads it, and that has to work for cards
               // nobody can choose. A disabled button fires no mouse events at
@@ -343,17 +350,11 @@ export function Lobby({
                 style={owner && !isPending && !waiting ? { borderColor: owner, borderWidth: 2 } : undefined}
                 className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
                   isPending
-                    ? "animate-pulse border-ochre opacity-100"
+                    ? "animate-pulse border-ochre"
                     : waiting
                       ? "border-edge opacity-20"
                       : owner
-                        ? // Dimmed because it is not on offer, coloured because
-                          // whose it is still matters — and yours a shade
-                          // brighter, since “which did I pick?” is the one
-                          // you go looking for.
-                          isTargets
-                          ? "opacity-70"
-                          : "opacity-35"
+                        ? "" // the border colour is set inline, and stays lit
                         : "border-edge hover:border-ochre disabled:opacity-40"
                 }`}
               >
@@ -363,10 +364,12 @@ export function Lobby({
                     alt={character.name}
                     width={114}
                     height={190}
-                    className="h-auto w-full"
+                    className={`h-auto w-full ${dim}`}
                   />
                 ) : (
-                  <span className="flex aspect-[114/190] items-center p-2 text-center text-[10px] text-ink">
+                  <span
+                    className={`flex aspect-[114/190] items-center p-2 text-center text-[10px] text-ink ${dim}`}
+                  >
                     {character.name}
                   </span>
                 )}
