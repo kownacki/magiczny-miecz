@@ -39,12 +39,19 @@ Every scan is image-only with no text layer, so all of this is read visually.
 - [x] Rulebook read end to end (9 pages)
 - [ ] `docs/RULES.md` — full rulebook transcribed to structured markdown
       (read end to end already; not yet written down)
+- [x] Dolny Krąg field instructions — all 14 transcribed and shown in the turn
+      panel. Draw counts agree with the independently-read engine data.
 - [~] Board fields: 58 fields read off the scans. Names and ring membership are
       corroborated — all five rule cross-checks pass (Uroczysko/Las Błędnych
       Ogni, Przełęcz Wichrów/Dolina Czaszek, both bridge crossings, both bridge
       entrances). **Cyclic order is NOT verified** and is deliberately not wired
       into movement: the outer ring came out shorter than the middle ring, which
-      is backwards for concentric rings. Needs a geometry pass.
+      is backwards for concentric rings. A second attempt from full-board views
+      confirmed the bridge order exactly but could not splice the outer two
+      rings — their edges mix fields from different rings, four names repeat
+      symmetrically (Bagna, Ruchome Skały, Urwisko, Rozstajne Drogi), and the
+      corners are ambiguous. **Fastest fix is to read the order off the physical
+      board.**
 - [x] 165 event cards → typed data
 - [x] 30 spells → typed data
 - [x] 30 items → typed data (14 unnamed in the print files, named in overrides.json)

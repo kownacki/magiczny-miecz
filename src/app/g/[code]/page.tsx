@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { DOLNY_KRAG, KAMIENNY_MOST } from "@/lib/engine/board";
+import { fieldWithText } from "@/lib/engine/fieldText";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
 
@@ -152,6 +153,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
             fieldName={
               active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
+            }
+            fieldText={
+              active.field_id ? (fieldWithText(active.field_id)?.text ?? null) : null
             }
             dieSource={game.die_source}
             busy={busy}

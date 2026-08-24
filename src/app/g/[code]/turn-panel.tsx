@@ -40,6 +40,8 @@ interface Props {
   isMine: boolean;
   playerName: string;
   fieldName: string;
+  /** The instruction printed on the board for the field, if it has been transcribed. */
+  fieldText: string | null;
   dieSource: string;
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
@@ -50,6 +52,7 @@ export function TurnPanel({
   isMine,
   playerName,
   fieldName,
+  fieldText,
   dieSource,
   busy,
   onAction,
@@ -62,6 +65,15 @@ export function TurnPanel({
         </h2>
         <span className="text-xs text-muted">{fieldName}</span>
       </header>
+
+      {/* Shown to everyone, not only the active player: at a table the others
+          read the field aloud and argue about it, and the board itself is
+          usually under somebody's elbow. */}
+      {fieldText && (phase.phase === "pole" || phase.phase === "walka") && (
+        <p className="mb-4 whitespace-pre-line rounded border-l-2 border-ochre/40 bg-night/60 px-3 py-2 text-xs leading-relaxed text-muted">
+          {fieldText}
+        </p>
+      )}
 
       {!isMine ? (
         <p className="text-sm text-muted">Czekamy na ruch gracza {playerName}.</p>

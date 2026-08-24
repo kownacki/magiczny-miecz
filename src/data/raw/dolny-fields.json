@@ -1,0 +1,79 @@
+[
+  {
+    "name": "Karczma",
+    "tile": "dolny-bottom-l.png",
+    "text": "MUSISZ RZUCIĆ KOSTKĄ:\n1 - przegrałeś w kości 1 Sz. Z.; 2 - wygrałeś 1 Sz. Z.; 3 - musisz tu nocować, tracisz 1 turę; 4 - musisz stawić czoła miejscowemu osiłkowi (Miecz 4); 5 - poczęstowano cię eliksirem, dzięki któremu możesz przenieść się do dowolnego miejsca w tym Kręgu; 6 - eliksir który ci podano może przenieść cię do Świątyni Nemed."
+  },
+  {
+    "name": "Mroźne Pustkowie",
+    "tile": "dolny-bottom-r.png",
+    "text": "WYCIĄGNIJ 1 KARTĘ.\nNie ciągnij Karty jeśli jakaś już tu jest.",
+    "draw": 1
+  },
+  {
+    "name": "Gród",
+    "tile": "dolny-right.png",
+    "text": "MOŻESZ TU ODWIEDZIĆ:\nWróżbitę: rzuć kostką 1 - zyskujesz 1 Zaklęcie; 2 - zostajesz Zaklęty w Kamień; 3 - jeżeli jesteś Zły stajesz się Dobry. Jeżeli jesteś Chaotyczny stajesz się Zły; 4-6 zostałeś zignorowany.\nLichwiarza - możesz wymienić dowolne Przedmioty na złoto (odłóż ich Karty i weź po 1 Sz.Z. za każdy)."
+  },
+  {
+    "name": "Bezdroża",
+    "tile": "dolny-right.png",
+    "text": "WYCIĄGNIJ 2 KARTY.\nCiągnij tylko 1 Kartę, jeżeli jakaś tu jest.",
+    "draw": 2
+  },
+  {
+    "name": "Studnia Wieczności",
+    "tile": "dolny-right.png",
+    "text": "Jeżeli jesteś Dobry możesz odzyskać punkty Życia z początku gry, lub rzuć kostką: 1-3 moc wody nie działa na ciebie, 4 - zyskujesz 1 punkt Życia, 5 - zyskujesz 1 Zaklęcie, 6 - zyskujesz dodatkowy ruch."
+  },
+  {
+    "name": "Krąg Mocy",
+    "tile": "dolny-right.png",
+    "text": "Musisz rzucić kostką: 1 - zostałeś zaatakowany przez Strażnika Kręgu (Miecz 5); 2, 3 - tracisz 1 turę; 4, 5 - nic się nie dzieje; 6 - zyskujesz 1 punkt Magii."
+  },
+  {
+    "name": "Czarci Młyn",
+    "tile": "dolny-top-r.png",
+    "text": "Jeżeli jesteś: Dobry - tracisz 1 Życie; Chaotyczny - rzuć kostką 1, 2, 3 - zyskujesz 1 Życie; 4, 5, 6 - tracisz 1 Życie; Zły - możesz wezwać Siły Ciemności; 1 - zyskujesz 1 punkt Miecza; 2 - zyskujesz 1 punkt Magii; 3 - otrzymujesz 1 Zaklęcie; 4 - zyskujesz dodatkowy ruch; 5 - tracisz 1 turę; 6 - tracisz 1 Życie."
+  },
+  {
+    "name": "Mokradła",
+    "tile": "dolny-left.png",
+    "text": "WYCIĄGNIJ 1 KARTĘ.\nNie ciągnij Karty jeżeli jakaś już tu jest.",
+    "draw": 1
+  },
+  {
+    "name": "Mokradła",
+    "tile": "dolny-right.png",
+    "text": "WYCIĄGNIJ 1 KARTĘ.\nNie ciągnij Karty jeśli już tu jakaś jest.",
+    "draw": 1
+  },
+  {
+    "name": "Step",
+    "tile": "dolny-left.png",
+    "text": "WYCIĄGNIJ 1 KARTĘ.\nNie ciągnij Karty, jeżeli już jakaś tu jest.",
+    "draw": 1
+  },
+  {
+    "name": "Step",
+    "tile": "dolny-top-r.png",
+    "text": "WYCIĄGNIJ 1 KARTĘ.\nNie ciągnij Karty jeżeli jakaś już tu jest.",
+    "draw": 1
+  },
+  {
+    "name": "Osada",
+    "tile": "dolny-left.png",
+    "text": "MOŻESZ TU ODWIEDZIĆ:\nCzarownicę: rzuć kostką 1-2 - tracisz 1 punkt Miecza; 2 - zyskujesz 1 punkt Miecza lub 1 punkt Magii, 3,4 - zyskujesz 1 punkt Magii lub 1 punkt Miecza; 5 - zyskujesz 1 Zaklęcie; 6 - zostajesz zignorowany.\nPłatnerza: możesz u niego kupić: za 2 Sz. Z. miecz; sztylet za 3 Sz. Z.; hełm - 1 Sz. Z.\nMedyka: za każdą Sztukę Złota przywróci ci 1 punkt Życia."
+  },
+  {
+    "name": "Kurhan",
+    "tile": "dolny-left.png",
+    "text": "MUSISZ RZUCIĆ KOSTKĄ: 1 - zyskujesz 1 punkt Miecza; 2-3 nic się nie dzieje; 4-5 zostałeś opętany przez duchy, tracisz 1 turę; 6 - zostałeś zaatakowany przez Ducha (Magia 4)."
+  },
+  {
+    "name": "Uroczysko",
+    "tile": "dolny-left.png",
+    "text": "WYCIĄGNIJ 1 KARTĘ.\nNie ciągnij Karty jeżeli jakaś już tu jest lub przeprawiasz się do Lasu Błędnych Ogni.\nAby przebyć Trzęsawiska musisz użyć Magii. Rzuć dwoma kostkami: wynik mniejszy lub równy twojej Magii - przeprawiłeś się na drugą stronę. Większy wynik oznacza porażkę (tracisz 1 Życie). Nie możesz kontynuować podróży dopóki nie przejdziesz przez Trzęsawiska. TYLKO TĘDY MOŻNA PRZEJŚĆ DO LASU BŁĘDNYCH OGNI.",
+    "draw": 1
+  }
+]

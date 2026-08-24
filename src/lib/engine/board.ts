@@ -8,6 +8,15 @@ export interface BoardField {
   region: Region;
   /** How many event cards stopping here makes you draw, if any. */
   draw?: number;
+  /**
+   * The instruction printed on the board for this field, verbatim.
+   *
+   * Shown to the player rather than interpreted. Most of these are die-roll
+   * tables and shopping lists, and displaying the real text is both honest and
+   * enough to be useful — the referee does not have to understand a field to
+   * save someone hunting for it on the board under four other players' arms.
+   */
+  text?: string;
 }
 
 /**
