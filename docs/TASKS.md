@@ -92,8 +92,10 @@ The primary mode: physical board and cards, app as referee.
       applied through the same journalled correction path as the manual +/-
 - [x] Conditional text (Nature, die roll, choice, all-players) suggests nothing
       at all, deliberately — a plausible wrong button is worse than none
-- [ ] Roll-table cards ("rzuć kostką: 1 - ...") — offer the roll, then the
-      matching outcome
+- [x] Roll-table cards and fields ("rzuć kostką: 1 - ...") — parsed into six
+      outcomes with a die to roll against them. Commits only when all six faces
+      are covered exactly once, so Czarci Młyn (two tables) and Osada (the 1993
+      printing claims face 2 twice) are correctly refused and fall back to text.
 - [ ] Nature-dependent cards — the seat's Nature is known, so these are
       resolvable once Kat's setup choice is handled
 
