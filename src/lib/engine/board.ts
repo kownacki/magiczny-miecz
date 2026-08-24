@@ -192,6 +192,20 @@ export const BRIDGE_ENTRANCES: readonly BridgeEntrance[] = [
   },
 ];
 
+/**
+ * The two river crossings in the middle ring.
+ *
+ * Both print the same instruction: "Musisz przeprawić się przez rzekę płacąc
+ * przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego rozpocząłeś ruch." So
+ * landing here is not a free stop — it is a toll, and the alternative is the
+ * whole move being undone.
+ */
+export const FERRY_TOLL = 1;
+
+export function isFerry(fieldId: string): boolean {
+  return FIELDS.get(fieldId)?.name === "Przeprawa";
+}
+
 export function bridgeEntranceFrom(fieldId: string): BridgeEntrance | undefined {
   return BRIDGE_ENTRANCES.find((entrance) => entrance.from === fieldId);
 }

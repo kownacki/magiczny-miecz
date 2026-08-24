@@ -8,7 +8,7 @@ import { suggestActions } from "@/lib/engine/cardEffects";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom, crossingIsDefended } from "@/lib/engine/rings";
-import { FIELDS } from "@/lib/engine/board";
+import { FIELDS, isFerry } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 
@@ -152,40 +152,18 @@ export function TurnPanel({
           Rycerz Wiecznych Śniegów for the Lodowy Las — which the board text
           above spells out. Both outcomes are offered because the app cannot
           adjudicate a fight it is not running. */}
-      {/* Rule 11.9: only these two fields, and only with a Magiczny Miecz. The
-          guardian is a real fight the players resolve, so both outcomes are
-          offered rather than the app rolling for it. */}
-      {isMine &&
-        (fieldId === "wymarle-miasto" || fieldId === "ruiny-twierdzy") &&
-        phase.phase === "pole" && (
-          <div className="mb-4 rounded border border-ochre/40 bg-night/60 p-3">
-            <p className="mb-2 text-xs text-muted">
-              Stąd można wejść na Kamienny Most — po pokonaniu{" "}
-              <span className="text-ink">
-                {fieldId === "wymarle-miasto" ? "Ducha Skał" : "Kamiennego Potwora"}
-              </span>
-              . Potrzebny Magiczny Miecz.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                disabled={busy}
-                onClick={() => onAction({ action: "bridge", succeeded: true })}
-                className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-              >
-                Pokonany — wchodzę na Most
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => onAction({ action: "bridge", succeeded: false })}
-                className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
-              >
-                Przegrana (11.11)
-              </button>
-            </div>
-          </div>
-        )}
+      {/* 11.10 puts the attempt in the move itself — a character standing on
+          Wymarłe Miasto or Ruiny Twierdzy is expressly the one case that may
+          NOT try, so there is deliberately nothing offered here. */}
 
-      {isMine && fieldId && crossingFrom(fieldId) && phase.phase === "pole" && (
+      {isMine &&
+        fieldId &&
+        crossingFrom(fieldId) &&
+        // 11.4 makes retrying the point of the next turn — "czy będzie ponownie
+        // próbowała przekroczyć granicę Kręgów" — so this is offered before the
+        // roll as well as on arrival. Drawing it only on arrival meant a failed
+        // crossing could never be attempted again.
+        (phase.phase === "pole" || phase.phase === "rzut") && (
         <Crossing
           crossing={crossingFrom(fieldId)!}
           busy={busy}
@@ -211,6 +189,63 @@ export function TurnPanel({
 }
 
 /**
+ * Facing the guardian at a bridge entrance (11.9-11.11).
+ *
+ * Three outcomes rather than two, because 11.11 gives a draw its own: it costs
+ * no point but still bars next turn's attempt, exactly as a loss does. Offering
+ * only "won" and "lost" quietly turned every draw into a loss and took a point
+ * the rules leave alone.
+ */
+function BridgeControls({
+  bridge,
+  busy,
+  onAction,
+}: {
+  bridge: { from: string; guardian: string; entersAt: string; stat: "miecz" | "magia" };
+  busy: boolean;
+  onAction: Props["onAction"];
+}) {
+  const stat = bridge.stat === "magia" ? "Magii" : "Miecza";
+  return (
+    <div>
+      <p className="mb-1 text-sm text-ink">
+        Zanim wejdziesz na Most, musisz pokonać:{" "}
+        <span className="text-vermilion">{bridge.guardian}</span>.
+      </p>
+      <p className="mb-3 text-[11px] text-muted">
+        Rzuć kostką, by poznać jego siłę {stat}: 1&nbsp;→&nbsp;5, 2&nbsp;→&nbsp;6,
+        3&nbsp;→&nbsp;7, 4&nbsp;→&nbsp;8, 5&nbsp;→&nbsp;9, 6&nbsp;→&nbsp;10. Potem
+        zwykła walka. Przegrana to 1 punkt {stat}; remis nic nie kosztuje. Po obu
+        nie spróbujesz ponownie w następnej turze (11.11).
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          disabled={busy}
+          onClick={() => onAction({ action: "bridge", outcome: "wygrana" })}
+          className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+        >
+          Pokonany — wchodzę na Most
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => onAction({ action: "bridge", outcome: "remis" })}
+          className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+        >
+          Remis
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => onAction({ action: "bridge", outcome: "porazka" })}
+          className={`rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50`}
+        >
+          Przegrana (−1 {stat})
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Stepping between two Kręgi.
  *
  * Only one direction of each crossing is defended, so this offers an outcome to
@@ -231,7 +266,7 @@ function Crossing({
   const defended = crossingIsDefended(crossing);
   return (
     <div className="mb-4 rounded border border-ochre/40 bg-night/60 p-3">
-      <p className="mb-2 text-xs text-muted">
+      <p className="mb-1 text-xs text-muted">
         Stąd można przejść do: <span className="text-ink">{to}</span>
         {!defended && (
           <>
@@ -239,6 +274,13 @@ function Crossing({
             — <span className="text-verdigris">bez rzutu kostką</span> (11.3, 11.7).
           </>
         )}
+      </p>
+      {/* Uroczysko and Przełęcz Wichrów both print the same exemption: the card
+          this field would otherwise make you draw is not drawn if you are
+          crossing. Said here rather than enforced, because the player may
+          legitimately decide to stay and draw instead. */}
+      <p className="mb-2 text-[11px] text-muted/80">
+        Przeprawiając się, nie ciągniesz karty z tego Obszaru.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -284,14 +326,28 @@ function PhaseControls({
           <div className="grid gap-2 sm:grid-cols-2">
             {phase.options.map((option) => (
               <button
-                key={option.direction}
+                key={`${option.direction}-${option.fieldId}-${option.bridge ? "most" : "ring"}`}
                 disabled={busy}
-                onClick={() => onAction({ action: "move", fieldId: option.fieldId })}
-                className="rounded border border-edge bg-raised px-4 py-3 text-left transition hover:border-ochre disabled:opacity-50"
+                onClick={() =>
+                  onAction({
+                    action: "move",
+                    fieldId: option.fieldId,
+                    ...(option.bridge ? { viaBridge: true } : {}),
+                  })
+                }
+                className={`rounded border bg-raised px-4 py-3 text-left transition disabled:opacity-50 ${
+                  option.bridge
+                    ? "border-vermilion/50 hover:border-vermilion"
+                    : "border-edge hover:border-ochre"
+                }`}
               >
-                <span className="block font-medium text-ink">{option.fieldName}</span>
+                <span className="block font-medium text-ink">
+                  {option.bridge ? "Kamienny Most" : option.fieldName}
+                </span>
                 <span className="block text-[11px] text-muted">
-                  {DIRECTION_LABEL[option.direction]}
+                  {option.bridge
+                    ? `skręć z ${option.fieldName} — czeka ${option.bridge.guardian}`
+                    : DIRECTION_LABEL[option.direction]}
                 </span>
                 {option.through.length > 0 && (
                   <span className="mt-1 block text-[11px] text-muted/70">
@@ -303,6 +359,8 @@ function PhaseControls({
           </div>
         </div>
       );
+    case "most":
+      return <BridgeControls bridge={phase.bridge} busy={busy} onAction={onAction} />;
     case "pole":
       return (
         <FieldControls
@@ -386,6 +444,31 @@ function FieldControls({
 
   return (
     <div className="flex flex-col gap-4">
+      {isFerry(phase.fieldId) && (
+        <div className="rounded border border-ochre/40 bg-night/60 p-3">
+          <p className="mb-2 text-xs text-muted">
+            Przewoźnik żąda <span className="text-zloto">1 Sz. Z.</span> za przeprawę.
+            Bez zapłaty wracasz tam, skąd zacząłeś ruch.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "ferry", pay: true })}
+              className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+            >
+              Płacę 1 Sz. Z.
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "ferry", pay: false })}
+              className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+            >
+              Nie płacę — wracam
+            </button>
+          </div>
+        </div>
+      )}
+
       {phase.draw > 0 && (
         <p className="text-sm text-muted">
           To pole każe wyciągnąć{" "}

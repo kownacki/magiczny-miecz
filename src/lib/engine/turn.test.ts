@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DOLNY_KRAG, destination, moveOptions, ringOf } from "./board";
+import { DOLNY_KRAG, destination, isFerry, moveOptions, ringOf } from "./board";
 import {
   afterDraw,
   afterMove,
   afterRoll,
+  bridgeBlockUntil,
+  bridgeBlocked,
   endFight,
   nextSeat,
   recordFightRoll,
@@ -246,5 +248,86 @@ describe("the Kamienny Most (10.3, 10.4)", () => {
     const phase = afterRoll("karczma", 3);
     if (phase.phase !== "ruch") throw new Error("expected ruch");
     expect(phase.options.map((o) => o.fieldId)).toEqual(["mokradla-2", "bezdroza"]);
+  });
+});
+
+describe("stepping onto the Kamienny Most (11.10)", () => {
+  // Ruiny Twierdzy is index 1 of the outer ring, so a character on Urwisko
+  // (index 0) walks over it with anything better than a roll of one.
+  const from = "urwisko-1";
+
+  it("offers the bridge when the walk passes an entrance with a step to spare", () => {
+    const phase = afterRoll(from, 2, { bridgeOffered: true });
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    const bridge = phase.options.find((option) => option.bridge);
+    expect(bridge?.bridge?.guardian).toBe("Kamienny Potwór");
+    expect(bridge?.fieldId).toBe("ruiny-twierdzy");
+    expect(bridge?.bridge?.entersAt).toBe("wejscie-na-most-a");
+  });
+
+  it("does NOT offer it when the move ends exactly on the entrance", () => {
+    // "Postać, której ruch kończy się dokładnie na Obszarze Wymarłego Miasta
+    // albo Ruin Twierdzy, nie może podjąć próby wkroczenia na Most."
+    const phase = afterRoll(from, 1, { bridgeOffered: true });
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    expect(phase.options.some((option) => option.fieldId === "ruiny-twierdzy")).toBe(true);
+    expect(phase.options.some((option) => option.bridge)).toBe(false);
+  });
+
+  it("does not offer it at all without a sword, or while barred by 11.11", () => {
+    const phase = afterRoll(from, 2);
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    expect(phase.options.some((option) => option.bridge)).toBe(false);
+  });
+
+  it("keeps the ordinary walk alongside the diversion", () => {
+    const phase = afterRoll(from, 2, { bridgeOffered: true });
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    // Both ways round the ring, plus the turn onto the bridge.
+    expect(phase.options).toHaveLength(3);
+    expect(phase.options.filter((option) => !option.bridge)).toHaveLength(2);
+  });
+
+  it("stops the walk short at the entrance rather than at the landing square", () => {
+    const phase = afterRoll(from, 3, { bridgeOffered: true });
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    const bridge = phase.options.find((option) => option.bridge)!;
+    // Walked from Urwisko straight to the ruins: nothing in between.
+    expect(bridge.through).toEqual([]);
+    expect(bridge.fieldId).toBe("ruiny-twierdzy");
+  });
+});
+
+describe("the Przeprawa (middle ring)", () => {
+  it("knows both river crossings and nothing else", () => {
+    expect(isFerry("przeprawa-1")).toBe(true);
+    expect(isFerry("przeprawa-2")).toBe(true);
+    expect(isFerry("pustelnia")).toBe(false);
+    expect(isFerry("karczma")).toBe(false);
+  });
+});
+
+describe("where a move started", () => {
+  it("is carried into the field phase, for the ferryman to send you back to", () => {
+    const ring = DOLNY_KRAG;
+    const phase = afterMove(ring[3], "karczma");
+    if (phase.phase !== "pole") throw new Error("expected pole");
+    expect(phase.from).toBe("karczma");
+  });
+});
+
+describe("the one-turn bar after a failed bridge attempt (11.11)", () => {
+  it("bars the next round and no more", () => {
+    const failedOn = 3;
+    const until = bridgeBlockUntil(failedOn);
+    expect(bridgeBlocked(until, failedOn)).toBe(true);
+    expect(bridgeBlocked(until, failedOn + 1)).toBe(true);
+    // "w następnej turze" is one turn, not two.
+    expect(bridgeBlocked(until, failedOn + 2)).toBe(false);
+    expect(bridgeBlocked(until, failedOn + 3)).toBe(false);
+  });
+
+  it("does not bar a character that never tried", () => {
+    expect(bridgeBlocked(null, 7)).toBe(false);
   });
 });

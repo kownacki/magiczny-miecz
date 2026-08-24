@@ -4,6 +4,7 @@ import {
   attackSeat,
   beginFight,
   crossRing,
+  payFerry,
   drawCard,
   enterBridge,
   escape,
@@ -49,7 +50,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         await rollForMove(game.id, typeof body.value === "number" ? body.value : null);
         break;
       case "move":
-        await moveTo(game.id, String(body.fieldId));
+        // `viaBridge` picks the turn-onto-the-Most option apart from the plain
+        // walk, which lands on the same field id (11.10).
+        await moveTo(game.id, String(body.fieldId), body.viaBridge === true);
         break;
       case "draw":
         // A named card means the physical deck decided; nothing named means
@@ -79,8 +82,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "cross":
         return NextResponse.json(await crossRing(game.id, body.succeeded !== false));
-      case "bridge":
-        return NextResponse.json(await enterBridge(game.id, body.succeeded !== false));
+      case "bridge": {
+        // 11.11 has three outcomes, and the draw is not the same as a loss:
+        // it costs no point but still bars next turn's attempt.
+        const outcome =
+          body.outcome === "remis" || body.outcome === "porazka"
+            ? body.outcome
+            : "wygrana";
+        return NextResponse.json(await enterBridge(game.id, outcome));
+      }
+      case "ferry":
+        return NextResponse.json(await payFerry(game.id, body.pay === true));
       case "escape":
         await escape(game.id, body.succeeded !== false);
         break;

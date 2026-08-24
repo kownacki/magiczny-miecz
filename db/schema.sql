@@ -76,6 +76,10 @@ create table if not exists magiczny_miecz.seats (
   turns_lost integer not null default 0,
   -- Turned to Stone lasts exactly three turns (20.1).
   stone_until_turn integer,
+  -- 11.11: failing or drawing against a bridge guardian bars another attempt
+  -- next turn. A turn number rather than a counter, so skipped turns cannot
+  -- make the block drift.
+  bridge_blocked_until_turn integer,
   eliminated boolean not null default false,
 
   unique (game_id, seat_index)

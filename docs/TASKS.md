@@ -194,24 +194,19 @@ engine gets wrong or does not have, not a missing feature.
       Rycerz Wiecznych Śniegów is a flat Miecz 10 — so simulation can fight them
       instead of asking the players who won. `BRIDGE_ENTRANCES` now carries the
       stat and the offset; the fight itself is not wired up.
-- [ ] **11.10: the bridge is entered in passing, not on arrival.** "Postać,
-      której ruch kończy się dokładnie na Obszarze Wymarłego Miasta albo Ruin
-      Twierdzy, nie może podjąć próby wkroczenia na Most." The app offers the
-      attempt in exactly the case the rule forbids — when the move ends there —
-      and never in the case it allows. It belongs in `moveOptions`, as a third
-      destination when the walk passes an entrance with a step still to spend.
-- [ ] **11.11: no retry next turn.** A failed or drawn bridge attempt bars
-      another next turn. Not modelled.
-- [ ] **A crossing can only be attempted on the turn you land.** The button is
-      drawn in the "pole" phase only, so a character who fails at the Trzęsawiska
-      cannot try again — 11.4 says deciding whether to try again is exactly what
-      they do next turn.
-- [ ] **Cards are drawn while crossing.** Uroczysko, Przełęcz Wichrów, Ruiny
-      Twierdzy and Wymarłe Miasto all print "nie ciągnij Karty ... jeżeli
-      przeprawiasz się / wchodzisz na Most". The app draws anyway.
-- [ ] **Przeprawa does nothing.** Both copies read "Musisz przeprawić się przez
-      rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz na Obszar, z którego
-      rozpocząłeś ruch." Neither the toll nor the bounce-back exists.
+- [x] **11.10: the bridge is entered in passing, not on arrival.** Now a third
+      move option, offered only when the walk passes an entrance with a step
+      still to spend, and never when the move ends on one.
+- [x] **11.11: no retry next turn.** A failed or drawn attempt marks the seat
+      and the option is withheld for exactly one round.
+- [x] **A crossing can be retried.** The choice is offered before the roll as
+      well as on arrival, which is what 11.4 describes.
+- [x] **No card is drawn when stepping onto the Most** — the entrance field is
+      no longer resolved at all, so the exemption holds by construction. The
+      Trzęsawiska and Lodowy Las equivalents are stated in the crossing panel
+      rather than enforced, because staying and drawing is a legal choice.
+- [x] **Przeprawa charges its toll.** Pay 1 Sz. Z. and carry on, or the whole
+      move is undone and the turn ends where it began.
 - [ ] **11.4's draw outcome.** The rulebook allows a drawn crossing — no Życie
       lost, but the character still stops. The Uroczysko card admits no draw
       ("mniejszy lub równy" succeeds), so the two disagree; the card is followed

@@ -22,6 +22,8 @@ export interface SeatRow {
   nature: string | null;
   turns_lost: number;
   stone_until_turn: number | null;
+  /** 11.11: the turn a failed bridge attempt stops barring another. */
+  bridge_blocked_until_turn: number | null;
   eliminated: boolean;
   is_host: boolean;
 }
@@ -50,7 +52,7 @@ const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,eliminated,is_host";
+  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,eliminated,is_host";
 
 /**
  * Creates a table and returns the host's seat token.

@@ -2,9 +2,10 @@
 
 import { db } from "@/lib/supabase";
 import {
+  FERRY_TOLL,
   FIELDS,
   KAMIENNY_MOST,
-  bridgeEntranceFrom,
+  isFerry,
   ringOf,
 } from "@/lib/engine/board";
 import { crossingFrom, crossingIsDefended } from "@/lib/engine/rings";
@@ -12,7 +13,11 @@ import {
   afterDraw,
   afterMove,
   afterRoll,
+  atBridge,
+  bridgeBlockUntil,
+  bridgeBlocked,
   endFight,
+  endTurn,
   nextSeat,
   recordFightRoll,
   setFightTotal,
@@ -170,34 +175,62 @@ export async function rollForMove(gameId: string, value: number | null): Promise
   }
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
 
+  // 11.10 offers the bridge as part of the move, so whether it is on the table
+  // has to be settled before the destinations are drawn: a Magiczny Miecz is
+  // required, and 11.11 bars anyone who failed there on their last turn.
+  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const { hasSword } = bridgeRequirements(holdings.map((h) => ({ cardId: h.card_id })));
+  const blocked = bridgeBlocked(seat.bridge_blocked_until_turn, game.turn);
+
   await db
     .from("games")
-    .update({ turn_state: afterRoll(seat.field_id, roll) })
+    .update({
+      turn_state: afterRoll(seat.field_id, roll, {
+        bridgeOffered: hasSword && !blocked,
+      }),
+    })
     .eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "rzut", { roll, manual: value !== null }, value !== null);
   await bumpRevision(gameId);
 }
 
-export async function moveTo(gameId: string, fieldId: string): Promise<void> {
+export async function moveTo(
+  gameId: string,
+  fieldId: string,
+  viaBridge = false,
+): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
   if (game.turn_state.phase !== "ruch") throw new Error("Nie czas na ruch.");
 
-  // Only the two squares the roll actually reaches are accepted, so a stale
-  // page cannot post a destination from a previous roll.
-  const chosen = game.turn_state.options.find((option) => option.fieldId === fieldId);
+  // Only the squares the roll actually reaches are accepted, so a stale page
+  // cannot post a destination from a previous roll. A bridge attempt shares its
+  // fieldId with the entrance it stops at, so the two are told apart by intent
+  // rather than by destination.
+  const chosen = game.turn_state.options.find(
+    (option) => option.fieldId === fieldId && !!option.bridge === viaBridge,
+  );
   if (!chosen) throw new Error("To pole nie jest w zasięgu tego rzutu.");
 
   const field = FIELDS.get(fieldId);
   if (!field) throw new Error(`Nieznane pole: ${fieldId}`);
 
   await db.from("seats").update({ field_id: fieldId }).eq("id", seat.id);
-  await db.from("games").update({ turn_state: afterMove(field) }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "ruch", {
+  await db
+    .from("games")
+    .update({
+      // Turning off the ring onto the bridge stops the walk at the entrance with
+      // the guardian still to be faced (11.10); the field itself is not resolved,
+      // and its card is not drawn ("nie ciągnij Karty ... gdy wchodzisz na Most").
+      turn_state: chosen.bridge ? atBridge(chosen.bridge) : afterMove(field, seat.field_id),
+    })
+    .eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, chosen.bridge ? "proba-mostu" : "ruch", {
     from: seat.field_id,
     to: fieldId,
     direction: chosen.direction,
+    ...(chosen.bridge ? { guardian: chosen.bridge.guardian } : {}),
   });
   await bumpRevision(gameId);
 }
@@ -802,60 +835,120 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
 
 
 /**
- * Steps onto the Kamienny Most (11.9-11.11).
+ * The ferryman at a Przeprawa.
  *
- * A failed attempt costs a point — Magii at the dead city, Miecza at the ruins
- * (11.11) — and the character must carry on round the Górny Krąg, forbidden
- * from trying again next turn. Succeeding ends the turn at the entrance (11.10).
+ * "Musisz przeprawić się przez rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz
+ * na Obszar, z którego rozpocząłeś ruch." Landing here is a toll, not a stop:
+ * pay it and the turn goes on as normal, or the whole move is undone and the
+ * character finishes the turn where it began.
+ *
+ * A character with no gold has no choice, which is why refusing is always
+ * available and paying is not.
  */
+export async function payFerry(gameId: string, pay: boolean): Promise<{ at: string }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (game.turn_state.phase !== "pole" || !isFerry(game.turn_state.fieldId)) {
+    throw new Error("Nie stoisz na Przeprawie.");
+  }
+  const here = game.turn_state.fieldId;
+
+  if (pay) {
+    if (seat.zloto < FERRY_TOLL) {
+      throw new Error("Nie masz czym zapłacić przewoźnikowi.");
+    }
+    await db
+      .from("seats")
+      .update({ zloto: seat.zloto - FERRY_TOLL })
+      .eq("id", seat.id);
+    await journal(gameId, seat.id, game.turn, "przewoznik", { field: here, paid: FERRY_TOLL });
+    await bumpRevision(gameId);
+    return { at: here };
+  }
+
+  // Sent back to where the move started. The turn ends there rather than
+  // resolving that field again — the character never left it in the first place.
+  const back = game.turn_state.from;
+  if (!back) throw new Error("Nie wiadomo, skąd zaczął się ten ruch.");
+  await db.from("seats").update({ field_id: back }).eq("id", seat.id);
+  await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "przewoznik-odmowa", { field: here, back });
+  await bumpRevision(gameId);
+  return { at: back };
+}
+
+/**
+ * Settles the guardian at a bridge entrance (11.9-11.11).
+ *
+ * Three outcomes, not two. 11.11 gives a draw its own consequence: "Jeżeli
+ * wynik walki jest remisowy Postać nie traci punktu Magii lub Miecza, lecz
+ * również nie może w następnej turze podjąć kolejnej próby wejścia na Most."
+ * So a draw is cheap but not free — it costs the next turn's attempt, the same
+ * as a loss does, and only a loss takes the point.
+ *
+ * Whichever way it goes the turn ends here: on a win at the bridge entrance
+ * (11.10), otherwise back on the ring at the field the attempt was made from.
+ */
+export type BridgeOutcome = "wygrana" | "remis" | "porazka";
+
 export async function enterBridge(
   gameId: string,
-  succeeded: boolean,
+  outcome: BridgeOutcome,
 ): Promise<{ at: string | null }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
-  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
-
-  const entrance = bridgeEntranceFrom(seat.field_id);
-  if (!entrance) {
-    throw new Error("Na Kamienny Most można wejść tylko z Wymarłego Miasta lub Ruin Twierdzy (11.9).");
+  if (game.turn_state.phase !== "most") {
+    throw new Error("Nie ma teraz próby wejścia na Most.");
   }
+  const entrance = game.turn_state.bridge;
 
-  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const { hasSword } = bridgeRequirements(holdings.map((h) => ({ cardId: h.card_id })));
-  if (!hasSword) {
-    throw new Error("Aby wejść na Most musisz mieć Magiczny Miecz.");
-  }
-
-  if (!succeeded) {
-    // 11.11: Magii at Wymarłe Miasto, Miecza at Ruiny Twierdzy.
-    const stat = entrance.stat === "magia" ? "magia_own" : "miecz_own";
-    const floor = stat === "magia_own" ? seat.magia_floor : seat.miecz_floor;
-    const current = stat === "magia_own" ? seat.magia_own : seat.miecz_own;
-    await db
-      .from("seats")
-      .update({ [stat]: Math.max(floor, current - 1) })
-      .eq("id", seat.id);
-    await journal(gameId, seat.id, game.turn, "most-nieudane", {
-      from: seat.field_id,
+  if (outcome === "wygrana") {
+    const field = FIELDS.get(entrance.entersAt);
+    if (!field) throw new Error(`Nieznane pole: ${entrance.entersAt}`);
+    await db.from("seats").update({ field_id: entrance.entersAt }).eq("id", seat.id);
+    // 11.10: "Jeżeli próba wkroczenia na Most jest udana, tura Postaci kończy
+    // się na Wejściu na Most" — the square is reached but not resolved.
+    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+    await journal(gameId, seat.id, game.turn, "wejscie-na-most", {
+      from: entrance.from,
       guardian: entrance.guardian,
     });
     await bumpRevision(gameId);
-    return { at: null };
+    return { at: entrance.entersAt };
   }
 
-  const field = FIELDS.get(entrance.entersAt);
-  if (!field) throw new Error(`Nieznane pole: ${entrance.entersAt}`);
-  await db.from("seats").update({ field_id: entrance.entersAt }).eq("id", seat.id);
-  // 11.10: the turn ends at the entrance, so the field is not resolved yet.
-  await db.from("games").update({ turn_state: { phase: "koniec" } }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "wejscie-na-most", {
-    from: seat.field_id,
+  if (outcome === "porazka") {
+    const column = entrance.stat === "magia" ? "magia_own" : "miecz_own";
+    const floor = entrance.stat === "magia" ? seat.magia_floor : seat.miecz_floor;
+    const current = entrance.stat === "magia" ? seat.magia_own : seat.miecz_own;
+    await db
+      .from("seats")
+      .update({ [column]: Math.max(floor, current - 1) })
+      .eq("id", seat.id);
+  }
+
+  // Both a loss and a draw bar the next turn's attempt (11.11). The character
+  // stays on the ring at the entrance and carries on from there.
+  //
+  // `turn` counts rounds, not seat-turns, so a seat gets exactly one go per
+  // number. Barring only the NEXT round means the block has to outlast it:
+  // stored as turn + 2 and tested with `> turn`, so an attempt on round 3 is
+  // barred on round 4 and allowed again on round 5. Storing turn + 1 barred
+  // nothing at all.
+  await db
+    .from("seats")
+    .update({ bridge_blocked_until_turn: bridgeBlockUntil(game.turn) })
+    .eq("id", seat.id);
+  await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "most-nieudane", {
+    from: entrance.from,
     guardian: entrance.guardian,
+    outcome,
   });
   await bumpRevision(gameId);
-  return { at: entrance.entersAt };
+  return { at: null };
 }
 
 /**

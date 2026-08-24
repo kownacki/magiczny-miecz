@@ -2,9 +2,12 @@
 
 import {
   DOLNY_KRAG,
+  FIELDS,
   KAMIENNY_MOST,
   type BoardField,
+  type BridgeEntrance,
   type Direction,
+  bridgeEntranceFrom,
   moveOptions,
   ringOf,
 } from "./board";
@@ -23,8 +26,17 @@ import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 export type TurnPhase =
   | { phase: "rzut" }
   | { phase: "ruch"; roll: number; options: TurnMoveOption[] }
-  | { phase: "pole"; fieldId: string; draw: number; drawn: TurnCard[] }
+  | {
+      phase: "pole";
+      fieldId: string;
+      /** Where this move started, which the Przeprawa sends you back to. */
+      from: string | null;
+      draw: number;
+      drawn: TurnCard[];
+    }
   | { phase: "walka"; fight: Fight }
+  /** Standing at a bridge entrance with its guardian in the way (11.9-11.11). */
+  | { phase: "most"; bridge: BridgeEntrance }
   | { phase: "koniec" };
 
 /**
@@ -60,6 +72,12 @@ export interface TurnMoveOption {
   fieldName: string;
   /** Names of the fields walked through, for the player to check against the board. */
   through: string[];
+  /**
+   * Set when taking this option is an attempt to step onto the Kamienny Most
+   * rather than to finish the walk (11.10). `fieldId` is then the entrance the
+   * character stops at to face the guardian, not where it ends up.
+   */
+  bridge?: BridgeEntrance;
 }
 
 export const DIRECTION_LABEL: Record<Direction, string> = {
@@ -113,19 +131,51 @@ export function bridgeOptions(fieldId: string): TurnMoveOption[] {
  * being asked for first, because what a player actually decides between is two
  * *places*, not two abstract directions.
  */
-export function afterRoll(fieldId: string, roll: number): TurnPhase {
+export function afterRoll(
+  fieldId: string,
+  roll: number,
+  /**
+   * Whether the character is in a position to try for the bridge at all — it
+   * needs a Magiczny Miecz, and 11.11 bars anyone who failed there last turn.
+   * Both are facts about the seat rather than the board, so they arrive here
+   * already decided.
+   */
+  { bridgeOffered = false }: { bridgeOffered?: boolean } = {},
+): TurnPhase {
   // On the bridge the roll is ignored entirely (10.3) — one field per turn,
   // either onward or back the way you came.
   if (ringOf(fieldId) === KAMIENNY_MOST) {
     return { phase: "ruch", roll, options: bridgeOptions(fieldId) };
   }
   const ring = ringOf(fieldId) ?? DOLNY_KRAG;
-  const options = moveOptions(ring, fieldId, roll).map((option) => ({
+  const walks = moveOptions(ring, fieldId, roll);
+  const options: TurnMoveOption[] = walks.map((option) => ({
     direction: option.direction,
     fieldId: option.field.id,
     fieldName: option.field.name,
     through: option.through.map((field) => field.name),
   }));
+
+  // 11.10: the bridge is taken in passing. A character may try for it only if
+  // this move would carry it *through* an entrance with a step still to spend —
+  // "Postać, której ruch kończy się dokładnie na Obszarze Wymarłego Miasta albo
+  // Ruin Twierdzy, nie może podjąć próby wkroczenia na Most." Landing squares
+  // are therefore not candidates, only fields walked over.
+  if (bridgeOffered) {
+    for (const walk of walks) {
+      const at = walk.through.findIndex((field) => bridgeEntranceFrom(field.id));
+      if (at === -1) continue;
+      const entrance = bridgeEntranceFrom(walk.through[at].id)!;
+      options.push({
+        direction: walk.direction,
+        fieldId: entrance.from,
+        fieldName: FIELDS.get(entrance.from)?.name ?? entrance.from,
+        through: walk.through.slice(0, at).map((field) => field.name),
+        bridge: entrance,
+      });
+    }
+  }
+
   return { phase: "ruch", roll, options };
 }
 
@@ -134,8 +184,31 @@ export function afterRoll(fieldId: string, roll: number): TurnPhase {
  * character draw, and 13.1 restricts encounters and exploration to the field a
  * move *ended* on — never one merely passed through.
  */
-export function afterMove(field: BoardField): TurnPhase {
-  return { phase: "pole", fieldId: field.id, draw: field.draw ?? 0, drawn: [] };
+export function afterMove(field: BoardField, from: string | null = null): TurnPhase {
+  return { phase: "pole", fieldId: field.id, from, draw: field.draw ?? 0, drawn: [] };
+}
+
+/**
+ * The one-turn bar 11.11 puts on a failed or drawn bridge attempt.
+ *
+ * "nie może w następnej turze podjąć kolejnej próby wejścia na Most" — the next
+ * turn, and only the next one. The turn counter counts rounds rather than
+ * seat-turns, so a seat gets exactly one go per number, and barring the next
+ * round means the mark has to outlast it: set at `turn + 2` and tested with a
+ * strict `>`, an attempt on round 3 is barred on round 4 and free again on
+ * round 5. The obvious `turn + 1` bars nothing.
+ */
+export function bridgeBlockUntil(turn: number): number {
+  return turn + 2;
+}
+
+export function bridgeBlocked(blockedUntil: number | null, turn: number): boolean {
+  return blockedUntil !== null && blockedUntil > turn;
+}
+
+/** Stops the move at a bridge entrance, with the guardian still to be dealt with. */
+export function atBridge(bridge: BridgeEntrance): TurnPhase {
+  return { phase: "most", bridge };
 }
 
 /**
@@ -225,7 +298,7 @@ export function recordFightRoll(
 export function endFight(phase: TurnPhase): TurnPhase {
   if (phase.phase !== "walka") return phase;
   const { fieldId, draw, drawn } = phase.fight;
-  return { phase: "pole", fieldId, draw, drawn };
+  return { phase: "pole", fieldId, from: null, draw, drawn };
 }
 
 /**
