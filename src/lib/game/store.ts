@@ -57,7 +57,9 @@ const SEAT_COLUMNS =
  * five characters from a 28-glyph alphabet, and a collision would otherwise
  * surface as a unique-constraint error in front of the players.
  */
-export async function createGame(): Promise<{ game: GameRow; hostToken: string }> {
+export async function createGame(
+  hostName: string | null = null,
+): Promise<{ game: GameRow; hostToken: string }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const joinCode = makeJoinCode();
     const { data, error } = await db
@@ -77,6 +79,7 @@ export async function createGame(): Promise<{ game: GameRow; hostToken: string }
       seat_index: 0,
       claim_token: hostToken,
       is_host: true,
+      player_name: hostName,
     });
     if (seatError) throw new Error(`createGame seat: ${seatError.message}`);
 

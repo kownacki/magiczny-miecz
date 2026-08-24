@@ -125,7 +125,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <header className="mb-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-edge pb-6">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-edge pb-6">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-ochre">
             Magiczny Miecz
@@ -134,7 +134,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             {playing ? `Tura ${game.turn}` : "Poczekalnia"} · {seated.length} postaci
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
           <p className="text-xs uppercase tracking-widest text-muted">Kod stołu</p>
           <p className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.25em] text-ink">
             {game.join_code}
@@ -301,7 +301,10 @@ function Stat({
       <dt className="text-[10px] uppercase tracking-wide text-muted">{label}</dt>
       <dd className={`text-xl font-medium ${tone}`}>{value}</dd>
       {canAdjust && (
-        <div className="mt-1 flex justify-center gap-1 opacity-0 transition group-hover:opacity-100">
+        // Always visible rather than revealed on hover. Phones are the primary
+        // device at a table and have no hover, so a hover-gated override is an
+        // override that does not exist for most of the people using it.
+        <div className="mt-1 flex justify-center gap-1">
           <button
             onClick={() => onAdjust(stat, -1)}
             className="h-5 w-5 rounded border border-edge text-[11px] leading-none text-muted hover:border-vermilion hover:text-ink"

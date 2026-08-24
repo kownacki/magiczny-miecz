@@ -12,10 +12,17 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   async function startTable() {
+    // Asked before the table exists, so the host is never left showing as an
+    // empty seat on the shared screen while holding a character.
+    const name = prompt("Twoje imię?");
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/games", { method: "POST" });
+      const response = await fetch("/api/games", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
       // The host's token is kept per-table so one device can sit at several.

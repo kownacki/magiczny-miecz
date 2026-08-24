@@ -17,6 +17,21 @@ export const CARD_CLASS = {
 
 export type CardClass = keyof typeof CARD_CLASS;
 
+/**
+ * How each class is actually printed on the cards. The keys are ASCII-folded
+ * because they are identifiers; the board and the cards say "Wróg" and
+ * "Przyjaciel", so anything shown to a player has to come from here rather than
+ * from the key.
+ */
+export const CARD_CLASS_LABEL: Record<CardClass, string> = {
+  spotkanie: "Spotkanie",
+  wrog: "Wróg",
+  nieznajomy: "Nieznajomy",
+  przyjaciel: "Przyjaciel",
+  przedmiot: "Przedmiot",
+  miejsce: "Miejsce",
+};
+
 export type Nature = "dobra" | "zla" | "chaotyczna";
 
 /**

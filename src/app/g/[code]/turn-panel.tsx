@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import events from "@/data/events.json";
-import type { EventCard } from "@/data/types";
+import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 
 const EVENTS = events as EventCard[];
@@ -215,7 +215,7 @@ function FieldControls({
                   >
                     <span className="text-ink">{card.name}</span>
                     <span className="ml-2 text-[11px] uppercase text-muted">
-                      {card.cardClass}
+                      {CARD_CLASS_LABEL[card.cardClass]}
                     </span>
                   </button>
                 </li>
@@ -259,9 +259,15 @@ function FightControls({
   const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-ink">
-        Walka {fight.kind === "magiczna" ? "magiczna" : "zwykła"} z{" "}
-        <span className="text-vermilion">{fight.cardName}</span>
+      {/* Phrased as a label rather than "walka z <nazwa>" because Polish would
+          need the instrumental case there ("z Cyklopem", "z Rusałką"), and the
+          card names are stored as printed. Declining them reliably is not
+          possible, and getting it wrong is more jarring than not trying. */}
+      <p className="text-sm text-muted">
+        Przeciwnik: <span className="text-vermilion">{fight.cardName}</span>{" "}
+        <span className="text-xs">
+          ({fight.kind === "magiczna" ? "walka magiczna" : "walka zwykła"})
+        </span>
       </p>
 
       <div className="grid grid-cols-2 gap-4">
@@ -422,7 +428,9 @@ function DrawnCards({
           <li key={`${entry.cardId}-${index}`}>
             <p className="text-sm font-medium text-ink">
               {index + 1}. {card?.name ?? entry.cardId}
-              <span className="ml-2 text-[11px] uppercase text-muted">{entry.cardClass}</span>
+              <span className="ml-2 text-[11px] uppercase text-muted">
+                {CARD_CLASS_LABEL[entry.cardClass as CardClass] ?? entry.cardClass}
+              </span>
             </p>
             {card && (
               <p className="mt-1 text-xs leading-relaxed text-muted">{card.text}</p>
