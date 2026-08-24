@@ -1,0 +1,258 @@
+# Pokrycie zasad
+
+Every numbered rule in [RULES.md](RULES.md), and whether the app carries it.
+
+This exists because "is it finished?" was not answerable without it. The engine
+covers the move–fight–card loop well and has gaps elsewhere, and until they were
+written down side by side it was impossible to tell which was which.
+
+**Status**
+
+| | meaning |
+|---|---|
+| ✅ | the app applies the rule |
+| ◐ | partly — the app does some of it and the table does the rest |
+| ❌ | the app does nothing; read the rule and apply it yourselves |
+| — | nothing to implement (physical bookkeeping the app replaces by existing) |
+
+A card-by-card equivalent of this table is enforced in code rather than written
+down: see `src/lib/engine/coverage.ts`, which puts the same three states on
+screen next to every drawn card.
+
+---
+
+## 1. Miecz Postaci
+
+| | rule | status | where |
+|---|---|---|---|
+| 1.1 | Miecz used in combat and to overcome obstacles | ✅ | `combat.ts`, guardians, crossings |
+| 1.2 | only own points are tracked; card bonuses added when needed | ✅ | `miecz_own` vs `derive.ts` |
+| 1.3 | losses recorded, never below the starting value | ✅ | `miecz_floor`, `adjustOwn` |
+| 1.4 | trophies trade at 1 Miecz per 7 points, remainder lost | ✅ | `tradeTrophies`, `TROPHY_RATE` |
+| 1.5 | total = own + Przedmioty + Przyjaciele | ✅ | `totalsFor` |
+
+## 2. Magia Postaci
+
+| | rule | status | where |
+|---|---|---|---|
+| 2.1–2.5 | as 1.1–1.5, for Magia | ✅ | same |
+| 2.6 | spell limit from Magia; excess must be discarded at once | ◐ | limit computed and shown; **discarding the excess is not forced** |
+
+## 3. Złoto
+
+| | rule | status | where |
+|---|---|---|---|
+| 3.1 | gold buys things | ✅ | `payFerry`; shops are ◐, see 21.2 |
+| 3.2 | each character starts with 1 | ✅ | column default |
+| 3.3 | prices are in Sztuki Złota | — | |
+| 3.4 | payments go back to the supply | — | no token supply to model |
+| 3.5 | gold never counts against the item limit | ✅ | `carriedCount` |
+
+## 4. Punkty Życia
+
+| | rule | status | where |
+|---|---|---|---|
+| 4.1 | Życie is lost to combat and hazards | ✅ | |
+| 4.2 | everyone starts on 4 | ✅ | column default |
+| 4.3 | losses are recorded | ✅ | |
+| 4.4 | at 0 the character dies; items and friends stay on the field, spells are discarded | ✅ | `killSeat` |
+| 4.4 | the player may take a new character and restart from its MGR | ❌ | elimination is final in the app |
+| 4.5 | Życie can be gained | ✅ | |
+| 4.6 | no ceiling on gains | ✅ | |
+| 4.7 | healing restores only up to the starting 4 | ✅ | `HEAL_CEILING` |
+
+## 5. Przedmioty
+
+| | rule | status | where |
+|---|---|---|---|
+| 5.1 | items are gained from encounters and fields | ✅ | `takeCard` |
+| 5.2 | held face up | ✅ | `face: "open"` |
+| 5.3 | a character may not hold an item its Natura forbids | ◐ | checked when Natura *changes*; not checked when the item is taken |
+| 5.4 | four at a time unless carrying transport | ✅ | `carryLimit` |
+| 5.5 | may be dropped at any moment, onto the current field | ✅ | `dropCard` |
+| 5.6 | must drop down to the limit at once | ◐ | taking beyond the limit is refused; an existing excess is not forced out |
+
+## 6. Przyjaciele
+
+| | rule | status | where |
+|---|---|---|---|
+| 6.1–6.4 | gained, held face up, unlimited, may be dismissed | ✅ | `takeCard`, `dropCard` |
+
+## 7. Natura
+
+| | rule | status | where |
+|---|---|---|---|
+| 7.1 | every character is Dobra, Zła or Chaotyczna | ✅ | |
+| 7.2 | Natura can change mid-game | ✅ | `changeNature` |
+| 7.3 | at most one change per turn | ❌ | not enforced |
+| 7.4 | an item forbidden by the new Natura must be dropped | ◐ | the app names them; dropping is left to the player |
+
+## 8. Charakterystyki Postaci
+
+| | rule | status | where |
+|---|---|---|---|
+| 8.1 | each character has special abilities and limits | ❌ | **all 27 are shown as text and consulted by nothing** |
+| 8.2 | an ability overrides the general rules | ❌ | there is no mechanism for it |
+
+## 9. Zaklęcia
+
+| | rule | status | where |
+|---|---|---|---|
+| 9.1 | a spell's effect is on its card | ◐ | text shown; no effect encoded |
+| 9.2 | held only up to the Magia limit | ✅ | |
+| 9.3 | held concealed from the other players | ✅ | enforced server-side |
+| 9.4 | may not be discarded unless over the limit | ❌ | |
+| 9.5 | drawn from the top; the pile is reshuffled when empty | ✅ | `drawSpell` |
+| 9.6 | **casting** | ❌ | **there is no way to cast a spell** |
+| 9.7 | no spell works on the Most or the Bestia | ❌ | nothing to enforce yet |
+
+## 10. Tury
+
+| | rule | status | where |
+|---|---|---|---|
+| 10.1 | move, then deal with where you landed | ✅ | `TurnPhase` |
+| 10.2 | one ring, either direction, chosen each turn | ✅ | `moveOptions` |
+| 10.3 | on the Most, one field per turn | ✅ | `bridgeOptions` |
+| 10.4 | you may turn round and leave the Most | ✅ | both neighbours offered |
+| 10.5 | having declared for the Bestia you must fight it | ◐ | the fight is offered, not compelled |
+
+## 11. Przekraczanie granic Kręgów
+
+| | rule | status | where |
+|---|---|---|---|
+| 11.1 | Trzęsawiska only at Uroczysko / Las Błędnych Ogni | ✅ | `CROSSINGS` |
+| 11.2 | except by Łódź, or by field and card effects | ◐ | the Łódź is encoded as an ability; crossing anywhere is not wired up |
+| 11.3 | rolled for only going inward | ✅ | `crossingIsDefended` |
+| 11.4 | failure costs 1 Życie and stops you; a draw only stops you | ✅ | `settleCrossing` |
+| 11.5 | Lodowy Las only at Przełęcz Wichrów / Dolina Czaszek | ✅ | |
+| 11.6 | except by Latarnia | ◐ | as 11.2 |
+| 11.7 | the Rycerz attacks only outbound characters | ✅ | |
+| 11.8 | loss costs 1 Życie, a draw stops you | ✅ | |
+| 11.9 | the Most is entered only from Ruiny Twierdzy / Wymarłe Miasto, past a guardian | ✅ | `BRIDGE_ENTRANCES`, `fightGuardian` |
+| 11.10 | entered in passing, never by ending your move there | ✅ | `afterRoll` |
+| 11.11 | a failed or drawn attempt costs a point and bars next turn | ✅ | `settleBridge`, `bridgeBlockUntil` |
+
+## 12. Zbieranie z planszy odkrytych kart
+
+| | rule | status | where |
+|---|---|---|---|
+| 12.1 | pick up gold, items and friends lying on your field, after any Wrogowie and drawn cards are dealt with | ❌ | **cards are written to the field and never shown again** |
+
+## 13. Spotkania i badanie Obszarów
+
+| | rule | status | where |
+|---|---|---|---|
+| 13.1 | only on the field your move ended on | ✅ | |
+| 13.2 | meet another character *or* explore, not both | ◐ | both are offered; the choice is the players' |
+| 13.3 | attack, or use an ability on them | ◐ | attacking works; abilities do not exist (8.1) |
+| 13.4 | draw only enough to bring the field up to its printed count | ◐ | the count is applied; cards already lying there are not counted |
+| 13.5 | obey the field's instruction; beat or flee Wrogowie first | ◐ | text and die tables shown; ordering is the players' |
+
+## 14. Spotkania na Kamiennym Moście
+
+| | rule | status | where |
+|---|---|---|---|
+| 14.1 | characters may meet only at the two Wejścia | ❌ | not enforced |
+| 14.2 | meetings resolve as elsewhere | ✅ | `attackSeat` |
+| 14.3 | each Most field's printed instruction | ❌ | **the Most fields have no text in the app** |
+| 14.4 | no spells and no escape on the Most | ◐ | escape is blocked (19.3); spells do not exist |
+| 14.5 | Pułapka / Magiczna Pułapka: 3 dice less Miecz or Magia, then a roll per item | ❌ | |
+| 14.6 | Demon Zagłady / Monstrum: roll for its strength, fight until beaten | ❌ | |
+| 14.7 | Zamek Bestii: roll the kind of fight, roll the Bestia at 10–15, win = win the game | ✅ | `fightBeast` |
+
+## 15. Karty Zdarzeń
+
+| | rule | status | where |
+|---|---|---|---|
+| 15.1 | cards that go to a named field resolve first and do not affect the drawer | ◐ | `poloz-karte` encodes the destination; the ordering is not applied |
+| 15.2 | the rest resolve in printed numeral order | ✅ | `resolutionOrder` |
+
+## 16. Rodzaje Kart Zdarzeń
+
+| | rule | status | where |
+|---|---|---|---|
+| 16.1 | Spotkanie — obey it; a lost turn ends the turn at once | ✅ | |
+| 16.2 | Wróg attacks immediately; its card is kept as a trophy | ✅ | `beginFight`, `kindForCard` |
+| 16.3 | a Demon forces magical combat | ✅ | `startFight` |
+| 16.4 | all Spotkania and Wrogowie first, then the rest | ✅ | `resolutionOrder` |
+| 16.5 | Nieznajomy — obey it | ✅ | |
+| 16.6 | Przedmioty and Przyjaciele may be taken | ✅ | `takeCard` |
+| 16.6 | a drawn Magiczny Miecz / Tarcza Tolimana is swapped for the equipment copy | ❌ | |
+| 16.7 | Miejsce — obey it | ✅ | |
+| 16.8 | cards left behind stay face up on the field for the next character | ❌ | **written, never read back** |
+
+## 17. Walka
+
+| | rule | status | where |
+|---|---|---|---|
+| 17.1 | when a fight happens | ✅ | |
+| 17.2 | flight is decided before any dice | ✅ | `escape` |
+| 17.3 | spells must be used before the roll | ❌ | no casting |
+| 17.4 | one die each, added to total Miecz; loser loses 1 Życie | ✅ | `compareCombat` |
+| 17.4 | an item or spell may prevent that loss | ❌ | `oslona` is encoded but nothing consumes it |
+| 17.5 | several enemies at once add their Miecze together | ❌ | one opponent at a time |
+| 17.6 | the attacked character may try to slip away | ✅ | |
+| 17.7 | **both** characters may cast before the roll | ❌ | no casting |
+| 17.8 | attacker's Miecz worked out first | ✅ | |
+| 17.9 | the winner takes a Życie, an item, or a Sztuka Złota | ◐ | the Życie is applied; the choice is the players' |
+| 17.10 | a draw costs nobody anything | ✅ | |
+
+## 18. Walka magiczna
+
+| | rule | status | where |
+|---|---|---|---|
+| 18.1 | when magical combat happens | ✅ | |
+| 18.2a | Magia replaces Miecz | ✅ | `CombatKind` |
+| 18.2b | no item can prevent the loss of Życie | ◐ | true by accident: no item prevention exists at all |
+
+## 19. Ucieczka
+
+| | rule | status | where |
+|---|---|---|---|
+| 19.1 | escape by special ability or Krąg Płomieni | ◐ | recorded; the app cannot judge it, since 8.1 and 9.6 are missing |
+| 19.2 | you may flee anything in the three Kręgi | ✅ | |
+| 19.3 | on the Most you may flee only other characters | ✅ | enforced |
+
+## 20. Zamiana w Kamień
+
+| | rule | status | where |
+|---|---|---|---|
+| 20.1 | three turns as stone | ✅ | `stone_until_turn` |
+| 20.2 | a stone character keeps no items, gold or friends | ❌ | nothing is dropped |
+| 20.3 | Miecz and Magia are kept but unusable | ◐ | kept; the ban is not enforced |
+| 20.4 | cannot move for three turns | ✅ | `nextSeat` |
+| 20.5 | cannot lose Życie, cannot be targeted; keeps its spells | ❌ | |
+
+## 21. Magiczne Miecze, Tarcze Tolimana i Karty Wyposażenia
+
+| | rule | status | where |
+|---|---|---|---|
+| 21.1 | take the matching equipment card | ✅ | |
+| 21.2 | bought items return to the shop stack and can run out | ❌ | shops are not modelled (see `kup`) |
+| 21.3 | they may be left on the board like any card | ✅ | `dropCard` |
+
+## 22. Zwycięstwo
+
+| | rule | status | where |
+|---|---|---|---|
+| 22 | reach the Zamek Bestii and beat the Bestia | ✅ | `fightBeast` ends the game |
+
+---
+
+## The three that matter most
+
+Counting rules is misleading — 20.5 and 9.6 are not the same size of hole. In
+descending order of what they cost a table:
+
+1. **9.6 — spells cannot be cast.** Thirty transcribed cards that do nothing.
+   17.3 and 17.7 depend on it, and 17.7 (both sides casting mid-fight) is the
+   rule that decided this game could not be played asynchronously.
+2. **8.1 — character abilities are inert.** Every player has two or three
+   printed on the card in front of them, and the engine consults none.
+3. **12.1 / 13.4 / 16.8 — cards on fields.** The board is meant to accumulate
+   what previous characters left behind; half the printed fields say "nie ciągnij
+   Karty, jeżeli jakaś już tu jest" and the app cannot tell you whether one is.
+
+After those: the Most's own fields (14.3, 14.5, 14.6) have no text in the app at
+all, which is odd given the rulebook prints them and the transcription is in
+RULES.md.

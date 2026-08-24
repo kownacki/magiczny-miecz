@@ -11,6 +11,7 @@ mode behind the same engine.
 ## Read these first
 
 - **[docs/TASKS.md](docs/TASKS.md)** — the live checklist; what is done and what is next
+- **[docs/COVERAGE.md](docs/COVERAGE.md)** — every numbered rule, and whether the app carries it
 - **[docs/RULES.md](docs/RULES.md)** — the rulebook transcribed
 - **[db/schema.sql](db/schema.sql)** — the data model and why RLS has no policies
 
