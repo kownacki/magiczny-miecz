@@ -259,3 +259,38 @@ describe("scripted randomness", () => {
     await expect(random.rollD6("second")).rejects.toThrow(/exhausted/);
   });
 });
+
+describe("the Beast in full (14.7, 22)", () => {
+  it("scales strength from the die, 10 through 15", () => {
+    expect([1, 6].map(beastStrength)).toEqual([10, 15]);
+  });
+
+  it("is beatable by a strong enough character", () => {
+    // Miecz 12 plus a 6 beats a Beast of 10 plus a 1.
+    const r = compareCombat(
+      { label: "Postać", total: 12, roll: 6 },
+      { label: "Bestia", total: beastStrength(1), roll: 1 },
+      "zwykla",
+    );
+    expect(r).toMatchObject({ outcome: "wygrana" });
+  });
+
+  it("is unbeatable by a starting character, which is the point of the game", () => {
+    // Barbarzyńca opens on Miecz 5, the highest in the box. Against the weakest
+    // Beast (10) rolling its worst, a maximum roll still only draws: 5+6 = 11
+    // against 10+1 = 11. A fresh character literally cannot win, which is why
+    // the game is a journey to get stronger first.
+    const best = compareCombat(
+      { label: "Postać", total: 5, roll: 6 },
+      { label: "Bestia", total: beastStrength(1), roll: 1 },
+      "zwykla",
+    );
+    expect(best.outcome).toBe("remis");
+    const typical = compareCombat(
+      { label: "Postać", total: 5, roll: 3 },
+      { label: "Bestia", total: beastStrength(3), roll: 3 },
+      "zwykla",
+    );
+    expect(typical.outcome).toBe("przegrana");
+  });
+});

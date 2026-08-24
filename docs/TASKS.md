@@ -71,7 +71,12 @@ Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 - [x] Legal-move computation (both directions round a ring, with the route walked)
 - [x] Card resolution ordering (15.2, 16.4)
 - [x] Combat and magic combat (17, 18) incl. the Beast (14.7)
+- [x] The Beast and victory (14.7, 22) — two dice set the fight kind and its
+      strength 10-15; losing costs two Życia, winning ends the game
+- [x] Death (4.4), carrying limit (5.4), spell capacity (2.6, 9.2), trophies (1.4)
 - [ ] Ring crossings (11) and the bridge (14) — blocked on verifying ring order
+- [ ] Player-versus-player combat (17.6) and escape (19)
+- [ ] Nature changes (7.2) and Turned to Stone (20)
 - [x] Vitest coverage — 53 tests green; caught a real bug where healing
       drained a character who was above four Życie
 
@@ -101,8 +106,6 @@ The primary mode: physical board and cards, app as referee.
 
 ## Card display
 
-- [ ] Show a seat's own character card and the cards it holds
-
 Show the actual scanned card beside the turn, in both modes. In simulation it
 is the only way to see what you drew; at a physical table it settles "what does
 this one do again?" without passing the card round.
@@ -111,14 +114,19 @@ this one do again?" without passing the card round.
 - [x] Side panel showing the drawn card, or the whole stack when a field draws
       several (Bezdroża draws 2, Płaskowyż Mgieł draws 3)
 - [x] Fall back to text when a card has no image
+- [x] A seat's hand listed on its card, with concealment applied server-side
+- [ ] The seat's character card as an image
 
 ## Phase 5 — Full simulation
 
-Secondary. Same engine, virtual ports.
+Now the primary mode; companion is the opt-in.
 
+- [x] Virtual deck — 165 event cards and 30 spells, shuffled, dealt, recycled
+      (9.5). Every printed copy is in the pile, so draw odds match the sheets.
+- [x] Virtual dice everywhere a die is needed
+- [x] Hidden information per player — concealment applied on the server, so a
+      rival's spells never reach the device at all
 - [ ] Board rendering from the scan
-- [ ] Virtual deck and dice
-- [ ] Hidden information per player
 
 ---
 

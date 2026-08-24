@@ -3,6 +3,7 @@ import { findGame, verifySeat } from "@/lib/game/store";
 import {
   beginFight,
   drawCard,
+  fightBeast,
   fightRoll,
   finishTurn,
   moveTo,
@@ -67,6 +68,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           game.id,
           body.side === "enemy" ? "enemy" : "player",
           typeof body.value === "number" ? body.value : null,
+        );
+        break;
+      case "beast":
+        await fightBeast(
+          game.id,
+          typeof body.kindRoll === "number" ? body.kindRoll : null,
+          typeof body.strengthRoll === "number" ? body.strengthRoll : null,
+          typeof body.playerRoll === "number" ? body.playerRoll : null,
+          typeof body.beastRoll === "number" ? body.beastRoll : null,
         );
         break;
       case "fight-done":

@@ -17,6 +17,7 @@ import {
 import events from "@/data/events.json";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
+import { beastCombatKind, beastStrength, compareCombat } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import {
   buildDeck,
@@ -618,6 +619,98 @@ async function killSeat(gameId: string, seatId: string): Promise<void> {
 
   // With the character gone, play must move on if it was their turn.
   if (game.active_seat === seat?.seat_index) await finishTurn(gameId);
+}
+
+/**
+ * Fights the Beast, which is how the game is won or the attempt fails (14.7, 22).
+ *
+ * The Beast is not a card: rule 14.7 rolls for it twice. One die decides the
+ * kind of fight (1-3 ordinary, 4-6 magical) and a second sets its strength from
+ * 10 to 15. A character that reaches the Zamek and has announced it is fighting
+ * MUST go through with it (10.5) — there is no backing out at this point.
+ *
+ * Winning ends the game there and then (22). Losing costs two points of Życie,
+ * not one, and forces a retreat off the bridge; the character may come back and
+ * try again.
+ */
+export async function fightBeast(
+  gameId: string,
+  kindRoll: number | null,
+  strengthRoll: number | null,
+  playerRoll: number | null,
+  beastRoll: number | null,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+
+  const kindDie = kindRoll ?? 1 + Math.floor(Math.random() * 6);
+  const strengthDie = strengthRoll ?? 1 + Math.floor(Math.random() * 6);
+  for (const die of [kindDie, strengthDie]) {
+    if (!Number.isInteger(die) || die < 1 || die > 6) {
+      throw new Error("Kostka daje wynik od 1 do 6.");
+    }
+  }
+
+  const holdings = (await holdingsFor(gameId))
+    .filter((h) => h.seat_id === seat.id)
+    .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
+  const bonus = bonusFromHoldings(holdings);
+
+  const kind = beastCombatKind(kindDie);
+  const beastTotal = beastStrength(strengthDie);
+  const mine =
+    kind === "magiczna" ? seat.magia_own + bonus.magia : seat.miecz_own + bonus.miecz;
+
+  const myDie = playerRoll ?? 1 + Math.floor(Math.random() * 6);
+  const itsDie = beastRoll ?? 1 + Math.floor(Math.random() * 6);
+  const result = compareCombat(
+    { label: "Postać", total: mine, roll: myDie },
+    { label: "Bestia", total: beastTotal, roll: itsDie },
+    kind,
+  );
+
+  if (result.outcome === "wygrana") {
+    await db
+      .from("games")
+      .update({ status: "finished", turn_state: { phase: "koniec" } })
+      .eq("id", gameId);
+    await journal(gameId, seat.id, game.turn, "zwyciestwo", {
+      kind,
+      beastTotal,
+      rolls: { kindDie, strengthDie, myDie, itsDie },
+    });
+  } else if (result.outcome === "przegrana") {
+    // Two points, not one (14.7).
+    await db
+      .from("seats")
+      .update({ zycie: Math.max(0, seat.zycie - 2) })
+      .eq("id", seat.id);
+    await journal(gameId, seat.id, game.turn, "bestia-porazka", { kind, beastTotal });
+    if (seat.zycie - 2 <= 0) await killSeat(gameId, seat.id);
+  } else {
+    await journal(gameId, seat.id, game.turn, "bestia-remis", { kind, beastTotal });
+  }
+  await bumpRevision(gameId);
+}
+
+/**
+ * Whether this character may set foot on the Kamienny Most.
+ *
+ * Rule 11.9 lets a character step on only from Wymarłe Miasto or Ruiny
+ * Twierdzy, and the "CEL GRY" section requires a Magiczny Miecz to walk it at
+ * all. Rule 14.7 adds that the Tarcza Tolimana is what gets you into the Zamek
+ * — without one you must walk past it.
+ */
+export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
+  hasSword: boolean;
+  hasShield: boolean;
+} {
+  const ids = new Set(holdings.map((h) => h.cardId));
+  return {
+    hasSword: ids.has("magiczny-miecz"),
+    hasShield: ids.has("tarcza-tolimana") || ids.has("tarcza-boga-tolimana"),
+  };
 }
 
 /**
