@@ -92,12 +92,38 @@ export interface Crossing {
   to: string;
   /** What must be overcome, per 11.3-11.4 and 11.7-11.8. */
   obstacle: "trzesawiska" | "lodowy-las";
+  /**
+   * What the crossing demands, or absent when it demands nothing.
+   *
+   * Only the inbound direction of each is defended — see the note on
+   * `crossingIsDefended` — and the two are not the same kind of obstacle at
+   * all. The Trzęsawiska are a test of Magia against two dice; the Lodowy Las
+   * is a fight against a creature with a printed Miecz. Treating both as a
+   * generic "did you make it?" lost that distinction.
+   */
+  test?: CrossingTest;
 }
 
+export type CrossingTest =
+  /** Uroczysko: "Rzuć dwoma kostkami: wynik mniejszy lub równy twojej Magii". */
+  | { kind: "magia"; dice: number }
+  /** Przełęcz Wichrów: "musisz pokonać ... Rycerza Wiecznych Śniegów (Miecz 10)". */
+  | { kind: "walka"; guardian: string; miecz: number };
+
 export const CROSSINGS: readonly Crossing[] = [
-  { from: "uroczysko", to: "las-blednych-ogni", obstacle: "trzesawiska" },
+  {
+    from: "uroczysko",
+    to: "las-blednych-ogni",
+    obstacle: "trzesawiska",
+    test: { kind: "magia", dice: 2 },
+  },
   { from: "las-blednych-ogni", to: "uroczysko", obstacle: "trzesawiska" },
-  { from: "przelecz-wichrow", to: "dolina-czaszek", obstacle: "lodowy-las" },
+  {
+    from: "przelecz-wichrow",
+    to: "dolina-czaszek",
+    obstacle: "lodowy-las",
+    test: { kind: "walka", guardian: "Rycerz Wiecznych Śniegów", miecz: 10 },
+  },
   { from: "dolina-czaszek", to: "przelecz-wichrow", obstacle: "lodowy-las" },
 ];
 
@@ -120,5 +146,26 @@ export function crossingFrom(fieldId: string): Crossing | undefined {
  * not levy.
  */
 export function crossingIsDefended(crossing: Crossing): boolean {
-  return crossing.from === "uroczysko" || crossing.from === "przelecz-wichrow";
+  return crossing.test !== undefined;
+}
+
+/**
+ * The Trzęsawiska, decided (11.3).
+ *
+ * The field card is explicit and admits no middle: "wynik mniejszy lub równy
+ * twojej Magii - przeprawiłeś się na drugą stronę. Większy wynik oznacza
+ * porażkę (tracisz 1 Życie)." Rule 11.4 does mention a drawn result, but that
+ * sentence reads as boilerplate carried over from 11.8, where a *fight* really
+ * can be drawn; against a threshold there is nothing for a draw to be. The
+ * printed card is the more specific rule and is followed.
+ *
+ * Magia here is the derived total, items included — the Trzęsawiska are not one
+ * of the places that suppress them.
+ */
+export function trzesawiskaOutcome(
+  dice: readonly number[],
+  magia: number,
+): "udana" | "nieudana" {
+  const rolled = dice.reduce((sum, die) => sum + die, 0);
+  return rolled <= magia ? "udana" : "nieudana";
 }

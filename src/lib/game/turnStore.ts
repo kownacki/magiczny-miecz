@@ -8,7 +8,7 @@ import {
   isFerry,
   ringOf,
 } from "@/lib/engine/board";
-import { crossingFrom, crossingIsDefended } from "@/lib/engine/rings";
+import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
 import {
   afterDraw,
   afterMove,
@@ -954,19 +954,24 @@ export async function enterBridge(
 /**
  * Crosses between rings (11.1-11.8).
  *
- * Only two places on the whole board allow it, and each demands something
- * first: the Trzęsawiska are crossed with Magia (two dice, at or under your
- * Magia succeeds), the Lodowy Las by beating the Rycerz Wiecznych Śniegów —
- * and 11.7 only makes him attack when going from the middle ring outward, not
- * the other way.
+ * Only two places on the whole board allow it, only one direction of each is
+ * defended, and the two obstacles are different in kind. The Trzęsawiska are a
+ * threshold — two dice against the character's Magia — so the app can settle
+ * them outright; the Lodowy Las is a fight with the Rycerz Wiecznych Śniegów
+ * (Miecz 10), which goes through the same reported outcome as any other fight
+ * until the fight machinery is wired to it.
  *
- * Failure costs a point of Życie and stops the journey (11.4, 11.8); the
- * character stays where it is and may try again next turn.
+ * Failure costs a point of Życie and stops the journey (11.4, 11.8). A draw —
+ * which only the fight can produce — costs nothing but still stops it. Either
+ * way the character stays put and may try again next turn, which 11.4 says is
+ * exactly what the next turn is for.
  */
+export type CrossOutcome = "udana" | "remis" | "nieudana";
+
 export async function crossRing(
   gameId: string,
-  succeeded: boolean,
-): Promise<{ to: string | null }> {
+  input: { outcome?: CrossOutcome; dice?: number[] | null } = {},
+): Promise<{ to: string | null; outcome: CrossOutcome; dice?: number[]; magia?: number }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
@@ -977,32 +982,68 @@ export async function crossRing(
     throw new Error("Z tego Obszaru nie można przejść do innego Kręgu (11.1, 11.5).");
   }
 
-  // Coming back down is free (11.3, 11.7), so a reported failure on an
-  // undefended crossing is not a thing that can happen and is ignored rather
-  // than charged for.
-  if (!succeeded && crossingIsDefended(crossing)) {
-    const left = Math.max(0, seat.zycie - 1);
-    await db.from("seats").update({ zycie: left }).eq("id", seat.id);
+  let outcome: CrossOutcome = "udana";
+  let dice: number[] | undefined;
+  let magia: number | undefined;
+
+  if (crossing.test?.kind === "magia") {
+    // The app owns this one: it is a threshold against a number it already
+    // knows, so there is nothing for a player to adjudicate. A physical die
+    // still overrides, which is what die_source is for.
+    const rolled =
+      input.dice && input.dice.length === crossing.test.dice
+        ? input.dice
+        : Array.from({ length: crossing.test.dice }, () => 1 + Math.floor(Math.random() * 6));
+    for (const die of rolled) {
+      if (!Number.isInteger(die) || die < 1 || die > 6) {
+        throw new Error("Kostka daje wynik od 1 do 6.");
+      }
+    }
+    const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+    const bonus = bonusFromHoldings(
+      holdings.map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face })),
+    );
+    magia = seat.magia_own + bonus.magia;
+    dice = rolled;
+    outcome = trzesawiskaOutcome(rolled, magia);
+  } else if (crossing.test) {
+    // A fight, so the table says how it went. 11.8 gives a draw its own result.
+    outcome = input.outcome ?? "udana";
+  }
+
+  if (outcome !== "udana") {
+    // 11.4 and 11.8: a loss costs a point of Życie, a draw costs nothing, and
+    // both stop the journey where it stands.
+    if (outcome === "nieudana") {
+      const left = Math.max(0, seat.zycie - 1);
+      await db.from("seats").update({ zycie: left }).eq("id", seat.id);
+      if (left === 0) await killSeat(gameId, seat.id);
+    }
     await journal(gameId, seat.id, game.turn, "przeprawa-nieudana", {
       from: crossing.from,
       obstacle: crossing.obstacle,
+      outcome,
+      ...(dice ? { dice, magia } : {}),
     });
-    if (left === 0) await killSeat(gameId, seat.id);
     await bumpRevision(gameId);
-    return { to: null };
+    return { to: null, outcome, ...(dice ? { dice, magia } : {}) };
   }
 
   const field = FIELDS.get(crossing.to);
   if (!field) throw new Error(`Nieznane pole: ${crossing.to}`);
   await db.from("seats").update({ field_id: crossing.to }).eq("id", seat.id);
-  await db.from("games").update({ turn_state: afterMove(field) }).eq("id", gameId);
+  await db
+    .from("games")
+    .update({ turn_state: afterMove(field, crossing.from) })
+    .eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "przeprawa", {
     from: crossing.from,
     to: crossing.to,
     obstacle: crossing.obstacle,
+    ...(dice ? { dice, magia } : {}),
   });
   await bumpRevision(gameId);
-  return { to: crossing.to };
+  return { to: crossing.to, outcome, ...(dice ? { dice, magia } : {}) };
 }
 
 /**

@@ -189,11 +189,12 @@ Now the primary mode; companion is the opt-in.
 These came out of playing a real game through the browser. Each is a rule the
 engine gets wrong or does not have, not a missing feature.
 
-- [ ] **Guardians are still adjudicated by hand.** The board text gives their
-      strength exactly — Kamienny Potwór and Duch Skał are a die plus four,
-      Rycerz Wiecznych Śniegów is a flat Miecz 10 — so simulation can fight them
-      instead of asking the players who won. `BRIDGE_ENTRANCES` now carries the
-      stat and the offset; the fight itself is not wired up.
+- [ ] **The three guardians are still adjudicated by hand.** Their numbers are
+      now in the engine — Kamienny Potwór and Duch Skał are a die plus four,
+      Rycerz Wiecznych Śniegów a flat Miecz 10 — and shown to the players, but
+      the fight itself still goes through a reported outcome rather than the
+      combat machinery. Wiring it up means letting a `Fight` resolve to
+      something other than the field it interrupted.
 - [x] **11.10: the bridge is entered in passing, not on arrival.** Now a third
       move option, offered only when the walk passes an entrance with a step
       still to spend, and never when the move ends on one.
@@ -207,10 +208,12 @@ engine gets wrong or does not have, not a missing feature.
       rather than enforced, because staying and drawing is a legal choice.
 - [x] **Przeprawa charges its toll.** Pay 1 Sz. Z. and carry on, or the whole
       move is undone and the turn ends where it began.
-- [ ] **11.4's draw outcome.** The rulebook allows a drawn crossing — no Życie
-      lost, but the character still stops. The Uroczysko card admits no draw
-      ("mniejszy lub równy" succeeds), so the two disagree; the card is followed
-      and the discrepancy is recorded here rather than silently resolved.
+- [x] **11.4/11.8's draw outcome.** The Lodowy Las is a fight and can be drawn,
+      so it has three outcomes now. The Trzęsawiska cannot: the card is a
+      threshold and "mniejszy lub równy" leaves no middle, so 11.4's mention of
+      a draw reads as boilerplate carried over from 11.8. The card is followed
+      and the discrepancy is recorded in `trzesawiskaOutcome` rather than
+      silently resolved.
 
 
 ## Known corrections

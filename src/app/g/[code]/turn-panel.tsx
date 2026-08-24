@@ -7,7 +7,7 @@ import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
-import { crossingFrom, crossingIsDefended } from "@/lib/engine/rings";
+import { crossingFrom } from "@/lib/engine/rings";
 import { FIELDS, isFerry } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
@@ -248,10 +248,13 @@ function BridgeControls({
 /**
  * Stepping between two Kręgi.
  *
- * Only one direction of each crossing is defended, so this offers an outcome to
- * report only when there is something to overcome. Walking back down is a plain
- * "przejdź" — no roll, no risk, no chance to mis-report a failure the rules do
- * not have.
+ * Three different panels, because these are three different situations and the
+ * old single pair of buttons made them look like one. Walking back down is
+ * free (11.3, 11.7) and needs no outcome at all. The Trzęsawiska are a
+ * threshold the app can settle from two dice against the character's Magia, so
+ * it does. The Lodowy Las is a fight with a creature that has a printed Miecz,
+ * and 11.8 lets a fight be drawn — costing no Życie but still stopping the
+ * journey — which the two-button version silently turned into a loss.
  */
 function Crossing({
   crossing,
@@ -263,12 +266,13 @@ function Crossing({
   onAction: Props["onAction"];
 }) {
   const to = FIELDS.get(crossing.to)?.name ?? crossing.to;
-  const defended = crossingIsDefended(crossing);
+  const test = crossing.test;
+
   return (
     <div className="mb-4 rounded border border-ochre/40 bg-night/60 p-3">
       <p className="mb-1 text-xs text-muted">
         Stąd można przejść do: <span className="text-ink">{to}</span>
-        {!defended && (
+        {!test && (
           <>
             {" "}
             — <span className="text-verdigris">bez rzutu kostką</span> (11.3, 11.7).
@@ -279,27 +283,69 @@ function Crossing({
           this field would otherwise make you draw is not drawn if you are
           crossing. Said here rather than enforced, because the player may
           legitimately decide to stay and draw instead. */}
-      <p className="mb-2 text-[11px] text-muted/80">
-        Przeprawiając się, nie ciągniesz karty z tego Obszaru.
-      </p>
-      <div className="flex flex-wrap gap-2">
+      {test && (
+        <p className="mb-2 text-[11px] text-muted/80">
+          Przeprawiając się, nie ciągniesz karty z tego Obszaru.
+        </p>
+      )}
+
+      {!test && (
         <button
           disabled={busy}
-          onClick={() => onAction({ action: "cross", succeeded: true })}
+          onClick={() => onAction({ action: "cross", outcome: "udana" })}
           className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
         >
-          {defended ? "Przeprawa udana" : `Przejdź do: ${to}`}
+          Przejdź do: {to}
         </button>
-        {defended && (
+      )}
+
+      {test?.kind === "magia" && (
+        <>
+          <p className="mb-2 text-[11px] text-muted/80">
+            Dwie kostki przeciw twojej Magii: wynik mniejszy lub równy — przeprawa
+            udana. Większy to porażka i 1 Życie.
+          </p>
           <button
             disabled={busy}
-            onClick={() => onAction({ action: "cross", succeeded: false })}
-            className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+            onClick={() => onAction({ action: "cross" })}
+            className="rounded border border-ochre/50 px-3 py-1 text-xs text-ink transition hover:bg-edge disabled:opacity-50"
           >
-            Nieudana (−1 Życie)
+            Rzuć dwoma kostkami
           </button>
-        )}
-      </div>
+        </>
+      )}
+
+      {test?.kind === "walka" && (
+        <>
+          <p className="mb-2 text-[11px] text-muted/80">
+            Drogę zagradza <span className="text-vermilion">{test.guardian}</span>{" "}
+            (Miecz {test.miecz}). Remis nie kosztuje Życia, ale też zatrzymuje (11.8).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "cross", outcome: "udana" })}
+              className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+            >
+              Pokonany — przechodzę
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "cross", outcome: "remis" })}
+              className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+            >
+              Remis
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "cross", outcome: "nieudana" })}
+              className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+            >
+              Przegrana (−1 Życie)
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

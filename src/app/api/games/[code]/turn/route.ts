@@ -80,8 +80,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "attack":
         await attackSeat(game.id, String(body.targetSeatId));
         break;
-      case "cross":
-        return NextResponse.json(await crossRing(game.id, body.succeeded !== false));
+      case "cross": {
+        // The Trzęsawiska are settled by the app from the dice; the Lodowy Las
+        // is a fight, so the table reports how it went — and 11.8 lets it draw.
+        const outcome =
+          body.outcome === "remis" || body.outcome === "nieudana" ? body.outcome : "udana";
+        return NextResponse.json(
+          await crossRing(game.id, {
+            outcome,
+            dice: Array.isArray(body.dice) ? body.dice.map(Number) : null,
+          }),
+        );
+      }
       case "bridge": {
         // 11.11 has three outcomes, and the draw is not the same as a loss:
         // it costs no point but still bars next turn's attempt.

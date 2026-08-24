@@ -84,6 +84,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [seats, setSeats] = useState<Seat[]>([]);
   /** A field the player tapped on the map, to read what it says. */
   const [inspecting, setInspecting] = useState<string | null>(null);
+  /** What the app just decided by itself, shown until the next action. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -130,7 +132,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ ...body, token: localStorage.getItem(`mm:${code}`) }),
         });
-        if (!response.ok) setError((await response.json()).error);
+        if (!response.ok) {
+          setError((await response.json()).error);
+        } else {
+          // Anything the app decided on the player's behalf has to be visible,
+          // or the table is being asked to take the referee's word for it. The
+          // Trzęsawiska roll is the first of these; the roll is journalled too,
+          // but the journal is not what someone is looking at mid-turn.
+          setNotice(describeResult(await response.json().catch(() => null)));
+        }
         await refresh();
       } finally {
         setBusy(false);
@@ -279,6 +289,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       </header>
 
       {error && <p className="mb-4 text-sm text-vermilion">{error}</p>}
+      {notice && !error && (
+        <p className="mb-4 rounded border border-ochre/30 bg-panel/60 px-3 py-2 text-sm text-ochre">
+          {notice}
+        </p>
+      )}
 
       {!playing && mySeatIndex !== null && (
         <section className="mb-6 rounded border border-edge/60 bg-panel/50 p-3">
@@ -803,4 +818,26 @@ function FieldNote({
       </p>
     </div>
   );
+}
+
+/**
+ * A one-line account of something the app worked out on its own.
+ *
+ * Only the results that were not visible as they happened need this. A card the
+ * player drew is already on screen; two dice thrown inside a route handler are
+ * not, and a referee that says only "you failed" is exactly the referee this
+ * app exists to not be.
+ */
+function describeResult(result: unknown): string | null {
+  if (!result || typeof result !== "object") return null;
+  const data = result as {
+    dice?: number[];
+    magia?: number;
+    outcome?: string;
+  };
+  if (!Array.isArray(data.dice) || typeof data.magia !== "number") return null;
+  const total = data.dice.reduce((sum, die) => sum + die, 0);
+  const verdict =
+    data.outcome === "udana" ? "przeprawa udana" : "porażka — tracisz 1 Życie";
+  return `Trzęsawiska: ${data.dice.join(" + ")} = ${total} przeciw Magii ${data.magia} — ${verdict}.`;
 }

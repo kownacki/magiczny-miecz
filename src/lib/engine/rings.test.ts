@@ -5,6 +5,7 @@ import {
   SRODKOWY_KRAG,
   crossingFrom,
   crossingIsDefended,
+  trzesawiskaOutcome,
 } from "./rings";
 import { DOLNY_KRAG, KAMIENNY_MOST } from "./board";
 
@@ -131,5 +132,47 @@ describe("which way a crossing is defended (11.3, 11.7)", () => {
       expect(back, `no way back from ${crossing.to}`).toBeDefined();
       expect(crossingIsDefended(back!)).toBe(false);
     }
+  });
+});
+
+describe("what each crossing demands", () => {
+  it("makes the Trzęsawiska a test of Magia against two dice (11.3)", () => {
+    const test = crossingFrom("uroczysko")!.test;
+    expect(test).toEqual({ kind: "magia", dice: 2 });
+  });
+
+  it("makes the Lodowy Las a fight with a printed Miecz (11.7)", () => {
+    const test = crossingFrom("przelecz-wichrow")!.test;
+    expect(test).toEqual({
+      kind: "walka",
+      guardian: "Rycerz Wiecznych Śniegów",
+      miecz: 10,
+    });
+  });
+
+  it("asks nothing of a character walking back down", () => {
+    expect(crossingFrom("las-blednych-ogni")!.test).toBeUndefined();
+    expect(crossingFrom("dolina-czaszek")!.test).toBeUndefined();
+  });
+});
+
+describe("crossing the Trzęsawiska (11.3)", () => {
+  it("succeeds on a total at or under the character's Magia", () => {
+    // "wynik mniejszy lub równy twojej Magii - przeprawiłeś się" — equal counts.
+    expect(trzesawiskaOutcome([1, 2], 4)).toBe("udana");
+    expect(trzesawiskaOutcome([2, 2], 4)).toBe("udana");
+  });
+
+  it("fails on anything over it", () => {
+    expect(trzesawiskaOutcome([2, 3], 4)).toBe("nieudana");
+    expect(trzesawiskaOutcome([6, 6], 10)).toBe("nieudana");
+  });
+
+  it("is out of reach for a character with Magia below two", () => {
+    // Two dice cannot total less than 2, so a Barbarzyńca on Magia 1 simply
+    // cannot cross unaided — which is what the item and spell exceptions in
+    // 11.2 are for, not a bug in the arithmetic.
+    expect(trzesawiskaOutcome([1, 1], 1)).toBe("nieudana");
+    expect(trzesawiskaOutcome([1, 1], 2)).toBe("udana");
   });
 });
