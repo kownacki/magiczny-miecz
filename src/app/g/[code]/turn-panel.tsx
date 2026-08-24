@@ -11,6 +11,7 @@ import {
   type CardScript,
   type Effect,
 } from "@/lib/engine/cardScript";
+import { NOT_HANDLED, coverageOf, manualNote } from "@/lib/engine/coverage";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom } from "@/lib/engine/rings";
@@ -1073,10 +1074,40 @@ function DrawnCards({
                 onSuggestion={onSuggestion}
               />
             )}
+            {card && <Coverage cardId={card.id} />}
           </li>
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * How much of this card the app is actually handling.
+ *
+ * Silence is the dangerous answer. Once a table has watched the referee resolve
+ * twenty cards it will assume it is resolving the twenty-first, and a card the
+ * app cannot read looks exactly like one it has already dealt with. So the ones
+ * it is not carrying say so, and the ones it is carrying only halfway name the
+ * half it is not.
+ */
+function Coverage({ cardId }: { cardId: string }) {
+  const coverage = coverageOf(cardId);
+  if (coverage === "pelne") return null;
+  const note = manualNote(cardId);
+  return (
+    <p
+      className={`mt-1 rounded border-l-2 px-2 py-1 text-[11px] leading-snug ${
+        coverage === "brak"
+          ? "border-vermilion/50 bg-vermilion/5 text-vermilion/90"
+          : "border-ochre/50 bg-ochre/5 text-ochre/90"
+      }`}
+    >
+      <span className="uppercase tracking-wide">
+        {coverage === "brak" ? "Ręcznie" : "Częściowo ręcznie"}
+      </span>{" "}
+      — {note ?? NOT_HANDLED}
+    </p>
   );
 }
 

@@ -6,6 +6,7 @@ import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
+import { manualNote } from "@/lib/engine/coverage";
 import { characterImageUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
@@ -554,6 +555,14 @@ function Hand({
             {describeAbilities(held.cardId).length > 0 && (
               <p className="text-[10px] leading-snug text-verdigris/80">
                 {describeAbilities(held.cardId).join(" · ")}
+              </p>
+            )}
+            {/* And what it does that the app is NOT watching for. A held card
+                is exactly where this matters: its rule fires somewhere else,
+                turns later, when nobody is looking at the card any more. */}
+            {manualNote(held.cardId) && (
+              <p className="text-[10px] leading-snug text-ochre/70">
+                ↳ {manualNote(held.cardId)}
               </p>
             )}
           </li>

@@ -1,0 +1,95 @@
+/** How much of a card the app actually handles, so nobody has to guess whether it is watching. */
+
+import { ABILITIES } from "./abilities";
+import { SCRIPTS } from "./cardScript";
+
+/**
+ * A referee that silently does nothing is worse than no referee.
+ *
+ * Most of the deck is encoded now, which creates a new hazard: a player who has
+ * seen the app resolve twenty cards will assume it is resolving the twenty-first
+ * too. For the cards it cannot read, and for the clauses it has only half read,
+ * it has to say so — otherwise the quiet ones look identical to the handled
+ * ones and rules get dropped.
+ *
+ * Three states, and only three:
+ *
+ * - `pelne` — everything the card says is encoded.
+ * - `czesciowe` — the app handles part of it and names the rest.
+ * - `brak` — the app is not helping with this card at all; read it and apply it.
+ */
+export type Coverage = "pelne" | "czesciowe" | "brak";
+
+/**
+ * What the app does NOT do, for cards it only partly understands.
+ *
+ * Every entry here corresponds to a clause deliberately left unencoded, and the
+ * wording is what a player needs to *do*, not what the type system is missing.
+ * Keeping these next to each other rather than in comments beside each entry is
+ * what lets the interface show them.
+ *
+ * An entry existing is itself a claim — it marks the card as only half handled.
+ * So a note that merely reassures ("the app already does this") does not belong
+ * here: it would tell a table to watch something the referee is watching for
+ * them, which is the same wasted vigilance as no referee at all.
+ */
+const MANUAL: Readonly<Record<string, string>> = {
+  // --- equipment and magic items -------------------------------------------
+  arondight: "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
+  "topor-swiatla-i-ciemnosci":
+    "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1. Tylko dla Chaotycznych.",
+  excalibur: "Po wygranej walce zyskujesz 1 Życie, odbierając je pokonanemu.",
+  "miecz-chaosu": "Nie dla Dobrych Postaci.",
+  "swiety-graal": "Nie dla Złych Postaci.",
+  "swieta-wlocznia": "Nie dla Złych Postaci.",
+  "czarodziejska-kosc":
+    "W Pułapce i Magicznej Pułapce daje zamiast tego 1 punkt Miecza lub Magii.",
+  relikwiarz: "Pokonuje wszystkie Demony bez walki.",
+  "talizman-ognia": "Daje odporność na Zaklęcie Krąg Płomieni.",
+  "talizman-powietrza": "Daje odporność na Siedem Wichrów i Władcę Gromu.",
+  lodz: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
+  latarnia: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
+  kon: "Tracąc Konia, zostawiasz na Obszarze wszystko, czego sam nie uniesiesz.",
+  mul: "Tracąc Muła, zostawiasz na Obszarze niesione przez niego Przedmioty.",
+  zaprzeg: "Tracąc Zaprzęg, zostawiasz na Obszarze to, czego sam nie uniesiesz.",
+  "magiczna-sakwa": "Utrata Sakwy to utrata wszystkiego, co w niej niesiono.",
+  "bojowy-rumak": "Ginie zamiast ciebie tylko raz — potem odłóż jego Kartę.",
+
+  // --- friends --------------------------------------------------------------
+  chochlik: "Kosztuje 1 punkt Życia na wstępie. Pozwala obejrzeć 2 Karty Zaklęć i wybrać.",
+  krzyzowiec: "Ma przy sobie 1 Zaklęcie, którego użyje na twoje życzenie.",
+  giermek: "Po przegranej rzuć kostką: 1 oznacza, że ginie Giermek zamiast twojego punktu.",
+  "poszukiwacz-przygod":
+    "Sam atakuje Postać lub Wroga do 3 Obszarów stąd, własnymi 3 punktami Miecza.",
+  tragarz: "Bez zapłaty 1 Sz. Z. odchodzi. Tracąc go, tracisz też niesione Przedmioty.",
+  ksiezniczka: "Możesz oddać jej Kartę w Zamku za 3 Sztuki Złota.",
+  wladca: "Możesz oddać jego Kartę w Twierdzy za 3 Sztuki Złota.",
+
+  // --- cards whose disposition is handled but whose body is not -------------
+  targowisko: "Kupno rozliczcie sami: zdejmijcie złoto i weźcie Kartę Przedmiotu.",
+  sztukmistrz: "Kupno Zaklęcia rozliczcie sami, o ile pozwala na to Magia.",
+  "kapliczka-nemed": "Rozpatrzcie modlitwę tak jak w Świątyni Bogini Nemed.",
+  "kapliczka-tolimana": "Rozpatrzcie modlitwę tak jak w Świątyni Tolimana.",
+  eremita: "Magiczny Miecz i Tarcza Tolimana są skończone — tylko jeśli jeszcze są.",
+  lewiatan: "Połóż Kartę na wolnym Obszarze. Jeśli żaden nie jest wolny, odłóż ją.",
+  zloczynca: "Płaci tylko ta Postać, która przegrała walkę.",
+};
+
+export function coverageOf(cardId: string): Coverage {
+  const known = cardId in SCRIPTS || cardId in ABILITIES;
+  if (!known) return "brak";
+  return cardId in MANUAL ? "czesciowe" : "pelne";
+}
+
+/** The clause the players have to apply themselves, if there is one. */
+export function manualNote(cardId: string): string | null {
+  return MANUAL[cardId] ?? null;
+}
+
+/**
+ * What to tell a player about a card the app is not resolving.
+ *
+ * Phrased as an instruction rather than an apology. "Rozpatrzcie sami" is
+ * something a table can act on; "not implemented" is a bug report.
+ */
+export const NOT_HANDLED = "Tę Kartę rozpatrzcie sami — aplikacja jej nie prowadzi.";

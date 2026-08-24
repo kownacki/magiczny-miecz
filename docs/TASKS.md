@@ -186,11 +186,15 @@ Now the primary mode; companion is the opt-in.
 
 ## Open, found while playing
 
-- [ ] **Encode the rest of the corpus against the ability vocabulary.** The
-      shapes are settled and validated (`src/lib/engine/abilities.ts`); what is
-      left is data. Encoded so far: the equipment sheet and the Przyjaciele. The
-      44 magic Przedmiot cards in the event deck (Excalibur, Święty Graal,
-      Talizman Ognia, …) are not, and neither is anything one-shot.
+- [ ] **The last 27 cards.** 111 of 138 distinct event cards are encoded. What
+      remains is individually irregular rather than merely unwritten, and the
+      app now says so on screen rather than staying quiet — see `coverage.ts`.
+      The recurring reasons: an enemy whose strength is its opponent's
+      (Sobowtór) or grows as it wins (Wampir); a creature with three heads that
+      regrow (Trójgłowy Smok); a consumable spent at a moment of the holder's
+      choosing (Eliksir Siły); targeting by Natura or by Krąg (Danina); cards
+      that reach other cards on the board (Kometa, Zwierciadło Zniszczenia).
+      Adding a variant per card would be worse than leaving these to their text.
 - [x] **One-shot and fixture cards have a vocabulary** — `cardScript.ts`, with
       disposition as a field of its own (odłóż / zostaje na Obszarze / zostaje z
       pulą punktów / do pierwszej Postaci / po N turach / wraca do stosu). About
