@@ -1,5 +1,6 @@
 /** Every database read and write for a game, so route handlers never touch Supabase directly. */
 
+import { randomInt } from "node:crypto";
 import { db } from "@/lib/supabase";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import characters from "@/data/characters.json";
@@ -236,13 +237,36 @@ export async function joinGame(
  * began with. Życie starts at 4 (4.2) and Złoto at 1 (3.2) unless the card says
  * otherwise, and those are already the column defaults.
  */
-export async function chooseCharacter(seatId: string, characterId: string): Promise<void> {
+/**
+ * Gives a seat its character.
+ *
+ * No two seats may hold the same one. The box has 27 Karty Postaci and one
+ * plastic figure per card, and setup deals *one* to each player — there is no
+ * second Kapłanka to hand out. The UI greys taken characters out; this is the
+ * rule itself, since two devices can reach for the same one in the same second
+ * and only the server sees both.
+ */
+export async function chooseCharacter(
+  gameId: string,
+  seatId: string,
+  characterId: string,
+): Promise<void> {
+  const character = CHARACTERS.find((c) => c.id === characterId);
+  if (!character) throw new Error(`Nieznana postać: ${characterId}`);
+
+  const { data: rivals } = await db
+    .from("seats")
+    .select("id,character_id")
+    .eq("game_id", gameId)
+    .eq("character_id", characterId);
+  if ((rivals ?? []).some((seat) => seat.id !== seatId)) {
+    throw new Error(`${character.name} jest już wybrana przez kogoś innego.`);
+  }
+
   // Swapping character un-readies you. Otherwise a player who said they were
   // ready and then changed their mind is still counted, and the host starts a
   // game somebody was still deciding about.
   await db.from("seats").update({ ready: false }).eq("id", seatId);
-  const character = CHARACTERS.find((c) => c.id === characterId);
-  if (!character) throw new Error(`Nieznana postać: ${characterId}`);
 
   const field = startingFieldId(character.start);
   const { error } = await db
@@ -260,6 +284,40 @@ export async function chooseCharacter(seatId: string, characterId: string): Prom
     })
     .eq("id", seatId);
   if (error) throw new Error(`chooseCharacter: ${error.message}`);
+}
+
+/**
+ * Shuffles the Karty Postaci and deals one to each seat — which is what the
+ * rulebook actually says to do:
+ *
+ * > Przed rozpoczęciem rozgrywki należy potasować Karty Postaci, a następnie
+ * > rozłożyć losowo, po jednej przed każdym z graczy. Jeżeli zgodzą się na to
+ * > wszyscy uczestnicy, można zrezygnować z losowego podziału […]
+ *
+ * Free choice is the variant, agreed to by everybody; the random deal is the
+ * default, and the app had only ever offered the variant. Seats that already
+ * hold a character keep it, so this fills the table in rather than overturning
+ * choices people have made.
+ */
+export async function dealCharacters(gameId: string): Promise<void> {
+  const seats = await seatsFor(gameId);
+  const empty = seats.filter((seat) => !seat.character_id && !seat.abandoned_at);
+  if (empty.length === 0) return;
+
+  const taken = new Set(seats.map((seat) => seat.character_id).filter(Boolean));
+  const pool = CHARACTERS.filter((character) => !taken.has(character.id));
+  // Fisher–Yates with a real CSPRNG. Nobody is attacking a character deal, but
+  // the one already in the file is correct and `Math.random` is not.
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  for (const [index, seat] of empty.entries()) {
+    const character = pool[index];
+    if (!character) break; // 27 cards, 6 seats — unreachable, but not assumed
+    await chooseCharacter(gameId, seat.id, character.id);
+  }
 }
 
 /** Character cards name their starting field in prose; the board uses slugs. */

@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { bumpRevision, chooseCharacter, findGame, verifySeat } from "@/lib/game/store";
+import {
+  bumpRevision,
+  chooseCharacter,
+  dealCharacters,
+  findGame,
+  verifySeat,
+} from "@/lib/game/store";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -12,12 +18,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const actor = await verifySeat(game.id, String(body.token ?? ""));
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
 
-  // A seated player may choose for another seat, because players added at the
-  // table have no device of their own to choose from.
-  const target = body.seatId ? String(body.seatId) : actor.id;
-
   try {
-    await chooseCharacter(target, String(body.characterId ?? ""));
+    // The rulebook's default: shuffle the Karty Postaci and deal one to each
+    // player. Host-only, because it decides for the whole table at once.
+    if (body.deal === true) {
+      if (!actor.is_host) {
+        return NextResponse.json({ error: "Tylko gospodarz rozdaje." }, { status: 403 });
+      }
+      if (game.status !== "lobby") {
+        return NextResponse.json(
+          { error: "Postacie rozdaje się przed rozpoczęciem gry." },
+          { status: 409 },
+        );
+      }
+      await dealCharacters(game.id);
+      await bumpRevision(game.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    // A seated player may choose for another seat, because players added at the
+    // table have no device of their own to choose from.
+    const target = body.seatId ? String(body.seatId) : actor.id;
+    await chooseCharacter(game.id, target, String(body.characterId ?? ""));
     await bumpRevision(game.id);
     return NextResponse.json({ ok: true });
   } catch (error) {

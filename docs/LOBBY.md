@@ -161,6 +161,22 @@ middle of a real table and nobody else has a device. In *pełna symulacja*
 everybody has their own and joins with the code, so a slot the host filled in
 would be a way of taking somebody's seat before they arrived.
 
+**The join code is the loudest thing on the screen.** For everybody not yet at
+the table, reading it out or sending the link is the whole of what the lobby is
+for; it was eight grey pixels next to the word "kod" and somebody across a table
+had to lean in. Clicking it copies the link — the code is what you say, the link
+is what you paste.
+
+**Leaving before the start deletes the seat** and returns you to the table list.
+Only during play does leaving abandon a character instead. Either way the button
+is in the lobby header, next to your name, and asks once.
+
+**Characters cannot be shared.** The box has 27 Karty Postaci and one figure per
+card, and setup deals one to each player, so two seats holding the same
+character is not a rule the game has an answer for. The lobby greys taken
+characters out and the server refuses them, because two devices can reach for
+the same one in the same second and only the server sees both.
+
 **A name is required** to open a table or to join one, and it is asked at the
 one moment somebody will answer it: on the way in. A table of "Miejsce 2" and
 "Miejsce 4" is nobody's game, and asking afterwards never happens — though it

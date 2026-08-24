@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
@@ -16,7 +17,7 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
-import { JoinGate, Lobby, type LobbySeat } from "./lobby";
+import { JoinGate, LeaveButton, Lobby, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
@@ -122,6 +123,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [busy, setBusy] = useState(false);
 
   const [mySeatIndex, setMySeatIndex] = useState<number | null>(null);
+  const router = useRouter();
 
   const refresh = useCallback(async () => {
     const stored = localStorage.getItem(`mm:${code}`);
@@ -207,6 +209,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       // Forget the seat locally too, or this browser keeps showing the
       // controls for a seat it no longer holds.
       localStorage.removeItem(`mm:${code}`);
+      // Leaving before the start means leaving, not standing in the doorway:
+      // the seat is gone, and staying here would only show the join form again
+      // as though the click had failed.
+      if (!playing) return router.push("/");
       setMySeatIndex(null);
       await refresh();
     } finally {
@@ -381,6 +387,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           onMakeHost={(seat) => post("host", { seatId: seat.id })}
           onReady={(ready) => post("seat", { ready })}
           onRename={(name) => post("seat", { name })}
+          onLeave={leave}
+          onDeal={() => post("character", { deal: true })}
           isHost={mySeat?.is_host === true}
           hostAway={seats.find((seat) => seat.is_host)?.abandoned_at !== null}
           onStart={() => post("start", {})}
@@ -1095,47 +1103,4 @@ function rollSkippedBy(seat: Seat): string | null {
     }
   }
   return null;
-}
-
-/**
- * Leaving, confirmed by a second click rather than a browser dialog.
- *
- * It says what actually happens, which is much less than it used to: the
- * character stays in the game exactly as it is and somebody can pick it up
- * again. Only this device stops speaking for it.
- */
-function LeaveButton({
-  playing,
-  busy,
-  onLeave,
-}: {
-  playing: boolean;
-  busy: boolean;
-  onLeave: () => void;
-}) {
-  const [armed, setArmed] = useState(false);
-  if (!armed) {
-    return (
-      <button onClick={() => setArmed(true)} className="text-muted hover:text-vermilion">
-        Opuść stół
-      </button>
-    );
-  }
-  return (
-    <span className="flex items-center gap-2">
-      <span className="text-vermilion">
-        {playing ? "Postać zostanie w grze bez gracza — na pewno?" : "Na pewno?"}
-      </span>
-      <button
-        onClick={onLeave}
-        disabled={busy}
-        className="rounded border border-vermilion/60 px-1.5 text-vermilion disabled:opacity-50"
-      >
-        tak
-      </button>
-      <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
-        nie
-      </button>
-    </span>
-  );
 }

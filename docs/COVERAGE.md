@@ -21,6 +21,21 @@ screen next to every drawn card.
 
 ---
 
+## 0. Przygotowanie do gry
+
+The setup paragraphs are unnumbered in the book; they are listed here because
+they are rules, and one of them was missing.
+
+| | rule | status | where |
+|---|---|---|---|
+| 0.1 | shuffle the Karty Postaci and deal one at random to each player | ✅ | `dealCharacters` — "rozlosuj postacie" in the lobby |
+| 0.2 | by unanimous agreement, free choice instead of the random deal | ✅ | the character strip; this is the variant, offered as the default |
+| 0.3 | one character per player — 27 cards, one figure each, no duplicates | ✅ | `chooseCharacter` rejects a taken character; the strip greys it out |
+| 0.4 | each figure starts on its MGR (Miejsce Gracza) | ✅ | `startingFieldId` from the card's `start` |
+| 0.5 | every character starts with 1 Sztuka Złota and 4 Życia | ✅ | column defaults in `db/schema.sql` |
+| 0.6 | characters with starting Zaklęcia draw them at once, unseen by others | ✅ | `STARTING_KIT`, dealt on start; hidden by 9.3 |
+| 0.7 | shuffle the Karty Zdarzeń and Zaklęć into face-down stacks | ✅ | simulation shuffles a virtual deck; in companion mode the table holds it |
+
 ## 1. Miecz Postaci
 
 | | rule | status | where |

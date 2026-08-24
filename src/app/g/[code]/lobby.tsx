@@ -54,6 +54,8 @@ export function Lobby({
   onMakeHost,
   onReady,
   onRename,
+  onLeave,
+  onDeal,
   isHost,
   hostAway,
   onStart,
@@ -74,6 +76,8 @@ export function Lobby({
   onMakeHost: (seat: LobbySeat) => void;
   onReady: (ready: boolean) => void;
   onRename: (name: string) => void;
+  onLeave: () => void;
+  onDeal: () => void;
   isHost: boolean;
   hostAway: boolean;
   onStart: () => void;
@@ -108,31 +112,33 @@ export function Lobby({
           <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
             Magiczny Miecz
           </h1>
-          <span className="text-xs text-muted">
-            Poczekalnia · kod <span className="tnum tracking-[0.2em] text-ink">{code}</span>
+          {/* Stated, not offered. The mode was settled when the table was
+              opened — it decides whether there is a board in the room, and
+              changing that halfway through setting up is not a thing anybody
+              does. */}
+          <span
+            className="text-[11px] text-muted"
+            title={
+              mode === "companion"
+                ? "Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
+                : "Wszystko dzieje się tutaj — plansza i karty nie są potrzebne."
+            }
+          >
+            {mode === "companion" ? "Sędzia przy planszy" : "Pełna symulacja"}
           </span>
         </div>
 
-        {/* Stated, not offered. The mode was settled when the table was
-            opened — it decides whether there is a board in the room, and
-            changing that halfway through setting up is not a thing anybody
-            does. */}
-        <span
-          className="text-[11px] text-muted"
-          title={
-            mode === "companion"
-              ? "Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
-              : "Wszystko dzieje się tutaj — plansza i karty nie są potrzebne."
-          }
-        >
-          {mode === "companion" ? "Sędzia przy planszy" : "Pełna symulacja"}
-        </span>
+        {/* The one thing everybody in the room needs off this screen. It was
+            eight grey pixels next to the word "kod", and somebody reading it
+            out across a table had to lean in. */}
+        <JoinCode code={code} />
 
         <div className="flex items-center gap-3 text-[11px]">
           <button onClick={onLibrary} className="text-ochre/80 hover:text-ochre">
             Karty
           </button>
           {me && <RenameField name={me.playerName} busy={busy} onRename={onRename} />}
+          {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
           {/* Always on screen for the host, disabled with the reason on it.
               A button that only appears once the conditions are met leaves
               everybody hunting for it and nobody knowing what is missing. */}
@@ -206,14 +212,29 @@ export function Lobby({
               ? `Postać dla: ${target.playerName ?? `miejsce ${target.seatIndex + 1}`}`
               : "Postacie"}
           </h2>
-          {pickingFor && (
-            <button
-              onClick={() => onPickFor(null)}
-              className="text-[11px] text-muted underline hover:text-ink"
-            >
-              anuluj wybór
-            </button>
-          )}
+          <span className="flex items-center gap-3">
+            {/* The book deals these at random and treats free choice as the
+                variant everybody has to agree to. Offered rather than imposed,
+                because the variant is the one every table I know plays. */}
+            {canAdminister && seats.some((seat) => !seat.characterId) && (
+              <button
+                onClick={onDeal}
+                disabled={busy}
+                title="Potasuj Karty Postaci i rozłóż po jednej — tak, jak każe Instrukcja"
+                className="text-[11px] text-ochre/80 underline transition hover:text-ochre disabled:opacity-40"
+              >
+                rozlosuj postacie
+              </button>
+            )}
+            {pickingFor && (
+              <button
+                onClick={() => onPickFor(null)}
+                className="text-[11px] text-muted underline hover:text-ink"
+              >
+                anuluj wybór
+              </button>
+            )}
+          </span>
         </div>
         {/* Two rows deep: one row of 27 needed a long horizontal drag to reach
             the far half of the roster, and the characters at the end were the
@@ -309,7 +330,10 @@ function SeatSlot({
               : "border-edge bg-panel/50"
       }`}
     >
-      {canAdminister && (
+      {/* Not on your own slot: leaving is "Opuść stół", and a host who kicks
+          themselves out of their own table has done something they meant to
+          spell differently. */}
+      {canAdminister && !isMine && (
         <button
           onClick={onRemove}
           disabled={busy}
@@ -583,5 +607,83 @@ export function JoinGate({
         </p>
       )}
     </main>
+  );
+}
+
+/**
+ * Leaving, confirmed by a second click rather than a browser dialog.
+ *
+ * It says what actually happens, which is much less than it used to: the
+ * character stays in the game exactly as it is and somebody can pick it up
+ * again. Only this device stops speaking for it.
+ */
+export function LeaveButton({
+  playing,
+  busy,
+  onLeave,
+}: {
+  playing: boolean;
+  busy: boolean;
+  onLeave: () => void;
+}) {
+  const [armed, setArmed] = useState(false);
+  if (!armed) {
+    return (
+      <button onClick={() => setArmed(true)} className="text-muted hover:text-vermilion">
+        Opuść stół
+      </button>
+    );
+  }
+  return (
+    <span className="flex items-center gap-2">
+      <span className="text-vermilion">
+        {playing ? "Postać zostanie w grze bez gracza — na pewno?" : "Na pewno?"}
+      </span>
+      <button
+        onClick={onLeave}
+        disabled={busy}
+        className="rounded border border-vermilion/60 px-1.5 text-vermilion disabled:opacity-50"
+      >
+        tak
+      </button>
+      <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+        nie
+      </button>
+    </span>
+  );
+}
+
+/**
+ * The join code, big enough to read across a room.
+ *
+ * This is the whole of the lobby's job for everybody not already at the table:
+ * somebody reads it out, or sends the link. Clicking copies the link rather
+ * than the code — the code is what you say, the link is what you paste, and
+ * whichever one is wanted, one of them is now to hand.
+ */
+function JoinCode({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <div className="flex flex-col items-center leading-none">
+      <span className="mb-1 text-[10px] uppercase tracking-widest text-muted">
+        Kod stołu
+      </span>
+      <button
+        onClick={() => {
+          navigator.clipboard
+            ?.writeText(window.location.href)
+            .then(() => setCopied(true))
+            .catch(() => {});
+        }}
+        title="Skopiuj link do stołu"
+        className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.3em] text-ochre transition hover:text-ink"
+      >
+        {code}
+      </button>
+      <span className="mt-1 h-3 text-[10px] text-muted">
+        {copied ? "skopiowano link" : ""}
+      </span>
+    </div>
   );
 }
