@@ -1,9 +1,40 @@
-.firebase/
-dist/
-node_modules/
+# dependencies
+/node_modules
 
-# Logsindex.html
-logs
-*.log
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+.idea/
+
+# debug
 npm-debug.log*
-firebase-debug.log*
+
+# env files
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Source scans of the physical game — 689 MB of PDFs, mirrored from Drive:
+# https://drive.google.com/drive/folders/1M1_kgUjBcVSWh6MYAnU3tDmNCocBCapV
+# The transcribed data in src/data/ IS committed; the scans it came from are
+# not. See docs/ASSETS.md.
+assets/raw/
+
+# Derived from assets/raw by scripts/extract-assets.mjs — 119 MB of native-res
+# page and card images. Regenerate with `node scripts/extract-assets.mjs`.
+# The transcriptions in src/data/ and the web-sized images in public/ are what
+# get committed.
+assets/extracted/

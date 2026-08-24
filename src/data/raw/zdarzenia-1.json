@@ -1,0 +1,142 @@
+[
+  {
+    "id": "burza-siedmiu-slonc",
+    "name": "BURZA SIEDMIU SŁOŃC",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 1 },
+    "text": "Nad Krąg, w którym jesteś dotarły wiry czasu spowodowane przez gwałtowną Burzę Słoneczną. Wszystkie Postacie tracą 1 turę. Potem nagły wybuch aktywności Słońc ustaje, należy odłożyć Kartę."
+  },
+  {
+    "id": "danina",
+    "name": "DANINA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 2 },
+    "text": "Bestia postanowiła nałożyć daninę wysokości 1 Sz.Z. Rzuć kostką, by stwierdzić kto złoży opłatę: 1. Dobrzy, 2. Chaotyczni, 3. Źli, 4. Wędrujący po Dolnym Kręgu, 5. Wędrujący po Środkowym Kręgu, 6. Wędrujący po Górnym Kręgu. Nie posiadający złota tracą 1 Życie. Po ściągnięciu daniny odłóż Kartę."
+  },
+  {
+    "id": "godzina-duchow",
+    "name": "GODZINA DUCHÓW",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 3 },
+    "text": "Nadeszła Godzina Duchów. Może je wezwać każda Zła Postać. Rzuć kostką, by określić skutek wezwania: 1-2. Zyskuje 1 Zaklęcie, 3-4. Odzyskuje 1 punkt Życia, 5-6. Traci 1 turę."
+  },
+  {
+    "id": "kometa",
+    "name": "KOMETA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 4 },
+    "text": "Na Krainę, po której wędrujesz spada apokaliptyczna Gwiazda. W katastrofie giną wszyscy Nieznajomi - należy odłożyć ich Karty."
+  },
+  {
+    "id": "magiczna-tablica",
+    "name": "MAGICZNA TABLICA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 5 },
+    "text": "Znalazłeś kamienną Tablicę, na której wyryte zostały magiczne formuły z zamierzchłych czasów. Natychmiast uzyskujesz taką liczbę Zaklęć, na jaką pozwala ci twoja Magia. Zaklęcia nabiorą mocy, gdy roztrzaskasz Tablicę - odłóż jej Kartę."
+  },
+  {
+    "id": "mgla",
+    "name": "MGŁA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 6 },
+    "text": "Z Płaskowyżu zeszła gęsta Mgła, okrywając nieprzeniknioną bielą wszystkie Krainy. Przez 2 tury Postacie mogą przebywać tylko 2 Obszary (1 Obszar na turę). Potem Mgła rozpływa się - odłóż jej Kartę."
+  },
+  {
+    "id": "poludnica",
+    "name": "POŁUDNICA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 7 },
+    "text": "Od pewnego czasu towarzyszy ci Południca. Musisz ją zabrać jako Przyjaciela chociaż jej obecność osłabia cię, że możesz poruszać się tylko o 1 Obszar na turę. Jedynym sposobem pozbycia się Południcy jest przeprawa przez Trzęsawiska lub Lodowy Las. Gdy to zrobisz, odłóż jej Kartę."
+  },
+  {
+    "id": "poslancy-bogow",
+    "name": "POSŁAŃCY BOGÓW",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 8 },
+    "text": "Spotkałeś potężne Dobre Duchy, wędrujące po tej Krainie. Jeżeli ty także jesteś Dobry, Duchy obdarują cię 1 punktem Życia, jeżeli jesteś Zły, tracisz 1 Życie. Posłańcy ignorują Chaotyczne Postacie. Po spotkaniu odłóż tę Kartę."
+  },
+  {
+    "id": "przesilenie",
+    "name": "PRZESILENIE",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 9 },
+    "text": "Potężny Żywioł Magii rozpętał nad Światem gwałtowną burzę. Wszystkie Zaklęcia utraciły swoją moc. Burza kończy się tak nagle, jak się rozpoczęła. Odłóż tę Kartę i wszystkie Karty Zaklęć, znajdujące się w posiadaniu Postaci (we wszystkich Kręgach)."
+  },
+  {
+    "id": "sabat-czarownic",
+    "name": "SABAT CZAROWNIC",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 10 },
+    "text": "Natknąłeś się na Czarownice tańczące w księżycowej poświacie. Jeżeli jesteś Zły, otrzymujesz 1 punkt Magii, jeśli jesteś Dobry lub Chaotyczny zamieniasz się w Złego. Potem Czarownice kończą swój taniec - odłóż Kartę."
+  },
+  {
+    "id": "slup-ognia",
+    "name": "SŁUP OGNIA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 11 },
+    "text": "Stanąłeś przed ogromnym Słupem Ognia, od którego emanuje potężna siłą Dobra. Jeżeli jesteś Dobry, otrzymujesz 1 punkt Magii, jeżeli jesteś Zły lub Chaotyczny, zamieniasz się w Dobrego. Potem Słup Ognia znika - odłóż tę Kartę."
+  },
+  {
+    "id": "straz",
+    "name": "STRAŻ",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 12 },
+    "text": "Niespodziewanie spotykasz wędrujący po okolicy oddział straży z Zamku Bestii. Strażnicy natychmiast zawracają cię na Obszar, z którego rozpocząłeś wędrówkę. Potem ruszają w dalszą drogę - odłóż Kartę."
+  },
+  {
+    "id": "turniej-rycerski",
+    "name": "TURNIEJ RYCERSKI",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 13 },
+    "text": "Możesz wyzwać na pojedynek każdą Postać, jeśli tylko nie znajduje się na Moście. Zostaje ona natychmiast przeniesiona do twojego Obszaru. Walka odbywa się według zwykłych zasad. Po jej zakończeniu, odłóż tę Kartę."
+  },
+  {
+    "id": "uklad-planet",
+    "name": "UKŁAD PLANET",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 14 },
+    "text": "Przy tym szczególnym układzie planet, na czas 1 tury podwojona zostaje Magia wszystkich Demonów. Po zakończeniu tury należy odłożyć Kartę."
+  },
+  {
+    "id": "zacmienie-slonc",
+    "name": "ZAĆMIENIE SŁOŃC",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 15 },
+    "text": "Zaćmienie Słońc otworzyło Siłom Ciemności drogę do Świata. Dobre i Chaotyczne Postacie tracą 1 turę. Potem Zaćmienie kończy się - odłóż tę Kartę."
+  },
+  {
+    "id": "zakleta-sciezka",
+    "name": "ZAKLĘTA ŚCIEŻKA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 16 },
+    "text": "Wszedłeś na Zaklętą Ścieżkę, nie wiedząc, dokąd cię zaprowadzi. Rzuć kostką, by się tego dowiedzieć: 1. do Równiny Snu, 2. do Równiny Traw, 3. do Doliny Cienia, 4. do Mrocznej Polany, 5. do Osady, 6. do Karczmy. Po zejściu ze ścieżki odłóż Kartę."
+  },
+  {
+    "id": "zaraza",
+    "name": "ZARAZA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 17 },
+    "text": "W Kręgu, w którym jesteś wybuchła Zaraza. Wszystkie znajdujące się w nim Postacie włącznie z tobą tracą 1 Życie. Następnie Zaraza wygasa, odłóż tę Kartę."
+  },
+  {
+    "id": "zasadzka",
+    "name": "ZASADZKA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 18 },
+    "text": "Wpadłeś w Zasadzkę żądnego łupów złoczyńcy. Tracisz całe złoto i wszystkie Przedmioty. Łupieżca ukrywa swoją zdobycz na Wrzosowiskach (połóż tam Karty i żetony), potem odchodzi w inne strony - odłóż jego Kartę."
+  },
+  {
+    "id": "zatrute-ziola",
+    "name": "ZATRUTE ZIOŁA",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 19 },
+    "text": "Trafiłeś na Łąkę Zatrutych Ziół. Jeżeli jesteś Zły, ich zapach pozwoli ci zyskać 1 Życie, jeśli jesteś Dobry - tracisz 1 Życie. Zapach Ziół nie działa na Chaotyczne Postacie. Natychmiast opuszczasz to miejsce - odłóż Kartę."
+  },
+  {
+    "id": "zly-duch",
+    "name": "ZŁY DUCH",
+    "cardClass": "spotkanie",
+    "source": { "sheet": "zdarzenia-1", "index": 20 },
+    "text": "Od pewnego czasu towarzyszy ci Zły Duch. Musisz zabrać go jako Przyjaciela. Natychmiast opuszczą cię wszyscy dotychczasowi Przyjaciele (z wyjątkiem Południcy). Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od niego, odwiedzając Pustelnię. Po wizycie u Pustelnika odłóż Kartę."
+  }
+]
