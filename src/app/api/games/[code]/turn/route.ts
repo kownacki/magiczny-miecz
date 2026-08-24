@@ -4,6 +4,7 @@ import {
   attackSeat,
   beginFight,
   drawCard,
+  escape,
   fightBeast,
   fightRoll,
   finishTurn,
@@ -73,6 +74,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "attack":
         await attackSeat(game.id, String(body.targetSeatId));
+        break;
+      case "escape":
+        await escape(game.id, body.succeeded !== false);
         break;
       case "beast":
         await fightBeast(

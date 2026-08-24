@@ -1,6 +1,13 @@
 /** The per-turn state machine: what the active player is being asked for, and what answering it does. */
 
-import { DOLNY_KRAG, type BoardField, type Direction, moveOptions, ringOf } from "./board";
+import {
+  DOLNY_KRAG,
+  KAMIENNY_MOST,
+  type BoardField,
+  type Direction,
+  moveOptions,
+  ringOf,
+} from "./board";
 import { resolutionOrder, type TurnCard } from "./state";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 
@@ -66,12 +73,52 @@ export function startTurn(): TurnPhase {
 }
 
 /**
+ * Movement on the Kamienny Most, where the die plays no part.
+ *
+ * Rule 10.3: a character on the bridge moves at one field per turn and must
+ * stop on each, resolving it before going on. There is no direction to choose
+ * beyond onward or back — 10.4 lets a character turn around and leave at any
+ * time, which is why both neighbours are offered.
+ */
+export function bridgeOptions(fieldId: string): TurnMoveOption[] {
+  const at = KAMIENNY_MOST.findIndex((field) => field.id === fieldId);
+  if (at === -1) return [];
+
+  const options: TurnMoveOption[] = [];
+  const onward = KAMIENNY_MOST[at + 1];
+  const back = KAMIENNY_MOST[at - 1];
+  // The bridge is a line, not a ring, so an entrance has only one neighbour.
+  if (onward) {
+    options.push({
+      direction: "zgodnie",
+      fieldId: onward.id,
+      fieldName: onward.name,
+      through: [],
+    });
+  }
+  if (back) {
+    options.push({
+      direction: "przeciwnie",
+      fieldId: back.id,
+      fieldName: back.name,
+      through: [],
+    });
+  }
+  return options;
+}
+
+/**
  * Rule 10.2: the roll gives a distance, and the player picks which way round
  * the ring to walk it. Both landing squares are offered rather than a direction
  * being asked for first, because what a player actually decides between is two
  * *places*, not two abstract directions.
  */
 export function afterRoll(fieldId: string, roll: number): TurnPhase {
+  // On the bridge the roll is ignored entirely (10.3) — one field per turn,
+  // either onward or back the way you came.
+  if (ringOf(fieldId) === KAMIENNY_MOST) {
+    return { phase: "ruch", roll, options: bridgeOptions(fieldId) };
+  }
   const ring = ringOf(fieldId) ?? DOLNY_KRAG;
   const options = moveOptions(ring, fieldId, roll).map((option) => ({
     direction: option.direction,

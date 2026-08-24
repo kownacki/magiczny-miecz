@@ -1,7 +1,7 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
 import { db } from "@/lib/supabase";
-import { FIELDS } from "@/lib/engine/board";
+import { FIELDS, KAMIENNY_MOST, ringOf } from "@/lib/engine/board";
 import {
   afterDraw,
   afterMove,
@@ -790,6 +790,45 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
   await journal(gameId, attacker.id, game.turn, "pojedynek", {
     target: target.seat_index,
     field: attacker.field_id,
+  });
+  await bumpRevision(gameId);
+}
+
+/**
+ * Declines a fight (17.2, 19).
+ *
+ * Rule 17.2 makes fleeing a decision taken BEFORE any dice, and 19.1 says
+ * whether it works depends on the character's own special abilities or the
+ * Krąg Płomieni spell — which are prose on the character card, not a die roll
+ * the app can adjudicate. So this records the attempt and its outcome as the
+ * players judge it, rather than inventing a mechanic the rulebook does not have.
+ *
+ * Rule 19.3 is the one hard limit: on the Kamienny Most you may only escape
+ * other characters, never the creatures guarding it.
+ */
+export async function escape(gameId: string, succeeded: boolean): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+
+  if (game.turn_state.phase !== "walka" && game.turn_state.phase !== "pole") {
+    throw new Error("Nie ma przed czym uciekać.");
+  }
+
+  const onBridge = ringOf(seat.field_id ?? "") === KAMIENNY_MOST;
+  const fleeingACard =
+    game.turn_state.phase === "walka" && game.turn_state.fight.opponentSeat === undefined;
+  if (onBridge && fleeingACard) {
+    throw new Error("Na Kamiennym Moście można wymknąć się tylko innym Postaciom (19.3).");
+  }
+
+  if (succeeded && game.turn_state.phase === "walka") {
+    // 19.1: having escaped, the character can no longer act on what it fled,
+    // so the fight simply ends and the field resumes.
+    await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
+  }
+  await journal(gameId, seat.id, game.turn, succeeded ? "ucieczka" : "ucieczka-nieudana", {
+    onBridge,
   });
   await bumpRevision(gameId);
 }

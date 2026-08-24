@@ -74,9 +74,11 @@ Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 - [x] The Beast and victory (14.7, 22) — two dice set the fight kind and its
       strength 10-15; losing costs two Życia, winning ends the game
 - [x] Death (4.4), carrying limit (5.4), spell capacity (2.6, 9.2), trophies (1.4)
-- [ ] Ring crossings (11) and the bridge (14) — blocked on verifying ring order
-- [ ] Player-versus-player combat (17.6) and escape (19)
-- [ ] Nature changes (7.2) and Turned to Stone (20)
+- [x] Player-versus-player combat (17.6) and escape (17.2, 19)
+- [x] Nature changes (7.2) and Turned to Stone (20)
+- [x] Bridge movement (10.3, 10.4) — one field per turn, die ignored, may turn back
+- [ ] Ring crossings (11.1-11.8) — blocked on verifying the middle/outer ring order
+- [ ] Stepping onto the bridge from Górny Krąg (11.9-11.11) — same blocker
 - [x] Vitest coverage — 53 tests green; caught a real bug where healing
       drained a character who was above four Życie
 

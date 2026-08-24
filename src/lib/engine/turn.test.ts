@@ -212,3 +212,36 @@ describe("resolution numerals (15.2, 16.6)", () => {
     expect(resolutionOrder(drawn)[0].cardId).toBe("mgla");
   });
 });
+
+describe("the Kamienny Most (10.3, 10.4)", () => {
+  it("moves one field per turn regardless of the die", () => {
+    const rolled6 = afterRoll("gra-ze-smiercia", 6);
+    if (rolled6.phase !== "ruch") throw new Error("expected ruch");
+    // Six pips, but the bridge only ever offers its two neighbours.
+    expect(rolled6.options.map((o) => o.fieldId)).toEqual([
+      "demon-zaglady",
+      "pulapka",
+    ]);
+  });
+
+  it("offers going back, since a character may leave at any time (10.4)", () => {
+    const phase = afterRoll("monstrum", 1);
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    expect(phase.options.map((o) => o.fieldId)).toContain("zamek-bestii");
+    expect(phase.options.map((o) => o.fieldId)).toContain("cerber");
+  });
+
+  it("offers only one way from an entrance, which is the end of the bridge", () => {
+    const phase = afterRoll("wejscie-na-most-a", 3);
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    expect(phase.options).toHaveLength(1);
+    expect(phase.options[0].fieldId).toBe("pulapka");
+  });
+
+  it("still uses the die on an ordinary ring", () => {
+    // Karczma is index 0, so three steps back wraps to index 11, Mokradła.
+    const phase = afterRoll("karczma", 3);
+    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    expect(phase.options.map((o) => o.fieldId)).toEqual(["bezdroza", "mokradla-2"]);
+  });
+});

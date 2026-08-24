@@ -388,6 +388,30 @@ function FightControls({
         </span>
       </p>
 
+      <div className="flex flex-wrap gap-2">
+        {/* Declared before any dice (17.2). Whether it works is the character's
+            own ability to judge (19.1), so both outcomes are offered rather
+            than the app rolling for something the rulebook does not roll for. */}
+        {fight.playerRoll === null && fight.enemyRoll === null && (
+          <>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "escape", succeeded: true })}
+              className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+            >
+              Wymknąłem się (19.1)
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "escape", succeeded: false })}
+              className="rounded border border-edge px-3 py-1 text-xs text-muted transition hover:border-vermilion disabled:opacity-50"
+            >
+              Próba nieudana
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <FightSide
           title="Ty"
