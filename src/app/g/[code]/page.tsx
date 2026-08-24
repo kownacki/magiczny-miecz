@@ -370,7 +370,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     }));
   })();
   const active = seats.find((seat) => seat.seat_index === game.active_seat);
-  const taken = new Set(seats.map((seat) => seat.character_id).filter(Boolean));
   const playing = game.status === "playing";
 
   const overlays = (
@@ -418,7 +417,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           seats={seats.map(asLobbySeat)}
           mySeatIndex={mySeatIndex}
           characters={CHARACTERS}
-          taken={taken}
           pickingFor={pickingFor ? asLobbySeat(pickingFor) : null}
           busy={busy}
           onAddLocal={addLocalPlayer}

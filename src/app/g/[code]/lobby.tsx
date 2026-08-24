@@ -44,7 +44,6 @@ export function Lobby({
   seats,
   mySeatIndex,
   characters,
-  taken,
   pickingFor,
   pendingCharacterId,
   busy,
@@ -67,7 +66,6 @@ export function Lobby({
   seats: LobbySeat[];
   mySeatIndex: number | null;
   characters: Character[];
-  taken: Set<string | null>;
   pickingFor: LobbySeat | null;
   /** Asked for, not yet granted. Everything else in the strip waits with it. */
   pendingCharacterId: string | null;
@@ -114,6 +112,12 @@ export function Lobby({
   // never blank once anything has been picked.
   const [preview, setPreview] = useState<string | null>(null);
   const reading = preview ?? target?.characterId ?? me?.characterId ?? null;
+
+  /** characterId -> the seat index holding it, which is also its colour. */
+  const ownerOf = new Map<string, number>();
+  for (const seat of seats) {
+    if (seat.characterId) ownerOf.set(seat.characterId, seat.seatIndex);
+  }
 
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
@@ -212,6 +216,7 @@ export function Lobby({
               onRemove={() => onRemove(seat)}
               onMakeHost={() => onMakeHost(seat)}
               onReady={seat.seatIndex === mySeatIndex ? onReady : undefined}
+              onPreview={setPreview}
             />
           );
         })}
@@ -259,7 +264,13 @@ export function Lobby({
         <div className="overflow-x-auto pb-1">
           <div className="mx-auto grid w-fit grid-flow-col grid-rows-2 gap-2">
           {characters.map((character) => {
-            const used = taken.has(character.id) && character.id !== target?.characterId;
+            // Every character somebody holds is out, and wears the colour of
+            // whoever holds it — the same colour as their dot on the board and
+            // the stripe on their slot. Who took Kapłanka is a question people
+            // ask out loud, and the answer was only readable by comparing the
+            // strip against six seat cards one at a time.
+            const ownerSeat = ownerOf.get(character.id);
+            const owner = ownerSeat === undefined ? null : SEAT_COLOURS[ownerSeat % SEAT_COLOURS.length];
             const isTargets = target?.characterId === character.id;
             // While a request is out, the one card it is about stays lit and
             // the rest step back. Anything else — dimming all of them, or
@@ -279,23 +290,28 @@ export function Lobby({
                 // rewrite the seat with the values it already has and, worse,
                 // clear the ready flag — so the one thing a second click on
                 // your own character could do is un-ready you.
-                disabled={busy || used || isTargets || !target || pendingCharacterId !== null}
+                disabled={busy || owner !== null || !target || pendingCharacterId !== null}
                 onClick={() => target && onChooseCharacter(target, character.id)}
                 onMouseEnter={() => setPreview(character.id)}
                 onMouseLeave={() => setPreview(null)}
                 onFocus={() => setPreview(character.id)}
                 onBlur={() => setPreview(null)}
                 title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
+                style={owner && !isPending && !waiting ? { borderColor: owner, borderWidth: 2 } : undefined}
                 className={`w-[76px] shrink-0 overflow-hidden rounded border transition disabled:cursor-default ${
                   isPending
                     ? "animate-pulse border-ochre opacity-100"
                     : waiting
                       ? "border-edge opacity-20"
-                      : isTargets
-                        ? "border-ochre"
-                        : used
-                          ? "border-edge opacity-25"
-                          : "border-edge hover:border-ochre disabled:opacity-40"
+                      : owner
+                        ? // Dimmed because it is not on offer, coloured because
+                          // whose it is still matters — and yours a shade
+                          // brighter, since “which did I pick?” is the one
+                          // you go looking for.
+                          isTargets
+                          ? "opacity-70"
+                          : "opacity-35"
+                        : "border-edge hover:border-ochre disabled:opacity-40"
                 }`}
               >
                 {standee ? (
@@ -373,6 +389,7 @@ function SeatSlot({
   onRemove,
   onMakeHost,
   onReady,
+  onPreview,
 }: {
   seat: LobbySeat;
   character: Character | null;
@@ -386,6 +403,8 @@ function SeatSlot({
   onMakeHost: () => void;
   /** Only your own slot gets this. */
   onReady?: (ready: boolean) => void;
+  /** Points the reading column at this player's character while pointed at. */
+  onPreview: (characterId: string | null) => void;
 }) {
   // The small card, because that is the piece standing on the board for this
   // player — it is what "which one are you?" is answered with at a table.
@@ -396,6 +415,8 @@ function SeatSlot({
 
   return (
     <div
+      onMouseEnter={() => onPreview(seat.characterId)}
+      onMouseLeave={() => onPreview(null)}
       style={{ borderTopColor: colour, borderTopWidth: 3 }}
       className={`relative flex h-full max-h-[340px] w-[190px] shrink-0 flex-col rounded-lg border p-2 ${
         isTarget
