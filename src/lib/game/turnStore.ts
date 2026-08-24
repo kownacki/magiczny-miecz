@@ -5,6 +5,7 @@ import {
   FERRY_TOLL,
   FIELDS,
   KAMIENNY_MOST,
+  type BridgeEntrance,
   isFerry,
   ringOf,
 } from "@/lib/engine/board";
@@ -17,6 +18,9 @@ import {
   bridgeBlockUntil,
   bridgeBlocked,
   endFight,
+  recordGuardianStrength,
+  startGuardianFight,
+  strengthPending,
   endTurn,
   nextSeat,
   recordFightRoll,
@@ -442,6 +446,25 @@ export async function resolveFight(gameId: string): Promise<void> {
   const { fight } = game.turn_state;
   if (!fight.result) throw new Error("Walka nie jest rozstrzygnięta.");
 
+  // A guardian is not a card: it charges what its doorway charges rather than
+  // the usual point of Życie, and winning carries the character through instead
+  // of returning it to the field the fight interrupted.
+  if (fight.guardian) {
+    const outcome = fight.result.outcome;
+    if (fight.guardian.kind === "most") {
+      await settleBridge(gameId, fight.guardian.entrance, outcome);
+    } else {
+      await settleCrossing(gameId, fight.guardian.crossing, outcome);
+    }
+    await journal(gameId, seat.id, game.turn, "straznik-koniec", {
+      guardian: fight.cardName,
+      outcome,
+      enemyTotal: fight.enemyTotal,
+    });
+    await bumpRevision(gameId);
+    return;
+  }
+
   // In a duel the loser may be either side; against a card only the character
   // can lose. Rule 17.9 gives the winner a choice of spoils, so only the life
   // is applied automatically and the rest is left to the players.
@@ -835,6 +858,81 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
 
 
 /**
+ * Squares up to whatever is guarding the way through.
+ *
+ * The bridge entrances and the Lodowy Las all print a creature with a strength
+ * and expect a normal fight, so they get one rather than a pair of buttons
+ * asking the table who won. Which creature it is comes from where the character
+ * is standing and what it is trying to do.
+ */
+export async function fightGuardian(gameId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+
+  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const bonus = bonusFromHoldings(
+    holdings.map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face })),
+  );
+  const totals = {
+    miecz: seat.miecz_own + bonus.miecz,
+    magia: seat.magia_own + bonus.magia,
+  };
+
+  if (game.turn_state.phase === "most") {
+    const next = startGuardianFight(
+      { kind: "most", entrance: game.turn_state.bridge },
+      totals,
+      seat.field_id,
+    );
+    await db.from("games").update({ turn_state: next }).eq("id", gameId);
+    await journal(gameId, seat.id, game.turn, "straznik-start", {
+      guardian: game.turn_state.bridge.guardian,
+    });
+    await bumpRevision(gameId);
+    return;
+  }
+
+  const crossing = crossingFrom(seat.field_id);
+  if (!crossing || crossing.test?.kind !== "walka") {
+    throw new Error("Nie ma tu nikogo, z kim trzeba walczyć.");
+  }
+  const next = startGuardianFight({ kind: "przeprawa", crossing }, totals, seat.field_id);
+  await db.from("games").update({ turn_state: next }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "straznik-start", {
+    guardian: crossing.test.guardian,
+  });
+  await bumpRevision(gameId);
+}
+
+/** Throws the die that gives a bridge guardian its Miecz or Magia (5 to 10). */
+export async function rollGuardianStrength(
+  gameId: string,
+  value: number | null,
+): Promise<{ strength: number }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
+  if (!strengthPending(game.turn_state.fight)) {
+    throw new Error("Siła przeciwnika jest już znana.");
+  }
+
+  const roll = value ?? 1 + Math.floor(Math.random() * 6);
+  if (!Number.isInteger(roll) || roll < 1 || roll > 6) {
+    throw new Error("Kostka daje wynik od 1 do 6.");
+  }
+  const next = recordGuardianStrength(game.turn_state, roll);
+  await db.from("games").update({ turn_state: next }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "straznik-sila", { roll }, value !== null);
+  await bumpRevision(gameId);
+  return {
+    strength: next.phase === "walka" ? next.fight.enemyTotal : 0,
+  };
+}
+
+/**
  * The ferryman at a Przeprawa.
  *
  * "Musisz przeprawić się przez rzekę płacąc przewoźnikowi 1 Sz. Z. lub wracasz
@@ -879,7 +977,16 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
 }
 
 /**
- * Settles the guardian at a bridge entrance (11.9-11.11).
+ * What a fight came to, from the character's side.
+ *
+ * The same three words the combat engine produces, used here so a guardian
+ * settled by an actual fight and one settled by the table saying how it went
+ * travel through exactly the same code.
+ */
+export type FightOutcome = "wygrana" | "remis" | "przegrana";
+
+/**
+ * Applies the result of a bridge guardian (11.9-11.11).
  *
  * Three outcomes, not two. 11.11 gives a draw its own consequence: "Jeżeli
  * wynik walki jest remisowy Postać nie traci punktu Magii lub Miecza, lecz
@@ -890,19 +997,14 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
  * Whichever way it goes the turn ends here: on a win at the bridge entrance
  * (11.10), otherwise back on the ring at the field the attempt was made from.
  */
-export type BridgeOutcome = "wygrana" | "remis" | "porazka";
-
-export async function enterBridge(
+async function settleBridge(
   gameId: string,
-  outcome: BridgeOutcome,
+  entrance: BridgeEntrance,
+  outcome: FightOutcome,
 ): Promise<{ at: string | null }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "most") {
-    throw new Error("Nie ma teraz próby wejścia na Most.");
-  }
-  const entrance = game.turn_state.bridge;
 
   if (outcome === "wygrana") {
     const field = FIELDS.get(entrance.entersAt);
@@ -915,11 +1017,10 @@ export async function enterBridge(
       from: entrance.from,
       guardian: entrance.guardian,
     });
-    await bumpRevision(gameId);
     return { at: entrance.entersAt };
   }
 
-  if (outcome === "porazka") {
+  if (outcome === "przegrana") {
     const column = entrance.stat === "magia" ? "magia_own" : "miecz_own";
     const floor = entrance.stat === "magia" ? seat.magia_floor : seat.miecz_floor;
     const current = entrance.stat === "magia" ? seat.magia_own : seat.miecz_own;
@@ -933,10 +1034,7 @@ export async function enterBridge(
   // stays on the ring at the entrance and carries on from there.
   //
   // `turn` counts rounds, not seat-turns, so a seat gets exactly one go per
-  // number. Barring only the NEXT round means the block has to outlast it:
-  // stored as turn + 2 and tested with `> turn`, so an attempt on round 3 is
-  // barred on round 4 and allowed again on round 5. Storing turn + 1 barred
-  // nothing at all.
+  // number — see bridgeBlockUntil for why that is turn + 2 and not turn + 1.
   await db
     .from("seats")
     .update({ bridge_blocked_until_turn: bridgeBlockUntil(game.turn) })
@@ -947,8 +1045,80 @@ export async function enterBridge(
     guardian: entrance.guardian,
     outcome,
   });
-  await bumpRevision(gameId);
   return { at: null };
+}
+
+/**
+ * Applies the result of a crossing between rings (11.4, 11.8).
+ *
+ * Failure costs a point of Życie and stops the journey. A draw costs nothing
+ * but still stops it. Either way the character stays put and may try again next
+ * turn, which 11.4 says is exactly what the next turn is for.
+ */
+async function settleCrossing(
+  gameId: string,
+  crossing: NonNullable<ReturnType<typeof crossingFrom>>,
+  outcome: FightOutcome,
+  extra: Record<string, unknown> = {},
+): Promise<{ to: string | null }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+
+  if (outcome !== "wygrana") {
+    if (outcome === "przegrana") {
+      const left = Math.max(0, seat.zycie - 1);
+      await db.from("seats").update({ zycie: left }).eq("id", seat.id);
+      if (left === 0) await killSeat(gameId, seat.id);
+    }
+    // The turn state is left where it was: still standing on the crossing field,
+    // free to try again next turn.
+    await journal(gameId, seat.id, game.turn, "przeprawa-nieudana", {
+      from: crossing.from,
+      obstacle: crossing.obstacle,
+      outcome,
+      ...extra,
+    });
+    return { to: null };
+  }
+
+  const field = FIELDS.get(crossing.to);
+  if (!field) throw new Error(`Nieznane pole: ${crossing.to}`);
+  await db.from("seats").update({ field_id: crossing.to }).eq("id", seat.id);
+  await db
+    .from("games")
+    .update({ turn_state: afterMove(field, crossing.from) })
+    .eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "przeprawa", {
+    from: crossing.from,
+    to: crossing.to,
+    obstacle: crossing.obstacle,
+    ...extra,
+  });
+  return { to: crossing.to };
+}
+
+/**
+ * The table reporting how a bridge guardian went, where it is not being fought
+ * through the app — companion mode with the creature resolved on the table.
+ */
+export type BridgeOutcome = "wygrana" | "remis" | "porazka";
+
+export async function enterBridge(
+  gameId: string,
+  outcome: BridgeOutcome,
+): Promise<{ at: string | null }> {
+  const game = await loadGame(gameId);
+  if (game.turn_state.phase !== "most") {
+    throw new Error("Nie ma teraz próby wejścia na Most.");
+  }
+  const at = await settleBridge(
+    gameId,
+    game.turn_state.bridge,
+    outcome === "porazka" ? "przegrana" : outcome,
+  );
+  await bumpRevision(gameId);
+  return at;
 }
 
 /**
@@ -956,15 +1126,10 @@ export async function enterBridge(
  *
  * Only two places on the whole board allow it, only one direction of each is
  * defended, and the two obstacles are different in kind. The Trzęsawiska are a
- * threshold — two dice against the character's Magia — so the app can settle
- * them outright; the Lodowy Las is a fight with the Rycerz Wiecznych Śniegów
- * (Miecz 10), which goes through the same reported outcome as any other fight
- * until the fight machinery is wired to it.
- *
- * Failure costs a point of Życie and stops the journey (11.4, 11.8). A draw —
- * which only the fight can produce — costs nothing but still stops it. Either
- * way the character stays put and may try again next turn, which 11.4 says is
- * exactly what the next turn is for.
+ * threshold — two dice against the character's Magia — so the app settles them
+ * outright. The Lodowy Las is a fight with the Rycerz Wiecznych Śniegów, which
+ * normally goes through `fightGuardian` and the combat engine; this route is
+ * what remains for a table resolving that fight themselves.
  */
 export type CrossOutcome = "udana" | "remis" | "nieudana";
 
@@ -1007,43 +1172,18 @@ export async function crossRing(
     dice = rolled;
     outcome = trzesawiskaOutcome(rolled, magia);
   } else if (crossing.test) {
-    // A fight, so the table says how it went. 11.8 gives a draw its own result.
     outcome = input.outcome ?? "udana";
   }
 
-  if (outcome !== "udana") {
-    // 11.4 and 11.8: a loss costs a point of Życie, a draw costs nothing, and
-    // both stop the journey where it stands.
-    if (outcome === "nieudana") {
-      const left = Math.max(0, seat.zycie - 1);
-      await db.from("seats").update({ zycie: left }).eq("id", seat.id);
-      if (left === 0) await killSeat(gameId, seat.id);
-    }
-    await journal(gameId, seat.id, game.turn, "przeprawa-nieudana", {
-      from: crossing.from,
-      obstacle: crossing.obstacle,
-      outcome,
-      ...(dice ? { dice, magia } : {}),
-    });
-    await bumpRevision(gameId);
-    return { to: null, outcome, ...(dice ? { dice, magia } : {}) };
-  }
-
-  const field = FIELDS.get(crossing.to);
-  if (!field) throw new Error(`Nieznane pole: ${crossing.to}`);
-  await db.from("seats").update({ field_id: crossing.to }).eq("id", seat.id);
-  await db
-    .from("games")
-    .update({ turn_state: afterMove(field, crossing.from) })
-    .eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "przeprawa", {
-    from: crossing.from,
-    to: crossing.to,
-    obstacle: crossing.obstacle,
-    ...(dice ? { dice, magia } : {}),
-  });
+  const extra = dice ? { dice, magia } : {};
+  const { to } = await settleCrossing(
+    gameId,
+    crossing,
+    outcome === "udana" ? "wygrana" : outcome === "remis" ? "remis" : "przegrana",
+    extra,
+  );
   await bumpRevision(gameId);
-  return { to: crossing.to, outcome, ...(dice ? { dice, magia } : {}) };
+  return { to, outcome, ...extra };
 }
 
 /**

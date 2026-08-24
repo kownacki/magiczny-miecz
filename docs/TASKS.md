@@ -189,12 +189,13 @@ Now the primary mode; companion is the opt-in.
 These came out of playing a real game through the browser. Each is a rule the
 engine gets wrong or does not have, not a missing feature.
 
-- [ ] **The three guardians are still adjudicated by hand.** Their numbers are
-      now in the engine — Kamienny Potwór and Duch Skał are a die plus four,
-      Rycerz Wiecznych Śniegów a flat Miecz 10 — and shown to the players, but
-      the fight itself still goes through a reported outcome rather than the
-      combat machinery. Wiring it up means letting a `Fight` resolve to
-      something other than the field it interrupted.
+- [x] **The three guardians are fought, not adjudicated.** "Stocz walkę" runs a
+      real fight through the combat engine: the bridge guardians roll for their
+      own strength first (a die plus four, as the board prints it), the Rycerz
+      brings his printed Miecz 10, and the outcome is routed to the doorway
+      rather than back to the field — so a loss costs what 11.11 or 11.8 says it
+      costs. Reporting an outcome by hand is still there for a table settling
+      the fight itself.
 - [x] **11.10: the bridge is entered in passing, not on arrival.** Now a third
       move option, offered only when the walk passes an entrance with a step
       still to spend, and never when the move ends on one.

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DOLNY_KRAG, destination, isFerry, moveOptions, ringOf } from "./board";
+import {
+  BRIDGE_ENTRANCES,
+  DOLNY_KRAG,
+  destination,
+  isFerry,
+  moveOptions,
+  ringOf,
+} from "./board";
+import { crossingFrom } from "./rings";
 import {
   afterDraw,
   afterMove,
@@ -7,6 +15,9 @@ import {
   bridgeBlockUntil,
   bridgeBlocked,
   endFight,
+  recordGuardianStrength,
+  startGuardianFight,
+  strengthPending,
   nextSeat,
   recordFightRoll,
   startFight,
@@ -329,5 +340,67 @@ describe("the one-turn bar after a failed bridge attempt (11.11)", () => {
 
   it("does not bar a character that never tried", () => {
     expect(bridgeBlocked(null, 7)).toBe(false);
+  });
+});
+
+describe("fighting a guardian", () => {
+  const ruins = BRIDGE_ENTRANCES.find((e) => e.from === "ruiny-twierdzy")!;
+  const totals = { miecz: 5, magia: 2 };
+
+  it("starts a bridge guardian with no strength until its die is thrown", () => {
+    const phase = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(strengthPending(phase.fight)).toBe(true);
+    expect(phase.fight.enemyTotal).toBe(0);
+    // Kamienny Potwór is fought on Miecz, so the character brings its Miecz.
+    expect(phase.fight.kind).toBe("zwykla");
+    expect(phase.fight.playerTotal).toBe(5);
+  });
+
+  it("reads the board's table as a die plus four", () => {
+    const opened = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    for (const [roll, strength] of [
+      [1, 5],
+      [2, 6],
+      [3, 7],
+      [4, 8],
+      [5, 9],
+      [6, 10],
+    ]) {
+      const phase = recordGuardianStrength(opened, roll);
+      if (phase.phase !== "walka") throw new Error("expected walka");
+      expect(phase.fight.enemyTotal, `roll ${roll}`).toBe(strength);
+      expect(strengthPending(phase.fight)).toBe(false);
+    }
+  });
+
+  it("refuses combat dice while the strength die is owed", () => {
+    // Rolling early would compare against zero and hand over a free win.
+    const opened = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    const same = recordFightRoll(opened, "player", 6);
+    expect(same).toEqual(opened);
+  });
+
+  it("fights the Duch Skał on Magia, not Miecz", () => {
+    const city = BRIDGE_ENTRANCES.find((e) => e.from === "wymarle-miasto")!;
+    const phase = startGuardianFight({ kind: "most", entrance: city }, totals, "wymarle-miasto");
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(phase.fight.kind).toBe("magiczna");
+    expect(phase.fight.playerTotal).toBe(2);
+  });
+
+  it("gives the Rycerz his printed Miecz and asks for no strength die", () => {
+    const crossing = crossingFrom("przelecz-wichrow")!;
+    const phase = startGuardianFight({ kind: "przeprawa", crossing }, totals, "przelecz-wichrow");
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(phase.fight.cardName).toBe("Rycerz Wiecznych Śniegów");
+    expect(phase.fight.enemyTotal).toBe(10);
+    expect(strengthPending(phase.fight)).toBe(false);
+  });
+
+  it("carries what the fight is for, so its outcome can be routed", () => {
+    const phase = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    if (phase.phase !== "walka") throw new Error("expected walka");
+    expect(phase.fight.guardian).toEqual({ kind: "most", entrance: ruins });
   });
 });

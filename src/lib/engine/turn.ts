@@ -5,6 +5,7 @@ import {
   FIELDS,
   KAMIENNY_MOST,
   type BoardField,
+  GUARDIAN_STRENGTH_OFFSET,
   type BridgeEntrance,
   type Direction,
   bridgeEntranceFrom,
@@ -12,6 +13,7 @@ import {
   ringOf,
 } from "./board";
 import { resolutionOrder, type TurnCard } from "./state";
+import type { Crossing } from "./rings";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 
 /**
@@ -64,7 +66,28 @@ export interface Fight {
   fieldId: string;
   draw: number;
   drawn: TurnCard[];
+  /**
+   * Set when this is not a fight with a drawn card but with something standing
+   * in a doorway — a bridge guardian or the Rycerz in the Lodowy Las.
+   *
+   * It changes both ends of the fight. A loss costs what that doorway charges
+   * rather than the usual point of Życie (11.4, 11.8, 11.11), and winning moves
+   * the character through rather than returning it to the field the fight
+   * interrupted.
+   */
+  guardian?: GuardianFight;
+  /**
+   * The die that decides the guardian's own strength, where the board makes it
+   * a roll rather than a number: "1 - 5; 2 - 6; ... 6 - 10" at both bridge
+   * entrances. Null while it is still owed. Absent when the creature has a
+   * printed strength, as the Rycerz does.
+   */
+  strengthRoll?: number | null;
 }
+
+export type GuardianFight =
+  | { kind: "most"; entrance: BridgeEntrance }
+  | { kind: "przeprawa"; crossing: Crossing };
 
 export interface TurnMoveOption {
   direction: Direction;
@@ -264,6 +287,75 @@ export function startFight(
   };
 }
 
+/**
+ * Opens a fight with something guarding a way off the ring.
+ *
+ * The two bridge guardians have no strength until a die is thrown for them, so
+ * the fight starts with `enemyTotal` at zero and `strengthRoll` owed; the Rycerz
+ * Wiecznych Śniegów prints Miecz 10 and needs no such step.
+ */
+export function startGuardianFight(
+  guardian: GuardianFight,
+  playerTotals: { miecz: number; magia: number },
+  fieldId: string,
+): TurnPhase {
+  const rolled = guardian.kind === "most";
+  const stat = guardian.kind === "most" ? guardian.entrance.stat : "miecz";
+  const kind: CombatKind = stat === "magia" ? "magiczna" : "zwykla";
+  const name =
+    guardian.kind === "most"
+      ? guardian.entrance.guardian
+      : guardian.crossing.test?.kind === "walka"
+        ? guardian.crossing.test.guardian
+        : "Strażnik";
+  const printed =
+    guardian.kind === "przeprawa" && guardian.crossing.test?.kind === "walka"
+      ? guardian.crossing.test.miecz
+      : 0;
+
+  return {
+    phase: "walka",
+    fight: {
+      cardId: `guardian:${name}`,
+      cardName: name,
+      kind,
+      enemyTotal: rolled ? 0 : printed,
+      playerTotal: kind === "magiczna" ? playerTotals.magia : playerTotals.miecz,
+      playerRoll: null,
+      enemyRoll: null,
+      result: null,
+      fieldId,
+      draw: 0,
+      drawn: [],
+      guardian,
+      ...(rolled ? { strengthRoll: null } : {}),
+    },
+  };
+}
+
+/** Whether the guardian's own strength is still owed a die. */
+export function strengthPending(fight: Fight): boolean {
+  return fight.strengthRoll === null;
+}
+
+/**
+ * Fixes a bridge guardian's strength from its die.
+ *
+ * Both entrances print the same table — 1 gives 5 and each pip adds one, up to
+ * 10 — which is a die plus four.
+ */
+export function recordGuardianStrength(phase: TurnPhase, roll: number): TurnPhase {
+  if (phase.phase !== "walka") return phase;
+  return {
+    ...phase,
+    fight: {
+      ...phase.fight,
+      strengthRoll: roll,
+      enemyTotal: roll + GUARDIAN_STRENGTH_OFFSET,
+    },
+  };
+}
+
 export function setFightTotal(phase: TurnPhase, playerTotal: number): TurnPhase {
   if (phase.phase !== "walka") return phase;
   return { ...phase, fight: { ...phase.fight, playerTotal: Math.max(0, playerTotal) } };
@@ -280,6 +372,9 @@ export function recordFightRoll(
   roll: number,
 ): TurnPhase {
   if (phase.phase !== "walka") return phase;
+  // Rolling for the fight before the guardian has a strength would compare
+  // against zero and hand the player a free win.
+  if (strengthPending(phase.fight)) return phase;
   const fight = {
     ...phase.fight,
     ...(side === "player" ? { playerRoll: roll } : { enemyRoll: roll }),

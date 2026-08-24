@@ -221,6 +221,13 @@ function BridgeControls({
       <div className="flex flex-wrap gap-2">
         <button
           disabled={busy}
+          onClick={() => onAction({ action: "guardian" })}
+          className="rounded border border-ochre/60 px-3 py-1 text-xs text-ochre transition hover:bg-edge disabled:opacity-50"
+        >
+          Stocz walkę
+        </button>
+        <button
+          disabled={busy}
           onClick={() => onAction({ action: "bridge", outcome: "wygrana" })}
           className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
         >
@@ -322,6 +329,13 @@ function Crossing({
             (Miecz {test.miecz}). Remis nie kosztuje Życia, ale też zatrzymuje (11.8).
           </p>
           <div className="flex flex-wrap gap-2">
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "guardian" })}
+              className="rounded border border-ochre/60 px-3 py-1 text-xs text-ochre transition hover:bg-edge disabled:opacity-50"
+            >
+              Stocz walkę
+            </button>
             <button
               disabled={busy}
               onClick={() => onAction({ action: "cross", outcome: "udana" })}
@@ -607,6 +621,44 @@ function FightControls({
   onAction: Props["onAction"];
 }) {
   const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
+
+  // A bridge guardian has no strength until a die is thrown for it — the board
+  // prints "1 - 5; 2 - 6; ... 6 - 10" at both entrances — so nothing else about
+  // the fight can be asked for until that is settled.
+  if (fight.strengthRoll === null) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-muted">
+          Przeciwnik: <span className="text-vermilion">{fight.cardName}</span>
+        </p>
+        <p className="text-xs text-muted/80">
+          Rzuć kostką, by poznać jego {label}: 1&nbsp;→&nbsp;5, 2&nbsp;→&nbsp;6,
+          3&nbsp;→&nbsp;7, 4&nbsp;→&nbsp;8, 5&nbsp;→&nbsp;9, 6&nbsp;→&nbsp;10.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            disabled={busy}
+            onClick={() => onAction({ action: "guardian-strength" })}
+            className="rounded border border-ochre/60 bg-raised px-4 py-2 font-[family-name:var(--font-display)] text-sm tracking-wide text-ochre transition hover:bg-edge disabled:opacity-50"
+          >
+            Rzuć kostką
+          </button>
+          <span className="text-xs text-muted">albo wpisz wynik</span>
+          {[1, 2, 3, 4, 5, 6].map((value) => (
+            <button
+              key={value}
+              disabled={busy}
+              onClick={() => onAction({ action: "guardian-strength", value })}
+              className="tnum rounded border border-edge px-3 py-2 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* Phrased as a label rather than "walka z <nazwa>" because Polish would
@@ -618,6 +670,11 @@ function FightControls({
         <span className="text-xs">
           ({fight.kind === "magiczna" ? "walka magiczna" : "walka zwykła"})
         </span>
+        {typeof fight.strengthRoll === "number" && (
+          <span className="ml-2 text-xs text-muted/80">
+            kostka {fight.strengthRoll} → {label} {fight.enemyTotal}
+          </span>
+        )}
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -670,31 +727,100 @@ function FightControls({
       {fight.result && (
         <div className="rounded border border-edge bg-night p-3">
           <p className="text-sm">
-            {fight.result.outcome === "remis" ? (
-              <span className="text-muted">
-                Remis — nikt nic nie traci (17.10).
-              </span>
-            ) : fight.result.outcome === "wygrana" ? (
-              <span className="text-verdigris">
-                Wygrywasz. Możesz odebrać 1 Życie, 1 Przedmiot albo 1 Sztukę Złota (17.9).
-              </span>
-            ) : (
-              <span className="text-vermilion">
-                Przegrywasz — tracisz 1 punkt Życia
-                {fight.kind === "magiczna" ? " (nie można temu zapobiec, 18.2)" : ""}.
-              </span>
-            )}
+            <FightVerdict fight={fight} outcome={fight.result.outcome} />
           </p>
           <button
             disabled={busy}
             onClick={() => onAction({ action: "fight-done" })}
             className="mt-3 rounded border border-edge bg-raised px-4 py-2 text-sm text-ink hover:border-ochre disabled:opacity-50"
           >
-            Zastosuj i wróć
+            {fight.guardian ? "Zastosuj i zakończ turę" : "Zastosuj i wróć"}
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * What the result of this fight actually costs.
+ *
+ * A guardian charges what its doorway charges, not the usual point of Życie: a
+ * bridge guardian takes a point of the very stat it was fought with (11.11) and
+ * the Rycerz stops the journey (11.8). Saying "tracisz 1 punkt Życia" at a
+ * bridge would have been wrong on every count — wrong stat, wrong rule, and
+ * contradicted by what the app was about to do.
+ */
+function FightVerdict({
+  fight,
+  outcome,
+}: {
+  fight: Fight;
+  outcome: "wygrana" | "przegrana" | "remis";
+}) {
+  const guardian = fight.guardian;
+
+  if (outcome === "remis") {
+    if (guardian?.kind === "most") {
+      return (
+        <span className="text-muted">
+          Remis — nic nie tracisz, ale nie wchodzisz na Most i nie spróbujesz
+          ponownie w następnej turze (11.11).
+        </span>
+      );
+    }
+    if (guardian) {
+      return (
+        <span className="text-muted">
+          Remis — nie tracisz Życia, ale zatrzymujesz się po tej stronie (11.8).
+        </span>
+      );
+    }
+    return <span className="text-muted">Remis — nikt nic nie traci (17.10).</span>;
+  }
+
+  if (outcome === "wygrana") {
+    if (guardian?.kind === "most") {
+      return <span className="text-verdigris">Pokonany — wchodzisz na Most (11.10).</span>;
+    }
+    if (guardian) {
+      return <span className="text-verdigris">Pokonany — przeprawiasz się (11.7).</span>;
+    }
+    return (
+      <span className="text-verdigris">
+        Wygrywasz. Możesz odebrać 1 Życie, 1 Przedmiot albo 1 Sztukę Złota (17.9).
+      </span>
+    );
+  }
+
+  if (guardian?.kind === "most") {
+    const stat = guardian.entrance.stat === "magia" ? "Magii" : "Miecza";
+    return (
+      <span className="text-vermilion">
+        Przegrywasz — tracisz 1 punkt {stat} i nie spróbujesz ponownie w następnej
+        turze (11.11).{" "}
+        {/* Own points never fall below what the character started with (1.3,
+            2.3), so a character still on its starting value pays nothing here.
+            Said plainly, because promising a cost that does not arrive looks
+            like the referee failing to apply its own ruling. */}
+        <span className="text-muted">
+          Punktu nie stracisz, jeśli masz już tylko tyle, ile na starcie (1.3).
+        </span>
+      </span>
+    );
+  }
+  if (guardian) {
+    return (
+      <span className="text-vermilion">
+        Przegrywasz — tracisz 1 punkt Życia i zatrzymujesz się (11.8).
+      </span>
+    );
+  }
+  return (
+    <span className="text-vermilion">
+      Przegrywasz — tracisz 1 punkt Życia
+      {fight.kind === "magiczna" ? " (nie można temu zapobiec, 18.2)" : ""}.
+    </span>
   );
 }
 

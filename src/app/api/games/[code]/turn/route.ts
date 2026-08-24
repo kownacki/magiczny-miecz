@@ -4,7 +4,9 @@ import {
   attackSeat,
   beginFight,
   crossRing,
+  fightGuardian,
   payFerry,
+  rollGuardianStrength,
   drawCard,
   enterBridge,
   escape,
@@ -101,6 +103,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             : "wygrana";
         return NextResponse.json(await enterBridge(game.id, outcome));
       }
+      case "guardian":
+        // Fight whatever is blocking the way, rather than reporting an outcome.
+        await fightGuardian(game.id);
+        break;
+      case "guardian-strength":
+        return NextResponse.json(
+          await rollGuardianStrength(
+            game.id,
+            typeof body.value === "number" ? body.value : null,
+          ),
+        );
       case "ferry":
         return NextResponse.json(await payFerry(game.id, body.pay === true));
       case "escape":
