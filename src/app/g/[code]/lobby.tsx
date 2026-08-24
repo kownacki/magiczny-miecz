@@ -46,6 +46,7 @@ export function Lobby({
   characters,
   taken,
   pickingFor,
+  pendingCharacterId,
   busy,
   onAddLocal,
   onPickFor,
@@ -68,6 +69,8 @@ export function Lobby({
   characters: Character[];
   taken: Set<string | null>;
   pickingFor: LobbySeat | null;
+  /** Asked for, not yet granted. Everything else in the strip waits with it. */
+  pendingCharacterId: string | null;
   busy: boolean;
   onAddLocal: (name: string) => void;
   onPickFor: (seat: LobbySeat | null) => void;
@@ -258,6 +261,12 @@ export function Lobby({
           {characters.map((character) => {
             const used = taken.has(character.id) && character.id !== target?.characterId;
             const isTargets = target?.characterId === character.id;
+            // While a request is out, the one card it is about stays lit and
+            // the rest step back. Anything else — dimming all of them, or
+            // dimming none — leaves the player unable to tell whether their
+            // click registered, which is the whole complaint.
+            const isPending = pendingCharacterId === character.id;
+            const waiting = pendingCharacterId !== null && !isPending;
             // The mała Karta — the one that goes in a plastic stand. It carries
             // its own name in print and is a figure rather than a page, which
             // is what makes 27 of them scannable at this size where 27 pages of
@@ -266,7 +275,7 @@ export function Lobby({
             return (
               <button
                 key={character.id}
-                disabled={busy || used || !target}
+                disabled={busy || used || !target || pendingCharacterId !== null}
                 onClick={() => target && onChooseCharacter(target, character.id)}
                 onMouseEnter={() => setPreview(character.id)}
                 onMouseLeave={() => setPreview(null)}
@@ -274,11 +283,15 @@ export function Lobby({
                 onBlur={() => setPreview(null)}
                 title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
                 className={`w-[76px] shrink-0 overflow-hidden rounded border transition disabled:cursor-default ${
-                  isTargets
-                    ? "border-ochre"
-                    : used
-                      ? "border-edge opacity-25"
-                      : "border-edge hover:border-ochre disabled:opacity-40"
+                  isPending
+                    ? "animate-pulse border-ochre opacity-100"
+                    : waiting
+                      ? "border-edge opacity-20"
+                      : isTargets
+                        ? "border-ochre"
+                        : used
+                          ? "border-edge opacity-25"
+                          : "border-edge hover:border-ochre disabled:opacity-40"
                 }`}
               >
                 {standee ? (

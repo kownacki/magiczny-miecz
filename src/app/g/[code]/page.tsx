@@ -120,6 +120,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [libraryOpen, setLibraryOpen] = useState(false);
   /** A seatless visitor who chose to watch rather than take a character over. */
   const [watching, setWatching] = useState(false);
+  /** The character asked for and not yet heard back about (see `chooseCharacter`). */
+  const [pendingCharacter, setPendingCharacter] = useState<string | null>(null);
   /** Which seat is choosing a character; "auto" lets the app decide. */
   const [picking, setPicking] = useState<string | "auto" | null>("auto");
   const [error, setError] = useState<string | null>(null);
@@ -272,6 +274,41 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     refresh();
   }
 
+  /**
+   * Asks for a character, and waits.
+   *
+   * Two people can want Kapłanka at the same instant and only the server knows
+   * who asked first, so nothing is taken here optimistically: the card appears
+   * on the seat when the server says it is yours and not before.
+   *
+   * Losing that race is not an error. Somebody else was quicker, the roster
+   * updates to show the character as taken, and the choice you already had
+   * stands — there is nothing for the player to do about it and nothing to
+   * apologise for, so it happens quietly.
+   *
+   * This deliberately does not go through `post`: that raises the table-wide
+   * busy flag, which would grey out the whole strip when the point is to grey
+   * out everything *except* the card being asked for.
+   */
+  async function chooseCharacter(seatId: string, characterId: string) {
+    if (pendingCharacter) return; // one at a time; a double-click is not two choices
+    setPendingCharacter(characterId);
+    try {
+      await fetch(`/api/games/${code}/character`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ characterId, seatId, token: readSeatToken(code) }),
+      });
+      // Taken or refused, the next question is the same one: what is true now?
+      await refresh();
+    } catch {
+      // A dropped request leaves the table exactly as it was, which is the
+      // same outcome as being refused.
+    } finally {
+      setPendingCharacter(null);
+    }
+  }
+
   async function addLocalPlayer(name: string) {
     const response = await fetch(`/api/games/${code}/join`, {
       method: "POST",
@@ -382,8 +419,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           busy={busy}
           onAddLocal={addLocalPlayer}
           onPickFor={(seat) => setPicking(seat ? seat.id : null)}
-          onChooseCharacter={(seat, characterId) => {
-            post("character", { characterId, seatId: seat.id });
+          pendingCharacterId={pendingCharacter}
+          onChooseCharacter={async (seat, characterId) => {
+            await chooseCharacter(seat.id, characterId);
             setPicking("auto");
           }}
           onRemove={(seat) => post("leave", { seatId: seat.id })}
