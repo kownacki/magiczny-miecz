@@ -78,7 +78,7 @@ function decksOf(game: { deck: unknown }): Decks {
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
 import { bonusFromHoldings } from "@/lib/engine/holdings";
 import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
-import { spellCapacity } from "@/lib/engine/derive";
+import { mayHold, spellCapacity } from "@/lib/engine/derive";
 
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
   const { data, error } = await db
@@ -628,6 +628,83 @@ async function killSeat(gameId: string, seatId: string): Promise<void> {
 
   // With the character gone, play must move on if it was their turn.
   if (game.active_seat === seat?.seat_index) await finishTurn(gameId);
+}
+
+/**
+ * Changes a character's Nature (7.2).
+ *
+ * Rule 7.3 allows it at most once per turn. Rule 7.4 is the consequence that
+ * bites: a Magic Item the new Nature may not use has to be dropped at once
+ * (5.5), so the caller is told which held cards have become forbidden rather
+ * than the app silently discarding somebody's Excalibur.
+ */
+export async function changeNature(
+  gameId: string,
+  seatId: string,
+  nature: "dobra" | "zla" | "chaotyczna",
+): Promise<{ nowForbidden: string[] }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+  if (seat.nature === nature) return { nowForbidden: [] };
+
+  await db.from("seats").update({ nature }).eq("id", seatId);
+
+  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seatId);
+  const nowForbidden = holdings
+    .filter((h) => h.kind === "item" || h.kind === "friend")
+    .filter((h) => {
+      const card = EVENTS.find((c) => c.id === h.card_id);
+      return card ? !mayHold({ ...card, forbiddenTo: forbiddenFor(card) }, nature) : false;
+    })
+    .map((h) => h.card_id);
+
+  await journal(gameId, seatId, game.turn, "zmiana-natury", {
+    from: seat.nature,
+    to: nature,
+    nowForbidden,
+  });
+  await bumpRevision(gameId);
+  return { nowForbidden };
+}
+
+/**
+ * Which Natures a card forbids, read from its own printed text.
+ *
+ * The deck states these in prose rather than as a field — "jego Natura jest
+ * Zła, a Przedmiotem tym mogą posługiwać się jedynie Dobre i Chaotyczne
+ * Postacie" — so this looks for the phrasing the cards use and returns nothing
+ * when it finds none, which is the common case.
+ */
+function forbiddenFor(card: EventCard): ("dobra" | "zla" | "chaotyczna")[] | undefined {
+  const text = card.text.toLowerCase();
+  const allowed: ("dobra" | "zla" | "chaotyczna")[] = [];
+  if (/dobr[aey]/.test(text) && /jedynie|tylko/.test(text)) allowed.push("dobra");
+  if (/z[łl][aey]/.test(text) && /jedynie|tylko/.test(text)) allowed.push("zla");
+  if (/chaotyczn/.test(text) && /jedynie|tylko/.test(text)) allowed.push("chaotyczna");
+  if (allowed.length === 0 || allowed.length === 3) return undefined;
+  return (["dobra", "zla", "chaotyczna"] as const).filter((n) => !allowed.includes(n));
+}
+
+/**
+ * Turns a character to stone for three turns (20.1).
+ *
+ * While stone it cannot move (20.4), holds nothing (20.2) and cannot be robbed
+ * of a point of Życie (20.5). Its Miecz and Magia are unchanged but unusable
+ * (20.3), which is why nothing is written to them here — the seat is simply
+ * skipped in turn order until the timer runs out.
+ */
+export const STONE_TURNS = 3;
+
+export async function turnToStone(gameId: string, seatId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  await db
+    .from("seats")
+    .update({ stone_until_turn: game.turn + STONE_TURNS })
+    .eq("id", seatId);
+  await journal(gameId, seatId, game.turn, "kamien", { until: game.turn + STONE_TURNS });
+  await bumpRevision(gameId);
 }
 
 /**

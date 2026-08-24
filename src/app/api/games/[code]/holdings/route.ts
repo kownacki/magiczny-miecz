@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { drawSpell, dropCard, takeCard, tradeTrophies } from "@/lib/game/turnStore";
+import {
+  changeNature,
+  drawSpell,
+  dropCard,
+  takeCard,
+  tradeTrophies,
+  turnToStone,
+} from "@/lib/game/turnStore";
 
 /**
  * Taking, dropping and trading in cards.
@@ -31,6 +38,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         return NextResponse.json({
           spellId: await drawSpell(game.id, String(body.seatId ?? actor.id)),
         });
+      case "nature": {
+        const nature = body.nature;
+        if (nature !== "dobra" && nature !== "zla" && nature !== "chaotyczna") {
+          return NextResponse.json({ error: "Nieznana Natura." }, { status: 400 });
+        }
+        return NextResponse.json(
+          await changeNature(game.id, String(body.seatId ?? actor.id), nature),
+        );
+      }
+      case "stone":
+        await turnToStone(game.id, String(body.seatId ?? actor.id));
+        break;
       case "trade":
         return NextResponse.json({
           gained: await tradeTrophies(game.id, String(body.seatId ?? actor.id)),
