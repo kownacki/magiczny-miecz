@@ -1,0 +1,166 @@
+import { describe, expect, it } from "vitest";
+import events from "@/data/events.json";
+import items from "@/data/items.json";
+import type { EventCard, Item } from "@/data/types";
+import { FIELDS } from "./board";
+import {
+  ABILITIES,
+  abilitiesOf,
+  canEscapeAt,
+  carryLimit,
+  crossingDice,
+  ferryIsFree,
+  heldAbilities,
+  isSpared,
+  moveBonusRange,
+  opensTheWayTo,
+  skipsRollAt,
+  wardThreshold,
+} from "./abilities";
+
+const KNOWN_CARDS = new Set([
+  ...(events as EventCard[]).map((card) => card.id),
+  ...(items as Item[]).map((item) => item.id),
+]);
+
+describe("the ability registry against the real deck", () => {
+  it("only describes cards that are actually in the box", () => {
+    // A typo in a key is otherwise invisible: the ability simply never fires,
+    // and the card goes on working by its printed text as if unencoded.
+    for (const cardId of Object.keys(ABILITIES)) {
+      expect(KNOWN_CARDS.has(cardId), cardId).toBe(true);
+    }
+  });
+
+  it("only names fields that exist on the board", () => {
+    for (const [cardId, abilities] of Object.entries(ABILITIES)) {
+      for (const ability of abilities) {
+        const named =
+          ability.kind === "bezpieczny" || ability.kind === "ucieczka"
+            ? ability.fields
+            : ability.kind === "uzdrowienie"
+              ? [ability.field]
+              : [];
+        for (const fieldId of named) {
+          expect(FIELDS.get(fieldId), `${cardId} -> ${fieldId}`).toBeDefined();
+        }
+      }
+    }
+  });
+
+  it("covers both printed copies of every field named in pairs", () => {
+    // Mokradła, Step, Urwisko, Bagna, Ruchome Skały and Rozstajne Drogi each
+    // appear twice on the board with suffixed ids. A card that says "on the
+    // Bagna" means both of them, and listing only one is the easiest mistake
+    // to make here.
+    const pairs = [
+      ["urwisko-1", "urwisko-2"],
+      ["bagna-1", "bagna-2"],
+      ["ruchome-skaly-1", "ruchome-skaly-2"],
+      ["mokradla-1", "mokradla-2"],
+    ];
+    for (const [cardId, abilities] of Object.entries(ABILITIES)) {
+      for (const ability of abilities) {
+        if (ability.kind !== "bezpieczny" && ability.kind !== "ucieczka") continue;
+        for (const [a, b] of pairs) {
+          const hasA = ability.fields.includes(a);
+          const hasB = ability.fields.includes(b);
+          expect(hasA, `${cardId}: names ${a} but not ${b}`).toBe(hasB);
+        }
+      }
+    }
+  });
+});
+
+describe("what the armour does (Hełm, Tarcza, Zbroja)", () => {
+  it("saves on the roll each card prints", () => {
+    expect(wardThreshold(abilitiesOf("helm"))).toBe(1);
+    expect(wardThreshold(abilitiesOf("tarcza"))).toBe(2);
+    expect(wardThreshold(abilitiesOf("zbroja"))).toBe(3);
+  });
+
+  it("gives nothing to a character wearing none of it", () => {
+    expect(wardThreshold(heldAbilities(["miecz", "sztylet"]))).toBe(0);
+  });
+
+  it("takes the kindest threshold rather than stacking rolls", () => {
+    // Each text describes one roll, not a sequence, so wearing all three does
+    // not mean three chances.
+    expect(wardThreshold(heldAbilities(["helm", "tarcza", "zbroja"]))).toBe(3);
+  });
+});
+
+describe("walking past what a field does to you", () => {
+  it("skips the roll where a friend says the roll is skipped", () => {
+    const opiekun = abilitiesOf("opiekun");
+    expect(skipsRollAt(opiekun, "wieza-przeznaczenia")).toBe(true);
+    expect(skipsRollAt(opiekun, "urwisko-2")).toBe(true);
+    expect(skipsRollAt(opiekun, "krypta-upiorow")).toBe(false);
+  });
+
+  it("keeps the point the Ruchome Skały would take, without skipping a roll", () => {
+    // Rękawice spare the Życie; that field has no roll to skip in the first
+    // place, and conflating the two would silently skip rolls elsewhere.
+    const rekawice = abilitiesOf("rekawice");
+    expect(isSpared(rekawice, "ruchome-skaly-1", "zycie")).toBe(true);
+    expect(skipsRollAt(rekawice, "ruchome-skaly-1")).toBe(false);
+  });
+
+  it("keeps what the Bagna would take", () => {
+    expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "utrata")).toBe(true);
+    expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "zycie")).toBe(false);
+  });
+
+  it("lets Elflin and Rusałka slip away where their cards say", () => {
+    expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las")).toBe(true);
+    expect(canEscapeAt(abilitiesOf("rusalka"), "las-blednych-ogni")).toBe(true);
+    expect(canEscapeAt(abilitiesOf("elflin"), "las-blednych-ogni")).toBe(false);
+  });
+});
+
+describe("crossings and tolls", () => {
+  it("halves the Trzęsawiska for Rusałka", () => {
+    expect(crossingDice(abilitiesOf("rusalka"), "trzesawiska", 2)).toBe(1);
+  });
+
+  it("leaves everyone else on two dice", () => {
+    expect(crossingDice(heldAbilities(["miecz"]), "trzesawiska", 2)).toBe(2);
+    // Her help is specific to the Trzęsawiska; the Lodowy Las is a fight.
+    expect(crossingDice(abilitiesOf("rusalka"), "lodowy-las", 2)).toBe(2);
+  });
+
+  it("waives the ferryman's Sztuka Złota for the Przewoźnik", () => {
+    expect(ferryIsFree(abilitiesOf("przewoznika"))).toBe(true);
+    expect(ferryIsFree(abilitiesOf("rusalka"))).toBe(false);
+  });
+});
+
+describe("keys to the two places that need one", () => {
+  it("opens the Most only with the Magiczny Miecz", () => {
+    expect(opensTheWayTo(abilitiesOf("magiczny-miecz"), "most")).toBe(true);
+    expect(opensTheWayTo(abilitiesOf("miecz"), "most")).toBe(false);
+  });
+
+  it("opens the Zamek Bestii only with the Tarcza Tolimana", () => {
+    expect(opensTheWayTo(abilitiesOf("tarcza-tolimana"), "zamek-bestii")).toBe(true);
+    expect(opensTheWayTo(abilitiesOf("tarcza"), "zamek-bestii")).toBe(false);
+  });
+});
+
+describe("carrying and moving", () => {
+  it("adds each transport's stated capacity", () => {
+    expect(carryLimit(abilitiesOf("kon"), 4)).toBe(12);
+    expect(carryLimit(abilitiesOf("magiczna-sakwa"), 4)).toBe(9);
+  });
+
+  it("treats only the Zaprzęg as unbounded", () => {
+    expect(carryLimit(abilitiesOf("zaprzeg"), 4)).toBe(Infinity);
+    expect(carryLimit(heldAbilities(["kon", "zaprzeg"]), 4)).toBe(Infinity);
+  });
+
+  it("reports the movement bonus a mount allows", () => {
+    expect(moveBonusRange(abilitiesOf("wierzchowiec"))).toEqual({ min: 1, max: 3 });
+    expect(moveBonusRange(abilitiesOf("zaprzeg"))).toEqual({ min: 1, max: 1 });
+    expect(moveBonusRange(abilitiesOf("miecz"))).toBeNull();
+  });
+});

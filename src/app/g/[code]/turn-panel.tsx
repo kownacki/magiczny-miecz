@@ -84,6 +84,8 @@ interface Props {
   fieldName: string;
   /** The instruction printed on the board for the field, if it has been transcribed. */
   fieldText: string | null;
+  /** Named when a held card lets this character skip the field's die roll. */
+  rollSkippedBy?: string | null;
   /** The field the active character is standing on, for the ring crossing. */
   fieldId: string | null;
   /** True when this is the shared table screen driving somebody else's turn. */
@@ -106,6 +108,7 @@ export function TurnPanel({
   fieldName,
   fieldText,
   fieldId,
+  rollSkippedBy,
   actingForOther = false,
   dieSource,
   mode,
@@ -137,7 +140,15 @@ export function TurnPanel({
               {fieldText}
             </p>
           )}
-          <RollTable text={fieldText} busy={busy} onSuggestion={isMine ? onSuggestion : undefined} />
+          {/* A Przyjaciel who says you walk past this field's roll means the
+              roll does not happen — not that it happens and is ignored, which
+              some of these tables would make a meaningful difference. The
+              table stays one tap away, because the app is always correctable. */}
+          {rollSkippedBy ? (
+            <RollSkipped by={rollSkippedBy} text={fieldText} busy={busy} onSuggestion={onSuggestion} />
+          ) : (
+            <RollTable text={fieldText} busy={busy} onSuggestion={isMine ? onSuggestion : undefined} />
+          )}
         </div>
       )}
 
@@ -360,6 +371,42 @@ function Crossing({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * A field's die roll, waived.
+ *
+ * Says which card is doing the waiving, because that is the part a player wants
+ * to check — the whole value of the Przewodnik is knowing, at the Krypta
+ * Upiorów, that you have him.
+ */
+function RollSkipped({
+  by,
+  text,
+  busy,
+  onSuggestion,
+}: {
+  by: string;
+  text: string;
+  busy: boolean;
+  onSuggestion: Props["onSuggestion"];
+}) {
+  const [anyway, setAnyway] = useState(false);
+  return (
+    <div className="mt-2 rounded border border-verdigris/40 bg-night/60 p-3">
+      <p className="text-xs text-verdigris">
+        Przechodzisz bezpiecznie — <span className="text-ink">{by}</span> zwalnia cię
+        z rzutu na tym Obszarze.
+      </p>
+      <button
+        onClick={() => setAnyway((on) => !on)}
+        className="mt-1 text-[10px] text-muted underline hover:text-ink"
+      >
+        {anyway ? "ukryj tabelę" : "rzuć mimo to"}
+      </button>
+      {anyway && <RollTable text={text} busy={busy} onSuggestion={onSuggestion} />}
     </div>
   );
 }

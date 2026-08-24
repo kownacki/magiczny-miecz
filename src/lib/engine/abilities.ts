@@ -1,0 +1,273 @@
+/** What a card does while you are holding it, as a typed vocabulary rather than prose to be re-read every time. */
+
+/**
+ * Why this exists, and why it is not one big "effect" type.
+ *
+ * Reading the corpus, cards fall into three quite different shapes. A Spotkanie
+ * happens once and is gone. A Miejsce sits on a field and offers something to
+ * whoever arrives. And a Przedmiot or Przyjaciel is a *standing rule* that
+ * changes how the other rules evaluate — "nie musisz wykonywać rzutów kostką w
+ * Wieży Przeznaczenia", "nie będziesz musiał płacić 1 Sztuki Złota za
+ * Przeprawę", "Koń może nieść 8 twoich Przedmiotów".
+ *
+ * Only the third shape is modelled here, because only the third shape is
+ * something the engine has to consult while resolving something else. Trying to
+ * cover all three with one union produced a type where most cases were
+ * meaningless in most contexts.
+ *
+ * The vocabulary below was derived from the printed text, not invented: every
+ * variant is there because at least one card needs it, and the parameters are
+ * the ones the cards actually vary. Hełm, Tarcza and Zbroja differ only in how
+ * high a roll saves you, so they are one variant with a number.
+ */
+export type Ability =
+  /** "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza." */
+  | { kind: "punkty"; miecz?: number; magia?: number }
+  /**
+   * A save against the point of Życie a lost fight costs: Hełm on a 1, Tarcza on
+   * 1-2, Zbroja on 1-3. The fight is still lost either way.
+   */
+  | { kind: "oslona"; upTo: number }
+  /**
+   * Passes a named field without what it normally does to you. `rzut` skips a
+   * field's die roll entirely (Opiekun, Przewodnik); `zycie` keeps the point it
+   * would cost (Rękawice on Ruchome Skały); `utrata` keeps the Przedmiot or
+   * Przyjaciel it would take (Kij i Sznur on Bagna).
+   */
+  | { kind: "bezpieczny"; fields: readonly string[]; from: "rzut" | "zycie" | "utrata" }
+  /** Reliably slips away from Wrogowie on named fields (Elflin, Rusałka). */
+  | { kind: "ucieczka"; fields: readonly string[] }
+  /**
+   * Raises the four-Przedmiot limit of 5.4 by a stated amount — Koń eight, Muł
+   * and Tragarz four apiece, Magiczna Sakwa five. Only the Zaprzęg is actually
+   * unbounded ("możesz przewozić dowolną liczbę Przedmiotów"), which is why
+   * that is a separate value rather than a very large number.
+   */
+  | { kind: "udzwig"; items: number | "bez-limitu" }
+  /** Zaprzęg adds one to the movement roll; Wierzchowiec one to three. */
+  | { kind: "ruch-bonus"; min: number; max: number }
+  /** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */
+  | { kind: "magia-do-miecza" }
+  /**
+   * Dies in your place rather than you losing the point — the Rumak always, the
+   * Giermek on a roll of one, the Poszukiwacz whenever he is the one attacking.
+   */
+  | { kind: "ginie-zamiast-ciebie"; onRollUpTo?: number }
+  /** A key rather than a bonus: no Magiczny Miecz, no Kamienny Most. */
+  | { kind: "wymagany"; place: "most" | "zamek-bestii" }
+  /** "nie będziesz musiał płacić 1 Sztuki Złota za Przeprawę" (Przewoźnik). */
+  | { kind: "przeprawa-gratis" }
+  /** Rusałka: one die at the Trzęsawiska instead of the usual two. */
+  | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
+  /**
+   * Łódź and Latarnia: cross anywhere rather than only at the two legal places
+   * (11.2, 11.6). Both are consumed whether or not they are used.
+   */
+  | { kind: "przeprawa-wszedzie"; obstacle: "trzesawiska" | "lodowy-las" }
+  /** Księżniczka at the Zamek, Władca at the Twierdza: up to two Życia a visit. */
+  | { kind: "uzdrowienie"; field: string; upTo: number }
+  /** Rycerz fights in your place, with his own points and none of your things. */
+  | { kind: "walczy-za-ciebie"; miecz: number; magia: number }
+  /** The Magiczny Miecz cannot be picked up in the lower ring. */
+  | { kind: "niedostepny"; region: "dolny" };
+
+/**
+ * Which cards have which standing rules.
+ *
+ * Keyed by card id, so all four printed Magiczne Miecze share one entry — they
+ * are the same card and the deck holds four of them on purpose.
+ *
+ * Absence is not an error and never blocks play. A card with no entry keeps
+ * working exactly as it did before this file existed: its text is shown and the
+ * players apply it. That is the same progressive-enhancement bargain the rest of
+ * the card data makes.
+ */
+export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
+  // --- equipment ------------------------------------------------------------
+  miecz: [{ kind: "punkty", miecz: 1 }],
+  sztylet: [{ kind: "punkty", miecz: 1 }],
+  helm: [{ kind: "oslona", upTo: 1 }],
+  tarcza: [{ kind: "oslona", upTo: 2 }],
+  zbroja: [{ kind: "oslona", upTo: 3 }],
+  rekawice: [
+    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "zycie" },
+  ],
+  "kij-i-sznur": [
+    { kind: "bezpieczny", fields: ["bagna-1", "bagna-2"], from: "utrata" },
+  ],
+  kon: [{ kind: "udzwig", items: 8 }],
+  mul: [{ kind: "udzwig", items: 4 }],
+  zaprzeg: [
+    { kind: "udzwig", items: "bez-limitu" },
+    { kind: "ruch-bonus", min: 1, max: 1 },
+  ],
+  wierzchowiec: [{ kind: "ruch-bonus", min: 1, max: 3 }],
+  "magiczna-sakwa": [{ kind: "udzwig", items: 5 }],
+  "bojowy-rumak": [{ kind: "magia-do-miecza" }, { kind: "ginie-zamiast-ciebie" }],
+  lodz: [{ kind: "przeprawa-wszedzie", obstacle: "trzesawiska" }],
+  latarnia: [{ kind: "przeprawa-wszedzie", obstacle: "lodowy-las" }],
+  "magiczny-miecz": [
+    { kind: "wymagany", place: "most" },
+    { kind: "niedostepny", region: "dolny" },
+  ],
+  "tarcza-tolimana": [{ kind: "wymagany", place: "zamek-bestii" }],
+
+  // --- friends --------------------------------------------------------------
+  pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
+  strzyga: [{ kind: "punkty", magia: 1 }],
+  chochlik: [{ kind: "punkty", magia: 2 }],
+  giermek: [
+    { kind: "punkty", miecz: 2 },
+    { kind: "ginie-zamiast-ciebie", onRollUpTo: 1 },
+  ],
+  krzyzowiec: [{ kind: "punkty", miecz: 2 }],
+  tragarz: [{ kind: "udzwig", items: 4 }],
+  przewoznika: [{ kind: "przeprawa-gratis" }],
+  rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
+  opiekun: [
+    { kind: "bezpieczny", fields: ["wieza-przeznaczenia", "urwisko-1", "urwisko-2"], from: "rzut" },
+  ],
+  przewodnik: [
+    {
+      kind: "bezpieczny",
+      fields: ["krag-mocy", "wilczy-parow", "krypta-upiorow"],
+      from: "rzut",
+    },
+  ],
+  elflin: [
+    { kind: "bezpieczny", fields: ["urwisko-1", "urwisko-2"], from: "rzut" },
+    {
+      kind: "ucieczka",
+      fields: ["bezdroza", "wrzosowiska", "rownina-samotnych-skal", "kamienny-las"],
+    },
+  ],
+  rusalka: [
+    { kind: "bezpieczny", fields: ["kurhan"], from: "rzut" },
+    { kind: "ucieczka", fields: ["mokradla-1", "mokradla-2", "las-blednych-ogni"] },
+    { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 },
+  ],
+  ksiezniczka: [{ kind: "uzdrowienie", field: "zamek", upTo: 2 }],
+  wladca: [{ kind: "uzdrowienie", field: "twierdza-strzegaca-drog", upTo: 2 }],
+};
+
+export function abilitiesOf(cardId: string): readonly Ability[] {
+  return ABILITIES[cardId] ?? [];
+}
+
+/** Every standing rule a seat is currently holding. */
+export function heldAbilities(cardIds: readonly string[]): Ability[] {
+  return cardIds.flatMap((cardId) => abilitiesOf(cardId));
+}
+
+/**
+ * Whether a field's die roll can simply be skipped.
+ *
+ * Deliberately narrow: this answers only "does the roll happen", never "what
+ * would it have given". A character with the Opiekun walks past the Wieża
+ * Przeznaczenia; it does not roll and then ignore the result, because some of
+ * those tables do things a skipped roll should not do.
+ */
+export function skipsRollAt(abilities: readonly Ability[], fieldId: string): boolean {
+  return abilities.some(
+    (ability) =>
+      ability.kind === "bezpieczny" &&
+      ability.from === "rzut" &&
+      ability.fields.includes(fieldId),
+  );
+}
+
+/** Whether a field's automatic cost is waived — the point, or the thing taken. */
+export function isSpared(
+  abilities: readonly Ability[],
+  fieldId: string,
+  from: "zycie" | "utrata",
+): boolean {
+  return abilities.some(
+    (ability) =>
+      ability.kind === "bezpieczny" &&
+      ability.from === from &&
+      ability.fields.includes(fieldId),
+  );
+}
+
+export function canEscapeAt(abilities: readonly Ability[], fieldId: string): boolean {
+  return abilities.some(
+    (ability) => ability.kind === "ucieczka" && ability.fields.includes(fieldId),
+  );
+}
+
+export function ferryIsFree(abilities: readonly Ability[]): boolean {
+  return abilities.some((ability) => ability.kind === "przeprawa-gratis");
+}
+
+/**
+ * How many dice this character throws at a crossing.
+ *
+ * Rusałka's whole point is that she halves the odds — one die against your
+ * Magia instead of two — so this is asked rather than assumed wherever the
+ * Trzęsawiska are rolled for.
+ */
+export function crossingDice(
+  abilities: readonly Ability[],
+  obstacle: string,
+  fallback: number,
+): number {
+  const aid = abilities.find(
+    (ability) => ability.kind === "przeprawa-kostki" && ability.obstacle === obstacle,
+  );
+  return aid && aid.kind === "przeprawa-kostki" ? aid.dice : fallback;
+}
+
+/**
+ * How many Przedmioty may be carried, over rule 5.4's four.
+ *
+ * The bonuses add up: nothing in any of these texts says a character may not
+ * lead a Koń and employ a Tragarz at once, and each states its own capacity.
+ *
+ * That capacity is the point. The engine used to read 5.4's "unless the
+ * character has transport" as *unlimited* for any of them, which is far more
+ * generous than what the cards say — the Koń carries eight, the Muł and the
+ * Tragarz four each. Only the Zaprzęg is truly unbounded.
+ */
+export function carryLimit(abilities: readonly Ability[], base: number): number {
+  let limit = base;
+  for (const ability of abilities) {
+    if (ability.kind !== "udzwig") continue;
+    if (ability.items === "bez-limitu") return Infinity;
+    limit += ability.items;
+  }
+  return limit;
+}
+
+/** The most a Wierzchowiec or Zaprzęg may add to a movement roll. */
+export function moveBonusRange(
+  abilities: readonly Ability[],
+): { min: number; max: number } | null {
+  const bonuses = abilities.filter((a) => a.kind === "ruch-bonus");
+  if (bonuses.length === 0) return null;
+  return {
+    min: Math.min(...bonuses.map((a) => (a.kind === "ruch-bonus" ? a.min : 0))),
+    max: bonuses.reduce((sum, a) => sum + (a.kind === "ruch-bonus" ? a.max : 0), 0),
+  };
+}
+
+export function opensTheWayTo(
+  abilities: readonly Ability[],
+  place: "most" | "zamek-bestii",
+): boolean {
+  return abilities.some((ability) => ability.kind === "wymagany" && ability.place === place);
+}
+
+/**
+ * The best save a character has against losing a point of Życie in a fight.
+ *
+ * Zero when there is none. Only the best applies — the texts each describe one
+ * roll, not a sequence of them, so a character wearing both Zbroja and Hełm
+ * rolls once against the kinder threshold.
+ */
+export function wardThreshold(abilities: readonly Ability[]): number {
+  return abilities.reduce(
+    (best, ability) => (ability.kind === "oslona" ? Math.max(best, ability.upTo) : best),
+    0,
+  );
+}

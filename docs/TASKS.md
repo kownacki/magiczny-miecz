@@ -186,8 +186,20 @@ Now the primary mode; companion is the opt-in.
 
 ## Open, found while playing
 
-These came out of playing a real game through the browser. Each is a rule the
-engine gets wrong or does not have, not a missing feature.
+- [ ] **Encode the rest of the corpus against the ability vocabulary.** The
+      shapes are settled and validated (`src/lib/engine/abilities.ts`); what is
+      left is data. Encoded so far: the equipment sheet and the Przyjaciele. The
+      44 magic Przedmiot cards in the event deck (Excalibur, Święty Graal,
+      Talizman Ognia, …) are not, and neither is anything one-shot.
+- [ ] **One-shot and fixture cards have no vocabulary yet.** Spotkanie, Miejsce
+      and most Nieznajomy are a different shape from a standing rule — an
+      ordered list of operations, and a *disposition* saying where the card goes
+      afterwards (odłóż / zostaje na Obszarze / do wyczerpania punktów / do
+      pierwszej Postaci). The corpus survey is in this file's history; the type
+      is not written.
+
+The rest came out of playing a real game through the browser. Each is a rule
+the engine gets wrong or does not have, not a missing feature.
 
 - [x] **The three guardians are fought, not adjudicated.** "Stocz walkę" runs a
       real fight through the combat engine: the bridge guardians roll for their

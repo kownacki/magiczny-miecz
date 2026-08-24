@@ -2,6 +2,7 @@
 
 import type { Item, Nature } from "@/data/types";
 import type { Holding, Seat } from "./state";
+import { carryLimit as abilityCarryLimit, heldAbilities } from "./abilities";
 
 /**
  * Rule 2.6, read straight off the printed table:
@@ -123,18 +124,21 @@ export function gainLife(seat: Seat, amount: number): Seat {
 export const BASE_CARRY_LIMIT = 4;
 
 /**
- * The four means of transport rule 5.4 names. Tragarz is deliberately not
- * filtered by holding kind: the other three are Przedmiot cards, but a bearer
- * is a person and the deck files him as a Przyjaciel, so keying off `kind ===
- * "item"` would silently drop the one that lifts the limit for a whole game.
+ * What a character can actually carry.
+ *
+ * Rule 5.4 says "unless the character has a means of transport", and this used
+ * to read that as *unlimited* for any of them. The cards are more careful: the
+ * Koń carries eight, the Muł and the Tragarz four apiece, the Magiczna Sakwa
+ * five over your own capacity, and only the Zaprzęg says "dowolną liczbę". So
+ * the number comes from the card now, through the shared ability vocabulary.
+ *
+ * Trophies are excluded because a trophy is a beaten enemy's card kept for
+ * trading (1.4), not a thing being carried — a Koń won as a trophy pulls no
+ * cart.
  */
-const TRANSPORT_IDS = new Set(["kon", "mul", "zaprzeg", "tragarz"]);
-
 export function carryLimit(holdings: readonly Holding[]): number {
-  const hasTransport = holdings.some(
-    (h) => h.kind !== "trophy" && TRANSPORT_IDS.has(h.cardId),
-  );
-  return hasTransport ? Infinity : BASE_CARRY_LIMIT;
+  const carried = holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId);
+  return abilityCarryLimit(heldAbilities(carried), BASE_CARRY_LIMIT);
 }
 
 export function carriedCount(holdings: readonly Holding[]): number {

@@ -10,6 +10,7 @@ import {
   ringOf,
 } from "@/lib/engine/board";
 import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
+import { crossingDice, ferryIsFree, heldAbilities } from "@/lib/engine/abilities";
 import {
   afterDraw,
   afterMove,
@@ -953,14 +954,21 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
   const here = game.turn_state.fieldId;
 
   if (pay) {
-    if (seat.zloto < FERRY_TOLL) {
+    // The Przewoźnik among your Przyjaciele is the ferryman's colleague: "nie
+    // będziesz musiał płacić 1 Sztuki Złota za Przeprawę".
+    const abilities = heldAbilities(
+      (await holdingsFor(gameId))
+        .filter((h) => h.seat_id === seat.id)
+        .map((h) => h.card_id),
+    );
+    const toll = ferryIsFree(abilities) ? 0 : FERRY_TOLL;
+    if (seat.zloto < toll) {
       throw new Error("Nie masz czym zapłacić przewoźnikowi.");
     }
-    await db
-      .from("seats")
-      .update({ zloto: seat.zloto - FERRY_TOLL })
-      .eq("id", seat.id);
-    await journal(gameId, seat.id, game.turn, "przewoznik", { field: here, paid: FERRY_TOLL });
+    if (toll > 0) {
+      await db.from("seats").update({ zloto: seat.zloto - toll }).eq("id", seat.id);
+    }
+    await journal(gameId, seat.id, game.turn, "przewoznik", { field: here, paid: toll });
     await bumpRevision(gameId);
     return { at: here };
   }
@@ -1155,18 +1163,22 @@ export async function crossRing(
     // The app owns this one: it is a threshold against a number it already
     // knows, so there is nothing for a player to adjudicate. A physical die
     // still overrides, which is what die_source is for.
+    const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+    const abilities = heldAbilities(held.map((h) => h.card_id));
+    // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
+    // of two, which is the difference between a hard crossing and a likely one.
+    const count = crossingDice(abilities, crossing.obstacle, crossing.test.dice);
     const rolled =
-      input.dice && input.dice.length === crossing.test.dice
+      input.dice && input.dice.length === count
         ? input.dice
-        : Array.from({ length: crossing.test.dice }, () => 1 + Math.floor(Math.random() * 6));
+        : Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
     for (const die of rolled) {
       if (!Number.isInteger(die) || die < 1 || die > 6) {
         throw new Error("Kostka daje wynik od 1 do 6.");
       }
     }
-    const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
     const bonus = bonusFromHoldings(
-      holdings.map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face })),
+      held.map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face })),
     );
     magia = seat.magia_own + bonus.magia;
     dice = rolled;

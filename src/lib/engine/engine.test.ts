@@ -135,12 +135,26 @@ describe("carrying limit (5.4)", () => {
     expect(carryLimit([held("miecz"), held("helm")])).toBe(BASE_CARRY_LIMIT);
   });
 
-  it("is lifted by a horse", () => {
-    expect(carryLimit([held("kon")])).toBe(Infinity);
+  it("is raised by exactly what the transport card says it carries", () => {
+    // "Koń może nieść 8 twoich Przedmiotów", "Muł będzie ... niósł twoje 4".
+    // Not unlimited: reading 5.4's "unless the character has transport" as
+    // unlimited gave away far more than any of these cards offer.
+    expect(carryLimit([held("kon")])).toBe(BASE_CARRY_LIMIT + 8);
+    expect(carryLimit([held("mul")])).toBe(BASE_CARRY_LIMIT + 4);
   });
 
-  it("is lifted by Tragarz even though he is a Friend, not an item", () => {
-    expect(carryLimit([held("tragarz", "friend")])).toBe(Infinity);
+  it("is raised by Tragarz even though he is a Friend, not an item", () => {
+    expect(carryLimit([held("tragarz", "friend")])).toBe(BASE_CARRY_LIMIT + 4);
+  });
+
+  it("adds up when a character has more than one", () => {
+    expect(carryLimit([held("kon"), held("tragarz", "friend")])).toBe(
+      BASE_CARRY_LIMIT + 12,
+    );
+  });
+
+  it("is unlimited only for the Zaprzęg, which is the only card that says so", () => {
+    expect(carryLimit([held("zaprzeg")])).toBe(Infinity);
   });
 
   it("is not lifted by a transport card held only as a trophy", () => {

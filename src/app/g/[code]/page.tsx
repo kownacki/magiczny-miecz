@@ -5,6 +5,7 @@ import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
+import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
 import { characterImageUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
@@ -394,6 +395,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               active.field_id ? (fieldWithText(active.field_id)?.text ?? null) : null
             }
             fieldId={active.field_id}
+            rollSkippedBy={rollSkippedBy(active)}
             dieSource={game.die_source}
             mode={game.mode}
             busy={busy}
@@ -526,23 +528,34 @@ function Hand({
     <div className="mt-3 border-t border-edge pt-2">
       <ul className="flex flex-col gap-1">
         {seat.holdings.map((held) => (
-          <li key={held.id} className="flex items-baseline justify-between gap-2 text-xs">
-            <span className="truncate text-ink">
-              {CARD_NAMES.get(held.cardId) ?? held.cardId}
-            </span>
-            <span className="flex shrink-0 items-baseline gap-2">
-              <span className="text-[10px] uppercase text-muted">
-                {KIND_LABEL[held.kind]}
+          <li key={held.id} className="text-xs">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-ink">
+                {CARD_NAMES.get(held.cardId) ?? held.cardId}
               </span>
-              {canAct && (
-                <button
-                  onClick={() => onDrop(held.id)}
-                  className="text-[10px] text-muted underline hover:text-vermilion"
-                >
-                  odrzuć
-                </button>
-              )}
-            </span>
+              <span className="flex shrink-0 items-baseline gap-2">
+                <span className="text-[10px] uppercase text-muted">
+                  {KIND_LABEL[held.kind]}
+                </span>
+                {canAct && (
+                  <button
+                    onClick={() => onDrop(held.id)}
+                    className="text-[10px] text-muted underline hover:text-vermilion"
+                  >
+                    odrzuć
+                  </button>
+                )}
+              </span>
+            </div>
+            {/* What the card actually does, for the ones whose rule the app is
+                holding to. Worth the line: half of these change what happens
+                three fields away, and a player cannot be expected to remember
+                which of their four Przyjaciele covers the Krypta Upiorów. */}
+            {describeAbilities(held.cardId).length > 0 && (
+              <p className="text-[10px] leading-snug text-verdigris/80">
+                {describeAbilities(held.cardId).join(" · ")}
+              </p>
+            )}
           </li>
         ))}
       </ul>
@@ -840,4 +853,87 @@ function describeResult(result: unknown): string | null {
   const verdict =
     data.outcome === "udana" ? "przeprawa udana" : "porażka — tracisz 1 Życie";
   return `Trzęsawiska: ${data.dice.join(" + ")} = ${total} przeciw Magii ${data.magia} — ${verdict}.`;
+}
+
+/**
+ * A card's standing rules, in the fewest words that still say what changes.
+ *
+ * Only the encoded ones appear. A card with no entry shows nothing here rather
+ * than a placeholder, because its printed text is the authority and inventing a
+ * summary for it would be the referee overstepping.
+ */
+function describeAbilities(cardId: string): string[] {
+  return abilitiesOf(cardId).map(describeAbility);
+}
+
+function describeAbility(ability: Ability): string {
+  switch (ability.kind) {
+    case "punkty": {
+      const parts = [];
+      if (ability.miecz) parts.push(`+${ability.miecz} Miecza`);
+      if (ability.magia) parts.push(`+${ability.magia} Magii`);
+      return parts.join(", ");
+    }
+    case "oslona":
+      return `osłona przy przegranej (rzut ≤ ${ability.upTo})`;
+    case "bezpieczny": {
+      const where = ability.fields.map(fieldName).join(", ");
+      if (ability.from === "rzut") return `bez rzutu: ${where}`;
+      if (ability.from === "zycie") return `bez straty Życia: ${where}`;
+      return `bez straty Przedmiotu: ${where}`;
+    }
+    case "ucieczka":
+      return `ucieczka przed Wrogiem: ${ability.fields.map(fieldName).join(", ")}`;
+    case "udzwig":
+      return ability.items === "bez-limitu"
+        ? "niesie dowolną liczbę Przedmiotów"
+        : `niesie +${ability.items} Przedmiotów`;
+    case "ruch-bonus":
+      return ability.min === ability.max
+        ? `+${ability.max} do ruchu`
+        : `+${ability.min}–${ability.max} do ruchu`;
+    case "magia-do-miecza":
+      return "w walce dodajesz Magię do Miecza";
+    case "ginie-zamiast-ciebie":
+      return ability.onRollUpTo
+        ? `ginie zamiast ciebie (rzut ≤ ${ability.onRollUpTo})`
+        : "ginie zamiast ciebie";
+    case "wymagany":
+      return ability.place === "most" ? "wstęp na Kamienny Most" : "wstęp do Zamku Bestii";
+    case "przeprawa-gratis":
+      return "Przeprawa za darmo";
+    case "przeprawa-kostki":
+      return `Trzęsawiska na ${ability.dice} kostkę`;
+    case "przeprawa-wszedzie":
+      return ability.obstacle === "trzesawiska"
+        ? "przeprawa przez Trzęsawiska w dowolnym miejscu"
+        : "przeprawa przez Lodowy Las w dowolnym miejscu";
+    case "uzdrowienie":
+      return `do ${ability.upTo} Życia w: ${fieldName(ability.field)}`;
+    case "walczy-za-ciebie":
+      return `walczy za ciebie (Miecz ${ability.miecz}, Magia ${ability.magia})`;
+    case "niedostepny":
+      return "nie do zdobycia w Dolnym Kręgu";
+  }
+}
+
+function fieldName(fieldId: string): string {
+  return FIELDS.get(fieldId)?.name ?? fieldId;
+}
+
+/**
+ * Which held card, if any, lets this character walk past the field's die roll.
+ *
+ * Returns the card's name rather than a boolean, because "you may skip this"
+ * is much less useful to a player than "your Przewodnik lets you skip this" —
+ * the second can be checked against the card lying on the table.
+ */
+function rollSkippedBy(seat: Seat): string | null {
+  if (!seat.field_id) return null;
+  for (const held of seat.holdings) {
+    if (skipsRollAt(abilitiesOf(held.cardId), seat.field_id)) {
+      return CARD_NAMES.get(held.cardId) ?? held.cardId;
+    }
+  }
+  return null;
 }
