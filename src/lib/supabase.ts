@@ -15,6 +15,11 @@ function connect(): SupabaseClient {
       "Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — check .env.local",
     );
   }
+  // The cast is needed because `SupabaseClient`'s schema parameter defaults to
+  // "public", and passing a `db.schema` narrows the returned type to a
+  // differently-parameterised client that no longer matches the exported
+  // handle. Nothing is being smuggled past the type system except the schema
+  // name itself, which db/schema.sql is the authority on.
   client ??= createClient(url, key, {
     auth: { persistSession: false },
     // Fourth tenant of one Postgres instance. The free tier allows two projects
@@ -26,7 +31,7 @@ function connect(): SupabaseClient {
     // Settings → API → Exposed schemas or PostgREST refuses every query with
     // PGRST106.
     db: { schema: SCHEMA },
-  });
+  }) as unknown as SupabaseClient;
   return client;
 }
 

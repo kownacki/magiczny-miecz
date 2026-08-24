@@ -66,3 +66,13 @@ scan is image-only with **no text layer**, so all transcription is done by
 reading images. `node scripts/extract-assets.mjs` rebuilds `assets/extracted/`
 (also gitignored) at native resolution — 2480x3508 per sheet, sliced into cards
 by detecting the printed cut lines.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
