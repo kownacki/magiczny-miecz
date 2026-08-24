@@ -1,6 +1,11 @@
 /** What a one-shot or fixture card does, and — just as importantly — where the card goes afterwards. */
 
 import type { Nature } from "@/data/types";
+import { MIEJSCA } from "./scripts/miejsca";
+import { NIEZNAJOMI } from "./scripts/nieznajomi";
+import { PRZEDMIOTY } from "./scripts/przedmioty";
+import { SPOTKANIA } from "./scripts/spotkania";
+import { WROGOWIE } from "./scripts/wrogowie";
 
 /**
  * The second of the three card shapes.
@@ -130,313 +135,23 @@ export type Condition =
   | { is: "ma-zloto" };
 
 /**
- * The cards encoded so far, keyed by card id.
+ * Every encoded card, gathered from the per-class modules.
+ *
+ * Split by card class because the classes are genuinely different work — a
+ * Miejsce is a fixture, a Spotkanie is an event, a Wróg is a fight — and
+ * because it lets several people encode different parts of the deck without
+ * meeting in the same file.
  *
  * Absent is the normal state and always will be for some of the deck. A card
- * with no script shows its text, exactly as before — the same
- * progressive-enhancement bargain the rest of the card data makes.
+ * with no script shows its text, exactly as before.
  */
 export const SCRIPTS: Readonly<Record<string, CardScript>> = {
-  // --- Nieznajomi who grant something and leave ------------------------------
-
-  // The card that prompted all of this: a ride anywhere in your own Krąg, and
-  // then he is gone whether or not you took it.
-  jednorozec: {
-    optional: true,
-    effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
-    disposition: { kind: "odloz" },
-  },
-  "dziki-rumak": {
-    optional: true,
-    effect: { op: "ruch-dodatkowy" },
-    disposition: { kind: "odloz" },
-  },
-  polbog: {
-    effect: { op: "zaklecie", count: 1 },
-    disposition: { kind: "odloz" },
-  },
-  // Three cards word the same wish differently and mean the same six things.
-  "krol-lasu": {
-    effect: WISH(),
-    disposition: { kind: "do-pierwszej" },
-  },
-  wrozka: {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
-      to: WISH(),
-    },
-    disposition: { kind: "do-pierwszej" },
-  },
-  koszmar: {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["zla"] },
-      to: WISH(),
-    },
-    disposition: { kind: "do-pierwszej" },
-  },
-  "zlodziej-dobroczynca": {
-    effect: {
-      op: "gdy",
-      warunek: { is: "ma-zloto" },
-      to: { op: "punkty", stat: "zloto", delta: -1 },
-      inaczej: { op: "punkty", stat: "zloto", delta: 1 },
-    },
-    disposition: { kind: "odloz" },
-  },
-  wielkolud: {
-    effect: {
-      op: "rzut",
-      faces: {
-        1: { op: "nic" },
-        2: { op: "nic" },
-        3: { op: "strata", co: "przedmiot", count: 1, wybor: "losowo" },
-        4: { op: "strata", co: "przedmiot", count: 1, wybor: "losowo" },
-        5: { op: "strata", co: "przyjaciel", count: 1, wybor: "losowo" },
-        6: { op: "strata", co: "przyjaciel", count: 1, wybor: "losowo" },
-      },
-    },
-    disposition: { kind: "odloz" },
-  },
-  "urocza-diablica": {
-    effect: {
-      op: "rzut",
-      faces: {
-        1: { op: "zaklecie", count: 1 },
-        2: { op: "punkty", stat: "magia", delta: 1 },
-        3: { op: "punkty", stat: "miecz", delta: 1 },
-        4: { op: "strata", co: "przedmiot", count: 1 },
-        5: { op: "punkty", stat: "zycie", delta: -1 },
-        6: { op: "kamien" },
-      },
-    },
-    disposition: { kind: "zostaje" },
-  },
-  cudotworca: {
-    effect: { op: "uzdrow", upTo: 2 },
-    disposition: { kind: "zostaje" },
-  },
-  czarodziej: {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
-      to: { op: "zaklecie", count: 1 },
-    },
-    disposition: { kind: "zostaje" },
-  },
-
-  // --- Miejsca: fixtures that serve whoever arrives --------------------------
-
-  "drzewo-zycia": {
-    optional: true,
-    effect: { op: "punkty", stat: "zycie", delta: 1, target: "kazdy-kto-tu-trafi" },
-    disposition: { kind: "zostaje-z-pula", stat: "zycie", points: 4 },
-  },
-  "jezioro-magiczne": {
-    optional: true,
-    effect: { op: "punkty", stat: "miecz", delta: 1, target: "kazdy-kto-tu-trafi" },
-    disposition: { kind: "zostaje-z-pula", stat: "miecz", points: 4 },
-  },
-  "zaklete-zrodlo": {
-    optional: true,
-    effect: { op: "punkty", stat: "magia", delta: 1, target: "kazdy-kto-tu-trafi" },
-    disposition: { kind: "zostaje-z-pula", stat: "magia", points: 4 },
-  },
-  labirynt: {
-    effect: {
-      op: "gdy",
-      warunek: { is: "prog", stat: "magia", ponizej: 5 },
-      to: { op: "tura-stracona", turns: 1, target: "kazdy-kto-tu-trafi" },
-    },
-    disposition: { kind: "zostaje" },
-  },
-  "spalona-ziemia": {
-    effect: {
-      op: "gdy",
-      warunek: { is: "prog", stat: "miecz", ponizej: 5 },
-      to: { op: "tura-stracona", turns: 1, target: "kazdy-kto-tu-trafi" },
-    },
-    disposition: { kind: "zostaje" },
-  },
-  grota: {
-    optional: true,
-    effect: {
-      op: "rzut",
-      faces: {
-        1: { op: "punkty", stat: "zloto", delta: 3 },
-        2: { op: "punkty", stat: "zloto", delta: 2 },
-        3: { op: "punkty", stat: "zloto", delta: 1 },
-        4: { op: "tura-stracona", turns: 1 },
-        5: { op: "walka", nazwa: "Hadron", miecz: 3 },
-        6: { op: "walka", nazwa: "Wilkołak", miecz: 10 },
-      },
-    },
-    disposition: { kind: "zostaje" },
-  },
-  sidh: {
-    optional: true,
-    effect: {
-      op: "rzut",
-      faces: {
-        1: { op: "punkty", stat: "zloto", delta: 3 },
-        2: { op: "punkty", stat: "zloto", delta: 2 },
-        3: { op: "punkty", stat: "zloto", delta: 1 },
-        4: { op: "walka", nazwa: "Widmo", magia: 3 },
-        5: { op: "walka", nazwa: "Zjawa", magia: 5 },
-        6: { op: "walka", nazwa: "Demon", magia: 10 },
-      },
-    },
-    disposition: { kind: "zostaje" },
-  },
-  "tajemne-przejscie": {
-    optional: true,
-    effect: {
-      op: "rzut",
-      faces: {
-        1: { op: "przenies", to: { kind: "pole", fieldId: "grod" } },
-        2: { op: "przenies", to: { kind: "pole", fieldId: "osada" } },
-        3: { op: "przenies", to: { kind: "pole", fieldId: "twierdza-strzegaca-drog" } },
-        4: { op: "przenies", to: { kind: "pole", fieldId: "swiatynia-bogini-nemed" } },
-        5: { op: "przenies", to: { kind: "pole", fieldId: "wymarle-miasto" } },
-        6: { op: "przenies", to: { kind: "pole", fieldId: "krypta-upiorow" } },
-      },
-    },
-    disposition: { kind: "zostaje" },
-  },
-  "skalne-wrota": {
-    optional: true,
-    effect: { op: "wyciagnij", count: 3 },
-    disposition: { kind: "odloz" },
-  },
-
-  // --- Spotkania: one-shot events -------------------------------------------
-
-  "zakleta-sciezka": {
-    effect: {
-      op: "rzut",
-      faces: {
-        1: { op: "przenies", to: { kind: "pole", fieldId: "rownina-snu" } },
-        2: { op: "przenies", to: { kind: "pole", fieldId: "rownina-traw" } },
-        3: { op: "przenies", to: { kind: "pole", fieldId: "dolina-cienia" } },
-        4: { op: "przenies", to: { kind: "pole", fieldId: "mroczna-polana" } },
-        5: { op: "przenies", to: { kind: "pole", fieldId: "osada" } },
-        6: { op: "przenies", to: { kind: "pole", fieldId: "karczma" } },
-      },
-    },
-    disposition: { kind: "odloz" },
-  },
-  straz: {
-    effect: { op: "przenies", to: { kind: "poczatek-ruchu" } },
-    disposition: { kind: "odloz" },
-  },
-  zaraza: {
-    effect: { op: "punkty", stat: "zycie", delta: -1, target: "wszyscy-w-kregu" },
-    disposition: { kind: "odloz" },
-  },
-  "burza-siedmiu-slonc": {
-    effect: { op: "tura-stracona", turns: 1, target: "wszyscy" },
-    disposition: { kind: "odloz" },
-  },
-  "zacmienie-slonc": {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra", "chaotyczna"] },
-      to: { op: "tura-stracona", turns: 1, target: "wszyscy" },
-    },
-    disposition: { kind: "odloz" },
-  },
-  "magiczna-tablica": {
-    effect: { op: "zaklecia-do-limitu" },
-    disposition: { kind: "odloz" },
-  },
-  "zatrute-ziola": {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["zla"] },
-      to: { op: "punkty", stat: "zycie", delta: 1 },
-      inaczej: {
-        op: "gdy",
-        warunek: { is: "natura", jedna_z: ["dobra"] },
-        to: { op: "punkty", stat: "zycie", delta: -1 },
-      },
-    },
-    disposition: { kind: "odloz" },
-  },
-  "poslancy-bogow": {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
-      to: { op: "punkty", stat: "zycie", delta: 1 },
-      inaczej: {
-        op: "gdy",
-        warunek: { is: "natura", jedna_z: ["zla"] },
-        to: { op: "punkty", stat: "zycie", delta: -1 },
-      },
-    },
-    disposition: { kind: "odloz" },
-  },
-  "sabat-czarownic": {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["zla"] },
-      to: { op: "punkty", stat: "magia", delta: 1 },
-      inaczej: { op: "natura", na: "zla" },
-    },
-    disposition: { kind: "odloz" },
-  },
-  "slup-ognia": {
-    effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
-      to: { op: "punkty", stat: "magia", delta: 1 },
-      inaczej: { op: "natura", na: "dobra" },
-    },
-    disposition: { kind: "odloz" },
-  },
-  zasadzka: {
-    effect: {
-      op: "po-kolei",
-      steps: [
-        { op: "strata", co: "zloto" },
-        { op: "strata", co: "wszystkie-przedmioty" },
-      ],
-    },
-    disposition: { kind: "odloz" },
-  },
-  mgla: {
-    effect: { op: "nic" },
-    disposition: { kind: "po-turach", turns: 2 },
-  },
-  "uklad-planet": {
-    effect: { op: "nic" },
-    disposition: { kind: "po-turach", turns: 1 },
-  },
+  ...NIEZNAJOMI,
+  ...MIEJSCA,
+  ...SPOTKANIA,
+  ...WROGOWIE,
+  ...PRZEDMIOTY,
 };
-
-/**
- * The six-way wish three separate Nieznajomi offer in identical terms.
- *
- * A function rather than a shared constant so each card owns its own object
- * tree; the alternative invites an edit meant for one card to silently change
- * three.
- */
-function WISH(): Effect {
-  return {
-    op: "wybor",
-    options: [
-      { label: "1 punkt Miecza", effect: { op: "punkty", stat: "miecz", delta: 1 } },
-      { label: "1 punkt Magii", effect: { op: "punkty", stat: "magia", delta: 1 } },
-      { label: "1 punkt Życia", effect: { op: "punkty", stat: "zycie", delta: 1 } },
-      { label: "1 Zaklęcie", effect: { op: "zaklecie", count: 1 } },
-      { label: "1 Sztuka Złota", effect: { op: "punkty", stat: "zloto", delta: 1 } },
-      {
-        label: "przeniesienie w tym Kręgu",
-        effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
-      },
-    ],
-  };
-}
 
 export function scriptFor(cardId: string): CardScript | null {
   return SCRIPTS[cardId] ?? null;
