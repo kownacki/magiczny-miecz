@@ -104,6 +104,9 @@ ones butt together with the same teal printed *on* them — so
 `node scripts/export-card-art.mjs` cuts the framed illustration out of every
 card — the same rectangle on all of them, 10%–90% across and 14.5%–56.5% down —
 for use as an icon where a whole card would be a grey smear.
+`node scripts/export-tokens.mjs` cuts the thirteen Żetony Pomocnicze — Miecz,
+Magia and Życie in denominations of 1 to 4, and the Sztuka Złota — off `MM -
+Żetony.pdf` into `public/tokens/`, which is committed.
 `node scripts/generate-ids.mjs` regenerates `src/data/ids.ts` — the literal
 id types — and must be re-run after anything that renames a card or a
 character. Then `node scripts/export-card-images.mjs` writes the
