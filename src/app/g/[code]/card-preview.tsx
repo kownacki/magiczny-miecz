@@ -25,8 +25,15 @@ import type { Nature } from "@/data/types";
 import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
-/** Width of the card picture. The scans are 629x780. */
-const PICTURE_WIDTH = 260;
+/**
+ * Width of the card picture.
+ *
+ * 208 CSS px is 416 on a retina screen, and the cards are exported 528 across —
+ * so it is downscaled with room to spare, which is the side of the line to be
+ * on. The panel is read for the formalised lines beside the picture; the
+ * picture is there to be recognised.
+ */
+const PICTURE_WIDTH = 208;
 const CARD_RATIO = 780 / 629;
 const GAP = 12;
 
