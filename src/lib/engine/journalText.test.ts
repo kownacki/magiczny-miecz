@@ -226,7 +226,7 @@ suite("Polish agreement", () => {
       "straznik-start", "straznik-koniec", "most-cerber", "most-pulapka",
       "walka-start", "walka-koniec", "pojedynek", "ucieczka", "ucieczka-nieudana",
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
-      "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc",
+      "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc", "uzycie",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
       "tura-stracona", "zostawienie", "punkty", "strata",
     ];
@@ -408,3 +408,37 @@ const PAYLOADS: Record<string, Record<string, unknown>> = {
   zostawienie: { cardIds: ["miecz"], fieldId: "kurhan" },
   punkty: { stat: "zycie", delta: -1 },
 };
+
+suite("spending a card by using it", () => {
+  it("says it with the card's own verb", () => {
+    // "Michał używa: ELIKSIR SIŁY" reads like a log. A table says who drank
+    // what, and `uses.ts` already knows which verb each card wants.
+    expect(text("uzycie", { cardId: "eliksir-sily" })).toBe("Michał wypija: ELIKSIR SIŁY.");
+    expect(text("uzycie", { cardId: "owoc-jarzebiny-wiedzy" })).toContain("zjada");
+    expect(text("uzycie", { cardId: "rozdzka-przeznaczenia" })).toContain("używa");
+  });
+
+  it("quotes the die where the app threw one", () => {
+    expect(text("uzycie", { cardId: "tajemnicza-szkatula", face: 4 })).toBe(
+      "Michał otwiera: TAJEMNICZA SZKATUŁA — wypadło 4.",
+    );
+  });
+
+  it("still names a card it has no entry for", () => {
+    expect(text("uzycie", { cardId: "nie-ma-takiej" })).toBe("Michał używa: nie-ma-takiej.");
+  });
+});
+
+suite("choosing again after death", () => {
+  it("names the new character", () => {
+    expect(text("nowa-postac", { characterId: "troll" })).toBe("Michał gra dalej jako: TROLL.");
+  });
+
+  it("says when the pile chose rather than the player", () => {
+    // Which card it is, is public either way; that it was drawn is a different
+    // decision from picking it, and worth the word.
+    expect(text("nowa-postac", { characterId: "troll", losowa: true })).toBe(
+      "Michał gra dalej jako: TROLL (wylosowana).",
+    );
+  });
+});

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
-import type { CharacterId } from "@/data/ids";
+import { RANDOM_CHARACTER_ID, type SeatCharacter } from "@/lib/engine/characters";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 
 /**
@@ -31,11 +31,11 @@ export function RebornModal({
   /** Every character already in the game — 4.4 puts the dead one out for good. */
   taken: ReadonlySet<string>;
   busy: boolean;
-  onConfirm: (characterId: CharacterId) => void;
+  onConfirm: (characterId: SeatCharacter) => void;
   onClose: () => void;
 }) {
-  const [picked, setPicked] = useState<CharacterId | null>(null);
-  const [hovered, setHovered] = useState<CharacterId | null>(null);
+  const [picked, setPicked] = useState<SeatCharacter | null>(null);
+  const [hovered, setHovered] = useState<SeatCharacter | null>(null);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -48,8 +48,12 @@ export function RebornModal({
   const free = characters.filter((character) => !taken.has(character.id));
   // What the reading column shows: whatever the cursor is over wins, because
   // running along the strip and reading each one is how you choose.
-  const reading = characters.find((c) => c.id === (hovered ?? picked)) ?? null;
-  const card = reading ? characterImageUrl(reading.id) : null;
+  const at = hovered ?? picked;
+  const reading = characters.find((c) => c.id === at) ?? null;
+  // The surprise has a card of its own, and it is the one thing in the strip
+  // that is worth reading precisely because it says nothing about what you get.
+  const card = at === RANDOM_CHARACTER_ID ? characterImageUrl(RANDOM_CHARACTER_ID) : reading ? characterImageUrl(reading.id) : null;
+  const randomStandee = characterStandeeUrl(RANDOM_CHARACTER_ID);
 
   return (
     <div
@@ -84,6 +88,43 @@ export function RebornModal({
         <div className="flex min-h-0 flex-1 gap-4 p-4">
           <div className="min-w-0 flex-1 overflow-y-auto">
             <div className="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-2">
+              {/* First, the way it is first in the poczekalnia. 4.4 says only
+                  that the player "może wybrać sobie nową" Postać — nothing in
+                  it forbids letting the pile choose, and a player who wanted a
+                  surprise the first time still wants one now. Unlike in the
+                  poczekalnia there is no start of the game left to reveal it
+                  at, so the draw happens on the press. */}
+              <button
+                disabled={busy || free.length === 0}
+                onClick={() => setPicked(RANDOM_CHARACTER_ID)}
+                onMouseEnter={() => setHovered(RANDOM_CHARACTER_ID)}
+                onMouseLeave={() =>
+                  setHovered((was) => (was === RANDOM_CHARACTER_ID ? null : was))
+                }
+                onFocus={() => setHovered(RANDOM_CHARACTER_ID)}
+                onBlur={() => setHovered(null)}
+                title="Losowa — Karta Postaci zostanie wylosowana spośród tych, które zostały"
+                className={`overflow-hidden rounded border transition disabled:opacity-40 ${
+                  picked === RANDOM_CHARACTER_ID
+                    ? "border-ochre"
+                    : "border-edge hover:border-ochre/60"
+                }`}
+              >
+                {randomStandee ? (
+                  <Image
+                    src={randomStandee}
+                    alt="Losowa postać"
+                    width={114}
+                    height={190}
+                    className={`h-auto w-full transition-opacity ${
+                      picked === RANDOM_CHARACTER_ID || !picked ? "opacity-100" : "opacity-45"
+                    }`}
+                    unoptimized
+                  />
+                ) : (
+                  <span className="block p-2 text-[10px] text-ink">Losowa</span>
+                )}
+              </button>
               {free.map((character) => {
                 const standee = characterStandeeUrl(character.id);
                 const chosen = picked === character.id;
@@ -146,9 +187,11 @@ export function RebornModal({
 
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-edge px-4 py-3">
           <p className="min-w-0 truncate text-[12px] text-muted">
-            {picked
-              ? `Wybrano: ${characters.find((c) => c.id === picked)?.name}`
-              : "Wybierz Postać z listy."}
+            {picked === RANDOM_CHARACTER_ID
+              ? "Wybrano: losowa — Karta zostanie wylosowana z tych, które zostały."
+              : picked
+                ? `Wybrano: ${characters.find((c) => c.id === picked)?.name}`
+                : "Wybierz Postać z listy."}
           </p>
           <button
             disabled={busy || !picked}

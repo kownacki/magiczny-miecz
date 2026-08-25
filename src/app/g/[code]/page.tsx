@@ -46,6 +46,8 @@ import type { EventCard, Item, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
 import { DrawModal, ringFields } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
+import { ConfirmDialog, type Confirmation } from "./confirm";
+import { askAbout, isUsable, usageOf } from "@/lib/engine/uses";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import type { Effect } from "@/lib/engine/cardScript";
 
@@ -181,6 +183,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [waved, setWaved] = useState<string[]>([]);
   /** Whether the "choose again" modal is open (4.4). */
   const [reborn, setReborn] = useState(false);
+  /**
+   * The irreversible thing waiting to be confirmed.
+   *
+   * Spending a card and speaking a Zaklęcie are the two acts here that cannot
+   * be taken back by the person they happen to — the Karta is gone, and 9.6 has
+   * the spell reaching its victim anywhere on the board. The poczekalnia
+   * already asks before its three, and this is the same dialog.
+   */
+  const [ask, setAsk] = useState<Confirmation | null>(null);
   /**
    * Whether a watcher has folded somebody else's turn away.
    *
@@ -542,6 +553,64 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * server refuses anyway, the next refresh has the truth in it and the
    * optimistic move is dropped on top of it, which puts the card back.
    */
+  /**
+   * Asks before a card is spent, and spends it on a yes.
+   *
+   * Nine Przedmioty are one act rather than a possession — the Karta goes on
+   * the used pile whatever comes of it — so this is the one place in the pack
+   * where a misclick costs something that cannot be put back. `uses.ts` writes
+   * the question, so the words are the same here as in the hover.
+   */
+  function askToUse(holdingId: string, cardId: string) {
+    const spend = usageOf(cardId);
+    if (!spend) return;
+    const name = CARD_NAMES.get(cardId) ?? cardId;
+    setAsk({
+      title: `${spend.verb}: ${name}`,
+      body: askAbout(name, spend),
+      confirmLabel: spend.verb,
+      // Red, like everything that takes something away from somebody — here
+      // from the person pressing it.
+      tone: "grave",
+      onConfirm: () => {
+        setAsk(null);
+        post("holdings", { action: "use", holdingId });
+      },
+    });
+  }
+
+  /**
+   * The same question before a Zaklęcie is spoken.
+   *
+   * 9.6 puts the spell on its victim wherever they are standing and takes the
+   * card out of the hand for good, and until now that was one click of a button
+   * sitting under every card in the hand.
+   */
+  function askToCast(holdingId: string, cardId: string, targetSeat?: number) {
+    const name = CARD_NAMES.get(cardId) ?? cardId;
+    const at =
+      targetSeat === undefined
+        ? ""
+        : ` na: ${seats.find((seat) => seat.seat_index === targetSeat)?.player_name ?? `Miejsce ${targetSeat + 1}`}`;
+    setAsk({
+      title: `Rzuć Zaklęcie: ${name}`,
+      body:
+        `${name}${at}. Karta odchodzi z ręki na stos kart zużytych i cały stół dowiaduje się, ` +
+        `co zostało wypowiedziane (12.5). Skutek rozpatrzcie sami.`,
+      confirmLabel: "Rzuć",
+      tone: "grave",
+      onConfirm: () => {
+        setAsk(null);
+        post("holdings", {
+          action: "cast",
+          seatId: seats.find((seat) => seat.seat_index === mySeatIndex)?.id,
+          holdingId,
+          ...(targetSeat !== undefined ? { targetSeat } : {}),
+        });
+      },
+    });
+  }
+
   async function equip(holdingId: string, slot: Slot | null) {
     const mineNow = seats.find((seat) => seat.seat_index === mySeatIndex);
     const held = mineNow?.holdings.find((h) => h.id === holdingId);
@@ -639,6 +708,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
 
   const overlays = (
     <>
+      {/* Above everything else it could be asked about, and dismissed by
+          clicking away — the safest answer is the one you get by not deciding. */}
+      <ConfirmDialog ask={ask} busy={busy} onCancel={() => setAsk(null)} />
+
       {inspectingCard && (
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
@@ -1123,6 +1196,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
                 onEquip={equip}
                 onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
+                onUse={askToUse}
                 onInspect={setInspectingCard}
               />
             )}
@@ -1165,14 +1239,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 }))}
                 busy={busy}
                 onInspect={setInspectingCard}
-                onCast={(holdingId, targetSeat) =>
-                  post("holdings", {
-                    action: "cast",
-                    seatId: mine.id,
-                    holdingId,
-                    ...(targetSeat !== undefined ? { targetSeat } : {}),
-                  })
-                }
+                onCast={(holdingId, targetSeat) => {
+                  const held = mine.holdings.find((card) => card.id === holdingId);
+                  if (held) askToCast(holdingId, held.cardId, targetSeat);
+                }}
               />
             )}
 
@@ -1279,6 +1349,7 @@ function Hand({
   onDrop,
   onTrade,
   onEquip,
+  onUse,
   onInspect,
 }: {
   seat: Seat;
@@ -1297,6 +1368,8 @@ function Hand({
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
   onEquip: (holdingId: string, slot: Slot | null) => void;
+  /** Spend a card by using it. Absent on somebody else's pack. */
+  onUse?: (holdingId: string, cardId: string) => void;
   onInspect: (card: TileCard) => void;
 }) {
   /** Something is being carried over the pack. */
@@ -1414,13 +1487,22 @@ function Hand({
                 });
               }
             }}
+            // Two clicks put a card on — and where there is nothing to put it
+            // on, two clicks spend it instead. Never both for the same card:
+            // the Różdżka Przeznaczenia is worn *and* spent, and it keeps the
+            // gesture the other nine wearables have, with its "użyj" on the
+            // button below. A gesture that meant one thing on this card and
+            // another on the next would be worse than no gesture.
             onDoubleClick={() => {
-              if (!slotted || !canAct || held.kind !== "item") return;
-              const place = SLOTS.find((slot) => fitsIn(held.cardId, slot));
+              if (!canAct || held.kind !== "item") return;
+              const place = slotted
+                ? SLOTS.find((slot) => fitsIn(held.cardId, slot))
+                : undefined;
               if (place) {
                 onCarry(null);
-                onEquip(held.id, place);
+                return onEquip(held.id, place);
               }
+              if (onUse && isUsable(held.cardId)) onUse(held.id, held.cardId);
             }}
             // Dragged onto a place to put it on — the same journey the
             // "załóż" button makes, for people who reach for the card.
@@ -1439,6 +1521,19 @@ function Hand({
                     worn={wornBySlot(seat)}
                     onEquip={(slot) => onEquip(held.id, slot)}
                   />
+                )}
+                {/* Always drawn where a card has a use, whether or not the
+                    double-click reaches it — a gesture nobody can see is not
+                    an offer. In ochre because it costs you the card, unlike
+                    "odrzuć", which leaves it lying on the Obszar (5.5). */}
+                {onUse && isUsable(held.cardId) && (
+                  <button
+                    onClick={() => onUse(held.id, held.cardId)}
+                    title={usageOf(held.cardId)?.co}
+                    className="text-[9px] text-ochre underline hover:text-ink"
+                  >
+                    {usageOf(held.cardId)!.verb.toLowerCase()}
+                  </button>
                 )}
                 <button
                   onClick={() => onDrop(held.id)}
@@ -1588,6 +1683,7 @@ function SeatCard({
   onDrop,
   onTrade,
   onEquip,
+  onUse,
   onInspect,
 }: {
   seat: Seat;
@@ -1611,6 +1707,8 @@ function SeatCard({
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
   onEquip: (holdingId: string, slot: Slot | null) => void;
+  /** Spend a card by using it — asked about first, because it cannot be undone. */
+  onUse?: (holdingId: string, cardId: string) => void;
   onInspect: (card: TileCard) => void;
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
@@ -1766,6 +1864,7 @@ function SeatCard({
                   setCarried(null);
                   onEquip(holdingId, null);
                 }}
+                onUse={onUse}
                 // A drag carries an id; a click carries nothing and means
                 // "put down what I am holding".
                 onDropInto={(holdingId, slot) =>
@@ -1811,6 +1910,7 @@ function SeatCard({
             onDrop={onDrop}
             onTrade={onTrade}
             onEquip={onEquip}
+            onUse={onUse}
             onInspect={onInspect}
           />
           <CarriedCard carried={carried} />
@@ -1961,6 +2061,8 @@ function describeResult(result: unknown): string | null {
     card?: string;
     face?: number;
     did?: string[];
+    /** A used card the app could not finish working out — see `uses.ts`. */
+    stol?: boolean;
   };
   // 19.1 is answered, not rolled — an escape works because an ability says so.
   // "No" is therefore a real result, and it changes nothing on the board, so
@@ -2016,7 +2118,11 @@ function describeResult(result: unknown): string | null {
   if (source && (typeof data.face === "number" || data.did)) {
     const did = data.did?.length ? data.did.join(", ") : "nic się nie dzieje";
     const rolled = typeof data.face === "number" ? `wypadło ${data.face} — ` : "";
-    return `${source}: ${rolled}${did}.`;
+    // A spent card whose effect the app cannot carry out says so, rather than
+    // reading like something that has already been applied. The Karta is gone
+    // either way; what is left is the table's to do.
+    const owed = data.stol ? " — rozpatrzcie sami." : ".";
+    return `${source}: ${rolled}${did}${owed}`;
   }
 
   // Paying a healer: what the money and 4.7 between them actually bought.

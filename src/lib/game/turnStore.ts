@@ -1,5 +1,6 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
+import { randomInt } from "node:crypto";
 import { db } from "@/lib/supabase";
 import {
   GAME_COLUMNS,
@@ -67,12 +68,15 @@ import {
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
-import type { CardClass, EventCard, Item, Nature } from "@/data/types";
+import charactersData from "@/data/characters.json";
+import type { CardClass, Character, EventCard, Item, Nature } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { combinedEnemyTotal } from "@/lib/engine/combat";
 import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
+import { usageOf } from "@/lib/engine/uses";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
+import { describeEffect } from "@/lib/engine/effectText";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { isSettled } from "@/lib/engine/resolve";
 import { goodsId } from "@/lib/engine/goods";
@@ -89,6 +93,7 @@ import {
 } from "@/lib/engine/deck";
 
 const EVENTS = events as EventCard[];
+const CHARACTERS = charactersData as Character[];
 
 /** Card lookup by slice reference — the only key that distinguishes duplicates. */
 const BY_REF = new Map(EVENTS.map((card) => [cardRef(card.source), card]));
@@ -1164,6 +1169,93 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
     onField: data?.kind !== "spell" && data?.kind !== "trophy" ? seat?.field_id : null,
   });
   await bumpRevision(gameId);
+}
+
+/**
+ * Spends a card by using it.
+ *
+ * Nine Przedmioty in the box are one act rather than a possession — "Po użyciu
+ * Kartę należy odłożyć" — and until now there was no way to perform that act.
+ * The card sat in a pack doing nothing, and the only button under it was
+ * "odrzuć", which is a different thing entirely: 5.5 leaves a discarded
+ * Przedmiot lying on the Obszar for whoever comes next, and a drunk Eliksir is
+ * gone.
+ *
+ * Not gated on whose turn it is. Four of the nine are used inside somebody
+ * else's turn — the Kryształ Losu in a fight you did not start, the
+ * Zwierciadło against whoever needs it — so a turn check would refuse the card
+ * at the only moment it is worth anything. `dropCard` is ungated for the same
+ * reason and this is its sibling.
+ *
+ * The Karta goes before the effect is applied, because that is the order the
+ * cards print it in and because it matters: the Szkatuła's first face hands
+ * over a Tarcza Tolimana, and 5.4 must not count the box it came out of.
+ */
+export interface UseResult {
+  card: string;
+  face?: number;
+  did: string[];
+  /** The table has to work this one out — see `Use.rozpatruje`. */
+  stol: boolean;
+}
+
+export async function spendHolding(gameId: string, holdingId: string): Promise<UseResult> {
+  const game = await loadGame(gameId);
+  const { data } = await db
+    .from("holdings")
+    .select("seat_id,card_id,kind")
+    .eq("id", holdingId)
+    .maybeSingle();
+  if (!data) throw new Error("Nie ma takiej Karty.");
+
+  // Zaklęcia are spoken, not used: 9.6 has its own path, with its own window
+  // and its own announcement to the table.
+  if (data.kind === "spell") {
+    throw new Error("Zaklęcie się rzuca, nie używa (9.6).");
+  }
+
+  const cardId = String(data.card_id);
+  const use = usageOf(cardId);
+  if (!use) throw new Error(`${cardName(cardId)} — tej Karty się nie zużywa.`);
+
+  const seatId = String(data.seat_id);
+  const script = use.rozpatruje === "aplikacja" ? scriptFor(cardId) : null;
+  const face =
+    script?.effect.op === "rzut" ? 1 + Math.floor(Math.random() * 6) : undefined;
+
+  // Spent first, whatever comes of it. Every one of these cards says the Karta
+  // goes — the Łódź says so even if you never got in it.
+  await db.from("holdings").delete().eq("id", holdingId);
+  await journal(gameId, seatId, game.turn, "uzycie", {
+    cardId,
+    ...(face !== undefined ? { face } : {}),
+  });
+
+  if (!script) {
+    await bumpRevision(gameId);
+    return { card: cardName(cardId), did: [use.co], stol: true };
+  }
+
+  const effect = face !== undefined && script.effect.op === "rzut"
+    ? script.effect.faces[face]
+    : script.effect;
+  const done = await applyEffect(
+    gameId,
+    seatId,
+    effect,
+    face !== undefined ? `${cardName(cardId)} (${face})` : cardName(cardId),
+    {},
+  );
+  await bumpRevision(gameId);
+  return {
+    card: cardName(cardId),
+    ...(face !== undefined ? { face } : {}),
+    // A face the app cannot finish — the Szkatuła's Tarcza Tolimana, which is a
+    // Karta somebody has to hand over — is reported as the table's rather than
+    // silently dropped.
+    did: done.pending ? [...done.did, describeEffect(done.pending)] : done.did,
+    stol: done.pending !== null,
+  };
 }
 
 /**
@@ -2454,25 +2546,39 @@ export async function takeNewCharacter(
   const seat = seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
   if (!seat.eliminated) throw new Error("Ta Postać wciąż żyje.");
-  // 4.4 is a choice from what is left on the table, made in front of everybody
-  // mid-game. The surprise belongs to the poczekalnia, where nobody can see
-  // what anybody drew; here it would only leave the seat holding a sentinel
-  // with no game start left to resolve it.
-  if (isRandomPick(characterId)) {
-    throw new Error("Nową Postać po śmierci wybiera się z tych, które zostały.");
-  }
-
   // The dead character's own card is out of the game — "jej Kartę odłożyć do
   // pozostałych nie biorących udziału w grze" — and so is everybody else's, so
   // the choice is from what nobody has held.
   const spent = new Set(
     seats.filter((s) => s.character_id).map((s) => s.character_id as string),
   );
-  if (spent.has(characterId)) {
+
+  /**
+   * The surprise, settled here and now.
+   *
+   * In the poczekalnia the sentinel sits on the seat until `startGame` deals a
+   * real card, so nobody can see what anybody drew before the game begins.
+   * There is no such moment left after a death — the game is already running —
+   * so the draw happens as the button is pressed, from the same pool 4.4
+   * describes: whatever nobody has held.
+   *
+   * A CSPRNG rather than `Math.random` for no reason except that the deal in
+   * `store.ts` already uses one and two ways of drawing a character would be
+   * one too many.
+   */
+  const wanted = isRandomPick(characterId)
+    ? (() => {
+        const left = CHARACTERS.filter((character) => !spent.has(character.id));
+        if (left.length === 0) throw new Error("Nie została żadna wolna Postać.");
+        return left[randomInt(left.length)].id;
+      })()
+    : characterId;
+
+  if (spent.has(wanted)) {
     throw new Error("Ta Postać jest już w grze.");
   }
 
-  await chooseCharacter(gameId, seatId, characterId);
+  await chooseCharacter(gameId, seatId, wanted);
   await db
     .from("seats")
     .update({
@@ -2490,7 +2596,12 @@ export async function takeNewCharacter(
   const fresh = (await seatsFor(gameId)).find((s) => s.id === seatId);
   if (fresh) await dealStartingKit(gameId, fresh);
 
-  await journal(gameId, seatId, game.turn, "nowa-postac", { characterId });
+  await journal(gameId, seatId, game.turn, "nowa-postac", {
+    characterId: wanted,
+    // Which card it is, is public either way; that it was drawn rather than
+    // chosen is worth a word, because the two are different decisions.
+    ...(isRandomPick(characterId) ? { losowa: true } : {}),
+  });
   await bumpRevision(gameId);
 }
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
+import { isUsable, usageOf } from "@/lib/engine/uses";
 import { ItemSlot, SLOT_WIDTH, type SlotTone } from "./item-slot";
 import type { TileCard } from "./card-tile";
 
@@ -112,6 +113,7 @@ export function SlotPanel({
   onDragging,
   onPickUp,
   onTakeOff,
+  onUse,
   onDropInto,
 }: {
   /** What is in each place; missing keys are empty places. */
@@ -130,6 +132,15 @@ export function SlotPanel({
   liftedHoldingId: string | null;
   onPickUp: (item: SlotItem, from: Slot) => void;
   onTakeOff: (holdingId: string) => void;
+  /**
+   * Spend a worn card by using it.
+   *
+   * One card in the box is both worn and spent — the Różdżka Przeznaczenia,
+   * which goes in the main hand and goes on the used pile once the Wróg it
+   * charmed has fought. Without this it would have to be taken off before it
+   * could be used, which is not a step the card describes.
+   */
+  onUse?: (holdingId: string, cardId: string) => void;
   /** Something was put into a place — dropped, or carried there and clicked. */
   onDropInto: (holdingId: string, slot: Slot) => void;
 }) {
@@ -233,7 +244,19 @@ export function SlotPanel({
                   </button>
                 ) : null
               }
-            />
+            >
+              {item && canAct && onUse && isUsable(item.cardId) ? (
+                <button
+                  type="button"
+                  onClick={() => onUse(item.holdingId, item.cardId)}
+                  disabled={busy}
+                  title={usageOf(item.cardId)?.co}
+                  className="text-[9px] text-ochre underline transition hover:text-ink disabled:opacity-40"
+                >
+                  {usageOf(item.cardId)!.verb.toLowerCase()}
+                </button>
+              ) : null}
+            </ItemSlot>
           </div>
         );
       })}

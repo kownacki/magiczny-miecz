@@ -73,6 +73,18 @@ export function SpellHand({
                 size="md"
                 dimmed={!now}
                 onClick={() => onInspect({ cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" })}
+                // Two clicks on the card speak it — the same gesture that puts
+                // a Przedmiot on, for the act that is a hand's equivalent. It
+                // goes through the same question the button below does, so a
+                // Zaklęcie is never spent by a double-click that missed.
+                onDoubleClick={
+                  now && !busy
+                    ? () =>
+                        needsVictim && opponents.length > 0
+                          ? setAiming(entry.holdingId)
+                          : onCast(entry.holdingId)
+                    : undefined
+                }
               />
 
               {/* When it may be spoken and at what, under the card that says
@@ -141,6 +153,7 @@ export function SpellHand({
           that is not coming. */}
       <p className="mt-2 border-t border-edge/60 pt-1 text-[10px] leading-snug text-ochre/70">
         Rzucone Zaklęcie znika z ręki i trafia do dziennika — skutek rozpatrzcie sami.
+        Podwójne kliknięcie Karty rzuca ją tak samo jak przycisk.
       </p>
     </div>
   );

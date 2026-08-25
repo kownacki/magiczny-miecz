@@ -7,6 +7,7 @@ import characters from "@/data/characters.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { asFieldId, FIELDS } from "./board";
 import { asCharacterId } from "./characters";
+import { usageOf } from "./uses";
 
 /** One row of `magiczny_miecz.moves`, as the route hands it over. */
 export interface JournalEntry {
@@ -299,6 +300,15 @@ export function describe(
 
     case "odrzucenie":
       return line(`${who} odrzuca: ${card(data.cardId)}.`);
+
+    // Spending a card by using it. Said with the card's own verb — a Postać
+    // wypija an Eliksir and otwiera a Szkatuła — because "używa" for all nine
+    // reads like a log and these are things that happened at a table.
+    case "uzycie": {
+      const spent = usageOf(String(data.cardId ?? ""));
+      const face = typeof data.face === "number" ? ` — wypadło ${data.face}` : "";
+      return line(`${who} ${spent?.dziennik ?? "używa"}: ${card(data.cardId)}${face}.`);
+    }
     case "kupno":
       return line(`${who} kupuje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);
     case "sprzedaz":
@@ -367,7 +377,8 @@ export function describe(
       return line(`${who} ginie na polu ${field(data.field)}.`);
     case "nowa-postac":
       return line(
-        `${who} gra dalej jako: ${characterName(data.characterId)}.`,
+        `${who} gra dalej jako: ${characterName(data.characterId)}` +
+          `${data.losowa === true ? " (wylosowana)" : ""}.`,
       );
     /**
      * Two opposite events share this kind, and only the payload separates them.

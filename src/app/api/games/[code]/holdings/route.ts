@@ -15,6 +15,7 @@ import {
   takeFromField,
   tradeTrophies,
   turnToStone,
+  spendHolding,
 } from "@/lib/game/turnStore";
 
 /**
@@ -51,6 +52,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "drop":
         await dropCard(game.id, String(body.holdingId));
         break;
+      // Spending a card by using it, which is not the same as putting it down:
+      // 5.5 leaves a discarded Przedmiot lying on the Obszar for whoever comes
+      // next, and a drunk Eliksir is gone. Which cards have a use, and what it
+      // costs, is `uses.ts`'s to say and never the request's.
+      case "use":
+        return NextResponse.json(await spendHolding(game.id, String(body.holdingId)));
       // The three establishment verbs. What each of them costs is read off the
       // board inside these, never taken from the request.
       case "buy":
