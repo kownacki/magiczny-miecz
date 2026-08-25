@@ -26,6 +26,7 @@ import {
   crossingDice,
   heldAbilities,
   tollIsWaived,
+  type EscapeTarget,
 } from "@/lib/engine/abilities";
 import { castableNow, spellScript } from "@/lib/engine/spells";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
@@ -47,6 +48,7 @@ import {
   isRandomPick,
   startingKit,
 } from "@/lib/engine/characters";
+import type { SpellId } from "@/data/ids";
 import {
   afterDraw,
   afterMove,
@@ -65,6 +67,7 @@ import {
   startFight,
   startTurn,
   type TurnPhase,
+  type SpellFloor,
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
@@ -127,6 +130,30 @@ const SPELL_BY_ID = new Map<string, (typeof SPELLS)[number]>(
 );
 
 /**
+ * The one Zaklęcie the rules name inside another rule.
+ *
+ * 19.1 does not say "a spell that lets you escape" — it says the Krąg Płomieni,
+ * by name, and it is the only way in the game to slip away from another Postać.
+ * So it is looked up here rather than left to the generic casting path, which
+ * has nowhere to put a mechanical effect.
+ */
+const KRAG_PLOMIENI: SpellId = "krag-plomieni";
+
+/**
+ * How many Zaklęcia a character was dealt at setup (9.5).
+ *
+ * The Różdżka Zaklęć is measured against this rather than against 2.6's table,
+ * so the limit cannot be worked out from Magia alone — see `spellAllowance`.
+ * A stored `character_id` is narrowed on the way in, and an unseated seat has
+ * no starting hand.
+ */
+const ROZDZKA_ZAKLEC = "rozdzka-zaklec";
+
+function spellsAtSetup(characterId: string | null): number {
+  return startingKit(asCharacterId(characterId)).spells ?? 0;
+}
+
+/**
  * Both piles a simulated game deals from.
  *
  * Kept separate because they recycle separately: rule 9.5 says the Spell pile
@@ -158,7 +185,7 @@ import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from 
 import { bonusFromHoldings, inEffect } from "@/lib/engine/holdings";
 import type { CombatKind } from "@/lib/engine/combat";
 import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
-import { HEAL_CEILING, heal, mayHold, spellCapacity } from "@/lib/engine/derive";
+import { HEAL_CEILING, heal, mayHold, spellAllowance } from "@/lib/engine/derive";
 import type { Seat } from "@/lib/engine/state";
 
 /**
@@ -552,6 +579,51 @@ export async function discardDrawn(gameId: string, refs: string[]): Promise<void
  * may hold no spells at all, and one that gains a spell it cannot hold must
  * shed the excess immediately (9.4).
  */
+/**
+ * The Różdżka Zaklęć's other half: a hand that refills itself (9.5).
+ *
+ * `spellAllowance` carries the card's first clause — how many you may hold.
+ * This is the second, and for most of the roster it is the only one that does
+ * anything: "może wziąć nowe Zaklęcie, gdy ma tyle Zaklęć, ile na początku gry
+ * lub mniej." A Zaklęcie is not otherwise something you may simply take —
+ * 9.5 has them arrive from Spotkania and Obszary — so a raised ceiling alone
+ * leaves the wand inert for a Książę, who could already hold two and had no
+ * way to reach them. The rulebook's own worked example is exactly this: he
+ * picks the wand up, draws at once, casts the Ocalony, and *"ponieważ ma
+ * Różdżkę, natychmiast bierze następne Zaklęcie."*
+ *
+ * Repeatable, because the card is: it is spent by nothing and says "gdy",
+ * not "raz". What bounds it is the setup hand — cast down to it, refill, and
+ * that is as often as the wand can be asked.
+ */
+export async function drawSpellWithWand(gameId: string, seatId: string): Promise<string> {
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  const mine = (await holdingsFor(gameId))
+    .filter((h) => h.seat_id === seatId)
+    .map(asHolding);
+  const hasWand = mine.some((h) => h.kind !== "trophy" && h.cardId === ROZDZKA_ZAKLEC);
+  if (!hasWand) throw new Error("Ta Postać nie ma Różdżki Zaklęć.");
+
+  const setup = spellsAtSetup(seat.character_id);
+  const held = mine.filter((h) => h.kind === "spell").length;
+  if (held > setup) {
+    throw new Error(
+      setup === 0
+        ? "Różdżka daje nowe Zaklęcie dopiero, gdy nie masz żadnego."
+        : `Różdżka daje nowe Zaklęcie dopiero, gdy masz najwyżej ${setup} (tyle, co na początku gry).`,
+    );
+  }
+
+  // Everything else — the deck, the empty-stack case, the face-down hand of
+  // 9.3, the journal line — is the same draw as any other, so it is the same
+  // code. `spellAllowance` has already made room for this one by definition:
+  // being at or below the setup hand is being below the floor the wand sets.
+  return drawSpell(gameId, seatId);
+}
+
 export async function drawSpell(gameId: string, seatId: string): Promise<string> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
@@ -568,7 +640,13 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
     .filter((h) => h.seat_id === seatId)
     .map(asHolding);
   const bonus = bonusFromHoldings(mine, eq(game), "parametr");
-  const capacity = spellCapacity(seat.magia_own + bonus.magia);
+  const capacity = spellAllowance(
+    seat.magia_own + bonus.magia,
+    spellsAtSetup(seat.character_id),
+    // "Właściciel Różdżki" — owning it is the whole condition, so the pack
+    // counts as much as the body does, in either eq variant.
+    heldAbilities(mine.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
+  );
 
   if ((held.data?.length ?? 0) >= capacity) {
     // Polish numerals agree with the noun: 2-4 take "Zaklęcia", 5 and up take
@@ -663,47 +741,97 @@ export async function shopStock(
  * is the difference between a rule being enforced and a rule being in the way:
  * most fights in this game involve no spells at all.
  */
-async function seatsOwedASpell(gameId: string): Promise<number[]> {
-  const seats = await seatsFor(gameId);
-  const holdings = await holdingsFor(gameId);
-  const owed: number[] = [];
-  for (const seat of seats) {
-    // A seat nobody is behind cannot pass, and a fight that waits on it waits
-    // for ever. Eliminated characters hold nothing; an abandoned seat may still
-    // have a hand, and it is the one case where the window would deadlock.
-    if (seat.eliminated || !seat.character_id || seat.abandoned_at !== null) continue;
-    const hand = holdings.filter((h) => h.seat_id === seat.id && h.kind === "spell");
-    const canCast = hand.some((held) => {
-      const script = spellScript(held.card_id);
-      return script ? castableNow(script, ["przed-walka", "spotkanie"]) : false;
-    });
-    if (canCast) owed.push(seat.seat_index);
-  }
-  return owed;
+/**
+ * How long a claim on the moment before the dice lasts.
+ *
+ * Fifteen seconds is a house rule — the rulebook has no clock anywhere, only
+ * "before the roll" (17.3) — and it exists to stop a fight hanging on somebody
+ * who has gone to make tea. It is not meant to be a test of reflexes: the race
+ * is the *claim*, which is one button, and the fifteen seconds are for choosing
+ * a card once the floor is already yours.
+ */
+const FLOOR_MS = 15_000;
+
+/** The claim on this fight, or null when nobody holds it or the last one lapsed. */
+function floorOf(fight: { caster?: SpellFloor | null }, now = Date.now()): SpellFloor | null {
+  const floor = fight.caster ?? null;
+  return floor && floor.until > now ? floor : null;
 }
 
 /**
- * Closes one seat's window (17.3, 17.7).
+ * Claims the moment before the dice (17.3, 17.7, 9.1).
  *
- * Passing is a decision, not an absence of one — which is why it is a button
- * and not a timer. The dice wait until everybody who could speak has said they
- * are not going to.
+ * Anybody may ask, including the player whose fight it is — thirteen of the
+ * twenty-seven Zaklęcia say "w dowolnej chwili", so a bystander speaking into
+ * someone else's fight is ordinary. Only one at a time: the floor is exclusive,
+ * and while it is held nobody else may claim it and the dice do not move.
+ *
+ * Refused for a seat with nothing to say, which is the honest half of 9.3 —
+ * the button can be offered to everybody without telling anybody anything,
+ * because it is pressing it that reveals you were holding something.
  */
-export async function passSpells(gameId: string, seatId: string): Promise<void> {
+export async function claimSpellFloor(gameId: string, seatId: string): Promise<void> {
   const game = await loadGame(gameId);
-  if (game.turn_state.phase !== "walka") return;
-  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
+  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
+  if (seat.eliminated) throw new Error("Zmarła Postać nie rzuca Zaklęć (4.4).");
 
-  const owed = (game.turn_state.fight.spellsOwedBy ?? []).filter(
-    (index) => index !== seat.seat_index,
+  const held = floorOf(game.turn_state.fight);
+  if (held && held.seat !== seat.seat_index) {
+    const who = seats.find((s) => s.seat_index === held.seat);
+    throw new Error(`${who?.player_name ?? "Ktoś inny"} właśnie rzuca Zaklęcie — poczekaj.`);
+  }
+
+  // 17.4 ends the fight at the dice, so there is nothing left to react to.
+  if (game.turn_state.fight.result) throw new Error("Walka jest już rozstrzygnięta.");
+
+  const hand = (await holdingsFor(gameId)).filter(
+    (h) => h.seat_id === seat.id && h.kind === "spell",
   );
+  const canCast = hand.some((card) => {
+    const script = spellScript(card.card_id);
+    return script ? castableNow(script, ["przed-walka", "w-walce", "dowolna-chwila"]) : false;
+  });
+  if (!canCast) throw new Error("Nie masz Zaklęcia, które można teraz rzucić.");
+
   await db
     .from("games")
     .update({
       turn_state: {
         ...game.turn_state,
-        fight: { ...game.turn_state.fight, spellsOwedBy: owed },
+        fight: {
+          ...game.turn_state.fight,
+          caster: { seat: seat.seat_index, until: Date.now() + FLOOR_MS },
+        },
+      },
+    })
+    .eq("id", gameId);
+  await bumpRevision(gameId);
+}
+
+/**
+ * Gives the floor back without using it.
+ *
+ * Reaching for a card and thinking better of it is a move somebody makes at a
+ * table, and holding everybody up for the rest of the fifteen seconds after
+ * deciding is not.
+ */
+export async function releaseSpellFloor(gameId: string, seatId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.turn_state.phase !== "walka") return;
+  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+  const held = floorOf(game.turn_state.fight);
+  if (held && held.seat !== seat.seat_index) return;
+
+  await db
+    .from("games")
+    .update({
+      turn_state: {
+        ...game.turn_state,
+        fight: { ...game.turn_state.fight, caster: null },
       },
     })
     .eq("id", gameId);
@@ -767,16 +895,9 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
     },
     { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
   );
-  const owed = await seatsOwedASpell(gameId);
-  await db
-    .from("games")
-    .update({
-      turn_state:
-        next.phase === "walka"
-          ? { ...next, fight: { ...next.fight, spellsOwedBy: owed } }
-          : next,
-    })
-    .eq("id", gameId);
+  // Nobody is polled and nobody is named: the floor starts empty and is
+  // claimed by whoever wants it (see `claimSpellFloor`).
+  await db.from("games").update({ turn_state: next }).eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "walka-start", {
     cardIds,
     enemyTotal: total,
@@ -838,6 +959,42 @@ export async function stageFight(
 }
 
 /**
+ * Walks out of a fight, for testing.
+ *
+ * DEVELOPMENT ONLY — reached through the debug route, which a deployed build
+ * refuses outright.
+ *
+ * The counterpart to `stageFight`, and needed for the same reason. Staging a
+ * fight to look at one thing leaves you holding the rest of it: the dice, the
+ * verdict, the point of Życie. And a fight is the one phase with no way back —
+ * 17.4 ends it when the dice are compared, and 19.1 will not let you leave
+ * without an ability that says so, which is exactly the rule being tested.
+ *
+ * So this is not an escape and does not pretend to be one. Nothing is applied,
+ * nothing is spent, no rule is consulted, and the journal says a fight was
+ * broken off rather than fled — because a row that read like 19.1 would make
+ * the test hatch indistinguishable from the thing it exists to test.
+ */
+export async function abandonFight(gameId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
+
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.seat_index === game.active_seat);
+  const { cardName } = game.turn_state.fight;
+
+  // `endFight` puts the character back on its field with the fight's creatures
+  // already in `fought` — startFight settles them the moment it opens — so the
+  // field resumes with nothing outstanding rather than offering the same
+  // creature again the moment the modal closes.
+  await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
+  if (seat) {
+    await journal(gameId, seat.id, game.turn, "test-koniec-walki", { cardName }, true);
+  }
+  await bumpRevision(gameId);
+}
+
+/**
  * Speaks a Zaklęcie (9.6).
  *
  * The card leaves the caster's hand for the used pile and the table is told
@@ -881,6 +1038,30 @@ export async function castSpell(
     throw new Error("Na Kamiennym Moście Zaklęcia nie działają na tutejsze istoty (9.7).");
   }
 
+  /**
+   * In a fight, the floor is asked for first and then spoken into.
+   *
+   * Two things fall out of that. Nobody speaks over anybody — the claim is
+   * exclusive, so a spell cannot land while somebody else is choosing one — and
+   * there is no need to guess who might want to answer, because answering is
+   * itself a claim. WŁADCA ZAKLĘĆ negates "każdego innego (bez wyjątku)
+   * Zaklęcia, rzuconego bezpośrednio przed nim" and ZWIERCIADŁO reflects one
+   * back at whoever spoke it, so an answer to an answer has to be possible, and
+   * a single window before the dice could never hold that.
+   */
+  const state = game.turn_state;
+  const inAFight = state.phase === "walka";
+  if (state.phase === "walka") {
+    const floor = floorOf(state.fight);
+    if (!floor || floor.seat !== caster.seat_index) {
+      throw new Error(
+        floor
+          ? "Teraz rzuca kto inny — poczekaj na swoją kolej."
+          : "Najpierw zgłoś, że chcesz rzucić Zaklęcie (17.3).",
+      );
+    }
+  }
+
   await db.from("holdings").delete().eq("id", holdingId);
 
   // Back to the used pile, so the spell deck can be reshuffled honestly (9.5).
@@ -903,6 +1084,38 @@ export async function castSpell(
     ...(victim ? { target: victim } : {}),
     ...(target.note ? { note: target.note } : {}),
   });
+
+  /**
+   * A spell spoken puts the fight back where it started, and hands the floor
+   * back to the table.
+   *
+   * 17.3 has the spells before the roll, so a fight that has been spoken into
+   * has not been rolled yet — and if it had been, the spell would be arriving
+   * after the thing it was meant to change. Clearing the dice is what makes the
+   * next claim mean something: whoever wants to answer this can, and the
+   * fighting player rolls into the fight as it now stands rather than as it
+   * stood before anybody spoke.
+   */
+  if (inAFight) {
+    const now = await loadGame(gameId);
+    if (now.turn_state.phase === "walka") {
+      await db
+        .from("games")
+        .update({
+          turn_state: {
+            ...now.turn_state,
+            fight: {
+              ...now.turn_state.fight,
+              caster: null,
+              playerRoll: null,
+              enemyRoll: null,
+              result: null,
+            },
+          },
+        })
+        .eq("id", gameId);
+    }
+  }
   await bumpRevision(gameId);
 
   return {
@@ -930,16 +1143,16 @@ export async function fightRoll(
   const seat = activeSeatOf(seats, game);
   if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
 
-  // 17.3 and 17.7: the spells go in before the dice, so the dice wait. Checked
-  // here and not only in the interface, because the point of the window is that
-  // the other player gets their chance — and a window one device can roll
-  // straight through is not one.
-  const owed = game.turn_state.fight.spellsOwedBy ?? [];
-  if (owed.length > 0) {
-    const who = seats
-      .filter((s) => owed.includes(s.seat_index))
-      .map((s) => s.player_name ?? `miejsce ${s.seat_index + 1}`);
-    throw new Error(`Zaklęcia przed rzutem (17.3, 17.7) — czekamy na: ${who.join(", ")}.`);
+  // 17.3 puts the spells before the dice, so the dice wait — but only while
+  // somebody actually holds the floor, and only until it lapses. Checked here
+  // and not only in the interface, because a claim one device can roll straight
+  // through is not a claim.
+  const floor = floorOf(game.turn_state.fight);
+  if (floor) {
+    const who = seats.find((s) => s.seat_index === floor.seat);
+    throw new Error(
+      `${who?.player_name ?? "Ktoś"} rzuca Zaklęcie (17.3) — kostki czekają.`,
+    );
   }
 
   const roll = value ?? 1 + Math.floor(Math.random() * 6);
@@ -1197,7 +1410,14 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
         eq(game),
         "parametr",
       );
-      const allowed = spellCapacity(seat.magia_own + bonus.magia);
+      const mineNow = (await holdingsFor(gameId))
+        .filter((h) => h.seat_id === seat.id)
+        .map(asHolding);
+      const allowed = spellAllowance(
+        seat.magia_own + bonus.magia,
+        spellsAtSetup(seat.character_id),
+        heldAbilities(mineNow.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
+      );
       if (held.length <= allowed) {
         throw new Error(
           `Zaklęć nie odrzuca się, dopóki nie masz ich więcej niż ${allowed} (9.4, 2.6).`,
@@ -1853,6 +2073,12 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
     },
     mine,
   );
+  // 17.7 word for word: "przed wykonaniem rzutu kostką obie Postacie mają
+  // możliwość użycia Zaklęć". A duel is the one fight where "obie Postacie" is
+  // literally two players, and it was the one fight that never opened the
+  // window — the attacker rolled the moment they pressed attack.
+  // Nobody is polled and nobody is named: the floor starts empty and is
+  // claimed by whoever wants it (see `claimSpellFloor`).
   await db.from("games").update({ turn_state: next }).eq("id", gameId);
   await journal(gameId, attacker.id, game.turn, "pojedynek", {
     target: target.seat_index,
@@ -2208,12 +2434,18 @@ export async function crossRing(
  *
  * Rule 17.2 makes fleeing a decision taken BEFORE any dice, and 19.1 says
  * whether it works depends on the character's own special abilities or the
- * Krąg Płomieni spell — which are prose on the character card, not a die roll
- * the app can adjudicate. So this records the attempt and its outcome as the
- * players judge it, rather than inventing a mechanic the rulebook does not have.
+ * Krąg Płomieni spell — never on a die. So the answer is read off what the
+ * seat is holding rather than rolled for, and a companion table can still say
+ * yes or no itself.
  *
- * Rule 19.3 is the one hard limit: on the Kamienny Most you may only escape
- * other characters, never the creatures guarding it.
+ * Three things the rules keep apart and this has to as well:
+ *
+ * - **Who.** 17.6 gives the attempt to the character who was *attacked*. In a
+ *   duel that is never the active seat, because a duel only starts when the
+ *   active seat attacks somebody (13.3).
+ * - **From what.** Every printed escape covers Wrogowie. Another Postać is the
+ *   Krąg Płomieni's alone — see `EscapeTarget`.
+ * - **Where.** 19.3 leaves exactly one kind of escape on the Kamienny Most.
  */
 export async function escape(
   gameId: string,
@@ -2228,64 +2460,156 @@ export async function escape(
    * whatever the players have agreed about a card nobody has transcribed.
    */
   reported: boolean | null,
+  /**
+   * The seat that pressed it, or null for the shared screen in companion mode.
+   *
+   * Checked rather than trusted, because 17.6 hands the escape to the other
+   * player: this is the one action in a fight that the seat whose turn it is
+   * must not be able to take for themselves.
+   */
+  actorSeatId: string | null = null,
 ): Promise<{ succeeded: boolean; onBridge: boolean }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
 
   if (game.turn_state.phase !== "walka" && game.turn_state.phase !== "pole") {
     throw new Error("Nie ma przed czym uciekać.");
   }
 
-  const onBridge = seat.field_id !== null && ringOf(seat.field_id) === KAMIENNY_MOST;
-  const fleeingACard =
-    game.turn_state.phase === "walka" && game.turn_state.fight.opponentSeat === undefined;
-  if (onBridge && fleeingACard) {
+  const duelWith =
+    game.turn_state.phase === "walka" ? game.turn_state.fight.opponentSeat : undefined;
+
+  /**
+   * 17.6: "Postać, która została zaatakowana, może próbować wymknąć się
+   * przeciwnikowi." The attacker has already made their choice by attacking —
+   * there is no rule anywhere letting them take it back — so in a duel the
+   * escape belongs to the other seat, and only to them.
+   */
+  const fleeing =
+    duelWith === undefined
+      ? activeSeatOf(seats, game)
+      : seats.find((s) => s.seat_index === duelWith);
+  if (!fleeing) throw new Error("Nie ma kto uciekać.");
+  if (actorSeatId !== null && actorSeatId !== fleeing.id) {
+    throw new Error(
+      duelWith === undefined
+        ? "To nie twoja tura."
+        : "Wymyka się Postać zaatakowana, nie atakująca (17.6).",
+    );
+  }
+
+  // A duel is the only thing in the game that is fled *as a Postać*; everything
+  // else on a field or in a hand of drawn cards is a Wróg.
+  const przed: EscapeTarget = duelWith === undefined ? "wrog" : "postac";
+
+  const onBridge = fleeing.field_id !== null && ringOf(fleeing.field_id) === KAMIENNY_MOST;
+  if (onBridge && przed === "wrog") {
     throw new Error("Na Kamiennym Moście można wymknąć się tylko innym Postaciom (19.3).");
   }
 
-  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === fleeing.id);
   const abilities = [
-    ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
+    ...abilitiesOfCharacter(asCharacterId(fleeing.character_id)),
     ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
   ];
-  const succeeded =
-    reported ?? (seat.field_id !== null && canEscapeAt(abilities, seat.field_id));
+  const byAbility =
+    fleeing.field_id !== null && canEscapeAt(abilities, fleeing.field_id, przed);
 
+  /**
+   * The other half of 19.1, and the only half that reaches another Postać.
+   *
+   * Looked for only once an ability has already said no, so nothing burns a
+   * Karta for something a Charakterystyka does for free. Spent when it is used,
+   * because 9.6 puts a spoken Zaklęcie on the used pile — and unlike the
+   * abilities it gets you away from one thing, not from everything standing on
+   * the Obszar.
+   *
+   * Only in a fight, because a Zaklęcie is spoken at something: 19.1 pins it to
+   * "jednej (unieruchomionej w Kręgu Płomieni) istocie", and standing on a
+   * field with three drawn Wrogowie names none of them. Refusing a card before
+   * any fight begins stays what 19.2 makes it — an ability, or nothing.
+   */
+  const circle =
+    byAbility || reported !== null || game.turn_state.phase !== "walka"
+      ? undefined
+      : held.find((h) => h.kind === "spell" && h.card_id === KRAG_PLOMIENI);
+
+  const succeeded = reported ?? (byAbility || circle !== undefined);
+
+  if (circle && succeeded) {
+    await db.from("holdings").delete().eq("id", circle.id);
+    if (game.mode === "simulation") {
+      const decks = decksOf(game);
+      await db
+        .from("games")
+        .update({ deck: { ...decks, spells: discardTo(decks.spells, [KRAG_PLOMIENI]) } })
+        .eq("id", gameId);
+    }
+    await journal(gameId, fleeing.id, game.turn, "zaklecie", {
+      cardId: KRAG_PLOMIENI,
+      name: SPELL_BY_ID.get(KRAG_PLOMIENI)?.name ?? KRAG_PLOMIENI,
+    });
+  }
+
+  /**
+   * What an escape leaves behind.
+   *
+   * 19.1 twice over: the character "nie może w żaden sposób oddziaływać" on
+   * what it fled, and an escape by ability takes it away from "wszystkim
+   * znajdującym się na danym Obszarze istotom" at once — not just from the one
+   * it happened to be rolling against. So every Wróg on the field is settled,
+   * which is `fought` rather than `resolved`: that list is the one 17.4 checks,
+   * so a fled creature can be neither offered again nor fought again.
+   *
+   * The Krąg Płomieni is the exception the same rule names — one creature,
+   * "jednej (unieruchomionej w Kręgu Płomieni) istocie" — so it ends the fight
+   * in hand and nothing more.
+   */
   if (succeeded && game.turn_state.phase === "walka") {
-    // 19.1: having escaped, the character can no longer act on what it fled,
-    // so the fight simply ends and the field resumes.
-    await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
+    const next = endFight(game.turn_state);
+    const sweep =
+      byAbility && przed === "wrog"
+        ? game.turn_state.fight.drawn
+            .filter((entry) => entry.cardClass === "wrog")
+            .map((entry) => entry.cardId)
+        : [];
+    await db
+      .from("games")
+      .update({
+        turn_state:
+          next.phase === "pole" && sweep.length > 0
+            ? { ...next, fought: [...new Set([...(next.fought ?? []), ...sweep])] }
+            : next,
+      })
+      .eq("id", gameId);
   } else if (succeeded && game.turn_state.phase === "pole") {
     /**
      * Slipping past what is lying here, before any fight began.
-     *
-     * 19.1 says an escape by ability works on everything on the Obszar at once
-     * — "wszystkim znajdującym się na danym Obszarze istotom" — and that having
-     * escaped, the character can no longer act on any of it. So they stop being
-     * offered.
      *
      * Without this the escape was invisible: it ended no fight, because there
      * was no fight yet, and left every Wróg sitting in the modal still asking
      * to be fought. Succeeding looked exactly like failing.
      */
-    const fled = game.turn_state.drawn
-      .filter((entry) => entry.cardClass === "wrog")
-      .map((entry) => entry.cardId);
+    const fled = byAbility
+      ? game.turn_state.drawn
+          .filter((entry) => entry.cardClass === "wrog")
+          .map((entry) => entry.cardId)
+      : [];
     if (fled.length > 0) {
       await db
         .from("games")
         .update({
           turn_state: {
             ...game.turn_state,
-            resolved: [...(game.turn_state.resolved ?? []), ...fled],
+            fought: [...new Set([...(game.turn_state.fought ?? []), ...fled])],
           },
         })
         .eq("id", gameId);
     }
   }
-  await journal(gameId, seat.id, game.turn, succeeded ? "ucieczka" : "ucieczka-nieudana", {
+  await journal(gameId, fleeing.id, game.turn, succeeded ? "ucieczka" : "ucieczka-nieudana", {
     onBridge,
+    ...(circle && succeeded ? { spell: KRAG_PLOMIENI } : {}),
   });
   await bumpRevision(gameId);
   // Said out loud. A failed attempt changes nothing on the board — 19.1 is not

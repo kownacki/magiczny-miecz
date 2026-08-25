@@ -282,6 +282,21 @@ export function describe(
     // worse — the grant went in the journal and the journal stayed silent.
     case "test-karta":
       return line(`${who} bierze z talii: ${card(data.cardId)}.`);
+    // Deliberately not worded as an ucieczka. 19.1 is a rule with conditions
+    // and this is a switch that ignores them, so the journal keeps the two
+    // apart — a test row that read "ucieka z walki" would be the one row you
+    // could not trust while testing exactly that.
+    case "test-koniec-walki": {
+      // Not `card()`: a fight's name is a display string, and 17.5 joins a pack
+      // into "Cyklop + Smok" while a duel carries the other player's name.
+      // Neither is an id, and neither is something to link to.
+      const against = typeof data.cardName === "string" ? data.cardName : "przeciwnikiem";
+      // Not "(tryb testowy)": every row written with the manual flag already
+      // carries that badge, and saying it in the sentence too printed it twice.
+      // The badge is the one to keep — it is on every override, in the same
+      // place, and it is what a reader is scanning the column for.
+      return line(`${who} przerywa walkę z: ${against}.`);
+    }
     // 16.8: what was not taken stays where it fell, face up. Saying where is the
     // whole point — a card on a field two turns later is otherwise unexplained.
     case "zostawienie": {

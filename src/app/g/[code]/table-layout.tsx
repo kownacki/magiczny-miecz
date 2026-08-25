@@ -17,8 +17,15 @@ import { type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
  * column put the board a scroll away from the buttons that acted on it, which is
  * the one arrangement that cannot work.
  *
- * So the frame is exactly the viewport, the two halves are independent, and only
+ * So the frame is exactly the viewport, the two columns are independent, and only
  * the right-hand column scrolls — the board never moves out from under you.
+ *
+ * They are not halves. The board is square and sized by whichever of its two
+ * axes runs out first, which on any laptop is the height — so half the width
+ * was more than it could ever use, and the slack sat as empty gutter beside it
+ * while the right-hand column, which holds the character, the holdings and
+ * every button, scrolled. The split is the golden ratio instead, the larger
+ * share to the right: 61.8 / 38.2.
  */
 export function TableLayout({
   header,
@@ -35,12 +42,13 @@ export function TableLayout({
         {header}
       </header>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Half the screen, and the board is sized to fill it rather than to a
-            fixed width: on a laptop the height is what runs out first. */}
-        <section className="flex min-h-0 shrink-0 items-center justify-center border-edge p-3 lg:h-full lg:w-1/2 lg:shrink lg:border-r">
+        {/* The short side of the ratio, and the board is sized to fill it
+            rather than to a fixed width: on a laptop the height is what runs
+            out first, so this is a ceiling the board rarely reaches. */}
+        <section className="flex min-h-0 shrink-0 items-center justify-center border-edge p-3 lg:h-full lg:w-[38.2%] lg:shrink lg:border-r">
           {map}
         </section>
-        <section className="min-h-0 flex-1 overflow-y-auto p-3 lg:w-1/2">{right}</section>
+        <section className="min-h-0 flex-1 overflow-y-auto p-3 lg:w-[61.8%]">{right}</section>
       </div>
     </main>
   );

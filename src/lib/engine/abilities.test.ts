@@ -22,6 +22,7 @@ import {
   wardThreshold,
   bestShield,
 } from "./abilities";
+import { abilitiesOfCharacter } from "./characters";
 
 const KNOWN_CARDS = new Set<string>([
   ...(events as EventCard[]).map((card) => card.id),
@@ -120,6 +121,17 @@ describe("walking past what a field does to you", () => {
     expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las")).toBe(true);
     expect(canEscapeAt(abilitiesOf("rusalka"), "las-blednych-ogni")).toBe(true);
     expect(canEscapeAt(abilitiesOf("elflin"), "las-blednych-ogni")).toBe(false);
+  });
+
+  it("does not let an escape from Wrogowie carry over to another Postać", () => {
+    // Every printed escape says "Wrogom" and means it. 19.1 allows fleeing a
+    // Postać too, but only by the Krąg Płomieni — so the Elflin who gets you
+    // past a Cyklop in the Kamienny Las does nothing about the player who
+    // walked in and attacked you there.
+    expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "wrog")).toBe(true);
+    expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "postac")).toBe(false);
+    expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "wrog")).toBe(true);
+    expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "postac")).toBe(false);
   });
 });
 

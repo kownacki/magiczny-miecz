@@ -7,9 +7,11 @@ import {
   heal,
   gainLife,
   mayHold,
+  spellAllowance,
   spellCapacity,
   totalsFor,
 } from "./derive";
+import { abilitiesOf } from "./abilities";
 import {
   beastCombatKind,
   beastStrength,
@@ -111,6 +113,45 @@ describe("totals (1.5, 2.5)", () => {
     const ring = new Map([["pierscien-mocy", item("pierscien-mocy", { magia: 3 })]]);
     const s = seat({ magiaOwn: 2, holdings: [held("pierscien-mocy")] });
     expect(totalsFor(s, ring).spellCapacity).toBe(spellCapacity(5));
+  });
+});
+
+describe("the Różdżka Zaklęć (2.6)", () => {
+  const none = [] as const;
+  const wand = abilitiesOf("rozdzka-zaklec");
+
+  it("changes nothing for a hand that has no wand", () => {
+    expect(spellAllowance(3, 2, none)).toBe(spellCapacity(3));
+    expect(spellAllowance(1, 0, none)).toBe(0);
+  });
+
+  it("is a floor under the table, not an addition to it", () => {
+    // "conajmniej 1 Zaklęcie więcej, niż liczba Zaklęć, z jaką rozpoczął grę".
+    // A Mag on Magia 5 starts with two and already reaches the table's ceiling
+    // of three, so the wand is worth nothing to him — read as "+1" it would
+    // have handed him a fourth, off a table whose highest row says three.
+    expect(spellAllowance(5, 2, wand)).toBe(3);
+    expect(spellAllowance(6, 2, wand)).toBe(3);
+  });
+
+  it("is measured from the hand dealt at setup", () => {
+    // Czarodziej: two at setup, Magia 4 — the table allows two, the wand a
+    // third. This is the case the card was printed for.
+    expect(spellCapacity(4)).toBe(2);
+    expect(spellAllowance(4, 2, wand)).toBe(3);
+  });
+
+  it("is worth most at the bottom of the table", () => {
+    // Barbarzyńca: Magia 1, nothing at setup. No spells at all by 2.6, and one
+    // with the wand — which is the difference between a hand and no hand.
+    expect(spellCapacity(1)).toBe(0);
+    expect(spellAllowance(1, 0, wand)).toBe(1);
+  });
+
+  it("reaches the same answer through a seat's holdings", () => {
+    const s = seat({ magiaOwn: 4, holdings: [held("rozdzka-zaklec")] });
+    expect(totalsFor(s, new Map()).spellCapacity).toBe(2); // no setup hand given
+    expect(totalsFor(s, new Map(), { startingSpells: 2 }).spellCapacity).toBe(3);
   });
 });
 

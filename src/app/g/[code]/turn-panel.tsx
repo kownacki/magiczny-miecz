@@ -684,6 +684,7 @@ function PhaseControls({
           fight={phase.fight}
           simulated={mode === "simulation"}
           busy={busy}
+          canFlee={phase.fight.opponentSeat === undefined}
           onAction={onAction}
         />
       );
@@ -876,15 +877,21 @@ export function FightControls({
   fight,
   simulated,
   busy,
-  waitingOn = [],
-  myTurnToPass = false,
+  floorHeld = false,
+  canFlee = true,
   onAction,
 }: {
   fight: Fight;
-  /** Names of the seats 17.3's window is still open for. */
-  waitingOn?: string[];
-  /** Whether this device is one of them. */
-  myTurnToPass?: boolean;
+  /** Somebody has claimed the moment before the dice (17.3), so they wait. */
+  floorHeld?: boolean;
+  /**
+   * Whether this device may take 17.2's decision.
+   *
+   * False for the attacker in a duel: 17.6 gives the escape to the character
+   * who was attacked, and attacking is a choice already made. Their opponent
+   * gets the button instead, in the panel they are watching the fight through.
+   */
+  canFlee?: boolean;
   /** No typed rolls and no edited totals — see `Props["mode"]`. */
   simulated: boolean;
   busy: boolean;
@@ -900,7 +907,7 @@ export function FightControls({
    * A player who has not read 17.7 has no way to guess that the way out is a
    * third button in a box that appears to be about somebody else.
    */
-  const waiting = (fight.spellsOwedBy?.length ?? 0) > 0;
+  const waiting = floorHeld;
 
   // A bridge guardian has no strength until a die is thrown for it — the board
   // prints "1 - 5; 2 - 6; ... 6 - 10" at both entrances — so nothing else about
@@ -966,7 +973,8 @@ export function FightControls({
             19.1 makes it an ability or the Krąg Płomieni — so a companion table
             says which happened, and a simulation asks the app, which knows the
             abilities in play and answers with `canEscapeAt`. */}
-        {fight.playerRoll === null &&
+        {canFlee &&
+          fight.playerRoll === null &&
           fight.enemyRoll === null &&
           (simulated ? (
             <button
@@ -996,44 +1004,10 @@ export function FightControls({
           ))}
       </div>
 
-      {/* 17.3 and 17.7: the spells go in before the dice, and both sides get
-          the chance. So the dice wait — and they wait on a decision rather than
-          on a clock. Talisman's digital edition puts a countdown here and it is
-          the most complained-about thing in that game: the roll lands before
-          anybody has read what they were meant to react to.
-
-          Nobody who has nothing to cast is ever asked, so most fights never see
-          this at all. */}
-      {waiting && (
-        <div className="rounded border border-magia/50 bg-magia/5 p-3">
-          {/* Said to whoever is reading it. "Czekamy na: Karol" is a strange
-              thing to tell Karol, and it was the whole of what the window said
-              to the one person who could close it: the dice would not move, the
-              only sentence on screen named somebody else's job, and the player
-              it was addressed to read their own name as somebody they were
-              waiting for. */}
-          <p className="text-xs text-ink">
-            {myTurnToPass
-              ? "Zaklęcia przed rzutem (17.3, 17.7) — kostki czekają na ciebie."
-              : `Zaklęcia przed rzutem (17.3, 17.7) — czekamy na: ${waitingOn.join(", ")}.`}
-          </p>
-          <p className="mt-1 text-[11px] text-muted">
-            {myTurnToPass
-              ? "Rzuć Zaklęcie ze swojej ręki albo powiedz, że nie rzucasz — dopiero potem można rzucać kostkami."
-              : "Rzuć Zaklęcie ze swojej ręki albo powiedz, że nie rzucasz. Kostki czekają."}
-          </p>
-          {myTurnToPass && (
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "spell-pass" })}
-              className="mt-2 rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-            >
-              Nie rzucam Zaklęcia
-            </button>
-          )}
-        </div>
-      )}
-
+      {/* The spell panel is beside the fight now, not inside it — see
+          `SpellFloorControl` in the modal. All that is left here is the
+          consequence: while somebody holds the moment before the dice, the
+          dice do not move, and they look it. */}
       <div className="grid grid-cols-2 gap-4">
         <FightSide
           title="Ty"

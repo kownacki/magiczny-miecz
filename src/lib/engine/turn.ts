@@ -114,21 +114,32 @@ export interface Fight {
    */
   strengthRoll?: number | null;
   /**
-   * Seats that still have a Zaklęcie to speak before the dice (17.3, 17.7).
+   * Who has claimed the moment before the dice, and until when (17.3, 17.7).
    *
-   * 17.3 puts the caster's spells before their roll and 17.7 gives the same
-   * right to the other side — "przed wykonaniem rzutu kostką obie Postacie
-   * mają możliwość użycia Zaklęć". A fight that rolls the moment it opens
-   * gives nobody that chance.
+   * 17.3 puts a character's spells before their own roll; 17.7 gives the same
+   * right to the other side of a duel; and thirteen of the twenty-seven cards
+   * say "w dowolnej chwili", which lets anybody at the table speak into
+   * somebody else's fight (9.1, 9.6). So the question is not *whether* a
+   * bystander may cast — they may — but how a table of four says so without
+   * everybody being asked every time.
    *
-   * Deliberately not a timer. The nearest thing to this app is Talisman's
-   * digital edition, where the reaction window is a countdown, and it is the
-   * most complained-about part of that game: the dice land before anyone has
-   * read what they are reacting to. This waits instead, and it waits on
-   * nobody who has nothing to cast — the list is built from who is actually
-   * holding a spell that says "przed walką", so the common case never sees it.
+   * They ask for the floor, and get it alone. Nobody is polled and nobody is
+   * named in advance, which also keeps 9.3: a window that opened only for the
+   * people holding a castable spell announced who was holding one, every
+   * fight, before anyone had decided anything. Reaching for a card is a tell
+   * you make yourself.
+   *
+   * The dice wait only while somebody holds this. An empty floor is the normal
+   * state of a fight, and the roll goes straight through it.
    */
-  spellsOwedBy?: number[];
+  caster?: SpellFloor | null;
+}
+
+/** A claim on the moment before the dice: whose it is, and when it lapses. */
+export interface SpellFloor {
+  seat: number;
+  /** Epoch milliseconds. Written by the server, which owns the clock. */
+  until: number;
 }
 
 export type GuardianFight =

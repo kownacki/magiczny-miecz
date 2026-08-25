@@ -6,6 +6,7 @@ import {
   castSpell,
   changeNature,
   drawSpell,
+  drawSpellWithWand,
   dropCard,
   equipCard,
   healSeat,
@@ -108,6 +109,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "spell":
         return NextResponse.json({
           spellId: await drawSpell(game.id, String(body.seatId ?? actor.id)),
+        });
+      case "wand-spell":
+        // The Różdżka Zaklęć refilling a hand back up to its setup size. A
+        // separate action rather than a flag on the one above, because the
+        // condition is the card's and not 2.6's.
+        return NextResponse.json({
+          spellId: await drawSpellWithWand(game.id, String(body.seatId ?? actor.id)),
         });
       case "nature": {
         const nature = body.nature;

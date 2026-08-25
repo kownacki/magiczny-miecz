@@ -24,6 +24,16 @@ import type { CardId } from "@/data/ids";
  * the ones the cards actually vary. Hełm, Tarcza and Zbroja differ only in how
  * high a roll saves you, so they are one variant with a number.
  */
+/**
+ * What an escape is being attempted *from* (19.1, 19.2).
+ *
+ * The rulebook keeps these apart and so must the code: 19.2 permits fleeing
+ * "każdą istotą (lub Postacią)", but the two are reached by different means.
+ * Every printed ability covers Wrogowie only; a Postać is the Krąg Płomieni's
+ * business, and on the Kamienny Most 19.3 allows nothing else.
+ */
+export type EscapeTarget = "wrog" | "postac";
+
 export type Ability =
   /**
    * Points a held card lends its owner (1.5, 2.5).
@@ -70,8 +80,18 @@ export type Ability =
        */
       natura?: readonly Nature[];
     }
-  /** Reliably slips away from Wrogowie on named fields (Elflin, Rusałka). */
-  | { kind: "ucieczka"; fields: readonly FieldId[] }
+  /**
+   * Reliably slips away on named fields (Elf, Hobgoblin, Obbol, Elflin, Rusałka).
+   *
+   * `przed` is *what* may be fled, and it defaults to Wrogowie because every
+   * card that grants this says so in as many words — "możesz wymykać się
+   * **Wrogom** na Równinach". 19.1 and 19.2 both also allow fleeing another
+   * Postać, and nothing printed on a character or a friend does it: that is the
+   * Krąg Płomieni's alone. Without this the check could not tell the two apart,
+   * and an Elf standing on a Równina escaped a duel on the strength of an
+   * ability about monsters.
+   */
+  | { kind: "ucieczka"; fields: readonly FieldId[]; przed?: readonly EscapeTarget[] }
   /**
    * Raises the four-Przedmiot limit of 5.4 by a stated amount — Koń eight, Muł
    * and Tragarz four apiece, Magiczna Sakwa five. Only the Zaprzęg is actually
@@ -544,11 +564,29 @@ export function spellsOverLimit(abilities: readonly Ability[]): number {
   );
 }
 
-export function canEscapeAt(abilities: readonly Ability[], fieldId: FieldId): boolean {
+/**
+ * Whether a Charakterystyka or a held card gets you away from this, here (19.1).
+ *
+ * Two questions, not one. The field has to be named — every escape in the game
+ * is bound to particular ground, and the Obbol who slips Wrogom on the Mokradła
+ * fights them everywhere else. And what is being fled has to match: `przed`
+ * defaults to a Wróg because that is what all of them say.
+ */
+export function canEscapeAt(
+  abilities: readonly Ability[],
+  fieldId: FieldId,
+  przed: EscapeTarget = "wrog",
+): boolean {
   return abilities.some(
-    (ability) => ability.kind === "ucieczka" && ability.fields.includes(fieldId),
+    (ability) =>
+      ability.kind === "ucieczka" &&
+      ability.fields.includes(fieldId) &&
+      (ability.przed ?? WROGOWIE_ONLY).includes(przed),
   );
 }
+
+/** What a printed escape covers when its card does not say otherwise. */
+const WROGOWIE_ONLY: readonly EscapeTarget[] = ["wrog"];
 
 /** Whether this character walks past the toll charged on a given field. */
 export function tollIsWaived(abilities: readonly Ability[], fieldId: FieldId): boolean {

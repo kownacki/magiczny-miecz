@@ -18,6 +18,7 @@ import {
   asCharacterId,
   isRandomPick,
   notesForCharacter,
+  startingKit,
   type SeatCharacter,
 } from "@/lib/engine/characters";
 import { cardArtUrl, characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
@@ -104,6 +105,14 @@ interface Seat {
   /** Own points plus everything carried (1.5, 2.5), computed server-side. */
   miecz_total: number;
   magia_total: number;
+  /**
+   * How many Zaklęcia this hand may hold (2.6), computed server-side.
+   *
+   * Sent rather than worked out here so the number shown is the number the
+   * server refuses a draw against — the same basis, not one that happens to
+   * agree most of the time.
+   */
+  spell_capacity: number;
   /** The same, reckoned for a fight — 1.5's other figure. */
   miecz_walka: number;
   magia_walka: number;
@@ -778,6 +787,38 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const active = seats.find((seat) => seat.seat_index === game.active_seat);
   const playing = game.status === "playing";
 
+  /**
+   * The windows the turn is open for, for the spell hand (9.6, 17.3).
+   *
+   * Read off the whole turn state rather than the phase alone: a fight before
+   * the dice and a fight after the first one are the same phase and are not
+   * the same moment, and neither is a field with a card just turned over.
+   */
+  const now = game
+    ? momentsOf({
+        phase: game.turn_state.phase,
+        diceRolled:
+          game.turn_state.phase === "walka" &&
+          (game.turn_state.fight.playerRoll !== null ||
+            game.turn_state.fight.enemyRoll !== null),
+        cardJustDrawn:
+          game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0,
+        meeting:
+          game.turn_state.phase === "pole" &&
+          game.turn_state.drawn.some((entry) => entry.cardClass === "wrog"),
+      })
+    : ["dowolna-chwila" as const];
+
+  const mine = mySeat
+    ? {
+        ...mySeat,
+        holdings: mySeat.holdings.map((held) =>
+          held.id in moved ? { ...held, slot: moved[held.id] } : held,
+        ),
+      }
+    : mySeat;
+  const others = seats.filter((seat) => seat.id !== mine?.id && seat.character_id);
+
   const overlays = (
     <>
       {/* Above everything else it could be asked about, and dismissed by
@@ -835,20 +876,67 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               game.turn_state.phase === "pole" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
             }
             simulated={game.mode === "simulation"}
-            waitingOn={
-              game.turn_state.phase === "walka"
-                ? (game.turn_state.fight.spellsOwedBy ?? []).map(
-                    (index) =>
-                      seats.find((seat) => seat.seat_index === index)?.player_name ??
-                      `Miejsce ${index + 1}`,
-                  )
+            /**
+             * Your own hand, beside whatever is happening — which in a fight is
+             * somebody else's turn as often as your own.
+             *
+             * 9.3 keeps these from every other device and the server never
+             * sends them there; this is the one seat they belong to.
+             */
+            spells={
+              mine
+                ? mine.holdings
+                    .filter((held) => held.kind === "spell" && isSpellId(held.cardId))
+                    .map((held) => ({ holdingId: held.id, cardId: held.cardId as SpellId }))
                 : []
             }
-            myTurnToPass={
-              game.turn_state.phase === "walka" &&
-              mySeatIndex !== null &&
-              (game.turn_state.fight.spellsOwedBy ?? []).includes(mySeatIndex)
+            moment={now}
+            opponents={others.map((seat) => ({
+              seatIndex: seat.seat_index,
+              name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
+            }))}
+            floor={
+              game.turn_state.phase === "walka"
+                ? (game.turn_state.fight.caster ?? null)
+                : null
             }
+            mySeatIndex={mySeatIndex}
+            seatName={(index) =>
+              seats.find((seat) => seat.seat_index === index)?.player_name ??
+              `Miejsce ${index + 1}`
+            }
+            onClaimFloor={() => post("turn", { action: "spell-claim" })}
+            onReleaseFloor={() => post("turn", { action: "spell-release" })}
+            /**
+             * Spoken on the press, with no second question.
+             *
+             * Everywhere else a Zaklęcie is confirmed before it leaves the
+             * hand, because 9.6 spends the card whatever comes of it. Here the
+             * confirming already happened: asking for the floor is the
+             * declaration, and it cost the fifteen seconds. Asking again ran
+             * the clock out inside the dialog — you claimed, read the question,
+             * pressed yes, and were told to claim first.
+             */
+            onCastSpell={(holdingId, targetSeat) =>
+              post("holdings", {
+                action: "cast",
+                seatId: mine?.id,
+                holdingId,
+                ...(targetSeat === undefined ? {} : { targetSeat }),
+              })
+            }
+            onInspect={setInspectingCard}
+            /* 17.6: in a duel the escape is the attacked character's, so the
+               button goes to their device rather than the attacker's. The
+               shared screen keeps it too, since in companion mode it is the
+               device the whole table is pressing. */
+            myEscape={
+              game.turn_state.phase === "walka" &&
+              game.turn_state.fight.opponentSeat !== undefined &&
+              (isTableScreen || game.turn_state.fight.opponentSeat === mySeatIndex)
+            }
+            testing={testing}
+            onAbandonFight={() => post("debug", { action: "leave-fight" })}
             ring={ringFields(active.field_id)}
             busy={busy}
             error={error}
@@ -1031,37 +1119,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * Laid over the server's answer rather than written into it, so the two-second
    * poll landing mid-flight cannot undo what the player just did.
    */
-  /**
-   * The windows the turn is open for, for the spell hand (9.6, 17.3).
-   *
-   * Read off the whole turn state rather than the phase alone: a fight before
-   * the dice and a fight after the first one are the same phase and are not
-   * the same moment, and neither is a field with a card just turned over.
-   */
-  const now = game
-    ? momentsOf({
-        phase: game.turn_state.phase,
-        diceRolled:
-          game.turn_state.phase === "walka" &&
-          (game.turn_state.fight.playerRoll !== null ||
-            game.turn_state.fight.enemyRoll !== null),
-        cardJustDrawn:
-          game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0,
-        meeting:
-          game.turn_state.phase === "pole" &&
-          game.turn_state.drawn.some((entry) => entry.cardClass === "wrog"),
-      })
-    : ["dowolna-chwila" as const];
-
-  const mine = mySeat
-    ? {
-        ...mySeat,
-        holdings: mySeat.holdings.map((held) =>
-          held.id in moved ? { ...held, slot: moved[held.id] } : held,
-        ),
-      }
-    : mySeat;
-  const others = seats.filter((seat) => seat.id !== mine?.id && seat.character_id);
 
   return (
     <>
@@ -1272,10 +1329,37 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onEquip={equip}
                 onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
                 onUse={askToUse}
+                onWand={() => post("holdings", { action: "wand-spell", seatId: mine.id })}
                 onReorder={(holdingIds) =>
                   post("holdings", { action: "order", seatId: mine.id, holdingIds })
                 }
                 onInspect={setInspectingCard}
+                /* Under the pack, in the same card and the same idiom: the
+                   pack says what 5.4 allows and this says what 2.6 does, and
+                   they are the two limits on what one player is holding. */
+                spells={
+                  <SpellHand
+                    frame="section"
+                    capacity={mine.spell_capacity}
+                    spells={mine.holdings
+                      // Both halves matter: the server says which holdings are
+                      // Zaklęcia, and `isSpellId` is what turns that claim into
+                      // a card the spell hand can actually look up.
+                      .filter((held) => held.kind === "spell" && isSpellId(held.cardId))
+                      .map((held) => ({ holdingId: held.id, cardId: held.cardId as SpellId }))}
+                    moment={now}
+                    opponents={others.map((seat) => ({
+                      seatIndex: seat.seat_index,
+                      name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
+                    }))}
+                    busy={busy}
+                    onInspect={setInspectingCard}
+                    onCast={(holdingId, targetSeat) => {
+                      const held = mine.holdings.find((card) => card.id === holdingId);
+                      if (held) askToCast(holdingId, held.cardId, targetSeat);
+                    }}
+                  />
+                }
               />
             )}
 
@@ -1300,28 +1384,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   Wybierz nową Postać
                 </button>
               </section>
-            )}
-
-            {mine && (
-              <SpellHand
-                spells={mine.holdings
-                  // Both halves matter: the server says which holdings are
-                  // Zaklęcia, and `isSpellId` is what turns that claim into a
-                  // card the spell hand can actually look up.
-                  .filter((held) => held.kind === "spell" && isSpellId(held.cardId))
-                  .map((held) => ({ holdingId: held.id, cardId: held.cardId as SpellId }))}
-                moment={now}
-                opponents={others.map((seat) => ({
-                  seatIndex: seat.seat_index,
-                  name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
-                }))}
-                busy={busy}
-                onInspect={setInspectingCard}
-                onCast={(holdingId, targetSeat) => {
-                  const held = mine.holdings.find((card) => card.id === holdingId);
-                  if (held) askToCast(holdingId, held.cardId, targetSeat);
-                }}
-              />
             )}
 
             <OtherPlayers
@@ -1428,6 +1490,7 @@ function Hand({
   onTrade,
   onEquip,
   onUse,
+  onWand,
   onReorder,
   onInspect,
 }: {
@@ -1450,6 +1513,8 @@ function Hand({
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it. Absent on somebody else's pack. */
   onUse?: (holdingId: string, cardId: string) => void;
+  /** Takes a Zaklęcie on the Różdżka's terms, not 2.6's. */
+  onWand?: () => void;
   /** The pack, in the order its owner wants it. Absent on somebody else's. */
   onReorder?: (holdingIds: string[]) => void;
   onInspect: (card: TileCard) => void;
@@ -1468,6 +1533,17 @@ function Hand({
    * matching the pack and is ignored.
    */
   const [wanted, setWanted] = useState<string[] | null>(null);
+
+  /**
+   * The Różdżka Zaklęć's condition, worked out where its button is drawn.
+   *
+   * "gdy ma tyle Zaklęć, ile na początku gry lub mniej" — so it is the setup
+   * hand this is measured against, not 2.6's table. The server checks it again
+   * and is the authority; this only decides whether the offer looks available.
+   */
+  const setupSpells = startingKit(asCharacterId(seat.character_id)).spells ?? 0;
+  const wandReady =
+    seat.holdings.filter((held) => held.kind === "spell").length <= setupSpells;
 
   const shown = seat.holdings.filter((held) => held.kind !== "spell");
   const packed = seat.holdings.filter(
@@ -1980,6 +2056,25 @@ function Hand({
                     {USE_VERB}
                   </button>
                 )}
+                {/* The Różdżka's refill, on the Różdżka. Drawn whenever the
+                    card is held and greyed when the hand is still above its
+                    setup size, rather than appearing and vanishing: an offer
+                    that comes and goes is one nobody learns the shape of, and
+                    the shape is the whole rule the card carries. */}
+                {onWand && held.cardId === "rozdzka-zaklec" && (
+                  <button
+                    disabled={!wandReady}
+                    onClick={onWand}
+                    title={
+                      wandReady
+                        ? "Weź nowe Zaklęcie — Różdżka pozwala, gdy masz tyle, co na początku gry, lub mniej"
+                        : `Różdżka da nowe Zaklęcie, gdy będziesz mieć najwyżej ${setupSpells}`
+                    }
+                    className="text-[9px] text-magia underline hover:text-ink disabled:text-muted/50 disabled:no-underline"
+                  >
+                    dobierz Zaklęcie
+                  </button>
+                )}
                 <button
                   onClick={() => onDrop(held.id)}
                   className="text-[9px] text-muted underline hover:text-vermilion"
@@ -2125,8 +2220,10 @@ function SeatCard({
   onTrade,
   onEquip,
   onUse,
+  onWand,
   onReorder,
   onInspect,
+  spells,
 }: {
   seat: Seat;
   active: boolean;
@@ -2151,9 +2248,20 @@ function SeatCard({
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it — asked about first, because it cannot be undone. */
   onUse?: (holdingId: string, cardId: string) => void;
+  /** Takes a Zaklęcie on the Różdżka's terms, not 2.6's. */
+  onWand?: () => void;
   /** The pack, in the order its owner wants it. */
   onReorder?: (holdingIds: string[]) => void;
   onInspect: (card: TileCard) => void;
+  /**
+   * The hand, drawn under the pack.
+   *
+   * Passed in rather than built here because casting needs the turn's open
+   * windows and the other seats to aim at, none of which a seat card knows.
+   * What it does know is where the section belongs: 5.4 and 2.6 are the same
+   * kind of fact about the same player, and they read as a pair.
+   */
+  spells?: React.ReactNode;
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
   const trophies = seat.holdings.filter((h) => h.kind === "trophy");
@@ -2450,9 +2558,11 @@ function SeatCard({
             onTrade={onTrade}
             onEquip={onEquip}
             onUse={onUse}
+            onWand={onWand}
             onReorder={onReorder}
             onInspect={onInspect}
           />
+          {spells}
           <CarriedCard carried={carried} />
           {/* Where the figure is standing is not repeated here. The board says
               it, the turn header says it for whoever is playing, and the roster

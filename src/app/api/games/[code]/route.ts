@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { spellAllowance } from "@/lib/engine/derive";
 import {
   AWAY_AFTER_MS,
   deleteGame,
@@ -11,6 +12,8 @@ import {
   verifySeat,
 } from "@/lib/game/store";
 import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
+import { heldAbilities } from "@/lib/engine/abilities";
+import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import { allStatuses, bonusFrom, markOf } from "@/lib/engine/status";
 import { effectsFor, shopStock } from "@/lib/game/turnStore";
 import type { Slot } from "@/lib/engine/slots";
@@ -193,6 +196,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         hidden_count: seen.hiddenCount,
         miecz_total: seat.miecz_own + bonus.miecz + spell.miecz,
         magia_total: seat.magia_own + bonus.magia + spell.magia,
+        // 2.6, worked out here for the same reason the totals are: this is the
+        // number the server refuses a draw against, so it is the number to
+        // show. Deliberately *not* off `magia_total` — a spell's own bonus is
+        // not in the basis the enforcement uses, and a cap that moved when a
+        // Zaklęcie landed would be a cap nothing honoured.
+        spell_capacity: spellAllowance(
+          seat.magia_own + bonus.magia,
+          startingKit(asCharacterId(seat.character_id)).spells ?? 0,
+          // Not `own` filtered by eq mode: the Różdżka says "Właściciel", and
+          // owning it is the whole condition — a wand in the pack raises the
+          // limit exactly as one on the body does.
+          heldAbilities(own.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
+        ),
         miecz_walka: seat.miecz_own + inFight.miecz + spell.miecz,
         magia_walka: seat.magia_own + inFight.magia + spell.magia,
         // What a player is shown beside their name, already worked out: the

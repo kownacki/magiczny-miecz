@@ -20,7 +20,8 @@ import {
   resolveBridgeOrdeal,
   resolveDrawnCard,
   resolveFieldOffer,
-  passSpells,
+  claimSpellFloor,
+  releaseSpellFloor,
 } from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
 import type { Decisions } from "@/lib/game/turnStore";
@@ -69,8 +70,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   // 17.7 is the one thing here a seat does on somebody else's turn: "przed
   // wykonaniem rzutu kostką obie Postacie mają możliwość użycia Zaklęć". A
   // window only the active player could close would not be a window.
-  const isSpellWindow = body.action === "spell-pass";
-  if (!isActiveSeat && !isTableScreen && !isSpellWindow) {
+  const isSpellWindow = body.action === "spell-claim" || body.action === "spell-release";
+  // 17.6 is the other one: "Postać, która została zaatakowana, może próbować
+  // wymknąć się przeciwnikowi". In a duel that is never the seat whose turn it
+  // is, so refusing every other seat here would refuse the only player entitled
+  // to press it. Which seat may actually flee is decided by `escape` itself,
+  // against the fight in progress, rather than guessed at from the action name.
+  const isFlight = body.action === "escape";
+  if (!isActiveSeat && !isTableScreen && !isSpellWindow && !isFlight) {
     return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
   }
 
@@ -157,7 +164,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         // The answer goes back, because "no" is a real answer here and used to
         // look exactly like nothing having happened.
         return NextResponse.json(
-          await escape(game.id, typeof body.succeeded === "boolean" ? body.succeeded : null),
+          await escape(
+            game.id,
+            typeof body.succeeded === "boolean" ? body.succeeded : null,
+            // The shared screen in companion mode acts for whoever is fleeing;
+            // a player's own device may only flee with its own character.
+            isTableScreen ? null : seat.id,
+          ),
         );
       case "most-pole":
         // The Kamienny Most's own fields: the traps, the game with Death, the
@@ -179,10 +192,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           typeof body.beastRoll === "number" ? body.beastRoll : null,
         );
         break;
-      case "spell-pass":
-        // 17.3/17.7's window closes seat by seat, and any seat may close its
-        // own — the player whose turn it is is not the only one holding cards.
-        await passSpells(game.id, seat.id);
+      case "spell-claim":
+        // 17.3/17.7, and the thirteen cards that say "w dowolnej chwili": any
+        // seat may ask for the moment before the dice, not only the one whose
+        // turn it is.
+        await claimSpellFloor(game.id, seat.id);
+        break;
+      case "spell-release":
+        await releaseSpellFloor(game.id, seat.id);
         break;
       case "fight-done":
         await resolveFight(game.id);

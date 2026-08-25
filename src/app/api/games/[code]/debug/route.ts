@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
+import { abandonFight, grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
 
 /**
  * Shortcuts for reaching a game state without playing to it.
@@ -49,6 +49,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         // walking until the deck hands it over, and there are a hundred and
         // forty-five other cards in it.
         await stageFight(game.id, seatId, String(body.cardId));
+        break;
+      case "leave-fight":
+        // The way out of one. 17.4 ends a fight only when the dice are compared
+        // and 19.1 only for a character that can, so a staged fight is a room
+        // with no door — which is fine for the fight you meant to look at and
+        // not for the four you had to walk through to reach it.
+        await abandonFight(game.id);
         break;
       default:
         return NextResponse.json({ error: "Nieznane działanie." }, { status: 400 });

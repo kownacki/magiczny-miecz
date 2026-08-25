@@ -7,11 +7,22 @@ import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/engine/cardImages";
 import { combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
-import { scriptFor, describeDisposition, type Effect } from "@/lib/engine/cardScript";
+import {
+  scriptFor,
+  describeDisposition,
+  type Effect,
+} from "@/lib/engine/cardScript";
 import { isSettled } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 import { FIELDS, ringOf, type FieldId } from "@/lib/engine/board";
 import { FightControls } from "./turn-panel";
+import { SpellHand, type HeldSpell } from "./spell-hand";
+import type { TileCard } from "./card-tile";
+import {
+  castableNow,
+  spellScript,
+  type SpellTiming,
+} from "@/lib/engine/spells";
 import type { Fight } from "@/lib/engine/turn";
 
 const EVENTS = events as EventCard[];
@@ -42,14 +53,25 @@ export function DrawModal({
   onMinimize,
   onRestore,
   error,
+  spells,
+  moment,
+  opponents,
+  floor,
+  mySeatIndex,
+  seatName,
+  onClaimFloor,
+  onReleaseFloor,
+  onCastSpell,
+  onInspect,
   cards,
   resolved,
   fought,
   fight,
   fieldOffer,
   simulated,
-  waitingOn,
-  myTurnToPass,
+  myEscape,
+  testing,
+  onAbandonFight,
   ring,
   busy,
   onAction,
@@ -83,6 +105,24 @@ export function DrawModal({
   onRestore: () => void;
   /** A refusal from the last thing pressed, said inside the sheet that hides it. */
   error: string | null;
+  /**
+   * This device's own hand, and everything a fight needs to let it speak.
+   *
+   * Shown to whoever is looking, fighting or watching: a Zaklęcie that says
+   * "w dowolnej chwili" belongs to its holder wherever they are sitting, and
+   * thirteen of the twenty-seven say exactly that.
+   */
+  spells: HeldSpell[];
+  moment: readonly SpellTiming[];
+  opponents: { seatIndex: number; name: string }[];
+  /** Who has claimed the moment before the dice, and until when. */
+  floor: { seat: number; until: number } | null;
+  mySeatIndex: number | null;
+  seatName: (index: number) => string;
+  onClaimFloor: () => void;
+  onReleaseFloor: () => void;
+  onCastSpell: (holdingId: string, targetSeat?: number) => void;
+  onInspect: (card: TileCard) => void;
   /** In 15.2 order, which is the order they are dealt with. */
   cards: DrawnEntry[];
   resolved: string[];
@@ -100,14 +140,33 @@ export function DrawModal({
   fieldOffer: { name: string; effect: Effect } | null;
   simulated: boolean;
   /** Names of the seats 17.3's spell window is still open for. */
-  waitingOn: string[];
   /** Whether this device is one of them — a watcher can be (17.7). */
-  myTurnToPass: boolean;
+  /**
+   * Whether this device is the character being attacked in a duel (17.6).
+   *
+   * The other half of the same idea as `myTurnToPass`: a fight has two sides,
+   * and both of the decisions taken before the dice — a Zaklęcie, and whether
+   * to run — belong to whichever side the rule names, not to whoever happens
+   * to be having their turn.
+   */
+  myEscape: boolean;
+  /**
+   * Whether this device is testing rather than playing (`testMode.ts`).
+   *
+   * The only thing it changes here is that a fight gains a way out of it. A
+   * production build cannot turn it on at all.
+   */
+  testing: boolean;
+  /** Breaks off the fight without resolving it — test mode only. */
+  onAbandonFight: () => void;
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
-  onResolve: (cardId: string, decisions: { choices?: number[]; destination?: FieldId }) => void;
+  onResolve: (
+    cardId: string,
+    decisions: { choices?: number[]; destination?: FieldId },
+  ) => void;
   /** Throws the field's own table and applies the row. */
   onResolveField: (choices: number[]) => void;
   /** One creature, or several at once when 17.5 lets them attack together. */
@@ -120,13 +179,39 @@ export function DrawModal({
   // The choices made so far for the card on screen, as indices into its own
   // options. Sent back with the next attempt, so the server re-walks the card
   // and takes the branch rather than being handed an effect.
+  /**
+   * The one clock the sheet keeps.
+   *
+   * A claim lapses by time, not by anybody writing it down, so every part of
+   * the modal that cares — the dice, the cast buttons, the box itself — has to
+   * agree on the moment it stops counting. Held once here and passed down: with
+   * the countdown inside the box, the box went back to "Chcę rzucić" while the
+   * dice stayed held, because nothing else had noticed the second go by.
+   *
+   * The number is a courtesy and the deadline is a fact: the server checks it
+   * again, so two devices with different clocks cannot disagree about who may
+   * speak.
+   */
+  const [left, setLeft] = useState(0);
+  const until = floor?.until ?? null;
+  useEffect(() => {
+    if (until === null) return setLeft(0);
+    const tick = () =>
+      setLeft(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 250);
+    return () => clearInterval(timer);
+  }, [until]);
+  const held = floor !== null && left > 0 ? floor : null;
+
   const [choices, setChoices] = useState<number[]>([]);
   const [going, setGoing] = useState<FieldId | "">("");
 
   // First card that is neither resolved, fought, nor waved past. 15.2 already
   // put them in order, so "first" is "next".
   const card = cards.find(
-    (entry) => !resolved.includes(entry.cardId) && !fought.includes(entry.cardId),
+    (entry) =>
+      !resolved.includes(entry.cardId) && !fought.includes(entry.cardId),
   );
 
   useEffect(() => {
@@ -156,36 +241,114 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
+        onAbandon={testing ? onAbandonFight : null}
         error={error}
+        wide
       >
-        {canAct ? (
-          <FightControls
-            fight={fight}
-            simulated={simulated}
-            busy={busy}
-            waitingOn={waitingOn}
-            myTurnToPass={myTurnToPass}
-            onAction={onAction}
-          />
-        ) : (
-          <>
-            <WatchFight fight={fight} />
-            {myTurnToPass && (
-              <div className="rounded border border-magia/50 bg-magia/5 p-3">
-                <p className="text-xs text-ink">
-                  Możesz rzucić Zaklęcie, zanim padną kostki (17.7).
-                </p>
-                <button
-                  disabled={busy}
-                  onClick={() => onAction({ action: "spell-pass" })}
-                  className="mt-2 rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-                >
-                  Nie rzucam Zaklęcia
-                </button>
-              </div>
+        {/* Two columns inside the sheet: what is happening, and what you are
+            holding while it happens. */}
+        <div className="flex min-h-0 flex-1 gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            {canAct ? (
+              <FightControls
+                fight={fight}
+                simulated={simulated}
+                busy={busy}
+                floorHeld={held !== null}
+                // A duel's escape is the other player's (17.6) — except on the
+                // shared screen, which acts for whoever is fleeing and so keeps it.
+                canFlee={fight.opponentSeat === undefined || myEscape}
+                onAction={onAction}
+              />
+            ) : (
+              <>
+                <WatchFight fight={fight} />
+                {myEscape &&
+                  fight.playerRoll === null &&
+                  fight.enemyRoll === null && (
+                    <div className="rounded border border-ochre/50 bg-ochre/5 p-3">
+                      <p className="text-xs text-ink">
+                        Zaatakowano cię. Możesz spróbować się wymknąć, zanim
+                        padną kostki (17.6) — udaje się to dzięki
+                        Charakterystyce albo Zaklęciu Krąg Płomieni (19.1).
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {simulated ? (
+                          <button
+                            disabled={busy}
+                            onClick={() => onAction({ action: "escape" })}
+                            className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+                          >
+                            Spróbuj się wymknąć (19.1)
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                onAction({ action: "escape", succeeded: true })
+                              }
+                              className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+                            >
+                              Wymknąłem się (19.1)
+                            </button>
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                onAction({ action: "escape", succeeded: false })
+                              }
+                              className="rounded border border-edge px-3 py-1 text-xs text-muted transition hover:border-vermilion disabled:opacity-50"
+                            >
+                              Próba nieudana
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+              </>
             )}
-          </>
-        )}
+          </div>
+
+          {/* Everybody's hand, beside everybody's fight. 17.3 puts a fighter's
+            spells before their own roll, 17.7 gives a duel's other side the
+            same, and the thirteen cards that say "w dowolnej chwili" give it to
+            the rest of the table — so this is the same panel whoever reads it,
+            and the only thing that differs is whose hand is in it. */}
+          <aside className="flex w-[290px] shrink-0 flex-col gap-2 overflow-y-auto border-l border-edge/60 pl-3">
+            <SpellFloorControl
+              floor={held}
+              left={left}
+              mySeatIndex={mySeatIndex}
+              seatName={seatName}
+              canClaim={
+                !fight.result &&
+                spells.some((entry) => {
+                  const script = spellScript(entry.cardId);
+                  return script ? castableNow(script, moment) : true;
+                })
+              }
+              busy={busy}
+              onClaim={onClaimFloor}
+              onRelease={onReleaseFloor}
+            />
+            <SpellHand
+              spells={spells}
+              moment={moment}
+              blocked={
+                held === null
+                  ? "Najpierw zgłoś, że chcesz rzucić."
+                  : held.seat === mySeatIndex
+                    ? null
+                    : `Teraz rzuca ${seatName(held.seat)}.`
+              }
+              opponents={opponents}
+              busy={busy}
+              onCast={onCastSpell}
+              onInspect={onInspect}
+            />
+          </aside>
+        </div>
       </Shell>
     );
   }
@@ -202,6 +365,7 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
+        onAbandon={null}
         error={error}
       >
         <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
@@ -231,7 +395,9 @@ export function DrawModal({
                 onClick={() => onResolveField(choices)}
                 className="rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
               >
-                {fieldOffer.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
+                {fieldOffer.effect.op === "rzut"
+                  ? "Rzuć i rozpatrz"
+                  : "Rozpatrz"}
               </button>
             )}
           </div>
@@ -256,10 +422,14 @@ export function DrawModal({
     .map((entry) => EVENTS.find((c) => c.id === entry.cardId))
     .filter(
       (c): c is EventCard =>
-        !!c && !!combatValueOf(c) && !fought.includes(c.id) && !resolved.includes(c.id),
+        !!c &&
+        !!combatValueOf(c) &&
+        !fought.includes(c.id) &&
+        !resolved.includes(c.id),
     );
   const together =
-    standing.length > 1 && new Set(standing.map((c) => combatValueOf(c)!.kind)).size === 1
+    standing.length > 1 &&
+    new Set(standing.map((c) => combatValueOf(c)!.kind)).size === 1
       ? standing
       : null;
   const keep = kindForCard(known);
@@ -277,6 +447,7 @@ export function DrawModal({
       minimized={minimized && !canAct}
       onMinimize={canAct ? null : onMinimize}
       onRestore={onRestore}
+      onAbandon={null}
       error={error}
     >
       {/* Only what the card does not say itself. The scan carries its own
@@ -417,7 +588,9 @@ export function DrawModal({
             </select>
             <button
               disabled={busy || !going}
-              onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
+              onClick={() =>
+                onResolve(known.id, { choices, destination: going as FieldId })
+              }
               className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
             >
               Przenieś się
@@ -430,7 +603,9 @@ export function DrawModal({
         {canAct && !foe && !keep && !asking && (
           <button
             disabled={busy}
-            onClick={() => (script ? onResolve(known.id, { choices }) : onLeave(known.id))}
+            onClick={() =>
+              script ? onResolve(known.id, { choices }) : onLeave(known.id)
+            }
             className="self-start rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
           >
             {!script
@@ -468,6 +643,92 @@ export function DrawModal({
  * Shared by the drawn card and the fight, because they are the same moment
  * looked at twice: a thing has happened to you and here is what you can do.
  */
+/**
+ * Asking for the moment before the dice, and the fifteen seconds it buys.
+ *
+ * The race is the button, not the casting. Everybody at the table sees the same
+ * one and it is live for anybody holding something they could speak (17.3,
+ * 17.7, and the thirteen cards that say "w dowolnej chwili") — so pressing it
+ * is the tell, the way reaching for a card is at a table, and nobody is named
+ * in advance the way a poll would name them (9.3).
+ *
+ * The clock is a house rule; the rulebook has none, only "before the roll". It
+ * is there so a fight cannot hang on somebody who has left the room, and it is
+ * generous enough not to be a test of reflexes: the hard part was getting the
+ * floor, and choosing a card afterwards is not a race.
+ */
+function SpellFloorControl({
+  floor,
+  left,
+  mySeatIndex,
+  seatName,
+  canClaim,
+  busy,
+  onClaim,
+  onRelease,
+}: {
+  /** Live only: a lapsed claim is nobody's, and reaches here as null. */
+  floor: { seat: number; until: number } | null;
+  /** Seconds still on it, counted by the one clock the modal keeps. */
+  left: number;
+  mySeatIndex: number | null;
+  seatName: (index: number) => string;
+  /** Whether this device is holding anything it could speak right now. */
+  canClaim: boolean;
+  busy: boolean;
+  onClaim: () => void;
+  onRelease: () => void;
+}) {
+  const mine = floor !== null && floor.seat === mySeatIndex;
+  const held = floor !== null;
+
+  return (
+    <div className="rounded border border-magia/40 bg-magia/5 p-2">
+      {held ? (
+        <>
+          <p className="text-[11px] text-ink">
+            {mine
+              ? "Rzucasz Zaklęcie"
+              : `${seatName(floor.seat)} rzuca Zaklęcie`}{" "}
+            — <span className="tnum text-magia">{left}s</span>
+          </p>
+          <p className="mt-0.5 text-[10px] text-muted">
+            {mine ? "Kostki czekają na ciebie." : "Kostki i pozostali czekają."}
+          </p>
+          {mine && (
+            <button
+              disabled={busy}
+              onClick={onRelease}
+              className="mt-1.5 rounded border border-edge px-2 py-0.5 text-[11px] text-muted transition hover:border-ochre hover:text-ink disabled:opacity-50"
+            >
+              Jednak nie rzucam
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <button
+            disabled={busy || !canClaim}
+            onClick={onClaim}
+            title={
+              canClaim
+                ? "Zgłoś się przed rzutem kostką (17.3) — dostaniesz 15 sekund"
+                : "Nie masz Zaklęcia, które można teraz rzucić"
+            }
+            className="rounded border border-magia/60 bg-magia/10 px-2 py-1 text-[11px] text-ink transition hover:bg-magia/20 disabled:opacity-40"
+          >
+            Chcę rzucić Zaklęcie
+          </button>
+          <p className="mt-1 text-[10px] text-muted">
+            Kto pierwszy się zgłosi, ten rzuca — 15 sekund, potem kostki idą
+            dalej.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Shell({
   label,
   art,
@@ -475,7 +736,9 @@ function Shell({
   minimized,
   onMinimize,
   onRestore,
+  onAbandon,
   error,
+  wide = false,
   children,
 }: {
   label: string;
@@ -485,8 +748,19 @@ function Shell({
   minimized: boolean;
   onMinimize: (() => void) | null;
   onRestore: () => void;
+  /**
+   * The test hatch out of a fight, or null — which is every other case.
+   *
+   * In the corner rather than among the buttons, because it is not one of them:
+   * everything else in this sheet is a move in the game, and this is a way of
+   * putting the game down. Kept visibly apart so it cannot be pressed for the
+   * one below it.
+   */
+  onAbandon: (() => void) | null;
   /** A refusal from the last thing pressed. */
   error: string | null;
+  /** Room for a third column: the card, the fight, and a hand beside it. */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   // Folded away, a watcher gets a line at the foot of the screen instead of a
@@ -498,7 +772,10 @@ function Shell({
         onClick={onRestore}
         className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-ochre/50 bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition hover:border-ochre"
       >
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ochre" aria-hidden />
+        <span
+          className="h-1.5 w-1.5 animate-pulse rounded-full bg-ochre"
+          aria-hidden
+        />
         {watching ?? label} — <span className="text-ochre">pokaż</span>
       </button>
     );
@@ -511,7 +788,20 @@ function Shell({
       aria-label={label}
       className="fixed inset-0 z-50 flex items-center justify-center bg-night/85 p-4"
     >
-      <div className="flex max-h-[90vh] w-full max-w-3xl gap-4 overflow-hidden rounded-lg border border-ochre/40 bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
+      <div
+        className={`relative flex max-h-[90vh] w-full gap-4 overflow-hidden rounded-lg border border-ochre/40 bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] ${
+          wide ? "max-w-5xl" : "max-w-3xl"
+        }`}
+      >
+        {onAbandon && (
+          <button
+            onClick={onAbandon}
+            title="Kończy walkę bez rozstrzygnięcia. Nie jest ucieczką (19.1) — nic nie jest stosowane i nikt nic nie traci."
+            className="absolute right-2 top-2 z-10 rounded border border-vermilion/50 bg-panel/90 px-2 py-1 text-[11px] text-vermilion transition hover:border-vermilion hover:bg-vermilion/10"
+          >
+            przerwij walkę (test)
+          </button>
+        )}
         {art && (
           <Image
             src={art}
@@ -523,7 +813,13 @@ function Shell({
             unoptimized
           />
         )}
-        <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
+        {/* Room kept for the corner button, so it sits beside the first line
+            rather than on top of it — that line is the opponent's name. */}
+        <div
+          className={`flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto${
+            onAbandon ? " pr-28" : ""
+          }`}
+        >
           {/* Said here, because here is where it happened.
               
               A modal covers the panel that used to carry these, so anything
@@ -571,7 +867,8 @@ function pendingIn(effect: Effect, choices: number[]): Effect | null {
     const option = pick === undefined ? undefined : effect.options[pick];
     return option ? pendingIn(option.effect, choices) : effect;
   }
-  if (effect.op === "przenies") return effect.to.kind === "pole" ? null : effect;
+  if (effect.op === "przenies")
+    return effect.to.kind === "pole" ? null : effect;
   if (effect.op === "po-kolei") {
     for (const step of effect.steps) {
       const owed = pendingIn(step, choices);
@@ -608,7 +905,9 @@ function WatchFight({ fight }: { fight: Fight }) {
   const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
   const side = (title: string, total: number, roll: number | null) => (
     <div className="rounded border border-edge bg-night p-3">
-      <p className="mb-2 truncate text-xs uppercase tracking-wide text-muted">{title}</p>
+      <p className="mb-2 truncate text-xs uppercase tracking-wide text-muted">
+        {title}
+      </p>
       <p className="flex items-baseline gap-2">
         <span className="tnum text-2xl text-ink">{total}</span>
         <span className="text-xs text-muted">{label}</span>
@@ -674,16 +973,21 @@ function say(effect: Effect): string {
     case "nic":
       return "nic się nie dzieje";
     case "punkty": {
-      const name = { miecz: "Miecza", magia: "Magii", zycie: "Życia", zloto: "Złota" }[
-        effect.stat
-      ];
+      const name = {
+        miecz: "Miecza",
+        magia: "Magii",
+        zycie: "Życia",
+        zloto: "Złota",
+      }[effect.stat];
       return `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${name}`;
     }
     case "tura-stracona":
       return `tracisz ${effect.turns} turę`;
     case "walka":
       return `walka: ${effect.nazwa} (${
-        effect.magia !== undefined ? `Magia ${effect.magia}` : `Miecz ${effect.miecz}`
+        effect.magia !== undefined
+          ? `Magia ${effect.magia}`
+          : `Miecz ${effect.miecz}`
       })`;
     case "przenies":
       return effect.to.kind === "pole"
@@ -694,7 +998,9 @@ function say(effect: Effect): string {
     case "kamien":
       return "Zamiana w Kamień (20.1)";
     case "uzdrow":
-      return effect.cena ? `leczenie za ${effect.cena} Sz. Z. za punkt` : "uzdrowienie";
+      return effect.cena
+        ? `leczenie za ${effect.cena} Sz. Z. za punkt`
+        : "uzdrowienie";
     case "wybor":
       return effect.options.map((option) => option.label).join(" albo ");
     case "po-kolei":

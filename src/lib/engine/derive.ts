@@ -7,6 +7,7 @@ import {
   carryLimit as abilityCarryLimit,
   heldAbilities,
   spellsOverLimit,
+  type Ability,
 } from "./abilities";
 
 /**
@@ -66,6 +67,35 @@ export function bonusesFrom(
   return { miecz, magia };
 }
 
+/**
+ * The whole of 2.6 for one character: the table, and what a card raises it to.
+ *
+ * The Różdżka Zaklęć is the only card that raises it, and it does not do what a
+ * plain "+1" would. Its own words: "Właściciel Różdżki może posiadać conajmniej
+ * 1 Zaklęcie więcej, niż liczba Zaklęć, z jaką rozpoczął grę (może wziąć nowe
+ * Zaklęcie, gdy ma tyle Zaklęć, ile na początku gry lub mniej)." Two things
+ * follow, and both matter:
+ *
+ * - the baseline is **the hand dealt at setup**, not 2.6's table;
+ * - "conajmniej" makes it a **floor beneath** the table, never an addition to
+ *   it — otherwise a Kapłanka on Magia 5 would be reading four off a table
+ *   whose own ceiling is three.
+ *
+ * So it is worth a third Zaklęcie to a Czarodziej, who starts with two, and
+ * nothing at all to a Mag on Magia 5, who already reaches three. Where it is
+ * worth most is at the bottom: a Barbarzyńca on Magia 1 may hold none by the
+ * table, and one with the Różdżka.
+ */
+export function spellAllowance(
+  totalMagia: number,
+  startingSpells: number,
+  abilities: readonly Ability[],
+): number {
+  const raised = spellsOverLimit(abilities);
+  const table = spellCapacity(totalMagia);
+  return raised > 0 ? Math.max(table, startingSpells + raised) : table;
+}
+
 export interface Totals {
   miecz: number;
   magia: number;
@@ -75,19 +105,27 @@ export interface Totals {
 export function totalsFor(
   seat: Seat,
   items: ReadonlyMap<string, Item>,
-  options?: { suppressMagicalItems?: boolean },
+  options?: {
+    suppressMagicalItems?: boolean;
+    /**
+     * The hand this character was dealt at setup (9.5), which is what the
+     * Różdżka Zaklęć measures itself against. Zero is the common case — twenty
+     * of the twenty-seven start with none — and is the safe default: without
+     * the Różdżka it changes nothing at all.
+     */
+    startingSpells?: number;
+  },
 ): Totals {
   const bonus = bonusesFrom(seat.holdings, items, options);
   const magia = seat.magiaOwn + bonus.magia;
-  // The Różdżka Zaklęć raises 2.6's limit the way the Koń raises 5.4's, so the
-  // capacity is asked for rather than read straight off the table.
-  const extraSpells = spellsOverLimit(
-    heldAbilities(seat.holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
-  );
   return {
     miecz: seat.mieczOwn + bonus.miecz,
     magia,
-    spellCapacity: spellCapacity(magia) + extraSpells,
+    spellCapacity: spellAllowance(
+      magia,
+      options?.startingSpells ?? 0,
+      heldAbilities(seat.holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
+    ),
   };
 }
 

@@ -52,7 +52,8 @@ they are rules, and one of them was missing.
 | | rule | status | where |
 |---|---|---|---|
 | 2.1–2.5 | as 1.1–1.5, for Magia | ✅ | same |
-| 2.6 | spell limit from Magia; excess must be discarded at once | ◐ | limit computed and shown; **discarding the excess is not forced** |
+| 2.6 | spell limit from Magia; excess must be discarded at once | ◐ | limit computed, enforced and shown under the pack; **discarding the excess is not forced** |
+| 2.6 | Różdżka Zaklęć: at least one more than the setup hand, refilled on demand | ✅ | `spellAllowance` floors the limit; `drawSpellWithWand` is the refill |
 
 ## 3. Złoto
 
@@ -209,8 +210,8 @@ they are rules, and one of them was missing.
 | 17.4 | an item or spell may prevent that loss | ✅ | `bestShield`, rolled in `settleFight` |
 | 17.4 | "na tym walka się kończy" — one roll per enemy per turn | ✅ | `endFight` records `fought`; `beginFight` refuses a rematch |
 | 17.5 | several enemies at once add their Miecze together | ✅ | `beginFight` takes a list; `combinedEnemyTotal` |
-| 17.6 | the attacked character may try to slip away | ✅ | |
-| 17.7 | **both** characters may cast before the roll | ◐ | a hand is castable during anyone's fight, not only its owner's turn; there is no explicit reaction pause |
+| 17.6 | the attacked character may try to slip away | ✅ | `escape` resolves the fleeing seat as the duel's `opponentSeat`, and refuses the attacker |
+| 17.7 | **both** characters may cast before the roll | ✅ | `spellsOwedBy` holds the dice until every seat holding a pre-fight spell has passed — duels included |
 | 17.8 | attacker's Miecz worked out first | ✅ | |
 | 17.9 | the winner takes a Życie, an item, or a Sztuka Złota | ◐ | the Życie is applied; the choice is the players' |
 | 17.10 | a draw costs nobody anything | ✅ | |
@@ -227,9 +228,10 @@ they are rules, and one of them was missing.
 
 | | rule | status | where |
 |---|---|---|---|
-| 19.1 | escape by special ability or Krąg Płomieni | ◐ | recorded; the app cannot judge it, since 8.1 and 9.6 are missing |
-| 19.2 | you may flee anything in the three Kręgi | ✅ | |
-| 19.3 | on the Most you may flee only other characters | ✅ | enforced |
+| 19.1 | escape by special ability or Krąg Płomieni | ✅ | `canEscapeAt` for the abilities; the Krąg Płomieni is spent from hand for one target |
+| 19.1 | an ability escapes every istota on the Obszar at once; the Krąg Płomieni just one | ✅ | the ability sweeps every drawn Wróg into `fought` |
+| 19.2 | you may flee anything in the three Kręgi | ✅ | a permission, not a grant — 19.1 still has to supply the means |
+| 19.3 | on the Most you may flee only other characters | ✅ | enforced, and reachable: the Krąg Płomieni is the only means that fits, and it is wired |
 
 ## 20. Zamiana w Kamień
 

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
-import { CardTile, type TileCard } from "./card-tile";
+import type { TileCard } from "./card-tile";
+import { ItemSlot, SLOT_WIDTH } from "./item-slot";
 import type { SpellId } from "@/data/ids";
 import {
   TARGET_LABEL,
@@ -32,6 +33,10 @@ export interface HeldSpell {
 export function SpellHand({
   spells: held,
   moment,
+  blocked = null,
+  title,
+  capacity,
+  frame = "panel",
   opponents,
   busy,
   onCast,
@@ -40,6 +45,26 @@ export function SpellHand({
   spells: HeldSpell[];
   /** Every window the turn is open for right now — a moment can be several. */
   moment: readonly SpellTiming[];
+  /** Why nothing can be spoken at this instant, if something cannot. */
+  blocked?: string | null;
+  /** Shown above the hand. */
+  title?: string;
+  /**
+   * How many the hand may hold (2.6), when the caller knows.
+   *
+   * Drawn beside the count the way the pack draws 5.4's, because it is the same
+   * kind of fact and was the one of the two nobody could see: a player learns
+   * their limit by being refused a Zaklęcie they had already decided to take.
+   */
+  capacity?: number;
+  /**
+   * Where this is standing.
+   *
+   * `section` is the seat card, under the pack and reading as part of it —
+   * a rule about your hand belongs beside the rule about your pack. `panel` is
+   * the fight sheet, where it is a box of its own beside the dice.
+   */
+  frame?: "panel" | "section";
   /** Other seats, for the spells that need a victim. */
   opponents: { seatIndex: number; name: string }[];
   busy: boolean;
@@ -47,18 +72,61 @@ export function SpellHand({
   onInspect: (card: TileCard) => void;
 }) {
   const [aiming, setAiming] = useState<string | null>(null);
-  if (held.length === 0) return null;
+  // An empty hand under the pack is still worth a line, for the same reason an
+  // empty pack is drawn: the cap is the thing being said, and "0 / 2" says it.
+  // In the fight sheet there is no cap to report and nothing to do, so nothing
+  // is drawn.
+  if (held.length === 0 && (frame === "panel" || capacity === undefined)) return null;
+
+  /**
+   * What can be spoken now, first.
+   *
+   * A hand is read in the moment it is needed, and in that moment the only
+   * question is which of these is live. Card order is the order they happened
+   * to arrive in, which answers nothing. The rest keep their places behind,
+   * greyed, because 9.1 puts the window on the card and knowing that the
+   * Magiczna Wędrówka is waiting for the start of a move is most of what you
+   * plan a turn around.
+   */
+  const live = (entry: HeldSpell) => {
+    const script = spellScript(entry.cardId);
+    return script ? castableNow(script, moment) : true;
+  };
+  const hand = [...held].sort((a, b) => Number(live(b)) - Number(live(a)));
+
+  const section = frame === "section";
+  // The count against what will fit, exactly as the pack says it — and the same
+  // red when there is no room, which is the moment 9.4 starts to bite.
+  const tally =
+    capacity === undefined ? (
+      `(${held.length})`
+    ) : (
+      <span className={held.length >= capacity ? "text-vermilion" : "text-muted/70"}>
+        {held.length} / {capacity}
+      </span>
+    );
 
   return (
-    <div className="mt-4 rounded-lg border border-magia/30 bg-panel/60 p-3">
-      <h3 className="mb-2 text-[11px] uppercase tracking-widest text-magia">
-        Twoje Zaklęcia ({held.length})
+    <div
+      className={
+        section
+          ? "mt-3 border-t border-edge pt-3"
+          : "mt-4 rounded-lg border border-magia/30 bg-panel/60 p-3"
+      }
+    >
+      <h3
+        className={`mb-2 text-[11px] uppercase tracking-widest ${
+          section ? "text-muted" : "text-magia"
+        }`}
+      >
+        {title ?? (section ? "Zaklęcia" : "Twoje Zaklęcia")} {tally}
       </h3>
+      {blocked && <p className="mb-2 text-[11px] text-muted">{blocked}</p>}
       {/* Face up, because they are yours — 9.3 hides them from everyone else,
           not from you, and a hand you cannot see is a hand you cannot plan
           with. */}
       <div className="flex flex-wrap gap-3">
-        {held.map((entry) => {
+        {hand.map((entry) => {
           const card = SPELL_BY_ID.get(entry.cardId);
           const script = spellScript(entry.cardId);
           const now = script ? castableNow(script, moment) : true;
@@ -67,26 +135,38 @@ export function SpellHand({
           const name = card?.name ?? entry.cardId;
 
           return (
-            <div key={entry.holdingId} className="flex flex-col items-center gap-1">
-              <CardTile
-                card={{ cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" }}
-                size="md"
-                dimmed={!now}
-                onClick={() => onInspect({ cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" })}
-                // Two clicks on the card speak it — the same gesture that puts
-                // a Przedmiot on, for the act that is a hand's equivalent. It
-                // goes through the same question the button below does, so a
-                // Zaklęcie is never spent by a double-click that missed.
-                onDoubleClick={
-                  now && !busy
-                    ? () =>
-                        needsVictim && opponents.length > 0
-                          ? setAiming(entry.holdingId)
-                          : onCast(entry.holdingId)
-                    : undefined
-                }
-              />
-
+            // The same square the pack is built from, at the same size. A
+            // Zaklęcie and a Przedmiot are both a card you hold, and drawing
+            // them at two different sizes in two different frames made the
+            // hand read as something from another screen. The picture is the
+            // illustration; the whole Karta is a hover away, as everywhere.
+            <ItemSlot
+              key={entry.holdingId}
+              item={{
+                holdingId: entry.holdingId,
+                cardId: entry.cardId,
+                card: { cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" },
+              }}
+              label={name}
+              tone="filled"
+              dimmed={!now}
+              disabled={busy}
+              onClick={() =>
+                onInspect({ cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" })
+              }
+              // Two clicks on the card speak it — the same gesture that puts
+              // a Przedmiot on, for the act that is a hand's equivalent. It
+              // goes through the same question the button below does, so a
+              // Zaklęcie is never spent by a double-click that missed.
+              onDoubleClick={
+                now && !busy && !blocked
+                  ? () =>
+                      needsVictim && opponents.length > 0
+                        ? setAiming(entry.holdingId)
+                        : onCast(entry.holdingId)
+                  : undefined
+              }
+            >
               {/* When it may be spoken and at what, under the card that says
                   it. Almost every Zaklęcie opens with a clause about its
                   moment — "przed wykonaniem ruchu", "w dowolnej chwili" — and
@@ -96,7 +176,7 @@ export function SpellHand({
                   Lit when the window is open, so a hand can be read at a
                   glance for what is live. */}
               {script && (
-                <div className="w-[132px] text-center leading-tight">
+                <div className="text-center leading-tight" style={{ width: SLOT_WIDTH }}>
                   <p className={`text-[10px] ${now ? "text-magia" : "text-muted/60"}`}>
                     {script.timing.map((when) => TIMING_LABEL[when]).join(" / ")}
                   </p>
@@ -105,11 +185,14 @@ export function SpellHand({
               )}
 
               {aiming === entry.holdingId && needsVictim ? (
-                <div className="flex w-[132px] flex-wrap justify-center gap-1">
+                <div
+                  className="flex flex-wrap justify-center gap-1"
+                  style={{ width: SLOT_WIDTH }}
+                >
                   {opponents.map((seat) => (
                     <button
                       key={seat.seatIndex}
-                      disabled={busy}
+                      disabled={busy || blocked !== null}
                       onClick={() => {
                         onCast(entry.holdingId, seat.seatIndex);
                         setAiming(null);
@@ -128,7 +211,7 @@ export function SpellHand({
                 </div>
               ) : (
                 <button
-                  disabled={busy || !now}
+                  disabled={busy || !now || blocked !== null}
                   onClick={() =>
                     needsVictim && opponents.length > 0
                       ? setAiming(entry.holdingId)
@@ -139,12 +222,13 @@ export function SpellHand({
                       ? script?.effect
                       : `tylko ${script?.timing.map((t) => TIMING_LABEL[t]).join(" / ")}`
                   }
-                  className="w-[132px] rounded border border-magia/50 px-2 py-1 text-[11px] text-ink transition hover:bg-magia/20 disabled:opacity-40"
+                  style={{ width: SLOT_WIDTH }}
+                  className="rounded border border-magia/50 px-2 py-1 text-[11px] text-ink transition hover:bg-magia/20 disabled:opacity-40"
                 >
                   {now ? "Rzuć" : "nie teraz"}
                 </button>
               )}
-            </div>
+            </ItemSlot>
           );
         })}
       </div>

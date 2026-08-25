@@ -240,8 +240,15 @@ export function describeAbility(ability: Ability): string {
       if (ability.from === "zycie") return `bez straty Życia: ${where}${onlyFor}`;
       return `bez straty Przedmiotu: ${where}${onlyFor}`;
     }
-    case "ucieczka":
-      return `ucieczka przed Wrogiem: ${fieldNames(ability.fields)}`;
+    case "ucieczka": {
+      // Said out loud because it is the whole restriction: an escape printed on
+      // a character or a friend is about Wrogowie, and a player who reads it as
+      // "you can run away here" will try it on another Postać and be told no.
+      const przed = (ability.przed ?? ["wrog"]).map((what) =>
+        what === "postac" ? "Postacią" : "Wrogiem",
+      );
+      return `ucieczka przed ${przed.join(" lub ")}: ${fieldNames(ability.fields)}`;
+    }
     case "udzwig": {
       if (ability.items === "bez-limitu") return "niesiesz bez ograniczeń (5.4)";
       // Added to the four of 5.4, not a cap replacing them — which is what

@@ -227,7 +227,7 @@ suite("Polish agreement", () => {
       "walka-start", "walka-koniec", "pojedynek", "ucieczka", "ucieczka-nieudana",
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc", "uzycie",
-      "test-karta",
+      "test-karta", "test-koniec-walki",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
       "tura-stracona", "zostawienie", "punkty", "strata",
     ];
@@ -425,6 +425,25 @@ suite("spending a card by using it", () => {
 
   it("still names a card it has no entry for", () => {
     expect(text("uzycie", { cardId: "nie-ma-takiej" })).toBe("Michał używa: nie-ma-takiej.");
+  });
+
+  it("keeps breaking a fight off apart from fleeing one", () => {
+    // The test hatch and 19.1 must not read alike: the whole reason to have a
+    // way out of a staged fight is to test the fights, and a row saying
+    // "ucieka z walki" would be the one row you could not trust while doing it.
+    const said = text("test-koniec-walki", { cardName: "CYKLOP" });
+    expect(said).toBe("Michał przerywa walkę z: CYKLOP.");
+    expect(said).not.toContain("ucieka");
+    // The badge on a manual row says this, and said it twice while the
+    // sentence did too.
+    expect(said).not.toContain("tryb testowy");
+  });
+
+  it("names a pack or a duel it has no card for", () => {
+    // 17.5 joins several creatures into one fight, and a duel carries a
+    // player's name — neither is a card id, so neither is looked up.
+    expect(text("test-koniec-walki", { cardName: "CYKLOP + SMOK" })).toContain("CYKLOP + SMOK");
+    expect(text("test-koniec-walki", {})).toContain("przeciwnikiem");
   });
 
   it("says a card handed over by the test shortcut, rather than nothing at all", () => {
