@@ -2234,6 +2234,21 @@ const CARD_HEIGHT = 238;
  */
 const STACK_HEIGHT = Math.round(CARD_HEIGHT / 2) - 28;
 
+/**
+ * The colour each parameter is counted in.
+ *
+ * The same four the box prints its żetony in (1.2, 2.2, 4.1, 3.1), so the
+ * numeral under a pile belongs to it by colour alone. Nothing else on the rail
+ * names the parameter — the word is on the card, printed up the edge the pile
+ * stands against.
+ */
+const STAT_COLOUR: Record<string, string> = {
+  miecz: "text-miecz",
+  magia: "text-magia",
+  zycie: "text-zycie",
+  zloto: "text-zloto",
+};
+
 function Tokens({ stat, points, label }: { stat: string; points: number; label: string }) {
   const SIZE = 20;
   if (stat === "zloto") {
@@ -2265,36 +2280,26 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
     const stacks = Math.ceil(points / PER_STACK);
 
     return (
-      <span className="flex flex-col items-center" title={`${label}: ${points}`}>
-        <span className="flex items-start gap-0.5">
-          {Array.from({ length: stacks }, (_, stack) => (
-            <span key={stack} className="flex flex-col items-center">
-              {Array.from(
-                { length: Math.min(PER_STACK, points - stack * PER_STACK) },
-                (_, index) => (
-                  <Image
-                    key={index}
-                    src="/tokens/zloto.png"
-                    alt=""
-                    width={SIZE}
-                    height={SIZE}
-                    style={index > 0 ? { marginTop: REVEAL - SIZE } : undefined}
-                    className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
-                    unoptimized
-                  />
-                ),
-              )}
-            </span>
-          ))}
-        </span>
-        {/* Bigger than the caption it sits under, and off the pile by a hair.
-            The count is the whole reading here — the coins are all the same
-            denomination, so the stack says "money" and the numeral says how
-            much — and set flush against the bottom coin it looked like part of
-            the picture rather than the answer to it. */}
-        <span className="tnum mt-1 text-[13px] font-medium leading-none text-zloto">
-          {points}
-        </span>
+      <span className="flex items-start gap-0.5" title={`${label}: ${points}`}>
+        {Array.from({ length: stacks }, (_, stack) => (
+          <span key={stack} className="flex flex-col items-center">
+            {Array.from(
+              { length: Math.min(PER_STACK, points - stack * PER_STACK) },
+              (_, index) => (
+                <Image
+                  key={index}
+                  src="/tokens/zloto.png"
+                  alt=""
+                  width={SIZE}
+                  height={SIZE}
+                  style={index > 0 ? { marginTop: REVEAL - SIZE } : undefined}
+                  className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
+                  unoptimized
+                />
+              ),
+            )}
+          </span>
+        ))}
       </span>
     );
   }
@@ -2381,6 +2386,11 @@ function RailStat({
   canAdjust: boolean;
   onAdjust: (stat: string, delta: number) => void;
 }) {
+  // Życie and Złoto have no derived half at all — 3.1 and 4.1 make the żetony
+  // the whole value — so those rails have no `total` and the number under them
+  // is simply what they are.
+  const shown = total ?? value;
+
   return (
     // A minimum rather than a width: one column is nine, and a pile that has
     // turned a corner needs the room for the second.
@@ -2396,30 +2406,37 @@ function RailStat({
           is not marked with a żeton, so a pile adding up to a number the table
           never had tokens for would be the interface inventing a rule. The
           figure under the pile is the one the cards make. */}
-      {/* Drawn when either figure has something to add. A character carrying
-          only a Miecz card has a parameter equal to its own points and is
-          still worth a point more in a fight — say nothing and the card looks
-          like it is doing nothing. */}
-      {total !== undefined && (total !== value || (inFight !== undefined && inFight !== total)) && (
-        <span
-          title={
-            inFight !== undefined && inFight !== total
-              ? `${label}: ${total}, w walce ${inFight} (własne ${value})`
-              : `${label}: ${total} (własne ${value})`
-          }
-          className="tnum text-[11px] leading-none text-ink"
-        >
-          {total}
-          {/* Own points in brackets, but only when the cards have added to
-              them — "12 (12)" is the same number twice. */}
-          {total !== value && <span className="text-muted"> ({value})</span>}
-          {/* Only where a card lends something in a fight and nowhere else,
-              which is four cards in the box. */}
-          {inFight !== undefined && inFight !== total && (
-            <span className="text-miecz">{" \u2694\uFE0E"}{inFight}</span>
-          )}
-        </span>
-      )}
+      {/*
+        The number, under every pile and not just the ones with a second
+        figure to report.
+
+        A pile is a picture and a picture of nine tokens is not a reading of
+        nine — that is the whole reason the gold has carried a numeral from the
+        start, and the other three want it for the same reason. In the
+        parameter's colour, because the pile it belongs to is that colour and
+        nothing else on the rail says which one it is.
+      */}
+      <span
+        title={
+          inFight !== undefined && inFight !== shown
+            ? `${label}: ${shown}, w walce ${inFight} (własne ${value})`
+            : shown !== value
+              ? `${label}: ${shown} (własne ${value})`
+              : `${label}: ${shown}`
+        }
+        className={`tnum mt-1 text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
+      >
+        {shown}
+        {/* Own points behind it, but only where the cards have added to them:
+            "12 (12)" is the same number twice. Dimmed rather than recoloured,
+            so the parameter stays the thing being read. */}
+        {shown !== value && <span className="opacity-60"> ({value})</span>}
+        {/* And the fight figure where a card lends something in a fight and
+            nowhere else, which is four cards in the box (1.5). */}
+        {inFight !== undefined && inFight !== shown && (
+          <span>{" \u2694\uFE0E"}{inFight}</span>
+        )}
+      </span>
       {canAdjust && (
         // Always visible rather than revealed on hover. Phones are the primary
         // device at a table and have no hover, so a hover-gated override is an
