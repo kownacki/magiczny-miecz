@@ -131,7 +131,8 @@ export function CardPreview({
     profile?.slotLabel ||
     (profile?.facts.length ?? 0) > 0 ||
     (profile?.requirements.length ?? 0) > 0 ||
-    (profile?.special.length ?? 0) > 0;
+    (profile?.special.length ?? 0) > 0 ||
+    (profile?.notes.length ?? 0) > 0;
 
   return createPortal(
     <div
@@ -205,6 +206,21 @@ export function CardPreview({
               {profile.special.map((line, at) => (
                 <li key={at} className="text-[11px] leading-snug text-ochre/90">
                   {line}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Rules the app states but does not apply. Marked, because at a table
+              the difference is who has to remember them. */}
+          {profile && profile.notes.length > 0 && (
+            <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
+              {profile.notes.map((note, at) => (
+                <li key={at} className="text-[11px] leading-snug text-ochre/90">
+                  {note}
+                  {at === 0 && (
+                    <span className="ml-1 text-[10px] text-muted/70">· pilnujesz sam</span>
+                  )}
                 </li>
               ))}
             </ul>

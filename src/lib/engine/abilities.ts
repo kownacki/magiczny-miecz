@@ -164,7 +164,49 @@ export type Ability =
    * Stated as who MAY hold it rather than who may not, because that is the
    * shorter list on all three and the one a player wants read out.
    */
-  | { kind: "tylko-natura"; natury: readonly Nature[] };
+  | { kind: "tylko-natura"; natury: readonly Nature[] }
+  /**
+   * Beats a whole class of enemy without fighting it at all.
+   *
+   * "Postać mająca Relikwiarz pokonuje wszystkie Demony, bez konieczności walki
+   * z nimi." Not a combat bonus — no dice are thrown — so `punkty` and
+   * `modyfikator-rzutu` both say the wrong thing about it.
+   */
+  | { kind: "pokonuje-bez-walki"; kogo: "demony" };
+
+/**
+ * Rules the typed vocabulary cannot hold, written out instead.
+ *
+ * Same bargain `CHARACTER_NOTES` makes, for the same reason: the app says what
+ * a card does either way, and is honest about which half it is enforcing. A
+ * rule stated here is one the players apply themselves.
+ *
+ * The point of writing them at all is that the scan stops being load-bearing.
+ * A fresh checkout has no card pictures, and a player should still be able to
+ * read what they are holding.
+ */
+export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = {
+  "diament-krolow": [
+    "sprzedasz w Zamku za 5 Sz. Z.",
+    "przegraną walkę z Postacią płacisz Diamentem, nie punktem Życia",
+  ],
+  "tajemna-sakwa": [
+    "1 Przedmiot włożony do Sakwy jest nie do odebrania — zabierze go tylko Pan Bogactwa",
+  ],
+  "eliksir-sily": ["+2 Miecza na 1 turę, potem odłóż Kartę"],
+  "krysztal-losu": [
+    "w walce rzut: 1 — tracisz 1 Życie; 2 — Kryształ niszczeje; 3 — nic; 4, 5, 6 — +1, +2, +3 do rzutu w tej walce",
+  ],
+  "owoc-jarzebiny-wiedzy": [
+    "przed ciągnięciem Kart: ciągniesz o 1 więcej i odrzucasz jedną; raz",
+  ],
+  "rozdzka-przeznaczenia": [
+    "napotkany Wróg staje się Przyjacielem na jedną walkę i dodaje swoje punkty; potem odłóż",
+  ],
+  "zwierciadlo-zniszczenia": [
+    "innej Postaci −2 Miecza lub Magii, albo −1 i −1 — tylko z jej własnych punktów; raz",
+  ],
+};
 
 /**
  * Which cards have which standing rules.
@@ -319,6 +361,9 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   relikwiarz: [
     { kind: "bezpieczny", fields: ["czarci-mlyn"], from: "zycie", natura: ["dobra"] },
     { kind: "bezpieczny", fields: ["studnia-wiecznosci"], from: "zycie", natura: ["zla"] },
+    // "pokonuje wszystkie Demony, bez konieczności walki z nimi" — the third of
+    // its three rules, and the only one the card was not carrying.
+    { kind: "pokonuje-bez-walki", kogo: "demony" },
   ],
   "rozdzka-zaklec": [{ kind: "zaklecia-ponad-limit", count: 1 }],
 

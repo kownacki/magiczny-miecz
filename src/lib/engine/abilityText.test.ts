@@ -98,11 +98,26 @@ describe("what using a card does", () => {
     expect(gold.facts).toEqual([]);
   });
 
-  it("stays quiet about effects it cannot say in a phrase", () => {
-    // Rolls, choices and branches: the card's own text says it better, and it
-    // is right there in the picture.
+  it("describes a branching effect rather than skipping it", () => {
+    // The picture is not always there — a fresh checkout has no scans — so a
+    // rule the app carries has to be sayable without one.
     const box = itemProfile("tajemnicza-szkatula");
-    expect(box.special.some((line) => /rzu|kostk/i.test(line))).toBe(false);
+    expect(box.special.join(" ")).toMatch(/rzut kostką/);
+  });
+
+  it("writes out the rules no typed kind can hold", () => {
+    const mirror = itemProfile("zwierciadlo-zniszczenia");
+    expect(mirror.notes).toHaveLength(1);
+    expect(mirror.notes[0]).toContain("Miecza");
+  });
+
+  it("says the Relikwiarz's condition, not just its protection", () => {
+    // Dropping the Natura read as sparing everyone at both fields.
+    const said = itemProfile("relikwiarz").facts.map((f) => f.what);
+    expect(said[0]).toContain("jeśli dobra");
+    expect(said[1]).toContain("jeśli zła");
+    // And the third rule, which nothing modelled at all.
+    expect(said[2]).toContain("Demony");
   });
 
   it("says nothing at all for a card with no script", () => {

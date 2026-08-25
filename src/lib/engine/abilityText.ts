@@ -2,8 +2,9 @@
 
 import type { Nature } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
-import { ABILITIES, type Ability } from "./abilities";
-import { describeDisposition, scriptFor, type Effect } from "./cardScript";
+import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
+import { describeDisposition, scriptFor } from "./cardScript";
+import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
@@ -91,6 +92,13 @@ export interface ItemProfile {
    */
   special: string[];
   /**
+   * Rules the app states but does not enforce.
+   *
+   * Kept apart from the rest because the difference matters at a table: these
+   * are the ones somebody has to remember.
+   */
+  notes: readonly string[];
+  /**
    * What it asks of you before it gives anything.
    *
    * Kept apart from the bonuses because they answer different questions — one
@@ -120,6 +128,7 @@ export function itemProfile(cardId: string, eqMode: EqMode = "klasyczny"): ItemP
     facts: lines.filter((l) => !IS_A_REQUIREMENT.has(l.ability.kind)).map((l) => l.fact),
     requirements: lines.filter((l) => IS_A_REQUIREMENT.has(l.ability.kind)).map((l) => l.fact),
     special: specialOf(cardId),
+    notes: CARD_NOTES[cardId as keyof typeof CARD_NOTES] ?? [],
   };
 }
 
@@ -135,41 +144,10 @@ export function itemProfile(cardId: string, eqMode: EqMode = "klasyczny"): ItemP
 function specialOf(cardId: string): string[] {
   const script = scriptFor(cardId);
   if (!script) return [];
-  const said = briefly(script.effect);
-  const lines = said ? [said] : [];
+  const lines = [describeEffect(script.effect)];
   // Only worth saying when the card does not simply stay with you.
   if (script.disposition.kind !== "zostaje") lines.push(describeDisposition(script.disposition));
   return lines;
-}
-
-function briefly(effect: Effect): string | null {
-  switch (effect.op) {
-    case "punkty": {
-      const many = Math.abs(effect.delta);
-      const stat =
-        effect.stat === "zloto"
-          ? "Złota"
-          : effect.stat === "zycie"
-            ? "Życia"
-            : effect.stat === "miecz"
-              ? "Miecza"
-              : "Magii";
-      return `${effect.delta > 0 ? "+" : "−"}${many} ${stat}`;
-    }
-    case "tura-stracona":
-      return `tracisz ${effect.turns} ${effect.turns === 1 ? "turę" : "tury"}`;
-    case "zaklecie":
-      return `+${effect.count} Zaklęcie`;
-    case "uzdrow":
-      return `leczy do ${effect.upTo} Życia (4.7)`;
-    case "kamien":
-      return "zamienia w Kamień (20.1)";
-    case "natura":
-      return `Natura: ${effect.na === "zla" ? "zła" : effect.na}`;
-    default:
-      // Rolls, choices, fights, anything with branches: the card says it better.
-      return null;
-  }
 }
 
 /**
@@ -204,6 +182,7 @@ export function characterProfile(characterId: string): ItemProfile {
     slotLabel: null,
     requirements: [],
     special: [],
+    notes: [],
     facts: abilities.map((ability) => ({
       kind: ability.kind,
       what: describeAbility(ability),
@@ -233,9 +212,15 @@ export function describeAbility(ability: Ability): string {
       return `osłona przy przegranej (rzut ≤ ${ability.upTo})`;
     case "bezpieczny": {
       const where = fieldNames(ability.fields);
-      if (ability.from === "rzut") return `bez rzutu: ${where}`;
-      if (ability.from === "zycie") return `bez straty Życia: ${where}`;
-      return `bez straty Przedmiotu: ${where}`;
+      // The condition is half the rule. The Relikwiarz spares a Dobra Postać at
+      // the Czarci Młyn and a Zła one at the Studnia Wieczności, and dropping
+      // that read as sparing everyone at both.
+      const onlyFor = ability.natura?.length
+        ? ` — jeśli ${ability.natura.map((n) => (n === "zla" ? "zła" : n)).join(" lub ")}`
+        : "";
+      if (ability.from === "rzut") return `bez rzutu: ${where}${onlyFor}`;
+      if (ability.from === "zycie") return `bez straty Życia: ${where}${onlyFor}`;
+      return `bez straty Przedmiotu: ${where}${onlyFor}`;
     }
     case "ucieczka":
       return `ucieczka przed Wrogiem: ${fieldNames(ability.fields)}`;
@@ -295,6 +280,8 @@ export function describeAbility(ability: Ability): string {
       const natury = ability.natury.map((n) => (n === "zla" ? "zła" : n)).join(" lub ");
       return `tylko Postać: ${natury} (5.3)`;
     }
+    case "pokonuje-bez-walki":
+      return "pokonujesz wszystkie Demony bez walki";
     case "zaklecia-ponad-limit":
       return `+${ability.count} Zaklęcie ponad limit (2.6)`;
   }
