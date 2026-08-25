@@ -97,6 +97,7 @@ export function SlotPanel({
   busy,
   carrying,
   movingCardId,
+  liftedHoldingId,
   onDragging,
   onPickUp,
   onTakeOff,
@@ -113,6 +114,8 @@ export function SlotPanel({
   /** Which card is being moved, dragged or carried — so a place can say whether
       it would take it before the player finds out by being refused. */
   movingCardId: string | null;
+  /** The card currently on the cursor, so the place it came from looks empty. */
+  liftedHoldingId: string | null;
   onPickUp: (item: SlotItem, from: Slot) => void;
   onTakeOff: (holdingId: string) => void;
   /** Something was put into a place — dropped, or carried there and clicked. */
@@ -134,7 +137,10 @@ export function SlotPanel({
       style={{ gridTemplateColumns: "repeat(3, 96px)", gridAutoRows: "84px" }}
     >
       {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
-        const item = worn[slot];
+        // What is *shown* here. A card on the cursor has left its place, so the
+        // place is drawn empty and answers to its own name again — it is a
+        // target now, and a target you cannot read the name of is a worse one.
+        const item = worn[slot]?.holdingId === liftedHoldingId ? undefined : worn[slot];
         return (
           <div
             key={slot}
@@ -179,16 +185,23 @@ export function SlotPanel({
                 item={item}
                 canAct={canAct}
                 onDragging={onDragging}
-                // One click picks it up; two take it straight off. Same pair as
-                // in the pack, so the gesture means one thing everywhere.
-                onPickUp={() => onPickUp(item, slot)}
+                // While something is on the cursor, a click puts it down —
+                // including onto the place it was lifted from, which is how you
+                // change your mind. Otherwise a click picks this one up, and
+                // two take it straight off.
+                onPickUp={() => (carrying ? onDropInto("", slot) : onPickUp(item, slot))}
                 onTakeOff={() => onTakeOff(item.holdingId)}
               />
             ) : (
               <button
                 type="button"
                 disabled={!canAct || !carrying}
-                onClick={() => onDropInto("", slot)}
+                onClick={(event) => {
+                  // Kept from the window, which is listening for a click
+                  // anywhere else in order to put the card back.
+                  event.stopPropagation();
+                  onDropInto("", slot);
+                }}
                 title={SLOT_LABEL[slot]}
                 className="flex h-full w-full items-center justify-center text-[26px] text-muted/30 disabled:cursor-default"
               >
@@ -250,7 +263,10 @@ function WornCard({
           startHoldingDrag(event, item.holdingId);
         }}
         onDragEnd={() => onDragging(null)}
-        onClick={onPickUp}
+        onClick={(event) => {
+          event.stopPropagation();
+          onPickUp();
+        }}
         onDoubleClick={onTakeOff}
         title={item.card.name}
         className="block h-full w-full cursor-grab active:cursor-grabbing"

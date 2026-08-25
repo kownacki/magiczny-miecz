@@ -933,7 +933,11 @@ function Hand({
         }}
         // Clicking the pack with something on the cursor puts it there, which
         // is how a worn card comes off without aiming at a particular card.
-        onClick={() => carried && onPlaceInPack()}
+        onClick={(event) => {
+          if (!carried) return;
+          event.stopPropagation();
+          onPlaceInPack();
+        }}
         className={`flex flex-wrap gap-2 rounded border border-dashed p-1 transition ${
           dragOver ? "border-ochre bg-ochre/5" : "border-transparent"
         }`}
@@ -950,12 +954,14 @@ function Hand({
             key={held.id}
             card={tileFor(held)}
             badge={held.kind === "trophy" ? "trofeum" : undefined}
-            dimmed={held.kind === "trophy"}
+            // The one on the cursor is not also in the pack.
+            dimmed={held.kind === "trophy" || held.id === carried?.holdingId}
             // One click picks it up, or puts down whatever is already on the
             // cursor. Two put it straight on. With no variant running there is
             // nowhere to put anything, so a click just reads the card.
-            onClick={() => {
+            onClick={(event) => {
               if (!slotted || !canAct) return onInspect(tileFor(held));
+              event.stopPropagation();
               if (carried) return onPlaceInPack();
               if (held.kind === "item" && isWearable(held.cardId)) {
                 onCarry({
@@ -1150,13 +1156,45 @@ function SeatCard({
   const [dragging, setDragging] = useState<string | null>(null);
   const movingCardId = carried?.cardId ?? dragging;
 
-  /** Puts what is being carried into a place, or takes it back out. */
+  /**
+   * Puts down what is being carried.
+   *
+   * Onto the place it came from, it is simply put back: nothing moved, so
+   * nothing is sent. That is also what happens when it is dropped anywhere that
+   * is not a place at all — a click on the board, or Escape — because a card
+   * picked up and not put anywhere has not gone anywhere.
+   */
   const place = (slot: Slot | null) => {
     if (!carried) return;
-    if (carried.from === (slot ?? "plecak")) return setCarried(null); // put back
+    if (carried.from === (slot ?? "plecak")) return setCarried(null);
     onEquip(carried.holdingId, slot);
     setCarried(null);
   };
+
+  // A click anywhere that is not a place, or Escape, puts it back. The places
+  // stop their own clicks from reaching the window, so this only hears the
+  // ones that missed. Registered a tick late so the click that picked the card
+  // up does not immediately put it down again.
+  useEffect(() => {
+    if (!carried) return;
+    let cancel: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      const putBack = () => setCarried(null);
+      const onKey = (event: KeyboardEvent) => {
+        if (event.key === "Escape") setCarried(null);
+      };
+      window.addEventListener("click", putBack);
+      window.addEventListener("keydown", onKey);
+      cancel = () => {
+        window.removeEventListener("click", putBack);
+        window.removeEventListener("keydown", onKey);
+      };
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      cancel?.();
+    };
+  }, [carried]);
 
   return (
     <article
@@ -1216,6 +1254,7 @@ function SeatCard({
                 busy={false}
                 carrying={carried !== null}
                 movingCardId={movingCardId}
+                liftedHoldingId={carried?.holdingId ?? null}
                 onDragging={setDragging}
                 onPickUp={(item, from) =>
                   setCarried({ ...item, name: item.card.name, from })

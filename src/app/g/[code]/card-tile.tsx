@@ -43,7 +43,7 @@ export function CardTile({
   dimmed?: boolean;
   /** A short flag drawn over the corner — a price, a count, "zakryte". */
   badge?: string;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent) => void;
   /** Two clicks put it straight on, in the slotted variant. */
   onDoubleClick?: () => void;
   /** Draggable into an equipment place, in the slotted variant. */
