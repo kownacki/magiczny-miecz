@@ -317,3 +317,13 @@ the engine gets wrong or does not have, not a missing feature.
   card headers. Przedmiot and Przyjaciel share V, matching rule 16.6 which names
   them in one clause. III is unused by any base-game card. An earlier guess of
   III/IV for Nieznajomy/Przyjaciel resolved turns in the wrong order.
+
+## Ekwipunek slotowy (wariant)
+
+- [x] Slot taxonomy and the audit of what the box actually has (`slots.ts`)
+- [ ] `eq_mode` on the table, chosen when it is opened
+- [ ] Pack limit counts only unslotted Przedmioty in the variant
+- [ ] Equip / unequip, and refusing a card the place cannot take
+- [ ] The slots drawn beside the character card
+
+See **Wariant: ekwipunek slotowy** in [COVERAGE.md](COVERAGE.md).

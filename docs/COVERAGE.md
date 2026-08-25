@@ -274,3 +274,51 @@ descending order of what they cost a table:
 
 After those: the two Pułapki and the Demon Zagłady / Monstrum (14.5, 14.6) print
 their own procedures and the app shows them but does not run them.
+
+---
+
+## Wariant: ekwipunek slotowy
+
+Not a rule. The rulebook has one kind of possession and one limit — four
+Przedmioty, no distinction between what a character wears and what it carries
+(5.4) — and nothing anywhere says a Hełm must be on your head to work. This is a
+house variant in the Diablo mould, chosen per table, and it never changes how
+the printed rules behave when it is off.
+
+**Klasyczny** is the game as printed and stays the default.
+
+**Slotowy** gives a character places to wear things. What is worn sits in its
+place and is not counted against the pack; what is carried goes in the pack,
+which is still the four of 5.4 and is still raised by a Koń, a Muł, a Zaprzęg, a
+Tragarz or a Sakwa.
+
+| miejsce | co tam pasuje | ile kart w grze |
+|---|---|---|
+| Głowa | Hełm | 1 |
+| Amulet | Talizman Ognia, Talizman Powietrza, Relikwiarz, Święty Graal, Kryształ Magów | 5 |
+| Tułów | Zbroja | 1 |
+| Dłoń ×2 | Miecz, Sztylet, Magiczny Miecz, Arondight, Excalibur, Miecz Chaosu, Święta Włócznia, Topór Światła i Ciemności, Srebrna Strzała, Tarcza, Tarcza Tolimana, Tarcza Boga Tolimana, Różdżka Przeznaczenia, Różdżka Zaklęć, Kryształ Losu, Zwierciadło Zniszczenia | 16 |
+| Rękawice | Rękawice | 1 |
+| **Pas** | — | **0** |
+| Pierścień | Pierścień Mocy | 1 |
+| **Buty** | — | **0** |
+| Wierzchowiec | Koń, Muł, Zaprzęg, Wierzchowiec, Bojowy Rumak | 5 |
+| Sakwa | Magiczna Sakwa, Tajemna Sakwa | 2 |
+
+**The belt and the boots have no card.** Not among the 63 Przedmiot cards, not
+in the Wyposażenie, and not in the text of any of the 165 Karty Zdarzeń — all of
+which are transcribed, so this is the whole box and not a gap in the
+transcription. Both places are drawn anyway and stay empty all game: a character
+with a gap where its boots go reads as one that has not found any boots, which
+is the more useful lie, and the expansions may yet fill them.
+
+**Everything with no place keeps working from the pack.** The Latarnia, the Kij
+i sznur, the Łódź, the Tabliczka, the Manuskrypt, the fruits and potions, the
+Diament, the Szkatuła: things a character carries and uses rather than wears. The
+alternative — only worn things work — would make half the deck inert the moment
+the variant was switched on.
+
+The assignments are judgement about a variant the book never mentions, so they
+live in one place, `src/lib/engine/slots.ts`, and `slots.test.ts` fails if a card
+id in the map stops existing or if a place the box can fill is left with nothing
+in it.
