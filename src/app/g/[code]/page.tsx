@@ -1212,7 +1212,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   .map((holding) => ({ id: holding.id, cardId: holding.cardId })),
               }
             : {})}
-          onClose={() => setInspecting(null)}
+          notice={error ? null : notice}
+          onClose={() => {
+            setInspecting(null);
+            setNotice(null);
+          }}
         />
       )}
       {libraryOpen && (
@@ -1528,10 +1532,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               />
             </div>
             {error && <p className="text-sm text-vermilion">{error}</p>}
-            {notice && !error && (
-              <p className="rounded border border-ochre/30 bg-panel/60 px-3 py-2 text-sm text-ochre">
-                {notice}
-              </p>
+            {/* Only when there is no window open to say it in. What the app
+                decided has to be visible — it threw the die — but it belongs
+                where the thing was done, not in a bordered box behind it. */}
+            {notice && !error && inspecting === null && (
+              <p className="px-1 text-sm text-ochre">{notice}</p>
             )}
 
             {game.mode === "companion" && mySeatIndex !== null && (

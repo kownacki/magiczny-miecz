@@ -71,6 +71,7 @@ export function FieldModal({
   onTake,
   onInspect,
   onClose,
+  notice,
   phase,
   simulated = true,
   typedRolls = false,
@@ -97,6 +98,14 @@ export function FieldModal({
    * on the map — reading about somewhere you are not standing is the other half
    * of what it is for, and none of these belong there.
    */
+  /**
+   * What the app just decided by itself, said where it was decided.
+   *
+   * The die for an Obszar's table is thrown in here, so the answer belongs in
+   * here. It used to land in a bordered line behind this window, which meant
+   * closing the window to read the result of what you did in it.
+   */
+  notice?: string | null;
   phase?: string;
   simulated?: boolean;
   typedRolls?: boolean;
@@ -148,6 +157,12 @@ export function FieldModal({
         </header>
 
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 py-3">
+          {notice && (
+            <p className="rounded border-l-2 border-ochre bg-ochre/5 px-3 py-2 text-sm text-ochre">
+              {notice}
+            </p>
+          )}
+
           <section>
             {field.draw ? (
               <p className="mb-1 text-[11px] uppercase tracking-wide text-verdigris">
