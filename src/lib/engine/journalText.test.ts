@@ -30,13 +30,13 @@ suite("journal vocabulary", () => {
   });
 
   it("resolves card ids to their printed names", () => {
-    expect(text("zabranie", { cardId: "magiczny-miecz" })).toBe("Michał bierze: MAGICZNY MIECZ.");
+    expect(text("zabranie", { cardId: "magiczny-miecz" })).toBe("Michał zdobywa: MAGICZNY MIECZ.");
   });
 
   it("falls back to the raw id for a card it does not know", () => {
     // The deck is transcribed progressively, so an unknown id is normal and
     // must not blank the line.
-    expect(text("zabranie", { cardId: "nie-ma-takiej" })).toBe("Michał bierze: nie-ma-takiej.");
+    expect(text("zabranie", { cardId: "nie-ma-takiej" })).toBe("Michał zdobywa: nie-ma-takiej.");
   });
 
   it("resolves field ids to their board names", () => {
@@ -325,7 +325,7 @@ suite("journalLines", () => {
       null,
     );
     expect(lines.map((line) => line.text)).toEqual([
-      "Michał bierze: MAGICZNY MIECZ.",
+      "Michał zdobywa: MAGICZNY MIECZ.",
       "Ania traci turę.",
       "Michał kończy turę.",
       "Ania zaczyna turę.",

@@ -273,7 +273,7 @@ export function describe(
 
     // — what people have ————————————————————————————————————————————
     case "zabranie":
-      return line(`${who} bierze: ${card(data.cardId)}.`);
+      return line(`${who} zdobywa: ${card(data.cardId)}.`);
     // 16.8: what was not taken stays where it fell, face up. Saying where is the
     // whole point — a card on a field two turns later is otherwise unexplained.
     case "zostawienie": {
