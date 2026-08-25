@@ -225,20 +225,35 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [consoleOpen, setConsoleOpen] = useState(false);
 
   /**
-   * Backtick opens and closes it.
+   * Two keys, on the same physical one.
    *
-   * The key every game with a console uses, and unshifted, so it cannot land in
-   * a Polish word — except in a field somebody is typing into, which is why
-   * that is checked: the console's own input is a field, and so is the card
-   * search.
+   * Backtick opens and closes the console — the key every game with a console
+   * uses — and shifted, as a tilde, it turns testing itself on and off. They
+   * belong together: the console is the whole of what testing offers now, and
+   * the switch that gates it was otherwise reachable only by finding a small
+   * word in the top bar.
+   *
+   * Unshifted backtick cannot land in a Polish word, and neither can a tilde —
+   * except in a field somebody is typing into, which is why that is checked:
+   * the console's own input is a field, and so is the card search.
    */
   useEffect(() => {
     if (!TESTING_POSSIBLE) return;
     const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       const typing =
         event.target instanceof HTMLElement &&
         (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA");
-      if (event.key === "`" && !typing) {
+      if (typing) return;
+      if (event.key === "~") {
+        event.preventDefault();
+        // Turning it off takes the console with it: what is behind the switch
+        // cannot outlive the switch.
+        writeTestMode(!readTestMode());
+        if (readTestMode() === false) setConsoleOpen(false);
+        return;
+      }
+      if (event.key === "`") {
         event.preventDefault();
         setConsoleOpen((was) => !was);
       }
@@ -1375,8 +1390,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   aria-pressed={testMode}
                   title={
                     testMode
-                      ? "Skróty testowe są włączone: karty, teleport i ręczne poprawki."
-                      : "Włącz skróty testowe: karty, teleport i ręczne poprawki."
+                      ? "Tryb testowy jest włączony — konsola pod ` (~ wyłącza)"
+                      : "Włącz tryb testowy — konsola pod ` (~ włącza)"
                   }
                   className={
                     testMode
