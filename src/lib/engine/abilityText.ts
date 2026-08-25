@@ -115,12 +115,14 @@ const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
 /**
  * Kinds that say what a card IS rather than what it gives you.
  *
- * Where it can be found, and what it lets you walk into, are facts about the
- * card's place in the game — not bonuses. Listing "nie do zdobycia w Dolnym
- * Kręgu" beside "+1 Miecza" invites reading it as something the card does for
- * you, which is the opposite of what it says.
+ * Where a card can be found is a fact about the game, not something the card
+ * does for you — listing "nie do zdobycia w Dolnym Kręgu" beside "+1 Miecza"
+ * invites reading it as a benefit, which is the opposite of what it says.
+ *
+ * Needing the card to walk somewhere is NOT one of these. That is exactly what
+ * a Magiczny Miecz gives its owner, and the only thing it gives them.
  */
-const IS_SPECIAL = new Set<Ability["kind"]>(["niedostepny", "wymagany"]);
+const IS_SPECIAL = new Set<Ability["kind"]>(["niedostepny"]);
 
 export function itemProfile(cardId: string, eqMode: EqMode = "klasyczny"): ItemProfile {
   const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
@@ -303,9 +305,11 @@ export function describeAbility(ability: Ability): string {
     }
     case "przeciw": {
       const gives = [
-        ability.miecz !== undefined && `${ability.miecz} Miecza`,
-        ability.magia !== undefined && `${ability.magia} Magii`,
-      ].filter(Boolean).join(", ");
+        ability.miecz !== undefined && `+${ability.miecz} Miecza`,
+        ability.magia !== undefined && `+${ability.magia} Magii`,
+      ]
+        .filter(Boolean)
+        .join(", ");
       return `przeciw: ${ability.komu.join(", ")} — ${gives} zamiast zwykłego bonusu`;
     }
     case "pokonuje-bez-walki":
