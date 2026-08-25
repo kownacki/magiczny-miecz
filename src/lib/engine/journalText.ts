@@ -425,6 +425,12 @@ export function describe(
       return line(`${who} zamienia się w Kamień — wraca w turze ${num(data.until)}.`);
     case "smierc":
       return line(`${who} ginie na polu ${field(data.field)}.`);
+    // Somebody who was not at the table when it started. A different line from
+    // "nowa-postac", because arriving is not the same event as coming back
+    // from the dead and a table reading its own history should be able to tell
+    // which of the two happened.
+    case "dosiadka":
+      return line(`${who} dosiada się do stołu jako ${characterName(data.characterId)}.`);
     case "nowa-postac":
       return line(
         `${who} gra dalej jako: ${characterName(data.characterId)}` +

@@ -21,7 +21,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       return NextResponse.json({ seatIndex: claimed?.seat_index ?? null, token });
     }
 
-    const { seat, token } = await joinGame(game.id, name, body.local === true);
+    // A table already playing takes newcomers too (LOBBY.md). The seat arrives
+    // out of play and joins the round once its player has picked a character.
+    const { seat, token } = await joinGame(
+      game.id,
+      name,
+      body.local === true,
+      game.status === "playing",
+    );
     await bumpRevision(game.id);
     return NextResponse.json({ seatIndex: seat.seat_index, token });
   } catch (error) {

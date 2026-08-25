@@ -228,7 +228,7 @@ suite("Polish agreement", () => {
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc", "uzycie",
       "test-karta", "test-karta-obszar", "test-koniec-walki", "przetasowanie",
-      "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
+      "nowa-postac", "dosiadka", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
       "tura-stracona", "zostawienie", "punkty", "strata",
     ];
     const gendered = /\b\w+(ął|ęła|iła|ył|yła|szedł|szła|any|ony|iony)\b/;
@@ -465,6 +465,18 @@ suite("spending a card by using it", () => {
     expect(text("test-karta", { cardId: "swiety-graal", kind: "item" })).toBe(
       "Michał bierze z talii: ŚWIĘTY GRAAL.",
     );
+  });
+});
+
+suite("sitting down at a table already running", () => {
+  it("is not the same line as coming back from a death", () => {
+    // Both go through takeNewCharacter and they are not the same event: one
+    // player has lost a character, the other never had one. A table reading
+    // its own history back should be able to tell which happened.
+    expect(text("dosiadka", { characterId: "troll" })).toBe(
+      "Michał dosiada się do stołu jako TROLL.",
+    );
+    expect(text("dosiadka", { characterId: "troll" })).not.toContain("zgin");
   });
 });
 

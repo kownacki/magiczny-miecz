@@ -3334,7 +3334,21 @@ export async function takeNewCharacter(
   const seats = await seatsFor(gameId);
   const seat = seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
-  if (!seat.eliminated) throw new Error("Ta Postać wciąż żyje.");
+  /**
+   * Two ways to be sitting here without a character in play.
+   *
+   * 4.4's, which is what this was written for: the character died and its
+   * player is taking another. And the latecomer's — somebody who sat down at a
+   * table already running, whose seat has never held a character at all.
+   *
+   * They want exactly the same thing done to them, which is why this is one
+   * function: a free character, the values it starts with, its MGR, its kit,
+   * and a line in the journal saying who has arrived. What is refused is
+   * swapping a living character for a better one.
+   */
+  if (!seat.eliminated && seat.character_id) {
+    throw new Error("Ta Postać wciąż żyje.");
+  }
   // The dead character's own card is out of the game — "jej Kartę odłożyć do
   // pozostałych nie biorących udziału w grze" — and so is everybody else's, so
   // the choice is from what nobody has held.
@@ -3385,7 +3399,7 @@ export async function takeNewCharacter(
   const fresh = (await seatsFor(gameId)).find((s) => s.id === seatId);
   if (fresh) await dealStartingKit(gameId, fresh);
 
-  await journal(gameId, seatId, game.turn, "nowa-postac", {
+  await journal(gameId, seatId, game.turn, seat.eliminated ? "nowa-postac" : "dosiadka", {
     characterId: wanted,
     // Which card it is, is public either way; that it was drawn rather than
     // chosen is worth a word, because the two are different decisions.

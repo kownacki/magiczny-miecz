@@ -4,7 +4,7 @@ import { randomInt } from "node:crypto";
 import type { EqMode } from "@/lib/engine/slots";
 import { db } from "@/lib/supabase";
 import { makeClaimToken, makeJoinCode } from "./codes";
-import type { GameMode } from "./modes";
+import { MAX_SEATS, type GameMode } from "./modes";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import {
@@ -252,20 +252,22 @@ export async function seatsFor(gameId: string): Promise<SeatRow[]> {
   }));
 }
 
-/**
- * Adds a seat and returns its token.
- *
- * Rule-wise the game seats two to six (the box says 2-6), and the cap is
- * enforced here rather than in the UI so a stale lobby page cannot squeeze in a
- * seventh player.
- */
-export const MAX_SEATS = 6;
-
+/** Adds a seat and returns its token. The 2-6 of `modes.ts` is enforced here. */
 export async function joinGame(
   gameId: string,
   playerName: string | null,
   /** True when the host is seating somebody who has no device of their own. */
   noDevice = false,
+  /**
+   * True when the table is already playing.
+   *
+   * The seat is created out of play: `eliminated` is what the turn order reads
+   * to mean "skip this one", and a seat with no character yet must be skipped
+   * or the round will stop on somebody who is not there. `takeNewCharacter`
+   * clears it as it deals them in, which is the same thing it does for a player
+   * coming back from a death — see the note there.
+   */
+  midGame = false,
 ): Promise<{ seat: SeatRow; token: string }> {
   const token = makeClaimToken();
 
@@ -301,6 +303,7 @@ export async function joinGame(
         claim_token: token,
         player_name: playerName,
         no_device: noDevice,
+        eliminated: midGame,
       })
       .select(SEAT_COLUMNS)
       .single();

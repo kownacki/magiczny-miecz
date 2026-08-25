@@ -7,6 +7,7 @@ import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages"
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
+import { MAX_SEATS } from "@/lib/game/modes";
 
 /**
  * The border on the surprise when more than one player has taken it.
@@ -34,7 +35,6 @@ export interface LobbySeat {
   noDevice: boolean;
 }
 
-const MAX_SEATS = 6;
 
 /**
  * Where a game is put together, laid out like the game screen: one viewport,
@@ -255,7 +255,9 @@ export function Lobby({
                   title: "Rozpocząć grę?",
                   body:
                     `Do gry siada ${chosen.length} ${chosen.length === 1 ? "postać" : "postaci"}. ` +
-                    "Po rozpoczęciu nikt nie zmieni już swojej Postaci ani nie dołączy do stołu.",
+                    "Po rozpoczęciu nikt nie zmieni już swojej Postaci. Dosiąść się " +
+                    "można nadal — nowy gracz bierze wolną Postać i zaczyna od jej " +
+                    "Obszaru startowego.",
                   confirmLabel: "Rozpocznij",
                   onConfirm: () => {
                     setAsk(null);
@@ -1231,8 +1233,10 @@ export function TakeOverGate({
   code,
   free,
   taken,
+  room,
   busy,
   onTakeOver,
+  onJoin,
   onWatch,
 }: {
   code: string;
@@ -1240,8 +1244,12 @@ export function TakeOverGate({
   free: { seatId: string; playerName: string | null; characterName: string; why: string }[];
   /** How many seats are being played, for when none are free. */
   taken: number;
+  /** Whether the table has room for one more (2-6 players). */
+  room: boolean;
   busy: boolean;
   onTakeOver: (seatId: string, name: string | null) => void;
+  /** Sit down as somebody new, mid-game. */
+  onJoin: (name: string | null) => void;
   onWatch: () => void;
 }) {
   // Blank by default: the commonest takeover by a long way is the same person
@@ -1289,9 +1297,37 @@ export function TakeOverGate({
         </div>
       ) : (
         <p className="max-w-sm text-center text-sm text-muted">
-          Wszystkie {taken} postaci mają swoich graczy. Możesz oglądać — jeśli ktoś
-          odejdzie, jego postać pojawi się tutaj do przejęcia.
+          Wszystkie {taken} postaci mają swoich graczy.
+          {room
+            ? " Możesz dosiąść się nową Postacią albo oglądać."
+            : " Stół jest pełny (2-6 graczy) — możesz oglądać. Jeśli ktoś odejdzie, jego postać pojawi się tutaj do przejęcia."}
         </p>
+      )}
+
+      {/* Sitting down at a table that is already running. A late arrival takes
+          a Postać nobody is holding and starts from its MGR, which is what 4.4
+          already does for a player whose character died — the same act, and
+          the same machinery. The alternative was watching until somebody left,
+          which is not a thing to ask of somebody who came to play. */}
+      {room && (
+        <div className="flex w-full max-w-sm flex-col gap-2">
+          {free.length === 0 && (
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="twoje imię"
+              maxLength={24}
+              className="rounded border border-edge bg-panel px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-muted/60 focus:border-ochre"
+            />
+          )}
+          <button
+            onClick={() => onJoin(name.trim() || null)}
+            disabled={busy}
+            className="rounded-lg border border-ochre/60 px-3 py-2 text-sm text-ochre transition hover:bg-ochre/10 disabled:opacity-40"
+          >
+            Dosiądź się nową Postacią
+          </button>
+        </div>
       )}
 
       <button

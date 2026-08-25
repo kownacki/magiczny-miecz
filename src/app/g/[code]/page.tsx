@@ -60,6 +60,7 @@ import { ConfirmDialog, type Confirmation } from "./confirm";
 import { USE_VERB, askAbout, isUsable, usageOf } from "@/lib/engine/uses";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import type { Effect } from "@/lib/engine/cardScript";
+import { MAX_SEATS } from "@/lib/game/modes";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
@@ -1023,13 +1024,18 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
       {/* Offered, never forced — 4.4 says *może*. Opened from the line on the
-          dead character's card and closed back to it. */}
-      {mySeat?.eliminated && reborn && (
+          dead character's card and closed back to it.
+
+          A latecomer gets it unasked, because for them it is not an offer:
+          they have just sat down and there is nothing else on the screen for
+          them to do. Closing it still leaves the line above as the way back. */}
+      {mySeat?.eliminated && (reborn || !mySeat.character_id) && (
         <RebornModal
           characters={CHARACTERS}
           taken={
             new Set(seats.map((seat) => seat.character_id).filter(Boolean) as string[])
           }
+          arriving={!mySeat.character_id}
           busy={busy}
           onConfirm={(characterId) => {
             setReborn(false);
@@ -1329,8 +1335,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           code={game.join_code}
           free={free}
           taken={seats.filter((seat) => seat.character_id && !seat.eliminated).length}
+          // 2-6 players, and every seat that exists is somebody's — so room is
+          // simply whether a seventh would fit.
+          room={seats.length < MAX_SEATS}
           busy={busy}
           onTakeOver={claimSeat}
+          onJoin={(name) => join(name ?? "")}
           onWatch={() => setWatching(true)}
         />
       </>
@@ -1654,18 +1664,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             {mine?.eliminated && (
               <section className="mt-3 rounded-lg border border-vermilion/50 bg-vermilion/5 p-3">
                 <h3 className="mb-1 font-[family-name:var(--font-display)] text-sm text-vermilion">
-                  Twoja Postać zginęła
+                  {mine.character_id ? "Twoja Postać zginęła" : "Dosiadasz się do stołu"}
                 </h3>
+                {/* The same box for the two ways of sitting here without a
+                    Postać in play — see `takeNewCharacter`. A latecomer is out
+                    of the round until they pick one, which is the same state a
+                    death leaves behind and the same way out of it. */}
                 <p className="mb-2 text-[11px] leading-relaxed text-muted">
-                  Jesteś poza kolejnością tur i oglądasz grę. Możesz wrócić nową
-                  Postacią, kiedy zechcesz (4.4).
+                  {mine.character_id
+                    ? "Jesteś poza kolejnością tur i oglądasz grę. Możesz wrócić nową Postacią, kiedy zechcesz (4.4)."
+                    : "Wybierz Postać, a wejdziesz do gry od jej Miejsca Gracza. Do tego czasu tury cię omijają."}
                 </p>
                 <button
                   disabled={busy}
                   onClick={() => setReborn(true)}
                   className="rounded border border-ochre/60 px-3 py-1 text-xs text-ochre transition hover:bg-ochre/10 disabled:opacity-40"
                 >
-                  Wybierz nową Postać
+                  {mine.character_id ? "Wybierz nową Postać" : "Wybierz Postać"}
                 </button>
               </section>
             )}

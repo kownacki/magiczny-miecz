@@ -191,9 +191,22 @@ Nobody polls a table everybody has closed, so it never hears that it is empty.
 The sweep therefore runs in two places: when anybody opens the table, and when
 anybody loads the list of tables.
 
-Arriving at a table already in progress is not joining — the Karty Postaci were
-dealt at setup and there is no 27th player. What the newcomer is offered is the
-list of characters nobody is behind, and failing that, watching.
+Arriving at a table already in progress **is** joining. Two ways, offered
+together: take a character nobody is behind, or sit down as somebody new.
+
+This used to be a takeover or nothing, on the grounds that the Karty Postaci
+were dealt at setup. The grounds were wrong. A table of two has twenty-five
+characters nobody has held, and the rulebook's own 4.4 already describes
+exactly this act for a player whose character died — take a free one, start
+from its MGR, with the life and the kit it starts with. A latecomer is that,
+minus the death. So it is the same code (`takeNewCharacter`), and the seat
+arrives `eliminated` — which is what the turn order reads as "skip this one" —
+until its player has chosen.
+
+What still refuses is the box's own 2-6: a seventh player has nowhere to sit,
+and then watching is the answer. `MAX_SEATS` lives in `modes.ts` beside the
+other thing about a table that is settled before anybody plays, because the
+lobby and the server were each keeping their own copy of the number.
 
 **W trakcie.** Seats are characters. *Leaving* abandons — the character plays
 on. *Being removed by the host* is different and really does take the character

@@ -33,3 +33,15 @@ export type GameMode = "simulation" | "companion";
  * that key's client in the browser bundle.
  */
 export const COMPANION_PARKED = true;
+
+/**
+ * How many can sit at one table.
+ *
+ * The box says 2-6, and it is a rule rather than a limit of this app — so it
+ * lives beside the other thing about a table that is decided before anybody
+ * plays. `store.ts` enforces the ceiling on the way in, because a stale lobby
+ * page must not be able to squeeze in a seventh; the lobby reads it to know
+ * whether to offer a chair at all.
+ */
+export const MIN_SEATS = 2;
+export const MAX_SEATS = 6;
