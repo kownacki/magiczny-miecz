@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe as suite, expect, it } from "vitest";
 import {
   describe,
@@ -341,3 +342,69 @@ suite("journalLines", () => {
     expect(lines).toHaveLength(1);
   });
 });
+
+/**
+ * Every kind the store writes has a sentence here, or is deliberately silent.
+ *
+ * This is the check that would have caught `przestawienie`: the vocabulary had
+ * the sentence for a manual re-placement from the start and nothing ever wrote
+ * that row, so the one action most in need of being visible left no trace at
+ * all — and nothing failed, because both halves were individually fine. Reading
+ * the store's source is blunt, but the alternative is a hand-kept list of kinds
+ * that goes stale exactly the way the journal did.
+ */
+suite("every event has a sentence", () => {
+  const source = readFileSync(
+    new URL("../game/turnStore.ts", import.meta.url),
+    "utf8",
+  );
+  // `journal(gameId, seatId, turn, "kind"` — the literal ones. The two written
+  // through a variable (`record.kind`, and the move that is either a step or an
+  // attempt at the Most) are listed after, because a regex cannot read them.
+  const written = new Set([
+    ...[...source.matchAll(/await journal\(\s*[\s\S]{0,120}?"([a-z-]+)"/g)].map((m) => m[1]),
+    "korekta",
+    "punkty",
+    "ruch",
+  ]);
+
+  it("finds the kinds in the store at all", () => {
+    // A guard on the guard: if the regex ever stops matching, this suite would
+    // pass by checking nothing.
+    expect(written.size).toBeGreaterThan(30);
+    expect(written.has("smierc")).toBe(true);
+  });
+
+  for (const kind of [...written].sort()) {
+    it(`says something about "${kind}", or nothing on purpose`, () => {
+      const said = describe(entry(kind, PAYLOADS[kind] ?? {}), SEATS, null);
+      if (said) expect(said.text).not.toBe("");
+      else expect(SILENT).toContain(kind);
+    });
+  }
+});
+
+/** Kinds with nothing to say to the table, and why. */
+const SILENT = [
+  // Raw dice: the line that uses them says the result instead.
+  "rzut",
+  "walka-rzut",
+  "straznik-sila",
+  // The tables a card or a field was read against — shown in the panel that
+  // asked, not narrated afterwards.
+  "karta-tabela",
+  "pole-tabela",
+  // Dealt before the first turn; the seat card is the record of it.
+  "wyposazenie-poczatkowe",
+  // Several lines rather than one, built by describeTurnChange.
+  "koniec-tury",
+  // A card handed over by a test, which is not a game event.
+  "test-karta",
+];
+
+/** Payloads that keep a line from rendering as a shrug. */
+const PAYLOADS: Record<string, Record<string, unknown>> = {
+  strata: { cardIds: ["miecz"] },
+  zostawienie: { cardIds: ["miecz"], fieldId: "kurhan" },
+  punkty: { stat: "zycie", delta: -1 },
+};

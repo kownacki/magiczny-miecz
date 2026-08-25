@@ -912,14 +912,7 @@ export async function resolveFight(gameId: string): Promise<void> {
     const outcome = fight.result.outcome;
     if (fight.guardian.kind === "most") {
       await settleBridge(gameId, fight.guardian.entrance, outcome);
-    } else if (fight.guardian.kind === "most-pole") {
-      // 14.6: the Demon and the Monstrum stand in the way rather than at a
-      // door. Beating one lets the character walk on next turn; losing costs a
-      // point of Życie and it is still there. Either way the character does not
-      // move — the bridge is one field a turn and this turn was the fight.
-      // The life is spent after the line below, so the journal reads in the
-      // order it happened: beaten by the creature, then dead of it.
-    } else {
+    } else if (fight.guardian.kind !== "most-pole") {
       await settleCrossing(gameId, fight.guardian.crossing, outcome);
     }
     await journal(gameId, seat.id, game.turn, "straznik-koniec", {
@@ -927,6 +920,12 @@ export async function resolveFight(gameId: string): Promise<void> {
       outcome,
       enemyTotal: fight.enemyTotal,
     });
+    // 14.6: the Demon and the Monstrum stand in the way rather than at a door.
+    // Beating one lets the character walk on next turn; losing costs a point of
+    // Życie and it is still there. Either way the character does not move — the
+    // bridge is one field a turn and this turn was the fight. Spent after the
+    // line above, so the journal reads in the order it happened: beaten by the
+    // creature, then dead of it.
     if (fight.guardian.kind === "most-pole" && outcome === "przegrana") {
       await spendLife(gameId, seat, 1);
     }
@@ -2185,7 +2184,16 @@ export async function equipCard(
     if (carriedCount(mine, "slotowy") >= carryLimit(mine, "slotowy")) {
       throw new Error("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
     }
-    await putInSlot(holdingId, null);
+    // Nothing to say about putting a card back where it already was: the
+    // client sends this whenever a card is dropped, including onto the pack it
+    // was picked up from.
+    if (held.slot !== null) {
+      await putInSlot(holdingId, null);
+      await journal(gameId, held.seat_id, game.turn, "schowanie", {
+        cardId: held.card_id,
+        from: held.slot,
+      });
+    }
     await bumpRevision(gameId);
     return;
   }
@@ -2209,8 +2217,27 @@ export async function equipCard(
   );
   if (occupant) {
     await putInSlot(occupant.id, null);
+    await journal(gameId, occupant.seat_id, game.turn, "schowanie", {
+      cardId: occupant.card_id,
+      from: slot,
+    });
   }
-  await putInSlot(holdingId, slot);
+  if (held.slot !== slot) {
+    await putInSlot(holdingId, slot);
+    /**
+     * What is worn is public, so the journal says it.
+     *
+     * At a table you watch somebody pick up their sword before a fight, and
+     * 17.2 makes that the whole difference between the fight they were going to
+     * have and the one they are having: one weapon counts, and which one is a
+     * decision taken before the dice. The app was applying that silently, so
+     * the only trace of a player arming themselves was the number changing.
+     */
+    await journal(gameId, held.seat_id, game.turn, "zalozenie", {
+      cardId: held.card_id,
+      slot,
+    });
+  }
   await bumpRevision(gameId);
 }
 

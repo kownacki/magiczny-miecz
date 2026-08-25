@@ -218,14 +218,27 @@ export function describe(
       return line(`${who} wchodzi na Kamienny Most.`);
     case "most-nieudane":
       return line(`${who} nie wchodzi na Most — zatrzymuje go ${String(data.guardian ?? "strażnik")}.`);
+    // 14.6's two creatures, which stand in the middle of the bridge rather than
+    // at its door. The table saw the fight end and never saw it begin, and the
+    // strength is two dice rolled on the spot — so without this the line saying
+    // somebody lost to the Monstrum never said what they were losing to.
+    case "straznik-mostu":
+      return line(
+        `${who} staje przed: ${String(data.guardian ?? "strażnikiem")} (${num(data.strength)}).`,
+      );
     case "straznik-start":
       return line(`${who} staje przed strażnikiem: ${String(data.guardian ?? "?")}.`);
     case "straznik-koniec":
       return line(
         `${who} ${data.outcome === "wygrana" ? "pokonuje" : "przegrywa z"}: ${String(data.guardian ?? "strażnik")}.`,
       );
+    // The player's name is the subject, not the object: Polish would want it in
+    // the dative after "zabiera" ("zabiera Michałowi"), and a name typed into a
+    // box cannot be declined. Every other line in this file is built the same
+    // way for the same reason — the seat acts, and what acted on it is named
+    // after the dash.
     case "most-cerber":
-      return line(`Cerber zabiera ${who} ${zycie(num(data.loss))}.`);
+      return line(`${who} traci ${zycie(num(data.loss))} — Cerber.`);
     case "most-pulapka":
       return line(`${who} wpada w Pułapkę.`);
     case "most-gra-ze-smiercia":
@@ -283,6 +296,14 @@ export function describe(
       if (parts.length === 0) return null;
       return line(`${who} traci: ${parts.join(", ")}.`);
     }
+
+    // What a character is wearing is public, and 17.2 makes it matter: only one
+    // weapon counts in a fight, and choosing it is a decision taken before the
+    // dice. Only the body is spoken — shuffling the pack is not an event.
+    case "zalozenie":
+      return line(`${who} zakłada: ${card(data.cardId)}.`);
+    case "schowanie":
+      return line(`${who} chowa do plecaka: ${card(data.cardId)}.`);
 
     case "odrzucenie":
       return line(`${who} odrzuca: ${card(data.cardId)}.`);
