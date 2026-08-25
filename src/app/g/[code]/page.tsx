@@ -2226,11 +2226,11 @@ const CARD_HEIGHT = 238;
  * How tall one pile may stand: half the card, less the ± and the total that
  * share the rail underneath it.
  *
- * Past that the pile turns a corner and starts a second column beside the
- * first, which is what anybody does with a heap of żetony that has got too tall
- * to be a heap. Without it, 28 Życia is seven tokens end to end — half again
- * the height of the card — and the rail runs off the bottom of it and down
- * past the pack.
+ * Only the gold uses it, and only to work out how much of each coin can show:
+ * a full stack of ten is exactly this tall. The żetony proper are counted
+ * rather than measured — five to a column — because they have faces that have
+ * to stay visible, and a pile whose height depends on the arithmetic is a pile
+ * you have to read instead of recognise.
  */
 const STACK_HEIGHT = Math.round(CARD_HEIGHT / 2) - 28;
 
@@ -2247,42 +2247,30 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
      * sliver showing, which is what a stack of chips looks like and costs
      * nothing to draw, since every coin is the same picture anyway.
      *
-     * The pile squeezes before it spreads.
+     * Stacks of ten, each one finished before the next is started.
      *
-     * A stack of chips absorbs a lot before it has to become two stacks —
-     * that is what stacking is for — so the sliver each coin shows tightens
-     * from six pixels down to three as the hoard grows, and only when even
-     * the tightest stack has run out of column does a second one start beside
-     * it. Loosest that still fits, so a small pile is never squashed for the
-     * sake of a rule aimed at a big one.
+     * Ten is how money is counted at a table — nobody builds two stacks of
+     * seven — and a full one is exactly what its half of the card holds, nine
+     * slivers under a whole top coin. Filling each before starting the next is
+     * the point of counting that way: a glance at four full stacks and a short
+     * one is forty-something without reading anything, where four stacks of
+     * eleven and a straggler is just a heap that happens to be in columns.
      *
-     * Three columns is where it stops and the numeral carries the rest. That is
-     * about seventy Sztuk Złota, which is more than this game hands out, and
-     * the count underneath is exact either way.
+     * Nothing is capped. The numeral underneath is exact whatever the stacks
+     * do, but they are the picture, and truncating the picture at some number
+     * nobody chose is how you get a rich character who looks poor.
      */
-    const LOOSEST = 6;
-    const TIGHTEST = 3;
-    const COLUMNS_MAX = 3;
-    /** How many coins one column holds when each shows this much of itself. */
-    const perColumn = (reveal: number) => 1 + Math.floor((STACK_HEIGHT - SIZE) / reveal);
-
-    let reveal = LOOSEST;
-    while (reveal > TIGHTEST && perColumn(reveal) * COLUMNS_MAX < points) reveal -= 1;
-
-    const tall = perColumn(reveal);
-    const coins = Math.min(points, tall * COLUMNS_MAX);
-    const columns = Math.max(1, Math.ceil(coins / tall));
-    // Spread evenly rather than filling each column before starting the next,
-    // so thirteen coins is seven and six and not twelve and a straggler.
-    const per = Math.ceil(coins / columns);
+    const PER_STACK = 10;
+    const REVEAL = Math.floor((STACK_HEIGHT - SIZE) / (PER_STACK - 1));
+    const stacks = Math.ceil(points / PER_STACK);
 
     return (
       <span className="flex flex-col items-center" title={`${label}: ${points}`}>
         <span className="flex items-start gap-0.5">
-          {Array.from({ length: columns }, (_, column) => (
-            <span key={column} className="flex flex-col items-center">
+          {Array.from({ length: stacks }, (_, stack) => (
+            <span key={stack} className="flex flex-col items-center">
               {Array.from(
-                { length: Math.max(0, Math.min(per, coins - column * per)) },
+                { length: Math.min(PER_STACK, points - stack * PER_STACK) },
                 (_, index) => (
                   <Image
                     key={index}
@@ -2290,7 +2278,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
                     alt=""
                     width={SIZE}
                     height={SIZE}
-                    style={index > 0 ? { marginTop: reveal - SIZE } : undefined}
+                    style={index > 0 ? { marginTop: REVEAL - SIZE } : undefined}
                     className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
                     unoptimized
                   />
@@ -2317,27 +2305,40 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
   // would read as a stat the app had failed to work out.
   if (tokens.length === 0) return <span className="text-lg font-medium text-muted">0</span>;
 
+  /**
+   * Five to a column, each one finished before the next is started.
+   *
+   * The same counting the gold stacks use, and for the same reason: a column
+   * of a known height is a number you can take in without reading, and a
+   * column whose height depends on how much there is altogether is not. Five
+   * because these do not overlap the way coins do — every żeton has to show
+   * its face, since unlike gold they come in four denominations and which ones
+   * they are is half the reading.
+   */
+  const PER_COLUMN = 5;
+  const columns = Math.ceil(tokens.length / PER_COLUMN);
+
   return (
-    <span
-      // A column that turns into two when it has to. Bounded height plus
-      // `flex-wrap` is the whole mechanism: the pile fills downwards until it
-      // reaches its half of the card, then starts again beside itself.
-      className="flex flex-col flex-wrap content-center items-center gap-0.5"
-      style={{ maxHeight: STACK_HEIGHT }}
-      title={`${label}: ${points}`}
-    >
-      {tokens.map((token, index) => (
-        <Image
-          key={index}
-          src={`/tokens/${stat}-${token}.png`}
-          // Read once, by the first token. Four images each announcing a
-          // number would have a screen reader count the pile aloud.
-          alt={index === 0 ? `${label} ${points}` : ""}
-          width={SIZE}
-          height={SIZE}
-          className="rounded-[2px]"
-          unoptimized
-        />
+    <span className="flex items-start gap-0.5" title={`${label}: ${points}`}>
+      {Array.from({ length: columns }, (_, column) => (
+        <span key={column} className="flex flex-col items-center gap-0.5">
+          {tokens
+            .slice(column * PER_COLUMN, (column + 1) * PER_COLUMN)
+            .map((token, index) => (
+              <Image
+                key={index}
+                src={`/tokens/${stat}-${token}.png`}
+                // Read once, by the very first token. Four images each
+                // announcing a number would have a screen reader count the
+                // pile aloud.
+                alt={column === 0 && index === 0 ? `${label} ${points}` : ""}
+                width={SIZE}
+                height={SIZE}
+                className="rounded-[2px]"
+                unoptimized
+              />
+            ))}
+        </span>
       ))}
     </span>
   );
