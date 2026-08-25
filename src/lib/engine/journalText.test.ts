@@ -227,7 +227,7 @@ suite("Polish agreement", () => {
       "walka-start", "walka-koniec", "pojedynek", "ucieczka", "ucieczka-nieudana",
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc", "uzycie",
-      "test-karta", "test-koniec-walki",
+      "test-karta", "test-koniec-walki", "przetasowanie",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
       "tura-stracona", "zostawienie", "punkty", "strata",
     ];
@@ -425,6 +425,15 @@ suite("spending a card by using it", () => {
 
   it("still names a card it has no entry for", () => {
     expect(text("uzycie", { cardId: "nie-ma-takiej" })).toBe("Michał używa: nie-ma-takiej.");
+  });
+
+  it("says which pile turned over, and belongs to no player", () => {
+    // 9.5's reshuffle is the table's event, not anybody's move — so it names
+    // no seat. It used to be carried as a flag on the draw line that nothing
+    // read, which made the loudest moment in a deck's life silent.
+    expect(text("przetasowanie", { pile: "zaklecia" })).toContain("Zaklęć");
+    expect(text("przetasowanie", { pile: "zaklecia" })).toContain("9.5");
+    expect(text("przetasowanie", { pile: "zdarzenia" })).toContain("Kart Zdarzeń");
   });
 
   it("keeps breaking a fight off apart from fleeing one", () => {

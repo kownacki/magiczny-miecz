@@ -173,6 +173,17 @@ interface Game {
   revision: number;
   die_source: string;
   turn_state: TurnPhase;
+  /**
+   * What is left in each pile, and what has come back to it.
+   *
+   * Counts only — the orders themselves never leave the server, because the
+   * next Karta Zdarzeń is the one thing at this table nobody is allowed to
+   * know. Absent in companion mode, where both piles are physical.
+   */
+  deckCounts?: {
+    events: { draw: number; discard: number };
+    spells: { draw: number; discard: number };
+  } | null;
 }
 
 /** The shared table screen: the whole game state everyone is allowed to see. */
@@ -1188,6 +1199,30 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               <span className="text-xs text-muted">
                 Tura {game.turn} · {active ? (active.player_name ?? "—") : "—"}
               </span>
+              {/* Both piles, beside the turn they are being drawn into. At a
+                  physical table the stacks sit on the table and everybody
+                  watches them thin; in simulation they were invisible, so a
+                  deck about to turn over (9.5) did it with no warning and no
+                  trace. The number after the slash is the stos zużytych — what
+                  a reshuffle will bring back. */}
+              {game.deckCounts && (
+                <span className="flex items-baseline gap-3 text-[11px] text-muted/70">
+                  <span title="Karty Zdarzeń: w talii / na stosie zużytych">
+                    Zdarzenia{" "}
+                    <span className="tnum text-ink/70">
+                      {game.deckCounts.events.draw}
+                      <span className="text-muted/50">/{game.deckCounts.events.discard}</span>
+                    </span>
+                  </span>
+                  <span title="Karty Zaklęć: w stosie / na stosie zużytych (9.5)">
+                    Zaklęcia{" "}
+                    <span className="tnum text-magia/80">
+                      {game.deckCounts.spells.draw}
+                      <span className="text-muted/50">/{game.deckCounts.spells.discard}</span>
+                    </span>
+                  </span>
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-4 text-[11px]">
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>

@@ -97,6 +97,7 @@ import {
   buildDeck,
   cardRef,
   discardTo,
+  returningRef,
   drawFrom,
   shuffleWith,
   type DeckState,
@@ -148,6 +149,108 @@ const KRAG_PLOMIENI: SpellId = "krag-plomieni";
  * no starting hand.
  */
 const ROZDZKA_ZAKLEC = "rozdzka-zaklec";
+
+/**
+ * Every copy of every card, by id — the lookup a discard needs.
+ *
+ * Drawing knows the ref and forgets it: a `holdings` row and a `field_cards`
+ * row both store an id, because a player holds "the Magiczny Miecz", not
+ * "zdarzenia-4#11". Returning one to the used pile has to name a copy again,
+ * and `returningRef` picks whichever copy the piles are not already counting.
+ */
+const EVENT_COPIES = new Map<string, string[]>();
+for (const card of EVENTS) {
+  const list = EVENT_COPIES.get(card.id) ?? [];
+  list.push(cardRef(card.source));
+  EVENT_COPIES.set(card.id, list);
+}
+const SPELL_COPIES = new Map<string, string[]>();
+for (const card of SPELLS) {
+  const list = SPELL_COPIES.get(card.id) ?? [];
+  list.push(cardRef(card.source));
+  SPELL_COPIES.set(card.id, list);
+}
+
+/**
+ * Puts cards on the used pile — "stos zużytych Kart Zdarzeń", and the spells'
+ * own (9.5, 9.6, 4.4, 1.4, 6.4, 16.6, 20.2).
+ *
+ * One door for all of it, because the rulebook keeps sending cards through it
+ * from seven different chapters and every one of those used to end in a bare
+ * `delete`. A card that is deleted has not been "odłożona na stos zużytych" —
+ * it has left the game, and 9.5 can never bring it back.
+ *
+ * Simulation only: at a physical table the pile is a pile.
+ *
+ * An id with no copies is not an error. The Wyposażenie is a stock and not a
+ * deck (21.2), so a Hełm handed back has nowhere here to go and is counted by
+ * `shopStock` instead.
+ */
+async function returnToPile(
+  gameId: string,
+  pile: "events" | "spells",
+  cardIds: readonly string[],
+): Promise<void> {
+  // 21.2: the Wyposażenie is a stock, not a deck. "Kart Przedmiotów zakupionych
+  // nie należy jednak odrzucać (umieszcza się je powtórnie w stosie Kart
+  // zakupów) ponieważ możliwe jest ponowne dokonanie ich zakupu." A Hełm that
+  // leaves a hand goes back to the pile it can be bought from again, and
+  // `stockLeft` puts it there by arithmetic the moment it stops being in play —
+  // so there is nothing to do here but stay out of the way.
+  //
+  // This is why it needs saying at all: eleven of the twelve Wyposażenie cards
+  // are *also* in the event deck. Pushing a sold Hełm onto the used pile would
+  // hand the deck a thirteenth Hełm and the shop its own back at once.
+  await pushToPile(
+    gameId,
+    pile,
+    pile === "events" ? cardIds.filter((cardId) => !fromTheShop(cardId)) : cardIds,
+  );
+}
+
+/**
+ * The drawn copy, once its Wyposażenie card has taken its place (16.6, 21.1).
+ *
+ * The one case that runs the other way: this card *did* come off the deck, so
+ * the deck is exactly where it goes. 16.6 says it outright for the two relics —
+ * "musi je zamienić na identyczne z Wyposażenia, a wyciągnięte odłożyć na stos
+ * zużytych" — and 21.1 extends the same exchange to every card in the chapter,
+ * which is what makes `stockLeft` count copies in play rather than keeping a
+ * tally.
+ */
+async function discardDrawnCopy(gameId: string, cardId: string): Promise<void> {
+  await pushToPile(gameId, "events", [cardId]);
+}
+
+async function pushToPile(
+  gameId: string,
+  pile: "events" | "spells",
+  cardIds: readonly string[],
+): Promise<void> {
+  if (cardIds.length === 0) return;
+  const game = await loadGame(gameId);
+  if (game.mode !== "simulation") return;
+
+  const copies = pile === "events" ? EVENT_COPIES : SPELL_COPIES;
+  const decks = decksOf(game);
+  let deck = decks[pile];
+  const returned: string[] = [];
+  for (const cardId of cardIds) {
+    const mine = copies.get(cardId);
+    if (!mine) continue;
+    const ref = returningRef(deck, mine);
+    if (!ref) continue;
+    returned.push(ref);
+    // Folded in as we go, so two copies of the same card in one call take two
+    // different refs rather than both taking the first free one.
+    deck = discardTo(deck, [ref]);
+  }
+  if (returned.length === 0) return;
+  await db
+    .from("games")
+    .update({ deck: { ...decks, [pile]: deck } })
+    .eq("id", gameId);
+}
 
 function spellsAtSetup(characterId: string | null): number {
   return startingKit(asCharacterId(characterId)).spells ?? 0;
@@ -489,12 +592,22 @@ async function leaveCardsBehind(
   seatId: string | null,
   turn: number,
 ): Promise<void> {
-  const stays = remaining.filter((card) => {
-    const spent =
-      CONSUMED_BY_READING.has(card.cardClass) &&
-      scriptFor(card.cardId)?.disposition.kind === "odloz";
-    return !spent;
-  });
+  const spentByReading = (card: TurnCard) =>
+    CONSUMED_BY_READING.has(card.cardClass) &&
+    scriptFor(card.cardId)?.disposition.kind === "odloz";
+  const stays = remaining.filter((card) => !spentByReading(card));
+
+  // The other half of the same sentence, and the half that used to go nowhere:
+  // a Karta whose own text says "odłóż" is not left on the Obszar (16.8) and is
+  // not destroyed either — it joins the stos zużytych, which is what 9.5 draws
+  // on when the deck runs dry. Without this every Spotkanie in the game left it
+  // for good, and the 165 Karty Zdarzeń drained instead of cycling.
+  await returnToPile(
+    gameId,
+    "events",
+    remaining.filter(spentByReading).map((card) => card.cardId),
+  );
+
   if (stays.length === 0) return;
   await db.from("field_cards").insert(
     stays.map((card) => ({ game_id: gameId, field_id: fieldId, card_id: card.cardId })),
@@ -551,6 +664,7 @@ export async function drawCard(
     .from("games")
     .update({ turn_state: next, deck: { ...decks, events: after } })
     .eq("id", gameId);
+  if (recycled) await journal(gameId, null, game.turn, "przetasowanie", { pile: "zdarzenia" });
   await journal(gameId, seat.id, game.turn, "karta", {
     cardId: card.id,
     ref: drawn[0],
@@ -559,17 +673,6 @@ export async function drawCard(
   });
   await bumpRevision(gameId);
   return { card, recycled };
-}
-
-/** Sets this turn's resolved cards aside, so the deck can recycle them later. */
-export async function discardDrawn(gameId: string, refs: string[]): Promise<void> {
-  const game = await loadGame(gameId);
-  if (game.mode !== "simulation" || refs.length === 0) return;
-  const decks = decksOf(game);
-  await db
-    .from("games")
-    .update({ deck: { ...decks, events: discardTo(decks.events, refs) } })
-    .eq("id", gameId);
 }
 
 /**
@@ -664,7 +767,7 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
   }
 
   const decks = decksOf(game);
-  const { deck: after, drawn } = drawFrom(decks.spells, 1, shuffle);
+  const { deck: after, drawn, recycled } = drawFrom(decks.spells, 1, shuffle);
   if (drawn.length === 0) throw new Error("Stos Kart Zaklęć jest pusty.");
   const spell = SPELL_BY_REF.get(drawn[0]);
   if (!spell) throw new Error(`Nieznane Zaklęcie: ${drawn[0]}`);
@@ -681,6 +784,10 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
     .from("games")
     .update({ deck: { ...decks, spells: after } })
     .eq("id", gameId);
+  // 9.5 in as many words: "Jeśli stos zostanie wyczerpany, tasuje się Karty
+  // Zaklęć już użyte i korzysta z nich ponownie." At a table that is the
+  // loudest thing that happens all evening, and it was happening in silence.
+  if (recycled) await journal(gameId, null, game.turn, "przetasowanie", { pile: "zaklecia" });
   await journal(gameId, seatId, game.turn, "zaklecie", { spellId: spell.id });
   await bumpRevision(gameId);
   return spell.id;
@@ -1065,13 +1172,8 @@ export async function castSpell(
   await db.from("holdings").delete().eq("id", holdingId);
 
   // Back to the used pile, so the spell deck can be reshuffled honestly (9.5).
-  if (game.mode === "simulation") {
-    const decks = decksOf(game);
-    await db
-      .from("games")
-      .update({ deck: { ...decks, spells: discardTo(decks.spells, [held.card_id]) } })
-      .eq("id", gameId);
-  }
+  // 9.6: "reprezentująca je Karta jest odkładana na stos Kart już zużytych."
+  await returnToPile(gameId, "spells", [held.card_id]);
 
   const victim =
     target.seatIndex !== undefined
@@ -1366,6 +1468,21 @@ export async function takeCard(
     }
   }
 
+  /**
+   * 16.6 and 21.1: what you take is the Wyposażenie card, not the one you drew.
+   *
+   * "Jeżeli Postać wyciągnie Magiczny Miecz lub Tarczę Tolimana musi je zamienić
+   * na identyczne z Wyposażenia, a wyciągnięte odłożyć na stos zużytych." The
+   * exchange happens here, at the moment of taking, which is what makes the
+   * rest of the app consistent: from now on this is a stock card, it occupies
+   * one of `PRINTED_STOCK`'s slots, and when it leaves a hand it returns to the
+   * shop rather than to the deck.
+   *
+   * `card` is set only when the id was found in the event deck — a Tarcza
+   * Tolimana picked up off a field has no drawn copy to give back.
+   */
+  if (card && fromTheShop(cardId)) await discardDrawnCopy(gameId, cardId);
+
   await db.from("holdings").insert({
     game_id: gameId,
     seat_id: seatId,
@@ -1439,12 +1556,19 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
   // Zaklęcie lying on the board — the Klątwa in 13.5's example is left by a
   // card that puts it there, not by a player dropping it.
   const seat = (await seatsFor(gameId)).find((s) => s.id === data?.seat_id);
-  if (data && data.kind !== "spell" && data.kind !== "trophy" && seat?.field_id) {
+  const onField = data && data.kind !== "spell" && data.kind !== "trophy" && seat?.field_id;
+  if (onField && data) {
     await db.from("field_cards").insert({
       game_id: gameId,
       field_id: seat.field_id,
       card_id: data.card_id,
     });
+  } else if (data) {
+    // The two that do not lie on a board. A shed Zaklęcie goes where 9.6 sends
+    // a spoken one, and a trophy nobody wants goes where 1.4 sends a traded
+    // one — both to the used pile, which until now they reached by being
+    // deleted, which is not the same place at all.
+    await returnToPile(gameId, data.kind === "spell" ? "spells" : "events", [data.card_id]);
   }
 
   await journal(gameId, (data?.seat_id as string) ?? null, game.turn, "odrzucenie", {
@@ -1644,6 +1768,7 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
   // Spent first, whatever comes of it. Every one of these cards says the Karta
   // goes — the Łódź says so even if you never got in it.
   await db.from("holdings").delete().eq("id", holdingId);
+  await returnToPile(gameId, "events", [cardId]);
   await journal(gameId, seatId, game.turn, "uzycie", {
     cardId,
     ...(face !== undefined ? { face } : {}),
@@ -1717,6 +1842,11 @@ export async function tradeTrophies(gameId: string, seatId: string): Promise<num
   // Everything is handed in: rule 1.4 says points above a multiple of seven are
   // lost, not banked.
   await db.from("holdings").delete().eq("seat_id", seatId).eq("kind", "trophy");
+  // 1.4, said in as many words: "Po tego rodzaju wymianie, Kartę pokonanego
+  // Wroga należy odłożyć na stos zużytych Kart Zdarzeń." A beaten Wróg is not
+  // spent when it is beaten — that is what makes it a trophy — it is spent
+  // here, when it is cashed in.
+  await returnToPile(gameId, "events", trophies.map((t) => t.card_id));
   await db
     .from("seats")
     .update({ miecz_own: seat.miecz_own + gained })
@@ -1845,7 +1975,19 @@ async function killSeat(gameId: string, seatId: string): Promise<void> {
   }
   await db.from("holdings").delete().eq("seat_id", seatId);
 
-  const spells = holdings.filter((h) => h.kind === "spell").length;
+  // 4.4: the gear and the friends stay on the field above, but "Karty Zaklęć
+  // umieszczane są wśród tych, które zostały już użyte" — so the hand goes
+  // back to the pile it was dealt from, where 9.5 can shuffle it in again.
+  // A trophy has nowhere else to be either.
+  const spellCards = holdings.filter((h) => h.kind === "spell").map((h) => h.card_id);
+  await returnToPile(gameId, "spells", spellCards);
+  await returnToPile(
+    gameId,
+    "events",
+    holdings.filter((h) => h.kind === "trophy").map((h) => h.card_id),
+  );
+
+  const spells = spellCards.length;
   await db.from("seats").update({ eliminated: true }).eq("id", seatId);
   await journal(gameId, seatId, game.turn, "smierc", {
     droppedOnField: left.map((h) => h.card_id),
@@ -1992,6 +2134,9 @@ export async function turnToStone(gameId: string, seatId: string): Promise<void>
       .delete()
       .in("id", [...dropped, ...friends].map((h) => h.id));
   }
+  // "odłóż ich Karty na stos Kart zużytych" — the sentence names the pile, and
+  // the friends were reaching it by being deleted, which is a different place.
+  await returnToPile(gameId, "events", friends.map((h) => h.card_id));
 
   if (seat.field_id) {
     // Gold is left there too, and the deck already has a card that *is* one
@@ -2538,13 +2683,7 @@ export async function escape(
 
   if (circle && succeeded) {
     await db.from("holdings").delete().eq("id", circle.id);
-    if (game.mode === "simulation") {
-      const decks = decksOf(game);
-      await db
-        .from("games")
-        .update({ deck: { ...decks, spells: discardTo(decks.spells, [KRAG_PLOMIENI]) } })
-        .eq("id", gameId);
-    }
+    await returnToPile(gameId, "spells", [KRAG_PLOMIENI]);
     await journal(gameId, fleeing.id, game.turn, "zaklecie", {
       cardId: KRAG_PLOMIENI,
       name: SPELL_BY_ID.get(KRAG_PLOMIENI)?.name ?? KRAG_PLOMIENI,
@@ -3274,6 +3413,9 @@ export async function sellHolding(
   if (held.kind !== "item") throw new Error("Lichwiarz kupuje tylko Przedmioty.");
 
   await db.from("holdings").delete().eq("id", holdingId);
+  // 21.2 for a Wyposażenie card — back to the stock, by arithmetic — and the
+  // used pile for anything the deck printed. `returnToPile` knows which.
+  await returnToPile(gameId, "events", [held.card_id]);
   await db.from("seats").update({ zloto: seat.zloto + price }).eq("id", seatId);
   const game = await loadGame(gameId);
   await journal(gameId, seatId, game.turn, "sprzedaz", { cardId: held.card_id, price });
@@ -3713,7 +3855,23 @@ export async function applyEffect(
         if (gone === null) return { did: [], pending: effect };
 
         const gold = goldLost(effect, row.zloto);
-        if (gone.length > 0) await db.from("holdings").delete().in("id", gone);
+        if (gone.length > 0) {
+          await db.from("holdings").delete().in("id", gone);
+          // 6.4's "muszą zostać odrzuceni z innych przyczyn": a card taken by
+          // an effect rather than put down by its owner is not left lying on
+          // the Obszar — it is gone, and gone means the used pile.
+          const lost = mine.filter((held) => gone.includes(held.id));
+          await returnToPile(
+            gameId,
+            "spells",
+            lost.filter((held) => held.kind === "spell").map((held) => held.cardId),
+          );
+          await returnToPile(
+            gameId,
+            "events",
+            lost.filter((held) => held.kind !== "spell").map((held) => held.cardId),
+          );
+        }
         if (gold > 0) {
           await db.from("seats").update({ zloto: row.zloto - gold }).eq("id", row.id);
         }

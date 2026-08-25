@@ -84,6 +84,24 @@ export function discardTo(deck: DeckState, refs: readonly CardRef[]): DeckState 
   return { draw: deck.draw, discard: [...deck.discard, ...refs] };
 }
 
+/**
+ * Which copy of a card to put back, when all we know is which card it is.
+ *
+ * A hand and a field hold card *ids*; the piles hold slice refs, because the box
+ * has genuine duplicates and discarding by id would discard all four Magiczne
+ * Miecze at once. Going the other way there is nothing to look up — so a copy
+ * is chosen instead, and the copies are identical, so any of them will do.
+ *
+ * "Any" with one condition: it must be a copy neither pile already accounts
+ * for. That is what makes this safe to call twice by mistake — the second call
+ * finds every copy accounted for and returns null rather than conjuring a fifth
+ * Magiczny Miecz into a deck that only ever held four.
+ */
+export function returningRef(deck: DeckState, copies: readonly CardRef[]): CardRef | null {
+  const accounted = new Set([...deck.draw, ...deck.discard]);
+  return copies.find((ref) => !accounted.has(ref)) ?? null;
+}
+
 export function remaining(deck: DeckState): number {
   return deck.draw.length + deck.discard.length;
 }

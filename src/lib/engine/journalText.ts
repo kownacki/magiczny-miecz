@@ -337,6 +337,15 @@ export function describe(
       return line(`${who} wymienia trofea — zyskuje ${num(data.gained)} Miecza.`);
     case "karta":
       return line(`${who} wyciąga: ${card(data.cardId)}.`);
+    // 9.5's reshuffle, which belongs to the table rather than to a player —
+    // hence no `who`. It is the one deck event everybody at a physical table
+    // notices, and the app used to do it in complete silence.
+    case "przetasowanie":
+      return line(
+        data.pile === "zaklecia"
+          ? "Stos Kart Zaklęć się wyczerpał — zużyte Zaklęcia potasowano ponownie (9.5)."
+          : "Talia Kart Zdarzeń się wyczerpała — zużyte Karty potasowano ponownie.",
+      );
 
     // — what people are ————————————————————————————————————————————
     case "korekta": {

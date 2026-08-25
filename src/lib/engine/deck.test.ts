@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildDeck, cardRef, discardTo, drawFrom, remaining, shuffleWith } from "./deck";
+import {
+  buildDeck,
+  cardRef,
+  discardTo,
+  drawFrom,
+  remaining,
+  returningRef,
+  shuffleWith,
+  type DeckState,
+} from "./deck";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 
@@ -113,5 +122,36 @@ describe("duplicate multiplicity is part of the design", () => {
     for (const card of cards) counts.set(card.name, (counts.get(card.name) ?? 0) + 1);
     const commonest = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
     expect(commonest[1]).toBeGreaterThan(3);
+  });
+});
+
+describe("returning a card whose ref was forgotten", () => {
+  // A hand stores an id; the piles store refs. `returningRef` is the way back,
+  // and the reason the discard cannot be fed with ids: a pile of ids is a pile
+  // the draw can never look up again.
+  const copies = ["zdarzenia-4#11", "zdarzenia-4#12", "zdarzenia-4#13"];
+
+  it("picks a copy neither pile is already counting", () => {
+    const deck: DeckState = { draw: ["zdarzenia-4#11"], discard: ["zdarzenia-4#12"] };
+    expect(returningRef(deck, copies)).toBe("zdarzenia-4#13");
+  });
+
+  it("refuses to invent a copy the box does not have", () => {
+    // Called twice by mistake, the second call finds every copy accounted for
+    // and returns null rather than conjuring a fourth Magiczny Miecz.
+    const deck: DeckState = { draw: [copies[0]], discard: [copies[1], copies[2]] };
+    expect(returningRef(deck, copies)).toBeNull();
+  });
+
+  it("survives the round trip a discarded card has to make", () => {
+    // The bug this exists for: a spent Zaklęcie used to be pushed onto the
+    // pile as its *id*, so the moment 9.5 shuffled the pile back in, the draw
+    // came up with a ref nothing could resolve.
+    let deck: DeckState = { draw: [], discard: [] };
+    const ref = returningRef(deck, copies)!;
+    deck = discardTo(deck, [ref]);
+    const { drawn, recycled } = drawFrom(deck, 1, (items) => [...items]);
+    expect(recycled).toBe(true);
+    expect(copies).toContain(drawn[0]);
   });
 });
