@@ -142,6 +142,17 @@ create table if not exists magiczny_miecz.holdings (
   -- this column existed, and a card picked up after an arrangement lands at the
   -- end rather than jumping to the front.
   ordinal integer,
+  -- Conjured by the test shortcut rather than drawn, bought or found.
+  --
+  -- A granted card is not a card from the box, and the box must never learn
+  -- about it: the deck keeps its own copy (so it can still deal it), and this
+  -- one never joins a used pile when it leaves. Without the flag the two are
+  -- indistinguishable, and a granted Cyklop discarded after the real one was
+  -- drawn puts a second Cyklop into the deck for good.
+  --
+  -- Default false is the right answer for every row that already exists: they
+  -- are all cards that arrived by playing.
+  granted boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -181,6 +192,10 @@ create table if not exists magiczny_miecz.field_cards (
   game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
   field_id text not null,
   card_id text not null,
+  -- Travels with the card. A granted Miecz dropped on a field and picked up by
+  -- somebody else would otherwise re-enter the game as a real one, and reach a
+  -- pile the next time it was discarded. See holdings.granted.
+  granted boolean not null default false,
   created_at timestamptz not null default now()
 );
 

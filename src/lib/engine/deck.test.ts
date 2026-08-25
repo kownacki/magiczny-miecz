@@ -5,7 +5,6 @@ import {
   discardTo,
   drawFrom,
   remaining,
-  removeCopy,
   returningRef,
   shuffleWith,
   type DeckState,
@@ -154,41 +153,5 @@ describe("returning a card whose ref was forgotten", () => {
     const { drawn, recycled } = drawFrom(deck, 1, (items) => [...items]);
     expect(recycled).toBe(true);
     expect(copies).toContain(drawn[0]);
-  });
-});
-
-describe("taking a copy out without dealing it", () => {
-  const copies = ["zdarzenia-4#11", "zdarzenia-4#12"];
-
-  it("prefers the draw pile, which is where it would have come from", () => {
-    const deck: DeckState = { draw: ["x#1", copies[0], "x#2"], discard: [copies[1]] };
-    expect(removeCopy(deck, copies)).toEqual({
-      draw: ["x#1", "x#2"],
-      discard: [copies[1]],
-    });
-  });
-
-  it("falls back to the used pile", () => {
-    const deck: DeckState = { draw: ["x#1"], discard: ["x#2", copies[1]] };
-    expect(removeCopy(deck, copies)).toEqual({ draw: ["x#1"], discard: ["x#2"] });
-  });
-
-  it("takes exactly one, however many copies are there", () => {
-    const deck: DeckState = { draw: [...copies], discard: [] };
-    expect(removeCopy(deck, copies)?.draw).toEqual([copies[1]]);
-  });
-
-  it("says nothing is left to take when every copy is in play", () => {
-    expect(removeCopy({ draw: [], discard: [] }, copies)).toBeNull();
-  });
-
-  it("round-trips with returningRef", () => {
-    // Granting a card and then discarding it should leave the piles exactly as
-    // they were — one copy out, one copy back — rather than losing it or
-    // duplicating it, which is what happened either way before.
-    const start: DeckState = { draw: [...copies], discard: [] };
-    const granted = removeCopy(start, copies)!;
-    const back = returningRef(granted, copies)!;
-    expect(discardTo(granted, [back])).toEqual({ draw: [copies[1]], discard: [copies[0]] });
   });
 });

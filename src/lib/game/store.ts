@@ -538,12 +538,20 @@ export interface HoldingRow {
   slot: string | null;
   /** Where the owner put it in their pack; null when they never said. */
   ordinal: number | null;
+  /**
+   * Conjured by the test shortcut rather than drawn, bought or found.
+   *
+   * The whole of what it means: this card is not from the box, so it never
+   * joins a used pile and the deck still holds its own copy. See the column's
+   * note in `db/schema.sql`.
+   */
+  granted: boolean;
 }
 
 export async function holdingsFor(gameId: string): Promise<HoldingRow[]> {
   const { data, error } = await db
     .from("holdings")
-    .select("id,seat_id,card_id,kind,face,slot,ordinal")
+    .select("id,seat_id,card_id,kind,face,slot,ordinal,granted")
     .eq("game_id", gameId)
     // A pack the player has arranged first, in the order they arranged it;
     // everything else after it, oldest first, which is how the whole table read
@@ -565,12 +573,14 @@ export interface FieldCardRow {
   id: string;
   field_id: string;
   card_id: string;
+  /** Dropped here by a test grant; it goes nowhere when it leaves again. */
+  granted: boolean;
 }
 
 export async function fieldCardsFor(gameId: string): Promise<FieldCardRow[]> {
   const { data, error } = await db
     .from("field_cards")
-    .select("id,field_id,card_id")
+    .select("id,field_id,card_id,granted")
     .eq("game_id", gameId)
     .order("created_at");
   if (error) throw new Error(error.message);

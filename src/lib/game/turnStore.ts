@@ -97,7 +97,6 @@ import {
   buildDeck,
   cardRef,
   discardTo,
-  removeCopy,
   returningRef,
   drawFrom,
   shuffleWith,
@@ -187,10 +186,22 @@ for (const card of SPELLS) {
  * deck (21.2), so a Hełm handed back has nowhere here to go and is counted by
  * `shopStock` instead.
  */
+/** A row from either table, as the thing that has to be put away. */
+function asReturnable(row: { card_id: string; granted: boolean }): Returnable {
+  return { cardId: row.card_id, granted: row.granted };
+}
+
+/** What a card needs to say about itself to be put away. */
+interface Returnable {
+  cardId: string;
+  /** Conjured by a test: it belongs to no pile and joins none. */
+  granted?: boolean;
+}
+
 async function returnToPile(
   gameId: string,
   pile: "events" | "spells",
-  cardIds: readonly string[],
+  cards: readonly Returnable[],
 ): Promise<void> {
   // 21.2: the Wyposażenie is a stock, not a deck. "Kart Przedmiotów zakupionych
   // nie należy jednak odrzucać (umieszcza się je powtórnie w stosie Kart
@@ -202,10 +213,16 @@ async function returnToPile(
   // This is why it needs saying at all: eleven of the twelve Wyposażenie cards
   // are *also* in the event deck. Pushing a sold Hełm onto the used pile would
   // hand the deck a thirteenth Hełm and the shop its own back at once.
+  //
+  // A granted card is kept out for the opposite reason: the deck never gave it
+  // up, so it has nothing to give back. Putting one on the pile is how a table
+  // ends up with two Cyklopy — the conjured one on the used pile and the real
+  // one still waiting in the draw.
+  const real = cards.filter((card) => !card.granted).map((card) => card.cardId);
   await pushToPile(
     gameId,
     pile,
-    pile === "events" ? cardIds.filter((cardId) => !fromTheShop(cardId)) : cardIds,
+    pile === "events" ? real.filter((cardId) => !fromTheShop(cardId)) : real,
   );
 }
 
@@ -606,7 +623,8 @@ async function leaveCardsBehind(
   await returnToPile(
     gameId,
     "events",
-    remaining.filter(spentByReading).map((card) => card.cardId),
+    // Straight off the deck this turn, so never a granted one.
+    remaining.filter(spentByReading).map((card) => ({ cardId: card.cardId })),
   );
 
   if (stays.length === 0) return;
@@ -1152,7 +1170,7 @@ async function applySpell(
       .from("holdings")
       .delete()
       .in("id", hand.map((h) => h.id));
-    await returnToPile(gameId, "spells", hand.map((h) => h.card_id));
+    await returnToPile(gameId, "spells", hand.map(asReturnable));
     return hand.map((h) => h.card_id);
   }
 
@@ -1163,7 +1181,7 @@ async function applySpell(
   const lying = (await fieldCardsFor(gameId)).find((row) => row.id === target.fieldCardId);
   if (!lying) throw new Error("Tej Karty już tam nie ma.");
   await db.from("field_cards").delete().eq("id", lying.id);
-  await returnToPile(gameId, "events", [lying.card_id]);
+  await returnToPile(gameId, "events", [asReturnable(lying)]);
   return [lying.card_id];
 }
 
@@ -1223,7 +1241,7 @@ export async function castSpell(
 
   // Back to the used pile, so the spell deck can be reshuffled honestly (9.5).
   // 9.6: "reprezentująca je Karta jest odkładana na stos Kart już zużytych."
-  await returnToPile(gameId, "spells", [held.card_id]);
+  await returnToPile(gameId, "spells", [asReturnable(held)]);
 
   const applied = script?.applies ? await applySpell(gameId, script.applies, target) : null;
 
@@ -1425,6 +1443,8 @@ export async function takeCard(
   gameId: string,
   seatId: string,
   cardId: string,
+  /** Set when this card came off a field that was holding a granted one. */
+  granted = false,
 ): Promise<void> {
   const game = await loadGame(gameId);
   // Both decks. 21.1 has a character take the Wyposażenie card for a Magiczny
@@ -1532,9 +1552,10 @@ export async function takeCard(
    * shop rather than to the deck.
    *
    * `card` is set only when the id was found in the event deck — a Tarcza
-   * Tolimana picked up off a field has no drawn copy to give back.
+   * Tolimana picked up off a field has no drawn copy to give back, and a
+   * granted one has none either — the deck never gave that copy up.
    */
-  if (card && fromTheShop(cardId)) await discardDrawnCopy(gameId, cardId);
+  if (card && fromTheShop(cardId) && !granted) await discardDrawnCopy(gameId, cardId);
 
   await db.from("holdings").insert({
     game_id: gameId,
@@ -1542,6 +1563,7 @@ export async function takeCard(
     card_id: cardId,
     kind,
     face: "open",
+    granted,
   });
 
   await liftOffField(gameId, cardId);
@@ -1560,7 +1582,7 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
   const game = await loadGame(gameId);
   const { data } = await db
     .from("holdings")
-    .select("seat_id,card_id,kind")
+    .select("seat_id,card_id,kind,granted")
     .eq("id", holdingId)
     .maybeSingle();
 
@@ -1615,6 +1637,10 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
       game_id: gameId,
       field_id: seat.field_id,
       card_id: data.card_id,
+      // Travels with it. Picked up by somebody else, a granted card would
+      // otherwise be a real one from then on, and reach a pile the next time
+      // it was put down.
+      granted: data.granted,
     });
   } else if (data) {
     // The two that do not lie on a board. A shed Zaklęcie goes where 9.6 sends
@@ -1798,7 +1824,7 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
   const game = await loadGame(gameId);
   const { data } = await db
     .from("holdings")
-    .select("seat_id,card_id,kind")
+    .select("seat_id,card_id,kind,granted")
     .eq("id", holdingId)
     .maybeSingle();
   if (!data) throw new Error("Nie ma takiej Karty.");
@@ -1821,7 +1847,7 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
   // Spent first, whatever comes of it. Every one of these cards says the Karta
   // goes — the Łódź says so even if you never got in it.
   await db.from("holdings").delete().eq("id", holdingId);
-  await returnToPile(gameId, "events", [cardId]);
+  await returnToPile(gameId, "events", [{ cardId, granted: data.granted === true }]);
   await journal(gameId, seatId, game.turn, "uzycie", {
     cardId,
     ...(face !== undefined ? { face } : {}),
@@ -1876,10 +1902,10 @@ export async function tradeTrophies(gameId: string, seatId: string): Promise<num
   const game = await loadGame(gameId);
   const { data } = await db
     .from("holdings")
-    .select("id,card_id")
+    .select("id,card_id,granted")
     .eq("seat_id", seatId)
     .eq("kind", "trophy");
-  const trophies = (data ?? []) as { id: string; card_id: string }[];
+  const trophies = (data ?? []) as { id: string; card_id: string; granted: boolean }[];
 
   const points = trophies.reduce((sum, t) => {
     const card = EVENTS.find((c) => c.id === t.card_id);
@@ -1899,7 +1925,7 @@ export async function tradeTrophies(gameId: string, seatId: string): Promise<num
   // Wroga należy odłożyć na stos zużytych Kart Zdarzeń." A beaten Wróg is not
   // spent when it is beaten — that is what makes it a trophy — it is spent
   // here, when it is cashed in.
-  await returnToPile(gameId, "events", trophies.map((t) => t.card_id));
+  await returnToPile(gameId, "events", trophies.map(asReturnable));
   await db
     .from("seats")
     .update({ miecz_own: seat.miecz_own + gained })
@@ -2023,7 +2049,12 @@ async function killSeat(gameId: string, seatId: string): Promise<void> {
   const left = holdings.filter((h) => h.kind === "item" || h.kind === "friend");
   if (left.length > 0 && seat?.field_id) {
     await db.from("field_cards").insert(
-      left.map((h) => ({ game_id: gameId, field_id: seat.field_id, card_id: h.card_id })),
+      left.map((h) => ({
+        game_id: gameId,
+        field_id: seat.field_id,
+        card_id: h.card_id,
+        granted: h.granted,
+      })),
     );
   }
   await db.from("holdings").delete().eq("seat_id", seatId);
@@ -2032,12 +2063,12 @@ async function killSeat(gameId: string, seatId: string): Promise<void> {
   // umieszczane są wśród tych, które zostały już użyte" — so the hand goes
   // back to the pile it was dealt from, where 9.5 can shuffle it in again.
   // A trophy has nowhere else to be either.
-  const spellCards = holdings.filter((h) => h.kind === "spell").map((h) => h.card_id);
-  await returnToPile(gameId, "spells", spellCards);
+  const spellCards = holdings.filter((h) => h.kind === "spell");
+  await returnToPile(gameId, "spells", spellCards.map(asReturnable));
   await returnToPile(
     gameId,
     "events",
-    holdings.filter((h) => h.kind === "trophy").map((h) => h.card_id),
+    holdings.filter((h) => h.kind === "trophy").map(asReturnable),
   );
 
   const spells = spellCards.length;
@@ -2189,7 +2220,7 @@ export async function turnToStone(gameId: string, seatId: string): Promise<void>
   }
   // "odłóż ich Karty na stos Kart zużytych" — the sentence names the pile, and
   // the friends were reaching it by being deleted, which is a different place.
-  await returnToPile(gameId, "events", friends.map((h) => h.card_id));
+  await returnToPile(gameId, "events", friends.map(asReturnable));
 
   if (seat.field_id) {
     // Gold is left there too, and the deck already has a card that *is* one
@@ -2736,7 +2767,7 @@ export async function escape(
 
   if (circle && succeeded) {
     await db.from("holdings").delete().eq("id", circle.id);
-    await returnToPile(gameId, "spells", [KRAG_PLOMIENI]);
+    await returnToPile(gameId, "spells", [asReturnable(circle)]);
     await journal(gameId, fleeing.id, game.turn, "zaklecie", {
       cardId: KRAG_PLOMIENI,
       name: SPELL_BY_ID.get(KRAG_PLOMIENI)?.name ?? KRAG_PLOMIENI,
@@ -3468,7 +3499,7 @@ export async function sellHolding(
   await db.from("holdings").delete().eq("id", holdingId);
   // 21.2 for a Wyposażenie card — back to the stock, by arithmetic — and the
   // used pile for anything the deck printed. `returnToPile` knows which.
-  await returnToPile(gameId, "events", [held.card_id]);
+  await returnToPile(gameId, "events", [asReturnable(held)]);
   await db.from("seats").update({ zloto: seat.zloto + price }).eq("id", seatId);
   const game = await loadGame(gameId);
   await journal(gameId, seatId, game.turn, "sprzedaz", { cardId: held.card_id, price });
@@ -3569,50 +3600,12 @@ export async function grantCard(gameId: string, seatId: string, cardId: string):
     kind,
     // 9.3 keeps a Zaklęcie face down even when it arrived by fiat.
     face: kind === "spell" ? "hidden" : "open",
+    // Not a card from the box. The deck keeps its own copy and can still deal
+    // it; this one belongs to no pile and joins none when it goes.
+    granted: true,
   });
-  await takeFromPile(gameId, cardId);
   await journal(gameId, seatId, game.turn, "test-karta", { cardId, kind }, true);
   await bumpRevision(gameId);
-}
-
-/**
- * The deck's side of a card conjured into a hand.
- *
- * A granted card is not drawn — nothing came off the top — so the deck was
- * still holding the copy and would happily deal it again, leaving two Cyklopy
- * on the board and one Karta unaccounted for at every count afterwards. It also
- * left the card no way home: `returningRef` looks for a copy neither pile is
- * counting, finds every one of them accounted for, and correctly declines to
- * invent a duplicate — so the card simply evaporated when it was discarded.
- *
- * Taking the copy out here makes a granted card behave like a drawn one
- * everywhere downstream, which is the whole point of a test shortcut: it should
- * reach a game state faster, not a different one.
- *
- * The Wyposażenie is left alone. Eleven of its twelve cards are printed in the
- * event deck too, but 16.6 makes the deck's copy a pointer to the shelf rather
- * than a second Hełm — so a granted one comes off the shelf, which `stockLeft`
- * records by arithmetic the moment it is in play, and the deck keeps its
- * pointer for whoever draws it later.
- */
-async function takeFromPile(gameId: string, cardId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  if (game.mode !== "simulation" || fromTheShop(cardId)) return;
-
-  const pile: "events" | "spells" = SPELL_COPIES.has(cardId) ? "spells" : "events";
-  const copies = (pile === "spells" ? SPELL_COPIES : EVENT_COPIES).get(cardId);
-  if (!copies) return;
-
-  const decks = decksOf(game);
-  const after = removeCopy(decks[pile], copies);
-  // Null is every copy already in play — somebody is holding the last Smok, and
-  // granting a second is the shortcut doing what it was asked. The deck cannot
-  // give up what it does not have, and says nothing about it.
-  if (!after) return;
-  await db
-    .from("games")
-    .update({ deck: { ...decks, [pile]: after } })
-    .eq("id", gameId);
 }
 
 export async function placeSeat(
@@ -3941,7 +3934,12 @@ export async function applyEffect(
 
         const mine = holdings
           .filter((held) => held.seat_id === row.id)
-          .map((held) => ({ id: held.id, cardId: held.card_id, kind: held.kind }));
+          .map((held) => ({
+            id: held.id,
+            cardId: held.card_id,
+            kind: held.kind,
+            granted: held.granted,
+          }));
         // Null means the holder has to pick, which 5.6 makes their right. It
         // should not reach here — isSettled asks first — but a card that starts
         // saying "wybierz" tomorrow should stop, not choose for somebody.
@@ -3958,12 +3956,12 @@ export async function applyEffect(
           await returnToPile(
             gameId,
             "spells",
-            lost.filter((held) => held.kind === "spell").map((held) => held.cardId),
+            lost.filter((held) => held.kind === "spell"),
           );
           await returnToPile(
             gameId,
             "events",
-            lost.filter((held) => held.kind !== "spell").map((held) => held.cardId),
+            lost.filter((held) => held.kind !== "spell"),
           );
         }
         if (gold > 0) {
@@ -4190,7 +4188,7 @@ export async function takeFromField(
   // count copies in play — do not see the same card twice.
   await db.from("field_cards").delete().eq("id", fieldCardId);
   try {
-    await takeCard(gameId, seatId, lying.card_id);
+    await takeCard(gameId, seatId, lying.card_id, lying.granted);
   } catch (error) {
     // Refused for a reason of its own: put it back where it was lying, because
     // a card that cannot be picked up is a card still on the field (5.3).
@@ -4198,6 +4196,7 @@ export async function takeFromField(
       game_id: gameId,
       field_id: lying.field_id,
       card_id: lying.card_id,
+      granted: lying.granted,
     });
     throw error;
   }
