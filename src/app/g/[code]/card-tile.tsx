@@ -214,6 +214,11 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
         onClick={(event) => event.stopPropagation()}
       >
         {src && (
+          // `relative`, so the mark can sit on the card rather than beside it:
+          // that is where it is true, and a reader looking at a picture of a
+          // card should not have to look away from it to learn the picture is
+          // of one that was conjured.
+          <div className="relative shrink-0 self-center">
           <Image
             src={src}
             alt={card.name}
@@ -223,19 +228,20 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
             // is drawn larger, and at its own proportions.
             width={card.character ? 340 : 260}
             height={card.character ? 422 : 369}
-            className="shrink-0 self-center rounded"
+            className="rounded"
             unoptimized={card.character}
           />
+            {card.granted && (
+              <span className="absolute bottom-1 right-1 rounded bg-night/85 px-1 py-0.5">
+                <CardMark mark="granted" size={26} />
+              </span>
+            )}
+          </div>
         )}
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h3 className="flex items-center gap-2 font-[family-name:var(--font-display)] text-lg text-ochre">
+            <h3 className="font-[family-name:var(--font-display)] text-lg text-ochre">
               {card.name}
-              {/* Beside the name, at the size the name is read at. This is the
-                  view somebody opens to check what a card actually is, so it is
-                  the last place that should stay quiet about one that is not
-                  from the box. */}
-              {card.granted && <CardMark mark="granted" size={22} />}
             </h3>
             <button onClick={onClose} className="text-xs text-muted hover:text-ink">
               zamknij

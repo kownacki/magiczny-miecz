@@ -78,6 +78,8 @@ export type TurnPhase =
 export interface Fight {
   cardId: string;
   cardName: string;
+  /** Staged by the test shortcut rather than drawn — see `TurnCard.granted`. */
+  granted?: boolean;
   /** Seat index of the opponent when this is a duel between characters (17.6). */
   opponentSeat?: number;
   kind: CombatKind;
@@ -343,6 +345,7 @@ export function startFight(
     miecz?: number;
     magia?: number;
     opponentSeat?: number;
+    granted?: boolean;
     /**
      * The ids this fight settles. Several when 17.5 has a pack attack as one,
      * and `cardId` is then their ids joined together for display rather than
@@ -360,6 +363,7 @@ export function startFight(
     fight: {
       cardId: card.cardId,
       cardName: card.cardName,
+      ...(card.granted ? { granted: true } : {}),
       ...(card.opponentSeat !== undefined ? { opponentSeat: card.opponentSeat } : {}),
       kind,
       enemyTotal,

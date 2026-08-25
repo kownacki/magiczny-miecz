@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { CardMark } from "./card-mark";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/engine/cardImages";
@@ -30,6 +31,8 @@ const EVENTS = events as EventCard[];
 export interface DrawnEntry {
   cardId: string;
   cardClass: string;
+  /** Staged by the test shortcut rather than drawn — see `TurnCard.granted`. */
+  granted?: boolean;
 }
 
 /**
@@ -333,6 +336,7 @@ export function DrawModal({
       <Shell
         label={fight.cardName}
         art={cardImageUrl(fight.cardId.split("+")[0])}
+        granted={fight.granted === true}
         watching={canAct ? null : `${who} walczy`}
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
@@ -534,6 +538,7 @@ export function DrawModal({
     <Shell
       label={known.name}
       art={art}
+      granted={card.granted === true}
       watching={canAct ? null : `${who} ciągnie Kartę`}
       minimized={minimized && !canAct}
       onMinimize={canAct ? null : onMinimize}
@@ -822,6 +827,7 @@ function SpellFloorControl({
 function Shell({
   label,
   art,
+  granted = false,
   watching,
   minimized,
   onMinimize,
@@ -832,6 +838,8 @@ function Shell({
 }: {
   label: string;
   art: string | null;
+  /** Staged by the test shortcut rather than drawn — marked on the card. */
+  granted?: boolean;
   /** Set when this device is only watching — says whose turn it is. */
   watching: string | null;
   minimized: boolean;
@@ -920,15 +928,25 @@ function Shell({
 
         <div className="flex min-h-0 flex-1 gap-4">
           {art && (
-            <Image
-              src={art}
-              alt={label}
-              width={300}
-              height={500}
-              className="hidden h-auto w-[260px] shrink-0 self-start rounded border border-edge sm:block"
-              priority
-              unoptimized
-            />
+            <div className="relative hidden shrink-0 self-start sm:block">
+              <Image
+                src={art}
+                alt={label}
+                width={300}
+                height={500}
+                className="h-auto w-[260px] rounded border border-edge"
+                priority
+                unoptimized
+              />
+              {/* A staged fight is a Wróg the deck never dealt, and this is the
+                  card you are looking at while you decide whether to run from
+                  it. On the picture, where every other view puts it. */}
+              {granted && (
+                <span className="absolute bottom-1 right-1 rounded bg-night/85 px-1 py-0.5">
+                  <CardMark mark="granted" size={26} />
+                </span>
+              )}
+            </div>
           )}
           <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
             {children}

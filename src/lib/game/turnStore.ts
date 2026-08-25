@@ -1022,6 +1022,13 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
       cardId: foes.map((f) => f.card.id).join("+"),
       cardName: foes.map((f) => f.card.name).join(" + "),
       settles: foes.map((f) => f.card.id),
+      // Carried through from the stack: a fight staged by a test is one the
+      // deck never dealt, and the sheet says so over the card's own picture.
+      ...(game.turn_state.drawn.some(
+        (entry) => cardIds.includes(entry.cardId) && entry.granted,
+      )
+        ? { granted: true }
+        : {}),
       ...(kind === "magiczna" ? { magia: total } : { miecz: total }),
     },
     { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
@@ -1080,7 +1087,10 @@ export async function stageFight(
         fieldId: seat.field_id,
         from: null,
         draw: 0,
-        drawn: [{ cardId: card.id, cardClass: card.cardClass }],
+        // Marked, because it was not drawn: `stageFight` reaches past the deck
+        // and the deck still holds this Wilkołak. Everything that draws the
+        // card from here on says so.
+        drawn: [{ cardId: card.id, cardClass: card.cardClass, granted: true }],
         fought: [],
       },
     })

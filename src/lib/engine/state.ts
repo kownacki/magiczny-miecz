@@ -92,6 +92,14 @@ export interface TurnCard {
    * knows which one they named.
    */
   ref?: string;
+  /**
+   * Staged by the test shortcut rather than drawn.
+   *
+   * The same fact as `Holding.granted` and for the same reason: the deck never
+   * gave this card up, so nothing about it should look like a card that came
+   * off the top.
+   */
+  granted?: boolean;
 }
 
 /**

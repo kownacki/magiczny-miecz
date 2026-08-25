@@ -175,14 +175,23 @@ export function CardPreview({
       className="pointer-events-none fixed z-[100] flex gap-3 overflow-y-auto rounded-lg border border-ochre/40 bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
     >
       {src && (
-        <Image
-          src={src}
-          alt={card.name}
-          width={PICTURE_WIDTH}
-          height={Math.round(PICTURE_WIDTH * CARD_RATIO)}
-          style={{ width: PICTURE_WIDTH }}
-          className="block h-auto shrink-0 self-start rounded"
-        />
+        <div className="relative shrink-0 self-start">
+          <Image
+            src={src}
+            alt={card.name}
+            width={PICTURE_WIDTH}
+            height={Math.round(PICTURE_WIDTH * CARD_RATIO)}
+            style={{ width: PICTURE_WIDTH }}
+            className="block h-auto rounded"
+          />
+          {/* On the card, where the tile puts it, so the hover and the thing
+              being hovered agree about where to look. */}
+          {card.granted && (
+            <span className="absolute bottom-1 right-1 rounded bg-night/85 px-1 py-0.5">
+              <CardMark mark="granted" size={22} />
+            </span>
+          )}
+        </div>
       )}
 
       {/* What the app knows, beside what the card says. Skipped entirely when
@@ -191,11 +200,8 @@ export function CardPreview({
       {anythingToSay && (
         <div className="flex w-[18rem] max-w-[55vw] flex-col gap-2">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="flex items-center gap-1.5 font-[family-name:var(--font-display)] text-sm text-ochre">
+            <p className="font-[family-name:var(--font-display)] text-sm text-ochre">
               {card.name}
-              {/* The hover is where a player checks what a card is without
-                  disturbing anything, so it says this too. */}
-              {card.granted && <CardMark mark="granted" size={18} />}
             </p>
             {/* The Roman numeral printed at the top of the card. Not an
                 identity and not a level — it is the class, and 15.2 resolves a
