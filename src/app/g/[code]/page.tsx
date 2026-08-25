@@ -34,6 +34,7 @@ import { carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
+import { Journal } from "./journal";
 import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
@@ -719,6 +720,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           </>
         }
         map={
+          // The board with the journal under it. `relative` is what lets the
+          // journal expand over the board instead of pushing it out of the way.
+          <div className="relative flex h-full w-full flex-col gap-2">
+            <div className="flex min-h-0 flex-1 items-center justify-center">
           <BoardMap
             seats={seats.map((seat) => ({
               id: seat.id,
@@ -739,6 +744,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             }
             onPick={(fieldId) => setInspecting(fieldId)}
           />
+            </div>
+            <Journal code={code} revision={game.revision} />
+          </div>
         }
         right={
           <div className="flex flex-col gap-3">
