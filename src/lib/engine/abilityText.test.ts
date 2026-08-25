@@ -30,10 +30,15 @@ describe("what an item gives, and when", () => {
     for (const fact of rumak.facts) expect(fact.when).toBe("w walce, gdy założony");
   });
 
-  it("keeps carrying capacity on all the time, worn or not", () => {
+  it("says carrying capacity is added to the four, not a cap of its own", () => {
+    // carryLimit adds: base four plus the Koń's eight is twelve. "Do 8" said
+    // the opposite, and the card agrees with the engine — lose the horse and
+    // you leave whatever you cannot carry yourself.
     const kon = itemProfile("kon", "slotowy");
-    expect(kon.facts[0].what).toContain("8 Przedmiotów");
+    expect(kon.facts[0].what).toBe("+8 Przedmiotów ponad limit (5.4)");
     expect(kon.facts[0].when).toBe("gdy założony");
+    // The Muł takes the few-form, which Polish spells differently.
+    expect(itemProfile("mul").facts[0].what).toBe("+4 Przedmioty ponad limit (5.4)");
   });
 
   it("has nothing to say about a card with no formalised rules", () => {

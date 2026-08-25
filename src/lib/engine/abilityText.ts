@@ -8,6 +8,14 @@ import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
+/** Polish counts three ways, and cards deal in small numbers. */
+function plural(n: number, one: string, few: string, many: string): string {
+  if (n === 1) return one;
+  const last = n % 10;
+  const tens = n % 100;
+  return last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14) ? few : many;
+}
+
 function fieldName(fieldId: FieldId): string {
   return FIELDS.get(fieldId)?.name ?? fieldId;
 }
@@ -224,10 +232,15 @@ export function describeAbility(ability: Ability): string {
     }
     case "ucieczka":
       return `ucieczka przed Wrogiem: ${fieldNames(ability.fields)}`;
-    case "udzwig":
-      return ability.items === "bez-limitu"
-        ? "niesiesz bez ograniczeń (5.4)"
-        : `niesiesz do ${ability.items} Przedmiotów (5.4)`;
+    case "udzwig": {
+      if (ability.items === "bez-limitu") return "niesiesz bez ograniczeń (5.4)";
+      // Added to the four of 5.4, not a cap replacing them — which is what
+      // carryLimit does, and what the card says: the Koń carries eight of your
+      // Przedmioty, and losing it makes you leave whatever you cannot carry
+      // yourself. "Do 8" said the opposite of both.
+      const many = ability.items;
+      return `+${many} ${plural(many, "Przedmiot", "Przedmioty", "Przedmiotów")} ponad limit (5.4)`;
+    }
     case "ruch-bonus":
       return ability.min === ability.max
         ? `+${ability.min} do ruchu`
