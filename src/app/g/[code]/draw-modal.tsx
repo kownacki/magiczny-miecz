@@ -643,7 +643,7 @@ export function DrawModal({
  * looked at twice: a thing has happened to you and here is what you can do.
  */
 /**
- * Asking for the moment before the dice, and the fifteen seconds it buys.
+ * Asking for the moment before the dice, and the half-minute it buys.
  *
  * The race is the button, not the casting. Everybody at the table sees the same
  * one and it is live for anybody holding something they could speak (17.3,
@@ -711,7 +711,7 @@ function SpellFloorControl({
             onClick={onClaim}
             title={
               canClaim
-                ? "Zgłoś się przed rzutem kostką (17.3) — dostaniesz 15 sekund"
+                ? "Zgłoś się przed rzutem kostką (17.3) — dostaniesz 30 sekund"
                 : "Nie masz Zaklęcia, które można teraz rzucić"
             }
             className="rounded border border-magia/60 bg-magia/10 px-2 py-1 text-[11px] text-ink transition hover:bg-magia/20 disabled:opacity-40"
@@ -719,7 +719,7 @@ function SpellFloorControl({
             Chcę rzucić Zaklęcie
           </button>
           <p className="mt-1 text-[10px] text-muted">
-            Kto pierwszy się zgłosi, ten rzuca — 15 sekund, potem kostki idą
+            Kto pierwszy się zgłosi, ten rzuca — 30 sekund, potem kostki idą
             dalej.
           </p>
         </>

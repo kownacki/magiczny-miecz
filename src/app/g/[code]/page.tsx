@@ -947,7 +947,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
              * Everywhere else a Zaklęcie is confirmed before it leaves the
              * hand, because 9.6 spends the card whatever comes of it. Here the
              * confirming already happened: asking for the floor is the
-             * declaration, and it cost the fifteen seconds. Asking again ran
+             * declaration, and it cost the half-minute. Asking again ran
              * the clock out inside the dialog — you claimed, read the question,
              * pressed yes, and were told to claim first.
              */

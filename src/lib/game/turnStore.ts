@@ -744,13 +744,13 @@ export async function shopStock(
 /**
  * How long a claim on the moment before the dice lasts.
  *
- * Fifteen seconds is a house rule — the rulebook has no clock anywhere, only
+ * Thirty seconds is a house rule — the rulebook has no clock anywhere, only
  * "before the roll" (17.3) — and it exists to stop a fight hanging on somebody
  * who has gone to make tea. It is not meant to be a test of reflexes: the race
- * is the *claim*, which is one button, and the fifteen seconds are for choosing
- * a card once the floor is already yours.
+ * is the *claim*, which is one button, and the time after it is for reading a
+ * hand of three and picking one, with the whole table waiting.
  */
-const FLOOR_MS = 15_000;
+const FLOOR_MS = 30_000;
 
 /** The claim on this fight, or null when nobody holds it or the last one lapsed. */
 function floorOf(fight: { caster?: SpellFloor | null }, now = Date.now()): SpellFloor | null {
@@ -815,7 +815,7 @@ export async function claimSpellFloor(gameId: string, seatId: string): Promise<v
  * Gives the floor back without using it.
  *
  * Reaching for a card and thinking better of it is a move somebody makes at a
- * table, and holding everybody up for the rest of the fifteen seconds after
+ * table, and holding everybody up for the rest of the half-minute after
  * deciding is not.
  */
 export async function releaseSpellFloor(gameId: string, seatId: string): Promise<void> {
