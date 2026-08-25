@@ -136,6 +136,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           // itself (5.2): what somebody has on is exactly what you look at
           // before deciding whether to attack them.
           slot: (holding.slot ?? null) as Slot | null,
+          // Public, and deliberately so: a card conjured for a test is the one
+          // thing at this table that is not part of the game, and hiding that
+          // from the other players would be the wrong secret to keep.
+          granted: holding.granted,
         }));
 
       // Concealment is applied HERE, on the server, and not by hiding things in

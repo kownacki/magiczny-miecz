@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
-import { ItemSlot, SLOT_WIDTH, type SlotTone } from "./item-slot";
+import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
 import type { TileCard } from "./card-tile";
 
 /**
@@ -24,11 +24,15 @@ import type { TileCard } from "./card-tile";
  * Only in the slotted variant. In klasyczny play there is no body to lay out:
  * the rulebook has one kind of possession and one limit (5.4).
  */
-export interface SlotItem {
-  holdingId: string;
-  cardId: string;
-  card: TileCard;
-}
+/**
+ * What is in a place on the body.
+ *
+ * The same shape the pack's places take, and deliberately the same: a card
+ * worn and a card carried are one object to a player, and two structurally
+ * identical types would have drifted the first time either gained a field —
+ * which is exactly what happened when the test mark was added.
+ */
+export type SlotItem = SlotOccupant;
 
 /**
  * Where each place sits, as a body.

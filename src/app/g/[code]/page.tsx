@@ -90,6 +90,8 @@ interface Held {
   cardId: CardId;
   kind: "spell" | "item" | "friend" | "trophy";
   face: "open" | "hidden";
+  /** Conjured by the test shortcut — marked on the card, not just in the journal. */
+  granted?: boolean;
 }
 
 interface Seat {
@@ -951,7 +953,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               mine
                 ? mine.holdings
                     .filter((held) => held.kind === "spell" && isSpellId(held.cardId))
-                    .map((held) => ({ holdingId: held.id, cardId: held.cardId as SpellId }))
+                    .map((held) => ({
+                      holdingId: held.id,
+                      cardId: held.cardId as SpellId,
+                      granted: held.granted,
+                    }))
                 : []
             }
             moment={now}
@@ -1463,7 +1469,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       // Zaklęcia, and `isSpellId` is what turns that claim into
                       // a card the spell hand can actually look up.
                       .filter((held) => held.kind === "spell" && isSpellId(held.cardId))
-                      .map((held) => ({ holdingId: held.id, cardId: held.cardId as SpellId }))}
+                      .map((held) => ({
+                      holdingId: held.id,
+                      cardId: held.cardId as SpellId,
+                      granted: held.granted,
+                    }))}
                     moment={now}
                     opponents={others.map((seat) => ({
                       seatIndex: seat.seat_index,
@@ -1962,7 +1972,12 @@ function Hand({
             // The same component the body is built from: a card in the pack and
             // a card being worn are the same object to a player, so picking one
             // up feels the same either way and both are the same size.
-            item={{ holdingId: held.id, cardId: held.cardId, card: tileFor(held) }}
+            item={{
+              holdingId: held.id,
+              cardId: held.cardId,
+              card: tileFor(held),
+              granted: held.granted,
+            }}
             label={tileFor(held).name}
             eqMode={slotted ? "slotowy" : "klasyczny"}
             nature={asNature(seat.nature)}
@@ -2254,7 +2269,12 @@ function wornBySlot(seat: Seat): Partial<Record<Slot, SlotItem>> {
   const worn: Partial<Record<Slot, SlotItem>> = {};
   for (const held of seat.holdings) {
     if (!held.slot) continue;
-    worn[held.slot] = { holdingId: held.id, cardId: held.cardId, card: tileFor(held) };
+    worn[held.slot] = {
+      holdingId: held.id,
+      cardId: held.cardId,
+      card: tileFor(held),
+      granted: held.granted,
+    };
   }
   return worn;
 }

@@ -51,6 +51,8 @@ export interface Holding {
    * which is the only place anything is in klasyczny play.
    */
   slot?: Slot | null;
+  /** Conjured by the test shortcut: it belongs to no pile (see `db/schema.sql`). */
+  granted?: boolean;
 }
 
 export interface GameState {

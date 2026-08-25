@@ -54,6 +54,14 @@ export interface SlotOccupant {
   holdingId: string;
   cardId: string;
   card: TileCard;
+  /**
+   * Conjured by the test shortcut rather than won.
+   *
+   * Carried on the card rather than passed to the place, because that is what
+   * it is true of: the same card is marked in the pack, on the paper doll and
+   * in the hand, and none of those has to be told.
+   */
+  granted?: boolean;
 }
 
 /** How the place should look, which is mostly about what a moving card would do. */
@@ -311,6 +319,23 @@ export function ItemSlot({
             )}
           </button>
 
+          {/* Marked because it is otherwise invisible: a conjured card looks
+              exactly like one somebody earned, and half an hour after setting a
+              scenario up nobody remembers which Graal was which. The journal
+              says so as it happens and then scrolls away; this stays on the
+              card.
+
+              Top-left, clear of the badge along the bottom and of whatever the
+              corner holds top-right. Red because it is the one thing on the
+              card that is not part of the game. */}
+          {item?.granted && !lifted && (
+            <span
+              title="Karta z trybu testowego — nie pochodzi z talii i nie wróci na stos"
+              className="pointer-events-none absolute left-0 top-0 rounded-br bg-night/85 px-1 text-[10px] leading-tight text-vermilion"
+            >
+              🔧
+            </span>
+          )}
           {badge && !lifted && (
             <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-night/85 px-1 text-center text-[9px] leading-tight text-ochre">
               {badge}

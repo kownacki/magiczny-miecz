@@ -19,6 +19,8 @@ const SPELL_BY_ID = new Map((spells as Spell[]).map((spell) => [spell.id, spell]
 export interface HeldSpell {
   holdingId: string;
   cardId: SpellId;
+  /** Conjured by the test shortcut, and marked on the card like any other. */
+  granted?: boolean;
 }
 
 /**
@@ -165,6 +167,7 @@ export function SpellHand({
                 holdingId: entry.holdingId,
                 cardId: entry.cardId,
                 card: { cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" },
+                granted: entry.granted,
               }}
               label={name}
               tone="filled"
