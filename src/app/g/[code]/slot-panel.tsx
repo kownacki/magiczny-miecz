@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
 import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
+import { ItemSlot, SLOT_WIDTH, type SlotTone } from "./item-slot";
 import type { TileCard } from "./card-tile";
 
 /**
@@ -125,16 +124,13 @@ export function SlotPanel({
   const [over, setOver] = useState<Slot | null>(null);
 
   return (
-    // Twice the size it started at. At 44 pixels a Hełm was a brown smudge and
-    // the empty places were indistinguishable from one another, which is the
-    // one thing a paper doll is for.
     <div
       className="grid shrink-0 gap-1.5"
-      // Shaped like what goes in them. The illustration cut off a card is 370
-      // by 323 — a shade wider than tall — so a square place either letterboxed
-      // the picture or cropped it, and every card in the box has the same
-      // proportions.
-      style={{ gridTemplateColumns: "repeat(3, 96px)", gridAutoRows: "84px" }}
+      // One width for every place, and the same one the pack uses: a card is
+      // the same object wherever it sits, so it is the same size wherever it
+      // sits. Rows size themselves, because the name under the picture is part
+      // of the place now.
+      style={{ gridTemplateColumns: `repeat(3, ${SLOT_WIDTH}px)` }}
     >
       {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
         const item = worn[slot];
@@ -146,170 +142,83 @@ export function SlotPanel({
         // button and the browser never called it a double-click at all. A ghost
         // says the same thing and stays put.
         const lifted = item !== undefined && item.holdingId === liftedHoldingId;
-        return (
-          <div
-            key={slot}
-            style={{ gridArea: LAYOUT[slot] }}
-            onDragOver={(event) => {
-              if (!canAct) return;
-              event.preventDefault();
-              setOver(slot);
-            }}
-            onDragLeave={() => setOver((current) => (current === slot ? null : current))}
-            // A carried card has no drag events behind it, so hovering has to
-            // be watched directly for the same answer to show.
-            onPointerEnter={() => carrying && setOver(slot)}
-            onPointerLeave={() => setOver((current) => (current === slot ? null : current))}
-            onDrop={(event) => {
-              setOver(null);
-              if (!canAct) return;
-              const holdingId = event.dataTransfer.getData(DRAG_TYPE);
-              if (!holdingId) return;
-              event.preventDefault();
-              onDropInto(holdingId, slot);
-            }}
-            className={`group relative overflow-hidden rounded border transition ${
-              over === slot && movingCardId
-                ? // Green if it would go here, red if it would not. Said while
-                  // the card is still in the air, rather than as a refusal
-                  // after the fact.
-                  fitsIn(movingCardId, slot)
-                  ? "border-verdigris bg-verdigris/25"
-                  : "border-vermilion bg-vermilion/25"
-                : movingCardId && fitsIn(movingCardId, slot)
-                  ? // Somewhere it could go, marked faintly while it is moving.
-                    "border-verdigris/50 bg-verdigris/5"
-                  : item
-                    ? "border-ochre/60 bg-raised"
-                    : "border-dashed border-edge/70 bg-night/40"
-            }`}
-            title={item && !lifted ? undefined : SLOT_LABEL[slot]}
-          >
-            {item ? (
-              <WornCard
-                item={item}
-                canAct={canAct}
-                lifted={lifted}
-                onDragging={onDragging}
-                // While something is on the cursor, a click puts it down —
-                // including onto the place it was lifted from, which is how you
-                // change your mind. Otherwise a click picks this one up, and
-                // two take it straight off.
-                onPickUp={() => (carrying ? onDropInto("", slot) : onPickUp(item, slot))}
-                onTakeOff={() => onTakeOff(item.holdingId)}
-              />
-            ) : (
-              <button
-                type="button"
-                disabled={!canAct || !carrying}
-                onClick={(event) => {
-                  // Kept from the window, which is listening for a click
-                  // anywhere else in order to put the card back.
-                  event.stopPropagation();
-                  onDropInto("", slot);
-                }}
-                title={SLOT_LABEL[slot]}
-                className="flex h-full w-full items-center justify-center text-[26px] text-muted/30 disabled:cursor-default"
-              >
-                {GLYPH[slot]}
-              </button>
-            )}
+        const tone: SlotTone =
+          over === slot && movingCardId
+            ? fitsIn(movingCardId, slot)
+              ? "accepts"
+              : "rejects"
+            : movingCardId && fitsIn(movingCardId, slot)
+              ? "candidate"
+              : item
+                ? "filled"
+                : "empty";
 
-            {/* Taking it off is a corner, not a row of its own: nine places
-                each with a button underneath is a form, and this is a paper
-                doll. Dragging it to the pack does the same thing. */}
-            {item && canAct && (
-              <button
-                type="button"
-                onClick={() => onTakeOff(item.holdingId)}
-                disabled={busy}
-                title="Zdejmij"
-                className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 text-[13px] leading-tight text-muted transition hover:text-vermilion disabled:opacity-40"
-              >
-                ×
-              </button>
-            )}
+        return (
+          <div key={slot} style={{ gridArea: LAYOUT[slot] }}>
+            <ItemSlot
+              item={item ?? null}
+              // The place says what it is for while it is empty, and what is in
+              // it once it is filled.
+              label={item ? item.card.name : SLOT_LABEL[slot]}
+              glyph={GLYPH[slot]}
+              tone={tone}
+              lifted={lifted}
+              draggable={canAct && item !== undefined}
+              disabled={!canAct || (item === undefined && !carrying)}
+              // One rule for both halves of the panel: a click puts down what
+              // is on the cursor, or picks up what is here. Dragging is the
+              // same journey with the button held, and neither is a special
+              // case of the other.
+              onClick={(event) => {
+                event.stopPropagation();
+                if (carrying) return onDropInto("", slot);
+                if (item) onPickUp(item, slot);
+              }}
+              onDoubleClick={item ? () => onTakeOff(item.holdingId) : undefined}
+              onDragStart={(event) => {
+                if (!item) return;
+                onDragging(item.cardId);
+                startHoldingDrag(event, item.holdingId);
+              }}
+              onDragEnd={() => onDragging(null)}
+              onDragOver={(event) => {
+                if (!canAct) return;
+                event.preventDefault();
+                setOver(slot);
+              }}
+              onDragLeave={() => setOver((current) => (current === slot ? null : current))}
+              onDrop={(event) => {
+                setOver(null);
+                if (!canAct) return;
+                const holdingId = event.dataTransfer.getData(DRAG_TYPE);
+                if (!holdingId) return;
+                event.preventDefault();
+                onDropInto(holdingId, slot);
+              }}
+              // A carried card has no drag events behind it, so hovering has to
+              // be watched directly for the same answer to show.
+              onPointerEnter={() => carrying && setOver(slot)}
+              onPointerLeave={() => setOver((current) => (current === slot ? null : current))}
+              corner={
+                // Taking it off is a corner, not a row of its own: nine places
+                // each with a button underneath is a form, and this is a paper
+                // doll. Dragging it to the pack does the same thing.
+                item && canAct ? (
+                  <button
+                    type="button"
+                    onClick={() => onTakeOff(item.holdingId)}
+                    disabled={busy}
+                    title="Zdejmij"
+                    className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 text-[13px] leading-tight text-muted transition hover:text-vermilion disabled:opacity-40"
+                  >
+                    ×
+                  </button>
+                ) : null
+              }
+            />
           </div>
         );
       })}
     </div>
-  );
-}
-
-/**
- * One worn card: its illustration, draggable, with the whole card on hover.
- *
- * The hover card escapes its box on purpose. Scaling a card to fit inside an
- * 84-pixel square would give back exactly the unreadable thing the illustration
- * was cut out to replace.
- */
-function WornCard({
-  item,
-  canAct,
-  lifted,
-  onDragging,
-  onPickUp,
-  onTakeOff,
-}: {
-  item: SlotItem;
-  canAct: boolean;
-  /** It is on the cursor; this is the hollow it left. */
-  lifted: boolean;
-  onDragging: (cardId: string | null) => void;
-  onPickUp: () => void;
-  onTakeOff: () => void;
-}) {
-  const art = cardArtUrl(item.cardId);
-  const full = cardImageUrl(item.cardId);
-
-  return (
-    <>
-      <button
-        type="button"
-        draggable={canAct}
-        onDragStart={(event) => {
-          onDragging(item.cardId);
-          startHoldingDrag(event, item.holdingId);
-        }}
-        onDragEnd={() => onDragging(null)}
-        onClick={(event) => {
-          event.stopPropagation();
-          onPickUp();
-        }}
-        onDoubleClick={onTakeOff}
-        title={item.card.name}
-        className={`block h-full w-full cursor-grab active:cursor-grabbing ${
-          lifted ? "opacity-25" : ""
-        }`}
-      >
-        {art ? (
-          <Image
-            src={art}
-            alt={item.card.name}
-            width={110}
-            height={96}
-            className="h-full w-full object-cover"
-            unoptimized
-          />
-        ) : (
-          <span className="flex h-full items-center justify-center p-1 text-center text-[11px] leading-tight text-ink">
-            {item.card.name}
-          </span>
-        )}
-      </button>
-
-      {full && !lifted && (
-        <span className="pointer-events-none absolute bottom-full left-1/2 z-40 mb-1 hidden -translate-x-1/2 group-hover:block">
-          <Image
-            src={full}
-            alt={item.card.name}
-            width={200}
-            height={333}
-            className="max-w-none rounded border border-ochre shadow-[0_4px_24px_rgba(0,0,0,0.85)]"
-            unoptimized
-          />
-        </span>
-      )}
-    </>
   );
 }

@@ -25,9 +25,10 @@ import { TurnPanel } from "./turn-panel";
 import { CardView, type ShownCard } from "./card-view";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
-import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
+import { CardBack, CardDetail, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
 import { DRAG_TYPE, SlotPanel, startHoldingDrag, type SlotItem } from "./slot-panel";
+import { ItemSlot } from "./item-slot";
 import { CarriedCard, type Carried } from "./carry";
 import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carryLimit } from "@/lib/engine/derive";
@@ -41,6 +42,7 @@ import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import type { EventCard, Item, Spell } from "@/data/types";
+import { FieldModal } from "./field-modal";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
@@ -113,8 +115,10 @@ interface Seat {
 }
 
 interface FieldCard {
-  fieldId: string;
-  cardId: string;
+  /** The row, because a field can hold two of the same Przedmiot. */
+  id: string;
+  fieldId: FieldId;
+  cardId: CardId;
 }
 
 interface Game {
@@ -568,6 +572,30 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {inspectingCard && (
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
+      {/* Tapping a field opens it, rather than filling in a panel off to the
+          side where nobody looked. */}
+      {inspecting && (
+        <FieldModal
+          fieldId={inspecting}
+          cards={fieldCards
+            .filter((card) => card.fieldId === inspecting)
+            .map((card) => ({ id: card.id, cardId: card.cardId }))}
+          standingHere={mySeat?.field_id === inspecting}
+          canAct={mySeat?.seat_index === game?.active_seat}
+          busy={busy}
+          onTake={(fieldCardId) =>
+            post("holdings", { action: "take-field", fieldCardId })
+          }
+          onInspect={(cardId) =>
+            setInspectingCard({
+              cardId,
+              name: CARD_NAMES.get(cardId) ?? cardId,
+              text: CARD_TEXTS.get(cardId),
+            })
+          }
+          onClose={() => setInspecting(null)}
+        />
+      )}
       {libraryOpen && <CardLibrary onClose={() => setLibraryOpen(false)} />}
     </>
   );
@@ -733,9 +761,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               eliminated: seat.eliminated,
             }))}
             activeSeatIndex={game.active_seat}
-            cardsOnFields={fieldCards.reduce<Record<string, number>>((count, card) => {
-              count[card.fieldId] = (count[card.fieldId] ?? 0) + 1;
-              return count;
+            cardsOnFields={fieldCards.reduce<
+              Partial<Record<FieldId, { id: string; cardId: CardId }[]>>
+            >((byField, card) => {
+              (byField[card.fieldId] ??= []).push({ id: card.id, cardId: card.cardId });
+              return byField;
             }, {})}
             highlight={
               game.turn_state.phase === "ruch"
@@ -787,9 +817,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               </p>
             )}
 
-            {inspecting && (
-              <FieldNote fieldId={inspecting} pinned onClear={() => setInspecting(null)} />
-            )}
 
             {active && (
               <TurnPanel
@@ -1094,12 +1121,19 @@ function Hand({
           // What is being worn is on the body above, not in the pack twice.
           .filter((held) => !slotted || held.slot == null)
           .map((held) => (
-          <CardTile
+          <ItemSlot
             key={held.id}
-            card={tileFor(held)}
+            // The same component the body is built from: a card in the pack and
+            // a card being worn are the same object to a player, so picking one
+            // up feels the same either way and both are the same size.
+            item={{ holdingId: held.id, cardId: held.cardId, card: tileFor(held) }}
+            label={tileFor(held).name}
+            tone="filled"
             badge={held.kind === "trophy" ? "trofeum" : undefined}
             // The one on the cursor is not also in the pack.
-            dimmed={held.kind === "trophy" || held.id === carried?.holdingId}
+            lifted={held.id === carried?.holdingId}
+            dimmed={held.kind === "trophy"}
+            disabled={!canAct && !slotted}
             // One click picks it up, or puts down whatever is already on the
             // cursor. Two put it straight on. With no variant running there is
             // nowhere to put anything, so a click just reads the card.
@@ -1152,7 +1186,7 @@ function Hand({
                 </button>
               </span>
             )}
-          </CardTile>
+          </ItemSlot>
           ))}
         {Number.isFinite(limit) &&
           Array.from({ length: Math.max(0, limit - packed) }, (_, i) => (
@@ -1628,46 +1662,6 @@ function Stat({
   );
 }
 
-/**
- * What the field under the pointer says.
- *
- * The map can only ever show a field's name, and half the board's rules are
- * printed on the fields themselves — so tapping one has to produce the text, or
- * the map would send players back to squinting at the physical board for
- * something the app already knows.
- */
-function FieldNote({
-  fieldId,
-  pinned,
-  onClear,
-}: {
-  fieldId: FieldId | null;
-  pinned: boolean;
-  onClear: () => void;
-}) {
-  const field = fieldId ? fieldWithText(fieldId) : null;
-  if (!field) return null;
-  return (
-    <div className="w-full rounded-lg border border-edge/60 bg-panel/50 p-4 lg:max-w-xs">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg text-ochre">{field.name}</h3>
-        {pinned && (
-          <button onClick={onClear} className="text-[11px] text-muted hover:text-ink">
-            wróć do pola gracza
-          </button>
-        )}
-      </div>
-      {field.draw ? (
-        <p className="mb-2 text-[11px] uppercase tracking-wide text-verdigris">
-          Wyciągnij {field.draw} {field.draw === 1 ? "kartę" : "karty"}
-        </p>
-      ) : null}
-      <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
-        {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
-      </p>
-    </div>
-  );
-}
 
 /**
  * A one-line account of something the app worked out on its own.
