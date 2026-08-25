@@ -104,9 +104,19 @@ suite("naming a card, a field or a creature", () => {
 
 suite("the rest of the vocabulary", () => {
   it("settles a fight three ways", () => {
-    expect(ok("win")).toEqual({ kind: "settle", outcome: "wygrana" });
-    expect(ok("lose")).toEqual({ kind: "settle", outcome: "przegrana" });
-    expect(ok("draw")).toEqual({ kind: "settle", outcome: "remis" });
+    expect(ok("winfight")).toEqual({ kind: "settle", outcome: "wygrana" });
+    expect(ok("losefight")).toEqual({ kind: "settle", outcome: "przegrana" });
+    expect(ok("drawfight")).toEqual({ kind: "settle", outcome: "remis" });
+  });
+
+  it("ends the game, which is a different thing from ending a fight", () => {
+    expect(ok("wingame")).toEqual({ kind: "endgame", won: true });
+    expect(ok("losegame")).toEqual({ kind: "endgame", won: false });
+  });
+
+  it("has no bare win or lose to be ambiguous with", () => {
+    expect(err("win")).toMatch(/No command/);
+    expect(err("lose")).toMatch(/No command/);
   });
 
   it("kills, draws and ends things", () => {

@@ -3736,6 +3736,46 @@ export async function runCommand(
           : `Lost to ${fight.cardName}.`;
     }
 
+    case "endgame": {
+      /**
+       * The end of the whole thing, which in this box has only one door.
+       *
+       * "CEL GRY" makes beating the Bestia the win and there is no other, so
+       * winning is that: the game finished, the turn over, and the victory in
+       * the journal — the state `fightBeast` leaves behind, without walking the
+       * Kamienny Most to get there.
+       *
+       * Losing is not its mirror, because the rulebook has no losing condition.
+       * What it has is 14.7 — the Bestia takes two points of Życie from
+       * whoever loses to it, and 4.4 does the rest if that was the last of
+       * them. So `losegame` loses to the Bestia rather than inventing a defeat
+       * the game does not have.
+       */
+      const seat = seatOf(null);
+      const game = await loadGame(gameId);
+      if (command.won) {
+        await db
+          .from("games")
+          .update({ status: "finished", turn_state: { phase: "koniec" } })
+          .eq("id", gameId);
+        await journal(gameId, seat.id, game.turn, "zwyciestwo", {
+          kind: "zwykla",
+          beastTotal: 0,
+        });
+        await bumpRevision(gameId);
+        return `${named(seat)} beats the Bestia. Game over.`;
+      }
+      await journal(gameId, seat.id, game.turn, "bestia-porazka", {
+        kind: "zwykla",
+        beastTotal: 0,
+      });
+      await adjust(gameId, seat.id, "zycie", -2, "tryb testowy");
+      const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
+      return after?.eliminated
+        ? `${named(seat)} loses to the Bestia and dies (14.7, 4.4).`
+        : `${named(seat)} loses to the Bestia — 2 Życia (14.7).`;
+    }
+
     case "endfight":
       await abandonFight(gameId);
       return "Fight dropped.";

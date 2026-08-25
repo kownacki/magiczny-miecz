@@ -44,6 +44,7 @@ export type Command =
   | { kind: "go"; fieldId: FieldId }
   | { kind: "fight"; cardId: string }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
+  | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
   | { kind: "endturn" }
   | { kind: "spell"; who: string | null };
@@ -72,10 +73,16 @@ export const COMMANDS: CommandSpec[] = [
   { name: "go", aliases: ["move"], usage: "go Karczma", summary: "stand on an Obszar" },
   { name: "fight", aliases: [], usage: "fight WILKOŁAK", summary: "pick a fight with a Wróg" },
   {
-    name: "win",
-    aliases: ["lose", "draw"],
-    usage: "win",
-    summary: "settle the fight you are in — also lose, draw",
+    name: "winfight",
+    aliases: ["losefight", "drawfight"],
+    usage: "winfight",
+    summary: "settle the fight you are in — also losefight, drawfight",
+  },
+  {
+    name: "wingame",
+    aliases: ["losegame"],
+    usage: "wingame",
+    summary: "beat the Bestia and end the game — losegame loses to it (14.7)",
   },
   { name: "endfight", aliases: [], usage: "endfight", summary: "drop the fight without settling it" },
   { name: "endturn", aliases: ["pass"], usage: "endturn", summary: "hand the turn on" },
@@ -118,9 +125,13 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
 
   if (word === "kill") return { ok: { kind: "kill", who: tail || null } };
   if (word === "spell") return { ok: { kind: "spell", who: tail || null } };
-  if (word === "win") return { ok: { kind: "settle", outcome: "wygrana" } };
-  if (word === "lose") return { ok: { kind: "settle", outcome: "przegrana" } };
-  if (word === "draw") return { ok: { kind: "settle", outcome: "remis" } };
+  // Spelled out, because `win` alone is two different things: the fight in
+  // front of you, and the game.
+  if (word === "winfight") return { ok: { kind: "settle", outcome: "wygrana" } };
+  if (word === "losefight") return { ok: { kind: "settle", outcome: "przegrana" } };
+  if (word === "drawfight") return { ok: { kind: "settle", outcome: "remis" } };
+  if (word === "wingame") return { ok: { kind: "endgame", won: true } };
+  if (word === "losegame") return { ok: { kind: "endgame", won: false } };
   if (word === "endfight") return { ok: { kind: "endfight" } };
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
 

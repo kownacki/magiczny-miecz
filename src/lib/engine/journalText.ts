@@ -117,6 +117,12 @@ function fieldName(id: unknown): string {
   return known ? (FIELDS.get(known)?.name ?? id) : id;
 }
 
+/** " (10)", or nothing at all when no die was thrown for it. */
+function strength(data: Record<string, unknown>): string {
+  const total = data.beastTotal;
+  return typeof total === "number" && total > 0 ? ` (${total})` : "";
+}
+
 function num(value: unknown, fallback = 0): number {
   return typeof value === "number" ? value : fallback;
 }
@@ -442,12 +448,20 @@ export function describe(
     }
 
     // — the end ——————————————————————————————————————————————————————
+    /**
+     * The Bestia's strength in brackets, when there was one.
+     *
+     * 14.7 rolls for it, so in a played game there always is — but an ending
+     * arrived at without walking the Most has nothing to put there, and
+     * "pokonuje Bestię (0)" reads as a Bestia with no strength rather than as a
+     * number nobody threw.
+     */
     case "zwyciestwo":
-      return line(`${who} pokonuje Bestię (${num(data.beastTotal)}) i wygrywa grę.`);
+      return line(`${who} pokonuje Bestię${strength(data)} i wygrywa grę.`);
     case "bestia-porazka":
-      return line(`${who} przegrywa z Bestią (${num(data.beastTotal)}).`);
+      return line(`${who} przegrywa z Bestią${strength(data)}.`);
     case "bestia-remis":
-      return line(`${who} remisuje z Bestią (${num(data.beastTotal)}).`);
+      return line(`${who} remisuje z Bestią${strength(data)}.`);
 
     default:
       return null;
