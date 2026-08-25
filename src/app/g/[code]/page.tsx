@@ -106,6 +106,14 @@ interface Seat {
   /** The same, reckoned for a fight — 1.5's other figure. */
   miecz_walka: number;
   magia_walka: number;
+  /**
+   * What the character is under, already worked out into marks.
+   *
+   * The server folds the stored effects together with the four ad-hoc columns
+   * the turn engine reads, so the browser gets one list and never has to know
+   * there were two halves.
+   */
+  effects: { id: string; glyph: string; tone: "dobry" | "zly" | "obojetny"; title: string }[];
   zycie: number;
   zloto: number;
   nature: string | null;
@@ -1715,9 +1723,6 @@ function Hand({
             // with a gap rather than by tinting the card under the pointer,
             // which reads as "this one is about to be replaced".
             step={stepFor(index)}
-            // The square this card has vacated is the one the carried card is
-            // going into, so the empty place is drawn here.
-            landing={index === insertIndex}
             // Reading and moving are different modes: no Karta opens over the
             // place you are aiming at while a card is in the air.
             quiet={moving}
@@ -2157,9 +2162,28 @@ function SeatCard({
             </span>
           )}
         </h3>
-        {seat.turns_lost > 0 && (
-          <span className="text-[10px] uppercase text-vermilion">
-            traci {seat.turns_lost}
+        {/* What is true of this character right now, beside the name it is
+            true of. A mark is a reminder that something holds, not an
+            explanation — the hover carries the whole of it, including how long
+            it has left, which is the part a player is actually deciding
+            around. */}
+        {seat.effects.length > 0 && (
+          <span className="flex shrink-0 items-center gap-1">
+            {seat.effects.map((mark) => (
+              <span
+                key={mark.id}
+                title={mark.title}
+                className={`cursor-help text-[13px] leading-none ${
+                  mark.tone === "dobry"
+                    ? "text-verdigris"
+                    : mark.tone === "zly"
+                      ? "text-vermilion"
+                      : "text-muted"
+                }`}
+              >
+                {mark.glyph}
+              </span>
+            ))}
           </span>
         )}
       </header>

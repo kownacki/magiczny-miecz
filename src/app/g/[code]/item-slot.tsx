@@ -34,13 +34,14 @@ export const SLOT_ART_HEIGHT = Math.round(SLOT_WIDTH * (155 / 240));
 /**
  * How far a card steps aside to show where a carried one is going.
  *
- * Not a whole square. The empty place is drawn behind the card in the square it
- * is vacating, so what opens is a sliver of it — enough to see that there is a
- * place there and where it is, with the card that made room still overlapping
- * most of it. A whole square would be truer to the arithmetic and much worse to
- * look at: the row would fly apart to make a hole nothing is in yet.
+ * A quarter of one, and no more, because a card is clipped to its own square:
+ * whatever it slides is taken off the far edge of it. Enough to open a sliver
+ * of the place behind and to read as movement, little enough to leave the card
+ * recognisable and its name legible. A whole square would be truer to the
+ * arithmetic and impossible here anyway — the pack wraps, and the card at the
+ * end of a row has no square beside it to move into.
  */
-const STEP_ASIDE = Math.round(SLOT_WIDTH * 0.45);
+const STEP_ASIDE = Math.round(SLOT_WIDTH * 0.28);
 
 export interface SlotOccupant {
   holdingId: string;
@@ -98,7 +99,6 @@ export function ItemSlot({
   nature = null,
   quiet = false,
   step = 0,
-  landing = false,
 }: {
   /** What is here, or null for an empty place. */
   item: SlotOccupant | null;
@@ -150,8 +150,6 @@ export function ItemSlot({
   quiet?: boolean;
   /** Which way this card has stepped aside to show where a carried one lands. */
   step?: -1 | 0 | 1;
-  /** The carried card would land in this square, which this one has vacated. */
-  landing?: boolean;
 }) {
   // The hover is suppressed while the card is on the cursor: what is under the
   // pointer then is a hollow, and describing it as though it still held
@@ -198,13 +196,20 @@ export function ItemSlot({
       onPointerLeave={onPointerLeave}
       {...handlers}
       style={{ width: SLOT_WIDTH }}
-      className="relative shrink-0"
+      // Clipped to itself, so a card that has stepped aside cannot be seen
+      // outside the square it belongs to. Otherwise the picture and the place
+      // disagree by however far it stepped, and you can point straight at a
+      // card while aiming at the square next door — which is what a row of
+      // stepped cards looked like: every picture forty pixels away from the
+      // square it answers for.
+      className="relative shrink-0 overflow-hidden"
     >
-      {/* The place a carried card is going into, drawn behind whatever is in
-          this square — so the sliver the card uncovers by stepping aside is the
-          part you see. A gap with nothing in it says the row has moved; a gap
-          with the edge of an empty place in it says what the row moved *for*. */}
-      {landing && (
+      {/* The place, drawn behind whatever is in this square — so the sliver a
+          card uncovers by sliding aside is the part you see. Behind every card
+          that has moved, not only the one being aimed at: they are all sliding
+          along the same opening, and the one that matters is the one under the
+          pointer, which needs no extra marking to be found. */}
+      {step !== 0 && (
         <span
           aria-hidden
           style={{ width: SLOT_WIDTH, height: SLOT_ART_HEIGHT }}
