@@ -34,6 +34,16 @@ export function TestConsole({
   onRun: (line: string) => Promise<string>;
 }) {
   const [line, setLine] = useState("");
+  /**
+   * Whether the log is given most of the window, the way the Dziennik's
+   * `rozwiń` gives it the board.
+   *
+   * A dozen commands is already more than a sliver holds, and one long answer —
+   * `help`, an ambiguous Tab listing twenty cards — is enough to push the top of
+   * itself out of sight on a short window. Nothing here needs the game visible
+   * while it is being read: `zwiń` is one click and the game has not moved.
+   */
+  const [big, setBig] = useState(false);
   const [log, setLog] = useState<{ said: string; mine: boolean }[]>([]);
   /** What has been typed before, newest last, for the up arrow. */
   const past = useRef<string[]>([]);
@@ -65,7 +75,7 @@ export function TestConsole({
       ? box.scrollTop + last.getBoundingClientRect().top - box.getBoundingClientRect().top
       : box.scrollHeight;
     box.scrollTo({ top });
-  }, [log, open]);
+  }, [log, open, big]);
 
   if (!open) return null;
 
@@ -101,17 +111,30 @@ export function TestConsole({
           <p className="text-[10px] uppercase tracking-widest text-vermilion">
             tryb testowy — konsola
           </p>
-          <button
-            onClick={onClose}
-            className="text-[11px] text-muted underline transition hover:text-ink"
-          >
-            zamknij (Esc)
-          </button>
+          <div className="flex items-baseline gap-3">
+            <button
+              onClick={() => setBig((was) => !was)}
+              aria-expanded={big}
+              className="text-[11px] text-ochre/80 transition hover:text-ochre"
+            >
+              {big ? "zwiń" : "rozwiń"}
+            </button>
+            <button
+              onClick={onClose}
+              className="text-[11px] text-muted underline transition hover:text-ink"
+            >
+              zamknij (Esc)
+            </button>
+          </div>
         </div>
 
         <div
           ref={tail}
-          className="tnum max-h-72 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed"
+          className={`tnum overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed ${
+            // A share of the window rather than a number of lines, because what
+            // has to fit is an answer whose length nobody knows in advance.
+            big ? "h-[70vh]" : "max-h-72"
+          }`}
         >
           {log.length === 0 ? (
             <p className="text-muted">

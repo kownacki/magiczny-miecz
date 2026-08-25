@@ -73,7 +73,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "gold",
     aliases: ["sword", "magic", "life"],
     usage: "gold +5 [player]",
-    summary: "move a parameter — gold, sword, magic, life — by a signed amount",
+    summary: "move a parameter by a signed amount",
   },
   { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
   { name: "give", aliases: ["card"], usage: "give MAGICZNY MIECZ", summary: "put a card in a hand" },
@@ -81,7 +81,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "place",
     aliases: ["put", "drop"],
     usage: "place MIECZ at Karczma",
-    summary: "leave a card lying on an Obszar — the one you stand on, unless you say",
+    summary: "leave a card lying on an Obszar — yours, unless you name one",
   },
   { name: "go", aliases: ["move"], usage: "go Karczma", summary: "stand on an Obszar" },
   { name: "fight", aliases: [], usage: "fight WILKOŁAK", summary: "pick a fight with a Wróg" },
@@ -95,7 +95,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "wingame",
     aliases: ["losegame"],
     usage: "wingame",
-    summary: "beat the Bestia and end the game — losegame loses to it (14.7)",
+    summary: "end the game on the Bestia — losing to it costs 2 Życia (14.7)",
   },
   { name: "endfight", aliases: [], usage: "endfight", summary: "drop the fight without settling it" },
   { name: "endturn", aliases: ["pass"], usage: "endturn", summary: "hand the turn on" },
@@ -327,10 +327,21 @@ export function complete(
   return { line: joined(shared), options: hits };
 }
 
-/** The list `help` prints, one command to a line. */
+/**
+ * The list `help` prints, one command to a line.
+ *
+ * Every word that can be typed starts its own line, `place|put|drop`, rather
+ * than trailing the summary as "(also put, drop)". Somebody reading this is
+ * looking for the word to type, and the alternatives were both the furthest
+ * thing from where the eye goes and the reason the lines were long enough to
+ * wrap — which on a narrow window is what made a list of twelve look like a
+ * list of seven.
+ */
 export function helpLines(): string[] {
-  return COMMANDS.map((spec) => {
-    const also = spec.aliases.length > 0 ? `  (also ${spec.aliases.join(", ")})` : "";
-    return `${spec.usage.padEnd(24)} ${spec.summary}${also}`;
-  });
+  const words = (spec: CommandSpec) => [spec.name, ...spec.aliases].join("|");
+  /** The usage line without its verb, which the words have just replaced. */
+  const args = (spec: CommandSpec) => spec.usage.split(/\s+/).slice(1).join(" ");
+  const rows = COMMANDS.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
+  const widest = Math.max(...rows.map((row) => row.length));
+  return COMMANDS.map((spec, index) => `${rows[index].padEnd(widest)}  ${spec.summary}`);
 }
