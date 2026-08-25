@@ -220,27 +220,50 @@ Now the primary mode; companion is the opt-in.
 
 ## Open, found while playing
 
-- [ ] **The last 22 cards.** 116 of 138 distinct event cards are encoded. What
-      remains is individually irregular rather than merely unwritten, and the
-      app now says so on screen rather than staying quiet — see `coverage.ts`.
-      The recurring reasons: an enemy whose strength is its opponent's
-      (Sobowtór) or grows as it wins (Wampir); a creature with three heads that
-      regrow (Trójgłowy Smok); a consumable spent at a moment of the holder's
-      choosing (Eliksir Siły); targeting by Natura or by Krąg (Danina); cards
-      that reach other cards on the board (Kometa, Zwierciadło Zniszczenia).
-      Adding a variant per card would be worse than leaving these to their text.
+- [x] **The fields that trade now trade.** Nine establishments — the Osada's
+      Płatnerz and Medyk, the Gród's Wróżbita and Lichwiarz, the Karczma, the
+      Zamek's Medyk, the Pustelnik, the Magiczne Wrota, the Strażnik — are
+      encoded in `fieldScript.ts` and bought from through `buyGoods`,
+      `sellHolding` and `payHealer`. `shopStock` had been computed and sent to
+      every device since 21.2 went in with nothing rendering it. The Twierdza is
+      deliberately left as prose: its mission is an errand across the board, and
+      six blank die faces would claim help that is not there.
+- [x] **A defeated Wróg could be fought again, forever.** 17.4 ends the fight
+      when the dice are compared; nothing wrote that down, so the same Smok
+      could be ground until the dice went your way. Found by a bot playing whole
+      games through the API, which is also how the shape of a turn got measured.
+- [x] **The whole draw pile shipped to every client**, in order, on every poll.
+- [x] **Position had no manual override** — the value most likely to drift, and
+      the one everything else is computed from.
+- [ ] **17.9's spoils are still the players'.** The winner of a duel may take a
+      Życie, a Przedmiot or a Sztuka Złota; only the Życie is applied.
 
-      Five came off that list: the Wędrowiec (a roll that decides whether there
-      is a fight at all), Godzina Duchów (a roll table behind a Natura test),
-      the Kryształ Magów (a standing bargain — no Zaklęcia at all, immunity to
-      six of them), and the Przybysz z Krainy Cieni and Trójgłowy Smok, which
-      are ordinary fixtures with one clause each the fight machinery cannot
-      carry, so they keep the clause as a note.
+- [ ] **The last 16 cards.** 122 of 138 distinct event cards are encoded. What
+      remains is individually irregular rather than merely unwritten, and the
+      app says so on screen rather than staying quiet — see `coverage.ts`.
+      The recurring reasons: an enemy whose strength is its opponent's
+      (Sobowtór) or grows as it wins (Wampir); a consumable spent at a moment of
+      the holder's choosing (Eliksir Siły); cards that reach other cards on the
+      board (Kometa, Zwierciadło Zniszczenia); friends that impose an ongoing
+      restriction rather than a bonus (Południca's one field a turn, the Zły
+      Duch barring new friends until the Pustelnia).
+
+      Eleven have come off the list. Five earlier: the Wędrowiec, Godzina
+      Duchów, the Kryształ Magów, the Przybysz z Krainy Cieni and the Trójgłowy
+      Smok. Six more while playing: Danina, Zaklinacz Czasu, Kuglarz, Mędrzec,
+      Tajemnicza Szkatuła and the Alchemik — each of which needed the effect
+      vocabulary to grow by exactly one thing, and each time because the card is
+      shaped that way rather than to make one card fit. Targeting by Natura and
+      by Krąg, which used to be listed here as a reason a card could not be
+      encoded, is now `Target`.
 
       The recurring blocker among what is left is **a bonus that lasts one
-      turn**: the Eliksir Siły, the Najemnik and both fruits all want it and
-      nothing in the engine has it. That is one piece of vocabulary, not five
-      special cases, and it is the next thing worth building here.
+      turn**: the Eliksir Siły, the Najemnik, the Kryształ Losu and both fruits
+      all want it and nothing in the engine has it. It needs somewhere to live
+      that outlasts a turn, which means a column on `seats` — the only item on
+      this list that touches the schema, and the reason it is still here. One
+      piece of vocabulary, not five special cases, and the next thing worth
+      building.
 - [x] **One-shot and fixture cards have a vocabulary** — `cardScript.ts`, with
       disposition as a field of its own (odłóż / zostaje na Obszarze / zostaje z
       pulą punktów / do pierwszej Postaci / po N turach / wraca do stosu). About
