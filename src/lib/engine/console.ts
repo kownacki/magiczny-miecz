@@ -49,15 +49,20 @@ export type Command =
   | { kind: "endturn" }
   | { kind: "spell"; who: string | null };
 
+/**
+ * The four parameters, under the words you type at them.
+ *
+ * English on the left and the store's column names on the right. There were
+ * Polish spellings here too — `miecz`, `zloto` — and they were the reason `help`
+ * looked incomplete: a word the parser answered to that nothing ever offered,
+ * uncompletable by Tab because Tab reads the same list `help` prints. One
+ * vocabulary or none.
+ */
 const STATS: Record<string, StatName> = {
   sword: "miecz",
-  miecz: "miecz",
   magic: "magia",
-  magia: "magia",
   life: "zycie",
-  zycie: "zycie",
   gold: "zloto",
-  zloto: "zloto",
 };
 
 export const COMMANDS: CommandSpec[] = [
@@ -76,7 +81,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "winfight",
     aliases: ["losefight", "drawfight"],
     usage: "winfight",
-    summary: "settle the fight you are in — also losefight, drawfight",
+    summary: "settle the fight you are in — won, lost or drawn",
   },
   {
     name: "wingame",
@@ -88,6 +93,17 @@ export const COMMANDS: CommandSpec[] = [
   { name: "endturn", aliases: ["pass"], usage: "endturn", summary: "hand the turn on" },
   { name: "spell", aliases: [], usage: "spell [player]", summary: "draw a Zaklęcie" },
 ];
+
+/**
+ * Every word this console answers to, taken from the list `help` prints.
+ *
+ * The gate below is the reason it exists: a verb that is not on this list is
+ * refused before anything looks at it, so the parser cannot quietly know a
+ * command that `help` has never heard of and Tab cannot finish. What is left is
+ * the opposite mistake — advertising something nothing carries out — and the
+ * tests catch that by typing every line `help` prints.
+ */
+const VERBS = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
 
 /** Every card that can be fought: only a Wróg has a Miecz or a Magia to roll against. */
 const FOES = (events as EventCard[]).filter((card) => card.cardClass === "wrog");
@@ -109,6 +125,8 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   const [verb, ...rest] = trimmed.split(/\s+/);
   const word = verb.toLowerCase();
   const tail = rest.join(" ").trim();
+
+  if (!VERBS.has(word)) return { error: `No command \`${word}\`. Type \`help\` for the list.` };
 
   if (word === "help" || word === "?") return { ok: { kind: "help" } };
 
@@ -156,7 +174,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     }));
   }
 
-  return { error: `No command \`${word}\`. Type \`help\` for the list.` };
+  // Only reachable if something is advertised and then not read, which the
+  // tests type every line of `help` to prevent.
+  return { error: `\`${word}\` is listed but does nothing yet.` };
 }
 
 /** Resolves one name, or says why it could not. */

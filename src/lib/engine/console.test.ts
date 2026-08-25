@@ -39,11 +39,15 @@ suite("moving a parameter", () => {
     expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, who: null });
   });
 
-  it("knows the four parameters by their English names", () => {
+  it("knows the four parameters by their English names, and only those", () => {
     expect(ok("sword +1")).toMatchObject({ stat: "miecz" });
     expect(ok("magic +1")).toMatchObject({ stat: "magia" });
     expect(ok("life -1")).toMatchObject({ stat: "zycie" });
     expect(ok("gold +1")).toMatchObject({ stat: "zloto" });
+    // The console is the one thing here that is not in Polish, and a spelling
+    // it answered to but never offered was the reason `help` read short.
+    expect(err("miecz +1")).toMatch(/No command/);
+    expect(err("zloto +1")).toMatch(/No command/);
   });
 
   it("takes a player after the amount, and nobody as yourself", () => {
@@ -151,12 +155,32 @@ suite("help", () => {
     }
   });
 
+  it("reads nothing it does not advertise", () => {
+    // Not a sample: the parser refuses anything outside the printed list before
+    // it looks at it, so `help` is the whole vocabulary by construction.
+    const printed = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
+    for (const word of ["miecz", "win", "lose", "grant", "walcz", "teleport"]) {
+      expect(printed.has(word), word).toBe(false);
+      expect(err(word)).toMatch(/No command/);
+    }
+  });
+
   it("reads every alias it advertises", () => {
     for (const spec of COMMANDS) {
       for (const alias of spec.aliases) {
         const parsed = parseCommand(alias);
         const refused = "error" in parsed ? parsed.error : "";
         expect(refused, alias).not.toMatch(/No command/);
+      }
+    }
+  });
+
+  it("carries out everything it lists, rather than shrugging at it", () => {
+    for (const spec of COMMANDS) {
+      for (const word of [spec.name, ...spec.aliases]) {
+        const parsed = parseCommand(word);
+        const refused = "error" in parsed ? parsed.error : "";
+        expect(refused, word).not.toMatch(/does nothing yet/);
       }
     }
   });

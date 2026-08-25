@@ -45,8 +45,26 @@ export function TestConsole({
     if (open) input.current?.focus();
   }, [open]);
 
+  /**
+   * Puts the newest command at the top of the box, not the bottom.
+   *
+   * Scrolling to the end is right for a chat, where the last line is the point.
+   * Here the last line is the end of an answer whose beginning is what you
+   * asked for: `help` is eleven lines into a box that holds a dozen, so
+   * scrolling to the bottom hid the first commands it printed and made the list
+   * look short. Line the echo of what was typed up with the top edge instead,
+   * and every answer is read from its first line. `scrollTo` clamps for us, so
+   * a short answer still ends up wherever it fits.
+   */
   useEffect(() => {
-    tail.current?.scrollTo({ top: tail.current.scrollHeight });
+    const box = tail.current;
+    if (!box) return;
+    const echoes = box.querySelectorAll<HTMLElement>("[data-echo]");
+    const last = echoes[echoes.length - 1];
+    const top = last
+      ? box.scrollTop + last.getBoundingClientRect().top - box.getBoundingClientRect().top
+      : box.scrollHeight;
+    box.scrollTo({ top });
   }, [log, open]);
 
   if (!open) return null;
@@ -93,7 +111,7 @@ export function TestConsole({
 
         <div
           ref={tail}
-          className="tnum max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed"
+          className="tnum max-h-72 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed"
         >
           {log.length === 0 ? (
             <p className="text-muted">
@@ -101,7 +119,11 @@ export function TestConsole({
             </p>
           ) : (
             log.map((entry, index) => (
-              <p key={index} className={entry.mine ? "text-ochre" : "text-ink"}>
+              <p
+                key={index}
+                data-echo={entry.mine ? "" : undefined}
+                className={entry.mine ? "text-ochre" : "text-ink"}
+              >
                 {entry.said}
               </p>
             ))
