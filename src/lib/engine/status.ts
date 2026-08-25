@@ -49,7 +49,19 @@ export type Modifier =
   /** Cannot act at all: Kamień, and the turn a Zaklinacz Czasu takes. */
   | { kind: "bez-ruchu" }
   /** Natura is forced to something while this lasts. */
-  | { kind: "natura"; na: Nature };
+  | { kind: "natura"; na: Nature }
+  /**
+   * Shut out of one place. 11.11 bars a failed attempt on the Kamienny Most
+   * from trying again next turn, which is not a cap on movement and not a
+   * freeze — the character walks normally everywhere else.
+   */
+  | { kind: "wzbroniony"; place: "most" }
+  /**
+   * Nothing mechanical, only worth saying. 7.2 limits how often a Natura may be
+   * changed, so "changed this turn" is a fact a player has to be able to see
+   * without it altering anything by itself.
+   */
+  | { kind: "adnotacja" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -160,5 +172,130 @@ export function describeEnd(ends: Ends): string {
           : "do śmierci Postaci";
     case "rozproszone":
       return "dopóki ktoś tego nie zdejmie";
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * The four ad-hoc columns, read as effects.
+ *
+ * `turns_lost`, `stone_until_turn`, `bridge_blocked_until_turn` and
+ * `nature_changed_turn` predate this module and are read by the turn engine
+ * itself when it works out whose turn is next. Moving them into the store would
+ * be a rewrite of turn order to gain nothing, so they stay where they are and
+ * are projected here instead.
+ *
+ * The point is that a player sees ONE set of effects. Which half of the model
+ * an effect happens to live in is the app's problem, not theirs.
+ * ----------------------------------------------------------------------- */
+
+/** What a seat's own columns say about it, in the shape everything else uses. */
+export interface TimedColumns {
+  turnsLost: number;
+  stoneUntilTurn: number | null;
+  bridgeBlockedUntilTurn: number | null;
+  natureChangedTurn: number | null;
+}
+
+export function fromColumns(seat: TimedColumns, turn: number): Status[] {
+  const out: Status[] = [];
+
+  if (seat.turnsLost > 0) {
+    out.push({
+      id: "tura-stracona",
+      source: "tura-stracona",
+      // Just the fact. How many is the duration's to say, and saying it twice
+      // gave "Traci 2 tury — jeszcze 2 tury".
+      label: "Traci turę",
+      modifier: { kind: "bez-ruchu" },
+      ends: { kind: "tur", turns: seat.turnsLost },
+    });
+  }
+
+  // 20.1: three turns as stone, and the column holds the turn it wears off on.
+  if (seat.stoneUntilTurn !== null && seat.stoneUntilTurn > turn) {
+    out.push({
+      id: "kamien",
+      source: "kamien",
+      label: "Zamieniony w Kamień",
+      modifier: { kind: "bez-ruchu" },
+      ends: { kind: "tur", turns: seat.stoneUntilTurn - turn },
+    });
+  }
+
+  // 11.11: a failed attempt on the Most cannot be repeated next turn.
+  if (seat.bridgeBlockedUntilTurn !== null && seat.bridgeBlockedUntilTurn > turn) {
+    out.push({
+      id: "most-zablokowany",
+      source: "most",
+      label: "Nie wejdziesz na Kamienny Most",
+      modifier: { kind: "wzbroniony", place: "most" },
+      ends: { kind: "tur", turns: seat.bridgeBlockedUntilTurn - turn },
+    });
+  }
+
+  // 7.2: worth showing, changes nothing on its own.
+  if (seat.natureChangedTurn !== null && seat.natureChangedTurn === turn) {
+    out.push({
+      id: "natura-zmieniona",
+      source: "natura",
+      label: "Natura zmieniona w tej turze",
+      modifier: { kind: "adnotacja" },
+      ends: { kind: "tur", turns: 1 },
+    });
+  }
+
+  return out;
+}
+
+/** Everything true of a seat right now, from both halves of the model. */
+export function allStatuses(
+  stored: readonly Status[],
+  seat: TimedColumns,
+  turn: number,
+): Status[] {
+  return [...fromColumns(seat, turn), ...stored];
+}
+
+/* --------------------------------------------------------------------------
+ * How an effect is drawn.
+ * ----------------------------------------------------------------------- */
+
+/** Whether the effect is doing the holder a favour. */
+export type Tone = "dobry" | "zly" | "obojetny";
+
+export interface Mark {
+  /** A single character, drawn small beside the holder's name. */
+  glyph: string;
+  tone: Tone;
+  /** The whole of it in words, for the hover. */
+  title: string;
+}
+
+/**
+ * One effect, as the mark a player sees.
+ *
+ * A glyph and not an icon file: there are six shapes here and each is doing the
+ * work of a bullet, not of a picture. The hover carries the meaning, which is
+ * where a player will look for it — a mark on a name is a reminder that
+ * something is true, not an explanation of what.
+ */
+export function markOf(status: Status): Mark {
+  const when = describeEnd(status.ends);
+  const title = `${status.label} — ${when}`;
+  switch (status.modifier.kind) {
+    case "punkty": {
+      const up = (status.modifier.miecz ?? 0) + (status.modifier.magia ?? 0) >= 0;
+      return { glyph: up ? "\u25B2" : "\u25BC", tone: up ? "dobry" : "zly", title };
+    }
+    case "bez-ruchu":
+      return { glyph: "\u25A0", tone: "zly", title };
+    case "ruch-max":
+      return { glyph: "\u25B8", tone: "zly", title };
+    case "natura":
+      return { glyph: "\u25D1", tone: "obojetny", title };
+    case "wzbroniony":
+      return { glyph: "\u2298", tone: "zly", title };
+    case "adnotacja":
+      return { glyph: "\u25CB", tone: "obojetny", title };
   }
 }

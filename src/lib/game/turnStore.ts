@@ -76,6 +76,13 @@ import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
 import { usageOf } from "@/lib/engine/uses";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
+import {
+  afterFight,
+  afterTurn,
+  type Ends,
+  type Modifier,
+  type Status,
+} from "@/lib/engine/status";
 import { describeEffect } from "@/lib/engine/effectText";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { isSettled } from "@/lib/engine/resolve";
@@ -910,6 +917,10 @@ export async function resolveFight(gameId: string): Promise<void> {
   const { fight } = game.turn_state;
   if (!fight.result) throw new Error("Walka nie jest rozstrzygnięta.");
 
+  // 17.4 ends a fight the moment the dice are compared — win, lose or draw —
+  // so anything that lasts "one fight" is spent whichever way it went.
+  if (seat) await clearFightEffects(gameId, seat.id);
+
   // A guardian is not a card: it charges what its doorway charges rather than
   // the usual point of Życie, and winning carries the character through instead
   // of returning it to the field the fight interrupted.
@@ -1188,6 +1199,103 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
  * order of somebody's own pack is not something the rules or anybody else at
  * the table has a stake in.
  */
+/* ---------------------------------------------------------------------------
+ * Effects a seat is under.
+ *
+ * The write half of `status.ts`. Reading is `allStatuses`, which folds these
+ * together with the four ad-hoc columns so a player sees one list; this half is
+ * only for the effects that have nowhere else to live — an Eliksir's two points
+ * of Miecz for a turn, and everything the buff system will carry once more
+ * cards are transcribed.
+ * ------------------------------------------------------------------------ */
+
+interface EffectRow {
+  id: string;
+  seat_id: string;
+  source: string;
+  label: string;
+  modifier: Modifier;
+  ends: Ends;
+}
+
+export async function effectsFor(gameId: string): Promise<EffectRow[]> {
+  const { data, error } = await db
+    .from("seat_effects")
+    .select("id,seat_id,source,label,modifier,ends")
+    .eq("game_id", gameId)
+    .order("created_at");
+  if (error) throw new Error(`effectsFor: ${error.message}`);
+  return (data ?? []) as EffectRow[];
+}
+
+/** What one seat is under, in the shape the engine reasons about. */
+export async function statusesOf(gameId: string, seatId: string): Promise<Status[]> {
+  return (await effectsFor(gameId))
+    .filter((row) => row.seat_id === seatId)
+    .map((row) => ({
+      id: row.id,
+      source: row.source,
+      label: row.label,
+      modifier: row.modifier,
+      ends: row.ends,
+    }));
+}
+
+/** Puts a seat under something, and says so. */
+export async function addEffect(
+  gameId: string,
+  seatId: string,
+  effect: { source: string; label: string; modifier: Modifier; ends: Ends },
+): Promise<void> {
+  const game = await loadGame(gameId);
+  await db.from("seat_effects").insert({
+    game_id: gameId,
+    seat_id: seatId,
+    source: effect.source,
+    label: effect.label,
+    modifier: effect.modifier,
+    ends: effect.ends,
+  });
+  await journal(gameId, seatId, game.turn, "efekt", {
+    source: effect.source,
+    label: effect.label,
+    ends: effect.ends,
+  });
+}
+
+/**
+ * Writes back whatever an engine function decided is left.
+ *
+ * The engine returns the survivors rather than naming what to delete, so this
+ * deletes by difference: anything that was there and is not in the answer has
+ * ended. A countdown that ticked comes back as the same id with a smaller
+ * number, so it is updated rather than replaced — the row is the effect, and
+ * replacing it would make an Eliksir look like it had been drunk twice.
+ */
+async function keepOnly(gameId: string, seatId: string, left: readonly Status[]): Promise<void> {
+  const before = await statusesOf(gameId, seatId);
+  const surviving = new Map(left.map((status) => [status.id, status]));
+
+  for (const was of before) {
+    const now = surviving.get(was.id);
+    if (!now) {
+      await db.from("seat_effects").delete().eq("id", was.id);
+    } else if (JSON.stringify(now.ends) !== JSON.stringify(was.ends)) {
+      await db.from("seat_effects").update({ ends: now.ends }).eq("id", was.id);
+    }
+  }
+}
+
+/** One of this seat's own turns has gone by (see `afterTurn`). */
+export async function tickEffects(gameId: string, seatId: string): Promise<void> {
+  await keepOnly(gameId, seatId, afterTurn(await statusesOf(gameId, seatId)));
+}
+
+/** A fight has finished, however it finished (17.4). */
+export async function clearFightEffects(gameId: string, seatId: string): Promise<void> {
+  await keepOnly(gameId, seatId, afterFight(await statusesOf(gameId, seatId)));
+}
+
 export async function reorderPack(
   gameId: string,
   seatId: string,
@@ -1268,6 +1376,15 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
     cardId,
     ...(face !== undefined ? { face } : {}),
   });
+
+  // An effect the buff system can hold is applied here and now — the card is
+  // gone, and what it bought is a thing the character is under until it runs
+  // out. This is the whole of what "aplikacja" means for a card with no die.
+  if (use.efekt) {
+    await addEffect(gameId, seatId, { source: cardId, ...use.efekt });
+    await bumpRevision(gameId);
+    return { card: cardName(cardId), did: [use.efekt.label], stol: false };
+  }
 
   if (!script) {
     await bumpRevision(gameId);
@@ -2223,6 +2340,11 @@ export async function finishTurn(gameId: string): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
+
+  // Counted in the holder's OWN turns, so this is the moment: "na 1 turę" on a
+  // card means one of yours, and measuring it in rounds would make an Eliksir
+  // last longer at a table of six than at a table of two.
+  if (seat) await tickEffects(gameId, seat.id);
 
   // Whatever was drawn or found here and not taken stays on the field (16.8).
   if (game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0) {

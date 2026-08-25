@@ -2151,7 +2151,7 @@ function SeatCard({
         active ? "border-ochre shadow-[0_0_0_1px_var(--color-ochre)]" : "border-edge"
       }`}
     >
-      <header className="mb-3 flex items-baseline justify-between gap-2">
+      <header className="mb-3 flex items-baseline gap-2">
         <h3 className="font-[family-name:var(--font-display)] text-ink">
           {/* A seat with a character but no name is somebody who joined without
               typing one, not an empty chair — calling it "wolne" made a player
@@ -2167,6 +2167,9 @@ function SeatCard({
             explanation — the hover carries the whole of it, including how long
             it has left, which is the part a player is actually deciding
             around. */}
+        {/* Beside the name, not across the card from it: these are true of
+            the person the name belongs to, and at the far edge of a wide seat
+            card they read as belonging to whatever they happen to be next to. */}
         {seat.effects.length > 0 && (
           <span className="flex shrink-0 items-center gap-1">
             {seat.effects.map((mark) => (

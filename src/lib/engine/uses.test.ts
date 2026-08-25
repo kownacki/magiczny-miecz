@@ -36,11 +36,21 @@ describe("which cards are spent by using them", () => {
     expect(isUsable("diament-krolow")).toBe(false);
   });
 
-  it("only claims to resolve a card it actually has a script for", () => {
-    // "Aplikacja rzuci kostką" is a promise; the die table has to exist.
+  it("only claims to resolve a card it has some way of resolving", () => {
+    // "Aplikacja" is a promise, and there are exactly two ways to keep it: a
+    // die table the app can throw, or an effect the buff system can hold.
     for (const [id, use] of Object.entries(USES)) {
       if (use.rozpatruje !== "aplikacja") continue;
-      expect(byId.get(id)?.text ?? "").toMatch(/rzuć kostką/i);
+      const rolls = /rzuć kostką/i.test(byId.get(id)?.text ?? "");
+      expect(rolls || use.efekt !== undefined, `${id} nie ma czym rozpatrzyć`).toBe(true);
+    }
+  });
+
+  it("leaves a card it cannot carry to the table", () => {
+    // The Kryształ shifts a fight roll and the Jabłko a Świątynia roll, at a
+    // moment nothing can be held across. Claiming those would be a lie.
+    for (const id of ["krysztal-losu", "jablko-natchnienia", "rozdzka-przeznaczenia"]) {
+      expect(usageOf(id)!.rozpatruje, id).toBe("stol");
     }
   });
 });
@@ -50,7 +60,13 @@ describe("what the player is asked", () => {
     const ask = askAbout("ELIKSIR SIŁY", usageOf("eliksir-sily")!);
     expect(ask).toContain("+2 Miecza");
     expect(ask).toContain("przepada");
-    expect(ask).toContain("rozpatrzcie sami");
+    // The app holds this one now, so it must not tell the table to.
+    expect(ask).toContain("zapamięta");
+    expect(ask).not.toContain("rozpatrzcie sami");
+  });
+
+  it("still hands the table what it cannot keep", () => {
+    expect(askAbout("KRYSZTAŁ LOSU", usageOf("krysztal-losu")!)).toContain("rozpatrzcie sami");
   });
 
   it("names the window when the card names one, and stays quiet when it does not", () => {

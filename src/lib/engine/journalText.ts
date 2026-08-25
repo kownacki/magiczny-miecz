@@ -8,6 +8,7 @@ import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { asFieldId, FIELDS } from "./board";
 import { asCharacterId } from "./characters";
 import { USE_VERB_PAST } from "./uses";
+import { describeEnd, type Ends } from "./status";
 
 /** One row of `magiczny_miecz.moves`, as the route hands it over. */
 export interface JournalEntry {
@@ -374,6 +375,15 @@ export function describe(
         `${who} traci ${tury(num(data.turns, 1))}` +
           `${typeof data.reason === "string" && data.reason ? ` — ${data.reason}` : ""}.`,
       );
+
+    // Something a character is now under, and how long for. Public: 5.2 puts
+    // what somebody carries on the table, and what they are under is weighed
+    // the same way by anyone deciding whether to attack them.
+    case "efekt": {
+      const what = typeof data.label === "string" ? data.label : "efekt";
+      const ends = data.ends as Ends | undefined;
+      return line(`${who}: ${what}${ends ? ` — ${describeEnd(ends)}` : ""}.`);
+    }
 
     case "kamien":
       return line(`${who} zamienia się w Kamień — wraca w turze ${num(data.until)}.`);

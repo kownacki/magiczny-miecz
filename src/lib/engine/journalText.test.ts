@@ -449,3 +449,15 @@ suite("choosing again after death", () => {
     );
   });
 });
+
+suite("something a character is under", () => {
+  it("says what it is and how long it lasts", () => {
+    expect(
+      text("efekt", { source: "eliksir-sily", label: "+2 Miecza", ends: { kind: "tur", turns: 1 } }),
+    ).toBe("Michał: +2 Miecza — do końca tej tury.");
+  });
+
+  it("still says something when the shape is older than the sentence", () => {
+    expect(text("efekt", { label: "coś" })).toBe("Michał: coś.");
+  });
+});

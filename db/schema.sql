@@ -147,6 +147,33 @@ create table if not exists magiczny_miecz.holdings (
 
 create index if not exists holdings_seat_idx on magiczny_miecz.holdings(seat_id);
 
+-- Things that are true of a character for a while, and what makes them stop
+-- being true. The shapes of `modifier` and `ends` are `status.ts`'s — see the
+-- Ends union there for why a countdown is one case among four and not the frame
+-- everything else has to be bent into.
+--
+-- Deliberately not a replacement for turns_lost / stone_until_turn /
+-- bridge_blocked_until_turn / nature_changed_turn. Those four are read by the
+-- turn engine itself when it works out whose turn is next, and moving them
+-- would be a rewrite of turn order to gain nothing. They are projected into the
+-- same list at read time instead, so a player sees one set of effects whichever
+-- half of the model an effect happens to live in.
+create table if not exists magiczny_miecz.seat_effects (
+  id uuid primary key default gen_random_uuid(),
+  game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
+  seat_id uuid not null references magiczny_miecz.seats(id) on delete cascade,
+  -- The card that put it there, for the journal and the hover.
+  source text not null,
+  -- What a player is shown, in the language the cards use.
+  label text not null,
+  modifier jsonb not null,
+  ends jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists seat_effects_seat_idx on magiczny_miecz.seat_effects(seat_id);
+create index if not exists seat_effects_game_idx on magiczny_miecz.seat_effects(game_id);
+
 -- Cards left lying face-up on a board field (16.8), which the next character to
 -- stop there must deal with.
 create table if not exists magiczny_miecz.field_cards (
@@ -185,5 +212,6 @@ create index if not exists moves_game_idx on magiczny_miecz.moves(game_id, seq d
 alter table magiczny_miecz.games enable row level security;
 alter table magiczny_miecz.seats enable row level security;
 alter table magiczny_miecz.holdings enable row level security;
+alter table magiczny_miecz.seat_effects enable row level security;
 alter table magiczny_miecz.field_cards enable row level security;
 alter table magiczny_miecz.moves enable row level security;

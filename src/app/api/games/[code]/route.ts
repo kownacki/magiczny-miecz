@@ -11,7 +11,8 @@ import {
   verifySeat,
 } from "@/lib/game/store";
 import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
-import { shopStock } from "@/lib/game/turnStore";
+import { allStatuses, bonusFrom, markOf } from "@/lib/engine/status";
+import { effectsFor, shopStock } from "@/lib/game/turnStore";
 import type { Slot } from "@/lib/engine/slots";
 
 /**
@@ -79,13 +80,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   // in the app — every device asks for it every couple of seconds — and these
   // four do not depend on each other, so running them in sequence spent four
   // round trips to make one answer.
-  const [mine, seats, holdings, fieldCards] = await Promise.all([
+  const [mine, seats, holdings, fieldCards, effects] = await Promise.all([
     token ? verifySeat(game.id, token) : Promise.resolve(null),
     seatsFor(game.id),
     holdingsFor(game.id),
     // Face up on the board by rule 16.8, so there is nothing to conceal and
     // every seat is sent the same list.
     fieldCardsFor(game.id),
+    // Public too: what somebody is under is exactly what you weigh before
+    // deciding whether to attack them.
+    effectsFor(game.id),
   ]);
 
   // The poll is the heartbeat. A device asking for the state is a device still
@@ -148,6 +152,32 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       // fight is asking about the other one.
       const inFight = bonusFromHoldings(own, mode, "walka");
 
+      // Everything the character is under, from both halves of the model: the
+      // stored effects and the four ad-hoc columns the turn engine reads. One
+      // list, because which half an effect lives in is the app's problem.
+      const under = allStatuses(
+        effects
+          .filter((row) => row.seat_id === seat.id)
+          .map((row) => ({
+            id: row.id,
+            source: row.source,
+            label: row.label,
+            modifier: row.modifier,
+            ends: row.ends,
+          })),
+        {
+          turnsLost: seat.turns_lost,
+          stoneUntilTurn: seat.stone_until_turn,
+          bridgeBlockedUntilTurn: seat.bridge_blocked_until_turn,
+          natureChangedTurn: seat.nature_changed_turn,
+        },
+        game.turn,
+      );
+      // 1.2 and 2.2 keep these off the żetony, exactly as they keep a
+      // Przedmiot's points off them: an effect is added at read time and never
+      // written into own points, or it would outlive its own expiry.
+      const spell = bonusFrom(under);
+
       const lastSeen = seat.seen_at ? Date.parse(seat.seen_at) : 0;
       return {
         ...seat,
@@ -161,10 +191,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           seat.abandoned_at === null && lastSeen > 0 && Date.now() - lastSeen > AWAY_AFTER_MS,
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
-        miecz_total: seat.miecz_own + bonus.miecz,
-        magia_total: seat.magia_own + bonus.magia,
-        miecz_walka: seat.miecz_own + inFight.miecz,
-        magia_walka: seat.magia_own + inFight.magia,
+        miecz_total: seat.miecz_own + bonus.miecz + spell.miecz,
+        magia_total: seat.magia_own + bonus.magia + spell.magia,
+        miecz_walka: seat.miecz_own + inFight.miecz + spell.miecz,
+        magia_walka: seat.magia_own + inFight.magia + spell.magia,
+        // What a player is shown beside their name, already worked out: the
+        // browser gets marks, not a modelling problem.
+        effects: under.map((status) => ({ id: status.id, ...markOf(status) })),
       };
     }),
   });

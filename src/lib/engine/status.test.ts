@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  allStatuses,
+  fromColumns,
+  markOf,
   afterEvent,
   afterFight,
   afterTurn,
@@ -128,5 +131,81 @@ describe("telling the player how long", () => {
       { kind: "rozproszone" },
     ] as const;
     for (const ends of all) expect(describeEnd(ends).length).toBeGreaterThan(0);
+  });
+});
+
+describe("the four ad-hoc columns, read as effects", () => {
+  const none = {
+    turnsLost: 0,
+    stoneUntilTurn: null,
+    bridgeBlockedUntilTurn: null,
+    natureChangedTurn: null,
+  };
+
+  it("says nothing about a seat nothing is true of", () => {
+    expect(fromColumns(none, 5)).toEqual([]);
+  });
+
+  it("counts a lost turn, and leaves the number to the duration", () => {
+    expect(fromColumns({ ...none, turnsLost: 2 }, 5)[0]).toMatchObject({
+      label: "Traci turę",
+      ends: { kind: "tur", turns: 2 },
+    });
+  });
+
+  it("measures Kamień from the turn it wears off on (20.1)", () => {
+    // The column holds a turn number, not a countdown, so the remaining turns
+    // are the difference — and it says nothing once that turn has arrived.
+    expect(fromColumns({ ...none, stoneUntilTurn: 8 }, 5)[0].ends).toEqual({
+      kind: "tur",
+      turns: 3,
+    });
+    expect(fromColumns({ ...none, stoneUntilTurn: 5 }, 5)).toEqual([]);
+  });
+
+  it("shows the Most being barred without calling it a freeze (11.11)", () => {
+    // A character barred from the bridge walks normally everywhere else.
+    const [barred] = fromColumns({ ...none, bridgeBlockedUntilTurn: 6 }, 5);
+    expect(barred.modifier).toEqual({ kind: "wzbroniony", place: "most" });
+    expect(frozen([barred])).toBe(false);
+  });
+
+  it("mentions a Natura changed this turn, and only this turn (7.2)", () => {
+    expect(fromColumns({ ...none, natureChangedTurn: 5 }, 5)).toHaveLength(1);
+    expect(fromColumns({ ...none, natureChangedTurn: 4 }, 5)).toEqual([]);
+  });
+
+  it("puts both halves of the model in one list", () => {
+    const stored = [status({ id: "eliksir" })];
+    const all = allStatuses(stored, { ...none, turnsLost: 1 }, 5);
+    expect(all.map((s) => s.id)).toEqual(["tura-stracona", "eliksir"]);
+  });
+});
+
+describe("what a player sees on a name", () => {
+  it("marks a bonus up and a penalty down", () => {
+    expect(markOf(status({ modifier: { kind: "punkty", miecz: 2 } })).tone).toBe("dobry");
+    expect(markOf(status({ modifier: { kind: "punkty", miecz: -2 } })).tone).toBe("zly");
+  });
+
+  it("says the whole thing, and how long, in the hover", () => {
+    const mark = markOf(status({ label: "+2 Miecza", ends: { kind: "tur", turns: 1 } }));
+    expect(mark.title).toBe("+2 Miecza — do końca tej tury");
+  });
+
+  it("has a mark for every modifier there is", () => {
+    // A closed union with a mark each: a new kind that forgets one is a
+    // compile error, not a blank space on somebody's name.
+    const all: Status["modifier"][] = [
+      { kind: "punkty", miecz: 1 },
+      { kind: "ruch-max", pola: 1 },
+      { kind: "bez-ruchu" },
+      { kind: "natura", na: "zla" },
+      { kind: "wzbroniony", place: "most" },
+      { kind: "adnotacja" },
+    ];
+    for (const modifier of all) {
+      expect(markOf(status({ modifier })).glyph.length).toBeGreaterThan(0);
+    }
   });
 });

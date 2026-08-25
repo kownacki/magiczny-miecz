@@ -1,6 +1,7 @@
 /** The cards you spend by using them, and what spending one buys. */
 
 import type { CardId } from "@/data/ids";
+import type { Ends, Modifier } from "./status";
 
 /**
  * Why this is a list of its own.
@@ -41,6 +42,17 @@ export interface Use {
    * exactly the bargain the Zaklęcia panel makes ("skutek rozpatrzcie sami").
    */
   rozpatruje: "aplikacja" | "stol";
+  /**
+   * What using it leaves the character under, where that is something the buff
+   * system can carry.
+   *
+   * Only the Eliksir, for now. The other seven either resolve at once (the
+   * Szkatuła), or shift a die roll at a moment nothing can be held across (the
+   * Jabłko, the Kryształ), or change what a Wróg is (the Różdżka) — none of
+   * which is a state a character is *in*. When one of those becomes expressible
+   * it gains a line here and needs no other change.
+   */
+  efekt?: { label: string; modifier: Modifier; ends: Ends };
 }
 
 export const USES: Readonly<Partial<Record<CardId, Use>>> = {
@@ -61,7 +73,14 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
   "eliksir-sily": {
     co: "+2 Miecza na 1 turę",
     kiedy: null,
-    rozpatruje: "stol",
+    // The app can carry this one now: two points of Miecz that expire with the
+    // holder's own turn, which is exactly what `status.ts` was written for.
+    rozpatruje: "aplikacja",
+    efekt: {
+      label: "+2 Miecza",
+      modifier: { kind: "punkty", miecz: 2 },
+      ends: { kind: "tur", turns: 1 },
+    },
   },
   "jablko-natchnienia": {
     co: "odejmij albo dodaj 1 do wyniku rzutu — jak wolisz",
@@ -147,8 +166,10 @@ export function isUsable(cardId: string): boolean {
 export function askAbout(name: string, use: Use): string {
   const when = use.kiedy ? ` Karta mówi: ${use.kiedy}.` : "";
   const who =
-    use.rozpatruje === "aplikacja"
-      ? " Aplikacja rzuci kostką i zastosuje wynik."
-      : " Skutek rozpatrzcie sami.";
+    use.rozpatruje !== "aplikacja"
+      ? " Skutek rozpatrzcie sami."
+      : use.efekt
+        ? " Aplikacja to zapamięta."
+        : " Aplikacja rzuci kostką i zastosuje wynik.";
   return `${name}: ${use.co}. Karta przepada po użyciu.${when}${who}`;
 }
