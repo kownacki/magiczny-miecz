@@ -32,6 +32,8 @@ export function CardTile({
   dimmed = false,
   badge,
   onClick,
+  draggable,
+  onDragStart,
   children,
 }: {
   card: TileCard;
@@ -40,6 +42,9 @@ export function CardTile({
   /** A short flag drawn over the corner — a price, a count, "zakryte". */
   badge?: string;
   onClick?: () => void;
+  /** Draggable into an equipment place, in the slotted variant. */
+  draggable?: boolean;
+  onDragStart?: (event: React.DragEvent) => void;
   /** Controls drawn under the card, such as a cast or drop button. */
   children?: React.ReactNode;
 }) {
@@ -53,11 +58,13 @@ export function CardTile({
         type="button"
         onClick={onClick}
         disabled={!onClick}
+        draggable={draggable}
+        onDragStart={onDragStart}
         title={card.name}
         style={{ width, height }}
         className={`relative overflow-hidden rounded border border-edge bg-raised transition ${
-          onClick ? "cursor-pointer hover:border-ochre" : "cursor-default"
-        } ${dimmed ? "opacity-45" : ""}`}
+          draggable ? "cursor-grab active:cursor-grabbing" : onClick ? "cursor-pointer" : "cursor-default"
+        } ${onClick ? "hover:border-ochre" : ""} ${dimmed ? "opacity-45" : ""}`}
       >
         {src ? (
           // Explicit dimensions rather than `fill`: the portraits elsewhere on

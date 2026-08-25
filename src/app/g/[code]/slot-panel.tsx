@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { cardImageUrl } from "@/lib/engine/cardImages";
+import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
 import { SLOT_LABEL, type Slot } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
@@ -14,6 +15,11 @@ import type { TileCard } from "./card-tile";
  * those are questions about a shape. So the places sit where they sit on a
  * person: head above the body, hands either side of it, the mount and the bag
  * underneath where the load goes.
+ *
+ * The pictures are the illustrations cut off the cards, not the cards
+ * themselves. A whole card at this size is a title four pixels tall over a grey
+ * smear of prose; the illustration is the half of it that survives being small,
+ * and it is what a player recognises anyway. The whole card is a hover away.
  *
  * Only in the slotted variant. In klasyczny play there is no body to lay out:
  * the rulebook has one kind of possession and one limit (5.4).
@@ -50,12 +56,16 @@ const GLYPH: Record<Slot, string> = {
   sakwa: "🎒",
 };
 
+/** What a drag carries: the id of the holding being moved. */
+export const DRAG_TYPE = "application/x-magiczny-miecz-holding";
+
 export function SlotPanel({
   worn,
   canAct,
   busy,
   onInspect,
   onTakeOff,
+  onDropInto,
 }: {
   /** What is in each place; missing keys are empty places. */
   worn: Partial<Record<Slot, SlotItem>>;
@@ -63,7 +73,12 @@ export function SlotPanel({
   busy: boolean;
   onInspect: (card: TileCard) => void;
   onTakeOff: (holdingId: string) => void;
+  /** Something was dragged onto a place. */
+  onDropInto: (holdingId: string, slot: Slot) => void;
 }) {
+  /** The place a drag is over, so it can say it will take it. */
+  const [over, setOver] = useState<Slot | null>(null);
+
   return (
     // Twice the size it started at. At 44 pixels a Hełm was a brown smudge and
     // the empty places were indistinguishable from one another, which is the
@@ -72,44 +87,39 @@ export function SlotPanel({
     // business being.
     <div
       className="grid shrink-0 gap-1.5"
-      style={{
-        gridTemplateColumns: "repeat(3, 84px)",
-        gridAutoRows: "84px",
-      }}
+      style={{ gridTemplateColumns: "repeat(3, 84px)", gridAutoRows: "84px" }}
     >
       {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
         const item = worn[slot];
-        const src = item ? cardImageUrl(item.cardId) : null;
         return (
           <div
             key={slot}
             style={{ gridArea: LAYOUT[slot] }}
-            className={`relative overflow-hidden rounded border ${
-              item ? "border-ochre/60 bg-raised" : "border-dashed border-edge/70 bg-night/40"
+            onDragOver={(event) => {
+              if (!canAct) return;
+              event.preventDefault();
+              setOver(slot);
+            }}
+            onDragLeave={() => setOver((current) => (current === slot ? null : current))}
+            onDrop={(event) => {
+              setOver(null);
+              if (!canAct) return;
+              const holdingId = event.dataTransfer.getData(DRAG_TYPE);
+              if (!holdingId) return;
+              event.preventDefault();
+              onDropInto(holdingId, slot);
+            }}
+            className={`group relative overflow-hidden rounded border transition ${
+              over === slot
+                ? "border-ochre bg-ochre/10"
+                : item
+                  ? "border-ochre/60 bg-raised"
+                  : "border-dashed border-edge/70 bg-night/40"
             }`}
-            title={item ? `${SLOT_LABEL[slot]}: ${item.card.name}` : SLOT_LABEL[slot]}
+            title={item ? undefined : SLOT_LABEL[slot]}
           >
             {item ? (
-              <button
-                type="button"
-                onClick={() => onInspect(item.card)}
-                className="block h-full w-full"
-              >
-                {src ? (
-                  <Image
-                    src={src}
-                    alt={item.card.name}
-                    width={110}
-                    height={155}
-                    className="h-full w-full object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <span className="flex h-full items-center justify-center p-1 text-center text-[11px] leading-tight text-ink">
-                    {item.card.name}
-                  </span>
-                )}
-              </button>
+              <WornCard item={item} canAct={canAct} onInspect={() => onInspect(item.card)} />
             ) : (
               <span className="flex h-full items-center justify-center text-[26px] text-muted/30">
                 {GLYPH[slot]}
@@ -118,14 +128,14 @@ export function SlotPanel({
 
             {/* Taking it off is a corner, not a row of its own: nine places
                 each with a button underneath is a form, and this is a paper
-                doll. */}
+                doll. Dragging it to the pack does the same thing. */}
             {item && canAct && (
               <button
                 type="button"
                 onClick={() => onTakeOff(item.holdingId)}
                 disabled={busy}
                 title="Zdejmij"
-                className="absolute right-0 top-0 rounded-bl bg-night/85 px-1.5 text-[13px] leading-tight text-muted transition hover:text-vermilion disabled:opacity-40"
+                className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 text-[13px] leading-tight text-muted transition hover:text-vermilion disabled:opacity-40"
               >
                 ×
               </button>
@@ -134,5 +144,69 @@ export function SlotPanel({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * One worn card: its illustration, draggable, with the whole card on hover.
+ *
+ * The hover card escapes its box on purpose. Scaling a card to fit inside an
+ * 84-pixel square would give back exactly the unreadable thing the illustration
+ * was cut out to replace.
+ */
+function WornCard({
+  item,
+  canAct,
+  onInspect,
+}: {
+  item: SlotItem;
+  canAct: boolean;
+  onInspect: () => void;
+}) {
+  const art = cardArtUrl(item.cardId);
+  const full = cardImageUrl(item.cardId);
+
+  return (
+    <>
+      <button
+        type="button"
+        draggable={canAct}
+        onDragStart={(event) => {
+          event.dataTransfer.setData(DRAG_TYPE, item.holdingId);
+          event.dataTransfer.effectAllowed = "move";
+        }}
+        onClick={onInspect}
+        title={item.card.name}
+        className="block h-full w-full cursor-grab active:cursor-grabbing"
+      >
+        {art ? (
+          <Image
+            src={art}
+            alt={item.card.name}
+            width={110}
+            height={96}
+            className="h-full w-full object-cover"
+            unoptimized
+          />
+        ) : (
+          <span className="flex h-full items-center justify-center p-1 text-center text-[11px] leading-tight text-ink">
+            {item.card.name}
+          </span>
+        )}
+      </button>
+
+      {full && (
+        <span className="pointer-events-none absolute bottom-full left-1/2 z-40 mb-1 hidden -translate-x-1/2 group-hover:block">
+          <Image
+            src={full}
+            alt={item.card.name}
+            width={200}
+            height={333}
+            className="max-w-none rounded border border-ochre shadow-[0_4px_24px_rgba(0,0,0,0.85)]"
+            unoptimized
+          />
+        </span>
+      )}
+    </>
   );
 }

@@ -71,6 +71,9 @@ by detecting the printed cut lines. That slicer cannot handle either Karta
 Postaci — the small ones sit in teal gutters it cuts only roughly, and the big
 ones butt together with the same teal printed *on* them — so
 `node scripts/build-character-cards.mjs` re-cuts both sets to one size each.
+`node scripts/export-card-art.mjs` cuts the framed illustration out of every
+card — the same rectangle on all of them, 10%–90% across and 14.5%–56.5% down —
+for use as an icon where a whole card would be a grey smear.
 Then `node scripts/export-card-images.mjs` writes the
 web-sized JPEGs into `public/cards/` — those *are* committed, so a fresh
 checkout has the pictures without needing the scans.

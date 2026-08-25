@@ -18,7 +18,7 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
-import { SlotPanel, type SlotItem } from "./slot-panel";
+import { DRAG_TYPE, SlotPanel, type SlotItem } from "./slot-panel";
 import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
@@ -817,7 +817,19 @@ function Hand({
       {/* Cards, as cards. A player at a table recognises their Miecz by its
           picture long before they read the word, and the ability text that used
           to sit under every line now lives one tap away in the detail view. */}
-      <div className="flex flex-wrap gap-2">
+      <div
+        onDragOver={(event) => {
+          if (canAct && event.dataTransfer.types.includes(DRAG_TYPE)) event.preventDefault();
+        }}
+        onDrop={(event) => {
+          if (!canAct) return;
+          const holdingId = event.dataTransfer.getData(DRAG_TYPE);
+          if (!holdingId) return;
+          event.preventDefault();
+          onEquip(holdingId, null);
+        }}
+        className="flex flex-wrap gap-2"
+      >
         {/* Your own Zaklęcia are not repeated here: they have their own panel
             above, face up and with the cast controls on them. What belongs on a
             seat card is what the *table* can see. */}
@@ -832,6 +844,13 @@ function Hand({
             badge={held.kind === "trophy" ? "trofeum" : undefined}
             dimmed={held.kind === "trophy"}
             onClick={() => onInspect(tileFor(held))}
+            // Dragged onto a place to put it on — the same journey the
+            // "załóż" button makes, for people who reach for the card.
+            draggable={canAct && slotted && held.kind === "item" && isWearable(held.cardId)}
+            onDragStart={(event) => {
+              event.dataTransfer.setData(DRAG_TYPE, held.id);
+              event.dataTransfer.effectAllowed = "move";
+            }}
           >
             {canAct && (
               <span className="flex items-center gap-2">
@@ -1035,6 +1054,7 @@ function SeatCard({
                 busy={false}
                 onInspect={onInspect}
                 onTakeOff={(holdingId) => onEquip(holdingId, null)}
+                onDropInto={(holdingId, slot) => onEquip(holdingId, slot)}
               />
             )}
           </div>

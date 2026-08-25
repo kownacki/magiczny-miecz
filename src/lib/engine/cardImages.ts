@@ -4,12 +4,14 @@ import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import manifest from "@/data/card-images.json";
+import artManifest from "@/data/card-art.json";
 import portraits from "@/data/character-images.json";
 import standees from "@/data/character-standees.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { cardRef } from "./deck";
 
 const AVAILABLE = new Set(manifest as string[]);
+const ART_AVAILABLE = new Set(artManifest as string[]);
 
 /**
  * First slice for each card id.
@@ -89,4 +91,29 @@ export function characterStandeeUrl(characterId: string): string | null {
   const slice = (standees as Record<string, string>)[characterId];
   if (!slice) return null;
   return `/cards/${fileNameFor(slice)}.jpg`;
+}
+
+/**
+ * Just the illustration off a card, with no title, frame or text.
+ *
+ * Every card in the box is a header, a title, a framed picture and a block of
+ * prose, and at icon size only the picture survives — the title is four pixels
+ * tall and the text is a grey smear. So where a whole card will not fit, this
+ * is what goes there instead: `scripts/export-card-art.mjs` cuts the same
+ * rectangle out of all of them.
+ *
+ * Falls back to the whole card, because four cards have no illustration to cut
+ * out: the Dobry/Zły markers are a word in a box.
+ */
+export function cardArtUrl(cardId: string, ref?: string): string | null {
+  const slice = ref && ART_AVAILABLE.has(ref) ? ref : FIRST_SLICE_BY_ID.get(cardId);
+  if (slice && ART_AVAILABLE.has(slice)) return `/cards/art/${fileNameFor(slice)}.jpg`;
+  return cardImageUrl(cardId, ref);
+}
+
+/** The illustration off a character's big card, for the same reasons. */
+export function characterArtUrl(characterId: string): string | null {
+  const slice = (portraits as Record<string, string>)[characterId];
+  if (slice && ART_AVAILABLE.has(slice)) return `/cards/art/${fileNameFor(slice)}.jpg`;
+  return characterImageUrl(characterId);
 }

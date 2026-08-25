@@ -364,6 +364,8 @@ carried at all but kept for trading (1.4).
 | card abilities only from worn cards | ✅ `inEffect` at the ferry and the crossings |
 | drawn as a body beside the character card | ✅ `slot-panel.tsx` |
 | the pack drawn as its places, with the count | ✅ "Plecak n / 4" |
+| the illustration as the icon, whole card on hover | ✅ `cardArtUrl`, `export-card-art.mjs` |
+| dragging between the pack and a place, both ways | ✅ `slot-panel.tsx` |
 | taking something off into a full pack is refused | ✅ `equipCard` |
 | two weapons at once, for a character that can | ❌ no character in the box has the ability |
 
