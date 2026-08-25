@@ -12,7 +12,8 @@ import type { FieldId } from "@/lib/engine/board";
 import { crossingFrom } from "@/lib/engine/rings";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { fieldScriptFor } from "@/lib/engine/fieldScript";
-import { BridgeOrdeal, Crossing, FieldServices } from "./turn-panel";
+import { BridgeOrdeal, Crossing, Ferry, FieldServices } from "./turn-panel";
+import { isFerry } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
 import type { CardId } from "@/data/ids";
 import events from "@/data/events.json";
@@ -235,6 +236,10 @@ export function FieldModal({
               in the first place. */}
           {standingHere && canAct && onAction && phase === "pole" && (
             <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
+              {/* 11.2's toll, which is a thing this Obszar asks of you and so
+                  belongs with the rest of what it asks. */}
+              {isFerry(fieldId) && <Ferry busy={busy} onAction={onAction} />}
+
               {/* The die table, where the field has one. */}
               {field.text && (
                 <RollTable

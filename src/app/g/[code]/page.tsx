@@ -24,7 +24,6 @@ import {
 import { cardArtUrl, characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
-import { TurnPanel } from "./turn-panel";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, type TileCard } from "./card-tile";
@@ -916,6 +915,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {active &&
         (game.turn_state.phase === "walka" ||
           game.turn_state.phase === "ruch" ||
+          game.turn_state.phase === "most" ||
           (game.turn_state.phase === "pole" &&
             (game.turn_state.drawn.length > 0 ||
               // A field nobody may walk past opens it too, even with nothing
@@ -947,6 +947,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 ? { roll: game.turn_state.roll, options: game.turn_state.options }
                 : null
             }
+            bridge={game.turn_state.phase === "most" ? game.turn_state.bridge : null}
             fieldOffer={
               game.turn_state.phase === "pole" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
             }
@@ -1351,6 +1352,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   canEnd={game.turn_state.phase !== "walka"}
                   canRoll={game.turn_state.phase === "rzut"}
                   onRoll={() => post("turn", { action: "roll" })}
+                  // 13.4: what is already lying here counts against the number
+                  // the field asks for, which is why a silted-up Obszar draws
+                  // nothing and the button is not there.
+                  canDraw={onField !== null && onField.draw - onField.drawn.length > 0}
+                  onDraw={() => post("turn", { action: "draw" })}
                   busy={busy}
                   onOpen={(id) => {
                     // The two the draw modal already owns open themselves; the
@@ -1397,28 +1403,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 )}
               </p>
             )}
-
-
-            {active && (
-              <TurnPanel
-                phase={game.turn_state}
-                isMine={
-                  (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
-                }
-                actingForOther={isTableScreen && active.seat_index !== mySeatIndex}
-                playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
-                dieSource={game.die_source}
-                mode={game.mode}
-                busy={busy}
-                onAction={(body) => post("turn", body)}
-                onSuggestion={(stat, delta, reason) =>
-                  post("adjust", { seatId: active.id, stat, delta, reason })
-                }
-                onTake={(cardId) =>
-                  post("holdings", { action: "take", seatId: active.id, cardId })
-                }
-              />
-            )}
+            {/* The turn panel is gone. Everything it drew has a home: the roll
+                and the draw are buttons in the box, the direction and the Most
+                are decisions and open the action window, the Obszar's own
+                business is in its window, and a fight was always in the
+                window. What was left was a bordered rectangle with nothing in
+                it. */}
 
 
             {active && (mySeatIndex === active.seat_index || isTableScreen) && (

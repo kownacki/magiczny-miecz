@@ -22,9 +22,11 @@ export function NowBox({
   windows,
   canEnd,
   canRoll,
+  canDraw,
   busy,
   onOpen,
   onRoll,
+  onDraw,
   onEnd,
 }: {
   playerName: string;
@@ -36,9 +38,12 @@ export function NowBox({
   canEnd: boolean;
   /** The turn has not been rolled yet — 10.2 makes this the first thing it does. */
   canRoll: boolean;
+  /** The Obszar still owes cards (13.4 counts what is already lying there). */
+  canDraw: boolean;
   busy: boolean;
   onOpen: (id: WindowId) => void;
   onRoll: () => void;
+  onDraw: () => void;
   onEnd: () => void;
 }) {
   return (
@@ -93,6 +98,19 @@ export function NowBox({
           — and there is nothing to decide about it, so it is a button and not
           a window. What the die then asks IS a decision, and that opens the
           action window like everything else. */}
+      {/* Drawing is the roll's twin: the field says how many and there is
+          nothing to decide, so it is a button here rather than a window. What
+          comes off the deck is the decision, and that opens one. */}
+      {isMine && canDraw && (
+        <button
+          onClick={onDraw}
+          disabled={busy}
+          className="mt-2 shrink-0 rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
+        >
+          Wyciągnij kartę
+        </button>
+      )}
+
       {isMine && canRoll && (
         <button
           onClick={onRoll}

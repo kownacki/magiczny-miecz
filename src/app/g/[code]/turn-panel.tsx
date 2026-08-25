@@ -192,7 +192,44 @@ export function TurnPanel({
  * only "won" and "lost" quietly turned every draw into a loss and took a point
  * the rules leave alone.
  */
-function BridgeControls({
+/**
+ * The Przewoźnik's toll (11.2), drawn in the Obszar window with the rest of
+ * what a field asks of you.
+ */
+export function Ferry({
+  busy,
+  onAction,
+}: {
+  busy: boolean;
+  onAction: (body: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="rounded border border-ochre/40 bg-night/60 p-3">
+      <p className="mb-2 text-xs text-muted">
+        Przewoźnik żąda <span className="text-zloto">1 Sz. Z.</span> za przeprawę.
+        Bez zapłaty wracasz tam, skąd zacząłeś ruch.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          disabled={busy}
+          onClick={() => onAction({ action: "ferry", pay: true })}
+          className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+        >
+          Płacę 1 Sz. Z.
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => onAction({ action: "ferry", pay: false })}
+          className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+        >
+          Nie płacę — wracam
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function BridgeControls({
   bridge,
   simulated,
   busy,
@@ -603,30 +640,6 @@ function FieldControls({
 
   return (
     <div className="flex flex-col gap-4">
-      {isFerry(phase.fieldId) && (
-        <div className="rounded border border-ochre/40 bg-night/60 p-3">
-          <p className="mb-2 text-xs text-muted">
-            Przewoźnik żąda <span className="text-zloto">1 Sz. Z.</span> za przeprawę.
-            Bez zapłaty wracasz tam, skąd zacząłeś ruch.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "ferry", pay: true })}
-              className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-            >
-              Płacę 1 Sz. Z.
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "ferry", pay: false })}
-              className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
-            >
-              Nie płacę — wracam
-            </button>
-          </div>
-        </div>
-      )}
 
       {phase.draw > 0 && (
         <p className="text-sm text-muted">

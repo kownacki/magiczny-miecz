@@ -15,7 +15,7 @@ import {
 import { isSettled } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 import { FIELDS, ringOf, type FieldId } from "@/lib/engine/board";
-import { FightControls } from "./turn-panel";
+import { BridgeControls, FightControls } from "./turn-panel";
 import { SpellHand, type HeldSpell } from "./spell-hand";
 import type { TileCard } from "./card-tile";
 import {
@@ -68,6 +68,7 @@ export function DrawModal({
   fought,
   fight,
   move,
+  bridge,
   fieldOffer,
   simulated,
   myEscape,
@@ -142,6 +143,16 @@ export function DrawModal({
    * on their own device.
    */
   move: { roll: number; options: TurnMoveOption[] } | null;
+  /**
+   * The Kamienny Most's entrance (11.9-11.11), which is the same shape as the
+   * move: one thing to decide, once, with the table watching.
+   */
+  bridge: {
+    from: string;
+    guardian: string;
+    entersAt: string;
+    stat: "miecz" | "magia";
+  } | null;
   /**
    * A field's compulsory table, when the character is standing on one.
    *
@@ -298,6 +309,28 @@ export function DrawModal({
             </button>
           ))}
         </div>
+      </Shell>
+    );
+  }
+
+  if (bridge) {
+    return (
+      <Shell
+        label="Kamienny Most"
+        art={null}
+        watching={canAct ? null : `${who} wchodzi na Most`}
+        minimized={minimized && !canAct}
+        onMinimize={canAct ? null : onMinimize}
+        onRestore={onRestore}
+        onAbandon={null}
+        error={error}
+      >
+        <BridgeControls
+          bridge={bridge}
+          simulated={simulated}
+          busy={busy}
+          onAction={onAction}
+        />
       </Shell>
     );
   }
