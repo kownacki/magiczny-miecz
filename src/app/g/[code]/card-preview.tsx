@@ -21,6 +21,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cardImageUrl, characterImageUrl } from "@/lib/engine/cardImages";
 import { characterProfile, forbiddenNatures, itemProfile } from "@/lib/engine/abilityText";
+import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";
 import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
@@ -142,6 +143,10 @@ export function CardPreview({
     : card.character
       ? characterProfile(card.cardId)
       : itemProfile(card.cardId, eqMode);
+  // What is printed at the top of the card. Null for a Zaklęcie, a Karta
+  // Postaci and anything off the Wyposażenie sheets — none of those is a Karta
+  // Zdarzeń and none of them carries one.
+  const numeral = numeralOf(card.cardId);
   // 5.3, answered for the reader rather than stated in the abstract.
   const barred = nature !== null && (forbiddenNatures(card.cardId)?.includes(nature) ?? false);
   const anythingToSay =
@@ -184,9 +189,23 @@ export function CardPreview({
           empty column next to it. */}
       {anythingToSay && (
         <div className="flex w-[18rem] max-w-[55vw] flex-col gap-2">
-          <p className="font-[family-name:var(--font-display)] text-sm text-ochre">
-            {card.name}
-          </p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="font-[family-name:var(--font-display)] text-sm text-ochre">
+              {card.name}
+            </p>
+            {/* The Roman numeral printed at the top of the card. Not an
+                identity and not a level — it is the class, and 15.2 resolves a
+                stack of cards drawn on one Obszar from the lowest up. Set apart
+                on the right the way it is on the card itself. */}
+            {numeral && (
+              <span
+                title={numeralMeaning(card.cardId) ?? undefined}
+                className="shrink-0 font-[family-name:var(--font-display)] text-sm leading-none text-ochre/50"
+              >
+                {numeral}
+              </span>
+            )}
+          </div>
           {card.kindLabel && <p className="text-[11px] text-muted">{card.kindLabel}</p>}
 
           {profile?.slotLabel && (

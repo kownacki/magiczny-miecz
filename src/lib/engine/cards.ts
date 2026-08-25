@@ -1,6 +1,7 @@
 /** Interprets a card's printed Miecz and Magia numbers, which mean different things depending on the card's class. */
 
-import type { EventCard } from "@/data/types";
+import events from "@/data/events.json";
+import { CARD_CLASS, type CardClass, type EventCard } from "@/data/types";
 import type { CombatKind } from "./combat";
 
 /**
@@ -52,4 +53,45 @@ export function bonusOf(card: Pick<EventCard, "cardClass" | "miecz" | "magia">):
   const magia = card.magia ?? 0;
   if (miecz === 0 && magia === 0) return null;
   return { miecz, magia };
+}
+
+/**
+ * The Roman numeral printed at the top of a Karta Zdarzeń.
+ *
+ * It is not an identity and not a level — four Magiczne Miecze all print V, and
+ * so does a Sztuka Złota. It is the card's *class*, and it is an instruction
+ * about order: 15.2 has a stack of cards drawn on one Obszar resolved by
+ * ascending numeral, "Karta o najniższym numerze rozpatrywana jest jako
+ * pierwsza". So a Spotkanie happens before the Wróg standing next to it, and
+ * you only reach the Przedmiot if you survived both.
+ *
+ * That is worth showing rather than leaving as a mark nobody can read. The
+ * ranks themselves already live in `CARD_CLASS` and are load-bearing — the
+ * sort in `state.ts` is what makes a turn resolve in the printed order.
+ */
+const NUMERAL = ["", "I", "II", "III", "IV", "V", "VI"] as const;
+
+const CLASS_BY_ID = new Map<string, CardClass>(
+  (events as EventCard[]).map((card) => [card.id, card.cardClass] as const),
+);
+
+/** The class a card belongs to, or null for anything that is not a Karta Zdarzeń. */
+export function classOf(cardId: string): CardClass | null {
+  return CLASS_BY_ID.get(cardId) ?? null;
+}
+
+/** What is printed at the top of the card, or null when nothing is. */
+export function numeralOf(cardId: string): string | null {
+  const cardClass = classOf(cardId);
+  return cardClass ? NUMERAL[CARD_CLASS[cardClass]] : null;
+}
+
+/** What the numeral means, said in full for a hover. */
+export function numeralMeaning(cardId: string): string | null {
+  const cardClass = classOf(cardId);
+  if (!cardClass) return null;
+  return (
+    `${NUMERAL[CARD_CLASS[cardClass]]} — klasa Karty. ` +
+    `Karty wyciągnięte na jednym Obszarze rozpatruje się od najniższej (15.2).`
+  );
 }
