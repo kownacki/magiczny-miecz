@@ -1382,7 +1382,6 @@ function Hand({
   liftedHoldingId,
   onCarry,
   onDragging,
-  onPlaceInPack,
   onDrop,
   onTrade,
   onEquip,
@@ -1404,7 +1403,6 @@ function Hand({
   onCarry: (carried: Carried | null) => void;
   /** The card id being dragged out of the pack, or null when the drag ends. */
   onDragging: (moving: { cardId: string; holdingId: string } | null) => void;
-  onPlaceInPack: () => void;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
   onEquip: (holdingId: string, slot: Slot | null) => void;
@@ -1483,22 +1481,42 @@ function Hand({
    */
   const stepAside = insertAt === null ? -1 : arranged.findIndex((held) => held.id === insertAt);
 
-  /**
-   * Moves a card in the pack to sit before another, or to the end.
-   *
-   * Only cards already in the pack: something coming off the body is being
-   * taken off, which is a different act with its own answer (it lands at the
-   * end, because that is where a card the pack has never seen goes).
-   */
-  const moveWithin = (holdingId: string, beforeId: string | null) => {
-    if (!onReorder) return;
-    const ids = arranged.map((held) => held.id);
-    if (!ids.includes(holdingId)) return;
-    const without = ids.filter((id) => id !== holdingId);
+  /** The pack's order with one card put before another, or on the end. */
+  const orderWith = (holdingId: string, beforeId: string | null) => {
+    const without = arranged.map((held) => held.id).filter((id) => id !== holdingId);
     const at = beforeId === null ? -1 : without.indexOf(beforeId);
     without.splice(at < 0 ? without.length : at, 0, holdingId);
-    setWanted(without);
-    onReorder(without);
+    return without;
+  };
+
+  /** Moves a card already in the pack to sit before another, or on the end. */
+  const moveWithin = (holdingId: string, beforeId: string | null) => {
+    if (!onReorder) return;
+    if (!arranged.some((held) => held.id === holdingId)) return;
+    const order = orderWith(holdingId, beforeId);
+    setWanted(order);
+    onReorder(order);
+  };
+
+  /**
+   * Takes a card off the body and puts it in the pack, where the pointer says.
+   *
+   * It used to land on the end however carefully you aimed, on the reasoning
+   * that a card the pack has not seen before has no place in it yet. But the
+   * pack is a row a player arranges, and coming off the body is the commonest
+   * way a card enters it — so "anywhere you like, except where you were
+   * pointing" was the one gesture that did not work.
+   *
+   * The two writes do not race. Where a card sits and whether it is worn are
+   * different columns, and the order is written for whatever the seat holds
+   * without asking where any of it is, so neither has to land first.
+   */
+  const dropIntoPack = (holdingId: string, beforeId: string | null) => {
+    onEquip(holdingId, null);
+    if (!onReorder) return;
+    const order = orderWith(holdingId, beforeId);
+    setWanted(order);
+    onReorder(order);
   };
 
   /**
@@ -1593,7 +1611,7 @@ function Hand({
           if (!holdingId) return;
           event.preventDefault();
           if (packOrder.includes(holdingId)) moveWithin(holdingId, before);
-          else onEquip(holdingId, null);
+          else dropIntoPack(holdingId, before);
         }}
         // Clicking the pack with something on the cursor puts it there, which
         // is how a worn card comes off without aiming at a particular card —
@@ -1608,7 +1626,8 @@ function Hand({
             moveWithin(carried.holdingId, before);
             return onCarry(null);
           }
-          onPlaceInPack();
+          dropIntoPack(carried.holdingId, before);
+          onCarry(null);
         }}
         className={`flex flex-wrap gap-2 rounded border border-dashed p-1 transition ${
           !landing
@@ -1675,7 +1694,10 @@ function Hand({
                   if (!putsItBack(held.id)) moveWithin(carried.holdingId, held.id);
                   return onCarry(null);
                 }
-                return onPlaceInPack();
+                // Off the body, and in front of this card rather than on the
+                // end of the row.
+                dropIntoPack(carried.holdingId, held.id);
+                return onCarry(null);
               }
               // Picked up from inside the pack, so the pointer is inside it —
               // said now rather than waiting for the first move, or the
@@ -1742,7 +1764,7 @@ function Hand({
               // A card off the body is being taken off; one already in the pack
               // is being moved within it.
               if (packOrder.includes(holdingId)) moveWithin(holdingId, held.id);
-              else onEquip(holdingId, null);
+              else dropIntoPack(holdingId, held.id);
             }}
             /**
              * A carried card has no drag events behind it, so hovering is
@@ -1763,7 +1785,7 @@ function Hand({
              * has left.
              */
             onPointerEnter={() => {
-              if (carried?.from !== "plecak" || putsItBack(held.id)) return;
+              if (!carried || putsItBack(held.id)) return;
               setInsertAt(held.id);
             }}
             // Only this card's own gap: moving straight to the next card sets
@@ -2212,7 +2234,6 @@ function SeatCard({
             liftedHoldingId={liftedHoldingId}
             onCarry={setCarried}
             onDragging={announceDrag}
-            onPlaceInPack={() => place(null)}
             onDrop={onDrop}
             onTrade={onTrade}
             onEquip={onEquip}
