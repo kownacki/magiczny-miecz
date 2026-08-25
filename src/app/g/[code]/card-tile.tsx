@@ -35,6 +35,7 @@ export function CardTile({
   onDoubleClick,
   draggable,
   onDragStart,
+  onDragEnd,
   children,
 }: {
   card: TileCard;
@@ -48,6 +49,7 @@ export function CardTile({
   /** Draggable into an equipment place, in the slotted variant. */
   draggable?: boolean;
   onDragStart?: (event: React.DragEvent) => void;
+  onDragEnd?: () => void;
   /** Controls drawn under the card, such as a cast or drop button. */
   children?: React.ReactNode;
 }) {
@@ -64,6 +66,7 @@ export function CardTile({
         disabled={!onClick}
         draggable={draggable}
         onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
         title={card.name}
         style={{ width, height }}
         className={`relative overflow-hidden rounded border border-edge bg-raised transition ${

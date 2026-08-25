@@ -371,6 +371,8 @@ carried at all but kept for trading (1.4).
 | dragging between the pack and a place, both ways | ✅ `slot-panel.tsx` |
 | one click carries a card, a second puts it down | ✅ `carry.tsx` — works on touch, unlike drag |
 | two clicks put it on or take it off | ✅ |
+| a place says green or red before you let go | ✅ `movingCardId` + `fitsIn` |
+| the move shows at once, the server is told after | ✅ optimistic; measured at 14ms |
 | taking something off into a full pack is refused | ✅ `equipCard` |
 | two weapons at once, for a character that can | ❌ no character in the box has the ability |
 

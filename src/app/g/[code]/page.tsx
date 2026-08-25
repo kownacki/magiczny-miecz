@@ -130,6 +130,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [watching, setWatching] = useState(false);
   /** The character asked for and not yet heard back about (see `chooseCharacter`). */
   const [pendingCharacter, setPendingCharacter] = useState<string | null>(null);
+  /** Moves this device has made and the server has not confirmed (see `equip`). */
+  const [moved, setMoved] = useState<Record<string, Slot | null>>({});
   /** Which seat is choosing a character; "auto" lets the app decide. */
   const [picking, setPicking] = useState<string | "auto" | null>("auto");
   const [error, setError] = useState<string | null>(null);
@@ -353,6 +355,67 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     }
   }
 
+  /**
+   * Moves a card between the pack and a place on the body — on screen first.
+   *
+   * Unlike choosing a character, this has nobody to race. Two players can want
+   * the same Kapłanka and only the server knows who asked first; nobody else is
+   * moving *your* Hełm from your pack to your head. So the card moves when you
+   * move it, and the server is told afterwards.
+   *
+   * What the server can still refuse — a card that does not fit, a pack with no
+   * room — the browser can work out for itself, so it is checked here first and
+   * the move never happens rather than happening and being taken back. If the
+   * server refuses anyway, the next refresh has the truth in it and the
+   * optimistic move is dropped on top of it, which puts the card back.
+   */
+  async function equip(holdingId: string, slot: Slot | null) {
+    const mineNow = seats.find((seat) => seat.seat_index === mySeatIndex);
+    const held = mineNow?.holdings.find((h) => h.id === holdingId);
+    if (!held || !mineNow) return;
+
+    if (slot !== null && !fitsIn(held.cardId, slot)) {
+      return setError(
+        isWearable(held.cardId)
+          ? `${CARD_NAMES.get(held.cardId) ?? held.cardId} nie pasuje w to miejsce.`
+          : `${CARD_NAMES.get(held.cardId) ?? held.cardId} to nie jest rzecz do noszenia.`,
+      );
+    }
+    if (slot === null && held.slot != null) {
+      const packed = mineNow.holdings.filter((h) => h.kind === "item" && h.slot == null).length;
+      const limit = carryLimit(
+        mineNow.holdings.map((h) => ({ cardId: h.cardId, kind: h.kind, face: h.face, slot: h.slot ?? null })),
+        "slotowy",
+      );
+      if (packed >= limit) return setError("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
+    }
+
+    setError(null);
+    setMoved((current) => ({ ...current, [holdingId]: slot }));
+    try {
+      const response = await fetch(`/api/games/${code}/holdings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "equip",
+          holdingId,
+          slot,
+          token: readSeatToken(code),
+        }),
+      });
+      if (!response.ok) setError((await response.json().catch(() => ({}))).error ?? null);
+      await refresh();
+    } finally {
+      // Dropped after the refresh, so the card never flickers back to where it
+      // was on its way to where it now is.
+      setMoved((current) => {
+        const next = { ...current };
+        delete next[holdingId];
+        return next;
+      });
+    }
+  }
+
   async function addLocalPlayer(name: string) {
     const response = await fetch(`/api/games/${code}/join`, {
       method: "POST",
@@ -515,7 +578,20 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     );
   }
 
-  const mine = mySeat;
+  /**
+   * This seat, with any move this device has just made already applied.
+   *
+   * Laid over the server's answer rather than written into it, so the two-second
+   * poll landing mid-flight cannot undo what the player just did.
+   */
+  const mine = mySeat
+    ? {
+        ...mySeat,
+        holdings: mySeat.holdings.map((held) =>
+          held.id in moved ? { ...held, slot: moved[held.id] } : held,
+        ),
+      }
+    : mySeat;
   const others = seats.filter((seat) => seat.id !== mine?.id && seat.character_id);
 
   return (
@@ -654,7 +730,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 slotted={game.eq_mode === "slotowy"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
                 onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
-                onEquip={(holdingId, slot) => post("holdings", { action: "equip", holdingId, slot })}
+                onEquip={equip}
                 onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
                 onInspect={setInspectingCard}
               />
@@ -780,6 +856,7 @@ function Hand({
   slotted,
   carried,
   onCarry,
+  onDragging,
   onPlaceInPack,
   onDrop,
   onTrade,
@@ -794,6 +871,8 @@ function Hand({
   /** The card on the cursor, if any. */
   carried: Carried | null;
   onCarry: (carried: Carried | null) => void;
+  /** The card id being dragged out of the pack, or null when the drag ends. */
+  onDragging: (cardId: string | null) => void;
   onPlaceInPack: () => void;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
@@ -900,7 +979,11 @@ function Hand({
             // Dragged onto a place to put it on — the same journey the
             // "załóż" button makes, for people who reach for the card.
             draggable={canAct && slotted && held.kind === "item" && isWearable(held.cardId)}
-            onDragStart={(event) => startHoldingDrag(event, held.id)}
+            onDragStart={(event) => {
+              onDragging(held.cardId);
+              startHoldingDrag(event, held.id);
+            }}
+            onDragEnd={() => onDragging(null)}
           >
             {canAct && (
               <span className="flex items-center gap-2">
@@ -1057,6 +1140,15 @@ function SeatCard({
    * usually the other half.
    */
   const [carried, setCarried] = useState<Carried | null>(null);
+  /**
+   * The card being dragged, by id.
+   *
+   * Kept in state because a `dragover` handler is not allowed to read what the
+   * drag is carrying — only the drop is — so without this the place under the
+   * pointer could not say whether it would accept before it was let go.
+   */
+  const [dragging, setDragging] = useState<string | null>(null);
+  const movingCardId = carried?.cardId ?? dragging;
 
   /** Puts what is being carried into a place, or takes it back out. */
   const place = (slot: Slot | null) => {
@@ -1123,6 +1215,8 @@ function SeatCard({
                 canAct={canAdjust}
                 busy={false}
                 carrying={carried !== null}
+                movingCardId={movingCardId}
+                onDragging={setDragging}
                 onPickUp={(item, from) =>
                   setCarried({ ...item, name: item.card.name, from })
                 }
@@ -1169,6 +1263,7 @@ function SeatCard({
             trophies={trophies.length}
             carried={carried}
             onCarry={setCarried}
+            onDragging={setDragging}
             onPlaceInPack={() => place(null)}
             onDrop={onDrop}
             onTrade={onTrade}

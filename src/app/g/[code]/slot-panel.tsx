@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
-import { SLOT_LABEL, type Slot } from "@/lib/engine/slots";
+import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
 /**
@@ -30,17 +30,27 @@ export interface SlotItem {
   card: TileCard;
 }
 
-/** Where each place sits in the three-column grid, by CSS grid area. */
+/**
+ * Where each place sits, as a body.
+ *
+ * Nine places fit a three-by-three exactly, which is what they get: the head in
+ * the middle of the top row with the amulet and the ring either side of it, the
+ * two hands either side of the torso, and the load along the bottom — gloves
+ * under the hand that wears them, then the mount and the bag.
+ *
+ * The hands used to be double-height, which made them the only places shaped
+ * differently from everything else and from the pictures that go in them.
+ */
 const LAYOUT: Record<Slot, string> = {
+  amulet: "1 / 1 / 2 / 2",
   glowa: "1 / 2 / 2 / 3",
-  amulet: "1 / 3 / 2 / 4",
-  "reka-glowna": "2 / 1 / 4 / 2",
+  pierscien: "1 / 3 / 2 / 4",
+  "reka-glowna": "2 / 1 / 3 / 2",
   tulow: "2 / 2 / 3 / 3",
-  "reka-pomocnicza": "2 / 3 / 4 / 4",
-  rekawice: "3 / 2 / 4 / 3",
-  pierscien: "4 / 1 / 5 / 2",
-  wierzchowiec: "4 / 2 / 5 / 3",
-  sakwa: "4 / 3 / 5 / 4",
+  "reka-pomocnicza": "2 / 3 / 3 / 4",
+  rekawice: "3 / 1 / 4 / 2",
+  wierzchowiec: "3 / 2 / 4 / 3",
+  sakwa: "3 / 3 / 4 / 4",
 };
 
 /** Drawn in the empty places, so a gap says which gap it is. */
@@ -86,6 +96,8 @@ export function SlotPanel({
   canAct,
   busy,
   carrying,
+  movingCardId,
+  onDragging,
   onPickUp,
   onTakeOff,
   onDropInto,
@@ -96,6 +108,11 @@ export function SlotPanel({
   busy: boolean;
   /** A card is on the cursor, so a click on a place puts it there. */
   carrying: boolean;
+  /** Announces the card id a drag has picked up, and null when it ends. */
+  onDragging: (cardId: string | null) => void;
+  /** Which card is being moved, dragged or carried — so a place can say whether
+      it would take it before the player finds out by being refused. */
+  movingCardId: string | null;
   onPickUp: (item: SlotItem, from: Slot) => void;
   onTakeOff: (holdingId: string) => void;
   /** Something was put into a place — dropped, or carried there and clicked. */
@@ -107,12 +124,14 @@ export function SlotPanel({
   return (
     // Twice the size it started at. At 44 pixels a Hełm was a brown smudge and
     // the empty places were indistinguishable from one another, which is the
-    // one thing a paper doll is for. Fixed rather than a fraction of the card:
-    // a share of the width made the four rows taller than the panel had any
-    // business being.
+    // one thing a paper doll is for.
     <div
       className="grid shrink-0 gap-1.5"
-      style={{ gridTemplateColumns: "repeat(3, 84px)", gridAutoRows: "84px" }}
+      // Shaped like what goes in them. The illustration cut off a card is 370
+      // by 323 — a shade wider than tall — so a square place either letterboxed
+      // the picture or cropped it, and every card in the box has the same
+      // proportions.
+      style={{ gridTemplateColumns: "repeat(3, 96px)", gridAutoRows: "84px" }}
     >
       {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
         const item = worn[slot];
@@ -126,6 +145,10 @@ export function SlotPanel({
               setOver(slot);
             }}
             onDragLeave={() => setOver((current) => (current === slot ? null : current))}
+            // A carried card has no drag events behind it, so hovering has to
+            // be watched directly for the same answer to show.
+            onPointerEnter={() => carrying && setOver(slot)}
+            onPointerLeave={() => setOver((current) => (current === slot ? null : current))}
             onDrop={(event) => {
               setOver(null);
               if (!canAct) return;
@@ -135,11 +158,19 @@ export function SlotPanel({
               onDropInto(holdingId, slot);
             }}
             className={`group relative overflow-hidden rounded border transition ${
-              over === slot
-                ? "border-ochre bg-ochre/10"
-                : item
-                  ? "border-ochre/60 bg-raised"
-                  : "border-dashed border-edge/70 bg-night/40"
+              over === slot && movingCardId
+                ? // Green if it would go here, red if it would not. Said while
+                  // the card is still in the air, rather than as a refusal
+                  // after the fact.
+                  fitsIn(movingCardId, slot)
+                  ? "border-verdigris bg-verdigris/25"
+                  : "border-vermilion bg-vermilion/25"
+                : movingCardId && fitsIn(movingCardId, slot)
+                  ? // Somewhere it could go, marked faintly while it is moving.
+                    "border-verdigris/50 bg-verdigris/5"
+                  : item
+                    ? "border-ochre/60 bg-raised"
+                    : "border-dashed border-edge/70 bg-night/40"
             }`}
             title={item ? undefined : SLOT_LABEL[slot]}
           >
@@ -147,6 +178,7 @@ export function SlotPanel({
               <WornCard
                 item={item}
                 canAct={canAct}
+                onDragging={onDragging}
                 // One click picks it up; two take it straight off. Same pair as
                 // in the pack, so the gesture means one thing everywhere.
                 onPickUp={() => onPickUp(item, slot)}
@@ -195,11 +227,13 @@ export function SlotPanel({
 function WornCard({
   item,
   canAct,
+  onDragging,
   onPickUp,
   onTakeOff,
 }: {
   item: SlotItem;
   canAct: boolean;
+  onDragging: (cardId: string | null) => void;
   onPickUp: () => void;
   onTakeOff: () => void;
 }) {
@@ -211,7 +245,11 @@ function WornCard({
       <button
         type="button"
         draggable={canAct}
-        onDragStart={(event) => startHoldingDrag(event, item.holdingId)}
+        onDragStart={(event) => {
+          onDragging(item.cardId);
+          startHoldingDrag(event, item.holdingId);
+        }}
+        onDragEnd={() => onDragging(null)}
         onClick={onPickUp}
         onDoubleClick={onTakeOff}
         title={item.card.name}
