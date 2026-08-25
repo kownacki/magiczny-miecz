@@ -24,8 +24,31 @@ export interface Carried {
   from: string | null;
 }
 
+/**
+ * Where the pointer was last seen.
+ *
+ * Module-level and not state, because it is read at the instant a card is
+ * picked up and nothing should re-render when it changes. Kept up to date from
+ * `pointerdown` as well as `pointermove`: a card is picked up by a click, the
+ * click follows a `pointerdown`, and on a touchscreen that press is the only
+ * position anybody has ever given us — there is no hovering finger to have left
+ * a trail of moves behind it.
+ */
+const lastPointer = { x: 0, y: 0 };
+
 export function CarriedCard({ carried }: { carried: Carried | null }) {
   const box = useRef<HTMLDivElement>(null);
+
+  // Always listening, whether or not anything is being carried, because the
+  // position has to be known *before* the pick-up rather than after it.
+  useEffect(() => {
+    const remember = (event: PointerEvent) => {
+      lastPointer.x = event.clientX;
+      lastPointer.y = event.clientY;
+    };
+    window.addEventListener("pointerdown", remember, { passive: true });
+    return () => window.removeEventListener("pointerdown", remember);
+  }, []);
 
   // Positioned by hand rather than through state: this fires on every pointer
   // move, and re-rendering the seat card for each pixel would make the card lag
@@ -33,6 +56,8 @@ export function CarriedCard({ carried }: { carried: Carried | null }) {
   useEffect(() => {
     if (!carried) return;
     const follow = (event: PointerEvent) => {
+      lastPointer.x = event.clientX;
+      lastPointer.y = event.clientY;
       const node = box.current;
       if (node) node.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
     };
@@ -45,7 +70,14 @@ export function CarriedCard({ carried }: { carried: Carried | null }) {
 
   return (
     <div
-      ref={box}
+      // Placed as it mounts, not on the first move afterwards. Waiting for a
+      // `pointermove` meant the card appeared in the top-left corner of the
+      // window and stayed there until the hand twitched — so picking something
+      // up looked like dropping it somewhere else.
+      ref={(node) => {
+        box.current = node;
+        if (node) node.style.transform = `translate(${lastPointer.x}px, ${lastPointer.y}px)`;
+      }}
       className="pointer-events-none fixed left-0 top-0 z-50 -ml-8 -mt-7 opacity-90"
       aria-hidden
     >
