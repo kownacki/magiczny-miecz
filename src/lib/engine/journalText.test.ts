@@ -72,6 +72,35 @@ suite("journal vocabulary", () => {
     expect(text("zostawienie", { fieldId: "kurhan", cardIds: [] })).toBeNull();
   });
 
+  it("records the field and cards it named, so they can be looked up", () => {
+    const line = describe(
+      entry("zostawienie", { fieldId: "kurhan", cardIds: ["magiczny-miecz", "upior"] }),
+      SEATS,
+      null,
+    );
+    expect(line?.refs).toEqual([
+      { kind: "field", id: "kurhan", name: "Kurhan" },
+      { kind: "card", id: "magiczny-miecz", name: "MAGICZNY MIECZ" },
+      { kind: "card", id: "upior", name: "UPIÓR" },
+    ]);
+    // Every recorded name really appears in the sentence, which is what lets
+    // the reader find it there.
+    for (const ref of line!.refs!) expect(line!.text).toContain(ref.name);
+  });
+
+  it("records nothing for a line that names nothing", () => {
+    expect(describe(entry("start", { seats: 2 }), SEATS, null)?.refs).toBeUndefined();
+  });
+
+  it("does not record the same name twice", () => {
+    const line = describe(
+      entry("zostawienie", { fieldId: "kurhan", cardIds: ["upior", "upior"] }),
+      SEATS,
+      null,
+    );
+    expect(line?.refs?.filter((ref) => ref.kind === "card")).toHaveLength(1);
+  });
+
   it("marks a manual correction as one", () => {
     const line = describe(
       entry("korekta", { stat: "zycie", delta: -1, from: 4, to: 3 }, { manual: true }),

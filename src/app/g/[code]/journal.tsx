@@ -16,7 +16,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
 import { readSeatToken } from "@/lib/game/seatToken";
-import type { JournalLine } from "@/lib/engine/journalText";
+import { fieldWithText } from "@/lib/engine/fieldText";
+import { asFieldId } from "@/lib/engine/board";
+import { useCardPreview } from "./card-preview";
+import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
 
 export function Journal({ code, revision }: { code: string; revision: number }) {
   const [lines, setLines] = useState<JournalLine[]>([]);
@@ -127,7 +130,7 @@ function Line({ line, heading }: { line: JournalLine; heading: boolean }) {
           className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${colour ? "" : "bg-edge"}`}
         />
         <span className={line.manual ? "text-ochre/90" : "text-muted"}>
-          {line.text}
+          <Looked text={line.text} refs={line.refs} />
           {/* A correction is a human overruling the referee, and LOBBY.md wants
               that visible rather than blended into what the rules did. */}
           {line.manual && <span className="ml-1 text-[10px] text-ochre/70">korekta</span>}
@@ -135,4 +138,69 @@ function Line({ line, heading }: { line: JournalLine; heading: boolean }) {
       </li>
     </>
   );
+}
+
+/**
+ * A sentence with the things it named turned into lookups.
+ *
+ * The journal is where a card or a field gets mentioned long after it left the
+ * screen — "zostawia na polu Kurhan: MAGICZNY MIECZ" is exactly the line you
+ * want to interrogate two turns later, and going to find the card by hand is
+ * the bookkeeping this app exists to remove.
+ *
+ * The names are matched in the finished sentence rather than the sentence being
+ * assembled from fragments, because the renderer records each name as it
+ * resolves it — so the list cannot drift from the words.
+ */
+function Looked({ text, refs }: { text: string; refs?: JournalRef[] }) {
+  if (!refs?.length) return <>{text}</>;
+
+  // Longest first: a short name that happens to sit inside a longer one must
+  // not win the split and leave the rest of the longer name as loose text.
+  const byLength = [...refs].sort((a, b) => b.name.length - a.name.length);
+  const pattern = new RegExp(`(${byLength.map(escapeForSplit).join("|")})`, "g");
+
+  return (
+    <>
+      {text.split(pattern).map((piece, at) => {
+        const ref = refs.find((candidate) => candidate.name === piece);
+        return ref ? <Lookup key={at} reference={ref} /> : <span key={at}>{piece}</span>;
+      })}
+    </>
+  );
+}
+
+/** One name in a sentence, with whatever there is to see about it on hover. */
+function Lookup({ reference }: { reference: JournalRef }) {
+  // A stored id becomes a FieldId only through the guard, and a name the board
+  // no longer knows simply has nothing to show rather than throwing.
+  const fieldId = reference.kind === "field" ? asFieldId(reference.id) : null;
+  const field = fieldId ? fieldWithText(fieldId) : null;
+  const { handlers, preview } = useCardPreview(
+    {
+      cardId: reference.id,
+      name: reference.name,
+      text: field?.text ?? undefined,
+      kindLabel: reference.kind === "field" ? "Obszar" : undefined,
+    },
+    // A field has no card to show; its printed instruction is what there is.
+    reference.kind === "field",
+  );
+
+  return (
+    <>
+      <span
+        {...handlers}
+        className="cursor-help underline decoration-dotted decoration-muted/50 underline-offset-2 hover:text-ink"
+      >
+        {reference.name}
+      </span>
+      {preview}
+    </>
+  );
+}
+
+/** Names carry brackets and dots; a split pattern must take them literally. */
+function escapeForSplit(reference: JournalRef): string {
+  return reference.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -25,6 +25,23 @@ export interface JournalSeat {
   characterId: string | null;
 }
 
+/**
+ * Something a line named that can be looked at.
+ *
+ * The journal is where a card or a field is mentioned long after it left the
+ * screen — "zostawia na polu Kurhan: MAGICZNY MIECZ" is exactly the sentence
+ * you want to be able to interrogate two turns later. So a line records what it
+ * named, and the reader turns those names into things you can hover.
+ *
+ * `name` is what appears in `text`, which is what lets the client find it there
+ * without the sentence having to be built out of fragments.
+ */
+export interface JournalRef {
+  kind: "card" | "field";
+  id: string;
+  name: string;
+}
+
 export interface JournalLine {
   seq: number;
   turn: number;
@@ -33,6 +50,8 @@ export interface JournalLine {
   manual: boolean;
   /** Seat the line is about, for colouring it like the rest of the table. */
   seatIndex: number | null;
+  /** Cards and fields this line named, in the order it named them. */
+  refs?: JournalRef[];
   /**
    * A round boundary rather than something somebody did.
    *
@@ -141,12 +160,27 @@ export function describe(
   const seat = seats.find((candidate) => candidate.id === entry.seatId);
   const who = nameOf(seat);
   const data = entry.payload;
+
+  // Every name the sentence resolves is remembered as it is resolved, so the
+  // list cannot drift from the words: the same call that puts a name in the
+  // text is the one that records it.
+  const refs: JournalRef[] = [];
+  const remember = (kind: JournalRef["kind"], id: unknown, name: string) => {
+    if (typeof id === "string" && !refs.some((ref) => ref.name === name)) {
+      refs.push({ kind, id, name });
+    }
+    return name;
+  };
+  const card = (id: unknown) => remember("card", id, cardName(id));
+  const field = (id: unknown) => remember("field", id, fieldName(id));
+
   const line = (text: string): JournalLine => ({
     seq: entry.seq,
     turn: entry.turn,
     text,
     manual: entry.manual,
     seatIndex: seat?.seatIndex ?? null,
+    refs: refs.length > 0 ? refs : undefined,
   });
 
   switch (entry.kind) {
@@ -155,14 +189,14 @@ export function describe(
 
     // — where people are ————————————————————————————————————————————
     case "ruch":
-      return line(`${who} idzie z ${fieldName(data.from)} na ${fieldName(data.to)}.`);
+      return line(`${who} idzie z ${field(data.from)} na ${field(data.to)}.`);
     // The same move, but aimed at the Most — 11.9 makes it an attempt that the
     // entrance's guardian can refuse, so it is worth saying differently.
     case "proba-mostu":
-      return line(`${who} próbuje wejść na Most przez ${fieldName(data.from)}.`);
+      return line(`${who} próbuje wejść na Most przez ${field(data.from)}.`);
     case "przestawienie":
       return line(
-        `${who} — przestawienie na ${fieldName(data.to)}${data.reason ? `, ${data.reason}` : ""}.`,
+        `${who} — przestawienie na ${field(data.to)}${data.reason ? `, ${data.reason}` : ""}.`,
       );
     case "przeprawa":
       return line(`${who} przeprawia się przez ${String(data.obstacle ?? "przeszkodę")}.`);
@@ -194,12 +228,12 @@ export function describe(
     // — fighting ————————————————————————————————————————————————————
     case "walka-start": {
       const ids = Array.isArray(data.cardIds) ? data.cardIds : [];
-      const foe = ids.map(cardName).join(" i ") || "wroga";
+      const foe = ids.map((id) => card(id)).join(" i ") || "wroga";
       return line(`${who} walczy z: ${foe} (${num(data.enemyTotal)}).`);
     }
     case "walka-koniec":
       return line(
-        `${who} ${data.outcome === "wygrana" ? "wygrywa" : data.outcome === "remis" ? "remisuje" : "przegrywa"} walkę z: ${cardName(data.cardId)}.`,
+        `${who} ${data.outcome === "wygrana" ? "wygrywa" : data.outcome === "remis" ? "remisuje" : "przegrywa"} walkę z: ${card(data.cardId)}.`,
       );
     case "pojedynek": {
       const target = seats.find((candidate) => candidate.seatIndex === num(data.target, -1));
@@ -214,27 +248,27 @@ export function describe(
 
     // — what people have ————————————————————————————————————————————
     case "zabranie":
-      return line(`${who} bierze: ${cardName(data.cardId)}.`);
+      return line(`${who} bierze: ${card(data.cardId)}.`);
     // 16.8: what was not taken stays where it fell, face up. Saying where is the
     // whole point — a card on a field two turns later is otherwise unexplained.
     case "zostawienie": {
       const left = Array.isArray(data.cardIds) ? data.cardIds : [];
       if (left.length === 0) return null;
       return line(
-        `${who} zostawia na polu ${fieldName(data.fieldId)}: ${left.map(cardName).join(", ")}.`,
+        `${who} zostawia na polu ${field(data.fieldId)}: ${left.map((id) => card(id)).join(", ")}.`,
       );
     }
 
     case "odrzucenie":
-      return line(`${who} odrzuca: ${cardName(data.cardId)}.`);
+      return line(`${who} odrzuca: ${card(data.cardId)}.`);
     case "kupno":
-      return line(`${who} kupuje: ${cardName(data.cardId)} za ${sztuki(num(data.price))}.`);
+      return line(`${who} kupuje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);
     case "sprzedaz":
-      return line(`${who} sprzedaje: ${cardName(data.cardId)} za ${sztuki(num(data.price))}.`);
+      return line(`${who} sprzedaje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);
     case "wymiana-trofeow":
       return line(`${who} wymienia trofea — zyskuje ${num(data.gained)} Miecza.`);
     case "karta":
-      return line(`${who} wyciąga: ${cardName(data.cardId)}.`);
+      return line(`${who} wyciąga: ${card(data.cardId)}.`);
 
     // — what people are ————————————————————————————————————————————
     case "korekta": {
@@ -262,7 +296,7 @@ export function describe(
     case "kamien":
       return line(`${who} zamienia się w Kamień — wraca w turze ${num(data.until)}.`);
     case "smierc":
-      return line(`${who} ginie na polu ${fieldName(data.field)}.`);
+      return line(`${who} ginie na polu ${field(data.field)}.`);
     case "nowa-postac":
       return line(
         `${who} gra dalej jako: ${characterName(data.characterId)}.`,
@@ -285,7 +319,7 @@ export function describe(
     case "zaklecie": {
       const cast = typeof data.cardId === "string" || typeof data.name === "string";
       if (!cast) return line(`${who} dobiera Zaklęcie.`);
-      const named = typeof data.name === "string" ? data.name : cardName(data.cardId);
+      const named = typeof data.name === "string" ? data.name : card(data.cardId);
       const at = typeof data.target === "string" ? ` na: ${data.target}` : "";
       return line(`${who} wypowiada Zaklęcie: ${named}${at}.`);
     }

@@ -11,6 +11,11 @@
  * clipping containers, and a preview drawn beside the thing it describes is cut
  * off by the first `overflow-hidden` above it; the body's own equipment panel
  * had exactly that bug. Fixed to the viewport, nothing clips it.
+ *
+ * It sits above everything, deliberately. The overlays in this app are z-50 and
+ * so was this, which is a tie — and a tie is settled by document order, so the
+ * card came up *behind* the modal that had just offered it. A thing that
+ * describes what is under the pointer has to be on top of whatever that is.
  */
 
 import { useState } from "react";
@@ -32,7 +37,7 @@ const GAP = 12;
  * every move: the card sits beside the thing it belongs to, so it does not need
  * to chase the cursor, and not chasing it means no work per mousemove.
  */
-export function useCardPreview(card: TileCard | null) {
+export function useCardPreview(card: TileCard | null, imageless = false) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
 
   const handlers = {
@@ -44,11 +49,27 @@ export function useCardPreview(card: TileCard | null) {
     onPointerDown: () => setAnchor(null),
   };
 
-  const preview = anchor && card ? <CardPreview card={card} anchor={anchor} /> : null;
+  const preview =
+    anchor && card ? <CardPreview card={card} anchor={anchor} imageless={imageless} /> : null;
   return { handlers, preview, hovering: anchor !== null };
 }
 
-export function CardPreview({ card, anchor }: { card: TileCard; anchor: DOMRect }) {
+export function CardPreview({
+  card,
+  anchor,
+  imageless = false,
+}: {
+  card: TileCard;
+  anchor: DOMRect;
+  /**
+   * There is no picture of this and there should be no lookup for one.
+   *
+   * A field is not a card, and its id can collide with a card's — asking for
+   * the picture of "kurhan" could hand back a Miejsce card that merely shares
+   * the name. Its printed instruction is what there is to show.
+   */
+  imageless?: boolean;
+}) {
   // Hovering implies a mounted client, but the guard keeps this honest during
   // any server render of the tree.
   if (typeof document === "undefined") return null;
@@ -64,14 +85,14 @@ export function CardPreview({ card, anchor }: { card: TileCard; anchor: DOMRect 
     Math.max(GAP, anchor.top + anchor.height / 2 - height / 2),
     Math.max(GAP, window.innerHeight - height - GAP),
   );
-  const src = cardImageUrl(card.cardId, card.ref);
+  const src = imageless ? null : cardImageUrl(card.cardId, card.ref);
 
   return createPortal(
     <div
       role="tooltip"
       style={{ left, top, width }}
       // Never under the pointer: a preview that can be hovered flickers.
-      className="pointer-events-none fixed z-50 overflow-hidden rounded-lg border border-ochre/40 bg-night shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+      className="pointer-events-none fixed z-[100] overflow-hidden rounded-lg border border-ochre/40 bg-night shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
     >
       {src ? (
         <Image src={src} alt={card.name} width={width} height={height} className="block h-auto w-full" />

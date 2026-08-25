@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
+import { useCardPreview } from "./card-preview";
 import { kindForCard } from "@/lib/engine/holdings";
 import type { FieldId } from "@/lib/engine/board";
 import type { CardId } from "@/data/ids";
@@ -145,26 +146,13 @@ export function FieldModal({
                       key={lying.id}
                       className="flex items-center gap-3 rounded border border-edge/60 bg-night/40 p-2"
                     >
-                      <button
-                        onClick={() => onInspect(lying.cardId)}
-                        title="Pokaż całą Kartę"
-                        className="shrink-0 overflow-hidden rounded border border-edge transition hover:border-ochre"
-                      >
-                        {art ? (
-                          <Image
-                            src={art}
-                            alt={name}
-                            width={74}
-                            height={65}
-                            className="h-auto w-[74px]"
-                            unoptimized
-                          />
-                        ) : (
-                          <span className="block w-[74px] p-2 text-[10px] text-muted">
-                            {name}
-                          </span>
-                        )}
-                      </button>
+                      <LyingThumb
+                        cardId={lying.cardId}
+                        name={name}
+                        text={text}
+                        art={art}
+                        onInspect={onInspect}
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm text-ink">{name}</p>
                         <p className="line-clamp-2 text-[11px] leading-snug text-muted">
@@ -197,5 +185,53 @@ export function FieldModal({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * A card lying on the field, as a thumbnail with the whole card on hover.
+ *
+ * Its own component because the hover is a hook, and the list this sits in is a
+ * map. Clicking still opens the full card — hover is the quick look, not the
+ * only way in, and a touch screen has no hover at all.
+ */
+function LyingThumb({
+  cardId,
+  name,
+  text,
+  art,
+  onInspect,
+}: {
+  cardId: CardId;
+  name: string;
+  text: string | undefined;
+  art: string | null;
+  onInspect: (cardId: CardId) => void;
+}) {
+  const { handlers, preview } = useCardPreview({ cardId, name, text });
+
+  return (
+    <>
+      <button
+        onClick={() => onInspect(cardId)}
+        {...handlers}
+        title="Pokaż całą Kartę"
+        className="shrink-0 overflow-hidden rounded border border-edge transition hover:border-ochre"
+      >
+        {art ? (
+          <Image
+            src={art}
+            alt={name}
+            width={74}
+            height={65}
+            className="h-auto w-[74px]"
+            unoptimized
+          />
+        ) : (
+          <span className="block w-[74px] p-2 text-[10px] text-muted">{name}</span>
+        )}
+      </button>
+      {preview}
+    </>
   );
 }
