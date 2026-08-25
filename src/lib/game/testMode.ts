@@ -46,6 +46,34 @@ export function writeTestMode(on: boolean): void {
   } catch {
     // Nothing to do about it, and nothing that depends on it having worked.
   }
+  for (const listener of listeners) listener();
+}
+
+const listeners = new Set<() => void>();
+
+/**
+ * Tells a component when the switch moves.
+ *
+ * Paired with `readTestMode` through `useSyncExternalStore`, which is what
+ * reading browser state during a render is *for*: the server has no
+ * `localStorage`, so an answer has to be given for the server and a different
+ * one for the browser, and React reconciles the two itself. Doing it by hand —
+ * false in state, corrected in an effect — renders twice on every load and is
+ * the cascading-render pattern the lint rule exists to catch.
+ *
+ * The `storage` event covers the other tabs: this is one switch for the person,
+ * so turning it off in one window turns it off in the window behind it.
+ */
+export function watchTestMode(listener: () => void): () => void {
+  listeners.add(listener);
+  const fromAnotherTab = (event: StorageEvent) => {
+    if (event.key === null || event.key === KEY) listener();
+  };
+  window.addEventListener("storage", fromAnotherTab);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", fromAnotherTab);
+  };
 }
 
 /** Whether this build can do anything with it at all. */

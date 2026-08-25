@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
-import { readTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
+import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { watchRevision } from "@/lib/game/liveRevision";
 import characters from "@/data/characters.json";
 import type { Character, Nature } from "@/data/types";
@@ -163,11 +163,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /**
    * Testing rather than playing — see `testMode.ts`.
    *
-   * Read in an effect and not during the render, so the server and the first
-   * paint agree that it is off.
+   * Subscribed to rather than copied into state, so the server renders "off"
+   * and the browser renders what the switch actually says, without a second
+   * pass to correct the first.
    */
-  const [testMode, setTestMode] = useState(false);
-  useEffect(() => setTestMode(readTestMode()), []);
+  const testMode = useSyncExternalStore(watchTestMode, readTestMode, () => false);
+  const setTestMode = writeTestMode;
   const testing = TESTING_POSSIBLE && testMode;
   /** A seatless visitor who chose to watch rather than take a character over. */
   const [watching, setWatching] = useState(false);
@@ -1010,11 +1011,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   one. */}
               {TESTING_POSSIBLE && (
                 <button
-                  onClick={() => {
-                    const next = !testMode;
-                    setTestMode(next);
-                    writeTestMode(next);
-                  }}
+                  onClick={() => setTestMode(!testMode)}
                   aria-pressed={testMode}
                   title={
                     testMode
@@ -1518,16 +1515,18 @@ function Hand({
           if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragOver(false);
         }}
         onDrop={(event) => {
+          // Whatever gap is open is where it lands — dropping into the space
+          // the row has made is the same gesture as dropping on the card that
+          // made it. With none open this is the end of the queue, which is
+          // where a card the pack has not seen before goes anyway.
+          const before = insertAt;
           setDragOver(false);
           setInsertAt(null);
           if (!canAct) return;
           const holdingId = event.dataTransfer.getData(DRAG_TYPE);
           if (!holdingId) return;
           event.preventDefault();
-          // Dropped on the pack itself rather than on one of its cards: the end
-          // of the queue, which is where a card the pack has not seen before
-          // goes anyway.
-          if (packOrder.includes(holdingId)) moveWithin(holdingId, null);
+          if (packOrder.includes(holdingId)) moveWithin(holdingId, before);
           else onEquip(holdingId, null);
         }}
         // Clicking the pack with something on the cursor puts it there, which
@@ -1536,8 +1535,11 @@ function Hand({
         onClick={(event) => {
           if (!carried) return;
           event.stopPropagation();
+          // Wherever the gap happens to be, this is the pack itself: the end.
+          const before = insertAt;
+          setInsertAt(null);
           if (carried.from === "plecak") {
-            moveWithin(carried.holdingId, null);
+            moveWithin(carried.holdingId, before);
             return onCarry(null);
           }
           onPlaceInPack();
@@ -1598,6 +1600,7 @@ function Hand({
               if (!canAct) return;
               event.stopPropagation();
               if (carried) {
+                setInsertAt(null);
                 // From the pack: it goes in front of this card. From the body:
                 // it is being taken off, which lands it at the end.
                 if (carried.from === "plecak") {
@@ -1650,7 +1653,9 @@ function Hand({
               event.preventDefault();
               setInsertAt(held.id);
             }}
-            onDragLeave={() => setInsertAt((at) => (at === held.id ? null : at))}
+            // Deliberately no onDragLeave. See the note on onPointerEnter: the
+            // gap moves this card out from under the pointer, so leaving it is
+            // something the gap itself causes.
             onDrop={(event) => {
               setInsertAt(null);
               setDragOver(false);
@@ -1664,14 +1669,25 @@ function Hand({
               if (packOrder.includes(holdingId)) moveWithin(holdingId, held.id);
               else onEquip(holdingId, null);
             }}
-            // A carried card has no drag events behind it, so hovering is
-            // watched directly for the same answer to show.
+            /**
+             * A carried card has no drag events behind it, so hovering is
+             * watched directly for the same answer to show.
+             *
+             * Entering is the only thing that moves the insertion point, and
+             * leaving does not clear it. That is not tidiness — it is the whole
+             * fix for a loop: opening the gap shifts this card to the right,
+             * out from under the pointer, which fired the leave, which closed
+             * the gap, which slid the card back under the pointer. The card
+             * shivered in place and the gap strobed.
+             *
+             * So the point stays where it was put until another card claims it,
+             * or a free square or leaving the pack sends it back to the end.
+             */
             onPointerEnter={() =>
               carried?.from === "plecak" && carried.holdingId !== held.id
                 ? setInsertAt(held.id)
                 : undefined
             }
-            onPointerLeave={() => setInsertAt((at) => (at === held.id ? null : at))}
           >
             {canAct && (
               <span className="flex items-center gap-2">
@@ -1724,6 +1740,11 @@ function Hand({
               glyph="+"
               tone="empty"
               disabled
+              // Past the last card is the end of the queue, and saying so is
+              // what closes the gap again — nothing else does, now that leaving
+              // a card does not.
+              onPointerEnter={() => setInsertAt(null)}
+              onDragOver={() => setInsertAt(null)}
             />
           ));
         })()}
@@ -1972,29 +1993,80 @@ function SeatCard({
 
       {character ? (
         <>
-          <div className="mb-3 flex items-center gap-3">
-            {/* The character card itself, small. It carries the abilities,
-                which no amount of stat display replaces — half of what a
-                character can do is prose on this card. */}
-            {characterImageUrl(character.id) && (
-              <Image
-                src={characterImageUrl(character.id)!}
-                alt={character.name}
-                width={192}
-                height={238}
-                // Big enough to read the Charakterystyka off, now that the
-                // slots take the other half of the row: half a card of white
-                // space either side of a thumbnail was the worse use of it.
-                className="h-auto w-48 shrink-0 rounded border border-edge"
-                unoptimized
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm text-ochre">{character.name}</p>
-              <p className="text-[10px] text-muted">
-                {seat.nature ?? "natura nieustalona"}
+          <div className="mb-3 flex flex-wrap items-start gap-3">
+            <div className="shrink-0">
+              {/*
+                The card between its tokens, laid out the way the card itself
+                says to.
+
+                Every Karta Postaci prints its four parameters up its own
+                edges — Miecz and Magia reading up the left side, Złoto and
+                Życia up the right — and those printed words are captions for
+                the piles of żetony a player builds against them. A row of
+                numbers underneath said the same thing and looked like a
+                spreadsheet; this looks like the table.
+              */}
+              <div className="flex items-stretch gap-1">
+                <div className="flex flex-col justify-between gap-2 py-1">
+                  <RailStat
+                    label="Miecz"
+                    value={seat.miecz_own}
+                    total={seat.miecz_total}
+                    stat="miecz"
+                    canAdjust={canCorrect}
+                    onAdjust={onAdjust}
+                  />
+                  <RailStat
+                    label="Magia"
+                    value={seat.magia_own}
+                    total={seat.magia_total}
+                    stat="magia"
+                    canAdjust={canCorrect}
+                    onAdjust={onAdjust}
+                  />
+                </div>
+
+                {/* The card carries the abilities, which no amount of stat
+                    display replaces — half of what a character can do is prose
+                    on it, and at this size that prose is readable. */}
+                {characterImageUrl(character.id) && (
+                  <Image
+                    src={characterImageUrl(character.id)!}
+                    alt={character.name}
+                    width={192}
+                    height={238}
+                    className="h-auto w-48 shrink-0 rounded border border-edge"
+                    unoptimized
+                  />
+                )}
+
+                <div className="flex flex-col justify-between gap-2 py-1">
+                  <RailStat
+                    label="Złoto"
+                    value={seat.zloto}
+                    stat="zloto"
+                    canAdjust={canCorrect}
+                    onAdjust={onAdjust}
+                  />
+                  <RailStat
+                    label="Życie"
+                    value={seat.zycie}
+                    stat="zycie"
+                    canAdjust={canCorrect}
+                    onAdjust={onAdjust}
+                  />
+                </div>
+              </div>
+
+              {/* The card prints its own name and its own Natura, so neither is
+                  repeated — except that 7.2 can change a Natura mid-game, and
+                  then what is printed is out of date and this is the only place
+                  saying so. */}
+              <p className="mt-1 text-center text-[10px] text-muted">
+                {seat.nature ? `natura: ${seat.nature}` : "natura nieustalona"}
               </p>
             </div>
+
             {/* The body, beside the character card, in the slotted variant
                 only — klasyczny play has nowhere to put anything. */}
             {slotted && (
@@ -2022,28 +2094,6 @@ function SeatCard({
               />
             )}
           </div>
-          <dl className="tnum grid grid-cols-4 gap-2 text-center text-sm">
-            <Stat
-              label="Miecz"
-              value={seat.miecz_own}
-              total={seat.miecz_total}
-              tone="text-miecz"
-              stat="miecz"
-              canAdjust={canCorrect}
-              onAdjust={onAdjust}
-            />
-            <Stat
-              label="Magia"
-              value={seat.magia_own}
-              total={seat.magia_total}
-              tone="text-magia"
-              stat="magia"
-              canAdjust={canCorrect}
-              onAdjust={onAdjust}
-            />
-            <Stat label="Życie" value={seat.zycie} tone="text-zycie" stat="zycie" canAdjust={canCorrect} onAdjust={onAdjust} />
-            <Stat label="Złoto" value={seat.zloto} tone="text-zloto" stat="zloto" canAdjust={canCorrect} onAdjust={onAdjust} />
-          </dl>
 
           <Hand
             seat={seat}
@@ -2128,7 +2178,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
   const SIZE = 20;
   if (stat === "zloto") {
     return (
-      <span className="flex items-center gap-1" title={`${label}: ${points}`}>
+      <span className="flex flex-col items-center" title={`${label}: ${points}`}>
         <Image
           src="/tokens/zloto.png"
           alt=""
@@ -2137,7 +2187,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
           className="rounded-[2px]"
           unoptimized
         />
-        <span className="tnum text-lg font-medium">{points}</span>
+        <span className="tnum text-[11px] font-medium leading-none text-zloto">{points}</span>
       </span>
     );
   }
@@ -2150,7 +2200,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
 
   return (
     <span
-      className="flex flex-wrap items-center justify-center gap-0.5"
+      className="flex flex-col items-center gap-0.5"
       title={`${label}: ${points}`}
     >
       {tokens.map((token, index) => (
@@ -2170,11 +2220,19 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
   );
 }
 
-function Stat({
+/**
+ * One parameter, as a pile of żetony up the side of the character card.
+ *
+ * The colour is the label. Every token in the box says which parameter it
+ * belongs to by being red, blue, green or gold (1.2, 2.2, 4.1, 3.1), the card
+ * prints the word right beside where the pile goes, and a caption under each
+ * one would be the third time. The word is still in the title and read aloud to
+ * a screen reader; it is just not drawn twice.
+ */
+function RailStat({
   label,
   value,
   total,
-  tone,
   stat,
   canAdjust,
   onAdjust,
@@ -2183,47 +2241,45 @@ function Stat({
   value: number;
   /** Own points plus what is carried. Shown only when the two differ. */
   total?: number;
-  tone: string;
   stat: string;
   canAdjust: boolean;
   onAdjust: (stat: string, delta: number) => void;
 }) {
   return (
-    <div className="group">
-      <dt className="text-[10px] uppercase tracking-wide text-muted">{label}</dt>
-      <dd className={`flex flex-wrap items-center justify-center gap-1 ${tone}`}>
-        <Tokens stat={stat} points={value} label={label} />
-        {/* The +/- move OWN points, which are what the rules floor at the
-            starting value (1.3, 2.3). The total is derived from the cards on
-            the table and is not editable — correcting it means changing what is
-            held, not typing a different number.
+    <div className="flex w-9 shrink-0 flex-col items-center gap-0.5">
+      <Tokens stat={stat} points={value} label={label} />
+      {/* The +/- move OWN points, which are what the rules floor at the
+          starting value (1.3, 2.3). The total is derived from the cards on the
+          table and is not editable — correcting it means changing what is held,
+          not typing a different number.
 
-            Which is also why the tokens stand for `value` and never `total`:
-            1.3 and 2.5 are explicit that what a Przedmiot or a Przyjaciel lends
-            you is not marked with a żeton, so a row of them adding up to a
-            number the table never had tokens for would be the interface
-            inventing a rule. The figure beside them is the one the cards make. */}
-        {total !== undefined && total !== value && (
-          <span className="tnum text-lg font-medium">
-            {total}
-            <span className="ml-1 text-[11px] text-muted">({value})</span>
-          </span>
-        )}
-      </dd>
+          Which is also why the tokens stand for `value` and never `total`: 1.3
+          and 2.5 are explicit that what a Przedmiot or a Przyjaciel lends you
+          is not marked with a żeton, so a pile adding up to a number the table
+          never had tokens for would be the interface inventing a rule. The
+          figure under the pile is the one the cards make. */}
+      {total !== undefined && total !== value && (
+        <span className="tnum text-[11px] leading-none text-ink">
+          {total}
+          <span className="text-muted"> ({value})</span>
+        </span>
+      )}
       {canAdjust && (
         // Always visible rather than revealed on hover. Phones are the primary
         // device at a table and have no hover, so a hover-gated override is an
         // override that does not exist for most of the people using it.
-        <div className="mt-1 flex justify-center gap-1">
+        <div className="flex gap-0.5">
           <button
             onClick={() => onAdjust(stat, -1)}
-            className="h-5 w-5 rounded border border-edge text-[11px] leading-none text-muted hover:border-vermilion hover:text-ink"
+            title={`${label} −1`}
+            className="h-4 w-4 rounded border border-edge text-[10px] leading-none text-muted hover:border-vermilion hover:text-ink"
           >
             −
           </button>
           <button
             onClick={() => onAdjust(stat, 1)}
-            className="h-5 w-5 rounded border border-edge text-[11px] leading-none text-muted hover:border-verdigris hover:text-ink"
+            title={`${label} +1`}
+            className="h-4 w-4 rounded border border-edge text-[10px] leading-none text-muted hover:border-verdigris hover:text-ink"
           >
             +
           </button>
@@ -2232,7 +2288,6 @@ function Stat({
     </div>
   );
 }
-
 
 /**
  * A one-line account of something the app worked out on its own.
