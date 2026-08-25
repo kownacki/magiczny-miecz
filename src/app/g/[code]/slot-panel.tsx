@@ -62,17 +62,19 @@ const LAYOUT: Record<Slot, string> = {
 
 /** Drawn in the empty places, so a gap says which gap it is. */
 const GLYPH: Record<Slot, string> = {
-  glowa: "⛑",
-  amulet: "◈",
-  tulow: "⛊",
-  "reka-glowna": "⚔",
-  "reka-pomocnicza": "⛨",
-  rekawice: "✋",
-  pierscien: "◯",
-  wierzchowiec: "🐴",
-  sakwa: "🎒",
-  "magiczny-miecz": "✦",
-  "tarcza-tolimana": "✧",
+  glowa: "\u26D1\uFE0E",
+  amulet: "\u25C8",
+  tulow: "\u26CA\uFE0E",
+  "reka-glowna": "\u2694\uFE0E",
+  "reka-pomocnicza": "\u26E8\uFE0E",
+  rekawice: "\u270B\uFE0E",
+  pierscien: "\u25EF",
+  // A horse and a bag exist only as emoji, and no selector makes them line
+  // drawings — so they are drawn as shapes like everything else instead.
+  wierzchowiec: "\u265E",
+  sakwa: "\u25A4",
+  "magiczny-miecz": "\u2726",
+  "tarcza-tolimana": "\u2727",
 };
 
 /** What a drag carries: the id of the holding being moved. */

@@ -6,6 +6,7 @@ import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import characters from "@/data/characters.json";
 import type { EqMode } from "@/lib/engine/slots";
+import type { Nature } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardDetail, CardTile, type TileCard } from "./card-tile";
@@ -94,8 +95,11 @@ function fold(text: string): string {
 export function CardLibrary({
   onClose,
   eqMode = "klasyczny",
+  nature = null,
 }: {
   onClose: () => void;
+  /** The reader's own Natura, so a 5.3 restriction says whether it shuts them out. */
+  nature?: Nature | null;
   /**
    * Which variant the table plays.
    *
@@ -164,6 +168,7 @@ export function CardLibrary({
               key={card.cardId}
               card={card}
               eqMode={eqMode}
+              nature={nature}
               onClick={() => setOpen(card)}
             />
           ))}

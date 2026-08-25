@@ -6,6 +6,7 @@ import { fieldWithText } from "@/lib/engine/fieldText";
 import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
+import type { Nature } from "@/data/types";
 import { kindForCard } from "@/lib/engine/holdings";
 import type { FieldId } from "@/lib/engine/board";
 import type { CardId } from "@/data/ids";
@@ -55,6 +56,7 @@ export interface FieldCardHere {
  */
 export function FieldModal({
   eqMode = "klasyczny",
+  nature = null,
   fieldId,
   cards,
   standingHere,
@@ -66,6 +68,7 @@ export function FieldModal({
 }: {
   /** Which variant the table plays, so a hover can say where a card must be. */
   eqMode?: EqMode;
+  nature?: Nature | null;
   fieldId: FieldId;
   cards: FieldCardHere[];
   /** Whether the viewer's own character is on this field (12.1, 13.1). */
@@ -152,6 +155,7 @@ export function FieldModal({
                     >
                       <LyingThumb
                         eqMode={eqMode}
+                        nature={nature}
                         cardId={lying.cardId}
                         name={name}
                         text={text}
@@ -202,6 +206,7 @@ export function FieldModal({
  */
 function LyingThumb({
   eqMode,
+  nature,
   cardId,
   name,
   text,
@@ -209,13 +214,14 @@ function LyingThumb({
   onInspect,
 }: {
   eqMode: EqMode;
+  nature: Nature | null;
   cardId: CardId;
   name: string;
   text: string | undefined;
   art: string | null;
   onInspect: (cardId: CardId) => void;
 }) {
-  const { handlers, preview } = useCardPreview({ cardId, name, text }, false, eqMode);
+  const { handlers, preview } = useCardPreview({ cardId, name, text }, false, eqMode, nature);
 
   return (
     <>

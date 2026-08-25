@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import { watchRevision } from "@/lib/game/liveRevision";
 import characters from "@/data/characters.json";
-import type { Character } from "@/data/types";
+import type { Character, Nature } from "@/data/types";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import { FIELDS, type FieldId, isFieldId } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
@@ -670,6 +670,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {inspecting && (
         <FieldModal
           eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+          nature={asNature(mySeat?.nature)}
           fieldId={inspecting}
           cards={fieldCards
             .filter((card) => card.fieldId === inspecting)
@@ -693,6 +694,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {libraryOpen && (
         <CardLibrary
           eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+          nature={asNature(mySeat?.nature)}
           onClose={() => setLibraryOpen(false)}
         />
       )}
@@ -1257,6 +1259,7 @@ function Hand({
             item={{ holdingId: held.id, cardId: held.cardId, card: tileFor(held) }}
             label={tileFor(held).name}
             eqMode={slotted ? "slotowy" : "klasyczny"}
+            nature={asNature(seat.nature)}
             tone="filled"
             badge={held.kind === "trophy" ? "trofeum" : undefined}
             // The one on the cursor is not also in the pack.
@@ -1772,6 +1775,16 @@ function Stat({
  * not, and a referee that says only "you failed" is exactly the referee this
  * app exists to not be.
  */
+/**
+ * The reader's own Natura, narrowed once.
+ *
+ * The column is a plain string, and 5.3 is answered against a Nature — so this
+ * is the boundary the guard belongs at, exactly like `asFieldId` elsewhere.
+ */
+function asNature(value: string | null | undefined): Nature | null {
+  return value === "dobra" || value === "zla" || value === "chaotyczna" ? value : null;
+}
+
 function describeResult(result: unknown): string | null {
   if (!result || typeof result !== "object") return null;
   const data = result as {

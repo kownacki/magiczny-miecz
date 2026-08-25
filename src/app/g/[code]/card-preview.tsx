@@ -20,7 +20,8 @@ import { useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cardImageUrl, characterImageUrl } from "@/lib/engine/cardImages";
-import { characterProfile, itemProfile } from "@/lib/engine/abilityText";
+import { characterProfile, forbiddenNatures, itemProfile } from "@/lib/engine/abilityText";
+import type { Nature } from "@/data/types";
 import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
@@ -41,6 +42,8 @@ export function useCardPreview(
   card: TileCard | null,
   imageless = false,
   eqMode: EqMode = "klasyczny",
+  /** Who is looking, so a requirement can say whether THEY meet it. */
+  nature: Nature | null = null,
 ) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
 
@@ -55,7 +58,13 @@ export function useCardPreview(
 
   const preview =
     anchor && card ? (
-      <CardPreview card={card} anchor={anchor} imageless={imageless} eqMode={eqMode} />
+      <CardPreview
+        card={card}
+        anchor={anchor}
+        imageless={imageless}
+        eqMode={eqMode}
+        nature={nature}
+      />
     ) : null;
   return { handlers, preview, hovering: anchor !== null };
 }
@@ -65,9 +74,11 @@ export function CardPreview({
   anchor,
   imageless = false,
   eqMode = "klasyczny",
+  nature = null,
 }: {
   card: TileCard;
   anchor: DOMRect;
+  nature?: Nature | null;
   /**
    * There is no picture of this and there should be no lookup for one.
    *
@@ -124,6 +135,8 @@ export function CardPreview({
     : card.character
       ? characterProfile(card.cardId)
       : itemProfile(card.cardId, eqMode);
+  // 5.3, answered for the reader rather than stated in the abstract.
+  const barred = nature !== null && (forbiddenNatures(card.cardId)?.includes(nature) ?? false);
   const anythingToSay =
     !src ||
     card.text ||
@@ -176,11 +189,25 @@ export function CardPreview({
           )}
 
           {/* What it asks before it gives. Above the bonuses on purpose: a card
-              you may not hold is not a card whose bonuses matter. */}
+              you may not hold is not a card whose bonuses matter.
+
+              Green or red by whether the person reading it passes — the useful
+              question is not "does this have a restriction" but "does it shut
+              ME out", and the answer is known. Neutral only when no Natura is
+              known, which is the shelf read from outside a game. */}
           {profile && profile.requirements.length > 0 && (
             <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
               {profile.requirements.map((need, at) => (
-                <li key={at} className="text-[11px] leading-snug text-vermilion/90">
+                <li
+                  key={at}
+                  className={`text-[11px] leading-snug ${
+                    nature === null
+                      ? "text-muted"
+                      : barred
+                        ? "text-vermilion"
+                        : "text-verdigris"
+                  }`}
+                >
                   {need.what}
                 </li>
               ))}
@@ -194,7 +221,7 @@ export function CardPreview({
                   <span className="text-ink">{fact.what}</span>
                   {/* When it is doing anything — the half a player has to keep
                       in their head otherwise. */}
-                  <span className="text-verdigris/80">{fact.when}</span>
+                  <span className="text-magia/80">{fact.when}</span>
                 </li>
               ))}
             </ul>

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { cardArtUrl, cardImageUrl, characterArtUrl } from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
+import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
 
 /**
@@ -48,6 +49,7 @@ export function CardTile({
   onDragEnd,
   children,
   eqMode = "klasyczny",
+  nature = null,
 }: {
   card: TileCard;
   size?: "sm" | "md";
@@ -65,6 +67,7 @@ export function CardTile({
   children?: React.ReactNode;
   /** Which variant the table plays, so the hover can say where a card must be. */
   eqMode?: EqMode;
+  nature?: Nature | null;
 }) {
   // The illustration, not the whole card. A card shrunk to tile size is a grey
   // smear with a four-pixel title; the picture is the thing a player actually
@@ -76,7 +79,7 @@ export function CardTile({
   // The art is cut 240x155, so the tile takes that shape rather than cropping
   // the picture back into a portrait box.
   const height = Math.round(width * (155 / 240));
-  const { handlers, preview } = useCardPreview(card, false, eqMode);
+  const { handlers, preview } = useCardPreview(card, false, eqMode, nature);
 
   return (
     <figure className="flex flex-col items-center gap-1">
