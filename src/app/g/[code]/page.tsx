@@ -2448,9 +2448,13 @@ function RailStat({
   const shown = total ?? value;
 
   return (
-    // A minimum rather than a width: one column is nine, and a pile that has
-    // turned a corner needs the room for the second.
-    <div className="flex min-w-9 shrink-0 flex-col items-center gap-0.5">
+    // No width of its own. It was a fixed nine while a pile was always one
+    // column wide, then a minimum of nine so a pile that had turned a corner
+    // had room for the second — and by the time a żeton was drawn at sixteen
+    // the minimum was more than twice what a single column needs, holding the
+    // rails away from the Karta they are captions for. What is in it is what
+    // it is wide.
+    <div className="flex shrink-0 flex-col items-center gap-0.5">
       <Tokens stat={stat} points={value} label={label} />
       {/* The +/- move OWN points, which are what the rules floor at the
           starting value (1.3, 2.3). The total is derived from the cards on the
