@@ -851,6 +851,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             }
             ring={ringFields(active.field_id)}
             busy={busy}
+            error={error}
             onAction={(body) => post("turn", body)}
             onResolve={(cardId, decisions) =>
               post("turn", { action: "karta-efekt", cardId, ...decisions })

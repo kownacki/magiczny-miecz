@@ -41,6 +41,7 @@ export function DrawModal({
   minimized,
   onMinimize,
   onRestore,
+  error,
   cards,
   resolved,
   fought,
@@ -80,6 +81,8 @@ export function DrawModal({
   minimized: boolean;
   onMinimize: () => void;
   onRestore: () => void;
+  /** A refusal from the last thing pressed, said inside the sheet that hides it. */
+  error: string | null;
   /** In 15.2 order, which is the order they are dealt with. */
   cards: DrawnEntry[];
   resolved: string[];
@@ -153,6 +156,7 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
+        error={error}
       >
         {canAct ? (
           <FightControls
@@ -198,6 +202,7 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
+        error={error}
       >
         <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
           {fieldOffer.name}
@@ -272,6 +277,7 @@ export function DrawModal({
       minimized={minimized && !canAct}
       onMinimize={canAct ? null : onMinimize}
       onRestore={onRestore}
+      error={error}
     >
       {/* Only what the card does not say itself. The scan carries its own
           name, class, Miecz and full text at a size you can read — printing
@@ -469,6 +475,7 @@ function Shell({
   minimized,
   onMinimize,
   onRestore,
+  error,
   children,
 }: {
   label: string;
@@ -478,6 +485,8 @@ function Shell({
   minimized: boolean;
   onMinimize: (() => void) | null;
   onRestore: () => void;
+  /** A refusal from the last thing pressed. */
+  error: string | null;
   children: React.ReactNode;
 }) {
   // Folded away, a watcher gets a line at the foot of the screen instead of a
@@ -515,6 +524,17 @@ function Shell({
           />
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
+          {/* Said here, because here is where it happened.
+              
+              A modal covers the panel that used to carry these, so anything
+              refused while one is open was refused in silence: the dice would
+              not move, the button that pressed them looked exactly as it had
+              before, and the reason was written on a card behind the sheet. */}
+          {error && (
+            <p className="shrink-0 rounded border border-vermilion/50 bg-vermilion/10 px-2 py-1 text-xs text-vermilion">
+              {error}
+            </p>
+          )}
           {watching && (
             <div className="flex shrink-0 items-center justify-between gap-2 rounded border border-edge bg-night/50 px-2 py-1">
               <p className="truncate text-[11px] uppercase tracking-wide text-muted">

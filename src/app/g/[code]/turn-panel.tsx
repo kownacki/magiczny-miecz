@@ -891,6 +891,16 @@ export function FightControls({
   onAction: Props["onAction"];
 }) {
   const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
+  /**
+   * The dice are held until 17.3's window closes, and they have to look held.
+   *
+   * They were offered the whole time and refused by the route, which is the one
+   * combination an interface must never present: a button that is plainly
+   * there, plainly enabled, and answers every press with the same complaint.
+   * A player who has not read 17.7 has no way to guess that the way out is a
+   * third button in a box that appears to be about somebody else.
+   */
+  const waiting = (fight.spellsOwedBy?.length ?? 0) > 0;
 
   // A bridge guardian has no strength until a die is thrown for it — the board
   // prints "1 - 5; 2 - 6; ... 6 - 10" at both entrances — so nothing else about
@@ -994,15 +1004,23 @@ export function FightControls({
 
           Nobody who has nothing to cast is ever asked, so most fights never see
           this at all. */}
-      {(fight.spellsOwedBy?.length ?? 0) > 0 && (
+      {waiting && (
         <div className="rounded border border-magia/50 bg-magia/5 p-3">
+          {/* Said to whoever is reading it. "Czekamy na: Karol" is a strange
+              thing to tell Karol, and it was the whole of what the window said
+              to the one person who could close it: the dice would not move, the
+              only sentence on screen named somebody else's job, and the player
+              it was addressed to read their own name as somebody they were
+              waiting for. */}
           <p className="text-xs text-ink">
-            Zaklęcia przed rzutem (17.3, 17.7) — czekamy na:{" "}
-            <span className="text-magia">{waitingOn.join(", ")}</span>.
+            {myTurnToPass
+              ? "Zaklęcia przed rzutem (17.3, 17.7) — kostki czekają na ciebie."
+              : `Zaklęcia przed rzutem (17.3, 17.7) — czekamy na: ${waitingOn.join(", ")}.`}
           </p>
           <p className="mt-1 text-[11px] text-muted">
-            Rzuć Zaklęcie ze swojej ręki albo powiedz, że nie rzucasz. Kostki
-            czekają.
+            {myTurnToPass
+              ? "Rzuć Zaklęcie ze swojej ręki albo powiedz, że nie rzucasz — dopiero potem można rzucać kostkami."
+              : "Rzuć Zaklęcie ze swojej ręki albo powiedz, że nie rzucasz. Kostki czekają."}
           </p>
           {myTurnToPass && (
             <button
@@ -1027,7 +1045,7 @@ export function FightControls({
           // by hand is for a table holding cards the app has never read.
           editable={!simulated}
           typedRolls={!simulated}
-          busy={busy}
+          busy={busy || waiting}
           onTotal={(total) => onAction({ action: "fight-total", total })}
           onRoll={(value) => onAction({ action: "fight-roll", side: "player", value })}
         />
@@ -1038,7 +1056,7 @@ export function FightControls({
           label={label}
           editable={false}
           typedRolls={!simulated}
-          busy={busy}
+          busy={busy || waiting}
           onTotal={() => {}}
           onRoll={(value) => onAction({ action: "fight-roll", side: "enemy", value })}
         />
