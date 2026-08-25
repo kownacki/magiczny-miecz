@@ -271,6 +271,19 @@ export function describe(
       );
     }
 
+    // A card taking something off you. Distinct from "odrzucenie", which is the
+    // holder choosing to put a card down (5.5).
+    case "strata": {
+      const lost = Array.isArray(data.cardIds) ? data.cardIds : [];
+      const gold = num(data.zloto);
+      const parts = [
+        lost.length > 0 ? lost.map((id) => card(id)).join(", ") : "",
+        gold > 0 ? sztuki(gold) : "",
+      ].filter(Boolean);
+      if (parts.length === 0) return null;
+      return line(`${who} traci: ${parts.join(", ")}.`);
+    }
+
     case "odrzucenie":
       return line(`${who} odrzuca: ${card(data.cardId)}.`);
     case "kupno":

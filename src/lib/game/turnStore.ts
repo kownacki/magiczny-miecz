@@ -28,6 +28,7 @@ import {
 } from "@/lib/engine/abilities";
 import { castableNow, spellScript } from "@/lib/engine/spells";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
+import { chooseLosses, describeLoss, goldLost } from "@/lib/engine/losses";
 import {
   BRIDGE_GUARDIAN,
   BRIDGE_ORDEAL,
@@ -2966,6 +2967,65 @@ export async function applyEffect(
       const onlyMe = hit.length === 1 && hit[0].seatIndex === actor?.seat_index;
       return {
         did: [onlyMe ? `tracisz ${effect.turns} turę` : `tracą turę: ${names.join(", ")}`],
+        pending: null,
+      };
+    }
+
+    case "strata": {
+      const seats = await seatsFor(gameId);
+      const actor = seats.find((row) => row.id === seatId);
+      const hit = seatsTargeted(
+        effect.target,
+        seats.map(asTargetSeat),
+        actor ? asTargetSeat(actor) : undefined,
+        [],
+      );
+      if (hit === null) return { did: [], pending: effect };
+
+      const game = await loadGame(gameId);
+      const holdings = await holdingsFor(gameId);
+      const said: string[] = [];
+
+      for (const target of hit) {
+        const row = seats.find((candidate) => candidate.seat_index === target.seatIndex);
+        if (!row) continue;
+
+        const mine = holdings
+          .filter((held) => held.seat_id === row.id)
+          .map((held) => ({ id: held.id, cardId: held.card_id, kind: held.kind }));
+        // Null means the holder has to pick, which 5.6 makes their right. It
+        // should not reach here — isSettled asks first — but a card that starts
+        // saying "wybierz" tomorrow should stop, not choose for somebody.
+        const gone = chooseLosses(mine, effect, (upTo) => Math.floor(Math.random() * upTo));
+        if (gone === null) return { did: [], pending: effect };
+
+        const gold = goldLost(effect, row.zloto);
+        if (gone.length > 0) await db.from("holdings").delete().in("id", gone);
+        if (gold > 0) {
+          await db.from("seats").update({ zloto: row.zloto - gold }).eq("id", row.id);
+        }
+        if (gone.length === 0 && gold === 0) continue;
+
+        const names = gone
+          .map((id) => mine.find((held) => held.id === id)?.cardId)
+          .filter((id): id is string => typeof id === "string")
+          .map(cardName);
+        // Its own kind, unflagged: a card doing what it says is not somebody
+        // overruling the referee, and the journal draws those two differently.
+        await journal(gameId, row.id, game.turn, "strata", {
+          co: effect.co,
+          cardIds: gone.map((id) => mine.find((held) => held.id === id)?.cardId).filter(Boolean),
+          zloto: gold,
+        });
+        said.push(
+          `${row.player_name ?? `miejsce ${row.seat_index + 1}`}: ` +
+            [names.join(", "), gold > 0 ? `${gold} Sz. Z.` : ""].filter(Boolean).join(", "),
+        );
+      }
+
+      await bumpRevision(gameId);
+      return {
+        did: said.length > 0 ? [`tracą ${describeLoss(effect)} — ${said.join("; ")}`] : ["nie ma czego stracić"],
         pending: null,
       };
     }

@@ -53,8 +53,20 @@ export function isSettled(effect: Effect): boolean {
       return false;
 
     // "Tracisz 1 z Przedmiotów wedle własnego wyboru" — which one is yours.
+    /**
+     * A loss is a decision only when there is something to decide.
+     *
+     * 5.6 gives the choice of what to give up to the player, so the default is
+     * to ask — but three of the shapes leave nothing to ask about. Everything
+     * going is not a choice, gold is a number rather than a card to pick, and a
+     * loss the card assigns to chance is chance's to make. Saying no to all of
+     * them meant the app announced "tracisz 1 Przedmiot" and then left the
+     * player to remember to do it, which is the hand-entry simulation is
+     * supposed to be free of.
+     */
     case "strata":
-      return false;
+      if (effect.co === "wszystkie-przedmioty" || effect.co === "zloto") return true;
+      return effect.wybor === "losowo";
 
     // A die table is settled only if every face it can land on is. Rolled
     // separately, so this asks about the table as a whole.
