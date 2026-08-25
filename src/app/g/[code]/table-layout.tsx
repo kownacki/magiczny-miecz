@@ -45,7 +45,10 @@ export function TableLayout({
         {/* The short side of the ratio, and the board is sized to fill it
             rather than to a fixed width: on a laptop the height is what runs
             out first, so this is a ceiling the board rarely reaches. */}
-        <section className="flex min-h-0 shrink-0 items-center justify-center border-edge p-3 lg:h-full lg:w-[38.2%] lg:shrink lg:border-r">
+        {/* No padding under this one: the journal is the last thing in it and
+            sits on the bottom edge, so twelve pixels of panel below a panel is
+            just a strip of nothing at the bottom of the screen. */}
+        <section className="flex min-h-0 shrink-0 items-center justify-center border-edge px-3 pt-3 lg:h-full lg:w-[38.2%] lg:shrink lg:border-r">
           {map}
         </section>
         <section className="min-h-0 flex-1 overflow-y-auto p-3 lg:w-[61.8%]">{right}</section>

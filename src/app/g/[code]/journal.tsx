@@ -71,7 +71,11 @@ export function Journal({
             // window. Four lines was too few to read a turn back — a fight is
             // three of them on its own — so this is half again as tall, less a
             // tenth given back to the map.
-            "flex h-[20.25%] shrink-0 flex-col rounded border border-edge bg-panel/50"
+            // `mt-auto` pins it to the bottom whatever the board above does.
+            // The board's wrapper is flex-1 and absorbs the slack today, but
+            // that is the board's business and not something this should
+            // depend on to stay where it belongs.
+            "mt-auto flex h-[20.25%] shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
       }
     >
       <header className="flex shrink-0 items-center justify-between border-b border-edge/60 px-3 py-1">
