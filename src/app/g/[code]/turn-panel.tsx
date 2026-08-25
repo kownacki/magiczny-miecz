@@ -952,15 +952,14 @@ export function FightControls({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Phrased as a label rather than "walka z <nazwa>" because Polish would
+      {/* The name is in the sheet's header now; what is left here is the kind
+          of fight it is, which the header cannot say without repeating itself.
+          Phrased as a label rather than "walka z <nazwa>" because Polish would
           need the instrumental case there ("z Cyklopem", "z Rusałką"), and the
           card names are stored as printed. Declining them reliably is not
           possible, and getting it wrong is more jarring than not trying. */}
       <p className="text-sm text-muted">
-        Przeciwnik: <span className="text-vermilion">{fight.cardName}</span>{" "}
-        <span className="text-xs">
-          ({fight.kind === "magiczna" ? "walka magiczna" : "walka zwykła"})
-        </span>
+        {fight.kind === "magiczna" ? "Walka magiczna" : "Walka zwykła"}
         {typeof fight.strengthRoll === "number" && (
           <span className="ml-2 text-xs text-muted/80">
             kostka {fight.strengthRoll} → {label} {fight.enemyTotal}

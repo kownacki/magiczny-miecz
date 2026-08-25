@@ -241,7 +241,9 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
-        onAbandon={testing ? onAbandonFight : null}
+        // Whoever is fighting may put the fight down; a watcher may not end
+        // somebody else's turn.
+        onAbandon={testing && canAct ? onAbandonFight : null}
         error={error}
         wide
       >
@@ -368,9 +370,6 @@ export function DrawModal({
         onAbandon={null}
         error={error}
       >
-        <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
-          {fieldOffer.name}
-        </h2>
         <FieldEffect effect={fieldOffer.effect} />
         {canAct && (
           <div className="mt-auto flex flex-wrap gap-2 border-t border-edge pt-3">
@@ -789,64 +788,79 @@ function Shell({
       className="fixed inset-0 z-50 flex items-center justify-center bg-night/85 p-4"
     >
       <div
-        className={`relative flex max-h-[90vh] w-full gap-4 overflow-hidden rounded-lg border border-ochre/40 bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] ${
+        className={`flex max-h-[90vh] w-full flex-col gap-3 overflow-hidden rounded-lg border border-ochre/40 bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] ${
           wide ? "max-w-5xl" : "max-w-3xl"
         }`}
       >
-        {onAbandon && (
-          <button
-            onClick={onAbandon}
-            title="Kończy walkę bez rozstrzygnięcia. Nie jest ucieczką (19.1) — nic nie jest stosowane i nikt nic nie traci."
-            className="absolute right-2 top-2 z-10 rounded border border-vermilion/50 bg-panel/90 px-2 py-1 text-[11px] text-vermilion transition hover:border-vermilion hover:bg-vermilion/10"
-          >
-            przerwij walkę (test)
-          </button>
-        )}
-        {art && (
-          <Image
-            src={art}
-            alt={label}
-            width={300}
-            height={500}
-            className="hidden h-auto w-[260px] shrink-0 self-start rounded border border-edge sm:block"
-            priority
-            unoptimized
-          />
-        )}
-        {/* Room kept for the corner button, so it sits beside the first line
-            rather than on top of it — that line is the opponent's name. */}
-        <div
-          className={`flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto${
-            onAbandon ? " pr-28" : ""
-          }`}
-        >
-          {/* Said here, because here is where it happened.
-              
-              A modal covers the panel that used to carry these, so anything
-              refused while one is open was refused in silence: the dice would
-              not move, the button that pressed them looked exactly as it had
-              before, and the reason was written on a card behind the sheet. */}
-          {error && (
-            <p className="shrink-0 rounded border border-vermilion/50 bg-vermilion/10 px-2 py-1 text-xs text-vermilion">
-              {error}
-            </p>
-          )}
-          {watching && (
-            <div className="flex shrink-0 items-center justify-between gap-2 rounded border border-edge bg-night/50 px-2 py-1">
-              <p className="truncate text-[11px] uppercase tracking-wide text-muted">
+        {/*
+          One header across the whole sheet.
+          
+          What is happening on the left, what you can do about the sheet itself
+          on the right — folding it away, and the test hatch out of a fight.
+          They belong together and above everything: they are not moves in the
+          game, and putting them among the moves meant the abandon button
+          floated in a corner of the spell column, which is not the column it
+          has anything to do with.
+        */}
+        <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-edge/60 pb-2">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <h2 className="truncate font-[family-name:var(--font-display)] text-lg text-ochre">
+              {label}
+            </h2>
+            {watching && (
+              <span className="truncate text-[11px] uppercase tracking-wide text-muted">
                 {watching} — oglądasz
-              </p>
-              {onMinimize && (
-                <button
-                  onClick={onMinimize}
-                  className="shrink-0 text-[11px] text-muted underline transition hover:text-ink"
-                >
-                  zwiń
-                </button>
-              )}
-            </div>
+              </span>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            {onMinimize && (
+              <button
+                onClick={onMinimize}
+                className="text-[11px] text-muted underline transition hover:text-ink"
+              >
+                zwiń
+              </button>
+            )}
+            {onAbandon && (
+              <button
+                onClick={onAbandon}
+                title="Kończy walkę bez rozstrzygnięcia. Nie jest ucieczką (19.1) — nic nie jest stosowane i nikt nic nie traci."
+                className="rounded border border-vermilion/50 px-2 py-1 text-[11px] text-vermilion transition hover:border-vermilion hover:bg-vermilion/10"
+              >
+                przerwij walkę (test)
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Said here, because here is where it happened.
+
+            A modal covers the panel that used to carry these, so anything
+            refused while one is open was refused in silence: the dice would not
+            move, the button that pressed them looked exactly as it had before,
+            and the reason was written on a card behind the sheet. */}
+        {error && (
+          <p className="shrink-0 rounded border border-vermilion/50 bg-vermilion/10 px-2 py-1 text-xs text-vermilion">
+            {error}
+          </p>
+        )}
+
+        <div className="flex min-h-0 flex-1 gap-4">
+          {art && (
+            <Image
+              src={art}
+              alt={label}
+              width={300}
+              height={500}
+              className="hidden h-auto w-[260px] shrink-0 self-start rounded border border-edge sm:block"
+              priority
+              unoptimized
+            />
           )}
-          {children}
+          <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -927,11 +941,10 @@ function WatchFight({ fight }: { fight: Fight }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* The name is in the sheet's header; this says what kind of fight it
+          is, which is the part the header cannot carry. */}
       <p className="text-sm text-muted">
-        Przeciwnik: <span className="text-vermilion">{fight.cardName}</span>{" "}
-        <span className="text-xs">
-          ({fight.kind === "magiczna" ? "walka magiczna" : "walka zwykła"})
-        </span>
+        {fight.kind === "magiczna" ? "Walka magiczna" : "Walka zwykła"}
       </p>
       <div className="grid grid-cols-2 gap-4">
         {side("Postać", fight.playerTotal, fight.playerRoll)}
