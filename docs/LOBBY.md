@@ -283,3 +283,52 @@ Conventions checked against how these systems are normally built:
 - [Implementing a "Kick Out" feature in a multiplayer game lobby](https://blog.yarsalabs.com/creating-kick-system-in-multiplayer-game/)
 - [Heroic Labs — How to create a multiplayer lobby system](https://heroiclabs.com/docs/nakama/guides/concepts/lobby/)
 - [Unity — game-lobby sample](https://github.com/Unity-Technologies/com.unity.services.samples.game-lobby)
+
+---
+
+## Realtime zamiast odpytywania
+
+Every device polls its table every two seconds. It works, it is simple, and it
+is the reason the disconnect thresholds have to be minutes rather than seconds
+(browsers throttle a hidden tab's timers to about once a minute). Replacing it
+was researched and half-built; here is where it stands.
+
+**It has to be Broadcast, not Postgres Changes.** Postgres Changes respects RLS
+on the table it watches. This schema has RLS on with *no policies at all* — the
+anon key can read nothing, by design — so a subscription to table changes would
+deliver silence forever. Broadcast does not read tables, which also means the
+secrecy model is untouched: no client learns anything from Supabase that a route
+handler did not decide to tell it. Postgres Changes also authorises every event
+per subscriber, so its cost scales with the number of people watching rather
+than with the number of changes.
+
+**The message is a number.** `stol:{KOD}` carries `{ revision }` and nothing
+else — not who moved, not what they drew, and above all not anybody's Zaklęcia
+(9.3). A device that hears a new number asks the server what happened, through
+the same route handler as always, and is told only what its seat may see.
+
+**Sent from a trigger, not from the route handlers.** Every mutation already
+funnels through `bumpRevision`, so `games.revision` is the one place that knows
+something happened. A trigger there (`magiczny_miecz.broadcast_revision`) cannot
+be forgotten by a new endpoint the way a broadcast call in a handler would be.
+
+### What works, and what does not
+
+- The trigger is installed and fires.
+- The HTTP broadcast endpoint accepts messages: `POST /realtime/v1/api/broadcast`
+  returns **202**.
+- The browser subscribes successfully: the channel reports `SUBSCRIBED`.
+- **Messages are never delivered to the subscriber.** Public channels first —
+  accepted, dropped. Then private, with a `select` policy on `realtime.messages`
+  for `anon` scoped to `stol:%` topics — same result.
+
+The remaining suspect is the project's Realtime settings, which are a dashboard
+concern rather than a SQL one: whether Realtime is enabled for the project at
+all, and whether "Allow public access" is on. Neither can be checked or changed
+from a migration, so this is where it stopped.
+
+**Nothing is worse in the meantime.** The client subscribes either way and the
+poll stays at two seconds until a message *actually arrives*; the first one that
+lands slows the poll to fifteen. So the day the setting is flipped, the table
+gets faster on its own and nobody has to remember to change anything — and if it
+never is, the app behaves exactly as it did before.

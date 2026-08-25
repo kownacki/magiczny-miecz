@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
+import { watchRevision } from "@/lib/game/liveRevision";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
@@ -164,8 +165,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     // on the server.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
-    const timer = setInterval(refresh, 2000);
-    return () => clearInterval(timer);
+    // Realtime says when something happened; the poll is what catches it if
+    // Realtime is down, blocked, or the tab was asleep when the message went
+    // out. Fifteen seconds rather than two, because it is now a backstop
+    // instead of the mechanism — and because a hidden tab is throttled to about
+    // a minute anyway, which the sweep thresholds already assume.
+    //
+    // The poll stays at two seconds until Realtime has actually delivered
+    // something. It subscribes either way, but on this project the broadcasts
+    // are accepted and never arrive (see `liveRevision.ts`), and slowing the
+    // poll down on the strength of a subscription that might be inert would
+    // make the table *less* responsive than it is today. So the first message
+    // that really lands is what earns the slower poll.
+    let live = false;
+    let timer = setInterval(refresh, 2000);
+    const stop = watchRevision(code, () => {
+      if (!live) {
+        live = true;
+        clearInterval(timer);
+        timer = setInterval(refresh, 15_000);
+      }
+      void refresh();
+    });
+    return () => {
+      stop();
+      clearInterval(timer);
+    };
   }, [code, refresh]);
 
   /**
