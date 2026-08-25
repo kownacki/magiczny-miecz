@@ -166,13 +166,31 @@ suite("the end of a turn", () => {
     expect(lines.map((line) => line.text)).toEqual([
       "Ania traci turę.",
       "TROLL traci turę.",
-      "Michał kończy turę — teraz Michał.",
+      "Michał kończy turę.",
+      "Michał zaczyna turę.",
     ]);
+  });
+
+  it("colours each half of the handover for its own player", () => {
+    // The reason the two are separate lines: one sentence can only carry one
+    // seat, and the feed is read by scanning those colours for your own.
+    const lines = describeTurnChange(entry("koniec-tury", { next: 1, skipped: [] }), SEATS);
+    expect(lines.map((line) => line.seatIndex)).toEqual([0, 1]);
   });
 
   it("still says the handover when nobody was passed over", () => {
     const lines = describeTurnChange(entry("koniec-tury", { next: 1, skipped: [] }), SEATS);
-    expect(lines.map((line) => line.text)).toEqual(["Michał kończy turę — teraz Ania."]);
+    expect(lines.map((line) => line.text)).toEqual([
+      "Michał kończy turę.",
+      "Ania zaczyna turę.",
+    ]);
+  });
+
+  it("says only the ending when there is nobody to hand over to", () => {
+    // Everyone left is eliminated or frozen; finishTurn parks active_seat at
+    // null and there is no next player to name.
+    const lines = describeTurnChange(entry("koniec-tury", { next: null, skipped: [] }), SEATS);
+    expect(lines.map((line) => line.text)).toEqual(["Michał kończy turę."]);
   });
 
   it("names the round when play comes back round to the first seat", () => {
@@ -182,13 +200,19 @@ suite("the end of a turn", () => {
       entry("koniec-tury", { next: 0, skipped: [], wrapped: true, turnAfter: 4 }),
       SEATS,
     );
+    // The heading sits BETWEEN the halves: the round it names is the one the
+    // next player is about to take, so after them it would be announcing a
+    // round that had already started a line earlier.
     expect(lines.map((line) => line.text)).toEqual([
-      "Michał kończy turę — teraz Michał.",
+      "Michał kończy turę.",
       "Tura 4",
+      "Michał zaczyna turę.",
     ]);
-    expect(lines.at(-1)!.seatIndex).toBeNull();
-    // Drawn as the heading rather than as a move — see `JournalLine.marker`.
-    expect(lines.at(-1)!.marker).toBe(true);
+    const marker = lines.find((line) => line.marker)!;
+    expect(marker.seatIndex).toBeNull();
+    // The turn that starts is filed under the round that just began, so the
+    // expanded view groups it beneath that heading and not the previous one.
+    expect(lines.at(-1)!.turn).toBe(4);
   });
 
   it("does not name a round when play merely moved on", () => {
@@ -218,7 +242,8 @@ suite("journalLines", () => {
     expect(lines.map((line) => line.text)).toEqual([
       "Michał bierze: MAGICZNY MIECZ.",
       "Ania traci turę.",
-      "Michał kończy turę — teraz Ania.",
+      "Michał kończy turę.",
+      "Ania zaczyna turę.",
       "Michał idzie z Karczma na Kurhan.",
     ]);
   });

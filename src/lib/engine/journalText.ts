@@ -323,13 +323,14 @@ export function describeTurnChange(
     });
   }
 
+  // Two events, two lines. One sentence covering both could only carry one
+  // seat, so the half about the player taking over was coloured for the player
+  // handing off — and the feed is read by scanning those colours for your own.
   const next = seats.find((candidate) => candidate.seatIndex === data.next);
   lines.push({
     seq: at_(),
     turn: entry.turn,
-    text: next
-      ? `${nameOf(seat)} kończy turę — teraz ${nameOf(next)}.`
-      : `${nameOf(seat)} kończy turę.`,
+    text: `${nameOf(seat)} kończy turę.`,
     manual: false,
     seatIndex: seat?.seatIndex ?? null,
   });
@@ -338,7 +339,12 @@ export function describeTurnChange(
   // are measured in. Carries no seat, because it belongs to the whole table —
   // which is also what makes it read as a heading rather than as somebody's
   // move.
-  if (data.wrapped) {
+  //
+  // It goes BETWEEN the two halves, because the turn it heads is the one the
+  // next player is about to take. After them it announced a round that had
+  // already started a line earlier.
+  const wrapped = Boolean(data.wrapped);
+  if (wrapped) {
     lines.push({
       seq: at_(),
       turn: num(data.turnAfter),
@@ -346,6 +352,18 @@ export function describeTurnChange(
       manual: false,
       seatIndex: null,
       marker: true,
+    });
+  }
+
+  if (next) {
+    lines.push({
+      // Filed under the round it belongs to, so the expanded view groups it
+      // beneath the heading above rather than the one before it.
+      seq: at_(),
+      turn: wrapped ? num(data.turnAfter) : entry.turn,
+      text: `${nameOf(next)} zaczyna turę.`,
+      manual: false,
+      seatIndex: next.seatIndex,
     });
   }
 
