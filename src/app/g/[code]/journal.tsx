@@ -153,9 +153,13 @@ function Line({
         />
         <span className={line.manual ? "text-ochre/90" : "text-muted"}>
           <Looked text={line.text} refs={line.refs} eqMode={eqMode} />
-          {/* A correction is a human overruling the referee, and LOBBY.md wants
-              that visible rather than blended into what the rules did. */}
-          {line.manual && <span className="ml-1 text-[10px] text-ochre/70">korekta</span>}
+          {/* A hand overruling the referee, which LOBBY.md wants visible rather
+              than blended into what the rules did. Named after the switch that
+              is the only way to reach it — "korekta" described the mechanism
+              and left you to work out who had done it and why. */}
+          {line.manual && (
+            <span className="ml-1 text-[10px] text-ochre/70">tryb testowy</span>
+          )}
         </span>
       </li>
     </>

@@ -245,14 +245,14 @@ export function CardLibrary({
           {/* The board is not the deck: counting it in "kart" said 0, because
               no card in the box has a field on it. */}
           {shelf === "obszary" && onTeleport ? (
-            "Kliknij Obszar, żeby na nim stanąć — skrót testowy, zapisany w dzienniku jako korekta."
+            "Kliknij Obszar, żeby na nim stanąć — skrót testowy, oznaczony w dzienniku."
           ) : (
             <>
               {cards.length} {cards.length === 1 ? "karta" : "kart"}
               {searching ? " — szukam w całej talii, nie tylko na tej półce." : null}
               {searching
                 ? null
-                : " — pokazane są pojedyncze wzory, nie wszystkie egzemplarze z talii."}
+                : " — każda karta raz, choć w talii część powtarza się po kilka razy."}
             </>
           )}
         </p>
