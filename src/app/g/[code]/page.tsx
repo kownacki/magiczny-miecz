@@ -2070,16 +2070,34 @@ function SeatCard({
 
                 {/* The card carries the abilities, which no amount of stat
                     display replaces — half of what a character can do is prose
-                    on it, and at this size that prose is readable. */}
+                    on it. At this size most of that prose is legible and the
+                    rest is a click away: the Karta opens full size, which is
+                    the only way to read the small print on the Charakterystyka
+                    without leaning into the screen. */}
                 {characterImageUrl(character.id) && (
-                  <Image
-                    src={characterImageUrl(character.id)!}
-                    alt={character.name}
-                    width={192}
-                    height={238}
-                    className="h-auto w-48 shrink-0 rounded border border-edge"
-                    unoptimized
-                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onInspect({
+                        cardId: character.id,
+                        name: character.name,
+                        text: character.abilities.join("\n\n"),
+                        kindLabel: `Postać · Miecz ${character.miecz} · Magia ${character.magia} · ${character.nature}`,
+                        character: true,
+                      })
+                    }
+                    title={`${character.name} — powiększ Kartę`}
+                    className="shrink-0 cursor-zoom-in rounded border border-edge transition hover:border-ochre"
+                  >
+                    <Image
+                      src={characterImageUrl(character.id)!}
+                      alt={character.name}
+                      width={192}
+                      height={238}
+                      className="h-auto w-48 rounded"
+                      unoptimized
+                    />
+                  </button>
                 )}
 
                 <div className="flex flex-col justify-between gap-2 py-1">

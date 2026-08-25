@@ -1,7 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { cardArtUrl, cardImageUrl, characterArtUrl } from "@/lib/engine/cardImages";
+import {
+  cardArtUrl,
+  cardImageUrl,
+  characterArtUrl,
+  characterImageUrl,
+} from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
@@ -169,9 +174,20 @@ export function CardBack({ count }: { count: number }) {
  * became unreadable the moment anybody owned more than two things.
  */
 export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => void }) {
-  const src = cardImageUrl(card.cardId, card.ref);
-  const coverage = coverageOf(card.cardId);
-  const note = manualNote(card.cardId);
+  // A Postać is looked up in its own manifest, and the flag is the only thing
+  // that knows to: `demon` and `czarodziej` each name a character *and* an
+  // event card, so the id alone would hand back the wrong picture rather than
+  // none — the failure that is hardest to notice.
+  const src = card.character
+    ? characterImageUrl(card.cardId)
+    : cardImageUrl(card.cardId, card.ref);
+  // Coverage is about Karty Zdarzeń — whether the app can carry out what a card
+  // does when it is drawn. A Karta Postaci is not drawn and not resolved; it is
+  // who you are for the whole game. Asking the registry about one got "brak"
+  // by default, so every character opened with "rozpatrzcie sami — aplikacja
+  // jej nie prowadzi" printed under it, which is not true of anything.
+  const coverage = card.character ? "pelne" : coverageOf(card.cardId);
+  const note = card.character ? null : manualNote(card.cardId);
 
   return (
     <div
@@ -186,9 +202,14 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
           <Image
             src={src}
             alt={card.name}
-            width={260}
-            height={369}
+            // A Karta Postaci is a different shape from a Karta Zdarzeń and
+            // carries four numbered clauses of Charakterystyka in print small
+            // enough that the whole point of opening it is to read them. So it
+            // is drawn larger, and at its own proportions.
+            width={card.character ? 340 : 260}
+            height={card.character ? 422 : 369}
             className="shrink-0 self-center rounded"
+            unoptimized={card.character}
           />
         )}
         <div className="min-w-0 flex-1">
