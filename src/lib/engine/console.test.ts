@@ -103,6 +103,12 @@ suite("naming a card, a field or a creature", () => {
 });
 
 suite("the rest of the vocabulary", () => {
+  it("settles a fight three ways", () => {
+    expect(ok("win")).toEqual({ kind: "settle", outcome: "wygrana" });
+    expect(ok("lose")).toEqual({ kind: "settle", outcome: "przegrana" });
+    expect(ok("draw")).toEqual({ kind: "settle", outcome: "remis" });
+  });
+
   it("kills, draws and ends things", () => {
     expect(ok("kill")).toEqual({ kind: "kill", who: null });
     expect(ok("kill Ola")).toEqual({ kind: "kill", who: "Ola" });

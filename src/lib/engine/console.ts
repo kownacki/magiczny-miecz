@@ -43,6 +43,7 @@ export type Command =
   | { kind: "give"; cardId: string }
   | { kind: "go"; fieldId: FieldId }
   | { kind: "fight"; cardId: string }
+  | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endfight" }
   | { kind: "endturn" }
   | { kind: "spell"; who: string | null };
@@ -70,6 +71,12 @@ export const COMMANDS: CommandSpec[] = [
   { name: "give", aliases: ["card"], usage: "give MAGICZNY MIECZ", summary: "put a card in a hand" },
   { name: "go", aliases: ["move"], usage: "go Karczma", summary: "stand on an Obszar" },
   { name: "fight", aliases: [], usage: "fight WILKOŁAK", summary: "pick a fight with a Wróg" },
+  {
+    name: "win",
+    aliases: ["lose", "draw"],
+    usage: "win",
+    summary: "settle the fight you are in — also lose, draw",
+  },
   { name: "endfight", aliases: [], usage: "endfight", summary: "drop the fight without settling it" },
   { name: "endturn", aliases: ["pass"], usage: "endturn", summary: "hand the turn on" },
   { name: "spell", aliases: [], usage: "spell [player]", summary: "draw a Zaklęcie" },
@@ -111,6 +118,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
 
   if (word === "kill") return { ok: { kind: "kill", who: tail || null } };
   if (word === "spell") return { ok: { kind: "spell", who: tail || null } };
+  if (word === "win") return { ok: { kind: "settle", outcome: "wygrana" } };
+  if (word === "lose") return { ok: { kind: "settle", outcome: "przegrana" } };
+  if (word === "draw") return { ok: { kind: "settle", outcome: "remis" } };
   if (word === "endfight") return { ok: { kind: "endfight" } };
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
 

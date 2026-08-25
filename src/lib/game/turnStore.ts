@@ -3678,6 +3678,54 @@ export async function runCommand(
       return `${named(seat)} fights ${cardName(command.cardId)}.`;
     }
 
+    case "settle": {
+      /**
+       * Decides the fight you are in, without arranging dice to do it.
+       *
+       * Rolling until the answer comes out right is what a tester would
+       * otherwise have to do, and against a Wilkołak with Miecz 10 there are
+       * totals no pair of dice can reach — so the result is written and then
+       * *applied* by `resolveFight`, the same function the last die calls. What
+       * follows a loss follows here too: 17.4's Zbroja rolled against the point
+       * of Życie, 4.4 if it was the last one, the guardian's own price on the
+       * Kamienny Most.
+       */
+      const game = await loadGame(gameId);
+      if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
+      const fight = game.turn_state.fight;
+      const settled =
+        command.outcome === "remis"
+          ? ({ outcome: "remis", kind: fight.kind } as const)
+          : ({
+              outcome: command.outcome,
+              kind: fight.kind,
+              winner: command.outcome === "wygrana" ? "Postać" : fight.cardName,
+              loser: command.outcome === "wygrana" ? fight.cardName : "Postać",
+            } as const);
+      await db
+        .from("games")
+        .update({
+          turn_state: {
+            ...game.turn_state,
+            // The dice are filled in as well, because everything downstream
+            // reads a settled fight as one that was rolled.
+            fight: {
+              ...fight,
+              playerRoll: fight.playerRoll ?? 0,
+              enemyRoll: fight.enemyRoll ?? 0,
+              result: settled,
+            },
+          },
+        })
+        .eq("id", gameId);
+      await resolveFight(gameId);
+      return command.outcome === "remis"
+        ? "Fight drawn."
+        : command.outcome === "wygrana"
+          ? `Won against ${fight.cardName}.`
+          : `Lost to ${fight.cardName}.`;
+    }
+
     case "endfight":
       await abandonFight(gameId);
       return "Fight dropped.";
