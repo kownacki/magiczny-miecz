@@ -9,7 +9,7 @@ import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
 import { abilitiesOfCharacter, notesForCharacter } from "@/lib/engine/characters";
-import { characterImageUrl } from "@/lib/engine/cardImages";
+import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
@@ -736,6 +736,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               />
             )}
 
+            {/* 4.4: death ends a character, not a player's evening. */}
+            {mine?.eliminated && (
+              <NewCharacter
+                taken={new Set(seats.map((seat) => seat.character_id).filter(Boolean) as string[])}
+                busy={busy}
+                onPick={(characterId) =>
+                  post("character", { again: true, seatId: mine.id, characterId })
+                }
+              />
+            )}
+
             {mine && (
               <SpellHand
                 spells={mine.holdings
@@ -1091,6 +1102,65 @@ function EquipButton({
         </button>
       ))}
     </span>
+  );
+}
+
+/**
+ * Choosing again after a death (4.4).
+ *
+ * The dead character's things are on the field where it fell and its card is
+ * out of the game; what the player gets is a fresh one from whatever nobody
+ * has held, starting from its own MGR. Offered as a plain roster rather than
+ * buried in a menu, because the player is sitting there with nothing to do
+ * until they pick.
+ */
+function NewCharacter({
+  taken,
+  busy,
+  onPick,
+}: {
+  taken: Set<string>;
+  busy: boolean;
+  onPick: (characterId: string) => void;
+}) {
+  const free = CHARACTERS.filter((character) => !taken.has(character.id));
+  return (
+    <section className="mt-3 rounded-lg border border-vermilion/50 bg-vermilion/5 p-3">
+      <h3 className="mb-1 font-[family-name:var(--font-display)] text-sm text-vermilion">
+        Twoja Postać zginęła
+      </h3>
+      <p className="mb-3 text-[11px] leading-relaxed text-muted">
+        Jej Przedmioty i Przyjaciele zostali na Obszarze, na którym zginęła (4.4).
+        Wybierz nową Postać i zacznij od jej MGR.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {free.map((character) => {
+          const standee = characterStandeeUrl(character.id);
+          return (
+            <button
+              key={character.id}
+              disabled={busy}
+              onClick={() => onPick(character.id)}
+              title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
+              className="w-[70px] overflow-hidden rounded border border-edge transition hover:border-ochre disabled:opacity-40"
+            >
+              {standee ? (
+                <Image
+                  src={standee}
+                  alt={character.name}
+                  width={70}
+                  height={117}
+                  className="h-auto w-full"
+                  unoptimized
+                />
+              ) : (
+                <span className="block p-2 text-[10px] text-ink">{character.name}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

@@ -72,7 +72,7 @@ they are rules, and one of them was missing.
 | 4.2 | everyone starts on 4 | ✅ | column default |
 | 4.3 | losses are recorded | ✅ | |
 | 4.4 | at 0 the character dies; items and friends stay on the field, spells are discarded | ✅ | `killSeat` |
-| 4.4 | the player may take a new character and restart from its MGR | ❌ | elimination is final in the app |
+| 4.4 | the player may take a new character and restart from its MGR | ✅ | `takeNewCharacter` |
 | 4.5 | Życie can be gained | ✅ | |
 | 4.6 | no ceiling on gains | ✅ | |
 | 4.7 | healing restores only up to the starting 4 | ✅ | `HEAL_CEILING` |

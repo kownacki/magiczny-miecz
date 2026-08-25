@@ -6,6 +6,7 @@ import {
   findGame,
   verifySeat,
 } from "@/lib/game/store";
+import { takeNewCharacter } from "@/lib/game/turnStore";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -33,6 +34,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
       await dealCharacters(game.id);
       await bumpRevision(game.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    // 4.4: a dead character's player takes a new one and starts again. Kept
+    // apart from the ordinary choice because it is a different act with
+    // different conditions — the seat must be dead, and the character free.
+    if (body.again === true) {
+      await takeNewCharacter(
+        game.id,
+        String(body.seatId ?? actor.id),
+        String(body.characterId ?? ""),
+      );
       return NextResponse.json({ ok: true });
     }
 

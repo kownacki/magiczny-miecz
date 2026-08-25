@@ -1,7 +1,7 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
 import { db } from "@/lib/supabase";
-import { GAME_COLUMNS, fieldCardsFor, type HoldingRow } from "./store";
+import { GAME_COLUMNS, chooseCharacter, fieldCardsFor, type HoldingRow } from "./store";
 import {
   FERRY_TOLL,
   FIELDS,
@@ -1946,4 +1946,61 @@ export async function resolveBridgeOrdeal(
   });
   await bumpRevision(gameId);
   return { field: here, kind: "straznik", dice, enemyTotal: strength, outcome: creature.name };
+}
+
+/**
+ * Rule 4.4's second half: the player takes a new character and begins again.
+ *
+ * "Gracz, który kierował niefortunną Postacią, może wybrać sobie nową i
+ * rozpocząć z nią grę od początku (z Obszaru oznaczonego jako MGR)." Death ends
+ * a character, not a player's evening — and until now the app treated it as
+ * both, which in a game this long is the difference between a bad turn and
+ * going to make tea for two hours.
+ *
+ * The new character starts as any character starts: its own MGR, its printed
+ * Miecz and Magia, four Życie, one Sztuka Złota and whatever it owns before
+ * anybody rolls. What the dead one was carrying stays where it fell (`killSeat`
+ * put it there) for whoever passes that way.
+ */
+export async function takeNewCharacter(
+  gameId: string,
+  seatId: string,
+  characterId: string,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+  if (!seat.eliminated) throw new Error("Ta Postać wciąż żyje.");
+
+  // The dead character's own card is out of the game — "jej Kartę odłożyć do
+  // pozostałych nie biorących udziału w grze" — and so is everybody else's, so
+  // the choice is from what nobody has held.
+  const spent = new Set(
+    seats.filter((s) => s.character_id).map((s) => s.character_id as string),
+  );
+  if (spent.has(characterId)) {
+    throw new Error("Ta Postać jest już w grze.");
+  }
+
+  await chooseCharacter(gameId, seatId, characterId);
+  await db
+    .from("seats")
+    .update({
+      eliminated: false,
+      zycie: 4,
+      zloto: 1,
+      turns_lost: 0,
+      stone_until_turn: null,
+      bridge_blocked_until_turn: null,
+      nature_changed_turn: null,
+      ready: true,
+    })
+    .eq("id", seatId);
+
+  const fresh = (await seatsFor(gameId)).find((s) => s.id === seatId);
+  if (fresh) await dealStartingKit(gameId, fresh);
+
+  await journal(gameId, seatId, game.turn, "nowa-postac", { characterId });
+  await bumpRevision(gameId);
 }
