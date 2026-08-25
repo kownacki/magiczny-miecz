@@ -50,7 +50,9 @@ import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { combinedEnemyTotal } from "@/lib/engine/combat";
 import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
-import { scriptFor } from "@/lib/engine/cardScript";
+import { scriptFor, type Effect } from "@/lib/engine/cardScript";
+import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { goodsId } from "@/lib/engine/goods";
 import type { TurnCard } from "@/lib/engine/state";
 import { beastCombatKind, beastStrength, compareCombat } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
@@ -574,9 +576,15 @@ async function copiesInPlay(gameId: string, cardId: string): Promise<number> {
  * Sent with the table state so a shop can show what it has rather than offering
  * something that will be refused.
  */
-export async function shopStock(gameId: string): Promise<Record<string, number>> {
-  const held = await holdingsFor(gameId);
-  const onFields = await fieldCardsFor(gameId);
+export async function shopStock(
+  gameId: string,
+  // Both lists are usually already in hand at the call site — the table state
+  // reads them anyway — and fetching them a second time is two more round
+  // trips on a request every device makes every couple of seconds.
+  known?: { holdings: HoldingRow[]; fieldCards: { card_id: string }[] },
+): Promise<Record<string, number>> {
+  const held = known?.holdings ?? (await holdingsFor(gameId));
+  const onFields = known?.fieldCards ?? (await fieldCardsFor(gameId));
   const stock: Record<string, number> = {};
   for (const cardId of Object.keys(PRINTED_STOCK)) {
     const inPlay =
@@ -593,6 +601,17 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
   const seat = activeSeatOf(seats, game);
   if (game.turn_state.phase !== "pole") throw new Error("Nie czas na walkę.");
   if (cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
+
+  // 17.4 ends the fight when the dice are compared, whatever the result. A card
+  // already rolled against this turn is settled — beaten and waiting to be
+  // taken, or standing and to be walked away from — and rolling again would let
+  // a character grind the same Smok until it got a six.
+  const settled = game.turn_state.fought ?? [];
+  const again = cardIds.find((cardId) => settled.includes(cardId));
+  if (again) {
+    const card = EVENTS.find((c) => c.id === again);
+    throw new Error(`Walka z ${card?.name ?? again} już się w tej turze odbyła (17.4).`);
+  }
 
   const foes = cardIds.map((cardId) => {
     const card = EVENTS.find((c) => c.id === cardId);
@@ -628,6 +647,7 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
     {
       cardId: foes.map((f) => f.card.id).join("+"),
       cardName: foes.map((f) => f.card.name).join(" + "),
+      settles: foes.map((f) => f.card.id),
       ...(kind === "magiczna" ? { magia: total } : { miecz: total }),
     },
     { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
@@ -1024,6 +1044,11 @@ export async function adjust(
   if (!seat) throw new Error("Nieznane miejsce.");
 
   const column = ADJUSTABLE[stat];
+  // An unrecognised stat used to update a column called `undefined`, which
+  // PostgREST accepts as an empty patch — so a typo in a correction returned
+  // ok and changed nothing, which is the worst possible answer for a manual
+  // override.
+  if (!column) throw new Error(`Nie ma takiej wartości do korekty: ${stat}`);
   const current = seat[column] as number;
   // Rules 1.3 and 2.3: own Miecz and Magia can never be pushed below the value
   // the character started with. Życie and Złoto simply floor at zero.
@@ -2142,5 +2167,192 @@ export async function takeNewCharacter(
   if (fresh) await dealStartingKit(gameId, fresh);
 
   await journal(gameId, seatId, game.turn, "nowa-postac", { characterId });
+  await bumpRevision(gameId);
+}
+
+/* ---------------------------------------------------------------------------
+ * The establishments (see `fieldScript.ts`).
+ *
+ * These are the three verbs the trading fields need and the card scripts had no
+ * way to perform: paying for a card, handing one back, and paying for wounds.
+ * Every one of them checks the price against what the character actually has,
+ * because the whole reason a shop is worth encoding is that "za 2 Sz. Z. miecz"
+ * is arithmetic somebody at the table gets wrong.
+ *
+ * Prices are read off the board here rather than taken from the request. The
+ * client says what it wants to buy; what it costs is not its to say, and a
+ * referee that accepted a price from the player being charged would not be one.
+ * ------------------------------------------------------------------------ */
+
+/** Walks a field's offers for an operation of the given kind. */
+function offerOn<K extends Effect["op"]>(
+  fieldId: string,
+  op: K,
+): Extract<Effect, { op: K }> | null {
+  const script = fieldScriptFor(fieldId);
+  if (!script) return null;
+  const found: Effect[] = [];
+  const walk = (effect: Effect) => {
+    if (effect.op === op) found.push(effect);
+    if (effect.op === "po-kolei") effect.steps.forEach(walk);
+    if (effect.op === "wybor") effect.options.forEach((o) => walk(o.effect));
+  };
+  for (const offer of script.offers) walk(offer.effect);
+  return (found[0] as Extract<Effect, { op: K }>) ?? null;
+}
+
+/** The seat acting, with the field it is standing on. */
+async function shopper(gameId: string, seatId: string): Promise<SeatRow> {
+  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nie ma takiego miejsca.");
+  if (!seat.field_id) throw new Error("Postać nie stoi jeszcze na Obszarze.");
+  return seat;
+}
+
+/**
+ * Buys one card from the shop on the field the character is standing on.
+ *
+ * The gold moves only if the card does. `takeCard` is what actually hands it
+ * over, and it is the one that knows about 5.4's carrying limit and 21.2's
+ * empty pile — so a character who cannot carry it, or a Miecz nobody has left
+ * to sell, fails before anything is paid rather than after.
+ */
+export async function buyGoods(
+  gameId: string,
+  seatId: string,
+  cardId: string,
+): Promise<void> {
+  const seat = await shopper(gameId, seatId);
+  const shop = offerOn(seat.field_id!, "kup");
+  if (!shop) throw new Error("Na tym Obszarze nie ma czego kupić.");
+
+  const entry = shop.towar.find((t) => goodsId(t.co) === cardId);
+  if (!entry) throw new Error(`${cardName(cardId)} nie jest tu na sprzedaż.`);
+  if (seat.zloto < entry.cena) {
+    throw new Error(`Za mało złota: ${entry.co} kosztuje ${entry.cena} Sz. Z.`);
+  }
+
+  await takeCard(gameId, seatId, cardId);
+  await db.from("seats").update({ zloto: seat.zloto - entry.cena }).eq("id", seatId);
+  const game = await loadGame(gameId);
+  await journal(gameId, seatId, game.turn, "kupno", { cardId, price: entry.cena });
+  await bumpRevision(gameId);
+}
+
+/**
+ * Sells one held card back for gold (the Gród's Lichwiarz).
+ *
+ * The card is discarded rather than left on the field: "odłóż ich Karty". That
+ * matters under 21.2, because a Wyposażenie card off a character's sheet is one
+ * back within somebody else's reach, which `stockLeft` reads straight off the
+ * copies in play.
+ */
+export async function sellHolding(
+  gameId: string,
+  seatId: string,
+  holdingId: string,
+): Promise<void> {
+  const seat = await shopper(gameId, seatId);
+  const desk = offerOn(seat.field_id!, "sprzedaj");
+  if (!desk) throw new Error("Na tym Obszarze nikt nie skupuje Przedmiotów.");
+
+  const held = (await holdingsFor(gameId)).find(
+    (h) => h.id === holdingId && h.seat_id === seatId,
+  );
+  if (!held) throw new Error("Nie masz tej karty.");
+  // A Przyjaciel is a person and a trophy is a memory; neither is something the
+  // Lichwiarz deals in. 5.4 counts only Przedmioty and so does he.
+  if (held.kind !== "item") throw new Error("Lichwiarz kupuje tylko Przedmioty.");
+
+  await db.from("holdings").delete().eq("id", holdingId);
+  await db.from("seats").update({ zloto: seat.zloto + desk.cena }).eq("id", seatId);
+  const game = await loadGame(gameId);
+  await journal(gameId, seatId, game.turn, "sprzedaz", {
+    cardId: held.card_id,
+    price: desk.cena,
+  });
+  await bumpRevision(gameId);
+}
+
+/**
+ * Pays a healer.
+ *
+ * Two limits meet here and both bite: 4.7 caps healing at the four Życie a
+ * character starts with, and the purse caps how many points can be paid for.
+ * Asking for more than either allows is not an error — it is answered with what
+ * the money and the rule between them actually buy, which is what a healer at a
+ * table would say.
+ *
+ * The Zamek's die is deliberately not thrown here. Its "1-4 wyleczony, 5 bez
+ * zmian, 6 tracisz 1 Życie" comes *after* the money changes hands, and it is
+ * the field's own roll — the same one every other die table on the board goes
+ * through, so it goes through the same controls rather than being hidden inside
+ * a payment.
+ */
+export async function payHealer(
+  gameId: string,
+  seatId: string,
+  points: number,
+): Promise<{ healed: number; paid: number }> {
+  const seat = await shopper(gameId, seatId);
+  const cure = offerOn(seat.field_id!, "uzdrow");
+  if (!cure) throw new Error("Na tym Obszarze nikt nie leczy.");
+  if (!Number.isInteger(points) || points < 1) throw new Error("Ile punktów?");
+
+  const price = cure.cena ?? 0;
+  const affordable = price > 0 ? Math.floor(seat.zloto / price) : points;
+  const wanted = Math.min(points, affordable, Math.max(0, HEAL_CEILING - seat.zycie));
+  if (wanted <= 0) {
+    throw new Error(
+      seat.zycie >= HEAL_CEILING
+        ? `Życie jest już na poziomie początkowym (${HEAL_CEILING}) — 4.7 nie pozwala wyżej.`
+        : "Za mało złota.",
+    );
+  }
+
+  const paid = wanted * price;
+  await db
+    .from("seats")
+    .update({ zycie: seat.zycie + wanted, zloto: seat.zloto - paid })
+    .eq("id", seatId);
+  const game = await loadGame(gameId);
+  await journal(gameId, seatId, game.turn, "leczenie", { points: wanted, paid });
+  await bumpRevision(gameId);
+  return { healed: wanted, paid };
+}
+
+/**
+ * Puts a character on a field by hand.
+ *
+ * The companion mode's founding assumption is that the figures on the table are
+ * the truth and the app is a record of them, so the app *will* be wrong: a
+ * figure gets knocked over, somebody counts six fields and moves five, a card
+ * nobody has transcribed says "przenieś się gdzie chcesz". Every other tracked
+ * value already has an override (see `adjust`); position, the value most likely
+ * to drift and the one everything else is computed from, had none.
+ *
+ * Journalled as manual, like every other assertion a human makes over the
+ * engine's head.
+ */
+export async function placeSeat(
+  gameId: string,
+  seatId: string,
+  fieldId: string,
+  reason: string | null,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+  if (!FIELDS.has(fieldId)) throw new Error(`Nie ma Obszaru: ${fieldId}`);
+
+  await db.from("seats").update({ field_id: fieldId }).eq("id", seatId);
+  await journal(
+    gameId,
+    seatId,
+    game.turn,
+    "przestawienie",
+    { from: seat.field_id, to: fieldId, reason },
+    true,
+  );
   await bumpRevision(gameId);
 }

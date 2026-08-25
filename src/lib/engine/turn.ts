@@ -35,6 +35,21 @@ export type TurnPhase =
       from: string | null;
       draw: number;
       drawn: TurnCard[];
+      /**
+       * Cards already fought this turn, by id.
+       *
+       * Rule 17.4 ends the fight the moment the two dice are compared — "na tym
+       * walka się kończy" — win, lose or draw. A beaten Wróg is a trophy to be
+       * picked up and a surviving one is something to walk away from; neither is
+       * something to roll against a second time on the same turn. Without this
+       * the card simply stays on the field and can be fought over and over,
+       * which is a way to farm a Smok for free until the dice go your way.
+       *
+       * By card id rather than by copy, because 17.5 has several creatures
+       * attack as one: their Miecze are summed into a single fight, so settling
+       * that fight settles all of them.
+       */
+      fought?: string[];
     }
   | { phase: "walka"; fight: Fight }
   /** Standing at a bridge entrance with its guardian in the way (11.9-11.11). */
@@ -66,6 +81,12 @@ export interface Fight {
   fieldId: string;
   draw: number;
   drawn: TurnCard[];
+  /**
+   * Every card that will count as fought once this is over — what the field had
+   * already settled, plus the creature or creatures in this fight. Carried
+   * through the fight so that ending it cannot lose the list.
+   */
+  fought?: string[];
   /**
    * Set when this is not a fight with a drawn card but with something standing
    * in a doorway — a bridge guardian or the Rycerz in the Lodowy Las.
@@ -286,6 +307,12 @@ export function startFight(
     miecz?: number;
     magia?: number;
     opponentSeat?: number;
+    /**
+     * The ids this fight settles. Several when 17.5 has a pack attack as one,
+     * and `cardId` is then their ids joined together for display rather than
+     * something to look up.
+     */
+    settles?: string[];
   },
   playerTotals: { miecz: number; magia: number },
 ): TurnPhase {
@@ -307,6 +334,12 @@ export function startFight(
       fieldId: phase.fieldId,
       draw: phase.draw,
       drawn: phase.drawn,
+      fought: [
+        ...(phase.fought ?? []),
+        // A duel settles no card: the other character is still there, and 17.9
+        // ends the turn anyway.
+        ...(card.opponentSeat !== undefined ? [] : (card.settles ?? [card.cardId])),
+      ],
     },
   };
 }
@@ -431,11 +464,18 @@ export function recordFightRoll(
   return { ...phase, fight };
 }
 
-/** Closes the fight and returns to the field it interrupted. */
+/**
+ * Closes the fight and returns to the field it interrupted.
+ *
+ * The card is left where it was — a defeated Wróg is a trophy still to be
+ * picked up (1.4), and one that won is still standing on the field for whoever
+ * comes next (16.8) — but it is written down as settled, so this turn is done
+ * rolling against it.
+ */
 export function endFight(phase: TurnPhase): TurnPhase {
   if (phase.phase !== "walka") return phase;
-  const { fieldId, draw, drawn } = phase.fight;
-  return { phase: "pole", fieldId, from: null, draw, drawn };
+  const { fieldId, draw, drawn, fought } = phase.fight;
+  return { phase: "pole", fieldId, from: null, draw, drawn, fought: fought ?? [] };
 }
 
 /**

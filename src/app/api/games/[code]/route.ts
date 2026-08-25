@@ -15,6 +15,42 @@ import { shopStock } from "@/lib/game/turnStore";
 import type { Slot } from "@/lib/engine/slots";
 
 /**
+ * The table minus its decks.
+ *
+ * The stored `deck` is the shuffled draw pile in order, and sending it is
+ * handing every player the rest of the game: what the next Zdarzenie is, which
+ * Zaklęcie is coming, whether the Wróg ahead is a Smok or a Wilk. Nobody in the
+ * browser reads it — drawing happens on the server — so it is simply removed
+ * rather than trimmed.
+ *
+ * What is left is the two counts, which are public at a physical table: the
+ * pile in front of everybody is visibly thick or nearly gone, and 15.5's
+ * reshuffle is something the whole table watches happen.
+ */
+function withoutDeck(game: { deck: unknown }) {
+  const { deck, ...rest } = game;
+  const decks = (deck ?? null) as {
+    events?: { draw?: unknown[]; discard?: unknown[] };
+    spells?: { draw?: unknown[]; discard?: unknown[] };
+  } | null;
+  return {
+    ...rest,
+    deckCounts: decks
+      ? {
+          events: {
+            draw: decks.events?.draw?.length ?? 0,
+            discard: decks.events?.discard?.length ?? 0,
+          },
+          spells: {
+            draw: decks.spells?.draw?.length ?? 0,
+            discard: decks.spells?.discard?.length ?? 0,
+          },
+        }
+      : null,
+  };
+}
+
+/**
  * The table view's state.
  *
  * Deliberately carries no claim tokens and no holdings: this is rendered on a
@@ -38,27 +74,43 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   }
 
   const token = new URL(request.url).searchParams.get("token");
-  const mine = token ? await verifySeat(game.id, token) : null;
+
+  // Fetched together rather than one after another. This is the busiest request
+  // in the app — every device asks for it every couple of seconds — and these
+  // four do not depend on each other, so running them in sequence spent four
+  // round trips to make one answer.
+  const [mine, seats, holdings, fieldCards] = await Promise.all([
+    token ? verifySeat(game.id, token) : Promise.resolve(null),
+    seatsFor(game.id),
+    holdingsFor(game.id),
+    // Face up on the board by rule 16.8, so there is nothing to conceal and
+    // every seat is sent the same list.
+    fieldCardsFor(game.id),
+  ]);
 
   // The poll is the heartbeat. A device asking for the state is a device still
   // at the table, so no separate ping is needed — and a seat that stops asking
   // goes quiet by itself, which is the difference between somebody who left and
   // somebody whose tab was closed.
-  if (mine) await markSeen(mine.id);
-
-  const seats = await seatsFor(game.id);
-  const holdings = await holdingsFor(game.id);
-  // Face up on the board by rule 16.8, so there is nothing to conceal and every
-  // seat is sent the same list.
-  const fieldCards = await fieldCardsFor(game.id);
+  //
+  // Not written on every poll. Presence is judged against AWAY_AFTER_MS, so a
+  // timestamp refreshed several times inside that window says nothing new — and
+  // writing it anyway meant a row update per device per poll, forever, for a
+  // table sitting still. It is also written whenever the page said goodbye, so
+  // that a reload cancels it.
+  if (mine) {
+    const row = seats.find((seat) => seat.id === mine.id);
+    const lastSeen = row?.seen_at ? Date.parse(row.seen_at) : 0;
+    if (row?.left_at || Date.now() - lastSeen > AWAY_AFTER_MS / 3) await markSeen(mine.id);
+  }
 
   return NextResponse.json({
-    game,
+    game: withoutDeck(game),
     mySeatIndex: mine?.seat_index ?? null,
     fieldCards: fieldCards.map((row) => ({ fieldId: row.field_id, cardId: row.card_id })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.
-    stock: await shopStock(game.id),
+    stock: await shopStock(game.id, { holdings, fieldCards }),
     seats: seats.map((seat) => {
       const own = holdings
         .filter((holding) => holding.seat_id === seat.id)

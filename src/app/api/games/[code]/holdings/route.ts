@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
 import type { Slot } from "@/lib/engine/slots";
 import {
+  buyGoods,
   castSpell,
   changeNature,
   drawSpell,
   dropCard,
   equipCard,
   healSeat,
+  payHealer,
+  sellHolding,
   takeCard,
   tradeTrophies,
   turnToStone,
@@ -38,6 +41,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "drop":
         await dropCard(game.id, String(body.holdingId));
         break;
+      // The three establishment verbs. What each of them costs is read off the
+      // board inside these, never taken from the request.
+      case "buy":
+        await buyGoods(game.id, String(body.seatId ?? actor.id), String(body.cardId));
+        break;
+      case "sell":
+        await sellHolding(game.id, String(body.seatId ?? actor.id), String(body.holdingId));
+        break;
+      case "heal-paid":
+        return NextResponse.json(
+          await payHealer(game.id, String(body.seatId ?? actor.id), Number(body.points)),
+        );
       case "equip":
         // `slot: null` takes it off. The slot itself is validated in
         // `equipCard` against what the card may wear, so anything unrecognised

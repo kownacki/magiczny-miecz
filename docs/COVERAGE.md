@@ -58,7 +58,7 @@ they are rules, and one of them was missing.
 
 | | rule | status | where |
 |---|---|---|---|
-| 3.1 | gold buys things | ✅ | `payFerry`; shops are ◐, see 21.2 |
+| 3.1 | gold buys things | ✅ | `payFerry`; the board's shops in `fieldScript.ts`, paid through `buyGoods` / `sellHolding` / `payHealer` |
 | 3.2 | each character starts with 1, unless its card says otherwise | ✅ | `STARTING_KIT` (the Książę's five) |
 | 3.3 | prices are in Sztuki Złota | — | |
 | 3.4 | payments go back to the supply | — | no token supply to model |
@@ -206,6 +206,7 @@ they are rules, and one of them was missing.
 | 17.3 | spells must be used before the roll | ◐ | the fight window offers them; nothing forces the order |
 | 17.4 | one die each, added to total Miecz; loser loses 1 Życie | ✅ | `compareCombat` |
 | 17.4 | an item or spell may prevent that loss | ✅ | `bestShield`, rolled in `settleFight` |
+| 17.4 | "na tym walka się kończy" — one roll per enemy per turn | ✅ | `endFight` records `fought`; `beginFight` refuses a rematch |
 | 17.5 | several enemies at once add their Miecze together | ✅ | `beginFight` takes a list; `combinedEnemyTotal` |
 | 17.6 | the attacked character may try to slip away | ✅ | |
 | 17.7 | **both** characters may cast before the roll | ◐ | a hand is castable during anyone's fight, not only its owner's turn; there is no explicit reaction pause |
@@ -246,6 +247,7 @@ they are rules, and one of them was missing.
 | 21.1 | take the matching equipment card | ✅ | |
 | 21.2 | bought items return to the shop stack and can run out | ✅ | `stock.ts` — derived from what is in play |
 | 21.3 | they may be left on the board like any card | ✅ | `dropCard` |
+| 21.2 | a shop shows what it still has, and refuses what it has not | ✅ | `stock` on the table state; the Płatnerz greys out an empty pile |
 
 ## 22. Zwycięstwo
 
@@ -274,6 +276,32 @@ descending order of what they cost a table:
 
 After those: the two Pułapki and the Demon Zagłady / Monstrum (14.5, 14.6) print
 their own procedures and the app shows them but does not run them.
+
+---
+
+## Obszary, które handlują
+
+Nine of the board's fields are establishments rather than events: they print a
+price list, a service or a die table. `src/lib/engine/fieldScript.ts` encodes
+them in the same `Effect` language the card scripts use, so a shop is one thing
+in this codebase and not two, and `EffectControls` draws them without knowing
+they came from the board rather than from a card.
+
+| Obszar | co oferuje | działa |
+|---|---|---|
+| Osada | Czarownica (kostka), Płatnerz (Miecz 2, Sztylet 3, Hełm 1), Medyk (1 Sz.Z. za punkt) | ✅ |
+| Gród | Wróżbita (kostka), Lichwiarz (skup Przedmiotów po 1 Sz.Z.) | ✅ |
+| Karczma | obowiązkowa kostka, sześć wyników | ✅ |
+| Zamek | Nadworny Medyk: płacisz, potem rzucasz | ✅ |
+| Pustelnia | Pustelnik leczy za 1 Sz.Z. od rany | ✅ |
+| Magiczne Wrota | życzenie: Miecz, Magia, Zaklęcie albo Złoto | ✅ |
+| Strażnik Magicznych Wrót | 1 Sz.Z. albo 1 Życia | ✅ |
+| Przeprawa ×2 | 1 Sz.Z. przewoźnikowi | ✅ `payFerry` |
+| Twierdza Strzegąca Dróg | misja Władcy | ❌ celowo — misja to wyprawa przez planszę, nie tablica kostki; zostaje prozą |
+
+Ceny czyta serwer z planszy, nigdy z żądania. Klient mówi *co* kupuje; ile to
+kosztuje nie jest jego rzeczą, a sędzia, który przyjmuje cenę od kupującego,
+nie jest sędzią.
 
 ---
 

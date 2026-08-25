@@ -159,6 +159,52 @@ describe("fights", () => {
     if (back.phase !== "pole") return;
     expect(back.drawn).toHaveLength(1);
   });
+
+  it("writes the enemy down as fought, so it cannot be rolled against twice (17.4)", () => {
+    let phase: TurnPhase = afterDraw(field, { cardId: "cyklop", cardClass: "wrog" });
+    phase = startFight(
+      phase,
+      { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
+      { miecz: 3, magia: 5 },
+    );
+    phase = recordFightRoll(phase, "player", 1);
+    phase = recordFightRoll(phase, "enemy", 6);
+    const back = endFight(phase);
+    if (back.phase !== "pole") throw new Error("expected pole");
+    // Lost, so the Cyklop is still on the field — and still not something to
+    // roll against again this turn.
+    expect(back.drawn.map((c) => c.cardId)).toEqual(["cyklop"]);
+    expect(back.fought).toEqual(["cyklop"]);
+  });
+
+  it("settles every creature of a pack that attacked as one (17.5)", () => {
+    let phase: TurnPhase = afterDraw(field, { cardId: "wilk", cardClass: "wrog" });
+    phase = afterDraw(phase, { cardId: "wilki", cardClass: "wrog" });
+    phase = startFight(
+      phase,
+      {
+        cardId: "wilk+wilki",
+        cardName: "WILK + WILKI",
+        miecz: 7,
+        settles: ["wilk", "wilki"],
+      },
+      { miecz: 3, magia: 5 },
+    );
+    const back = endFight(phase);
+    if (back.phase !== "pole") throw new Error("expected pole");
+    expect(back.fought).toEqual(["wilk", "wilki"]);
+  });
+
+  it("settles nothing in a duel — the other character is still standing (17.9)", () => {
+    const phase = startFight(
+      field,
+      { cardId: "seat:1", cardName: "Ola", miecz: 4, opponentSeat: 1 },
+      { miecz: 3, magia: 5 },
+    );
+    const back = endFight(phase);
+    if (back.phase !== "pole") throw new Error("expected pole");
+    expect(back.fought).toEqual([]);
+  });
 });
 
 describe("turn order", () => {

@@ -5,6 +5,9 @@ import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
+import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { goodsId } from "@/lib/engine/goods";
+import { HEAL_CEILING } from "@/lib/engine/derive";
 import {
   describeDisposition,
   scriptFor,
@@ -107,6 +110,14 @@ interface Props {
   onSuggestion: (stat: string, delta: number, reason: string) => void;
   /** Takes a drawn card into the active player's keeping. */
   onTake: (cardId: string) => void;
+  /** What the character standing here has to spend and to spend it on. */
+  purse?: { zloto: number; zycie: number };
+  /** What the Wyposażenie pile still holds, so a shop can grey out what it lacks. */
+  stock?: Record<string, number>;
+  /** The active character's Przedmioty, for the Lichwiarz to buy back. */
+  sellable?: { id: string; cardId: string }[];
+  /** Buying, selling and paying a healer — see `fieldScript.ts`. */
+  onService?: (body: Record<string, unknown>) => void;
 }
 
 export function TurnPanel({
@@ -124,6 +135,10 @@ export function TurnPanel({
   onAction,
   onSuggestion,
   onTake,
+  purse,
+  stock,
+  sellable,
+  onService,
 }: Props) {
   return (
     <section className="rounded-lg border border-ochre/40 bg-panel p-5">
@@ -143,7 +158,7 @@ export function TurnPanel({
               prose above the parsed version says everything twice. Where the
               table does not account for most of the text — Gród, Osada — the
               prose carries rules the table does not, and is kept. */}
-          {!isTableOnly(fieldText) && (
+          {(!isTableOnly(fieldText) || (fieldId && fieldScriptFor(fieldId))) && (
             <p className="whitespace-pre-line rounded border-l-2 border-ochre/40 bg-night/60 px-3 py-2 text-xs leading-relaxed text-muted">
               {fieldText}
             </p>
@@ -152,12 +167,32 @@ export function TurnPanel({
               roll does not happen — not that it happens and is ignored, which
               some of these tables would make a meaningful difference. The
               table stays one tap away, because the app is always correctable. */}
-          {rollSkippedBy ? (
+          {/* An encoded field wins over the prose reader, the same way an
+              encoded card does. `suggestActions` is regular expressions
+              guessing at 1993 Polish, and on the Gród it glues the Lichwiarz's
+              sentence onto three faces of the Wróżbita's die. Where somebody
+              has read the field, that reading stands. */}
+          {fieldId && fieldScriptFor(fieldId) ? null : rollSkippedBy ? (
             <RollSkipped by={rollSkippedBy} text={fieldText} busy={busy} onSuggestion={onSuggestion} />
           ) : (
             <RollTable text={fieldText} busy={busy} onSuggestion={isMine ? onSuggestion : undefined} />
           )}
         </div>
+      )}
+
+      {/* The establishments. Ten fields on the board sell things, buy things or
+          mend wounds, and until this panel existed the app read their price
+          lists out and left the table to do the sums. */}
+      {isMine && fieldId && phase.phase === "pole" && fieldScriptFor(fieldId) && (
+        <FieldServices
+          fieldId={fieldId}
+          busy={busy}
+          purse={purse}
+          stock={stock}
+          sellable={sellable}
+          onSuggestion={onSuggestion}
+          onService={onService}
+        />
       )}
 
       {actingForOther && (
@@ -721,6 +756,7 @@ function FieldControls({
       {phase.drawn.length > 0 && (
         <DrawnCards
           drawn={phase.drawn}
+          fought={phase.fought ?? []}
           busy={busy}
           onAction={onAction}
           onSuggestion={onSuggestion}
@@ -1048,12 +1084,15 @@ function FightSide({
  */
 function DrawnCards({
   drawn,
+  fought,
   busy,
   onAction,
   onSuggestion,
   onTake,
 }: {
   drawn: { cardId: string; cardClass: string }[];
+  /** Ids already rolled against this turn (17.4), which are not offered again. */
+  fought: string[];
   busy: boolean;
   onAction: Props["onAction"];
   onSuggestion: Props["onSuggestion"];
@@ -1065,7 +1104,10 @@ function DrawnCards({
   // summed, because the sums are of different things.
   const foes = drawn
     .map((entry) => EVENTS.find((c) => c.id === entry.cardId))
-    .filter((card): card is EventCard => !!card && !!combatValueOf(card));
+    .filter(
+      (card): card is EventCard =>
+        !!card && !!combatValueOf(card) && !fought.includes(card.id),
+    );
   const together =
     foes.length > 1 && new Set(foes.map((c) => combatValueOf(c)!.kind)).size === 1
       ? foes
@@ -1152,7 +1194,7 @@ function DrawnCards({
                   Weź Przyjaciela
                 </button>
               )}
-              {card && combatValueOf(card) && (
+              {card && combatValueOf(card) && !fought.includes(card.id) && (
                 <button
                   disabled={busy}
                   onClick={() => onAction({ action: "fight", cardId: card.id })}
@@ -1160,6 +1202,14 @@ function DrawnCards({
                 >
                   Walcz
                 </button>
+              )}
+              {/* 17.4: the fight ended when the dice were compared. Said out
+                  loud, because a Wróg still lying on the field with no Walcz
+                  button otherwise looks like a bug. */}
+              {card && combatValueOf(card) && fought.includes(card.id) && (
+                <span className="rounded border border-muted/30 px-3 py-1 text-xs text-muted">
+                  Walka rozstrzygnięta w tej turze (17.4)
+                </span>
               )}
               {/* An encoded card wins over the prose reader: the script says
                   what the card does because someone read it, where
@@ -1498,4 +1548,310 @@ function conditionLabel(condition: Extract<Effect, { op: "gdy" }>["warunek"]): s
     case "ma-zloto":
       return "jeśli masz złoto";
   }
+}
+
+/**
+ * A field that trades.
+ *
+ * Each named service is a box with the thing it does actually attached to a
+ * button: the Płatnerz's three lines become three prices you can pay, the
+ * Medyk's sentence becomes a number of wounds you can afford, and the
+ * Lichwiarz's becomes the list of what you are carrying with what he will give
+ * you for it. Everything else — a die table, a wish, a change of Natura —
+ * falls through to `EffectControls`, which already knows how to draw it.
+ *
+ * Nothing here decides a price. The buttons say what to buy; the server reads
+ * what it costs off the same board.
+ */
+function FieldServices({
+  fieldId,
+  busy,
+  purse,
+  stock,
+  sellable,
+  onSuggestion,
+  onService,
+}: {
+  fieldId: string;
+  busy: boolean;
+  purse?: { zloto: number; zycie: number };
+  stock?: Record<string, number>;
+  sellable?: { id: string; cardId: string }[];
+  onSuggestion: Props["onSuggestion"];
+  onService?: Props["onService"];
+}) {
+  const script = fieldScriptFor(fieldId)!;
+  const gold = purse?.zloto ?? 0;
+
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      <p className="text-[11px] uppercase tracking-wide text-ochre/80">
+        {script.obowiazkowe ? "To pole trzeba rozpatrzeć" : "Możesz tu odwiedzić"}
+        {purse && (
+          <span className="ml-2 normal-case tracking-normal text-muted">
+            masz <span className="tnum text-zloto">{purse.zloto} Sz. Z.</span>
+          </span>
+        )}
+      </p>
+      {script.offers.map((offer) => (
+        <div key={offer.name} className="rounded border border-edge bg-night/40 p-2">
+          <p className="mb-1 text-xs font-medium text-ink">{offer.name}</p>
+          <ServiceEffect
+            effect={offer.effect}
+            name={offer.name}
+            busy={busy}
+            gold={gold}
+            zycie={purse?.zycie ?? 0}
+            stock={stock}
+            sellable={sellable}
+            onSuggestion={onSuggestion}
+            onService={onService}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The three trading operations, with everything else handed to `EffectControls`. */
+function ServiceEffect({
+  effect,
+  name,
+  busy,
+  gold,
+  zycie,
+  stock,
+  sellable,
+  onSuggestion,
+  onService,
+}: {
+  effect: Effect;
+  name: string;
+  busy: boolean;
+  gold: number;
+  zycie: number;
+  stock?: Record<string, number>;
+  sellable?: { id: string; cardId: string }[];
+  onSuggestion: Props["onSuggestion"];
+  onService?: Props["onService"];
+}) {
+  if (effect.op === "po-kolei") {
+    return (
+      <div className="flex flex-col gap-2">
+        {effect.steps.map((step, i) => (
+          <ServiceEffect
+            key={i}
+            effect={step}
+            name={name}
+            busy={busy}
+            gold={gold}
+            zycie={zycie}
+            stock={stock}
+            sellable={sellable}
+            onSuggestion={onSuggestion}
+            onService={onService}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // A scripted die table keeps the affordance the prose reader had: roll here,
+  // or tap the face that came up on a real die. Local state, because this is a
+  // lookup — what the face *does* is still applied through its own control, so
+  // the referee never silently decides a player's outcome.
+  if (effect.op === "rzut") {
+    return (
+      <ScriptedRoll
+        effect={effect}
+        name={name}
+        busy={busy}
+        gold={gold}
+        zycie={zycie}
+        stock={stock}
+        sellable={sellable}
+        onSuggestion={onSuggestion}
+        onService={onService}
+      />
+    );
+  }
+
+  if (effect.op === "kup" && onService) {
+    return (
+      <ul className="flex flex-wrap gap-1">
+        {effect.towar.map((towar) => {
+          const cardId = goodsId(towar.co);
+          // 21.2: a shop with none left is not offering it. Said plainly rather
+          // than hidden, because "nieosiągalny" is information the table wants.
+          const left = cardId && stock ? (stock[cardId] ?? Infinity) : Infinity;
+          const affordable = gold >= towar.cena;
+          const can = !!cardId && left > 0 && affordable;
+          return (
+            <li key={towar.co}>
+              <button
+                disabled={busy || !can}
+                title={
+                  left <= 0
+                    ? "Nie ma już ani jednej (21.2)"
+                    : affordable
+                      ? undefined
+                      : "Za mało złota"
+                }
+                onClick={() => onService({ action: "buy", cardId })}
+                className="rounded border border-zloto/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-zloto/20 disabled:opacity-40"
+              >
+                {towar.co} <span className="tnum text-zloto">{towar.cena} Sz. Z.</span>
+                {left <= 0 && <span className="ml-1 text-muted">(brak)</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  if (effect.op === "sprzedaj" && onService) {
+    if (!sellable?.length) {
+      return <p className="text-[11px] text-muted">Nie masz Przedmiotów na sprzedaż.</p>;
+    }
+    return (
+      <ul className="flex flex-wrap gap-1">
+        {sellable.map((held) => (
+          <li key={held.id}>
+            <button
+              disabled={busy}
+              onClick={() => onService({ action: "sell", holdingId: held.id })}
+              className="rounded border border-zloto/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-zloto/20 disabled:opacity-40"
+            >
+              {cardNameOf(held.cardId)} → <span className="tnum text-zloto">+{effect.cena}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (effect.op === "uzdrow" && onService) {
+    const price = effect.cena ?? 0;
+    const missing = Math.max(0, HEAL_CEILING - zycie);
+    const affordable = price > 0 ? Math.floor(gold / price) : missing;
+    const most = Math.min(missing, affordable);
+    if (missing === 0) {
+      return (
+        <p className="text-[11px] text-muted">
+          Życie jest już na poziomie początkowym — 4.7 nie pozwala wyżej.
+        </p>
+      );
+    }
+    return (
+      <div>
+        <p className="mb-1 text-[11px] text-muted">
+          {price > 0 ? `${price} Sz. Z. za punkt Życia` : "leczenie za darmo"} — brakuje ci{" "}
+          <span className="tnum text-zycie">{missing}</span>
+          {most < missing && `, stać cię na ${most}`}.
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {Array.from({ length: most }, (_, i) => i + 1).map((points) => (
+            <button
+              key={points}
+              disabled={busy}
+              onClick={() => onService({ action: "heal-paid", points })}
+              className="tnum rounded border border-zycie/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-zycie/20 disabled:opacity-40"
+            >
+              +{points} Życia{price > 0 && ` (${points * price} Sz. Z.)`}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <EffectControls effect={effect} cardName={name} busy={busy} onSuggestion={onSuggestion} />
+  );
+}
+
+/** A card's printed name, for the few places holding only an id. */
+function cardNameOf(cardId: string): string {
+  return EVENTS.find((c) => c.id === cardId)?.name ?? cardId;
+}
+
+/** One field's die table, with the face that came up picked out. */
+function ScriptedRoll({
+  effect,
+  name,
+  busy,
+  gold,
+  zycie,
+  stock,
+  sellable,
+  onSuggestion,
+  onService,
+}: {
+  effect: Extract<Effect, { op: "rzut" }>;
+  name: string;
+  busy: boolean;
+  gold: number;
+  zycie: number;
+  stock?: Record<string, number>;
+  sellable?: { id: string; cardId: string }[];
+  onSuggestion: Props["onSuggestion"];
+  onService?: Props["onService"];
+}) {
+  const [rolled, setRolled] = useState<number | null>(null);
+  const faces = rolled === null ? [1, 2, 3, 4, 5, 6] : [rolled];
+
+  return (
+    <div>
+      <div className="mb-1 flex flex-wrap items-center gap-1">
+        <span className="mr-1 text-[11px] text-muted">Rzuć kostką:</span>
+        <button
+          disabled={busy}
+          onClick={() => setRolled(1 + Math.floor(Math.random() * 6))}
+          className="rounded border border-edge px-2 py-0.5 text-[11px] text-ink transition hover:border-ochre disabled:opacity-50"
+        >
+          Rzuć
+        </button>
+        {[1, 2, 3, 4, 5, 6].map((face) => (
+          <button
+            key={face}
+            onClick={() => setRolled(face)}
+            className={`tnum h-5 w-5 rounded border text-[11px] transition ${
+              rolled === face
+                ? "border-ochre text-ochre"
+                : "border-edge text-muted hover:border-ochre"
+            }`}
+          >
+            {face}
+          </button>
+        ))}
+        {rolled !== null && (
+          <button
+            onClick={() => setRolled(null)}
+            className="ml-auto text-[11px] text-muted underline hover:text-ink"
+          >
+            wyczyść
+          </button>
+        )}
+      </div>
+      <ol className="flex flex-col gap-0.5">
+        {faces.map((face) => (
+          <li key={face} className="flex items-baseline gap-2">
+            <span className="tnum w-3 text-[11px] text-ochre">{face}</span>
+            <ServiceEffect
+              effect={effect.faces[face]}
+              name={name}
+              busy={busy}
+              gold={gold}
+              zycie={zycie}
+              stock={stock}
+              sellable={sellable}
+              onSuggestion={onSuggestion}
+              onService={onService}
+            />
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 }

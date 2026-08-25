@@ -119,6 +119,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [seats, setSeats] = useState<Seat[]>([]);
   /** Cards lying face up on the board (16.8) — public to every seat. */
   const [fieldCards, setFieldCards] = useState<FieldCard[]>([]);
+  /** What the Wyposażenie pile still holds (21.2), so a shop offers only what it has. */
+  const [stock, setStock] = useState<Record<string, number>>({});
   /** A field the player tapped on the map, to read what it says. */
   const [inspecting, setInspecting] = useState<string | null>(null);
   /** What the app just decided by itself, shown until the next action. */
@@ -150,6 +152,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setGame(data.game);
     setSeats(data.seats);
     setFieldCards(data.fieldCards ?? []);
+    setStock(data.stock ?? {});
     setMySeatIndex(data.mySeatIndex);
   }, [code]);
 
@@ -723,6 +726,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 }
                 onTake={(cardId) =>
                   post("holdings", { action: "take", seatId: active.id, cardId })
+                }
+                purse={{ zloto: active.zloto, zycie: active.zycie }}
+                stock={stock}
+                sellable={active.holdings
+                  .filter((holding) => holding.kind === "item")
+                  .map((holding) => ({ id: holding.id, cardId: holding.cardId }))}
+                onService={(body) =>
+                  post("holdings", { ...body, seatId: active.id })
                 }
               />
             )}

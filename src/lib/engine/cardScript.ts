@@ -110,8 +110,21 @@ export type Effect =
   /**
    * Restores Życie but no higher than the four a character starts with (4.7) —
    * Cudotwórca, Księżniczka, the Zamek's Medyk.
+   *
+   * `cena` is what one restored point costs, where it costs anything: the
+   * Osada's Medyk asks "za każdą Sztukę Złota przywróci ci 1 punkt Życia" and
+   * the Pustelnik "1 Sz. Z. za każdą wyleczoną ranę". Free healing leaves it
+   * out. It matters because a character with two gold cannot buy back three
+   * wounds, and that arithmetic is exactly what a table gets wrong.
    */
-  | { op: "uzdrow"; upTo: number }
+  | { op: "uzdrow"; upTo: number; cena?: number }
+  /**
+   * The other direction: Przedmioty handed back for gold. The Gród's Lichwiarz
+   * pays a Sztuka Złota apiece, "odłóż ich Karty i weź po 1 Sz.Z. za każdy" —
+   * and by 21.2 the card returning to its pile is the point, because it puts
+   * the thing back within somebody's reach.
+   */
+  | { op: "sprzedaj"; cena: number }
   | { op: "tura-stracona"; turns: number; target?: Target }
   | { op: "ruch-dodatkowy" }
   | { op: "zaklecie"; count: number }

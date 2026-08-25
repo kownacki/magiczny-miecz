@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { adjust, type Adjustable } from "@/lib/game/turnStore";
+import { adjust, placeSeat, type Adjustable } from "@/lib/game/turnStore";
 
 /**
  * The manual override. Any seated player may correct any seat, not just their
@@ -17,6 +17,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
 
   try {
+    // Position is the other override. It is not a delta like the rest — you do
+    // not nudge a figure two fields, you say where it is — so it takes a field
+    // id rather than a number.
+    if (body.stat === "pole") {
+      await placeSeat(
+        game.id,
+        String(body.seatId),
+        String(body.fieldId),
+        typeof body.reason === "string" ? body.reason : null,
+      );
+      return NextResponse.json({ ok: true });
+    }
     await adjust(
       game.id,
       String(body.seatId),
