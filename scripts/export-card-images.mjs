@@ -8,11 +8,17 @@ const IN = "assets/extracted";
 const OUT = "public/cards";
 
 /**
- * Width in CSS pixels the card is displayed at, doubled for retina. Card text
- * has to stay readable — that is the entire point of showing the image rather
- * than the transcription — so this is generous.
+ * Longest side of a card, sized for the place it is read: the hover panel.
+ *
+ * That panel shows a card 260 CSS px wide, which is 520 device px on a retina
+ * screen. At the old 420 the cards came out 252 across and were being blown up
+ * 2.06x to fill it — blurry, and inconsistent besides, because Karty Postaci
+ * were already exported big enough and rendered sharp beside them.
+ *
+ * 880 puts a card at 528 across, which clears 520 with nothing to spare and
+ * nothing wasted.
  */
-const WIDTH = 420;
+const WIDTH = 880;
 
 /**
  * Character cards are read, not glanced at.
@@ -22,7 +28,17 @@ const WIDTH = 420;
  * print is a grey suggestion, and the scan has 777 to give — so it gives it.
  * Nothing else on any sheet is looked at for that long.
  */
-const WIDTH_BY_SHEET = { karta: 780 };
+const WIDTH_BY_SHEET = {
+  karta: 780,
+  /**
+   * Standees are never read, only recognised.
+   *
+   * The biggest one on screen is the active chip in the turn bar at 85px, and
+   * the paper doll draws them at 96. 420 already covers twice that; giving them
+   * the card treatment would quadruple 28 files nobody looks closely at.
+   */
+  standee: 420,
+};
 
 /** JPEG quality. Above ~75 the files grow faster than the scans deserve. */
 const QUALITY = 72;
