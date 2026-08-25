@@ -36,7 +36,7 @@ import type { TileCard } from "./card-tile";
  * picture. `export-card-art.mjs` now settles the aspect where the pictures are
  * made; this is the same number read off the other end.
  */
-export const SLOT_WIDTH = 96;
+export const SLOT_WIDTH = 86;
 export const SLOT_ART_HEIGHT = Math.round(SLOT_WIDTH / ART_RATIO);
 
 /**
