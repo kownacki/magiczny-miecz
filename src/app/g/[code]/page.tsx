@@ -2281,10 +2281,18 @@ const STAT_COLOUR: Record<string, string> = {
 function Tokens({ stat, points, label }: { stat: string; points: number; label: string }) {
   /**
    * How big a żeton is drawn, and the number everything else on the rail comes
-   * off. The pictures are about 100px square, so this is a fifth of what is
+   * off. The pictures are about 100px square, so this is a sixth of what is
    * there and stays sharp on any screen worth having.
+   *
+   * Sixteen is where a column of five finally fits the half of the card it is
+   * given — eighty-eight against ninety-one — where at eighteen it was seven
+   * over and two full rails could outgrow the Karta they stand against.
+   *
+   * It also brings the two kinds of pile to the same height: a stack of ten
+   * coins is eighty-eight as well, so a full rail is a full rail whichever
+   * parameter it belongs to.
    */
-  const SIZE = 18;
+  const SIZE = 16;
   if (stat === "zloto") {
     /**
      * Money is a stack, not a row.
