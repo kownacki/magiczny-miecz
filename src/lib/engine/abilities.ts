@@ -138,7 +138,19 @@ export type Ability =
   /** Rycerz fights in your place, with his own points and none of your things. */
   | { kind: "walczy-za-ciebie"; miecz: number; magia: number }
   /** The Magiczny Miecz cannot be picked up in the lower ring. */
-  | { kind: "niedostepny"; region: "dolny" };
+  | { kind: "niedostepny"; region: "dolny" }
+  /**
+   * May change Natura at will, rather than only when something changes it.
+   *
+   * 7.2 describes what happens *when* a Nature changes, not a choice anybody
+   * gets to make: cards change it. Magog is the exception, and this is what
+   * separates the one character who may reach for it from the twenty-six who
+   * may not — so that in simulation the control can exist for him and for
+   * nobody else, instead of being a hand-editing button for everyone.
+   *
+   * Still bounded by 7.3: once per turn.
+   */
+  | { kind: "natura-dowolna" };
 
 /**
  * Which cards have which standing rules.

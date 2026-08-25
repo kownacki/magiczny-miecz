@@ -42,6 +42,7 @@ import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
+import { DrawModal, ringFields } from "./draw-modal";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
@@ -155,6 +156,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [watching, setWatching] = useState(false);
   /** The character asked for and not yet heard back about (see `chooseCharacter`). */
   const [pendingCharacter, setPendingCharacter] = useState<string | null>(null);
+  /**
+   * Cards the player has waved past for now.
+   *
+   * 16.8 lets a card simply stay where it fell, and 12.1 gives until the end of
+   * the turn to come back to it — so "not now" has to be a real answer, and it
+   * is this device's business rather than the table's. Cleared when the turn
+   * moves on, since the next character meets the same cards fresh.
+   */
+  const [waved, setWaved] = useState<string[]>([]);
   /** Moves this device has made and the server has not confirmed (see `equip`). */
   const [moved, setMoved] = useState<Record<string, Slot | null>>({});
   /**
@@ -196,6 +206,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setStock(data.stock ?? {});
     setMySeatIndex(data.mySeatIndex);
   }, [code]);
+
+  const turnKey = game ? `${game.turn}:${game.active_seat}` : null;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWaved([]);
+  }, [turnKey]);
 
   useEffect(() => {
     // Polling stands in for the Realtime revision ping. Two seconds is
@@ -556,6 +572,30 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {inspectingCard && (
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
+      {/* The card you just turned over, at a size you can read, with exactly
+          the things this card lets you do under it. */}
+      {active &&
+        (mySeatIndex === active.seat_index || isTableScreen) &&
+        game.turn_state.phase === "pole" &&
+        game.turn_state.drawn.length > 0 && (
+          <DrawModal
+            cards={game.turn_state.drawn}
+            resolved={[...(game.turn_state.resolved ?? []), ...waved]}
+            fought={game.turn_state.fought ?? []}
+            ring={ringFields(active.field_id)}
+            busy={busy}
+            onResolve={(cardId, decisions) =>
+              post("turn", { action: "karta-efekt", cardId, ...decisions })
+            }
+            onFight={(cardId) => post("turn", { action: "fight", cardId })}
+            onEscape={() => post("turn", { action: "escape" })}
+            onTake={(cardId) =>
+              post("holdings", { action: "take", seatId: active.id, cardId })
+            }
+            onLeave={(cardId) => setWaved((current) => [...current, cardId])}
+          />
+        )}
+
       {/* Tapping a field opens it, rather than filling in a panel off to the
           side where nobody looked. */}
       {inspecting && (
@@ -848,6 +888,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 busy={busy}
                 nature={active.nature}
                 canFightBeast={active.field_id === "zamek-bestii"}
+                // Companion mode is the app being told what a physical table
+                // did, so it has to ask. Simulation rolls and applies these
+                // itself, and a button for them would be editing the record
+                // rather than playing (see CLAUDE.md).
+                byHand={game.mode === "companion"}
+                mayChooseNature={abilitiesOfCharacter(
+                  asCharacterId(active.character_id),
+                ).some((ability) => ability.kind === "natura-dowolna")}
                 onSpell={() => post("holdings", { action: "spell", seatId: active.id })}
                 onNature={(nature) =>
                   post("holdings", { action: "nature", seatId: active.id, nature })
@@ -1825,6 +1873,8 @@ function describeAbility(ability: Ability): string {
       return `walczy za ciebie (Miecz ${ability.miecz}, Magia ${ability.magia})`;
     case "niedostepny":
       return "nie do zdobycia w Dolnym Kręgu";
+    case "natura-dowolna":
+      return "Naturę zmieniasz dowolnie (raz na turę)";
     case "modyfikator-rzutu": {
       const sign = ability.dowolnyZnak
         ? `±${Math.abs(ability.delta)}`

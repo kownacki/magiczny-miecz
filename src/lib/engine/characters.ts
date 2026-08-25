@@ -70,6 +70,10 @@ export const CHARACTER_ABILITIES: Readonly<Partial<Record<CharacterId, readonly 
     { kind: "zakazane", cardIds: ["miecz", "sztylet", "helm", "zbroja"] },
   ],
   magog: [
+    // "Możesz dowolnie zmieniać swoją naturę, jednak musi być ona określona
+    // w każdym momencie gry." Carried by the app now rather than remembered:
+    // it is the only reason a Natura control belongs on screen in simulation.
+    { kind: "natura-dowolna" },
     // "Możesz dodać 1 ... w walkach rozgrywanych na Równinach."
     {
       kind: "modyfikator-rzutu",
@@ -196,7 +200,7 @@ export const CHARACTER_NOTES: Readonly<Partial<Record<CharacterId, readonly stri
     "Atakując możesz walczyć nieuczciwie — przeciwnik nie dodaje rzutu do Miecza.",
   ],
   mag: ["Musisz mieć zawsze co najmniej 1 Zaklęcie.", "Golem i Homunculus cię nie atakują."],
-  magog: ["Naturę możesz zmieniać dowolnie, ale zawsze musi być określona.", "Możesz ignorować Mgłę."],
+  magog: ["Możesz ignorować Mgłę."],
   obbol: ["Przegrywasz dopiero przy różnicy 2 punktów; różnica 1 to remis."],
   olbrzym: [
     "Kończąc ruch na zajętym Obszarze idziesz dalej, na pierwszy wolny.",
