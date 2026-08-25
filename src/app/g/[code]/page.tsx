@@ -1456,6 +1456,24 @@ function Hand({
       : inPack;
 
   /**
+   * The two squares that mean "put it back" rather than "move it here".
+   *
+   * A card's own square is one of them. The other is the square immediately
+   * after: taking a card out of the row and putting it in front of the next one
+   * leaves it exactly where it started. Neither opens a gap, because a gap is a
+   * promise that something will change, and neither of these changes anything.
+   *
+   * Its own square used to do worse than promise nothing. Dropping there asked
+   * the row to put the card in front of itself, which is not a position any
+   * more once the card has been taken out of the row to look for one — so it
+   * fell through to the end of the queue, and a card picked up and put straight
+   * back down came to rest at the back of the pack.
+   */
+  const liftedIndex = arranged.findIndex((held) => held.id === liftedHoldingId);
+  const putsItBack = (id: string) =>
+    liftedIndex >= 0 && (id === liftedHoldingId || arranged[liftedIndex + 1]?.id === id);
+
+  /**
    * The first card that has stepped aside, or -1 when none has.
    *
    * The gap is drawn by moving pictures and not by moving boxes (see
@@ -1649,7 +1667,9 @@ function Hand({
                 // From the pack: it goes in front of this card. From the body:
                 // it is being taken off, which lands it at the end.
                 if (carried.from === "plecak") {
-                  moveWithin(carried.holdingId, held.id);
+                  // Its own square, or the one after it: putting it back, which
+                  // is the pack left exactly as it was.
+                  if (!putsItBack(held.id)) moveWithin(carried.holdingId, held.id);
                   return onCarry(null);
                 }
                 return onPlaceInPack();
@@ -1696,11 +1716,14 @@ function Hand({
               // lands where the pointer is instead of at the end.
               event.stopPropagation();
               event.preventDefault();
-              setInsertAt(held.id);
+              // The same two squares that mean "put it back" under the pointer
+              // mean it under a drag.
+              if (!putsItBack(held.id)) setInsertAt(held.id);
             }}
-            // Deliberately no onDragLeave. See the note on onPointerEnter: the
-            // gap moves this card out from under the pointer, so leaving it is
-            // something the gap itself causes.
+            // No onDragLeave: unlike pointerleave, it fires on the way into a
+            // child as well as on the way out, so a drag crossing the picture
+            // inside this box would keep closing the gap it had just opened.
+            // Leaving the pack clears it, and the next card claims it.
             onDrop={(event) => {
               setInsertAt(null);
               setDragOver(false);
@@ -1732,11 +1755,10 @@ function Hand({
              * this box does not move, so leaving it means the pointer really
              * has left.
              */
-            onPointerEnter={() =>
-              carried?.from === "plecak" && carried.holdingId !== held.id
-                ? setInsertAt(held.id)
-                : undefined
-            }
+            onPointerEnter={() => {
+              if (carried?.from !== "plecak" || putsItBack(held.id)) return;
+              setInsertAt(held.id);
+            }}
             // Only this card's own gap: moving straight to the next card sets
             // the new one in the same breath, and React keeps the last word.
             onPointerLeave={() => setInsertAt((at) => (at === held.id ? null : at))}
