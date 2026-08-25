@@ -69,8 +69,9 @@ export function Journal({
           : // A share of the column rather than a number of lines: the board
             // above it is the thing that has to fit, and it scales with the
             // window. Four lines was too few to read a turn back — a fight is
-            // three of them on its own — so this is half again as tall.
-            "flex h-[22.5%] shrink-0 flex-col rounded border border-edge bg-panel/50"
+            // three of them on its own — so this is half again as tall, less a
+            // tenth given back to the map.
+            "flex h-[20.25%] shrink-0 flex-col rounded border border-edge bg-panel/50"
       }
     >
       <header className="flex shrink-0 items-center justify-between border-b border-edge/60 px-3 py-1">
