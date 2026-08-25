@@ -28,6 +28,7 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
+import { tokensFor } from "@/lib/engine/tokens";
 import { DRAG_TYPE, SlotPanel, startHoldingDrag, type SlotItem } from "./slot-panel";
 import { ItemSlot } from "./item-slot";
 import { CarriedCard, type Carried } from "./carry";
@@ -1955,12 +1956,12 @@ function SeatCard({
               <Image
                 src={characterImageUrl(character.id)!}
                 alt={character.name}
-                width={160}
-                height={198}
+                width={192}
+                height={238}
                 // Big enough to read the Charakterystyka off, now that the
                 // slots take the other half of the row: half a card of white
                 // space either side of a thumbnail was the worse use of it.
-                className="h-auto w-40 shrink-0 rounded border border-edge"
+                className="h-auto w-48 shrink-0 rounded border border-edge"
                 unoptimized
               />
             )}
@@ -2085,6 +2086,66 @@ function SeatCard({
  * owner. At a table people spot each other's miscounts, and an override that
  * only the owner can use is useless in the moment someone else notices.
  */
+/**
+ * A number of points, as the tokens it is made of.
+ *
+ * This is what the table looks like: a character's own Miecz is a little pile
+ * of red squares beside its card, and the rulebook never asks anybody to write
+ * the number down. It asks for "żetony o odpowiednim nominale" (1.4, 2.4, 4.5)
+ * — change, made out of the four denominations the box prints.
+ *
+ * Złoto is the exception and gets one coin and a count. There is only the one
+ * gold denomination, so a hoard would be that many coins in a row, and by the
+ * middle of a game that is a picture of a pile rather than a reading of it.
+ * Everything else in the app already counts gold in numerals — "za 2 Sztuki
+ * Złota" — so this reads the same way.
+ */
+function Tokens({ stat, points, label }: { stat: string; points: number; label: string }) {
+  const SIZE = 20;
+  if (stat === "zloto") {
+    return (
+      <span className="flex items-center gap-1" title={`${label}: ${points}`}>
+        <Image
+          src="/tokens/zloto.png"
+          alt=""
+          width={SIZE}
+          height={SIZE}
+          className="rounded-[2px]"
+          unoptimized
+        />
+        <span className="tnum text-lg font-medium">{points}</span>
+      </span>
+    );
+  }
+
+  const tokens = tokensFor(points);
+  // Nothing is the honest picture of nothing: a character at zero Życie has had
+  // its last token taken off the table (4.4). A bare 0 says so; an empty gap
+  // would read as a stat the app had failed to work out.
+  if (tokens.length === 0) return <span className="text-lg font-medium text-muted">0</span>;
+
+  return (
+    <span
+      className="flex flex-wrap items-center justify-center gap-0.5"
+      title={`${label}: ${points}`}
+    >
+      {tokens.map((token, index) => (
+        <Image
+          key={index}
+          src={`/tokens/${stat}-${token}.png`}
+          // Read once, by the first token. Four images each announcing a
+          // number would have a screen reader count the pile aloud.
+          alt={index === 0 ? `${label} ${points}` : ""}
+          width={SIZE}
+          height={SIZE}
+          className="rounded-[2px]"
+          unoptimized
+        />
+      ))}
+    </span>
+  );
+}
+
 function Stat({
   label,
   value,
@@ -2106,18 +2167,23 @@ function Stat({
   return (
     <div className="group">
       <dt className="text-[10px] uppercase tracking-wide text-muted">{label}</dt>
-      <dd className={`text-xl font-medium ${tone}`}>
+      <dd className={`flex flex-wrap items-center justify-center gap-1 ${tone}`}>
+        <Tokens stat={stat} points={value} label={label} />
         {/* The +/- move OWN points, which are what the rules floor at the
             starting value (1.3, 2.3). The total is derived from the cards on
             the table and is not editable — correcting it means changing what is
-            held, not typing a different number. */}
-        {total !== undefined && total !== value ? (
-          <>
+            held, not typing a different number.
+
+            Which is also why the tokens stand for `value` and never `total`:
+            1.3 and 2.5 are explicit that what a Przedmiot or a Przyjaciel lends
+            you is not marked with a żeton, so a row of them adding up to a
+            number the table never had tokens for would be the interface
+            inventing a rule. The figure beside them is the one the cards make. */}
+        {total !== undefined && total !== value && (
+          <span className="tnum text-lg font-medium">
             {total}
             <span className="ml-1 text-[11px] text-muted">({value})</span>
-          </>
-        ) : (
-          value
+          </span>
         )}
       </dd>
       {canAdjust && (
