@@ -10,6 +10,7 @@ import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import { FIELDS, type FieldId, isFieldId } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
+import { describeAbility } from "@/lib/engine/abilityText";
 import {
   RANDOM_CHARACTER_ID,
   abilitiesOfCharacter,
@@ -506,7 +507,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     if (slot !== null && !fitsIn(held.cardId, slot)) {
       return setError(
         isWearable(held.cardId)
-          ? `${CARD_NAMES.get(held.cardId) ?? held.cardId} nie pasuje w to miejsce.`
+          ? `${CARD_NAMES.get(held.cardId) ?? held.cardId} nie pasuje w ten slot.`
           : `${CARD_NAMES.get(held.cardId) ?? held.cardId} to nie jest rzecz do noszenia.`,
       );
     }
@@ -1245,6 +1246,7 @@ function Hand({
             // up feels the same either way and both are the same size.
             item={{ holdingId: held.id, cardId: held.cardId, card: tileFor(held) }}
             label={tileFor(held).name}
+            eqMode={slotted ? "slotowy" : "klasyczny"}
             tone="filled"
             badge={held.kind === "trophy" ? "trofeum" : undefined}
             // The one on the cursor is not also in the pack.
@@ -1853,82 +1855,6 @@ function describeResult(result: unknown): string | null {
   const verdict =
     data.outcome === "udana" ? "przeprawa udana" : "porażka — tracisz 1 Życie";
   return `Trzęsawiska: ${data.dice.join(" + ")} = ${total} przeciw Magii ${data.magia} — ${verdict}.`;
-}
-
-
-function describeAbility(ability: Ability): string {
-  switch (ability.kind) {
-    case "punkty": {
-      const parts = [];
-      if (ability.miecz) parts.push(`+${ability.miecz} Miecza`);
-      if (ability.magia) parts.push(`+${ability.magia} Magii`);
-      return parts.join(", ");
-    }
-    case "oslona":
-      return `osłona przy przegranej (rzut ≤ ${ability.upTo})`;
-    case "bezpieczny": {
-      const where = fieldNames(ability.fields);
-      if (ability.from === "rzut") return `bez rzutu: ${where}`;
-      if (ability.from === "zycie") return `bez straty Życia: ${where}`;
-      return `bez straty Przedmiotu: ${where}`;
-    }
-    case "ucieczka":
-      return `ucieczka przed Wrogiem: ${fieldNames(ability.fields)}`;
-    case "udzwig":
-      return ability.items === "bez-limitu"
-        ? "niesie dowolną liczbę Przedmiotów"
-        : `niesie +${ability.items} Przedmiotów`;
-    case "ruch-bonus":
-      return ability.min === ability.max
-        ? `+${ability.max} do ruchu`
-        : `+${ability.min}–${ability.max} do ruchu`;
-    case "magia-do-miecza":
-      return "w walce dodajesz Magię do Miecza";
-    case "ginie-zamiast-ciebie":
-      return ability.onRollUpTo
-        ? `ginie zamiast ciebie (rzut ≤ ${ability.onRollUpTo})`
-        : "ginie zamiast ciebie";
-    case "wymagany":
-      return ability.place === "most" ? "wstęp na Kamienny Most" : "wstęp do Zamku Bestii";
-    case "bez-oplaty":
-      return `bez opłaty: ${ability.fields.map(fieldName).filter((n, i, all) => all.indexOf(n) === i).join(", ")}`;
-    case "zakazane":
-      return `nie możesz używać: ${ability.cardIds.map((id) => CARD_NAMES.get(id) ?? id).join(", ")}`;
-    case "bez-zaklec":
-      // Both halves of the Kryształ's bargain, because taking it is a decision
-      // and the player has to see what they are trading away.
-      return `bez Zaklęć — ale odporny na ${ability.odpornyNa.length} z nich`;
-    case "przeprawa-kostki":
-      return `Trzęsawiska na ${ability.dice} kostkę`;
-    case "skup":
-      return `zamienia Przedmiot na złoto (${ability.cena} Sz. Z. za sztukę)`;
-    case "przeprawa-wszedzie":
-      return ability.obstacle === "trzesawiska"
-        ? "przeprawa przez Trzęsawiska w dowolnym miejscu"
-        : "przeprawa przez Lodowy Las w dowolnym miejscu";
-    case "uzdrowienie":
-      return `do ${ability.upTo} Życia w: ${fieldName(ability.field)}`;
-    case "walczy-za-ciebie":
-      return `walczy za ciebie (Miecz ${ability.miecz}, Magia ${ability.magia})`;
-    case "niedostepny":
-      return "nie do zdobycia w Dolnym Kręgu";
-    case "natura-dowolna":
-      return "Naturę zmieniasz dowolnie (raz na turę)";
-    case "modyfikator-rzutu": {
-      const sign = ability.dowolnyZnak
-        ? `±${Math.abs(ability.delta)}`
-        : `${ability.delta > 0 ? "+" : "−"}${Math.abs(ability.delta)}`;
-      const where =
-        ability.gdzie.na === "walke"
-          ? ability.gdzie.rodzaj === "magiczna"
-            ? "w walce magicznej"
-            : "w walce zwykłej"
-          : `na: ${ability.gdzie.fields.map(fieldName).join(", ")}`;
-      return `${sign} do rzutu ${where}${ability.jednorazowy ? " (raz)" : ""}`;
-    }
-    case "zaklecia-ponad-limit":
-      return `+${ability.count} Zaklęcie ponad limit (2.6)`;
-  }
 }
 
 function fieldName(fieldId: FieldId): string {

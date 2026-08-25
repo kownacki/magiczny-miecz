@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
+import { cardArtUrl, cardImageUrl, characterArtUrl } from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
 
@@ -25,6 +25,14 @@ export interface TileCard {
   ref?: string;
   text?: string;
   kindLabel?: string;
+  /**
+   * This is a Postać, not a card off one of the decks.
+   *
+   * The id cannot be trusted to say so: `demon` and `czarodziej` name a
+   * character AND an event card each, so looking a character up in the card
+   * registry hands back the wrong picture rather than none.
+   */
+  character?: boolean;
 }
 
 export function CardTile({
@@ -57,7 +65,9 @@ export function CardTile({
   // The illustration, not the whole card. A card shrunk to tile size is a grey
   // smear with a four-pixel title; the picture is the thing a player actually
   // recognises when reaching across a table. The whole card is one hover away.
-  const src = cardArtUrl(card.cardId, card.ref);
+  const src = card.character
+    ? characterArtUrl(card.cardId)
+    : cardArtUrl(card.cardId, card.ref);
   const width = size === "md" ? 132 : 92;
   // The art is cut 240x155, so the tile takes that shape rather than cropping
   // the picture back into a portrait box.

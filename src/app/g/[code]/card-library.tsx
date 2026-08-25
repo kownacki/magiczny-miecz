@@ -64,6 +64,7 @@ function shelfCards(shelf: Shelf): TileCard[] {
         name: character.name,
         text: character.abilities.join("\n\n"),
         kindLabel: `Postać · Miecz ${character.miecz} · Magia ${character.magia}`,
+        character: true,
       });
     }
   } else {

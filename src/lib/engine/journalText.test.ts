@@ -101,6 +101,27 @@ suite("journal vocabulary", () => {
     expect(line?.refs?.filter((ref) => ref.kind === "card")).toHaveLength(1);
   });
 
+  it("says what a card gave or took, and is not a correction", () => {
+    expect(text("punkty", { stat: "zloto", delta: 1, reason: "1 SZTUKA ZŁOTA" })).toBe(
+      "Michał zyskuje 1 Sztukę Złota — 1 SZTUKA ZŁOTA.",
+    );
+    expect(text("punkty", { stat: "zycie", delta: -2 })).toBe("Michał traci 2 Życia.");
+    expect(text("punkty", { stat: "miecz", delta: 1 })).toBe("Michał zyskuje 1 punkt Miecza.");
+    expect(text("punkty", { stat: "magia", delta: 3 })).toBe("Michał zyskuje 3 punkty Magii.");
+  });
+
+  it("says which Natura was left behind, not only the new one", () => {
+    // What everybody has been playing against all game — whether the Święta
+    // Włócznia still works, whether the Czarci Młyn heals or hurts.
+    expect(text("zmiana-natury", { from: "dobra", to: "zla" })).toBe(
+      "Michał zmienia naturę z dobra na zła.",
+    );
+    // Nothing known to have been left: say only where it went.
+    expect(text("zmiana-natury", { to: "chaotyczna" })).toBe(
+      "Michał zmienia naturę na: chaotyczna.",
+    );
+  });
+
   it("marks a manual correction as one", () => {
     const line = describe(
       entry("korekta", { stat: "zycie", delta: -1, from: 4, to: 3 }, { manual: true }),
@@ -195,7 +216,7 @@ suite("Polish agreement", () => {
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
-      "tura-stracona", "zostawienie",
+      "tura-stracona", "zostawienie", "punkty",
     ];
     const gendered = /\b\w+(ął|ęła|iła|ył|yła|szedł|szła|any|ony|iony)\b/;
     for (const kind of kinds) {

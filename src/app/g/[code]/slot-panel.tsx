@@ -156,6 +156,9 @@ export function SlotPanel({
         return (
           <div key={slot} style={{ gridArea: LAYOUT[slot] }}>
             <ItemSlot
+              // The paper doll only exists in slotowy, so anything on it is
+              // worn by definition.
+              eqMode="slotowy"
               item={item ?? null}
               // The place says what it is for while it is empty, and what is in
               // it once it is filled.

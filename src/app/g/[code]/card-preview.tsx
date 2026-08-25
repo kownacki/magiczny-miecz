@@ -1,31 +1,31 @@
 "use client";
 
 /**
- * The whole card, big enough to read, while the pointer is on something.
+ * The card, big enough to read, with what the app knows about it beside it.
  *
- * Shared by every place a card is shown small — the pack, the body, the shelf —
- * so that hovering means the same thing everywhere and the card comes up the
- * same size wherever it is.
+ * Shared by every place a card is shown small — the pack, the body, the shelf,
+ * the journal — so hovering means the same thing everywhere.
  *
- * It is rendered into `document.body`. Hands and shelves sit inside scrolling,
+ * Rendered into `document.body`. Hands and shelves sit inside scrolling,
  * clipping containers, and a preview drawn beside the thing it describes is cut
- * off by the first `overflow-hidden` above it; the body's own equipment panel
- * had exactly that bug. Fixed to the viewport, nothing clips it.
+ * off by the first `overflow-hidden` above it. Fixed to the viewport, nothing
+ * clips it.
  *
- * It sits above everything, deliberately. The overlays in this app are z-50 and
- * so was this, which is a tie — and a tie is settled by document order, so the
- * card came up *behind* the modal that had just offered it. A thing that
- * describes what is under the pointer has to be on top of whatever that is.
+ * It sits above everything, deliberately: the overlays here are z-50 and so was
+ * this, which is a tie — and a tie is settled by document order, so the card
+ * came up *behind* the modal that had just offered it.
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { cardImageUrl } from "@/lib/engine/cardImages";
+import { cardImageUrl, characterImageUrl } from "@/lib/engine/cardImages";
+import { characterProfile, itemProfile } from "@/lib/engine/abilityText";
+import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
-/** Readable width for the enlarged card. The scans are 629x780. */
-const PREVIEW_WIDTH = 400;
+/** Width of the card picture. The scans are 629x780. */
+const PICTURE_WIDTH = 260;
 const CARD_RATIO = 780 / 629;
 const GAP = 12;
 
@@ -37,7 +37,11 @@ const GAP = 12;
  * every move: the card sits beside the thing it belongs to, so it does not need
  * to chase the cursor, and not chasing it means no work per mousemove.
  */
-export function useCardPreview(card: TileCard | null, imageless = false) {
+export function useCardPreview(
+  card: TileCard | null,
+  imageless = false,
+  eqMode: EqMode = "klasyczny",
+) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
 
   const handlers = {
@@ -50,7 +54,9 @@ export function useCardPreview(card: TileCard | null, imageless = false) {
   };
 
   const preview =
-    anchor && card ? <CardPreview card={card} anchor={anchor} imageless={imageless} /> : null;
+    anchor && card ? (
+      <CardPreview card={card} anchor={anchor} imageless={imageless} eqMode={eqMode} />
+    ) : null;
   return { handlers, preview, hovering: anchor !== null };
 }
 
@@ -58,6 +64,7 @@ export function CardPreview({
   card,
   anchor,
   imageless = false,
+  eqMode = "klasyczny",
 }: {
   card: TileCard;
   anchor: DOMRect;
@@ -69,45 +76,157 @@ export function CardPreview({
    * the name. Its printed instruction is what there is to show.
    */
   imageless?: boolean;
+  eqMode?: EqMode;
 }) {
-  // Hovering implies a mounted client, but the guard keeps this honest during
-  // any server render of the tree.
+  /**
+   * Placed from what it measures, not from what it was expected to be.
+   *
+   * Working the height out in advance only ever worked for a bare picture. The
+   * moment the panel had a column of text beside it — or a field's printed
+   * instruction instead of a card — the real height had nothing to do with the
+   * arithmetic, so the clamp used a wrong number and the bottom ran off the
+   * screen. A ref callback runs at commit, before paint, so measuring and then
+   * positioning is invisible rather than a jump.
+   *
+   * The CSS caps do the rest: whatever ends up inside, the panel can never be
+   * taller or wider than the window, and tall content scrolls instead of
+   * overflowing it.
+   */
+  const place = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return;
+      const box = node.getBoundingClientRect();
+      const room = { x: window.innerWidth, y: window.innerHeight };
+      const fitsRight = room.x - anchor.right > box.width + GAP;
+      const wanted = fitsRight ? anchor.right + GAP : anchor.left - box.width - GAP;
+      node.style.left = `${clamp(wanted, GAP, room.x - box.width - GAP)}px`;
+      node.style.top = `${clamp(
+        anchor.top + anchor.height / 2 - box.height / 2,
+        GAP,
+        room.y - box.height - GAP,
+      )}px`;
+    },
+    [anchor],
+  );
+
   if (typeof document === "undefined") return null;
 
-  const width = PREVIEW_WIDTH;
-  const height = Math.round(width * CARD_RATIO);
-  // Prefer the right, flip when the viewport edge is nearer than the card is
-  // wide, and never hang off the top or bottom.
-  const room = window.innerWidth - anchor.right;
-  const left =
-    room > width + GAP ? anchor.right + GAP : Math.max(GAP, anchor.left - width - GAP);
-  const top = Math.min(
-    Math.max(GAP, anchor.top + anchor.height / 2 - height / 2),
-    Math.max(GAP, window.innerHeight - height - GAP),
-  );
-  const src = imageless ? null : cardImageUrl(card.cardId, card.ref);
+  // A character's id is not a card id, even when it looks like one: `demon` and
+  // `czarodziej` name both. Going through the card registry for those two hands
+  // back a Wróg and a Nieznajomy rather than the Postać being pointed at.
+  const src = imageless
+    ? null
+    : card.character
+      ? characterImageUrl(card.cardId)
+      : cardImageUrl(card.cardId, card.ref);
+  const profile = imageless
+    ? null
+    : card.character
+      ? characterProfile(card.cardId)
+      : itemProfile(card.cardId, eqMode);
+  const anythingToSay =
+    !src ||
+    card.text ||
+    card.kindLabel ||
+    profile?.slotLabel ||
+    (profile?.facts.length ?? 0) > 0 ||
+    (profile?.requirements.length ?? 0) > 0 ||
+    (profile?.special.length ?? 0) > 0;
 
   return createPortal(
     <div
+      ref={place}
       role="tooltip"
-      style={{ left, top, width }}
+      style={{
+        // A first guess, corrected before paint.
+        left: anchor.right + GAP,
+        top: anchor.top,
+        maxWidth: `calc(100vw - ${GAP * 2}px)`,
+        maxHeight: `calc(100vh - ${GAP * 2}px)`,
+      }}
       // Never under the pointer: a preview that can be hovered flickers.
-      className="pointer-events-none fixed z-[100] overflow-hidden rounded-lg border border-ochre/40 bg-night shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+      className="pointer-events-none fixed z-[100] flex gap-3 overflow-y-auto rounded-lg border border-ochre/40 bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
     >
-      {src ? (
-        <Image src={src} alt={card.name} width={width} height={height} className="block h-auto w-full" />
-      ) : (
-        // No scan in this checkout. The transcription is always there, and it is
-        // what the picture was standing in for anyway.
-        <div className="flex flex-col gap-2 p-3">
-          <p className="font-[family-name:var(--font-display)] text-sm text-ochre">{card.name}</p>
+      {src && (
+        <Image
+          src={src}
+          alt={card.name}
+          width={PICTURE_WIDTH}
+          height={Math.round(PICTURE_WIDTH * CARD_RATIO)}
+          style={{ width: PICTURE_WIDTH }}
+          className="block h-auto shrink-0 self-start rounded"
+        />
+      )}
+
+      {/* What the app knows, beside what the card says. Skipped entirely when
+          there is nothing to put here: a picture alone beats a picture with an
+          empty column next to it. */}
+      {anythingToSay && (
+        <div className="flex w-[18rem] max-w-[55vw] flex-col gap-2">
+          <p className="font-[family-name:var(--font-display)] text-sm text-ochre">
+            {card.name}
+          </p>
           {card.kindLabel && <p className="text-[11px] text-muted">{card.kindLabel}</p>}
-          {card.text && (
-            <p className="whitespace-pre-line text-xs leading-relaxed text-ink">{card.text}</p>
+
+          {profile?.slotLabel && (
+            <p className="text-[11px] text-muted">
+              Slot: <span className="text-ink">{profile.slotLabel}</span>
+            </p>
+          )}
+
+          {/* What it asks before it gives. Above the bonuses on purpose: a card
+              you may not hold is not a card whose bonuses matter. */}
+          {profile && profile.requirements.length > 0 && (
+            <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
+              {profile.requirements.map((need, at) => (
+                <li key={at} className="text-[11px] leading-snug text-vermilion/90">
+                  {need.what}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {profile && profile.facts.length > 0 && (
+            <ul className="flex flex-col gap-1.5 border-t border-edge/60 pt-2">
+              {profile.facts.map((fact, at) => (
+                <li key={at} className="flex flex-col text-[11px] leading-snug">
+                  <span className="text-ink">{fact.what}</span>
+                  {/* When it is doing anything — the half a player has to keep
+                      in their head otherwise. */}
+                  <span className="text-verdigris/80">{fact.when}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* What using it does, once — as opposed to what holding it gives. */}
+          {profile && profile.special.length > 0 && (
+            <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
+              {profile.special.map((line, at) => (
+                <li key={at} className="text-[11px] leading-snug text-ochre/90">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* The prose only when there is no picture of it.
+              Beside the card, repeating its text is repeating what the reader is
+              already looking at — and it pushed the formalised lines, which are
+              what the app will actually DO, off the bottom of the panel. */}
+          {card.text && !src && (
+            <p className="whitespace-pre-line border-t border-edge/60 pt-2 text-[11px] leading-relaxed text-muted">
+              {card.text}
+            </p>
           )}
         </div>
       )}
     </div>,
     document.body,
   );
+}
+
+/** Keeps a value inside the window even when the window is smaller than the panel. */
+function clamp(value: number, low: number, high: number): number {
+  return Math.max(low, Math.min(value, Math.max(low, high)));
 }

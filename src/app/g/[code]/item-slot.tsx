@@ -17,6 +17,7 @@
 import Image from "next/image";
 import { cardArtUrl } from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
+import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
 /**
@@ -69,6 +70,7 @@ export function ItemSlot({
   onPointerLeave,
   corner,
   children,
+  eqMode = "klasyczny",
 }: {
   /** What is here, or null for an empty place. */
   item: SlotOccupant | null;
@@ -97,11 +99,17 @@ export function ItemSlot({
   corner?: React.ReactNode;
   /** Controls under the name. */
   children?: React.ReactNode;
+  /** Decides whether the hover may say "gdy założony" — only slotowy has places. */
+  eqMode?: EqMode;
 }) {
   // The hover is suppressed while the card is on the cursor: what is under the
   // pointer then is a hollow, and describing it as though it still held
   // something is a lie.
-  const { handlers, preview } = useCardPreview(item && !lifted ? item.card : null);
+  const { handlers, preview } = useCardPreview(
+    item && !lifted ? item.card : null,
+    false,
+    eqMode,
+  );
   const art = item ? cardArtUrl(item.cardId) : null;
 
   return (
