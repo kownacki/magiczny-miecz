@@ -1456,6 +1456,16 @@ function Hand({
       : inPack;
 
   /**
+   * The first card that has stepped aside, or -1 when none has.
+   *
+   * The gap is drawn by moving pictures and not by moving boxes (see
+   * `ItemSlot`), so every card from the insertion point onwards has to be told
+   * to step: laying it out would have slid the row sideways under the pointer
+   * and taken the card you were aiming at with it.
+   */
+  const stepAside = insertAt === null ? -1 : arranged.findIndex((held) => held.id === insertAt);
+
+  /**
    * Moves a card in the pack to sit before another, or to the end.
    *
    * Only cards already in the pack: something coming off the body is being
@@ -1592,7 +1602,7 @@ function Hand({
         {/* Your own Zaklęcia are not repeated here: they have their own panel
             above, face up and with the cast controls on them. What belongs on a
             seat card is what the *table* can see. */}
-        {arranged.map((held) => (
+        {arranged.map((held, index) => (
           <ItemSlot
             key={held.id}
             // The same component the body is built from: a card in the pack and
@@ -1607,7 +1617,7 @@ function Hand({
             // after it steps aside to show the space it is going into. Said
             // with a gap rather than by tinting the card under the pointer,
             // which reads as "this one is about to be replaced".
-            gapBefore={insertAt === held.id}
+            shifted={stepAside >= 0 && index >= stepAside}
             // Reading and moving are different modes: no Karta opens over the
             // place you are aiming at while a card is in the air.
             quiet={moving}

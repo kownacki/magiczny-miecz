@@ -74,7 +74,7 @@ export function ItemSlot({
   eqMode = "klasyczny",
   nature = null,
   quiet = false,
-  gapBefore = false,
+  shifted = false,
 }: {
   /** What is here, or null for an empty place. */
   item: SlotOccupant | null;
@@ -116,8 +116,8 @@ export function ItemSlot({
    * hover is for reading, and nobody is reading mid-drag.
    */
   quiet?: boolean;
-  /** A card would land in front of this one, so the row opens up to show where. */
-  gapBefore?: boolean;
+  /** A card would land at or before this one, so it has stepped aside to show where. */
+  shifted?: boolean;
 }) {
   // The hover is suppressed while the card is on the cursor: what is under the
   // pointer then is a hollow, and describing it as though it still held
@@ -163,16 +163,36 @@ export function ItemSlot({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       {...handlers}
-      // The gap is the whole answer to "where will this land": everything from
-      // here rightwards steps aside, which is what a hand does with a card it
-      // is about to be given. Tinting the card under the pointer said something
-      // else — that it was about to be replaced.
-      style={{ paddingLeft: gapBefore ? SLOT_WIDTH * 0.45 : 0 }}
-      className="shrink-0 transition-[padding] duration-150"
+      style={{ width: SLOT_WIDTH }}
+      className="shrink-0"
     >
       <figure
-        style={{ width: SLOT_WIDTH }}
-        className="flex flex-col items-center gap-1"
+        /**
+         * The gap is drawn, not laid out.
+         *
+         * Everything from the insertion point rightwards steps aside, which is
+         * what a hand does with a card it is about to be given — but it steps
+         * aside by moving the picture only. The box above keeps the width and
+         * the position it has at rest, so where the pointer is means the same
+         * thing whether or not a gap happens to be open: move a card's width to
+         * the right and you are over the next card, every time.
+         *
+         * Made of layout instead — a margin, or padding on the box above — the
+         * row slid right underneath the pointer, and the card you were aiming
+         * at was no longer the card you were over. You had to chase it.
+         *
+         * A stepped-aside picture takes no pointer events, or it would be over
+         * its neighbour's resting place answering for a card that is not there.
+         * Nothing is lost: a click anywhere in the pack lands where the gap is,
+         * which is the same answer the card under it would have given.
+         */
+        style={{
+          width: SLOT_WIDTH,
+          transform: shifted ? `translateX(${SLOT_WIDTH * 0.45}px)` : undefined,
+        }}
+        className={`flex flex-col items-center gap-1 transition-transform duration-150 ${
+          shifted ? "pointer-events-none" : ""
+        }`}
       >
         <div
           style={{ width: SLOT_WIDTH, height: SLOT_ART_HEIGHT }}
