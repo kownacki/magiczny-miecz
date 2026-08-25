@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
+import { readTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { watchRevision } from "@/lib/game/liveRevision";
 import characters from "@/data/characters.json";
 import type { Character, Nature } from "@/data/types";
@@ -156,6 +157,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
   /** The reference drawer of every card in the box. */
   const [libraryOpen, setLibraryOpen] = useState(false);
+  /**
+   * Testing rather than playing — see `testMode.ts`.
+   *
+   * Read in an effect and not during the render, so the server and the first
+   * paint agree that it is off.
+   */
+  const [testMode, setTestMode] = useState(false);
+  useEffect(() => setTestMode(readTestMode()), []);
+  const testing = TESTING_POSSIBLE && testMode;
   /** A seatless visitor who chose to watch rather than take a character over. */
   const [watching, setWatching] = useState(false);
   /** The character asked for and not yet heard back about (see `chooseCharacter`). */
@@ -749,7 +759,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           // Testing shortcuts, and only while developing. The route refuses
           // them in production too — this just stops the buttons being drawn
           // somewhere they could never work.
-          {...(process.env.NODE_ENV === "production" || mySeatIndex === null
+          {...(!testing || mySeatIndex === null
             ? {}
             : {
                 onGrant: (cardId: string) => post("debug", { action: "grant", cardId }),
@@ -920,6 +930,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               <button onClick={() => setLibraryOpen(true)} className="text-ochre/80 hover:text-ochre">
                 Karty
               </button>
+              {/* Loud on purpose while it is on. Everything it unlocks writes a
+                  manual override into the journal, and a switch you can forget
+                  you flipped is how a tested game gets mistaken for a played
+                  one. */}
+              {TESTING_POSSIBLE && (
+                <button
+                  onClick={() => {
+                    const next = !testMode;
+                    setTestMode(next);
+                    writeTestMode(next);
+                  }}
+                  aria-pressed={testMode}
+                  title={
+                    testMode
+                      ? "Skróty testowe są włączone: karty, teleport i ręczne poprawki."
+                      : "Włącz skróty testowe: karty, teleport i ręczne poprawki."
+                  }
+                  className={
+                    testMode
+                      ? "rounded border border-vermilion/60 bg-vermilion/15 px-1.5 py-0.5 text-vermilion"
+                      : "text-muted/60 transition hover:text-muted"
+                  }
+                >
+                  tryb testowy{testMode ? " ✓" : ""}
+                </button>
+              )}
               {mySeatIndex !== null && (
                 <LeaveButton
                   playing
@@ -1076,7 +1112,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 seat={mine}
                 active={mine.seat_index === game.active_seat}
                 canAdjust
-                canCorrect={game.mode !== "simulation"}
+                // Companion play is corrected by hand because the board is the
+                // source of truth there and the app will desync. Simulation is
+                // settled the other way — nothing is entered by hand — so the
+                // only way to reach these here is to say you are testing.
+                canCorrect={game.mode !== "simulation" || testing}
                 isMine
                 slotted={game.eq_mode === "slotowy"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
