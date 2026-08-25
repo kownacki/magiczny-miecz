@@ -7,7 +7,7 @@ import items from "@/data/items.json";
 import characters from "@/data/characters.json";
 import type { EqMode } from "@/lib/engine/slots";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
-import type { Nature } from "@/data/types";
+import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardDetail, CardTile, type TileCard } from "./card-tile";
@@ -57,6 +57,21 @@ const SHELVES: { key: Shelf; label: string }[] = [
 
 /** Only while testing: the board as a list, to stand on any of it at once. */
 const FIELD_SHELF: { key: Shelf; label: string } = { key: "obszary", label: "Obszary" };
+
+/**
+ * The four parts of the board, outermost first.
+ *
+ * The same order they are walked in: a character starts in the Dolny Krąg and
+ * works inwards, and the Kamienny Most is the last of it. Ninety-odd fields in
+ * one alphabetical heap made you read every name to find the one you wanted,
+ * when what you actually know about a field is which ring it is on.
+ */
+const REGIONS: { key: Region; label: string }[] = [
+  { key: "dolny", label: "Dolny Krąg" },
+  { key: "srodkowy", label: "Środkowy Krąg" },
+  { key: "gorny", label: "Górny Krąg" },
+  { key: "most", label: "Kamienny Most" },
+];
 
 /** Deduplicated, because the deck holds several copies of many cards on purpose. */
 function shelfCards(shelf: Shelf): TileCard[] {
@@ -227,23 +242,48 @@ export function CardLibrary({
 
       <div className="flex-1 overflow-y-auto p-4">
         <p className="mb-3 text-[11px] text-muted">
-          {cards.length} {cards.length === 1 ? "karta" : "kart"}
-          {searching ? " — szukam w całej talii, nie tylko na tej półce." : null}
-          {searching ? null : " — pokazane są pojedyncze wzory, nie wszystkie egzemplarze z talii."}
+          {/* The board is not the deck: counting it in "kart" said 0, because
+              no card in the box has a field on it. */}
+          {shelf === "obszary" && onTeleport ? (
+            "Kliknij Obszar, żeby na nim stanąć — skrót testowy, zapisany w dzienniku jako korekta."
+          ) : (
+            <>
+              {cards.length} {cards.length === 1 ? "karta" : "kart"}
+              {searching ? " — szukam w całej talii, nie tylko na tej półce." : null}
+              {searching
+                ? null
+                : " — pokazane są pojedyncze wzory, nie wszystkie egzemplarze z talii."}
+            </>
+          )}
         </p>
         {shelf === "obszary" && onTeleport ? (
-          <div className="flex flex-wrap gap-2">
-            {[...FIELDS.values()].map((field) => (
-              <button
-                key={field.id}
-                onClick={() => onTeleport(field.id as FieldId)}
-                title={`Stań na: ${field.name}`}
-                className="rounded border border-edge bg-panel px-2 py-1 text-[11px] text-ink transition hover:border-ochre"
-              >
-                {field.name}
-                <span className="ml-1 text-muted/60">{field.region}</span>
-              </button>
-            ))}
+          <div className="flex flex-col gap-5">
+            {REGIONS.map(({ key, label }) => {
+              const here = [...FIELDS.values()].filter((field) => field.region === key);
+              if (here.length === 0) return null;
+              return (
+                <section key={key}>
+                  <h3 className="mb-2 flex items-baseline gap-2 border-b border-edge/60 pb-1 text-[11px] uppercase tracking-wide text-ochre/80">
+                    {label}
+                    <span className="tnum text-muted/70">{here.length}</span>
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {here.map((field) => (
+                      <button
+                        key={field.id}
+                        onClick={() => onTeleport(field.id as FieldId)}
+                        title={`Stań na: ${field.name}`}
+                        className="rounded border border-edge bg-panel px-2 py-1 text-[11px] text-ink transition hover:border-ochre"
+                      >
+                        {/* The ring is the heading now, so the name is the
+                            whole button. */}
+                        {field.name}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         ) : (
         <div className="flex flex-col gap-5">
