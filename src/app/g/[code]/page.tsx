@@ -36,7 +36,7 @@ import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lo
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
 import { Journal } from "./journal";
-import { momentOf } from "@/lib/engine/spells";
+import { momentsOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
@@ -643,6 +643,20 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               game.turn_state.phase === "pole" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
             }
             simulated={game.mode === "simulation"}
+            waitingOn={
+              game.turn_state.phase === "walka"
+                ? (game.turn_state.fight.spellsOwedBy ?? []).map(
+                    (index) =>
+                      seats.find((seat) => seat.seat_index === index)?.player_name ??
+                      `Miejsce ${index + 1}`,
+                  )
+                : []
+            }
+            myTurnToPass={
+              game.turn_state.phase === "walka" &&
+              mySeatIndex !== null &&
+              (game.turn_state.fight.spellsOwedBy ?? []).includes(mySeatIndex)
+            }
             ring={ringFields(active.field_id)}
             busy={busy}
             onAction={(body) => post("turn", body)}
@@ -809,6 +823,28 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * Laid over the server's answer rather than written into it, so the two-second
    * poll landing mid-flight cannot undo what the player just did.
    */
+  /**
+   * The windows the turn is open for, for the spell hand (9.6, 17.3).
+   *
+   * Read off the whole turn state rather than the phase alone: a fight before
+   * the dice and a fight after the first one are the same phase and are not
+   * the same moment, and neither is a field with a card just turned over.
+   */
+  const now = game
+    ? momentsOf({
+        phase: game.turn_state.phase,
+        diceRolled:
+          game.turn_state.phase === "walka" &&
+          (game.turn_state.fight.playerRoll !== null ||
+            game.turn_state.fight.enemyRoll !== null),
+        cardJustDrawn:
+          game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0,
+        meeting:
+          game.turn_state.phase === "pole" &&
+          game.turn_state.drawn.some((entry) => entry.cardClass === "wrog"),
+      })
+    : ["dowolna-chwila" as const];
+
   const mine = mySeat
     ? {
         ...mySeat,
@@ -1036,7 +1072,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   // card the spell hand can actually look up.
                   .filter((held) => held.kind === "spell" && isSpellId(held.cardId))
                   .map((held) => ({ holdingId: held.id, cardId: held.cardId as SpellId }))}
-                moment={momentOf(game.turn_state.phase, game.turn_state.phase !== "rzut")}
+                moment={now}
                 opponents={others.map((seat) => ({
                   seatIndex: seat.seat_index,
                   name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,

@@ -113,6 +113,22 @@ export interface Fight {
    * printed strength, as the Rycerz does.
    */
   strengthRoll?: number | null;
+  /**
+   * Seats that still have a Zaklęcie to speak before the dice (17.3, 17.7).
+   *
+   * 17.3 puts the caster's spells before their roll and 17.7 gives the same
+   * right to the other side — "przed wykonaniem rzutu kostką obie Postacie
+   * mają możliwość użycia Zaklęć". A fight that rolls the moment it opens
+   * gives nobody that chance.
+   *
+   * Deliberately not a timer. The nearest thing to this app is Talisman's
+   * digital edition, where the reaction window is a countdown, and it is the
+   * most complained-about part of that game: the dice land before anyone has
+   * read what they are reacting to. This waits instead, and it waits on
+   * nobody who has nothing to cast — the list is built from who is actually
+   * holding a spell that says "przed walką", so the common case never sees it.
+   */
+  spellsOwedBy?: number[];
 }
 
 export type GuardianFight =

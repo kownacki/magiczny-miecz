@@ -876,9 +876,15 @@ export function FightControls({
   fight,
   simulated,
   busy,
+  waitingOn = [],
+  myTurnToPass = false,
   onAction,
 }: {
   fight: Fight;
+  /** Names of the seats 17.3's window is still open for. */
+  waitingOn?: string[];
+  /** Whether this device is one of them. */
+  myTurnToPass?: boolean;
   /** No typed rolls and no edited totals — see `Props["mode"]`. */
   simulated: boolean;
   busy: boolean;
@@ -979,6 +985,36 @@ export function FightControls({
             </>
           ))}
       </div>
+
+      {/* 17.3 and 17.7: the spells go in before the dice, and both sides get
+          the chance. So the dice wait — and they wait on a decision rather than
+          on a clock. Talisman's digital edition puts a countdown here and it is
+          the most complained-about thing in that game: the roll lands before
+          anybody has read what they were meant to react to.
+
+          Nobody who has nothing to cast is ever asked, so most fights never see
+          this at all. */}
+      {(fight.spellsOwedBy?.length ?? 0) > 0 && (
+        <div className="rounded border border-magia/50 bg-magia/5 p-3">
+          <p className="text-xs text-ink">
+            Zaklęcia przed rzutem (17.3, 17.7) — czekamy na:{" "}
+            <span className="text-magia">{waitingOn.join(", ")}</span>.
+          </p>
+          <p className="mt-1 text-[11px] text-muted">
+            Rzuć Zaklęcie ze swojej ręki albo powiedz, że nie rzucasz. Kostki
+            czekają.
+          </p>
+          {myTurnToPass && (
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "spell-pass" })}
+              className="mt-2 rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+            >
+              Nie rzucam Zaklęcia
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <FightSide

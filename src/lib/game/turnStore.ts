@@ -26,7 +26,7 @@ import {
   heldAbilities,
   tollIsWaived,
 } from "@/lib/engine/abilities";
-import { spellScript } from "@/lib/engine/spells";
+import { castableNow, spellScript } from "@/lib/engine/spells";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import {
   BRIDGE_GUARDIAN,
@@ -641,6 +641,62 @@ export async function shopStock(
   return stock;
 }
 
+/**
+ * Which seats hold a Zaklęcie that 17.3 or 17.7 lets them speak before the
+ * dice.
+ *
+ * Built from what people are actually holding rather than from who is at the
+ * table, so a fight where nobody has a spell to cast never stops for one. That
+ * is the difference between a rule being enforced and a rule being in the way:
+ * most fights in this game involve no spells at all.
+ */
+async function seatsOwedASpell(gameId: string): Promise<number[]> {
+  const seats = await seatsFor(gameId);
+  const holdings = await holdingsFor(gameId);
+  const owed: number[] = [];
+  for (const seat of seats) {
+    // A seat nobody is behind cannot pass, and a fight that waits on it waits
+    // for ever. Eliminated characters hold nothing; an abandoned seat may still
+    // have a hand, and it is the one case where the window would deadlock.
+    if (seat.eliminated || !seat.character_id || seat.abandoned_at !== null) continue;
+    const hand = holdings.filter((h) => h.seat_id === seat.id && h.kind === "spell");
+    const canCast = hand.some((held) => {
+      const script = spellScript(held.card_id);
+      return script ? castableNow(script, ["przed-walka", "spotkanie"]) : false;
+    });
+    if (canCast) owed.push(seat.seat_index);
+  }
+  return owed;
+}
+
+/**
+ * Closes one seat's window (17.3, 17.7).
+ *
+ * Passing is a decision, not an absence of one — which is why it is a button
+ * and not a timer. The dice wait until everybody who could speak has said they
+ * are not going to.
+ */
+export async function passSpells(gameId: string, seatId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.turn_state.phase !== "walka") return;
+  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  const owed = (game.turn_state.fight.spellsOwedBy ?? []).filter(
+    (index) => index !== seat.seat_index,
+  );
+  await db
+    .from("games")
+    .update({
+      turn_state: {
+        ...game.turn_state,
+        fight: { ...game.turn_state.fight, spellsOwedBy: owed },
+      },
+    })
+    .eq("id", gameId);
+  await bumpRevision(gameId);
+}
+
 export async function beginFight(gameId: string, cardIds: string[]): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
@@ -698,7 +754,16 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
     },
     { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
   );
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
+  const owed = await seatsOwedASpell(gameId);
+  await db
+    .from("games")
+    .update({
+      turn_state:
+        next.phase === "walka"
+          ? { ...next, fight: { ...next.fight, spellsOwedBy: owed } }
+          : next,
+    })
+    .eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "walka-start", {
     cardIds,
     enemyTotal: total,
@@ -799,6 +864,18 @@ export async function fightRoll(
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
   if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
+
+  // 17.3 and 17.7: the spells go in before the dice, so the dice wait. Checked
+  // here and not only in the interface, because the point of the window is that
+  // the other player gets their chance — and a window one device can roll
+  // straight through is not one.
+  const owed = game.turn_state.fight.spellsOwedBy ?? [];
+  if (owed.length > 0) {
+    const who = seats
+      .filter((s) => owed.includes(s.seat_index))
+      .map((s) => s.player_name ?? `miejsce ${s.seat_index + 1}`);
+    throw new Error(`Zaklęcia przed rzutem (17.3, 17.7) — czekamy na: ${who.join(", ")}.`);
+  }
 
   const roll = value ?? 1 + Math.floor(Math.random() * 6);
   if (!Number.isInteger(roll) || roll < 1 || roll > 6) {

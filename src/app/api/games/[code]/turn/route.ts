@@ -20,6 +20,7 @@ import {
   resolveBridgeOrdeal,
   resolveDrawnCard,
   resolveFieldOffer,
+  passSpells,
 } from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
 import type { Decisions } from "@/lib/game/turnStore";
@@ -65,7 +66,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
   const isActiveSeat = seat.seat_index === game.active_seat;
   const isTableScreen = game.mode === "companion" && seat.is_host;
-  if (!isActiveSeat && !isTableScreen) {
+  // 17.7 is the one thing here a seat does on somebody else's turn: "przed
+  // wykonaniem rzutu kostką obie Postacie mają możliwość użycia Zaklęć". A
+  // window only the active player could close would not be a window.
+  const isSpellWindow = body.action === "spell-pass";
+  if (!isActiveSeat && !isTableScreen && !isSpellWindow) {
     return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
   }
 
@@ -173,6 +178,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           typeof body.playerRoll === "number" ? body.playerRoll : null,
           typeof body.beastRoll === "number" ? body.beastRoll : null,
         );
+        break;
+      case "spell-pass":
+        // 17.3/17.7's window closes seat by seat, and any seat may close its
+        // own — the player whose turn it is is not the only one holding cards.
+        await passSpells(game.id, seat.id);
         break;
       case "fight-done":
         await resolveFight(game.id);

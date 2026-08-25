@@ -245,26 +245,70 @@ export function spellScript(cardId: string): SpellScript | null {
  * fight. A reactive spell is always allowed for the same reason: it exists to
  * answer something that has just happened.
  */
-export function castableNow(script: SpellScript, moment: SpellTiming): boolean {
+export function castableNow(
+  script: SpellScript,
+  moment: SpellTiming | readonly SpellTiming[],
+): boolean {
   if (script.reactive) return true;
   if (script.timing.includes("dowolna-chwila")) return true;
-  return script.timing.includes(moment);
+  const open = typeof moment === "string" ? [moment] : moment;
+  return script.timing.some((when) => open.includes(when));
 }
 
-/** The window the turn is in, from its phase. */
-export function momentOf(phase: string, hasMoved: boolean): SpellTiming {
-  switch (phase) {
+/**
+ * What the turn is currently in the middle of.
+ *
+ * More than the phase, because the phase alone cannot tell four of these
+ * windows apart. A fight before the dice and a fight after the first die are
+ * both `walka` and are not the same moment — 17.3 puts the spells before the
+ * roll, and a spell that changes a roll has to come after it. A field with a
+ * card just turned over is `pole`, and so is a field with nothing left on it.
+ *
+ * This existed as `phase + hasMoved` and produced four of the nine windows;
+ * `w-walce`, `po-karcie`, `spotkanie` and `zamiast-ruchu` could never happen,
+ * so the spells timed to them were never castable at all. A spell that is never
+ * castable is a spell that is not implemented.
+ */
+export interface TurnMoment {
+  phase: string;
+  /** A fight that has begun rolling is past the point 17.3 talks about. */
+  diceRolled?: boolean;
+  /** A Karta Zdarzeń turned over and not yet dealt with. */
+  cardJustDrawn?: boolean;
+  /** Another character on this field, or a Wróg standing on it. */
+  meeting?: boolean;
+}
+
+/** Every window the turn is in at once — a moment can be more than one. */
+export function momentsOf(at: TurnMoment): SpellTiming[] {
+  const now: SpellTiming[] = ["dowolna-chwila"];
+  switch (at.phase) {
     case "rzut":
-      return hasMoved ? "przed-ruchem" : "poczatek-tury";
+      // Nothing has happened yet: the start of the turn, and everything that
+      // has to come before the move.
+      now.push("poczatek-tury", "przed-ruchem", "zamiast-ruchu");
+      break;
     case "ruch":
-      return "przed-ruchem";
+      now.push("przed-ruchem");
+      break;
     case "pole":
-      return "po-ruchu";
+      now.push("po-ruchu");
+      if (at.cardJustDrawn) now.push("po-karcie");
+      if (at.meeting) now.push("spotkanie", "przed-walka");
+      break;
     case "walka":
-      return "przed-walka";
-    default:
-      return "dowolna-chwila";
+      // Before the dice both windows are open; once one is thrown, 17.3 has
+      // passed and only the spells that act on a roll are left.
+      now.push(at.diceRolled ? "w-walce" : "przed-walka", "spotkanie");
+      break;
   }
+  return now;
+}
+
+/** The single window that best describes the moment, for labelling it. */
+export function momentOf(at: TurnMoment): SpellTiming {
+  const [, first] = momentsOf(at);
+  return first ?? "dowolna-chwila";
 }
 
 export const TIMING_LABEL: Record<SpellTiming, string> = {

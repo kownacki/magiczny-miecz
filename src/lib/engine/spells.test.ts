@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
-import { SPELLS, castableNow, momentOf, spellScript } from "./spells";
+import {
+  SPELLS,
+  TIMING_LABEL,
+  castableNow,
+  momentOf,
+  momentsOf,
+  spellScript,
+  type SpellTiming,
+} from "./spells";
 
 const IDS = new Set<string>((spells as Spell[]).map((s) => s.id));
 
@@ -49,9 +57,37 @@ describe("when a spell may be spoken", () => {
 
   it("offers the fight window when a fight is what is happening", () => {
     // 17.3 and 17.7: spells go in before the dice.
-    expect(momentOf("walka", true)).toBe("przed-walka");
-    expect(momentOf("rzut", false)).toBe("poczatek-tury");
-    expect(momentOf("pole", true)).toBe("po-ruchu");
+    expect(momentOf({ phase: "walka" })).toBe("przed-walka");
+    expect(momentOf({ phase: "rzut" })).toBe("poczatek-tury");
+    expect(momentOf({ phase: "pole" })).toBe("po-ruchu");
+  });
+
+  it("closes 17.3's window once a die has been thrown", () => {
+    // Before the dice a fight is "przed walką"; after the first one it is not,
+    // and only the spells that act on a roll are left. The phase is the same
+    // for both, which is why the moment is more than the phase.
+    expect(momentsOf({ phase: "walka" })).toContain("przed-walka");
+    expect(momentsOf({ phase: "walka" })).not.toContain("w-walce");
+    expect(momentsOf({ phase: "walka", diceRolled: true })).toContain("w-walce");
+    expect(momentsOf({ phase: "walka", diceRolled: true })).not.toContain("przed-walka");
+  });
+
+  it("reaches every window it names", () => {
+    // A window `momentsOf` can never produce is a spell that can never be
+    // cast, which is how "w walce", "po karcie", "spotkanie" and "zamiast
+    // ruchu" were all unreachable at once.
+    const reachable = new Set([
+      ...momentsOf({ phase: "rzut" }),
+      ...momentsOf({ phase: "ruch" }),
+      ...momentsOf({ phase: "pole" }),
+      ...momentsOf({ phase: "pole", cardJustDrawn: true }),
+      ...momentsOf({ phase: "pole", meeting: true }),
+      ...momentsOf({ phase: "walka" }),
+      ...momentsOf({ phase: "walka", diceRolled: true }),
+    ]);
+    for (const timing of Object.keys(TIMING_LABEL) as SpellTiming[]) {
+      expect(reachable.has(timing), timing).toBe(true);
+    }
   });
 
   it("keeps the movement spells out of the middle of a turn", () => {

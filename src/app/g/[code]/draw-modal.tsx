@@ -47,6 +47,8 @@ export function DrawModal({
   fight,
   fieldOffer,
   simulated,
+  waitingOn,
+  myTurnToPass,
   ring,
   busy,
   onAction,
@@ -94,6 +96,10 @@ export function DrawModal({
    */
   fieldOffer: { name: string; effect: Effect } | null;
   simulated: boolean;
+  /** Names of the seats 17.3's spell window is still open for. */
+  waitingOn: string[];
+  /** Whether this device is one of them — a watcher can be (17.7). */
+  myTurnToPass: boolean;
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
   busy: boolean;
@@ -153,10 +159,28 @@ export function DrawModal({
             fight={fight}
             simulated={simulated}
             busy={busy}
+            waitingOn={waitingOn}
+            myTurnToPass={myTurnToPass}
             onAction={onAction}
           />
         ) : (
-          <WatchFight fight={fight} />
+          <>
+            <WatchFight fight={fight} />
+            {myTurnToPass && (
+              <div className="rounded border border-magia/50 bg-magia/5 p-3">
+                <p className="text-xs text-ink">
+                  Możesz rzucić Zaklęcie, zanim padną kostki (17.7).
+                </p>
+                <button
+                  disabled={busy}
+                  onClick={() => onAction({ action: "spell-pass" })}
+                  className="mt-2 rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+                >
+                  Nie rzucam Zaklęcia
+                </button>
+              </div>
+            )}
+          </>
         )}
       </Shell>
     );

@@ -6,6 +6,7 @@ import type { Spell } from "@/data/types";
 import { CardTile, type TileCard } from "./card-tile";
 import type { SpellId } from "@/data/ids";
 import {
+  TARGET_LABEL,
   TIMING_LABEL,
   castableNow,
   spellScript,
@@ -37,7 +38,8 @@ export function SpellHand({
   onInspect,
 }: {
   spells: HeldSpell[];
-  moment: SpellTiming;
+  /** Every window the turn is open for right now — a moment can be several. */
+  moment: readonly SpellTiming[];
   /** Other seats, for the spells that need a victim. */
   opponents: { seatIndex: number; name: string }[];
   busy: boolean;
@@ -70,9 +72,25 @@ export function SpellHand({
                 card={{ cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" }}
                 size="md"
                 dimmed={!now}
-                badge={script ? TIMING_LABEL[script.timing[0]] : undefined}
                 onClick={() => onInspect({ cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" })}
               />
+
+              {/* When it may be spoken and at what, under the card that says
+                  it. Almost every Zaklęcie opens with a clause about its
+                  moment — "przed wykonaniem ruchu", "w dowolnej chwili" — and
+                  that clause is most of what you need to know while deciding
+                  which to hold and which to spend. It used to be a badge on
+                  the corner showing the first of them and hiding the rest.
+                  Lit when the window is open, so a hand can be read at a
+                  glance for what is live. */}
+              {script && (
+                <div className="w-[132px] text-center leading-tight">
+                  <p className={`text-[10px] ${now ? "text-magia" : "text-muted/60"}`}>
+                    {script.timing.map((when) => TIMING_LABEL[when]).join(" / ")}
+                  </p>
+                  <p className="text-[10px] text-muted/60">{TARGET_LABEL[script.target]}</p>
+                </div>
+              )}
 
               {aiming === entry.holdingId && needsVictim ? (
                 <div className="flex w-[132px] flex-wrap justify-center gap-1">
