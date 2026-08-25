@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
-import { USES, askAbout, isUsable, usageOf } from "./uses";
+import { USES, USE_VERB, USE_VERB_PAST, askAbout, isUsable, usageOf } from "./uses";
 import { isConsumedOnResolve } from "./cardScript";
 
 const PRZEDMIOTY = (events as EventCard[]).filter((card) => card.cardClass === "przedmiot");
@@ -64,11 +64,17 @@ describe("what the player is asked", () => {
     expect(askAbout("SZKATUŁA", usageOf("tajemnicza-szkatula")!)).toContain("rzuci kostką");
   });
 
-  it("never leaves a card without every word the question needs", () => {
+  it("never leaves a card without the line the question is built from", () => {
     for (const [id, use] of Object.entries(USES)) {
-      for (const part of [use.verb, use.dziennik, use.co]) {
-        expect(part.length, id).toBeGreaterThan(0);
-      }
+      expect(use.co.length, id).toBeGreaterThan(0);
     }
+  });
+
+  it("says the same word for all nine", () => {
+    // One act, one verb. The cards each have their own idiom — a Szkatuła is
+    // opened and an Eliksir drunk — and nine different words in the pack made
+    // one thing look like nine controls.
+    expect(USE_VERB).toBe("użyj");
+    expect(USE_VERB_PAST).toBe("używa");
   });
 });

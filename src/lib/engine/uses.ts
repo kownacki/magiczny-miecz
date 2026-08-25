@@ -20,10 +20,6 @@ import type { CardId } from "@/data/ids";
  * the flag. A card that had a use and survived it would not belong here.
  */
 export interface Use {
-  /** On the button, in the imperative the card would use. */
-  verb: string;
-  /** In the journal, third person — a table reads what somebody did. */
-  dziennik: string;
   /** What using it buys, in one line, for the question before it happens. */
   co: string;
   /**
@@ -54,8 +50,6 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
    * następnie odłóż Kartę."
    */
   "tajemnicza-szkatula": {
-    verb: "Otwórz",
-    dziennik: "otwiera",
     co: "rzut kostką decyduje, co jest w środku",
     kiedy: null,
     rozpatruje: "aplikacja",
@@ -65,36 +59,26 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
   // Nothing here can hold a bonus for a turn yet — that is `status.ts`, which
   // is written and not yet wired — so the table carries it.
   "eliksir-sily": {
-    verb: "Wypij",
-    dziennik: "wypija",
     co: "+2 Miecza na 1 turę",
     kiedy: null,
     rozpatruje: "stol",
   },
   "jablko-natchnienia": {
-    verb: "Zjedz",
-    dziennik: "zjada",
     co: "odejmij albo dodaj 1 do wyniku rzutu — jak wolisz",
     kiedy: "przed rzutem w Świątyni Bogini Nemed lub Świątyni Tolimana",
     rozpatruje: "stol",
   },
   "owoc-jarzebiny-wiedzy": {
-    verb: "Zjedz",
-    dziennik: "zjada",
     co: "ciągniesz o 1 Kartę więcej i odrzucasz tę, która ci nie odpowiada",
     kiedy: "przed ciągnięciem Kart Zdarzeń",
     rozpatruje: "stol",
   },
   "rozdzka-przeznaczenia": {
-    verb: "Użyj",
-    dziennik: "używa",
     co: "napotkany Wróg staje się Przyjacielem na jedną walkę i dodaje swoje punkty",
     kiedy: "przy napotkanym Wrogu",
     rozpatruje: "stol",
   },
   "zwierciadlo-zniszczenia": {
-    verb: "Użyj",
-    dziennik: "używa",
     co: "innej Postaci −2 Miecza lub Magii, albo −1 i −1 — tylko z jej własnych punktów",
     kiedy: null,
     rozpatruje: "stol",
@@ -108,8 +92,6 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
    * worse than handing the whole thing to the table.
    */
   "krysztal-losu": {
-    verb: "Użyj",
-    dziennik: "używa",
     co: "rzut kostką: 1 — tracisz 1 Życie; 2 — Kryształ niszczeje; 3 — nic; 4, 5, 6 — +1, +2, +3 do rzutu w tej walce",
     kiedy: "w walce",
     rozpatruje: "stol",
@@ -118,15 +100,11 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
   // Nothing else in the app discards these, so this is the only way one leaves
   // a pack it is doing nothing in.
   lodz: {
-    verb: "Użyj",
-    dziennik: "używa",
     co: "przeprawa przez Trzęsawiska na Obszar sąsiadujący z tym, z którego wyruszasz",
     kiedy: "w turze po znalezieniu",
     rozpatruje: "stol",
   },
   latarnia: {
-    verb: "Użyj",
-    dziennik: "używa",
     co: "przeprawa przez Lodowy Las na Obszar sąsiadujący z tym, z którego wchodzisz",
     kiedy: "w turze po znalezieniu",
     rozpatruje: "stol",
@@ -143,6 +121,17 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
 export function usageOf(cardId: string): Use | null {
   return USES[cardId as CardId] ?? null;
 }
+
+/**
+ * The one word for all nine, on the button and in the journal.
+ *
+ * The cards each have their own idiom — a Szkatuła is opened, an Eliksir drunk,
+ * a Jabłko eaten — and using them made the pack read like nine different
+ * controls. It is one act, so it gets one word, and what the act actually is
+ * stays where it belongs: in the question asked before it happens.
+ */
+export const USE_VERB = "użyj";
+export const USE_VERB_PAST = "używa";
 
 /** Whether this is a card you spend rather than one you keep. */
 export function isUsable(cardId: string): boolean {

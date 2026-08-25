@@ -7,7 +7,7 @@ import characters from "@/data/characters.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { asFieldId, FIELDS } from "./board";
 import { asCharacterId } from "./characters";
-import { usageOf } from "./uses";
+import { USE_VERB_PAST } from "./uses";
 
 /** One row of `magiczny_miecz.moves`, as the route hands it over. */
 export interface JournalEntry {
@@ -301,13 +301,11 @@ export function describe(
     case "odrzucenie":
       return line(`${who} odrzuca: ${card(data.cardId)}.`);
 
-    // Spending a card by using it. Said with the card's own verb — a Postać
-    // wypija an Eliksir and otwiera a Szkatuła — because "używa" for all nine
-    // reads like a log and these are things that happened at a table.
+    // Spending a card by using it. One word for all nine — the cards have their
+    // own idioms, but this is one act and the line is read as a list.
     case "uzycie": {
-      const spent = usageOf(String(data.cardId ?? ""));
       const face = typeof data.face === "number" ? ` — wypadło ${data.face}` : "";
-      return line(`${who} ${spent?.dziennik ?? "używa"}: ${card(data.cardId)}${face}.`);
+      return line(`${who} ${USE_VERB_PAST}: ${card(data.cardId)}${face}.`);
     }
     case "kupno":
       return line(`${who} kupuje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);

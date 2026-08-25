@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
-import { isUsable, usageOf } from "@/lib/engine/uses";
+import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { ItemSlot, SLOT_WIDTH, type SlotTone } from "./item-slot";
 import type { TileCard } from "./card-tile";
 
@@ -253,7 +253,7 @@ export function SlotPanel({
                   title={usageOf(item.cardId)?.co}
                   className="text-[9px] text-ochre underline transition hover:text-ink disabled:opacity-40"
                 >
-                  {usageOf(item.cardId)!.verb.toLowerCase()}
+                  {USE_VERB}
                 </button>
               ) : null}
             </ItemSlot>

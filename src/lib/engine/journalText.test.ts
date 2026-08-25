@@ -410,17 +410,15 @@ const PAYLOADS: Record<string, Record<string, unknown>> = {
 };
 
 suite("spending a card by using it", () => {
-  it("says it with the card's own verb", () => {
-    // "Michał używa: ELIKSIR SIŁY" reads like a log. A table says who drank
-    // what, and `uses.ts` already knows which verb each card wants.
-    expect(text("uzycie", { cardId: "eliksir-sily" })).toBe("Michał wypija: ELIKSIR SIŁY.");
-    expect(text("uzycie", { cardId: "owoc-jarzebiny-wiedzy" })).toContain("zjada");
+  it("says it the same way for every card", () => {
+    expect(text("uzycie", { cardId: "eliksir-sily" })).toBe("Michał używa: ELIKSIR SIŁY.");
+    expect(text("uzycie", { cardId: "owoc-jarzebiny-wiedzy" })).toContain("używa");
     expect(text("uzycie", { cardId: "rozdzka-przeznaczenia" })).toContain("używa");
   });
 
   it("quotes the die where the app threw one", () => {
     expect(text("uzycie", { cardId: "tajemnicza-szkatula", face: 4 })).toBe(
-      "Michał otwiera: TAJEMNICZA SZKATUŁA — wypadło 4.",
+      "Michał używa: TAJEMNICZA SZKATUŁA — wypadło 4.",
     );
   });
 

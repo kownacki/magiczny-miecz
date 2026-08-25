@@ -47,7 +47,7 @@ import { FieldModal } from "./field-modal";
 import { DrawModal, ringFields } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
 import { ConfirmDialog, type Confirmation } from "./confirm";
-import { askAbout, isUsable, usageOf } from "@/lib/engine/uses";
+import { USE_VERB, askAbout, isUsable, usageOf } from "@/lib/engine/uses";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import type { Effect } from "@/lib/engine/cardScript";
 
@@ -566,9 +566,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     if (!spend) return;
     const name = CARD_NAMES.get(cardId) ?? cardId;
     setAsk({
-      title: `${spend.verb}: ${name}`,
+      title: `Użyj: ${name}`,
       body: askAbout(name, spend),
-      confirmLabel: spend.verb,
+      confirmLabel: "Użyj",
       // Red, like everything that takes something away from somebody — here
       // from the person pressing it.
       tone: "grave",
@@ -1532,7 +1532,7 @@ function Hand({
                     title={usageOf(held.cardId)?.co}
                     className="text-[9px] text-ochre underline hover:text-ink"
                   >
-                    {usageOf(held.cardId)!.verb.toLowerCase()}
+                    {USE_VERB}
                   </button>
                 )}
                 <button
