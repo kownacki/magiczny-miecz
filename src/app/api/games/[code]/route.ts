@@ -197,7 +197,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         magia_walka: seat.magia_own + inFight.magia + spell.magia,
         // What a player is shown beside their name, already worked out: the
         // browser gets marks, not a modelling problem.
-        effects: under.map((status) => ({ id: status.id, ...markOf(status) })),
+        effects: under.map((status) => ({
+          id: status.id,
+          // The card that put it there, so the browser can draw its picture
+          // rather than a shape standing in for it.
+          source: status.source,
+          ...markOf(status),
+        })),
       };
     }),
   });

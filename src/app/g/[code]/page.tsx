@@ -20,7 +20,7 @@ import {
   notesForCharacter,
   type SeatCharacter,
 } from "@/lib/engine/characters";
-import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
+import { cardArtUrl, characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
@@ -113,7 +113,14 @@ interface Seat {
    * the turn engine reads, so the browser gets one list and never has to know
    * there were two halves.
    */
-  effects: { id: string; glyph: string; tone: "dobry" | "zly" | "obojetny"; title: string }[];
+  effects: {
+    id: string;
+    /** The card that put it there, where a card did. */
+    source: string;
+    glyph: string;
+    tone: "dobry" | "zly" | "obojetny";
+    title: string;
+  }[];
   zycie: number;
   zloto: number;
   nature: string | null;
@@ -1502,7 +1509,24 @@ function Hand({
    * `ItemSlot`): laying it out would slide the row sideways under the pointer
    * and take the card you were aiming at with it.
    */
-  const insertIndex = insertAt === null ? -1 : arranged.findIndex((held) => held.id === insertAt);
+  /**
+   * Where the gap is, and nowhere when nothing is in the air.
+   *
+   * The insertion point is a hover, and a hover outlives what it was for: put
+   * the card down with Escape or a click on the board and the pointer has not
+   * moved, so nothing tells the row to close. It used to stay open — and open
+   * far wider than it had been, because with no card in the air the rule that
+   * decides which way each one steps reads the row as a card arriving from the
+   * body, and the whole tail steps aside for it. Fourteen cards stepped and
+   * twelve places drawn, for a card that was already back in the pack.
+   *
+   * Read from what is actually in the air rather than from what was last
+   * hovered, and the row cannot be left open by anything at all.
+   */
+  const insertIndex =
+    insertAt === null || liftedHoldingId === null
+      ? -1
+      : arranged.findIndex((held) => held.id === insertAt);
   const stepFor = (index: number): -1 | 0 | 1 => {
     if (insertIndex < 0) return 0;
     if (liftedIndex < 0) return index >= insertIndex ? 1 : 0;
@@ -2145,6 +2169,32 @@ function SeatCard({
     };
   }, [carried]);
 
+  /**
+   * Going away puts the card down.
+   *
+   * A card on the cursor is a gesture half finished, and a gesture cannot be
+   * left running in a tab nobody is looking at: you come back minutes later to
+   * a card stuck to the pointer, having forgotten which card it was or where it
+   * came from, and the first click anywhere puts it somewhere. Leaving the tab
+   * ends it, and so does the window losing focus.
+   *
+   * Nothing is lost by being eager about this. Putting it down is not a move —
+   * the card has not gone anywhere yet, and the pack is exactly as it was.
+   */
+  useEffect(() => {
+    if (!carried) return;
+    const putBack = () => setCarried(null);
+    const onHidden = () => {
+      if (document.hidden) putBack();
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    window.addEventListener("blur", putBack);
+    return () => {
+      document.removeEventListener("visibilitychange", onHidden);
+      window.removeEventListener("blur", putBack);
+    };
+  }, [carried]);
+
   return (
     <article
       className={`rounded-lg border bg-panel p-4 transition ${
@@ -2172,21 +2222,40 @@ function SeatCard({
             card they read as belonging to whatever they happen to be next to. */}
         {seat.effects.length > 0 && (
           <span className="flex shrink-0 items-center gap-1">
-            {seat.effects.map((mark) => (
-              <span
-                key={mark.id}
-                title={mark.title}
-                className={`cursor-help text-[13px] leading-none ${
-                  mark.tone === "dobry"
-                    ? "text-verdigris"
-                    : mark.tone === "zly"
-                      ? "text-vermilion"
-                      : "text-muted"
-                }`}
-              >
-                {mark.glyph}
-              </span>
-            ))}
+            {seat.effects.map((mark) => {
+              // The card's own illustration where a card is what did this — an
+              // Eliksir is recognised by its picture the way everything else in
+              // this app is. The shape is the fallback, and it is what the
+              // effects with no card behind them get: a lost turn and a barred
+              // Most are rules, not things.
+              const art = cardArtUrl(mark.source);
+              const ring =
+                mark.tone === "dobry"
+                  ? "border-verdigris text-verdigris"
+                  : mark.tone === "zly"
+                    ? "border-vermilion text-vermilion"
+                    : "border-edge text-muted";
+              return (
+                <span
+                  key={mark.id}
+                  title={mark.title}
+                  className={`flex h-5 w-5 shrink-0 cursor-help items-center justify-center overflow-hidden rounded border leading-none ${ring}`}
+                >
+                  {art ? (
+                    <Image
+                      src={art}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <span className="text-[11px]">{mark.glyph}</span>
+                  )}
+                </span>
+              );
+            })}
           </span>
         )}
       </header>
@@ -2642,15 +2711,16 @@ function RailStat({
         className={`tnum mt-1 text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
       >
         {shown}
-        {/* Own points behind it, but only where the cards have added to them:
+        {/* Own points behind it, but only where something has added to them:
             "12 (12)" is the same number twice. Dimmed rather than recoloured,
-            so the parameter stays the thing being read. */}
+            so the total stays the thing being read.
+
+            Two numbers and no more. The fight figure is a third — 1.5 quotes it
+            and it is real, but a rail reading "53 (51) 54" is three numbers to
+            hold in your head at a glance, which is worse than knowing one of
+            them late. It is on the hover, which is where somebody weighing a
+            fight will be looking anyway. */}
         {shown !== value && <span className="opacity-60"> ({value})</span>}
-        {/* And the fight figure where a card lends something in a fight and
-            nowhere else, which is four cards in the box (1.5). */}
-        {inFight !== undefined && inFight !== shown && (
-          <span>{" \u2694\uFE0E"}{inFight}</span>
-        )}
       </span>
       {canAdjust && (
         // Always visible rather than revealed on hover. Phones are the primary
