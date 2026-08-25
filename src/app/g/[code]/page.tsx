@@ -1710,6 +1710,9 @@ function Hand({
             // with a gap rather than by tinting the card under the pointer,
             // which reads as "this one is about to be replaced".
             step={stepFor(index)}
+            // The square this card has vacated is the one the carried card is
+            // going into, so the empty place is drawn here.
+            landing={index === insertIndex}
             // Reading and moving are different modes: no Karta opens over the
             // place you are aiming at while a card is in the air.
             quiet={moving}

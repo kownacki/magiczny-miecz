@@ -31,6 +31,17 @@ import type { TileCard } from "./card-tile";
 export const SLOT_WIDTH = 96;
 export const SLOT_ART_HEIGHT = Math.round(SLOT_WIDTH * (155 / 240));
 
+/**
+ * How far a card steps aside to show where a carried one is going.
+ *
+ * Not a whole square. The empty place is drawn behind the card in the square it
+ * is vacating, so what opens is a sliver of it — enough to see that there is a
+ * place there and where it is, with the card that made room still overlapping
+ * most of it. A whole square would be truer to the arithmetic and much worse to
+ * look at: the row would fly apart to make a hole nothing is in yet.
+ */
+const STEP_ASIDE = Math.round(SLOT_WIDTH * 0.45);
+
 export interface SlotOccupant {
   holdingId: string;
   cardId: string;
@@ -87,6 +98,7 @@ export function ItemSlot({
   nature = null,
   quiet = false,
   step = 0,
+  landing = false,
 }: {
   /** What is here, or null for an empty place. */
   item: SlotOccupant | null;
@@ -138,6 +150,8 @@ export function ItemSlot({
   quiet?: boolean;
   /** Which way this card has stepped aside to show where a carried one lands. */
   step?: -1 | 0 | 1;
+  /** The carried card would land in this square, which this one has vacated. */
+  landing?: boolean;
 }) {
   // The hover is suppressed while the card is on the cursor: what is under the
   // pointer then is a hollow, and describing it as though it still held
@@ -184,8 +198,22 @@ export function ItemSlot({
       onPointerLeave={onPointerLeave}
       {...handlers}
       style={{ width: SLOT_WIDTH }}
-      className="shrink-0"
+      className="relative shrink-0"
     >
+      {/* The place a carried card is going into, drawn behind whatever is in
+          this square — so the sliver the card uncovers by stepping aside is the
+          part you see. A gap with nothing in it says the row has moved; a gap
+          with the edge of an empty place in it says what the row moved *for*. */}
+      {landing && (
+        <span
+          aria-hidden
+          style={{ width: SLOT_WIDTH, height: SLOT_ART_HEIGHT }}
+          // Strong enough to read as a place through a sliver of itself. The
+          // faint tint the whole rectangle uses works over a full square and
+          // disappears over forty pixels of one.
+          className="absolute left-0 top-0 rounded border border-dashed border-verdigris bg-verdigris/25"
+        />
+      )}
       <figure
         /**
          * The gap is drawn, not laid out.
@@ -208,10 +236,13 @@ export function ItemSlot({
          */
         style={{
           width: SLOT_WIDTH,
-          transform: step === 0 ? undefined : `translateX(${step * SLOT_WIDTH * 0.45}px)`,
+          transform: step === 0 ? undefined : `translateX(${step * STEP_ASIDE}px)`,
         }}
         className={`flex flex-col items-center gap-1 transition-transform duration-150 ${
-          step === 0 ? "" : "pointer-events-none"
+          // Above the row while it is over somebody else's square, so a card
+          // closing the hollow covers the faded one it is closing over rather
+          // than being covered by it.
+          step === 0 ? "" : "pointer-events-none relative z-10"
         }`}
       >
         <div
