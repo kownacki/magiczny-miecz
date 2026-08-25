@@ -22,6 +22,8 @@ import {
   resolveFieldOffer,
 } from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
+import type { Decisions } from "@/lib/game/turnStore";
+import { asFieldId } from "@/lib/engine/board";
 
 /**
  * Every turn action funnels through here.
@@ -35,6 +37,24 @@ import type { CardClass } from "@/data/types";
  * Simulation mode is excluded, because there the app *does* hold each player's
  * concealed spells (9.3) and one device acting for everyone would expose them.
  */
+/**
+ * What the player decided, taken off the request.
+ *
+ * Only numbers and a field id — never an effect. The server re-walks the card
+ * it owns and takes the branch these point at, so a card cannot be talked into
+ * doing something it does not say.
+ */
+function decisionsFrom(body: Record<string, unknown>): Decisions {
+  const choices = Array.isArray(body.choices)
+    ? body.choices.map(Number).filter((n) => Number.isInteger(n) && n >= 0)
+    : undefined;
+  const destination = asFieldId(typeof body.destination === "string" ? body.destination : null);
+  return {
+    ...(choices?.length ? { choices } : {}),
+    ...(destination ? { destination } : {}),
+  };
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const game = await findGame(code.toUpperCase());
@@ -164,6 +184,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             game.id,
             String(body.offer ?? ""),
             typeof body.value === "number" ? body.value : null,
+            decisionsFrom(body),
           ),
         );
       case "karta-efekt":
@@ -174,6 +195,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             game.id,
             String(body.cardId ?? ""),
             typeof body.value === "number" ? body.value : null,
+            decisionsFrom(body),
           ),
         );
       case "end":

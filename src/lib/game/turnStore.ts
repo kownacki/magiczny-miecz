@@ -2573,6 +2573,19 @@ async function beginNamedFight(
  * ------------------------------------------------------------------------ */
 
 /** What an effect did, in the words the table would use. */
+/**
+ * What a player has already said, for an effect that asks.
+ *
+ * `choices` is a queue, taken in the order the effect walks: a card with a
+ * choice inside a choice consumes two. `destination` answers the one question
+ * that is a place rather than an option — "przenieś się na dowolny Obszar w
+ * tym Kręgu".
+ */
+export interface Decisions {
+  choices?: number[];
+  destination?: FieldId;
+}
+
 export interface Resolution {
   /** One line per thing that happened, for the notice and the journal. */
   did: string[];
@@ -2583,12 +2596,21 @@ export interface Resolution {
   pending: Effect | null;
 }
 
-const STAT_NAME: Record<"miecz" | "magia" | "zycie" | "zloto", string> = {
-  miecz: "Miecza",
-  magia: "Magii",
-  zycie: "Życia",
-  zloto: "Sztuk Złota",
-};
+/**
+ * How many of a thing, in Polish.
+ *
+ * Miecz, Magia and Życie take the same form whatever the number — "+2 Życia" —
+ * but Złoto declines: one Sztukę, two to four Sztuki, five and up Sztuk. The
+ * deltas in this game are almost always one, which is exactly the case a single
+ * fixed form gets wrong.
+ */
+function amountOf(stat: "miecz" | "magia" | "zycie" | "zloto", count: number): string {
+  if (stat !== "zloto") {
+    return { miecz: "Miecza", magia: "Magii", zycie: "Życia" }[stat];
+  }
+  if (count === 1) return "Sztukę Złota";
+  return count >= 2 && count <= 4 ? "Sztuki Złota" : "Sztuk Złota";
+}
 
 /**
  * Applies one effect to one seat, as far as it goes.
@@ -2603,7 +2625,40 @@ export async function applyEffect(
   seatId: string,
   effect: Effect,
   reason: string,
+  /**
+   * What the player has already decided, in the order the effect asks.
+   *
+   * The client never sends an effect — it sends *which option it picked*, and
+   * the server re-walks the card it owns and takes that branch. A card cannot
+   * therefore be talked into doing something it does not say, which is the
+   * whole reason the decision travels as a number.
+   */
+  decided: Decisions = {},
 ): Promise<Resolution> {
+  // A decision the player has already made turns an unsettled effect into a
+  // settled one, so this is asked after the choices have been consumed rather
+  // than before.
+  if (effect.op === "wybor") {
+    const pick = decided.choices?.shift();
+    const option = pick === undefined ? undefined : effect.options[pick];
+    if (!option) return { did: [], pending: effect };
+    const done = await applyEffect(gameId, seatId, option.effect, `${reason}: ${option.label}`, decided);
+    // The label only when it adds something. An option called "+1 Magii" whose
+    // effect reports "+1 Magii" would otherwise be written down twice.
+    const said = done.did[0] === option.label ? done.did : [option.label, ...done.did];
+    return { did: said, pending: done.pending };
+  }
+
+  if (effect.op === "przenies" && effect.to.kind !== "pole") {
+    const where = decided.destination;
+    if (!where) return { did: [], pending: effect };
+    await placeSeat(gameId, seatId, where, reason);
+    return {
+      did: [`przenosisz się na: ${FIELDS.get(where)?.name ?? where}`],
+      pending: null,
+    };
+  }
+
   if (!isSettled(effect)) return { did: [], pending: effect };
 
   switch (effect.op) {
@@ -2613,7 +2668,11 @@ export async function applyEffect(
     case "po-kolei": {
       const did: string[] = [];
       for (const step of effect.steps) {
-        const step_ = await applyEffect(gameId, seatId, step, reason);
+        const step_ = await applyEffect(gameId, seatId, step, reason, decided);
+        // A step nobody has decided yet stops the sequence: what follows it may
+        // depend on it, and doing the rest first would resolve the card out of
+        // its own order.
+        if (step_.pending) return { did, pending: step_.pending };
         did.push(...step_.did);
       }
       return { did, pending: null };
@@ -2631,7 +2690,7 @@ export async function applyEffect(
             effect.warunek.ponizej;
       const branch = holds ? effect.to : effect.inaczej;
       return branch
-        ? applyEffect(gameId, seatId, branch, reason)
+        ? applyEffect(gameId, seatId, branch, reason, decided)
         : { did: ["warunek niespełniony — nic się nie dzieje"], pending: null };
     }
 
@@ -2644,8 +2703,9 @@ export async function applyEffect(
       }
       await adjust(gameId, seatId, effect.stat, effect.delta, reason);
       const sign = effect.delta > 0 ? "+" : "−";
+      const many = Math.abs(effect.delta);
       return {
-        did: [`${sign}${Math.abs(effect.delta)} ${STAT_NAME[effect.stat]}`],
+        did: [`${sign}${many} ${amountOf(effect.stat, many)}`],
         pending: null,
       };
     }
@@ -2726,6 +2786,7 @@ export async function resolveFieldOffer(
   gameId: string,
   offerName: string,
   value: number | null,
+  decided: Decisions = {},
 ): Promise<{ offer: string; face?: number; did: string[]; pending: Effect | null }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
@@ -2745,7 +2806,7 @@ export async function resolveFieldOffer(
 
   // A table is rolled; anything else is simply carried out.
   if (offer.effect.op !== "rzut") {
-    const done = await applyEffect(gameId, seat.id, offer.effect, offer.name);
+    const done = await applyEffect(gameId, seat.id, offer.effect, offer.name, decided);
     return { offer: offer.name, ...done };
   }
 
@@ -2755,7 +2816,7 @@ export async function resolveFieldOffer(
   }
   const outcome = offer.effect.faces[face];
   await journal(gameId, seat.id, game.turn, "pole-tabela", { offer: offer.name, face }, value !== null);
-  const done = await applyEffect(gameId, seat.id, outcome, `${offer.name} (${face})`);
+  const done = await applyEffect(gameId, seat.id, outcome, `${offer.name} (${face})`, decided);
   await bumpRevision(gameId);
   return { offer: offer.name, face, ...done };
 }
@@ -2776,6 +2837,7 @@ export async function resolveDrawnCard(
   gameId: string,
   cardId: string,
   value: number | null,
+  decided: Decisions = {},
 ): Promise<{ card: string; face?: number; did: string[]; pending: Effect | null }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
@@ -2789,7 +2851,8 @@ export async function resolveDrawnCard(
   if (!script) throw new Error(`${cardName(cardId)} — tę Kartę rozpatrzcie sami.`);
 
   if (script.effect.op !== "rzut") {
-    const done = await applyEffect(gameId, seat.id, script.effect, cardName(cardId));
+    const done = await applyEffect(gameId, seat.id, script.effect, cardName(cardId), decided);
+    if (!done.pending) await markResolved(gameId, cardId);
     await bumpRevision(gameId);
     return { card: cardName(cardId), ...done };
   }
@@ -2804,7 +2867,9 @@ export async function resolveDrawnCard(
     seat.id,
     script.effect.faces[face],
     `${cardName(cardId)} (${face})`,
+    decided,
   );
+  if (!done.pending) await markResolved(gameId, cardId);
   await bumpRevision(gameId);
   return { card: cardName(cardId), face, ...done };
 }
@@ -2854,4 +2919,22 @@ export async function takeFromField(
     });
     throw error;
   }
+}
+
+/**
+ * Writes a card down as dealt with for this turn.
+ *
+ * Not the same as taking it off the field: 16.8 leaves a resolved Spotkanie
+ * lying there face up until the turn ends, so "still on the field" cannot mean
+ * "still to be resolved". The same distinction `fought` makes for a Wróg.
+ */
+async function markResolved(gameId: string, cardId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.turn_state.phase !== "pole") return;
+  const already = game.turn_state.resolved ?? [];
+  if (already.includes(cardId)) return;
+  await db
+    .from("games")
+    .update({ turn_state: { ...game.turn_state, resolved: [...already, cardId] } })
+    .eq("id", gameId);
 }

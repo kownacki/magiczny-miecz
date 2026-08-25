@@ -37,6 +37,14 @@ export type TurnPhase =
       draw: number;
       drawn: TurnCard[];
       /**
+       * Cards already resolved this turn, by id.
+       *
+       * A Spotkanie stays on the field until the turn ends (16.8), so "still
+       * lying here" cannot mean "still to be dealt with". Without this the
+       * draw modal would offer the same card again the moment it closed.
+       */
+      resolved?: string[];
+      /**
        * Cards already fought this turn, by id.
        *
        * Rule 17.4 ends the fight the moment the two dice are compared — "na tym
