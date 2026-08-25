@@ -13,6 +13,7 @@ import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardDetail, CardTile, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/engine/fieldText";
+import { LAYER } from "./layers";
 
 /**
  * Every card in the box, to look at.
@@ -300,7 +301,7 @@ export function CardLibrary({
   const cards = useMemo(() => sections.flatMap((section) => section.cards), [sections]);
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-night">
+    <div className={`fixed inset-0 ${LAYER.library} flex flex-col bg-night`}>
       {open && <CardDetail card={open} onClose={() => setOpen(null)} />}
 
       <header className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-edge px-4 py-3">

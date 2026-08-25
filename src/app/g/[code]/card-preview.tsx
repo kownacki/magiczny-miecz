@@ -24,6 +24,7 @@ import { characterProfile, forbiddenNatures, itemProfile } from "@/lib/engine/ab
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";
 import { CardMark } from "./card-mark";
+import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
@@ -172,7 +173,7 @@ export function CardPreview({
         maxHeight: `calc(100vh - ${GAP * 2}px)`,
       }}
       // Never under the pointer: a preview that can be hovered flickers.
-      className="pointer-events-none fixed z-[100] flex gap-3 overflow-y-auto rounded-lg border border-ochre/40 bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+      className={`pointer-events-none fixed ${LAYER.hover} flex gap-3 overflow-y-auto rounded-lg border border-ochre/40 bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]`}
     >
       {src && (
         <div className="relative shrink-0 self-start">

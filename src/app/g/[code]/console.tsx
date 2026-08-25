@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COMMANDS, complete } from "@/lib/engine/console";
+import { LAYER } from "./layers";
 
 /**
  * A line to type at, instead of a button for every test.
@@ -104,7 +105,7 @@ export function TestConsole({
        * the thing you are escaping paints over is not a way out. So it clears
        * the modals' backdrop as well as their z-order, and is not dimmed by it.
        */
-      className="fixed inset-x-0 bottom-0 z-[110] border-t border-vermilion/40 bg-night/95 shadow-[0_-8px_30px_rgba(0,0,0,0.6)]"
+      className={`fixed inset-x-0 bottom-0 ${LAYER.console} border-t border-vermilion/40 bg-night/95 shadow-[0_-8px_30px_rgba(0,0,0,0.6)]`}
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-1 p-2">
         <div className="flex items-baseline justify-between gap-2">

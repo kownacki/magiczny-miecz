@@ -208,6 +208,21 @@ and then watching is the answer. `MAX_SEATS` lives in `modes.ts` beside the
 other thing about a table that is settled before anybody plays, because the
 lobby and the server were each keeping their own copy of the number.
 
+**Gracze.** One drawer, from the bar, listing every seat including your own:
+name, character, host, away or abandoned, the four numbers, and on expanding —
+the Karta Postaci, the Obszar, own-versus-total Miecz and Magia, and everything
+the seat is holding (5.2, 6.2 face up; 9.3 as a back). The host's two powers
+live there too: removing a player, and handing the role on.
+
+It sits **above** the modals, and so does the bar it opens from. A fight owns
+the game; it does not own the table. What a modal may cover is the board and
+the panels — those are the game, and the fight is the part of it happening now.
+What it may not cover is who is at the table, what cards exist, the join code
+or the way out: those answer questions asked *while* something is on screen,
+and several of them exist to get out of it. `layers.ts` holds the order and the
+reasoning; the console had already worked it out alone and everything else was
+muddled behind it — the Karty library opened *underneath* a fight.
+
 **W trakcie.** Seats are characters. *Leaving* abandons — the character plays
 on. *Being removed by the host* is different and really does take the character
 out, freeing the seat for somebody new. What it was carrying stays: the

@@ -37,7 +37,7 @@ import { CarriedCard, type Carried } from "./carry";
 import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
-import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
+import { TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
 import { turnSteps, windowsFor } from "@/lib/engine/turnWindows";
@@ -61,6 +61,7 @@ import { USE_VERB, askAbout, isUsable, usageOf } from "@/lib/engine/uses";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import type { Effect } from "@/lib/engine/cardScript";
 import { MAX_SEATS } from "@/lib/game/modes";
+import { PlayersDrawer } from "./players";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
@@ -279,6 +280,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [waved, setWaved] = useState<string[]>([]);
   /** Whether the "choose again" modal is open (4.4). */
   const [reborn, setReborn] = useState(false);
+  /** The roster, open over the right-hand column. */
+  const [players, setPlayers] = useState(false);
   /**
    * Something that happened to this character and has to be said out loud.
    *
@@ -1023,6 +1026,37 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {inspectingCard && (
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
+
+      {players && (
+        <PlayersDrawer
+          // Every seat, in seat order, this one included — see the note on the
+          // component about why the roster it replaces left you out.
+          seats={[...seats].sort((a, b) => a.seat_index - b.seat_index).map(asPublicSeat)}
+          characters={CHARACTERS}
+          activeSeatIndex={game.active_seat}
+          mySeatId={mySeat?.id ?? null}
+          amHost={mySeat?.is_host === true}
+          room={seats.length < MAX_SEATS}
+          busy={busy}
+          onClose={() => setPlayers(false)}
+          onInspect={setInspectingCard}
+          onClaim={mySeatIndex === null ? claimSeat : undefined}
+          onKick={
+            mySeat?.is_host ? (seat) => post("leave", { seatId: seat.id }) : undefined
+          }
+          onPassHost={
+            mySeat?.is_host ? (seat) => post("host", { seatId: seat.id }) : undefined
+          }
+          onJoin={
+            mySeatIndex === null
+              ? () => {
+                  setPlayers(false);
+                  join("");
+                }
+              : undefined
+          }
+        />
+      )}
       {/* Offered, never forced — 4.4 says *może*. Opened from the line on the
           dead character's card and closed back to it.
 
@@ -1393,6 +1427,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               )}
             </div>
             <div className="flex items-center gap-4 text-[11px]">
+              {/* Who is at the table, which is a question about the table and
+                  not about the turn — so it lives up here with the rest of
+                  them, and stays reachable while a fight is open. */}
+              <button
+                onClick={() => setPlayers(true)}
+                className="text-ochre/80 transition hover:text-ochre"
+              >
+                Gracze <span className="tnum text-muted">{seats.length}</span>
+              </button>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
               <button onClick={() => setLibraryOpen(true)} className="text-ochre/80 hover:text-ochre">
                 Karty
@@ -1685,20 +1728,19 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               </section>
             )}
 
-            <OtherPlayers
-              seats={others.map(asPublicSeat)}
-              activeSeatIndex={game.active_seat}
-              characters={CHARACTERS}
-              onInspect={setInspectingCard}
-              // Only offered to a device with no seat of its own; sitting at two
-              // at once is the bug that stranded a player early on.
-              onClaim={mySeatIndex === null ? claimSeat : undefined}
-              onKick={
-                mySeat?.is_host
-                  ? (seat) => post("leave", { seatId: seat.id })
-                  : undefined
-              }
-            />
+            {/* The roster moved into the drawer: every seat rather than everybody
+                else, reachable from the bar rather than by scrolling past your
+                own pack, and open while a fight is — see `players.tsx`. What
+                stays here is the one line that says it is there. */}
+            <button
+              onClick={() => setPlayers(true)}
+              className="mt-3 w-full rounded border border-edge/60 px-2 py-1.5 text-left text-[11px] text-muted transition hover:border-ochre hover:text-ink"
+            >
+              Gracze przy stole:{" "}
+              <span className="text-ink">
+                {others.map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`).join(", ") || "nikt jeszcze"}
+              </span>
+            </button>
           </div>
         }
       />
