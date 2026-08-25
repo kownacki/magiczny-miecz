@@ -325,10 +325,8 @@ the engine gets wrong or does not have, not a missing feature.
 - [x] Pack limit counts only unslotted Przedmioty in the variant
 - [x] Equip / unequip / swap, and refusing a card the place cannot take
 - [x] The slots drawn as a body beside the character card
-- [ ] **Miecz and Magia bonuses only from worn items** (`bonusFromHoldings`)
-- [ ] **Card abilities only from worn items** (`heldAbilities`)
-
-Until the last two, slotowy changes what you can carry and where it is drawn,
-but a Miecz in the pack still adds its point.
+- [x] Miecz and Magia bonuses only from worn cards (`inEffect`)
+- [x] Card abilities only from worn cards
+- [ ] Two weapons at once, for a character with the ability — none has one yet
 
 See **Wariant: ekwipunek slotowy** in [COVERAGE.md](COVERAGE.md).

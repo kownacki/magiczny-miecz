@@ -293,19 +293,25 @@ still the four of 5.4.
 | miejsce | co tam pasuje | kart |
 |---|---|---|
 | Głowa | Hełm | 1 |
-| Amulet | Talizman Ognia, Talizman Powietrza, Relikwiarz, Święty Graal, Kryształ Magów | 5 |
+| Amulet | Talizman Ognia, Talizman Powietrza | 2 |
 | Tułów | Zbroja | 1 |
-| Ręka główna | Miecz, Sztylet, Magiczny Miecz, Arondight, Excalibur, Miecz Chaosu, Święta Włócznia, Topór Światła i Ciemności, Srebrna Strzała, Różdżka Przeznaczenia, Różdżka Zaklęć | 11 |
-| Ręka pomocnicza | wszystko z ręki głównej, plus Tarcza, Tarcza Tolimana, Tarcza Boga Tolimana, Zwierciadło Zniszczenia, Kryształ Losu, Latarnia | 17 |
+| Ręka główna | Miecz, Sztylet, Magiczny Miecz, Arondight, Excalibur, Miecz Chaosu, Święta Włócznia, Topór Światła i Ciemności, Różdżka Przeznaczenia, Różdżka Zaklęć | 10 |
+| Ręka pomocnicza | Tarcza, Tarcza Tolimana, Tarcza Boga Tolimana | 3 |
 | Rękawice | Rękawice | 1 |
 | Pierścień | Pierścień Mocy | 1 |
 | Wierzchowiec | Koń, Muł, Zaprzęg, Wierzchowiec, Bojowy Rumak | 5 |
 | Sakwa | Magiczna Sakwa, Tajemna Sakwa | 2 |
 
-33 of the 45 Przedmioty are worn somewhere; the other 12 are carried and have no
-place. A weapon goes in either hand, a shield only in the off one — which is
-where the interesting decisions are, since four of the places have exactly one
-card in the whole box.
+26 of the 45 Przedmioty are worn somewhere; the other 19 are carried.
+
+**A weapon goes in the main hand only.** Two weapons at once is a character
+ability — a Barbarzyńca fighting with a sword in each hand — and no character in
+this box has one, so the rule waits until one does rather than being invented
+for nobody. The off hand takes shields.
+
+**Nothing is two-handed.** The two candidates by weapon type are the Święta
+Włócznia and the Topór Światła i Ciemności, and the art on both cards shows a
+single gauntleted hand on the haft. No card text mentions hands at all.
 
 **There is no belt and there are no boots.** Both were proposed and neither has
 a card anywhere: not among the 63 Przedmiot cards, not in the Wyposażenie, and
@@ -315,11 +321,21 @@ dropped rather than drawn empty all game. The five expansions are out of scope
 (CLAUDE.md) and their scans are untouched, so if a Pas or a pair of Butów turns
 up in one of them, `slots.ts` says what to add.
 
-**Everything with no place keeps working from the pack.** The Latarnia's
-neighbours the Kij i sznur and the Łódź, the Tabliczka, the Manuskrypt, the
-one-use fruits and potions, the Diament, the Szkatuła: carried and used rather
-than worn. Making only worn things work would leave a quarter of the deck inert
-the moment the variant was switched on.
+### Co działa gdzie
+
+**A card that has a place only works in it.** A sheathed Excalibur adds nothing.
+That is the whole of the variant, and it is why the places matter at all.
+
+**A card with no place goes on working from the pack.** The Latarnia, the Kij i
+sznur, the Łódź, the Tabliczka, the Manuskrypt, the fruits and potions, the
+Diament, the Szkatuła — and the relics and crystals whose effect is having them
+about you rather than wearing them anywhere in particular: the Graal, the
+Relikwiarz, the Kryształ Magów, the Kryształ Losu, the Zwierciadło Zniszczenia
+and the Srebrna Strzała. Otherwise a quarter of the deck would fall silent the
+moment the variant was switched on.
+
+Przyjaciele are never worn and always count, as do trophies, which are not
+carried at all but kept for trading (1.4).
 
 ### Co już działa, a co nie
 
@@ -331,11 +347,10 @@ the moment the variant was switched on.
 | refusing a card the place cannot take | ✅ a Tarcza will not go in the main hand |
 | the pack limit counts only what is *not* worn | ✅ `carriedCount`, `carryLimit` |
 | a Koń pulls nothing while it is in the pack | ✅ `carryLimit` |
+| Miecz and Magia bonuses only from worn cards | ✅ `inEffect`, `bonusFromHoldings` |
+| card abilities only from worn cards | ✅ `inEffect` at the ferry and the crossings |
 | drawn as a body beside the character card | ✅ `slot-panel.tsx` |
-| **Miecz and Magia bonuses only from worn items** | ❌ `bonusFromHoldings` still counts the pack |
-| **card abilities only from worn items** | ❌ `heldAbilities` still reads the pack |
+| two weapons at once, for a character that can | ❌ no character in the box has the ability |
 
-The last two are the rules half of the variant and are not done: a Miecz in the
-pack still adds its point. Until they are, slotowy changes what you can carry
-and where it is drawn, but not what it is worth.
-
+Klasyczny is untouched by all of it: `inEffect` returns everything, which is
+what the rulebook says (5.4).

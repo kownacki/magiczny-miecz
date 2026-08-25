@@ -4,6 +4,8 @@ import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { bonusOf } from "./cards";
 import { ABILITIES } from "./abilities";
+import type { EqMode } from "./slots";
+import { isWearable } from "./slots";
 import type { Holding } from "./state";
 
 const EVENTS = events as EventCard[];
@@ -72,10 +74,36 @@ export interface HeldTotals {
  * every card is transcribed, so an unknown card must be inert rather than a
  * crash.
  */
-export function bonusFromHoldings(holdings: readonly Holding[]): HeldTotals {
+/**
+ * The cards that are actually doing something.
+ *
+ * In klasyczny play, all of them: the rulebook has one kind of possession and
+ * a Miecz in your pack is a Miecz (5.4).
+ *
+ * In slotowy, a card that *has* a place only works when it is in it — that is
+ * the whole of the variant — while a card with no place goes on working from
+ * the pack, because otherwise a quarter of the deck would fall silent. So a
+ * sheathed Excalibur adds nothing and a Latarnia in the pack still lights the
+ * Lodowy Las.
+ *
+ * Friends are never worn and always count. So are trophies, which are not
+ * carried at all but kept for trading (1.4).
+ */
+export function inEffect<T extends { cardId: string; slot?: string | null }>(
+  holdings: readonly T[],
+  eqMode: EqMode,
+): T[] {
+  if (eqMode === "klasyczny") return [...holdings];
+  return holdings.filter((held) => held.slot != null || !isWearable(held.cardId));
+}
+
+export function bonusFromHoldings(
+  holdings: readonly Holding[],
+  eqMode: EqMode = "klasyczny",
+): HeldTotals {
   let miecz = 0;
   let magia = 0;
-  for (const holding of holdings) {
+  for (const holding of inEffect(holdings, eqMode)) {
     if (holding.kind !== "item" && holding.kind !== "friend") continue;
     const bonus = BONUS_BY_ID.get(holding.cardId);
     if (!bonus) continue;

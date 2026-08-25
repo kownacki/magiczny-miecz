@@ -50,30 +50,27 @@ export const SLOT_LABEL: Record<Slot, string> = {
   sakwa: "Sakwa",
 };
 
-/** Both hands, for the cards that may go in either. */
-const OBIE_RECE = ["reka-glowna", "reka-pomocnicza"] as const;
-
 /**
- * Where each Przedmiot may be worn.
+ * Where each Przedmiot is worn.
  *
- * A list rather than a single place, because a Miecz goes in either hand and a
- * Tarcza only in the off one — which is the whole of the interesting decision
- * in this variant, since almost everything else has exactly one card competing
- * for its place.
+ * A list rather than a single place so a card can name more than one, but in
+ * the base game none does: a weapon goes in the main hand, a shield in the off
+ * hand, and that is that. Two weapons at once is a character ability — a
+ * Barbarzyńca who fights with a sword in each hand — and no character in this
+ * box has one, so the rule waits until one does rather than being invented for
+ * nobody.
  *
- * Anything absent has no place on the body and lives in the pack, which is most
- * of the box: the Latarnia's neighbours the Kij i sznur and the Łódź, the
- * Tabliczka and the Manuskrypt, the one-use fruits and potions, the Diament and
- * the Szkatuła. They are things a character carries and uses, not things it
- * wears, and in slotted play they go on working from the pack exactly as they
- * always did — otherwise half the deck would fall inert the moment the variant
- * was switched on.
+ * **Nothing here is two-handed.** The two candidates by weapon type are the
+ * Święta Włócznia and the Topór Światła i Ciemności, and the art on both cards
+ * shows a single gauntleted hand on the haft. No card text mentions hands.
  *
- * These are judgement about a variant the rulebook never mentions, so they all
- * live here where they can be argued with in one place. Three are worth saying
- * out loud: the Latarnia is held up rather than worn and so costs you a shield;
- * the Srebrna Strzała is an arrow and is held; and the Kryształ Losu is used in
- * a fight rather than carried through one.
+ * Anything absent has no place on the body, lives in the pack — and, unlike the
+ * worn things, goes on working from there. That is most of the box: the
+ * Latarnia, the Kij i sznur, the Łódź, the Tabliczka and the Manuskrypt, the
+ * one-use fruits and potions, the Diament and the Szkatuła, and the relics and
+ * crystals whose whole effect is having them about you: the Graal, the
+ * Relikwiarz, the Kryształ Magów, the Kryształ Losu, the Zwierciadło
+ * Zniszczenia and the Srebrna Strzała.
  */
 export const SLOT_OF: Record<string, readonly Slot[]> = {
   // Głowa, tułów, ręce, palec — the four the box has exactly one card for.
@@ -82,33 +79,26 @@ export const SLOT_OF: Record<string, readonly Slot[]> = {
   rekawice: ["rekawice"],
   "pierscien-mocy": ["pierscien"],
 
-  // Amulet: talizmany i relikwie.
+  // Amulet: the two talizmany, the only things in the box worn round a neck.
   "talizman-ognia": ["amulet"],
   "talizman-powietrza": ["amulet"],
-  relikwiarz: ["amulet"],
-  "swiety-graal": ["amulet"],
-  "krysztal-magow": ["amulet"],
 
-  // Broń i różdżki — either hand.
-  miecz: OBIE_RECE,
-  sztylet: OBIE_RECE,
-  "magiczny-miecz": OBIE_RECE,
-  arondight: OBIE_RECE,
-  excalibur: OBIE_RECE,
-  "miecz-chaosu": OBIE_RECE,
-  "swieta-wlocznia": OBIE_RECE,
-  "topor-swiatla-i-ciemnosci": OBIE_RECE,
-  "srebrna-strzala": OBIE_RECE,
-  "rozdzka-przeznaczenia": OBIE_RECE,
-  "rozdzka-zaklec": OBIE_RECE,
+  // Broń i różdżki — ręka główna.
+  miecz: ["reka-glowna"],
+  sztylet: ["reka-glowna"],
+  "magiczny-miecz": ["reka-glowna"],
+  arondight: ["reka-glowna"],
+  excalibur: ["reka-glowna"],
+  "miecz-chaosu": ["reka-glowna"],
+  "swieta-wlocznia": ["reka-glowna"],
+  "topor-swiatla-i-ciemnosci": ["reka-glowna"],
+  "rozdzka-przeznaczenia": ["reka-glowna"],
+  "rozdzka-zaklec": ["reka-glowna"],
 
-  // Tarcze i to, co się trzyma w drugiej ręce — off hand only.
+  // Tarcze — ręka pomocnicza.
   tarcza: ["reka-pomocnicza"],
   "tarcza-tolimana": ["reka-pomocnicza"],
   "tarcza-boga-tolimana": ["reka-pomocnicza"],
-  "zwierciadlo-zniszczenia": ["reka-pomocnicza"],
-  "krysztal-losu": ["reka-pomocnicza"],
-  latarnia: ["reka-pomocnicza"],
 
   // Wierzchowce i sakwy.
   kon: ["wierzchowiec"],

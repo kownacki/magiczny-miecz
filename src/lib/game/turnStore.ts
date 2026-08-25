@@ -1,7 +1,7 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
 import { db } from "@/lib/supabase";
-import { GAME_COLUMNS, fieldCardsFor } from "./store";
+import { GAME_COLUMNS, fieldCardsFor, type HoldingRow } from "./store";
 import {
   FERRY_TOLL,
   FIELDS,
@@ -101,12 +101,38 @@ function decksOf(game: { deck: unknown }): Decks {
   if (!stored?.events) return freshDecks();
   return { events: stored.events, spells: stored.spells ?? buildDeck(SPELLS.map((c) => cardRef(c.source)), shuffle) };
 }
-import { fitsIn, type Slot } from "@/lib/engine/slots";
+import { fitsIn, type EqMode, type Slot } from "@/lib/engine/slots";
+import type { Holding } from "@/lib/engine/state";
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
-import { bonusFromHoldings } from "@/lib/engine/holdings";
+import { bonusFromHoldings, inEffect } from "@/lib/engine/holdings";
 import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
 import { HEAL_CEILING, heal, mayHold, spellCapacity } from "@/lib/engine/derive";
 import type { Seat } from "@/lib/engine/state";
+
+/**
+ * A stored row as the engine wants it — including where it is worn, which every
+ * one of these call sites used to drop on the floor while building the same
+ * object by hand.
+ */
+/**
+ * The table's equipment variant, as the engine's type.
+ *
+ * A column rather than an enum in here, so this is where the string becomes
+ * something the rules can switch on — and where an unrecognised value falls
+ * back to the game as printed rather than to a house rule.
+ */
+function eq(game: { eq_mode: string }): EqMode {
+  return game.eq_mode === "slotowy" ? "slotowy" : "klasyczny";
+}
+
+function asHolding(row: HoldingRow): Holding {
+  return {
+    cardId: row.card_id,
+    kind: row.kind,
+    face: row.face,
+    slot: (row.slot ?? null) as Slot | null,
+  };
+}
 
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
   const { data, error } = await db
@@ -455,8 +481,8 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
   const holdings = await holdingsFor(gameId);
   const mine = holdings
     .filter((h) => h.seat_id === seatId)
-    .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
-  const bonus = bonusFromHoldings(mine);
+    .map(asHolding);
+  const bonus = bonusFromHoldings(mine, eq(game));
   const capacity = spellCapacity(seat.magia_own + bonus.magia);
 
   if ((held.data?.length ?? 0) >= capacity) {
@@ -721,7 +747,7 @@ export async function takeCard(
     const holdings = await holdingsFor(gameId);
     const mine = holdings
       .filter((h) => h.seat_id === seatId)
-      .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
+      .map(asHolding);
     if (carriedCount(mine) >= carryLimit(mine)) {
       throw new Error(
         `Postać może nieść najwyżej ${BASE_CARRY_LIMIT} Przedmioty (5.4). Odrzuć coś najpierw.`,
@@ -1106,8 +1132,8 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
   const totalsOf = (seatId: string, own: { miecz: number; magia: number }) => {
     const mine = holdings
       .filter((h) => h.seat_id === seatId)
-      .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
-    const bonus = bonusFromHoldings(mine);
+      .map(asHolding);
+    const bonus = bonusFromHoldings(mine, eq(game));
     return { miecz: own.miecz + bonus.miecz, magia: own.magia + bonus.magia };
   };
 
@@ -1148,9 +1174,7 @@ export async function fightGuardian(gameId: string): Promise<void> {
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
 
   const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(
-    holdings.map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face })),
-  );
+  const bonus = bonusFromHoldings(holdings.map(asHolding), eq(game));
   const totals = {
     miecz: seat.miecz_own + bonus.miecz,
     magia: seat.magia_own + bonus.magia,
@@ -1233,9 +1257,10 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
     // będziesz musiał płacić 1 Sztuki Złota za Przeprawę".
     const abilities = [
       ...heldAbilities(
-        (await holdingsFor(gameId))
-          .filter((h) => h.seat_id === seat.id)
-          .map((h) => h.card_id),
+        inEffect(
+          (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id).map(asHolding),
+          eq(game),
+        ).map((h) => h.cardId),
       ),
       // 8.2: a character's own powers sit alongside what it is carrying, and
       // override the general rules where they disagree.
@@ -1445,7 +1470,7 @@ export async function crossRing(
     // still overrides, which is what die_source is for.
     const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
     const abilities = [
-      ...heldAbilities(held.map((h) => h.card_id)),
+      ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
       ...abilitiesOfCharacter(seat.character_id),
     ];
     // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
@@ -1460,9 +1485,7 @@ export async function crossRing(
         throw new Error("Kostka daje wynik od 1 do 6.");
       }
     }
-    const bonus = bonusFromHoldings(
-      held.map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face })),
-    );
+    const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
     magia = seat.magia_own + bonus.magia;
     dice = rolled;
     outcome = trzesawiskaOutcome(rolled, magia);
@@ -1553,8 +1576,8 @@ export async function fightBeast(
 
   const holdings = (await holdingsFor(gameId))
     .filter((h) => h.seat_id === seat.id)
-    .map((h) => ({ cardId: h.card_id, kind: h.kind, face: h.face }));
-  const bonus = bonusFromHoldings(holdings);
+    .map(asHolding);
+  const bonus = bonusFromHoldings(holdings, eq(game));
 
   const kind = beastCombatKind(kindDie);
   const beastTotal = beastStrength(strengthDie);

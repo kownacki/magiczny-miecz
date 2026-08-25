@@ -79,3 +79,25 @@ describe("concealment (9.3, 5.2, 6.2)", () => {
     expect(seen.hiddenCount).toBe(0);
   });
 });
+
+describe("what counts, in each equipment variant", () => {
+  const miecz = { cardId: "miecz", kind: "item", face: "open" } as const;
+  const graal = { cardId: "swiety-graal", kind: "item", face: "open" } as const;
+
+  it("counts everything in klasyczny play, worn or not", () => {
+    // The rulebook has one kind of possession: a Miecz in the pack is a Miecz.
+    expect(bonusFromHoldings([{ ...miecz, slot: null }]).miecz).toBe(1);
+    expect(bonusFromHoldings([{ ...miecz, slot: "reka-glowna" }]).miecz).toBe(1);
+  });
+
+  it("counts a wearable card in slotowy only where it is worn", () => {
+    expect(bonusFromHoldings([{ ...miecz, slot: null }], "slotowy").miecz).toBe(0);
+    expect(bonusFromHoldings([{ ...miecz, slot: "reka-glowna" }], "slotowy").miecz).toBe(1);
+  });
+
+  it("still counts a card with nowhere to be worn", () => {
+    // The Graal has no place on the body and works from the pack; otherwise a
+    // quarter of the deck would fall silent the moment the variant went on.
+    expect(bonusFromHoldings([{ ...graal, slot: null }], "slotowy").magia).toBe(1);
+  });
+});

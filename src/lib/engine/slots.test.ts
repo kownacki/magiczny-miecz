@@ -34,14 +34,41 @@ describe("slotted equipment", () => {
     expect(slotsFor("pierscien-mocy")).toEqual(["pierscien"]);
   });
 
-  it("takes a weapon in either hand and a shield only in the off one", () => {
+  it("takes a weapon in the main hand and a shield in the off one, and neither in the other", () => {
+    // A weapon in each hand is a character ability nobody in this box has, so
+    // until somebody does, a sword goes where a sword goes.
     for (const weapon of ["miecz", "excalibur", "swieta-wlocznia", "rozdzka-zaklec"]) {
       expect(fitsIn(weapon, "reka-glowna")).toBe(true);
-      expect(fitsIn(weapon, "reka-pomocnicza")).toBe(true);
+      expect(fitsIn(weapon, "reka-pomocnicza")).toBe(false);
     }
-    for (const offhand of ["tarcza", "tarcza-tolimana", "zwierciadlo-zniszczenia", "latarnia"]) {
-      expect(fitsIn(offhand, "reka-glowna")).toBe(false);
-      expect(fitsIn(offhand, "reka-pomocnicza")).toBe(true);
+    for (const shield of ["tarcza", "tarcza-tolimana", "tarcza-boga-tolimana"]) {
+      expect(fitsIn(shield, "reka-glowna")).toBe(false);
+      expect(fitsIn(shield, "reka-pomocnicza")).toBe(true);
+    }
+  });
+
+  it("leaves the relics and the crystals in the pack, where they work", () => {
+    // Their effect is having them about you, not wearing them anywhere in
+    // particular — and the box has no place that would mean.
+    for (const id of [
+      "swiety-graal",
+      "relikwiarz",
+      "krysztal-magow",
+      "krysztal-losu",
+      "zwierciadlo-zniszczenia",
+      "srebrna-strzala",
+      "latarnia",
+    ]) {
+      expect(ITEM_IDS.has(id)).toBe(true);
+      expect(isWearable(id)).toBe(false);
+    }
+  });
+
+  it("has nothing that takes both hands", () => {
+    // Checked against the art: the Włócznia and the Topór are the only
+    // candidates by weapon type and both are drawn in one gauntleted hand.
+    for (const id of Object.keys(SLOT_OF)) {
+      expect(slotsFor(id).length).toBe(1);
     }
   });
 
@@ -80,7 +107,7 @@ describe("slotted equipment", () => {
     // newly transcribed card shows up here as a number that moved.
     const worn = [...ITEM_IDS].filter(isWearable);
     expect(ITEM_IDS.size).toBe(45);
-    expect(worn).toHaveLength(33);
-    expect(ITEM_IDS.size - worn.length).toBe(12);
+    expect(worn).toHaveLength(26);
+    expect(ITEM_IDS.size - worn.length).toBe(19);
   });
 });

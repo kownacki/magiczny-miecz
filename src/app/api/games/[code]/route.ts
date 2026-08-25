@@ -74,7 +74,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       // player's device at all. Totals are still reported in full, because a
       // character's strength is public even when the source of it is not.
       const seen = visibleTo(own, { own: mine?.id === seat.id, mode: game.mode });
-      const bonus = bonusFromHoldings(own);
+      // In slotowy a card only counts where it is worn, so the totals every
+      // device reads are computed from what is on the character, not from the
+      // pack. See `inEffect`.
+      const bonus = bonusFromHoldings(own, game.eq_mode === "slotowy" ? "slotowy" : "klasyczny");
 
       const lastSeen = seat.seen_at ? Date.parse(seat.seen_at) : 0;
       return {
