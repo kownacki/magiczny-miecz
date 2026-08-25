@@ -174,10 +174,17 @@ export function Lobby({
             Karty
           </button>
           {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
-          {/* Always on screen for the host, disabled with the reason on it.
-              A button that only appears once the conditions are met leaves
+          {/* Anybody at the table may start it, not only the host.
+              Everybody with a character has already said they are ready — that
+              is what the button waits for — so by the time it lights up there
+              is nothing left for a host to decide, and making four people wait
+              on a fifth to press a button they are all entitled to press is a
+              rule with no work to do.
+
+              Always on screen, disabled with the reason written on it. A
+              button that only appears once the conditions are met leaves
               everybody hunting for it and nobody knowing what is missing. */}
-          {canAdminister && (
+          {me && (
             <button
               onClick={onStart}
               disabled={busy || chosen.length < 2 || waitingOn.length > 0}
@@ -614,8 +621,11 @@ function SeatSlot({
             className="h-full w-full object-contain"
           />
         ) : (
+          // The empty card says what is happening; the line below stays quiet
+          // until there is something else to report. Saying it twice, once in
+          // the box and once under it, was one sentence broken in half.
           <span className="flex h-full items-center justify-center p-2 text-center text-[12px] leading-snug text-muted">
-            postać jeszcze niewybrana
+            wybiera postać…
           </span>
         )}
       </button>
@@ -643,13 +653,7 @@ function SeatSlot({
             seat.ready ? "text-verdigris" : "text-muted/60"
           }`}
         >
-          {seat.abandoned
-            ? ""
-            : !seat.characterId
-              ? "wybiera postać…"
-              : seat.ready
-                ? "gotów ✓"
-                : "czeka"}
+          {seat.abandoned || !seat.characterId ? "" : seat.ready ? "gotów ✓" : "czeka"}
         </p>
       )}
 

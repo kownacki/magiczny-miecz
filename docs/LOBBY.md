@@ -35,12 +35,19 @@ behind.
 | remove a player | in the lobby, and during play |
 | choose a character *for another seat* | companion mode, for players with no device |
 | add a player by hand | companion mode only |
-| start the game | when at least two characters are chosen |
 | hand the host role to another player | any time |
 
 ### What any player may do
 
-Choose their own character, say they are ready, change the name
+**Start the game**, once at least two characters are chosen and everybody
+holding one has said they are ready. This is not a host power. Readiness is
+already unanimous consent — it is exactly what the button waits for — so by the
+time it can be pressed there is nothing left for a host to decide, and making
+four people wait on a fifth to press a button they are all entitled to press is
+a rule with no work to do. The server enforces both conditions; the button
+carries whichever one is missing as its label.
+
+And: choose their own character, say they are ready, change the name
 they are shown under, leave, take over an abandoned seat, adjust their own
 tracked values, and — during play — everything the rules give
 their character. Corrections to *other* seats' points stay open to everyone
