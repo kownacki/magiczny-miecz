@@ -77,7 +77,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   // to press it. Which seat may actually flee is decided by `escape` itself,
   // against the fight in progress, rather than guessed at from the action name.
   const isFlight = body.action === "escape";
-  if (!isActiveSeat && !isTableScreen && !isSpellWindow && !isFlight) {
+  /**
+   * Nobody is playing, so anybody may move the game on.
+   *
+   * A table can arrive here with no active seat — every remaining character
+   * owing a lost turn is the way, and Burza Siedmiu Słońc causes it outright.
+   * `finishTurn` works through that now, but a game already sitting in the
+   * state cannot reach `finishTurn` at all: every action here is gated on being
+   * the active seat, and there is no active seat to be.
+   */
+  const isStuck = game.active_seat === null && body.action === "end";
+  if (!isActiveSeat && !isTableScreen && !isSpellWindow && !isFlight && !isStuck) {
     return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
   }
 

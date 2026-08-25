@@ -450,3 +450,35 @@ describe("fighting a guardian", () => {
     expect(phase.fight.guardian).toEqual({ kind: "most", entrance: ruins });
   });
 });
+
+describe("a table where everybody owes a turn", () => {
+  const seat = (index: number, turnsLost = 0) => ({
+    index,
+    eliminated: false,
+    turnsLost,
+    stoneUntilTurn: null,
+  });
+
+  it("finds nobody when every seat is waiting", () => {
+    // Burza Siedmiu Słońc does exactly this: "Wszystkie Postacie tracą 1 turę".
+    // `nextSeat` walks the table once, so it reports nobody — and it is the
+    // caller's job to pass again rather than to stop the game for good.
+    const { seat: next, skipped } = nextSeat([seat(0, 1), seat(1, 1)], 0, 5);
+    expect(next).toBeNull();
+    expect(skipped).toEqual([1, 0]);
+  });
+
+  it("finds somebody once those turns have been spent", () => {
+    // Which is what the second pass looks like: one taken off each.
+    const { seat: next } = nextSeat([seat(0, 0), seat(1, 0)], 0, 5);
+    expect(next).toBe(1);
+  });
+
+  it("still reports nobody when what is left is stone, which no pass helps", () => {
+    // 20.1 measures Kamień in turn numbers, so it comes back as the counter
+    // moves rather than by being passed over.
+    const stone = { index: 0, eliminated: false, turnsLost: 0, stoneUntilTurn: 9 };
+    expect(nextSeat([stone], 0, 5).seat).toBeNull();
+    expect(nextSeat([stone], 0, 9).seat).toBe(0);
+  });
+});

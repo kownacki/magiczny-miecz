@@ -2953,7 +2953,10 @@ export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
 export async function finishTurn(gameId: string): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
+  // Looked up leniently rather than through `activeSeatOf`, which throws: a
+  // table with nobody to play is exactly the state this has to be able to work
+  // its way out of, and refusing to run is what kept it stuck.
+  const seat = seats.find((row) => row.seat_index === game.active_seat) ?? null;
 
   // Counted in the holder's OWN turns, so this is the moment: "na 1 turę" on a
   // card means one of yours, and measuring it in rounds would make an Eliksir
@@ -2980,15 +2983,68 @@ export async function finishTurn(gameId: string): Promise<void> {
       stoneUntilTurn: s.stone_until_turn,
     }));
 
-  const { seat: next, skipped } = nextSeat(order, game.active_seat, game.turn);
-  for (const index of skipped) {
-    const skippedSeat = seats.find((s) => s.seat_index === index);
-    if (skippedSeat && skippedSeat.turns_lost > 0) {
-      await db
-        .from("seats")
-        .update({ turns_lost: skippedSeat.turns_lost - 1 })
-        .eq("id", skippedSeat.id);
+  /**
+   * Keep passing until somebody can actually play.
+   *
+   * `nextSeat` walks the table once. If every seat that is left owes a lost
+   * turn — which Burza Siedmiu Słońc causes outright, "Wszystkie Postacie tracą
+   * 1 turę" — it comes back with nobody, and the game used to stop there for
+   * good: `active_seat` went null, and every way of moving the game on needs an
+   * active seat to press it, including the one that spends those lost turns.
+   *
+   * So the pass repeats. Each one spends a turn from everybody it skips, so it
+   * cannot run forever — the loop is bounded by the largest `turns_lost` at the
+   * table, and the guard below is only there so a future bug cannot hang a
+   * request.
+   *
+   * Stone is not spent this way and does not need to be: 20.1 measures it in
+   * turn numbers, so it comes back on its own as the counter moves.
+   */
+  const spent = new Map<number, number>();
+  const owedBy = (index: number) =>
+    (order.find((row) => row.index === index)?.turnsLost ?? 0) - (spent.get(index) ?? 0);
+
+  let next: number | null = null;
+  let skipped: number[] = [];
+  let asOfTurn = game.turn;
+
+  // The guard is a backstop, not the exit: each pass spends a turn from
+  // everybody it skips, so the loop is bounded by the largest `turns_lost` at
+  // the table. It is here so a future bug cannot hang a request.
+  for (let pass = 0; pass < 64; pass++) {
+    const attempt = nextSeat(
+      order.map((row) => ({ ...row, turnsLost: owedBy(row.index) })),
+      pass === 0 ? game.active_seat : next,
+      asOfTurn,
+    );
+    next = attempt.seat;
+    skipped = attempt.skipped;
+
+    // Everybody passed over on this round spends one, whether or not the round
+    // found somebody after them.
+    let anySpent = false;
+    for (const index of skipped) {
+      if (owedBy(index) > 0) {
+        spent.set(index, (spent.get(index) ?? 0) + 1);
+        anySpent = true;
+      }
     }
+
+    if (next !== null) break;
+    // Nobody, and nobody is merely waiting either: what is left is stone or
+    // eliminated. 20.1 measures stone in turn numbers, so it comes back on its
+    // own as the counter moves, and passing again would achieve nothing.
+    if (!anySpent) break;
+    asOfTurn += 1;
+  }
+
+  for (const [index, count] of spent) {
+    const seatRow = seats.find((s) => s.seat_index === index);
+    if (!seatRow) continue;
+    await db
+      .from("seats")
+      .update({ turns_lost: Math.max(0, seatRow.turns_lost - count) })
+      .eq("id", seatRow.id);
   }
 
   // The turn counter advances when play comes back round to or past the first
@@ -3005,7 +3061,9 @@ export async function finishTurn(gameId: string): Promise<void> {
   // `wrapped` and the number it wrapped to, because the round counter is not
   // derivable from the row: the journal reads entries in order and has no way
   // to know that this particular pass was the one that came back round.
-  await journal(gameId, seat.id, game.turn, "koniec-tury", {
+  // `seat` is absent when the table had nobody to play — see `isStuck` in the
+  // turn route. The pass still happened and is still worth recording.
+  await journal(gameId, seat?.id ?? null, game.turn, "koniec-tury", {
     next,
     skipped,
     wrapped,
