@@ -746,6 +746,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <CardLibrary
           eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
           nature={asNature(mySeat?.nature)}
+          // Testing shortcuts, and only while developing. The route refuses
+          // them in production too — this just stops the buttons being drawn
+          // somewhere they could never work.
+          {...(process.env.NODE_ENV === "production" || mySeatIndex === null
+            ? {}
+            : {
+                onGrant: (cardId: string) => post("debug", { action: "grant", cardId }),
+                onTeleport: (fieldId: FieldId) => post("debug", { action: "teleport", fieldId }),
+              })}
           onClose={() => setLibraryOpen(false)}
         />
       )}

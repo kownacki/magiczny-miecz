@@ -6,6 +6,7 @@ import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import characters from "@/data/characters.json";
 import type { EqMode } from "@/lib/engine/slots";
+import { FIELDS, type FieldId } from "@/lib/engine/board";
 import type { Nature } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
@@ -25,7 +26,22 @@ import { CardDetail, CardTile, type TileCard } from "./card-tile";
  * rulebook lets you do, and it is not information anybody has to be protected
  * from — what is secret is *who holds which*, and that is not shown here.
  */
-type Shelf = "zaklecia" | "wyposazenie" | "postacie" | CardClass;
+type Shelf = "zaklecia" | "wyposazenie" | "postacie" | "obszary" | CardClass;
+
+/**
+ * Shelves whose cards a hand can actually contain.
+ *
+ * A Wróg is a trophy you have to beat; Spotkania, Nieznajomi and Miejsca are
+ * resolved and set aside. Offering to "take" one would put a row in the
+ * holdings table that no rule knows how to read, so the button is only where it
+ * means something.
+ */
+const TAKEABLE: ReadonlySet<Shelf> = new Set<Shelf>([
+  "zaklecia",
+  "wyposazenie",
+  "przedmiot",
+  "przyjaciel",
+]);
 
 const SHELVES: { key: Shelf; label: string }[] = [
   { key: "zaklecia", label: "Zaklęcia" },
@@ -39,10 +55,15 @@ const SHELVES: { key: Shelf; label: string }[] = [
   { key: "miejsce", label: "Miejsca" },
 ];
 
+/** Only while testing: the board as a list, to stand on any of it at once. */
+const FIELD_SHELF: { key: Shelf; label: string } = { key: "obszary", label: "Obszary" };
+
 /** Deduplicated, because the deck holds several copies of many cards on purpose. */
 function shelfCards(shelf: Shelf): TileCard[] {
   const unique = new Map<string, TileCard>();
+  const holdable = TAKEABLE.has(shelf);
   const add = (card: TileCard) => {
+    card.holdable = holdable;
     if (!unique.has(card.cardId)) unique.set(card.cardId, card);
   };
 
@@ -96,8 +117,19 @@ export function CardLibrary({
   onClose,
   eqMode = "klasyczny",
   nature = null,
+  onGrant,
+  onTeleport,
 }: {
   onClose: () => void;
+  /**
+   * Testing only, and absent in a deployed build.
+   *
+   * Reaching a fight on the Kamienny Most legitimately is twenty minutes of
+   * play; these hand you the card and the square so the thing being tested can
+   * be tested.
+   */
+  onGrant?: (cardId: string) => void;
+  onTeleport?: (fieldId: FieldId) => void;
   /** The reader's own Natura, so a 5.3 restriction says whether it shuts them out. */
   nature?: Nature | null;
   /**
@@ -157,7 +189,7 @@ export function CardLibrary({
       </header>
 
       <nav className="flex flex-wrap gap-1 border-b border-edge px-4 py-2">
-        {SHELVES.map((entry) => (
+        {[...SHELVES, ...(onTeleport ? [FIELD_SHELF] : [])].map((entry) => (
           <button
             key={entry.key}
             onClick={() => setShelf(entry.key)}
@@ -178,6 +210,21 @@ export function CardLibrary({
           {searching ? " — szukam w całej talii, nie tylko na tej półce." : null}
           {searching ? null : " — pokazane są pojedyncze wzory, nie wszystkie egzemplarze z talii."}
         </p>
+        {shelf === "obszary" && onTeleport ? (
+          <div className="flex flex-wrap gap-2">
+            {[...FIELDS.values()].map((field) => (
+              <button
+                key={field.id}
+                onClick={() => onTeleport(field.id as FieldId)}
+                title={`Stań na: ${field.name}`}
+                className="rounded border border-edge bg-panel px-2 py-1 text-[11px] text-ink transition hover:border-ochre"
+              >
+                {field.name}
+                <span className="ml-1 text-muted/60">{field.region}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
         <div className="flex flex-wrap gap-3">
           {cards.map((card) => (
             <CardTile
@@ -186,9 +233,19 @@ export function CardLibrary({
               eqMode={eqMode}
               nature={nature}
               onClick={() => setOpen(card)}
-            />
+            >
+              {onGrant && card.holdable && (
+                <button
+                  onClick={() => onGrant(card.cardId)}
+                  className="text-[9px] text-ochre/80 underline transition hover:text-ochre"
+                >
+                  weź (test)
+                </button>
+              )}
+            </CardTile>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

@@ -35,6 +35,8 @@ export interface TileCard {
    * registry hands back the wrong picture rather than none.
    */
   character?: boolean;
+  /** Could a hand contain this? Only Przedmioty, Przyjaciele and Zaklęcia can. */
+  holdable?: boolean;
 }
 
 export function CardTile({

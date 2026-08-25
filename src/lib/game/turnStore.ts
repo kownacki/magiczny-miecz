@@ -917,12 +917,8 @@ export async function resolveFight(gameId: string): Promise<void> {
       // door. Beating one lets the character walk on next turn; losing costs a
       // point of Życie and it is still there. Either way the character does not
       // move — the bridge is one field a turn and this turn was the fight.
-      if (outcome === "przegrana") {
-        await db
-          .from("seats")
-          .update({ zycie: Math.max(0, seat.zycie - 1) })
-          .eq("id", seat.id);
-      }
+      // The life is spent after the line below, so the journal reads in the
+      // order it happened: beaten by the creature, then dead of it.
     } else {
       await settleCrossing(gameId, fight.guardian.crossing, outcome);
     }
@@ -931,6 +927,9 @@ export async function resolveFight(gameId: string): Promise<void> {
       outcome,
       enemyTotal: fight.enemyTotal,
     });
+    if (fight.guardian.kind === "most-pole" && outcome === "przegrana") {
+      await spendLife(gameId, seat, 1);
+    }
     await bumpRevision(gameId);
     return;
   }
@@ -951,11 +950,7 @@ export async function resolveFight(gameId: string): Promise<void> {
     // widest of them rather than three chances. 18.2b takes the possibility
     // away entirely in a magical fight, which `spoilsFor` already knows.
     const saved = await shieldSaves(gameId, loserSeat, fight.kind, game.turn);
-    if (!saved) {
-      const left = Math.max(0, loserSeat.zycie - 1);
-      await db.from("seats").update({ zycie: left }).eq("id", loserSeat.id);
-      if (left === 0) await killSeat(gameId, loserSeat.id);
-    }
+    if (!saved) await spendLife(gameId, loserSeat, 1);
   }
 
   await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
@@ -1284,6 +1279,27 @@ export async function adjust(
 
   if (stat === "zycie" && next === 0 && !seat.eliminated) await killSeat(gameId, seatId);
   await bumpRevision(gameId);
+}
+
+/**
+ * Takes Życie off a character, and buries it if that was the last of it (4.4).
+ *
+ * The one place that does this, because it was six places and three of them
+ * forgot the second half. Losing to the Demon Zagłady, playing badly against
+ * Śmierć and being bitten by Cerber all wrote the new number straight to the
+ * row — so a character could reach zero on the Kamienny Most and simply carry
+ * on, alive at nothing, taking turns nobody could explain and never appearing
+ * in the journal as having died. Those are the three fields where a character
+ * is *most* likely to die, which is how it stayed unnoticed: the deaths that
+ * did work were the ones anybody tests.
+ *
+ * Returns what is left, because most callers want to say it.
+ */
+async function spendLife(gameId: string, seat: SeatRow, points: number): Promise<number> {
+  const left = Math.max(0, seat.zycie - points);
+  await db.from("seats").update({ zycie: left }).eq("id", seat.id);
+  if (left === 0 && !seat.eliminated) await killSeat(gameId, seat.id);
+  return left;
 }
 
 /**
@@ -1768,11 +1784,7 @@ async function settleCrossing(
   const seat = activeSeatOf(seats, game);
 
   if (outcome !== "wygrana") {
-    if (outcome === "przegrana") {
-      const left = Math.max(0, seat.zycie - 1);
-      await db.from("seats").update({ zycie: left }).eq("id", seat.id);
-      if (left === 0) await killSeat(gameId, seat.id);
-    }
+    if (outcome === "przegrana") await spendLife(gameId, seat, 1);
     // The turn state is left where it was: still standing on the crossing field,
     // free to try again next turn.
     await journal(gameId, seat.id, game.turn, "przeprawa-nieudana", {
@@ -2045,12 +2057,8 @@ export async function fightBeast(
     });
   } else if (result.outcome === "przegrana") {
     // Two points, not one (14.7).
-    await db
-      .from("seats")
-      .update({ zycie: Math.max(0, seat.zycie - 2) })
-      .eq("id", seat.id);
     await journal(gameId, seat.id, game.turn, "bestia-porazka", { kind, beastTotal });
-    if (seat.zycie - 2 <= 0) await killSeat(gameId, seat.id);
+    await spendLife(gameId, seat, 2);
   } else {
     await journal(gameId, seat.id, game.turn, "bestia-remis", { kind, beastTotal });
   }
@@ -2326,14 +2334,12 @@ export async function resolveBridgeOrdeal(
     const mine = await roll(2, "gra-ze-smiercia");
     const deaths = Array.from({ length: 2 }, () => 1 + Math.floor(Math.random() * 6));
     const outcome = deathGameOutcome(mine, deaths);
-    if (outcome === "strata") {
-      await db
-        .from("seats")
-        .update({ zycie: Math.max(0, seat.zycie - 1) })
-        .eq("id", seat.id);
-    }
     await journal(gameId, seat.id, game.turn, "most-gra-ze-smiercia", { mine, deaths, outcome });
     await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+    // After the turn state is closed: a death hands play on, and doing that
+    // first only for this write to land on top of it puts the table back in a
+    // turn belonging to somebody who is no longer in the game.
+    if (outcome === "strata") await spendLife(gameId, seat, 1);
     await bumpRevision(gameId);
     return {
       field: here,
@@ -2348,12 +2354,9 @@ export async function resolveBridgeOrdeal(
   if (here === "cerber") {
     const [die] = await roll(1, "cerber");
     const loss = cerberLoss(die);
-    await db
-      .from("seats")
-      .update({ zycie: Math.max(0, seat.zycie - loss) })
-      .eq("id", seat.id);
     await journal(gameId, seat.id, game.turn, "most-cerber", { die, loss });
     await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+    await spendLife(gameId, seat, loss);
     await bumpRevision(gameId);
     return { field: here, kind: "cerber", dice: [die], lifeLost: loss };
   }
@@ -2666,6 +2669,45 @@ export async function payHealer(
  * Journalled as manual, like every other assertion a human makes over the
  * engine's head.
  */
+/**
+ * Puts a card straight into a seat's hand, out of nowhere.
+ *
+ * For testing, and only that. It skips every check taking a card normally makes
+ * — 5.3's Natura restriction, 5.4's carrying limit, 21.2's finite Wyposażenie
+ * pile — because the point is to reach a state quickly rather than to reach it
+ * legally.
+ *
+ * Only the three kinds anybody actually holds. A Wróg is a trophy you have to
+ * beat, and Spotkania, Nieznajomi and Miejsca are resolved and set aside; none
+ * of them are things a hand can contain, so granting one would put a row in the
+ * holdings table that no rule knows how to read.
+ *
+ * Journalled as a manual override, because that is exactly what it is: the
+ * journal draws those differently and says so, and a card that appeared by
+ * magic should not be indistinguishable from one that was won.
+ */
+export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  const spell = SPELLS.find((card) => card.id === cardId);
+  const equipment = (items as Item[]).find((item) => item.id === cardId);
+  const event = EVENTS.find((card) => card.id === cardId);
+
+  const kind = spell ? "spell" : equipment ? "item" : event ? kindForCard(event) : null;
+  if (kind === null) throw new Error(`Nie wiem, czym jest: ${cardId}`);
+  if (kind === "trophy") throw new Error("Wroga trzeba pokonać, nie wziąć.");
+
+  await db.from("holdings").insert({
+    game_id: gameId,
+    seat_id: seatId,
+    card_id: cardId,
+    kind,
+    // 9.3 keeps a Zaklęcie face down even when it arrived by fiat.
+    face: kind === "spell" ? "hidden" : "open",
+  });
+  await journal(gameId, seatId, game.turn, "test-karta", { cardId, kind }, true);
+  await bumpRevision(gameId);
+}
+
 export async function placeSeat(
   gameId: string,
   seatId: string,
