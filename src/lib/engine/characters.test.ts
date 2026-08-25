@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import characters from "@/data/characters.json";
 import items from "@/data/items.json";
 import type { Character, Item } from "@/data/types";
-import { FIELDS } from "./board";
+import { FIELDS, fieldByName } from "./board";
 import { skipsRollAt, tollIsWaived, isForbidden, rollModifier } from "./abilities";
 import {
   CHARACTER_ABILITIES,
@@ -139,5 +139,27 @@ describe("the surprise pick", () => {
     expect(abilitiesOfCharacter(RANDOM_CHARACTER_ID)).toEqual([]);
     expect(notesForCharacter(RANDOM_CHARACTER_ID)).toEqual([]);
     expect(startingKit(RANDOM_CHARACTER_ID)).toEqual({});
+  });
+});
+
+describe("where characters start", () => {
+  it("puts every MGR on a field that exists", () => {
+    // Six characters used to start nowhere. Their cards name Step and Mokradła,
+    // the board has two of each, and the ids are `step-1`/`step-2` — so a
+    // slugified "Step" matched no field at all and the figure went on the board
+    // at a place with no dot, no neighbours and no way to move.
+    for (const character of CHARACTERS) {
+      const field = fieldByName(character.start);
+      expect(field, `${character.id} — MGR "${character.start}"`).toBeDefined();
+      expect(FIELDS.has(field!.id)).toBe(true);
+    }
+  });
+
+  it("starts everybody in the Dolny Krąg", () => {
+    // The journey the game is about runs outward from the inner ring, so an MGR
+    // anywhere else would be a character starting the race halfway along it.
+    for (const character of CHARACTERS) {
+      expect(fieldByName(character.start)!.region, character.id).toBe("dolny");
+    }
   });
 });

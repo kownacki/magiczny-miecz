@@ -46,15 +46,24 @@ export interface BoardField {
  * of this ring reads Osada, Step, Mokradła from left to right, which is the
  * order below.
  */
+/**
+ * The numerals run in ring order, not id order.
+ *
+ * `step-1` is the *second* Step you walk past and is labelled Step II. The ids
+ * were assigned from where each field sits on the scanned board; the numeral is
+ * for a player walking the ring, and it is the numeral they see. It also means
+ * a character whose MGR reads "Step" starts on Step I, which is the one you
+ * would point at if somebody asked.
+ */
 export const DOLNY_KRAG: readonly BoardField[] = [
   { id: "karczma", name: "Karczma", region: "dolny" },
   { id: "uroczysko", name: "Uroczysko", region: "dolny", draw: 1 },
-  { id: "step-2", name: "Step", region: "dolny", draw: 1 },
-  { id: "mokradla-2", name: "Mokradła", region: "dolny", draw: 1 },
+  { id: "step-2", name: "Step I", region: "dolny", draw: 1 },
+  { id: "mokradla-2", name: "Mokradła I", region: "dolny", draw: 1 },
   { id: "kurhan", name: "Kurhan", region: "dolny" },
   { id: "osada", name: "Osada", region: "dolny" },
-  { id: "step-1", name: "Step", region: "dolny", draw: 1 },
-  { id: "mokradla-1", name: "Mokradła", region: "dolny", draw: 1 },
+  { id: "step-1", name: "Step II", region: "dolny", draw: 1 },
+  { id: "mokradla-1", name: "Mokradła II", region: "dolny", draw: 1 },
   { id: "czarci-mlyn", name: "Czarci Młyn", region: "dolny" },
   { id: "krag-mocy", name: "Krąg Mocy", region: "dolny" },
   { id: "studnia-wiecznosci", name: "Studnia Wieczności", region: "dolny" },
@@ -73,7 +82,7 @@ export const DOLNY_KRAG: readonly BoardField[] = [
  * 11.9). Movement here ignores the die — one field per turn (10.3).
  */
 export const KAMIENNY_MOST: readonly BoardField[] = [
-  { id: "wejscie-na-most-a", name: "Wejście na Most", region: "most" },
+  { id: "wejscie-na-most-a", name: "Wejście na Most I", region: "most" },
   { id: "pulapka", name: "Pułapka", region: "most" },
   { id: "gra-ze-smiercia", name: "Gra ze Śmiercią", region: "most" },
   { id: "demon-zaglady", name: "Demon Zagłady", region: "most" },
@@ -81,7 +90,7 @@ export const KAMIENNY_MOST: readonly BoardField[] = [
   { id: "monstrum", name: "Monstrum", region: "most" },
   { id: "cerber", name: "Cerber", region: "most" },
   { id: "magiczna-pulapka", name: "Magiczna Pułapka", region: "most" },
-  { id: "wejscie-na-most-b", name: "Wejście na Most", region: "most" },
+  { id: "wejscie-na-most-b", name: "Wejście na Most II", region: "most" },
 ];
 
 /** Every field the engine knows about, by id. */
@@ -92,8 +101,33 @@ export const FIELDS: ReadonlyMap<string, BoardField> = new Map(
   ]),
 );
 
+/**
+ * The numeral this project adds to tell two identical fields apart.
+ *
+ * Eight names on the printed board belong to two fields each — two Steps and
+ * two Mokradła in the Dolny Krąg alone — and the board prints both of them the
+ * same. That is fine on a table where you point at one, and useless in a list
+ * of destinations that offers "Step" twice, so the app numbers them: Step I and
+ * Step II. The numeral is ours, not the board's.
+ */
+const NUMERAL = /\s+(I{1,3})$/;
+
+/** A field's name as the board prints it, without the numeral this app adds. */
+export function printedName(name: string): string {
+  return name.replace(NUMERAL, "");
+}
+
+/**
+ * Finds a field by the name something outside the board calls it.
+ *
+ * Falls back to the printed name because the things that name fields — a
+ * character's MGR above all — were written against the board, where both Steps
+ * are just "Step". An exact match wins, so "Step I" finds the one it names and
+ * "Step" finds the first of them.
+ */
 export function fieldByName(name: string): BoardField | undefined {
-  return [...FIELDS.values()].find((field) => field.name === name);
+  const all = [...FIELDS.values()];
+  return all.find((field) => field.name === name) ?? all.find((field) => printedName(field.name) === name);
 }
 
 export type Direction = "zgodnie" | "przeciwnie";
@@ -203,7 +237,11 @@ export const BRIDGE_ENTRANCES: readonly BridgeEntrance[] = [
 export const FERRY_TOLL = 1;
 
 export function isFerry(fieldId: string): boolean {
-  return FIELDS.get(fieldId)?.name === "Przeprawa";
+  // The printed name, not the numbered one: both river crossings are a
+  // Przeprawa and the numeral is this app's, so matching the full name would
+  // have quietly stopped charging the ferryman at either of them.
+  const field = FIELDS.get(fieldId);
+  return field ? printedName(field.name) === "Przeprawa" : false;
 }
 
 export function bridgeEntranceFrom(fieldId: string): BridgeEntrance | undefined {

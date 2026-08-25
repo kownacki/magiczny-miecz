@@ -35,7 +35,7 @@ export const RINGS_VERIFIED_AGAINST_PHYSICAL_BOARD = false;
 export const SRODKOWY_KRAG: readonly BoardField[] = [
   { id: "twierdza-strzegaca-drog", name: "Twierdza Strzegąca Dróg", region: "srodkowy" },
   { id: "przelecz-wichrow", name: "Przełęcz Wichrów", region: "srodkowy", draw: 1 },
-  { id: "przeprawa-1", name: "Przeprawa", region: "srodkowy" },
+  { id: "przeprawa-1", name: "Przeprawa I", region: "srodkowy" },
   { id: "dolina-cienia", name: "Dolina Cienia", region: "srodkowy", draw: 1 },
   { id: "wrzosowiska", name: "Wrzosowiska", region: "srodkowy", draw: 2 },
   { id: "wieza-przeznaczenia", name: "Wieża Przeznaczenia", region: "srodkowy" },
@@ -47,7 +47,7 @@ export const SRODKOWY_KRAG: readonly BoardField[] = [
   { id: "las-blednych-ogni", name: "Las Błędnych Ogni", region: "srodkowy", draw: 1 },
   { id: "pustelnia", name: "Pustelnia", region: "srodkowy" },
   { id: "rownina-samotnych-skal", name: "Równina Samotnych Skał", region: "srodkowy", draw: 2 },
-  { id: "przeprawa-2", name: "Przeprawa", region: "srodkowy" },
+  { id: "przeprawa-2", name: "Przeprawa II", region: "srodkowy" },
   { id: "mroczna-polana", name: "Mroczna Polana", region: "srodkowy", draw: 1 },
 ];
 
@@ -59,22 +59,22 @@ export const SRODKOWY_KRAG: readonly BoardField[] = [
  * straight line across the whole board rather than a spur.
  */
 export const GORNY_KRAG: readonly BoardField[] = [
-  { id: "urwisko-1", name: "Urwisko", region: "gorny" },
+  { id: "urwisko-1", name: "Urwisko I", region: "gorny" },
   { id: "ruiny-twierdzy", name: "Ruiny Twierdzy", region: "gorny", draw: 1 },
   { id: "swiatynia-tolimana", name: "Świątynia Tolimana", region: "gorny" },
   { id: "dolina-czaszek", name: "Dolina Czaszek", region: "gorny", draw: 1 },
-  { id: "bagna-1", name: "Bagna", region: "gorny" },
-  { id: "ruchome-skaly-1", name: "Ruchome Skały", region: "gorny" },
-  { id: "urwisko-2", name: "Urwisko", region: "gorny" },
+  { id: "bagna-1", name: "Bagna I", region: "gorny" },
+  { id: "ruchome-skaly-1", name: "Ruchome Skały I", region: "gorny" },
+  { id: "urwisko-2", name: "Urwisko II", region: "gorny" },
   { id: "rownina-traw", name: "Równina Traw", region: "gorny", draw: 1 },
-  { id: "rozstajne-drogi-1", name: "Rozstajne Drogi", region: "gorny", draw: 1 },
+  { id: "rozstajne-drogi-1", name: "Rozstajne Drogi I", region: "gorny", draw: 1 },
   { id: "zamek", name: "Zamek", region: "gorny" },
   { id: "wymarle-miasto", name: "Wymarłe Miasto", region: "gorny", draw: 1 },
-  { id: "ruchome-skaly-2", name: "Ruchome Skały", region: "gorny" },
-  { id: "bagna-2", name: "Bagna", region: "gorny" },
+  { id: "ruchome-skaly-2", name: "Ruchome Skały II", region: "gorny" },
+  { id: "bagna-2", name: "Bagna II", region: "gorny" },
   { id: "krypta-upiorow", name: "Krypta Upiorów", region: "gorny" },
   { id: "rownina-snu", name: "Równina Snu", region: "gorny", draw: 1 },
-  { id: "rozstajne-drogi-2", name: "Rozstajne Drogi", region: "gorny", draw: 1 },
+  { id: "rozstajne-drogi-2", name: "Rozstajne Drogi II", region: "gorny", draw: 1 },
   { id: "kamienny-las", name: "Kamienny Las", region: "gorny", draw: 2 },
   { id: "wilczy-parow", name: "Wilczy Parów", region: "gorny" },
 ];

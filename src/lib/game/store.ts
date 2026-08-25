@@ -7,6 +7,7 @@ import { makeClaimToken, makeJoinCode } from "./codes";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { RANDOM_CHARACTER_ID, isRandomPick } from "@/lib/engine/characters";
+import { fieldByName } from "@/lib/engine/board";
 
 export const CHARACTERS = characters as Character[];
 
@@ -445,15 +446,31 @@ async function dealTo(
   }
 }
 
-/** Character cards name their starting field in prose; the board uses slugs. */
+/**
+ * The field a character's MGR names.
+ *
+ * Matched on the printed name rather than slugified into an id, because eight
+ * names on this board belong to two fields each — there are two Steps and two
+ * Mokradła in the Dolny Krąg alone, so their ids are `step-1`/`step-2` and no
+ * amount of slugifying "Step" will ever produce one of them. Six characters
+ * were slugified onto fields that do not exist and started the game standing
+ * nowhere: no dot on the map, no directions to move in, the turn dead on
+ * arrival. Goblin, Hobgoblin, Karzeł, Magog, Obbol and Olbrzym.
+ *
+ * Where a name is ambiguous this takes the first in board order, which is
+ * always the Dolny Krąg one — the ring every character starts in. Which of the
+ * two identical fields a figure actually stands on is the players' to say, and
+ * the position override is there for a table that wants the other one; what
+ * matters here is that it is a real field.
+ *
+ * Throws rather than guessing. A character whose MGR is not on the board is a
+ * data error, and it is better to refuse the pick than to seat somebody in a
+ * place that does not exist — which is precisely the failure this replaces.
+ */
 function startingFieldId(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/ł/g, "l")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  const field = fieldByName(name);
+  if (!field) throw new Error(`Karta Postaci wskazuje Obszar, którego nie ma na planszy: ${name}`);
+  return field.id;
 }
 
 /**

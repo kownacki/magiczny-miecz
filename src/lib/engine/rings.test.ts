@@ -7,7 +7,7 @@ import {
   crossingIsDefended,
   trzesawiskaOutcome,
 } from "./rings";
-import { DOLNY_KRAG, KAMIENNY_MOST } from "./board";
+import { DOLNY_KRAG, KAMIENNY_MOST, printedName } from "./board";
 
 /**
  * Every constraint the rulebook places on these two rings, as a test.
@@ -26,10 +26,23 @@ describe("ring composition", () => {
   });
 
   it("repeats exactly the four names the board prints twice", () => {
+    // Against the *printed* name. The app numbers these — Bagna I, Bagna II —
+    // because a list of destinations offering "Bagna" twice tells a player
+    // nothing; the board itself prints both the same, and that is what this is
+    // checking against the scan.
     const counts = new Map<string, number>();
-    for (const field of GORNY_KRAG) counts.set(field.name, (counts.get(field.name) ?? 0) + 1);
+    for (const field of GORNY_KRAG) {
+      const name = printedName(field.name);
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
     const twice = [...counts.entries()].filter(([, n]) => n > 1).map(([name]) => name).sort();
     expect(twice).toEqual(["Bagna", "Rozstajne Drogi", "Ruchome Skały", "Urwisko"]);
+  });
+
+  it("numbers each of them, so no two fields share a name", () => {
+    const all = [...DOLNY_KRAG, ...SRODKOWY_KRAG, ...GORNY_KRAG, ...KAMIENNY_MOST];
+    const names = all.map((field) => field.name);
+    expect(new Set(names).size).toBe(all.length);
   });
 
   it("makes the outer ring the longest, as concentric rings must be", () => {

@@ -1767,14 +1767,20 @@ function fieldName(fieldId: string): string {
 }
 
 /**
- * Field names for a list, without saying "Urwisko, Urwisko".
+ * Field names for a list.
  *
- * Six places on the board are printed twice and carry suffixed ids, and a card
- * that names one almost always names both — so the ids are right and the label
- * is what needs to collapse.
+ * Eight places on the board are printed twice, and a card that names one almost
+ * always names both — which used to render as "Urwisko, Urwisko", since both
+ * carried the printed name. They are numbered now, so the pair reads as
+ * "Urwisko I, Urwisko II" and the dedup is left only for genuine repeats.
  */
 function fieldNames(fieldIds: readonly string[]): string {
-  return [...new Set(fieldIds.map(fieldName))].join(", ");
+  // Board order, so a pair of numbered fields reads the way you walk them.
+  // The ability data lists ids in whatever order the card's prose does, which
+  // put the Hobgoblin's escape at "Step II, Step I".
+  const order = [...FIELDS.keys()];
+  const sorted = [...new Set(fieldIds)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return [...new Set(sorted.map(fieldName))].join(", ");
 }
 
 /**
