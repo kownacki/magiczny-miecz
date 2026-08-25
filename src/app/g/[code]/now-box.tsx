@@ -56,10 +56,12 @@ export function NowBox({
     <section
       aria-label="Teraz"
       // A fixed width and a floor, stretching to whatever the queue beside it
-      // is tall. Nothing below moves when a window appears or the Obszar turns
+      // is tall. Half again as wide as it was: three steps and a row of window
+      // buttons were wrapping onto second lines in a box that had the height
+      // for them and not the width. Nothing below moves when a window appears or the Obszar turns
       // out to have more to say than the last one did — and a hard height
       // clipped the buttons the moment a field offered two.
-      className="flex min-h-[180px] w-[180px] shrink-0 flex-col rounded-lg border border-ochre/40 bg-panel p-3"
+      className="flex min-h-[180px] w-[270px] shrink-0 flex-col rounded-lg border border-ochre/40 bg-panel p-3"
     >
       <header className="mb-2 min-w-0">
         <p className="truncate font-[family-name:var(--font-display)] text-sm text-ochre">
