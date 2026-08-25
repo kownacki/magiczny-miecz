@@ -1504,18 +1504,21 @@ function Hand({
   /**
    * The pack is about to be dropped into, and whether it would take it.
    *
-   * Lit for as long as a card is in the air, including while the pointer is
-   * over one of the cards. The two say different things and do not compete: the
-   * rectangle is *the pack will take this*, and the gap is *here, exactly*. It
-   * used to go dark the moment the pointer crossed onto a card, which read as
-   * the pack having stopped being a destination at the one moment you were
-   * aiming inside it.
+   * Lit while the pointer is inside it with a card in the air — the same answer
+   * a place on the body gives, and given the same way: you are over me, and I
+   * would take this. A card in the air is not enough on its own; it lit the
+   * rectangle from the moment anything was picked up, so the pack claimed to be
+   * the destination while you were aiming at a hand or the board.
+   *
+   * Being over one of the pack's own cards still counts as being inside it. The
+   * two lights say different things and do not compete: the rectangle is *the
+   * pack will take this*, and the gap is *here, exactly*.
    *
    * `refuses` is 5.4 — a card coming in from the body when there is no room for
    * it — and never a card already in the pack, which is only being moved about
    * inside a limit it already satisfies.
    */
-  const landing = carried !== null || dragOver;
+  const landing = dragOver;
   const refuses =
     landing &&
     carried !== null &&
@@ -1674,6 +1677,10 @@ function Hand({
                 }
                 return onPlaceInPack();
               }
+              // Picked up from inside the pack, so the pointer is inside it —
+              // said now rather than waiting for the first move, or the
+              // rectangle stays dark until the hand twitches.
+              setDragOver(true);
               onCarry({
                 holdingId: held.id,
                 cardId: held.cardId,
