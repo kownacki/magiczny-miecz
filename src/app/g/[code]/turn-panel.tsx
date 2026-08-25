@@ -146,19 +146,28 @@ export function TurnPanel({
   onSuggestion,
   onTake,
 }: Props) {
+  /**
+   * Nothing here for somebody who is not playing, and nothing for a phase whose
+   * controls live somewhere else.
+   *
+   * "Czekamy na ruch gracza Karol" was a bordered box saying what the box
+   * beside the queue already says, and it sat on screen for most of every
+   * round. A fight is fought in the action window and `Zakończ turę` is in the
+   * box, so those two phases have nothing left to draw here either — and an
+   * empty bordered box is worse than no box.
+   */
+  const controls =
+    phase.phase === "rzut" ||
+    phase.phase === "ruch" ||
+    phase.phase === "most" ||
+    phase.phase === "pole";
+  if (!isMine || (!controls && !actingForOther)) return null;
+
   return (
     <section className="rounded-lg border border-ochre/40 bg-panel p-5">
       {/* No header: whose turn it is and where they are stand in the box beside
           the queue now, and saying it twice on one screen is how this panel came
           to read as the turn itself rather than as the controls for it. */}
-
-      {/* Shown to everyone, not only the active player: at a table the others
-          read the field aloud and argue about it, and the board itself is
-          usually under somebody's elbow. */}
-
-      {/* The establishments. Ten fields on the board sell things, buy things or
-          mend wounds, and until this panel existed the app read their price
-          lists out and left the table to do the sums. */}
 
       {actingForOther && (
         <p className="mb-3 text-xs text-ochre/80">
@@ -166,34 +175,15 @@ export function TurnPanel({
         </p>
       )}
 
-      {/* Only four fields on the whole board allow it (11.1, 11.5), and each
-          demands something first — Magia for the Trzęsawiska, beating the
-          Rycerz Wiecznych Śniegów for the Lodowy Las — which the board text
-          above spells out. Both outcomes are offered because the app cannot
-          adjudicate a fight it is not running. */}
-      {/* 11.10 puts the attempt in the move itself — a character standing on
-          Wymarłe Miasto or Ruiny Twierdzy is expressly the one case that may
-          NOT try, so there is deliberately nothing offered here. */}
-
-
-      {/* The Kamienny Most's own fields. Offered on arrival and again on the
-          next turn's roll, because most of them are things you have to sit
-          through more than once — the Demon does not move and neither do
-          you. */}
-
-      {!isMine ? (
-        <p className="text-sm text-muted">Czekamy na ruch gracza {playerName}.</p>
-      ) : (
-        <PhaseControls
-          phase={phase}
-          dieSource={dieSource}
-          mode={mode}
-          busy={busy}
-          onAction={onAction}
-          onSuggestion={onSuggestion}
-          onTake={onTake}
-        />
-      )}
+      <PhaseControls
+        phase={phase}
+        dieSource={dieSource}
+        mode={mode}
+        busy={busy}
+        onAction={onAction}
+        onSuggestion={onSuggestion}
+        onTake={onTake}
+      />
     </section>
   );
 }
@@ -585,26 +575,14 @@ function PhaseControls({
           onTake={onTake}
         />
       );
+    // A fight is fought in the action window, which opens itself and which the
+    // whole table watches — see `DrawModal`, which imports `FightControls`.
     case "walka":
-      return (
-        <FightControls
-          fight={phase.fight}
-          simulated={mode === "simulation"}
-          busy={busy}
-          canFlee={phase.fight.opponentSeat === undefined}
-          onAction={onAction}
-        />
-      );
+      return null;
+    // The box beside the queue carries this one, where it keeps its place
+    // whatever the turn is doing. It is the control pressed every single turn.
     case "koniec":
-      return (
-        <button
-          disabled={busy}
-          onClick={() => onAction({ action: "end" })}
-          className="rounded border border-edge bg-raised px-4 py-2 text-sm text-ink hover:border-ochre"
-        >
-          Zakończ turę
-        </button>
-      );
+      return null;
   }
 }
 
