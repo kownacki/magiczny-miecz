@@ -17,7 +17,7 @@ import type { FieldId } from "./board";
  * walked past, a Karczma happens to you on arrival, and 11.4 makes retrying a
  * crossing the point of the next turn.
  */
-export type WindowId = "walka" | "karty" | "obszar" | "przeprawa" | "most";
+export type WindowId = "walka" | "ruch" | "karty" | "obszar" | "przeprawa" | "most";
 
 export interface TurnWindow {
   id: WindowId;
@@ -72,6 +72,13 @@ export function windowsFor(facts: TurnFacts): TurnWindow[] {
   // A fight is not something you go back to later.
   if (facts.fighting) {
     windows.push({ id: "walka", label: "Walka", compulsory: true });
+  }
+
+  // The die has been thrown and the character is standing between two roads.
+  // Not an offer either: the turn cannot go anywhere else until it is answered,
+  // and there is nothing else on the board to look at meanwhile.
+  if (facts.phase === "ruch") {
+    windows.push({ id: "ruch", label: "Ruch", compulsory: true });
   }
 
   // 16.4: everything drawn here is settled before the Obszar itself is.

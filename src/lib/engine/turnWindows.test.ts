@@ -92,3 +92,24 @@ describe("the two that come back next turn", () => {
     ]);
   });
 });
+
+describe("the move itself", () => {
+  it("is a window too, and not one that can be put off", () => {
+    // The die is thrown and the character is standing between two roads: the
+    // turn goes nowhere until that is answered, so the box opens it rather
+    // than offering it.
+    const [first] = windowsFor({ ...quiet, phase: "ruch" });
+    expect(first.id).toBe("ruch");
+    expect(first.compulsory).toBe(true);
+    expect(opensItself(windowsFor({ ...quiet, phase: "ruch" }))).toBe("ruch");
+  });
+
+  it("still comes second to a fight", () => {
+    expect(ids({ phase: "ruch", fighting: true })).toEqual(["walka", "ruch", "obszar"]);
+  });
+
+  it("is not offered in any other phase", () => {
+    expect(ids({ phase: "pole" })).not.toContain("ruch");
+    expect(ids({ phase: "rzut" })).not.toContain("ruch");
+  });
+});
