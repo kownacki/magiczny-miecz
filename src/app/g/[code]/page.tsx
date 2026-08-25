@@ -2174,6 +2174,24 @@ function SeatCard({
  * Everything else in the app already counts gold in numerals — "za 2 Sztuki
  * Złota" — so this reads the same way.
  */
+/**
+ * The Karta Postaci is drawn 192 wide and keeps its proportions, so it stands
+ * this tall. Two piles share each side of it.
+ */
+const CARD_HEIGHT = 238;
+
+/**
+ * How tall one pile may stand: half the card, less the ± and the total that
+ * share the rail underneath it.
+ *
+ * Past that the pile turns a corner and starts a second column beside the
+ * first, which is what anybody does with a heap of żetony that has got too tall
+ * to be a heap. Without it, 28 Życia is seven tokens end to end — half again
+ * the height of the card — and the rail runs off the bottom of it and down
+ * past the pack.
+ */
+const STACK_HEIGHT = Math.round(CARD_HEIGHT / 2) - 28;
+
 function Tokens({ stat, points, label }: { stat: string; points: number; label: string }) {
   const SIZE = 20;
   if (stat === "zloto") {
@@ -2187,14 +2205,15 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
      * sliver showing, which is what a stack of chips looks like and costs
      * nothing to draw, since every coin is the same picture anyway.
      *
-     * The pile stops growing at eight and the number carries on, because a rail
-     * up the side of a card is only so tall and a rich character is common.
-     * Nothing is lost: unlike the other three, this is a stack of ones, so the
-     * count is the only thing the picture was ever going to tell you, and it is
-     * written underneath.
+     * The pile stops at what its half of the card holds and the number carries
+     * on, rather than turning a corner the way the other three do. Nothing is
+     * lost by that: this is a stack of ones, so the count is the only thing the
+     * picture was ever going to tell you, and it is written underneath. A
+     * second column of identical coins would only be a wider way of saying the
+     * same nothing.
      */
     const REVEAL = 6;
-    const coins = Math.min(points, 8);
+    const coins = Math.min(points, 1 + Math.floor((STACK_HEIGHT - SIZE) / REVEAL));
     return (
       <span className="flex flex-col items-center" title={`${label}: ${points}`}>
         <span className="flex flex-col items-center">
@@ -2231,7 +2250,11 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
 
   return (
     <span
-      className="flex flex-col items-center gap-0.5"
+      // A column that turns into two when it has to. Bounded height plus
+      // `flex-wrap` is the whole mechanism: the pile fills downwards until it
+      // reaches its half of the card, then starts again beside itself.
+      className="flex flex-col flex-wrap content-center items-center gap-0.5"
+      style={{ maxHeight: STACK_HEIGHT }}
       title={`${label}: ${points}`}
     >
       {tokens.map((token, index) => (
@@ -2277,7 +2300,9 @@ function RailStat({
   onAdjust: (stat: string, delta: number) => void;
 }) {
   return (
-    <div className="flex w-9 shrink-0 flex-col items-center gap-0.5">
+    // A minimum rather than a width: one column is nine, and a pile that has
+    // turned a corner needs the room for the second.
+    <div className="flex min-w-9 shrink-0 flex-col items-center gap-0.5">
       <Tokens stat={stat} points={value} label={label} />
       {/* The +/- move OWN points, which are what the rules floor at the
           starting value (1.3, 2.3). The total is derived from the cards on the
