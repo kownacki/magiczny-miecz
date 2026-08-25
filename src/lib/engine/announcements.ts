@@ -58,10 +58,13 @@ export function announce(before: Watched | null, now: Watched): Announcement | n
   if (now.eliminated && !before.eliminated) {
     return {
       kind: "smierc",
+      // "MGR" is what the Karta Postaci prints beside the field name, and it is
+      // legible there because the field is printed next to it. In a sentence it
+      // is three letters standing for nothing a player has been told.
       title: "Twoja Postać zginęła",
       body:
         "Jej Przedmioty i Przyjaciele zostali na Obszarze, na którym zginęła. " +
-        "Możesz wybrać nową Postać i zacząć od jej MGR (4.4).",
+        "Możesz wybrać nową Postać i zacząć od jej Obszaru startowego (4.4).",
       tone: "grave",
     };
   }

@@ -23,6 +23,7 @@ import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages"
 export function RebornModal({
   characters,
   taken,
+  arriving = false,
   busy,
   onConfirm,
   onClose,
@@ -30,6 +31,11 @@ export function RebornModal({
   characters: Character[];
   /** Every character already in the game — 4.4 puts the dead one out for good. */
   taken: ReadonlySet<string>;
+  /**
+   * Sitting down at a table already running, rather than coming back from a
+   * death. The choice is the same and the sentence above it is not.
+   */
+  arriving?: boolean;
   busy: boolean;
   onConfirm: (characterId: SeatCharacter) => void;
   onClose: () => void;
@@ -70,11 +76,12 @@ export function RebornModal({
         <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-edge px-4 py-3">
           <div>
             <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
-              Twoja Postać zginęła
+              {arriving ? "Wybierz Postać" : "Twoja Postać zginęła"}
             </h2>
             <p className="text-[11px] text-muted">
-              Jej Przedmioty i Przyjaciele zostali na Obszarze, na którym zginęła.
-              Możesz wybrać nową i zacząć od jej MGR (4.4).
+              {arriving
+                ? "Gra już trwa. Bierzesz Postać, której nikt nie ma, i zaczynasz od jej Obszaru startowego — z pełnym Życiem i wyposażeniem początkowym."
+                : "Jej Przedmioty i Przyjaciele zostali na Obszarze, na którym zginęła. Możesz wybrać nową i zacząć od jej Obszaru startowego (4.4)."}
             </p>
           </div>
           <button
