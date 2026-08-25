@@ -63,9 +63,17 @@ export function TestConsole({
 
   return (
     <section
-      // Above the board and below the modals: a fight or a card is still the
-      // thing being looked at, and this is the thing being typed at.
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-vermilion/40 bg-night/95 shadow-[0_-8px_30px_rgba(0,0,0,0.6)]"
+      /**
+       * Above everything, including the sheets.
+       *
+       * It started below them, on the reasoning that a fight is what you are
+       * looking at and this is only what you are typing at — which is exactly
+       * backwards. The console is most wanted when a modal has the game stuck
+       * behind it: `endfight` and `endturn` exist for that, and a way out that
+       * the thing you are escaping paints over is not a way out. So it clears
+       * the modals' backdrop as well as their z-order, and is not dimmed by it.
+       */
+      className="fixed inset-x-0 bottom-0 z-[110] border-t border-vermilion/40 bg-night/95 shadow-[0_-8px_30px_rgba(0,0,0,0.6)]"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-1 p-2">
         <div className="flex items-baseline justify-between gap-2">
