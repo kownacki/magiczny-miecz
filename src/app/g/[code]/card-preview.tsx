@@ -195,7 +195,7 @@ export function CardPreview({
               {card.name}
               {/* The hover is where a player checks what a card is without
                   disturbing anything, so it says this too. */}
-              {card.granted && <CardMark mark="granted" size={16} />}
+              {card.granted && <CardMark mark="granted" size={18} />}
             </p>
             {/* The Roman numeral printed at the top of the card. Not an
                 identity and not a level — it is the class, and 15.2 resolves a

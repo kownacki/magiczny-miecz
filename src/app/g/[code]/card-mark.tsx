@@ -41,7 +41,7 @@ const MARK: Record<SlotMark, { icon: string; tone: string; title: string }> = {
  * are: the shape takes the colour of whatever it is standing in, so red is
  * actually red and it dims with the card when the card dims.
  */
-export function CardMark({ mark, size = 18 }: { mark: SlotMark; size?: number }) {
+export function CardMark({ mark, size = 20 }: { mark: SlotMark; size?: number }) {
   const { icon, tone, title } = MARK[mark];
   return (
     <span

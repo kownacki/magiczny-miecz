@@ -235,7 +235,7 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
                   view somebody opens to check what a card actually is, so it is
                   the last place that should stay quiet about one that is not
                   from the box. */}
-              {card.granted && <CardMark mark="granted" size={20} />}
+              {card.granted && <CardMark mark="granted" size={22} />}
             </h3>
             <button onClick={onClose} className="text-xs text-muted hover:text-ink">
               zamknij
