@@ -39,9 +39,13 @@ function fieldNames(fieldIds: readonly FieldId[]): string {
  * question with an existing answer: `slotsFor` knows if it has a place, and the
  * variant decides whether being in that place is required.
  */
-export type AbilityWhen = "gdy w plecaku" | "gdy założony" | "warunek";
+export type AbilityWhen = "gdy założony" | "warunek";
 
-export function whenApplies(ability: Ability, cardId: string, eqMode: EqMode): AbilityWhen {
+export function whenApplies(
+  ability: Ability,
+  cardId: string,
+  eqMode: EqMode,
+): AbilityWhen | null {
   // A requirement is not something that happens at a moment; it is true or the
   // card is not yours at all.
   if (ability.kind === "tylko-natura") return "warunek";
@@ -60,14 +64,18 @@ export function whenApplies(ability: Ability, cardId: string, eqMode: EqMode): A
    * be worn. In klasyczny nothing does — 5.4 has one kind of possession, and a
    * Miecz in the pack is a Miecz.
    */
-  return eqMode === "slotowy" && isWearable(cardId) ? "gdy założony" : "gdy w plecaku";
+  // Nothing to say when the card just has to be on you. "Gdy w plecaku" was
+  // true of almost everything and therefore told a player nothing; the label is
+  // worth a line only where there is a condition to meet.
+  return eqMode === "slotowy" && isWearable(cardId) ? "gdy założony" : null;
 }
 
 /** One formalised line: what it gives, and when it gives it. */
 export interface AbilityFact {
   kind: Ability["kind"];
   what: string;
-  when: AbilityWhen;
+  /** Null when the card simply has to be on you, which is not worth a line. */
+  when: AbilityWhen | null;
 }
 
 /** Everything the app carries about one card, ready to be shown. */
@@ -104,6 +112,16 @@ export interface ItemProfile {
 /** Kinds that state a condition on holding the card at all, rather than a benefit. */
 const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
 
+/**
+ * Kinds that say what a card IS rather than what it gives you.
+ *
+ * Where it can be found, and what it lets you walk into, are facts about the
+ * card's place in the game — not bonuses. Listing "nie do zdobycia w Dolnym
+ * Kręgu" beside "+1 Miecza" invites reading it as something the card does for
+ * you, which is the opposite of what it says.
+ */
+const IS_SPECIAL = new Set<Ability["kind"]>(["niedostepny", "wymagany"]);
+
 export function itemProfile(cardId: string, eqMode: EqMode = "klasyczny"): ItemProfile {
   const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
   const slots = slotsFor(cardId);
@@ -118,9 +136,14 @@ export function itemProfile(cardId: string, eqMode: EqMode = "klasyczny"): ItemP
   return {
     slots,
     slotLabel: slots.length > 0 ? slots.map((slot) => SLOT_LABEL[slot]).join(" / ") : null,
-    facts: lines.filter((l) => !IS_A_REQUIREMENT.has(l.ability.kind)).map((l) => l.fact),
+    facts: lines
+      .filter((l) => !IS_A_REQUIREMENT.has(l.ability.kind) && !IS_SPECIAL.has(l.ability.kind))
+      .map((l) => l.fact),
     requirements: lines.filter((l) => IS_A_REQUIREMENT.has(l.ability.kind)).map((l) => l.fact),
-    special: specialOf(cardId),
+    special: [
+      ...lines.filter((l) => IS_SPECIAL.has(l.ability.kind)).map((l) => l.fact.what),
+      ...specialOf(cardId),
+    ],
     notes: CARD_NOTES[cardId as keyof typeof CARD_NOTES] ?? [],
   };
 }

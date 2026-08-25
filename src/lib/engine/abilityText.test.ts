@@ -10,10 +10,11 @@ describe("what an item gives, and when", () => {
     ]);
   });
 
-  it("says the same item works from the pack in klasyczny", () => {
+  it("says nothing about where an item must be when there is no condition", () => {
     // 5.4 has one kind of possession: a Miecz in the pack is a Miecz. Only the
-    // slotted variant makes wearing it the condition.
-    expect(itemProfile("miecz", "klasyczny").facts[0].when).toBe("gdy w plecaku");
+    // slotted variant makes wearing it a condition, and a label that is true of
+    // almost every card tells a player nothing.
+    expect(itemProfile("miecz", "klasyczny").facts[0].when).toBeNull();
   });
 
   it("knows the Bojowy Rumak's two rules and that both are combat-only", () => {
@@ -58,7 +59,7 @@ describe("what an item gives, and when", () => {
     // A Sztylet's +1 Miecza matters only in a fight too, and never carried a
     // combat label — so annotating the Tarcza and not the Sztylet was telling
     // the player something untrue about the difference between them.
-    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "klasyczny")).toBe("gdy w plecaku");
+    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "klasyczny")).toBeNull();
     expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "slotowy")).toBe("gdy założony");
     expect(whenApplies({ kind: "punkty", miecz: 1 }, "sztylet", "slotowy")).toBe("gdy założony");
   });
