@@ -225,7 +225,18 @@ Rules that fall out of it:
 
 - **Several seats may hold it at once.** There is one Kapłanka, but no limit on
   how many people want whatever comes, so the uniqueness check skips it and the
-  strip keeps its tile live for everybody except whoever already picked it.
+  strip keeps its tile live for everybody except whoever already picked it. It
+  is never dimmed for being taken either: in the only sense a player scanning
+  the strip cares about, it is always available. Who has taken it is carried by
+  the border — one seat's colour for one taker, neutral grey for several, since
+  two seats cannot share a border and picking one of their colours would name
+  the wrong person — and by a stack of name bars in seat order, so the strip and
+  the roster above it read as the same list.
+- **It is taken client-first.** The one pick that cannot be refused, because
+  there is no race to lose, so the card lands on the seat immediately and the
+  request follows behind it — the same rule the item moves follow. Every other
+  character still waits for the server, since two people can want Kapłanka and
+  only the server knows who asked first.
 - **`startGame` resolves it, and nothing else does.** `resolveRandomPicks` deals
   a distinct free character to every seat holding the sentinel, at the moment
   the game starts and not before — so no device, the player's own included, can
@@ -240,11 +251,14 @@ Rules that fall out of it:
   left, made in front of everybody mid-game; there is no game start left to
   resolve a sentinel against.
 
-The tile's artwork is a Karta Postaci with the figure and printed name lifted
-off the white field and the word LOSOWA in their place. Until it exists the
-placeholders are marked `data-placeholder="losowa-standee"` and
-`data-placeholder="losowa-karta"`, and hold the exact shape the real asset will
-occupy so the strip lays out now as it will then.
+The artwork is a Karta Postaci with the figure and printed name lifted off the
+white field and LOSOWA in their place, cut to the same sizes as the scans —
+`karta-random.jpg` at 629x780, `standee-random.jpg` at 249x420, and the
+illustration at `art/karta-random.jpg`. Unlike every other character picture
+these are named in `cardImages.ts` rather than in `character-images.json` and
+`character-standees.json`: those two files are generated from the 27 printed
+characters by `export-card-images.mjs`, so an entry added by hand would last
+until somebody next ran the script. This card was never on a sheet.
 
 ## Decisions taken, and what was left out
 

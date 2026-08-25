@@ -119,12 +119,26 @@ def fitted_font(height):
     return ImageFont.truetype(SERIF, size)
 
 
-def mark(draw, box, fill_ratio):
-    """Centres a red question mark in `box`, filling `fill_ratio` of its height."""
+def mark(draw, box, fill_ratio, by_ink=False):
+    """Centres a red question mark in `box`, filling `fill_ratio` of its height.
+
+    `by_ink` centres the visible glyph rather than the font's metrics. The two
+    are far apart for "?": the em box reserves descender room the glyph never
+    uses, so metric centring floats the mark visibly high. The big card is
+    forgiving about that — its field is nearly square and the mark is huge — but
+    on the standee it reads as misaligned against a row of figures that are all
+    centred in the space under their name.
+    """
     font = fitted_font(round((box[3] - box[1]) * fill_ratio))
+    if not by_ink:
+        draw.text(((box[0] + box[2]) // 2, (box[1] + box[3]) // 2),
+                  "?", font=font, fill=MIECZ_INK, anchor="mm")
+        return
+    ink = draw.textbbox((0, 0), "?", font=font)
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
     draw.text(
-        ((box[0] + box[2]) // 2, (box[1] + box[3]) // 2),
-        "?", font=font, fill=MIECZ_INK, anchor="mm",
+        (cx - (ink[2] - ink[0]) / 2 - ink[0], cy - (ink[3] - ink[1]) / 2 - ink[1]),
+        "?", font=font, fill=MIECZ_INK,
     )
 
 
@@ -161,8 +175,12 @@ OUT_STANDEE = "public/cards/standee-random.jpg"
 STANDEE_WIDTH = 249
 
 STANDEE_TITLE = (43, 106)        # y range of the printed name
-STANDEE_ART = (173, 681)         # y range of the illustration
 STANDEE_SEED = (222, 150)        # a point in the white field, between the two
+
+# Goblin's figure spans y140-658 inside a field of y21-703, so it is centred in
+# the space BELOW the name (centre 404), not in the whole field (centre 362),
+# and stands about 0.87 of that space tall. The mark is matched to that.
+STANDEE_FILL = 0.78
 
 
 def interior(im):
@@ -204,9 +222,11 @@ def build_standee():
     st.paste(Image.new("RGB", st.size, (255, 255, 255)), (0, 0), shape)
     draw = ImageDraw.Draw(st)
 
-    span = [x for x in range(st.width) if shape.getpixel((x, STANDEE_ART[1] - 40))]
-    box = (min(span), STANDEE_ART[0], max(span), STANDEE_ART[1])
-    mark(draw, box, 0.66)
+    # The field's own extent, so the mark cannot drift if the scan is recut.
+    rows = [y for y in range(st.height) if any(shape.getpixel((x, y)) for x in range(st.width))]
+    span = [x for x in range(st.width) if shape.getpixel((x, (rows[0] + rows[-1]) // 2))]
+    box = (min(span), STANDEE_TITLE[1], max(span), rows[-1])
+    mark(draw, box, STANDEE_FILL, by_ink=True)
 
     title = fitted_font(round((STANDEE_TITLE[1] - STANDEE_TITLE[0]) * 0.72))
     outlined(

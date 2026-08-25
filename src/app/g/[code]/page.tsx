@@ -9,7 +9,7 @@ import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
-import { abilitiesOfCharacter, notesForCharacter } from "@/lib/engine/characters";
+import { abilitiesOfCharacter, isRandomPick, notesForCharacter } from "@/lib/engine/characters";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
@@ -135,6 +135,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [pendingCharacter, setPendingCharacter] = useState<string | null>(null);
   /** Moves this device has made and the server has not confirmed (see `equip`). */
   const [moved, setMoved] = useState<Record<string, Slot | null>>({});
+  /**
+   * Characters taken client-first, by seat id.
+   *
+   * Only ever the surprise — see `chooseCharacter`. Cleared the moment the
+   * server reports the same thing, so a pick that never landed reverts on the
+   * next poll rather than lingering as a lie.
+   */
+  const [taking, setTaking] = useState<Record<string, string>>({});
   /** Which seat is choosing a character; "auto" lets the app decide. */
   const [picking, setPicking] = useState<string | "auto" | null>("auto");
   const [error, setError] = useState<string | null>(null);
@@ -151,6 +159,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const data = await response.json();
     setGame(data.game);
     setSeats(data.seats);
+    setTaking((current) => {
+      const still = Object.fromEntries(
+        Object.entries(current).filter(([seatId, characterId]) => {
+          const seat = data.seats.find((row: Seat) => row.id === seatId);
+          // Gone once the server says the same thing — and gone anyway once the
+          // game is running, where a seat holds whatever it was dealt.
+          return seat ? seat.character_id !== characterId : false;
+        }),
+      );
+      return Object.keys(still).length === Object.keys(current).length ? current : still;
+    });
     setFieldCards(data.fieldCards ?? []);
     setStock(data.stock ?? {});
     setMySeatIndex(data.mySeatIndex);
@@ -366,6 +385,28 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     // card too, but the rule belongs here as well: `chooseCharacter` resets the
     // seat, ready flag included, so a no-op request is not harmless.
     if (seats.find((seat) => seat.id === seatId)?.character_id === characterId) return;
+
+    // The surprise is the one pick that cannot be refused: any number of seats
+    // may hold it, so there is no race to lose and nothing the server can say
+    // that this does not already know. It lands on the seat immediately and the
+    // request goes out behind it — the same client-first rule the item moves
+    // follow, for the same reason. Everything else still waits, because two
+    // people can want Kapłanka and only the server knows who asked first.
+    if (isRandomPick(characterId)) {
+      setTaking((current) => ({ ...current, [seatId]: characterId }));
+      void fetch(`/api/games/${code}/character`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ characterId, seatId, token: readSeatToken(code) }),
+      })
+        .then(refresh)
+        .catch(() => {
+          // A dropped request leaves the seat as it was; the next poll will
+          // put the optimistic pick right.
+        });
+      return;
+    }
+
     setPendingCharacter(characterId);
     try {
       await fetch(`/api/games/${code}/character`, {
@@ -526,7 +567,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           )}
           <JoinGate
             code={game.join_code}
-            seats={seats.map(asLobbySeat)}
+            seats={seats.map((seat) =>
+            asLobbySeat(
+              taking[seat.id] ? { ...seat, character_id: taking[seat.id], ready: false } : seat,
+            ),
+          )}
             busy={busy}
             onJoin={join}
           />
@@ -545,7 +590,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <Lobby
           code={game.join_code}
           mode={game.mode}
-          seats={seats.map(asLobbySeat)}
+          seats={seats.map((seat) =>
+            asLobbySeat(
+              taking[seat.id] ? { ...seat, character_id: taking[seat.id], ready: false } : seat,
+            ),
+          )}
           mySeatIndex={mySeatIndex}
           characters={CHARACTERS}
           pickingFor={pickingFor ? asLobbySeat(pickingFor) : null}

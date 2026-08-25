@@ -9,9 +9,28 @@ import portraits from "@/data/character-images.json";
 import standees from "@/data/character-standees.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { cardRef } from "./deck";
+import { RANDOM_CHARACTER_ID } from "./characters";
 
 const AVAILABLE = new Set(manifest as string[]);
 const ART_AVAILABLE = new Set(artManifest as string[]);
+
+/**
+ * The "Losowa" card, drawn rather than scanned.
+ *
+ * Written here instead of in `character-images.json` and its neighbour because
+ * those two files are *generated*: `export-card-images.mjs` builds them from
+ * the 27 printed characters, so an entry added by hand would survive exactly
+ * until the next time anybody ran the script. This card was never on a sheet,
+ * so it has no slice reference and nothing to be regenerated from.
+ *
+ * Cut to the same sizes as the real thing — 629x780 and 249x420 — so it needs
+ * no special handling anywhere it is drawn.
+ */
+const RANDOM_CARD = {
+  karta: "/cards/karta-random.jpg",
+  standee: "/cards/standee-random.jpg",
+  art: "/cards/art/karta-random.jpg",
+} as const;
 
 /**
  * First slice for each card id.
@@ -71,6 +90,7 @@ function fileNameFor(slice: string): string {
  * lookup.
  */
 export function characterImageUrl(characterId: string): string | null {
+  if (characterId === RANDOM_CHARACTER_ID) return RANDOM_CARD.karta;
   const slice = (portraits as Record<string, string>)[characterId];
   if (!slice) return null;
   return `/cards/${fileNameFor(slice)}.jpg`;
@@ -88,6 +108,7 @@ export function characterImageUrl(characterId: string): string | null {
  * unreadable print, and the small one is a figure you recognise at a glance.
  */
 export function characterStandeeUrl(characterId: string): string | null {
+  if (characterId === RANDOM_CHARACTER_ID) return RANDOM_CARD.standee;
   const slice = (standees as Record<string, string>)[characterId];
   if (!slice) return null;
   return `/cards/${fileNameFor(slice)}.jpg`;
@@ -113,6 +134,7 @@ export function cardArtUrl(cardId: string, ref?: string): string | null {
 
 /** The illustration off a character's big card, for the same reasons. */
 export function characterArtUrl(characterId: string): string | null {
+  if (characterId === RANDOM_CHARACTER_ID) return RANDOM_CARD.art;
   const slice = (portraits as Record<string, string>)[characterId];
   if (slice && ART_AVAILABLE.has(slice)) return `/cards/art/${fileNameFor(slice)}.jpg`;
   return characterImageUrl(characterId);

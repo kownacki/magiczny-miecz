@@ -7,6 +7,16 @@ import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages"
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
 import { RANDOM_CHARACTER_ID, isRandomPick } from "@/lib/engine/characters";
 
+/**
+ * The border on the surprise when more than one player has taken it.
+ *
+ * Every other card carries the colour of the one seat that holds it. Two seats
+ * cannot share a border, and picking either of their colours would name the
+ * wrong person, so it goes to the neutral grey of `--color-muted` — which reads
+ * as "several" rather than as anybody in particular.
+ */
+const MANY_TAKERS = "#9aa2bd";
+
 export interface LobbySeat {
   id: string;
   seatIndex: number;
@@ -156,7 +166,9 @@ export function Lobby({
 
   // The surprise is the one tile several people can be standing on at once, so
   // it keeps a list where every other character keeps an owner.
-  const surprised = seats.filter((seat) => isRandomPick(seat.characterId));
+  const surprised = seats
+    .filter((seat) => isRandomPick(seat.characterId))
+    .sort((a, b) => a.seatIndex - b.seatIndex);
 
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
@@ -330,6 +342,7 @@ export function Lobby({
           <RandomChoice
             takenBy={surprised}
             mine={isRandomPick(target?.characterId ?? null)}
+            aimed={target !== null}
             busy={busy || pendingCharacterId !== null || !target}
             pending={pendingCharacterId === RANDOM_CHARACTER_ID}
             dimmed={pendingCharacterId !== null && pendingCharacterId !== RANDOM_CHARACTER_ID}
@@ -513,44 +526,53 @@ export function Lobby({
  * is a decision, not a deferral: the seat can be ready, and what it turns into
  * is not settled until the game starts.
  *
- * The only tile more than one seat can hold at once. There is one Kapłanka, but
- * no limit on how many people want a surprise, so this shows a row of everybody
- * who does where the others show a single owner.
- *
- * PLACEHOLDER ARTWORK. The finished tile is a Karta Postaci with the figure and
- * the printed name lifted off the white field and the word LOSOWA set in their
- * place; it is being drawn separately. Until it lands this draws the same shape
- * — the 114x190 of a mała Karta, the same border and dimming — with the word in
- * the display face where the name belongs, so the strip lays out exactly as it
- * will with the real thing in it.
+ * The one tile that is never unavailable. There is a single Kapłanka, but no
+ * limit on how many people want a surprise, so this is never dimmed for being
+ * taken and never disabled for somebody else holding it — it behaves exactly
+ * like a card nobody has picked, because in the only sense that matters to a
+ * player looking at the strip, nobody has. Who *has* picked it is carried by
+ * the border and the row of names instead.
  */
 function RandomChoice({
   takenBy,
   mine,
+  aimed,
   busy,
   pending,
   dimmed,
   onPreview,
   onPick,
 }: {
+  /** Every seat holding the surprise, in seat order. */
   takenBy: LobbySeat[];
   mine: boolean;
+  /** Whether there is a seat to choose for at all. */
+  aimed: boolean;
   busy: boolean;
   pending: boolean;
   dimmed: boolean;
   onPreview: (characterId: string | null) => void;
   onPick: () => void;
 }) {
-  // One taker wears their colour, as any other card would. Several cannot, so
-  // the border stays neutral and the foot counts them instead.
-  const only = takenBy.length === 1 ? SEAT_COLOURS[takenBy[0].seatIndex % SEAT_COLOURS.length] : null;
+  const standee = characterStandeeUrl(RANDOM_CHARACTER_ID);
+  // One taker wears their colour, as any other card would. Several cannot —
+  // there is no such thing as two thirds of a border — so it goes grey, which
+  // reads as "more than one person" rather than as anybody in particular.
+  const border =
+    takenBy.length === 0
+      ? null
+      : takenBy.length === 1
+        ? SEAT_COLOURS[takenBy[0].seatIndex % SEAT_COLOURS.length]
+        : MANY_TAKERS;
+  // The same ladder the other tiles use, minus the owner-dimming: a card that
+  // cannot be taken away from you is never the greyed-out kind.
   const dim = pending
     ? "opacity-100"
     : dimmed
       ? "opacity-20"
-      : mine
+      : mine || aimed
         ? "opacity-100"
-        : "opacity-60";
+        : "opacity-40";
 
   return (
     <div
@@ -559,45 +581,45 @@ function RandomChoice({
       onMouseLeave={() => onPreview(null)}
     >
       <button
-        // Unlike every other tile this stays live when somebody already holds
-        // it — unless that somebody is you, in which case there is nothing to
-        // ask for and a second click would only un-ready you.
+        // Live even while somebody else holds it — unless that somebody is you,
+        // in which case there is nothing to ask for and a second click could
+        // only un-ready you.
         disabled={busy || mine}
         onClick={onPick}
         onFocus={() => onPreview(RANDOM_CHARACTER_ID)}
         onBlur={() => onPreview(null)}
-        title="Losowa — postać zostanie wylosowana i odsłonięta na starcie gry"
-        style={only && !pending ? { borderColor: only, borderWidth: 2 } : undefined}
+        title="Losowa — Karta Postaci zostanie wylosowana i odsłonięta po rozpoczęciu gry"
+        style={border && !pending ? { borderColor: border, borderWidth: 2 } : undefined}
         className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
-          pending ? "animate-pulse border-ochre" : only ? "" : "border-edge hover:border-ochre"
+          pending ? "animate-pulse border-ochre" : border ? "" : "border-edge hover:border-ochre"
         }`}
       >
-        {/* data-placeholder marks the one element the artwork replaces. */}
-        <span
-          data-placeholder="losowa-standee"
-          className={`flex aspect-[114/190] flex-col items-center justify-center gap-1 bg-raised px-1 text-center transition-opacity ${dim}`}
-        >
-          <span className="font-[family-name:var(--font-display)] text-[15px] leading-none text-ochre">
-            Losowa
-          </span>
-          <span className="text-[9px] leading-tight text-muted">
-            odsłonięta
-            <br />
-            na starcie
-          </span>
-        </span>
+        {standee && (
+          <Image
+            src={standee}
+            alt="Losowa postać"
+            width={114}
+            height={190}
+            className={`h-auto w-full transition-opacity ${dim}`}
+          />
+        )}
+        {/* Everybody who wants a surprise, stacked in seat order — the same
+            order they sit in above, so the strip and the roster read as one
+            list. The other tiles need only one of these; this is the only
+            place two people can be standing on the same card. */}
         {takenBy.length > 0 && (
-          <span
-            style={{ background: only ?? undefined }}
-            className={`absolute inset-x-0 bottom-0 flex h-[14.3%] min-h-[21px] items-center justify-center overflow-hidden px-0.5 text-[13px] font-medium leading-none ${
-              only ? "text-night" : "bg-edge text-ink"
-            }`}
-          >
-            <span className="truncate">
-              {takenBy.length === 1
-                ? (takenBy[0].playerName ?? `miejsce ${takenBy[0].seatIndex + 1}`)
-                : `${takenBy.length} graczy`}
-            </span>
+          <span className="absolute inset-x-0 bottom-0 flex flex-col">
+            {takenBy.map((seat) => (
+              <span
+                key={seat.id}
+                style={{ background: SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length] }}
+                className="flex min-h-[21px] items-center justify-center overflow-hidden px-0.5 text-[13px] font-medium leading-none text-night"
+              >
+                <span className="truncate">
+                  {seat.playerName ?? `miejsce ${seat.seatIndex + 1}`}
+                </span>
+              </span>
+            ))}
           </span>
         )}
       </button>
@@ -605,20 +627,19 @@ function RandomChoice({
   );
 }
 
-/** What the reading column shows for the surprise: there is no Karta to read yet. */
+/** The reading column's version: the card itself, and nothing said about it. */
 function RandomCard() {
+  const src = characterImageUrl(RANDOM_CHARACTER_ID);
+  if (!src) return null;
   return (
-    <div
-      data-placeholder="losowa-karta"
-      className="flex aspect-[780/972] max-h-full w-auto max-w-full flex-col items-center justify-center gap-3 rounded border border-edge bg-raised p-6 text-center"
-    >
-      <p className="font-[family-name:var(--font-display)] text-2xl text-ochre">Losowa</p>
-      <p className="max-w-[14rem] text-[12px] leading-relaxed text-muted">
-        Nie wybierasz — Karta Postaci zostanie wylosowana spośród tych, których
-        nikt nie wziął, i odsłonięta dopiero po rozpoczęciu gry. Możesz być
-        gotów, nie wiedząc, kim zagrasz.
-      </p>
-    </div>
+    <Image
+      src={src}
+      alt="Karta Postaci: losowa"
+      width={780}
+      height={972}
+      className="max-h-full w-auto rounded border border-edge object-contain"
+      priority
+    />
   );
 }
 
@@ -681,7 +702,14 @@ function SeatSlot({
 }) {
   // The small card, because that is the piece standing on the board for this
   // player — it is what "which one are you?" is answered with at a table.
-  const portrait = character ? characterStandeeUrl(character.id) : null;
+  // The surprise has a card of its own, so a seat holding it shows a picture
+  // like everybody else rather than the "still choosing" placeholder — which
+  // would be wrong twice over, since that seat has chosen and can be ready.
+  const portrait = character
+    ? characterStandeeUrl(character.id)
+    : isRandomPick(seat.characterId)
+      ? characterStandeeUrl(RANDOM_CHARACTER_ID)
+      : null;
   // The same colour this player's dot has on the board, and it never changes:
   // it comes from the seat index, so "the blue one" means one person all game.
   const colour = SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
@@ -762,10 +790,10 @@ function SeatSlot({
             : "cursor-default border-edge/40"
         }`}
       >
-        {portrait && character ? (
+        {portrait ? (
           <Image
             src={portrait}
-            alt={character.name}
+            alt={character?.name ?? "Losowa postać"}
             width={174}
             height={270}
             // Contained, not cropped: the small card is a whole illustration
@@ -773,20 +801,6 @@ function SeatSlot({
             // off — which is the one thing on it.
             className="h-full w-full object-contain"
           />
-        ) : isRandomPick(seat.characterId) ? (
-          // Chosen, and deliberately unreadable. Distinct from the empty card
-          // below, because "I asked for a surprise" and "I am still looking"
-          // are different states and the ready line beside them reads
-          // differently for each. PLACEHOLDER — see `RandomChoice`.
-          <span
-            data-placeholder="losowa-standee"
-            className="flex h-full flex-col items-center justify-center gap-1 p-2 text-center"
-          >
-            <span className="font-[family-name:var(--font-display)] text-lg text-ochre">
-              Losowa
-            </span>
-            <span className="text-[11px] leading-snug text-muted">odsłonięta na starcie</span>
-          </span>
         ) : (
           // The empty card says what is happening; the line below stays quiet
           // until there is something else to report. Saying it twice, once in
