@@ -111,3 +111,51 @@ describe("slotted equipment", () => {
     expect(ITEM_IDS.size - worn.length).toBe(19);
   });
 });
+
+describe("every Przedmiot in the box, one at a time", () => {
+  /**
+   * The whole table, asserted card by card rather than by sampling.
+   *
+   * The point is the *pairing*: a card that may be worn fits its own place and
+   * no other, and a card that may not fits nowhere at all. Dragging and the
+   * "załóż" button both ask exactly this question, so a card that answered it
+   * wrongly would be draggable into a place it has no business being.
+   */
+  const ALL = [...ITEM_IDS].sort();
+
+  it.each(ALL)("%s fits exactly the places it is meant to", (id) => {
+    const mine = slotsFor(id);
+    for (const slot of SLOTS) {
+      expect(fitsIn(id, slot)).toBe(mine.includes(slot));
+    }
+    // Wearable or not, never both and never neither.
+    expect(isWearable(id)).toBe(mine.length > 0);
+  });
+
+  it("splits the box the way the variant says", () => {
+    const worn = ALL.filter(isWearable);
+    const carried = ALL.filter((id) => !isWearable(id));
+    expect(worn).toHaveLength(26);
+    expect(carried).toEqual([
+      "1-sztuka-zlota",
+      "2-sztuki-zlota",
+      "czarodziejska-kosc",
+      "diament-krolow",
+      "eliksir-sily",
+      "gliniana-tabliczka",
+      "jablko-natchnienia",
+      "kij-i-sznur",
+      "krysztal-losu",
+      "krysztal-magow",
+      "latarnia",
+      "lodz",
+      "magiczny-manuskrypt",
+      "owoc-jarzebiny-wiedzy",
+      "relikwiarz",
+      "srebrna-strzala",
+      "swiety-graal",
+      "tajemnicza-szkatula",
+      "zwierciadlo-zniszczenia",
+    ]);
+  });
+});

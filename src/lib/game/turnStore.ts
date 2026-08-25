@@ -34,7 +34,8 @@ import {
   type TurnPhase,
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
-import type { CardClass, EventCard } from "@/data/types";
+import items from "@/data/items.json";
+import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { scriptFor } from "@/lib/engine/cardScript";
 import type { TurnCard } from "@/lib/engine/state";
@@ -101,7 +102,7 @@ function decksOf(game: { deck: unknown }): Decks {
   if (!stored?.events) return freshDecks();
   return { events: stored.events, spells: stored.spells ?? buildDeck(SPELLS.map((c) => cardRef(c.source)), shuffle) };
 }
-import { fitsIn, type EqMode, type Slot } from "@/lib/engine/slots";
+import { SLOT_LABEL, fitsIn, isWearable, type EqMode, type Slot } from "@/lib/engine/slots";
 import type { Holding } from "@/lib/engine/state";
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
 import { bonusFromHoldings, inEffect } from "@/lib/engine/holdings";
@@ -123,6 +124,15 @@ import type { Seat } from "@/lib/engine/state";
  */
 function eq(game: { eq_mode: string }): EqMode {
   return game.eq_mode === "slotowy" ? "slotowy" : "klasyczny";
+}
+
+/** A card's printed name, for messages a player reads. */
+function cardName(cardId: string): string {
+  return (
+    (events as EventCard[]).find((card) => card.id === cardId)?.name ??
+    (items as Item[]).find((item) => item.id === cardId)?.name ??
+    cardId
+  );
 }
 
 function asHolding(row: HoldingRow): Holding {
@@ -1732,7 +1742,15 @@ export async function equipCard(
   }
 
   if (!fitsIn(held.card_id, slot)) {
-    throw new Error("Ten Przedmiot tam nie pasuje.");
+    // Two different refusals wearing one sentence. "It does not go there" is
+    // useful when there is somewhere it does go; when there is nowhere at all,
+    // it reads as a puzzle about which place to try next.
+    const name = cardName(held.card_id);
+    throw new Error(
+      isWearable(held.card_id)
+        ? `${name} nie pasuje w to miejsce (${SLOT_LABEL[slot]}).`
+        : `${name} to nie jest rzecz do noszenia — zostaje w plecaku.`,
+    );
   }
 
   // One thing per place, and the thing already there goes back in the pack
