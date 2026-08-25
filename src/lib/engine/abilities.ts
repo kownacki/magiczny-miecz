@@ -172,7 +172,18 @@ export type Ability =
    * z nimi." Not a combat bonus — no dice are thrown — so `punkty` and
    * `modyfikator-rzutu` both say the wrong thing about it.
    */
-  | { kind: "pokonuje-bez-walki"; kogo: "demony" };
+  | { kind: "pokonuje-bez-walki"; kogo: "demony" }
+  /**
+   * A different bonus against particular enemies.
+   *
+   * Arondight and the Topór both add one point of Miecz, "a w walce z
+   * Wilkołakiem - 2 punkty" — so this REPLACES the standing bonus against the
+   * named foe rather than stacking with it. Two points in total, not three.
+   *
+   * `modyfikator-rzutu` cannot say this: its `gdzie` knows fields and the kind
+   * of fight, never who is being fought.
+   */
+  | { kind: "przeciw"; komu: readonly string[]; miecz?: number; magia?: number };
 
 /**
  * Rules the typed vocabulary cannot hold, written out instead.
@@ -186,6 +197,9 @@ export type Ability =
  * read what they are holding.
  */
 export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = {
+  excalibur: ["po każdej wygranej walce zabierasz pokonanemu 1 punkt Życia"],
+  "czarodziejska-kosc": ["+1 Miecza lub Magii w Pułapce i Magicznej Pułapce — wybierasz"],
+  "poszukiwacz-przygod": ["atakuje Postać lub Wroga do 3 Obszarów stąd, po twoim ruchu"],
   "diament-krolow": [
     "sprzedasz w Zamku za 5 Sz. Z.",
     "przegraną walkę z Postacią płacisz Diamentem, nie punktem Życia",
@@ -279,8 +293,17 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // rather than one when the fight is against a Wilkołak. The bonus below is
   // the one that applies in every other fight; the exception is left to the
   // text rather than half-encoded.
-  arondight: [{ kind: "punkty", miecz: 1 }],
-  "topor-swiatla-i-ciemnosci": [{ kind: "punkty", miecz: 1 }],
+  arondight: [
+    { kind: "punkty", miecz: 1 },
+    { kind: "przeciw", komu: ["wilkolak"], miecz: 2 },
+  ],
+  // "nie może być w posiadaniu Chaotycznych Postaci" — a 5.3 restriction the
+  // prose-reading version never found, because it is phrased differently again.
+  "topor-swiatla-i-ciemnosci": [
+    { kind: "tylko-natura", natury: ["dobra", "zla"] },
+    { kind: "punkty", miecz: 1 },
+    { kind: "przeciw", komu: ["wilkolak"], miecz: 2 },
+  ],
   /** Excalibur also takes a point of Życie off each beaten opponent — not encodable. */
   excalibur: [{ kind: "punkty", miecz: 1 }],
   // "Włóczni nie mogą posiadać Złe Postacie."
@@ -314,9 +337,9 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
       delta: -2,
     },
   ],
-  // Only the second half of the Kość is here. Its first half adds a point of
-  // Miecza or Magii *in the two Pułapki*, which is a stat bonus limited to two
-  // fields and has no variant; that clause stays on the card.
+  // Only the second half of the Kość fits a kind. Its first half — a point of
+  // Miecza or Magii in the two Pułapki, chosen by the player — is written out
+  // in CARD_NOTES instead of being left on the card.
   "czarodziejska-kosc": [
     {
       kind: "modyfikator-rzutu",
@@ -390,7 +413,11 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
    * the printed text is unambiguous about, is that his failure costs him rather
    * than you.
    */
-  "poszukiwacz-przygod": [{ kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true }],
+  "poszukiwacz-przygod": [
+    // "posiada 3 punkty Miecza" — the strength it raids with, which nothing said.
+    { kind: "walczy-za-ciebie", miecz: 3, magia: 0 },
+    { kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true },
+  ],
   opiekun: [
     { kind: "bezpieczny", fields: ["wieza-przeznaczenia", "urwisko-1", "urwisko-2"], from: "rzut" },
   ],

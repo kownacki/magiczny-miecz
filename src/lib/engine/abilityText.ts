@@ -278,6 +278,13 @@ export function describeAbility(ability: Ability): string {
       const natury = ability.natury.map((n) => (n === "zla" ? "zła" : n)).join(" lub ");
       return `tylko Postać: ${natury} (5.3)`;
     }
+    case "przeciw": {
+      const gives = [
+        ability.miecz !== undefined && `${ability.miecz} Miecza`,
+        ability.magia !== undefined && `${ability.magia} Magii`,
+      ].filter(Boolean).join(", ");
+      return `przeciw: ${ability.komu.join(", ")} — ${gives} zamiast zwykłego bonusu`;
+    }
     case "pokonuje-bez-walki":
       return "pokonujesz wszystkie Demony bez walki";
     case "zaklecia-ponad-limit":

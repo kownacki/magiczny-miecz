@@ -41,20 +41,23 @@ export interface SlotItem {
  * differently from everything else and from the pictures that go in them.
  */
 const LAYOUT: Record<Slot, string> = {
-  amulet: "1 / 1 / 2 / 2",
+  // Head between the two things worn on it, hands either side of the torso, the
+  // load along the bottom.
+  pierscien: "1 / 1 / 2 / 2",
   glowa: "1 / 2 / 2 / 3",
-  pierscien: "1 / 3 / 2 / 4",
+  amulet: "1 / 3 / 2 / 4",
   "reka-glowna": "2 / 1 / 3 / 2",
   tulow: "2 / 2 / 3 / 3",
   "reka-pomocnicza": "2 / 3 / 3 / 4",
   rekawice: "3 / 1 / 4 / 2",
-  wierzchowiec: "3 / 2 / 4 / 3",
-  sakwa: "3 / 3 / 4 / 4",
-  // A row of their own, under the body. They are not worn in any sense a
-  // person would recognise — they are the two things you must have found — so
-  // they sit apart from the places that hold real gear.
-  "magiczny-miecz": "4 / 1 / 5 / 2",
-  "tarcza-tolimana": "4 / 3 / 5 / 4",
+  sakwa: "3 / 2 / 4 / 3",
+  wierzchowiec: "3 / 3 / 4 / 4",
+
+  // Off to the side, past a gap, in a column of their own. They are not gear —
+  // neither does anything in a fight — so they do not belong among the places
+  // that hold it, and standing apart says that without a caption.
+  "magiczny-miecz": "1 / 5 / 2 / 6",
+  "tarcza-tolimana": "2 / 5 / 3 / 6",
 };
 
 /** Drawn in the empty places, so a gap says which gap it is. */
@@ -137,7 +140,9 @@ export function SlotPanel({
       // the same object wherever it sits, so it is the same size wherever it
       // sits. Rows size themselves, because the name under the picture is part
       // of the place now.
-      style={{ gridTemplateColumns: `repeat(3, ${SLOT_WIDTH}px)` }}
+      // Three columns of body, a gutter, then the two that only have to be
+      // found.
+      style={{ gridTemplateColumns: `repeat(3, ${SLOT_WIDTH}px) 1.5rem ${SLOT_WIDTH}px` }}
     >
       {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
         const item = worn[slot];

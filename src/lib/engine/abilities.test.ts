@@ -213,9 +213,13 @@ describe("who dies in your place", () => {
   it("limits the Poszukiwacz to the raid he was sent on", () => {
     // "W przypadku porażki ty nie tracisz punktu Życia, ale twój Przyjaciel
     // ginie" — of the raid, not of your own fights.
-    expect(abilitiesOf("poszukiwacz-przygod")).toEqual([
-      { kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true },
-    ]);
+    // Asserted on the rule itself, not on it being the only rule the card has:
+    // the Poszukiwacz also raids with three points of Miecz, and pinning the
+    // whole array made adding that look like a regression.
+    expect(abilitiesOf("poszukiwacz-przygod")).toContainEqual({
+      kind: "ginie-zamiast-ciebie",
+      onlyWhenRaiding: true,
+    });
   });
 });
 
