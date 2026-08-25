@@ -61,21 +61,32 @@ const LAYOUT: Record<Slot, string> = {
   "tarcza-tolimana": "2 / 5 / 3 / 6",
 };
 
-/** Drawn in the empty places, so a gap says which gap it is. */
-const GLYPH: Record<Slot, string> = {
-  glowa: "\u26D1\uFE0E",
-  amulet: "\u25C8",
-  tulow: "\u26CA\uFE0E",
-  "reka-glowna": "\u2694\uFE0E",
-  "reka-pomocnicza": "\u26E8\uFE0E",
-  rekawice: "\u270B\uFE0E",
-  pierscien: "\u25EF",
-  // A horse and a bag exist only as emoji, and no selector makes them line
-  // drawings — so they are drawn as shapes like everything else instead.
-  wierzchowiec: "\u265E",
-  sakwa: "\u25A4",
-  "magiczny-miecz": "\u2726",
-  "tarcza-tolimana": "\u2727",
+/**
+ * Drawn in the empty places, so a gap says which gap it is.
+ *
+ * Silhouettes from game-icons.net (CC BY 3.0 — see README), used as masks so
+ * they take the slot's own colour. They were Unicode glyphs, which meant a
+ * helmet where the font happened to have a helmet, a chess knight standing in
+ * for a horse and a shaded square standing in for a bag. These are drawings of
+ * the eleven things.
+ *
+ * Deliberately not the cards' own illustrations, though every one of them is
+ * exported and to hand: those are white-on-black hatched engravings, and a
+ * ghost of one reads as a card already in the place rather than as the shape of
+ * the place itself.
+ */
+const ICON: Record<Slot, string> = {
+  glowa: "/slots/glowa.svg",
+  amulet: "/slots/amulet.svg",
+  tulow: "/slots/tulow.svg",
+  "reka-glowna": "/slots/reka-glowna.svg",
+  "reka-pomocnicza": "/slots/reka-pomocnicza.svg",
+  rekawice: "/slots/rekawice.svg",
+  pierscien: "/slots/pierscien.svg",
+  wierzchowiec: "/slots/wierzchowiec.svg",
+  sakwa: "/slots/sakwa.svg",
+  "magiczny-miecz": "/slots/magiczny-miecz.svg",
+  "tarcza-tolimana": "/slots/tarcza-tolimana.svg",
 };
 
 /** What a drag carries: the id of the holding being moved. */
@@ -192,7 +203,7 @@ export function SlotPanel({
               // The place says what it is for while it is empty, and what is in
               // it once it is filled.
               label={item ? item.card.name : SLOT_LABEL[slot]}
-              glyph={GLYPH[slot]}
+              icon={ICON[slot]}
               tone={tone}
               lifted={lifted}
               draggable={canAct && item !== undefined}

@@ -40,13 +40,24 @@ export interface SlotOccupant {
 /** How the place should look, which is mostly about what a moving card would do. */
 export type SlotTone = "empty" | "filled" | "accepts" | "rejects" | "candidate";
 
+/**
+ * Two questions, answered in two strengths.
+ *
+ * A card in the air asks every place the same thing, and each answers twice
+ * over: *this is somewhere it could go* — dashed and faint, the way an empty
+ * place is drawn, because nothing is happening here yet — and *this is where it
+ * would go* — solid and filled in, because it is. Green for yes and red for no
+ * (5.4, 17.2), and the pack rectangle says it the same way, since a player
+ * dropping a Miecz is not asking a different question of the two.
+ *
+ * Said while the card is still in the air, rather than as a refusal after the
+ * fact.
+ */
 const TONE: Record<SlotTone, string> = {
-  // Green if it would go here, red if it would not — said while the card is
-  // still in the air, rather than as a refusal after the fact.
-  accepts: "border-verdigris bg-verdigris/25",
-  rejects: "border-vermilion bg-vermilion/25",
-  candidate: "border-verdigris/50 bg-verdigris/5",
-  filled: "border-ochre/60 bg-raised",
+  accepts: "border-solid border-verdigris bg-verdigris/25",
+  rejects: "border-solid border-vermilion bg-vermilion/25",
+  candidate: "border-dashed border-verdigris/60 bg-verdigris/10",
+  filled: "border-solid border-ochre/60 bg-raised",
   empty: "border-dashed border-edge/70 bg-night/40",
 };
 
@@ -54,6 +65,7 @@ export function ItemSlot({
   item,
   label,
   glyph,
+  icon,
   tone,
   lifted = false,
   dimmed = false,
@@ -82,6 +94,14 @@ export function ItemSlot({
   label: string;
   /** Drawn in an empty place, so a gap says which gap it is. */
   glyph?: string;
+  /**
+   * An SVG to draw in an empty place instead of a glyph.
+   *
+   * Used as a CSS mask rather than an `<img>`, so the shape takes the slot's
+   * own text colour and dims and lights with everything else on it. The files
+   * are single black paths on nothing, which is exactly what a mask wants.
+   */
+  icon?: string;
   tone: SlotTone;
   /** It is on the cursor; this is the hollow it left. */
   lifted?: boolean;
@@ -227,6 +247,25 @@ export function ItemSlot({
               // No scan in this checkout: the name is what the picture stood for.
               <span className="flex h-full w-full items-center justify-center p-1 text-center text-[10px] leading-tight text-ink">
                 {item.card.name}
+              </span>
+            ) : icon ? (
+              <span className="flex h-full w-full items-center justify-center text-muted/30">
+                <span
+                  aria-hidden
+                  style={{
+                    WebkitMaskImage: `url(${icon})`,
+                    maskImage: `url(${icon})`,
+                    WebkitMaskSize: "contain",
+                    maskSize: "contain",
+                    WebkitMaskRepeat: "no-repeat",
+                    maskRepeat: "no-repeat",
+                    WebkitMaskPosition: "center",
+                    maskPosition: "center",
+                    backgroundColor: "currentColor",
+                    width: 34,
+                    height: 34,
+                  }}
+                />
               </span>
             ) : (
               <span className="flex h-full w-full items-center justify-center text-[22px] text-muted/30">
