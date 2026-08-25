@@ -11,6 +11,7 @@ import {
   verifySeat,
 } from "@/lib/game/store";
 import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
+import { shopStock } from "@/lib/game/turnStore";
 import type { Slot } from "@/lib/engine/slots";
 
 /**
@@ -55,6 +56,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     game,
     mySeatIndex: mine?.seat_index ?? null,
     fieldCards: fieldCards.map((row) => ({ fieldId: row.field_id, cardId: row.card_id })),
+    // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
+    // rather than offering what will be refused.
+    stock: await shopStock(game.id),
     seats: seats.map((seat) => {
       const own = holdings
         .filter((holding) => holding.seat_id === seat.id)

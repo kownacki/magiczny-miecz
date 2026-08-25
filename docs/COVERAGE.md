@@ -117,7 +117,7 @@ they are rules, and one of them was missing.
 | 9.1 | a spell's effect is on its card | ◐ | every spell's timing, target and effect are typed; the effect is stated, not applied |
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side |
-| 9.4 | may not be discarded unless over the limit | ❌ | |
+| 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |
 | 9.5 | drawn from the top; the pile is reshuffled when empty; some characters start holding one | ✅ | `drawSpell`, `STARTING_KIT` |
 | 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ◐ | `castSpell` — the window is enforced, the card is spent and the table is told; the effect is the players' |
 | 9.7 | no spell works on the Most or the Bestia | ✅ | refused in `castSpell` |
@@ -193,7 +193,7 @@ they are rules, and one of them was missing.
 | 16.4 | all Spotkania and Wrogowie first, then the rest | ✅ | `resolutionOrder` |
 | 16.5 | Nieznajomy — obey it | ✅ | |
 | 16.6 | Przedmioty and Przyjaciele may be taken | ✅ | `takeCard` |
-| 16.6 | a drawn Magiczny Miecz / Tarcza Tolimana is swapped for the equipment copy | ❌ | |
+| 16.6 | a drawn Magiczny Miecz / Tarcza Tolimana is swapped for the equipment copy | ✅ | the same card either way, so the pile is the supply |
 | 16.7 | Miejsce — obey it | ✅ | |
 | 16.8 | cards left behind stay face up on the field for the next character | ✅ | `leaveCardsBehind` |
 
@@ -244,7 +244,7 @@ they are rules, and one of them was missing.
 | | rule | status | where |
 |---|---|---|---|
 | 21.1 | take the matching equipment card | ✅ | |
-| 21.2 | bought items return to the shop stack and can run out | ❌ | shops are not modelled (see `kup`) |
+| 21.2 | bought items return to the shop stack and can run out | ✅ | `stock.ts` — derived from what is in play |
 | 21.3 | they may be left on the board like any card | ✅ | `dropCard` |
 
 ## 22. Zwycięstwo

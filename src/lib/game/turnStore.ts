@@ -49,6 +49,7 @@ import items from "@/data/items.json";
 import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { combinedEnemyTotal } from "@/lib/engine/combat";
+import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { scriptFor } from "@/lib/engine/cardScript";
 import type { TurnCard } from "@/lib/engine/state";
 import { beastCombatKind, beastStrength, compareCombat } from "@/lib/engine/combat";
@@ -554,6 +555,38 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
  * the referee does not track yet — so the number is seeded low and left
  * editable rather than being quietly wrong.
  */
+/**
+ * How many copies of a card are anywhere in the game — held by anybody, or
+ * lying face up on a field where somebody left it (12.1, 16.8).
+ *
+ * This is the denominator for 21.2: every copy in play is one that is not on
+ * the pile to be bought.
+ */
+async function copiesInPlay(gameId: string, cardId: string): Promise<number> {
+  const held = (await holdingsFor(gameId)).filter((h) => h.card_id === cardId).length;
+  const onFields = (await fieldCardsFor(gameId)).filter((c) => c.card_id === cardId).length;
+  return held + onFields;
+}
+
+/**
+ * What the Wyposażenie pile still has, for every card on it.
+ *
+ * Sent with the table state so a shop can show what it has rather than offering
+ * something that will be refused.
+ */
+export async function shopStock(gameId: string): Promise<Record<string, number>> {
+  const held = await holdingsFor(gameId);
+  const onFields = await fieldCardsFor(gameId);
+  const stock: Record<string, number> = {};
+  for (const cardId of Object.keys(PRINTED_STOCK)) {
+    const inPlay =
+      held.filter((h) => h.card_id === cardId).length +
+      onFields.filter((c) => c.card_id === cardId).length;
+    stock[cardId] = stockLeft(cardId, inPlay);
+  }
+  return stock;
+}
+
 export async function beginFight(gameId: string, cardIds: string[]): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
@@ -819,6 +852,19 @@ export async function takeCard(
     // In slotowy the limit is on the pack alone — what a character is wearing
     // hangs on the character. Picking a card up always puts it in the pack, so
     // this is the pack's question either way.
+    // 21.2: the Wyposażenie pile is finite. A Magiczny Miecz that four other
+    // characters are already carrying is "w danej chwili nieosiągalny", and
+    // 16.6 makes a drawn one the same card rather than a fifth — which is why
+    // counting what is in play is the same answer as keeping a tally.
+    if (fromTheShop(cardId)) {
+      const left = stockLeft(cardId, await copiesInPlay(gameId, cardId));
+      if (left <= 0) {
+        throw new Error(
+          `${cardName(cardId)} — nie ma już ani jednej w Wyposażeniu (21.2).`,
+        );
+      }
+    }
+
     const variant = eq(game);
     if (carriedCount(mine, variant) >= carryLimit(mine, variant)) {
       throw new Error(
@@ -866,6 +912,31 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
     .select("seat_id,card_id,kind")
     .eq("id", holdingId)
     .maybeSingle();
+
+  // 9.4: Zaklęcia are not discarded at will — "Postać nie może odrzucać
+  // Zaklęć, chyba, że posiada ich więcej, niż wynika to z jej parametru Magii".
+  // A hand you can throw away is a hand you can tidy into whatever you wanted,
+  // and the limit of 2.6 is meant to bite.
+  if (data?.kind === "spell") {
+    const seats = await seatsFor(gameId);
+    const seat = seats.find((s) => s.id === data.seat_id);
+    const held = (await holdingsFor(gameId)).filter(
+      (h) => h.seat_id === data.seat_id && h.kind === "spell",
+    );
+    if (seat) {
+      const bonus = bonusFromHoldings(
+        (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id).map(asHolding),
+        eq(game),
+      );
+      const allowed = spellCapacity(seat.magia_own + bonus.magia);
+      if (held.length <= allowed) {
+        throw new Error(
+          `Zaklęć nie odrzuca się, dopóki nie masz ich więcej niż ${allowed} (9.4, 2.6).`,
+        );
+      }
+    }
+  }
+
   await db.from("holdings").delete().eq("id", holdingId);
   await journal(gameId, (data?.seat_id as string) ?? null, game.turn, "odrzucenie", {
     cardId: data?.card_id,
