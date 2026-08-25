@@ -10,6 +10,7 @@ import {
   characterImageUrl,
 } from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
+import { CardMark } from "./card-mark";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -44,6 +45,16 @@ export interface TileCard {
   character?: boolean;
   /** Could a hand contain this? Only Przedmioty, Przyjaciele and Zaklęcia can. */
   holdable?: boolean;
+  /**
+   * Conjured by the test shortcut rather than won.
+   *
+   * Carried on the card itself so the mark follows it everywhere it is drawn —
+   * the pack, the paper doll, the hand, and the whole Karta when it is opened.
+   * A tile a player recognises at a glance and a Karta they open to read are
+   * the same card, and the one place they were most likely to check was the
+   * one that did not say.
+   */
+  granted?: boolean;
 }
 
 export function CardTile({
@@ -218,8 +229,13 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
         )}
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h3 className="font-[family-name:var(--font-display)] text-lg text-ochre">
+            <h3 className="flex items-center gap-2 font-[family-name:var(--font-display)] text-lg text-ochre">
               {card.name}
+              {/* Beside the name, at the size the name is read at. This is the
+                  view somebody opens to check what a card actually is, so it is
+                  the last place that should stay quiet about one that is not
+                  from the box. */}
+              {card.granted && <CardMark mark="granted" size={20} />}
             </h3>
             <button onClick={onClose} className="text-xs text-muted hover:text-ink">
               zamknij

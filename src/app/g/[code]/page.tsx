@@ -1990,7 +1990,11 @@ function Hand({
             // Reading and moving are different modes: no Karta opens over the
             // place you are aiming at while a card is in the air.
             quiet={moving}
-            badge={held.kind === "trophy" ? "trofeum" : undefined}
+            // Both answer "what is this card, exactly", so they sit together.
+            marks={[
+              ...(held.kind === "trophy" ? (["trofeum"] as const) : []),
+              ...(held.granted ? (["granted"] as const) : []),
+            ]}
             // Up onto the body, mirroring the arrow down that takes a card
             // off it. Only where there is one place it could go: with two
             // hands to choose between, an arrow would be choosing for you, and
@@ -2339,6 +2343,9 @@ function tileFor(held: Held): TileCard {
     name: CARD_NAMES.get(held.cardId) ?? held.cardId,
     text: CARD_TEXTS.get(held.cardId),
     kindLabel: KIND_LABEL[held.kind],
+    // Travels with the card into every view that draws it — the hover, the
+    // whole Karta — rather than each of them being told separately.
+    granted: held.granted,
   };
 }
 

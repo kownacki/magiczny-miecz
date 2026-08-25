@@ -20,6 +20,7 @@ import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
+import { CardMark, type SlotMark } from "./card-mark";
 
 /**
  * One size, everywhere.
@@ -96,7 +97,7 @@ export function ItemSlot({
   tone,
   lifted = false,
   dimmed = false,
-  badge,
+  marks = [],
   draggable = false,
   disabled = false,
   onClick,
@@ -133,8 +134,8 @@ export function ItemSlot({
   /** It is on the cursor; this is the hollow it left. */
   lifted?: boolean;
   dimmed?: boolean;
-  /** A short flag over the corner of the picture — a price, "trofeum". */
-  badge?: string;
+  /** What is true of this card, drawn on the bottom-right of the picture. */
+  marks?: readonly SlotMark[];
   draggable?: boolean;
   disabled?: boolean;
   onClick?: (event: React.MouseEvent) => void;
@@ -319,26 +320,14 @@ export function ItemSlot({
             )}
           </button>
 
-          {/* Marked because it is otherwise invisible: a conjured card looks
-              exactly like one somebody earned, and half an hour after setting a
-              scenario up nobody remembers which Graal was which. The journal
-              says so as it happens and then scrolls away; this stays on the
-              card.
-
-              Top-left, clear of the badge along the bottom and of whatever the
-              corner holds top-right. Red because it is the one thing on the
-              card that is not part of the game. */}
-          {item?.granted && !lifted && (
-            <span
-              title="Karta z trybu testowego — nie pochodzi z talii i nie wróci na stos"
-              className="pointer-events-none absolute left-0 top-0 rounded-br bg-night/85 px-1 text-[10px] leading-tight text-vermilion"
-            >
-              🔧
-            </span>
-          )}
-          {badge && !lifted && (
-            <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-night/85 px-1 text-center text-[9px] leading-tight text-ochre">
-              {badge}
+          {/* Bottom-right, together, because they answer the same question and
+              a player scanning a pack should only have to look in one place.
+              Clear of the corner button opposite and of the name below. */}
+          {marks.length > 0 && !lifted && (
+            <span className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl bg-night/85 px-1 py-0.5">
+              {marks.map((mark) => (
+                <CardMark key={mark} mark={mark} />
+              ))}
             </span>
           )}
           {corner}

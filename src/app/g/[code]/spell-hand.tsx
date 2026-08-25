@@ -166,7 +166,13 @@ export function SpellHand({
               item={{
                 holdingId: entry.holdingId,
                 cardId: entry.cardId,
-                card: { cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" },
+                card: {
+                  cardId: entry.cardId,
+                  name,
+                  text: card?.text,
+                  kindLabel: "Zaklęcie",
+                  granted: entry.granted,
+                },
                 granted: entry.granted,
               }}
               label={name}
@@ -174,7 +180,13 @@ export function SpellHand({
               dimmed={!now}
               disabled={busy}
               onClick={() =>
-                onInspect({ cardId: entry.cardId, name, text: card?.text, kindLabel: "Zaklęcie" })
+                onInspect({
+                  cardId: entry.cardId,
+                  name,
+                  text: card?.text,
+                  kindLabel: "Zaklęcie",
+                  granted: entry.granted,
+                })
               }
               // Two clicks on the card speak it — the same gesture that puts
               // a Przedmiot on, for the act that is a hand's equivalent. It

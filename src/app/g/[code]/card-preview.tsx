@@ -23,6 +23,7 @@ import { cardImageUrl, characterImageUrl } from "@/lib/engine/cardImages";
 import { characterProfile, forbiddenNatures, itemProfile } from "@/lib/engine/abilityText";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";
+import { CardMark } from "./card-mark";
 import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
 
@@ -190,8 +191,11 @@ export function CardPreview({
       {anythingToSay && (
         <div className="flex w-[18rem] max-w-[55vw] flex-col gap-2">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="font-[family-name:var(--font-display)] text-sm text-ochre">
+            <p className="flex items-center gap-1.5 font-[family-name:var(--font-display)] text-sm text-ochre">
               {card.name}
+              {/* The hover is where a player checks what a card is without
+                  disturbing anything, so it says this too. */}
+              {card.granted && <CardMark mark="granted" size={16} />}
             </p>
             {/* The Roman numeral printed at the top of the card. Not an
                 identity and not a level — it is the class, and 15.2 resolves a
