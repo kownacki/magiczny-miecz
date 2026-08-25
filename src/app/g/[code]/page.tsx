@@ -1752,6 +1752,30 @@ function Hand({
             // place you are aiming at while a card is in the air.
             quiet={moving}
             badge={held.kind === "trophy" ? "trofeum" : undefined}
+            // Up onto the body, mirroring the arrow down that takes a card
+            // off it. Only where there is one place it could go: with two
+            // hands to choose between, an arrow would be choosing for you, and
+            // the pair of named buttons below is the whole point.
+            corner={
+              canAct && slotted && wearsInOnePlace(held.cardId) ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCarry(null);
+                    onEquip(held.id, SLOTS.find((slot) => fitsIn(held.cardId, slot))!);
+                  }}
+                  title={
+                    wornBySlot(seat)[SLOTS.find((slot) => fitsIn(held.cardId, slot))!]
+                      ? "Załóż — to, co tam jest, wraca na to miejsce w plecaku"
+                      : "Załóż"
+                  }
+                  className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 leading-none text-muted transition hover:text-ochre"
+                >
+                  <span className="block pb-0.5 text-[14px]">↑</span>
+                </button>
+              ) : null
+            }
             // The one on the cursor is not also in the pack.
             lifted={held.id === liftedHoldingId}
             dimmed={held.kind === "trophy"}
@@ -1894,7 +1918,11 @@ function Hand({
           >
             {canAct && (
               <span className="flex items-center gap-2">
-                {slotted && held.kind === "item" && isWearable(held.cardId) && (
+                {/* Only where there is something to decide. A card with one
+                    place has the arrow in its corner and needs no word for the
+                    same act; a card with two hands to go in needs the two
+                    named buttons, which is what this is. */}
+                {slotted && held.kind === "item" && !wearsInOnePlace(held.cardId) && (
                   <EquipButton
                     cardId={held.cardId}
                     worn={wornBySlot(seat)}
@@ -1983,6 +2011,11 @@ function wornBySlot(seat: Seat): Partial<Record<Slot, SlotItem>> {
  * a weapon and both hands are places it could go — which is the only real
  * decision the variant offers, so it is the only one worth a second button.
  */
+/** Somewhere to put it, and only one somewhere — so no choice to offer. */
+function wearsInOnePlace(cardId: string): boolean {
+  return SLOTS.filter((slot) => fitsIn(cardId, slot)).length === 1;
+}
+
 function EquipButton({
   cardId,
   worn,

@@ -2456,12 +2456,27 @@ export async function equipCard(
     );
   }
 
-  // One thing per place, and the thing already there goes back in the pack
-  // rather than vanishing. Only this seat's — everybody else's Miecz stays on.
+  /**
+   * One thing per place, and the thing already there goes back in the pack
+   * rather than vanishing. Only this seat's — everybody else's Miecz stays on.
+   *
+   * It goes back into the square the new one is leaving, so the two change
+   * places. Landing on the end of the row instead was the tidy answer and the
+   * wrong one: a player swapping a Miecz for an Excalibur has not decided
+   * anything about where the Miecz should sit, and finding it at the back of a
+   * pack of sixteen is a small punishment for an ordinary move.
+   */
   const occupant = holdings.find(
     (h) => h.seat_id === held.seat_id && h.slot === slot && h.id !== holdingId,
   );
-  if (occupant) await putInSlot(occupant.id, null);
+  if (occupant) {
+    await putInSlot(occupant.id, null);
+    const { error } = await db
+      .from("holdings")
+      .update({ ordinal: held.ordinal })
+      .eq("id", occupant.id);
+    if (error) throw new Error(`Nie udało się przenieść Przedmiotu: ${error.message}`);
+  }
   if (held.slot !== slot) await putInSlot(holdingId, slot);
   /**
    * Nothing is journalled here, deliberately.
