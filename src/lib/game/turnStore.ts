@@ -97,6 +97,7 @@ import {
   buildDeck,
   cardRef,
   discardTo,
+  removeCopy,
   returningRef,
   drawFrom,
   shuffleWith,
@@ -3569,8 +3570,49 @@ export async function grantCard(gameId: string, seatId: string, cardId: string):
     // 9.3 keeps a Zaklęcie face down even when it arrived by fiat.
     face: kind === "spell" ? "hidden" : "open",
   });
+  await takeFromPile(gameId, cardId);
   await journal(gameId, seatId, game.turn, "test-karta", { cardId, kind }, true);
   await bumpRevision(gameId);
+}
+
+/**
+ * The deck's side of a card conjured into a hand.
+ *
+ * A granted card is not drawn — nothing came off the top — so the deck was
+ * still holding the copy and would happily deal it again, leaving two Cyklopy
+ * on the board and one Karta unaccounted for at every count afterwards. It also
+ * left the card no way home: `returningRef` looks for a copy neither pile is
+ * counting, finds every one of them accounted for, and correctly declines to
+ * invent a duplicate — so the card simply evaporated when it was discarded.
+ *
+ * Taking the copy out here makes a granted card behave like a drawn one
+ * everywhere downstream, which is the whole point of a test shortcut: it should
+ * reach a game state faster, not a different one.
+ *
+ * The Wyposażenie is left alone. Eleven of its twelve cards are printed in the
+ * event deck too, but 16.6 makes the deck's copy a pointer to the shelf rather
+ * than a second Hełm — so a granted one comes off the shelf, which `stockLeft`
+ * records by arithmetic the moment it is in play, and the deck keeps its
+ * pointer for whoever draws it later.
+ */
+async function takeFromPile(gameId: string, cardId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.mode !== "simulation" || fromTheShop(cardId)) return;
+
+  const pile: "events" | "spells" = SPELL_COPIES.has(cardId) ? "spells" : "events";
+  const copies = (pile === "spells" ? SPELL_COPIES : EVENT_COPIES).get(cardId);
+  if (!copies) return;
+
+  const decks = decksOf(game);
+  const after = removeCopy(decks[pile], copies);
+  // Null is every copy already in play — somebody is holding the last Smok, and
+  // granting a second is the shortcut doing what it was asked. The deck cannot
+  // give up what it does not have, and says nothing about it.
+  if (!after) return;
+  await db
+    .from("games")
+    .update({ deck: { ...decks, [pile]: after } })
+    .eq("id", gameId);
 }
 
 export async function placeSeat(

@@ -102,6 +102,29 @@ export function returningRef(deck: DeckState, copies: readonly CardRef[]): CardR
   return copies.find((ref) => !accounted.has(ref)) ?? null;
 }
 
+/**
+ * Takes one copy out of a pile without dealing it.
+ *
+ * The counterpart to `returningRef`, and it exists for the test shortcut: a
+ * card conjured into a hand is a card the deck must stop holding, or it will
+ * deal the same Cyklop again and the table will have two. Reaching into the box
+ * is allowed while testing; the box quietly refilling behind you is not.
+ *
+ * The draw pile first, because that is where a copy would have come from. Null
+ * when neither pile has one — every copy is already in play, which is a normal
+ * answer and not a failure.
+ */
+export function removeCopy(deck: DeckState, copies: readonly CardRef[]): DeckState | null {
+  const wanted = new Set(copies);
+  const inDraw = deck.draw.findIndex((ref) => wanted.has(ref));
+  if (inDraw !== -1) {
+    return { draw: deck.draw.filter((_, at) => at !== inDraw), discard: deck.discard };
+  }
+  const inDiscard = deck.discard.findIndex((ref) => wanted.has(ref));
+  if (inDiscard === -1) return null;
+  return { draw: deck.draw, discard: deck.discard.filter((_, at) => at !== inDiscard) };
+}
+
 export function remaining(deck: DeckState): number {
   return deck.draw.length + deck.discard.length;
 }
