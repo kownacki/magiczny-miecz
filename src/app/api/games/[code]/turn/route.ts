@@ -17,6 +17,7 @@ import {
   resolveFight,
   rollForMove,
   setFightPlayerTotal,
+  resolveBridgeOrdeal,
 } from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
 
@@ -119,6 +120,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "escape":
         await escape(game.id, body.succeeded !== false);
         break;
+      case "most-pole":
+        // The Kamienny Most's own fields: the traps, the game with Death, the
+        // dog, and the two creatures that stand in the way (14.5-14.6).
+        return NextResponse.json(
+          await resolveBridgeOrdeal(game.id, {
+            ...(Array.isArray(body.dice) ? { dice: body.dice.map(Number) } : {}),
+            ...(Array.isArray(body.itemRolls)
+              ? { itemRolls: body.itemRolls.map(Number) }
+              : {}),
+          }),
+        );
       case "beast":
         await fightBeast(
           game.id,

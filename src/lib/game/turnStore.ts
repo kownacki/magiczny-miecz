@@ -13,6 +13,17 @@ import {
 import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
 import { crossingDice, heldAbilities, tollIsWaived } from "@/lib/engine/abilities";
 import { spellScript } from "@/lib/engine/spells";
+import {
+  BRIDGE_GUARDIAN,
+  BRIDGE_ORDEAL,
+  BRIDGE_SIDE,
+  cerberLoss,
+  deathGameOutcome,
+  guardianStrength,
+  keptAfterFall,
+  rollDice,
+  trapOutcome,
+} from "@/lib/engine/bridge";
 import { abilitiesOfCharacter, startingKit } from "@/lib/engine/characters";
 import {
   afterDraw,
@@ -695,6 +706,17 @@ export async function resolveFight(gameId: string): Promise<void> {
     const outcome = fight.result.outcome;
     if (fight.guardian.kind === "most") {
       await settleBridge(gameId, fight.guardian.entrance, outcome);
+    } else if (fight.guardian.kind === "most-pole") {
+      // 14.6: the Demon and the Monstrum stand in the way rather than at a
+      // door. Beating one lets the character walk on next turn; losing costs a
+      // point of Życie and it is still there. Either way the character does not
+      // move — the bridge is one field a turn and this turn was the fight.
+      if (outcome === "przegrana") {
+        await db
+          .from("seats")
+          .update({ zycie: Math.max(0, seat.zycie - 1) })
+          .eq("id", seat.id);
+      }
     } else {
       await settleCrossing(gameId, fight.guardian.crossing, outcome);
     }
@@ -1141,6 +1163,12 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
     throw new Error("Spotkanie jest możliwe tylko na tym samym Obszarze (13.1).");
   }
   if (game.turn_state.phase !== "pole") throw new Error("Nie czas na spotkanie.");
+  // 14.1: on the Kamienny Most characters meet at the two Wejścia and nowhere
+  // else. The bridge is a single-file line above a valley — there is no room to
+  // turn and fight beside a Demon, which is what the rule is about.
+  if (attacker.field_id && attacker.field_id in BRIDGE_SIDE && BRIDGE_ORDEAL.has(attacker.field_id)) {
+    throw new Error("Na Moście Postacie spotykają się tylko na Wejściu na Most (14.1).");
+  }
 
   const holdings = await holdingsFor(gameId);
   const totalsOf = (seatId: string, own: { miecz: number; magia: number }) => {
@@ -1763,4 +1791,159 @@ export async function equipCard(
   }
   await db.from("holdings").update({ slot }).eq("id", holdingId);
   await bumpRevision(gameId);
+}
+
+/**
+ * What the Kamienny Most does to a character standing on one of its fields.
+ *
+ * The bridge is where the game ends, and until now the app went quiet on it:
+ * the seven fields between an entrance and the Zamek existed on the board and
+ * did nothing. Each has a printed procedure (14.5–14.6 and the boxed field text
+ * at the end of the rulebook) and this is all six of them — the Zamek itself
+ * already had its own fight.
+ *
+ * Dice may be supplied, as everywhere else, because a table with real dice on
+ * it beats a table being told what it rolled.
+ */
+export interface BridgeOrdealResult {
+  field: string;
+  kind: string;
+  dice?: number[];
+  /** Where a fall put the character down, when it fell. */
+  to?: string;
+  /** Cards lost off the bridge, by name (14.5). */
+  lost?: string[];
+  kept?: string[];
+  lifeLost?: number;
+  outcome?: string;
+  enemyTotal?: number;
+}
+
+export async function resolveBridgeOrdeal(
+  gameId: string,
+  input: { dice?: number[]; itemRolls?: number[] } = {},
+): Promise<BridgeOrdealResult> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  const here = seat.field_id;
+  if (!here || !BRIDGE_ORDEAL.has(here)) {
+    throw new Error("Na tym Obszarze nie ma czego rozpatrywać.");
+  }
+
+  const roll = async (count: number, reason: string) =>
+    input.dice && input.dice.length === count
+      ? input.dice
+      : await rollDice({ rollD6: async () => 1 + Math.floor(Math.random() * 6) }, count, reason);
+
+  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
+  const totals = {
+    miecz: seat.miecz_own + bonus.miecz,
+    magia: seat.magia_own + bonus.magia,
+  };
+
+  // --- Pułapka / Magiczna Pułapka (14.5)
+  if (here === "pulapka" || here === "magiczna-pulapka") {
+    const side = BRIDGE_SIDE[here];
+    const dice = await roll(3, "pulapka");
+    const outcome = trapOutcome(dice, side === "magia" ? totals.magia : totals.miecz, side);
+    if (!outcome.fell) {
+      await journal(gameId, seat.id, game.turn, "most-pulapka", { dice, result: 0 });
+      await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+    await bumpRevision(gameId);
+      return { field: here, kind: "pulapka", dice, outcome: "uniknieta" };
+    }
+
+    // Everything carried is rolled for, Przedmioty and Przyjaciele alike; a 1
+    // or a 2 keeps it and anything else is put on the discard pile, which is
+    // what "odłożyć ich Karty" means here rather than leaving it on a field.
+    const carried = held.filter((h) => h.kind === "item" || h.kind === "friend");
+    const rolls =
+      input.itemRolls && input.itemRolls.length === carried.length
+        ? input.itemRolls
+        : carried.map(() => 1 + Math.floor(Math.random() * 6));
+    const { kept, lost } = keptAfterFall(carried, rolls);
+    if (lost.length > 0) {
+      await db
+        .from("holdings")
+        .delete()
+        .in("id", lost.map((h) => h.id));
+    }
+    await db.from("seats").update({ field_id: outcome.fieldId }).eq("id", seat.id);
+    await journal(gameId, seat.id, game.turn, "most-pulapka", {
+      dice,
+      result: outcome.result,
+      to: outcome.fieldId,
+      lost: lost.map((h) => h.card_id),
+    });
+    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+    await bumpRevision(gameId);
+    return {
+      field: here,
+      kind: "pulapka",
+      dice,
+      to: outcome.fieldId,
+      lost: lost.map((h) => cardName(h.card_id)),
+      kept: kept.map((h) => cardName(h.card_id)),
+    };
+  }
+
+  // --- Gra ze Śmiercią
+  if (here === "gra-ze-smiercia") {
+    const mine = await roll(2, "gra-ze-smiercia");
+    const deaths = Array.from({ length: 2 }, () => 1 + Math.floor(Math.random() * 6));
+    const outcome = deathGameOutcome(mine, deaths);
+    if (outcome === "strata") {
+      await db
+        .from("seats")
+        .update({ zycie: Math.max(0, seat.zycie - 1) })
+        .eq("id", seat.id);
+    }
+    await journal(gameId, seat.id, game.turn, "most-gra-ze-smiercia", { mine, deaths, outcome });
+    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+    await bumpRevision(gameId);
+    return {
+      field: here,
+      kind: "gra-ze-smiercia",
+      dice: [...mine, ...deaths],
+      outcome,
+      lifeLost: outcome === "strata" ? 1 : 0,
+    };
+  }
+
+  // --- Cerber
+  if (here === "cerber") {
+    const [die] = await roll(1, "cerber");
+    const loss = cerberLoss(die);
+    await db
+      .from("seats")
+      .update({ zycie: Math.max(0, seat.zycie - loss) })
+      .eq("id", seat.id);
+    await journal(gameId, seat.id, game.turn, "most-cerber", { die, loss });
+    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
+    await bumpRevision(gameId);
+    return { field: here, kind: "cerber", dice: [die], lifeLost: loss };
+  }
+
+  // --- Demon Zagłady / Monstrum (14.6): a fight, not a table.
+  const creature = BRIDGE_GUARDIAN[here];
+  const dice = await roll(2, "straznik-mostu");
+  const strength = guardianStrength(dice);
+  const phase = recordGuardianStrength(
+    startGuardianFight(
+      { kind: "most-pole", fieldId: here, name: creature.name, combat: creature.kind },
+      totals,
+      here,
+    ),
+    strength,
+  );
+  await db.from("games").update({ turn_state: phase }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "straznik-mostu", {
+    guardian: creature.name,
+    dice,
+    strength,
+  });
+  await bumpRevision(gameId);
+  return { field: here, kind: "straznik", dice, enemyTotal: strength, outcome: creature.name };
 }

@@ -87,7 +87,13 @@ export interface Fight {
 
 export type GuardianFight =
   | { kind: "most"; entrance: BridgeEntrance }
-  | { kind: "przeprawa"; crossing: Crossing };
+  | { kind: "przeprawa"; crossing: Crossing }
+  /**
+   * The Demon Zagłady and the Monstrum, which stand on the bridge itself rather
+   * than at its entrance (14.6). Their strength is two dice rather than the
+   * entrances' one-plus-four, and a character cannot pass until one is dead.
+   */
+  | { kind: "most-pole"; fieldId: string; name: string; combat: CombatKind };
 
 export interface TurnMoveOption {
   direction: Direction;
@@ -317,15 +323,24 @@ export function startGuardianFight(
   playerTotals: { miecz: number; magia: number },
   fieldId: string,
 ): TurnPhase {
-  const rolled = guardian.kind === "most";
-  const stat = guardian.kind === "most" ? guardian.entrance.stat : "miecz";
+  const rolled = guardian.kind === "most" || guardian.kind === "most-pole";
+  const stat =
+    guardian.kind === "most"
+      ? guardian.entrance.stat
+      : guardian.kind === "most-pole"
+        ? guardian.combat === "magiczna"
+          ? "magia"
+          : "miecz"
+        : "miecz";
   const kind: CombatKind = stat === "magia" ? "magiczna" : "zwykla";
   const name =
     guardian.kind === "most"
       ? guardian.entrance.guardian
-      : guardian.crossing.test?.kind === "walka"
-        ? guardian.crossing.test.guardian
-        : "Strażnik";
+      : guardian.kind === "most-pole"
+        ? guardian.name
+        : guardian.crossing.test?.kind === "walka"
+          ? guardian.crossing.test.guardian
+          : "Strażnik";
   const printed =
     guardian.kind === "przeprawa" && guardian.crossing.test?.kind === "walka"
       ? guardian.crossing.test.miecz
@@ -362,14 +377,23 @@ export function strengthPending(fight: Fight): boolean {
  * Both entrances print the same table — 1 gives 5 and each pip adds one, up to
  * 10 — which is a die plus four.
  */
+/**
+ * Fixes a guardian's strength from its dice.
+ *
+ * The two entrances print a table that is a die plus four (1 gives 5, up to
+ * 10). The Demon Zagłady and the Monstrum are two dice added together, with no
+ * offset — a different creature on a different rule (14.6), so the sum is
+ * passed in and used as it stands.
+ */
 export function recordGuardianStrength(phase: TurnPhase, roll: number): TurnPhase {
   if (phase.phase !== "walka") return phase;
+  const onTheBridgeItself = phase.fight.guardian?.kind === "most-pole";
   return {
     ...phase,
     fight: {
       ...phase.fight,
       strengthRoll: roll,
-      enemyTotal: roll + GUARDIAN_STRENGTH_OFFSET,
+      enemyTotal: onTheBridgeItself ? roll : roll + GUARDIAN_STRENGTH_OFFSET,
     },
   };
 }

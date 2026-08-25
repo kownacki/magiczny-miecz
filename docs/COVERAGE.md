@@ -168,12 +168,12 @@ they are rules, and one of them was missing.
 
 | | rule | status | where |
 |---|---|---|---|
-| 14.1 | characters may meet only at the two Wejścia | ❌ | not enforced |
+| 14.1 | characters may meet only at the two Wejścia | ✅ | `attackSeat` refuses elsewhere on the Most |
 | 14.2 | meetings resolve as elsewhere | ✅ | `attackSeat` |
 | 14.3 | each Most field's printed instruction | ✅ | `most-fields.json` — all nine |
 | 14.4 | no spells and no escape on the Most | ◐ | escape is blocked (19.3); spells do not exist |
-| 14.5 | Pułapka / Magiczna Pułapka: 3 dice less Miecz or Magia, then a roll per item | ❌ | |
-| 14.6 | Demon Zagłady / Monstrum: roll for its strength, fight until beaten | ❌ | |
+| 14.5 | Pułapka / Magiczna Pułapka: 3 dice less Miecz or Magia, then a roll per item | ✅ | `bridge.ts`, `resolveBridgeOrdeal` |
+| 14.6 | Demon Zagłady / Monstrum: roll for its strength, fight until beaten | ✅ | two dice, then the ordinary fight machinery |
 | 14.7 | Zamek Bestii: roll the kind of fight, roll the Bestia at 10–15, win = win the game | ✅ | `fightBeast` |
 
 ## 15. Karty Zdarzeń

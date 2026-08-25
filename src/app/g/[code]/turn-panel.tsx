@@ -12,6 +12,7 @@ import {
   type Effect,
 } from "@/lib/engine/cardScript";
 import { NOT_HANDLED, coverageOf, manualNote } from "@/lib/engine/coverage";
+import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom } from "@/lib/engine/rings";
@@ -189,6 +190,17 @@ export function TurnPanel({
         />
       )}
 
+      {/* The Kamienny Most's own fields. Offered on arrival and again on the
+          next turn's roll, because most of them are things you have to sit
+          through more than once — the Demon does not move and neither do
+          you. */}
+      {isMine &&
+        fieldId &&
+        BRIDGE_ORDEAL.has(fieldId) &&
+        (phase.phase === "pole" || phase.phase === "rzut") && (
+          <BridgeOrdeal fieldId={fieldId} busy={busy} onAction={onAction} />
+        )}
+
       {!isMine ? (
         <p className="text-sm text-muted">Czekamy na ruch gracza {playerName}.</p>
       ) : (
@@ -281,6 +293,75 @@ function BridgeControls({
  * and 11.8 lets a fight be drawn — costing no Życie but still stopping the
  * journey — which the two-button version silently turned into a loss.
  */
+/**
+ * One of the six things on the bridge that has to be got past (14.5-14.6).
+ *
+ * Every one of them is printed on the board where the player is standing, so
+ * the text is quoted rather than paraphrased and the button only does the
+ * arithmetic. The app owns the dice here because there is nothing to
+ * adjudicate: three dice less a number you already know, or a table.
+ */
+function BridgeOrdeal({
+  fieldId,
+  busy,
+  onAction,
+}: {
+  fieldId: string;
+  busy: boolean;
+  onAction: (body: Record<string, unknown>) => void;
+}) {
+  const what: Record<string, { title: string; text: string; button: string }> = {
+    pulapka: {
+      title: "Pułapka",
+      text: "Rzuć 3 kostkami i odejmij swoje punkty Miecza: 0 — zostajesz; 1 — wejście na Most; 2-3 — Ruiny Twierdzy; 4-5 — Twierdza Strzegąca Dróg; 6 i więcej — Osada. Strącony rzucasz kostką za każdy Przedmiot i każdego Przyjaciela: 1 lub 2 zostaje przy tobie.",
+      button: "Rzuć trzema kostkami",
+    },
+    "magiczna-pulapka": {
+      title: "Magiczna Pułapka",
+      text: "Rzuć 3 kostkami i odejmij swoje punkty Magii: 0 — zostajesz; 2-3 — Wymarłe Miasto; 4-5 — Świątynia Nemed; 6 i więcej — Karczma. Strącony rzucasz kostką za każdy Przedmiot i każdego Przyjaciela: 1 lub 2 zostaje przy tobie.",
+      button: "Rzuć trzema kostkami",
+    },
+    "gra-ze-smiercia": {
+      title: "Gra ze Śmiercią",
+      text: "Dwie kostki za siebie i dwie za Śmierć. Wyżej — idziesz dalej. Równo — grasz dalej w następnej turze. Niżej — tracisz 1 Życie i grasz ponownie.",
+      button: "Zagraj ze Śmiercią",
+    },
+    cerber: {
+      title: "Cerber",
+      text: "Rzuć kostką: 1-2 — tracisz 1 Życie; 3-4 — 2 Życia; 5-6 — 3 Życia.",
+      button: "Rzuć kostką",
+    },
+    "demon-zaglady": {
+      title: "Demon Zagłady",
+      text: "Rzuć 2 kostkami — suma to Magia Demona. Walczysz magicznie i nie przejdziesz dalej, dopóki go nie zabijesz. Przegrana kosztuje 1 Życie i walczysz znowu w następnej turze.",
+      button: "Rzuć za Demona",
+    },
+    monstrum: {
+      title: "Monstrum",
+      text: "Rzuć 2 kostkami — suma to Miecz Monstrum. Nie przejdziesz dalej, dopóki go nie zabijesz. Przegrana kosztuje 1 Życie i walczysz znowu w następnej turze.",
+      button: "Rzuć za Monstrum",
+    },
+  };
+  const it = what[fieldId];
+  if (!it) return null;
+
+  return (
+    <section className="mb-3 rounded border border-vermilion/40 bg-vermilion/5 p-3">
+      <h3 className="mb-1 font-[family-name:var(--font-display)] text-sm text-vermilion">
+        {it.title}
+      </h3>
+      <p className="mb-2 text-[11px] leading-relaxed text-muted">{it.text}</p>
+      <button
+        disabled={busy}
+        onClick={() => onAction({ action: "most-pole" })}
+        className="rounded border border-vermilion/60 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+      >
+        {it.button}
+      </button>
+    </section>
+  );
+}
+
 function Crossing({
   crossing,
   busy,
