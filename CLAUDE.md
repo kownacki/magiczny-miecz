@@ -3,10 +3,13 @@
 A referee for the 1993 Polish board game *Magiczny Miecz* (Sfera, Adrian
 Markowski) — a Talisman derivative. **Private project, not published.**
 
-The primary mode is a **companion**: you play on the physical board with the
-physical cards, and the app owns everything tedious — state, dice, arithmetic,
-card resolution order, legal moves. Full in-browser simulation is a secondary
-mode behind the same engine.
+Two modes behind one engine. **Simulation** runs the whole game in the browser —
+board, deck, dice, arithmetic — and is the only one currently open.
+**Companion** — you play on the physical board with the physical cards and the
+app owns everything tedious — is **parked**: see `COMPANION_PARKED` in
+`src/lib/game/modes.ts`. No new table can be opened in it, nothing about it has
+been deleted, and one boolean brings it back. Assume simulation when working on
+anything.
 
 ## Read these first
 
@@ -65,9 +68,18 @@ mode behind the same engine.
 
 - **Base game only.** The five expansions are out of scope; their scans are
   deliberately untouched.
-- **Companion mode before simulation.** It is the mode that attacks the actual
-  complaint about this game (downtime and bookkeeping), and it needs almost no
-  card art to be useful.
+- ~~**Companion mode before simulation.**~~ Reversed. It was chosen because it
+  attacks the actual complaint about this game (downtime and bookkeeping) and
+  needs almost no card art. What settled it the other way is that keeping both
+  honest costs a second pass over every change, against a mode nobody is
+  playing yet. Simulation first; companion comes back when it is worth the
+  second pass. Nothing has been deleted — see `COMPANION_PARKED`.
+- **In simulation, nothing is entered by hand.** No typed die results, no
+  edited totals, no reported fight outcomes, no ± on a tracked value. The app
+  rolls, moves and computes; a player who could overwrite that is not playing
+  the game but editing its record of itself. Those controls exist and are
+  correct — they are companion mode's, and they are gated on the mode, not
+  deleted.
 - **Card data is a progressive enhancement, not a prerequisite.** The referee is
   useful with zero transcribed cards — you tell it what happened. Each card
   transcribed upgrades one interaction from "tell me" to "I'll handle it".

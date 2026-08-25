@@ -4,6 +4,7 @@ import { randomInt } from "node:crypto";
 import type { EqMode } from "@/lib/engine/slots";
 import { db } from "@/lib/supabase";
 import { makeClaimToken, makeJoinCode } from "./codes";
+import type { GameMode } from "./modes";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import {
@@ -88,7 +89,8 @@ const SEAT_COLUMNS =
  * five characters from a 28-glyph alphabet, and a collision would otherwise
  * surface as a unique-constraint error in front of the players.
  */
-export type GameMode = "simulation" | "companion";
+export type { GameMode } from "./modes";
+
 
 /**
  * Opens a table.

@@ -7,6 +7,7 @@ import { readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { isCharacterId } from "@/data/ids";
+import { COMPANION_PARKED } from "@/lib/game/modes";
 
 interface GameSummary {
   joinCode: string;
@@ -164,9 +165,13 @@ export default function Home() {
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold tracking-wide text-ochre">
           Magiczny Miecz
         </h1>
+        {/* Says what the app does today. While companion mode is parked there
+            is one way to play, and promising two would be promising one that
+            cannot be chosen. */}
         <p className="mt-3 text-sm text-muted">
-          Zagraj całą partię tutaj albo przy planszy — liczenie, rzuty i kolejność
-          kart aplikacja bierze na siebie w obu trybach.
+          {COMPANION_PARKED
+            ? "Zagraj całą partię tutaj — plansza, karty, kostka i kolejność po stronie aplikacji."
+            : "Zagraj całą partię tutaj albo przy planszy — liczenie, rzuty i kolejność kart aplikacja bierze na siebie w obu trybach."}
         </p>
       </header>
 
@@ -464,11 +469,19 @@ function CreateDialog({
             label="Pełna symulacja"
             hint="Wszystko dzieje się tutaj — plansza i karty nie są potrzebne."
           />
+          {/* Parked, not removed — see COMPANION_PARKED. Left on screen so
+              that it reads as "later" rather than as a mode this app never
+              had. */}
           <ModeChoice
             active={mode === "companion"}
             onPick={() => setMode("companion")}
+            parked={COMPANION_PARKED}
             label="Sędzia przy planszy"
-            hint="Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
+            hint={
+              COMPANION_PARKED
+                ? "Chwilowo wyłączone — wróci, gdy symulacja będzie gotowa."
+                : "Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
+            }
           />
         </fieldset>
 
@@ -512,29 +525,41 @@ function ModeChoice({
   onPick,
   label,
   hint,
+  parked,
 }: {
   active: boolean;
   onPick: () => void;
   label: string;
   hint: string;
+  /** Shown, struck through and unselectable: not gone, just not now. */
+  parked?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onPick}
+      disabled={parked}
       aria-pressed={active}
       className={`rounded-lg border px-3 py-2 text-left transition ${
-        active ? "border-ochre bg-ochre/10" : "border-edge bg-panel/40 hover:border-ochre/60"
+        parked
+          ? "cursor-not-allowed border-edge/50 bg-panel/20"
+          : active
+            ? "border-ochre bg-ochre/10"
+            : "border-edge bg-panel/40 hover:border-ochre/60"
       }`}
     >
       <span
         className={`block font-[family-name:var(--font-display)] text-sm ${
-          active ? "text-ochre" : "text-ink"
+          parked ? "text-muted/60 line-through" : active ? "text-ochre" : "text-ink"
         }`}
       >
         {label}
       </span>
-      <span className="block text-[11px] leading-snug text-muted">{hint}</span>
+      <span
+        className={`block text-[11px] leading-snug ${parked ? "text-muted/50" : "text-muted"}`}
+      >
+        {hint}
+      </span>
     </button>
   );
 }
