@@ -32,6 +32,11 @@ create table if not exists magiczny_miecz.games (
   -- Which equipment variant this table plays. Klasyczny is the rulebook: four
   -- Przedmioty, no distinction between worn and carried (5.4). Slotowy is a
   -- house variant — see "Wariant: ekwipunek slotowy" in docs/COVERAGE.md.
+  --
+  -- The column default is the printed rules, but nothing ever reaches it:
+  -- `createGame` always writes the value, and what it writes when nobody says
+  -- is slotowy, because that is how this table plays. Left as 'klasyczny' so
+  -- that a row inserted by hand gets the game as published.
   eq_mode text not null default 'klasyczny' check (eq_mode in ('klasyczny', 'slotowy')),
   -- Where randomness comes from. 'physical' means a human types in what they
   -- rolled; this is the RandomPort's binding, stored so it survives a reload.

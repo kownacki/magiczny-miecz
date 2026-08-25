@@ -434,7 +434,7 @@ function CreateDialog({
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"simulation" | "companion">("simulation");
-  const [eqMode, setEqMode] = useState<"klasyczny" | "slotowy">("klasyczny");
+  const [eqMode, setEqMode] = useState<"klasyczny" | "slotowy">("slotowy");
 
   return (
     <Dialog title="Nowy stół" onCancel={onCancel}>
@@ -469,24 +469,27 @@ function CreateDialog({
           />
         </fieldset>
 
-        {/* A house rule, so it is offered and never assumed: klasyczny is the
-            game as printed. Settled here with the mode because both describe
-            the table rather than the moment. */}
+        {/* Slotowy first and preselected: it is how this table plays. The
+            variant is still a house rule and klasyczny is still the game as
+            printed, which is why both are offered rather than one assumed —
+            the order says which is expected, not which is legitimate. Settled
+            here with the mode because both describe the table rather than the
+            moment. */}
         <fieldset className="mt-3 flex flex-col gap-2">
           <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
             Ekwipunek
           </legend>
           <ModeChoice
+            active={eqMode === "slotowy"}
+            onPick={() => setEqMode("slotowy")}
+            label="Slotowy"
+            hint="Co nosisz, zakładasz na miejsce; reszta w plecaku."
+          />
+          <ModeChoice
             active={eqMode === "klasyczny"}
             onPick={() => setEqMode("klasyczny")}
             label="Klasyczny"
             hint="Jak w Instrukcji: 4 Przedmioty, bez podziału na noszone i niesione."
-          />
-          <ModeChoice
-            active={eqMode === "slotowy"}
-            onPick={() => setEqMode("slotowy")}
-            label="Slotowy"
-            hint="Wariant: co nosisz, zakładasz na miejsce; reszta w plecaku."
           />
         </fieldset>
 

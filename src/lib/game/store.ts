@@ -93,7 +93,7 @@ export type GameMode = "simulation" | "companion";
 export async function createGame(
   hostName: string | null = null,
   mode: GameMode = "simulation",
-  eqMode: EqMode = "klasyczny",
+  eqMode: EqMode = "slotowy",
 ): Promise<{ game: GameRow; hostToken: string }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const joinCode = makeJoinCode();
