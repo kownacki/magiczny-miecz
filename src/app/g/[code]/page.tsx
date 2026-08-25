@@ -829,6 +829,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 seat={mine}
                 active={mine.seat_index === game.active_seat}
                 canAdjust
+                canCorrect={game.mode !== "simulation"}
                 isMine
                 slotted={game.eq_mode === "slotowy"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
@@ -1291,6 +1292,7 @@ function SeatCard({
   seat,
   active,
   canAdjust,
+  canCorrect,
   isMine,
   slotted,
   onAdjust,
@@ -1302,6 +1304,17 @@ function SeatCard({
   seat: Seat;
   active: boolean;
   canAdjust: boolean;
+  /**
+   * Whether the tracked values may be corrected by hand.
+   *
+   * Separate from `canAdjust`, which is really "this is your card and you may
+   * act on it" — dropping a Przedmiot and equipping one are moves, not
+   * corrections. Nudging Miecz with a ± is a correction, and a simulation has
+   * nothing to correct: the app moved the figure, threw the die and applied the
+   * result, so a player editing the outcome is not playing the game, they are
+   * editing its record of itself.
+   */
+  canCorrect: boolean;
   isMine: boolean;
   /** The table plays the slotted variant. */
   slotted: boolean;
@@ -1454,7 +1467,7 @@ function SeatCard({
               total={seat.miecz_total}
               tone="text-miecz"
               stat="miecz"
-              canAdjust={canAdjust}
+              canAdjust={canCorrect}
               onAdjust={onAdjust}
             />
             <Stat
@@ -1463,11 +1476,11 @@ function SeatCard({
               total={seat.magia_total}
               tone="text-magia"
               stat="magia"
-              canAdjust={canAdjust}
+              canAdjust={canCorrect}
               onAdjust={onAdjust}
             />
-            <Stat label="Życie" value={seat.zycie} tone="text-zycie" stat="zycie" canAdjust={canAdjust} onAdjust={onAdjust} />
-            <Stat label="Złoto" value={seat.zloto} tone="text-zloto" stat="zloto" canAdjust={canAdjust} onAdjust={onAdjust} />
+            <Stat label="Życie" value={seat.zycie} tone="text-zycie" stat="zycie" canAdjust={canCorrect} onAdjust={onAdjust} />
+            <Stat label="Złoto" value={seat.zloto} tone="text-zloto" stat="zloto" canAdjust={canCorrect} onAdjust={onAdjust} />
           </dl>
 
           <Hand

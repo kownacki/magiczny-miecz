@@ -235,6 +235,18 @@ Now the primary mode; companion is the opt-in.
 - [x] **The whole draw pile shipped to every client**, in order, on every poll.
 - [x] **Position had no manual override** — the value most likely to drift, and
       the one everything else is computed from.
+- [x] **No manual entry in simulation.** Typed rolls, edited totals, reported
+      fight outcomes and the ± on every tracked value are gone from
+      `simulation`; companion keeps all of them. See "Tryb symulacji" in
+      COVERAGE.md.
+- [ ] **Card effects still need a tap to apply.** The app rolls and shows the
+      face, but "+1 Miecza" is a button somebody presses. Applying an `Effect`
+      automatically is what would finish the simulation — and it is also what
+      would let the `adjust` endpoint be closed to simulation tables, which it
+      cannot be while the suggestion buttons go through it.
+- [ ] **Die tables on cards roll in the browser.** `RollTable` uses
+      `Math.random` locally, so a simulation's own rolls are neither on the
+      server nor in the journal. Everything the turn loop rolls already is.
 - [ ] **17.9's spoils are still the players'.** The winner of a duel may take a
       Życie, a Przedmiot or a Sztuka Złota; only the Życie is applied.
 

@@ -16,10 +16,19 @@ import { suggestActions } from "@/lib/engine/cardEffects";
 export function RollTable({
   text,
   busy = false,
+  typedRolls = true,
   onSuggestion,
 }: {
   text: string;
   busy?: boolean;
+  /**
+   * Whether the face that came up may be picked by hand.
+   *
+   * True at a physical table, where somebody has just thrown a real die and the
+   * app's job is to look up what it means. False in a simulation, where there
+   * is no die but this one and choosing your own result is not a game.
+   */
+  typedRolls?: boolean;
   /** Applies an outcome's bookkeeping. Omitted for viewers who cannot act. */
   onSuggestion?: (stat: string, delta: number, reason: string) => void;
 }) {
@@ -42,19 +51,20 @@ export function RollTable({
         >
           Rzuć
         </button>
-        {[1, 2, 3, 4, 5, 6].map((face) => (
-          <button
-            key={face}
-            onClick={() => setRolled(face)}
-            className={`tnum h-6 w-6 rounded border text-xs transition ${
-              rolled === face
-                ? "border-ochre text-ochre"
-                : "border-edge text-muted hover:border-ochre"
-            }`}
-          >
-            {face}
-          </button>
-        ))}
+        {typedRolls &&
+          [1, 2, 3, 4, 5, 6].map((face) => (
+            <button
+              key={face}
+              onClick={() => setRolled(face)}
+              className={`tnum h-6 w-6 rounded border text-xs transition ${
+                rolled === face
+                  ? "border-ochre text-ochre"
+                  : "border-edge text-muted hover:border-ochre"
+              }`}
+            >
+              {face}
+            </button>
+          ))}
         {rolled !== null && (
           <button
             onClick={() => setRolled(null)}

@@ -279,6 +279,33 @@ their own procedures and the app shows them but does not run them.
 
 ---
 
+## Tryb symulacji: nic nie wpisuje się ręcznie
+
+W `simulation` aplikacja prowadzi grę, więc zniknęły wszystkie kontrolki, które
+służyły do *powiedzenia* jej, co się stało:
+
+| co było | gdzie | teraz w symulacji |
+|---|---|---|
+| „albo wpisz wynik" 1–6 | rzut na ruch | tylko **Rzuć kostką** |
+| 1–6 przy sile strażnika | Most, Lodowy Las | tylko rzut aplikacji |
+| 1–6 przy rzucie w walce | obie strony walki | tylko **Rzuć** |
+| ± przy Całkowitym Mieczu | walka | nic — 1.5 liczy aplikacja |
+| „Pokonany / Remis / Przegrana" | Most, przeprawa | tylko **Stocz walkę** |
+| „Wymknąłem się / Próba nieudana" | walka | **Spróbuj się wymknąć** — 19.1 to zdolność, nie rzut, więc odpowiada `canEscapeAt` |
+| 1–6 w tabelach kostki na kartach i Obszarach | wszędzie | tylko **Rzuć** |
+| ± przy Mieczu, Magii, Życiu, Złocie | Karta gracza | nic |
+
+Tryb `companion` zachowuje wszystkie z nich i musi: tam plansza na stole jest
+prawdą, a aplikacja jej zapisem — sędzia, którego nie można poprawić, jest
+gorszy niż żaden.
+
+**Czego jeszcze brakuje do pełnej symulacji.** Skutki kart wciąż wymagają
+jednego kliknięcia: aplikacja rzuca i pokazuje, co wypadło, ale „+1 Miecza"
+trzeba zatwierdzić. To nie jest ręczna korekta — to karta, tyle że stosowana
+ręką — ale dopóki tak jest, punkt `adjust` pozostaje otwarty także w symulacji.
+Tabele kostki na kartach losują nadal w przeglądarce (`Math.random`), a nie
+przez port, więc nie trafiają do dziennika. Jedno i drugie to następny krok.
+
 ## Obszary, które handlują
 
 Nine of the board's fields are establishments rather than events: they print a

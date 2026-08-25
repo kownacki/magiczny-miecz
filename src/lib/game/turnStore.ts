@@ -19,7 +19,13 @@ import {
   ringOf,
 } from "@/lib/engine/board";
 import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
-import { bestShield, crossingDice, heldAbilities, tollIsWaived } from "@/lib/engine/abilities";
+import {
+  bestShield,
+  canEscapeAt,
+  crossingDice,
+  heldAbilities,
+  tollIsWaived,
+} from "@/lib/engine/abilities";
 import { spellScript } from "@/lib/engine/spells";
 import {
   BRIDGE_GUARDIAN,
@@ -1710,7 +1716,20 @@ export async function crossRing(
  * Rule 19.3 is the one hard limit: on the Kamienny Most you may only escape
  * other characters, never the creatures guarding it.
  */
-export async function escape(gameId: string, succeeded: boolean): Promise<void> {
+export async function escape(
+  gameId: string,
+  /**
+   * Whether the attempt worked, or null to let the app decide.
+   *
+   * Null is what a simulation sends. 19.1 does not roll for this — an escape
+   * works because a character's ability or the Krąg Płomieni says it does — so
+   * "decide" means reading the abilities rather than throwing a die, and the
+   * answer is the same one `canEscapeAt` gives the interface. A companion table
+   * still says yes or no itself, because there the abilities in play include
+   * whatever the players have agreed about a card nobody has transcribed.
+   */
+  reported: boolean | null,
+): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
@@ -1725,6 +1744,14 @@ export async function escape(gameId: string, succeeded: boolean): Promise<void> 
   if (onBridge && fleeingACard) {
     throw new Error("Na Kamiennym Moście można wymknąć się tylko innym Postaciom (19.3).");
   }
+
+  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const abilities = [
+    ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
+    ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
+  ];
+  const succeeded =
+    reported ?? (seat.field_id !== null && canEscapeAt(abilities, seat.field_id));
 
   if (succeeded && game.turn_state.phase === "walka") {
     // 19.1: having escaped, the character can no longer act on what it fled,

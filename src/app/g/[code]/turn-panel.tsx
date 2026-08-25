@@ -109,7 +109,19 @@ interface Props {
   /** True when this is the shared table screen driving somebody else's turn. */
   actingForOther?: boolean;
   dieSource: string;
-  /** "simulation" means the app owns the deck and deals cards itself. */
+  /**
+   * "simulation" means the app owns the deck and deals cards itself.
+   *
+   * It also means it owns everything else. In a simulation there is no physical
+   * die to read and no figure to have been moved wrongly, so every control that
+   * exists to let a person *tell* the app what happened is gone: no typing a
+   * roll, no editing a total, no reporting the outcome of a fight the app is
+   * running. What is left is the game asking to be played.
+   *
+   * Companion mode keeps all of them, and must: there the board on the table is
+   * the truth and the app is a record of it, so a referee you cannot correct is
+   * worse than no referee.
+   */
   mode: string;
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
@@ -183,9 +195,20 @@ export function TurnPanel({
               sentence onto three faces of the Wróżbita's die. Where somebody
               has read the field, that reading stands. */}
           {fieldId && fieldScriptFor(fieldId) ? null : rollSkippedBy ? (
-            <RollSkipped by={rollSkippedBy} text={fieldText} busy={busy} onSuggestion={onSuggestion} />
+            <RollSkipped
+              by={rollSkippedBy}
+              text={fieldText}
+              busy={busy}
+              typedRolls={mode !== "simulation"}
+              onSuggestion={onSuggestion}
+            />
           ) : (
-            <RollTable text={fieldText} busy={busy} onSuggestion={isMine ? onSuggestion : undefined} />
+            <RollTable
+              text={fieldText}
+              busy={busy}
+              typedRolls={mode !== "simulation"}
+              onSuggestion={isMine ? onSuggestion : undefined}
+            />
           )}
         </div>
       )}
@@ -198,6 +221,7 @@ export function TurnPanel({
           fieldId={fieldId}
           fieldCardIds={fieldCardIds ?? []}
           busy={busy}
+          typedRolls={mode !== "simulation"}
           purse={purse}
           stock={stock}
           sellable={sellable}
@@ -231,6 +255,7 @@ export function TurnPanel({
         (phase.phase === "pole" || phase.phase === "rzut") && (
         <Crossing
           crossing={crossingFrom(fieldId)!}
+          simulated={mode === "simulation"}
           busy={busy}
           onAction={onAction}
         />
@@ -274,10 +299,13 @@ export function TurnPanel({
  */
 function BridgeControls({
   bridge,
+  simulated,
   busy,
   onAction,
 }: {
   bridge: { from: string; guardian: string; entersAt: string; stat: "miecz" | "magia" };
+  /** No manual outcomes when the app is the one fighting — see `Props["mode"]`. */
+  simulated: boolean;
   busy: boolean;
   onAction: Props["onAction"];
 }) {
@@ -302,27 +330,35 @@ function BridgeControls({
         >
           Stocz walkę
         </button>
-        <button
-          disabled={busy}
-          onClick={() => onAction({ action: "bridge", outcome: "wygrana" })}
-          className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-        >
-          Pokonany — wchodzę na Most
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => onAction({ action: "bridge", outcome: "remis" })}
-          className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-        >
-          Remis
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => onAction({ action: "bridge", outcome: "porazka" })}
-          className={`rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50`}
-        >
-          Przegrana (−1 {stat})
-        </button>
+        {/* Reporting the outcome instead of fighting it is a companion-mode
+            affordance: there the fight may have been settled by a card the app
+            has never read. In a simulation the app is the one rolling, so being
+            told who won would be taking its word for its own work. */}
+        {!simulated && (
+          <>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "bridge", outcome: "wygrana" })}
+              className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+            >
+              Pokonany — wchodzę na Most
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "bridge", outcome: "remis" })}
+              className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+            >
+              Remis
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction({ action: "bridge", outcome: "porazka" })}
+              className={`rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50`}
+            >
+              Przegrana (−1 {stat})
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -410,11 +446,14 @@ function BridgeOrdeal({
 
 function Crossing({
   crossing,
+  simulated,
   busy,
   onAction,
 }: {
   crossing: NonNullable<ReturnType<typeof crossingFrom>>;
   busy: boolean;
+  /** No manual outcomes when the app is the one fighting — see `Props["mode"]`. */
+  simulated: boolean;
   onAction: Props["onAction"];
 }) {
   const to = FIELDS.get(crossing.to)?.name ?? crossing.to;
@@ -481,27 +520,33 @@ function Crossing({
             >
               Stocz walkę
             </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "cross", outcome: "udana" })}
-              className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-            >
-              Pokonany — przechodzę
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "cross", outcome: "remis" })}
-              className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-            >
-              Remis
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "cross", outcome: "nieudana" })}
-              className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
-            >
-              Przegrana (−1 Życie)
-            </button>
+            {/* As at the bridge: reporting a result belongs to a table that
+                fought it themselves. */}
+            {!simulated && (
+              <>
+                <button
+                  disabled={busy}
+                  onClick={() => onAction({ action: "cross", outcome: "udana" })}
+                  className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
+                >
+                  Pokonany — przechodzę
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => onAction({ action: "cross", outcome: "remis" })}
+                  className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+                >
+                  Remis
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => onAction({ action: "cross", outcome: "nieudana" })}
+                  className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+                >
+                  Przegrana (−1 Życie)
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
@@ -520,11 +565,13 @@ function RollSkipped({
   by,
   text,
   busy,
+  typedRolls,
   onSuggestion,
 }: {
   by: string;
   text: string;
   busy: boolean;
+  typedRolls: boolean;
   onSuggestion: Props["onSuggestion"];
 }) {
   const [anyway, setAnyway] = useState(false);
@@ -540,7 +587,9 @@ function RollSkipped({
       >
         {anyway ? "ukryj tabelę" : "rzuć mimo to"}
       </button>
-      {anyway && <RollTable text={text} busy={busy} onSuggestion={onSuggestion} />}
+      {anyway && (
+        <RollTable text={text} busy={busy} typedRolls={typedRolls} onSuggestion={onSuggestion} />
+      )}
     </div>
   );
 }
@@ -556,7 +605,14 @@ function PhaseControls({
 }: Pick<Props, "phase" | "dieSource" | "mode" | "busy" | "onAction" | "onSuggestion" | "onTake">) {
   switch (phase.phase) {
     case "rzut":
-      return <RollControls dieSource={dieSource} busy={busy} onAction={onAction} />;
+      return (
+        <RollControls
+          dieSource={dieSource}
+          simulated={mode === "simulation"}
+          busy={busy}
+          onAction={onAction}
+        />
+      );
     case "ruch":
       return (
         <div>
@@ -601,7 +657,14 @@ function PhaseControls({
         </div>
       );
     case "most":
-      return <BridgeControls bridge={phase.bridge} busy={busy} onAction={onAction} />;
+      return (
+        <BridgeControls
+          bridge={phase.bridge}
+          simulated={mode === "simulation"}
+          busy={busy}
+          onAction={onAction}
+        />
+      );
     case "pole":
       return (
         <FieldControls
@@ -614,7 +677,14 @@ function PhaseControls({
         />
       );
     case "walka":
-      return <FightControls fight={phase.fight} busy={busy} onAction={onAction} />;
+      return (
+        <FightControls
+          fight={phase.fight}
+          simulated={mode === "simulation"}
+          busy={busy}
+          onAction={onAction}
+        />
+      );
     case "koniec":
       return (
         <button
@@ -630,12 +700,14 @@ function PhaseControls({
 
 function RollControls({
   dieSource,
+  simulated,
   busy,
   onAction,
-}: Pick<Props, "dieSource" | "busy" | "onAction">) {
-  // Both ways of getting a number are always offered regardless of the table's
-  // configured preference: people reach for the physical die mid-game, and a
-  // referee that refuses to accept it would be worse than no referee.
+}: Pick<Props, "dieSource" | "busy" | "onAction"> & { simulated: boolean }) {
+  // At a physical table both ways of getting a number are offered whatever the
+  // table's configured preference: people reach for the die mid-game, and a
+  // referee that refuses to accept it would be worse than no referee. In a
+  // simulation there is no die to reach for and the app throws its own.
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
@@ -645,21 +717,25 @@ function RollControls({
       >
         Rzuć kostką
       </button>
-      <span className="text-xs text-muted">
-        albo wpisz wynik {dieSource === "physical" ? "(stół gra własną kostką)" : ""}
-      </span>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5, 6].map((value) => (
-          <button
-            key={value}
-            disabled={busy}
-            onClick={() => onAction({ action: "roll", value })}
-            className="tnum h-10 w-10 rounded border border-edge bg-night text-ink transition hover:border-ochre disabled:opacity-50"
-          >
-            {value}
-          </button>
-        ))}
-      </div>
+      {!simulated && (
+        <>
+          <span className="text-xs text-muted">
+            albo wpisz wynik {dieSource === "physical" ? "(stół gra własną kostką)" : ""}
+          </span>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5, 6].map((value) => (
+              <button
+                key={value}
+                disabled={busy}
+                onClick={() => onAction({ action: "roll", value })}
+                className="tnum h-10 w-10 rounded border border-edge bg-night text-ink transition hover:border-ochre disabled:opacity-50"
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -769,6 +845,7 @@ function FieldControls({
           drawn={phase.drawn}
           fought={phase.fought ?? []}
           busy={busy}
+          typedRolls={mode !== "simulation"}
           onAction={onAction}
           onSuggestion={onSuggestion}
           onTake={onTake}
@@ -795,10 +872,13 @@ function FieldControls({
  */
 function FightControls({
   fight,
+  simulated,
   busy,
   onAction,
 }: {
   fight: Fight;
+  /** No typed rolls and no edited totals — see `Props["mode"]`. */
+  simulated: boolean;
   busy: boolean;
   onAction: Props["onAction"];
 }) {
@@ -825,17 +905,21 @@ function FightControls({
           >
             Rzuć kostką
           </button>
-          <span className="text-xs text-muted">albo wpisz wynik</span>
-          {[1, 2, 3, 4, 5, 6].map((value) => (
-            <button
-              key={value}
-              disabled={busy}
-              onClick={() => onAction({ action: "guardian-strength", value })}
-              className="tnum rounded border border-edge px-3 py-2 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
-            >
-              {value}
-            </button>
-          ))}
+          {!simulated && (
+            <>
+              <span className="text-xs text-muted">albo wpisz wynik</span>
+              {[1, 2, 3, 4, 5, 6].map((value) => (
+                <button
+                  key={value}
+                  disabled={busy}
+                  onClick={() => onAction({ action: "guardian-strength", value })}
+                  className="tnum rounded border border-edge px-3 py-2 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
+                >
+                  {value}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
     );
@@ -860,27 +944,38 @@ function FightControls({
       </p>
 
       <div className="flex flex-wrap gap-2">
-        {/* Declared before any dice (17.2). Whether it works is the character's
-            own ability to judge (19.1), so both outcomes are offered rather
-            than the app rolling for something the rulebook does not roll for. */}
-        {fight.playerRoll === null && fight.enemyRoll === null && (
-          <>
+        {/* Declared before any dice (17.2). Whether it works is not a roll —
+            19.1 makes it an ability or the Krąg Płomieni — so a companion table
+            says which happened, and a simulation asks the app, which knows the
+            abilities in play and answers with `canEscapeAt`. */}
+        {fight.playerRoll === null &&
+          fight.enemyRoll === null &&
+          (simulated ? (
             <button
               disabled={busy}
-              onClick={() => onAction({ action: "escape", succeeded: true })}
+              onClick={() => onAction({ action: "escape" })}
               className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
             >
-              Wymknąłem się (19.1)
+              Spróbuj się wymknąć (19.1)
             </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "escape", succeeded: false })}
-              className="rounded border border-edge px-3 py-1 text-xs text-muted transition hover:border-vermilion disabled:opacity-50"
-            >
-              Próba nieudana
-            </button>
-          </>
-        )}
+          ) : (
+            <>
+              <button
+                disabled={busy}
+                onClick={() => onAction({ action: "escape", succeeded: true })}
+                className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+              >
+                Wymknąłem się (19.1)
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => onAction({ action: "escape", succeeded: false })}
+                className="rounded border border-edge px-3 py-1 text-xs text-muted transition hover:border-vermilion disabled:opacity-50"
+              >
+                Próba nieudana
+              </button>
+            </>
+          ))}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -889,7 +984,11 @@ function FightControls({
           total={fight.playerTotal}
           roll={fight.playerRoll}
           label={label}
-          editable
+          // 1.5 says the total is the character plus everything it carries, and
+          // in a simulation the app already knows all of it. Nudging the number
+          // by hand is for a table holding cards the app has never read.
+          editable={!simulated}
+          typedRolls={!simulated}
           busy={busy}
           onTotal={(total) => onAction({ action: "fight-total", total })}
           onRoll={(value) => onAction({ action: "fight-roll", side: "player", value })}
@@ -900,6 +999,7 @@ function FightControls({
           roll={fight.enemyRoll}
           label={label}
           editable={false}
+          typedRolls={!simulated}
           busy={busy}
           onTotal={() => {}}
           onRoll={(value) => onAction({ action: "fight-roll", side: "enemy", value })}
@@ -1012,6 +1112,7 @@ function FightSide({
   roll,
   label,
   editable,
+  typedRolls,
   busy,
   onTotal,
   onRoll,
@@ -1021,6 +1122,8 @@ function FightSide({
   roll: number | null;
   label: string;
   editable: boolean;
+  /** Whether a die may be typed in rather than thrown — see `Props["mode"]`. */
+  typedRolls: boolean;
   busy: boolean;
   onTotal: (total: number) => void;
   onRoll: (value: number | null) => void;
@@ -1066,16 +1169,17 @@ function FightSide({
             >
               Rzuć
             </button>
-            {[1, 2, 3, 4, 5, 6].map((value) => (
-              <button
-                key={value}
-                disabled={busy}
-                onClick={() => onRoll(value)}
-                className="tnum h-6 w-6 rounded border border-edge text-xs text-muted hover:border-ochre disabled:opacity-50"
-              >
-                {value}
-              </button>
-            ))}
+            {typedRolls &&
+              [1, 2, 3, 4, 5, 6].map((value) => (
+                <button
+                  key={value}
+                  disabled={busy}
+                  onClick={() => onRoll(value)}
+                  className="tnum h-6 w-6 rounded border border-edge text-xs text-muted hover:border-ochre disabled:opacity-50"
+                >
+                  {value}
+                </button>
+              ))}
           </div>
         ) : (
           <p className="tnum text-sm text-muted">
@@ -1097,6 +1201,7 @@ function DrawnCards({
   drawn,
   fought,
   busy,
+  typedRolls,
   onAction,
   onSuggestion,
   onTake,
@@ -1105,6 +1210,7 @@ function DrawnCards({
   /** Ids already rolled against this turn (17.4), which are not offered again. */
   fought: string[];
   busy: boolean;
+  typedRolls: boolean;
   onAction: Props["onAction"];
   onSuggestion: Props["onSuggestion"];
   onTake: Props["onTake"];
@@ -1163,7 +1269,12 @@ function DrawnCards({
             {/* The prose reader and the script would otherwise print the same
                 die table twice, in two different wordings. The script wins. */}
             {card && !scriptFor(card.id) && (
-              <RollTable text={card.text} busy={busy} onSuggestion={onSuggestion} />
+              <RollTable
+                text={card.text}
+                busy={busy}
+                typedRolls={typedRolls}
+                onSuggestion={onSuggestion}
+              />
             )}
             {card && combatValueOf(card) && (
               <p
@@ -1612,6 +1723,7 @@ function FieldServices({
   fieldId,
   fieldCardIds,
   busy,
+  typedRolls,
   purse,
   stock,
   sellable,
@@ -1621,6 +1733,7 @@ function FieldServices({
   fieldId: FieldId;
   fieldCardIds: string[];
   busy: boolean;
+  typedRolls: boolean;
   purse?: { zloto: number; zycie: number };
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
@@ -1659,6 +1772,7 @@ function FieldServices({
             effect={offer.effect}
             name={offer.name}
             busy={busy}
+            typedRolls={typedRolls}
             gold={gold}
             zycie={purse?.zycie ?? 0}
             stock={stock}
@@ -1677,6 +1791,7 @@ function ServiceEffect({
   effect,
   name,
   busy,
+  typedRolls,
   gold,
   zycie,
   stock,
@@ -1687,6 +1802,7 @@ function ServiceEffect({
   effect: Effect;
   name: string;
   busy: boolean;
+  typedRolls: boolean;
   gold: number;
   zycie: number;
   stock?: Record<string, number>;
@@ -1703,6 +1819,7 @@ function ServiceEffect({
             effect={step}
             name={name}
             busy={busy}
+            typedRolls={typedRolls}
             gold={gold}
             zycie={zycie}
             stock={stock}
@@ -1725,6 +1842,7 @@ function ServiceEffect({
         effect={effect}
         name={name}
         busy={busy}
+        typedRolls={typedRolls}
         gold={gold}
         zycie={zycie}
         stock={stock}
@@ -1840,6 +1958,7 @@ function ScriptedRoll({
   effect,
   name,
   busy,
+  typedRolls,
   gold,
   zycie,
   stock,
@@ -1850,6 +1969,7 @@ function ScriptedRoll({
   effect: Extract<Effect, { op: "rzut" }>;
   name: string;
   busy: boolean;
+  typedRolls: boolean;
   gold: number;
   zycie: number;
   stock?: Record<string, number>;
@@ -1871,19 +1991,20 @@ function ScriptedRoll({
         >
           Rzuć
         </button>
-        {[1, 2, 3, 4, 5, 6].map((face) => (
-          <button
-            key={face}
-            onClick={() => setRolled(face)}
-            className={`tnum h-5 w-5 rounded border text-[11px] transition ${
-              rolled === face
-                ? "border-ochre text-ochre"
-                : "border-edge text-muted hover:border-ochre"
-            }`}
-          >
-            {face}
-          </button>
-        ))}
+        {typedRolls &&
+          [1, 2, 3, 4, 5, 6].map((face) => (
+            <button
+              key={face}
+              onClick={() => setRolled(face)}
+              className={`tnum h-5 w-5 rounded border text-[11px] transition ${
+                rolled === face
+                  ? "border-ochre text-ochre"
+                  : "border-edge text-muted hover:border-ochre"
+              }`}
+            >
+              {face}
+            </button>
+          ))}
         {rolled !== null && (
           <button
             onClick={() => setRolled(null)}
@@ -1901,6 +2022,7 @@ function ScriptedRoll({
               effect={effect.faces[face]}
               name={name}
               busy={busy}
+              typedRolls={typedRolls}
               gold={gold}
               zycie={zycie}
               stock={stock}
