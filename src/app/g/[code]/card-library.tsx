@@ -216,6 +216,7 @@ function fold(text: string): string {
 
 export function CardLibrary({
   onClose,
+  onGrant,
   eqMode = "klasyczny",
   nature = null,
 }: {
@@ -228,6 +229,16 @@ export function CardLibrary({
    * be tested.
    */
 
+  /**
+   * Puts this card in a hand, while testing.
+   *
+   * The one test shortcut that stayed. The rest became console commands because
+   * a console types a name faster than a shelf can be found — but this shelf is
+   * where somebody already is when they want the card, with the picture of it
+   * in front of them, and `give` would mean closing it to type the name of the
+   * thing they are looking at.
+   */
+  onGrant?: (cardId: string) => void;
   /** The reader's own Natura, so a 5.3 restriction says whether it shuts them out. */
   nature?: Nature | null;
   /**
@@ -387,6 +398,14 @@ export function CardLibrary({
                     nature={nature}
                     onClick={() => setOpen(card)}
                   >
+                    {onGrant && card.holdable && (
+                      <button
+                        onClick={() => onGrant(card.cardId)}
+                        className="text-[9px] text-ochre/80 underline transition hover:text-ochre"
+                      >
+                        weź (test)
+                      </button>
+                    )}
                   </CardTile>
                 ))}
               </div>

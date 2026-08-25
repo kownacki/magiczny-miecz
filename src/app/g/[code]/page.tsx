@@ -1219,9 +1219,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <CardLibrary
           eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
           nature={asNature(mySeat?.nature)}
-          // No test buttons here any more: `give`, `fight` and `go` say the
-          // same three things in the console, without a control under every
-          // card on every shelf. What is left is a shelf to read.
+          // "walcz" and the Obszary chips became `fight` and `go` in the
+          // console; taking a card stayed, because this shelf is where somebody
+          // already is when they want one, with the picture in front of them.
+          {...(testing && mySeatIndex !== null
+            ? { onGrant: (cardId: string) => post("debug", { action: "grant", cardId }) }
+            : {})}
           onClose={() => setLibraryOpen(false)}
         />
       )}
