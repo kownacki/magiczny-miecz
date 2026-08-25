@@ -101,3 +101,16 @@ describe("what counts, in each equipment variant", () => {
     expect(bonusFromHoldings([{ ...graal, slot: null }], "slotowy").magia).toBe(1);
   });
 });
+
+describe("a card you spend is not a card you carry", () => {
+  it("gives nothing for an unopened Eliksir Siły", () => {
+    // The 2 printed on it is what drinking it is worth, for one turn. Read as a
+    // standing bonus it made carrying the bottle a permanent +2 that vanished
+    // the moment it was finally drunk — the opposite of the card.
+    expect(bonusFromHoldings([held("eliksir-sily", "item")])).toEqual({ miecz: 0, magia: 0 });
+  });
+
+  it("still reads the corner on a card you keep", () => {
+    expect(bonusFromHoldings([held("miecz", "item")]).miecz).toBe(1);
+  });
+});

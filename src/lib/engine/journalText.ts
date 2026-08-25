@@ -275,6 +275,12 @@ export function describe(
     // — what people have ————————————————————————————————————————————
     case "zabranie":
       return line(`${who} zdobywa: ${card(data.cardId)}.`);
+    // A card handed over by the test shortcut rather than won. Said, and marked
+    // manual like every other override: a card that appeared by fiat must not
+    // read like one that was earned, and a row nothing can render at all is
+    // worse — the grant went in the journal and the journal stayed silent.
+    case "test-karta":
+      return line(`${who} bierze z talii: ${card(data.cardId)}.`);
     // 16.8: what was not taken stays where it fell, face up. Saying where is the
     // whole point — a card on a field two turns later is otherwise unexplained.
     case "zostawienie": {

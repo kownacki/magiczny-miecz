@@ -1172,6 +1172,43 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
 }
 
 /**
+ * Puts a seat's pack in the order its owner wants it in.
+ *
+ * Not a rule — 5.4 counts what you carry and has no opinion about the order it
+ * sits in — but a pack of four cards you cannot arrange is one you have to read
+ * every time instead of recognising. The order has to be the server's, or the
+ * next two-second poll would put the cards back where they were.
+ *
+ * Every id is checked against the seat that claims them, and only those ids are
+ * written: a request naming somebody else's card renumbers nothing, rather than
+ * quietly reaching into their pack.
+ *
+ * Not journalled. The journal is what the *table* is allowed to read, and the
+ * order of somebody's own pack is not something the rules or anybody else at
+ * the table has a stake in.
+ */
+export async function reorderPack(
+  gameId: string,
+  seatId: string,
+  holdingIds: readonly string[],
+): Promise<void> {
+  const mine = new Set(
+    (await holdingsFor(gameId))
+      .filter((holding) => holding.seat_id === seatId)
+      .map((holding) => holding.id),
+  );
+  const order = holdingIds.filter((id) => mine.has(id));
+  if (order.length === 0) return;
+
+  // One-based, so a card that has never been arranged — which is null, and
+  // sorts last — cannot collide with the first arranged one.
+  for (const [index, id] of order.entries()) {
+    await db.from("holdings").update({ ordinal: index + 1 }).eq("id", id);
+  }
+  await bumpRevision(gameId);
+}
+
+/**
  * Spends a card by using it.
  *
  * Nine Przedmioty in the box are one act rather than a possession — "Po użyciu

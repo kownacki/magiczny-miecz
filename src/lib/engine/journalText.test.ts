@@ -227,6 +227,7 @@ suite("Polish agreement", () => {
       "walka-start", "walka-koniec", "pojedynek", "ucieczka", "ucieczka-nieudana",
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc", "uzycie",
+      "test-karta",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
       "tura-stracona", "zostawienie", "punkty", "strata",
     ];
@@ -424,6 +425,14 @@ suite("spending a card by using it", () => {
 
   it("still names a card it has no entry for", () => {
     expect(text("uzycie", { cardId: "nie-ma-takiej" })).toBe("Michał używa: nie-ma-takiej.");
+  });
+
+  it("says a card handed over by the test shortcut, rather than nothing at all", () => {
+    // It used to write a row no case could render, so granting a card in test
+    // mode left the journal silent about where it came from.
+    expect(text("test-karta", { cardId: "swiety-graal", kind: "item" })).toBe(
+      "Michał bierze z talii: ŚWIĘTY GRAAL.",
+    );
   });
 });
 

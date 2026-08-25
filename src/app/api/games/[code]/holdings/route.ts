@@ -10,6 +10,7 @@ import {
   equipCard,
   healSeat,
   payHealer,
+  reorderPack,
   sellHolding,
   takeCard,
   takeFromField,
@@ -58,6 +59,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       // costs, is `uses.ts`'s to say and never the request's.
       case "use":
         return NextResponse.json(await spendHolding(game.id, String(body.holdingId)));
+      // How somebody's own pack is laid out. Not a move and not journalled —
+      // 5.4 counts what you carry and has no opinion about the order.
+      case "order":
+        await reorderPack(
+          game.id,
+          String(body.seatId ?? actor.id),
+          Array.isArray(body.holdingIds) ? body.holdingIds.map(String) : [],
+        );
+        break;
       // The three establishment verbs. What each of them costs is read off the
       // board inside these, never taken from the request.
       case "buy":

@@ -134,6 +134,14 @@ create table if not exists magiczny_miecz.holdings (
   slot text check (slot in ('glowa', 'amulet', 'tulow', 'reka-glowna',
     'reka-pomocnicza', 'rekawice', 'pierscien', 'wierzchowiec', 'sakwa',
     'magiczny-miecz', 'tarcza-tolimana')),
+  -- Where the card sits in its owner's pack, when they have said.
+  --
+  -- Nullable on purpose: null is "no opinion", which is what every card starts
+  -- with and what most of them keep. Ordering is `ordinal nulls last,
+  -- created_at`, so a pack nobody has arranged reads exactly as it did before
+  -- this column existed, and a card picked up after an arrangement lands at the
+  -- end rather than jumping to the front.
+  ordinal integer,
   created_at timestamptz not null default now()
 );
 

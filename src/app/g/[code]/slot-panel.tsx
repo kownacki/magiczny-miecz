@@ -185,6 +185,9 @@ export function SlotPanel({
               // The paper doll only exists in slotowy, so anything on it is
               // worn by definition.
               eqMode="slotowy"
+              // Nothing offers to be read while a card is in the air: the Karta
+              // used to open over the very place the pointer had to be.
+              quiet={movingCardId !== null}
               item={item ?? null}
               // The place says what it is for while it is empty, and what is in
               // it once it is filled.

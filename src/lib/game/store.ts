@@ -536,13 +536,19 @@ export interface HoldingRow {
   face: "open" | "hidden";
   /** Where it is worn in the slotted variant; null when it is in the pack. */
   slot: string | null;
+  /** Where the owner put it in their pack; null when they never said. */
+  ordinal: number | null;
 }
 
 export async function holdingsFor(gameId: string): Promise<HoldingRow[]> {
   const { data, error } = await db
     .from("holdings")
-    .select("id,seat_id,card_id,kind,face,slot")
+    .select("id,seat_id,card_id,kind,face,slot,ordinal")
     .eq("game_id", gameId)
+    // A pack the player has arranged first, in the order they arranged it;
+    // everything else after it, oldest first, which is how the whole table read
+    // before anybody could arrange anything.
+    .order("ordinal", { nullsFirst: false })
     .order("created_at");
   if (error) throw new Error(`holdingsFor: ${error.message}`);
   return (data ?? []) as HoldingRow[];

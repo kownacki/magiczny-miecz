@@ -1197,6 +1197,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onEquip={equip}
                 onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
                 onUse={askToUse}
+                onReorder={(holdingIds) =>
+                  post("holdings", { action: "order", seatId: mine.id, holdingIds })
+                }
                 onInspect={setInspectingCard}
               />
             )}
@@ -1342,6 +1345,7 @@ function Hand({
   trophies,
   slotted,
   carried,
+  moving,
   liftedHoldingId,
   onCarry,
   onDragging,
@@ -1350,6 +1354,7 @@ function Hand({
   onTrade,
   onEquip,
   onUse,
+  onReorder,
   onInspect,
 }: {
   seat: Seat;
@@ -1359,6 +1364,8 @@ function Hand({
   trophies: number;
   /** The card on the cursor, if any. */
   carried: Carried | null;
+  /** A card is in the air, however it was picked up — so nothing offers to be read. */
+  moving: boolean;
   /** What is in the air, however it was picked up, so its place looks emptied. */
   liftedHoldingId: string | null;
   onCarry: (carried: Carried | null) => void;
@@ -1370,10 +1377,24 @@ function Hand({
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it. Absent on somebody else's pack. */
   onUse?: (holdingId: string, cardId: string) => void;
+  /** The pack, in the order its owner wants it. Absent on somebody else's. */
+  onReorder?: (holdingIds: string[]) => void;
   onInspect: (card: TileCard) => void;
 }) {
   /** Something is being carried over the pack. */
   const [dragOver, setDragOver] = useState(false);
+  /** The card a reordering drag is currently over, so it can show where it lands. */
+  const [insertAt, setInsertAt] = useState<string | null>(null);
+  /**
+   * The order this device has just asked for and the server has not confirmed.
+   *
+   * Without it a card dragged across the pack snaps back for as long as the
+   * round trip takes, which for a gesture that is *about* where the card ends
+   * up reads as the drag having failed. Never cleared: once the server agrees,
+   * sorting by it is a no-op, and the moment a card is gained or lost it stops
+   * matching the pack and is ignored.
+   */
+  const [wanted, setWanted] = useState<string[] | null>(null);
 
   const shown = seat.holdings.filter((held) => held.kind !== "spell");
   const packed = seat.holdings.filter(
@@ -1383,6 +1404,41 @@ function Hand({
     seat.holdings.map((h) => ({ cardId: h.cardId, kind: h.kind, face: h.face, slot: h.slot ?? null })),
     slotted ? "slotowy" : "klasyczny",
   );
+
+  /**
+   * The pack, in the order it should be drawn.
+   *
+   * The server's order is the truth; `wanted` overrides it only while it still
+   * describes exactly this set of cards. A stale one — from before a card was
+   * taken or lost — is simply ignored rather than cleared, which keeps this a
+   * derivation and not a thing that has to be kept in step.
+   */
+  const inPack = shown.filter((held) => !slotted || held.slot == null);
+  const packOrder = inPack.map((held) => held.id);
+  const arranged =
+    wanted !== null &&
+    wanted.length === packOrder.length &&
+    packOrder.every((id) => wanted.includes(id))
+      ? [...inPack].sort((a, b) => wanted.indexOf(a.id) - wanted.indexOf(b.id))
+      : inPack;
+
+  /**
+   * Moves a card in the pack to sit before another, or to the end.
+   *
+   * Only cards already in the pack: something coming off the body is being
+   * taken off, which is a different act with its own answer (it lands at the
+   * end, because that is where a card the pack has never seen goes).
+   */
+  const moveWithin = (holdingId: string, beforeId: string | null) => {
+    if (!onReorder) return;
+    const ids = arranged.map((held) => held.id);
+    if (!ids.includes(holdingId)) return;
+    const without = ids.filter((id) => id !== holdingId);
+    const at = beforeId === null ? -1 : without.indexOf(beforeId);
+    without.splice(at < 0 ? without.length : at, 0, holdingId);
+    setWanted(without);
+    onReorder(without);
+  };
 
   // After the hooks, which have to run every render whatever is on show.
   //
@@ -1424,17 +1480,27 @@ function Hand({
         }}
         onDrop={(event) => {
           setDragOver(false);
+          setInsertAt(null);
           if (!canAct) return;
           const holdingId = event.dataTransfer.getData(DRAG_TYPE);
           if (!holdingId) return;
           event.preventDefault();
-          onEquip(holdingId, null);
+          // Dropped on the pack itself rather than on one of its cards: the end
+          // of the queue, which is where a card the pack has not seen before
+          // goes anyway.
+          if (packOrder.includes(holdingId)) moveWithin(holdingId, null);
+          else onEquip(holdingId, null);
         }}
         // Clicking the pack with something on the cursor puts it there, which
-        // is how a worn card comes off without aiming at a particular card.
+        // is how a worn card comes off without aiming at a particular card —
+        // and how a card already in the pack is sent to the back of it.
         onClick={(event) => {
           if (!carried) return;
           event.stopPropagation();
+          if (carried.from === "plecak") {
+            moveWithin(carried.holdingId, null);
+            return onCarry(null);
+          }
           onPlaceInPack();
         }}
         className={`flex flex-wrap gap-2 rounded border border-dashed p-1 transition ${
@@ -1444,11 +1510,7 @@ function Hand({
         {/* Your own Zaklęcia are not repeated here: they have their own panel
             above, face up and with the cast controls on them. What belongs on a
             seat card is what the *table* can see. */}
-        {seat.holdings
-          .filter((held) => held.kind !== "spell")
-          // What is being worn is on the body above, not in the pack twice.
-          .filter((held) => !slotted || held.slot == null)
-          .map((held) => (
+        {arranged.map((held) => (
           <ItemSlot
             key={held.id}
             // The same component the body is built from: a card in the pack and
@@ -1459,15 +1521,28 @@ function Hand({
             eqMode={slotted ? "slotowy" : "klasyczny"}
             nature={asNature(seat.nature)}
             tone="filled"
+            // A card would land in front of this one, so this and everything
+            // after it steps aside to show the space it is going into. Said
+            // with a gap rather than by tinting the card under the pointer,
+            // which reads as "this one is about to be replaced".
+            gapBefore={insertAt === held.id}
+            // Reading and moving are different modes: no Karta opens over the
+            // place you are aiming at while a card is in the air.
+            quiet={moving}
             badge={held.kind === "trophy" ? "trofeum" : undefined}
             // The one on the cursor is not also in the pack.
             lifted={held.id === liftedHoldingId}
             dimmed={held.kind === "trophy"}
-            disabled={!canAct && !slotted}
-            // One click picks it up, or puts down whatever is already on the
-            // cursor. Two put it straight on. With no variant running there is
-            // nowhere to put anything, so a click just reads the card.
-            // Clicking moves things; hovering reads them.
+            disabled={!canAct}
+            // One click picks it up; the next puts down whatever is on the
+            // cursor, in front of the card it lands on. Clicking moves things;
+            // hovering reads them.
+            //
+            // Everything in the pack can be picked up, not only what could be
+            // worn. It used to be the wearables alone, which made the pack an
+            // inventory in a game where three quarters of what you carry has no
+            // place on the body — a Graal, an Eliksir and a trophy could not be
+            // moved at all, so a pack could not be arranged.
             //
             // It used to open the card as a fallback, so the same gesture meant
             // "pick this up" on one card and "let me look at that" on the next —
@@ -1475,17 +1550,23 @@ function Hand({
             // rearranging. Reading is what the hover is for, and it is always
             // available without disturbing anything.
             onClick={(event) => {
-              if (!slotted || !canAct) return;
+              if (!canAct) return;
               event.stopPropagation();
-              if (carried) return onPlaceInPack();
-              if (held.kind === "item" && isWearable(held.cardId)) {
-                onCarry({
-                  holdingId: held.id,
-                  cardId: held.cardId,
-                  name: tileFor(held).name,
-                  from: "plecak",
-                });
+              if (carried) {
+                // From the pack: it goes in front of this card. From the body:
+                // it is being taken off, which lands it at the end.
+                if (carried.from === "plecak") {
+                  moveWithin(carried.holdingId, held.id);
+                  return onCarry(null);
+                }
+                return onPlaceInPack();
               }
+              onCarry({
+                holdingId: held.id,
+                cardId: held.cardId,
+                name: tileFor(held).name,
+                from: "plecak",
+              });
             }}
             // Two clicks put a card on — and where there is nothing to put it
             // on, two clicks spend it instead. Never both for the same card:
@@ -1505,13 +1586,47 @@ function Hand({
               if (onUse && isUsable(held.cardId)) onUse(held.id, held.cardId);
             }}
             // Dragged onto a place to put it on — the same journey the
-            // "załóż" button makes, for people who reach for the card.
-            draggable={canAct && slotted && held.kind === "item" && isWearable(held.cardId)}
+            // "załóż" button makes, for people who reach for the card — or onto
+            // another card in the pack, which is how the pack is arranged.
+            draggable={canAct}
             onDragStart={(event) => {
               startHoldingDrag(event, held.id);
               onDragging({ cardId: held.cardId, holdingId: held.id });
             }}
-            onDragEnd={() => onDragging(null)}
+            onDragEnd={() => {
+              setInsertAt(null);
+              onDragging(null);
+            }}
+            onDragOver={(event) => {
+              if (!canAct || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
+              // Taken here rather than left to the pack behind it, so the card
+              // lands where the pointer is instead of at the end.
+              event.stopPropagation();
+              event.preventDefault();
+              setInsertAt(held.id);
+            }}
+            onDragLeave={() => setInsertAt((at) => (at === held.id ? null : at))}
+            onDrop={(event) => {
+              setInsertAt(null);
+              setDragOver(false);
+              if (!canAct) return;
+              const holdingId = event.dataTransfer.getData(DRAG_TYPE);
+              if (!holdingId || holdingId === held.id) return;
+              event.stopPropagation();
+              event.preventDefault();
+              // A card off the body is being taken off; one already in the pack
+              // is being moved within it.
+              if (packOrder.includes(holdingId)) moveWithin(holdingId, held.id);
+              else onEquip(holdingId, null);
+            }}
+            // A carried card has no drag events behind it, so hovering is
+            // watched directly for the same answer to show.
+            onPointerEnter={() =>
+              carried?.from === "plecak" && carried.holdingId !== held.id
+                ? setInsertAt(held.id)
+                : undefined
+            }
+            onPointerLeave={() => setInsertAt((at) => (at === held.id ? null : at))}
           >
             {canAct && (
               <span className="flex items-center gap-2">
@@ -1572,11 +1687,17 @@ function Hand({
               glyph="+"
               tone={moving ? "accepts" : "empty"}
               // Clicking an empty place puts down what is carried — the same
-              // gesture that works on the body.
+              // gesture that works on the body. A card already in the pack goes
+              // to the end of it rather than nowhere.
               disabled={!canAct || carried === null}
               onClick={(event) => {
                 event.stopPropagation();
-                if (carried) onPlaceInPack();
+                if (!carried) return;
+                if (carried.from === "plecak") {
+                  moveWithin(carried.holdingId, null);
+                  return onCarry(null);
+                }
+                onPlaceInPack();
               }}
             />
           ));
@@ -1684,6 +1805,7 @@ function SeatCard({
   onTrade,
   onEquip,
   onUse,
+  onReorder,
   onInspect,
 }: {
   seat: Seat;
@@ -1709,6 +1831,8 @@ function SeatCard({
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it — asked about first, because it cannot be undone. */
   onUse?: (holdingId: string, cardId: string) => void;
+  /** The pack, in the order its owner wants it. */
+  onReorder?: (holdingIds: string[]) => void;
   onInspect: (card: TileCard) => void;
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
@@ -1903,6 +2027,7 @@ function SeatCard({
             slotted={slotted}
             trophies={trophies.length}
             carried={carried}
+            moving={movingCardId !== null}
             liftedHoldingId={liftedHoldingId}
             onCarry={setCarried}
             onDragging={announceDrag}
@@ -1911,6 +2036,7 @@ function SeatCard({
             onTrade={onTrade}
             onEquip={onEquip}
             onUse={onUse}
+            onReorder={onReorder}
             onInspect={onInspect}
           />
           <CarriedCard carried={carried} />

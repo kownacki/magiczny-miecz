@@ -4,6 +4,7 @@ import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { bonusOf } from "./cards";
 import { ABILITIES } from "./abilities";
+import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
 import { isWearable } from "./slots";
 import type { Holding } from "./state";
@@ -48,9 +49,17 @@ export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | n
  * Taking the sum of the two instead would double every card that has both,
  * which is the natural mistake here and an invisible one — Excalibur would
  * quietly be worth two points of Miecza rather than one.
+ *
+ * A card you spend is the exception, and reading the corner is exactly wrong
+ * for it: the Eliksir Siły prints a 2 because drinking it is worth two points
+ * of Miecza *for one turn*, and carrying an unopened bottle around is worth
+ * nothing at all. Left in, holding one was a permanent +2 that vanished when it
+ * was finally drunk — the opposite of the card. `uses.ts` is what knows the
+ * difference between a payoff and a standing rule.
  */
 const BONUS_BY_ID = new Map<string, { miecz: number; magia: number }>();
 for (const card of EVENTS) {
+  if (isUsable(card.id)) continue;
   const printed = bonusOf(card);
   if (printed) BONUS_BY_ID.set(card.id, printed);
 }

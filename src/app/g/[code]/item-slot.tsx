@@ -73,6 +73,8 @@ export function ItemSlot({
   children,
   eqMode = "klasyczny",
   nature = null,
+  quiet = false,
+  gapBefore = false,
 }: {
   /** What is here, or null for an empty place. */
   item: SlotOccupant | null;
@@ -105,12 +107,23 @@ export function ItemSlot({
   eqMode?: EqMode;
   /** Who is looking, so a 5.3 restriction can say whether THEY pass it. */
   nature?: Nature | null;
+  /**
+   * A card is in the air somewhere, so this one holds its tongue.
+   *
+   * Reading and moving are different modes and they were fighting: crossing the
+   * pack with a card on the cursor opened a full-size Karta over the very place
+   * you were aiming at, and it landed exactly where the pointer had to be. The
+   * hover is for reading, and nobody is reading mid-drag.
+   */
+  quiet?: boolean;
+  /** A card would land in front of this one, so the row opens up to show where. */
+  gapBefore?: boolean;
 }) {
   // The hover is suppressed while the card is on the cursor: what is under the
   // pointer then is a hollow, and describing it as though it still held
   // something is a lie.
   const { handlers, preview } = useCardPreview(
-    item && !lifted ? item.card : null,
+    item && !lifted && !quiet ? item.card : null,
     false,
     eqMode,
     nature,
@@ -125,7 +138,14 @@ export function ItemSlot({
   const shown: SlotTone = lifted && (tone === "filled" || tone === "candidate") ? "empty" : tone;
 
   return (
-    <figure style={{ width: SLOT_WIDTH }} className="flex shrink-0 flex-col items-center gap-1">
+    <figure
+      // The gap is the whole answer to "where will this land": everything from
+      // here rightwards steps aside, which is what a hand does with a card it
+      // is about to be given. Tinting the card under the pointer said something
+      // else — that it was about to be replaced.
+      style={{ width: SLOT_WIDTH, marginLeft: gapBefore ? SLOT_WIDTH * 0.45 : undefined }}
+      className="flex shrink-0 flex-col items-center gap-1 transition-[margin] duration-150"
+    >
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
