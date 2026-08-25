@@ -230,7 +230,14 @@ export async function startGame(gameId: string): Promise<void> {
   // ready are two different things, and conflating them is what let a game
   // start while somebody was still deciding.
   const chosen = seats.filter((seat) => seat.character_id);
-  if (chosen.length < 2) throw new Error("Do gry potrzeba co najmniej 2 postaci.");
+  // One is enough. The box says 2-6 and the rulebook never states a count at
+  // all: the only rule that assumes company is 17.4, where "jeden z pozostałych
+  // graczy" throws the enemy's die — and in a simulation the app throws it. The
+  // victory condition is beating the Bestia, which one character can do alone.
+  // The race against other players is what makes it tense, not what makes it
+  // possible, and it is also what a table is left with when everybody else has
+  // died.
+  if (chosen.length < 1) throw new Error("Do gry potrzeba przynajmniej jednej postaci.");
 
   // Everybody with a character has to have said so (docs/LOBBY.md). A seat
   // nobody is behind cannot say anything, so it is not asked.

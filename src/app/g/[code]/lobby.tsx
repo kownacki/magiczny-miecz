@@ -263,10 +263,10 @@ export function Lobby({
                   },
                 })
               }
-              disabled={busy || chosen.length < 2 || waitingOn.length > 0}
+              disabled={busy || chosen.length < 1 || waitingOn.length > 0}
               title={
-                chosen.length < 2
-                  ? `Brakuje ${2 - chosen.length} postaci`
+                chosen.length < 1
+                  ? "Nikt jeszcze nie wybrał Postaci"
                   : waitingOn.length > 0
                     ? `Czekamy na: ${waitingOn
                         .map((seat) => seat.playerName ?? `miejsce ${seat.seatIndex + 1}`)
@@ -275,8 +275,8 @@ export function Lobby({
               }
               className="rounded border border-ochre bg-ochre/10 px-4 py-1 font-[family-name:var(--font-display)] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
             >
-              {chosen.length < 2
-                ? `Rozpocznij grę — brakuje ${2 - chosen.length} postaci`
+              {chosen.length < 1
+                ? "Rozpocznij grę — nikt nie wybrał Postaci"
                 : waitingOn.length > 0
                   ? `Rozpocznij grę — czekamy na ${waitingOn.length}`
                   : "Rozpocznij grę"}

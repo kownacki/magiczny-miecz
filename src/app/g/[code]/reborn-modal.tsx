@@ -1,0 +1,164 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import type { Character } from "@/data/types";
+import type { CharacterId } from "@/data/ids";
+import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
+
+/**
+ * Choosing again, after dying.
+ *
+ * Rule 4.4: "Gracz, który kierował niefortunną Postacią, może wybrać sobie nową
+ * i rozpocząć z nią grę od początku (z Obszaru oznaczonego jako MGR)". *Może* —
+ * so this is offered and never forced, and it can be closed. A player who would
+ * rather watch the rest of the game from outside it keeps that choice, and the
+ * button to reopen this stays where their character used to be.
+ *
+ * Built like the poczekalnia because it is the same decision: the strip to
+ * choose from, the Karta big enough to read beside it, and a confirmation —
+ * a character is four clauses of Charakterystyka and two numbers, and picking
+ * one off a thumbnail is picking blind.
+ */
+export function RebornModal({
+  characters,
+  taken,
+  busy,
+  onConfirm,
+  onClose,
+}: {
+  characters: Character[];
+  /** Every character already in the game — 4.4 puts the dead one out for good. */
+  taken: ReadonlySet<string>;
+  busy: boolean;
+  onConfirm: (characterId: CharacterId) => void;
+  onClose: () => void;
+}) {
+  const [picked, setPicked] = useState<CharacterId | null>(null);
+  const [hovered, setHovered] = useState<CharacterId | null>(null);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const free = characters.filter((character) => !taken.has(character.id));
+  // What the reading column shows: whatever the cursor is over wins, because
+  // running along the strip and reading each one is how you choose.
+  const reading = characters.find((c) => c.id === (hovered ?? picked)) ?? null;
+  const card = reading ? characterImageUrl(reading.id) : null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Wybierz nową Postać"
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-night/85 p-4"
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-ochre/40 bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.7)]"
+      >
+        <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-edge px-4 py-3">
+          <div>
+            <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
+              Twoja Postać zginęła
+            </h2>
+            <p className="text-[11px] text-muted">
+              Jej Przedmioty i Przyjaciele zostali na Obszarze, na którym zginęła.
+              Możesz wybrać nową i zacząć od jej MGR (4.4).
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="shrink-0 text-[11px] text-muted transition hover:text-ink"
+          >
+            oglądaj dalej
+          </button>
+        </header>
+
+        <div className="flex min-h-0 flex-1 gap-4 p-4">
+          <div className="min-w-0 flex-1 overflow-y-auto">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-2">
+              {free.map((character) => {
+                const standee = characterStandeeUrl(character.id);
+                const chosen = picked === character.id;
+                return (
+                  <button
+                    key={character.id}
+                    disabled={busy}
+                    onClick={() => setPicked(character.id)}
+                    onMouseEnter={() => setHovered(character.id)}
+                    onMouseLeave={() =>
+                      setHovered((at) => (at === character.id ? null : at))
+                    }
+                    onFocus={() => setHovered(character.id)}
+                    onBlur={() => setHovered(null)}
+                    title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
+                    className={`overflow-hidden rounded border transition disabled:opacity-40 ${
+                      chosen ? "border-ochre" : "border-edge hover:border-ochre/60"
+                    }`}
+                  >
+                    {standee ? (
+                      <Image
+                        src={standee}
+                        alt={character.name}
+                        width={114}
+                        height={190}
+                        className={`h-auto w-full transition-opacity ${
+                          chosen || !picked ? "opacity-100" : "opacity-45"
+                        }`}
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="block p-2 text-[10px] text-ink">{character.name}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* The Karta, big enough to read. A character is four numbered
+              clauses and two numbers, and every one of them matters to the
+              choice being made to the left of it. */}
+          <aside className="hidden w-[260px] shrink-0 flex-col items-center gap-3 lg:flex">
+            {card && reading ? (
+              <Image
+                src={card}
+                alt={`Karta Postaci: ${reading.name}`}
+                width={520}
+                height={648}
+                className="max-h-full w-auto rounded border border-edge object-contain"
+                unoptimized
+              />
+            ) : (
+              <p className="mt-8 max-w-[16rem] text-center text-[12px] leading-relaxed text-muted/70">
+                Najedź na Postać, żeby przeczytać jej Kartę.
+              </p>
+            )}
+          </aside>
+        </div>
+
+        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-edge px-4 py-3">
+          <p className="min-w-0 truncate text-[12px] text-muted">
+            {picked
+              ? `Wybrano: ${characters.find((c) => c.id === picked)?.name}`
+              : "Wybierz Postać z listy."}
+          </p>
+          <button
+            disabled={busy || !picked}
+            onClick={() => picked && onConfirm(picked)}
+            className="shrink-0 rounded border border-ochre bg-ochre/10 px-4 py-1.5 font-[family-name:var(--font-display)] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
+          >
+            Zacznij nową Postacią
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}

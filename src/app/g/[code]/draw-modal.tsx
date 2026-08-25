@@ -36,6 +36,8 @@ export interface DrawnEntry {
  * asked as the question the rules ask.
  */
 export function DrawModal({
+  who,
+  canAct,
   cards,
   resolved,
   fought,
@@ -50,6 +52,17 @@ export function DrawModal({
   onTake,
   onLeave,
 }: {
+  /** Whose turn this is, for everybody who is only watching it. */
+  who: string;
+  /**
+   * Whether this device may press anything.
+   *
+   * False for everyone but the player whose turn it is — including a player
+   * whose own character has died and is watching the rest of the game. They see
+   * the card, the dice as they land and the verdict; what they do not get is a
+   * say in somebody else's turn.
+   */
+  canAct: boolean;
   /** In 15.2 order, which is the order they are dealt with. */
   cards: DrawnEntry[];
   resolved: string[];
@@ -86,7 +99,7 @@ export function DrawModal({
   }, [card?.cardId]);
 
   useEffect(() => {
-    if (!card) return;
+    if (!card || !canAct) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onLeave(card.cardId);
     };
@@ -100,13 +113,21 @@ export function DrawModal({
   // the two dice are the only thing anyone at the table is looking at.
   if (fight) {
     return (
-      <Shell label={fight.cardName} art={cardImageUrl(fight.cardId.split("+")[0])}>
-        <FightControls
-          fight={fight}
-          simulated={simulated}
-          busy={busy}
-          onAction={onAction}
-        />
+      <Shell
+        label={fight.cardName}
+        art={cardImageUrl(fight.cardId.split("+")[0])}
+        watching={canAct ? null : `${who} walczy`}
+      >
+        {canAct ? (
+          <FightControls
+            fight={fight}
+            simulated={simulated}
+            busy={busy}
+            onAction={onAction}
+          />
+        ) : (
+          <WatchFight fight={fight} />
+        )}
       </Shell>
     );
   }
@@ -126,7 +147,7 @@ export function DrawModal({
   const asking = script ? pendingIn(script.effect, [...choices]) : null;
 
   return (
-    <Shell label={known.name} art={art}>
+    <Shell label={known.name} art={art} watching={canAct ? null : `${who} ciągnie Kartę`}>
       {/* Only what the card does not say itself. The scan carries its own
           name, class, Miecz and full text at a size you can read — printing
           all of it again beside the picture was two of everything and pushed
@@ -173,7 +194,7 @@ export function DrawModal({
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
         {/* A Wróg attacks the moment it is turned over (16.2), so the two
             things you may do about it are the two the rules give you. */}
-        {foe && (
+        {canAct && foe && (
           <div className="flex flex-wrap gap-2">
             <button
               disabled={busy}
@@ -194,7 +215,7 @@ export function DrawModal({
 
         {/* Picked up or left where it lies — 12.1 and 16.8, and the app
             refuses for 5.3, 5.4 or 21.2 if it must. */}
-        {!foe && keep && (
+        {canAct && !foe && keep && (
           <div className="flex flex-wrap gap-2">
             <button
               disabled={busy}
@@ -214,7 +235,7 @@ export function DrawModal({
         )}
 
         {/* A choice the rules give the player: "wedle własnego wyboru". */}
-        {asking?.op === "wybor" && (
+        {canAct && asking?.op === "wybor" && (
           <div>
             <p className="mb-1 text-[11px] text-muted">Wybierz jedno:</p>
             <div className="flex flex-wrap gap-2">
@@ -238,7 +259,7 @@ export function DrawModal({
 
         {/* "przenieś się na dowolny Obszar w tym Kręgu" — the player points at
             the board, so the board is what is offered. */}
-        {asking?.op === "przenies" && asking.to.kind !== "pole" && (
+        {canAct && asking?.op === "przenies" && asking.to.kind !== "pole" && (
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={going}
@@ -264,7 +285,7 @@ export function DrawModal({
 
         {/* Nothing left to ask: the app does it, and the notice says what it
             did. A card with no script has nothing to do but be read. */}
-        {!foe && !keep && !asking && (
+        {canAct && !foe && !keep && !asking && (
           <button
             disabled={busy}
             onClick={() => (script ? onResolve(known.id, { choices }) : onLeave(known.id))}
@@ -281,7 +302,7 @@ export function DrawModal({
         )}
 
         {/* Always available: 16.8 lets a card simply stay where it fell. */}
-        {(foe || asking) && (
+        {canAct && (foe || asking) && (
           <button
             disabled={busy}
             onClick={() => onLeave(known.id)}
@@ -304,10 +325,13 @@ export function DrawModal({
 function Shell({
   label,
   art,
+  watching,
   children,
 }: {
   label: string;
   art: string | null;
+  /** Set when this device is only watching — says whose turn it is. */
+  watching: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -329,7 +353,14 @@ function Shell({
             unoptimized
           />
         )}
-        <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
+          {watching && (
+            <p className="shrink-0 rounded border border-edge bg-night/50 px-2 py-1 text-[11px] uppercase tracking-wide text-muted">
+              {watching} — oglądasz
+            </p>
+          )}
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -372,4 +403,59 @@ function pendingIn(effect: Effect, choices: number[]): Effect | null {
 export function ringFields(fieldId: FieldId | null): FieldId[] {
   if (!fieldId) return [];
   return (ringOf(fieldId) ?? []).map((field) => field.id);
+}
+
+/**
+ * A fight somebody else is having.
+ *
+ * The same two numbers, with nothing to press. It exists because a fight is the
+ * moment the game is most worth looking at, and it used to happen entirely
+ * inside one person's browser — everybody else read about it in the journal
+ * afterwards, which is not the same as watching the second die land.
+ */
+function WatchFight({ fight }: { fight: Fight }) {
+  const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
+  const side = (title: string, total: number, roll: number | null) => (
+    <div className="rounded border border-edge bg-night p-3">
+      <p className="mb-2 truncate text-xs uppercase tracking-wide text-muted">{title}</p>
+      <p className="flex items-baseline gap-2">
+        <span className="tnum text-2xl text-ink">{total}</span>
+        <span className="text-xs text-muted">{label}</span>
+      </p>
+      <p className="tnum mt-3 text-sm text-muted">
+        {roll === null ? (
+          "czeka na rzut…"
+        ) : (
+          <>
+            rzut <span className="text-ink">{roll}</span> — razem{" "}
+            <span className="text-ochre">{total + roll}</span>
+          </>
+        )}
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-muted">
+        Przeciwnik: <span className="text-vermilion">{fight.cardName}</span>{" "}
+        <span className="text-xs">
+          ({fight.kind === "magiczna" ? "walka magiczna" : "walka zwykła"})
+        </span>
+      </p>
+      <div className="grid grid-cols-2 gap-4">
+        {side("Postać", fight.playerTotal, fight.playerRoll)}
+        {side(fight.cardName, fight.enemyTotal, fight.enemyRoll)}
+      </div>
+      {fight.result && (
+        <p className="rounded border border-edge bg-night p-3 text-sm text-ink">
+          {fight.result.outcome === "wygrana"
+            ? "Wygrana."
+            : fight.result.outcome === "remis"
+              ? "Remis — nikt nic nie traci (17.10)."
+              : "Przegrana."}
+        </p>
+      )}
+    </div>
+  );
 }

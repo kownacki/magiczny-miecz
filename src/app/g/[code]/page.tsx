@@ -43,6 +43,7 @@ import items from "@/data/items.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
 import { DrawModal, ringFields } from "./draw-modal";
+import { RebornModal } from "./reborn-modal";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
@@ -165,6 +166,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * moves on, since the next character meets the same cards fresh.
    */
   const [waved, setWaved] = useState<string[]>([]);
+  /** Whether the "choose again" modal is open (4.4). */
+  const [reborn, setReborn] = useState(false);
   /** Moves this device has made and the server has not confirmed (see `equip`). */
   const [moved, setMoved] = useState<Record<string, Slot | null>>({});
   /**
@@ -572,13 +575,35 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {inspectingCard && (
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
+      {/* Offered, never forced — 4.4 says *może*. Opened from the line on the
+          dead character's card and closed back to it. */}
+      {mySeat?.eliminated && reborn && (
+        <RebornModal
+          characters={CHARACTERS}
+          taken={
+            new Set(seats.map((seat) => seat.character_id).filter(Boolean) as string[])
+          }
+          busy={busy}
+          onConfirm={(characterId) => {
+            setReborn(false);
+            post("character", { again: true, seatId: mySeat.id, characterId });
+          }}
+          onClose={() => setReborn(false)}
+        />
+      )}
+
       {/* The card you just turned over, at a size you can read, with exactly
           the things this card lets you do under it. */}
       {active &&
-        (mySeatIndex === active.seat_index || isTableScreen) &&
         (game.turn_state.phase === "walka" ||
           (game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0)) && (
           <DrawModal
+            // Everybody at the table watches. A fight is the moment the game
+            // is most worth looking at, and it used to happen entirely inside
+            // one person's browser while the rest read about it afterwards in
+            // the journal. Only the player whose turn it is can press anything.
+            who={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
+            canAct={mySeatIndex === active.seat_index || isTableScreen}
             cards={game.turn_state.phase === "pole" ? game.turn_state.drawn : []}
             resolved={
               game.turn_state.phase === "pole"
@@ -931,15 +956,27 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               />
             )}
 
-            {/* 4.4: death ends a character, not a player's evening. */}
+            {/* 4.4: death ends a character, not a player's evening — but the
+                rule says *może*, so choosing again is offered rather than
+                demanded. Dismissing the modal leaves this line, which is the
+                way back into it whenever they want. */}
             {mine?.eliminated && (
-              <NewCharacter
-                taken={new Set(seats.map((seat) => seat.character_id).filter(Boolean) as string[])}
-                busy={busy}
-                onPick={(characterId) =>
-                  post("character", { again: true, seatId: mine.id, characterId })
-                }
-              />
+              <section className="mt-3 rounded-lg border border-vermilion/50 bg-vermilion/5 p-3">
+                <h3 className="mb-1 font-[family-name:var(--font-display)] text-sm text-vermilion">
+                  Twoja Postać zginęła
+                </h3>
+                <p className="mb-2 text-[11px] leading-relaxed text-muted">
+                  Jesteś poza kolejnością tur i oglądasz grę. Możesz wrócić nową
+                  Postacią, kiedy zechcesz (4.4).
+                </p>
+                <button
+                  disabled={busy}
+                  onClick={() => setReborn(true)}
+                  className="rounded border border-ochre/60 px-3 py-1 text-xs text-ochre transition hover:bg-ochre/10 disabled:opacity-40"
+                >
+                  Wybierz nową Postać
+                </button>
+              </section>
             )}
 
             {mine && (
@@ -1341,64 +1378,6 @@ function EquipButton({
   );
 }
 
-/**
- * Choosing again after a death (4.4).
- *
- * The dead character's things are on the field where it fell and its card is
- * out of the game; what the player gets is a fresh one from whatever nobody
- * has held, starting from its own MGR. Offered as a plain roster rather than
- * buried in a menu, because the player is sitting there with nothing to do
- * until they pick.
- */
-function NewCharacter({
-  taken,
-  busy,
-  onPick,
-}: {
-  taken: Set<string>;
-  busy: boolean;
-  onPick: (characterId: string) => void;
-}) {
-  const free = CHARACTERS.filter((character) => !taken.has(character.id));
-  return (
-    <section className="mt-3 rounded-lg border border-vermilion/50 bg-vermilion/5 p-3">
-      <h3 className="mb-1 font-[family-name:var(--font-display)] text-sm text-vermilion">
-        Twoja Postać zginęła
-      </h3>
-      <p className="mb-3 text-[11px] leading-relaxed text-muted">
-        Jej Przedmioty i Przyjaciele zostali na Obszarze, na którym zginęła (4.4).
-        Wybierz nową Postać i zacznij od jej MGR.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {free.map((character) => {
-          const standee = characterStandeeUrl(character.id);
-          return (
-            <button
-              key={character.id}
-              disabled={busy}
-              onClick={() => onPick(character.id)}
-              title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
-              className="w-[70px] overflow-hidden rounded border border-edge transition hover:border-ochre disabled:opacity-40"
-            >
-              {standee ? (
-                <Image
-                  src={standee}
-                  alt={character.name}
-                  width={70}
-                  height={117}
-                  className="h-auto w-full"
-                  unoptimized
-                />
-              ) : (
-                <span className="block p-2 text-[10px] text-ink">{character.name}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 
 function tileFor(held: Held): TileCard {
   return {
