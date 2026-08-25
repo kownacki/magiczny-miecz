@@ -117,6 +117,13 @@ export function ItemSlot({
   );
   const art = item ? cardArtUrl(item.cardId) : null;
 
+  // While its card is in the air the place is a hollow, and it should look like
+  // one: the picture fading inside a full-looking frame reads as a card that
+  // has gone dim, not as a place you have emptied. It still answers for itself
+  // when something is held over it — that question is about where the card in
+  // the air would land, not about where it came from.
+  const shown: SlotTone = lifted && (tone === "filled" || tone === "candidate") ? "empty" : tone;
+
   return (
     <figure style={{ width: SLOT_WIDTH }} className="flex shrink-0 flex-col items-center gap-1">
       <div
@@ -126,7 +133,7 @@ export function ItemSlot({
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
         style={{ width: SLOT_WIDTH, height: SLOT_ART_HEIGHT }}
-        className={`relative overflow-hidden rounded border transition ${TONE[tone]}`}
+        className={`relative overflow-hidden rounded border transition ${TONE[shown]}`}
       >
         <button
           type="button"
@@ -174,12 +181,15 @@ export function ItemSlot({
         style={{ width: SLOT_WIDTH }}
         title={label}
         className={`truncate text-center text-[9px] leading-tight ${
-          item ? "text-muted" : "text-muted/50"
+          item && !lifted ? "text-muted" : "text-muted/50"
         }`}
       >
         {label}
       </figcaption>
-      {children}
+      {/* The controls go quiet with the card they belong to: "załóż" under a
+          card that is currently on the cursor is an offer to do the thing you
+          are already in the middle of doing. */}
+      <div className={lifted ? "pointer-events-none opacity-30" : undefined}>{children}</div>
       {preview}
     </figure>
   );

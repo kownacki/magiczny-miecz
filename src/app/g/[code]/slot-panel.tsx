@@ -120,8 +120,9 @@ export function SlotPanel({
   busy: boolean;
   /** A card is on the cursor, so a click on a place puts it there. */
   carrying: boolean;
-  /** Announces the card id a drag has picked up, and null when it ends. */
-  onDragging: (cardId: string | null) => void;
+  /** Announces what a drag has picked up — the card, and the holding it is —
+      and null when it ends. */
+  onDragging: (moving: { cardId: string; holdingId: string } | null) => void;
   /** Which card is being moved, dragged or carried — so a place can say whether
       it would take it before the player finds out by being refused. */
   movingCardId: string | null;
@@ -194,8 +195,8 @@ export function SlotPanel({
               onDoubleClick={item ? () => onTakeOff(item.holdingId) : undefined}
               onDragStart={(event) => {
                 if (!item) return;
-                onDragging(item.cardId);
                 startHoldingDrag(event, item.holdingId);
+                onDragging({ cardId: item.cardId, holdingId: item.holdingId });
               }}
               onDragEnd={() => onDragging(null)}
               onDragOver={(event) => {

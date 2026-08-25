@@ -1223,6 +1223,7 @@ function Hand({
   trophies,
   slotted,
   carried,
+  liftedHoldingId,
   onCarry,
   onDragging,
   onPlaceInPack,
@@ -1238,9 +1239,11 @@ function Hand({
   trophies: number;
   /** The card on the cursor, if any. */
   carried: Carried | null;
+  /** What is in the air, however it was picked up, so its place looks emptied. */
+  liftedHoldingId: string | null;
   onCarry: (carried: Carried | null) => void;
   /** The card id being dragged out of the pack, or null when the drag ends. */
-  onDragging: (cardId: string | null) => void;
+  onDragging: (moving: { cardId: string; holdingId: string } | null) => void;
   onPlaceInPack: () => void;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
@@ -1336,7 +1339,7 @@ function Hand({
             tone="filled"
             badge={held.kind === "trophy" ? "trofeum" : undefined}
             // The one on the cursor is not also in the pack.
-            lifted={held.id === carried?.holdingId}
+            lifted={held.id === liftedHoldingId}
             dimmed={held.kind === "trophy"}
             disabled={!canAct && !slotted}
             // One click picks it up, or puts down whatever is already on the
@@ -1374,8 +1377,8 @@ function Hand({
             // "załóż" button makes, for people who reach for the card.
             draggable={canAct && slotted && held.kind === "item" && isWearable(held.cardId)}
             onDragStart={(event) => {
-              onDragging(held.cardId);
               startHoldingDrag(event, held.id);
+              onDragging({ cardId: held.cardId, holdingId: held.id });
             }}
             onDragEnd={() => onDragging(null)}
           >
@@ -1579,8 +1582,33 @@ function SeatCard({
    * drag is carrying — only the drop is — so without this the place under the
    * pointer could not say whether it would accept before it was let go.
    */
-  const [dragging, setDragging] = useState<string | null>(null);
-  const movingCardId = carried?.cardId ?? dragging;
+  const [dragging, setDragging] = useState<{ cardId: string; holdingId: string } | null>(null);
+  /**
+   * Says what a drag has picked up — a tick after it picks it up.
+   *
+   * The browser takes its picture of the card being dragged at the end of the
+   * `dragstart` handler, and the place the card came from is faded the moment
+   * this lands. Fade it inside the handler and the picture on the cursor is the
+   * faded one, which is the opposite of what a card in the air should look
+   * like. Letting go cancels a pending fade rather than queueing behind it, so
+   * a drag abandoned in the same breath cannot leave a hollow behind.
+   */
+  const dragTimer = useRef<number | null>(null);
+  const announceDrag = useCallback((moving: { cardId: string; holdingId: string } | null) => {
+    if (dragTimer.current !== null) window.clearTimeout(dragTimer.current);
+    dragTimer.current = null;
+    if (!moving) return setDragging(null);
+    dragTimer.current = window.setTimeout(() => setDragging(moving), 0);
+  }, []);
+  const movingCardId = carried?.cardId ?? dragging?.cardId ?? null;
+  /**
+   * The card that is in the air, whichever way it was picked up.
+   *
+   * Clicking a card and dragging it are the same journey — one with the button
+   * held — so the place it came from looks the same either way: emptied, not
+   * still occupied by something that has gone slightly grey.
+   */
+  const liftedHoldingId = carried?.holdingId ?? dragging?.holdingId ?? null;
 
   /**
    * Puts down what is being carried.
@@ -1680,8 +1708,8 @@ function SeatCard({
                 busy={false}
                 carrying={carried !== null}
                 movingCardId={movingCardId}
-                liftedHoldingId={carried?.holdingId ?? null}
-                onDragging={setDragging}
+                liftedHoldingId={liftedHoldingId}
+                onDragging={announceDrag}
                 onPickUp={(item, from) =>
                   setCarried({ ...item, name: item.card.name, from })
                 }
@@ -1727,8 +1755,9 @@ function SeatCard({
             slotted={slotted}
             trophies={trophies.length}
             carried={carried}
+            liftedHoldingId={liftedHoldingId}
             onCarry={setCarried}
-            onDragging={setDragging}
+            onDragging={announceDrag}
             onPlaceInPack={() => place(null)}
             onDrop={onDrop}
             onTrade={onTrade}
