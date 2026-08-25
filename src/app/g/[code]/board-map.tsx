@@ -1,6 +1,8 @@
 "use client";
 
 import type { FieldId } from "@/lib/engine/board";
+import type { CardId } from "@/data/ids";
+import { cardArtUrl } from "@/lib/engine/cardImages";
 
 import { useState } from "react";
 import {
@@ -41,7 +43,8 @@ export function BoardMap({
   seats: MapSeat[];
   activeSeatIndex: number | null;
   /** Fields with cards lying face up on them (16.8). */
-  cardsOnFields?: Partial<Record<FieldId, number>>;
+  /** What is lying on each field (16.8), topmost first. */
+  cardsOnFields?: Partial<Record<FieldId, { id: string; cardId: CardId }[]>>;
   /** Fields the active character could move to, highlighted while choosing. */
   highlight?: FieldId[];
   onPick?: (fieldId: FieldId) => void;
@@ -102,33 +105,60 @@ export function BoardMap({
         />
       ))}
 
-      {/* A card waiting on a field changes what a move is worth, so it has to be
-          visible from the map rather than only once you land there. */}
-      {CELLS.map((cell) =>
-        cardsOnFields[cell.id] ? (
+      {/* What is lying on a field changes what a move is worth, so it belongs on
+          the map and not only in the panel once you have landed there. The
+          picture rather than a number, because "there is a Cyklop on Kurhan" is
+          a different decision from "there is something on Kurhan" — and the
+          illustration is the one part of a card legible at this size.
+
+          Bottom-right, opposite the player dots, so a field with both reads as
+          who is here on one side and what is here on the other. */}
+      {CELLS.map((cell) => {
+        const here = cardsOnFields[cell.id];
+        if (!here?.length) return null;
+        const w = Math.min(34, cell.w / 2.4);
+        const h = w * (323 / 370); // the art's own proportion — see export-card-art
+        const x = cell.x + cell.w - w - 5;
+        const y = cell.y + cell.h - h - 5;
+        const art = cardArtUrl(here[0].cardId);
+        return (
           <g key={`cards-${cell.id}`} style={{ pointerEvents: "none" }}>
+            {art ? (
+              <image
+                href={art}
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                preserveAspectRatio="xMidYMid slice"
+                clipPath="inset(0 round 2)"
+              />
+            ) : (
+              <rect x={x} y={y} width={w} height={h} rx={2} fill="#2b3149" />
+            )}
             <rect
-              x={cell.x + cell.w - 26}
-              y={cell.y + 6}
-              width={20}
-              height={16}
-              rx={3}
-              fill="#d9a441"
-              stroke="#10131f"
+              x={x}
+              y={y}
+              width={w}
+              height={h}
+              rx={2}
+              fill="none"
+              stroke="#d9a441"
               strokeWidth={1.5}
             />
-            <text
-              x={cell.x + cell.w - 16}
-              y={cell.y + 18}
-              textAnchor="middle"
-              fontSize={12}
-              fill="#10131f"
-            >
-              {cardsOnFields[cell.id]}
-            </text>
+            {/* Only the top card is drawn, so a field holding more says how
+                many rather than pretending one is all of it. */}
+            {here.length > 1 && (
+              <>
+                <circle cx={x} cy={y} r={7.5} fill="#d9a441" stroke="#10131f" strokeWidth={1.5} />
+                <text x={x} y={y + 3.5} textAnchor="middle" fontSize={9.5} fill="#10131f">
+                  {here.length}
+                </text>
+              </>
+            )}
           </g>
-        ) : null,
-      )}
+        );
+      })}
 
       {[...occupants.entries()].map(([fieldId, here]) => {
         const cell = CELL_BY_ID.get(fieldId);

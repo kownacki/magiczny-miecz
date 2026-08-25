@@ -107,7 +107,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   return NextResponse.json({
     game: withoutDeck(game),
     mySeatIndex: mine?.seat_index ?? null,
-    fieldCards: fieldCards.map((row) => ({ fieldId: row.field_id, cardId: row.card_id })),
+    // The row id travels too: picking a card up names *which* card, and a
+    // field can hold two of the same Przedmiot.
+    fieldCards: fieldCards.map((row) => ({
+      id: row.id,
+      fieldId: row.field_id,
+      cardId: row.card_id,
+    })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.
     stock: await shopStock(game.id, { holdings, fieldCards }),

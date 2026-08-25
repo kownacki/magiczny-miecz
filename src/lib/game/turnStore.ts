@@ -888,6 +888,34 @@ export async function takeCard(
   const kind = kindForCard(card);
   if (!kind) throw new Error("Tej karty nie można zabrać ze sobą.");
 
+  const seats = await seatsFor(gameId);
+  const taker = seats.find((s) => s.id === seatId);
+
+  // 5.3: "Żadna Postać nie może posiadać Przedmiotów, którymi na mocy zasad nie
+  // wolno się jej posługiwać. Kartę takiego Przedmiotu należy położyć odkrytą
+  // na Obszarze, na którym Przedmiot ten został znaleziony." So it is not that
+  // you take it and then discover you may not — you never take it, and it stays
+  // where it lies. Checked here rather than only when a Natura changes, which
+  // was the half of it that existed.
+  if (!mayHold({ forbiddenTo: forbiddenFor(card) }, (taker?.nature ?? null) as Nature | null)) {
+    throw new Error(`${card.name} — twoja Natura nie pozwala ci tego nieść (5.3).`);
+  }
+
+  // 12.1a: nothing is picked up while a Wróg is still standing on the field.
+  // "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec" —
+  // the loot waits until the fight is settled.
+  if (game.turn_state.phase === "pole") {
+    const settled = game.turn_state.fought ?? [];
+    const standing = game.turn_state.drawn.find((entry) => {
+      const foe = EVENTS.find((c) => c.id === entry.cardId);
+      return foe && combatValueOf(foe) && !settled.includes(entry.cardId);
+    });
+    if (standing && standing.cardId !== cardId) {
+      const foe = EVENTS.find((c) => c.id === standing.cardId);
+      throw new Error(`Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1).`);
+    }
+  }
+
   // Rule 5.4: four Przedmioty at a time unless the character has transport.
   // Friends and trophies are not Przedmioty and do not count (6.3 puts no limit
   // on Friends at all), and Sztuki Złota never count (3.5).
@@ -985,9 +1013,30 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
   }
 
   await db.from("holdings").delete().eq("id", holdingId);
+
+  // 5.5, 6.4 and 21.3: a discarded Przedmiot or a dismissed Przyjaciel is left
+  // "na Obszarze, na którym aktualnie się znajduje" — face up, for whoever
+  // stops there next. This used to delete the card outright, which quietly
+  // removed it from the game; 12.1's own worked example is built on gear
+  // waiting on a field for the next character to find.
+  //
+  // Zaklęcia are the exception and go to the used pile instead: 9.6 says a
+  // spell's card goes there when it is spent, and nothing in the box has a
+  // Zaklęcie lying on the board — the Klątwa in 13.5's example is left by a
+  // card that puts it there, not by a player dropping it.
+  const seat = (await seatsFor(gameId)).find((s) => s.id === data?.seat_id);
+  if (data && data.kind !== "spell" && data.kind !== "trophy" && seat?.field_id) {
+    await db.from("field_cards").insert({
+      game_id: gameId,
+      field_id: seat.field_id,
+      card_id: data.card_id,
+    });
+  }
+
   await journal(gameId, (data?.seat_id as string) ?? null, game.turn, "odrzucenie", {
     cardId: data?.card_id,
     kind: data?.kind,
+    onField: data?.kind !== "spell" && data?.kind !== "trophy" ? seat?.field_id : null,
   });
   await bumpRevision(gameId);
 }
@@ -2750,4 +2799,51 @@ export async function resolveDrawnCard(
   );
   await bumpRevision(gameId);
   return { card: cardName(cardId), face, ...done };
+}
+
+/**
+ * Picks a card up off the field a character is standing on (12.1).
+ *
+ * Distinct from `takeCard`, which lifts something out of the turn's own stack —
+ * a card just drawn. This one reaches for what was already lying there: gear a
+ * dead character left, something a previous visitor dropped, a Przedmiot nobody
+ * could carry. Every rule about *whether* you may have it is `takeCard`'s, so
+ * this establishes the right to reach and then defers.
+ *
+ * "Postać, której ruch kończy się na danym Obszarze" — you must be standing on
+ * it, and it must be your turn, because 13.1 is explicit that nothing happens
+ * on a field you merely passed through.
+ */
+export async function takeFromField(
+  gameId: string,
+  seatId: string,
+  fieldCardId: string,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+  if (seat.seat_index !== game.active_seat) throw new Error("To nie twoja tura.");
+
+  const lying = (await fieldCardsFor(gameId)).find((row) => row.id === fieldCardId);
+  if (!lying) throw new Error("Tej Karty już tam nie ma.");
+  if (lying.field_id !== seat.field_id) {
+    throw new Error("Można zabierać tylko z Obszaru, na którym się stoi (12.1).");
+  }
+
+  // Off the field first, so the carrying limit and 21.2's stock — both of which
+  // count copies in play — do not see the same card twice.
+  await db.from("field_cards").delete().eq("id", fieldCardId);
+  try {
+    await takeCard(gameId, seatId, lying.card_id);
+  } catch (error) {
+    // Refused for a reason of its own: put it back where it was lying, because
+    // a card that cannot be picked up is a card still on the field (5.3).
+    await db.from("field_cards").insert({
+      game_id: gameId,
+      field_id: lying.field_id,
+      card_id: lying.card_id,
+    });
+    throw error;
+  }
 }

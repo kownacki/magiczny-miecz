@@ -89,9 +89,11 @@ describe("map sides against the ring arrays", () => {
 describe("player dots", () => {
   const cell = CELL_BY_ID.get("karczma")!;
 
-  it("puts a lone character under the field's name, not over it", () => {
+  it("puts a lone character in the bottom-left, clear of both the name and the cards", () => {
+    // Below the name, which is drawn from the top; and left, because a card
+    // lying on the field is drawn in the bottom-right corner.
     const [only] = dotPositions(cell, 1);
-    expect(only.x).toBe(cell.cx);
+    expect(only.x).toBeLessThan(cell.cx);
     expect(only.y).toBeGreaterThan(cell.cy);
   });
 

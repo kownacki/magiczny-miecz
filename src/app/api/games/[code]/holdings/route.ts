@@ -12,6 +12,7 @@ import {
   payHealer,
   sellHolding,
   takeCard,
+  takeFromField,
   tradeTrophies,
   turnToStone,
 } from "@/lib/game/turnStore";
@@ -37,6 +38,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     switch (body.action) {
       case "take":
         await takeCard(game.id, String(body.seatId ?? actor.id), String(body.cardId));
+        break;
+      case "take-field":
+        // From the board rather than from the turn's stack — see
+        // `takeFromField`.
+        await takeFromField(
+          game.id,
+          String(body.seatId ?? actor.id),
+          String(body.fieldCardId),
+        );
         break;
       case "drop":
         await dropCard(game.id, String(body.holdingId));

@@ -274,18 +274,20 @@ export function dotPositions(
 ): { x: number; y: number }[] {
   const perRow = Math.min(3, Math.max(1, count));
   const rows = Math.ceil(count / perRow);
-  const gapX = Math.min(28, (cell.w - 16) / perRow);
-  const gapY = Math.min(26, (cell.h - 16) / Math.max(rows, 1));
-  // Sat against the bottom of the cell, because the name is drawn from the top
-  // down: a field wants to show both at once, and centring both puts a figure
-  // on top of the word underneath it.
-  const bottom = cell.y + cell.h - 10 - gapY / 2;
+  const gapX = Math.min(26, (cell.w - 16) / perRow);
+  const gapY = Math.min(24, (cell.h - 16) / Math.max(rows, 1));
+  // Bottom-left, and the two halves of that are for different reasons. Bottom,
+  // because the field's name is drawn from the top down and centring the
+  // figures put them on the word. Left, because the card lying on a field is
+  // drawn at the bottom *right* — so a busy field reads as "who is here" on one
+  // side and "what is here" on the other, instead of the two overlapping.
+  const left = cell.x + 6 + gapX / 2;
+  const bottom = cell.y + cell.h - 8 - gapY / 2;
   return Array.from({ length: count }, (_, i) => {
     const row = Math.floor(i / perRow);
-    const inRow = Math.min(perRow, count - row * perRow);
     const col = i % perRow;
     return {
-      x: cell.cx + (col - (inRow - 1) / 2) * gapX,
+      x: left + col * gapX,
       y: bottom - (rows - 1 - row) * gapY,
     };
   });
