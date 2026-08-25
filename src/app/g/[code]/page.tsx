@@ -2245,13 +2245,13 @@ const STACK_HEIGHT = Math.round(CARD_HEIGHT / 2) - 28;
 /**
  * How wide any one pile is allowed to get.
  *
- * A ceiling rather than a considered number: four columns is enough for
+ * A ceiling rather than a considered number: three columns is enough for
  * anything this game actually hands out, and past it the picture stops growing
  * while the numeral underneath carries the truth. A hundred Sztuk Złota draws
- * as forty and reads as a hundred, which is the right way round — the count was
- * always the exact half of this and the stacks were always the impression.
+ * as thirty and reads as a hundred, which is the right way round — the count
+ * was always the exact half of this and the stacks were always the impression.
  */
-const COLUMNS_MAX = 4;
+const COLUMNS_MAX = 3;
 
 const STAT_COLOUR: Record<string, string> = {
   miecz: "text-miecz",
@@ -2282,7 +2282,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
      * one is forty-something without reading anything, where four stacks of
      * eleven and a straggler is just a heap that happens to be in columns.
      *
-     * Four stacks and no more — see COLUMNS_MAX. Past forty the pile stops
+     * Three stacks and no more — see COLUMNS_MAX. Past thirty the pile stops
      * growing and the numeral goes on being exact, which costs nothing: the
      * coins are all ones, so the picture was only ever an impression of how
      * rich somebody is and the count was always the reading.
@@ -2333,7 +2333,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
    * they are is half the reading.
    */
   const PER_COLUMN = 5;
-  // And four columns at the outside, the same ceiling the gold has. What gets
+  // And three columns at the outside, the same ceiling the gold has. What gets
   // dropped is the tail, and `tokensFor` puts the big denominations first — so
   // a pile too large to draw still shows the part of itself worth looking at.
   const columns = Math.min(COLUMNS_MAX, Math.ceil(tokens.length / PER_COLUMN));
