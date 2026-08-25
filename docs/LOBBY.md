@@ -78,6 +78,11 @@ seated player may take the role without being given it. Without this a table
 whose host closed their laptop can never be started or configured again, which
 is the failure mode host migration exists to prevent.
 
+**Companion mode is parked** (`COMPANION_PARKED`), so everything in this
+document marked companion-only is currently unreachable. It is described in the
+present tense because none of it has been removed and the mode is one boolean
+away from returning.
+
 **Companion mode.** The host's device is also the one that plays for everybody
 in *sędzia przy planszy* mode, because there is one screen in the middle of a
 real table. That is the same role, not a second one.

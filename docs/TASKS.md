@@ -129,7 +129,13 @@ Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 
 ## Phase 4 — Companion app
 
-The primary mode: physical board and cards, app as referee.
+**Parked.** See `COMPANION_PARKED` in `src/lib/game/modes.ts`: no new table can
+be opened in this mode. It was the primary mode and everything below still
+works, but simulation is what is being built now, and keeping both honest cost
+a second pass over every change against a mode nobody was playing. Nothing here
+has been deleted; one boolean brings it back.
+
+Physical board and cards, app as referee.
 
 - [x] Game + seat model, join code, no accounts
 - [x] Table view — responsive, so a phone gets the same page with only its own controls
@@ -197,7 +203,9 @@ ring, then the card is discarded whether or not the offer was taken.
 
 ## Phase 5 — Full simulation
 
-Now the primary mode; companion is the opt-in.
+**The mode.** Companion is parked (Phase 4), so this is the only way a new table
+can be opened — and it is simulation in earnest: nothing is entered by hand,
+because the app rolls, moves and computes everything.
 
 - [x] Virtual deck — 165 event cards and 30 spells, shuffled, dealt, recycled
       (9.5). Every printed copy is in the pile, so draw odds match the sheets.

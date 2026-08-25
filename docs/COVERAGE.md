@@ -297,7 +297,8 @@ służyły do *powiedzenia* jej, co się stało:
 
 Tryb `companion` zachowuje wszystkie z nich i musi: tam plansza na stole jest
 prawdą, a aplikacja jej zapisem — sędzia, którego nie można poprawić, jest
-gorszy niż żaden.
+gorszy niż żaden. Ten tryb jest jednak **wstrzymany** (`COMPANION_PARKED`), więc
+w praktyce nie da się dziś otworzyć stołu, na którym te kontrolki są widoczne.
 
 **Czego jeszcze brakuje do pełnej symulacji.** Skutki kart wciąż wymagają
 jednego kliknięcia: aplikacja rzuca i pokazuje, co wypadło, ale „+1 Miecza"
