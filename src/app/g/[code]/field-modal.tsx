@@ -5,6 +5,7 @@ import Image from "next/image";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
+import type { EqMode } from "@/lib/engine/slots";
 import { kindForCard } from "@/lib/engine/holdings";
 import type { FieldId } from "@/lib/engine/board";
 import type { CardId } from "@/data/ids";
@@ -53,6 +54,7 @@ export interface FieldCardHere {
  * decision, not a surprise for whoever lands there.
  */
 export function FieldModal({
+  eqMode = "klasyczny",
   fieldId,
   cards,
   standingHere,
@@ -62,6 +64,8 @@ export function FieldModal({
   onInspect,
   onClose,
 }: {
+  /** Which variant the table plays, so a hover can say where a card must be. */
+  eqMode?: EqMode;
   fieldId: FieldId;
   cards: FieldCardHere[];
   /** Whether the viewer's own character is on this field (12.1, 13.1). */
@@ -147,6 +151,7 @@ export function FieldModal({
                       className="flex items-center gap-3 rounded border border-edge/60 bg-night/40 p-2"
                     >
                       <LyingThumb
+                        eqMode={eqMode}
                         cardId={lying.cardId}
                         name={name}
                         text={text}
@@ -196,19 +201,21 @@ export function FieldModal({
  * only way in, and a touch screen has no hover at all.
  */
 function LyingThumb({
+  eqMode,
   cardId,
   name,
   text,
   art,
   onInspect,
 }: {
+  eqMode: EqMode;
   cardId: CardId;
   name: string;
   text: string | undefined;
   art: string | null;
   onInspect: (cardId: CardId) => void;
 }) {
-  const { handlers, preview } = useCardPreview({ cardId, name, text });
+  const { handlers, preview } = useCardPreview({ cardId, name, text }, false, eqMode);
 
   return (
     <>

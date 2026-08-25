@@ -20,8 +20,17 @@ import { fieldWithText } from "@/lib/engine/fieldText";
 import { asFieldId } from "@/lib/engine/board";
 import { useCardPreview } from "./card-preview";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
+import type { EqMode } from "@/lib/engine/slots";
 
-export function Journal({ code, revision }: { code: string; revision: number }) {
+export function Journal({
+  code,
+  revision,
+  eqMode = "klasyczny",
+}: {
+  code: string;
+  revision: number;
+  eqMode?: EqMode;
+}) {
   const [lines, setLines] = useState<JournalLine[]>([]);
   const [expanded, setExpanded] = useState(false);
   const tail = useRef<HTMLDivElement>(null);
@@ -79,6 +88,7 @@ export function Journal({ code, revision }: { code: string; revision: number }) 
             {lines.map((line, at) => (
               <Line
                 key={line.seq}
+                eqMode={eqMode}
                 line={line}
                 // Turn headings only in the expanded view, and only where the
                 // turn changes: in a sliver they would cost more room than the
@@ -100,7 +110,15 @@ export function Journal({ code, revision }: { code: string; revision: number }) 
   );
 }
 
-function Line({ line, heading }: { line: JournalLine; heading: boolean }) {
+function Line({
+  line,
+  heading,
+  eqMode,
+}: {
+  line: JournalLine;
+  heading: boolean;
+  eqMode: EqMode;
+}) {
   const colour =
     line.seatIndex === null ? null : SEAT_COLOURS[line.seatIndex % SEAT_COLOURS.length];
 
@@ -130,7 +148,7 @@ function Line({ line, heading }: { line: JournalLine; heading: boolean }) {
           className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${colour ? "" : "bg-edge"}`}
         />
         <span className={line.manual ? "text-ochre/90" : "text-muted"}>
-          <Looked text={line.text} refs={line.refs} />
+          <Looked text={line.text} refs={line.refs} eqMode={eqMode} />
           {/* A correction is a human overruling the referee, and LOBBY.md wants
               that visible rather than blended into what the rules did. */}
           {line.manual && <span className="ml-1 text-[10px] text-ochre/70">korekta</span>}
@@ -152,7 +170,15 @@ function Line({ line, heading }: { line: JournalLine; heading: boolean }) {
  * assembled from fragments, because the renderer records each name as it
  * resolves it — so the list cannot drift from the words.
  */
-function Looked({ text, refs }: { text: string; refs?: JournalRef[] }) {
+function Looked({
+  text,
+  refs,
+  eqMode,
+}: {
+  text: string;
+  refs?: JournalRef[];
+  eqMode: EqMode;
+}) {
   if (!refs?.length) return <>{text}</>;
 
   // Longest first: a short name that happens to sit inside a longer one must
@@ -164,14 +190,18 @@ function Looked({ text, refs }: { text: string; refs?: JournalRef[] }) {
     <>
       {text.split(pattern).map((piece, at) => {
         const ref = refs.find((candidate) => candidate.name === piece);
-        return ref ? <Lookup key={at} reference={ref} /> : <span key={at}>{piece}</span>;
+        return ref ? (
+          <Lookup key={at} reference={ref} eqMode={eqMode} />
+        ) : (
+          <span key={at}>{piece}</span>
+        );
       })}
     </>
   );
 }
 
 /** One name in a sentence, with whatever there is to see about it on hover. */
-function Lookup({ reference }: { reference: JournalRef }) {
+function Lookup({ reference, eqMode }: { reference: JournalRef; eqMode: EqMode }) {
   // A stored id becomes a FieldId only through the guard, and a name the board
   // no longer knows simply has nothing to show rather than throwing.
   const fieldId = reference.kind === "field" ? asFieldId(reference.id) : null;
@@ -185,6 +215,7 @@ function Lookup({ reference }: { reference: JournalRef }) {
     },
     // A field has no card to show; its printed instruction is what there is.
     reference.kind === "field",
+    eqMode,
   );
 
   return (

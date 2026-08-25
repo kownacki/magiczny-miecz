@@ -5,6 +5,7 @@ import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import characters from "@/data/characters.json";
+import type { EqMode } from "@/lib/engine/slots";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardDetail, CardTile, type TileCard } from "./card-tile";
@@ -90,7 +91,20 @@ function fold(text: string): string {
     .replace(/ł/g, "l");
 }
 
-export function CardLibrary({ onClose }: { onClose: () => void }) {
+export function CardLibrary({
+  onClose,
+  eqMode = "klasyczny",
+}: {
+  onClose: () => void;
+  /**
+   * Which variant the table plays.
+   *
+   * The shelf is read away from the board, so nothing here knows it otherwise —
+   * and without it every Przedmiot claimed to work from the pack, which is only
+   * true in klasyczny. A Sztylet in a slotowy game has to be in your hand.
+   */
+  eqMode?: EqMode;
+}) {
   const [shelf, setShelf] = useState<Shelf>("zaklecia");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<TileCard | null>(null);
@@ -146,7 +160,12 @@ export function CardLibrary({ onClose }: { onClose: () => void }) {
         </p>
         <div className="flex flex-wrap gap-3">
           {cards.map((card) => (
-            <CardTile key={card.cardId} card={card} onClick={() => setOpen(card)} />
+            <CardTile
+              key={card.cardId}
+              card={card}
+              eqMode={eqMode}
+              onClick={() => setOpen(card)}
+            />
           ))}
         </div>
       </div>

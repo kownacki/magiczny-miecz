@@ -669,6 +669,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           side where nobody looked. */}
       {inspecting && (
         <FieldModal
+          eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
           fieldId={inspecting}
           cards={fieldCards
             .filter((card) => card.fieldId === inspecting)
@@ -689,7 +690,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           onClose={() => setInspecting(null)}
         />
       )}
-      {libraryOpen && <CardLibrary onClose={() => setLibraryOpen(false)} />}
+      {libraryOpen && (
+        <CardLibrary
+          eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
     </>
   );
 
@@ -868,7 +874,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onPick={(fieldId) => setInspecting(fieldId)}
           />
             </div>
-            <Journal code={code} revision={game.revision} />
+            <Journal
+              code={code}
+              revision={game.revision}
+              eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+            />
           </div>
         }
         right={
