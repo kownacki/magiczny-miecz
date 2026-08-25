@@ -653,7 +653,7 @@ function SeatSlot({
             seat.ready ? "text-verdigris" : "text-muted/60"
           }`}
         >
-          {seat.abandoned || !seat.characterId ? "" : seat.ready ? "gotów ✓" : "czeka"}
+          {seat.abandoned || !seat.characterId ? "" : seat.ready ? "gotów ✓" : "niegotowy"}
         </p>
       )}
 
