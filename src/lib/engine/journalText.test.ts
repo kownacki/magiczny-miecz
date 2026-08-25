@@ -62,6 +62,16 @@ suite("journal vocabulary", () => {
     expect(text("tura-stracona", { turns: 2 })).toBe("Michał traci 2 tury.");
   });
 
+  it("says what was left behind, and on which field", () => {
+    expect(
+      text("zostawienie", { fieldId: "kurhan", cardIds: ["magiczny-miecz", "upior"] }),
+    ).toBe("Michał zostawia na polu Kurhan: MAGICZNY MIECZ, UPIÓR.");
+  });
+
+  it("says nothing when nothing was left", () => {
+    expect(text("zostawienie", { fieldId: "kurhan", cardIds: [] })).toBeNull();
+  });
+
   it("marks a manual correction as one", () => {
     const line = describe(
       entry("korekta", { stat: "zycie", delta: -1, from: 4, to: 3 }, { manual: true }),
@@ -156,11 +166,15 @@ suite("Polish agreement", () => {
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
-      "tura-stracona",
+      "tura-stracona", "zostawienie",
     ];
     const gendered = /\b\w+(ął|ęła|iła|ył|yła|szedł|szła|any|ony|iony)\b/;
     for (const kind of kinds) {
       const rendered = text(kind, { loss: 1, saved: true, target: 1, price: 1, points: 1 });
+      // Some kinds render nothing without their own payload — leaving cards
+      // behind says nothing when no cards were left — and silence cannot
+      // misgender anybody.
+      if (rendered === null) continue;
       expect(rendered, `${kind}: ${rendered}`).not.toMatch(gendered);
     }
   });

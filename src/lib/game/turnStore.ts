@@ -445,6 +445,8 @@ async function leaveCardsBehind(
   gameId: string,
   fieldId: string,
   remaining: readonly TurnCard[],
+  seatId: string | null,
+  turn: number,
 ): Promise<void> {
   const stays = remaining.filter((card) => {
     const spent =
@@ -456,6 +458,14 @@ async function leaveCardsBehind(
   await db.from("field_cards").insert(
     stays.map((card) => ({ game_id: gameId, field_id: fieldId, card_id: card.cardId })),
   );
+  // 16.8 leaves them lying face up, so what was left and where is something the
+  // whole table can see — and therefore something the journal owes it. Without
+  // this a card simply appeared on a field with nothing saying how it got
+  // there, which is the sort of thing players argue about two turns later.
+  await journal(gameId, seatId, turn, "zostawienie", {
+    fieldId,
+    cardIds: stays.map((card) => card.cardId),
+  });
 }
 
 /**
@@ -1927,7 +1937,13 @@ export async function finishTurn(gameId: string): Promise<void> {
 
   // Whatever was drawn or found here and not taken stays on the field (16.8).
   if (game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0) {
-    await leaveCardsBehind(gameId, game.turn_state.fieldId, game.turn_state.drawn);
+    await leaveCardsBehind(
+      gameId,
+      game.turn_state.fieldId,
+      game.turn_state.drawn,
+      seat?.id ?? null,
+      game.turn,
+    );
   }
 
   const order = seats

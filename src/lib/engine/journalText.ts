@@ -215,6 +215,16 @@ export function describe(
     // — what people have ————————————————————————————————————————————
     case "zabranie":
       return line(`${who} bierze: ${cardName(data.cardId)}.`);
+    // 16.8: what was not taken stays where it fell, face up. Saying where is the
+    // whole point — a card on a field two turns later is otherwise unexplained.
+    case "zostawienie": {
+      const left = Array.isArray(data.cardIds) ? data.cardIds : [];
+      if (left.length === 0) return null;
+      return line(
+        `${who} zostawia na polu ${fieldName(data.fieldId)}: ${left.map(cardName).join(", ")}.`,
+      );
+    }
+
     case "odrzucenie":
       return line(`${who} odrzuca: ${cardName(data.cardId)}.`);
     case "kupno":
