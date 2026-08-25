@@ -227,3 +227,19 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
 export function fieldScriptFor(fieldId: FieldId): FieldScript | null {
   return FIELD_SCRIPTS[fieldId] ?? null;
 }
+
+/**
+ * How a field's own offer is written into the same "resolved" list the cards
+ * use.
+ *
+ * Prefixed so it can never collide with a card id — the Karczma is not a card,
+ * and a field named the same as one would otherwise silently resolve it.
+ *
+ * Here rather than beside the code that writes it, because the interface needs
+ * to ask the same question and `turnStore` carries the service-role database
+ * handle: one import of that from a client component would put the key's client
+ * in the browser bundle.
+ */
+export function offerKey(offerName: string): string {
+  return `pole:${offerName}`;
+}

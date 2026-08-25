@@ -843,15 +843,7 @@ function FieldControls({
       )}
 
       {phase.drawn.length > 0 && (
-        <DrawnCards
-          drawn={phase.drawn}
-          fought={phase.fought ?? []}
-          busy={busy}
-          typedRolls={mode !== "simulation"}
-          onAction={onAction}
-          onSuggestion={onSuggestion}
-          onTake={onTake}
-        />
+        <DrawnCards drawn={phase.drawn} />
       )}
 
       <button
@@ -1207,62 +1199,13 @@ function FightSide({
  * numeral first. Showing them pre-sorted is most of the point of the referee:
  * getting this order wrong by hand is the commonest mistake at the table.
  */
-function DrawnCards({
-  drawn,
-  fought,
-  busy,
-  typedRolls,
-  onAction,
-  onSuggestion,
-  onTake,
-}: {
-  drawn: { cardId: string; cardClass: string }[];
-  /** Ids already rolled against this turn (17.4), which are not offered again. */
-  fought: string[];
-  busy: boolean;
-  typedRolls: boolean;
-  onAction: Props["onAction"];
-  onSuggestion: Props["onSuggestion"];
-  onTake: Props["onTake"];
-}) {
-  // 17.5: several creatures attacking at once are one opponent, their Miecze
-  // added and one die rolled for the lot. Only offered when there is more than
-  // one and they are of a kind — an ordinary Wróg and a magical one cannot be
-  // summed, because the sums are of different things.
-  const foes = drawn
-    .map((entry) => EVENTS.find((c) => c.id === entry.cardId))
-    .filter(
-      (card): card is EventCard =>
-        !!card && !!combatValueOf(card) && !fought.includes(card.id),
-    );
-  const together =
-    foes.length > 1 && new Set(foes.map((c) => combatValueOf(c)!.kind)).size === 1
-      ? foes
-      : null;
-
+function DrawnCards({ drawn }: { drawn: { cardId: string; cardClass: string }[] }) {
+  // Nothing here is pressable. Everything a player *does* about a drawn card
+  // happens in the modal, where the whole table can see it and where nobody can
+  // quietly re-equip mid-encounter — this is the same stack written down so
+  // that the field can be read at a glance while the modal is folded away.
   return (
     <ol className="flex flex-col gap-2 border-l-2 border-ochre/30 pl-3">
-      {together && (
-        <li className="rounded border border-vermilion/40 bg-vermilion/5 p-2">
-          <p className="mb-2 text-[11px] leading-relaxed text-muted">
-            {together.length} Wrogów naraz: ich Miecze sumują się i rzucacie raz
-            za wszystkich (17.5) — razem{" "}
-            <span className="text-vermilion">
-              {together.reduce((sum, card) => sum + combatValueOf(card)!.total, 0)}
-            </span>
-            .
-          </p>
-          <button
-            disabled={busy}
-            onClick={() =>
-              onAction({ action: "fight", cardIds: together.map((card) => card.id) })
-            }
-            className="rounded border border-vermilion/60 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
-          >
-            Walcz ze wszystkimi naraz
-          </button>
-        </li>
-      )}
       {drawn.map((entry, index) => {
         const card = EVENTS.find((c) => c.id === entry.cardId);
         return (
@@ -1275,16 +1218,6 @@ function DrawnCards({
             </p>
             {card && (
               <p className="mt-1 text-xs leading-relaxed text-muted">{card.text}</p>
-            )}
-            {/* The prose reader and the script would otherwise print the same
-                die table twice, in two different wordings. The script wins. */}
-            {card && !scriptFor(card.id) && (
-              <RollTable
-                text={card.text}
-                busy={busy}
-                typedRolls={typedRolls}
-                onSuggestion={onSuggestion}
-              />
             )}
             {card && combatValueOf(card) && (
               <p
@@ -1306,71 +1239,6 @@ function DrawnCards({
                   .filter(Boolean)
                   .join(", ")}
               </p>
-            )}
-            <div className="mt-2 flex flex-wrap gap-2">
-              {card && kindForCard(card) === "item" && (
-                <button
-                  disabled={busy}
-                  onClick={() => onTake(card.id)}
-                  className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-                >
-                  Weź Przedmiot
-                </button>
-              )}
-              {card && kindForCard(card) === "friend" && (
-                <button
-                  disabled={busy}
-                  onClick={() => onTake(card.id)}
-                  className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-                >
-                  Weź Przyjaciela
-                </button>
-              )}
-              {card && combatValueOf(card) && !fought.includes(card.id) && (
-                <button
-                  disabled={busy}
-                  onClick={() => onAction({ action: "fight", cardId: card.id })}
-                  className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
-                >
-                  Walcz
-                </button>
-              )}
-              {/* 17.4: the fight ended when the dice were compared. Said out
-                  loud, because a Wróg still lying on the field with no Walcz
-                  button otherwise looks like a bug. */}
-              {card && combatValueOf(card) && fought.includes(card.id) && (
-                <span className="rounded border border-muted/30 px-3 py-1 text-xs text-muted">
-                  Walka rozstrzygnięta w tej turze (17.4)
-                </span>
-              )}
-              {/* An encoded card wins over the prose reader: the script says
-                  what the card does because someone read it, where
-                  suggestActions is regular expressions guessing at 1993 Polish.
-                  Only unscripted cards fall back to the guess. */}
-              {card &&
-                !scriptFor(card.id) &&
-                suggestActions(card).map((suggestion) => (
-                  <button
-                    key={suggestion.label}
-                    disabled={busy}
-                    onClick={() =>
-                      onSuggestion(suggestion.stat, suggestion.delta, card.name)
-                    }
-                    className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-                  >
-                    {suggestion.label}
-                  </button>
-                ))}
-            </div>
-            {card && scriptFor(card.id) && (
-              <ScriptedCard
-                script={scriptFor(card.id)!}
-                cardName={card.name}
-                busy={busy}
-                simulated={!typedRolls}
-                onResolve={() => onAction({ action: "karta-efekt", cardId: card.id })}
-                onSuggestion={onSuggestion}
-              />
             )}
             {card && <Coverage cardId={card.id} />}
           </li>
@@ -1797,10 +1665,14 @@ function FieldServices({
     if (!script || !card) return [];
     return sells(script.effect) ? [{ name: card.name, effect: script.effect }] : [];
   });
-  const offers = [...(fieldScriptFor(fieldId)?.offers ?? []), ...fromCards];
-  if (offers.length === 0) return null;
-
   const script = fieldScriptFor(fieldId);
+  // A compulsory field is not offered here: "MUSISZ RZUCIĆ KOSTKĄ" happens to
+  // you, which puts it in the modal with the drawn cards, where the whole table
+  // can watch and where nobody can re-equip halfway through. What stays is the
+  // visiting — "MOŻESZ TU ODWIEDZIĆ" — because deciding not to go in is a real
+  // answer and nobody else needs to watch you decline.
+  const offers = [...(script?.obowiazkowe ? [] : (script?.offers ?? [])), ...fromCards];
+  if (offers.length === 0) return null;
   const gold = purse?.zloto ?? 0;
 
   return (

@@ -44,6 +44,8 @@ import type { EventCard, Item, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
 import { DrawModal, ringFields } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
+import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
+import type { Effect } from "@/lib/engine/cardScript";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
@@ -613,7 +615,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           the things this card lets you do under it. */}
       {active &&
         (game.turn_state.phase === "walka" ||
-          (game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0)) && (
+          (game.turn_state.phase === "pole" &&
+            (game.turn_state.drawn.length > 0 ||
+              // A field nobody may walk past opens it too, even with nothing
+              // drawn: the Karczma happens to you the moment you arrive.
+              compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) !== null))) && (
           <DrawModal
             // Everybody at the table watches. A fight is the moment the game
             // is most worth looking at, and it used to happen entirely inside
@@ -632,6 +638,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             }
             fought={game.turn_state.phase === "pole" ? (game.turn_state.fought ?? []) : []}
             fight={game.turn_state.phase === "walka" ? game.turn_state.fight : null}
+            fieldOffer={
+              game.turn_state.phase === "pole" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
+            }
             simulated={game.mode === "simulation"}
             ring={ringFields(active.field_id)}
             busy={busy}
@@ -639,7 +648,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onResolve={(cardId, decisions) =>
               post("turn", { action: "karta-efekt", cardId, ...decisions })
             }
-            onFight={(cardId) => post("turn", { action: "fight", cardId })}
+            onResolveField={(choices) => {
+              const offer = compulsoryOffer(
+                active.field_id,
+                game.turn_state.phase === "pole" ? (game.turn_state.resolved ?? []) : [],
+              );
+              if (offer) post("turn", { action: "pole-tabela", offer: offer.name, choices });
+            }}
+            onFight={(cardIds) => post("turn", { action: "fight", cardIds })}
             onEscape={() => post("turn", { action: "escape" })}
             onTake={(cardId) =>
               post("holdings", { action: "take", seatId: active.id, cardId })
@@ -1238,8 +1254,15 @@ function Hand({
             // One click picks it up, or puts down whatever is already on the
             // cursor. Two put it straight on. With no variant running there is
             // nowhere to put anything, so a click just reads the card.
+            // Clicking moves things; hovering reads them.
+            //
+            // It used to open the card as a fallback, so the same gesture meant
+            // "pick this up" on one card and "let me look at that" on the next —
+            // and a modal landed on top of the pack you were in the middle of
+            // rearranging. Reading is what the hover is for, and it is always
+            // available without disturbing anything.
             onClick={(event) => {
-              if (!slotted || !canAct) return onInspect(tileFor(held));
+              if (!slotted || !canAct) return;
               event.stopPropagation();
               if (carried) return onPlaceInPack();
               if (held.kind === "item" && isWearable(held.cardId)) {
@@ -1249,8 +1272,6 @@ function Hand({
                   name: tileFor(held).name,
                   from: "plecak",
                 });
-              } else {
-                onInspect(tileFor(held));
               }
             }}
             onDoubleClick={() => {
@@ -1749,6 +1770,9 @@ function describeResult(result: unknown): string | null {
     effect?: string;
     /** The Kamienny Most's own fields (14.5-14.6). */
     kind?: string;
+    /** 19.1, which is answered rather than rolled. */
+    succeeded?: boolean;
+    onBridge?: boolean;
     to?: string;
     lost?: string[];
     kept?: string[];
@@ -1762,6 +1786,15 @@ function describeResult(result: unknown): string | null {
     face?: number;
     did?: string[];
   };
+  // 19.1 is answered, not rolled — an escape works because an ability says so.
+  // "No" is therefore a real result, and it changes nothing on the board, so
+  // saying it is the only way to tell it apart from the button doing nothing.
+  if (typeof data.succeeded === "boolean" && typeof data.onBridge === "boolean") {
+    return data.succeeded
+      ? "Wymknąłeś się (19.1) — nie możesz już nic zrobić temu, przed czym uciekłeś."
+      : "Nie udało się wymknąć: twoja Postać nie potrafi tego na tym Obszarze (19.1).";
+  }
+
   // A spell has to be announced loudly: 9.6 reaches its victim anywhere on the
   // board, so the person it lands on may not be looking at this turn at all.
   if (data.spell) return `Rzucono Zaklęcie: ${data.spell}. ${data.effect ?? ""}`.trim();
@@ -1934,4 +1967,24 @@ function rollSkippedBy(seat: Seat): string | null {
     }
   }
   return null;
+}
+
+/**
+ * A field's table that the character has no choice about, if it is still owed.
+ *
+ * `obowiazkowe` is the whole test: the Karczma's "MUSISZ RZUCIĆ KOSTKĄ" and the
+ * Strażnik's toll happen to you, which puts them in the same class as a drawn
+ * card and therefore in the modal, where the table can watch. Everything else a
+ * field offers is a visit — "MOŻESZ TU ODWIEDZIĆ" — and a visit stays in the
+ * panel, because choosing not to go is a real answer.
+ */
+function compulsoryOffer(
+  fieldId: FieldId | null,
+  resolved: readonly string[],
+): { name: string; effect: Effect } | null {
+  if (!fieldId) return null;
+  const script = fieldScriptFor(fieldId);
+  if (!script?.obowiazkowe) return null;
+  const owed = script.offers.find((offer) => !resolved.includes(offerKey(offer.name)));
+  return owed ? { name: owed.name, effect: owed.effect } : null;
 }

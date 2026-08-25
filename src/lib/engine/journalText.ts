@@ -136,6 +136,12 @@ function plural(count: number, one: string, few: string, many: string): string {
   return many;
 }
 
+/** The cards print "zła", not "zla". Null when there is no Natura to name. */
+function natura(value: unknown): string | null {
+  if (typeof value !== "string" || value === "") return null;
+  return value === "zla" ? "zła" : value;
+}
+
 const zycie = (n: number) => `${n} ${plural(n, "Życie", "Życia", "Żyć")}`;
 const sztuki = (n: number) => `${n} ${plural(n, "Sztukę", "Sztuki", "Sztuk")} Złota`;
 const tury = (n: number) => `${n} ${plural(n, "turę", "tury", "tur")}`;
@@ -227,8 +233,14 @@ export function describe(
 
     // — fighting ————————————————————————————————————————————————————
     case "walka-start": {
+      // Usually cards; sometimes a creature a field conjured, which has a name
+      // and no card at all — the Karczma's "miejscowy osiłek" is a line on the
+      // board with a number after it. Saying "wroga" for those was the journal
+      // reporting less than it knew.
       const ids = Array.isArray(data.cardIds) ? data.cardIds : [];
-      const foe = ids.map((id) => card(id)).join(" i ") || "wroga";
+      const foe =
+        ids.map((id) => card(id)).join(" i ") ||
+        (typeof data.nazwa === "string" ? data.nazwa : "wroga");
       return line(`${who} walczy z: ${foe} (${num(data.enemyTotal)}).`);
     }
     case "walka-koniec":
@@ -279,12 +291,42 @@ export function describe(
           `${data.reason ? ` — ${data.reason}` : ""}.`,
       );
     }
+    // A card giving or taking points. Distinct from "korekta", which is a person
+    // overruling the referee and is drawn as such.
+    case "punkty": {
+      const delta = num(data.delta);
+      if (delta === 0) return null;
+      const many = Math.abs(delta);
+      const what =
+        data.stat === "zloto"
+          ? sztuki(many)
+          : data.stat === "zycie"
+            ? zycie(many)
+            : `${many} ${plural(many, "punkt", "punkty", "punktów")} ` +
+              `${data.stat === "miecz" ? "Miecza" : "Magii"}`;
+      return line(
+        `${who} ${delta > 0 ? "zyskuje" : "traci"} ${what}` +
+          `${typeof data.reason === "string" && data.reason ? ` — ${data.reason}` : ""}.`,
+      );
+    }
+
     case "uzdrowienie":
       return line(`${who} wraca do ${zycie(num(data.to))}.`);
     case "leczenie":
       return line(`${who} leczy ${zycie(num(data.points))} za ${sztuki(num(data.paid))}.`);
-    case "zmiana-natury":
-      return line(`${who} zmienia naturę na: ${String(data.to ?? "?")}.`);
+    // 7.2 puts a Karta Zmiany Natury next to the character showing the new one,
+    // and the old one is what everybody has been playing against all game —
+    // whether the Święta Włócznia still works, whether the Czarci Młyn heals or
+    // hurts. Saying only the destination loses half the fact.
+    case "zmiana-natury": {
+      const to = natura(data.to) ?? "?";
+      const from = natura(data.from);
+      return line(
+        from && from !== to
+          ? `${who} zmienia naturę z ${from} na ${to}.`
+          : `${who} zmienia naturę na: ${to}.`,
+      );
+    }
     // A card taking a turn away, which is a different event from the seat later
     // sitting out — describeTurnChange says that one, when it happens.
     case "tura-stracona":

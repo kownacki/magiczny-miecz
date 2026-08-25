@@ -70,8 +70,8 @@ import type { CardClass, EventCard, Item, Nature } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { combinedEnemyTotal } from "@/lib/engine/combat";
 import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
-import { scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
+import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { isSettled } from "@/lib/engine/resolve";
 import { goodsId } from "@/lib/engine/goods";
 import type { TurnCard } from "@/lib/engine/state";
@@ -894,6 +894,24 @@ export async function resolveFight(gameId: string): Promise<void> {
  * a defeated Wróg cannot be filed as equipment and start adding its Miecz to
  * its killer. Spells are the only kind held concealed (9.3).
  */
+/**
+ * Takes a card off the field's stack once somebody has claimed it.
+ *
+ * What is still listed when the turn ends is exactly what nobody took, which is
+ * what 16.8 leaves lying there for the next character.
+ */
+async function liftOffField(gameId: string, cardId: string): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.turn_state.phase !== "pole") return;
+  const at = game.turn_state.drawn.findIndex((entry) => entry.cardId === cardId);
+  if (at === -1) return;
+  const drawn = game.turn_state.drawn.filter((_, index) => index !== at);
+  await db
+    .from("games")
+    .update({ turn_state: { ...game.turn_state, drawn } })
+    .eq("id", gameId);
+}
+
 export async function takeCard(
   gameId: string,
   seatId: string,
@@ -905,6 +923,26 @@ export async function takeCard(
 
   const kind = kindForCard(card);
   if (!kind) throw new Error("Tej karty nie można zabrać ze sobą.");
+
+  /**
+   * Money is not luggage.
+   *
+   * A Sztuka Złota prints V, so `kindForCard` calls it an item and it went
+   * into the pack with a discard button under it — where it also ate one of the
+   * four places 5.4 allows. But the card *is* the gold: its script turns it
+   * into a coin and puts it on the used pile, and nothing survives to carry.
+   *
+   * So taking one resolves it. The card still leaves the field's stack the same
+   * way anything taken does, which is what 16.8 counts at the end of the turn.
+   */
+  if (isConsumedOnResolve(cardId)) {
+    const script = scriptFor(cardId);
+    if (script) await applyEffect(gameId, seatId, script.effect, cardName(cardId));
+    await liftOffField(gameId, cardId);
+    await journal(gameId, seatId, game.turn, "zabranie", { cardId, kind: "gold" });
+    await bumpRevision(gameId);
+    return;
+  }
 
   const seats = await seatsFor(gameId);
   const taker = seats.find((s) => s.id === seatId);
@@ -974,19 +1012,7 @@ export async function takeCard(
     face: "open",
   });
 
-  // Taking a card lifts it off the field's stack, so what is still listed when
-  // the turn ends is exactly what nobody claimed — which is what 16.8 leaves
-  // lying there for the next character.
-  if (game.turn_state.phase === "pole") {
-    const at = game.turn_state.drawn.findIndex((entry) => entry.cardId === cardId);
-    if (at !== -1) {
-      const drawn = game.turn_state.drawn.filter((_, index) => index !== at);
-      await db
-        .from("games")
-        .update({ turn_state: { ...game.turn_state, drawn } })
-        .eq("id", gameId);
-    }
-  }
+  await liftOffField(gameId, cardId);
   await journal(gameId, seatId, game.turn, "zabranie", { cardId, kind });
   await bumpRevision(gameId);
 }
@@ -1131,6 +1157,15 @@ export async function adjust(
   stat: Adjustable,
   delta: number,
   reason: string | null,
+  /**
+   * How to file it.
+   *
+   * The default is what this was built for: a human overruling the referee, and
+   * the journal draws those differently and says "korekta". A card doing what
+   * the card says is the opposite of that, so the card paths pass their own
+   * kind and leave the manual flag alone.
+   */
+  record: { kind: string; manual: boolean } = { kind: "korekta", manual: true },
 ): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
@@ -1155,9 +1190,9 @@ export async function adjust(
     gameId,
     seatId,
     game.turn,
-    "korekta",
+    record.kind,
     { stat, delta, from: current, to: next, reason },
-    true,
+    record.manual,
   );
 
   if (stat === "zycie" && next === 0 && !seat.eliminated) await killSeat(gameId, seatId);
@@ -1797,7 +1832,7 @@ export async function escape(
    * whatever the players have agreed about a card nobody has transcribed.
    */
   reported: boolean | null,
-): Promise<void> {
+): Promise<{ succeeded: boolean; onBridge: boolean }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
@@ -1825,11 +1860,42 @@ export async function escape(
     // 19.1: having escaped, the character can no longer act on what it fled,
     // so the fight simply ends and the field resumes.
     await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
+  } else if (succeeded && game.turn_state.phase === "pole") {
+    /**
+     * Slipping past what is lying here, before any fight began.
+     *
+     * 19.1 says an escape by ability works on everything on the Obszar at once
+     * — "wszystkim znajdującym się na danym Obszarze istotom" — and that having
+     * escaped, the character can no longer act on any of it. So they stop being
+     * offered.
+     *
+     * Without this the escape was invisible: it ended no fight, because there
+     * was no fight yet, and left every Wróg sitting in the modal still asking
+     * to be fought. Succeeding looked exactly like failing.
+     */
+    const fled = game.turn_state.drawn
+      .filter((entry) => entry.cardClass === "wrog")
+      .map((entry) => entry.cardId);
+    if (fled.length > 0) {
+      await db
+        .from("games")
+        .update({
+          turn_state: {
+            ...game.turn_state,
+            resolved: [...(game.turn_state.resolved ?? []), ...fled],
+          },
+        })
+        .eq("id", gameId);
+    }
   }
   await journal(gameId, seat.id, game.turn, succeeded ? "ucieczka" : "ucieczka-nieudana", {
     onBridge,
   });
   await bumpRevision(gameId);
+  // Said out loud. A failed attempt changes nothing on the board — 19.1 is not
+  // a die roll, so there is no state for the interface to notice — which meant
+  // the answer "no" was indistinguishable from the button doing nothing at all.
+  return { succeeded, onBridge };
 }
 
 /**
@@ -2734,13 +2800,25 @@ export async function applyEffect(
     }
 
     case "punkty": {
-      // Only the seat that rolled. A card reaching other players is a `target`
-      // this does not carry, and `isSettled` lets it through because the effect
-      // itself is settled — so it is stopped here, where the seats are known.
-      if (effect.target && effect.target !== "ty") {
-        return { did: [], pending: effect };
+      const seats = await seatsFor(gameId);
+      const actor = seats.find((row) => row.id === seatId);
+      const hit = seatsTargeted(
+        effect.target,
+        seats.map(asTargetSeat),
+        actor ? asTargetSeat(actor) : undefined,
+        [],
+      );
+      // Waits for somebody to arrive, or for the holder to choose.
+      if (hit === null) return { did: [], pending: effect };
+      for (const target of hit) {
+        const row = seats.find((candidate) => candidate.seat_index === target.seatIndex);
+        if (!row) continue;
+        await adjust(gameId, row.id, effect.stat, effect.delta, reason, {
+          kind: "punkty",
+          manual: false,
+        });
       }
-      await adjust(gameId, seatId, effect.stat, effect.delta, reason);
+      if (hit.length === 0) return { did: ["nikogo to nie dotyczy"], pending: null };
       const sign = effect.delta > 0 ? "+" : "−";
       const many = Math.abs(effect.delta);
       return {
@@ -2882,6 +2960,8 @@ export async function resolveFieldOffer(
   // A table is rolled; anything else is simply carried out.
   if (offer.effect.op !== "rzut") {
     const done = await applyEffect(gameId, seat.id, offer.effect, offer.name, decided);
+    if (!done.pending) await markResolved(gameId, offerKey(offer.name));
+    await bumpRevision(gameId);
     return { offer: offer.name, ...done };
   }
 
@@ -2892,6 +2972,7 @@ export async function resolveFieldOffer(
   const outcome = offer.effect.faces[face];
   await journal(gameId, seat.id, game.turn, "pole-tabela", { offer: offer.name, face }, value !== null);
   const done = await applyEffect(gameId, seat.id, outcome, `${offer.name} (${face})`, decided);
+  if (!done.pending) await markResolved(gameId, offerKey(offer.name));
   await bumpRevision(gameId);
   return { offer: offer.name, face, ...done };
 }

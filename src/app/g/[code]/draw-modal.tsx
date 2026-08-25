@@ -45,11 +45,13 @@ export function DrawModal({
   resolved,
   fought,
   fight,
+  fieldOffer,
   simulated,
   ring,
   busy,
   onAction,
   onResolve,
+  onResolveField,
   onFight,
   onEscape,
   onTake,
@@ -82,13 +84,25 @@ export function DrawModal({
   fought: string[];
   /** The fight in progress, which is fought here rather than behind the modal. */
   fight: Fight | null;
+  /**
+   * A field's compulsory table, when the character is standing on one.
+   *
+   * "MUSISZ RZUCIĆ KOSTKĄ" at the Karczma, and the Strażnik's toll: two things
+   * that happen to you rather than being offered, which puts them in the same
+   * class as a drawn card. The Osada's Czarownica and Płatnerz stay in the
+   * panel — those are a visit, and a visit is optional.
+   */
+  fieldOffer: { name: string; effect: Effect } | null;
   simulated: boolean;
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
   onResolve: (cardId: string, decisions: { choices?: number[]; destination?: FieldId }) => void;
-  onFight: (cardId: string) => void;
+  /** Throws the field's own table and applies the row. */
+  onResolveField: (choices: number[]) => void;
+  /** One creature, or several at once when 17.5 lets them attack together. */
+  onFight: (cardIds: string[]) => void;
   onEscape: () => void;
   onTake: (cardId: string) => void;
   /** Nothing to do with this one — it stays on the field (16.8). */
@@ -148,6 +162,55 @@ export function DrawModal({
     );
   }
 
+  // Nothing drawn to deal with, but the field itself demands something. Same
+  // shape as a card: it happened to you, here is what you can do about it.
+  if (!card && fieldOffer) {
+    const owed = pendingIn(fieldOffer.effect, [...choices]);
+    return (
+      <Shell
+        label={fieldOffer.name}
+        art={null}
+        watching={canAct ? null : `${who} na polu: ${fieldOffer.name}`}
+        minimized={minimized && !canAct}
+        onMinimize={canAct ? null : onMinimize}
+        onRestore={onRestore}
+      >
+        <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
+          {fieldOffer.name}
+        </h2>
+        <FieldEffect effect={fieldOffer.effect} />
+        {canAct && (
+          <div className="mt-auto flex flex-wrap gap-2 border-t border-edge pt-3">
+            {owed?.op === "wybor" ? (
+              owed.options.map((option, index) => (
+                <button
+                  key={option.label}
+                  disabled={busy}
+                  onClick={() => {
+                    const next = [...choices, index];
+                    setChoices(next);
+                    onResolveField(next);
+                  }}
+                  className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
+                >
+                  {option.label}
+                </button>
+              ))
+            ) : (
+              <button
+                disabled={busy}
+                onClick={() => onResolveField(choices)}
+                className="rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
+              >
+                {fieldOffer.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
+              </button>
+            )}
+          </div>
+        )}
+      </Shell>
+    );
+  }
+
   if (!card) return null;
   const known = EVENTS.find((c) => c.id === card.cardId);
   if (!known) return null;
@@ -155,6 +218,21 @@ export function DrawModal({
   const art = cardImageUrl(known.id);
   const script = scriptFor(known.id);
   const foe = combatValueOf(known);
+
+  // 17.5: several creatures attacking at once are one opponent — their Miecze
+  // added and one die thrown for the lot, which is the difference between hard
+  // and hopeless. Only when they are of a kind: an ordinary Wróg and a magical
+  // one cannot be summed, because the sums are of different things.
+  const standing = cards
+    .map((entry) => EVENTS.find((c) => c.id === entry.cardId))
+    .filter(
+      (c): c is EventCard =>
+        !!c && !!combatValueOf(c) && !fought.includes(c.id) && !resolved.includes(c.id),
+    );
+  const together =
+    standing.length > 1 && new Set(standing.map((c) => combatValueOf(c)!.kind)).size === 1
+      ? standing
+      : null;
   const keep = kindForCard(known);
   const label = CARD_CLASS_LABEL[card.cardClass as CardClass] ?? card.cardClass;
 
@@ -221,11 +299,22 @@ export function DrawModal({
           <div className="flex flex-wrap gap-2">
             <button
               disabled={busy}
-              onClick={() => onFight(known.id)}
+              onClick={() => onFight([known.id])}
               className="rounded border border-vermilion/60 bg-vermilion/10 px-4 py-2 text-sm text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
             >
               Walcz ({foe.kind === "magiczna" ? "Magia" : "Miecz"} {foe.total})
             </button>
+            {together && (
+              <button
+                disabled={busy}
+                onClick={() => onFight(together.map((c) => c.id))}
+                title={together.map((c) => c.name).join(" + ")}
+                className="rounded border border-vermilion/60 px-4 py-2 text-sm text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+              >
+                Walcz ze wszystkimi naraz ({together.length}) —{" "}
+                {together.reduce((sum, c) => sum + combatValueOf(c)!.total, 0)}
+              </button>
+            )}
             <button
               disabled={busy}
               onClick={onEscape}
@@ -325,7 +414,11 @@ export function DrawModal({
         )}
 
         {/* Always available: 16.8 lets a card simply stay where it fell. */}
-        {canAct && (foe || asking) && (
+        {/* 16.8 lets a card stay where it fell — but not a Wróg. Rule 11 is
+            explicit that creatures present "muszą najpierw zostać pokonani ...
+            lub należy im uciec", so a fight is fought or fled, never shelved.
+            16.8 is about what is left when a turn ends, not a way out of one. */}
+        {canAct && asking && (
           <button
             disabled={busy}
             onClick={() => onLeave(known.id)}
@@ -512,4 +605,59 @@ function WatchFight({ fight }: { fight: Fight }) {
       )}
     </div>
   );
+}
+
+/** A field's table, written out. The app rolls it; nothing here is pressable. */
+function FieldEffect({ effect }: { effect: Effect }) {
+  if (effect.op === "rzut") {
+    return (
+      <ol className="flex flex-col gap-0.5 text-xs">
+        {[1, 2, 3, 4, 5, 6].map((face) => (
+          <li key={face} className="flex items-baseline gap-2">
+            <span className="tnum w-3 text-ochre">{face}</span>
+            <span className="text-muted">{say(effect.faces[face])}</span>
+          </li>
+        ))}
+      </ol>
+    );
+  }
+  return <p className="text-xs text-muted">{say(effect)}</p>;
+}
+
+/** One line for what an effect does, for a table nobody is meant to press. */
+function say(effect: Effect): string {
+  switch (effect.op) {
+    case "nic":
+      return "nic się nie dzieje";
+    case "punkty": {
+      const name = { miecz: "Miecza", magia: "Magii", zycie: "Życia", zloto: "Złota" }[
+        effect.stat
+      ];
+      return `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${name}`;
+    }
+    case "tura-stracona":
+      return `tracisz ${effect.turns} turę`;
+    case "walka":
+      return `walka: ${effect.nazwa} (${
+        effect.magia !== undefined ? `Magia ${effect.magia}` : `Miecz ${effect.miecz}`
+      })`;
+    case "przenies":
+      return effect.to.kind === "pole"
+        ? `przenieś się na: ${FIELDS.get(effect.to.fieldId)?.name ?? effect.to.fieldId}`
+        : "przenieś się na dowolny Obszar w tym Kręgu";
+    case "zaklecie":
+      return `+${effect.count} Zaklęcie`;
+    case "kamien":
+      return "Zamiana w Kamień (20.1)";
+    case "uzdrow":
+      return effect.cena ? `leczenie za ${effect.cena} Sz. Z. za punkt` : "uzdrowienie";
+    case "wybor":
+      return effect.options.map((option) => option.label).join(" albo ");
+    case "po-kolei":
+      return effect.steps.map(say).join(", potem ");
+    case "gdy":
+      return `${say(effect.to)}${effect.inaczej ? `, inaczej ${say(effect.inaczej)}` : ""}`;
+    default:
+      return "rozpatrzcie sami";
+  }
 }
