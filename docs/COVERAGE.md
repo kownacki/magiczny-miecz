@@ -85,7 +85,7 @@ they are rules, and one of them was missing.
 | 5.2 | held face up | ✅ | `face: "open"` |
 | 5.3 | a character may not hold an item its Natura forbids | ◐ | checked when Natura *changes*; not checked when the item is taken |
 | 5.4 | four at a time unless carrying transport | ✅ | `carryLimit` |
-| 5.5 | may be dropped at any moment, onto the current field | ✅ | `dropCard` |
+| 5.5 | may be dropped at any moment, **onto the current field** | ❌ | `dropCard` deletes the holding; the card should be lying face up where you stand |
 | 5.6 | must drop down to the limit at once | ◐ | taking beyond the limit is refused; an existing excess is not forced out |
 
 ## 6. Przyjaciele
@@ -152,7 +152,8 @@ they are rules, and one of them was missing.
 
 | | rule | status | where |
 |---|---|---|---|
-| 12.1 | pick up gold, items and friends lying on your field, after any Wrogowie and drawn cards are dealt with | ✅ | `liftFieldCards`, `takeCard` |
+| 12.1 | pick up gold, items and friends lying on your field | ✅ | `liftFieldCards` puts them into the turn's stack |
+| 12.1 | …but only after any Wrogowie and drawn cards are dealt with | ❌ | `takeCard` does not check; a Przedmiot can be taken with an unfought Wróg on the field |
 
 ## 13. Spotkania i badanie Obszarów
 
@@ -246,7 +247,7 @@ they are rules, and one of them was missing.
 |---|---|---|---|
 | 21.1 | take the matching equipment card | ✅ | |
 | 21.2 | bought items return to the shop stack and can run out | ✅ | `stock.ts` — derived from what is in play |
-| 21.3 | they may be left on the board like any card | ✅ | `dropCard` |
+| 21.3 | they may be left on the board like any card | ❌ | same as 5.5 — dropping destroys instead of leaving |
 | 21.2 | a shop shows what it still has, and refuses what it has not | ✅ | `stock` on the table state; the Płatnerz greys out an empty pile |
 
 ## 22. Zwycięstwo
