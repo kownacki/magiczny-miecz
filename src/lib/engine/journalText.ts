@@ -297,14 +297,6 @@ export function describe(
       return line(`${who} traci: ${parts.join(", ")}.`);
     }
 
-    // What a character is wearing is public, and 17.2 makes it matter: only one
-    // weapon counts in a fight, and choosing it is a decision taken before the
-    // dice. Only the body is spoken — shuffling the pack is not an event.
-    case "zalozenie":
-      return line(`${who} zakłada: ${card(data.cardId)}.`);
-    case "schowanie":
-      return line(`${who} chowa do plecaka: ${card(data.cardId)}.`);
-
     case "odrzucenie":
       return line(`${who} odrzuca: ${card(data.cardId)}.`);
     case "kupno":

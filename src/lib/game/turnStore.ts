@@ -2184,16 +2184,10 @@ export async function equipCard(
     if (carriedCount(mine, "slotowy") >= carryLimit(mine, "slotowy")) {
       throw new Error("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
     }
-    // Nothing to say about putting a card back where it already was: the
-    // client sends this whenever a card is dropped, including onto the pack it
-    // was picked up from.
-    if (held.slot !== null) {
-      await putInSlot(holdingId, null);
-      await journal(gameId, held.seat_id, game.turn, "schowanie", {
-        cardId: held.card_id,
-        from: held.slot,
-      });
-    }
+    // Nothing to write when the card is already there: the client sends this
+    // whenever a card is dropped, including onto the pack it was picked up
+    // from.
+    if (held.slot !== null) await putInSlot(holdingId, null);
     await bumpRevision(gameId);
     return;
   }
@@ -2215,29 +2209,17 @@ export async function equipCard(
   const occupant = holdings.find(
     (h) => h.seat_id === held.seat_id && h.slot === slot && h.id !== holdingId,
   );
-  if (occupant) {
-    await putInSlot(occupant.id, null);
-    await journal(gameId, occupant.seat_id, game.turn, "schowanie", {
-      cardId: occupant.card_id,
-      from: slot,
-    });
-  }
-  if (held.slot !== slot) {
-    await putInSlot(holdingId, slot);
-    /**
-     * What is worn is public, so the journal says it.
-     *
-     * At a table you watch somebody pick up their sword before a fight, and
-     * 17.2 makes that the whole difference between the fight they were going to
-     * have and the one they are having: one weapon counts, and which one is a
-     * decision taken before the dice. The app was applying that silently, so
-     * the only trace of a player arming themselves was the number changing.
-     */
-    await journal(gameId, held.seat_id, game.turn, "zalozenie", {
-      cardId: held.card_id,
-      slot,
-    });
-  }
+  if (occupant) await putInSlot(occupant.id, null);
+  if (held.slot !== slot) await putInSlot(holdingId, slot);
+  /**
+   * Nothing is journalled here, deliberately.
+   *
+   * Gear moves around constantly — a card is picked up, tried in a place, put
+   * back, swapped for a better one — and a line for each would bury the turn it
+   * happened in. What the table needs to see is a character *gaining* something
+   * ("zabranie"), which is the event with consequences; where it then hangs on
+   * the body is arrangement, and the seat card shows it at a glance.
+   */
   await bumpRevision(gameId);
 }
 
