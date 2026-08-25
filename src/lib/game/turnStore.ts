@@ -2370,18 +2370,26 @@ export async function placeSeat(
   // The turn state carries its own copy of where the character is standing —
   // it is what the panel reads to decide which field's options to offer — so
   // moving the figure without it left the header naming one field and the
-  // buttons belonging to another. Only for the seat whose turn it is: the
-  // others have no turn state to correct.
+  // buttons belonging to another.
+  //
+  // Every phase past the roll, not just `pole`. The commonest reason to reach
+  // for this override is a table that is *stuck*: mid-fight with something on
+  // a field the figure is not on any more, or holding a bridge guardian that
+  // should never have been met. Leaving that fight running while the figure
+  // stands somewhere else is the desync, not a lesser version of it. `rzut` is
+  // left alone because the character has not moved yet this turn.
   if (
     seat.seat_index === game.active_seat &&
-    game.turn_state.phase === "pole" &&
-    game.turn_state.fieldId !== fieldId
+    game.turn_state.phase !== "rzut" &&
+    game.turn_state.phase !== "koniec"
   ) {
     await db
       .from("games")
       .update({
         // Freshly arrived: whatever was drawn belonged to the old field, and
-        // the new one has not been resolved at all.
+        // the new one has not been resolved at all. `draw: 0` rather than the
+        // field's printed count, because a figure put here by hand did not
+        // walk here, and 15.1 makes drawing a consequence of arriving.
         turn_state: { phase: "pole", fieldId, from: null, draw: 0, drawn: [], fought: [] },
       })
       .eq("id", gameId);
