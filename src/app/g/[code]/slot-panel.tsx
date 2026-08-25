@@ -137,10 +137,15 @@ export function SlotPanel({
       style={{ gridTemplateColumns: "repeat(3, 96px)", gridAutoRows: "84px" }}
     >
       {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
-        // What is *shown* here. A card on the cursor has left its place, so the
-        // place is drawn empty and answers to its own name again — it is a
-        // target now, and a target you cannot read the name of is a worse one.
-        const item = worn[slot]?.holdingId === liftedHoldingId ? undefined : worn[slot];
+        const item = worn[slot];
+        // On the cursor: drawn faintly where it came from rather than removed.
+        //
+        // Removing it broke the double-click that takes a card straight off,
+        // because a double-click is two clicks *on the same element* — and the
+        // first click emptied the place, so the second landed on a different
+        // button and the browser never called it a double-click at all. A ghost
+        // says the same thing and stays put.
+        const lifted = item !== undefined && item.holdingId === liftedHoldingId;
         return (
           <div
             key={slot}
@@ -178,12 +183,13 @@ export function SlotPanel({
                     ? "border-ochre/60 bg-raised"
                     : "border-dashed border-edge/70 bg-night/40"
             }`}
-            title={item ? undefined : SLOT_LABEL[slot]}
+            title={item && !lifted ? undefined : SLOT_LABEL[slot]}
           >
             {item ? (
               <WornCard
                 item={item}
                 canAct={canAct}
+                lifted={lifted}
                 onDragging={onDragging}
                 // While something is on the cursor, a click puts it down —
                 // including onto the place it was lifted from, which is how you
@@ -240,12 +246,15 @@ export function SlotPanel({
 function WornCard({
   item,
   canAct,
+  lifted,
   onDragging,
   onPickUp,
   onTakeOff,
 }: {
   item: SlotItem;
   canAct: boolean;
+  /** It is on the cursor; this is the hollow it left. */
+  lifted: boolean;
   onDragging: (cardId: string | null) => void;
   onPickUp: () => void;
   onTakeOff: () => void;
@@ -269,7 +278,9 @@ function WornCard({
         }}
         onDoubleClick={onTakeOff}
         title={item.card.name}
-        className="block h-full w-full cursor-grab active:cursor-grabbing"
+        className={`block h-full w-full cursor-grab active:cursor-grabbing ${
+          lifted ? "opacity-25" : ""
+        }`}
       >
         {art ? (
           <Image
@@ -287,7 +298,7 @@ function WornCard({
         )}
       </button>
 
-      {full && (
+      {full && !lifted && (
         <span className="pointer-events-none absolute bottom-full left-1/2 z-40 mb-1 hidden -translate-x-1/2 group-hover:block">
           <Image
             src={full}
