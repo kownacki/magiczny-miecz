@@ -56,17 +56,34 @@ export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | n
  * nothing at all. Left in, holding one was a permanent +2 that vanished when it
  * was finally drunk — the opposite of the card. `uses.ts` is what knows the
  * difference between a payoff and a standing rule.
+ *
+ * Each card is filed under both figures, because a character has two: 1.5's
+ * example gives the Troll a "parametr Miecza równy 8" and "podczas walki 11
+ * punktom". Only an encoded ability can tell them apart — a printed corner
+ * number says how much and never when — so a card nobody has encoded counts
+ * towards both, which is what it did before this existed.
  */
-const BONUS_BY_ID = new Map<string, { miecz: number; magia: number }>();
+interface Lent {
+  /** The character's parameter (1.5): what they are worth standing still. */
+  parametr: HeldTotals;
+  /** What they are worth in a fight, which is the same or more. */
+  walka: HeldTotals;
+}
+
+const BONUS_BY_ID = new Map<string, Lent>();
 for (const card of EVENTS) {
   if (isUsable(card.id)) continue;
   const printed = bonusOf(card);
-  if (printed) BONUS_BY_ID.set(card.id, printed);
+  if (printed) BONUS_BY_ID.set(card.id, { parametr: printed, walka: printed });
 }
 for (const [cardId, abilities] of Object.entries(ABILITIES)) {
   const points = abilities.find((ability) => ability.kind === "punkty");
   if (points && points.kind === "punkty") {
-    BONUS_BY_ID.set(cardId, { miecz: points.miecz ?? 0, magia: points.magia ?? 0 });
+    const lent = { miecz: points.miecz ?? 0, magia: points.magia ?? 0 };
+    BONUS_BY_ID.set(cardId, {
+      parametr: points.tylkoWalka ? { miecz: 0, magia: 0 } : lent,
+      walka: lent,
+    });
   }
 }
 
@@ -106,9 +123,21 @@ export function inEffect<T extends { cardId: string; slot?: string | null }>(
   return holdings.filter((held) => held.slot != null || !isWearable(held.cardId));
 }
 
+/**
+ * Which of the two figures is being asked for.
+ *
+ * Named at every call site rather than defaulted, because both defaults are
+ * wrong in one direction: assume `parametr` and a forgotten fight leaves a
+ * character weaker than their cards make them; assume `walka` and everything
+ * that is not a fight — the Pułapka of 14.5, the number on their card — reads
+ * high. The compiler asking is cheaper than either.
+ */
+export type Reckoning = keyof Lent;
+
 export function bonusFromHoldings(
   holdings: readonly Holding[],
-  eqMode: EqMode = "klasyczny",
+  eqMode: EqMode,
+  as: Reckoning,
 ): HeldTotals {
   let miecz = 0;
   let magia = 0;
@@ -116,8 +145,8 @@ export function bonusFromHoldings(
     if (holding.kind !== "item" && holding.kind !== "friend") continue;
     const bonus = BONUS_BY_ID.get(holding.cardId);
     if (!bonus) continue;
-    miecz += bonus.miecz;
-    magia += bonus.magia;
+    miecz += bonus[as].miecz;
+    magia += bonus[as].magia;
   }
   return { miecz, magia };
 }

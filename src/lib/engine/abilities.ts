@@ -25,8 +25,19 @@ import type { CardId } from "@/data/ids";
  * high a roll saves you, so they are one variant with a number.
  */
 export type Ability =
-  /** "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza." */
-  | { kind: "punkty"; miecz?: number; magia?: number }
+  /**
+   * Points a held card lends its owner (1.5, 2.5).
+   *
+   * `tylkoWalka` is the difference between the two figures the rulebook quotes
+   * for the same character. Its worked example under 1.5 gives the Troll a
+   * "parametr Miecza równy 8" and "podczas walki 11 punktom" — the Miecz card
+   * and the Krzyżowiec count in a fight and nowhere else, and the printed text
+   * says so in as many words ("podczas walki", "podczas każdej walki").
+   *
+   * It matters off the battlefield too: 14.5 has the Pułapka subtract "wartość
+   * swojego parametru Miecza", which is the 8.
+   */
+  | { kind: "punkty"; miecz?: number; magia?: number; tylkoWalka?: true }
   /**
    * A save against the point of Życie a lost fight costs: Hełm on a 1, Tarcza on
    * 1-2, Zbroja on 1-3. The fight is still lost either way.
@@ -235,8 +246,10 @@ export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = 
  */
 export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = {
   // --- equipment ------------------------------------------------------------
-  miecz: [{ kind: "punkty", miecz: 1 }],
-  sztylet: [{ kind: "punkty", miecz: 1 }],
+  // "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza."
+  miecz: [{ kind: "punkty", miecz: 1, tylkoWalka: true }],
+  // "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza."
+  sztylet: [{ kind: "punkty", miecz: 1, tylkoWalka: true }],
   helm: [{ kind: "oslona", upTo: 1 }],
   tarcza: [{ kind: "oslona", upTo: 2 }],
   zbroja: [{ kind: "oslona", upTo: 3 }],
@@ -397,10 +410,13 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   strzyga: [{ kind: "punkty", magia: 1 }],
   chochlik: [{ kind: "punkty", magia: 2 }],
   giermek: [
-    { kind: "punkty", miecz: 2 },
+    // "będzie dodawał ci 2 punkty Miecza podczas każdej walki".
+    { kind: "punkty", miecz: 2, tylkoWalka: true },
     { kind: "ginie-zamiast-ciebie", onRollUpTo: 1 },
   ],
-  krzyzowiec: [{ kind: "punkty", miecz: 2 }],
+  // "będzie dodawał ci 2 punkty Miecza podczas każdej walki" — and the 1.5
+  // example counts him only in the fight figure.
+  krzyzowiec: [{ kind: "punkty", miecz: 2, tylkoWalka: true }],
   tragarz: [{ kind: "udzwig", items: 4 }],
   przewoznika: [{ kind: "bez-oplaty", fields: ["przeprawa-1", "przeprawa-2"] }],
   rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],

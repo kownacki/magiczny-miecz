@@ -180,14 +180,14 @@ describe("the two places a bonus can come from", () => {
     // the two sources instead of preferring one would silently make it worth
     // two, and nothing on screen would say so.
     const held = [{ cardId: "excalibur", kind: "item" as const, face: "open" as const }];
-    expect(bonusFromHoldings(held)).toEqual({ miecz: 1, magia: 0 });
+    expect(bonusFromHoldings(held, "klasyczny", "parametr")).toEqual({ miecz: 1, magia: 0 });
   });
 
   it("counts a card whose bonus is only in its text", () => {
     // Srebrna Strzała prints no numbers at all; before it was encoded it added
     // nothing, which was an undercount rather than a safe default.
     const held = [{ cardId: "srebrna-strzala", kind: "item" as const, face: "open" as const }];
-    expect(bonusFromHoldings(held)).toEqual({ miecz: 1, magia: 1 });
+    expect(bonusFromHoldings(held, "klasyczny", "parametr")).toEqual({ miecz: 1, magia: 1 });
   });
 
   it("keeps the encoded value and the printed value in step", () => {

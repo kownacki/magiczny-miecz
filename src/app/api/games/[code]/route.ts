@@ -139,7 +139,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       // In slotowy a card only counts where it is worn, so the totals every
       // device reads are computed from what is on the character, not from the
       // pack. See `inEffect`.
-      const bonus = bonusFromHoldings(own, game.eq_mode === "slotowy" ? "slotowy" : "klasyczny");
+      // The character's parameter, not their fight strength. 1.5's example is
+      // exactly this distinction: the Troll's "parametr Miecza" is 8 and he is
+      // worth 11 "podczas walki", and it is the 8 that belongs on his card.
+      const mode = game.eq_mode === "slotowy" ? "slotowy" : "klasyczny";
+      const bonus = bonusFromHoldings(own, mode, "parametr");
+      // Both, because the rulebook quotes both and a player about to pick a
+      // fight is asking about the other one.
+      const inFight = bonusFromHoldings(own, mode, "walka");
 
       const lastSeen = seat.seen_at ? Date.parse(seat.seen_at) : 0;
       return {
@@ -156,6 +163,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         hidden_count: seen.hiddenCount,
         miecz_total: seat.miecz_own + bonus.miecz,
         magia_total: seat.magia_own + bonus.magia,
+        miecz_walka: seat.miecz_own + inFight.miecz,
+        magia_walka: seat.magia_own + inFight.magia,
       };
     }),
   });

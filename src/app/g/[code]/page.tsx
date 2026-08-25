@@ -103,6 +103,9 @@ interface Seat {
   /** Own points plus everything carried (1.5, 2.5), computed server-side. */
   miecz_total: number;
   magia_total: number;
+  /** The same, reckoned for a fight — 1.5's other figure. */
+  miecz_walka: number;
+  magia_walka: number;
   zycie: number;
   zloto: number;
   nature: string | null;
@@ -582,6 +585,38 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }
 
   /**
+   * Asks before a card is thrown away, because it is not thrown away.
+   *
+   * 5.5 does not destroy what a character puts down: the card stays face up on
+   * the Obszar it was dropped on, and 16.8 and 21.3 let the next person through
+   * pick it up. So this costs less than using a card and more than it looks —
+   * one click under every card in the pack, and a Magiczny Miecz left in the
+   * Karczma is a present for whoever walks in.
+   *
+   * The question says where it will be lying, because that is the part a player
+   * is deciding and the button cannot say it.
+   */
+  function askToDrop(holdingId: string) {
+    const seat = seats.find((candidate) => candidate.seat_index === mySeatIndex);
+    const held = seat?.holdings.find((candidate) => candidate.id === holdingId);
+    if (!held) return;
+    const name = CARD_NAMES.get(held.cardId) ?? held.cardId;
+    const here = seat?.field_id ? FIELD_NAMES.get(seat.field_id) : null;
+    setAsk({
+      title: `Wyrzuć: ${name}`,
+      body: here
+        ? `${name} zostanie na Obszarze ${here}, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`
+        : `${name} zostanie na Obszarze, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`,
+      confirmLabel: "Wyrzuć",
+      tone: "grave",
+      onConfirm: () => {
+        setAsk(null);
+        post("holdings", { action: "drop", holdingId });
+      },
+    });
+  }
+
+  /**
    * The same question before a Zaklęcie is spoken.
    *
    * 9.6 puts the spell on its victim wherever they are standing and takes the
@@ -631,7 +666,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         mineNow.holdings.map((h) => ({ cardId: h.cardId, kind: h.kind, face: h.face, slot: h.slot ?? null })),
         "slotowy",
       );
-      if (packed >= limit) return setError("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
+      if (packed >= limit) return setError("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
     }
 
     setError(null);
@@ -1191,7 +1226,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 isMine
                 slotted={game.eq_mode === "slotowy"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
-                onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
+                onDrop={askToDrop}
                 onEquip={equip}
                 onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
                 onUse={askToUse}
@@ -1701,7 +1736,7 @@ function Hand({
                 {/* Always drawn where a card has a use, whether or not the
                     double-click reaches it — a gesture nobody can see is not
                     an offer. In ochre because it costs you the card, unlike
-                    "odrzuć", which leaves it lying on the Obszar (5.5). */}
+                    "wyrzuć", which leaves it lying on the Obszar (5.5). */}
                 {onUse && isUsable(held.cardId) && (
                   <button
                     onClick={() => onUse(held.id, held.cardId)}
@@ -1715,7 +1750,7 @@ function Hand({
                   onClick={() => onDrop(held.id)}
                   className="text-[9px] text-muted underline hover:text-vermilion"
                 >
-                  odrzuć
+                  wyrzuć
                 </button>
               </span>
             )}
@@ -1993,7 +2028,12 @@ function SeatCard({
 
       {character ? (
         <>
-          <div className="mb-3 flex flex-wrap items-start gap-3">
+          {/* The character and what it is wearing, pushed to opposite sides.
+              They are two different things to look at — who this is, and what
+              they have on — and sitting them shoulder to shoulder in the middle
+              made one wide object out of two. Wrapping is kept, because on a
+              narrow screen a row that will not fit has to become two. */}
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-6">
             <div className="shrink-0">
               {/*
                 The card between its tokens, laid out the way the card itself
@@ -2012,6 +2052,7 @@ function SeatCard({
                     label="Miecz"
                     value={seat.miecz_own}
                     total={seat.miecz_total}
+                    inFight={seat.miecz_walka}
                     stat="miecz"
                     canAdjust={canCorrect}
                     onAdjust={onAdjust}
@@ -2020,6 +2061,7 @@ function SeatCard({
                     label="Magia"
                     value={seat.magia_own}
                     total={seat.magia_total}
+                    inFight={seat.magia_walka}
                     stat="magia"
                     canAdjust={canCorrect}
                     onAdjust={onAdjust}
@@ -2205,29 +2247,56 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
      * sliver showing, which is what a stack of chips looks like and costs
      * nothing to draw, since every coin is the same picture anyway.
      *
-     * The pile stops at what its half of the card holds and the number carries
-     * on, rather than turning a corner the way the other three do. Nothing is
-     * lost by that: this is a stack of ones, so the count is the only thing the
-     * picture was ever going to tell you, and it is written underneath. A
-     * second column of identical coins would only be a wider way of saying the
-     * same nothing.
+     * The pile squeezes before it spreads.
+     *
+     * A stack of chips absorbs a lot before it has to become two stacks —
+     * that is what stacking is for — so the sliver each coin shows tightens
+     * from six pixels down to three as the hoard grows, and only when even
+     * the tightest stack has run out of column does a second one start beside
+     * it. Loosest that still fits, so a small pile is never squashed for the
+     * sake of a rule aimed at a big one.
+     *
+     * Three columns is where it stops and the numeral carries the rest. That is
+     * about seventy Sztuk Złota, which is more than this game hands out, and
+     * the count underneath is exact either way.
      */
-    const REVEAL = 6;
-    const coins = Math.min(points, 1 + Math.floor((STACK_HEIGHT - SIZE) / REVEAL));
+    const LOOSEST = 6;
+    const TIGHTEST = 3;
+    const COLUMNS_MAX = 3;
+    /** How many coins one column holds when each shows this much of itself. */
+    const perColumn = (reveal: number) => 1 + Math.floor((STACK_HEIGHT - SIZE) / reveal);
+
+    let reveal = LOOSEST;
+    while (reveal > TIGHTEST && perColumn(reveal) * COLUMNS_MAX < points) reveal -= 1;
+
+    const tall = perColumn(reveal);
+    const coins = Math.min(points, tall * COLUMNS_MAX);
+    const columns = Math.max(1, Math.ceil(coins / tall));
+    // Spread evenly rather than filling each column before starting the next,
+    // so thirteen coins is seven and six and not twelve and a straggler.
+    const per = Math.ceil(coins / columns);
+
     return (
       <span className="flex flex-col items-center" title={`${label}: ${points}`}>
-        <span className="flex flex-col items-center">
-          {Array.from({ length: coins }, (_, index) => (
-            <Image
-              key={index}
-              src="/tokens/zloto.png"
-              alt=""
-              width={SIZE}
-              height={SIZE}
-              style={index > 0 ? { marginTop: REVEAL - SIZE } : undefined}
-              className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
-              unoptimized
-            />
+        <span className="flex items-start gap-0.5">
+          {Array.from({ length: columns }, (_, column) => (
+            <span key={column} className="flex flex-col items-center">
+              {Array.from(
+                { length: Math.max(0, Math.min(per, coins - column * per)) },
+                (_, index) => (
+                  <Image
+                    key={index}
+                    src="/tokens/zloto.png"
+                    alt=""
+                    width={SIZE}
+                    height={SIZE}
+                    style={index > 0 ? { marginTop: reveal - SIZE } : undefined}
+                    className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
+                    unoptimized
+                  />
+                ),
+              )}
+            </span>
           ))}
         </span>
         {/* Bigger than the caption it sits under, and off the pile by a hair.
@@ -2287,6 +2356,7 @@ function RailStat({
   label,
   value,
   total,
+  inFight,
   stat,
   canAdjust,
   onAdjust,
@@ -2295,6 +2365,17 @@ function RailStat({
   value: number;
   /** Own points plus what is carried. Shown only when the two differ. */
   total?: number;
+  /**
+   * The same reckoned for a fight, which is the same or more.
+   *
+   * A character has two figures and 1.5 quotes both — the Troll's "parametr
+   * Miecza równy 8" and "podczas walki 11 punktom" — because the Miecz card and
+   * the Krzyżowiec count in a fight and nowhere else. The rail shows the
+   * parameter, which is what the card is asking for and what 14.5's Pułapka
+   * subtracts; the fight figure is a hover away, where somebody deciding
+   * whether to start one will look for it.
+   */
+  inFight?: number;
   stat: string;
   canAdjust: boolean;
   onAdjust: (stat: string, delta: number) => void;
@@ -2314,10 +2395,28 @@ function RailStat({
           is not marked with a żeton, so a pile adding up to a number the table
           never had tokens for would be the interface inventing a rule. The
           figure under the pile is the one the cards make. */}
-      {total !== undefined && total !== value && (
-        <span className="tnum text-[11px] leading-none text-ink">
+      {/* Drawn when either figure has something to add. A character carrying
+          only a Miecz card has a parameter equal to its own points and is
+          still worth a point more in a fight — say nothing and the card looks
+          like it is doing nothing. */}
+      {total !== undefined && (total !== value || (inFight !== undefined && inFight !== total)) && (
+        <span
+          title={
+            inFight !== undefined && inFight !== total
+              ? `${label}: ${total}, w walce ${inFight} (własne ${value})`
+              : `${label}: ${total} (własne ${value})`
+          }
+          className="tnum text-[11px] leading-none text-ink"
+        >
           {total}
-          <span className="text-muted"> ({value})</span>
+          {/* Own points in brackets, but only when the cards have added to
+              them — "12 (12)" is the same number twice. */}
+          {total !== value && <span className="text-muted"> ({value})</span>}
+          {/* Only where a card lends something in a fight and nowhere else,
+              which is four cards in the box. */}
+          {inFight !== undefined && inFight !== total && (
+            <span className="text-miecz">{" \u2694\uFE0E"}{inFight}</span>
+          )}
         </span>
       )}
       {canAdjust && (

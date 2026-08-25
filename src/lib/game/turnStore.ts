@@ -560,7 +560,7 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
   const mine = holdings
     .filter((h) => h.seat_id === seatId)
     .map(asHolding);
-  const bonus = bonusFromHoldings(mine, eq(game));
+  const bonus = bonusFromHoldings(mine, eq(game), "parametr");
   const capacity = spellCapacity(seat.magia_own + bonus.magia);
 
   if ((held.data?.length ?? 0) >= capacity) {
@@ -748,7 +748,7 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
   // used to start from `miecz_own` alone, so every item a character was
   // carrying quietly failed to show up at the moment it mattered.
   const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
+  const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "walka");
 
   const next = startFight(
     game.turn_state,
@@ -1132,6 +1132,7 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
       const bonus = bonusFromHoldings(
         (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id).map(asHolding),
         eq(game),
+        "parametr",
       );
       const allowed = spellCapacity(seat.magia_own + bonus.magia);
       if (held.length <= allowed) {
@@ -1214,7 +1215,7 @@ export async function reorderPack(
  * Nine Przedmioty in the box are one act rather than a possession — "Po użyciu
  * Kartę należy odłożyć" — and until now there was no way to perform that act.
  * The card sat in a pack doing nothing, and the only button under it was
- * "odrzuć", which is a different thing entirely: 5.5 leaves a discarded
+ * "wyrzuć", which is a different thing entirely: 5.5 leaves a discarded
  * Przedmiot lying on the Obszar for whoever comes next, and a drunk Eliksir is
  * gone.
  *
@@ -1666,7 +1667,7 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
     const mine = holdings
       .filter((h) => h.seat_id === seatId)
       .map(asHolding);
-    const bonus = bonusFromHoldings(mine, eq(game));
+    const bonus = bonusFromHoldings(mine, eq(game), "walka");
     return { miecz: own.miecz + bonus.miecz, magia: own.magia + bonus.magia };
   };
 
@@ -1707,7 +1708,7 @@ export async function fightGuardian(gameId: string): Promise<void> {
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
 
   const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(holdings.map(asHolding), eq(game));
+  const bonus = bonusFromHoldings(holdings.map(asHolding), eq(game), "walka");
   const totals = {
     miecz: seat.miecz_own + bonus.miecz,
     magia: seat.magia_own + bonus.magia,
@@ -2014,7 +2015,7 @@ export async function crossRing(
         throw new Error("Kostka daje wynik od 1 do 6.");
       }
     }
-    const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
+    const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "parametr");
     magia = seat.magia_own + bonus.magia;
     dice = rolled;
     outcome = trzesawiskaOutcome(rolled, magia);
@@ -2158,7 +2159,7 @@ export async function fightBeast(
   const holdings = (await holdingsFor(gameId))
     .filter((h) => h.seat_id === seat.id)
     .map(asHolding);
-  const bonus = bonusFromHoldings(holdings, eq(game));
+  const bonus = bonusFromHoldings(holdings, eq(game), "walka");
 
   const kind = beastCombatKind(kindDie);
   const beastTotal = beastStrength(strengthDie);
@@ -2311,7 +2312,7 @@ export async function equipCard(
     // something (5.6) — so it says so rather than quietly making a fifth place.
     const mine = holdings.filter((h) => h.seat_id === held.seat_id).map(asHolding);
     if (carriedCount(mine, "slotowy") >= carryLimit(mine, "slotowy")) {
-      throw new Error("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
+      throw new Error("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
     }
     // Nothing to write when the card is already there: the client sends this
     // whenever a card is dropped, including onto the pack it was picked up
@@ -2412,7 +2413,7 @@ export async function resolveBridgeOrdeal(
       : await rollDice({ rollD6: async () => 1 + Math.floor(Math.random() * 6) }, count, reason);
 
   const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
+  const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "parametr");
   const totals = {
     miecz: seat.miecz_own + bonus.miecz,
     magia: seat.magia_own + bonus.magia,
@@ -2939,7 +2940,7 @@ async function beginNamedFight(
   if (game.turn_state.phase !== "pole") throw new Error("Nie czas na walkę.");
 
   const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
+  const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "walka");
   const next = startFight(
     game.turn_state,
     { cardId: `pole:${name}`, cardName: name, ...(magia !== undefined ? { magia } : { miecz }), settles: [] },
