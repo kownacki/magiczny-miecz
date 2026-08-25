@@ -241,6 +241,14 @@ export function describe(
       return line(`${who} leczy ${zycie(num(data.points))} za ${sztuki(num(data.paid))}.`);
     case "zmiana-natury":
       return line(`${who} zmienia naturę na: ${String(data.to ?? "?")}.`);
+    // A card taking a turn away, which is a different event from the seat later
+    // sitting out — describeTurnChange says that one, when it happens.
+    case "tura-stracona":
+      return line(
+        `${who} traci ${tury(num(data.turns, 1))}` +
+          `${typeof data.reason === "string" && data.reason ? ` — ${data.reason}` : ""}.`,
+      );
+
     case "kamien":
       return line(`${who} zamienia się w Kamień — wraca w turze ${num(data.until)}.`);
     case "smierc":

@@ -27,6 +27,7 @@ import {
   tollIsWaived,
 } from "@/lib/engine/abilities";
 import { spellScript } from "@/lib/engine/spells";
+import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import {
   BRIDGE_GUARDIAN,
   BRIDGE_ORDEAL,
@@ -2620,6 +2621,21 @@ function amountOf(stat: "miecz" | "magia" | "zycie" | "zloto", count: number): s
  * a thing can be applied at all, and that lives in `resolve.ts` where it can be
  * tested against every card in the box.
  */
+/** A seat row as the target rules see it: where it stands, what it is, whether it is still playing. */
+function asTargetSeat(row: SeatRow): TargetSeat {
+  const nature =
+    row.nature === "dobra" || row.nature === "zla" || row.nature === "chaotyczna"
+      ? row.nature
+      : null;
+  return {
+    seatIndex: row.seat_index,
+    characterId: row.character_id,
+    fieldId: row.field_id,
+    nature,
+    eliminated: row.eliminated,
+  };
+}
+
 export async function applyEffect(
   gameId: string,
   seatId: string,
@@ -2711,9 +2727,45 @@ export async function applyEffect(
     }
 
     case "tura-stracona": {
-      if (effect.target && effect.target !== "ty") return { did: [], pending: effect };
-      await adjust(gameId, seatId, "tury", effect.turns, reason);
-      return { did: [`tracisz ${effect.turns} turę`], pending: null };
+      const seats = await seatsFor(gameId);
+      const actor = seats.find((row) => row.id === seatId);
+      const hit = seatsTargeted(
+        effect.target,
+        seats.map(asTargetSeat),
+        actor ? asTargetSeat(actor) : undefined,
+        effect.oprocz ?? [],
+      );
+      // Waits for somebody to arrive, or for the holder to choose: still not
+      // this applier's to finish.
+      if (hit === null) return { did: [], pending: effect };
+
+      const game = await loadGame(gameId);
+      const names: string[] = [];
+      for (const target of hit) {
+        const row = seats.find((candidate) => candidate.seat_index === target.seatIndex);
+        if (!row) continue;
+        await db
+          .from("seats")
+          .update({ turns_lost: row.turns_lost + effect.turns })
+          .eq("id", row.id);
+        // Its own kind, and not marked manual. `adjust` writes a "korekta" flagged
+        // as a human override, and a card doing what the card says is the exact
+        // opposite of somebody overruling the referee — the journal draws those
+        // differently and would have been calling every one of these a correction.
+        await journal(gameId, row.id, game.turn, "tura-stracona", {
+          turns: effect.turns,
+          reason,
+        });
+        names.push(row.player_name ?? `miejsce ${row.seat_index + 1}`);
+      }
+      await bumpRevision(gameId);
+
+      if (hit.length === 0) return { did: ["nikogo to nie dotyczy"], pending: null };
+      const onlyMe = hit.length === 1 && hit[0].seatIndex === actor?.seat_index;
+      return {
+        did: [onlyMe ? `tracisz ${effect.turns} turę` : `tracą turę: ${names.join(", ")}`],
+        pending: null,
+      };
     }
 
     case "uzdrow": {

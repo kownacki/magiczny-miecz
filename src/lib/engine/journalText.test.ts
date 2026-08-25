@@ -54,6 +54,14 @@ suite("journal vocabulary", () => {
     expect(text("pojedynek", { target: 1 })).toBe("Michał atakuje: Ania.");
   });
 
+  it("says a card took a turn away, and names the card", () => {
+    // Distinct from the seat later sitting out, which describeTurnChange says.
+    expect(text("tura-stracona", { turns: 1, reason: "ZAKLINACZ CZASU" })).toBe(
+      "Michał traci 1 turę — ZAKLINACZ CZASU.",
+    );
+    expect(text("tura-stracona", { turns: 2 })).toBe("Michał traci 2 tury.");
+  });
+
   it("marks a manual correction as one", () => {
     const line = describe(
       entry("korekta", { stat: "zycie", delta: -1, from: 4, to: 3 }, { manual: true }),
@@ -148,6 +156,7 @@ suite("Polish agreement", () => {
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
+      "tura-stracona",
     ];
     const gendered = /\b\w+(ął|ęła|iła|ył|yła|szedł|szła|any|ony|iony)\b/;
     for (const kind of kinds) {
