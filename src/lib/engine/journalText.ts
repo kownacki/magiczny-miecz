@@ -305,7 +305,7 @@ export function describe(
     }
 
     case "odrzucenie":
-      return line(`${who} odrzuca: ${card(data.cardId)}.`);
+      return line(`${who} wyrzuca: ${card(data.cardId)}.`);
 
     // Spending a card by using it. One word for all nine — the cards have their
     // own idioms, but this is one act and the line is read as a list.
