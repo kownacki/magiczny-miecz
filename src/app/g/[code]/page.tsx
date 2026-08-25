@@ -576,14 +576,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           the things this card lets you do under it. */}
       {active &&
         (mySeatIndex === active.seat_index || isTableScreen) &&
-        game.turn_state.phase === "pole" &&
-        game.turn_state.drawn.length > 0 && (
+        (game.turn_state.phase === "walka" ||
+          (game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0)) && (
           <DrawModal
-            cards={game.turn_state.drawn}
-            resolved={[...(game.turn_state.resolved ?? []), ...waved]}
-            fought={game.turn_state.fought ?? []}
+            cards={game.turn_state.phase === "pole" ? game.turn_state.drawn : []}
+            resolved={
+              game.turn_state.phase === "pole"
+                ? [...(game.turn_state.resolved ?? []), ...waved]
+                : []
+            }
+            fought={game.turn_state.phase === "pole" ? (game.turn_state.fought ?? []) : []}
+            fight={game.turn_state.phase === "walka" ? game.turn_state.fight : null}
+            simulated={game.mode === "simulation"}
             ring={ringFields(active.field_id)}
             busy={busy}
+            onAction={(body) => post("turn", body)}
             onResolve={(cardId, decisions) =>
               post("turn", { action: "karta-efekt", cardId, ...decisions })
             }

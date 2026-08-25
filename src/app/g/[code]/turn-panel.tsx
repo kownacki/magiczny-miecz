@@ -872,7 +872,15 @@ function FieldControls({
  * because at a table the tension is in watching the second die — and because
  * every other player needs to be able to check the arithmetic.
  */
-function FightControls({
+/**
+ * Exported because the draw modal shows the same fight.
+ *
+ * One component in two places rather than two that drift: the modal is what the
+ * player fighting looks at, and this panel is what everybody else watches it
+ * through. Nothing about a fight differs between the two views — it is the same
+ * two dice.
+ */
+export function FightControls({
   fight,
   simulated,
   busy,
