@@ -113,14 +113,29 @@ export function CardLibrary({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<TileCard | null>(null);
 
+  const searching = query.trim().length > 0;
+
   const cards = useMemo(() => {
-    const all = shelfCards(shelf);
-    if (!query.trim()) return all;
+    if (!searching) return shelfCards(shelf);
+    /**
+     * A search is for a card, not for a card on this shelf.
+     *
+     * It used to filter the open shelf only, so looking for the Tajemnicza
+     * Szkatuła from anywhere except Przedmioty found nothing — and the one
+     * thing you reach for a search box to avoid is having to know where the
+     * thing already is.
+     */
     const needle = fold(query.trim());
-    return all.filter(
+    const everywhere = new Map<string, TileCard>();
+    for (const { key } of SHELVES) {
+      for (const card of shelfCards(key)) {
+        if (!everywhere.has(card.cardId)) everywhere.set(card.cardId, card);
+      }
+    }
+    return [...everywhere.values()].filter(
       (card) => fold(card.name).includes(needle) || fold(card.text ?? "").includes(needle),
     );
-  }, [shelf, query]);
+  }, [shelf, query, searching]);
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-night">
@@ -159,8 +174,9 @@ export function CardLibrary({
 
       <div className="flex-1 overflow-y-auto p-4">
         <p className="mb-3 text-[11px] text-muted">
-          {cards.length} {cards.length === 1 ? "karta" : "kart"} — pokazane są pojedyncze
-          wzory, nie wszystkie egzemplarze z talii.
+          {cards.length} {cards.length === 1 ? "karta" : "kart"}
+          {searching ? " — szukam w całej talii, nie tylko na tej półce." : null}
+          {searching ? null : " — pokazane są pojedyncze wzory, nie wszystkie egzemplarze z talii."}
         </p>
         <div className="flex flex-wrap gap-3">
           {cards.map((card) => (
