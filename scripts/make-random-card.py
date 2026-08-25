@@ -119,7 +119,7 @@ def fitted_font(height):
     return ImageFont.truetype(SERIF, size)
 
 
-def mark(draw, box, fill_ratio, by_ink=False):
+def mark(draw, box, fill_ratio, by_ink=False, cap=None):
     """Centres a red question mark in `box`, filling `fill_ratio` of its height.
 
     `by_ink` centres the visible glyph rather than the font's metrics. The two
@@ -129,7 +129,10 @@ def mark(draw, box, fill_ratio, by_ink=False):
     on the standee it reads as misaligned against a row of figures that are all
     centred in the space under their name.
     """
-    font = fitted_font(round((box[3] - box[1]) * fill_ratio))
+    height = round((box[3] - box[1]) * fill_ratio)
+    if cap:
+        height = min(height, cap)
+    font = fitted_font(height)
     if not by_ink:
         draw.text(((box[0] + box[2]) // 2, (box[1] + box[3]) // 2),
                   "?", font=font, fill=MIECZ_INK, anchor="mm")
@@ -177,10 +180,16 @@ STANDEE_WIDTH = 249
 STANDEE_TITLE = (43, 106)        # y range of the printed name
 STANDEE_SEED = (222, 150)        # a point in the white field, between the two
 
-# Goblin's figure spans y140-658 inside a field of y21-703, so it is centred in
-# the space BELOW the name (centre 404), not in the whole field (centre 362),
-# and stands about 0.87 of that space tall. The mark is matched to that.
-STANDEE_FILL = 0.78
+# The mark is centred in the white field itself, ignoring where the name sits —
+# that is what reads as "centred" next to the other figures, even though those
+# figures technically hang a little lower.
+#
+# 0.60 of the field height. It was 0.80, which the clearance below then trimmed
+# to 484px; this is 15% off that, and small enough that the clearance no longer
+# binds — so the size is now this number alone, and changing it changes the mark
+# by exactly that proportion.
+STANDEE_FILL = 0.60
+STANDEE_TITLE_GAP = 14
 
 
 def interior(im):
@@ -225,8 +234,9 @@ def build_standee():
     # The field's own extent, so the mark cannot drift if the scan is recut.
     rows = [y for y in range(st.height) if any(shape.getpixel((x, y)) for x in range(st.width))]
     span = [x for x in range(st.width) if shape.getpixel((x, (rows[0] + rows[-1]) // 2))]
-    box = (min(span), STANDEE_TITLE[1], max(span), rows[-1])
-    mark(draw, box, STANDEE_FILL, by_ink=True)
+    field = (min(span), rows[0], max(span), rows[-1])
+    clearance = round(((field[1] + field[3]) / 2 - STANDEE_TITLE[1] - STANDEE_TITLE_GAP) * 2)
+    mark(draw, field, STANDEE_FILL, by_ink=True, cap=clearance)
 
     title = fitted_font(round((STANDEE_TITLE[1] - STANDEE_TITLE[0]) * 0.72))
     outlined(
