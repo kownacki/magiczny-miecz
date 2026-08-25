@@ -70,7 +70,11 @@ export function PlayersDrawer({
     <aside
       role="dialog"
       aria-label="Gracze"
-      className={`fixed inset-y-0 right-0 flex w-full max-w-sm flex-col border-l border-ochre/40 bg-night shadow-[-8px_0_30px_rgba(0,0,0,0.6)] ${LAYER.players}`}
+      // Absolute inside the layout's content row rather than fixed to the
+      // window, so it begins under the bar instead of beside it. Its z still
+      // counts globally — the row makes no stacking context of its own — so it
+      // is over the modals exactly as intended.
+      className={`absolute inset-y-0 right-0 flex w-full max-w-sm flex-col border-l border-ochre/40 bg-night shadow-[-8px_0_30px_rgba(0,0,0,0.6)] ${LAYER.players}`}
     >
       <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-edge px-3 py-2">
         <h2 className="text-[11px] uppercase tracking-widest text-ochre">

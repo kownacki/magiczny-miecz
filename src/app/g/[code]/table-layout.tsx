@@ -27,10 +27,13 @@ export function TableLayout({
   header,
   map,
   right,
+  drawer,
 }: {
   header: React.ReactNode;
   map: React.ReactNode;
   right: React.ReactNode;
+  /** Laid over the columns, below the bar — see the note on the row below. */
+  drawer?: React.ReactNode;
 }) {
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
@@ -49,7 +52,12 @@ export function TableLayout({
       >
         {header}
       </header>
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      {/* `relative`, so a drawer can be laid over the columns and start *below*
+          the bar rather than beside it. Overlapping the two put the roster's
+          own header level with the bar's right-hand end and hid Karty and the
+          console behind it — the same mistake as the bar covering the Karty
+          library, made the other way round. */}
+      <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* The short side of the ratio, and the board is sized to fill it
             rather than to a fixed width: on a laptop the height is what runs
             out first, so this is a ceiling the board rarely reaches. */}
@@ -60,6 +68,7 @@ export function TableLayout({
           {map}
         </section>
         <section className="min-h-0 flex-1 overflow-y-auto p-3 lg:w-[61.8%]">{right}</section>
+        {drawer}
       </div>
     </main>
   );

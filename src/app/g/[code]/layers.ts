@@ -17,6 +17,13 @@
  * out. Those answer questions a player has *while* stuck in a fight, and half
  * of them exist to unstick it.
  *
+ * Which is why the bar sits above the modals and *below* the table surfaces it
+ * opens. Putting it above those instead was the first way of getting this
+ * wrong: the bar is opaque and full-width, so it sliced the top off the Karty
+ * library and took its search box and its `zamknij` with it. A surface that
+ * covers the screen and carries its own way out does not want a bar across it;
+ * it wants to be the thing you are looking at until you close it.
+ *
  * Anything added here belongs above `modal` if somebody would want it while a
  * modal is open, and below if they would not.
  */
@@ -27,12 +34,12 @@ export const LAYER = {
   banner: "z-30",
   /** The game happening: a fight, a drawn card, a field, a question. */
   modal: "z-50",
-  /** Every card in the box, to look one up. */
-  library: "z-[60]",
+  /** The table's own bar: code, decks, Karty, Gracze, the way out. */
+  bar: "z-[60]",
   /** Who is at this table, and what the host can do about them. */
   players: "z-[70]",
-  /** The table's own bar: code, decks, Karty, Gracze, the way out. */
-  bar: "z-[80]",
+  /** Every card in the box, to look one up. */
+  library: "z-[80]",
   /** The test console, which exists to escape everything above. */
   console: "z-[110]",
   /**

@@ -1027,36 +1027,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
 
-      {players && (
-        <PlayersDrawer
-          // Every seat, in seat order, this one included — see the note on the
-          // component about why the roster it replaces left you out.
-          seats={[...seats].sort((a, b) => a.seat_index - b.seat_index).map(asPublicSeat)}
-          characters={CHARACTERS}
-          activeSeatIndex={game.active_seat}
-          mySeatId={mySeat?.id ?? null}
-          amHost={mySeat?.is_host === true}
-          room={seats.length < MAX_SEATS}
-          busy={busy}
-          onClose={() => setPlayers(false)}
-          onInspect={setInspectingCard}
-          onClaim={mySeatIndex === null ? claimSeat : undefined}
-          onKick={
-            mySeat?.is_host ? (seat) => post("leave", { seatId: seat.id }) : undefined
-          }
-          onPassHost={
-            mySeat?.is_host ? (seat) => post("host", { seatId: seat.id }) : undefined
-          }
-          onJoin={
-            mySeatIndex === null
-              ? () => {
-                  setPlayers(false);
-                  join("");
-                }
-              : undefined
-          }
-        />
-      )}
       {/* Offered, never forced — 4.4 says *może*. Opened from the line on the
           dead character's card and closed back to it.
 
@@ -1392,6 +1362,38 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     <>
       {overlays}
       <TableLayout
+        drawer={
+          players ? (
+            <PlayersDrawer
+              // Every seat, in seat order, this one included — see the note on the
+              // component about why the roster it replaces left you out.
+              seats={[...seats].sort((a, b) => a.seat_index - b.seat_index).map(asPublicSeat)}
+              characters={CHARACTERS}
+              activeSeatIndex={game.active_seat}
+              mySeatId={mySeat?.id ?? null}
+              amHost={mySeat?.is_host === true}
+              room={seats.length < MAX_SEATS}
+              busy={busy}
+              onClose={() => setPlayers(false)}
+              onInspect={setInspectingCard}
+              onClaim={mySeatIndex === null ? claimSeat : undefined}
+              onKick={
+                mySeat?.is_host ? (seat) => post("leave", { seatId: seat.id }) : undefined
+              }
+              onPassHost={
+                mySeat?.is_host ? (seat) => post("host", { seatId: seat.id }) : undefined
+              }
+              onJoin={
+                mySeatIndex === null
+                  ? () => {
+                      setPlayers(false);
+                      join("");
+                    }
+                  : undefined
+              }
+            />
+          ) : null
+        }
         header={
           <>
             <div className="flex items-baseline gap-3">
