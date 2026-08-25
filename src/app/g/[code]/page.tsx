@@ -1188,17 +1188,42 @@ function Hand({
             )}
           </ItemSlot>
           ))}
-        {Number.isFinite(limit) &&
-          Array.from({ length: Math.max(0, limit - packed) }, (_, i) => (
-            <span
+        {/* Free places, built from the same component and wearing the same
+            colours as the body's: green while a card that would fit is in the
+            air, red when nothing more will. An empty place is a place, so it
+            has no business being a differently-sized span with a highlight of
+            its own. */}
+        {(() => {
+          // A card is in the air if it is on the cursor or being dragged over.
+          const moving = carried !== null || dragOver;
+          // No limit still shows one place, so there is somewhere to aim.
+          const free = Number.isFinite(limit) ? Math.max(0, limit - packed) : 1;
+
+          // Nothing will fit. Said while the card is still in the air rather
+          // than as a refusal after it lands (5.4, 5.6).
+          if (free === 0) {
+            return moving ? (
+              <ItemSlot item={null} label="pełny" glyph="✕" tone="rejects" disabled />
+            ) : null;
+          }
+
+          return Array.from({ length: free }, (_, i) => (
+            <ItemSlot
               key={`wolne-${i}`}
-              className={`flex h-[131px] w-[92px] items-center justify-center rounded border border-dashed text-[11px] transition ${
-                dragOver ? "border-ochre/70 bg-ochre/10 text-ochre/70" : "border-edge/60 text-muted/40"
-              }`}
-            >
-              wolne
-            </span>
-          ))}
+              item={null}
+              label="wolne"
+              glyph="+"
+              tone={moving ? "accepts" : "empty"}
+              // Clicking an empty place puts down what is carried — the same
+              // gesture that works on the body.
+              disabled={!canAct || carried === null}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (carried) onPlaceInPack();
+              }}
+            />
+          ));
+        })()}
         {seat.hidden_count > 0 && <CardBack count={seat.hidden_count} />}
       </div>
 
