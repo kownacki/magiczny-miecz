@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import { watchRevision } from "@/lib/game/liveRevision";
@@ -197,6 +197,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [busy, setBusy] = useState(false);
 
   const [mySeatIndex, setMySeatIndex] = useState<number | null>(null);
+  /** The newest revision this device has rendered — see `refresh`. */
+  const seenRevision = useRef(-1);
+  /** When each optimistic move was made, so a lost one cannot pin a card forever. */
+  const movedAt = useRef<Record<string, number>>({});
   const router = useRouter();
 
   const refresh = useCallback(async () => {
@@ -205,6 +209,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const response = await fetch(`/api/games/${code}${query}`);
     if (!response.ok) return setError((await response.json()).error ?? "Błąd");
     const data = await response.json();
+
+    // Never go backwards. The poll and a move's own refetch are in flight at
+    // the same time, and a poll that started *before* the write can land after
+    // it — putting the old state back and snapping the card the player just
+    // moved into its old place, until the next tick moved it again. The
+    // revision counter already numbers every change the table makes, so an
+    // answer older than what is on screen is simply dropped.
+    if (data.game.revision < seenRevision.current) return;
+    seenRevision.current = data.game.revision;
+
     setGame(data.game);
     setSeats(data.seats);
     setTaking((current) => {
@@ -214,6 +228,25 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           // Gone once the server says the same thing — and gone anyway once the
           // game is running, where a seat holds whatever it was dealt.
           return seat ? seat.character_id !== characterId : false;
+        }),
+      );
+      return Object.keys(still).length === Object.keys(current).length ? current : still;
+    });
+    // An optimistic move stands until the server reports the same place. Timing
+    // it to the request instead meant the card fell back the moment a stale
+    // answer arrived, which is the same race in a different coat.
+    setMoved((current) => {
+      const still = Object.fromEntries(
+        Object.entries(current).filter(([holdingId, slot]) => {
+          const held = (data.seats as Seat[])
+            .flatMap((seat) => seat.holdings)
+            .find((candidate) => candidate.id === holdingId);
+          if (!held) return false;
+          // Waiting on agreement, but not forever: a request that never arrived
+          // would otherwise hold the card in a place the table does not know
+          // about for the rest of the game. Four seconds is two polls.
+          if (Date.now() - (movedAt.current[holdingId] ?? 0) > 4000) return false;
+          return (held.slot ?? null) !== slot;
         }),
       );
       return Object.keys(still).length === Object.keys(current).length ? current : still;
@@ -521,6 +554,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     }
 
     setError(null);
+    movedAt.current[holdingId] = Date.now();
     setMoved((current) => ({ ...current, [holdingId]: slot }));
     try {
       const response = await fetch(`/api/games/${code}/holdings`, {
@@ -533,16 +567,19 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           token: readSeatToken(code),
         }),
       });
-      if (!response.ok) setError((await response.json().catch(() => ({}))).error ?? null);
+      if (!response.ok) {
+        // Refused, so put it back where it was — and say why.
+        setError((await response.json().catch(() => ({}))).error ?? null);
+        setMoved((current) => {
+          const next = { ...current };
+          delete next[holdingId];
+          return next;
+        });
+      }
       await refresh();
-    } finally {
-      // Dropped after the refresh, so the card never flickers back to where it
-      // was on its way to where it now is.
-      setMoved((current) => {
-        const next = { ...current };
-        delete next[holdingId];
-        return next;
-      });
+    } catch {
+      // A dropped request leaves the card where the player put it; the next
+      // poll will move it back if the server never heard.
     }
   }
 

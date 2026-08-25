@@ -996,10 +996,18 @@ export async function takeCard(
   cardId: string,
 ): Promise<void> {
   const game = await loadGame(gameId);
+  // Both decks. 21.1 has a character take the Wyposażenie card for a Magiczny
+  // Miecz or a Tarcza Tolimana, and 21.3 lets either be left on the board like
+  // anything else — but the Tarcza Tolimana exists *only* on the equipment
+  // sheet, so looking in the event deck alone made the one card the Zamek
+  // Bestii requires impossible to pick up.
   const card = EVENTS.find((c) => c.id === cardId);
-  if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+  const equipment = card ? null : (items as Item[]).find((i) => i.id === cardId);
+  if (!card && !equipment) throw new Error(`Nieznana karta: ${cardId}`);
 
-  const kind = kindForCard(card);
+  // Everything on the Wyposażenie sheet is a Przedmiot; only the event deck
+  // needs its class read to tell an item from a friend from a trophy.
+  const kind = card ? kindForCard(card) : "item";
   if (!kind) throw new Error("Tej karty nie można zabrać ze sobą.");
 
   /**
@@ -1031,7 +1039,7 @@ export async function takeCard(
   // you take it and then discover you may not — you never take it, and it stays
   // where it lies. Checked here rather than only when a Natura changes, which
   // was the half of it that existed.
-  if (!mayHold({ forbiddenTo: forbiddenFor(card) }, (taker?.nature ?? null) as Nature | null)) {
+  if (card && !mayHold({ forbiddenTo: forbiddenFor(card) }, (taker?.nature ?? null) as Nature | null)) {
     throw new Error(`${card.name} — twoja Natura nie pozwala ci tego nieść (5.3).`);
   }
 
@@ -2168,7 +2176,7 @@ export async function equipCard(
     if (carriedCount(mine, "slotowy") >= carryLimit(mine, "slotowy")) {
       throw new Error("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
     }
-    await db.from("holdings").update({ slot: null }).eq("id", holdingId);
+    await putInSlot(holdingId, null);
     await bumpRevision(gameId);
     return;
   }
@@ -2191,10 +2199,26 @@ export async function equipCard(
     (h) => h.seat_id === held.seat_id && h.slot === slot && h.id !== holdingId,
   );
   if (occupant) {
-    await db.from("holdings").update({ slot: null }).eq("id", occupant.id);
+    await putInSlot(occupant.id, null);
   }
-  await db.from("holdings").update({ slot }).eq("id", holdingId);
+  await putInSlot(holdingId, slot);
   await bumpRevision(gameId);
+}
+
+/**
+ * Moves one card into a place, and says so if it did not.
+ *
+ * Supabase returns write errors in the result rather than throwing, so an
+ * unchecked update is a write that can fail in silence — which is exactly what
+ * happened when the Magiczny Miecz and the Tarcza Tolimana were given places of
+ * their own: the column's CHECK still listed the nine gear slots, every equip
+ * of a relic violated it, and the app reported success and changed nothing. A
+ * silent write is worse than a failing one; the player is told their shield is
+ * on and it is not.
+ */
+async function putInSlot(holdingId: string, slot: Slot | null): Promise<void> {
+  const { error } = await db.from("holdings").update({ slot }).eq("id", holdingId);
+  if (error) throw new Error(`Nie udało się przenieść Przedmiotu: ${error.message}`);
 }
 
 /**
