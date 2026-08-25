@@ -2279,7 +2279,12 @@ const STAT_COLOUR: Record<string, string> = {
 };
 
 function Tokens({ stat, points, label }: { stat: string; points: number; label: string }) {
-  const SIZE = 20;
+  /**
+   * How big a żeton is drawn, and the number everything else on the rail comes
+   * off. The pictures are about 100px square, so this is a fifth of what is
+   * there and stays sharp on any screen worth having.
+   */
+  const SIZE = 18;
   if (stat === "zloto") {
     /**
      * Money is a stack, not a row.
