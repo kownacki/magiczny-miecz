@@ -18,6 +18,8 @@ import {
   rollForMove,
   setFightPlayerTotal,
   resolveBridgeOrdeal,
+  resolveDrawnCard,
+  resolveFieldOffer,
 } from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
 
@@ -154,6 +156,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "fight-done":
         await resolveFight(game.id);
         break;
+      case "pole-tabela":
+        // The app throws the die and applies the row. What comes back says
+        // which face and what it did, because the player did not watch it.
+        return NextResponse.json(
+          await resolveFieldOffer(
+            game.id,
+            String(body.offer ?? ""),
+            typeof body.value === "number" ? body.value : null,
+          ),
+        );
+      case "karta-efekt":
+        // The card's own script, applied by the app for the same reason the
+        // field's table is.
+        return NextResponse.json(
+          await resolveDrawnCard(
+            game.id,
+            String(body.cardId ?? ""),
+            typeof body.value === "number" ? body.value : null,
+          ),
+        );
       case "end":
         await finishTurn(game.id);
         break;

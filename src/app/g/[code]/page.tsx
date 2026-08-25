@@ -33,6 +33,7 @@ import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
+import { TurnQueue } from "./turn-queue";
 import { momentOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
@@ -95,6 +96,8 @@ interface Seat {
   zloto: number;
   nature: string | null;
   turns_lost: number;
+  /** Turn the Kamień wears off on (20.1). Null when not petrified. */
+  stone_until_turn: number | null;
   eliminated: boolean;
   /** Set when the player behind this seat walked away; the character stays. */
   abandoned_at: string | null;
@@ -739,6 +742,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         }
         right={
           <div className="flex flex-col gap-3">
+            {/* First thing in the column, above everything a player acts on:
+                whose turn it is, and who is being passed over on the way. */}
+            <TurnQueue
+              seats={seats.map((seat) => ({
+                seatIndex: seat.seat_index,
+                playerName: seat.player_name,
+                characterId: seat.character_id,
+                turnsLost: seat.turns_lost,
+                stoneUntilTurn: seat.stone_until_turn,
+                eliminated: seat.eliminated,
+              }))}
+              activeSeat={game.active_seat}
+              turn={game.turn}
+              mySeatIndex={mySeatIndex}
+            />
             {error && <p className="text-sm text-vermilion">{error}</p>}
             {notice && !error && (
               <p className="rounded border border-ochre/30 bg-panel/60 px-3 py-2 text-sm text-ochre">
@@ -1668,6 +1686,11 @@ function describeResult(result: unknown): string | null {
     enemyTotal?: number;
     healed?: number;
     paid?: number;
+    /** A field's die table or a card's script, thrown and applied by the server. */
+    offer?: string;
+    card?: string;
+    face?: number;
+    did?: string[];
   };
   // A spell has to be announced loudly: 9.6 reaches its victim anywhere on the
   // board, so the person it lands on may not be looking at this turn at all.
@@ -1706,6 +1729,15 @@ function describeResult(result: unknown): string | null {
       return `Cerber: ${roll(data.dice)} — tracisz ${data.lifeLost} Życia.`;
     case "straznik":
       return `${data.outcome}: ${roll(data.dice)} — jego siła to ${data.enemyTotal}. Nie przejdziesz, póki nie zginie.`;
+  }
+
+  // A die table the app rolled and acted on. The player pressed one button and
+  // did not see either half, so both are said: the face, and what it did.
+  const source = data.offer ?? data.card;
+  if (source && (typeof data.face === "number" || data.did)) {
+    const did = data.did?.length ? data.did.join(", ") : "nic się nie dzieje";
+    const rolled = typeof data.face === "number" ? `wypadło ${data.face} — ` : "";
+    return `${source}: ${rolled}${did}.`;
   }
 
   // Paying a healer: what the money and 4.7 between them actually bought.

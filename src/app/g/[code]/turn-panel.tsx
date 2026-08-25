@@ -7,6 +7,7 @@ import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
 import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { isSettled } from "@/lib/engine/resolve";
 import { goodsId } from "@/lib/engine/goods";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import {
@@ -222,6 +223,7 @@ export function TurnPanel({
           fieldCardIds={fieldCardIds ?? []}
           busy={busy}
           typedRolls={mode !== "simulation"}
+          onRollOffer={(offer) => onAction({ action: "pole-tabela", offer })}
           purse={purse}
           stock={stock}
           sellable={sellable}
@@ -1357,6 +1359,8 @@ function DrawnCards({
                 script={scriptFor(card.id)!}
                 cardName={card.name}
                 busy={busy}
+                simulated={!typedRolls}
+                onResolve={() => onAction({ action: "karta-efekt", cardId: card.id })}
                 onSuggestion={onSuggestion}
               />
             )}
@@ -1413,13 +1417,22 @@ function ScriptedCard({
   script,
   cardName,
   busy,
+  simulated,
+  onResolve,
   onSuggestion,
 }: {
   script: CardScript;
   cardName: string;
   busy: boolean;
+  /** The app carries the card out rather than listing what you should do. */
+  simulated: boolean;
+  onResolve: () => void;
   onSuggestion: Props["onSuggestion"];
 }) {
+  // Everything the app can do without asking. What is left — a `wybor`, which
+  // Przedmiot to give up — comes back from the server as `pending` and is asked
+  // then, so the card is read here and decided there.
+  const settled = isSettled(script.effect);
   return (
     <div className="mt-2 rounded border border-edge/60 bg-night/40 p-2">
       {script.optional && (
@@ -1432,7 +1445,18 @@ function ScriptedCard({
         cardName={cardName}
         busy={busy}
         onSuggestion={onSuggestion}
+        // Read, not pressed: the button below is what applies it.
+        applied={simulated}
       />
+      {simulated && settled && (
+        <button
+          disabled={busy}
+          onClick={onResolve}
+          className="mt-2 rounded border border-ochre/60 px-3 py-1 text-xs text-ochre transition hover:bg-edge disabled:opacity-50"
+        >
+          {script.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
+        </button>
+      )}
       <p className="mt-2 border-t border-edge/60 pt-1 text-[11px] text-ochre/80">
         {describeDisposition(script.disposition)}
       </p>
@@ -1454,12 +1478,22 @@ function EffectControls({
   busy,
   onSuggestion,
   prefix = "",
+  applied = false,
 }: {
   effect: Effect;
   cardName: string;
   busy: boolean;
   onSuggestion: Props["onSuggestion"];
   prefix?: string;
+  /**
+   * Whether the app has already carried this out.
+   *
+   * When it has, the outcomes are read, not pressed: a button that applies
+   * "−1 Złota" a second time is not an affordance, it is a trap. Set for every
+   * die table a simulation rolls, where the server applied the row before the
+   * page ever saw it.
+   */
+  applied?: boolean;
 }) {
   const stated = (text: string) => (
     <p className="text-[11px] text-muted">
@@ -1482,6 +1516,7 @@ function EffectControls({
               busy={busy}
               onSuggestion={onSuggestion}
               prefix={prefix}
+              applied={applied}
             />
           ))}
         </div>
@@ -1516,6 +1551,7 @@ function EffectControls({
                   cardName={cardName}
                   busy={busy}
                   onSuggestion={onSuggestion}
+                  applied={applied}
                 />
               </li>
             ))}
@@ -1527,6 +1563,7 @@ function EffectControls({
       if (effect.target && effect.target !== "ty") {
         return stated(`${label} — ${TARGET_LABEL[effect.target]}`);
       }
+      if (applied) return stated(label);
       return (
         <button
           disabled={busy}
@@ -1540,6 +1577,7 @@ function EffectControls({
     case "uzdrow":
       return stated(`uzdrowienie do ${effect.upTo} punktów Życia (nie ponad start, 4.7)`);
     case "tura-stracona":
+      if (applied) return stated(`−${effect.turns} tura`);
       return effect.target && effect.target !== "ty" ? (
         stated(
           `−${effect.turns} tura — ${TARGET_LABEL[effect.target]}` +
@@ -1724,6 +1762,7 @@ function FieldServices({
   fieldCardIds,
   busy,
   typedRolls,
+  onRollOffer,
   purse,
   stock,
   sellable,
@@ -1734,6 +1773,7 @@ function FieldServices({
   fieldCardIds: string[];
   busy: boolean;
   typedRolls: boolean;
+  onRollOffer: (offer: string) => void;
   purse?: { zloto: number; zycie: number };
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
@@ -1773,6 +1813,7 @@ function FieldServices({
             name={offer.name}
             busy={busy}
             typedRolls={typedRolls}
+            onRollOffer={() => onRollOffer(offer.name)}
             gold={gold}
             zycie={purse?.zycie ?? 0}
             stock={stock}
@@ -1792,6 +1833,7 @@ function ServiceEffect({
   name,
   busy,
   typedRolls,
+  onRollOffer,
   gold,
   zycie,
   stock,
@@ -1803,6 +1845,7 @@ function ServiceEffect({
   name: string;
   busy: boolean;
   typedRolls: boolean;
+  onRollOffer?: () => void;
   gold: number;
   zycie: number;
   stock?: Record<string, number>;
@@ -1820,6 +1863,7 @@ function ServiceEffect({
             name={name}
             busy={busy}
             typedRolls={typedRolls}
+            onRollOffer={onRollOffer}
             gold={gold}
             zycie={zycie}
             stock={stock}
@@ -1843,6 +1887,7 @@ function ServiceEffect({
         name={name}
         busy={busy}
         typedRolls={typedRolls}
+        onRollOffer={onRollOffer}
         gold={gold}
         zycie={zycie}
         stock={stock}
@@ -1944,7 +1989,13 @@ function ServiceEffect({
   }
 
   return (
-    <EffectControls effect={effect} cardName={name} busy={busy} onSuggestion={onSuggestion} />
+    <EffectControls
+      effect={effect}
+      cardName={name}
+      busy={busy}
+      onSuggestion={onSuggestion}
+      applied={!typedRolls}
+    />
   );
 }
 
@@ -1953,12 +2004,24 @@ function cardNameOf(cardId: string): string {
   return EVENTS.find((c) => c.id === cardId)?.name ?? cardId;
 }
 
-/** One field's die table, with the face that came up picked out. */
+/**
+ * A field's die table.
+ *
+ * In a simulation this is one button: the server throws the die, applies the
+ * row and says what it did — pressing "−1 Złota" afterwards would be the player
+ * doing the app's job. The six faces stay on screen because they are the board,
+ * and knowing what the Karczma can do to you before you walk in is the game.
+ *
+ * At a physical table it is the older thing: pick the face your own die showed
+ * and apply the row yourself, because there the app is keeping the record and
+ * not making it.
+ */
 function ScriptedRoll({
   effect,
   name,
   busy,
   typedRolls,
+  onRollOffer,
   gold,
   zycie,
   stock,
@@ -1970,6 +2033,8 @@ function ScriptedRoll({
   name: string;
   busy: boolean;
   typedRolls: boolean;
+  /** Asks the server to throw this offer's die and apply the row. */
+  onRollOffer?: () => void;
   gold: number;
   zycie: number;
   stock?: Record<string, number>;
@@ -1978,7 +2043,10 @@ function ScriptedRoll({
   onService?: Props["onService"];
 }) {
   const [rolled, setRolled] = useState<number | null>(null);
-  const faces = rolled === null ? [1, 2, 3, 4, 5, 6] : [rolled];
+  // Nothing is picked out for the player in a simulation: the app rolled and
+  // acted, and the notice above says what came of it. Showing one face as
+  // "yours" here would invite a second, contradictory click.
+  const faces = rolled === null || !typedRolls ? [1, 2, 3, 4, 5, 6] : [rolled];
 
   return (
     <div>
@@ -1986,7 +2054,11 @@ function ScriptedRoll({
         <span className="mr-1 text-[11px] text-muted">Rzuć kostką:</span>
         <button
           disabled={busy}
-          onClick={() => setRolled(1 + Math.floor(Math.random() * 6))}
+          onClick={() =>
+            typedRolls
+              ? setRolled(1 + Math.floor(Math.random() * 6))
+              : onRollOffer?.()
+          }
           className="rounded border border-edge px-2 py-0.5 text-[11px] text-ink transition hover:border-ochre disabled:opacity-50"
         >
           Rzuć
@@ -2023,6 +2095,7 @@ function ScriptedRoll({
               name={name}
               busy={busy}
               typedRolls={typedRolls}
+              onRollOffer={onRollOffer}
               gold={gold}
               zycie={zycie}
               stock={stock}

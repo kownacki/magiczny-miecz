@@ -300,12 +300,24 @@ prawdą, a aplikacja jej zapisem — sędzia, którego nie można poprawić, jes
 gorszy niż żaden. Ten tryb jest jednak **wstrzymany** (`COMPANION_PARKED`), więc
 w praktyce nie da się dziś otworzyć stołu, na którym te kontrolki są widoczne.
 
-**Czego jeszcze brakuje do pełnej symulacji.** Skutki kart wciąż wymagają
-jednego kliknięcia: aplikacja rzuca i pokazuje, co wypadło, ale „+1 Miecza"
-trzeba zatwierdzić. To nie jest ręczna korekta — to karta, tyle że stosowana
-ręką — ale dopóki tak jest, punkt `adjust` pozostaje otwarty także w symulacji.
-Tabele kostki na kartach losują nadal w przeglądarce (`Math.random`), a nie
-przez port, więc nie trafiają do dziennika. Jedno i drugie to następny krok.
+**Skutki wykonuje aplikacja.** Tabela kostki na Obszarze i skrypt Karty są
+rozpatrywane po stronie serwera: jedno naciśnięcie, serwer rzuca, odczytuje
+wiersz i **stosuje go** — a potem mówi, co wypadło i co z tego wynikło.
+Wcześniej trzeba było jeszcze kliknąć „−1 Złota", co jest przepisywaniem, nie
+graniem.
+
+Granicę wyznacza `isSettled` w `src/lib/engine/resolve.ts`: automatyzujemy
+wszystko, co **nie jest decyzją**. „Tracisz 1 Sz. Z." ma jeden wynik i robi to
+aplikacja. „Wybierz jedno", „tracisz 1 Przedmiot wedle własnego wyboru",
+„przenieś się na dowolny Obszar w tym Kręgu" — to zostaje graczowi, bo sędzia,
+który wybiera za ciebie, gra twoją Postacią. Serwer odsyła taką resztę jako
+`pending` i wtedy interfejs pyta dokładnie o to jedno.
+
+**Czego jeszcze brakuje.** Skutki, które sięgają innych graczy (`target` inny
+niż „ty"), wracają jako `pending` — aplikacja stosuje je tylko na siedzeniu,
+które rzucało. Tabele kostki czytane z prozy (`RollTable`, dla Kart bez
+skryptu) losują nadal w przeglądarce. Punkt `adjust` pozostaje otwarty, bo tędy
+idą właśnie te dwa przypadki.
 
 ## Obszary, które handlują
 

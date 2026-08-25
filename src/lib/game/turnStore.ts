@@ -65,12 +65,13 @@ import {
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
-import type { CardClass, EventCard, Item } from "@/data/types";
+import type { CardClass, EventCard, Item, Nature } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { combinedEnemyTotal } from "@/lib/engine/combat";
 import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
 import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { isSettled } from "@/lib/engine/resolve";
 import { goodsId } from "@/lib/engine/goods";
 import type { TurnCard } from "@/lib/engine/state";
 import { beastCombatKind, beastStrength, compareCombat } from "@/lib/engine/combat";
@@ -2468,4 +2469,285 @@ export async function placeSeat(
     true,
   );
   await bumpRevision(gameId);
+}
+
+/**
+ * Opens a fight with a creature a card names rather than one lying on a field.
+ *
+ * The Karczma's "miejscowy osiłek (Miecz 4)" is nowhere in the deck: he is a
+ * line on the board with a number after him. `beginFight` starts from a card
+ * id, so it cannot be used, but everything after that — the totals, the two
+ * dice, 17.4's point of Życie — is the same fight.
+ */
+async function beginNamedFight(
+  gameId: string,
+  name: string,
+  miecz?: number,
+  magia?: number,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (game.turn_state.phase !== "pole") throw new Error("Nie czas na walkę.");
+
+  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
+  const next = startFight(
+    game.turn_state,
+    { cardId: `pole:${name}`, cardName: name, ...(magia !== undefined ? { magia } : { miecz }), settles: [] },
+    { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
+  );
+  await db.from("games").update({ turn_state: next }).eq("id", gameId);
+  await journal(gameId, seat.id, game.turn, "walka-start", { nazwa: name, enemyTotal: miecz ?? magia });
+  await bumpRevision(gameId);
+}
+
+/* ---------------------------------------------------------------------------
+ * Carrying an effect out.
+ *
+ * A simulation that rolls the die and then asks somebody to press "−1 Złota" is
+ * not simulating anything; it is a die with extra steps. This is the other
+ * half: the app rolls, and then it does what the roll says.
+ *
+ * `isSettled` draws the line. Everything that has one outcome happens here;
+ * everything the rules leave to the player — a `wybor`, which Przedmiot to
+ * lose, where in the Krąg to move to — is handed back so the interface can ask
+ * exactly that and nothing else.
+ * ------------------------------------------------------------------------ */
+
+/** What an effect did, in the words the table would use. */
+export interface Resolution {
+  /** One line per thing that happened, for the notice and the journal. */
+  did: string[];
+  /**
+   * The part still owed to a player's decision, if any. Null when the whole
+   * effect has been carried out.
+   */
+  pending: Effect | null;
+}
+
+const STAT_NAME: Record<"miecz" | "magia" | "zycie" | "zloto", string> = {
+  miecz: "Miecza",
+  magia: "Magii",
+  zycie: "Życia",
+  zloto: "Sztuk Złota",
+};
+
+/**
+ * Applies one effect to one seat, as far as it goes.
+ *
+ * Not a pure function and deliberately not in the engine: it writes seats,
+ * draws Zaklęcia and opens fights. What *is* pure is the decision about whether
+ * a thing can be applied at all, and that lives in `resolve.ts` where it can be
+ * tested against every card in the box.
+ */
+export async function applyEffect(
+  gameId: string,
+  seatId: string,
+  effect: Effect,
+  reason: string,
+): Promise<Resolution> {
+  if (!isSettled(effect)) return { did: [], pending: effect };
+
+  switch (effect.op) {
+    case "nic":
+      return { did: ["nic się nie dzieje"], pending: null };
+
+    case "po-kolei": {
+      const did: string[] = [];
+      for (const step of effect.steps) {
+        const step_ = await applyEffect(gameId, seatId, step, reason);
+        did.push(...step_.did);
+      }
+      return { did, pending: null };
+    }
+
+    case "gdy": {
+      const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
+      if (!seat) throw new Error("Nieznane miejsce.");
+      const nature = seat.nature as Nature | null;
+      const holds = effect.warunek.is === "natura"
+        ? nature !== null && effect.warunek.jedna_z.includes(nature)
+        : effect.warunek.is === "ma-zloto"
+          ? seat.zloto > 0
+          : (effect.warunek.stat === "miecz" ? seat.miecz_own : seat.magia_own) <
+            effect.warunek.ponizej;
+      const branch = holds ? effect.to : effect.inaczej;
+      return branch
+        ? applyEffect(gameId, seatId, branch, reason)
+        : { did: ["warunek niespełniony — nic się nie dzieje"], pending: null };
+    }
+
+    case "punkty": {
+      // Only the seat that rolled. A card reaching other players is a `target`
+      // this does not carry, and `isSettled` lets it through because the effect
+      // itself is settled — so it is stopped here, where the seats are known.
+      if (effect.target && effect.target !== "ty") {
+        return { did: [], pending: effect };
+      }
+      await adjust(gameId, seatId, effect.stat, effect.delta, reason);
+      const sign = effect.delta > 0 ? "+" : "−";
+      return {
+        did: [`${sign}${Math.abs(effect.delta)} ${STAT_NAME[effect.stat]}`],
+        pending: null,
+      };
+    }
+
+    case "tura-stracona": {
+      if (effect.target && effect.target !== "ty") return { did: [], pending: effect };
+      await adjust(gameId, seatId, "tury", effect.turns, reason);
+      return { did: [`tracisz ${effect.turns} turę`], pending: null };
+    }
+
+    case "uzdrow": {
+      const healed = await healSeat(gameId, seatId, effect.upTo);
+      return {
+        did: [healed > 0 ? `+${healed} Życia (4.7)` : "Życie już na poziomie początkowym"],
+        pending: null,
+      };
+    }
+
+    case "zaklecie": {
+      const names: string[] = [];
+      for (let i = 0; i < effect.count; i++) names.push(await drawSpell(gameId, seatId));
+      return { did: [`Zaklęcie: ${names.join(", ")}`], pending: null };
+    }
+
+    case "kamien":
+      await turnToStone(gameId, seatId);
+      return { did: ["Zamiana w Kamień (20.1)"], pending: null };
+
+    case "natura":
+      await changeNature(gameId, seatId, effect.na);
+      return { did: [`Natura: ${effect.na === "zla" ? "zła" : effect.na}`], pending: null };
+
+    case "przenies": {
+      if (effect.to.kind !== "pole") return { did: [], pending: effect };
+      await placeSeat(gameId, seatId, effect.to.fieldId, reason);
+      return {
+        did: [`przenosisz się na: ${FIELDS.get(effect.to.fieldId)?.name ?? effect.to.fieldId}`],
+        pending: null,
+      };
+    }
+
+    case "walka": {
+      // A creature the card conjures rather than a card on the field, so the
+      // fight is opened directly with its printed strength.
+      await beginNamedFight(gameId, effect.nazwa, effect.miecz, effect.magia);
+      return { did: [`walka: ${effect.nazwa}`], pending: null };
+    }
+
+    case "ruch-dodatkowy":
+      return { did: ["dodatkowy ruch — rzuć jeszcze raz"], pending: null };
+
+    case "wyciagnij": {
+      for (let i = 0; i < effect.count; i++) await drawCard(gameId, null);
+      return { did: [`wyciągnięto ${effect.count} Kart`], pending: null };
+    }
+
+    default:
+      // `isSettled` said yes and this says how — so a new settled op that
+      // forgets to be handled here is a loud failure rather than a silent one.
+      throw new Error(`Nie wiem, jak wykonać: ${effect.op}`);
+  }
+}
+
+/**
+ * Rolls one of the field's die tables and does what it says.
+ *
+ * The whole point of a simulation: press once, and the app throws the die,
+ * reads the row and applies it. What comes back is the face and a plain-words
+ * account of what happened, because a player who did not see it happen has to
+ * be told — and because at a table somebody always asks to see the die.
+ *
+ * `pending` comes back set when the face lands on something the rules leave to
+ * the player: "wybierz jedno", which Przedmiot to give up, which Obszar in the
+ * Krąg to move to. Then the app has done everything except the deciding, and
+ * the interface asks that one question.
+ */
+export async function resolveFieldOffer(
+  gameId: string,
+  offerName: string,
+  value: number | null,
+): Promise<{ offer: string; face?: number; did: string[]; pending: Effect | null }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (!seat.field_id) throw new Error("Postać nie stoi na Obszarze.");
+  // Rolling a field's table is something you do having arrived on it (15.1), so
+  // it belongs to the field phase. Said here rather than left to whatever the
+  // face happens to do — a face that opens a fight would otherwise report
+  // "nie czas na walkę", which is true and explains nothing.
+  if (game.turn_state.phase !== "pole") {
+    throw new Error("To rozpatruje się po wejściu na Obszar.");
+  }
+
+  const script = fieldScriptFor(seat.field_id);
+  const offer = script?.offers.find((o) => o.name === offerName);
+  if (!offer) throw new Error(`Na tym Obszarze nie ma: ${offerName}`);
+
+  // A table is rolled; anything else is simply carried out.
+  if (offer.effect.op !== "rzut") {
+    const done = await applyEffect(gameId, seat.id, offer.effect, offer.name);
+    return { offer: offer.name, ...done };
+  }
+
+  const face = value ?? 1 + Math.floor(Math.random() * 6);
+  if (!Number.isInteger(face) || face < 1 || face > 6) {
+    throw new Error("Kostka daje wynik od 1 do 6.");
+  }
+  const outcome = offer.effect.faces[face];
+  await journal(gameId, seat.id, game.turn, "pole-tabela", { offer: offer.name, face }, value !== null);
+  const done = await applyEffect(gameId, seat.id, outcome, `${offer.name} (${face})`);
+  await bumpRevision(gameId);
+  return { offer: offer.name, face, ...done };
+}
+
+/**
+ * Resolves a drawn card's script — the same act as rolling a field's table,
+ * for the other place effects come from.
+ *
+ * One press per card rather than one per outcome. A card is a thing that
+ * happens to you, and pressing "−1 Życia" after reading that a card takes a
+ * point of Życie is transcription, not play. Optional cards keep the press,
+ * because "Jeżeli chcesz" means the press is the decision.
+ *
+ * Only cards actually drawn this turn: the id comes from the browser, and the
+ * turn state is what says which cards are on the field in front of you.
+ */
+export async function resolveDrawnCard(
+  gameId: string,
+  cardId: string,
+  value: number | null,
+): Promise<{ card: string; face?: number; did: string[]; pending: Effect | null }> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = activeSeatOf(seats, game);
+  if (game.turn_state.phase !== "pole") throw new Error("Nie ma czego rozpatrywać.");
+  if (!game.turn_state.drawn.some((entry) => entry.cardId === cardId)) {
+    throw new Error("Tej Karty tu nie ma.");
+  }
+
+  const script = scriptFor(cardId);
+  if (!script) throw new Error(`${cardName(cardId)} — tę Kartę rozpatrzcie sami.`);
+
+  if (script.effect.op !== "rzut") {
+    const done = await applyEffect(gameId, seat.id, script.effect, cardName(cardId));
+    await bumpRevision(gameId);
+    return { card: cardName(cardId), ...done };
+  }
+
+  const face = value ?? 1 + Math.floor(Math.random() * 6);
+  if (!Number.isInteger(face) || face < 1 || face > 6) {
+    throw new Error("Kostka daje wynik od 1 do 6.");
+  }
+  await journal(gameId, seat.id, game.turn, "karta-tabela", { cardId, face }, value !== null);
+  const done = await applyEffect(
+    gameId,
+    seat.id,
+    script.effect.faces[face],
+    `${cardName(cardId)} (${face})`,
+  );
+  await bumpRevision(gameId);
+  return { card: cardName(cardId), face, ...done };
 }

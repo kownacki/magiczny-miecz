@@ -247,14 +247,18 @@ because the app rolls, moves and computes everything.
       fight outcomes and the ± on every tracked value are gone from
       `simulation`; companion keeps all of them. See "Tryb symulacji" in
       COVERAGE.md.
-- [ ] **Card effects still need a tap to apply.** The app rolls and shows the
-      face, but "+1 Miecza" is a button somebody presses. Applying an `Effect`
-      automatically is what would finish the simulation — and it is also what
-      would let the `adjust` endpoint be closed to simulation tables, which it
-      cannot be while the suggestion buttons go through it.
-- [ ] **Die tables on cards roll in the browser.** `RollTable` uses
-      `Math.random` locally, so a simulation's own rolls are neither on the
-      server nor in the journal. Everything the turn loop rolls already is.
+- [x] **The app carries effects out.** A field's die table and a card's script
+      are resolved on the server: one press, it rolls, reads the row and applies
+      it, then says what happened. `isSettled` (`resolve.ts`) draws the line —
+      automate everything that is not a decision — and what is left comes back
+      as `pending` for the interface to ask about, which is exactly the set of
+      choices the rules actually give a player.
+- [ ] **Effects that reach other players are still `pending`.** `applyEffect`
+      writes one seat, so a `target` of "wszyscy" or "wszyscy-w-kregu" comes
+      back undone. The Danina and Przesilenie are the cards that want it.
+- [ ] **Prose die tables still roll in the browser.** `RollTable` — the reader
+      for cards with no script — uses `Math.random` locally, so those rolls are
+      neither on the server nor in the journal. Scripted ones are.
 - [ ] **17.9's spoils are still the players'.** The winner of a duel may take a
       Życie, a Przedmiot or a Sztuka Złota; only the Życie is applied.
 
