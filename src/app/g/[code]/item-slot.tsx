@@ -336,9 +336,9 @@ export function ItemSlot({
           {/* Bottom-right, together, because they answer the same question and
               a player scanning a pack should only have to look in one place.
               Clear of the corner button opposite and of the name below. */}
-          {marks.length > 0 && !lifted && (
+          {corners.length > 0 && !lifted && (
             <span className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl bg-night/85 px-1 py-0.5">
-              {marks.map((mark) => (
+              {corners.map((mark) => (
                 <CardMark key={mark} mark={mark} />
               ))}
             </span>
