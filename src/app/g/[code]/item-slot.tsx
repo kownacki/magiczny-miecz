@@ -135,82 +135,111 @@ export function ItemSlot({
   // has gone dim, not as a place you have emptied. It still answers for itself
   // when something is held over it — that question is about where the card in
   // the air would land, not about where it came from.
-  const shown: SlotTone = lifted && (tone === "filled" || tone === "candidate") ? "empty" : tone;
+  const shown: SlotTone =
+    lifted && (tone === "filled" || tone === "candidate") ? "empty" : tone;
 
   return (
-    <figure
+    /**
+     * The place, which is bigger than the picture in it.
+     *
+     * Every pointer question — is this the card being hovered, is this where a
+     * carried one would land, is a drag over it — is asked of this box and not
+     * of the framed picture inside it, and the gap that opens in front of a
+     * card is padding *here* rather than a margin out there. That is the whole
+     * fix for a loop the pack could otherwise not get out of: opening the gap
+     * slides the picture out from under the pointer, which fires its leave,
+     * which closes the gap, which slides the picture back under the pointer.
+     * The card shivers and the gap strobes.
+     *
+     * Asking the outer box instead makes the gap part of what is being hovered,
+     * so the pointer never leaves and the question never changes its own
+     * answer. Anything that grows or moves a slot from now on is safe by
+     * construction rather than by remembering not to listen for the leave.
+     */
+    <div
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      {...handlers}
       // The gap is the whole answer to "where will this land": everything from
       // here rightwards steps aside, which is what a hand does with a card it
       // is about to be given. Tinting the card under the pointer said something
       // else — that it was about to be replaced.
-      style={{ width: SLOT_WIDTH, marginLeft: gapBefore ? SLOT_WIDTH * 0.45 : undefined }}
-      className="flex shrink-0 flex-col items-center gap-1 transition-[margin] duration-150"
+      style={{ paddingLeft: gapBefore ? SLOT_WIDTH * 0.45 : 0 }}
+      className="shrink-0 transition-[padding] duration-150"
     >
-      <div
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onPointerEnter={onPointerEnter}
-        onPointerLeave={onPointerLeave}
-        style={{ width: SLOT_WIDTH, height: SLOT_ART_HEIGHT }}
-        className={`relative overflow-hidden rounded border transition ${TONE[shown]}`}
+      <figure
+        style={{ width: SLOT_WIDTH }}
+        className="flex flex-col items-center gap-1"
       >
-        <button
-          type="button"
-          disabled={disabled}
-          draggable={draggable}
-          onClick={onClick}
-          onDoubleClick={onDoubleClick}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          {...handlers}
-          title={item ? item.card.name : label}
-          className={`block h-full w-full transition ${
-            draggable ? "cursor-grab active:cursor-grabbing" : disabled ? "cursor-default" : "cursor-pointer"
-          } ${lifted ? "opacity-25" : dimmed ? "opacity-45" : ""}`}
+        <div
+          style={{ width: SLOT_WIDTH, height: SLOT_ART_HEIGHT }}
+          className={`relative overflow-hidden rounded border transition ${TONE[shown]}`}
         >
-          {item && art ? (
-            <Image
-              src={art}
-              alt={item.card.name}
-              width={SLOT_WIDTH}
-              height={SLOT_ART_HEIGHT}
-              className="h-full w-full object-cover"
-            />
-          ) : item ? (
-            // No scan in this checkout: the name is what the picture stood for.
-            <span className="flex h-full w-full items-center justify-center p-1 text-center text-[10px] leading-tight text-ink">
-              {item.card.name}
-            </span>
-          ) : (
-            <span className="flex h-full w-full items-center justify-center text-[22px] text-muted/30">
-              {glyph}
+          <button
+            type="button"
+            disabled={disabled}
+            draggable={draggable}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            title={item ? item.card.name : label}
+            className={`block h-full w-full transition ${
+              draggable
+                ? "cursor-grab active:cursor-grabbing"
+                : disabled
+                  ? "cursor-default"
+                  : "cursor-pointer"
+            } ${lifted ? "opacity-25" : dimmed ? "opacity-45" : ""}`}
+          >
+            {item && art ? (
+              <Image
+                src={art}
+                alt={item.card.name}
+                width={SLOT_WIDTH}
+                height={SLOT_ART_HEIGHT}
+                className="h-full w-full object-cover"
+              />
+            ) : item ? (
+              // No scan in this checkout: the name is what the picture stood for.
+              <span className="flex h-full w-full items-center justify-center p-1 text-center text-[10px] leading-tight text-ink">
+                {item.card.name}
+              </span>
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-[22px] text-muted/30">
+                {glyph}
+              </span>
+            )}
+          </button>
+
+          {badge && !lifted && (
+            <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-night/85 px-1 text-center text-[9px] leading-tight text-ochre">
+              {badge}
             </span>
           )}
-        </button>
+          {corner}
+        </div>
 
-        {badge && !lifted && (
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-night/85 px-1 text-center text-[9px] leading-tight text-ochre">
-            {badge}
-          </span>
-        )}
-        {corner}
-      </div>
-
-      <figcaption
-        style={{ width: SLOT_WIDTH }}
-        title={label}
-        className={`truncate text-center text-[9px] leading-tight ${
-          item && !lifted ? "text-muted" : "text-muted/50"
-        }`}
-      >
-        {label}
-      </figcaption>
-      {/* The controls go quiet with the card they belong to: "załóż" under a
+        <figcaption
+          style={{ width: SLOT_WIDTH }}
+          title={label}
+          className={`truncate text-center text-[9px] leading-tight ${
+            item && !lifted ? "text-muted" : "text-muted/50"
+          }`}
+        >
+          {label}
+        </figcaption>
+        {/* The controls go quiet with the card they belong to: "załóż" under a
           card that is currently on the cursor is an offer to do the thing you
           are already in the middle of doing. */}
-      <div className={lifted ? "pointer-events-none opacity-30" : undefined}>{children}</div>
+        <div className={lifted ? "pointer-events-none opacity-30" : undefined}>
+          {children}
+        </div>
+      </figure>
       {preview}
-    </figure>
+    </div>
   );
 }
