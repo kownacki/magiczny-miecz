@@ -22,7 +22,6 @@ import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages"
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { TurnPanel } from "./turn-panel";
-import { CardView, type ShownCard } from "./card-view";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, type TileCard } from "./card-tile";
@@ -549,21 +548,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
 
   // Cards in play this turn. A fight keeps the stack it interrupted, so the
   // panel does not empty out mid-combat.
-  const shown: ShownCard[] = (() => {
-    const state = game.turn_state;
-    const drawn =
-      state?.phase === "pole"
-        ? state.drawn
-        : state?.phase === "walka"
-          ? state.fight.drawn
-          : [];
-    return drawn.map((entry) => ({
-      cardId: entry.cardId,
-      cardClass: entry.cardClass,
-      ref: entry.ref,
-      name: EVENTS.find((c) => c.id === entry.cardId)?.name ?? entry.cardId,
-    }));
-  })();
   const active = seats.find((seat) => seat.seat_index === game.active_seat);
   const playing = game.status === "playing";
 
@@ -858,7 +842,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               />
             )}
 
-            <CardView cards={shown} />
 
             {active && (mySeatIndex === active.seat_index || isTableScreen) && (
               <SeatActions
@@ -1063,7 +1046,13 @@ function Hand({
   );
 
   // After the hooks, which have to run every render whatever is on show.
-  if (shown.length === 0 && seat.hidden_count === 0) return null;
+  //
+  // Your own pack is always drawn, empty or not. It used to disappear until the
+  // first card landed in it, which meant the places you drop things into did
+  // not exist until you already had something to drop — and taking a card off
+  // the body aims at nothing. Somebody else's empty pack is still hidden: that
+  // one is information, and "nothing" is a whole row to say it in.
+  if (!isMine && shown.length === 0 && seat.hidden_count === 0) return null;
 
   return (
     <div className="mt-3 border-t border-edge pt-3">
