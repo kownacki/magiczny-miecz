@@ -33,6 +33,16 @@ export interface JournalLine {
   manual: boolean;
   /** Seat the line is about, for colouring it like the rest of the table. */
   seatIndex: number | null;
+  /**
+   * A round boundary rather than something somebody did.
+   *
+   * Drawn as a heading, and it *is* the heading: the expanded view used to
+   * derive one whenever `turn` changed, which would now print "Tura 4"
+   * immediately above a line saying the same thing. The derived heading stays
+   * for games that were already running when this was added, and for the very
+   * first line, which has no boundary before it.
+   */
+  marker?: true;
 }
 
 const CARD_NAMES = new Map<string, string>([
@@ -276,30 +286,70 @@ export function describe(
 }
 
 /**
- * Everything the end of a turn is worth saying, which is the seats it passed
- * over.
+ * Everything the end of a turn is worth saying.
  *
- * Separate from `describe` because one row becomes several lines: "koniec tury"
- * itself is not news, but each seat that sat out is exactly the thing players
- * kept missing, and it is the same fact the turn bar draws.
+ * Separate from `describe` because one row becomes several lines, in the order
+ * they happened: whoever was passed over, then the handover itself, then — when
+ * play has come back round to the first seat — the number of the round that
+ * just began.
+ *
+ * The handover is one line and not two. "X kończy turę" followed by "Y zaczyna
+ * turę" is the same fact written twice, and at four players it would double the
+ * length of the journal with news nobody reads.
  */
-export function describeSkips(
+export function describeTurnChange(
   entry: JournalEntry,
   seats: readonly JournalSeat[],
 ): JournalLine[] {
   if (entry.kind !== "koniec-tury") return [];
-  const skipped = Array.isArray(entry.payload.skipped) ? entry.payload.skipped : [];
-  return skipped.map((index, at) => {
-    const seat = seats.find((candidate) => candidate.seatIndex === index);
-    return {
-      // Keeps several lines from one row distinct and in order.
-      seq: entry.seq + at / 1000,
+  const data = entry.payload;
+  const seat = seats.find((candidate) => candidate.id === entry.seatId);
+  const skipped = Array.isArray(data.skipped) ? data.skipped : [];
+
+  // Fractions of a seq keep several lines from one row distinct and in the
+  // order they are written here.
+  let at = 0;
+  const at_ = () => entry.seq + at++ / 1000;
+  const lines: JournalLine[] = [];
+
+  for (const index of skipped) {
+    const missed = seats.find((candidate) => candidate.seatIndex === index);
+    lines.push({
+      seq: at_(),
       turn: entry.turn,
-      text: `${nameOf(seat)} traci turę.`,
+      text: `${nameOf(missed)} traci turę.`,
       manual: false,
-      seatIndex: seat?.seatIndex ?? null,
-    };
+      seatIndex: missed?.seatIndex ?? null,
+    });
+  }
+
+  const next = seats.find((candidate) => candidate.seatIndex === data.next);
+  lines.push({
+    seq: at_(),
+    turn: entry.turn,
+    text: next
+      ? `${nameOf(seat)} kończy turę — teraz ${nameOf(next)}.`
+      : `${nameOf(seat)} kończy turę.`,
+    manual: false,
+    seatIndex: seat?.seatIndex ?? null,
   });
+
+  // A round, not a player's turn: the counter that 20.1's three turns of Stone
+  // are measured in. Carries no seat, because it belongs to the whole table —
+  // which is also what makes it read as a heading rather than as somebody's
+  // move.
+  if (data.wrapped) {
+    lines.push({
+      seq: at_(),
+      turn: num(data.turnAfter),
+      text: `Tura ${num(data.turnAfter)}`,
+      manual: false,
+      seatIndex: null,
+      marker: true,
+    });
+  }
+
+  return lines;
 }
 
 /** Every line a viewer may read, oldest first. */
@@ -310,7 +360,7 @@ export function journalLines(
 ): JournalLine[] {
   const lines: JournalLine[] = [];
   for (const entry of entries) {
-    lines.push(...describeSkips(entry, seats));
+    lines.push(...describeTurnChange(entry, seats));
     const one = describe(entry, seats, viewerSeatId);
     if (one) lines.push(one);
   }

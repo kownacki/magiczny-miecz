@@ -1953,7 +1953,15 @@ export async function finishTurn(gameId: string): Promise<void> {
       turn_state: startTurn(),
     })
     .eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "koniec-tury", { next, skipped });
+  // `wrapped` and the number it wrapped to, because the round counter is not
+  // derivable from the row: the journal reads entries in order and has no way
+  // to know that this particular pass was the one that came back round.
+  await journal(gameId, seat.id, game.turn, "koniec-tury", {
+    next,
+    skipped,
+    wrapped,
+    turnAfter: wrapped ? game.turn + 1 : game.turn,
+  });
   await bumpRevision(gameId);
 }
 

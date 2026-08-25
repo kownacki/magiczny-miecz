@@ -1,7 +1,7 @@
 import { describe as suite, expect, it } from "vitest";
 import {
   describe,
-  describeSkips,
+  describeTurnChange,
   journalLines,
   type JournalEntry,
   type JournalSeat,
@@ -157,26 +157,55 @@ suite("Polish agreement", () => {
   });
 });
 
-suite("skipped turns", () => {
-  it("makes one line per seat that sat out", () => {
-    const lines = describeSkips(entry("koniec-tury", { next: 0, skipped: [1, 2] }), SEATS);
+suite("the end of a turn", () => {
+  it("says who was passed over, then who has it now", () => {
+    const lines = describeTurnChange(
+      entry("koniec-tury", { next: 0, skipped: [1, 2] }),
+      SEATS,
+    );
     expect(lines.map((line) => line.text)).toEqual([
       "Ania traci turę.",
       "TROLL traci turę.",
+      "Michał kończy turę — teraz Michał.",
     ]);
   });
 
-  it("says nothing when nobody was passed over", () => {
-    expect(describeSkips(entry("koniec-tury", { next: 1, skipped: [] }), SEATS)).toEqual([]);
+  it("still says the handover when nobody was passed over", () => {
+    const lines = describeTurnChange(entry("koniec-tury", { next: 1, skipped: [] }), SEATS);
+    expect(lines.map((line) => line.text)).toEqual(["Michał kończy turę — teraz Ania."]);
   });
 
-  it("ignores rows that are not the end of a turn", () => {
-    expect(describeSkips(entry("zabranie", { skipped: [1] }), SEATS)).toEqual([]);
+  it("names the round when play comes back round to the first seat", () => {
+    // The counter 20.1's three turns of Stone are measured in, so it is worth
+    // its own line — and it carries no seat, because it belongs to the table.
+    const lines = describeTurnChange(
+      entry("koniec-tury", { next: 0, skipped: [], wrapped: true, turnAfter: 4 }),
+      SEATS,
+    );
+    expect(lines.map((line) => line.text)).toEqual([
+      "Michał kończy turę — teraz Michał.",
+      "Tura 4",
+    ]);
+    expect(lines.at(-1)!.seatIndex).toBeNull();
+    // Drawn as the heading rather than as a move — see `JournalLine.marker`.
+    expect(lines.at(-1)!.marker).toBe(true);
+  });
+
+  it("does not name a round when play merely moved on", () => {
+    const lines = describeTurnChange(
+      entry("koniec-tury", { next: 1, skipped: [], wrapped: false, turnAfter: 3 }),
+      SEATS,
+    );
+    expect(lines.some((line) => /^Tura /.test(line.text))).toBe(false);
+  });
+
+  it("says nothing about rows that are not the end of a turn", () => {
+    expect(describeTurnChange(entry("zabranie", { skipped: [1] }), SEATS)).toEqual([]);
   });
 });
 
 suite("journalLines", () => {
-  it("keeps everything in order, skips included", () => {
+  it("keeps everything in order, turn changes included", () => {
     const lines = journalLines(
       [
         entry("zabranie", { cardId: "magiczny-miecz" }, { seq: 1 }),
@@ -189,6 +218,7 @@ suite("journalLines", () => {
     expect(lines.map((line) => line.text)).toEqual([
       "Michał bierze: MAGICZNY MIECZ.",
       "Ania traci turę.",
+      "Michał kończy turę — teraz Ania.",
       "Michał idzie z Karczma na Kurhan.",
     ]);
   });

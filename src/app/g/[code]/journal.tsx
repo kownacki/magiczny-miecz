@@ -80,7 +80,14 @@ export function Journal({ code, revision }: { code: string; revision: number }) 
                 // Turn headings only in the expanded view, and only where the
                 // turn changes: in a sliver they would cost more room than the
                 // lines they label.
-                heading={expanded && (at === 0 || line.turn !== lines[at - 1].turn)}
+                heading={
+                  expanded &&
+                  !line.marker &&
+                  (at === 0 || line.turn !== lines[at - 1].turn) &&
+                  // A boundary line already says which round this is, in both
+                  // views. Deriving one above it would say it twice.
+                  !lines[at - 1]?.marker
+                }
               />
             ))}
           </ol>
@@ -93,6 +100,19 @@ export function Journal({ code, revision }: { code: string; revision: number }) 
 function Line({ line, heading }: { line: JournalLine; heading: boolean }) {
   const colour =
     line.seatIndex === null ? null : SEAT_COLOURS[line.seatIndex % SEAT_COLOURS.length];
+
+  // A round boundary is not somebody's move, so it is not drawn like one: no
+  // dot, and set like the heading it replaces. It shows in the collapsed sliver
+  // too, which is where the derived heading never appeared and where "which
+  // round are we on" was hardest to answer.
+  if (line.marker) {
+    return (
+      <li className="mt-2 border-t border-edge/60 pt-1 text-[11px] uppercase tracking-wide text-ochre/70 first:mt-0">
+        {line.text}
+      </li>
+    );
+  }
+
   return (
     <>
       {heading && (
