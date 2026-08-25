@@ -27,10 +27,11 @@ import { TurnPanel } from "./turn-panel";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, type TileCard } from "./card-tile";
+import { useCardPreview } from "./card-preview";
 import { CardLibrary } from "./card-library";
 import { tokensFor } from "@/lib/engine/tokens";
 import { DRAG_TYPE, SlotPanel, startHoldingDrag, type SlotItem } from "./slot-panel";
-import { ItemSlot } from "./item-slot";
+import { ItemSlot, SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
 import { CarriedCard, type Carried } from "./carry";
 import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carryLimit } from "@/lib/engine/derive";
@@ -2222,40 +2223,9 @@ function SeatCard({
             card they read as belonging to whatever they happen to be next to. */}
         {seat.effects.length > 0 && (
           <span className="flex shrink-0 items-center gap-1">
-            {seat.effects.map((mark) => {
-              // The card's own illustration where a card is what did this — an
-              // Eliksir is recognised by its picture the way everything else in
-              // this app is. The shape is the fallback, and it is what the
-              // effects with no card behind them get: a lost turn and a barred
-              // Most are rules, not things.
-              const art = cardArtUrl(mark.source);
-              const ring =
-                mark.tone === "dobry"
-                  ? "border-verdigris text-verdigris"
-                  : mark.tone === "zly"
-                    ? "border-vermilion text-vermilion"
-                    : "border-edge text-muted";
-              return (
-                <span
-                  key={mark.id}
-                  title={mark.title}
-                  className={`flex h-5 w-5 shrink-0 cursor-help items-center justify-center overflow-hidden rounded border leading-none ${ring}`}
-                >
-                  {art ? (
-                    <Image
-                      src={art}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="h-full w-full object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="text-[11px]">{mark.glyph}</span>
-                  )}
-                </span>
-              );
-            })}
+            {seat.effects.map((mark) => (
+              <EffectMark key={mark.id} mark={mark} nature={asNature(seat.nature)} />
+            ))}
           </span>
         )}
       </header>
@@ -2638,6 +2608,81 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
  * one would be the third time. The word is still in the title and read aloud to
  * a screen reader; it is just not drawn twice.
  */
+/** Twice what it was, and the shape every other card in the app is drawn in. */
+const MARK_WIDTH = 40;
+
+/**
+ * One thing that is true of a character, beside the name it is true of.
+ *
+ * The card's own illustration where a card is what did it — an Eliksir is
+ * recognised by its picture the way everything else in this app is. A shape is
+ * the fallback and is what the effects with no card behind them get: a lost
+ * turn and a barred Most are rules, not things.
+ *
+ * Hovering opens the whole Karta, the same preview a card in the pack opens,
+ * because the question "what is this doing to me" is answered by the card that
+ * did it. How long it has left rides in where the class label usually goes —
+ * that part belongs to this instance rather than to the card, and it is the
+ * half a player is deciding around.
+ */
+function EffectMark({
+  mark,
+  nature,
+}: {
+  mark: Seat["effects"][number];
+  nature: Nature | null;
+}) {
+  const name = CARD_NAMES.get(mark.source);
+  const card: TileCard | null = name
+    ? {
+        cardId: mark.source,
+        name,
+        text: CARD_TEXTS.get(mark.source),
+        kindLabel: mark.title,
+      }
+    : null;
+  const { handlers, preview } = useCardPreview(card, false, "klasyczny", nature);
+  const art = cardArtUrl(mark.source);
+  // The shape a card is drawn in everywhere else: the illustration export is
+  // 240x155 and every slot in the pack and on the body takes that ratio, so a
+  // mark that took it too stopped needing to crop. A square was cutting the
+  // sides off an Eliksir to make it fit a shape nothing else here uses.
+  const height = Math.round(MARK_WIDTH * (SLOT_ART_HEIGHT / SLOT_WIDTH));
+  const ring =
+    mark.tone === "dobry"
+      ? "border-verdigris text-verdigris"
+      : mark.tone === "zly"
+        ? "border-vermilion text-vermilion"
+        : "border-edge text-muted";
+
+  return (
+    <>
+      <span
+        {...handlers}
+        // The native tooltip only where there is no Karta to open instead: two
+        // things appearing at once over the same mark is one too many.
+        title={card ? undefined : mark.title}
+        style={{ width: MARK_WIDTH, height }}
+        className={`flex shrink-0 cursor-help items-center justify-center overflow-hidden rounded border leading-none ${ring}`}
+      >
+        {art ? (
+          <Image
+            src={art}
+            alt=""
+            width={MARK_WIDTH}
+            height={height}
+            className="h-full w-full object-cover"
+            unoptimized
+          />
+        ) : (
+          <span className="text-[15px]">{mark.glyph}</span>
+        )}
+      </span>
+      {preview}
+    </>
+  );
+}
+
 function RailStat({
   label,
   value,
