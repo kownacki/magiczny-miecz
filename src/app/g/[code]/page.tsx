@@ -2312,11 +2312,12 @@ function SeatCard({
             onInspect={onInspect}
           />
           <CarriedCard carried={carried} />
-          <p className="mt-3 text-xs text-muted">
-            {seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—"}
-          </p>
+          {/* Where the figure is standing is not repeated here. The board says
+              it, the turn header says it for whoever is playing, and the roster
+              says it for everybody else — a fourth copy under your own pack was
+              the one nobody was reading. */}
           {character.abilities.length > 0 && (
-            <details className="mt-2">
+            <details className="mt-3">
               <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted">
                 Zdolności ({character.abilities.length})
                 {abilitiesOfCharacter(asCharacterId(seat.character_id)).length > 0 && (
