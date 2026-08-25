@@ -6,6 +6,8 @@ import { NIEZNAJOMI } from "./scripts/nieznajomi";
 import { PRZEDMIOTY } from "./scripts/przedmioty";
 import { SPOTKANIA } from "./scripts/spotkania";
 import { WROGOWIE } from "./scripts/wrogowie";
+import type { FieldId } from "./board";
+import type { CardId } from "@/data/ids";
 
 /**
  * The second of the three card shapes.
@@ -92,7 +94,7 @@ export type Target =
  * destination, which is why it is a variant rather than a field id.
  */
 export type Destination =
-  | { kind: "pole"; fieldId: string }
+  | { kind: "pole"; fieldId: FieldId }
   | { kind: "dowolne-w-kregu" }
   /** Straight back where the move began (Straż). */
   | { kind: "poczatek-ruchu" }
@@ -101,7 +103,7 @@ export type Destination =
    * of the Mokradła, Przeprawa or Bagna is unoccupied. The choice among them is
    * the players'; what matters is that it is these fields and no others.
    */
-  | { kind: "jedno-z"; fieldIds: readonly string[] };
+  | { kind: "jedno-z"; fieldIds: readonly FieldId[] };
 
 /**
  * What a card does, as an ordered list of operations.
@@ -146,6 +148,13 @@ export type Effect =
        * Character ids the effect passes over. The Zaklinacz Czasu's flute
        * stills everyone "z wyjątkiem Elfa, Hummita, Spryciarza, Czarodziejki
        * i Szczęściarza" — an exemption list is the card, not a footnote to it.
+       *
+       * `string` and not `CharacterId`, which is the only such exception in the
+       * engine. Two of the five the card names — Czarodziejka and Szczęściarz —
+       * are expansion characters and are not in this box, so they are not
+       * `CharacterId`s and never will be while the scope is the base game.
+       * Narrowing this would mean deleting them from the card, and the card is
+       * what is being transcribed. They simply never match, which is correct.
        */
       oprocz?: readonly string[];
     }
@@ -194,7 +203,7 @@ export type Effect =
    * Pointing at the field is more faithful than copying its outcomes, and it
    * cannot drift out of step with the field it borrows from.
    */
-  | { op: "jak-pole"; fieldId: string }
+  | { op: "jak-pole"; fieldId: FieldId }
   /**
    * Puts the *card* somewhere, which is not the same as moving a character.
    *
@@ -231,7 +240,7 @@ export type Condition =
  * Absent is the normal state and always will be for some of the deck. A card
  * with no script shows its text, exactly as before.
  */
-export const SCRIPTS: Readonly<Record<string, CardScript>> = {
+export const SCRIPTS: Readonly<Partial<Record<CardId, CardScript>>> = {
   ...NIEZNAJOMI,
   ...MIEJSCA,
   ...SPOTKANIA,
@@ -240,11 +249,17 @@ export const SCRIPTS: Readonly<Record<string, CardScript>> = {
 };
 
 export function scriptFor(cardId: string): CardScript | null {
-  return SCRIPTS[cardId] ?? null;
+  // The registry's *keys* are checked — a typo in one of the ~250 card names
+  // above is a compile error, which is the whole point. The lookup itself takes
+  // a plain string on purpose: it is fed card ids that came off the wire or out
+  // of the database, and its contract is already "nothing, if I do not know it".
+  // Narrowing every caller instead would move a runtime miss into a runtime
+  // miss with more ceremony.
+  return SCRIPTS[cardId as CardId] ?? null;
 }
 
 /** Every field id a script names, for checking against the board. */
-export function fieldsNamedBy(effect: Effect): string[] {
+export function fieldsNamedBy(effect: Effect): FieldId[] {
   switch (effect.op) {
     case "przenies":
       return effect.to.kind === "pole" ? [effect.to.fieldId] : [];

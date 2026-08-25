@@ -9,7 +9,7 @@ import {
   keptAfterFall,
   trapOutcome,
 } from "./bridge";
-import { FIELDS } from "./board";
+import { FIELDS, type FieldId } from "./board";
 
 describe("Pułapka i Magiczna Pułapka (14.5)", () => {
   it("misses when the dice do not beat the stat", () => {
@@ -107,14 +107,14 @@ describe("Demon Zagłady i Monstrum (14.6)", () => {
   });
 
   it("fights the Demon with Magia and the Monstrum with Miecz", () => {
-    expect(BRIDGE_GUARDIAN["demon-zaglady"].kind).toBe("magiczna");
-    expect(BRIDGE_GUARDIAN["monstrum"].kind).toBe("zwykla");
+    expect(BRIDGE_GUARDIAN["demon-zaglady"]?.kind).toBe("magiczna");
+    expect(BRIDGE_GUARDIAN["monstrum"]?.kind).toBe("zwykla");
   });
 });
 
 describe("the bridge itself", () => {
   it("puts every field on a side, and only fields the board has", () => {
-    for (const [fieldId, side] of Object.entries(BRIDGE_SIDE)) {
+    for (const [fieldId, side] of Object.entries(BRIDGE_SIDE) as [FieldId, string][]) {
       expect(FIELDS.get(fieldId)?.region).toBe("most");
       expect(["miecz", "magia"]).toContain(side);
     }

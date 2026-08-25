@@ -3,7 +3,7 @@ import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
 import { SPELLS, castableNow, momentOf, spellScript } from "./spells";
 
-const IDS = new Set((spells as Spell[]).map((s) => s.id));
+const IDS = new Set<string>((spells as Spell[]).map((s) => s.id));
 
 describe("the spell registry against the real pile", () => {
   it("covers every spell in the box, and invents none", () => {

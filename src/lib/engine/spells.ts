@@ -1,4 +1,5 @@
 /** When a Zaklęcie may be cast, at what, and what casting it does (9.1, 9.6). */
+import type { CardId, SpellId } from "@/data/ids";
 
 /**
  * The third card shape, and the one the app had nothing at all for.
@@ -82,7 +83,7 @@ export interface SpellScript {
  */
 export const CAST_IS_ANNOUNCED = true;
 
-export const SPELLS: Readonly<Record<string, SpellScript>> = {
+export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
   "kamien-filozoficzny": {
     timing: ["poczatek-tury"],
     target: "siebie",
@@ -233,7 +234,7 @@ export const SPELLS: Readonly<Record<string, SpellScript>> = {
 };
 
 export function spellScript(cardId: string): SpellScript | null {
-  return SPELLS[cardId] ?? null;
+  return SPELLS[cardId as SpellId] ?? null;
 }
 
 /**

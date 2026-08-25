@@ -1,6 +1,8 @@
 /** What a card does while you are holding it, as a typed vocabulary rather than prose to be re-read every time. */
 
 import type { Nature } from "@/data/types";
+import type { FieldId } from "./board";
+import type { CardId } from "@/data/ids";
 
 /**
  * Why this exists, and why it is not one big "effect" type.
@@ -47,7 +49,7 @@ export type Ability =
    */
   | {
       kind: "bezpieczny";
-      fields: readonly string[];
+      fields: readonly FieldId[];
       from: "rzut" | "zycie" | "utrata";
       /**
        * Some protections are conditional on who is holding them: the Relikwiarz
@@ -58,7 +60,7 @@ export type Ability =
       natura?: readonly Nature[];
     }
   /** Reliably slips away from Wrogowie on named fields (Elflin, Rusałka). */
-  | { kind: "ucieczka"; fields: readonly string[] }
+  | { kind: "ucieczka"; fields: readonly FieldId[] }
   /**
    * Raises the four-Przedmiot limit of 5.4 by a stated amount — Koń eight, Muł
    * and Tragarz four apiece, Magiczna Sakwa five. Only the Zaprzęg is actually
@@ -87,7 +89,7 @@ export type Ability =
    * ferryman's Sztuka Złota; the Karzeł walks past the Strażnik Magicznych Wrót
    * without buying his way through. One shape, two tolls.
    */
-  | { kind: "bez-oplaty"; fields: readonly string[] }
+  | { kind: "bez-oplaty"; fields: readonly FieldId[] }
   /** Cards this character may not hold at all — the Pustelnik bears no blade. */
   | { kind: "zakazane"; cardIds: readonly string[] }
   /**
@@ -102,7 +104,7 @@ export type Ability =
   | {
       kind: "modyfikator-rzutu";
       gdzie:
-        | { na: "pola"; fields: readonly string[] }
+        | { na: "pola"; fields: readonly FieldId[] }
         | { na: "walke"; rodzaj: "zwykla" | "magiczna" };
       delta: number;
       /** "odjąć lub dodać 1 ... jeśli taka jest wola gracza" — the holder picks. */
@@ -132,7 +134,7 @@ export type Ability =
    */
   | { kind: "przeprawa-wszedzie"; obstacle: "trzesawiska" | "lodowy-las" }
   /** Księżniczka at the Zamek, Władca at the Twierdza: up to two Życia a visit. */
-  | { kind: "uzdrowienie"; field: string; upTo: number }
+  | { kind: "uzdrowienie"; field: FieldId; upTo: number }
   /** Rycerz fights in your place, with his own points and none of your things. */
   | { kind: "walczy-za-ciebie"; miecz: number; magia: number }
   /** The Magiczny Miecz cannot be picked up in the lower ring. */
@@ -149,7 +151,7 @@ export type Ability =
  * players apply it. That is the same progressive-enhancement bargain the rest of
  * the card data makes.
  */
-export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
+export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = {
   // --- equipment ------------------------------------------------------------
   miecz: [{ kind: "punkty", miecz: 1 }],
   sztylet: [{ kind: "punkty", miecz: 1 }],
@@ -335,7 +337,13 @@ export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
 };
 
 export function abilitiesOf(cardId: string): readonly Ability[] {
-  return ABILITIES[cardId] ?? [];
+  // The registry's *keys* are checked — a typo in one of the ~250 card names
+  // above is a compile error, which is the whole point. The lookup itself takes
+  // a plain string on purpose: it is fed card ids that came off the wire or out
+  // of the database, and its contract is already "nothing, if I do not know it".
+  // Narrowing every caller instead would move a runtime miss into a runtime
+  // miss with more ceremony.
+  return ABILITIES[cardId as CardId] ?? [];
 }
 
 /** Every standing rule a seat is currently holding. */
@@ -351,7 +359,7 @@ export function heldAbilities(cardIds: readonly string[]): Ability[] {
  * Przeznaczenia; it does not roll and then ignore the result, because some of
  * those tables do things a skipped roll should not do.
  */
-export function skipsRollAt(abilities: readonly Ability[], fieldId: string): boolean {
+export function skipsRollAt(abilities: readonly Ability[], fieldId: FieldId): boolean {
   return abilities.some(
     (ability) =>
       ability.kind === "bezpieczny" &&
@@ -363,7 +371,7 @@ export function skipsRollAt(abilities: readonly Ability[], fieldId: string): boo
 /** Whether a field's automatic cost is waived — the point, or the thing taken. */
 export function isSpared(
   abilities: readonly Ability[],
-  fieldId: string,
+  fieldId: FieldId,
   from: "zycie" | "utrata",
   /** The holder's Natura, for the protections that depend on it. */
   natura?: Nature | null,
@@ -386,7 +394,7 @@ export function isSpared(
  */
 export function rollModifier(
   abilities: readonly Ability[],
-  at: { fieldId?: string; walka?: "zwykla" | "magiczna" },
+  at: { fieldId?: FieldId; walka?: "zwykla" | "magiczna" },
 ): { delta: number; dowolnyZnak: boolean } {
   let delta = 0;
   let dowolnyZnak = false;
@@ -412,14 +420,14 @@ export function spellsOverLimit(abilities: readonly Ability[]): number {
   );
 }
 
-export function canEscapeAt(abilities: readonly Ability[], fieldId: string): boolean {
+export function canEscapeAt(abilities: readonly Ability[], fieldId: FieldId): boolean {
   return abilities.some(
     (ability) => ability.kind === "ucieczka" && ability.fields.includes(fieldId),
   );
 }
 
 /** Whether this character walks past the toll charged on a given field. */
-export function tollIsWaived(abilities: readonly Ability[], fieldId: string): boolean {
+export function tollIsWaived(abilities: readonly Ability[], fieldId: FieldId): boolean {
   return abilities.some(
     (ability) => ability.kind === "bez-oplaty" && ability.fields.includes(fieldId),
   );

@@ -11,6 +11,8 @@ import {
 import {
   FERRY_TOLL,
   FIELDS,
+  requireFieldId,
+  type FieldId,
   KAMIENNY_MOST,
   type BridgeEntrance,
   isFerry,
@@ -30,7 +32,12 @@ import {
   rollDice,
   trapOutcome,
 } from "@/lib/engine/bridge";
-import { abilitiesOfCharacter, isRandomPick, startingKit } from "@/lib/engine/characters";
+import {
+  abilitiesOfCharacter,
+  asCharacterId,
+  isRandomPick,
+  startingKit,
+} from "@/lib/engine/characters";
 import {
   afterDraw,
   afterMove,
@@ -257,7 +264,7 @@ export async function startGame(gameId: string): Promise<void> {
 
 async function dealStartingKit(gameId: string, seat: SeatRow): Promise<void> {
   if (!seat.character_id) return;
-  const kit = startingKit(seat.character_id);
+  const kit = startingKit(asCharacterId(seat.character_id));
 
   if (kit.items?.length) {
     await db.from("holdings").insert(
@@ -337,9 +344,11 @@ export async function rollForMove(gameId: string, value: number | null): Promise
 
 export async function moveTo(
   gameId: string,
-  fieldId: string,
+  destination: string,
   viaBridge = false,
 ): Promise<void> {
+  // Straight off the request body, so it is checked before it is a field.
+  const fieldId = requireFieldId(destination, "Ruch");
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
@@ -1449,7 +1458,7 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
       ),
       // 8.2: a character's own powers sit alongside what it is carrying, and
       // override the general rules where they disagree.
-      ...abilitiesOfCharacter(seat.character_id),
+      ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
     ];
     const toll = tollIsWaived(abilities, here) ? 0 : FERRY_TOLL;
     if (seat.zloto < toll) {
@@ -1656,7 +1665,7 @@ export async function crossRing(
     const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
     const abilities = [
       ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
-      ...abilitiesOfCharacter(seat.character_id),
+      ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
     ];
     // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
     // of two, which is the difference between a hard crossing and a likely one.
@@ -1710,7 +1719,7 @@ export async function escape(gameId: string, succeeded: boolean): Promise<void> 
     throw new Error("Nie ma przed czym uciekać.");
   }
 
-  const onBridge = ringOf(seat.field_id ?? "") === KAMIENNY_MOST;
+  const onBridge = seat.field_id !== null && ringOf(seat.field_id) === KAMIENNY_MOST;
   const fleeingACard =
     game.turn_state.phase === "walka" && game.turn_state.fight.opponentSeat === undefined;
   if (onBridge && fleeingACard) {
@@ -1988,7 +1997,10 @@ export async function resolveBridgeOrdeal(
 
   // --- Pułapka / Magiczna Pułapka (14.5)
   if (here === "pulapka" || here === "magiczna-pulapka") {
-    const side = BRIDGE_SIDE[here];
+    // Only the eight bridge fields have a side, and this is one of the two
+    // traps, so it has one — but the table says so rather than the code
+    // assuming it.
+    const side = BRIDGE_SIDE[here] ?? "miecz";
     const dice = await roll(3, "pulapka");
     const outcome = trapOutcome(dice, side === "magia" ? totals.magia : totals.miecz, side);
     if (!outcome.fell) {
@@ -2070,7 +2082,12 @@ export async function resolveBridgeOrdeal(
   }
 
   // --- Demon Zagłady / Monstrum (14.6): a fight, not a table.
+  // Everything else on the bridge was handled above, so what is left is one of
+  // the two creatures. Checked rather than assumed: this used to index a
+  // Record<string, …> and would have read `undefined.name` off any field that
+  // slipped through, which is a crash in the middle of somebody's turn.
   const creature = BRIDGE_GUARDIAN[here];
+  if (!creature) throw new Error(`Na tym polu Mostu nie ma nic do rozpatrzenia: ${here}`);
   const dice = await roll(2, "straznik-mostu");
   const strength = guardianStrength(dice);
   const phase = recordGuardianStrength(
@@ -2113,7 +2130,7 @@ async function shieldSaves(
   const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
   const abilities = [
     ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
-    ...abilitiesOfCharacter(seat.character_id),
+    ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
   ];
   const upTo = bestShield(abilities);
   if (upTo === 0) return false;
@@ -2214,7 +2231,7 @@ export async function takeNewCharacter(
  */
 async function offerOn<K extends Effect["op"]>(
   gameId: string,
-  fieldId: string,
+  fieldId: FieldId,
   op: K,
 ): Promise<Extract<Effect, { op: K }> | null> {
   const found: Effect[] = [];
@@ -2375,13 +2392,15 @@ export async function payHealer(
 export async function placeSeat(
   gameId: string,
   seatId: string,
-  fieldId: string,
+  target: string,
   reason: string | null,
 ): Promise<void> {
   const game = await loadGame(gameId);
   const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
-  if (!FIELDS.has(fieldId)) throw new Error(`Nie ma Obszaru: ${fieldId}`);
+  // The other request-body field id. `requireFieldId` is the check that used to
+  // be spelled out here by hand, and now every caller gets the narrow type.
+  const fieldId = requireFieldId(target, "Przestawienie");
 
   await db.from("seats").update({ field_id: fieldId }).eq("id", seatId);
 

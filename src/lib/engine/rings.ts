@@ -1,6 +1,6 @@
 /** The middle and outer rings, derived from the board scan and checked against the rules that constrain them. */
 
-import type { BoardField } from "./board";
+import type { BoardField, FieldId } from "./board";
 
 /**
  * How this order was arrived at, and how far to trust it.
@@ -32,7 +32,7 @@ export const RINGS_VERIFIED_AGAINST_PHYSICAL_BOARD = false;
  * Nemed, which the rulebook names explicitly (p3): walking the middle ring you
  * ignore the bridge squares and use those two instead.
  */
-export const SRODKOWY_KRAG: readonly BoardField[] = [
+export const SRODKOWY_KRAG_FIELDS = [
   { id: "twierdza-strzegaca-drog", name: "Twierdza Strzegąca Dróg", region: "srodkowy" },
   { id: "przelecz-wichrow", name: "Przełęcz Wichrów", region: "srodkowy", draw: 1 },
   { id: "przeprawa-1", name: "Przeprawa I", region: "srodkowy" },
@@ -49,7 +49,10 @@ export const SRODKOWY_KRAG: readonly BoardField[] = [
   { id: "rownina-samotnych-skal", name: "Równina Samotnych Skał", region: "srodkowy", draw: 2 },
   { id: "przeprawa-2", name: "Przeprawa II", region: "srodkowy" },
   { id: "mroczna-polana", name: "Mroczna Polana", region: "srodkowy", draw: 1 },
-];
+] as const;
+
+export const SRODKOWY_KRAG: readonly BoardField[] = SRODKOWY_KRAG_FIELDS;
+
 
 /**
  * Kraina Górnego Kręgu, the outermost ring, clockwise from the top-left corner.
@@ -58,7 +61,7 @@ export const SRODKOWY_KRAG: readonly BoardField[] = [
  * and Wymarłe Miasto on the bottom (11.9) — which is what makes the bridge a
  * straight line across the whole board rather than a spur.
  */
-export const GORNY_KRAG: readonly BoardField[] = [
+export const GORNY_KRAG_FIELDS = [
   { id: "urwisko-1", name: "Urwisko I", region: "gorny" },
   { id: "ruiny-twierdzy", name: "Ruiny Twierdzy", region: "gorny", draw: 1 },
   { id: "swiatynia-tolimana", name: "Świątynia Tolimana", region: "gorny" },
@@ -77,7 +80,10 @@ export const GORNY_KRAG: readonly BoardField[] = [
   { id: "rozstajne-drogi-2", name: "Rozstajne Drogi II", region: "gorny", draw: 1 },
   { id: "kamienny-las", name: "Kamienny Las", region: "gorny", draw: 2 },
   { id: "wilczy-parow", name: "Wilczy Parów", region: "gorny" },
-];
+] as const;
+
+export const GORNY_KRAG: readonly BoardField[] = GORNY_KRAG_FIELDS;
+
 
 /**
  * The only places a character may pass between rings.
@@ -88,8 +94,8 @@ export const GORNY_KRAG: readonly BoardField[] = [
  * makes the rings rings rather than one long track.
  */
 export interface Crossing {
-  from: string;
-  to: string;
+  from: FieldId;
+  to: FieldId;
   /** What must be overcome, per 11.3-11.4 and 11.7-11.8. */
   obstacle: "trzesawiska" | "lodowy-las";
   /**
@@ -127,7 +133,7 @@ export const CROSSINGS: readonly Crossing[] = [
   { from: "dolina-czaszek", to: "przelecz-wichrow", obstacle: "lodowy-las" },
 ];
 
-export function crossingFrom(fieldId: string): Crossing | undefined {
+export function crossingFrom(fieldId: FieldId): Crossing | undefined {
   return CROSSINGS.find((crossing) => crossing.from === fieldId);
 }
 

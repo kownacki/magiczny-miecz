@@ -2,6 +2,7 @@
 
 import { CARD_CLASS, type CardClass, type Nature } from "@/data/types";
 import type { Slot } from "./slots";
+import type { FieldId } from "./board";
 
 export type SeatId = string;
 
@@ -19,7 +20,7 @@ export interface Seat {
   index: number;
   name: string | null;
   characterId: string | null;
-  fieldId: string | null;
+  fieldId: FieldId | null;
 
   mieczOwn: number;
   magiaOwn: number;

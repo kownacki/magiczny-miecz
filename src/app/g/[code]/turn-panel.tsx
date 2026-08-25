@@ -21,7 +21,7 @@ import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom } from "@/lib/engine/rings";
-import { FIELDS, isFerry } from "@/lib/engine/board";
+import { FIELDS, isFerry, type FieldId } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 
@@ -105,7 +105,7 @@ interface Props {
   /** Named when a held card lets this character skip the field's die roll. */
   rollSkippedBy?: string | null;
   /** The field the active character is standing on, for the ring crossing. */
-  fieldId: string | null;
+  fieldId: FieldId | null;
   /** True when this is the shared table screen driving somebody else's turn. */
   actingForOther?: boolean;
   dieSource: string;
@@ -1618,7 +1618,7 @@ function FieldServices({
   onSuggestion,
   onService,
 }: {
-  fieldId: string;
+  fieldId: FieldId;
   fieldCardIds: string[];
   busy: boolean;
   purse?: { zloto: number; zycie: number };

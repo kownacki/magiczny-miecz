@@ -1,12 +1,37 @@
 /** The board graph: which field neighbours which, and how movement runs around a ring. */
 
 import type { Region } from "@/data/types";
-import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
+import { GORNY_KRAG, GORNY_KRAG_FIELDS, SRODKOWY_KRAG, SRODKOWY_KRAG_FIELDS } from "./rings";
 
 export { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
 
+/**
+ * Every field on the board, as a type.
+ *
+ * Derived from the four ring definitions rather than written out beside them,
+ * so there is exactly one list and it cannot drift from the board. What it buys
+ * is that a field id is no longer a `string`: `"step"` is a compile error, and
+ * `"step-2"` is not.
+ *
+ * That distinction is not academic. Six characters shipped for months starting
+ * on a field called `"step"`, produced by slugifying the name printed on their
+ * card. The board has two Steps, their ids are `step-1` and `step-2`, and
+ * nothing anywhere could tell that the value was nonsense — it was a string,
+ * and so was every real id. The figure went on the board at a place that did
+ * not exist and the turn died there.
+ *
+ * The rule that follows: **anything that names a field names a `FieldId`.**
+ * A string that has come from outside — a request body, a database column, a
+ * name slugified off a card — is not one until `asFieldId` has looked at it.
+ */
+export type FieldId =
+  | (typeof DOLNY_KRAG_FIELDS)[number]["id"]
+  | (typeof KAMIENNY_MOST_FIELDS)[number]["id"]
+  | (typeof SRODKOWY_KRAG_FIELDS)[number]["id"]
+  | (typeof GORNY_KRAG_FIELDS)[number]["id"];
+
 export interface BoardField {
-  id: string;
+  id: FieldId;
   name: string;
   region: Region;
   /** How many event cards stopping here makes you draw, if any. */
@@ -55,7 +80,7 @@ export interface BoardField {
  * a character whose MGR reads "Step" starts on Step I, which is the one you
  * would point at if somebody asked.
  */
-export const DOLNY_KRAG: readonly BoardField[] = [
+const DOLNY_KRAG_FIELDS = [
   { id: "karczma", name: "Karczma", region: "dolny" },
   { id: "uroczysko", name: "Uroczysko", region: "dolny", draw: 1 },
   { id: "step-2", name: "Step I", region: "dolny", draw: 1 },
@@ -70,7 +95,10 @@ export const DOLNY_KRAG: readonly BoardField[] = [
   { id: "bezdroza", name: "Bezdroża", region: "dolny", draw: 2 },
   { id: "grod", name: "Gród", region: "dolny" },
   { id: "mrozne-pustkowie", name: "Mroźne Pustkowie", region: "dolny", draw: 1 },
-];
+] as const;
+
+export const DOLNY_KRAG: readonly BoardField[] = DOLNY_KRAG_FIELDS;
+
 
 /**
  * Kamienny Most — nine fields in a straight line through the centre, with
@@ -81,7 +109,7 @@ export const DOLNY_KRAG: readonly BoardField[] = [
  * these squares entirely and only steps onto them from the Górny Krąg (p3,
  * 11.9). Movement here ignores the die — one field per turn (10.3).
  */
-export const KAMIENNY_MOST: readonly BoardField[] = [
+const KAMIENNY_MOST_FIELDS = [
   { id: "wejscie-na-most-a", name: "Wejście na Most I", region: "most" },
   { id: "pulapka", name: "Pułapka", region: "most" },
   { id: "gra-ze-smiercia", name: "Gra ze Śmiercią", region: "most" },
@@ -91,15 +119,45 @@ export const KAMIENNY_MOST: readonly BoardField[] = [
   { id: "cerber", name: "Cerber", region: "most" },
   { id: "magiczna-pulapka", name: "Magiczna Pułapka", region: "most" },
   { id: "wejscie-na-most-b", name: "Wejście na Most II", region: "most" },
-];
+] as const;
+
+export const KAMIENNY_MOST: readonly BoardField[] = KAMIENNY_MOST_FIELDS;
+
 
 /** Every field the engine knows about, by id. */
-export const FIELDS: ReadonlyMap<string, BoardField> = new Map(
+export const FIELDS: ReadonlyMap<FieldId, BoardField> = new Map(
   [...DOLNY_KRAG, ...SRODKOWY_KRAG, ...GORNY_KRAG, ...KAMIENNY_MOST].map((field) => [
     field.id,
     field,
   ]),
 );
+
+/**
+ * The one door a `string` comes through to become a `FieldId`.
+ *
+ * Everything inside the engine names fields by literal, and the compiler checks
+ * those. What it cannot check is a value that arrived from somewhere else — a
+ * `field_id` column, a request body, a name slugified off a character card —
+ * because at that moment it really is just a string. This is where that gets
+ * decided, once, instead of being assumed at every use.
+ *
+ * Prefer `asFieldId` where there is something sensible to do with a bad value,
+ * and `requireFieldId` where there is not: a seat standing on a field that does
+ * not exist has no legal move and no dot on the map, and failing loudly beats
+ * carrying the nonsense forward.
+ */
+export function isFieldId(value: string | null | undefined): value is FieldId {
+  return value !== null && value !== undefined && FIELDS.has(value as FieldId);
+}
+
+export function asFieldId(value: string | null | undefined): FieldId | null {
+  return isFieldId(value) ? value : null;
+}
+
+export function requireFieldId(value: string | null | undefined, what = "Obszar"): FieldId {
+  if (!isFieldId(value)) throw new Error(`${what}: nie ma takiego Obszaru — ${value}`);
+  return value;
+}
 
 /**
  * The numeral this project adds to tell two identical fields apart.
@@ -201,9 +259,9 @@ export function moveOptions(
  * bottom edge.
  */
 export interface BridgeEntrance {
-  from: string;
+  from: FieldId;
   guardian: string;
-  entersAt: string;
+  entersAt: FieldId;
   /** The stat the guardian is fought with, and the one a loss costs (11.11). */
   stat: "miecz" | "magia";
 }
@@ -236,7 +294,7 @@ export const BRIDGE_ENTRANCES: readonly BridgeEntrance[] = [
  */
 export const FERRY_TOLL = 1;
 
-export function isFerry(fieldId: string): boolean {
+export function isFerry(fieldId: FieldId): boolean {
   // The printed name, not the numbered one: both river crossings are a
   // Przeprawa and the numeral is this app's, so matching the full name would
   // have quietly stopped charging the ferryman at either of them.
@@ -244,12 +302,12 @@ export function isFerry(fieldId: string): boolean {
   return field ? printedName(field.name) === "Przeprawa" : false;
 }
 
-export function bridgeEntranceFrom(fieldId: string): BridgeEntrance | undefined {
+export function bridgeEntranceFrom(fieldId: FieldId): BridgeEntrance | undefined {
   return BRIDGE_ENTRANCES.find((entrance) => entrance.from === fieldId);
 }
 
 /** The ring a field belongs to, for movement purposes. */
-export function ringOf(fieldId: string): readonly BoardField[] | null {
+export function ringOf(fieldId: FieldId): readonly BoardField[] | null {
   if (DOLNY_KRAG.some((f) => f.id === fieldId)) return DOLNY_KRAG;
   if (SRODKOWY_KRAG.some((f) => f.id === fieldId)) return SRODKOWY_KRAG;
   if (GORNY_KRAG.some((f) => f.id === fieldId)) return GORNY_KRAG;

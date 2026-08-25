@@ -11,7 +11,7 @@ import {
 } from "./cardScript";
 
 const EVENTS = events as EventCard[];
-const BY_ID = new Map(EVENTS.map((card) => [card.id, card]));
+const BY_ID = new Map<string, EventCard>(EVENTS.map((card) => [card.id, card]));
 
 describe("the script registry against the real deck", () => {
   it("only scripts cards that are actually in the box", () => {

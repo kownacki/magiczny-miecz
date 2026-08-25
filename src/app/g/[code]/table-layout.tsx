@@ -6,6 +6,7 @@ import type { Character } from "@/data/types";
 import { characterStandeeUrl } from "@/lib/engine/cardImages";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
+import { type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
 
 /**
  * The game screen: a board on the left, everything about you on the right.
@@ -49,7 +50,7 @@ export interface PublicSeat {
   id: string;
   seatIndex: number;
   playerName: string | null;
-  characterId: string | null;
+  characterId: SeatCharacter | null;
   fieldName: string;
   miecz: number;
   mieczOwn: number;
@@ -107,7 +108,8 @@ export function OtherPlayers({
       </h2>
       <div className="flex flex-col gap-2">
         {seats.map((seat) => {
-          const character = seat.characterId ? byId.get(seat.characterId) : null;
+          const real = asCharacterId(seat.characterId);
+          const character = real ? (byId.get(real) ?? null) : null;
           // The small card: a thumbnail of the big one is a page of print too
           // small to read, where the standee is the figure on the board.
           const portrait = character ? characterStandeeUrl(character.id) : null;

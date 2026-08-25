@@ -1,4 +1,5 @@
 /** The slotted equipment variant: which Przedmiot goes where on a character. */
+import type { CardId, SpellId } from "@/data/ids";
 
 /**
  * Two ways to hold your things.
@@ -72,7 +73,7 @@ export const SLOT_LABEL: Record<Slot, string> = {
  * Relikwiarz, the Kryształ Magów, the Kryształ Losu, the Zwierciadło
  * Zniszczenia and the Srebrna Strzała.
  */
-export const SLOT_OF: Record<string, readonly Slot[]> = {
+export const SLOT_OF: Partial<Record<CardId, readonly Slot[]>> = {
   // Głowa, tułów, ręce, palec — the four the box has exactly one card for.
   helm: ["glowa"],
   zbroja: ["tulow"],
@@ -112,7 +113,7 @@ export const SLOT_OF: Record<string, readonly Slot[]> = {
 
 /** The places this Przedmiot may be worn; empty when it is only ever carried. */
 export function slotsFor(cardId: string): readonly Slot[] {
-  return SLOT_OF[cardId] ?? [];
+  return SLOT_OF[cardId as CardId] ?? [];
 }
 
 /** Whether this card may be worn in this place. */

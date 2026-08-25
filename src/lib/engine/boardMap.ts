@@ -1,6 +1,6 @@
 /** Where every field sits on the drawn map, and the clockwise sense the printed board actually uses. */
 
-import { DOLNY_KRAG, KAMIENNY_MOST } from "./board";
+import { DOLNY_KRAG, KAMIENNY_MOST, type FieldId } from "./board";
 import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
 
 /**
@@ -23,7 +23,7 @@ import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
 export const VIEW = { width: 1000, height: 1420 } as const;
 
 export interface Cell {
-  id: string;
+  id: FieldId;
   name: string;
   /** Which track it belongs to, for colouring. */
   region: "gorny" | "srodkowy" | "dolny" | "most";
@@ -52,10 +52,10 @@ interface Rect {
  * lap, which is exactly what the test compares against the ring arrays.
  */
 interface Sides {
-  top: string[];
-  right: string[];
-  bottom: string[];
-  left: string[];
+  top: FieldId[];
+  right: FieldId[];
+  bottom: FieldId[];
+  left: FieldId[];
 }
 
 export const GORNY_SIDES: Sides = {
@@ -110,7 +110,7 @@ export const DOLNY_SIDES: Sides = {
 };
 
 /** One clockwise lap of a ring, in the order a figure walks it on the table. */
-export function clockwise(sides: Sides): string[] {
+export function clockwise(sides: Sides): FieldId[] {
   return [...sides.top, ...sides.right, ...sides.bottom, ...sides.left];
 }
 
@@ -154,10 +154,10 @@ function placeRing(
   band: number,
   sides: Sides,
   region: Cell["region"],
-  names: ReadonlyMap<string, string>,
+  names: ReadonlyMap<FieldId, string>,
 ): Cell[] {
   const cells: Cell[] = [];
-  const add = (id: string, x: number, y: number, w: number, h: number) =>
+  const add = (id: FieldId, x: number, y: number, w: number, h: number) =>
     cells.push({
       id,
       name: names.get(id) ?? id,
@@ -215,7 +215,7 @@ function placeBridge(): Cell[] {
   });
 }
 
-const NAMES = new Map<string, string>(
+const NAMES = new Map<FieldId, string>(
   [...GORNY_KRAG, ...SRODKOWY_KRAG, ...DOLNY_KRAG, ...KAMIENNY_MOST].map((f) => [
     f.id,
     f.name,
@@ -229,7 +229,7 @@ export const CELLS: readonly Cell[] = [
   ...placeBridge(),
 ];
 
-export const CELL_BY_ID: ReadonlyMap<string, Cell> = new Map(
+export const CELL_BY_ID: ReadonlyMap<FieldId, Cell> = new Map(
   CELLS.map((cell) => [cell.id, cell]),
 );
 
@@ -239,7 +239,7 @@ export const CELL_BY_ID: ReadonlyMap<string, Cell> = new Map(
  * Drawn as lines because nothing about the two tracks' geometry implies them —
  * they exist only because 11.9 says so.
  */
-export const BRIDGE_LINKS: readonly { from: string; to: string }[] = [
+export const BRIDGE_LINKS: readonly { from: FieldId; to: FieldId }[] = [
   { from: "ruiny-twierdzy", to: "wejscie-na-most-a" },
   { from: "wymarle-miasto", to: "wejscie-na-most-b" },
 ];

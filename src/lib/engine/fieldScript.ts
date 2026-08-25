@@ -1,6 +1,7 @@
 /** What the fields that offer something actually offer, in the same language the cards use. */
 
 import type { Effect } from "./cardScript";
+import type { FieldId } from "./board";
 
 /**
  * Ten of the board's fields are not events but establishments. They print a
@@ -76,7 +77,7 @@ const CZAROWNICA: Effect = {
   },
 };
 
-export const FIELD_SCRIPTS: Readonly<Record<string, FieldScript>> = {
+export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   osada: {
     offers: [
       { name: "Czarownica", effect: CZAROWNICA },
@@ -223,6 +224,6 @@ export const FIELD_SCRIPTS: Readonly<Record<string, FieldScript>> = {
 
 };
 
-export function fieldScriptFor(fieldId: string): FieldScript | null {
+export function fieldScriptFor(fieldId: FieldId): FieldScript | null {
   return FIELD_SCRIPTS[fieldId] ?? null;
 }

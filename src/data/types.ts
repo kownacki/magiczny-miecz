@@ -1,5 +1,7 @@
 /** The shape of every transcribed game component, shared by the engine and the transcription pipeline. */
 
+import type { CharacterId, EventId, ItemId, SpellId } from "./ids";
+
 /**
  * Resolution class, printed as a Roman numeral at the top of every event card.
  * Rule 16 fixes both the names and the order, and rule 15.2 resolves a stack of
@@ -55,7 +57,7 @@ export type Region = "dolny" | "srodkowy" | "gorny" | "most";
 
 export interface EventCard {
   /** Slug of the Polish name, unique across the deck. */
-  id: string;
+  id: EventId;
   name: string;
   cardClass: CardClass;
   /** Sheet and 1-based position it was sliced from, so any card traces back to its scan. */
@@ -73,14 +75,14 @@ export interface EventCard {
 }
 
 export interface Spell {
-  id: string;
+  id: SpellId;
   name: string;
   source: { sheet: string; index: number };
   text: string;
 }
 
 export interface Item {
-  id: string;
+  id: ItemId;
   name: string;
   source: { sheet: string; index: number };
   text: string;
@@ -95,7 +97,7 @@ export interface Item {
 }
 
 export interface Character {
-  id: string;
+  id: CharacterId;
   name: string;
   source: { sheet: string; index: number };
   /** Kat prints "dowolna" — the player chooses at setup. See StartingNature. */

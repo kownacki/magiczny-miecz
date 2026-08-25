@@ -6,8 +6,14 @@ import { db } from "@/lib/supabase";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
-import { RANDOM_CHARACTER_ID, isRandomPick } from "@/lib/engine/characters";
-import { fieldByName } from "@/lib/engine/board";
+import {
+  RANDOM_CHARACTER_ID,
+  asCharacterId,
+  asSeatCharacter,
+  isRandomPick,
+  type SeatCharacter,
+} from "@/lib/engine/characters";
+import { asFieldId, fieldByName, type FieldId } from "@/lib/engine/board";
 
 export const CHARACTERS = characters as Character[];
 
@@ -15,8 +21,9 @@ export interface SeatRow {
   id: string;
   seat_index: number;
   player_name: string | null;
-  character_id: string | null;
-  field_id: string | null;
+  /** One of the 27 cards, the surprise sentinel, or nothing chosen yet. */
+  character_id: SeatCharacter | null;
+  field_id: FieldId | null;
   miecz_own: number;
   magia_own: number;
   miecz_floor: number;
@@ -222,7 +229,25 @@ export async function seatsFor(gameId: string): Promise<SeatRow[]> {
     .eq("game_id", gameId)
     .order("seat_index");
   if (error) throw new Error(`seatsFor: ${error.message}`);
-  return (data ?? []) as SeatRow[];
+  // The one place a stored `field_id` becomes a `FieldId`, so that nothing
+  // downstream has to wonder. A column is a string and the board is a closed
+  // set; narrowing here means every rule that asks where a character is
+  // standing gets an answer the compiler has already checked.
+  //
+  // A value that is not a field becomes null rather than throwing. Null is a
+  // state the game already has — a seat that has not picked a character is
+  // nowhere — and it degrades to "figure is off the board, put it back with the
+  // override", which a table can act on. Throwing would take the whole table
+  // down over one bad row.
+  type StoredSeat = Omit<SeatRow, "field_id" | "character_id"> & {
+    field_id: string | null;
+    character_id: string | null;
+  };
+  return ((data ?? []) as StoredSeat[]).map((row) => ({
+    ...row,
+    field_id: asFieldId(row.field_id),
+    character_id: asSeatCharacter(row.character_id),
+  }));
 }
 
 /**
@@ -421,10 +446,10 @@ async function dealTo(
 
   // The sentinel is not a character and cannot be "taken" — several seats may
   // be holding it, and none of them is holding a card.
+  // `asCharacterId` is the whole filter: it answers null for both "nothing
+  // chosen" and "the surprise", which are exactly the two that hold no card.
   const taken = new Set(
-    seats
-      .map((seat) => seat.character_id)
-      .filter((id): id is string => !!id && !isRandomPick(id)),
+    seats.map((seat) => asCharacterId(seat.character_id)).filter((id) => id !== null),
   );
   const pool = CHARACTERS.filter((character) => !taken.has(character.id));
   // Fisher–Yates with a real CSPRNG. Nobody is attacking a character deal, but

@@ -22,6 +22,7 @@ import { resolutionOrder } from "./state";
 import { scriptedRandom } from "./ports";
 import type { Item } from "@/data/types";
 import type { Holding, Seat } from "./state";
+import type { CardId } from "@/data/ids";
 
 const seat = (over: Partial<Seat> = {}): Seat => ({
   id: "s1",
@@ -43,8 +44,16 @@ const seat = (over: Partial<Seat> = {}): Seat => ({
   ...over,
 });
 
-const item = (id: string, over: Partial<Item> = {}): Item => ({
-  id,
+/**
+ * An Item-shaped fixture.
+ *
+ * Takes a `CardId` rather than an `ItemId` because half of these are Karty
+ * Zdarzeń — Święty Graal and the Srebrna Strzała were never on the Wyposażenie
+ * sheet — and 16.6 is exactly the rule that lets a drawn card be held like a
+ * bought one. The cast is the fixture admitting it is a fixture.
+ */
+const item = (id: CardId, over: Partial<Item> = {}): Item => ({
+  id: id as Item["id"],
   name: id.toUpperCase(),
   source: { sheet: "test", index: 1 },
   text: "",
@@ -99,8 +108,8 @@ describe("totals (1.5, 2.5)", () => {
   });
 
   it("recomputes spell capacity from the total, not from own Magia", () => {
-    const ring = new Map([["pierscien", item("pierscien", { magia: 3 })]]);
-    const s = seat({ magiaOwn: 2, holdings: [held("pierscien")] });
+    const ring = new Map([["pierscien-mocy", item("pierscien-mocy", { magia: 3 })]]);
+    const s = seat({ magiaOwn: 2, holdings: [held("pierscien-mocy")] });
     expect(totalsFor(s, ring).spellCapacity).toBe(spellCapacity(5));
   });
 });

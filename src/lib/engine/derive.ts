@@ -195,7 +195,15 @@ export function carriedCount(
  * does not destroy it — the card is left face up on the field where it was
  * found, which is why this answers only the permission question.
  */
-export function mayHold(item: Item, nature: Nature | null): boolean {
+/**
+ * Takes the one field it reads rather than a whole `Item`.
+ *
+ * It is called with Karty Zdarzeń as often as with Wyposażenie — 16.6 makes a
+ * drawn Magiczny Miecz the same card as the equipment one — and while both had
+ * `id: string` the two shapes matched structurally by accident. They no longer
+ * do, and asking for what it uses is more honest than asking for either.
+ */
+export function mayHold(item: Pick<Item, "forbiddenTo">, nature: Nature | null): boolean {
   if (!item.forbiddenTo || nature === null) return true;
   return !item.forbiddenTo.includes(nature);
 }

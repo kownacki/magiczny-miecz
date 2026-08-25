@@ -10,14 +10,16 @@ import {
   RANDOM_CHARACTER_ID,
   STARTING_KIT,
   abilitiesOfCharacter,
+  asCharacterId,
+  asSeatCharacter,
   isRandomPick,
   notesForCharacter,
   startingKit,
 } from "./characters";
 
 const CHARACTERS = characters as Character[];
-const IDS = new Set(CHARACTERS.map((c) => c.id));
-const ITEM_IDS = new Set((items as Item[]).map((i) => i.id));
+const IDS = new Set<string>(CHARACTERS.map((c) => c.id));
+const ITEM_IDS = new Set<string>((items as Item[]).map((i) => i.id));
 
 describe("the character registries against the real character cards", () => {
   it("only describes characters that exist", () => {
@@ -60,8 +62,8 @@ describe("the character registries against the real character cards", () => {
     // A character with neither encoded abilities nor notes is a claim that the
     // app handles all of its powers, which is true of none of them.
     for (const character of CHARACTERS) {
-      const encoded = abilitiesOfCharacter(character.id).length;
-      const noted = notesForCharacter(character.id).length;
+      const encoded = abilitiesOfCharacter(asCharacterId(character.id)).length;
+      const noted = notesForCharacter(asCharacterId(character.id)).length;
       expect(encoded + noted, character.id).toBeGreaterThan(0);
     }
   });
@@ -132,13 +134,22 @@ describe("the surprise pick", () => {
     expect(isRandomPick("")).toBe(false);
   });
 
-  it("carries no abilities, notes or kit of its own", () => {
-    // It is never held once a game is running — `startGame` deals a real card
-    // first — so anything reading it should find an empty character rather
-    // than a special case.
-    expect(abilitiesOfCharacter(RANDOM_CHARACTER_ID)).toEqual([]);
-    expect(notesForCharacter(RANDOM_CHARACTER_ID)).toEqual([]);
-    expect(startingKit(RANDOM_CHARACTER_ID)).toEqual({});
+  it("cannot reach an ability lookup at all", () => {
+    // Stronger than it used to be. This once checked that the accessors
+    // returned nothing for the sentinel; now `abilitiesOfCharacter` will not
+    // take it — the type says a Karta Postaci or null, and the sentinel is
+    // neither, so the narrowing has to happen first and this is what it says.
+    expect(asCharacterId(RANDOM_CHARACTER_ID)).toBeNull();
+    expect(abilitiesOfCharacter(asCharacterId(RANDOM_CHARACTER_ID))).toEqual([]);
+    expect(notesForCharacter(asCharacterId(RANDOM_CHARACTER_ID))).toEqual([]);
+    expect(startingKit(asCharacterId(RANDOM_CHARACTER_ID))).toEqual({});
+  });
+
+  it("is still a seat's state, alongside the 27 cards and nothing chosen", () => {
+    expect(asSeatCharacter(RANDOM_CHARACTER_ID)).toBe(RANDOM_CHARACTER_ID);
+    expect(asSeatCharacter("goblin")).toBe("goblin");
+    expect(asSeatCharacter("step")).toBeNull();
+    expect(asSeatCharacter(null)).toBeNull();
   });
 });
 

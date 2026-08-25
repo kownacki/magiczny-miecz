@@ -4,6 +4,7 @@ import { useState } from "react";
 import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
 import { CardTile, type TileCard } from "./card-tile";
+import type { SpellId } from "@/data/ids";
 import {
   TIMING_LABEL,
   castableNow,
@@ -15,7 +16,7 @@ const SPELL_BY_ID = new Map((spells as Spell[]).map((spell) => [spell.id, spell]
 
 export interface HeldSpell {
   holdingId: string;
-  cardId: string;
+  cardId: SpellId;
 }
 
 /**

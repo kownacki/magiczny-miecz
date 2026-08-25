@@ -1,6 +1,7 @@
 /** What each of the 27 characters brings to the table, and what its own Charakterystyka does (8.1, 8.2). */
 
 import type { Ability } from "./abilities";
+import { isCharacterId, type CharacterId } from "@/data/ids";
 
 /**
  * Rule 8.1 gives every character two to five printed powers, and until now the
@@ -17,7 +18,7 @@ import type { Ability } from "./abilities";
  * terms as the cards: the app says which powers it is carrying and which the
  * player has to remember, rather than going quiet and hoping.
  */
-export const CHARACTER_ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
+export const CHARACTER_ABILITIES: Readonly<Partial<Record<CharacterId, readonly Ability[]>>> = {
   barbarzynca: [
     {
       kind: "bezpieczny",
@@ -100,7 +101,7 @@ export interface StartingKit {
   zloto?: number;
 }
 
-export const STARTING_KIT: Readonly<Record<string, StartingKit>> = {
+export const STARTING_KIT: Readonly<Partial<Record<CharacterId, StartingKit>>> = {
   "bledny-rycerz": { items: ["miecz", "zbroja"] },
   czarodziej: { spells: 2 },
   demon: { spells: 1 },
@@ -129,7 +130,7 @@ export const STARTING_KIT: Readonly<Record<string, StartingKit>> = {
  * because the interesting half of a Charakterystyka is usually the half that
  * bends a rule rather than adds a number.
  */
-export const CHARACTER_NOTES: Readonly<Record<string, readonly string[]>> = {
+export const CHARACTER_NOTES: Readonly<Partial<Record<CharacterId, readonly string[]>>> = {
   awanturnik: [
     "Zamiast atakować Postać możesz zabrać jej 1 losowe Zaklęcie.",
     "W walce rzucasz dwa razy i bierzesz wyższy wynik.",
@@ -244,14 +245,35 @@ export function isRandomPick(characterId: string | null | undefined): boolean {
   return characterId === RANDOM_CHARACTER_ID;
 }
 
-export function abilitiesOfCharacter(characterId: string | null): readonly Ability[] {
+/**
+ * What a seat's `character_id` column can hold, spelled out.
+ *
+ * Three states, and they are genuinely different: one of the 27 cards, the
+ * sentinel meaning "surprise me", or nothing chosen yet. Writing it as a string
+ * left all three looking alike, which is how the sentinel could have reached an
+ * ability lookup and quietly returned nothing.
+ */
+export type SeatCharacter = CharacterId | typeof RANDOM_CHARACTER_ID;
+
+/** The card a seat is holding, or null — including when it is holding the surprise. */
+export function asCharacterId(value: string | null | undefined): CharacterId | null {
+  return isCharacterId(value) ? value : null;
+}
+
+/** Narrows a stored column to the three states it can be in. */
+export function asSeatCharacter(value: string | null | undefined): SeatCharacter | null {
+  if (isCharacterId(value)) return value;
+  return value === RANDOM_CHARACTER_ID ? RANDOM_CHARACTER_ID : null;
+}
+
+export function abilitiesOfCharacter(characterId: CharacterId | null): readonly Ability[] {
   return characterId ? (CHARACTER_ABILITIES[characterId] ?? []) : [];
 }
 
-export function notesForCharacter(characterId: string | null): readonly string[] {
+export function notesForCharacter(characterId: CharacterId | null): readonly string[] {
   return characterId ? (CHARACTER_NOTES[characterId] ?? []) : [];
 }
 
-export function startingKit(characterId: string): StartingKit {
-  return STARTING_KIT[characterId] ?? {};
+export function startingKit(characterId: CharacterId | null): StartingKit {
+  return characterId ? (STARTING_KIT[characterId] ?? {}) : {};
 }

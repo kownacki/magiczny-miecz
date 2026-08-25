@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FIELD_SCRIPTS, fieldScriptFor } from "./fieldScript";
 import { goodsId } from "./goods";
-import { FIELDS } from "./board";
+import { FIELDS, type FieldId } from "./board";
 import type { Effect } from "./cardScript";
 
 /** Every effect in a field's offers, flattened. */
@@ -27,7 +27,7 @@ const ALL = Object.entries(FIELD_SCRIPTS).flatMap(([fieldId, script]) =>
 
 describe("the fields that trade", () => {
   it("names fields the board actually has", () => {
-    for (const fieldId of Object.keys(FIELD_SCRIPTS)) {
+    for (const fieldId of Object.keys(FIELD_SCRIPTS) as FieldId[]) {
       expect(FIELDS.has(fieldId), fieldId).toBe(true);
     }
   });
@@ -94,7 +94,7 @@ describe("the fields that trade", () => {
   });
 
   it("charges for healing where the board charges", () => {
-    for (const id of ["osada", "pustelnia", "zamek"]) {
+    for (const id of ["osada", "pustelnia", "zamek"] as const) {
       const cure = fieldScriptFor(id)!
         .offers.flatMap((o) => every(o.effect))
         .find((e) => e.op === "uzdrow");

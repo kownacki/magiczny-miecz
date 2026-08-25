@@ -4,7 +4,7 @@ import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
 import { bonusOf } from "./cards";
 import { bonusFromHoldings } from "./holdings";
-import { FIELDS } from "./board";
+import { FIELDS, type FieldId } from "./board";
 import {
   ABILITIES,
   abilitiesOf,
@@ -23,7 +23,7 @@ import {
   bestShield,
 } from "./abilities";
 
-const KNOWN_CARDS = new Set([
+const KNOWN_CARDS = new Set<string>([
   ...(events as EventCard[]).map((card) => card.id),
   ...(items as Item[]).map((item) => item.id),
 ]);
@@ -67,7 +67,7 @@ describe("the ability registry against the real deck", () => {
     for (const [cardId, abilities] of Object.entries(ABILITIES)) {
       for (const ability of abilities) {
         if (ability.kind !== "bezpieczny" && ability.kind !== "ucieczka") continue;
-        for (const [a, b] of pairs) {
+        for (const [a, b] of pairs as [FieldId, FieldId][]) {
           const hasA = ability.fields.includes(a);
           const hasB = ability.fields.includes(b);
           expect(hasA, `${cardId}: names ${a} but not ${b}`).toBe(hasB);

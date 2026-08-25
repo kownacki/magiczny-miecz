@@ -6,10 +6,18 @@ import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatT
 import { watchRevision } from "@/lib/game/liveRevision";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
-import { FIELDS } from "@/lib/engine/board";
+import { isSpellId, type CardId, type SpellId } from "@/data/ids";
+import { FIELDS, type FieldId, isFieldId } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
-import { abilitiesOfCharacter, isRandomPick, notesForCharacter } from "@/lib/engine/characters";
+import {
+  RANDOM_CHARACTER_ID,
+  abilitiesOfCharacter,
+  asCharacterId,
+  isRandomPick,
+  notesForCharacter,
+  type SeatCharacter,
+} from "@/lib/engine/characters";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
@@ -60,7 +68,8 @@ interface Held {
   /** Where it is worn in the slotted variant; null when it is in the pack. */
   slot?: Slot | null;
   id: string;
-  cardId: string;
+  /** Any card in the box — 16.6 makes the event and equipment id spaces overlap. */
+  cardId: CardId;
   kind: "spell" | "item" | "friend" | "trophy";
   face: "open" | "hidden";
 }
@@ -69,8 +78,14 @@ interface Seat {
   id: string;
   seat_index: number;
   player_name: string | null;
-  character_id: string | null;
-  field_id: string | null;
+  character_id: SeatCharacter | null;
+  /**
+   * Narrow here as well as on the server, because the server is what guarantees
+   * it: `seatsFor` turns the stored column into a `FieldId` or null before it
+   * ever reaches a response, so the browser is not trusting a wire value — it is
+   * naming the type the API already promises.
+   */
+  field_id: FieldId | null;
   miecz_own: number;
   magia_own: number;
   /** Own points plus everything carried (1.5, 2.5), computed server-side. */
@@ -122,7 +137,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /** What the Wyposażenie pile still holds (21.2), so a shop offers only what it has. */
   const [stock, setStock] = useState<Record<string, number>>({});
   /** A field the player tapped on the map, to read what it says. */
-  const [inspecting, setInspecting] = useState<string | null>(null);
+  const [inspecting, setInspecting] = useState<FieldId | null>(null);
   /** What the app just decided by itself, shown until the next action. */
   const [notice, setNotice] = useState<string | null>(null);
   /** A card somebody tapped, shown large with its full text. */
@@ -142,7 +157,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * server reports the same thing, so a pick that never landed reverts on the
    * next poll rather than lingering as a lie.
    */
-  const [taking, setTaking] = useState<Record<string, string>>({});
+  const [taking, setTaking] = useState<Record<string, SeatCharacter>>({});
   /** Which seat is choosing a character; "auto" lets the app decide. */
   const [picking, setPicking] = useState<string | "auto" | null>("auto");
   const [error, setError] = useState<string | null>(null);
@@ -393,7 +408,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     // follow, for the same reason. Everything else still waits, because two
     // people can want Kapłanka and only the server knows who asked first.
     if (isRandomPick(characterId)) {
-      setTaking((current) => ({ ...current, [seatId]: characterId }));
+      setTaking((current) => ({ ...current, [seatId]: RANDOM_CHARACTER_ID }));
       void fetch(`/api/games/${code}/character`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -838,8 +853,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             {mine && (
               <SpellHand
                 spells={mine.holdings
-                  .filter((held) => held.kind === "spell")
-                  .map((held) => ({ holdingId: held.id, cardId: held.cardId }))}
+                  // Both halves matter: the server says which holdings are
+                  // Zaklęcia, and `isSpellId` is what turns that claim into a
+                  // card the spell hand can actually look up.
+                  .filter((held) => held.kind === "spell" && isSpellId(held.cardId))
+                  .map((held) => ({ holdingId: held.id, cardId: held.cardId as SpellId }))}
                 moment={momentOf(game.turn_state.phase, game.turn_state.phase !== "rzut")}
                 opponents={others.map((seat) => ({
                   seatIndex: seat.seat_index,
@@ -1475,18 +1493,18 @@ function SeatCard({
             <details className="mt-2">
               <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted">
                 Zdolności ({character.abilities.length})
-                {abilitiesOfCharacter(seat.character_id).length > 0 && (
+                {abilitiesOfCharacter(asCharacterId(seat.character_id)).length > 0 && (
                   <span className="ml-2 normal-case tracking-normal text-verdigris/80">
-                    {abilitiesOfCharacter(seat.character_id).map(describeAbility).join(" · ")}
+                    {abilitiesOfCharacter(asCharacterId(seat.character_id)).map(describeAbility).join(" · ")}
                   </span>
                 )}
               </summary>
               {/* Which of them the app is watching for, and which the player has
                   to remember. A Charakterystyka overrides the general rules
                   (8.2), so a power nobody applies is a rule quietly dropped. */}
-              {notesForCharacter(seat.character_id).length > 0 && (
+              {notesForCharacter(asCharacterId(seat.character_id)).length > 0 && (
                 <ul className="mt-1 flex flex-col gap-0.5 border-l-2 border-ochre/40 pl-2 text-[10px] leading-snug text-ochre/80">
-                  {notesForCharacter(seat.character_id).map((note) => (
+                  {notesForCharacter(asCharacterId(seat.character_id)).map((note) => (
                     <li key={note}>↳ {note}</li>
                   ))}
                 </ul>
@@ -1584,7 +1602,7 @@ function FieldNote({
   pinned,
   onClear,
 }: {
-  fieldId: string | null;
+  fieldId: FieldId | null;
   pinned: boolean;
   onClear: () => void;
 }) {
@@ -1654,7 +1672,8 @@ function describeResult(result: unknown): string | null {
       if (data.outcome === "uniknieta") {
         return `Pułapka: ${roll(data.dice)} = ${sum} — mniej niż twoje punkty, zostajesz na miejscu.`;
       }
-      const where = data.to ? (FIELD_NAMES.get(data.to) ?? data.to) : "?";
+      // Straight off the wire, so it is looked up rather than trusted.
+      const where = (isFieldId(data.to) ? FIELD_NAMES.get(data.to) : null) ?? data.to ?? "?";
       const lost = data.lost?.length ? `Tracisz: ${data.lost.join(", ")}.` : "Nic nie tracisz.";
       const kept = data.kept?.length ? ` Zostaje przy tobie: ${data.kept.join(", ")}.` : "";
       return `Pułapka: ${roll(data.dice)} = ${sum} — spadasz na ${where}. ${lost}${kept}`;
@@ -1762,7 +1781,7 @@ function describeAbility(ability: Ability): string {
   }
 }
 
-function fieldName(fieldId: string): string {
+function fieldName(fieldId: FieldId): string {
   return FIELDS.get(fieldId)?.name ?? fieldId;
 }
 
@@ -1774,7 +1793,7 @@ function fieldName(fieldId: string): string {
  * carried the printed name. They are numbered now, so the pair reads as
  * "Urwisko I, Urwisko II" and the dedup is left only for genuine repeats.
  */
-function fieldNames(fieldIds: readonly string[]): string {
+function fieldNames(fieldIds: readonly FieldId[]): string {
   // Board order, so a pair of numbered fields reads the way you walk them.
   // The ability data lists ids in whatever order the card's prose does, which
   // put the Hobgoblin's escape at "Step II, Step I".

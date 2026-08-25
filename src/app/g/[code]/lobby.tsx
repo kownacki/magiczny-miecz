@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
-import { RANDOM_CHARACTER_ID, isRandomPick } from "@/lib/engine/characters";
+import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
 
 /**
  * The border on the surprise when more than one player has taken it.
@@ -21,7 +21,7 @@ export interface LobbySeat {
   id: string;
   seatIndex: number;
   playerName: string | null;
-  characterId: string | null;
+  characterId: SeatCharacter | null;
   isHost: boolean;
   /** Nobody is behind this seat — see `leaveGame`. */
   abandoned: boolean;
@@ -123,6 +123,18 @@ export function Lobby({
   const waitingOn = chosen.filter((seat) => !seat.ready && !seat.abandoned);
   const byId = new Map(characters.map((character) => [character.id, character]));
 
+  /**
+   * The Karta a seat is showing, or null.
+   *
+   * Null for both "nothing chosen" and "the surprise", which is what
+   * `asCharacterId` answers and why the lookup goes through it: the sentinel is
+   * a seat state, not a card, and there is nothing in `byId` to find for it.
+   */
+  const cardFor = (id: SeatCharacter | null): Character | null => {
+    const real = asCharacterId(id);
+    return real ? (byId.get(real) ?? null) : null;
+  };
+
   // Alphabetical, in Polish — Ł after L, Ż after Z. The data file already
   // happens to be in this order; sorting here means the strip stays in it
   // whatever order a card is added to the file in.
@@ -153,7 +165,7 @@ export function Lobby({
   // — running along the strip and reading each one is how you choose — falling
   // back to the character of whoever you are choosing for, so the column is
   // never blank once anything has been picked.
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<SeatCharacter | null>(null);
   const reading = preview ?? target?.characterId ?? me?.characterId ?? null;
 
   /** characterId -> the seat holding it. There is only ever one of each card. */
@@ -261,7 +273,7 @@ export function Lobby({
               />
             );
           }
-          const character = seat.characterId ? byId.get(seat.characterId) : null;
+          const character = cardFor(seat.characterId);
           return (
             <SeatSlot
               key={seat.id}
@@ -503,7 +515,7 @@ export function Lobby({
             {isRandomPick(reading) ? (
               <RandomCard />
             ) : reading ? (
-              <BigCard character={byId.get(reading) ?? null} />
+              <BigCard character={cardFor(reading)} />
             ) : (
               <p className="max-w-[16rem] text-center text-[12px] leading-relaxed text-muted/70">
                 Najedź na postać, żeby przeczytać jej Kartę.
@@ -551,7 +563,7 @@ function RandomChoice({
   busy: boolean;
   pending: boolean;
   dimmed: boolean;
-  onPreview: (characterId: string | null) => void;
+  onPreview: (characterId: SeatCharacter | null) => void;
   onPick: () => void;
 }) {
   const standee = characterStandeeUrl(RANDOM_CHARACTER_ID);
@@ -698,7 +710,7 @@ function SeatSlot({
   /** Only your own slot gets this. */
   onReady?: (ready: boolean) => void;
   /** Points the reading column at this player's character while pointed at. */
-  onPreview: (characterId: string | null) => void;
+  onPreview: (characterId: SeatCharacter | null) => void;
 }) {
   // The small card, because that is the piece standing on the board for this
   // player — it is what "which one are you?" is answered with at a table.

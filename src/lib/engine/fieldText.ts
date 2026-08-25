@@ -3,7 +3,7 @@
 import dolnyTexts from "@/data/dolny-fields.json";
 import mostTexts from "@/data/most-fields.json";
 import ringTexts from "@/data/ring-fields.json";
-import { FIELDS, type BoardField } from "./board";
+import { FIELDS, type BoardField, type FieldId } from "./board";
 
 interface FieldText {
   id: string;
@@ -34,7 +34,7 @@ const TEXTS = new Map(
  * to be useful before the transcription is complete, and an untranscribed field
  * simply shows its name and lets the players read the board themselves.
  */
-export function fieldWithText(fieldId: string): BoardField | null {
+export function fieldWithText(fieldId: FieldId): BoardField | null {
   const field = FIELDS.get(fieldId);
   if (!field) return null;
   const extra = TEXTS.get(fieldId);

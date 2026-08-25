@@ -1,5 +1,7 @@
 "use client";
 
+import type { FieldId } from "@/lib/engine/board";
+
 import { useState } from "react";
 import {
   BRIDGE_LINKS,
@@ -15,7 +17,7 @@ export interface MapSeat {
   id: string;
   seatIndex: number;
   name: string;
-  fieldId: string | null;
+  fieldId: FieldId | null;
   eliminated: boolean;
 }
 
@@ -39,14 +41,14 @@ export function BoardMap({
   seats: MapSeat[];
   activeSeatIndex: number | null;
   /** Fields with cards lying face up on them (16.8). */
-  cardsOnFields?: Record<string, number>;
+  cardsOnFields?: Partial<Record<FieldId, number>>;
   /** Fields the active character could move to, highlighted while choosing. */
-  highlight?: string[];
-  onPick?: (fieldId: string) => void;
+  highlight?: FieldId[];
+  onPick?: (fieldId: FieldId) => void;
 }) {
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<FieldId | null>(null);
 
-  const occupants = new Map<string, MapSeat[]>();
+  const occupants = new Map<FieldId, MapSeat[]>();
   for (const seat of seats) {
     if (!seat.fieldId || seat.eliminated) continue;
     const list = occupants.get(seat.fieldId) ?? [];
@@ -175,7 +177,7 @@ function FieldShape({
   hovered: boolean;
   onEnter: () => void;
   onLeave: () => void;
-  onPick?: (fieldId: string) => void;
+  onPick?: (fieldId: FieldId) => void;
 }) {
   const stroke = active
     ? "#d9a441"

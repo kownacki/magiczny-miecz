@@ -18,6 +18,24 @@ mode behind the same engine.
 
 ## Non-negotiables
 
+- **An id is never a `string`.** Fields, characters, cards and spells each have a
+  literal-union type, and the compiler checks every name written against them.
+  `FieldId` is derived from the four ring arrays in `board.ts`/`rings.ts`, so
+  there is one list and it cannot drift; `CharacterId`, `EventId`, `ItemId` and
+  `SpellId` are generated into `src/data/ids.ts` by
+  `node scripts/generate-ids.mjs`, and `src/data/ids.test.ts` fails the build if
+  that file has gone stale.
+
+  A `string` from outside — a request body, a database column, a name slugified
+  off a card — becomes an id only by passing a guard: `asFieldId` /
+  `requireFieldId`, `asCharacterId` / `asSeatCharacter`, `isCardId` and friends.
+  Narrow **once at the boundary**, not at each use: `seatsFor` is where a stored
+  `field_id` and `character_id` become typed, and everything downstream inherits
+  it. This exists because six characters shipped starting on a field called
+  `"step"` — slugified from the name printed on their card, while the board's two
+  Steps are `step-1` and `step-2`. Nothing could tell it was nonsense, because
+  every real id was a string too.
+
 - **The engine in `src/lib/engine/` is pure.** No React, no Supabase, no I/O, no
   `Math.random`. Everything effectful arrives through a port. This is what makes
   the rules testable, and it is the only reason one engine can serve both a
@@ -74,7 +92,9 @@ ones butt together with the same teal printed *on* them — so
 `node scripts/export-card-art.mjs` cuts the framed illustration out of every
 card — the same rectangle on all of them, 10%–90% across and 14.5%–56.5% down —
 for use as an icon where a whole card would be a grey smear.
-Then `node scripts/export-card-images.mjs` writes the
+`node scripts/generate-ids.mjs` regenerates `src/data/ids.ts` — the literal
+id types — and must be re-run after anything that renames a card or a
+character. Then `node scripts/export-card-images.mjs` writes the
 web-sized JPEGs into `public/cards/` — those *are* committed, so a fresh
 checkout has the pictures without needing the scans.
 

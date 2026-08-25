@@ -2,6 +2,7 @@
 
 import { ABILITIES } from "./abilities";
 import { SCRIPTS } from "./cardScript";
+import type { CardId } from "@/data/ids";
 
 /**
  * A referee that silently does nothing is worse than no referee.
@@ -33,7 +34,7 @@ export type Coverage = "pelne" | "czesciowe" | "brak";
  * here: it would tell a table to watch something the referee is watching for
  * them, which is the same wasted vigilance as no referee at all.
  */
-const MANUAL: Readonly<Record<string, string>> = {
+const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // --- creatures whose fight has a clause the fight machinery cannot carry ---
   "przybysz-z-krainy-cieni":
     "Przeciw Przybyszowi nie wolno użyć Zaklęć, Magicznych Przedmiotów ani Broni — walczy się samym Mieczem Postaci.",
@@ -89,7 +90,7 @@ export function coverageOf(cardId: string): Coverage {
 
 /** The clause the players have to apply themselves, if there is one. */
 export function manualNote(cardId: string): string | null {
-  return MANUAL[cardId] ?? null;
+  return MANUAL[cardId as CardId] ?? null;
 }
 
 /**

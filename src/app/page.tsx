@@ -6,6 +6,7 @@ import { normaliseJoinCode } from "@/lib/game/codes";
 import { readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
+import { isCharacterId } from "@/data/ids";
 
 interface GameSummary {
   joinCode: string;
@@ -244,9 +245,11 @@ export default function Home() {
                         .map((player) => {
                           const who =
                             player.name ??
-                            (player.characterId
+                            (isCharacterId(player.characterId)
                               ? (CHARACTER_NAMES.get(player.characterId) ?? "?")
-                              : "wolne");
+                              : player.characterId
+                                ? "?"
+                                : "wolne");
                           // A seat somebody walked away from still holds its
                           // character, so it is listed — and marked, because
                           // that is the thing worth knowing before you sit down.

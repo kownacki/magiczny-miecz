@@ -1,6 +1,7 @@
 /** The Kamienny Most: the seven fields between an entrance and the Zamek Bestii, and what each of them does (14.5–14.7). */
 
 import type { RandomPort } from "./ports";
+import type { FieldId } from "./board";
 
 /**
  * Which approach a character is walking.
@@ -14,7 +15,7 @@ import type { RandomPort } from "./ports";
 export type BridgeSide = "miecz" | "magia";
 
 /** Which side of the bridge a field belongs to. */
-export const BRIDGE_SIDE: Record<string, BridgeSide> = {
+export const BRIDGE_SIDE: Partial<Record<FieldId, BridgeSide>> = {
   "wejscie-na-most-a": "miecz",
   pulapka: "miecz",
   "gra-ze-smiercia": "miecz",
@@ -41,7 +42,7 @@ export const BRIDGE_SIDE: Record<string, BridgeSide> = {
  * a 1 lands on the entrance here too. It is a house reading of a misprint and
  * it is the only invented number in this file.
  */
-const TRAP_TABLE: Record<BridgeSide, { upTo: number; fieldId: string }[]> = {
+const TRAP_TABLE: Record<BridgeSide, { upTo: number; fieldId: FieldId }[]> = {
   miecz: [
     { upTo: 1, fieldId: "wejscie-na-most-a" },
     { upTo: 3, fieldId: "ruiny-twierdzy" },
@@ -58,7 +59,7 @@ const TRAP_TABLE: Record<BridgeSide, { upTo: number; fieldId: string }[]> = {
 
 export type TrapOutcome =
   | { fell: false; result: number }
-  | { fell: true; result: number; fieldId: string };
+  | { fell: true; result: number; fieldId: FieldId };
 
 /**
  * Rule 14.5. Three dice, less Miecz or Magia depending on the side.
@@ -143,13 +144,15 @@ export function guardianStrength(dice: readonly number[]): number {
 }
 
 /** Which of the two the field is, and so which stat the fight is fought with. */
-export const BRIDGE_GUARDIAN: Record<string, { kind: "magiczna" | "zwykla"; name: string }> = {
+export const BRIDGE_GUARDIAN: Partial<
+  Record<FieldId, { kind: "magiczna" | "zwykla"; name: string }>
+> = {
   "demon-zaglady": { kind: "magiczna", name: "Demon Zagłady" },
   monstrum: { kind: "zwykla", name: "Monstrum" },
 };
 
 /** The bridge fields that stop a character until something is settled. */
-export const BRIDGE_ORDEAL = new Set([
+export const BRIDGE_ORDEAL: ReadonlySet<FieldId> = new Set<FieldId>([
   "pulapka",
   "gra-ze-smiercia",
   "demon-zaglady",

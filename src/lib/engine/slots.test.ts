@@ -5,7 +5,7 @@ import type { EventCard, Item } from "@/data/types";
 import { SLOTS, SLOT_LABEL, SLOT_OF, fitsIn, isWearable, slotsFor } from "./slots";
 
 /** Every Przedmiot in the box, by id, from both the event deck and the shop. */
-const ITEM_IDS = new Set([
+const ITEM_IDS = new Set<string>([
   ...(events as EventCard[]).filter((c) => c.cardClass === "przedmiot").map((c) => c.id),
   ...(items as Item[]).map((i) => i.id),
 ]);

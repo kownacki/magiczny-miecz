@@ -11,6 +11,7 @@ import {
   bridgeEntranceFrom,
   moveOptions,
   ringOf,
+  type FieldId,
 } from "./board";
 import { resolutionOrder, type TurnCard } from "./state";
 import type { Crossing } from "./rings";
@@ -30,9 +31,9 @@ export type TurnPhase =
   | { phase: "ruch"; roll: number; options: TurnMoveOption[] }
   | {
       phase: "pole";
-      fieldId: string;
+      fieldId: FieldId;
       /** Where this move started, which the Przeprawa sends you back to. */
-      from: string | null;
+      from: FieldId | null;
       draw: number;
       drawn: TurnCard[];
       /**
@@ -78,7 +79,7 @@ export interface Fight {
   enemyRoll: number | null;
   result: CombatResult | null;
   /** The field to return to once the fight is settled. */
-  fieldId: string;
+  fieldId: FieldId;
   draw: number;
   drawn: TurnCard[];
   /**
@@ -114,11 +115,11 @@ export type GuardianFight =
    * than at its entrance (14.6). Their strength is two dice rather than the
    * entrances' one-plus-four, and a character cannot pass until one is dead.
    */
-  | { kind: "most-pole"; fieldId: string; name: string; combat: CombatKind };
+  | { kind: "most-pole"; fieldId: FieldId; name: string; combat: CombatKind };
 
 export interface TurnMoveOption {
   direction: Direction;
-  fieldId: string;
+  fieldId: FieldId;
   fieldName: string;
   /** Names of the fields walked through, for the player to check against the board. */
   through: string[];
@@ -148,7 +149,7 @@ export function startTurn(): TurnPhase {
  * beyond onward or back — 10.4 lets a character turn around and leave at any
  * time, which is why both neighbours are offered.
  */
-export function bridgeOptions(fieldId: string): TurnMoveOption[] {
+export function bridgeOptions(fieldId: FieldId): TurnMoveOption[] {
   const at = KAMIENNY_MOST.findIndex((field) => field.id === fieldId);
   if (at === -1) return [];
 
@@ -182,7 +183,7 @@ export function bridgeOptions(fieldId: string): TurnMoveOption[] {
  * *places*, not two abstract directions.
  */
 export function afterRoll(
-  fieldId: string,
+  fieldId: FieldId,
   roll: number,
   /**
    * Whether the character is in a position to try for the bridge at all — it
@@ -236,7 +237,7 @@ export function afterRoll(
  */
 export function afterMove(
   field: BoardField,
-  from: string | null = null,
+  from: FieldId | null = null,
   /**
    * Cards already lying face up on the field (16.8), which the arriving
    * character has to deal with along with anything it draws.
@@ -354,7 +355,7 @@ export function startFight(
 export function startGuardianFight(
   guardian: GuardianFight,
   playerTotals: { miecz: number; magia: number },
-  fieldId: string,
+  fieldId: FieldId,
 ): TurnPhase {
   const rolled = guardian.kind === "most" || guardian.kind === "most-pole";
   const stat =

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BRIDGE_ENTRANCES, DOLNY_KRAG, KAMIENNY_MOST } from "./board";
+import { BRIDGE_ENTRANCES, DOLNY_KRAG, KAMIENNY_MOST, type FieldId } from "./board";
 import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
 import {
   BRIDGE_LINKS,
@@ -50,7 +50,7 @@ describe("map sides against the ring arrays", () => {
   it("keeps the outer ring outside the middle one, and the middle outside the lower", () => {
     // A ring drawn inside the one it should enclose means the side lists and the
     // rectangles have come apart.
-    const spread = (ids: readonly { id: string }[]) => {
+    const spread = (ids: readonly { id: FieldId }[]) => {
       const cells = ids.map((f) => CELL_BY_ID.get(f.id)!);
       return Math.min(...cells.map((c) => c.x));
     };
