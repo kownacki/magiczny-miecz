@@ -39,6 +39,10 @@ import { carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
+import { NowBox } from "./now-box";
+import { windowsFor } from "@/lib/engine/turnWindows";
+import { crossingFrom } from "@/lib/engine/rings";
+import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { Journal } from "./journal";
 import { momentsOf } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
@@ -819,6 +823,36 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     : mySeat;
   const others = seats.filter((seat) => seat.id !== mine?.id && seat.character_id);
 
+  /**
+   * What this turn is offering, as a short list of windows.
+   *
+   * The reading of the rules is `windowsFor`'s — 16.4's order, and which of
+   * these are not offers at all. What is left here is turning the turn state
+   * into the plain facts it asks about.
+   */
+  const turnState = game.turn_state;
+  // Only the "pole" phase has a stack of drawn cards, so the narrowing is done
+  // once here rather than repeated inside the literal — where it does not carry
+  // into the closure anyway.
+  const onField = turnState.phase === "pole" ? turnState : null;
+  const settled = onField?.resolved ?? [];
+  const turnWindows = active
+    ? windowsFor({
+        phase: turnState.phase,
+        standingOn: active.field_id,
+        cardsWaiting:
+          onField?.drawn.filter((card) => !settled.includes(card.cardId)).length ?? 0,
+        fighting: turnState.phase === "walka",
+        // `crossingFrom` answers `undefined`, not null — comparing against null
+        // is true for every field on the board, which offered a Przeprawa from
+        // the Karczma.
+        crossing: active.field_id !== null && crossingFrom(active.field_id) !== undefined,
+        ordeal: active.field_id !== null && BRIDGE_ORDEAL.has(active.field_id),
+        demands:
+          onField !== null && compulsoryOffer(active.field_id, settled) !== null,
+      })
+    : [];
+
   const overlays = (
     <>
       {/* Above everything else it could be asked about, and dismissed by
@@ -983,6 +1017,27 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               text: CARD_TEXTS.get(cardId),
             })
           }
+          // Everything the Obszar can be *done* about, which used to live in a
+          // panel down the page. Only passed for the field the active character
+          // is standing on: reading about somewhere else is the other half of
+          // what this window is for, and none of these belong there.
+          {...(active && inspecting === active.field_id
+            ? {
+                phase: turnState.phase,
+                simulated: game.mode === "simulation",
+                typedRolls: game.mode !== "simulation",
+                onAction: (body: Record<string, unknown>) => post("turn", body),
+                onSuggestion: (stat: string, delta: number, reason: string) =>
+                  post("adjust", { seatId: active.id, stat, delta, reason }),
+                onService: (body: Record<string, unknown>) =>
+                  post("holdings", { ...body, seatId: active.id }),
+                purse: { zloto: active.zloto, zycie: active.zycie },
+                stock,
+                sellable: active.holdings
+                  .filter((holding) => holding.kind === "item")
+                  .map((holding) => ({ id: holding.id, cardId: holding.cardId })),
+              }
+            : {})}
           onClose={() => setInspecting(null)}
         />
       )}
@@ -1208,21 +1263,47 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         }
         right={
           <div className="flex flex-col gap-3">
-            {/* First thing in the column, above everything a player acts on:
-                whose turn it is, and who is being passed over on the way. */}
-            <TurnQueue
-              seats={seats.map((seat) => ({
-                seatIndex: seat.seat_index,
-                playerName: seat.player_name,
-                characterId: seat.character_id,
-                turnsLost: seat.turns_lost,
-                stoneUntilTurn: seat.stone_until_turn,
-                eliminated: seat.eliminated,
-              }))}
-              activeSeat={game.active_seat}
-              turn={game.turn}
-              mySeatIndex={mySeatIndex}
-            />
+            {/* First thing in the column, above everything a player acts on.
+                Two questions side by side: "now" on the left, in a box that
+                never changes size, and "when" to the right of it — the queue
+                gives up the width, since it already scrolls. */}
+            <div className="flex items-stretch gap-3">
+              {active && (
+                <NowBox
+                  playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
+                  isMine={
+                    (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
+                  }
+                  fieldName={
+                    active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
+                  }
+                  windows={turnWindows}
+                  canEnd={game.turn_state.phase !== "walka"}
+                  busy={busy}
+                  onOpen={(id) => {
+                    // The two the draw modal already owns open themselves; the
+                    // rest are the Obszar, which is one window with the field's
+                    // own actions in it.
+                    if (id === "walka" || id === "karty") return setFolded(false);
+                    setInspecting(active.field_id);
+                  }}
+                  onEnd={() => post("turn", { action: "end" })}
+                />
+              )}
+              <TurnQueue
+                seats={seats.map((seat) => ({
+                  seatIndex: seat.seat_index,
+                  playerName: seat.player_name,
+                  characterId: seat.character_id,
+                  turnsLost: seat.turns_lost,
+                  stoneUntilTurn: seat.stone_until_turn,
+                  eliminated: seat.eliminated,
+                }))}
+                activeSeat={game.active_seat}
+                turn={game.turn}
+                mySeatIndex={mySeatIndex}
+              />
+            </div>
             {error && <p className="text-sm text-vermilion">{error}</p>}
             {notice && !error && (
               <p className="rounded border border-ochre/30 bg-panel/60 px-3 py-2 text-sm text-ochre">
@@ -1254,14 +1335,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 }
                 actingForOther={isTableScreen && active.seat_index !== mySeatIndex}
                 playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
-                fieldName={
-                  active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
-                }
-                fieldText={
-                  active.field_id ? (fieldWithText(active.field_id)?.text ?? null) : null
-                }
-                fieldId={active.field_id}
-                rollSkippedBy={rollSkippedBy(active)}
                 dieSource={game.die_source}
                 mode={game.mode}
                 busy={busy}
@@ -1272,17 +1345,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onTake={(cardId) =>
                   post("holdings", { action: "take", seatId: active.id, cardId })
                 }
-                purse={{ zloto: active.zloto, zycie: active.zycie }}
-                stock={stock}
-                sellable={active.holdings
-                  .filter((holding) => holding.kind === "item")
-                  .map((holding) => ({ id: holding.id, cardId: holding.cardId }))}
-                onService={(body) =>
-                  post("holdings", { ...body, seatId: active.id })
-                }
-                fieldCardIds={fieldCards
-                  .filter((card) => card.fieldId === active.field_id)
-                  .map((card) => card.cardId)}
               />
             )}
 

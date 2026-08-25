@@ -39,9 +39,11 @@ export function NowBox({
   return (
     <section
       aria-label="Teraz"
-      // A fixed square, so nothing below it moves when a window appears or the
-      // Obszar turns out to have more to say than the last one did.
-      className="flex h-[140px] w-[140px] shrink-0 flex-col rounded-lg border border-ochre/40 bg-panel p-3"
+      // A fixed width and a floor, stretching to whatever the queue beside it
+      // is tall. Nothing below moves when a window appears or the Obszar turns
+      // out to have more to say than the last one did — and a hard height
+      // clipped the buttons the moment a field offered two.
+      className="flex min-h-[140px] w-[150px] shrink-0 flex-col rounded-lg border border-ochre/40 bg-panel p-3"
     >
       <header className="mb-2 min-w-0">
         <p className="truncate font-[family-name:var(--font-display)] text-sm text-ochre">

@@ -96,17 +96,19 @@ function searchCards(query: string): EventCard[] {
 
 export { matchRank };
 
+/**
+ * Buying, selling and paying a healer — see `fieldScript.ts`.
+ *
+ * A type of its own now that the establishments are drawn in the Obszar window
+ * rather than here: `FieldServices` is exported and its callers are not this
+ * panel, so hanging its signature off this panel's props would be a leftover.
+ */
+export type OnService = (body: Record<string, unknown>) => void;
+
 interface Props {
   phase: TurnPhase;
   isMine: boolean;
   playerName: string;
-  fieldName: string;
-  /** The instruction printed on the board for the field, if it has been transcribed. */
-  fieldText: string | null;
-  /** Named when a held card lets this character skip the field's die roll. */
-  rollSkippedBy?: string | null;
-  /** The field the active character is standing on, for the ring crossing. */
-  fieldId: FieldId | null;
   /** True when this is the shared table screen driving somebody else's turn. */
   actingForOther?: boolean;
   dieSource: string;
@@ -130,26 +132,12 @@ interface Props {
   onSuggestion: (stat: string, delta: number, reason: string) => void;
   /** Takes a drawn card into the active player's keeping. */
   onTake: (cardId: string) => void;
-  /** What the character standing here has to spend and to spend it on. */
-  purse?: { zloto: number; zycie: number };
-  /** What the Wyposażenie pile still holds, so a shop can grey out what it lacks. */
-  stock?: Record<string, number>;
-  /** The active character's Przedmioty, for the Lichwiarz to buy back. */
-  sellable?: { id: string; cardId: string }[];
-  /** Buying, selling and paying a healer — see `fieldScript.ts`. */
-  onService?: (body: Record<string, unknown>) => void;
-  /** Card ids lying face up on the active character's field (16.8). */
-  fieldCardIds?: string[];
 }
 
 export function TurnPanel({
   phase,
   isMine,
   playerName,
-  fieldName,
-  fieldText,
-  fieldId,
-  rollSkippedBy,
   actingForOther = false,
   dieSource,
   mode,
@@ -157,80 +145,20 @@ export function TurnPanel({
   onAction,
   onSuggestion,
   onTake,
-  purse,
-  stock,
-  sellable,
-  onService,
-  fieldCardIds,
 }: Props) {
   return (
     <section className="rounded-lg border border-ochre/40 bg-panel p-5">
-      <header className="mb-4 flex items-baseline justify-between">
-        <h2 className="font-[family-name:var(--font-display)] text-lg text-ochre">
-          Tura: {playerName}
-        </h2>
-        <span className="text-xs text-muted">{fieldName}</span>
-      </header>
+      {/* No header: whose turn it is and where they are stand in the box beside
+          the queue now, and saying it twice on one screen is how this panel came
+          to read as the turn itself rather than as the controls for it. */}
 
       {/* Shown to everyone, not only the active player: at a table the others
           read the field aloud and argue about it, and the board itself is
           usually under somebody's elbow. */}
-      {fieldText && (phase.phase === "pole" || phase.phase === "walka") && (
-        <div className="mb-4">
-          {/* A field like Karczma is nothing but its die table, so printing the
-              prose above the parsed version says everything twice. Where the
-              table does not account for most of the text — Gród, Osada — the
-              prose carries rules the table does not, and is kept. */}
-          {(!isTableOnly(fieldText) || (fieldId && fieldScriptFor(fieldId))) && (
-            <p className="whitespace-pre-line rounded border-l-2 border-ochre/40 bg-night/60 px-3 py-2 text-xs leading-relaxed text-muted">
-              {fieldText}
-            </p>
-          )}
-          {/* A Przyjaciel who says you walk past this field's roll means the
-              roll does not happen — not that it happens and is ignored, which
-              some of these tables would make a meaningful difference. The
-              table stays one tap away, because the app is always correctable. */}
-          {/* An encoded field wins over the prose reader, the same way an
-              encoded card does. `suggestActions` is regular expressions
-              guessing at 1993 Polish, and on the Gród it glues the Lichwiarz's
-              sentence onto three faces of the Wróżbita's die. Where somebody
-              has read the field, that reading stands. */}
-          {fieldId && fieldScriptFor(fieldId) ? null : rollSkippedBy ? (
-            <RollSkipped
-              by={rollSkippedBy}
-              text={fieldText}
-              busy={busy}
-              typedRolls={mode !== "simulation"}
-              onSuggestion={onSuggestion}
-            />
-          ) : (
-            <RollTable
-              text={fieldText}
-              busy={busy}
-              typedRolls={mode !== "simulation"}
-              onSuggestion={isMine ? onSuggestion : undefined}
-            />
-          )}
-        </div>
-      )}
 
       {/* The establishments. Ten fields on the board sell things, buy things or
           mend wounds, and until this panel existed the app read their price
           lists out and left the table to do the sums. */}
-      {isMine && fieldId && phase.phase === "pole" && (
-        <FieldServices
-          fieldId={fieldId}
-          fieldCardIds={fieldCardIds ?? []}
-          busy={busy}
-          typedRolls={mode !== "simulation"}
-          onRollOffer={(offer) => onAction({ action: "pole-tabela", offer })}
-          purse={purse}
-          stock={stock}
-          sellable={sellable}
-          onSuggestion={onSuggestion}
-          onService={onService}
-        />
-      )}
 
       {actingForOther && (
         <p className="mb-3 text-xs text-ochre/80">
@@ -247,32 +175,11 @@ export function TurnPanel({
           Wymarłe Miasto or Ruiny Twierdzy is expressly the one case that may
           NOT try, so there is deliberately nothing offered here. */}
 
-      {isMine &&
-        fieldId &&
-        crossingFrom(fieldId) &&
-        // 11.4 makes retrying the point of the next turn — "czy będzie ponownie
-        // próbowała przekroczyć granicę Kręgów" — so this is offered before the
-        // roll as well as on arrival. Drawing it only on arrival meant a failed
-        // crossing could never be attempted again.
-        (phase.phase === "pole" || phase.phase === "rzut") && (
-        <Crossing
-          crossing={crossingFrom(fieldId)!}
-          simulated={mode === "simulation"}
-          busy={busy}
-          onAction={onAction}
-        />
-      )}
 
       {/* The Kamienny Most's own fields. Offered on arrival and again on the
           next turn's roll, because most of them are things you have to sit
           through more than once — the Demon does not move and neither do
           you. */}
-      {isMine &&
-        fieldId &&
-        BRIDGE_ORDEAL.has(fieldId) &&
-        (phase.phase === "pole" || phase.phase === "rzut") && (
-          <BridgeOrdeal fieldId={fieldId} busy={busy} onAction={onAction} />
-        )}
 
       {!isMine ? (
         <p className="text-sm text-muted">Czekamy na ruch gracza {playerName}.</p>
@@ -385,7 +292,7 @@ function BridgeControls({
  * arithmetic. The app owns the dice here because there is nothing to
  * adjudicate: three dice less a number you already know, or a table.
  */
-function BridgeOrdeal({
+export function BridgeOrdeal({
   fieldId,
   busy,
   onAction,
@@ -446,7 +353,7 @@ function BridgeOrdeal({
   );
 }
 
-function Crossing({
+export function Crossing({
   crossing,
   simulated,
   busy,
@@ -1660,7 +1567,7 @@ function conditionLabel(condition: Extract<Effect, { op: "gdy" }>["warunek"]): s
  * Nothing here decides a price. The buttons say what to buy; the server reads
  * what it costs off the same board.
  */
-function FieldServices({
+export function FieldServices({
   fieldId,
   fieldCardIds,
   busy,
@@ -1681,7 +1588,7 @@ function FieldServices({
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
   onSuggestion: Props["onSuggestion"];
-  onService?: Props["onService"];
+  onService?: OnService;
 }) {
   // A shop that arrived on a card is not a different kind of shop from one
   // printed on the board: the Targowisko settles on a field and sells eight
@@ -1758,7 +1665,7 @@ function ServiceEffect({
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
   onSuggestion: Props["onSuggestion"];
-  onService?: Props["onService"];
+  onService?: OnService;
 }) {
   if (effect.op === "po-kolei") {
     return (
@@ -1947,7 +1854,7 @@ function ScriptedRoll({
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
   onSuggestion: Props["onSuggestion"];
-  onService?: Props["onService"];
+  onService?: OnService;
 }) {
   const [rolled, setRolled] = useState<number | null>(null);
   // Nothing is picked out for the player in a simulation: the app rolled and

@@ -9,6 +9,11 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { kindForCard } from "@/lib/engine/holdings";
 import type { FieldId } from "@/lib/engine/board";
+import { crossingFrom } from "@/lib/engine/rings";
+import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
+import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { BridgeOrdeal, Crossing, FieldServices } from "./turn-panel";
+import { RollTable } from "./roll-table";
 import type { CardId } from "@/data/ids";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
@@ -65,6 +70,15 @@ export function FieldModal({
   onTake,
   onInspect,
   onClose,
+  phase,
+  simulated = true,
+  typedRolls = false,
+  onAction,
+  onSuggestion,
+  onService,
+  purse,
+  stock,
+  sellable,
 }: {
   /** Which variant the table plays, so a hover can say where a card must be. */
   eqMode?: EqMode;
@@ -75,6 +89,22 @@ export function FieldModal({
   standingHere: boolean;
   /** Whether it is their turn to be doing anything about it. */
   canAct: boolean;
+  /**
+   * Everything the Obszar can be *done* about, which used to live in a panel
+   * that grew down the page: its die table, its shops, the crossing it offers
+   * and the ordeal it is. Optional, because this same window opens from a tap
+   * on the map — reading about somewhere you are not standing is the other half
+   * of what it is for, and none of these belong there.
+   */
+  phase?: string;
+  simulated?: boolean;
+  typedRolls?: boolean;
+  onAction?: (body: Record<string, unknown>) => void;
+  onSuggestion?: (stat: string, delta: number, reason: string) => void;
+  onService?: (body: Record<string, unknown>) => void;
+  purse?: { zloto: number; zycie: number };
+  stock?: Record<string, number>;
+  sellable?: { id: string; cardId: string }[];
   busy: boolean;
   onTake: (fieldCardId: string) => void;
   onInspect: (cardId: CardId) => void;
@@ -191,6 +221,56 @@ export function FieldModal({
               </p>
             )}
           </section>
+
+          {/* What can be done here, for whoever is standing here on their own
+              turn. Everyone can read the Obszar — at a table the others read it
+              aloud and argue about it — but only the character on it acts. */}
+          {standingHere && canAct && onAction && (
+            <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
+              {/* The die table, where the field has one. */}
+              {field.text && (
+                <RollTable
+                  text={field.text}
+                  busy={busy}
+                  typedRolls={typedRolls}
+                  onSuggestion={onSuggestion}
+                />
+              )}
+
+              {/* The ten fields that sell, buy or mend (and the shops that
+                  arrive on a card and settle here). */}
+              {fieldScriptFor(fieldId) && (
+                <FieldServices
+                  fieldId={fieldId}
+                  fieldCardIds={cards.map((card) => card.cardId)}
+                  busy={busy}
+                  typedRolls={typedRolls}
+                  onRollOffer={(offer) => onAction({ action: "pole-tabela", offer })}
+                  purse={purse}
+                  stock={stock}
+                  sellable={sellable}
+                  onSuggestion={onSuggestion ?? (() => {})}
+                  onService={onService}
+                />
+              )}
+
+              {/* 11.4 makes retrying the point of the next turn, so these are
+                  offered before the roll as well as on arrival — see
+                  `windowsFor`, which decides when the button exists at all. */}
+              {crossingFrom(fieldId) && (phase === "pole" || phase === "rzut") && (
+                <Crossing
+                  crossing={crossingFrom(fieldId)!}
+                  simulated={simulated}
+                  busy={busy}
+                  onAction={onAction}
+                />
+              )}
+
+              {BRIDGE_ORDEAL.has(fieldId) && (phase === "pole" || phase === "rzut") && (
+                <BridgeOrdeal fieldId={fieldId} busy={busy} onAction={onAction} />
+              )}
+            </section>
+          )}
         </div>
       </div>
     </div>
