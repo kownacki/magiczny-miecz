@@ -20,6 +20,7 @@ import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
 import { SlotPanel, type SlotItem } from "./slot-panel";
 import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
+import { carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { momentOf } from "@/lib/engine/spells";
@@ -794,8 +795,25 @@ function Hand({
   const shown = seat.holdings.filter((held) => held.kind !== "spell");
   if (shown.length === 0 && seat.hidden_count === 0) return null;
 
+  const packed = seat.holdings.filter(
+    (held) => held.kind === "item" && (!slotted || held.slot == null),
+  ).length;
+  const limit = carryLimit(
+    seat.holdings.map((h) => ({ cardId: h.cardId, kind: h.kind, face: h.face, slot: h.slot ?? null })),
+    slotted ? "slotowy" : "klasyczny",
+  );
+
   return (
     <div className="mt-3 border-t border-edge pt-3">
+      {/* What is in the pack, against what will fit. In the variant a place on
+          the body is not the pack, so the number here is the one 5.4 is about —
+          and seeing it beats finding out by being refused. */}
+      <p className="mb-2 text-[11px] uppercase tracking-widest text-muted">
+        Plecak{" "}
+        <span className={packed >= limit ? "text-vermilion" : "text-muted/70"}>
+          {packed} / {Number.isFinite(limit) ? limit : "∞"}
+        </span>
+      </p>
       {/* Cards, as cards. A player at a table recognises their Miecz by its
           picture long before they read the word, and the ability text that used
           to sit under every line now lives one tap away in the detail view. */}
@@ -833,6 +851,15 @@ function Hand({
               </span>
             )}
           </CardTile>
+          ))}
+        {Number.isFinite(limit) &&
+          Array.from({ length: Math.max(0, limit - packed) }, (_, i) => (
+            <span
+              key={`wolne-${i}`}
+              className="flex h-[131px] w-[92px] items-center justify-center rounded border border-dashed border-edge/60 text-[11px] text-muted/40"
+            >
+              wolne
+            </span>
           ))}
         {seat.hidden_count > 0 && <CardBack count={seat.hidden_count} />}
       </div>
@@ -984,9 +1011,12 @@ function SeatCard({
               <Image
                 src={characterImageUrl(character.id)!}
                 alt={character.name}
-                width={64}
-                height={92}
-                className="h-auto w-16 shrink-0 rounded border border-edge"
+                width={160}
+                height={198}
+                // Big enough to read the Charakterystyka off, now that the
+                // slots take the other half of the row: half a card of white
+                // space either side of a thumbnail was the worse use of it.
+                className="h-auto w-40 shrink-0 rounded border border-edge"
                 unoptimized
               />
             )}

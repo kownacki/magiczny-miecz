@@ -748,7 +748,11 @@ export async function takeCard(
     const mine = holdings
       .filter((h) => h.seat_id === seatId)
       .map(asHolding);
-    if (carriedCount(mine) >= carryLimit(mine)) {
+    // In slotowy the limit is on the pack alone — what a character is wearing
+    // hangs on the character. Picking a card up always puts it in the pack, so
+    // this is the pack's question either way.
+    const variant = eq(game);
+    if (carriedCount(mine, variant) >= carryLimit(mine, variant)) {
       throw new Error(
         `Postać może nieść najwyżej ${BASE_CARRY_LIMIT} Przedmioty (5.4). Odrzuć coś najpierw.`,
       );
@@ -1714,6 +1718,14 @@ export async function equipCard(
   if (held.kind !== "item") throw new Error("Zakładać można tylko Przedmioty.");
 
   if (slot === null) {
+    // Taking something off puts it in the pack, and the pack is still the four
+    // of 5.4. A character with four things already carried has nowhere to put
+    // its helmet, and the rulebook's answer to being over the limit is to drop
+    // something (5.6) — so it says so rather than quietly making a fifth place.
+    const mine = holdings.filter((h) => h.seat_id === held.seat_id).map(asHolding);
+    if (carriedCount(mine, "slotowy") >= carryLimit(mine, "slotowy")) {
+      throw new Error("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
+    }
     await db.from("holdings").update({ slot: null }).eq("id", holdingId);
     await bumpRevision(gameId);
     return;

@@ -321,6 +321,19 @@ dropped rather than drawn empty all game. The five expansions are out of scope
 (CLAUDE.md) and their scans are untouched, so if a Pas or a pair of Butów turns
 up in one of them, `slots.ts` says what to add.
 
+### Plecak
+
+What is not worn is in the **plecak**, and that is the four of 5.4 — the limit
+applies to the pack alone, since what a character is wearing hangs on the
+character. A Koń or a Sakwa raises it, but only while it is worn: a Koń in the
+pack pulls nothing.
+
+Taking something off puts it in the pack, so it can be refused: a character
+carrying four things has nowhere to put its helmet, and the rulebook's answer to
+being over the limit is to drop something (5.6) rather than to grow a fifth
+place. The pack shows `n / limit` and draws its empty places, so the ceiling is
+visible instead of being discovered by being refused.
+
 ### Co działa gdzie
 
 **A card that has a place only works in it.** A sheathed Excalibur adds nothing.
@@ -350,6 +363,8 @@ carried at all but kept for trading (1.4).
 | Miecz and Magia bonuses only from worn cards | ✅ `inEffect`, `bonusFromHoldings` |
 | card abilities only from worn cards | ✅ `inEffect` at the ferry and the crossings |
 | drawn as a body beside the character card | ✅ `slot-panel.tsx` |
+| the pack drawn as its places, with the count | ✅ "Plecak n / 4" |
+| taking something off into a full pack is refused | ✅ `equipCard` |
 | two weapons at once, for a character that can | ❌ no character in the box has the ability |
 
 Klasyczny is untouched by all of it: `inEffect` returns everything, which is

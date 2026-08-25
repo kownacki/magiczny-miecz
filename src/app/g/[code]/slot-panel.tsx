@@ -65,11 +65,16 @@ export function SlotPanel({
   onTakeOff: (holdingId: string) => void;
 }) {
   return (
+    // Twice the size it started at. At 44 pixels a Hełm was a brown smudge and
+    // the empty places were indistinguishable from one another, which is the
+    // one thing a paper doll is for. Fixed rather than a fraction of the card:
+    // a share of the width made the four rows taller than the panel had any
+    // business being.
     <div
-      className="grid shrink-0 gap-1"
+      className="grid shrink-0 gap-1.5"
       style={{
-        gridTemplateColumns: "repeat(3, 44px)",
-        gridTemplateRows: "44px 44px 44px 44px",
+        gridTemplateColumns: "repeat(3, 84px)",
+        gridAutoRows: "84px",
       }}
     >
       {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
@@ -94,19 +99,19 @@ export function SlotPanel({
                   <Image
                     src={src}
                     alt={item.card.name}
-                    width={44}
-                    height={62}
+                    width={110}
+                    height={155}
                     className="h-full w-full object-cover"
                     unoptimized
                   />
                 ) : (
-                  <span className="flex h-full items-center justify-center p-0.5 text-center text-[9px] leading-tight text-ink">
+                  <span className="flex h-full items-center justify-center p-1 text-center text-[11px] leading-tight text-ink">
                     {item.card.name}
                   </span>
                 )}
               </button>
             ) : (
-              <span className="flex h-full items-center justify-center text-[15px] text-muted/35">
+              <span className="flex h-full items-center justify-center text-[26px] text-muted/30">
                 {GLYPH[slot]}
               </span>
             )}
@@ -120,7 +125,7 @@ export function SlotPanel({
                 onClick={() => onTakeOff(item.holdingId)}
                 disabled={busy}
                 title="Zdejmij"
-                className="absolute right-0 top-0 rounded-bl bg-night/85 px-1 text-[10px] leading-tight text-muted transition hover:text-vermilion disabled:opacity-40"
+                className="absolute right-0 top-0 rounded-bl bg-night/85 px-1.5 text-[13px] leading-tight text-muted transition hover:text-vermilion disabled:opacity-40"
               >
                 ×
               </button>
