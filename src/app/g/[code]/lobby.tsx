@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
+import { ConfirmDialog, type Confirmation } from "./confirm";
 import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
 
 /**
@@ -166,6 +167,20 @@ export function Lobby({
   // back to the character of whoever you are choosing for, so the column is
   // never blank once anything has been picked.
   const [preview, setPreview] = useState<SeatCharacter | null>(null);
+
+  /**
+   * The question on screen, or null.
+   *
+   * One at a time and held here rather than inside each slot: the three things
+   * worth asking about — starting, removing, handing over the role — are asked
+   * from three different places, and a dialog per place would be three dialogs
+   * that could all be open at once.
+   */
+  const [ask, setAsk] = useState<Confirmation | null>(null);
+
+  /** How a seat is named in a question about it. */
+  const nameOf = (seat: LobbySeat) =>
+    seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`;
   const reading = preview ?? target?.characterId ?? me?.characterId ?? null;
 
   /** characterId -> the seat holding it. There is only ever one of each card. */
@@ -184,6 +199,7 @@ export function Lobby({
 
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
+      <ConfirmDialog ask={ask} busy={busy} onCancel={() => setAsk(null)} />
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-edge px-4 py-2">
         <div className="flex items-baseline gap-3">
           <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
@@ -215,19 +231,38 @@ export function Lobby({
             Karty
           </button>
           {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
-          {/* Anybody at the table may start it, not only the host.
-              Everybody with a character has already said they are ready — that
-              is what the button waits for — so by the time it lights up there
-              is nothing left for a host to decide, and making four people wait
-              on a fifth to press a button they are all entitled to press is a
-              rule with no work to do.
+          {/* The host starts the table, and only the host. Everybody else has
+              already said what they have to say by marking themselves ready;
+              somebody has to decide that the waiting is over, and that is what
+              the role is for.
 
-              Always on screen, disabled with the reason written on it. A
-              button that only appears once the conditions are met leaves
-              everybody hunting for it and nobody knowing what is missing. */}
-          {me && (
+              Shown only to them, rather than shown to everybody and refused:
+              a button four people cannot use is four people wondering why.
+              For the host it is always on screen, disabled with the reason
+              written on it, because a button that appears only once the
+              conditions are met leaves everybody hunting for it and nobody
+              knowing what is missing.
+
+              `isHost` and not `canAdminister`: the second also covers a host
+              who has gone quiet, which is right for removing a stuck player but
+              would put this button on a screen the server is about to refuse.
+              A missing host is migrated away after a minute anyway, and then
+              somebody really is the host. */}
+          {isHost && (
             <button
-              onClick={onStart}
+              onClick={() =>
+                setAsk({
+                  title: "Rozpocząć grę?",
+                  body:
+                    `Do gry siada ${chosen.length} ${chosen.length === 1 ? "postać" : "postaci"}. ` +
+                    "Po rozpoczęciu nikt nie zmieni już swojej Postaci ani nie dołączy do stołu.",
+                  confirmLabel: "Rozpocznij",
+                  onConfirm: () => {
+                    setAsk(null);
+                    onStart();
+                  },
+                })
+              }
               disabled={busy || chosen.length < 2 || waitingOn.length > 0}
               title={
                 chosen.length < 2
@@ -285,8 +320,37 @@ export function Lobby({
               canAdminister={canAdminister}
               busy={busy}
               onSelect={() => onPickFor(target?.id === seat.id ? null : seat)}
-              onRemove={() => onRemove(seat)}
-              onMakeHost={() => onMakeHost(seat)}
+              // Both of these happen to somebody else and cannot be undone by
+              // the person they happen to, so both are asked first. The slot
+              // raises the question; the answer runs the same handler it always
+              // did.
+              onRemove={() =>
+                setAsk({
+                  title: "Usunąć ze stołu?",
+                  body:
+                    `${nameOf(seat)} straci swoje miejsce${seat.characterId ? " razem z wybraną Postacią" : ""}. ` +
+                    "Może dołączyć ponownie, jeśli poda kod stołu.",
+                  confirmLabel: "Usuń",
+                  tone: "grave",
+                  onConfirm: () => {
+                    setAsk(null);
+                    onRemove(seat);
+                  },
+                })
+              }
+              onMakeHost={() =>
+                setAsk({
+                  title: "Przekazać rolę gospodarza?",
+                  body:
+                    `${nameOf(seat)} będzie od tej chwili prowadzić stół: rozpocznie grę, ` +
+                    "usunie graczy i przekaże rolę dalej. Ty przestaniesz to móc.",
+                  confirmLabel: "Przekaż",
+                  onConfirm: () => {
+                    setAsk(null);
+                    onMakeHost(seat);
+                  },
+                })
+              }
               onReady={seat.seatIndex === mySeatIndex ? onReady : undefined}
               onPreview={setPreview}
             />
@@ -741,41 +805,75 @@ function SeatSlot({
               : "border-edge bg-panel/50"
       }`}
     >
-      {/* Not on your own slot: leaving is "Opuść stół", and a host who kicks
-          themselves out of their own table has done something they meant to
-          spell differently. */}
-      {canAdminister && !isMine && (
-        <button
-          onClick={onRemove}
-          disabled={busy}
-          title="Usuń ze stołu"
-          className="absolute right-1 top-1 z-10 rounded px-1 text-xs text-muted transition hover:text-vermilion disabled:opacity-40"
-        >
-          ×
-        </button>
-      )}
+      {/* Everything above the card, at a height that never changes.
+          
+          The standee is the one thing on this slot you read at a glance across
+          a table, and it used to grow and shrink: it took whatever vertical
+          space was left over, so a seat gained height when "zrób gospodarzem"
+          went away and lost it when the host badge appeared. Six slots side by
+          side, each with a different-sized figure, and none of the differences
+          meaning anything. Every row around the card is now a fixed height and
+          the card gets the constant remainder. */}
+      <div className="flex h-[48px] shrink-0 flex-col">
+        <p className="flex h-6 items-center gap-1.5 truncate pr-4 font-[family-name:var(--font-display)] text-base text-ink">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: colour }}
+            aria-hidden
+          />
+          <span className="truncate">{seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}</span>
+        </p>
+        {/* One row for who this seat is and what can be done about it.
+            
+            They belong together and they are mutually exclusive: a seat that is
+            already the host is never offered "zrób gospodarzem", so the badge
+            and the button occupy the same line rather than two, and the same
+            line on every slot. Two rows meant Michał's "gospodarz" sat a line
+            above Ola's button, which read as a misalignment because it was one.
 
-      <p className="flex items-center gap-1.5 truncate pr-4 font-[family-name:var(--font-display)] text-base text-ink">
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: colour }}
-          aria-hidden
-        />
-        <span className="truncate">{seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}</span>
-      </p>
-      <p className="mb-1 h-4 truncate text-[12px]">
-        {seat.isHost && <span className="text-ochre">gospodarz</span>}
-        {seat.isHost && (seat.abandoned || seat.away || isMine) && (
-          <span className="text-muted"> · </span>
-        )}
-        {seat.abandoned ? (
-          <span className="text-vermilion/80">bez gracza</span>
-        ) : seat.away ? (
-          <span className="text-muted/70">nieobecny</span>
-        ) : isMine ? (
-          <span className="text-ochre/70">to ty</span>
-        ) : null}
-      </p>
+            Removing lives here too, next to promoting, instead of as an × in
+            the corner: both are things the host does to somebody else's seat,
+            and a × the size of a full stop is a poor control for taking a
+            player's seat away. */}
+        <div className="mt-0.5 flex h-[22px] items-center gap-1">
+          <p className="min-w-0 flex-1 truncate text-[12px] leading-none">
+            {seat.isHost && <span className="text-ochre">gospodarz</span>}
+            {seat.isHost && (seat.abandoned || seat.away || isMine) && (
+              <span className="text-muted"> · </span>
+            )}
+            {seat.abandoned ? (
+              <span className="text-vermilion/80">bez gracza</span>
+            ) : seat.away ? (
+              <span className="text-muted/70">nieobecny</span>
+            ) : isMine ? (
+              <span className="text-ochre/70">to ty</span>
+            ) : null}
+          </p>
+          {canAdminister && !seat.isHost && !seat.abandoned && (
+            <button
+              onClick={onMakeHost}
+              disabled={busy}
+              title={`Przekaż rolę gospodarza: ${seat.playerName ?? `miejsce ${seat.seatIndex + 1}`}`}
+              className="shrink-0 rounded border border-edge px-1 py-0.5 text-[11px] leading-none text-muted transition hover:border-ochre hover:text-ochre disabled:opacity-40"
+            >
+              zrób gospodarzem
+            </button>
+          )}
+          {/* Never your own seat: leaving is "Opuść stół", and a host who
+              removes themselves has done something they meant to spell
+              differently. */}
+          {canAdminister && !isMine && (
+            <button
+              onClick={onRemove}
+              disabled={busy}
+              title={`Usuń ze stołu: ${seat.playerName ?? `miejsce ${seat.seatIndex + 1}`}`}
+              className="shrink-0 rounded border border-edge px-1 py-0.5 text-[11px] leading-none text-muted transition hover:border-vermilion hover:text-vermilion disabled:opacity-40"
+            >
+              usuń
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Tapping the slot aims the character strip at it. */}
       {/* The portrait gives height back on a short screen but is capped, since
@@ -827,38 +925,32 @@ function SeatSlot({
           and the same line says which, for you and for everybody else. Yours is
           a button because saying you are ready is the only thing left to do
           once you have a character; theirs is a word because it is news. */}
-      {onReady ? (
-        <button
-          disabled={busy || !seat.characterId}
-          onClick={() => onReady(!seat.ready)}
-          title={seat.characterId ? undefined : "Najpierw wybierz postać"}
-          className={`mt-1 rounded border px-2 py-1 text-[12px] transition disabled:opacity-40 ${
-            seat.ready
-              ? "border-verdigris bg-verdigris/10 text-verdigris"
-              : "border-edge text-ink hover:border-ochre"
-          }`}
-        >
-          {seat.ready ? "Gotów ✓" : "Jestem gotów"}
-        </button>
-      ) : (
-        <p
-          className={`mt-1 h-[27px] truncate pt-1 text-[12px] ${
-            seat.ready ? "text-verdigris" : "text-muted/60"
-          }`}
-        >
-          {seat.abandoned || !seat.characterId ? "" : seat.ready ? "gotów ✓" : "niegotowy"}
-        </p>
-      )}
+      <div className="mt-1 flex h-[27px] shrink-0 items-stretch">
+        {onReady ? (
+          <button
+            disabled={busy || !seat.characterId}
+            onClick={() => onReady(!seat.ready)}
+            title={seat.characterId ? undefined : "Najpierw wybierz postać"}
+            className={`w-full rounded border px-2 text-[12px] transition disabled:opacity-40 ${
+              seat.ready
+                ? "border-verdigris bg-verdigris/10 text-verdigris"
+                : "border-edge text-ink hover:border-ochre"
+            }`}
+          >
+            {seat.ready ? "Gotów ✓" : "Jestem gotów"}
+          </button>
+        ) : (
+          <p
+            className={`flex items-center truncate text-[12px] ${
+              seat.ready ? "text-verdigris" : "text-muted/60"
+            }`}
+          >
+            {seat.abandoned || !seat.characterId ? "" : seat.ready ? "gotów ✓" : "niegotowy"}
+          </p>
+        )}
+      </div>
 
-      {canAdminister && !seat.isHost && !seat.abandoned && (
-        <button
-          onClick={onMakeHost}
-          disabled={busy}
-          className="mt-1 rounded border border-edge px-1 py-0.5 text-[12px] text-muted transition hover:border-ochre hover:text-ochre disabled:opacity-40"
-        >
-          zrób gospodarzem
-        </button>
-      )}
+
     </div>
   );
 }
