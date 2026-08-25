@@ -1718,21 +1718,28 @@ function Hand({
              * A carried card has no drag events behind it, so hovering is
              * watched directly for the same answer to show.
              *
-             * Entering is the only thing that moves the insertion point, and
-             * leaving does not clear it. That is not tidiness — it is the whole
-             * fix for a loop: opening the gap shifts this card to the right,
-             * out from under the pointer, which fired the leave, which closed
-             * the gap, which slid the card back under the pointer. The card
-             * shivered in place and the gap strobed.
+             * Both halves of it: coming to a card opens the gap in front of it
+             * and going away closes it again, wherever you go — onto the pack's
+             * own margin, onto the body, off the panel. For a while only the
+             * first half was safe, because the gap used to be made of layout
+             * and opening it slid this card out from under the pointer, which
+             * fired the leave, which closed the gap, which slid the card back.
+             * The card shivered and the gap strobed, so the leave was simply
+             * not listened for and the gap stayed open until something else
+             * claimed it.
              *
-             * So the point stays where it was put until another card claims it,
-             * or a free square or leaving the pack sends it back to the end.
+             * The gap is drawn rather than laid out now (see `ItemSlot`) and
+             * this box does not move, so leaving it means the pointer really
+             * has left.
              */
             onPointerEnter={() =>
               carried?.from === "plecak" && carried.holdingId !== held.id
                 ? setInsertAt(held.id)
                 : undefined
             }
+            // Only this card's own gap: moving straight to the next card sets
+            // the new one in the same breath, and React keeps the last word.
+            onPointerLeave={() => setInsertAt((at) => (at === held.id ? null : at))}
           >
             {canAct && (
               <span className="flex items-center gap-2">
@@ -1785,9 +1792,9 @@ function Hand({
               glyph="+"
               tone="empty"
               disabled
-              // Past the last card is the end of the queue, and saying so is
-              // what closes the gap again — nothing else does, now that leaving
-              // a card does not.
+              // Past the last card is the end of the queue, which is what a
+              // free square means: not a position of its own, just the room
+              // 5.4 has left.
               onPointerEnter={() => setInsertAt(null)}
               onDragOver={() => setInsertAt(null)}
             />
