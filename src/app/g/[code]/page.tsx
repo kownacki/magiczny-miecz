@@ -1576,10 +1576,59 @@ function describeResult(result: unknown): string | null {
     outcome?: string;
     spell?: string;
     effect?: string;
+    /** The Kamienny Most's own fields (14.5-14.6). */
+    kind?: string;
+    to?: string;
+    lost?: string[];
+    kept?: string[];
+    lifeLost?: number;
+    enemyTotal?: number;
+    healed?: number;
+    paid?: number;
   };
   // A spell has to be announced loudly: 9.6 reaches its victim anywhere on the
   // board, so the person it lands on may not be looking at this turn at all.
   if (data.spell) return `Rzucono Zaklęcie: ${data.spell}. ${data.effect ?? ""}`.trim();
+
+  // The bridge. These are the most expensive things that happen in the game —
+  // a fall from the Pułapka takes two thirds of everything a character owns —
+  // and they used to happen in silence, the figure simply appearing somewhere
+  // else with a lighter pack. The dice are quoted because at a table somebody
+  // always asks to see them.
+  const roll = (dice?: number[]) => (dice ?? []).join(" + ");
+  switch (data.kind) {
+    case "pulapka": {
+      const sum = (data.dice ?? []).reduce((total, die) => total + die, 0);
+      if (data.outcome === "uniknieta") {
+        return `Pułapka: ${roll(data.dice)} = ${sum} — mniej niż twoje punkty, zostajesz na miejscu.`;
+      }
+      const where = data.to ? (FIELD_NAMES.get(data.to) ?? data.to) : "?";
+      const lost = data.lost?.length ? `Tracisz: ${data.lost.join(", ")}.` : "Nic nie tracisz.";
+      const kept = data.kept?.length ? ` Zostaje przy tobie: ${data.kept.join(", ")}.` : "";
+      return `Pułapka: ${roll(data.dice)} = ${sum} — spadasz na ${where}. ${lost}${kept}`;
+    }
+    case "gra-ze-smiercia": {
+      const mine = (data.dice ?? []).slice(0, 2);
+      const deaths = (data.dice ?? []).slice(2);
+      const verdict =
+        data.outcome === "dalej"
+          ? "wygrywasz — idziesz dalej"
+          : data.outcome === "znowu"
+            ? "remis — grasz jeszcze raz w następnej turze"
+            : "przegrywasz — tracisz 1 Życia i grasz dalej";
+      return `Gra ze Śmiercią: ty ${roll(mine)} przeciw ${roll(deaths)} — ${verdict}.`;
+    }
+    case "cerber":
+      return `Cerber: ${roll(data.dice)} — tracisz ${data.lifeLost} Życia.`;
+    case "straznik":
+      return `${data.outcome}: ${roll(data.dice)} — jego siła to ${data.enemyTotal}. Nie przejdziesz, póki nie zginie.`;
+  }
+
+  // Paying a healer: what the money and 4.7 between them actually bought.
+  if (typeof data.healed === "number") {
+    return `Wyleczone: ${data.healed} ${data.healed === 1 ? "punkt" : "punkty"} Życia za ${data.paid} Sz. Z.`;
+  }
+
   if (!Array.isArray(data.dice) || typeof data.magia !== "number") return null;
   const total = data.dice.reduce((sum, die) => sum + die, 0);
   const verdict =

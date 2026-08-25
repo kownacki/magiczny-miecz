@@ -2346,6 +2346,27 @@ export async function placeSeat(
   if (!FIELDS.has(fieldId)) throw new Error(`Nie ma Obszaru: ${fieldId}`);
 
   await db.from("seats").update({ field_id: fieldId }).eq("id", seatId);
+
+  // The turn state carries its own copy of where the character is standing —
+  // it is what the panel reads to decide which field's options to offer — so
+  // moving the figure without it left the header naming one field and the
+  // buttons belonging to another. Only for the seat whose turn it is: the
+  // others have no turn state to correct.
+  if (
+    seat.seat_index === game.active_seat &&
+    game.turn_state.phase === "pole" &&
+    game.turn_state.fieldId !== fieldId
+  ) {
+    await db
+      .from("games")
+      .update({
+        // Freshly arrived: whatever was drawn belonged to the old field, and
+        // the new one has not been resolved at all.
+        turn_state: { phase: "pole", fieldId, from: null, draw: 0, drawn: [], fought: [] },
+      })
+      .eq("id", gameId);
+  }
+
   await journal(
     gameId,
     seatId,
