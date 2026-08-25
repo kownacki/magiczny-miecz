@@ -13,13 +13,14 @@
  * this answers "now", and they are the same question asked twice.
  */
 
-import type { TurnWindow, WindowId } from "@/lib/engine/turnWindows";
+import type { TurnStep, TurnWindow, WindowId } from "@/lib/engine/turnWindows";
 
 export function NowBox({
   playerName,
   isMine,
   fieldName,
   windows,
+  steps,
   canEnd,
   canRoll,
   canDraw,
@@ -35,6 +36,8 @@ export function NowBox({
   fieldName: string;
   /** What this turn is offering — see `windowsFor`. */
   windows: readonly TurnWindow[];
+  /** How far through the turn it is — see `turnSteps`. */
+  steps: readonly TurnStep[];
   canEnd: boolean;
   /** The turn has not been rolled yet — 10.2 makes this the first thing it does. */
   canRoll: boolean;
@@ -66,6 +69,35 @@ export function NowBox({
           {fieldName}
         </p>
       </header>
+
+      {/* How far through the turn this is.
+      
+          When the roll was a panel that appeared, and then a different panel
+          appeared in its place, the screen changing WAS the progress report.
+          Now that both are buttons in one box, a player who looks away comes
+          back to a box that looks much like it did and cannot tell whether they
+          have already rolled. */}
+      {steps.length > 0 && (
+        <p className="mb-2 flex shrink-0 flex-wrap items-center gap-x-1 text-[10px] uppercase tracking-wide">
+          {steps.map((step, at) => (
+            <span key={step.label} className="flex items-center gap-1">
+              {at > 0 && <span className="text-edge">·</span>}
+              <span
+                className={
+                  step.state === "zrobione"
+                    ? "text-verdigris"
+                    : step.state === "teraz"
+                      ? "text-ochre"
+                      : "text-muted/50"
+                }
+              >
+                {step.label}
+                {step.state === "zrobione" && " \u2713"}
+              </span>
+            </span>
+          ))}
+        </p>
+      )}
 
       {/* The windows, most pressing first — the order is 16.4's. Everyone gets
           them, not only the player whose turn it is: at a table the others read

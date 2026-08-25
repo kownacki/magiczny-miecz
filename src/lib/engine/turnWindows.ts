@@ -118,3 +118,43 @@ export function windowsFor(facts: TurnFacts): TurnWindow[] {
 export function opensItself(windows: readonly TurnWindow[]): WindowId | null {
   return windows.find((window) => window.compulsory)?.id ?? null;
 }
+
+/* --------------------------------------------------------------------------
+ * How far through the turn you are.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * 10.1 says what a turn is made of: "a) ruch b) spotkania i badanie Obszaru,
+ * na którym się znalazły" — and 10.2 splits the first into the roll and the
+ * walk. Three steps, in that order, always.
+ *
+ * Worth drawing because the controls no longer say it. When the roll was a
+ * panel that appeared and then a different panel appeared in its place, the
+ * screen changing WAS the progress report; now that both are buttons in one
+ * box, a player who looks away comes back to a box that looks much like it did
+ * and cannot tell whether they have rolled.
+ */
+export type StepState = "zrobione" | "teraz" | "przed";
+
+export interface TurnStep {
+  label: string;
+  state: StepState;
+}
+
+export function turnSteps(phase: string): TurnStep[] {
+  // The Kamienny Most is not made of these: 10.3 has no roll at all there, one
+  // Obszar a turn and an instruction to get through. Claiming a roll had
+  // happened would be a lie, and claiming one was coming would be worse.
+  if (phase === "most") return [{ label: "Most", state: "teraz" }];
+  if (phase === "walka") return [{ label: "Walka", state: "teraz" }];
+
+  const order = ["rzut", "ruch", "pole"];
+  const at = phase === "koniec" ? order.length : order.indexOf(phase);
+  if (at < 0) return [];
+
+  return [
+    { label: "Rzut", state: at > 0 ? "zrobione" : "teraz" },
+    { label: "Ruch", state: at > 1 ? "zrobione" : at === 1 ? "teraz" : "przed" },
+    { label: "Obszar", state: at > 2 ? "zrobione" : at === 2 ? "teraz" : "przed" },
+  ];
+}

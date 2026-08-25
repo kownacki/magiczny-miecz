@@ -29,6 +29,7 @@ import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
 import { CardLibrary } from "./card-library";
+import { TestConsole } from "./console";
 import { tokensFor } from "@/lib/engine/tokens";
 import { DRAG_TYPE, SlotPanel, startHoldingDrag, type SlotItem } from "./slot-panel";
 import { ItemSlot, SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
@@ -39,7 +40,7 @@ import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lo
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
-import { windowsFor } from "@/lib/engine/turnWindows";
+import { turnSteps, windowsFor } from "@/lib/engine/turnWindows";
 import { crossingFrom } from "@/lib/engine/rings";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { Journal } from "./journal";
@@ -52,6 +53,8 @@ import type { EventCard, Item, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
 import { DrawModal, ringFields } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
+import { AnnouncementModal } from "./announcement";
+import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { USE_VERB, askAbout, isUsable, usageOf } from "@/lib/engine/uses";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
@@ -212,6 +215,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * pass to correct the first.
    */
   const testMode = useSyncExternalStore(watchTestMode, readTestMode, () => false);
+  /**
+   * The console, opened with a backtick or from the switch that gates it.
+   *
+   * The key is the one every game with a console uses, and it is unshifted, so
+   * it never lands in a Polish word being typed anywhere else.
+   */
+  const [consoleOpen, setConsoleOpen] = useState(false);
   const setTestMode = writeTestMode;
   const testing = TESTING_POSSIBLE && testMode;
   /** A seatless visitor who chose to watch rather than take a character over. */
@@ -229,6 +239,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [waved, setWaved] = useState<string[]>([]);
   /** Whether the "choose again" modal is open (4.4). */
   const [reborn, setReborn] = useState(false);
+  /**
+   * Something that happened to this character and has to be said out loud.
+   *
+   * Half of these arrive on somebody else's turn — Burza Siedmiu Słońc costs
+   * every character in the Krąg a turn, drawn by one player — so they cannot
+   * wait for the next thing this device does. See `announcements.ts` for what
+   * is worth interrupting somebody for and what is not.
+   */
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  /**
+   * The last reading of this seat, to compare the next one against.
+   *
+   * A ref and not state: nothing renders from it, and re-rendering on every
+   * poll to store a value nobody looks at would be a re-render per two
+   * seconds, per device, for the whole game.
+   */
+  const watched = useRef<Watched | null>(null);
   /**
    * The irreversible thing waiting to be confirmed.
    *
@@ -321,6 +348,24 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setFieldCards(data.fieldCards ?? []);
     setStock(data.stock ?? {});
     setMySeatIndex(data.mySeatIndex);
+
+    // Done here rather than in an effect because this is where the new reading
+    // arrives, and because the comparison has to happen exactly once per
+    // answer: an effect keyed on the seat would fire again on any unrelated
+    // re-render and announce a death twice.
+    const mineNow = (data.seats as Seat[]).find(
+      (seat) => seat.seat_index === data.mySeatIndex,
+    );
+    if (mineNow) {
+      const reading = watch({
+        turnsLost: mineNow.turns_lost,
+        stoneUntilTurn: mineNow.stone_until_turn,
+        eliminated: mineNow.eliminated,
+      });
+      const said = announce(watched.current, reading);
+      watched.current = reading;
+      if (said) setAnnouncement(said);
+    }
   }, [code]);
 
   const turnKey = game ? `${game.turn}:${game.active_seat}` : null;
@@ -884,8 +929,42 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       })
     : [];
 
+  /** One line, run on the server, answered with what to print. */
+  const runConsole = useCallback(
+    async (line: string) => {
+      const response = await fetch(`/api/games/${code}/debug`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "console", line, token: readSeatToken(code) }),
+      });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      return response.ok ? String(body.said ?? "ok") : String(body.error ?? "?");
+    },
+    [code, refresh],
+  );
+
   const overlays = (
     <>
+      {/* Above everything: what it reports has already happened, and half of it
+          happened while this player was not even looking at their own turn. */}
+      <AnnouncementModal
+        announcement={announcement}
+        onDismiss={() => setAnnouncement(null)}
+      >
+        {announcement?.kind === "smierc" && (
+          <button
+            onClick={() => {
+              setAnnouncement(null);
+              setReborn(true);
+            }}
+            className="rounded border border-ochre bg-ochre/10 px-3 py-1 text-[13px] text-ochre transition hover:bg-ochre/20"
+          >
+            Wybierz nową Postać
+          </button>
+        )}
+      </AnnouncementModal>
+
       {/* Above everything else it could be asked about, and dismissed by
           clicking away — the safest answer is the one you get by not deciding. */}
       <ConfirmDialog ask={ask} busy={busy} onCancel={() => setAsk(null)} />
@@ -1349,6 +1428,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
                   }
                   windows={turnWindows}
+                  steps={turnSteps(turnState.phase)}
                   canEnd={game.turn_state.phase !== "walka"}
                   canRoll={game.turn_state.phase === "rzut"}
                   onRoll={() => post("turn", { action: "roll" })}

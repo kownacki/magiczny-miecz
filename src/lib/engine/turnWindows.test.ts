@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { opensItself, windowsFor, type TurnFacts } from "./turnWindows";
+import { opensItself, turnSteps, windowsFor, type TurnFacts } from "./turnWindows";
 
 const quiet: TurnFacts = {
   phase: "pole",
@@ -111,5 +111,36 @@ describe("the move itself", () => {
   it("is not offered in any other phase", () => {
     expect(ids({ phase: "pole" })).not.toContain("ruch");
     expect(ids({ phase: "rzut" })).not.toContain("ruch");
+  });
+});
+
+describe("how far through the turn you are", () => {
+  const shape = (phase: string) =>
+    turnSteps(phase).map((step) => `${step.label}:${step.state}`);
+
+  it("has not rolled yet at the start", () => {
+    expect(shape("rzut")).toEqual(["Rzut:teraz", "Ruch:przed", "Obszar:przed"]);
+  });
+
+  it("has rolled once there is a direction to choose", () => {
+    expect(shape("ruch")).toEqual(["Rzut:zrobione", "Ruch:teraz", "Obszar:przed"]);
+  });
+
+  it("has rolled and moved once it is standing somewhere", () => {
+    expect(shape("pole")).toEqual(["Rzut:zrobione", "Ruch:zrobione", "Obszar:teraz"]);
+  });
+
+  it("has done all three at the end", () => {
+    expect(shape("koniec").every((s) => s.endsWith("zrobione"))).toBe(true);
+  });
+
+  it("claims no roll on the Kamienny Most, which has none (10.3)", () => {
+    // One Obszar a turn and an instruction to get through. Saying a roll had
+    // happened would be a lie; saying one was coming would be worse.
+    expect(shape("most")).toEqual(["Most:teraz"]);
+  });
+
+  it("says only that a fight is happening", () => {
+    expect(shape("walka")).toEqual(["Walka:teraz"]);
   });
 });
