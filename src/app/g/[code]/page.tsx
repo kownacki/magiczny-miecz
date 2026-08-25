@@ -1536,12 +1536,9 @@ function Hand({
    * it — and never a card already in the pack, which is only being moved about
    * inside a limit it already satisfies.
    */
-  const landing = dragOver;
+  const landing = liftedHoldingId !== null;
   const refuses =
-    landing &&
-    carried !== null &&
-    carried.from !== "plecak" &&
-    packed >= limit;
+    landing && carried !== null && carried.from !== "plecak" && packed >= limit;
 
   // After the hooks, which have to run every render whatever is on show.
   //
@@ -1629,14 +1626,20 @@ function Hand({
           dropIntoPack(carried.holdingId, before);
           onCarry(null);
         }}
-        className={`flex flex-wrap gap-2 rounded border border-dashed p-1 transition ${
+        // The same two strengths every place on the body uses (see `TONE`):
+        // dashed and faint for somewhere the card could go, solid and filled in
+        // for where it would go. Red is 5.4 — no room — said while the card is
+        // still in the air rather than as a refusal after it lands.
+        className={`flex flex-wrap gap-2 rounded border p-1 transition ${
           !landing
             ? "border-transparent"
-            : // Red when the card would not fit at all: 5.4 said while it is
-              // still in the air, rather than as a refusal after it lands.
-              refuses
-              ? "border-vermilion bg-vermilion/10"
-              : "border-verdigris bg-verdigris/10"
+            : refuses
+              ? dragOver
+                ? "border-solid border-vermilion bg-vermilion/25"
+                : "border-dashed border-vermilion/60 bg-vermilion/10"
+              : dragOver
+                ? "border-solid border-verdigris bg-verdigris/25"
+                : "border-dashed border-verdigris/60 bg-verdigris/10"
         }`}
       >
         {/* Your own Zaklęcia are not repeated here: they have their own panel
