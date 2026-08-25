@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
   // this it adopts the parent directory and warns on every start.
   turbopack: { root: __dirname },
 
+  // Next's dev badge defaults to bottom-left, which is where the journal now
+  // sits — it covered the newest lines, the ones most worth reading.
+  devIndicators: { position: "bottom-right" },
+
   images: {
     /**
      * Bypass the image optimizer while developing.
