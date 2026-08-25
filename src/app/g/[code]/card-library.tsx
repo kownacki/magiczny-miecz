@@ -11,6 +11,8 @@ import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardDetail, CardTile, type TileCard } from "./card-tile";
+import { useCardPreview } from "./card-preview";
+import { fieldWithText } from "@/lib/engine/fieldText";
 
 /**
  * Every card in the box, to look at.
@@ -55,7 +57,14 @@ const SHELVES: { key: Shelf; label: string }[] = [
   { key: "miejsce", label: "Miejsca" },
 ];
 
-/** Only while testing: the board as a list, to stand on any of it at once. */
+/**
+ * The board as a list.
+ *
+ * A shelf like the others: the fields carry printed instructions — die-roll
+ * tables, shop prices, what the Czarci Młyn does to you — and looking one up
+ * without leaning over the board is exactly what this drawer is for. Only
+ * *standing* on one is a test shortcut, and that is what the switch gates.
+ */
 const FIELD_SHELF: { key: Shelf; label: string } = { key: "obszary", label: "Obszary" };
 
 /**
@@ -117,6 +126,95 @@ function shelfCards(shelf: Shelf): TileCard[] {
     }
   }
   return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, "pl"));
+}
+
+/**
+ * One field, to read and — while testing — to stand on.
+ *
+ * There is no card to show for a field, so the hover carries its printed
+ * instruction instead, which is the same thing the journal does when a line
+ * names one.
+ */
+function FieldChip({
+  fieldId,
+  name,
+  eqMode,
+  onTeleport,
+}: {
+  fieldId: FieldId;
+  name: string;
+  eqMode: EqMode;
+  onTeleport?: (fieldId: FieldId) => void;
+}) {
+  const field = fieldWithText(fieldId);
+  const { handlers, preview } = useCardPreview(
+    { cardId: fieldId, name, text: field?.text ?? undefined, kindLabel: "Obszar" },
+    true,
+    eqMode,
+  );
+  const look = "rounded border border-edge bg-panel px-2 py-1 text-[11px] text-ink transition";
+
+  return (
+    <>
+      {onTeleport ? (
+        <button
+          {...handlers}
+          onClick={() => onTeleport(fieldId)}
+          title={`Stań na: ${name}`}
+          className={`${look} hover:border-ochre`}
+        >
+          {name}
+        </button>
+      ) : (
+        // Not a button when there is nothing to press: a chip that lights up
+        // under the pointer and then does nothing is the affordance lying.
+        <span {...handlers} className={`${look} cursor-help`}>
+          {name}
+        </span>
+      )}
+      {preview}
+    </>
+  );
+}
+
+/** Polish counts things three ways, and these are small numbers. */
+function plural(count: number, one: string, few: string, many: string): string {
+  if (count === 1) return one;
+  const last = count % 10;
+  const tens = count % 100;
+  return last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14) ? few : many;
+}
+
+/**
+ * How much of this shelf the box actually holds.
+ *
+ * The grid shows one of each, which is not the same as how many there are: the
+ * deck has three Wilkołaki and fifteen 1 Sztuka Złota, and the equipment pile
+ * four Magiczne Miecze (21.2), so "44 Przedmioty" and "63 Przedmioty" are both
+ * true answers to different questions. Both are worth knowing — how likely a
+ * card is to come up is the whole shape of the deck — so the heading says the
+ * designs and, where they differ, the cards.
+ */
+function shelfSize(shelf: Shelf): { designs: number; cards: number } {
+  const count = (ids: readonly string[]) => ({
+    designs: new Set(ids).size,
+    cards: ids.length,
+  });
+  if (shelf === "zaklecia") return count((spells as Spell[]).map((card) => card.id));
+  if (shelf === "wyposazenie") return count((items as Item[]).map((card) => card.id));
+  if (shelf === "postacie") return count((characters as Character[]).map((one) => one.id));
+  if (shelf === "obszary") return { designs: 0, cards: 0 };
+  return count(
+    (events as EventCard[]).filter((card) => card.cardClass === shelf).map((card) => card.id),
+  );
+}
+
+/** The heading's tally: "44 rodzaje · 63 karty", or just the one when they agree. */
+function shelfTally(shelf: Shelf): string {
+  const { designs, cards } = shelfSize(shelf);
+  const named = `${cards} ${plural(cards, "karta", "karty", "kart")}`;
+  if (designs === cards) return named;
+  return `${designs} ${plural(designs, "rodzaj", "rodzaje", "rodzajów")} · ${named}`;
 }
 
 /** Folds Polish diacritics so "zaklecie" finds "Zaklęcie" without a Polish keyboard. */
@@ -225,7 +323,7 @@ export function CardLibrary({
       </header>
 
       <nav className="flex flex-wrap gap-1 border-b border-edge px-4 py-2">
-        {[...SHELVES, ...(onTeleport ? [FIELD_SHELF] : [])].map((entry) => (
+        {[...SHELVES, FIELD_SHELF].map((entry) => (
           <button
             key={entry.key}
             onClick={() => setShelf(entry.key)}
@@ -244,19 +342,21 @@ export function CardLibrary({
         <p className="mb-3 text-[11px] text-muted">
           {/* The board is not the deck: counting it in "kart" said 0, because
               no card in the box has a field on it. */}
-          {shelf === "obszary" && onTeleport ? (
-            "Kliknij Obszar, żeby na nim stanąć — skrót testowy, oznaczony w dzienniku."
+          {shelf === "obszary" ? (
+            onTeleport
+              ? "Najedź, żeby przeczytać, co na Obszarze napisano — kliknij, żeby na nim stanąć (skrót testowy, oznaczony w dzienniku)."
+              : "Najedź na Obszar, żeby przeczytać, co na nim napisano."
           ) : (
             <>
-              {cards.length} {cards.length === 1 ? "karta" : "kart"}
-              {searching ? " — szukam w całej talii, nie tylko na tej półce." : null}
+              {/* The headings carry the tally now; this is left with the one
+                  thing they cannot say, which is where the search looked. */}
               {searching
-                ? null
-                : " — każda karta raz, choć w talii część powtarza się po kilka razy."}
+                ? `${cards.length} ${plural(cards.length, "karta", "karty", "kart")} — szukam w całej talii, nie tylko na tej półce.`
+                : "Kliknij kartę, żeby ją obejrzeć."}
             </>
           )}
         </p>
-        {shelf === "obszary" && onTeleport ? (
+        {shelf === "obszary" ? (
           <div className="flex flex-col gap-5">
             {REGIONS.map(({ key, label }) => {
               const here = [...FIELDS.values()].filter((field) => field.region === key);
@@ -269,16 +369,15 @@ export function CardLibrary({
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {here.map((field) => (
-                      <button
+                      // The ring is the heading now, so the name is the whole
+                      // chip.
+                      <FieldChip
                         key={field.id}
-                        onClick={() => onTeleport(field.id as FieldId)}
-                        title={`Stań na: ${field.name}`}
-                        className="rounded border border-edge bg-panel px-2 py-1 text-[11px] text-ink transition hover:border-ochre"
-                      >
-                        {/* The ring is the heading now, so the name is the
-                            whole button. */}
-                        {field.name}
-                      </button>
+                        fieldId={field.id as FieldId}
+                        name={field.name}
+                        eqMode={eqMode}
+                        onTeleport={onTeleport}
+                      />
                     ))}
                   </div>
                 </section>
@@ -291,7 +390,11 @@ export function CardLibrary({
             <section key={section.key}>
               <h3 className="mb-2 flex items-baseline gap-2 border-b border-edge/60 pb-1 text-[11px] uppercase tracking-wide text-ochre/80">
                 {section.label}
-                <span className="tnum text-muted/70">{section.cards.length}</span>
+                <span className="tnum normal-case tracking-normal text-muted/70">
+                  {/* Searching, the number is how many were found; browsing, it
+                      is what the box holds. */}
+                  {searching ? section.cards.length : shelfTally(section.key)}
+                </span>
               </h3>
               <div className="flex flex-wrap gap-3">
                 {section.cards.map((card) => (
