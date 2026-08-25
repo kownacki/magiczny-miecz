@@ -38,6 +38,9 @@ export interface DrawnEntry {
 export function DrawModal({
   who,
   canAct,
+  minimized,
+  onMinimize,
+  onRestore,
   cards,
   resolved,
   fought,
@@ -63,6 +66,16 @@ export function DrawModal({
    * say in somebody else's turn.
    */
   canAct: boolean;
+  /**
+   * Whether a watcher has folded this away.
+   *
+   * Only ever a watcher's: the player whose turn it is cannot put their own
+   * fight in a corner, because it is the thing they are being asked to do and
+   * the game does not go on without it.
+   */
+  minimized: boolean;
+  onMinimize: () => void;
+  onRestore: () => void;
   /** In 15.2 order, which is the order they are dealt with. */
   cards: DrawnEntry[];
   resolved: string[];
@@ -117,6 +130,9 @@ export function DrawModal({
         label={fight.cardName}
         art={cardImageUrl(fight.cardId.split("+")[0])}
         watching={canAct ? null : `${who} walczy`}
+        minimized={minimized && !canAct}
+        onMinimize={canAct ? null : onMinimize}
+        onRestore={onRestore}
       >
         {canAct ? (
           <FightControls
@@ -147,7 +163,14 @@ export function DrawModal({
   const asking = script ? pendingIn(script.effect, [...choices]) : null;
 
   return (
-    <Shell label={known.name} art={art} watching={canAct ? null : `${who} ciągnie Kartę`}>
+    <Shell
+      label={known.name}
+      art={art}
+      watching={canAct ? null : `${who} ciągnie Kartę`}
+      minimized={minimized && !canAct}
+      onMinimize={canAct ? null : onMinimize}
+      onRestore={onRestore}
+    >
       {/* Only what the card does not say itself. The scan carries its own
           name, class, Miecz and full text at a size you can read — printing
           all of it again beside the picture was two of everything and pushed
@@ -326,14 +349,35 @@ function Shell({
   label,
   art,
   watching,
+  minimized,
+  onMinimize,
+  onRestore,
   children,
 }: {
   label: string;
   art: string | null;
   /** Set when this device is only watching — says whose turn it is. */
   watching: string | null;
+  minimized: boolean;
+  onMinimize: (() => void) | null;
+  onRestore: () => void;
   children: React.ReactNode;
 }) {
+  // Folded away, a watcher gets a line at the foot of the screen instead of a
+  // sheet over it. It still says what is going on — which is most of what the
+  // modal was for — and the board is visible behind it again.
+  if (minimized) {
+    return (
+      <button
+        onClick={onRestore}
+        className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-ochre/50 bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition hover:border-ochre"
+      >
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ochre" aria-hidden />
+        {watching ?? label} — <span className="text-ochre">pokaż</span>
+      </button>
+    );
+  }
+
   return (
     <div
       role="dialog"
@@ -355,9 +399,19 @@ function Shell({
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto">
           {watching && (
-            <p className="shrink-0 rounded border border-edge bg-night/50 px-2 py-1 text-[11px] uppercase tracking-wide text-muted">
-              {watching} — oglądasz
-            </p>
+            <div className="flex shrink-0 items-center justify-between gap-2 rounded border border-edge bg-night/50 px-2 py-1">
+              <p className="truncate text-[11px] uppercase tracking-wide text-muted">
+                {watching} — oglądasz
+              </p>
+              {onMinimize && (
+                <button
+                  onClick={onMinimize}
+                  className="shrink-0 text-[11px] text-muted underline transition hover:text-ink"
+                >
+                  zwiń
+                </button>
+              )}
+            </div>
           )}
           {children}
         </div>

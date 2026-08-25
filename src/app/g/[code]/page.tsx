@@ -168,6 +168,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [waved, setWaved] = useState<string[]>([]);
   /** Whether the "choose again" modal is open (4.4). */
   const [reborn, setReborn] = useState(false);
+  /**
+   * Whether a watcher has folded somebody else's turn away.
+   *
+   * Kept until their own turn comes round, and cleared then: staying folded
+   * across your own turn would hide the thing you are being asked to do, and
+   * unfolding it on every card would make the control useless — you fold it
+   * once because you want to look at the board, and it stays out of the way
+   * until it is yours again.
+   */
+  const [folded, setFolded] = useState(false);
   /** Moves this device has made and the server has not confirmed (see `equip`). */
   const [moved, setMoved] = useState<Record<string, Slot | null>>({});
   /**
@@ -215,6 +225,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWaved([]);
   }, [turnKey]);
+
+  // Back in front of you the moment the turn is yours again.
+  const myTurn = game !== null && mySeatIndex !== null && game.active_seat === mySeatIndex;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (myTurn) setFolded(false);
+  }, [myTurn]);
 
   useEffect(() => {
     // Polling stands in for the Realtime revision ping. Two seconds is
@@ -604,6 +621,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             // the journal. Only the player whose turn it is can press anything.
             who={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
             canAct={mySeatIndex === active.seat_index || isTableScreen}
+            minimized={folded}
+            onMinimize={() => setFolded(true)}
+            onRestore={() => setFolded(false)}
             cards={game.turn_state.phase === "pole" ? game.turn_state.drawn : []}
             resolved={
               game.turn_state.phase === "pole"
