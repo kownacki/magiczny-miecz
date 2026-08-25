@@ -31,6 +31,15 @@ export type Ability =
    */
   | { kind: "oslona"; upTo: number }
   /**
+   * The Kryształ Magów: its owner "nie może rzucać ani używać Zaklęć" and is
+   * "całkowicie odporny" to the six named ones, and an opponent may not use
+   * Odrodzenie against them.
+   *
+   * Both halves of one bargain, so both live on one ability: give up magic
+   * entirely and nothing magical touches you.
+   */
+  | { kind: "bez-zaklec"; odpornyNa: readonly string[]; przeciwnikBez: readonly string[] }
+  /**
    * Passes a named field without what it normally does to you. `rzut` skips a
    * field's die roll entirely (Opiekun, Przewodnik); `zycie` keeps the point it
    * would cost (Rękawice on Ruchome Skały); `utrata` keeps the Przedmiot or
@@ -152,6 +161,24 @@ export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
   ],
   wierzchowiec: [{ kind: "ruch-bonus", min: 1, max: 3 }],
   "magiczna-sakwa": [{ kind: "udzwig", items: 5 }],
+  // "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie
+  // odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan
+  // Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może
+  // walcząc z nim użyć Zaklęcia Odrodzenie."
+  "krysztal-magow": [
+    {
+      kind: "bez-zaklec",
+      odpornyNa: [
+        "krag-plomieni",
+        "fatum",
+        "magia-i-miecz",
+        "golem",
+        "pan-bogactwa",
+        "pan-przyjaciol",
+      ],
+      przeciwnikBez: ["odrodzenie"],
+    },
+  ],
   "bojowy-rumak": [{ kind: "magia-do-miecza" }, { kind: "ginie-zamiast-ciebie" }],
   lodz: [{ kind: "przeprawa-wszedzie", obstacle: "trzesawiska" }],
   latarnia: [{ kind: "przeprawa-wszedzie", obstacle: "lodowy-las" }],
@@ -432,6 +459,26 @@ export function crossingDice(
  * is one roll against the widest of them, not three rolls. Returns 0 when there
  * is nothing to roll for.
  */
+/** Whether this character has given up magic entirely (Kryształ Magów). */
+export function cannotUseSpells(abilities: readonly Ability[]): boolean {
+  return abilities.some((ability) => ability.kind === "bez-zaklec");
+}
+
+/** Spells this character is immune to, and spells an opponent may not use on it. */
+export function spellWards(abilities: readonly Ability[]): {
+  immune: Set<string>;
+  deniedToOpponent: Set<string>;
+} {
+  const immune = new Set<string>();
+  const deniedToOpponent = new Set<string>();
+  for (const ability of abilities) {
+    if (ability.kind !== "bez-zaklec") continue;
+    for (const id of ability.odpornyNa) immune.add(id);
+    for (const id of ability.przeciwnikBez) deniedToOpponent.add(id);
+  }
+  return { immune, deniedToOpponent };
+}
+
 export function bestShield(abilities: readonly Ability[]): number {
   let best = 0;
   for (const ability of abilities) {

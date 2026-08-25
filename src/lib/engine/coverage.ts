@@ -34,6 +34,11 @@ export type Coverage = "pelne" | "czesciowe" | "brak";
  * them, which is the same wasted vigilance as no referee at all.
  */
 const MANUAL: Readonly<Record<string, string>> = {
+  // --- creatures whose fight has a clause the fight machinery cannot carry ---
+  "przybysz-z-krainy-cieni":
+    "Przeciw Przybyszowi nie wolno użyć Zaklęć, Magicznych Przedmiotów ani Broni — walczy się samym Mieczem Postaci.",
+  "trogglowy-smok":
+    "Trzy głowy po 2 punkty Miecza, po kolei. Przegrana odrasta wszystkie odcięte — walkę zaczyna się od nowa.",
   // --- equipment and magic items -------------------------------------------
   arondight: "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
   "topor-swiatla-i-ciemnosci":

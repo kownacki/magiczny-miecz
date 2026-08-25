@@ -220,7 +220,7 @@ Now the primary mode; companion is the opt-in.
 
 ## Open, found while playing
 
-- [ ] **The last 27 cards.** 111 of 138 distinct event cards are encoded. What
+- [ ] **The last 22 cards.** 116 of 138 distinct event cards are encoded. What
       remains is individually irregular rather than merely unwritten, and the
       app now says so on screen rather than staying quiet — see `coverage.ts`.
       The recurring reasons: an enemy whose strength is its opponent's
@@ -229,6 +229,18 @@ Now the primary mode; companion is the opt-in.
       choosing (Eliksir Siły); targeting by Natura or by Krąg (Danina); cards
       that reach other cards on the board (Kometa, Zwierciadło Zniszczenia).
       Adding a variant per card would be worse than leaving these to their text.
+
+      Five came off that list: the Wędrowiec (a roll that decides whether there
+      is a fight at all), Godzina Duchów (a roll table behind a Natura test),
+      the Kryształ Magów (a standing bargain — no Zaklęcia at all, immunity to
+      six of them), and the Przybysz z Krainy Cieni and Trójgłowy Smok, which
+      are ordinary fixtures with one clause each the fight machinery cannot
+      carry, so they keep the clause as a note.
+
+      The recurring blocker among what is left is **a bonus that lasts one
+      turn**: the Eliksir Siły, the Najemnik and both fruits all want it and
+      nothing in the engine has it. That is one piece of vocabulary, not five
+      special cases, and it is the next thing worth building here.
 - [x] **One-shot and fixture cards have a vocabulary** — `cardScript.ts`, with
       disposition as a field of its own (odłóż / zostaje na Obszarze / zostaje z
       pulą punktów / do pierwszej Postaci / po N turach / wraca do stosu). About

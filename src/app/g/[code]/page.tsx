@@ -1590,6 +1590,10 @@ function describeAbility(ability: Ability): string {
       return `bez opłaty: ${ability.fields.map(fieldName).filter((n, i, all) => all.indexOf(n) === i).join(", ")}`;
     case "zakazane":
       return `nie możesz używać: ${ability.cardIds.map((id) => CARD_NAMES.get(id) ?? id).join(", ")}`;
+    case "bez-zaklec":
+      // Both halves of the Kryształ's bargain, because taking it is a decision
+      // and the player has to see what they are trading away.
+      return `bez Zaklęć — ale odporny na ${ability.odpornyNa.length} z nich`;
     case "przeprawa-kostki":
       return `Trzęsawiska na ${ability.dice} kostkę`;
     case "przeprawa-wszedzie":

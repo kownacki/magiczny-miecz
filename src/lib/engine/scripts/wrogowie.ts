@@ -25,6 +25,37 @@ function STRAZUJE(): CardScript {
  * discard.
  */
 export const WROGOWIE: Readonly<Record<string, CardScript>> = {
+  /**
+   * "Rzuć kostką: 1,2 lub 3 oznacza, że nie dałeś się zwieść i w porę umknąłeś
+   * potworowi. Inny wynik: musisz rozpocząć walkę."
+   *
+   * A Wróg you might walk past. Half the time the card does nothing at all,
+   * which makes it the only creature in the deck whose danger is decided before
+   * the fight rather than in it. Its Miecz of 3 is printed on the card and read
+   * from there, so the fight step names it and nothing else.
+   */
+  wedrowiec: {
+    effect: {
+      op: "rzut",
+      faces: {
+        1: { op: "nic" },
+        2: { op: "nic" },
+        3: { op: "nic" },
+        4: { op: "walka", nazwa: "Wędrowiec", miecz: 3 },
+        5: { op: "walka", nazwa: "Wędrowiec", miecz: 3 },
+        6: { op: "walka", nazwa: "Wędrowiec", miecz: 3 },
+      },
+    },
+    // "Potwór pozostanie tu, aż ktoś go pokona" — including when you slipped
+    // past it, which is what makes slipping past worth doing.
+    disposition: { kind: "zostaje" },
+  },
+
+  // Both of these are fixtures like the rest — "pozostanie tu, aż ktoś go
+  // pokona" — with one clause each that the fight machinery cannot carry, so
+  // the card keeps the clause as a note and the app keeps the fixture.
+  "przybysz-z-krainy-cieni": STRAZUJE(),
+  "trogglowy-smok": STRAZUJE(),
   cyklop: STRAZUJE(),
   "czarna-hybryda": STRAZUJE(),
   "czerwona-hybryda": STRAZUJE(),

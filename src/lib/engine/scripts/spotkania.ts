@@ -10,6 +10,43 @@ import type { CardScript } from "../cardScript";
  * and the players apply it, exactly as before.
  */
 export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
+  /**
+   * "Nadeszła Godzina Duchów. Może je wezwać każda Zła Postać."
+   *
+   * Only an Evil character may call them, and calling is a choice — a one in
+   * three chance of losing a turn is a real price for a spell or a point of
+   * Życie. A Good or Chaotic character draws this and nothing happens, which is
+   * the card working rather than the card being ignored.
+   */
+  "godzina-duchow": {
+    effect: {
+      op: "gdy",
+      warunek: { is: "natura", jedna_z: ["zla"] },
+      to: {
+        op: "wybor",
+        options: [
+          {
+            label: "Wezwij duchy",
+            effect: {
+              op: "rzut",
+              faces: {
+                1: { op: "zaklecie", count: 1 },
+                2: { op: "zaklecie", count: 1 },
+                3: { op: "uzdrow", upTo: 1 },
+                4: { op: "uzdrow", upTo: 1 },
+                5: { op: "tura-stracona", turns: 1 },
+                6: { op: "tura-stracona", turns: 1 },
+              },
+            },
+          },
+          { label: "Nie wzywaj", effect: { op: "nic" } },
+        ],
+      },
+      inaczej: { op: "nic" },
+    },
+    disposition: { kind: "odloz" },
+  },
+
   "zakleta-sciezka": {
     effect: {
       op: "rzut",
