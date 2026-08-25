@@ -1444,15 +1444,18 @@ function Hand({
   /**
    * The pack is about to be dropped into, and whether it would take it.
    *
-   * Quiet while the pointer is over one of the cards: the gap that opens in the
-   * row there says where the card lands, which is more than the rectangle can.
-   * And quiet when nothing is in the air, obviously.
+   * Lit for as long as a card is in the air, including while the pointer is
+   * over one of the cards. The two say different things and do not compete: the
+   * rectangle is *the pack will take this*, and the gap is *here, exactly*. It
+   * used to go dark the moment the pointer crossed onto a card, which read as
+   * the pack having stopped being a destination at the one moment you were
+   * aiming inside it.
    *
    * `refuses` is 5.4 — a card coming in from the body when there is no room for
    * it — and never a card already in the pack, which is only being moved about
    * inside a limit it already satisfies.
    */
-  const landing = (carried !== null || dragOver) && insertAt === null;
+  const landing = carried !== null || dragOver;
   const refuses =
     landing &&
     carried !== null &&
@@ -1490,9 +1493,8 @@ function Hand({
           positions a pack has are the ones its cards are in. The squares are
           how much room is left — 5.4's number, drawn — and nothing more.
           
-          So the whole rectangle answers instead, and the one time it stays
-          quiet is when the pointer is over a card, because then the gap in the
-          row is already saying something more precise. */}
+          So the whole rectangle answers instead — for as long as a card is in
+          the air, and the gap that opens under the pointer says where in it. */}
       <div
         onDragOver={(event) => {
           if (!canAct || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
