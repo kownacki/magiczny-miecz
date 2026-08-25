@@ -1499,7 +1499,26 @@ function Hand({
     if (insertIndex < 0) return 0;
     if (liftedIndex < 0) return index >= insertIndex ? 1 : 0;
     if (insertIndex < liftedIndex) return index >= insertIndex && index < liftedIndex ? 1 : 0;
-    return index > liftedIndex && index < insertIndex ? -1 : 0;
+    return index > liftedIndex && index <= insertIndex ? -1 : 0;
+  };
+
+  /**
+   * The card a landing card goes in front of, given the square you aimed at.
+   *
+   * You aim at a square and the card takes it. Coming from the left that means
+   * going in front of the card *after* the one under the pointer, not in front
+   * of that one — which is the same square counted from the other end, and
+   * counting it from the wrong end put the card down one place short of where
+   * it was aimed. Point at the fifth square and the fourth card was the one
+   * that moved.
+   *
+   * Coming from the right, and for a card off the body with no place in the row
+   * yet, the square you aim at is the one you go in front of.
+   */
+  const landsBefore = (targetId: string): string | null => {
+    const target = arranged.findIndex((held) => held.id === targetId);
+    if (target < 0 || liftedIndex < 0 || target < liftedIndex) return targetId;
+    return arranged[target + 1]?.id ?? null;
   };
 
   /** The pack's order with one card put before another, or on the end. */
@@ -1630,7 +1649,7 @@ function Hand({
           // the row has made is the same gesture as dropping on the card that
           // made it. With none open this is the end of the queue, which is
           // where a card the pack has not seen before goes anyway.
-          const before = insertAt;
+          const before = insertAt === null ? null : landsBefore(insertAt);
           setDragOver(false);
           setInsertAt(null);
           if (!canAct) return;
@@ -1647,7 +1666,7 @@ function Hand({
           if (!carried) return;
           event.stopPropagation();
           // Wherever the gap happens to be, this is the pack itself: the end.
-          const before = insertAt;
+          const before = insertAt === null ? null : landsBefore(insertAt);
           setInsertAt(null);
           if (carried.from === "plecak") {
             moveWithin(carried.holdingId, before);
@@ -1724,12 +1743,14 @@ function Hand({
                 if (carried.from === "plecak") {
                   // Its own square is putting it back, which is the pack left
                   // exactly as it was.
-                  if (!itsOwnSquare(held.id)) moveWithin(carried.holdingId, held.id);
+                  if (!itsOwnSquare(held.id)) {
+                    moveWithin(carried.holdingId, landsBefore(held.id));
+                  }
                   return onCarry(null);
                 }
                 // Off the body, and in front of this card rather than on the
                 // end of the row.
-                dropIntoPack(carried.holdingId, held.id);
+                dropIntoPack(carried.holdingId, landsBefore(held.id));
                 return onCarry(null);
               }
               // Picked up from inside the pack, so the pointer is inside it —
@@ -1796,8 +1817,9 @@ function Hand({
               event.preventDefault();
               // A card off the body is being taken off; one already in the pack
               // is being moved within it.
-              if (packOrder.includes(holdingId)) moveWithin(holdingId, held.id);
-              else dropIntoPack(holdingId, held.id);
+              const before = landsBefore(held.id);
+              if (packOrder.includes(holdingId)) moveWithin(holdingId, before);
+              else dropIntoPack(holdingId, before);
             }}
             /**
              * A carried card has no drag events behind it, so hovering is
