@@ -7,8 +7,10 @@ import { skipsRollAt, tollIsWaived, isForbidden, rollModifier } from "./abilitie
 import {
   CHARACTER_ABILITIES,
   CHARACTER_NOTES,
+  RANDOM_CHARACTER_ID,
   STARTING_KIT,
   abilitiesOfCharacter,
+  isRandomPick,
   notesForCharacter,
   startingKit,
 } from "./characters";
@@ -109,5 +111,33 @@ describe("what a character owns before the first roll", () => {
   it("gives a plain fighter nothing beyond the default", () => {
     expect(startingKit("barbarzynca")).toEqual({});
     expect(startingKit("troll")).toEqual({});
+  });
+});
+
+describe("the surprise pick", () => {
+  it("is not the id of any printed character", () => {
+    // The whole scheme rests on this: the sentinel lives in the same column as
+    // a real character id, so a collision would let a seat claim a card by
+    // asking to be surprised.
+    expect(IDS.has(RANDOM_CHARACTER_ID)).toBe(false);
+  });
+
+  it("recognises itself and nothing else", () => {
+    expect(isRandomPick(RANDOM_CHARACTER_ID)).toBe(true);
+    for (const character of CHARACTERS) expect(isRandomPick(character.id)).toBe(false);
+    // A seat that has not chosen is not a seat that chose the surprise, and
+    // the difference is what lets one be ready and the other not.
+    expect(isRandomPick(null)).toBe(false);
+    expect(isRandomPick(undefined)).toBe(false);
+    expect(isRandomPick("")).toBe(false);
+  });
+
+  it("carries no abilities, notes or kit of its own", () => {
+    // It is never held once a game is running — `startGame` deals a real card
+    // first — so anything reading it should find an empty character rather
+    // than a special case.
+    expect(abilitiesOfCharacter(RANDOM_CHARACTER_ID)).toEqual([]);
+    expect(notesForCharacter(RANDOM_CHARACTER_ID)).toEqual([]);
+    expect(startingKit(RANDOM_CHARACTER_ID)).toEqual({});
   });
 });

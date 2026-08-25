@@ -6,6 +6,7 @@ import { db } from "@/lib/supabase";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
+import { RANDOM_CHARACTER_ID, isRandomPick } from "@/lib/engine/characters";
 
 export const CHARACTERS = characters as Character[];
 
@@ -305,6 +306,31 @@ export async function chooseCharacter(
   seatId: string,
   characterId: string,
 ): Promise<void> {
+  // "Surprise me" is a choice, and several people can make it — there is only
+  // one Kapłanka but no limit on wanting whatever comes. Nothing else is
+  // decided now: the stats, the starting field and the kit all wait for
+  // `resolveRandomPicks` at the start of the game, which is the point.
+  if (isRandomPick(characterId)) {
+    const { error } = await db
+      .from("seats")
+      .update({
+        character_id: RANDOM_CHARACTER_ID,
+        ready: false,
+        // Cleared, in case this seat is changing its mind out of a real
+        // character. Leaving a Książę's five gold on a seat that is now taking
+        // a surprise would hand it to whoever the surprise turns out to be.
+        field_id: null,
+        miecz_own: 0,
+        magia_own: 0,
+        miecz_floor: 0,
+        magia_floor: 0,
+        nature: null,
+      })
+      .eq("id", seatId);
+    if (error) throw new Error(`chooseCharacter: ${error.message}`);
+    return;
+  }
+
   const character = CHARACTERS.find((c) => c.id === characterId);
   if (!character) throw new Error(`Nieznana postać: ${characterId}`);
 
@@ -355,10 +381,50 @@ export async function chooseCharacter(
  */
 export async function dealCharacters(gameId: string): Promise<void> {
   const seats = await seatsFor(gameId);
-  const empty = seats.filter((seat) => !seat.character_id && !seat.abandoned_at);
-  if (empty.length === 0) return;
+  await dealTo(
+    gameId,
+    seats,
+    seats.filter((seat) => !seat.character_id && !seat.abandoned_at),
+  );
+}
 
-  const taken = new Set(seats.map((seat) => seat.character_id).filter(Boolean));
+/**
+ * Turns every "surprise me" into a real Karta Postaci.
+ *
+ * Called at the start of the game and nowhere else, which is what makes the
+ * pick a surprise: the seat holds the sentinel for the whole poczekalnia, so
+ * nobody — including the player — can see what is coming until the game is
+ * running.
+ *
+ * Deliberately not `dealCharacters`. That one also fills seats that chose
+ * nothing at all, and a seat that never picked has not agreed to play; dealing
+ * it a character at the moment somebody presses start would put a stranger in
+ * the game.
+ */
+export async function resolveRandomPicks(gameId: string): Promise<void> {
+  const seats = await seatsFor(gameId);
+  await dealTo(
+    gameId,
+    seats,
+    seats.filter((seat) => isRandomPick(seat.character_id) && !seat.abandoned_at),
+  );
+}
+
+/** Deals a distinct character to each of `toFill`, avoiding everything held. */
+async function dealTo(
+  gameId: string,
+  seats: readonly SeatRow[],
+  toFill: readonly SeatRow[],
+): Promise<void> {
+  if (toFill.length === 0) return;
+
+  // The sentinel is not a character and cannot be "taken" — several seats may
+  // be holding it, and none of them is holding a card.
+  const taken = new Set(
+    seats
+      .map((seat) => seat.character_id)
+      .filter((id): id is string => !!id && !isRandomPick(id)),
+  );
   const pool = CHARACTERS.filter((character) => !taken.has(character.id));
   // Fisher–Yates with a real CSPRNG. Nobody is attacking a character deal, but
   // the one already in the file is correct and `Math.random` is not.
@@ -367,10 +433,15 @@ export async function dealCharacters(gameId: string): Promise<void> {
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
 
-  for (const [index, seat] of empty.entries()) {
+  for (const [index, seat] of toFill.entries()) {
     const character = pool[index];
     if (!character) break; // 27 cards, 6 seats — unreachable, but not assumed
     await chooseCharacter(gameId, seat.id, character.id);
+    // `chooseCharacter` un-readies, because changing your mind about a
+    // character should. Being dealt the one you asked to be surprised by is not
+    // changing your mind, and un-readying here would make the start button
+    // refuse the very table that just pressed it.
+    if (seat.ready) await db.from("seats").update({ ready: true }).eq("id", seat.id);
   }
 }
 

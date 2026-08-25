@@ -207,6 +207,45 @@ opened — which matters for a game that takes several sittings.
 
 ---
 
+## Wybór postaci: "Losowa"
+
+The first tile in the strip, ahead of the 27 printed characters, because it is
+the rulebook's own default — "należy potasować Karty Postaci, a następnie
+rozłożyć losowo" — and choosing freely from the strip is the variant everybody
+has to agree to.
+
+Held in `seats.character_id` as the sentinel `losowa` (`RANDOM_CHARACTER_ID` in
+`characters.ts`). A sentinel rather than a null because **"surprise me" and
+"I have not looked yet" are different answers**: the first can be ready to
+play, and the second cannot. Everything else about the seat waits — no starting
+field, no Miecz, no Magia, no Natura — which is what makes it a surprise rather
+than a card dealt early and hidden by the interface.
+
+Rules that fall out of it:
+
+- **Several seats may hold it at once.** There is one Kapłanka, but no limit on
+  how many people want whatever comes, so the uniqueness check skips it and the
+  strip keeps its tile live for everybody except whoever already picked it.
+- **`startGame` resolves it, and nothing else does.** `resolveRandomPicks` deals
+  a distinct free character to every seat holding the sentinel, at the moment
+  the game starts and not before — so no device, the player's own included, can
+  see what is coming while the poczekalnia is still open.
+- **Deliberately not `dealCharacters`.** That one also fills seats that chose
+  nothing at all, and a seat that never picked has not agreed to play; dealing
+  it a character when somebody presses start would put a stranger in the game.
+- **Being dealt what you asked for does not un-ready you.** Choosing a character
+  clears the ready flag, which is right when you change your mind and wrong
+  here — it would make the start button refuse the very table that pressed it.
+- **4.4 refuses it.** A dead player's new character is a choice from what is
+  left, made in front of everybody mid-game; there is no game start left to
+  resolve a sentinel against.
+
+The tile's artwork is a Karta Postaci with the figure and printed name lifted
+off the white field and the word LOSOWA in their place. Until it exists the
+placeholders are marked `data-placeholder="losowa-standee"` and
+`data-placeholder="losowa-karta"`, and hold the exact shape the real asset will
+occupy so the strip lays out now as it will then.
+
 ## Decisions taken, and what was left out
 
 **No ban list.** Kicking exists only before the start, and among friends in one

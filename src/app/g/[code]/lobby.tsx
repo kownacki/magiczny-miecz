@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
+import { RANDOM_CHARACTER_ID, isRandomPick } from "@/lib/engine/characters";
 
 export interface LobbySeat {
   id: string;
@@ -135,11 +136,17 @@ export function Lobby({
   const [preview, setPreview] = useState<string | null>(null);
   const reading = preview ?? target?.characterId ?? me?.characterId ?? null;
 
-  /** characterId -> the seat holding it. */
+  /** characterId -> the seat holding it. There is only ever one of each card. */
   const ownerOf = new Map<string, LobbySeat>();
   for (const seat of seats) {
-    if (seat.characterId) ownerOf.set(seat.characterId, seat);
+    if (seat.characterId && !isRandomPick(seat.characterId)) {
+      ownerOf.set(seat.characterId, seat);
+    }
   }
+
+  // The surprise is the one tile several people can be standing on at once, so
+  // it keeps a list where every other character keeps an owner.
+  const surprised = seats.filter((seat) => isRandomPick(seat.characterId));
 
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
@@ -303,6 +310,15 @@ export function Lobby({
             style={{ gridAutoColumns: "minmax(0, 1fr)" }}
             className="mx-auto grid w-full max-w-[1708px] grid-flow-col grid-rows-2 gap-2"
           >
+          <RandomChoice
+            takenBy={surprised}
+            mine={isRandomPick(target?.characterId ?? null)}
+            busy={busy || pendingCharacterId !== null || !target}
+            pending={pendingCharacterId === RANDOM_CHARACTER_ID}
+            dimmed={pendingCharacterId !== null && pendingCharacterId !== RANDOM_CHARACTER_ID}
+            onPreview={setPreview}
+            onPick={() => target && onChooseCharacter(target, RANDOM_CHARACTER_ID)}
+          />
           {characters.map((character) => {
             // Every character somebody holds is out, and wears the colour of
             // whoever holds it — the same colour as their dot on the board and
@@ -454,7 +470,9 @@ export function Lobby({
               size the print is a grey smudge, and a player picking Kat has no
               way to find out what Kat does without picking it first. */}
           <div className="mt-auto flex min-h-0 flex-col items-center justify-end">
-            {reading ? (
+            {isRandomPick(reading) ? (
+              <RandomCard />
+            ) : reading ? (
               <BigCard character={byId.get(reading) ?? null} />
             ) : (
               <p className="max-w-[16rem] text-center text-[12px] leading-relaxed text-muted/70">
@@ -469,6 +487,124 @@ export function Lobby({
 }
 
 /** The big card, filling the column and never overflowing it. */
+/**
+ * The first tile in the strip: take whatever comes.
+ *
+ * Sits ahead of the 27 printed characters because it is the rulebook's own
+ * default — "należy potasować Karty Postaci, a następnie rozłożyć losowo" — and
+ * choosing from the strip is the variant everybody has to agree to. Picking it
+ * is a decision, not a deferral: the seat can be ready, and what it turns into
+ * is not settled until the game starts.
+ *
+ * The only tile more than one seat can hold at once. There is one Kapłanka, but
+ * no limit on how many people want a surprise, so this shows a row of everybody
+ * who does where the others show a single owner.
+ *
+ * PLACEHOLDER ARTWORK. The finished tile is a Karta Postaci with the figure and
+ * the printed name lifted off the white field and the word LOSOWA set in their
+ * place; it is being drawn separately. Until it lands this draws the same shape
+ * — the 114x190 of a mała Karta, the same border and dimming — with the word in
+ * the display face where the name belongs, so the strip lays out exactly as it
+ * will with the real thing in it.
+ */
+function RandomChoice({
+  takenBy,
+  mine,
+  busy,
+  pending,
+  dimmed,
+  onPreview,
+  onPick,
+}: {
+  takenBy: LobbySeat[];
+  mine: boolean;
+  busy: boolean;
+  pending: boolean;
+  dimmed: boolean;
+  onPreview: (characterId: string | null) => void;
+  onPick: () => void;
+}) {
+  // One taker wears their colour, as any other card would. Several cannot, so
+  // the border stays neutral and the foot counts them instead.
+  const only = takenBy.length === 1 ? SEAT_COLOURS[takenBy[0].seatIndex % SEAT_COLOURS.length] : null;
+  const dim = pending
+    ? "opacity-100"
+    : dimmed
+      ? "opacity-20"
+      : mine
+        ? "opacity-100"
+        : "opacity-60";
+
+  return (
+    <div
+      className="min-w-0"
+      onMouseEnter={() => onPreview(RANDOM_CHARACTER_ID)}
+      onMouseLeave={() => onPreview(null)}
+    >
+      <button
+        // Unlike every other tile this stays live when somebody already holds
+        // it — unless that somebody is you, in which case there is nothing to
+        // ask for and a second click would only un-ready you.
+        disabled={busy || mine}
+        onClick={onPick}
+        onFocus={() => onPreview(RANDOM_CHARACTER_ID)}
+        onBlur={() => onPreview(null)}
+        title="Losowa — postać zostanie wylosowana i odsłonięta na starcie gry"
+        style={only && !pending ? { borderColor: only, borderWidth: 2 } : undefined}
+        className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
+          pending ? "animate-pulse border-ochre" : only ? "" : "border-edge hover:border-ochre"
+        }`}
+      >
+        {/* data-placeholder marks the one element the artwork replaces. */}
+        <span
+          data-placeholder="losowa-standee"
+          className={`flex aspect-[114/190] flex-col items-center justify-center gap-1 bg-raised px-1 text-center transition-opacity ${dim}`}
+        >
+          <span className="font-[family-name:var(--font-display)] text-[15px] leading-none text-ochre">
+            Losowa
+          </span>
+          <span className="text-[9px] leading-tight text-muted">
+            odsłonięta
+            <br />
+            na starcie
+          </span>
+        </span>
+        {takenBy.length > 0 && (
+          <span
+            style={{ background: only ?? undefined }}
+            className={`absolute inset-x-0 bottom-0 flex h-[14.3%] min-h-[21px] items-center justify-center overflow-hidden px-0.5 text-[13px] font-medium leading-none ${
+              only ? "text-night" : "bg-edge text-ink"
+            }`}
+          >
+            <span className="truncate">
+              {takenBy.length === 1
+                ? (takenBy[0].playerName ?? `miejsce ${takenBy[0].seatIndex + 1}`)
+                : `${takenBy.length} graczy`}
+            </span>
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** What the reading column shows for the surprise: there is no Karta to read yet. */
+function RandomCard() {
+  return (
+    <div
+      data-placeholder="losowa-karta"
+      className="flex aspect-[780/972] max-h-full w-auto max-w-full flex-col items-center justify-center gap-3 rounded border border-edge bg-raised p-6 text-center"
+    >
+      <p className="font-[family-name:var(--font-display)] text-2xl text-ochre">Losowa</p>
+      <p className="max-w-[14rem] text-[12px] leading-relaxed text-muted">
+        Nie wybierasz — Karta Postaci zostanie wylosowana spośród tych, których
+        nikt nie wziął, i odsłonięta dopiero po rozpoczęciu gry. Możesz być
+        gotów, nie wiedząc, kim zagrasz.
+      </p>
+    </div>
+  );
+}
+
 function BigCard({ character }: { character: Character | null }) {
   if (!character) return null;
   const src = characterImageUrl(character.id);
@@ -620,6 +756,20 @@ function SeatSlot({
             // off — which is the one thing on it.
             className="h-full w-full object-contain"
           />
+        ) : isRandomPick(seat.characterId) ? (
+          // Chosen, and deliberately unreadable. Distinct from the empty card
+          // below, because "I asked for a surprise" and "I am still looking"
+          // are different states and the ready line beside them reads
+          // differently for each. PLACEHOLDER — see `RandomChoice`.
+          <span
+            data-placeholder="losowa-standee"
+            className="flex h-full flex-col items-center justify-center gap-1 p-2 text-center"
+          >
+            <span className="font-[family-name:var(--font-display)] text-lg text-ochre">
+              Losowa
+            </span>
+            <span className="text-[11px] leading-snug text-muted">odsłonięta na starcie</span>
+          </span>
         ) : (
           // The empty card says what is happening; the line below stays quiet
           // until there is something else to report. Saying it twice, once in

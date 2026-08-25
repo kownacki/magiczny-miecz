@@ -225,6 +225,25 @@ export const CHARACTER_NOTES: Readonly<Record<string, readonly string[]>> = {
   ],
 };
 
+/**
+ * The seat has decided, and what it decided is not to decide.
+ *
+ * Held in `seats.character_id` between the pick and the start of the game, and
+ * gone by the time anything reads a character: `startGame` deals a real one
+ * before the first turn. It is a sentinel rather than a null because "I want a
+ * surprise" and "I have not looked yet" are different answers to the same
+ * question — the first can be ready to play, and the second cannot.
+ *
+ * Not a character id anybody could otherwise hold: the 27 printed ones are all
+ * names, and none of them is this.
+ */
+export const RANDOM_CHARACTER_ID = "losowa";
+
+/** Whether a seat is holding the surprise rather than a Karta Postaci. */
+export function isRandomPick(characterId: string | null | undefined): boolean {
+  return characterId === RANDOM_CHARACTER_ID;
+}
+
 export function abilitiesOfCharacter(characterId: string | null): readonly Ability[] {
   return characterId ? (CHARACTER_ABILITIES[characterId] ?? []) : [];
 }

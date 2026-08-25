@@ -1,7 +1,13 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
 import { db } from "@/lib/supabase";
-import { GAME_COLUMNS, chooseCharacter, fieldCardsFor, type HoldingRow } from "./store";
+import {
+  GAME_COLUMNS,
+  chooseCharacter,
+  fieldCardsFor,
+  resolveRandomPicks,
+  type HoldingRow,
+} from "./store";
 import {
   FERRY_TOLL,
   FIELDS,
@@ -24,7 +30,7 @@ import {
   rollDice,
   trapOutcome,
 } from "@/lib/engine/bridge";
-import { abilitiesOfCharacter, startingKit } from "@/lib/engine/characters";
+import { abilitiesOfCharacter, isRandomPick, startingKit } from "@/lib/engine/characters";
 import {
   afterDraw,
   afterMove,
@@ -199,6 +205,11 @@ async function journal(
 }
 
 export async function startGame(gameId: string): Promise<void> {
+  // Everybody who asked to be surprised finds out now, and not a moment
+  // earlier — the sentinel sits in the seat for the whole poczekalnia so that
+  // no device, the player's included, can see what is coming.
+  await resolveRandomPicks(gameId);
+
   const seats = await seatsFor(gameId);
   // `chosen`, not `ready`: having picked a character and having said you are
   // ready are two different things, and conflating them is what let a game
@@ -2137,6 +2148,13 @@ export async function takeNewCharacter(
   const seat = seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
   if (!seat.eliminated) throw new Error("Ta Postać wciąż żyje.");
+  // 4.4 is a choice from what is left on the table, made in front of everybody
+  // mid-game. The surprise belongs to the poczekalnia, where nobody can see
+  // what anybody drew; here it would only leave the seat holding a sentinel
+  // with no game start left to resolve it.
+  if (isRandomPick(characterId)) {
+    throw new Error("Nową Postać po śmierci wybiera się z tych, które zostały.");
+  }
 
   // The dead character's own card is out of the game — "jej Kartę odłożyć do
   // pozostałych nie biorących udziału w grze" — and so is everybody else's, so
