@@ -158,6 +158,38 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     return () => clearInterval(timer);
   }, [code, refresh]);
 
+  /**
+   * Tells the table this page is going away, so the seat is freed in seconds
+   * rather than in minutes.
+   *
+   * `pagehide` and not `beforeunload`: the latter is unreliable — mobile
+   * browsers frequently never fire it — and having a handler for it disqualifies
+   * the page from the back/forward cache. `pagehide` fires in both cases and is
+   * bfcache-compatible; `event.persisted` says which happened, and a page going
+   * into the cache has not gone anywhere.
+   *
+   * `sendBeacon` and not `fetch`: a request started from an unloading page is
+   * dropped. The browser guarantees to queue a beacon and run it to completion
+   * after the page is discarded, which is the whole point of it existing.
+   *
+   * A reload fires this too, and out here that is indistinguishable from a
+   * closed tab — so the server treats it as a countdown, not a departure, and
+   * the reload's first poll cancels it.
+   */
+  useEffect(() => {
+    const bye = (event: PageTransitionEvent) => {
+      if (event.persisted) return; // going into the bfcache, not going away
+      const token = readSeatToken(code);
+      if (!token) return;
+      navigator.sendBeacon?.(
+        `/api/games/${code}/bye`,
+        new Blob([JSON.stringify({ token })], { type: "text/plain" }),
+      );
+    };
+    window.addEventListener("pagehide", bye);
+    return () => window.removeEventListener("pagehide", bye);
+  }, [code]);
+
   const post = useCallback(
     async (path: string, body: Record<string, unknown>) => {
       setBusy(true);

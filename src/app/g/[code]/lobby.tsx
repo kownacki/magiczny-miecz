@@ -363,7 +363,12 @@ export function Lobby({
                 onFocus={() => setPreview(character.id)}
                 onBlur={() => setPreview(null)}
                 title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
-                style={owner && !isPending && !waiting ? { borderColor: owner, borderWidth: 2 } : undefined}
+                // Whoever holds it, holds it — including while somebody else's
+                // pick is in flight. Dropping the colour during `waiting` left
+                // the border with no colour class at all, so it fell back to
+                // `currentColor` and every taken card turned gold for as long
+                // as the request took.
+                style={owner && !isPending ? { borderColor: owner, borderWidth: 2 } : undefined}
                 className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
                   isPending
                     ? "animate-pulse border-ochre"

@@ -98,6 +98,10 @@ create table if not exists magiczny_miecz.seats (
   -- gap" rather than "got here first" — and host migration hands the table to
   -- whoever has been at it longest.
   created_at timestamptz not null default now(),
+  -- Set by a beacon as the page unloads: "my tab is going away". Not a
+  -- departure — a reload fires the same event — so it starts a short countdown
+  -- that the next poll cancels. See `sayGoodbye` and `GOODBYE_GRACE_MS`.
+  left_at timestamptz,
 
   unique (game_id, seat_index)
 );

@@ -140,12 +140,35 @@ utworzony ──> poczekalnia ──> w trakcie ──> zakończona
 and the host may remove any of them. Nothing is lost because nothing has
 happened yet.
 
-Closing the tab is the same act without the click, so it has the same effect:
-a seat nobody has been heard from for `LOBBY_GONE_AFTER_MS` is deleted. The
-threshold is deliberately much longer than the one for *nieobecny* — browsers
-throttle timers in a background tab to roughly once a minute, and evicting
-somebody for reading something else in another tab would be worse than leaving
-a ghost on screen for two minutes.
+Closing the tab is the same act without the click, so it has the same effect —
+and the page says so on its way out rather than being waited out. A `pagehide`
+handler fires a `navigator.sendBeacon` to `/bye`, which is the only kind of
+request that survives a page being discarded; `beforeunload` is not used, as
+mobile browsers frequently never fire it and having a handler for it disqualifies
+the page from the back/forward cache.
+
+That is not a departure, because a reload fires `pagehide` too and the two are
+indistinguishable from the server. It starts a `GOODBYE_GRACE_MS` countdown that
+the reloaded page's first poll cancels.
+
+The backstop, for the tabs that never manage to say anything, is silence: a seat
+unheard-from for `LOBBY_GONE_AFTER_MS` is deleted. That threshold is much longer
+than the one for *nieobecny*, because browsers throttle timers in a background
+tab to roughly once a minute and evicting somebody for reading something else
+would be worse than a ghost on screen for two minutes.
+
+**The host stops being host before anybody is removed.** `HOST_MISSING_AFTER_MS`
+is shorter than `LOBBY_GONE_AFTER_MS` on purpose: they answer different
+questions — "can this table still be administered?" and "is this person still
+here?" — and the first has to be answered first, or a table full of people sits
+there unable to start. Only the role moves; the seat stays, so a host who comes
+back is still at the table, just not running it.
+
+A table everybody has gone quiet on is **unlisted before it is deleted**. It has
+minutes left on its clock and is still advertised as somewhere you could go and
+play, which is the one thing it is not — but deleting it the moment it looks
+quiet would take a table away from somebody whose laptop had merely gone to
+sleep. It stays reachable by its code the whole time.
 
 When the last seat goes, so does the table. An empty poczekalnia is not a game
 anybody can join; it is a code taking up space in the list. A table left holding
