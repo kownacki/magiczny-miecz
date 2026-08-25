@@ -68,7 +68,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         );
         break;
       case "fight":
-        await beginFight(game.id, String(body.cardId));
+        // One Wróg, or several at once (17.5) whose Miecze add together.
+        await beginFight(
+          game.id,
+          Array.isArray(body.cardIds)
+            ? body.cardIds.map(String)
+            : [String(body.cardId)],
+        );
         break;
       case "fight-total":
         await setFightPlayerTotal(game.id, Number(body.total));

@@ -11,7 +11,7 @@ import {
   ringOf,
 } from "@/lib/engine/board";
 import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
-import { crossingDice, heldAbilities, tollIsWaived } from "@/lib/engine/abilities";
+import { bestShield, crossingDice, heldAbilities, tollIsWaived } from "@/lib/engine/abilities";
 import { spellScript } from "@/lib/engine/spells";
 import {
   BRIDGE_GUARDIAN,
@@ -48,6 +48,7 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
+import { combinedEnemyTotal } from "@/lib/engine/combat";
 import { scriptFor } from "@/lib/engine/cardScript";
 import type { TurnCard } from "@/lib/engine/state";
 import { beastCombatKind, beastStrength, compareCombat } from "@/lib/engine/combat";
@@ -117,6 +118,7 @@ import { SLOT_LABEL, fitsIn, isWearable, type EqMode, type Slot } from "@/lib/en
 import type { Holding } from "@/lib/engine/state";
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
 import { bonusFromHoldings, inEffect } from "@/lib/engine/holdings";
+import type { CombatKind } from "@/lib/engine/combat";
 import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
 import { HEAL_CEILING, heal, mayHold, spellCapacity } from "@/lib/engine/derive";
 import type { Seat } from "@/lib/engine/state";
@@ -552,30 +554,57 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
  * the referee does not track yet — so the number is seeded low and left
  * editable rather than being quietly wrong.
  */
-export async function beginFight(gameId: string, cardId: string): Promise<void> {
+export async function beginFight(gameId: string, cardIds: string[]): Promise<void> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
   const seat = activeSeatOf(seats, game);
   if (game.turn_state.phase !== "pole") throw new Error("Nie czas na walkę.");
+  if (cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
 
-  const card = EVENTS.find((c) => c.id === cardId);
-  if (!card) throw new Error(`Nieznana karta: ${cardId}`);
-  // Only a Wróg fights. The Miecz on Excalibur and the Magia on Pierścień Mocy
-  // are bonuses to their holder (1.5, 2.5), not creatures to be rolled against.
-  const foe = combatValueOf(card);
-  if (!foe) throw new Error("Ta karta nie jest Wrogiem.");
+  const foes = cardIds.map((cardId) => {
+    const card = EVENTS.find((c) => c.id === cardId);
+    if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+    // Only a Wróg fights. The Miecz on Excalibur and the Magia on Pierścień
+    // Mocy are bonuses to their holder (1.5, 2.5), not creatures to be rolled
+    // against.
+    const foe = combatValueOf(card);
+    if (!foe) throw new Error(`${card.name} nie jest Wrogiem.`);
+    return { card, foe };
+  });
+
+  // 17.5: several creatures attacking at once are one opponent — "Miecze tych
+  // istot są sumowane, a do uzyskanego rezultatu dodawany jest wynik rzutu
+  // kostką". One roll for the lot of them, not one each, which is the
+  // difference between hard and hopeless.
+  const kinds = new Set(foes.map((f) => f.foe.kind));
+  if (kinds.size > 1) {
+    throw new Error("Zwykli i magiczni Wrogowie nie atakują razem — rozpatrzcie osobno.");
+  }
+  const kind = foes[0].foe.kind;
+  const total = combinedEnemyTotal(foes.map((f) => ({ total: f.foe.total })));
+
+  // The character brings everything it has (1.5, 17.4), not just its own
+  // tokens: a Miecz card adds its point in the fight it was found for. This
+  // used to start from `miecz_own` alone, so every item a character was
+  // carrying quietly failed to show up at the moment it mattered.
+  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const bonus = bonusFromHoldings(held.map(asHolding), eq(game));
 
   const next = startFight(
     game.turn_state,
     {
-      cardId: card.id,
-      cardName: card.name,
-      ...(foe.kind === "magiczna" ? { magia: foe.total } : { miecz: foe.total }),
+      cardId: foes.map((f) => f.card.id).join("+"),
+      cardName: foes.map((f) => f.card.name).join(" + "),
+      ...(kind === "magiczna" ? { magia: total } : { miecz: total }),
     },
-    { miecz: seat.miecz_own, magia: seat.magia_own },
+    { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
   );
   await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "walka-start", { cardId });
+  await journal(gameId, seat.id, game.turn, "walka-start", {
+    cardIds,
+    enemyTotal: total,
+    together: cardIds.length > 1,
+  });
   await bumpRevision(gameId);
 }
 
@@ -740,9 +769,16 @@ export async function resolveFight(gameId: string): Promise<void> {
         : undefined;
 
   if (loserSeat) {
-    const left = Math.max(0, loserSeat.zycie - 1);
-    await db.from("seats").update({ zycie: left }).eq("id", loserSeat.id);
-    if (left === 0) await killSeat(gameId, loserSeat.id);
+    // 17.4: an item may prevent the point of Życie — a Hełm on a 1, a Tarcza on
+    // 1-2, a Zbroja on 1-3, and wearing all three is one roll against the
+    // widest of them rather than three chances. 18.2b takes the possibility
+    // away entirely in a magical fight, which `spoilsFor` already knows.
+    const saved = await shieldSaves(gameId, loserSeat, fight.kind, game.turn);
+    if (!saved) {
+      const left = Math.max(0, loserSeat.zycie - 1);
+      await db.from("seats").update({ zycie: left }).eq("id", loserSeat.id);
+      if (left === 0) await killSeat(gameId, loserSeat.id);
+    }
   }
 
   await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
@@ -1946,6 +1982,39 @@ export async function resolveBridgeOrdeal(
   });
   await bumpRevision(gameId);
   return { field: here, kind: "straznik", dice, enemyTotal: strength, outcome: creature.name };
+}
+
+/**
+ * Rolls a character's Hełm, Tarcza or Zbroja against the point of Życie it is
+ * about to lose (17.4), and says whether it was saved.
+ *
+ * Rolled automatically because there is nothing to decide: the card grants "the
+ * right to roll" and no reason has ever existed to decline. Journalled either
+ * way, since a save is the difference between a death and a scratch and the
+ * table will want to see the die.
+ */
+async function shieldSaves(
+  gameId: string,
+  seat: SeatRow,
+  kind: CombatKind,
+  turn: number,
+): Promise<boolean> {
+  // 18.2b: nothing prevents the loss in a magical fight.
+  if (kind === "magiczna") return false;
+
+  const game = await loadGame(gameId);
+  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
+  const abilities = [
+    ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
+    ...abilitiesOfCharacter(seat.character_id),
+  ];
+  const upTo = bestShield(abilities);
+  if (upTo === 0) return false;
+
+  const die = 1 + Math.floor(Math.random() * 6);
+  const saved = die <= upTo;
+  await journal(gameId, seat.id, turn, "oslona", { die, upTo, saved });
+  return saved;
 }
 
 /**

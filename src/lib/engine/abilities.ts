@@ -423,6 +423,23 @@ export function crossingDice(
  * generous than what the cards say — the Koń carries eight, the Muł and the
  * Tragarz four each. Only the Zaprzęg is truly unbounded.
  */
+/**
+ * The best save a character has against the point of Życie a lost fight costs
+ * (17.4: "może temu zapobiec użycie Przedmiotu lub Zaklęcia").
+ *
+ * The three cards that grant it are cumulative in reach rather than in number —
+ * a Hełm saves on a 1, a Tarcza on 1-2, a Zbroja on 1-3 — so wearing all three
+ * is one roll against the widest of them, not three rolls. Returns 0 when there
+ * is nothing to roll for.
+ */
+export function bestShield(abilities: readonly Ability[]): number {
+  let best = 0;
+  for (const ability of abilities) {
+    if (ability.kind === "oslona" && ability.upTo > best) best = ability.upTo;
+  }
+  return best;
+}
+
 export function carryLimit(abilities: readonly Ability[], base: number): number {
   let limit = base;
   for (const ability of abilities) {

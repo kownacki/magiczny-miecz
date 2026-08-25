@@ -205,8 +205,8 @@ they are rules, and one of them was missing.
 | 17.2 | flight is decided before any dice | ✅ | `escape` |
 | 17.3 | spells must be used before the roll | ◐ | the fight window offers them; nothing forces the order |
 | 17.4 | one die each, added to total Miecz; loser loses 1 Życie | ✅ | `compareCombat` |
-| 17.4 | an item or spell may prevent that loss | ❌ | `oslona` is encoded but nothing consumes it |
-| 17.5 | several enemies at once add their Miecze together | ❌ | one opponent at a time |
+| 17.4 | an item or spell may prevent that loss | ✅ | `bestShield`, rolled in `settleFight` |
+| 17.5 | several enemies at once add their Miecze together | ✅ | `beginFight` takes a list; `combinedEnemyTotal` |
 | 17.6 | the attacked character may try to slip away | ✅ | |
 | 17.7 | **both** characters may cast before the roll | ◐ | a hand is castable during anyone's fight, not only its owner's turn; there is no explicit reaction pause |
 | 17.8 | attacker's Miecz worked out first | ✅ | |

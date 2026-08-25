@@ -1059,8 +1059,41 @@ function DrawnCards({
   onSuggestion: Props["onSuggestion"];
   onTake: Props["onTake"];
 }) {
+  // 17.5: several creatures attacking at once are one opponent, their Miecze
+  // added and one die rolled for the lot. Only offered when there is more than
+  // one and they are of a kind — an ordinary Wróg and a magical one cannot be
+  // summed, because the sums are of different things.
+  const foes = drawn
+    .map((entry) => EVENTS.find((c) => c.id === entry.cardId))
+    .filter((card): card is EventCard => !!card && !!combatValueOf(card));
+  const together =
+    foes.length > 1 && new Set(foes.map((c) => combatValueOf(c)!.kind)).size === 1
+      ? foes
+      : null;
+
   return (
     <ol className="flex flex-col gap-2 border-l-2 border-ochre/30 pl-3">
+      {together && (
+        <li className="rounded border border-vermilion/40 bg-vermilion/5 p-2">
+          <p className="mb-2 text-[11px] leading-relaxed text-muted">
+            {together.length} Wrogów naraz: ich Miecze sumują się i rzucacie raz
+            za wszystkich (17.5) — razem{" "}
+            <span className="text-vermilion">
+              {together.reduce((sum, card) => sum + combatValueOf(card)!.total, 0)}
+            </span>
+            .
+          </p>
+          <button
+            disabled={busy}
+            onClick={() =>
+              onAction({ action: "fight", cardIds: together.map((card) => card.id) })
+            }
+            className="rounded border border-vermilion/60 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
+          >
+            Walcz ze wszystkimi naraz
+          </button>
+        </li>
+      )}
       {drawn.map((entry, index) => {
         const card = EVENTS.find((c) => c.id === entry.cardId);
         return (

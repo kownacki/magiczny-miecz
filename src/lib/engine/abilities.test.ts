@@ -20,6 +20,7 @@ import {
   spellsOverLimit,
   skipsRollAt,
   wardThreshold,
+  bestShield,
 } from "./abilities";
 
 const KNOWN_CARDS = new Set([
@@ -275,5 +276,22 @@ describe("carrying more Zaklęcia than Magia allows", () => {
   it("counts the Różdżka and nothing else", () => {
     expect(spellsOverLimit(abilitiesOf("rozdzka-zaklec"))).toBe(1);
     expect(spellsOverLimit(abilitiesOf("pierscien-mocy"))).toBe(0);
+  });
+});
+
+describe("osłona against the point of Życie (17.4)", () => {
+  it("gives nothing when nothing is worn", () => {
+    expect(bestShield([])).toBe(0);
+  });
+
+  it("takes the widest save rather than adding them up", () => {
+    // A Hełm saves on a 1, a Tarcza on 1-2, a Zbroja on 1-3. Wearing all three
+    // is one roll against three, not three rolls — the cards each grant "the
+    // right to roll", singular, for the same point of Życie.
+    expect(bestShield(abilitiesOf("helm"))).toBe(1);
+    expect(bestShield(abilitiesOf("tarcza"))).toBe(2);
+    expect(bestShield(abilitiesOf("zbroja"))).toBe(3);
+    expect(bestShield(heldAbilities(["helm", "tarcza", "zbroja"]))).toBe(3);
+    expect(bestShield(heldAbilities(["helm", "tarcza"]))).toBe(2);
   });
 });
