@@ -46,3 +46,27 @@ describe("saying why", () => {
     expect(whyCannotEnd([])).toBeNull();
   });
 });
+
+describe("the move, which is not optional (10.1-10.2)", () => {
+  it("will not let a turn end before it has moved", () => {
+    // 10.1 makes a turn "a) ruch b) spotkania", and 10.2 gives no clause
+    // turning a roll of 3 into a move of 0. The only choice is direction.
+    expect(mayEndTurn({ fieldId: "karczma", done: [], phase: "rzut" })).toBe(false);
+    expect(whyCannotEnd(dutiesBeforeEnding({ fieldId: "karczma", done: [], phase: "rzut" })))
+      .toContain("10.1");
+  });
+
+  it("lets it end once the character has arrived somewhere", () => {
+    expect(mayEndTurn({ fieldId: "karczma", done: [], phase: "pole" })).toBe(true);
+  });
+
+  it("asks nothing of the Kamienny Most, which has no roll (10.3)", () => {
+    expect(mayEndTurn({ fieldId: "pulapka", done: [], phase: "most" })).toBe(true);
+  });
+
+  it("takes a move that happened another way as done", () => {
+    // 10.2 allows for it: "Pewne specjalne zdolności i Zaklęcia umożliwiają
+    // wykonywanie ruchu w inny sposób."
+    expect(mayEndTurn({ fieldId: "karczma", done: ["ruch"], phase: "rzut" })).toBe(true);
+  });
+});

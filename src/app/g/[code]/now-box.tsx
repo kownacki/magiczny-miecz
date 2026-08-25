@@ -22,6 +22,7 @@ export function NowBox({
   windows,
   steps,
   canEnd,
+  whyNotEnd,
   canRoll,
   canDraw,
   busy,
@@ -39,6 +40,8 @@ export function NowBox({
   /** How far through the turn it is — see `turnSteps`. */
   steps: readonly TurnStep[];
   canEnd: boolean;
+  /** Said on the disabled control, so a refusal explains itself (see `duties.ts`). */
+  whyNotEnd?: string | null;
   /** The turn has not been rolled yet — 10.2 makes this the first thing it does. */
   canRoll: boolean;
   /** The Obszar still owes cards (13.4 counts what is already lying there). */
@@ -156,6 +159,9 @@ export function NowBox({
         <button
           onClick={onEnd}
           disabled={busy || !canEnd}
+          // A disabled control that does not say why is a control that looks
+          // broken. The reason is the rule, quoted.
+          title={canEnd ? undefined : (whyNotEnd ?? undefined)}
           className="mt-2 shrink-0 rounded border border-edge px-2 py-1 text-[11px] text-muted transition hover:border-ochre hover:text-ink disabled:opacity-40"
         >
           Zakończ turę

@@ -16,7 +16,7 @@ import type { FieldId } from "./board";
  * leaves the player free to do everything else in any order they like and still
  * cannot walk away from what the rules require.
  */
-export type DutyKind = "bestia";
+export type DutyKind = "bestia" | "ruch";
 
 export interface Duty {
   kind: DutyKind;
@@ -36,8 +36,35 @@ export interface Duty {
 export function dutiesBeforeEnding(input: {
   fieldId: FieldId | null;
   done: readonly DutyKind[];
+  /**
+   * Where the turn has got to. A turn still at "rzut" has not moved, and 10.1
+   * makes the move the first of the two things a turn is made of.
+   */
+  phase?: string;
 }): Duty[] {
   const duties: Duty[] = [];
+
+  /**
+   * 10.1: "Postacie kolejno wykonują swoje czynności: a) ruch b) spotkania i
+   * badanie Obszaru" — and 10.2 has no clause letting a roll of 3 become a move
+   * of 0. The only choice the rules give is the direction.
+   *
+   * 13.1 says the same from the other side: nothing whatsoever may be done on
+   * the Obszar a turn starts from, so a turn spent standing still would be a
+   * turn in which nothing could legally happen at all.
+   *
+   * The turn never reaches this phase in the cases where movement is genuinely
+   * impossible — Kamień and a lost turn are skipped by the turn engine before
+   * anybody is asked to roll, and the Kamienny Most has its own phase because
+   * 10.3 gives it no roll.
+   */
+  if (input.phase === "rzut" && !input.done.includes("ruch")) {
+    duties.push({
+      kind: "ruch",
+      label: "Rzuć kostką i wykonaj ruch",
+      rule: "10.1-10.2",
+    });
+  }
 
   // 14.7: reaching the Zamek means fighting the Bestia. There is no leaving
   // without it — a loss costs two Życia and puts the character off the Most,
@@ -57,6 +84,7 @@ export function dutiesBeforeEnding(input: {
 export function mayEndTurn(input: {
   fieldId: FieldId | null;
   done: readonly DutyKind[];
+  phase?: string;
 }): boolean {
   return dutiesBeforeEnding(input).length === 0;
 }
