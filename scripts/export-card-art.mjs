@@ -35,6 +35,40 @@ const WIDTH = 240;
 const QUALITY = 72;
 
 /**
+ * One shape per family, forced.
+ *
+ * The crop above is a *fraction* of each slice, so its output is only as
+ * uniform as the slicing is — and it is not. Cards came out 240x209 mostly,
+ * 240x210 often, and anywhere from 240x200 to 240x214 on zdarzenia-9, whose
+ * slices wobble. Karty Postaci are a different card entirely and come out
+ * 240x155.
+ *
+ * That was invisible here and expensive downstream: every slot in the app draws
+ * art in a box of one fixed shape, so a picture of another shape is silently
+ * cropped to fit. The box had been built to the Karta Postaci's 240x155 while
+ * 225 of the 264 pictures were 240x209 — a quarter of every item illustration's
+ * height, cut off and never missed because nobody had seen the whole one.
+ *
+ * So the aspect is settled here, once, where the pictures are made. Cropped to
+ * the target ratio about the centre and then resized to it exactly, which
+ * trims a few pixels off the stragglers and distorts nothing.
+ */
+const SHAPE = {
+  /** Karty Zdarzeń, Zaklęcia and Wyposażenie: the frame is 80.2% by 42.0%. */
+  karta_zdarzen: { width: WIDTH, height: 209 },
+  /** Karty Postaci are taller and wider, and their frame is a different one. */
+  karta_postaci: { width: WIDTH, height: 155 },
+};
+
+/** The largest rectangle of `ratio` that fits inside w x h, centred. */
+function centreCrop(width, height, ratio) {
+  const wide = width / height > ratio;
+  const w = wide ? Math.round(height * ratio) : width;
+  const h = wide ? height : Math.round(width / ratio);
+  return { x: Math.round((width - w) / 2), y: Math.round((height - h) / 2), w, h };
+}
+
+/**
  * Cards with no illustration to cut out.
  *
  * The Dobry/Zły markers are a word in a box. Cropping to where an illustration
@@ -96,14 +130,22 @@ function run() {
       const y = Math.round(img.height * ART.top);
       const w = Math.round(img.width * ART.right) - x;
       const h = Math.round(img.height * ART.bottom) - y;
+      const art = cropImage(img, x, y, w, h);
+
+      // Then to the one shape its family is drawn in — see SHAPE.
+      const shape = sheet === "karta" ? SHAPE.karta_postaci : SHAPE.karta_zdarzen;
+      const fit = centreCrop(art.width, art.height, shape.width / shape.height);
 
       const temp = path.join(scratch, `${sheetId}-${index}.png`);
-      fs.writeFileSync(temp, encodePng(cropImage(img, x, y, w, h)));
+      fs.writeFileSync(temp, encodePng(cropImage(art, fit.x, fit.y, fit.w, fit.h)));
 
       const destination = path.join(OUT, `${sheetId}-${index}.jpg`);
+      // `-z height width` is an exact resize. The crop above already made the
+      // ratio right, so nothing is stretched by asking for it.
       execFileSync(
         "sips",
-        ["-s", "format", "jpeg", "-s", "formatOptions", String(QUALITY), "-Z", String(WIDTH), temp, "--out", destination],
+        ["-s", "format", "jpeg", "-s", "formatOptions", String(QUALITY),
+         "-z", String(shape.height), String(shape.width), temp, "--out", destination],
         { stdio: "ignore" },
       );
       bytes += fs.statSync(destination).size;

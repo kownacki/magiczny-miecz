@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import {
+  ART_RATIO,
+  CHARACTER_ART_RATIO,
   cardArtUrl,
   cardImageUrl,
   characterArtUrl,
@@ -83,9 +85,11 @@ export function CardTile({
     ? characterArtUrl(card.cardId)
     : cardArtUrl(card.cardId, card.ref);
   const width = size === "md" ? 132 : 92;
-  // The art is cut 240x155, so the tile takes that shape rather than cropping
-  // the picture back into a portrait box.
-  const height = Math.round(width * (155 / 240));
+  // The tile takes the shape of whichever family it is drawing, rather than
+  // cropping the picture back into a box built for the other one. A Karta
+  // Postaci's frame is a different rectangle from a Karta Zdarzeń's, and this
+  // component draws both.
+  const height = Math.round(width / (card.character ? CHARACTER_ART_RATIO : ART_RATIO));
   const { handlers, preview } = useCardPreview(card, false, eqMode, nature);
 
   return (

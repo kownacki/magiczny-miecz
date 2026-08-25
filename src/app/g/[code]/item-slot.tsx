@@ -15,7 +15,7 @@
  */
 
 import Image from "next/image";
-import { cardArtUrl } from "@/lib/engine/cardImages";
+import { ART_RATIO, cardArtUrl } from "@/lib/engine/cardImages";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
@@ -24,12 +24,20 @@ import type { TileCard } from "./card-tile";
 /**
  * One size, everywhere.
  *
- * The illustration export cuts 240x155, so the picture box takes that shape.
- * Anything else either letterboxes the art or crops it, and every card in the
- * box has the same proportions, so one ratio serves all of them.
+ * The illustration export cuts 240x209 off a Karta Zdarzeń, so the picture box
+ * takes that shape. Anything else either letterboxes the art or crops it, and
+ * every card of that family has the same proportions now, so one ratio serves
+ * all of them.
+ *
+ * It used to say 155, which is the *Karta Postaci's* frame — a different card
+ * with a different shape, 28 pictures against 236. Every item illustration in
+ * the app was being cropped by a quarter of its height to fit a box built for
+ * something else, and nobody could see it because nobody had seen the whole
+ * picture. `export-card-art.mjs` now settles the aspect where the pictures are
+ * made; this is the same number read off the other end.
  */
 export const SLOT_WIDTH = 96;
-export const SLOT_ART_HEIGHT = Math.round(SLOT_WIDTH * (155 / 240));
+export const SLOT_ART_HEIGHT = Math.round(SLOT_WIDTH / ART_RATIO);
 
 /**
  * How far a card steps aside to show where a carried one is going.

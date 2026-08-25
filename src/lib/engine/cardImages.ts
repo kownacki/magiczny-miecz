@@ -11,6 +11,18 @@ import type { EventCard, Item, Spell } from "@/data/types";
 import { cardRef } from "./deck";
 import { RANDOM_CHARACTER_ID } from "./characters";
 
+/**
+ * The shape each family of illustration is exported in.
+ *
+ * `export-card-art.mjs` settles these where the pictures are made — one crop
+ * per family, forced, because a percentage crop of a slice is only as uniform
+ * as the slicing. Read them from here rather than writing 240/209 into every
+ * box that draws one, which is how the app came to draw 236 Karty Zdarzeń in a
+ * box built for the 28 Karty Postaci and crop a quarter off each.
+ */
+export const ART_RATIO = 240 / 209;
+export const CHARACTER_ART_RATIO = 240 / 155;
+
 const AVAILABLE = new Set(manifest as string[]);
 const ART_AVAILABLE = new Set(artManifest as string[]);
 
