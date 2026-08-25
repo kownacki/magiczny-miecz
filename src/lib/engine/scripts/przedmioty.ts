@@ -16,10 +16,12 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
   "1-sztuka-zlota": {
     effect: { op: "punkty", stat: "zloto", delta: 1 },
     disposition: { kind: "odloz" },
+    consumed: true,
   },
   "2-sztuki-zlota": {
     effect: { op: "punkty", stat: "zloto", delta: 2 },
     disposition: { kind: "odloz" },
+    consumed: true,
   },
 
   /**

@@ -35,6 +35,19 @@ export interface CardScript {
    * disposition still applies: the Jednorożec leaves either way.
    */
   optional?: boolean;
+  /**
+   * The card is not kept — resolving it is the whole of it.
+   *
+   * A Sztuka Złota is filed as a Przedmiot because that is the numeral printed
+   * on it, but it is money: the card turns into gold and goes on the used pile.
+   * Nothing about it survives to be carried, so it costs nothing against the
+   * four-item limit of 5.4 and there is nothing to lose on the Bagna later.
+   *
+   * Class alone cannot tell you this — `kindForCard` sees "przedmiot" and says
+   * "item", which is how gold ended up sitting in players' packs with a discard
+   * button under it. The script is what knows.
+   */
+  consumed?: boolean;
 }
 
 /**
@@ -247,6 +260,17 @@ export const SCRIPTS: Readonly<Partial<Record<CardId, CardScript>>> = {
   ...WROGOWIE,
   ...PRZEDMIOTY,
 };
+
+/**
+ * Whether a card is spent by being resolved rather than kept.
+ *
+ * Takes a plain string for the same reason `scriptFor` does: it is asked about
+ * ids that came off the wire, and its answer for anything it does not know is
+ * "no, this is an ordinary card".
+ */
+export function isConsumedOnResolve(cardId: string): boolean {
+  return scriptFor(cardId)?.consumed === true;
+}
 
 export function scriptFor(cardId: string): CardScript | null {
   // The registry's *keys* are checked — a typo in one of the ~250 card names

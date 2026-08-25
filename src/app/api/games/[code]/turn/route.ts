@@ -148,11 +148,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "escape":
         // Absent means "you decide" — a simulation never reports an outcome it
         // could have worked out. A companion table sends a boolean.
-        await escape(
-          game.id,
-          typeof body.succeeded === "boolean" ? body.succeeded : null,
+        //
+        // The answer goes back, because "no" is a real answer here and used to
+        // look exactly like nothing having happened.
+        return NextResponse.json(
+          await escape(game.id, typeof body.succeeded === "boolean" ? body.succeeded : null),
         );
-        break;
       case "most-pole":
         // The Kamienny Most's own fields: the traps, the game with Death, the
         // dog, and the two creatures that stand in the way (14.5-14.6).

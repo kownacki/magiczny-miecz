@@ -71,6 +71,7 @@ import { combatValueOf } from "@/lib/engine/cards";
 import { combinedEnemyTotal } from "@/lib/engine/combat";
 import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
+import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { isSettled } from "@/lib/engine/resolve";
 import { goodsId } from "@/lib/engine/goods";
@@ -1322,21 +1323,20 @@ export async function changeNature(
 }
 
 /**
- * Which Natures a card forbids, read from its own printed text.
+ * Which Natures a card forbids (5.3).
  *
- * The deck states these in prose rather than as a field — "jego Natura jest
- * Zła, a Przedmiotem tym mogą posługiwać się jedynie Dobre i Chaotyczne
- * Postacie" — so this looks for the phrasing the cards use and returns nothing
- * when it finds none, which is the common case.
+ * It used to read this out of the card's prose, looking for "jedynie" and
+ * "tylko" — and all three cards that carry the restriction phrase it the other
+ * way round, as a prohibition: "Włóczni nie mogą posiadać Złe Postacie". So the
+ * search found nothing on exactly the cards the rule exists for, and a Zła
+ * Postać could pick up the Święta Włócznia.
+ *
+ * It is data now, in the same registry as everything else a card does, so the
+ * rule and the hover cannot disagree about it.
  */
 function forbiddenFor(card: EventCard): ("dobra" | "zla" | "chaotyczna")[] | undefined {
-  const text = card.text.toLowerCase();
-  const allowed: ("dobra" | "zla" | "chaotyczna")[] = [];
-  if (/dobr[aey]/.test(text) && /jedynie|tylko/.test(text)) allowed.push("dobra");
-  if (/z[łl][aey]/.test(text) && /jedynie|tylko/.test(text)) allowed.push("zla");
-  if (/chaotyczn/.test(text) && /jedynie|tylko/.test(text)) allowed.push("chaotyczna");
-  if (allowed.length === 0 || allowed.length === 3) return undefined;
-  return (["dobra", "zla", "chaotyczna"] as const).filter((n) => !allowed.includes(n));
+  const forbidden = forbiddenNatures(card.id);
+  return forbidden ? [...forbidden] : undefined;
 }
 
 /**
