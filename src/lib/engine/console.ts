@@ -3,7 +3,7 @@
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
-import { findByName } from "./search";
+import { findByName, fold } from "./search";
 
 /**
  * A tester's console, and why the game has one.
@@ -157,6 +157,75 @@ function name<T>(
 
 function usageOf(command: string): string {
   return COMMANDS.find((spec) => spec.name === command)?.usage ?? command;
+}
+
+/**
+ * What a Tab should finish, given a half-typed line.
+ *
+ * Names in this box are long, printed in capitals and full of Polish letters —
+ * ZWIERCIADŁO ZNISZCZENIA, ŚWIĄTYNIA BOGINI NEMED — and a console whose
+ * arguments have to be typed exactly is a console that is slower than the
+ * buttons it replaced. So the same vocabulary the parser matches against is the
+ * vocabulary Tab completes from, and the same folded comparison decides what
+ * counts as a start: `swi` finds ŚWIĘTY GRAAL.
+ *
+ * Given several, it fills in as far as they agree and hands back the list, the
+ * way a shell does. Pure, and the players are passed in rather than looked up,
+ * because who is at the table is not something the grammar knows.
+ */
+export function complete(
+  line: string,
+  players: readonly string[] = [],
+): { line: string; options: string[] } {
+  const slash = line.startsWith("/") ? "/" : "";
+  const bare = line.slice(slash.length);
+  const parts = bare.split(/\s+/);
+  const typingVerb = parts.length === 1;
+
+  const verb = parts[0].toLowerCase();
+  const stat = verb in STATS;
+
+  /** Every name this position could take, and where the fragment being typed starts. */
+  const from = (): { pool: string[]; at: number } => {
+    if (typingVerb) {
+      return {
+        pool: COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]),
+        at: 0,
+      };
+    }
+    // A stat takes its amount first and a player after it; everything else
+    // takes its one argument straight away.
+    if (stat) return { pool: [...players], at: 2 };
+    if (verb === "give" || verb === "card") return { pool: CARDS.map((c) => c.name), at: 1 };
+    if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
+    if (verb === "go" || verb === "move") return { pool: PLACES.map((f) => f.name), at: 1 };
+    if (verb === "kill" || verb === "spell") return { pool: [...players], at: 1 };
+    return { pool: [], at: parts.length - 1 };
+  };
+
+  const { pool, at } = from();
+  // The rest of the line is one argument, so a name with spaces in it can be
+  // completed from any word of it: `give magiczny mie` is still one fragment.
+  const fragment = parts.slice(at).join(" ");
+  if (pool.length === 0 || at >= parts.length) return { line, options: [] };
+
+  const needle = fold(fragment);
+  const hits = [...new Set(pool.filter((name) => fold(name).startsWith(needle)))].sort((a, b) =>
+    a.localeCompare(b, "pl"),
+  );
+  if (hits.length === 0) return { line, options: [] };
+
+  const head = parts.slice(0, at).join(" ");
+  const joined = (name: string) => `${slash}${head === "" ? "" : `${head} `}${name}`;
+  if (hits.length === 1) return { line: `${joined(hits[0])} `, options: [] };
+
+  // As far as they all agree, and then the list — a shell's answer to an
+  // ambiguous Tab, and the only one that never guesses.
+  let shared = hits[0];
+  for (const name of hits) {
+    while (!fold(name).startsWith(fold(shared))) shared = shared.slice(0, -1);
+  }
+  return { line: joined(shared), options: hits };
 }
 
 /** The list `help` prints, one command to a line. */

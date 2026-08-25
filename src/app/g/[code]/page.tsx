@@ -974,6 +974,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <TestConsole
           open={consoleOpen}
           busy={busy}
+          players={seats
+            .filter((seat) => seat.character_id)
+            .map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`)}
           onClose={() => setConsoleOpen(false)}
           onRun={runConsole}
         />

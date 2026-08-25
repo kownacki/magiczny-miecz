@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { COMMANDS } from "@/lib/engine/console";
+import { COMMANDS, complete } from "@/lib/engine/console";
 
 /**
  * A line to type at, instead of a button for every test.
@@ -21,11 +21,14 @@ import { COMMANDS } from "@/lib/engine/console";
 export function TestConsole({
   open,
   busy,
+  players,
   onClose,
   onRun,
 }: {
   open: boolean;
   busy: boolean;
+  /** Who is at the table, so a player's name can be finished like a card's. */
+  players: string[];
   onClose: () => void;
   /** Runs one line and answers with what to print — the reply, or the refusal. */
   onRun: (line: string) => Promise<string>;
@@ -113,6 +116,23 @@ export function TestConsole({
           onKeyDown={(event) => {
             if (event.key === "Enter") return void run();
             if (event.key === "Escape") return onClose();
+            /**
+             * Tab finishes what is being typed.
+             *
+             * The names are long, capitalised and full of Polish letters —
+             * ZWIERCIADŁO ZNISZCZENIA, ŚWIĄTYNIA BOGINI NEMED — and a console
+             * whose arguments must be typed exactly is slower than the buttons
+             * it replaced. Several candidates fill in as far as they agree and
+             * print the list, the way a shell answers an ambiguous Tab: the one
+             * behaviour that never guesses.
+             */
+            if (event.key === "Tab") {
+              event.preventDefault();
+              const done = complete(line, players);
+              setLine(done.line);
+              if (done.options.length > 0) say(done.options.join("   "));
+              return;
+            }
             // The last thing typed, the way a shell gives it back. Testing is
             // mostly the same line with one word changed.
             if (event.key === "ArrowUp" || event.key === "ArrowDown") {

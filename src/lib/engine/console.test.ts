@@ -1,5 +1,5 @@
 import { describe as suite, expect, it } from "vitest";
-import { COMMANDS, helpLines, parseCommand } from "./console";
+import { COMMANDS, complete, helpLines, parseCommand } from "./console";
 
 const ok = (line: string) => {
   const parsed = parseCommand(line);
@@ -143,5 +143,55 @@ suite("help", () => {
         expect(refused, alias).not.toMatch(/No command/);
       }
     }
+  });
+});
+
+suite("finishing a half-typed line", () => {
+  const tab = (line: string) => complete(line, ["Michał", "Ola"]);
+
+  it("finishes a command and leaves room for its argument", () => {
+    expect(tab("gi")).toEqual({ line: "give ", options: [] });
+    expect(tab("endf")).toEqual({ line: "endfight ", options: [] });
+  });
+
+  it("keeps the slash somebody typed", () => {
+    expect(tab("/gi").line).toBe("/give ");
+  });
+
+  it("goes as far as the candidates agree, and lists them", () => {
+    // give, go and gold all start here, so there is nothing to add.
+    expect(tab("g")).toEqual({ line: "g", options: ["give", "go", "gold"] });
+    expect(tab("give krysz")).toEqual({
+      line: "give KRYSZTAŁ ",
+      options: ["KRYSZTAŁ LOSU", "KRYSZTAŁ MAGÓW"],
+    });
+  });
+
+  it("finishes a name without a Polish keyboard, in the case it is printed in", () => {
+    expect(tab("go kar")).toEqual({ line: "go Karczma ", options: [] });
+    expect(tab("give swiety g")).toEqual({ line: "give ŚWIĘTY GRAAL ", options: [] });
+  });
+
+  it("completes a card from any word of its name", () => {
+    expect(tab("give magiczny mie").line).toBe("give MAGICZNY MIECZ ");
+  });
+
+  it("offers only Wrogowie to a fight", () => {
+    expect(tab("fight magiczny")).toEqual({ line: "fight magiczny", options: [] });
+    expect(tab("fight wilko").line).toBe("fight WILKOŁAK ");
+  });
+
+  it("completes a player where a player goes, and after the amount", () => {
+    expect(tab("kill o").line).toBe("kill Ola ");
+    expect(tab("gold +5 o").line).toBe("gold +5 Ola ");
+  });
+
+  it("leaves a line it cannot finish exactly as it was", () => {
+    expect(tab("xyz")).toEqual({ line: "xyz", options: [] });
+    expect(tab("go Narnia")).toEqual({ line: "go Narnia", options: [] });
+  });
+
+  it("takes nothing where nothing goes", () => {
+    expect(tab("endturn ").options).toEqual([]);
   });
 });
