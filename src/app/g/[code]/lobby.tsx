@@ -113,6 +113,16 @@ export function Lobby({
   const waitingOn = chosen.filter((seat) => !seat.ready && !seat.abandoned);
   const byId = new Map(characters.map((character) => [character.id, character]));
 
+  // Alphabetical, in Polish — Ł after L, Ż after Z. The data file already
+  // happens to be in this order; sorting here means the strip stays in it
+  // whatever order a card is added to the file in.
+  const inOrder = [...characters].sort((a, b) => a.name.localeCompare(b.name, "pl"));
+
+  // Read left to right, then wrap: two rows of fourteen for the 27 characters
+  // plus the surprise. Derived rather than written down, so adding a card moves
+  // the wrap instead of pushing one tile onto a third row nobody sized for.
+  const columns = Math.ceil((inOrder.length + 1) / 2);
+
   /**
    * Whose character you may choose.
    *
@@ -291,7 +301,7 @@ export function Lobby({
             )}
           </span>
         </div>
-        {/* Two rows deep: one row of 27 needed a long horizontal drag to reach
+        {/* Two rows deep: one row of 28 needed a long horizontal drag to reach
             the far half of the roster, and the characters at the end were the
             ones nobody ever looked at. Height is left to the content — a cap
             here silently cut the second row's names off. */}
@@ -300,15 +310,22 @@ export function Lobby({
             side by side with margins either side of them. When they do not fit,
             the margins collapse to nothing and this scrolls. */}
         <div className="overflow-x-auto pb-1">
-          {/* The columns share whatever width is left, so all 27 are on screen
-              at once and each is as large as that allows — capped, because past
-              a point they stop being easier to read and start being a poster.
+          {/* The columns share whatever width is left, so all 28 tiles are on
+              screen at once and each is as large as that allows — capped,
+              because past a point they stop being easier to read and start
+              being a poster.
               Sizing them in fixed pixels instead pushed five characters off the
               right-hand edge, which is the drag-to-find problem that put them
               in two rows in the first place. */}
+          {/* Row by row. Filling column-first put Awanturnik above Barbarzyńca
+              and Błędny Rycerz in the next column along, so the alphabet ran
+              down-then-across and finding a name meant reading a boustrophedon.
+              Explicit columns rather than `grid-flow-col grid-rows-2`, because
+              row-first flow has no way to say "two rows" — it has to be told
+              how wide a row is. */}
           <div
-            style={{ gridAutoColumns: "minmax(0, 1fr)" }}
-            className="mx-auto grid w-full max-w-[1708px] grid-flow-col grid-rows-2 gap-2"
+            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+            className="mx-auto grid w-full max-w-[1708px] gap-2"
           >
           <RandomChoice
             takenBy={surprised}
@@ -319,7 +336,7 @@ export function Lobby({
             onPreview={setPreview}
             onPick={() => target && onChooseCharacter(target, RANDOM_CHARACTER_ID)}
           />
-          {characters.map((character) => {
+          {inOrder.map((character) => {
             // Every character somebody holds is out, and wears the colour of
             // whoever holds it — the same colour as their dot on the board and
             // the stripe on their slot. Who took Kapłanka is a question people

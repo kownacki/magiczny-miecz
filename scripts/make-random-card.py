@@ -32,7 +32,12 @@ MIECZ_INK = (226, 0, 0)
 MAGIA_INK = (50, 18, 99)
 OUTLINE = (255, 255, 255)
 
-# Web sizes, matching scripts/export-card-images.mjs and export-card-art.mjs.
+# Web sizes. Pinned to what the siblings already are rather than derived from
+# the source aspect, because deriving lands a pixel off on two of the three and
+# a card grid with one odd tile in it visibly jitters.
+CARD_SIZE = (629, 780)
+ART_SIZE = (240, 155)
+STANDEE_SIZE = (249, 420)
 CARD_WIDTH = 629
 ART = {"left": 0.1, "right": 0.9022, "top": 0.1447, "bottom": 0.5651}
 QUALITY = 82
@@ -132,17 +137,87 @@ def art_box(card):
 
 def save_web():
     card = build(PANEL, 0.62)
-    height = round(card.height * CARD_WIDTH / card.width)
-    card.resize((CARD_WIDTH, height), Image.LANCZOS).save(OUT_CARD, quality=QUALITY)
+    card.resize(CARD_SIZE, Image.LANCZOS).save(OUT_CARD, quality=QUALITY)
 
     # Rebuilt rather than cropped, with the mark sized for the shallower box.
     thumb = build(art_box(card), 0.78)
     crop = thumb.crop((
         *art_box(thumb)[:2], *art_box(thumb)[2:],
     ))
-    crop.resize((240, round(240 * crop.height / crop.width)), Image.LANCZOS).save(OUT_ART, quality=QUALITY)
-    print(f"wrote {OUT_CARD} ({CARD_WIDTH}x{height}) and {OUT_ART} ({crop.size})")
+    crop.resize(ART_SIZE, Image.LANCZOS).save(OUT_ART, quality=QUALITY)
+    print(f"wrote {OUT_CARD} {CARD_SIZE} and {OUT_ART} {ART_SIZE}")
+
+
+
+
+# ---------------------------------------------------------------------------
+# The mała Karta Postaci — the illustration-only card that goes in a plastic
+# stand. The rulebook makes it a separate object from the big card, so it needs
+# its own LOSOWA, and its frame is a different shape: rounded corners, a dark
+# inner border, and a title in title case rather than caps.
+
+STANDEE_SOURCE = "assets/extracted/standee/standee-07.png"
+OUT_STANDEE = "public/cards/standee-random.jpg"
+STANDEE_WIDTH = 249
+
+STANDEE_TITLE = (43, 106)        # y range of the printed name
+STANDEE_ART = (173, 681)         # y range of the illustration
+STANDEE_SEED = (222, 150)        # a point in the white field, between the two
+
+
+def interior(im):
+    """The white field's shape, holes filled — the frame is never touched.
+
+    Insetting a rectangle instead does not work here: the corners are rounded
+    and there is a dark border just inside them, so any rectangle safe enough to
+    miss the frame also fails to reach the title. Flooding the background and
+    then closing each row between its outermost white pixels gives the actual
+    printed field, illustration included.
+    """
+    w, h = im.size
+    px = im.load()
+    seen = [[False] * h for _ in range(w)]
+    stack = [STANDEE_SEED]
+    while stack:
+        x, y = stack.pop()
+        if not (0 <= x < w and 0 <= y < h) or seen[x][y]:
+            continue
+        p = px[x, y]
+        if not (p[0] > 228 and p[1] > 228 and p[2] > 228):
+            continue
+        seen[x][y] = True
+        stack += [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+
+    shape = Image.new("L", (w, h), 0)
+    fill = ImageDraw.Draw(shape)
+    for y in range(h):
+        row = [x for x in range(w) if seen[x][y]]
+        if row:
+            fill.line([(row[0], y), (row[-1], y)], fill=255)
+    return shape
+
+
+def build_standee():
+    st = Image.open(STANDEE_SOURCE).convert("RGB")
+    # Measured before the field is blanked; afterwards there is no edge to find.
+    shape = interior(st)
+    st.paste(Image.new("RGB", st.size, (255, 255, 255)), (0, 0), shape)
+    draw = ImageDraw.Draw(st)
+
+    span = [x for x in range(st.width) if shape.getpixel((x, STANDEE_ART[1] - 40))]
+    box = (min(span), STANDEE_ART[0], max(span), STANDEE_ART[1])
+    mark(draw, box, 0.66)
+
+    title = fitted_font(round((STANDEE_TITLE[1] - STANDEE_TITLE[0]) * 0.72))
+    outlined(
+        draw,
+        (st.width // 2, (STANDEE_TITLE[0] + STANDEE_TITLE[1]) // 2),
+        "Losowa", title, (255, 255, 255), (0, 0, 0), 3,
+    )
+    st.resize(STANDEE_SIZE, Image.LANCZOS).save(OUT_STANDEE, quality=QUALITY)
+    print(f"wrote {OUT_STANDEE} {STANDEE_SIZE}")
 
 
 if __name__ == "__main__":
     save_web()
+    build_standee()
