@@ -44,7 +44,7 @@ import { windowsFor } from "@/lib/engine/turnWindows";
 import { crossingFrom } from "@/lib/engine/rings";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { Journal } from "./journal";
-import { momentsOf } from "@/lib/engine/spells";
+import { momentsOf, spellScript } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
@@ -663,17 +663,35 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * card out of the hand for good, and until now that was one click of a button
    * sitting under every card in the hand.
    */
-  function askToCast(holdingId: string, cardId: string, targetSeat?: number) {
+  function askToCast(
+    holdingId: string,
+    cardId: string,
+    target: { seatIndex?: number; fieldCardId?: string } = {},
+  ) {
     const name = CARD_NAMES.get(cardId) ?? cardId;
+    const lying = fieldCards.find((row) => row.id === target.fieldCardId);
     const at =
-      targetSeat === undefined
-        ? ""
-        : ` na: ${seats.find((seat) => seat.seat_index === targetSeat)?.player_name ?? `Miejsce ${targetSeat + 1}`}`;
+      target.seatIndex !== undefined
+        ? ` na: ${seats.find((seat) => seat.seat_index === target.seatIndex)?.player_name ?? `Miejsce ${target.seatIndex + 1}`}`
+        : lying
+          ? ` na: ${CARD_NAMES.get(lying.cardId) ?? lying.cardId}`
+          : "";
+    // Two of them the app carries out, and both of those take cards away for
+    // good — so the question says what will actually happen rather than the
+    // usual "rozpatrzcie sami", which would be untrue here and is the only
+    // sentence standing between a player and a hand they cannot get back.
+    const applied = spellScript(cardId)?.applies;
+    const what =
+      applied === "gasi-zaklecia"
+        ? "Ofiara traci wszystkie Zaklęcia — ich Karty idą na stos zużytych (9.6). Zrobi to aplikacja."
+        : applied === "zdejmuje-karte"
+          ? "Karta znika z planszy i trafia na stos zużytych. Zrobi to aplikacja."
+          : "Skutek rozpatrzcie sami.";
     setAsk({
       title: `Rzuć Zaklęcie: ${name}`,
       body:
         `${name}${at}. Karta odchodzi z ręki na stos kart zużytych i cały stół dowiaduje się, ` +
-        `co zostało wypowiedziane (12.5). Skutek rozpatrzcie sami.`,
+        `co zostało wypowiedziane (12.5). ${what}`,
       confirmLabel: "Rzuć",
       tone: "grave",
       onConfirm: () => {
@@ -682,7 +700,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           action: "cast",
           seatId: seats.find((seat) => seat.seat_index === mySeatIndex)?.id,
           holdingId,
-          ...(targetSeat !== undefined ? { targetSeat } : {}),
+          ...(target.seatIndex !== undefined ? { targetSeat: target.seatIndex } : {}),
+          ...(target.fieldCardId !== undefined ? { fieldCardId: target.fieldCardId } : {}),
         });
       },
     });
@@ -962,12 +981,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
              * the clock out inside the dialog — you claimed, read the question,
              * pressed yes, and were told to claim first.
              */
-            onCastSpell={(holdingId, targetSeat) =>
+            onCastSpell={(holdingId, target) =>
               post("holdings", {
                 action: "cast",
                 seatId: mine?.id,
                 holdingId,
-                ...(targetSeat === undefined ? {} : { targetSeat }),
+                ...(target.seatIndex === undefined ? {} : { targetSeat: target.seatIndex }),
+                ...(target.fieldCardId === undefined ? {} : { fieldCardId: target.fieldCardId }),
               })
             }
             onInspect={setInspectingCard}
@@ -1451,9 +1471,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     }))}
                     busy={busy}
                     onInspect={setInspectingCard}
-                    onCast={(holdingId, targetSeat) => {
+                    boardCards={fieldCards.map((row) => ({
+                      id: row.id,
+                      name: CARD_NAMES.get(row.cardId) ?? row.cardId,
+                      where: FIELD_NAMES.get(row.fieldId) ?? row.fieldId,
+                    }))}
+                    onCast={(holdingId, target) => {
                       const held = mine.holdings.find((card) => card.id === holdingId);
-                      if (held) askToCast(holdingId, held.cardId, targetSeat);
+                      if (held) askToCast(holdingId, held.cardId, target);
                     }}
                   />
                 }

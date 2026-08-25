@@ -121,7 +121,7 @@ they are rules, and one of them was missing.
 | 9.3 | held concealed from the other players | ✅ | enforced server-side |
 | 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |
 | 9.5 | drawn from the top; the pile is reshuffled when empty; some characters start holding one | ✅ | `drawSpell`, `STARTING_KIT`; the reshuffle is journalled and both piles are counted in the top bar |
-| 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ◐ | `castSpell` — the window is enforced, the card reaches the used pile and the table is told; the effect is the players' |
+| 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ◐ | `castSpell` — the window is enforced, the card reaches the used pile and the table is told; the effect is the players', except the two that take cards out of play (`SpellScript.applies`) |
 | 9.7 | no spell works on the Most or the Bestia | ✅ | refused in `castSpell` |
 
 ## 10. Tury

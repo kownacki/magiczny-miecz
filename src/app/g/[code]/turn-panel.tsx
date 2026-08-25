@@ -1536,6 +1536,7 @@ function LOSS_LABEL(effect: Extract<Effect, { op: "strata" }>): string {
     przyjaciel: "Przyjaciela",
     zaklecie: "Zaklęcie",
     zloto: "całe złoto",
+    "wszystkie-zaklecia": "wszystkie Zaklęcia",
     "wszystkie-przedmioty": "wszystkie Przedmioty",
   }[effect.co];
   const how = effect.wybor === "losowo" ? " (losowo)" : "";

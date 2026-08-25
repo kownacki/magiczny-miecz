@@ -2,7 +2,13 @@
 
 /** The shape `strata` carries on a card's script. */
 export interface Loss {
-  co: "przedmiot" | "przyjaciel" | "zaklecie" | "zloto" | "wszystkie-przedmioty";
+  co:
+    | "przedmiot"
+    | "przyjaciel"
+    | "zaklecie"
+    | "zloto"
+    | "wszystkie-przedmioty"
+    | "wszystkie-zaklecia";
   count?: number;
   /** Whose choice it is. Absent means the holder's, which is the rulebook's default (5.6). */
   wybor?: "ty" | "losowo";
@@ -29,6 +35,7 @@ function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
     case "przyjaciel":
       return "friend";
     case "zaklecie":
+    case "wszystkie-zaklecia":
       return "spell";
     case "zloto":
       // Gold is a number on the seat, not a card in the pack (3.5).
@@ -58,8 +65,13 @@ export function chooseLosses(
   const candidates = holdings.filter((held) => held.kind === kind);
   if (candidates.length === 0) return [];
 
-  // "Wszystkie Przedmioty" is not a count, it is everything of that kind.
-  if (loss.co === "wszystkie-przedmioty") return candidates.map((held) => held.id);
+  // "Wszystkie" is not a count, it is everything of that kind — and it is not a
+  // choice either, so it never comes back as null asking which. The Przesilenie
+  // says it of a whole table at once ("wszystkie Karty Zaklęć, znajdujące się w
+  // posiadaniu Postaci") and the Władca Czarów of one victim.
+  if (loss.co === "wszystkie-przedmioty" || loss.co === "wszystkie-zaklecia") {
+    return candidates.map((held) => held.id);
+  }
 
   const wanted = Math.min(loss.count ?? 1, candidates.length);
   if (loss.wybor !== "losowo") return null;
@@ -96,6 +108,7 @@ export function describeLoss(loss: Loss): string {
     zaklecie: "Zaklęcie",
     zloto: "złoto",
     "wszystkie-przedmioty": "wszystkie Przedmioty",
+    "wszystkie-zaklecia": "wszystkie Zaklęcia",
   }[loss.co];
   const many = loss.count && loss.count > 1 ? `${loss.count} ` : "";
   const how = loss.wybor === "losowo" ? " (losowo)" : "";

@@ -65,6 +65,24 @@ export interface SpellScript {
    * after the fact (9.6's "rzuconego bezpośrednio przed nim").
    */
   reactive?: boolean;
+  /**
+   * The three exceptions to `CAST_IS_ANNOUNCED`, marked in the data rather than
+   * hidden in a branch somewhere.
+   *
+   * Both of these take *cards out of play*, and that is the whole reason they
+   * are exceptions. Announcing them and leaving the table to it means nobody
+   * puts the cards on the used pile — the app is the only thing here that knows
+   * where the pile is — and 9.5 refills the deck from that pile. A card
+   * announced and not collected is a card gone from the game.
+   *
+   * Nothing else is applied: what a Zwierciadło reflects or a Wojna Żywiołów
+   * suspends stays the table's, exactly as before.
+   */
+  applies?:
+    /** Władca Czarów: the victim's whole hand, "należy odłożyć ich Karty". */
+    | "gasi-zaklecia"
+    /** Siewca Spustoszenia: one face-up Karta Zdarzeń, off the board. */
+    | "zdejmuje-karte";
 }
 
 /**
@@ -82,6 +100,23 @@ export interface SpellScript {
  * whose hand it left, that it is gone, and that everyone was told.
  */
 export const CAST_IS_ANNOUNCED = true;
+
+/**
+ * …with two exceptions, and they are exceptions for a reason that is not
+ * "these ones were easy".
+ *
+ * Everything above is about *effects* the app would have to adjudicate. These
+ * two are about *cards*, and cards are the app's own bookkeeping: where they
+ * came from, which pile they go back to, and what 9.5 has left to reshuffle.
+ * The Władca Czarów's own text ends "należy odłożyć ich Karty" — a table can
+ * read that and do it, but the app is the only one here holding the pile, so
+ * announcing and stepping back means the cards leave the game rather than the
+ * deck. The Przesilenie says the same of every hand at once and is an event
+ * card, so it goes through `strata` with the rest of them.
+ */
+export function appliedByTheApp(script: SpellScript | null): boolean {
+  return script?.applies !== undefined;
+}
 
 export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
   "kamien-filozoficzny": {
@@ -156,6 +191,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["poczatek-tury", "po-ruchu"],
     target: "karta-na-planszy",
     effect: "Zdejmij z planszy jedną odkrytą Kartę Zdarzeń.",
+    applies: "zdejmuje-karte",
   },
   szalenstwo: {
     timing: ["dowolna-chwila"],
@@ -166,6 +202,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["dowolna-chwila"],
     target: "postac",
     effect: "Ofiara traci wszystkie swoje Zaklęcia.",
+    applies: "gasi-zaklecia",
   },
   "wladca-gromu": {
     timing: ["dowolna-chwila"],

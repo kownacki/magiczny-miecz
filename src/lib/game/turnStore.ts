@@ -28,7 +28,7 @@ import {
   tollIsWaived,
   type EscapeTarget,
 } from "@/lib/engine/abilities";
-import { castableNow, spellScript } from "@/lib/engine/spells";
+import { castableNow, spellScript, type SpellScript } from "@/lib/engine/spells";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, describeLoss, goldLost } from "@/lib/engine/losses";
 import {
@@ -1114,14 +1114,63 @@ export async function abandonFight(gameId: string): Promise<void> {
  * What the app does own is the bookkeeping a table actually loses: whose hand
  * it left, that it is spent, and that everybody heard.
  *
+ * Two spells are applied rather than announced, and `SpellScript.applies` says
+ * which and why: both take *cards* out of play, and where a card goes when it
+ * leaves is the one thing at this table only the app knows. Announcing those
+ * and stepping back means the cards never reach the used pile, and 9.5 refills
+ * the deck from that pile.
+ *
  * 9.7 is the one hard prohibition and is enforced: nothing works on the
  * creatures of the Kamienny Most, nor on the Bestia.
  */
+/**
+ * The two spells the app carries out rather than reads aloud.
+ *
+ * Returns what it took, for the journal — a spell that says "wszystkie" needs
+ * to say how many that turned out to be, or the table cannot check it.
+ */
+async function applySpell(
+  gameId: string,
+  applies: NonNullable<SpellScript["applies"]>,
+  target: { seatIndex?: number; fieldCardId?: string },
+): Promise<string[]> {
+  if (applies === "gasi-zaklecia") {
+    if (target.seatIndex === undefined) throw new Error("Wskaż Postać (9.6).");
+    const seats = await seatsFor(gameId);
+    const victim = seats.find((s) => s.seat_index === target.seatIndex);
+    if (!victim) throw new Error("Nie ma takiej Postaci.");
+
+    // The whole hand, "unicestwienie wszystkich posiadanych przez ofiarę
+    // Zaklęć" — and then, in the card's own next breath, "należy odłożyć ich
+    // Karty", which is why this is applied at all.
+    const hand = (await holdingsFor(gameId)).filter(
+      (h) => h.seat_id === victim.id && h.kind === "spell",
+    );
+    if (hand.length === 0) return [];
+    await db
+      .from("holdings")
+      .delete()
+      .in("id", hand.map((h) => h.id));
+    await returnToPile(gameId, "spells", hand.map((h) => h.card_id));
+    return hand.map((h) => h.card_id);
+  }
+
+  // "zdjąć z planszy jedną odkrytą Kartę Zdarzeń." Off the board is not out of
+  // the game: 16.8 put it there face up and the used pile is the only other
+  // place a Karta Zdarzeń has to be.
+  if (target.fieldCardId === undefined) throw new Error("Wskaż Kartę na planszy.");
+  const lying = (await fieldCardsFor(gameId)).find((row) => row.id === target.fieldCardId);
+  if (!lying) throw new Error("Tej Karty już tam nie ma.");
+  await db.from("field_cards").delete().eq("id", lying.id);
+  await returnToPile(gameId, "events", [lying.card_id]);
+  return [lying.card_id];
+}
+
 export async function castSpell(
   gameId: string,
   seatId: string,
   holdingId: string,
-  target: { seatIndex?: number; note?: string } = {},
+  target: { seatIndex?: number; note?: string; fieldCardId?: string } = {},
 ): Promise<{ spell: string; effect: string }> {
   const game = await loadGame(gameId);
   const seats = await seatsFor(gameId);
@@ -1175,6 +1224,8 @@ export async function castSpell(
   // 9.6: "reprezentująca je Karta jest odkładana na stos Kart już zużytych."
   await returnToPile(gameId, "spells", [held.card_id]);
 
+  const applied = script?.applies ? await applySpell(gameId, script.applies, target) : null;
+
   const victim =
     target.seatIndex !== undefined
       ? (seats.find((s) => s.seat_index === target.seatIndex)?.player_name ?? null)
@@ -1185,6 +1236,7 @@ export async function castSpell(
     name: spell?.name ?? held.card_id,
     ...(victim ? { target: victim } : {}),
     ...(target.note ? { note: target.note } : {}),
+    ...(applied ? { took: applied } : {}),
   });
 
   /**

@@ -89,3 +89,31 @@ describe("saying what went", () => {
     expect(describeLoss({ co: "wszystkie-przedmioty" })).toBe("wszystkie Przedmioty");
   });
 });
+
+describe("a whole hand at once (Przesilenie, Władca Czarów)", () => {
+  const hand = [
+    { id: "a", cardId: "fatum", kind: "spell" as const },
+    { id: "b", cardId: "golem", kind: "spell" as const },
+    { id: "c", cardId: "miecz", kind: "item" as const },
+  ];
+
+  it("takes every Zaklęcie and asks nobody which", () => {
+    // "wszystkie Karty Zaklęć, znajdujące się w posiadaniu Postaci" — not a
+    // count, so it never comes back null wanting the holder to choose.
+    expect(chooseLosses(hand, { co: "wszystkie-zaklecia" })).toEqual(["a", "b"]);
+  });
+
+  it("leaves everything that is not a Zaklęcie", () => {
+    expect(chooseLosses(hand, { co: "wszystkie-zaklecia" })).not.toContain("c");
+  });
+
+  it("is quiet about a hand that was already empty", () => {
+    expect(chooseLosses([hand[2]], { co: "wszystkie-zaklecia" })).toEqual([]);
+  });
+
+  it("still asks which, when the card takes only one", () => {
+    // The distinction that made this necessary: the Przesilenie used to be
+    // written as this, and cost a Czarodziej one of his three.
+    expect(chooseLosses(hand, { co: "zaklecie" })).toBeNull();
+  });
+});

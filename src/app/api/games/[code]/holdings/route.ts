@@ -102,6 +102,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             String(body.holdingId),
             {
               ...(typeof body.targetSeat === "number" ? { seatIndex: body.targetSeat } : {}),
+              // The Siewca Spustoszenia names a Karta lying on the board, which
+              // is a row id rather than a seat — see `applySpell`.
+              ...(body.fieldCardId ? { fieldCardId: String(body.fieldCardId) } : {}),
               ...(body.note ? { note: String(body.note) } : {}),
             },
           ),

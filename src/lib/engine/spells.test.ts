@@ -97,3 +97,28 @@ describe("when a spell may be spoken", () => {
     expect(castableNow(walk, "po-ruchu")).toBe(false);
   });
 });
+
+describe("the two spells the app carries out (9.6)", () => {
+  it("marks them in the data, not in a branch somewhere", () => {
+    // Both take *cards* out of play, which is the app's own bookkeeping and
+    // nobody else's: announce them and step back, and the cards never reach the
+    // used pile that 9.5 refills the deck from.
+    expect(spellScript("wladca-czarow")?.applies).toBe("gasi-zaklecia");
+    expect(spellScript("siewca-spustoszenia")?.applies).toBe("zdejmuje-karte");
+  });
+
+  it("leaves the interconnected ones alone", () => {
+    // The reason CAST_IS_ANNOUNCED exists: these answer other spells, and a
+    // referee getting one subtly wrong is worse than one staying out of it.
+    for (const id of ["zwierciadlo", "wladca-zaklec", "wojna-zywiolow", "odmiana-losu"]) {
+      expect(spellScript(id)?.applies).toBeUndefined();
+    }
+  });
+
+  it("does not offer to remove a board card for the spell that moves one", () => {
+    // Władca Zdarzeń names a Karta na planszy too, and picks it up rather than
+    // taking it away — so it stays announced and gets no picker.
+    expect(spellScript("wladca-zdarzen")?.target).toBe("karta-na-planszy");
+    expect(spellScript("wladca-zdarzen")?.applies).toBeUndefined();
+  });
+});

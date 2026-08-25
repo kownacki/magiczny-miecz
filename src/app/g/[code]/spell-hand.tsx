@@ -38,6 +38,7 @@ export function SpellHand({
   capacity,
   frame = "panel",
   opponents,
+  boardCards = [],
   busy,
   onCast,
   onInspect,
@@ -68,7 +69,9 @@ export function SpellHand({
   /** Other seats, for the spells that need a victim. */
   opponents: { seatIndex: number; name: string }[];
   busy: boolean;
-  onCast: (holdingId: string, targetSeat?: number) => void;
+  /** Boards cards this spell could be aimed at, when its own says so. */
+  boardCards?: { id: string; name: string; where: string }[];
+  onCast: (holdingId: string, target: { seatIndex?: number; fieldCardId?: string }) => void;
   onInspect: (card: TileCard) => void;
 }) {
   const [aiming, setAiming] = useState<string | null>(null);
@@ -132,6 +135,22 @@ export function SpellHand({
           const now = script ? castableNow(script, moment) : true;
           const needsVictim =
             script?.target === "postac" || script?.target === "siebie-lub-postac";
+          // Only the one the app actually carries out. The Władca Zdarzeń names
+          // a board card too, but it *moves* one and stays announced — offering
+          // a picker there would ask for something nothing reads.
+          const needsCard = script?.applies === "zdejmuje-karte";
+          const aims = needsCard
+            ? boardCards.map((entry) => ({
+                key: entry.id,
+                label: `${entry.name} — ${entry.where}`,
+                target: { fieldCardId: entry.id },
+              }))
+            : opponents.map((seat) => ({
+                key: String(seat.seatIndex),
+                label: seat.name,
+                target: { seatIndex: seat.seatIndex },
+              }));
+          const mustAim = (needsVictim || needsCard) && aims.length > 0;
           const name = card?.name ?? entry.cardId;
 
           return (
@@ -160,10 +179,7 @@ export function SpellHand({
               // Zaklęcie is never spent by a double-click that missed.
               onDoubleClick={
                 now && !busy && !blocked
-                  ? () =>
-                      needsVictim && opponents.length > 0
-                        ? setAiming(entry.holdingId)
-                        : onCast(entry.holdingId)
+                  ? () => (mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {}))
                   : undefined
               }
             >
@@ -184,22 +200,22 @@ export function SpellHand({
                 </div>
               )}
 
-              {aiming === entry.holdingId && needsVictim ? (
+              {aiming === entry.holdingId && mustAim ? (
                 <div
                   className="flex flex-wrap justify-center gap-1"
                   style={{ width: SLOT_WIDTH }}
                 >
-                  {opponents.map((seat) => (
+                  {aims.map((aim) => (
                     <button
-                      key={seat.seatIndex}
+                      key={aim.key}
                       disabled={busy || blocked !== null}
                       onClick={() => {
-                        onCast(entry.holdingId, seat.seatIndex);
+                        onCast(entry.holdingId, aim.target);
                         setAiming(null);
                       }}
                       className="rounded border border-magia/50 px-1.5 py-0.5 text-[10px] text-ink transition hover:bg-magia/20 disabled:opacity-50"
                     >
-                      {seat.name}
+                      {aim.label}
                     </button>
                   ))}
                   <button
@@ -211,12 +227,8 @@ export function SpellHand({
                 </div>
               ) : (
                 <button
-                  disabled={busy || !now || blocked !== null}
-                  onClick={() =>
-                    needsVictim && opponents.length > 0
-                      ? setAiming(entry.holdingId)
-                      : onCast(entry.holdingId)
-                  }
+                  disabled={busy || !now || blocked !== null || (needsCard && aims.length === 0)}
+                  onClick={() => (mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {}))}
                   title={
                     now
                       ? script?.effect
@@ -225,7 +237,7 @@ export function SpellHand({
                   style={{ width: SLOT_WIDTH }}
                   className="rounded border border-magia/50 px-2 py-1 text-[11px] text-ink transition hover:bg-magia/20 disabled:opacity-40"
                 >
-                  {now ? "Rzuć" : "nie teraz"}
+                  {needsCard && aims.length === 0 ? "brak Kart" : now ? "Rzuć" : "nie teraz"}
                 </button>
               )}
             </ItemSlot>

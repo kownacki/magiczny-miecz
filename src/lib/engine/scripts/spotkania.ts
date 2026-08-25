@@ -200,8 +200,16 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
   },
 
   // Every Zaklęcie in the game goes, in every Krąg — not just the drawer's.
+  /**
+   * "Odłóż tę Kartę i **wszystkie** Karty Zaklęć, znajdujące się w posiadaniu
+   * Postaci (we wszystkich Kręgach)."
+   *
+   * Every hand at the table, not one card from each — which is what this said
+   * before, and which made the storm that ends the magic in the world cost a
+   * Czarodziej one of his three.
+   */
   przesilenie: {
-    effect: { op: "strata", co: "zaklecie", target: "wszyscy" },
+    effect: { op: "strata", co: "wszystkie-zaklecia", target: "wszyscy" },
     disposition: { kind: "odloz" },
   },
 };

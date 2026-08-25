@@ -121,7 +121,10 @@ export function DrawModal({
   seatName: (index: number) => string;
   onClaimFloor: () => void;
   onReleaseFloor: () => void;
-  onCastSpell: (holdingId: string, targetSeat?: number) => void;
+  onCastSpell: (
+    holdingId: string,
+    target: { seatIndex?: number; fieldCardId?: string },
+  ) => void;
   onInspect: (card: TileCard) => void;
   /** In 15.2 order, which is the order they are dealt with. */
   cards: DrawnEntry[];
@@ -654,7 +657,7 @@ export function DrawModal({
  * The clock is a house rule; the rulebook has none, only "before the roll". It
  * is there so a fight cannot hang on somebody who has left the room, and it is
  * generous enough not to be a test of reflexes: the hard part was getting the
- * floor, and choosing a card afterwards is not a race.
+ * floor, and reading a hand afterwards is not a race.
  */
 function SpellFloorControl({
   floor,

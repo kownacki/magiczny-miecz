@@ -181,7 +181,13 @@ export type Effect =
   | { op: "walka"; nazwa: string; miecz?: number; magia?: number }
   | {
       op: "strata";
-      co: "przedmiot" | "przyjaciel" | "zaklecie" | "zloto" | "wszystkie-przedmioty";
+      co:
+        | "przedmiot"
+        | "przyjaciel"
+        | "zaklecie"
+        | "zloto"
+        | "wszystkie-przedmioty"
+        | "wszystkie-zaklecia";
       count?: number;
       /** Who picks which one goes: the holder, or chance. */
       wybor?: "ty" | "losowo";

@@ -30,6 +30,7 @@ const LOST = {
   zaklecie: "Zaklęcie",
   zloto: "całe złoto",
   "wszystkie-przedmioty": "wszystkie Przedmioty",
+  "wszystkie-zaklecia": "wszystkie Zaklęcia",
 } as const;
 
 function fieldName(fieldId: FieldId): string {
