@@ -2177,16 +2177,40 @@ function SeatCard({
 function Tokens({ stat, points, label }: { stat: string; points: number; label: string }) {
   const SIZE = 20;
   if (stat === "zloto") {
+    /**
+     * Money is a stack, not a row.
+     *
+     * There is one gold denomination in the box, so twelve Sztuk Złota is
+     * twelve identical coins — and twelve identical coins side by side is a
+     * picture nobody reads, while twelve coins in a pile is a thing everybody
+     * recognises from across a table. Each sits over the one before with a
+     * sliver showing, which is what a stack of chips looks like and costs
+     * nothing to draw, since every coin is the same picture anyway.
+     *
+     * The pile stops growing at eight and the number carries on, because a rail
+     * up the side of a card is only so tall and a rich character is common.
+     * Nothing is lost: unlike the other three, this is a stack of ones, so the
+     * count is the only thing the picture was ever going to tell you, and it is
+     * written underneath.
+     */
+    const REVEAL = 6;
+    const coins = Math.min(points, 8);
     return (
       <span className="flex flex-col items-center" title={`${label}: ${points}`}>
-        <Image
-          src="/tokens/zloto.png"
-          alt=""
-          width={SIZE}
-          height={SIZE}
-          className="rounded-[2px]"
-          unoptimized
-        />
+        <span className="flex flex-col items-center">
+          {Array.from({ length: coins }, (_, index) => (
+            <Image
+              key={index}
+              src="/tokens/zloto.png"
+              alt=""
+              width={SIZE}
+              height={SIZE}
+              style={index > 0 ? { marginTop: REVEAL - SIZE } : undefined}
+              className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
+              unoptimized
+            />
+          ))}
+        </span>
         <span className="tnum text-[11px] font-medium leading-none text-zloto">{points}</span>
       </span>
     );
