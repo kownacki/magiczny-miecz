@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
-import { cardImageUrl } from "@/lib/engine/cardImages";
+import { cardArtUrl, cardImageUrl } from "@/lib/engine/cardImages";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
 
 /**
@@ -53,9 +55,15 @@ export function CardTile({
   /** Controls drawn under the card, such as a cast or drop button. */
   children?: React.ReactNode;
 }) {
-  const src = cardImageUrl(card.cardId, card.ref);
+  // The illustration, not the whole card. A card shrunk to tile size is a grey
+  // smear with a four-pixel title; the picture is the thing a player actually
+  // recognises when reaching across a table. The whole card is one hover away.
+  const src = cardArtUrl(card.cardId, card.ref);
   const width = size === "md" ? 132 : 92;
-  const height = Math.round(width * 1.42);
+  // The art is cut 240x155, so the tile takes that shape rather than cropping
+  // the picture back into a portrait box.
+  const height = Math.round(width * (155 / 240));
+  const [hovering, setHovering] = useState<DOMRect | null>(null);
 
   return (
     <figure className="flex flex-col items-center gap-1">
@@ -67,6 +75,10 @@ export function CardTile({
         draggable={draggable}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
+        onMouseEnter={(event) => setHovering(event.currentTarget.getBoundingClientRect())}
+        onMouseLeave={() => setHovering(null)}
+        // A dragged tile leaves no mouseleave behind it.
+        onPointerDown={() => setHovering(null)}
         title={card.name}
         style={{ width, height }}
         className={`relative overflow-hidden rounded border border-edge bg-raised transition ${
@@ -99,6 +111,7 @@ export function CardTile({
           </span>
         )}
       </button>
+      {hovering && <CardPreview card={card} anchor={hovering} />}
       <figcaption
         style={{ width }}
         className="truncate text-center text-[9px] leading-tight text-muted"
@@ -108,6 +121,71 @@ export function CardTile({
       </figcaption>
       {children}
     </figure>
+  );
+}
+
+/** Readable width for the enlarged card. The scans are 629x780. */
+const PREVIEW_WIDTH = 400;
+const CARD_RATIO = 780 / 629;
+const GAP = 12;
+
+/**
+ * The whole card, big enough to read, while the pointer is on the tile.
+ *
+ * Rendered into `document.body` rather than beside the tile: hands and shelves
+ * live inside scrolling, clipping containers, and a preview drawn in place gets
+ * cut off by the first `overflow-hidden` above it. Fixed to the viewport, it is
+ * clipped by nothing.
+ *
+ * Hover is an enhancement, not the only way in — clicking a tile still opens
+ * `CardDetail`, which is what a touch screen gets, since it has no hover at all.
+ */
+function CardPreview({ card, anchor }: { card: TileCard; anchor: DOMRect }) {
+  // Hovering implies a mounted client, but the guard keeps this honest during
+  // any server render of the tree.
+  if (typeof document === "undefined") return null;
+
+  const width = PREVIEW_WIDTH;
+  const height = Math.round(width * CARD_RATIO);
+  // Prefer the right of the tile, flip when the viewport edge is closer than
+  // the card is wide, and never let it hang off the top or bottom.
+  const room = window.innerWidth - anchor.right;
+  const left =
+    room > width + GAP ? anchor.right + GAP : Math.max(GAP, anchor.left - width - GAP);
+  const top = Math.min(
+    Math.max(GAP, anchor.top + anchor.height / 2 - height / 2),
+    Math.max(GAP, window.innerHeight - height - GAP),
+  );
+  const src = cardImageUrl(card.cardId, card.ref);
+
+  return createPortal(
+    <div
+      role="tooltip"
+      style={{ left, top, width }}
+      // Never under the pointer: a preview that can be hovered flickers.
+      className="pointer-events-none fixed z-50 overflow-hidden rounded-lg border border-ochre/40 bg-night shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+    >
+      {src ? (
+        <Image
+          src={src}
+          alt={card.name}
+          width={width}
+          height={height}
+          className="block h-auto w-full"
+        />
+      ) : (
+        // No scan in this checkout. The transcription is always there, and it is
+        // what the picture was standing in for anyway.
+        <div className="flex flex-col gap-2 p-3">
+          <p className="font-[family-name:var(--font-display)] text-sm text-ochre">{card.name}</p>
+          {card.kindLabel && <p className="text-[11px] text-muted">{card.kindLabel}</p>}
+          {card.text && (
+            <p className="whitespace-pre-line text-xs leading-relaxed text-ink">{card.text}</p>
+          )}
+        </div>
+      )}
+    </div>,
+    document.body,
   );
 }
 
