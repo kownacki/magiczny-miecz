@@ -1,7 +1,8 @@
 /** The test console's grammar: turning a typed line into something the store can carry out. */
 
 import events from "@/data/events.json";
-import type { EventCard } from "@/data/types";
+import itemCards from "@/data/items.json";
+import type { EventCard, Item } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { findByName, fold } from "./search";
 
@@ -41,6 +42,7 @@ export type Command =
   | { kind: "kill"; who: string | null }
   | { kind: "stat"; stat: StatName; delta: number; who: string | null }
   | { kind: "give"; cardId: string }
+  | { kind: "place"; cardId: string; fieldId: FieldId | null }
   | { kind: "go"; fieldId: FieldId }
   | { kind: "fight"; cardId: string }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
@@ -75,6 +77,12 @@ export const COMMANDS: CommandSpec[] = [
   },
   { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
   { name: "give", aliases: ["card"], usage: "give MAGICZNY MIECZ", summary: "put a card in a hand" },
+  {
+    name: "place",
+    aliases: ["put", "drop"],
+    usage: "place MIECZ at Karczma",
+    summary: "leave a card lying on an Obszar — the one you stand on, unless you say",
+  },
   { name: "go", aliases: ["move"], usage: "go Karczma", summary: "stand on an Obszar" },
   { name: "fight", aliases: [], usage: "fight WILKOŁAK", summary: "pick a fight with a Wróg" },
   {
@@ -107,8 +115,23 @@ const VERBS = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
 
 /** Every card that can be fought: only a Wróg has a Miecz or a Magia to roll against. */
 const FOES = (events as EventCard[]).filter((card) => card.cardClass === "wrog");
-const CARDS = events as EventCard[];
+
+/**
+ * Everything nameable as a card.
+ *
+ * The 165 Karty Zdarzeń and the Wyposażenie, which is a separate file because
+ * it is a separate deck — and which mostly reprints the same cards, so it is
+ * merged by id rather than concatenated. The one name only it has is TARCZA
+ * TOLIMANA, and it was already once the card that could not be asked for.
+ */
+const CARDS: { id: string; name: string }[] = [
+  ...(events as EventCard[]),
+  ...(itemCards as Item[]).filter((item) => !events.some((card) => card.id === item.id)),
+];
 const PLACES = [...FIELDS.values()];
+
+/** Where `at` splits `place MIECZ at Karczma` into its two names. */
+const AT = /\s+at\s+/i;
 
 /**
  * Reads one line.
@@ -157,6 +180,33 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return name(CARDS, (card) => card.name, tail, "card", (card) => ({
       kind: "give",
       cardId: card.id,
+    }));
+  }
+
+  /**
+   * A card left lying on a field, rather than put in a hand.
+   *
+   * Two names in one line, which nothing else here takes, so they are separated
+   * by the word that reads as English and appears in no card and no Obszar:
+   * `place MIECZ at Karczma`. Without it, the Obszar is the one you are
+   * standing on — which is what a tester wants most of the time, and the only
+   * reason the field is optional.
+   */
+  if (word === "place" || word === "put" || word === "drop") {
+    const cut = tail.search(AT);
+    const cardPart = cut === -1 ? tail : tail.slice(0, cut);
+    const fieldPart = cut === -1 ? "" : tail.slice(cut).replace(AT, "");
+    let fieldId: FieldId | null = null;
+    if (fieldPart !== "") {
+      const where = findByName(PLACES, (field) => field.name, fieldPart);
+      if ("ambiguous" in where) return { error: `Which one — ${where.ambiguous.join(", ")}?` };
+      if ("missing" in where) return { error: `No Obszar called \`${fieldPart}\`.` };
+      fieldId = where.found.id;
+    }
+    return name(CARDS, (c) => c.name, cardPart, "card", (c) => ({
+      kind: "place",
+      cardId: c.id,
+      fieldId,
     }));
   }
 
@@ -238,6 +288,14 @@ export function complete(
     // takes its one argument straight away.
     if (stat) return { pool: [...players], at: 2 };
     if (verb === "give" || verb === "card") return { pool: CARDS.map((c) => c.name), at: 1 };
+    if (verb === "place" || verb === "put" || verb === "drop") {
+      // Which half of the line is being typed. Past the `at`, the names on
+      // offer are the board's; before it, the deck's.
+      const said = parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "at");
+      return said === -1
+        ? { pool: CARDS.map((c) => c.name), at: 1 }
+        : { pool: PLACES.map((f) => f.name), at: said + 1 };
+    }
     if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "go" || verb === "move") return { pool: PLACES.map((f) => f.name), at: 1 };
     if (verb === "kill" || verb === "spell") return { pool: [...players], at: 1 };

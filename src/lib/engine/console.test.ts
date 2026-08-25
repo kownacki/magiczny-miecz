@@ -86,6 +86,32 @@ suite("naming a card, a field or a creature", () => {
     expect(err("give krysz")).toContain("KRYSZTAŁ LOSU");
   });
 
+  it("leaves a card where you stand, or on the Obszar you name", () => {
+    expect(ok("place MIECZ")).toEqual({ kind: "place", cardId: "miecz", fieldId: null });
+    expect(ok("place MIECZ at Karczma")).toEqual({
+      kind: "place",
+      cardId: "miecz",
+      fieldId: "karczma",
+    });
+    // `put` and `drop` are the two words somebody reaches for first; `place` is
+    // the one the store already uses for putting a character on a field.
+    expect(ok("drop MIECZ at Karczma")).toMatchObject({ kind: "place", fieldId: "karczma" });
+    expect(ok("put MIECZ")).toMatchObject({ kind: "place", cardId: "miecz" });
+  });
+
+  it("names both halves of a place, and complains about the one that is wrong", () => {
+    expect(err("place")).toMatch(/Which card/);
+    expect(err("place MIECZ at Narnia")).toContain("Narnia");
+    expect(err("place nothing at Karczma")).toMatch(/No card/);
+  });
+
+  it("reaches the Wyposażenie deck, which is not the Karty Zdarzeń", () => {
+    // The card that could once not be asked for at all, because only the event
+    // deck was searched.
+    expect(ok("give tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
+    expect(ok("place tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
+  });
+
   it("finds an Obszar", () => {
     expect(ok("go Karczma")).toEqual({ kind: "go", fieldId: "karczma" });
   });
@@ -214,6 +240,14 @@ suite("finishing a half-typed line", () => {
 
   it("completes a card from any word of its name", () => {
     expect(tab("give magiczny mie").line).toBe("give MAGICZNY MIECZ ");
+  });
+
+  it("offers cards before the `at` and Obszary after it", () => {
+    expect(tab("place magiczny mie").line).toBe("place MAGICZNY MIECZ ");
+    expect(tab("place MIECZ at kar").line).toBe("place MIECZ at Karczma ");
+    // The half being typed decides the list, so a field name never turns up
+    // where a card goes.
+    expect(tab("drop kar").options).toEqual([]);
   });
 
   it("offers only Wrogowie to a fight", () => {

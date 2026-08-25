@@ -227,7 +227,7 @@ suite("Polish agreement", () => {
       "walka-start", "walka-koniec", "pojedynek", "ucieczka", "ucieczka-nieudana",
       "oslona", "zabranie", "odrzucenie", "kupno", "sprzedaz", "wymiana-trofeow",
       "karta", "uzdrowienie", "leczenie", "zmiana-natury", "kamien", "smierc", "uzycie",
-      "test-karta", "test-koniec-walki", "przetasowanie",
+      "test-karta", "test-karta-obszar", "test-koniec-walki", "przetasowanie",
       "nowa-postac", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
       "tura-stracona", "zostawienie", "punkty", "strata",
     ];
@@ -407,6 +407,7 @@ const SILENT = [
 const PAYLOADS: Record<string, Record<string, unknown>> = {
   strata: { cardIds: ["miecz"] },
   zostawienie: { cardIds: ["miecz"], fieldId: "kurhan" },
+  "test-karta-obszar": { cardId: "miecz", fieldId: "kurhan" },
   punkty: { stat: "zycie", delta: -1 },
 };
 
@@ -458,6 +459,9 @@ suite("spending a card by using it", () => {
   it("says a card handed over by the test shortcut, rather than nothing at all", () => {
     // It used to write a row no case could render, so granting a card in test
     // mode left the journal silent about where it came from.
+    expect(text("test-karta-obszar", { cardId: "miecz", fieldId: "kurhan" })).toBe(
+      "Michał kładzie na polu Kurhan: MIECZ.",
+    );
     expect(text("test-karta", { cardId: "swiety-graal", kind: "item" })).toBe(
       "Michał bierze z talii: ŚWIĘTY GRAAL.",
     );

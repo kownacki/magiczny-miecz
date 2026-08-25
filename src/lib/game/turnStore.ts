@@ -3599,6 +3599,56 @@ export async function payHealer(
  * magic should not be indistinguishable from one that was won.
  */
 /**
+ * Leaves a card lying on a field, out of nowhere.
+ *
+ * `grantCard`'s counterpart, and the other half of the same shortcut: that one
+ * reaches a state where somebody holds a card, this one a state where a card is
+ * waiting to be found. 12.1's worked example is built on gear lying on a field,
+ * a dead character's pack is delivered this way, and 16.8 leaves resolved
+ * Spotkania there — all of it reachable before now only by playing up to it or
+ * by killing somebody.
+ *
+ * Not a Zaklęcie. 9.6 sends a spent spell to the used pile and nothing in the
+ * box puts one on the board; `dropHolding` makes the same exception, and a
+ * Zaklęcie lying on a field would be a card the field modal knows how to draw
+ * and no rule knows how to pick up.
+ *
+ * `granted` travels with it, as everywhere else: picked up by somebody, a card
+ * that appeared by fiat must not re-enter the game as a real one and reach a
+ * pile the next time it is put down.
+ */
+export async function placeCard(
+  gameId: string,
+  seatId: string,
+  cardId: string,
+  target: FieldId | null,
+): Promise<FieldId> {
+  const game = await loadGame(gameId);
+  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  const fieldId = target ?? seat.field_id;
+  if (!fieldId) throw new Error("Nobody is standing anywhere — name an Obszar.");
+
+  if (SPELLS.some((card) => card.id === cardId)) {
+    throw new Error("Zaklęcia nie leżą na Obszarze (9.6).");
+  }
+  const known =
+    EVENTS.some((card) => card.id === cardId) || (items as Item[]).some((i) => i.id === cardId);
+  if (!known) throw new Error(`Nie wiem, czym jest: ${cardId}`);
+
+  await db.from("field_cards").insert({
+    game_id: gameId,
+    field_id: fieldId,
+    card_id: cardId,
+    granted: true,
+  });
+  await journal(gameId, seatId, game.turn, "test-karta-obszar", { cardId, fieldId }, true);
+  await bumpRevision(gameId);
+  return fieldId;
+}
+
+/**
  * Carries out one line from the test console.
  *
  * The grammar is in `console.ts` and is pure; this is the half with the
@@ -3674,6 +3724,12 @@ export async function runCommand(
       const seat = seatOf(null);
       await grantCard(gameId, seat.id, command.cardId);
       return `${named(seat)} takes ${cardName(command.cardId)}.`;
+    }
+
+    case "place": {
+      const seat = seatOf(null);
+      const where = await placeCard(gameId, seat.id, command.cardId, command.fieldId);
+      return `${cardName(command.cardId)} lies on ${FIELDS.get(where)?.name ?? where}.`;
     }
 
     case "go": {

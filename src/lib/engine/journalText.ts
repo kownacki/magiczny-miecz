@@ -288,6 +288,12 @@ export function describe(
     // worse — the grant went in the journal and the journal stayed silent.
     case "test-karta":
       return line(`${who} bierze z talii: ${card(data.cardId)}.`);
+    // Its counterpart: a card put on the board rather than into a hand. Worded
+    // like a real `zostawienie`, because what the next visitor finds is exactly
+    // that — the manual flag is what says where it came from, and saying it
+    // twice would be the only difference the table cannot check.
+    case "test-karta-obszar":
+      return line(`${who} kładzie na polu ${field(data.fieldId)}: ${card(data.cardId)}.`);
     // Deliberately not worded as an ucieczka. 19.1 is a rule with conditions
     // and this is a switch that ignores them, so the journal keeps the two
     // apart — a test row that read "ucieka z walki" would be the one row you
