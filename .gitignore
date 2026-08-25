@@ -49,3 +49,7 @@ assets/extracted/
 # same reasoning as public/cards. Track list and zone assignments live in
 # src/data/music.json.
 assets/music/
+
+# Python bytecode from the asset scripts.
+__pycache__/
+*.pyc
