@@ -11,6 +11,7 @@ import {
   verifySeat,
 } from "@/lib/game/store";
 import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
+import type { Slot } from "@/lib/engine/slots";
 
 /**
  * The table view's state.
@@ -62,6 +63,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           cardId: holding.card_id,
           kind: holding.kind,
           face: holding.face,
+          // Where it is worn, in the slotted variant. Public like the card
+          // itself (5.2): what somebody has on is exactly what you look at
+          // before deciding whether to attack them.
+          slot: (holding.slot ?? null) as Slot | null,
         }));
 
       // Concealment is applied HERE, on the server, and not by hiding things in

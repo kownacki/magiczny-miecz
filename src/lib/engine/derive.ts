@@ -2,6 +2,7 @@
 
 import type { Item, Nature } from "@/data/types";
 import type { Holding, Seat } from "./state";
+import type { EqMode } from "./slots";
 import {
   carryLimit as abilityCarryLimit,
   heldAbilities,
@@ -145,13 +146,33 @@ export const BASE_CARRY_LIMIT = 4;
  * trading (1.4), not a thing being carried — a Koń won as a trophy pulls no
  * cart.
  */
-export function carryLimit(holdings: readonly Holding[]): number {
-  const carried = holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId);
+export function carryLimit(
+  holdings: readonly Holding[],
+  eqMode: EqMode = "klasyczny",
+): number {
+  // In the slotted variant a Koń pulls nothing while it is in the pack: the
+  // whole point of the variant is that a thing works where it is worn, and the
+  // mount place is where a mount is worn.
+  const counts = (held: Holding) =>
+    held.kind !== "trophy" && (eqMode === "klasyczny" || held.slot != null);
+  const carried = holdings.filter(counts).map((h) => h.cardId);
   return abilityCarryLimit(heldAbilities(carried), BASE_CARRY_LIMIT);
 }
 
-export function carriedCount(holdings: readonly Holding[]): number {
-  return holdings.filter((h) => h.kind === "item").length;
+/**
+ * How many Przedmioty count against the limit of 5.4.
+ *
+ * In klasyczny play that is all of them, because the rulebook knows only one
+ * kind of possession. In slotowy what a character is wearing hangs on the
+ * character rather than being carried, so the limit applies to the pack alone.
+ */
+export function carriedCount(
+  holdings: readonly Holding[],
+  eqMode: EqMode = "klasyczny",
+): number {
+  return holdings.filter(
+    (held) => held.kind === "item" && (eqMode === "klasyczny" || held.slot == null),
+  ).length;
 }
 
 /**

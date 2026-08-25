@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
-import { EMPTY_IN_BASE_GAME, SLOTS, SLOT_OF, slotCapacity, slotOf } from "./slots";
+import { SLOTS, SLOT_LABEL, SLOT_OF, fitsIn, isWearable, slotsFor } from "./slots";
 
 /** Every Przedmiot in the box, by id, from both the event deck and the shop. */
 const ITEM_IDS = new Set([
@@ -14,73 +14,73 @@ describe("slotted equipment", () => {
   it("only assigns places to cards that exist", () => {
     // A typo in the map would otherwise sit there doing nothing until somebody
     // wondered why their Excalibur would not go in a hand.
-    const unknown = Object.keys(SLOT_OF).filter((id) => !ITEM_IDS.has(id));
-    expect(unknown).toEqual([]);
+    expect(Object.keys(SLOT_OF).filter((id) => !ITEM_IDS.has(id))).toEqual([]);
   });
 
-  it("has two hands and one of everything else", () => {
-    expect(slotCapacity("dlon")).toBe(2);
-    for (const slot of new Set(SLOTS)) {
-      if (slot === "dlon") continue;
-      expect(slotCapacity(slot)).toBe(1);
+  it("gives every place at least one card and a label", () => {
+    // The belt and the boots were dropped because the box has nothing for
+    // them; this is what stops another one being added on a hunch.
+    const filled = new Set(Object.values(SLOT_OF).flat());
+    for (const slot of SLOTS) {
+      expect(SLOT_LABEL[slot]).toBeTruthy();
+      expect(filled.has(slot)).toBe(true);
+    }
+  });
+
+  it("wears the four things the box has exactly one card for", () => {
+    expect(slotsFor("helm")).toEqual(["glowa"]);
+    expect(slotsFor("zbroja")).toEqual(["tulow"]);
+    expect(slotsFor("rekawice")).toEqual(["rekawice"]);
+    expect(slotsFor("pierscien-mocy")).toEqual(["pierscien"]);
+  });
+
+  it("takes a weapon in either hand and a shield only in the off one", () => {
+    for (const weapon of ["miecz", "excalibur", "swieta-wlocznia", "rozdzka-zaklec"]) {
+      expect(fitsIn(weapon, "reka-glowna")).toBe(true);
+      expect(fitsIn(weapon, "reka-pomocnicza")).toBe(true);
+    }
+    for (const offhand of ["tarcza", "tarcza-tolimana", "zwierciadlo-zniszczenia", "latarnia"]) {
+      expect(fitsIn(offhand, "reka-glowna")).toBe(false);
+      expect(fitsIn(offhand, "reka-pomocnicza")).toBe(true);
     }
   });
 
   it("leaves the pack for things that are carried rather than worn", () => {
     // The variant must not make half the deck inert: anything with no place on
     // the body keeps working from the pack.
-    for (const id of ["latarnia", "kij-i-sznur", "lodz", "eliksir-sily", "diament-krolow"]) {
-      expect(ITEM_IDS.has(id)).toBe(true);
-      expect(slotOf(id)).toBeNull();
-    }
-  });
-
-  it("wears the four things the box actually has clothing for", () => {
-    expect(slotOf("helm")).toBe("glowa");
-    expect(slotOf("zbroja")).toBe("tulow");
-    expect(slotOf("rekawice")).toBe("rekawice");
-    expect(slotOf("pierscien-mocy")).toBe("pierscien");
-  });
-
-  it("knows which places the base game can never fill", () => {
-    // Documented rather than implied: this is the audit that says the belt and
-    // the boots have no card, and it fails the day an expansion adds one.
-    for (const slot of EMPTY_IN_BASE_GAME) {
-      const wearable = Object.entries(SLOT_OF).filter(([, place]) => place === slot);
-      expect(wearable).toEqual([]);
-    }
-    const filled = new Set(Object.values(SLOT_OF));
-    for (const slot of new Set(SLOTS)) {
-      if (EMPTY_IN_BASE_GAME.includes(slot)) continue;
-      expect(filled.has(slot)).toBe(true);
-    }
-  });
-
-  it("puts every weapon and shield in a hand", () => {
     for (const id of [
-      "miecz",
-      "sztylet",
-      "magiczny-miecz",
-      "arondight",
-      "excalibur",
-      "miecz-chaosu",
-      "swieta-wlocznia",
-      "topor-swiatla-i-ciemnosci",
-      "tarcza",
-      "tarcza-tolimana",
-      "tarcza-boga-tolimana",
+      "kij-i-sznur",
+      "lodz",
+      "eliksir-sily",
+      "diament-krolow",
+      "gliniana-tabliczka",
+      "magiczny-manuskrypt",
+      "tajemnicza-szkatula",
+      "czarodziejska-kosc",
+      "jablko-natchnienia",
+      "owoc-jarzebiny-wiedzy",
     ]) {
-      expect(slotOf(id)).toBe("dlon");
+      expect(ITEM_IDS.has(id)).toBe(true);
+      expect(isWearable(id)).toBe(false);
     }
   });
 
   it("puts everything that carries things in the mount or bag place", () => {
-    // These are the cards rule 5.4 names as transport, plus the two sakwy.
+    // The cards rule 5.4 names as transport, plus the two sakwy.
     for (const id of ["kon", "mul", "zaprzeg", "wierzchowiec", "bojowy-rumak"]) {
-      expect(slotOf(id)).toBe("wierzchowiec");
+      expect(slotsFor(id)).toEqual(["wierzchowiec"]);
     }
     for (const id of ["magiczna-sakwa", "tajemna-sakwa"]) {
-      expect(slotOf(id)).toBe("sakwa");
+      expect(slotsFor(id)).toEqual(["sakwa"]);
     }
+  });
+
+  it("accounts for every Przedmiot in the box, one way or the other", () => {
+    // Not an assertion about the split, just that nothing is unconsidered: a
+    // newly transcribed card shows up here as a number that moved.
+    const worn = [...ITEM_IDS].filter(isWearable);
+    expect(ITEM_IDS.size).toBe(45);
+    expect(worn).toHaveLength(33);
+    expect(ITEM_IDS.size - worn.length).toBe(12);
   });
 });

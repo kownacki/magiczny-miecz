@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createGame, listGames, type GameMode } from "@/lib/game/store";
+import type { EqMode } from "@/lib/engine/slots";
 
 /** The tables that exist, so a game can be found again without its code. */
 export async function GET() {
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
   // Anything but the one other legal value means simulation, which is the mode
   // that needs nothing on the table.
   const mode: GameMode = body.mode === "companion" ? "companion" : "simulation";
-  const { game, hostToken } = await createGame(name, mode);
+  // Klasyczny unless the table asked otherwise: the variant is a house rule and
+  // the default has to be the game as printed.
+  const eqMode: EqMode = body.eqMode === "slotowy" ? "slotowy" : "klasyczny";
+  const { game, hostToken } = await createGame(name, mode, eqMode);
   return NextResponse.json({ joinCode: game.join_code, token: hostToken });
 }

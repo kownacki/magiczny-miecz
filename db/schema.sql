@@ -29,6 +29,10 @@ create table if not exists magiczny_miecz.games (
   -- played with nothing else; 'companion' is the opt-in for a table that has
   -- the physical board out and wants the app only as a referee.
   mode text not null default 'simulation' check (mode in ('companion', 'simulation')),
+  -- Which equipment variant this table plays. Klasyczny is the rulebook: four
+  -- Przedmioty, no distinction between worn and carried (5.4). Slotowy is a
+  -- house variant — see "Wariant: ekwipunek slotowy" in docs/COVERAGE.md.
+  eq_mode text not null default 'klasyczny' check (eq_mode in ('klasyczny', 'slotowy')),
   -- Where randomness comes from. 'physical' means a human types in what they
   -- rolled; this is the RandomPort's binding, stored so it survives a reload.
   die_source text not null default 'app' check (die_source in ('app', 'physical')),
@@ -118,6 +122,10 @@ create table if not exists magiczny_miecz.holdings (
   card_id text not null,
   kind text not null check (kind in ('spell', 'item', 'friend', 'trophy')),
   face text not null default 'open' check (face in ('open', 'hidden')),
+  -- Where it is worn, in the slotted variant only; null means the pack, which
+  -- is the only place anything is in klasyczny play.
+  slot text check (slot in ('glowa', 'amulet', 'tulow', 'reka-glowna',
+    'reka-pomocnicza', 'rekawice', 'pierscien', 'wierzchowiec', 'sakwa')),
   created_at timestamptz not null default now()
 );
 

@@ -1,7 +1,7 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
 import { db } from "@/lib/supabase";
-import { fieldCardsFor } from "./store";
+import { GAME_COLUMNS, fieldCardsFor } from "./store";
 import {
   FERRY_TOLL,
   FIELDS,
@@ -101,6 +101,7 @@ function decksOf(game: { deck: unknown }): Decks {
   if (!stored?.events) return freshDecks();
   return { events: stored.events, spells: stored.spells ?? buildDeck(SPELLS.map((c) => cardRef(c.source)), shuffle) };
 }
+import { fitsIn, type Slot } from "@/lib/engine/slots";
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
 import { bonusFromHoldings } from "@/lib/engine/holdings";
 import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
@@ -110,7 +111,10 @@ import type { Seat } from "@/lib/engine/state";
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
   const { data, error } = await db
     .from("games")
-    .select("id,join_code,mode,die_source,status,active_seat,turn,revision,turn_state,deck")
+    // The shared list, not a copy: this one had drifted the moment a column
+    // was added, and a game that does not know its own eq_mode silently
+    // behaves as though the variant were off.
+    .select(GAME_COLUMNS)
     .eq("id", gameId)
     .single();
   if (error) throw new Error(`loadGame: ${error.message}`);
@@ -1656,5 +1660,54 @@ export async function finishTurn(gameId: string): Promise<void> {
     })
     .eq("id", gameId);
   await journal(gameId, seat.id, game.turn, "koniec-tury", { next, skipped });
+  await bumpRevision(gameId);
+}
+
+/**
+ * Puts a Przedmiot on, or takes it off.
+ *
+ * Only in the slotted variant — in klasyczny play there is nowhere to put
+ * anything, because the rulebook has one kind of possession and one limit
+ * (5.4). A table playing by the book must not find its cards quietly acquiring
+ * positions on a body the rules do not have.
+ *
+ * `slot` of null takes the card off and puts it back in the pack. Anything
+ * already in the place being filled comes off in the same breath, which is what
+ * a player means by putting on a different sword.
+ */
+export async function equipCard(
+  gameId: string,
+  holdingId: string,
+  slot: Slot | null,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  if (game.eq_mode !== "slotowy") {
+    throw new Error("Ten stół gra klasycznym ekwipunkiem — nie ma miejsc na przedmioty.");
+  }
+
+  const holdings = await holdingsFor(gameId);
+  const held = holdings.find((h) => h.id === holdingId);
+  if (!held) throw new Error("Nie ma takiej karty.");
+  if (held.kind !== "item") throw new Error("Zakładać można tylko Przedmioty.");
+
+  if (slot === null) {
+    await db.from("holdings").update({ slot: null }).eq("id", holdingId);
+    await bumpRevision(gameId);
+    return;
+  }
+
+  if (!fitsIn(held.card_id, slot)) {
+    throw new Error("Ten Przedmiot tam nie pasuje.");
+  }
+
+  // One thing per place, and the thing already there goes back in the pack
+  // rather than vanishing. Only this seat's — everybody else's Miecz stays on.
+  const occupant = holdings.find(
+    (h) => h.seat_id === held.seat_id && h.slot === slot && h.id !== holdingId,
+  );
+  if (occupant) {
+    await db.from("holdings").update({ slot: null }).eq("id", occupant.id);
+  }
+  await db.from("holdings").update({ slot }).eq("id", holdingId);
   await bumpRevision(gameId);
 }

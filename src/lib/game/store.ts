@@ -1,6 +1,7 @@
 /** Every database read and write for a game, so route handlers never touch Supabase directly. */
 
 import { randomInt } from "node:crypto";
+import type { EqMode } from "@/lib/engine/slots";
 import { db } from "@/lib/supabase";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import characters from "@/data/characters.json";
@@ -47,6 +48,8 @@ export interface GameRow {
   id: string;
   join_code: string;
   mode: string;
+  /** Which equipment variant this table plays: see `EqMode` in `slots.ts`. */
+  eq_mode: string;
   die_source: string;
   status: string;
   active_seat: number | null;
@@ -62,8 +65,8 @@ export interface GameRow {
  * column added to the schema cannot silently go missing from the API — which is
  * exactly how turn_state was absent from every response the first time.
  */
-const GAME_COLUMNS =
-  "id,join_code,mode,die_source,status,active_seat,turn,revision,turn_state,deck";
+export const GAME_COLUMNS =
+  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,turn_state,deck";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
@@ -90,12 +93,13 @@ export type GameMode = "simulation" | "companion";
 export async function createGame(
   hostName: string | null = null,
   mode: GameMode = "simulation",
+  eqMode: EqMode = "klasyczny",
 ): Promise<{ game: GameRow; hostToken: string }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const joinCode = makeJoinCode();
     const { data, error } = await db
       .from("games")
-      .insert({ join_code: joinCode, mode })
+      .insert({ join_code: joinCode, mode, eq_mode: eqMode })
       .select(GAME_COLUMNS)
       .single();
 
@@ -415,12 +419,14 @@ export interface HoldingRow {
   card_id: string;
   kind: "spell" | "item" | "friend" | "trophy";
   face: "open" | "hidden";
+  /** Where it is worn in the slotted variant; null when it is in the pack. */
+  slot: string | null;
 }
 
 export async function holdingsFor(gameId: string): Promise<HoldingRow[]> {
   const { data, error } = await db
     .from("holdings")
-    .select("id,seat_id,card_id,kind,face")
+    .select("id,seat_id,card_id,kind,face,slot")
     .eq("game_id", gameId)
     .order("created_at");
   if (error) throw new Error(`holdingsFor: ${error.message}`);

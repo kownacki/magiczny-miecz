@@ -1,6 +1,7 @@
 /** The game state the engine reads and returns, independent of how it is stored or rendered. */
 
 import { CARD_CLASS, type CardClass, type Nature } from "@/data/types";
+import type { Slot } from "./slots";
 
 export type SeatId = string;
 
@@ -44,6 +45,11 @@ export interface Holding {
   kind: "spell" | "item" | "friend" | "trophy";
   /** Spells are held concealed (9.3); items and friends lie open (5.2, 6.2). */
   face: "open" | "hidden";
+  /**
+   * Where it is worn, in the slotted variant. Null means it is in the pack,
+   * which is the only place anything is in klasyczny play.
+   */
+  slot?: Slot | null;
 }
 
 export interface GameState {

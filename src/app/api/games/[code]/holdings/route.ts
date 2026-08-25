@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
+import type { Slot } from "@/lib/engine/slots";
 import {
   castSpell,
   changeNature,
   drawSpell,
   dropCard,
+  equipCard,
   healSeat,
   takeCard,
   tradeTrophies,
@@ -35,6 +37,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "drop":
         await dropCard(game.id, String(body.holdingId));
+        break;
+      case "equip":
+        // `slot: null` takes it off. The slot itself is validated in
+        // `equipCard` against what the card may wear, so anything unrecognised
+        // simply fails to fit.
+        await equipCard(
+          game.id,
+          String(body.holdingId),
+          body.slot == null ? null : (String(body.slot) as Slot),
+        );
         break;
       case "cast":
         // Casting is the caster's own act (9.6), but the table screen plays for

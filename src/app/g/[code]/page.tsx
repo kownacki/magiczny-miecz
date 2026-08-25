@@ -18,6 +18,8 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
+import { SlotPanel, type SlotItem } from "./slot-panel";
+import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { momentOf } from "@/lib/engine/spells";
@@ -52,6 +54,8 @@ const FIELD_NAMES = new Map(
 );
 
 interface Held {
+  /** Where it is worn in the slotted variant; null when it is in the pack. */
+  slot?: Slot | null;
   id: string;
   cardId: string;
   kind: "spell" | "item" | "friend" | "trophy";
@@ -93,6 +97,8 @@ interface FieldCard {
 
 interface Game {
   id: string;
+  /** Which equipment variant this table plays (`EqMode`). */
+  eq_mode: string;
   join_code: string;
   mode: string;
   status: string;
@@ -643,8 +649,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 active={mine.seat_index === game.active_seat}
                 canAdjust
                 isMine
+                slotted={game.eq_mode === "slotowy"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
                 onDrop={(holdingId) => post("holdings", { action: "drop", holdingId })}
+                onEquip={(holdingId, slot) => post("holdings", { action: "equip", holdingId, slot })}
                 onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
                 onInspect={setInspectingCard}
               />
@@ -767,16 +775,20 @@ function Hand({
   isMine,
   canAct,
   trophies,
+  slotted,
   onDrop,
   onTrade,
+  onEquip,
   onInspect,
 }: {
   seat: Seat;
   isMine: boolean;
   canAct: boolean;
+  slotted: boolean;
   trophies: number;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
+  onEquip: (holdingId: string, slot: Slot | null) => void;
   onInspect: (card: TileCard) => void;
 }) {
   const shown = seat.holdings.filter((held) => held.kind !== "spell");
@@ -793,6 +805,8 @@ function Hand({
             seat card is what the *table* can see. */}
         {seat.holdings
           .filter((held) => held.kind !== "spell")
+          // What is being worn is on the body above, not in the pack twice.
+          .filter((held) => !slotted || held.slot == null)
           .map((held) => (
           <CardTile
             key={held.id}
@@ -802,12 +816,21 @@ function Hand({
             onClick={() => onInspect(tileFor(held))}
           >
             {canAct && (
-              <button
-                onClick={() => onDrop(held.id)}
-                className="text-[9px] text-muted underline hover:text-vermilion"
-              >
-                odrzuć
-              </button>
+              <span className="flex items-center gap-2">
+                {slotted && held.kind === "item" && isWearable(held.cardId) && (
+                  <EquipButton
+                    cardId={held.cardId}
+                    worn={wornBySlot(seat)}
+                    onEquip={(slot) => onEquip(held.id, slot)}
+                  />
+                )}
+                <button
+                  onClick={() => onDrop(held.id)}
+                  className="text-[9px] text-muted underline hover:text-vermilion"
+                >
+                  odrzuć
+                </button>
+              </span>
             )}
           </CardTile>
           ))}
@@ -823,6 +846,64 @@ function Hand({
         </button>
       )}
     </div>
+  );
+}
+
+/** What this seat is wearing, keyed by place. */
+function wornBySlot(seat: Seat): Partial<Record<Slot, SlotItem>> {
+  const worn: Partial<Record<Slot, SlotItem>> = {};
+  for (const held of seat.holdings) {
+    if (!held.slot) continue;
+    worn[held.slot] = { holdingId: held.id, cardId: held.cardId, card: tileFor(held) };
+  }
+  return worn;
+}
+
+/**
+ * Putting a Przedmiot on.
+ *
+ * One button when there is one place it can go, and a choice of two when it is
+ * a weapon and both hands are places it could go — which is the only real
+ * decision the variant offers, so it is the only one worth a second button.
+ */
+function EquipButton({
+  cardId,
+  worn,
+  onEquip,
+}: {
+  cardId: string;
+  worn: Partial<Record<Slot, SlotItem>>;
+  onEquip: (slot: Slot) => void;
+}) {
+  const places = SLOTS.filter((slot) => fitsIn(cardId, slot));
+  if (places.length === 0) return null;
+
+  if (places.length === 1) {
+    return (
+      <button
+        onClick={() => onEquip(places[0])}
+        className="text-[9px] text-ochre/80 underline hover:text-ochre"
+      >
+        {worn[places[0]] ? "zamień" : "załóż"}
+      </button>
+    );
+  }
+  // Both hands. Named rather than numbered, because "gł." and "pom." is what
+  // somebody staring at the two boxes either side of the body will read them as.
+  return (
+    <span className="flex items-center gap-1 text-[9px]">
+      <span className="text-muted">załóż:</span>
+      {places.map((slot) => (
+        <button
+          key={slot}
+          onClick={() => onEquip(slot)}
+          title={slot === "reka-glowna" ? "Ręka główna" : "Ręka pomocnicza"}
+          className="text-ochre/80 underline hover:text-ochre"
+        >
+          {slot === "reka-glowna" ? "gł." : "pom."}
+        </button>
+      ))}
+    </span>
   );
 }
 
@@ -848,18 +929,23 @@ function SeatCard({
   active,
   canAdjust,
   isMine,
+  slotted,
   onAdjust,
   onDrop,
   onTrade,
+  onEquip,
   onInspect,
 }: {
   seat: Seat;
   active: boolean;
   canAdjust: boolean;
   isMine: boolean;
+  /** The table plays the slotted variant. */
+  slotted: boolean;
   onAdjust: (stat: string, delta: number) => void;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
+  onEquip: (holdingId: string, slot: Slot | null) => void;
   onInspect: (card: TileCard) => void;
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
@@ -904,12 +990,23 @@ function SeatCard({
                 unoptimized
               />
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-ochre">{character.name}</p>
               <p className="text-[10px] text-muted">
                 {seat.nature ?? "natura nieustalona"}
               </p>
             </div>
+            {/* The body, beside the character card, in the slotted variant
+                only — klasyczny play has nowhere to put anything. */}
+            {slotted && (
+              <SlotPanel
+                worn={wornBySlot(seat)}
+                canAct={canAdjust}
+                busy={false}
+                onInspect={onInspect}
+                onTakeOff={(holdingId) => onEquip(holdingId, null)}
+              />
+            )}
           </div>
           <dl className="tnum grid grid-cols-4 gap-2 text-center text-sm">
             <Stat
@@ -938,9 +1035,11 @@ function SeatCard({
             seat={seat}
             isMine={isMine}
             canAct={canAdjust}
+            slotted={slotted}
             trophies={trophies.length}
             onDrop={onDrop}
             onTrade={onTrade}
+            onEquip={onEquip}
             onInspect={onInspect}
           />
           <p className="mt-3 text-xs text-muted">

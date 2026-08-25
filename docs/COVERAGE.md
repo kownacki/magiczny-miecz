@@ -282,43 +282,60 @@ their own procedures and the app shows them but does not run them.
 Not a rule. The rulebook has one kind of possession and one limit — four
 Przedmioty, no distinction between what a character wears and what it carries
 (5.4) — and nothing anywhere says a Hełm must be on your head to work. This is a
-house variant in the Diablo mould, chosen per table, and it never changes how
-the printed rules behave when it is off.
+house variant in the Diablo mould, chosen when the table is opened
+(`games.eq_mode`), and it never changes how the printed rules behave when it is
+off. **Klasyczny** is the default.
 
-**Klasyczny** is the game as printed and stays the default.
+In **slotowy** a character has nine places. What is worn sits in its place and
+does not count against the pack; what is carried goes in the pack, which is
+still the four of 5.4.
 
-**Slotowy** gives a character places to wear things. What is worn sits in its
-place and is not counted against the pack; what is carried goes in the pack,
-which is still the four of 5.4 and is still raised by a Koń, a Muł, a Zaprzęg, a
-Tragarz or a Sakwa.
-
-| miejsce | co tam pasuje | ile kart w grze |
+| miejsce | co tam pasuje | kart |
 |---|---|---|
 | Głowa | Hełm | 1 |
 | Amulet | Talizman Ognia, Talizman Powietrza, Relikwiarz, Święty Graal, Kryształ Magów | 5 |
 | Tułów | Zbroja | 1 |
-| Dłoń ×2 | Miecz, Sztylet, Magiczny Miecz, Arondight, Excalibur, Miecz Chaosu, Święta Włócznia, Topór Światła i Ciemności, Srebrna Strzała, Tarcza, Tarcza Tolimana, Tarcza Boga Tolimana, Różdżka Przeznaczenia, Różdżka Zaklęć, Kryształ Losu, Zwierciadło Zniszczenia | 16 |
+| Ręka główna | Miecz, Sztylet, Magiczny Miecz, Arondight, Excalibur, Miecz Chaosu, Święta Włócznia, Topór Światła i Ciemności, Srebrna Strzała, Różdżka Przeznaczenia, Różdżka Zaklęć | 11 |
+| Ręka pomocnicza | wszystko z ręki głównej, plus Tarcza, Tarcza Tolimana, Tarcza Boga Tolimana, Zwierciadło Zniszczenia, Kryształ Losu, Latarnia | 17 |
 | Rękawice | Rękawice | 1 |
-| **Pas** | — | **0** |
 | Pierścień | Pierścień Mocy | 1 |
-| **Buty** | — | **0** |
 | Wierzchowiec | Koń, Muł, Zaprzęg, Wierzchowiec, Bojowy Rumak | 5 |
 | Sakwa | Magiczna Sakwa, Tajemna Sakwa | 2 |
 
-**The belt and the boots have no card.** Not among the 63 Przedmiot cards, not
-in the Wyposażenie, and not in the text of any of the 165 Karty Zdarzeń — all of
-which are transcribed, so this is the whole box and not a gap in the
-transcription. Both places are drawn anyway and stay empty all game: a character
-with a gap where its boots go reads as one that has not found any boots, which
-is the more useful lie, and the expansions may yet fill them.
+33 of the 45 Przedmioty are worn somewhere; the other 12 are carried and have no
+place. A weapon goes in either hand, a shield only in the off one — which is
+where the interesting decisions are, since four of the places have exactly one
+card in the whole box.
 
-**Everything with no place keeps working from the pack.** The Latarnia, the Kij
-i sznur, the Łódź, the Tabliczka, the Manuskrypt, the fruits and potions, the
-Diament, the Szkatuła: things a character carries and uses rather than wears. The
-alternative — only worn things work — would make half the deck inert the moment
-the variant was switched on.
+**There is no belt and there are no boots.** Both were proposed and neither has
+a card anywhere: not among the 63 Przedmiot cards, not in the Wyposażenie, and
+not in the text of any of the 165 Karty Zdarzeń — all of which are transcribed,
+so that is the whole box rather than a gap in the transcription. The places were
+dropped rather than drawn empty all game. The five expansions are out of scope
+(CLAUDE.md) and their scans are untouched, so if a Pas or a pair of Butów turns
+up in one of them, `slots.ts` says what to add.
 
-The assignments are judgement about a variant the book never mentions, so they
-live in one place, `src/lib/engine/slots.ts`, and `slots.test.ts` fails if a card
-id in the map stops existing or if a place the box can fill is left with nothing
-in it.
+**Everything with no place keeps working from the pack.** The Latarnia's
+neighbours the Kij i sznur and the Łódź, the Tabliczka, the Manuskrypt, the
+one-use fruits and potions, the Diament, the Szkatuła: carried and used rather
+than worn. Making only worn things work would leave a quarter of the deck inert
+the moment the variant was switched on.
+
+### Co już działa, a co nie
+
+| | status |
+|---|---|
+| the places, and which card fits which | ✅ `slots.ts`, `slots.test.ts` |
+| chosen when the table is opened | ✅ `games.eq_mode` |
+| put on, take off, swap what is already there | ✅ `equipCard` |
+| refusing a card the place cannot take | ✅ a Tarcza will not go in the main hand |
+| the pack limit counts only what is *not* worn | ✅ `carriedCount`, `carryLimit` |
+| a Koń pulls nothing while it is in the pack | ✅ `carryLimit` |
+| drawn as a body beside the character card | ✅ `slot-panel.tsx` |
+| **Miecz and Magia bonuses only from worn items** | ❌ `bonusFromHoldings` still counts the pack |
+| **card abilities only from worn items** | ❌ `heldAbilities` still reads the pack |
+
+The last two are the rules half of the variant and are not done: a Miecz in the
+pack still adds its point. Until they are, slotowy changes what you can carry
+and where it is drawn, but not what it is worth.
+

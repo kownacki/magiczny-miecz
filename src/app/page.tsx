@@ -86,14 +86,18 @@ export default function Home() {
     setGames((current) => (current ?? []).filter((game) => game.joinCode !== joinCode));
   }
 
-  async function createTable(name: string, mode: "simulation" | "companion") {
+  async function createTable(
+    name: string,
+    mode: "simulation" | "companion",
+    eqMode: "klasyczny" | "slotowy",
+  ) {
     setBusy(true);
     setError(null);
     try {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, mode }),
+        body: JSON.stringify({ name, mode, eqMode }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -422,17 +426,22 @@ function CreateDialog({
 }: {
   busy: boolean;
   onCancel: () => void;
-  onCreate: (name: string, mode: "simulation" | "companion") => void;
+  onCreate: (
+    name: string,
+    mode: "simulation" | "companion",
+    eqMode: "klasyczny" | "slotowy",
+  ) => void;
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"simulation" | "companion">("simulation");
+  const [eqMode, setEqMode] = useState<"klasyczny" | "slotowy">("klasyczny");
 
   return (
     <Dialog title="Nowy stół" onCancel={onCancel}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (name.trim()) onCreate(name.trim(), mode);
+          if (name.trim()) onCreate(name.trim(), mode, eqMode);
         }}
         className="flex flex-col gap-2"
       >
@@ -457,6 +466,27 @@ function CreateDialog({
             onPick={() => setMode("companion")}
             label="Sędzia przy planszy"
             hint="Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
+          />
+        </fieldset>
+
+        {/* A house rule, so it is offered and never assumed: klasyczny is the
+            game as printed. Settled here with the mode because both describe
+            the table rather than the moment. */}
+        <fieldset className="mt-3 flex flex-col gap-2">
+          <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
+            Ekwipunek
+          </legend>
+          <ModeChoice
+            active={eqMode === "klasyczny"}
+            onPick={() => setEqMode("klasyczny")}
+            label="Klasyczny"
+            hint="Jak w Instrukcji: 4 Przedmioty, bez podziału na noszone i niesione."
+          />
+          <ModeChoice
+            active={eqMode === "slotowy"}
+            onPick={() => setEqMode("slotowy")}
+            label="Slotowy"
+            hint="Wariant: co nosisz, zakładasz na miejsce; reszta w plecaku."
           />
         </fieldset>
 
