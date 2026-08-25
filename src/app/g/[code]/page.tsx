@@ -1679,7 +1679,12 @@ function Hand({
         // dashed and faint for somewhere the card could go, solid and filled in
         // for where it would go. Red is 5.4 — no room — said while the card is
         // still in the air rather than as a refusal after it lands.
-        className={`flex flex-wrap gap-2 rounded border p-1 transition ${
+        // Clipped to itself, because a card at the start of a wrapped row steps
+        // aside into nothing: there is no room inside the rectangle to its
+        // left, so it leans out past the edge and was being cut off by the
+        // panel behind, several pixels further out and in the wrong colour.
+        // Cut by the pack's own border it reads as a card half out of the bag.
+        className={`flex flex-wrap gap-2 overflow-hidden rounded border p-1 transition ${
           !landing
             ? "border-transparent"
             : refuses
@@ -1843,8 +1848,15 @@ function Hand({
              * has left.
              */
             onPointerEnter={() => {
-              if (!carried || itsOwnSquare(held.id)) return;
-              setInsertAt(held.id);
+              if (!carried) return;
+              // Its own square is not a place to put it, so nothing is open
+              // while the pointer is there — said rather than left to the leave
+              // of whatever was hovered before, which does not always come.
+              // A card that has stepped aside is standing over its neighbour's
+              // square, so coming back to the square you lifted from can mean
+              // arriving under the very card that stepped, with no boundary
+              // crossed to fire anything.
+              setInsertAt(itsOwnSquare(held.id) ? null : held.id);
             }}
             // Only this card's own gap: moving straight to the next card sets
             // the new one in the same breath, and React keeps the last word.
