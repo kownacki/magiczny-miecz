@@ -150,7 +150,21 @@ export type Ability =
    *
    * Still bounded by 7.3: once per turn.
    */
-  | { kind: "natura-dowolna" };
+  | { kind: "natura-dowolna" }
+  /**
+   * Only these Natures may possess the card (5.3).
+   *
+   * A requirement rather than a bonus, and the only one the base game states.
+   * It was being read out of the card's prose by regex, which looked for
+   * "jedynie" and "tylko" — and every card that has this restriction phrases it
+   * the other way round, as a prohibition: "Włóczni nie mogą posiadać Złe
+   * Postacie". So the search found nothing on all three of them and 5.3 went
+   * unenforced on exactly the cards it exists for.
+   *
+   * Stated as who MAY hold it rather than who may not, because that is the
+   * shorter list on all three and the one a player wants read out.
+   */
+  | { kind: "tylko-natura"; natury: readonly Nature[] };
 
 /**
  * Which cards have which standing rules.
@@ -227,12 +241,22 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   "topor-swiatla-i-ciemnosci": [{ kind: "punkty", miecz: 1 }],
   /** Excalibur also takes a point of Życie off each beaten opponent — not encodable. */
   excalibur: [{ kind: "punkty", miecz: 1 }],
-  "swieta-wlocznia": [{ kind: "punkty", miecz: 1 }],
-  "miecz-chaosu": [{ kind: "punkty", miecz: 2 }],
+  // "Włóczni nie mogą posiadać Złe Postacie."
+  "swieta-wlocznia": [
+    { kind: "tylko-natura", natury: ["dobra", "chaotyczna"] },
+    { kind: "punkty", miecz: 1 },
+  ],
+  // "Miecza Chaosu nie może posiadać Dobra Postać."
+  "miecz-chaosu": [
+    { kind: "tylko-natura", natury: ["zla", "chaotyczna"] },
+    { kind: "punkty", miecz: 2 },
+  ],
   "pierscien-mocy": [{ kind: "punkty", magia: 2 }],
   "srebrna-strzala": [{ kind: "punkty", miecz: 1, magia: 1 }],
   /** "zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały" — the second half is the Rękawice's rule. */
+  // "Graala nie może posiadać Zła Postać."
   "swiety-graal": [
+    { kind: "tylko-natura", natury: ["dobra", "chaotyczna"] },
     { kind: "punkty", magia: 1 },
     { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "zycie" },
   ],
