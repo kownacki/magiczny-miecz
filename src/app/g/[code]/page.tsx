@@ -2211,7 +2211,14 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
             />
           ))}
         </span>
-        <span className="tnum text-[11px] font-medium leading-none text-zloto">{points}</span>
+        {/* Bigger than the caption it sits under, and off the pile by a hair.
+            The count is the whole reading here — the coins are all the same
+            denomination, so the stack says "money" and the numeral says how
+            much — and set flush against the bottom coin it looked like part of
+            the picture rather than the answer to it. */}
+        <span className="tnum mt-1 text-[13px] font-medium leading-none text-zloto">
+          {points}
+        </span>
       </span>
     );
   }
