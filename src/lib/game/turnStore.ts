@@ -74,6 +74,8 @@ import items from "@/data/items.json";
 import charactersData from "@/data/characters.json";
 import type { CardClass, Character, EventCard, Item, Nature } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
+import { helpLines, type Command } from "@/lib/engine/console";
+import { findByName } from "@/lib/engine/search";
 import { combinedEnemyTotal } from "@/lib/engine/combat";
 import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
@@ -330,6 +332,9 @@ function cardName(cardId: string): string {
   return (
     (events as EventCard[]).find((card) => card.id === cardId)?.name ??
     (items as Item[]).find((item) => item.id === cardId)?.name ??
+    // Zaklęcia are cards too, and are named on the one occasion the app says
+    // so out loud: 12.5 has a cast spoken, and the console reports a draw.
+    SPELL_BY_ID.get(cardId)?.name ??
     cardId
   );
 }
@@ -3583,6 +3588,112 @@ export async function payHealer(
  * journal draws those differently and says so, and a card that appeared by
  * magic should not be indistinguishable from one that was won.
  */
+/**
+ * Carries out one line from the test console.
+ *
+ * The grammar is in `console.ts` and is pure; this is the half with the
+ * database in it, and it does almost nothing of its own — every command calls
+ * the function the game itself calls, so a tested Życie is lost the way a real
+ * one is, a staged fight rolls the dice the real combat rolls, and nothing here
+ * can quietly disagree with the rules by having its own copy of them.
+ *
+ * Returns the line to print back. Refusals come up as thrown errors, which the
+ * route turns into the same message any other refusal gets.
+ */
+export async function runCommand(
+  gameId: string,
+  actorSeatId: string,
+  command: Command,
+): Promise<string> {
+  const seats = await seatsFor(gameId);
+
+  /**
+   * Whose seat a command is about: the one named, or your own.
+   *
+   * Named by player, by character, or by seat number — whichever is on screen
+   * when somebody types. Any seated player may act on any seat here, as they
+   * may with the corrections: at a table people fix each other's boards.
+   */
+  const seatOf = (who: string | null) => {
+    if (!who) {
+      const mine = seats.find((seat) => seat.id === actorSeatId);
+      if (!mine) throw new Error("Nieznane miejsce.");
+      return mine;
+    }
+    const digits = who.trim();
+    if (/^\d+$/.test(digits)) {
+      const at = seats.find((seat) => seat.seat_index === Number(digits) - 1);
+      if (at) return at;
+    }
+    const hit = findByName(
+      seats.filter((seat) => seat.character_id),
+      (seat) => seat.player_name ?? seat.character_id ?? `${seat.seat_index + 1}`,
+      who,
+    );
+    if ("found" in hit) return hit.found;
+    if ("ambiguous" in hit) throw new Error(`Which one — ${hit.ambiguous.join(", ")}?`);
+    throw new Error(`Nobody called \`${who}\` is at this table.`);
+  };
+
+  const named = (seat: { player_name: string | null; seat_index: number }) =>
+    seat.player_name ?? `Miejsce ${seat.seat_index + 1}`;
+
+  switch (command.kind) {
+    case "help":
+      return helpLines().join("\n");
+
+    case "stat": {
+      const seat = seatOf(command.who);
+      await adjust(gameId, seat.id, command.stat as Adjustable, command.delta, "tryb testowy");
+      const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
+      const now = after ? (after as unknown as Record<string, number>)[ADJUSTABLE[command.stat]] : "?";
+      return `${named(seat)}: ${command.stat} ${command.delta > 0 ? "+" : ""}${command.delta} → ${now}`;
+    }
+
+    case "kill": {
+      const seat = seatOf(command.who);
+      if (seat.eliminated) return `${named(seat)} już nie żyje.`;
+      // Through the same door a lost fight goes through, so what a death does
+      // to a character — its cards on the field, its Zaklęcia spent, the turn
+      // handed on — happens here too (4.4).
+      await adjust(gameId, seat.id, "zycie", -seat.zycie, "tryb testowy");
+      return `${named(seat)} ginie.`;
+    }
+
+    case "give": {
+      const seat = seatOf(null);
+      await grantCard(gameId, seat.id, command.cardId);
+      return `${named(seat)} takes ${cardName(command.cardId)}.`;
+    }
+
+    case "go": {
+      const seat = seatOf(null);
+      await placeSeat(gameId, seat.id, command.fieldId, "tryb testowy");
+      return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
+    }
+
+    case "fight": {
+      const seat = seatOf(null);
+      await stageFight(gameId, seat.id, command.cardId);
+      return `${named(seat)} fights ${cardName(command.cardId)}.`;
+    }
+
+    case "endfight":
+      await abandonFight(gameId);
+      return "Fight dropped.";
+
+    case "endturn":
+      await finishTurn(gameId);
+      return "Turn passed.";
+
+    case "spell": {
+      const seat = seatOf(command.who);
+      const spellId = await drawSpell(gameId, seat.id);
+      return `${named(seat)} draws ${cardName(spellId)}.`;
+    }
+  }
+}
+
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {
   const game = await loadGame(gameId);
   const spell = SPELLS.find((card) => card.id === cardId);

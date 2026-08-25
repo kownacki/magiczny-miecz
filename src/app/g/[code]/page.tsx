@@ -222,6 +222,29 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * it never lands in a Polish word being typed anywhere else.
    */
   const [consoleOpen, setConsoleOpen] = useState(false);
+
+  /**
+   * Backtick opens and closes it.
+   *
+   * The key every game with a console uses, and unshifted, so it cannot land in
+   * a Polish word — except in a field somebody is typing into, which is why
+   * that is checked: the console's own input is a field, and so is the card
+   * search.
+   */
+  useEffect(() => {
+    if (!TESTING_POSSIBLE) return;
+    const onKey = (event: KeyboardEvent) => {
+      const typing =
+        event.target instanceof HTMLElement &&
+        (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA");
+      if (event.key === "`" && !typing) {
+        event.preventDefault();
+        setConsoleOpen((was) => !was);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const setTestMode = writeTestMode;
   const testing = TESTING_POSSIBLE && testMode;
   /** A seatless visitor who chose to watch rather than take a character over. */
@@ -452,6 +475,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     window.addEventListener("pagehide", bye);
     return () => window.removeEventListener("pagehide", bye);
   }, [code]);
+
+  /** One line, run on the server, answered with what to print. */
+  const runConsole = useCallback(
+    async (line: string) => {
+      const response = await fetch(`/api/games/${code}/debug`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "console", line, token: readSeatToken(code) }),
+      });
+      const body = await response.json().catch(() => ({}));
+      await refresh();
+      return response.ok ? String(body.said ?? "ok") : String(body.error ?? "?");
+    },
+    [code, refresh],
+  );
 
   const post = useCallback(
     async (path: string, body: Record<string, unknown>) => {
@@ -929,23 +967,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       })
     : [];
 
-  /** One line, run on the server, answered with what to print. */
-  const runConsole = useCallback(
-    async (line: string) => {
-      const response = await fetch(`/api/games/${code}/debug`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "console", line, token: readSeatToken(code) }),
-      });
-      const body = await response.json().catch(() => ({}));
-      await refresh();
-      return response.ok ? String(body.said ?? "ok") : String(body.error ?? "?");
-    },
-    [code, refresh],
-  );
-
   const overlays = (
     <>
+      {testing && (
+        <TestConsole
+          open={consoleOpen}
+          busy={busy}
+          onClose={() => setConsoleOpen(false)}
+          onRun={runConsole}
+        />
+      )}
       {/* Above everything: what it reports has already happened, and half of it
           happened while this player was not even looking at their own turn. */}
       <AnnouncementModal
@@ -1364,6 +1395,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   }
                 >
                   tryb testowy{testMode ? " ✓" : ""}
+                </button>
+              )}
+              {testing && (
+                <button
+                  onClick={() => setConsoleOpen((was) => !was)}
+                  title="Konsola testowa (`)"
+                  className="text-vermilion/80 transition hover:text-vermilion"
+                >
+                  konsola
                 </button>
               )}
               {mySeatIndex !== null && (
@@ -2071,11 +2111,8 @@ function Hand({
             // Reading and moving are different modes: no Karta opens over the
             // place you are aiming at while a card is in the air.
             quiet={moving}
-            // Both answer "what is this card, exactly", so they sit together.
-            marks={[
-              ...(held.kind === "trophy" ? (["trofeum"] as const) : []),
-              ...(held.granted ? (["granted"] as const) : []),
-            ]}
+            // The test mark comes off the card itself — see `ItemSlot`.
+            marks={held.kind === "trophy" ? ["trofeum"] : []}
             // Up onto the body, mirroring the arrow down that takes a card
             // off it. Only where there is one place it could go: with two
             // hands to choose between, an arrow would be choosing for you, and

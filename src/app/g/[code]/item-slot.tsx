@@ -178,6 +178,19 @@ export function ItemSlot({
   );
   const art = item ? cardArtUrl(item.cardId) : null;
 
+  /**
+   * Everything to draw on the corner: what the caller named, plus what the card
+   * says about itself.
+   *
+   * `granted` is folded in here rather than being passed, because it belongs to
+   * the card and not to the place — otherwise every view that draws a card has
+   * to remember, and two of the three did not.
+   *
+   * A Set because both routes can name the same thing, and a card marked twice
+   * is a card marked wrong.
+   */
+  const corners = [...new Set([...marks, ...(item?.granted ? (["granted"] as const) : [])])];
+
   // While its card is in the air the place is a hollow, and it should look like
   // one: the picture fading inside a full-looking frame reads as a card that
   // has gone dim, not as a place you have emptied. It still answers for itself

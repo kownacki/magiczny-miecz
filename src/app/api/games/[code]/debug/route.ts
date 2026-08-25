@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { abandonFight, grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
+import { abandonFight, grantCard, placeSeat, runCommand, stageFight } from "@/lib/game/turnStore";
+import { parseCommand } from "@/lib/engine/console";
 
 /**
  * Shortcuts for reaching a game state without playing to it.
@@ -38,6 +39,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
   try {
     switch (body.action) {
+      case "console": {
+        // One line in, one line back. The grammar is pure and lives in the
+        // engine; what it means is `runCommand`, which does everything by
+        // calling the functions the game itself calls.
+        const parsed = parseCommand(String(body.line ?? ""));
+        if ("error" in parsed) {
+          return NextResponse.json({ error: parsed.error }, { status: 400 });
+        }
+        return NextResponse.json({ said: await runCommand(game.id, seatId, parsed.ok) });
+      }
       case "grant":
         await grantCard(game.id, seatId, String(body.cardId));
         break;
