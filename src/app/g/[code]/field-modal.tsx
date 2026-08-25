@@ -224,8 +224,16 @@ export function FieldModal({
 
           {/* What can be done here, for whoever is standing here on their own
               turn. Everyone can read the Obszar — at a table the others read it
-              aloud and argue about it — but only the character on it acts. */}
-          {standingHere && canAct && onAction && (
+              aloud and argue about it — but only the character on it acts.
+              
+              And only on the turn they arrived. 13.1 could not be plainer:
+              "W żadnym przypadku nie mogą nikogo spotkać ani wogóle podejmować
+              żadnych czynności na Obszarze, z którego rozpoczynają ruch." The
+              field you begin a turn standing on is the one you finished the
+              last turn on, and it is spent. `resolveFieldOffer` refuses it
+              server-side too; this is so the button is not there to be pressed
+              in the first place. */}
+          {standingHere && canAct && onAction && phase === "pole" && (
             <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
               {/* The die table, where the field has one. */}
               {field.text && (
@@ -254,10 +262,19 @@ export function FieldModal({
                 />
               )}
 
-              {/* 11.4 makes retrying the point of the next turn, so these are
-                  offered before the roll as well as on arrival — see
-                  `windowsFor`, which decides when the button exists at all. */}
-              {crossingFrom(fieldId) && (phase === "pole" || phase === "rzut") && (
+            </section>
+          )}
+
+          {/* The two exceptions 13.1 makes room for, and the reason they are
+              outside the gate above: 11.4 puts retrying a crossing in the next
+              turn by name — "czy będzie ponownie próbowała przekroczyć granicę
+              Kręgów" — and the Kamienny Most's ordeals are things you sit
+              through more than once, because the Demon does not move and
+              neither do you. Both are therefore offered before the roll as
+              well as on arrival. */}
+          {standingHere && canAct && onAction && (phase === "pole" || phase === "rzut") && (
+            <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
+              {crossingFrom(fieldId) && (
                 <Crossing
                   crossing={crossingFrom(fieldId)!}
                   simulated={simulated}
@@ -265,8 +282,7 @@ export function FieldModal({
                   onAction={onAction}
                 />
               )}
-
-              {BRIDGE_ORDEAL.has(fieldId) && (phase === "pole" || phase === "rzut") && (
+              {BRIDGE_ORDEAL.has(fieldId) && (
                 <BridgeOrdeal fieldId={fieldId} busy={busy} onAction={onAction} />
               )}
             </section>
