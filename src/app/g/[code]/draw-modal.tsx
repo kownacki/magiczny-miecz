@@ -72,8 +72,6 @@ export function DrawModal({
   fieldOffer,
   simulated,
   myEscape,
-  testing,
-  onAbandonFight,
   ring,
   busy,
   onAction,
@@ -174,15 +172,6 @@ export function DrawModal({
    * to be having their turn.
    */
   myEscape: boolean;
-  /**
-   * Whether this device is testing rather than playing (`testMode.ts`).
-   *
-   * The only thing it changes here is that a fight gains a way out of it. A
-   * production build cannot turn it on at all.
-   */
-  testing: boolean;
-  /** Breaks off the fight without resolving it — test mode only. */
-  onAbandonFight: () => void;
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
   busy: boolean;
@@ -216,15 +205,21 @@ export function DrawModal({
    * again, so two devices with different clocks cannot disagree about who may
    * speak.
    */
-  const [left, setLeft] = useState(0);
   const until = floor?.until ?? null;
+  const [left, setLeft] = useState(0);
   useEffect(() => {
-    if (until === null) return setLeft(0);
-    const tick = () =>
-      setLeft(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
-    tick();
+    if (until === null) return;
+    const tick = () => setLeft(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+    // The first one a beat late rather than in the effect's own body, and the
+    // rest on the interval: reading the clock while rendering is not allowed to
+    // be a pure function of anything, and setting state as an effect runs is
+    // the cascade the same rule is there to stop.
+    const first = setTimeout(tick, 0);
     const timer = setInterval(tick, 250);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
   }, [until]);
   const held = floor !== null && left > 0 ? floor : null;
 
@@ -268,7 +263,6 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
-        onAbandon={null}
         error={error}
         wide
       >
@@ -322,7 +316,6 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
-        onAbandon={null}
         error={error}
       >
         <BridgeControls
@@ -344,9 +337,6 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
-        // Whoever is fighting may put the fight down; a watcher may not end
-        // somebody else's turn.
-        onAbandon={testing && canAct ? onAbandonFight : null}
         error={error}
         wide
       >
@@ -470,8 +460,7 @@ export function DrawModal({
         minimized={minimized && !canAct}
         onMinimize={canAct ? null : onMinimize}
         onRestore={onRestore}
-        onAbandon={null}
-        error={error}
+          error={error}
       >
         <FieldEffect effect={fieldOffer.effect} />
         {canAct && (
@@ -549,7 +538,6 @@ export function DrawModal({
       minimized={minimized && !canAct}
       onMinimize={canAct ? null : onMinimize}
       onRestore={onRestore}
-      onAbandon={null}
       error={error}
     >
       {/* Only what the card does not say itself. The scan carries its own
@@ -838,7 +826,6 @@ function Shell({
   minimized,
   onMinimize,
   onRestore,
-  onAbandon,
   error,
   wide = false,
   children,
@@ -850,15 +837,6 @@ function Shell({
   minimized: boolean;
   onMinimize: (() => void) | null;
   onRestore: () => void;
-  /**
-   * The test hatch out of a fight, or null — which is every other case.
-   *
-   * In the corner rather than among the buttons, because it is not one of them:
-   * everything else in this sheet is a move in the game, and this is a way of
-   * putting the game down. Kept visibly apart so it cannot be pressed for the
-   * one below it.
-   */
-  onAbandon: (() => void) | null;
   /** A refusal from the last thing pressed. */
   error: string | null;
   /** Room for a third column: the card, the fight, and a hand beside it. */
@@ -923,15 +901,6 @@ function Shell({
                 className="text-[11px] text-muted underline transition hover:text-ink"
               >
                 zwiń
-              </button>
-            )}
-            {onAbandon && (
-              <button
-                onClick={onAbandon}
-                title="Kończy walkę bez rozstrzygnięcia. Nie jest ucieczką (19.1) — nic nie jest stosowane i nikt nic nie traci."
-                className="rounded border border-vermilion/50 px-2 py-1 text-[11px] text-vermilion transition hover:border-vermilion hover:bg-vermilion/10"
-              >
-                przerwij walkę (test)
               </button>
             )}
           </div>

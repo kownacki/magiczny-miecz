@@ -41,6 +41,7 @@ import { OtherPlayers, TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
 import { turnSteps, windowsFor } from "@/lib/engine/turnWindows";
+import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "@/lib/engine/duties";
 import { crossingFrom } from "@/lib/engine/rings";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { Journal } from "./journal";
@@ -1126,8 +1127,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               game.turn_state.fight.opponentSeat !== undefined &&
               (isTableScreen || game.turn_state.fight.opponentSeat === mySeatIndex)
             }
-            testing={testing}
-            onAbandonFight={() => post("debug", { action: "leave-fight" })}
             ring={ringFields(active.field_id)}
             busy={busy}
             error={error}
@@ -1202,21 +1201,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <CardLibrary
           eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
           nature={asNature(mySeat?.nature)}
-          // Testing shortcuts, and only while developing. The route refuses
-          // them in production too — this just stops the buttons being drawn
-          // somewhere they could never work.
-          {...(!testing || mySeatIndex === null
-            ? {}
-            : {
-                onGrant: (cardId: string) => post("debug", { action: "grant", cardId }),
-                onTeleport: (fieldId: FieldId) => post("debug", { action: "teleport", fieldId }),
-                // The drawer closes behind it: a fight opens a sheet of its
-                // own, and it would open underneath this one.
-                onFight: (cardId: string) => {
-                  setLibraryOpen(false);
-                  post("debug", { action: "fight", cardId });
-                },
-              })}
+          // No test buttons here any more: `give`, `fight` and `go` say the
+          // same three things in the console, without a control under every
+          // card on every shelf. What is left is a shelf to read.
           onClose={() => setLibraryOpen(false)}
         />
       )}
@@ -1469,7 +1456,24 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   }
                   windows={turnWindows}
                   steps={turnSteps(turnState.phase)}
-                  canEnd={game.turn_state.phase !== "walka"}
+                  // 17.4 ends a fight when the dice are compared, not when
+                  // somebody walks away from it; and 10.1-10.2 make the move
+                  // the first of the two things a turn is made of.
+                  canEnd={
+                    game.turn_state.phase !== "walka" &&
+                    mayEndTurn({
+                      fieldId: active.field_id,
+                      done: [],
+                      phase: game.turn_state.phase,
+                    })
+                  }
+                  whyNotEnd={whyCannotEnd(
+                    dutiesBeforeEnding({
+                      fieldId: active.field_id,
+                      done: [],
+                      phase: game.turn_state.phase,
+                    }),
+                  )}
                   canRoll={game.turn_state.phase === "rzut"}
                   onRoll={() => post("turn", { action: "roll" })}
                   // 13.4: what is already lying here counts against the number
@@ -1563,9 +1567,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 canAdjust
                 // Companion play is corrected by hand because the board is the
                 // source of truth there and the app will desync. Simulation is
-                // settled the other way — nothing is entered by hand — so the
-                // only way to reach these here is to say you are testing.
-                canCorrect={game.mode !== "simulation" || testing}
+                // settled the other way — nothing is entered by hand — and a
+                // tester who needs a number moved says `gold +5` rather than
+                // finding a ± under every parameter for the rest of time.
+                canCorrect={game.mode !== "simulation"}
                 isMine
                 slotted={game.eq_mode === "slotowy"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}

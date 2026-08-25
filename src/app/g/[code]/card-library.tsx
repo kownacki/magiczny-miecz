@@ -139,12 +139,10 @@ function FieldChip({
   fieldId,
   name,
   eqMode,
-  onTeleport,
 }: {
   fieldId: FieldId;
   name: string;
   eqMode: EqMode;
-  onTeleport?: (fieldId: FieldId) => void;
 }) {
   const field = fieldWithText(fieldId);
   const { handlers, preview } = useCardPreview(
@@ -156,22 +154,12 @@ function FieldChip({
 
   return (
     <>
-      {onTeleport ? (
-        <button
-          {...handlers}
-          onClick={() => onTeleport(fieldId)}
-          title={`Stań na: ${name}`}
-          className={`${look} hover:border-ochre`}
-        >
-          {name}
-        </button>
-      ) : (
-        // Not a button when there is nothing to press: a chip that lights up
-        // under the pointer and then does nothing is the affordance lying.
-        <span {...handlers} className={`${look} cursor-help`}>
-          {name}
-        </span>
-      )}
+      {/* Something to read, never something to press. Standing on an Obszar is
+          `go Karczma` in the console now, which is one line instead of a button
+          under each of fifty-seven names. */}
+      <span {...handlers} className={`${look} cursor-help`}>
+        {name}
+      </span>
       {preview}
     </>
   );
@@ -230,9 +218,6 @@ export function CardLibrary({
   onClose,
   eqMode = "klasyczny",
   nature = null,
-  onGrant,
-  onTeleport,
-  onFight,
 }: {
   onClose: () => void;
   /**
@@ -242,10 +227,7 @@ export function CardLibrary({
    * play; these hand you the card and the square so the thing being tested can
    * be tested.
    */
-  onGrant?: (cardId: string) => void;
-  onTeleport?: (fieldId: FieldId) => void;
-  /** Picks a fight with this Wróg, on your own turn. Testing only, like the rest. */
-  onFight?: (cardId: string) => void;
+
   /** The reader's own Natura, so a 5.3 restriction says whether it shuts them out. */
   nature?: Nature | null;
   /**
@@ -346,9 +328,7 @@ export function CardLibrary({
           {/* The board is not the deck: counting it in "kart" said 0, because
               no card in the box has a field on it. */}
           {shelf === "obszary" ? (
-            onTeleport
-              ? "Najedź, żeby przeczytać, co na Obszarze napisano — kliknij, żeby na nim stanąć (skrót testowy, oznaczony w dzienniku)."
-              : "Najedź na Obszar, żeby przeczytać, co na nim napisano."
+            "Najedź na Obszar, żeby przeczytać, co na nim napisano."
           ) : (
             <>
               {/* The headings carry the tally now; this is left with the one
@@ -379,7 +359,6 @@ export function CardLibrary({
                         fieldId={field.id as FieldId}
                         name={field.name}
                         eqMode={eqMode}
-                        onTeleport={onTeleport}
                       />
                     ))}
                   </div>
@@ -408,25 +387,6 @@ export function CardLibrary({
                     nature={nature}
                     onClick={() => setOpen(card)}
                   >
-                    {/* A Wróg is not taken, it is fought. The same shortcut in
-                        the same place, for the shelf where "have one" makes no
-                        sense and "meet one" is the thing you came for. */}
-                    {onFight && section.key === "wrog" && (
-                      <button
-                        onClick={() => onFight(card.cardId)}
-                        className="text-[9px] text-vermilion/80 underline transition hover:text-vermilion"
-                      >
-                        walcz (test)
-                      </button>
-                    )}
-                    {onGrant && card.holdable && (
-                      <button
-                        onClick={() => onGrant(card.cardId)}
-                        className="text-[9px] text-ochre/80 underline transition hover:text-ochre"
-                      >
-                        weź (test)
-                      </button>
-                    )}
                   </CardTile>
                 ))}
               </div>
