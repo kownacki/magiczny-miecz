@@ -147,8 +147,21 @@ export function CardLibrary({
 
   const searching = query.trim().length > 0;
 
-  const cards = useMemo(() => {
-    if (!searching) return shelfCards(shelf);
+  /**
+   * The cards to show, under the heading each belongs beneath.
+   *
+   * A shelf on its own is one section, and the heading merely names what the
+   * open tab already says. A search is the case this is for: it looks in the
+   * whole deck, so the answers arrive from everywhere at once, and a flat grid
+   * of them cannot say whether the ZWIERCIADŁO it found is a Zaklęcie or a
+   * Przedmiot — which is the first thing you want to know about a card you were
+   * looking for by name.
+   */
+  const sections = useMemo(() => {
+    const labelled = (key: Shelf) =>
+      [...SHELVES, FIELD_SHELF].find((entry) => entry.key === key)?.label ?? key;
+    if (!searching) return [{ key: shelf, label: labelled(shelf), cards: shelfCards(shelf) }];
+
     /**
      * A search is for a card, not for a card on this shelf.
      *
@@ -158,16 +171,24 @@ export function CardLibrary({
      * thing already is.
      */
     const needle = fold(query.trim());
-    const everywhere = new Map<string, TileCard>();
-    for (const { key } of SHELVES) {
-      for (const card of shelfCards(key)) {
-        if (!everywhere.has(card.cardId)) everywhere.set(card.cardId, card);
-      }
+    // A handful of cards sit on two shelves — a Magiczny Miecz is both drawn
+    // and bought — and the first shelf that claims one keeps it, so the order
+    // of the tabs above is the order of the sections below.
+    const seen = new Set<string>();
+    const found: { key: Shelf; label: string; cards: TileCard[] }[] = [];
+    for (const { key, label } of SHELVES) {
+      const hits = shelfCards(key).filter(
+        (card) =>
+          !seen.has(card.cardId) &&
+          (fold(card.name).includes(needle) || fold(card.text ?? "").includes(needle)),
+      );
+      for (const card of hits) seen.add(card.cardId);
+      if (hits.length > 0) found.push({ key, label, cards: hits });
     }
-    return [...everywhere.values()].filter(
-      (card) => fold(card.name).includes(needle) || fold(card.text ?? "").includes(needle),
-    );
+    return found;
   }, [shelf, query, searching]);
+
+  const cards = useMemo(() => sections.flatMap((section) => section.cards), [sections]);
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-night">
@@ -225,24 +246,34 @@ export function CardLibrary({
             ))}
           </div>
         ) : (
-        <div className="flex flex-wrap gap-3">
-          {cards.map((card) => (
-            <CardTile
-              key={card.cardId}
-              card={card}
-              eqMode={eqMode}
-              nature={nature}
-              onClick={() => setOpen(card)}
-            >
-              {onGrant && card.holdable && (
-                <button
-                  onClick={() => onGrant(card.cardId)}
-                  className="text-[9px] text-ochre/80 underline transition hover:text-ochre"
-                >
-                  weź (test)
-                </button>
-              )}
-            </CardTile>
+        <div className="flex flex-col gap-5">
+          {sections.map((section) => (
+            <section key={section.key}>
+              <h3 className="mb-2 flex items-baseline gap-2 border-b border-edge/60 pb-1 text-[11px] uppercase tracking-wide text-ochre/80">
+                {section.label}
+                <span className="tnum text-muted/70">{section.cards.length}</span>
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {section.cards.map((card) => (
+                  <CardTile
+                    key={card.cardId}
+                    card={card}
+                    eqMode={eqMode}
+                    nature={nature}
+                    onClick={() => setOpen(card)}
+                  >
+                    {onGrant && card.holdable && (
+                      <button
+                        onClick={() => onGrant(card.cardId)}
+                        className="text-[9px] text-ochre/80 underline transition hover:text-ochre"
+                      >
+                        weź (test)
+                      </button>
+                    )}
+                  </CardTile>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
         )}
