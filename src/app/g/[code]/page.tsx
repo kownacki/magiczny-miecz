@@ -686,8 +686,26 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     }
 
     setError(null);
+    /**
+     * Both halves of a swap at once.
+     *
+     * Putting a card on a place that is taken moves two cards, and only the one
+     * being put on was moved here — so the card it replaced sat on the body
+     * until the server answered and the next poll came round, a second or so
+     * later. You saw your Excalibur go on and your Miecz stay where it was,
+     * which is not a swap, it is a glitch that fixes itself.
+     */
+    const displaced =
+      slot === null
+        ? undefined
+        : mineNow.holdings.find((h) => h.slot === slot && h.id !== holdingId);
     movedAt.current[holdingId] = Date.now();
-    setMoved((current) => ({ ...current, [holdingId]: slot }));
+    if (displaced) movedAt.current[displaced.id] = Date.now();
+    setMoved((current) => ({
+      ...current,
+      [holdingId]: slot,
+      ...(displaced ? { [displaced.id]: null } : {}),
+    }));
     try {
       const response = await fetch(`/api/games/${code}/holdings`, {
         method: "POST",
@@ -700,11 +718,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         }),
       });
       if (!response.ok) {
-        // Refused, so put it back where it was — and say why.
+        // Refused, so put both of them back where they were — and say why.
         setError((await response.json().catch(() => ({}))).error ?? null);
         setMoved((current) => {
           const next = { ...current };
           delete next[holdingId];
+          if (displaced) delete next[displaced.id];
           return next;
         });
       }
@@ -1763,7 +1782,19 @@ function Hand({
                   onClick={(event) => {
                     event.stopPropagation();
                     onCarry(null);
-                    onEquip(held.id, SLOTS.find((slot) => fitsIn(held.cardId, slot))!);
+                    const slot = SLOTS.find((place) => fitsIn(held.cardId, place))!;
+                    // Where the two change places, say where the displaced one
+                    // is going before the server does: it takes this card's
+                    // square, and waiting to be told that means watching it
+                    // arrive at the back of the pack and then jump.
+                    const displaced = wornBySlot(seat)[slot];
+                    if (displaced && onReorder) {
+                      const order = arranged.map((card) => card.id).filter((id) => id !== held.id);
+                      order.splice(index, 0, displaced.holdingId);
+                      setWanted(order);
+                      onReorder(order);
+                    }
+                    onEquip(held.id, slot);
                   }}
                   title={
                     wornBySlot(seat)[SLOTS.find((slot) => fitsIn(held.cardId, slot))!]
