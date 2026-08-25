@@ -70,7 +70,20 @@ export type Target =
   /** Everyone in the drawer's own Krąg (Zaraza). */
   | "wszyscy-w-kregu"
   /** Whoever later stops on the field the card is lying on. */
-  | "kazdy-kto-tu-trafi";
+  | "kazdy-kto-tu-trafi"
+  /**
+   * A group picked out by Natura or by which ring they are walking. The Danina
+   * rolls a die to decide which of the six groups pays the Beast this time, so
+   * these are not six special cases but one card's six faces.
+   */
+  | "dobrzy"
+  | "chaotyczni"
+  | "zli"
+  | "w-dolnym-kregu"
+  | "w-srodkowym-kregu"
+  | "w-gornym-kregu"
+  /** One other character, chosen by whoever is holding the card. */
+  | "inna-postac";
 
 /**
  * Where a card can send a character.
@@ -125,7 +138,17 @@ export type Effect =
    * the thing back within somebody's reach.
    */
   | { op: "sprzedaj"; cena: number }
-  | { op: "tura-stracona"; turns: number; target?: Target }
+  | {
+      op: "tura-stracona";
+      turns: number;
+      target?: Target;
+      /**
+       * Character ids the effect passes over. The Zaklinacz Czasu's flute
+       * stills everyone "z wyjątkiem Elfa, Hummita, Spryciarza, Czarodziejki
+       * i Szczęściarza" — an exemption list is the card, not a footnote to it.
+       */
+      oprocz?: readonly string[];
+    }
   | { op: "ruch-dodatkowy" }
   | { op: "zaklecie"; count: number }
   /** "taką liczbę Zaklęć, na jaką pozwala ci twoja Magia" (Magiczna Tablica). */
@@ -143,6 +166,19 @@ export type Effect =
       target?: Target;
     }
   | { op: "kamien" }
+  /**
+   * The Kuglarz's trade: Miecz points become Magia points or the other way
+   * about. Not two `punkty` steps — the number swapped is the player's choice
+   * and the two halves must move together or a character could take the gain
+   * and refuse the cost.
+   */
+  | { op: "zamien-punkty" }
+  /**
+   * The Mędrzec's riddle: name a face aloud, then roll. Distinct from `rzut`
+   * because the guess comes first and is the whole game of it — a die table
+   * would give away that five faces are worth nothing.
+   */
+  | { op: "zgadnij"; nagroda: Effect }
   | { op: "natura"; na: Nature }
   /**
    * A shop. Targowisko lists eight Przedmioty with prices, the Sztukmistrz

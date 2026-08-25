@@ -735,6 +735,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onService={(body) =>
                   post("holdings", { ...body, seatId: active.id })
                 }
+                fieldCardIds={fieldCards
+                  .filter((card) => card.fieldId === active.field_id)
+                  .map((card) => card.cardId)}
               />
             )}
 
@@ -1681,6 +1684,8 @@ function describeAbility(ability: Ability): string {
       return `bez Zaklęć — ale odporny na ${ability.odpornyNa.length} z nich`;
     case "przeprawa-kostki":
       return `Trzęsawiska na ${ability.dice} kostkę`;
+    case "skup":
+      return `zamienia Przedmiot na złoto (${ability.cena} Sz. Z. za sztukę)`;
     case "przeprawa-wszedzie":
       return ability.obstacle === "trzesawiska"
         ? "przeprawa przez Trzęsawiska w dowolnym miejscu"

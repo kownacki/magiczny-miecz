@@ -131,4 +131,31 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     },
     disposition: { kind: "do-pierwszej" },
   },
+
+  /**
+   * "Może zamienić twoje punkty Miecza na punkty Magii lub odwrotnie."
+   *
+   * How many is not stated, which reads as all of them: this is the card that
+   * turns a Wojownik into a Mag. Either way the two halves move together, which
+   * is why it is one operation and not a gain beside a loss. Rules 1.3 and 2.3
+   * still hold — neither can go below where the character started — and that is
+   * what makes the trade a real decision rather than free.
+   */
+  kuglarz: {
+    effect: { op: "zamien-punkty" },
+    optional: true,
+    disposition: { kind: "odloz" },
+  },
+
+  /**
+   * "Wybierz cyfrę od 1 do 6 (musisz ją głośno powiedzieć), a następnie rzuć."
+   *
+   * Said aloud, because the whole card is that the table hears the guess before
+   * the die lands. One in six for a Zaklęcie, and nothing at all the other five
+   * times — which a six-faced table would give away by showing five blanks.
+   */
+  medrzec: {
+    effect: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
+    disposition: { kind: "odloz" },
+  },
 };

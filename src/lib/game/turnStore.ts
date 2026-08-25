@@ -2184,20 +2184,36 @@ export async function takeNewCharacter(
  * referee that accepted a price from the player being charged would not be one.
  * ------------------------------------------------------------------------ */
 
-/** Walks a field's offers for an operation of the given kind. */
-function offerOn<K extends Effect["op"]>(
+/**
+ * Finds an operation of the given kind among everything on offer where a
+ * character is standing — the field's own establishments, and any card lying
+ * face up on it (16.8).
+ *
+ * The Targowisko and the Sztukmistrz are shops that settled onto a field, and a
+ * shop that arrived on a card is not a different kind of shop from one printed
+ * on the board. Looking in both places is what lets them be bought from with
+ * the same three verbs.
+ */
+async function offerOn<K extends Effect["op"]>(
+  gameId: string,
   fieldId: string,
   op: K,
-): Extract<Effect, { op: K }> | null {
-  const script = fieldScriptFor(fieldId);
-  if (!script) return null;
+): Promise<Extract<Effect, { op: K }> | null> {
   const found: Effect[] = [];
   const walk = (effect: Effect) => {
     if (effect.op === op) found.push(effect);
     if (effect.op === "po-kolei") effect.steps.forEach(walk);
     if (effect.op === "wybor") effect.options.forEach((o) => walk(o.effect));
   };
-  for (const offer of script.offers) walk(offer.effect);
+
+  for (const offer of fieldScriptFor(fieldId)?.offers ?? []) walk(offer.effect);
+
+  const here = (await fieldCardsFor(gameId)).filter((card) => card.field_id === fieldId);
+  for (const card of here) {
+    const script = scriptFor(card.card_id);
+    if (script) walk(script.effect);
+  }
+
   return (found[0] as Extract<Effect, { op: K }>) ?? null;
 }
 
@@ -2223,7 +2239,7 @@ export async function buyGoods(
   cardId: string,
 ): Promise<void> {
   const seat = await shopper(gameId, seatId);
-  const shop = offerOn(seat.field_id!, "kup");
+  const shop = await offerOn(gameId, seat.field_id!, "kup");
   if (!shop) throw new Error("Na tym Obszarze nie ma czego kupić.");
 
   const entry = shop.towar.find((t) => goodsId(t.co) === cardId);
@@ -2253,24 +2269,28 @@ export async function sellHolding(
   holdingId: string,
 ): Promise<void> {
   const seat = await shopper(gameId, seatId);
-  const desk = offerOn(seat.field_id!, "sprzedaj");
-  if (!desk) throw new Error("Na tym Obszarze nikt nie skupuje Przedmiotów.");
+  const all = await holdingsFor(gameId);
+  const mine = all.filter((h) => h.seat_id === seatId);
 
-  const held = (await holdingsFor(gameId)).find(
-    (h) => h.id === holdingId && h.seat_id === seatId,
+  // Either a desk on this field, or an Alchemik walking beside you — the two
+  // are the same trade at the same rate, and the card says so.
+  const desk = await offerOn(gameId, seat.field_id!, "sprzedaj");
+  const alchemist = heldAbilities(mine.map((h) => h.card_id)).find(
+    (ability) => ability.kind === "skup",
   );
+  const price = desk?.cena ?? (alchemist?.kind === "skup" ? alchemist.cena : null);
+  if (price === null) throw new Error("Nikt tu nie skupuje Przedmiotów.");
+
+  const held = mine.find((h) => h.id === holdingId);
   if (!held) throw new Error("Nie masz tej karty.");
   // A Przyjaciel is a person and a trophy is a memory; neither is something the
   // Lichwiarz deals in. 5.4 counts only Przedmioty and so does he.
   if (held.kind !== "item") throw new Error("Lichwiarz kupuje tylko Przedmioty.");
 
   await db.from("holdings").delete().eq("id", holdingId);
-  await db.from("seats").update({ zloto: seat.zloto + desk.cena }).eq("id", seatId);
+  await db.from("seats").update({ zloto: seat.zloto + price }).eq("id", seatId);
   const game = await loadGame(gameId);
-  await journal(gameId, seatId, game.turn, "sprzedaz", {
-    cardId: held.card_id,
-    price: desk.cena,
-  });
+  await journal(gameId, seatId, game.turn, "sprzedaz", { cardId: held.card_id, price });
   await bumpRevision(gameId);
 }
 
@@ -2295,7 +2315,7 @@ export async function payHealer(
   points: number,
 ): Promise<{ healed: number; paid: number }> {
   const seat = await shopper(gameId, seatId);
-  const cure = offerOn(seat.field_id!, "uzdrow");
+  const cure = await offerOn(gameId, seat.field_id!, "uzdrow");
   if (!cure) throw new Error("Na tym Obszarze nikt nie leczy.");
   if (!Number.isInteger(points) || points < 1) throw new Error("Ile punktów?");
 

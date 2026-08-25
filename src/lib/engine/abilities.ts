@@ -118,6 +118,15 @@ export type Ability =
   /** Rusałka: one die at the Trzęsawiska instead of the usual two. */
   | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
   /**
+   * A Lichwiarz you carry with you: the Alchemik turns any Przedmiot into gold,
+   * one for one, wherever the character happens to be standing.
+   *
+   * Same shape as the Gród's desk, and deliberately so — "proces ten jest
+   * nieodwracalny" is exactly what selling a card means, and there is no reason
+   * for the app to have two ways of doing it.
+   */
+  | { kind: "skup"; cena: number }
+  /**
    * Łódź and Latarnia: cross anywhere rather than only at the two legal places
    * (11.2, 11.6). Both are consumed whether or not they are used.
    */
@@ -276,6 +285,8 @@ export const ABILITIES: Readonly<Record<string, readonly Ability[]>> = {
   "rozdzka-zaklec": [{ kind: "zaklecia-ponad-limit", count: 1 }],
 
   // --- friends --------------------------------------------------------------
+  // "1 Przedmiot zamienia się w 1 Sztukę cennego kruszcu."
+  alchemik: [{ kind: "skup", cena: 1 }],
   pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
   strzyga: [{ kind: "punkty", magia: 1 }],
   chochlik: [{ kind: "punkty", magia: 2 }],

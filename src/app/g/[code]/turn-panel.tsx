@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import events from "@/data/events.json";
+import characters from "@/data/characters.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { suggestActions } from "@/lib/engine/cardEffects";
@@ -13,6 +14,7 @@ import {
   scriptFor,
   type CardScript,
   type Effect,
+  type Target,
 } from "@/lib/engine/cardScript";
 import { NOT_HANDLED, coverageOf, manualNote } from "@/lib/engine/coverage";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
@@ -24,6 +26,11 @@ import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 
 const EVENTS = events as EventCard[];
+
+/** Character ids to their printed names, for the cards that name exceptions. */
+const CHARACTER_NAMES = new Map(
+  (characters as { id: string; name: string }[]).map((c) => [c.id, c.name]),
+);
 
 /**
  * Card lookup for the companion flow. The Roman numeral printed on a card is
@@ -118,6 +125,8 @@ interface Props {
   sellable?: { id: string; cardId: string }[];
   /** Buying, selling and paying a healer — see `fieldScript.ts`. */
   onService?: (body: Record<string, unknown>) => void;
+  /** Card ids lying face up on the active character's field (16.8). */
+  fieldCardIds?: string[];
 }
 
 export function TurnPanel({
@@ -139,6 +148,7 @@ export function TurnPanel({
   stock,
   sellable,
   onService,
+  fieldCardIds,
 }: Props) {
   return (
     <section className="rounded-lg border border-ochre/40 bg-panel p-5">
@@ -183,9 +193,10 @@ export function TurnPanel({
       {/* The establishments. Ten fields on the board sell things, buy things or
           mend wounds, and until this panel existed the app read their price
           lists out and left the table to do the sums. */}
-      {isMine && fieldId && phase.phase === "pole" && fieldScriptFor(fieldId) && (
+      {isMine && fieldId && phase.phase === "pole" && (
         <FieldServices
           fieldId={fieldId}
+          fieldCardIds={fieldCardIds ?? []}
           busy={busy}
           purse={purse}
           stock={stock}
@@ -1419,7 +1430,12 @@ function EffectControls({
       return stated(`uzdrowienie do ${effect.upTo} punktów Życia (nie ponad start, 4.7)`);
     case "tura-stracona":
       return effect.target && effect.target !== "ty" ? (
-        stated(`−${effect.turns} tura — ${TARGET_LABEL[effect.target]}`)
+        stated(
+          `−${effect.turns} tura — ${TARGET_LABEL[effect.target]}` +
+            (effect.oprocz?.length
+              ? `, oprócz: ${effect.oprocz.map((id) => CHARACTER_NAMES.get(id) ?? id).join(", ")}`
+              : ""),
+        )
       ) : (
         <button
           disabled={busy}
@@ -1453,6 +1469,26 @@ function EffectControls({
       return stated(LOSS_LABEL(effect));
     case "kamien":
       return stated("Zamiana w Kamień (20.1)");
+    case "zamien-punkty":
+      // 1.3 and 2.3 still hold on both sides of the swap, which is what makes
+      // it a decision rather than a free re-roll of the character sheet.
+      return stated("zamiana punktów Miecza na Magię albo odwrotnie (nie poniżej wartości początkowych)");
+    case "zgadnij":
+      return (
+        <div>
+          <p className="text-[11px] text-muted">
+            {prefix}Powiedz na głos cyfrę od 1 do 6, potem rzuć. Trafienie:
+          </p>
+          <div className="mt-0.5">
+            <EffectControls
+              effect={effect.nagroda}
+              cardName={cardName}
+              busy={busy}
+              onSuggestion={onSuggestion}
+            />
+          </div>
+        </div>
+      );
     case "natura":
       return stated(`zmiana Natury na: ${effect.na === "zla" ? "zła" : effect.na}`);
     case "kup":
@@ -1471,6 +1507,8 @@ function EffectControls({
           </ul>
         </div>
       );
+    case "sprzedaj":
+      return stated(`skup Przedmiotów: ${effect.cena} Sz. Z. za sztukę`);
     case "jak-pole":
       return stated(
         `modlisz się na zasadach z: ${FIELDS.get(effect.fieldId)?.name ?? effect.fieldId}`,
@@ -1519,11 +1557,18 @@ const STAT_LABEL = {
   zloto: "Złota",
 } as const;
 
-const TARGET_LABEL = {
+const TARGET_LABEL: Record<Target, string> = {
   ty: "ty",
   wszyscy: "wszystkie Postacie",
   "wszyscy-w-kregu": "wszystkie Postacie w tym Kręgu",
   "kazdy-kto-tu-trafi": "każdy, kto tu trafi",
+  dobrzy: "Postacie o Naturze dobrej",
+  chaotyczni: "Postacie o Naturze chaotycznej",
+  zli: "Postacie o Naturze złej",
+  "w-dolnym-kregu": "wędrujący po Dolnym Kręgu",
+  "w-srodkowym-kregu": "wędrujący po Środkowym Kręgu",
+  "w-gornym-kregu": "wędrujący po Górnym Kręgu",
+  "inna-postac": "wybrana inna Postać",
 } as const;
 
 function LOSS_LABEL(effect: Extract<Effect, { op: "strata" }>): string {
@@ -1565,6 +1610,7 @@ function conditionLabel(condition: Extract<Effect, { op: "gdy" }>["warunek"]): s
  */
 function FieldServices({
   fieldId,
+  fieldCardIds,
   busy,
   purse,
   stock,
@@ -1573,6 +1619,7 @@ function FieldServices({
   onService,
 }: {
   fieldId: string;
+  fieldCardIds: string[];
   busy: boolean;
   purse?: { zloto: number; zycie: number };
   stock?: Record<string, number>;
@@ -1580,20 +1627,32 @@ function FieldServices({
   onSuggestion: Props["onSuggestion"];
   onService?: Props["onService"];
 }) {
-  const script = fieldScriptFor(fieldId)!;
+  // A shop that arrived on a card is not a different kind of shop from one
+  // printed on the board: the Targowisko settles on a field and sells eight
+  // Przedmioty from it, so it belongs in the same box with the same buttons.
+  const fromCards = fieldCardIds.flatMap((cardId) => {
+    const script = scriptFor(cardId);
+    const card = EVENTS.find((c) => c.id === cardId);
+    if (!script || !card) return [];
+    return sells(script.effect) ? [{ name: card.name, effect: script.effect }] : [];
+  });
+  const offers = [...(fieldScriptFor(fieldId)?.offers ?? []), ...fromCards];
+  if (offers.length === 0) return null;
+
+  const script = fieldScriptFor(fieldId);
   const gold = purse?.zloto ?? 0;
 
   return (
     <div className="mb-4 flex flex-col gap-2">
       <p className="text-[11px] uppercase tracking-wide text-ochre/80">
-        {script.obowiazkowe ? "To pole trzeba rozpatrzeć" : "Możesz tu odwiedzić"}
+        {script?.obowiazkowe ? "To pole trzeba rozpatrzeć" : "Możesz tu odwiedzić"}
         {purse && (
           <span className="ml-2 normal-case tracking-normal text-muted">
             masz <span className="tnum text-zloto">{purse.zloto} Sz. Z.</span>
           </span>
         )}
       </p>
-      {script.offers.map((offer) => (
+      {offers.map((offer) => (
         <div key={offer.name} className="rounded border border-edge bg-night/40 p-2">
           <p className="mb-1 text-xs font-medium text-ink">{offer.name}</p>
           <ServiceEffect
@@ -1854,4 +1913,12 @@ function ScriptedRoll({
       </ol>
     </div>
   );
+}
+
+/** Whether an effect trades in anything — the test for putting a card in the services box. */
+function sells(effect: Effect): boolean {
+  if (effect.op === "kup" || effect.op === "sprzedaj" || effect.op === "uzdrow") return true;
+  if (effect.op === "po-kolei") return effect.steps.some(sells);
+  if (effect.op === "wybor") return effect.options.some((o) => sells(o.effect));
+  return false;
 }

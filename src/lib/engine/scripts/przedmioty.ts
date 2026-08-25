@@ -21,4 +21,28 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
     effect: { op: "punkty", stat: "zloto", delta: 2 },
     disposition: { kind: "odloz" },
   },
+
+  /**
+   * Half the faces are worth having and half are not, which is the card.
+   *
+   * "Możesz zabrać Szkatułę i otworzyć ją w dowolnym momencie" — so it is taken
+   * like any Przedmiot and counts against 5.4 until it is opened. The app does
+   * not model *when*; what it models is the roll and the six outcomes, and the
+   * player opens it when they like.
+   */
+  "tajemnicza-szkatula": {
+    effect: {
+      op: "rzut",
+      faces: {
+        1: { op: "otrzymaj", co: "Tarcza Tolimana" },
+        2: { op: "zaklecie", count: 1 },
+        3: { op: "punkty", stat: "zloto", delta: 2 },
+        4: { op: "tura-stracona", turns: 1 },
+        5: { op: "punkty", stat: "zycie", delta: -1 },
+        6: { op: "punkty", stat: "zycie", delta: -2 },
+      },
+    },
+    optional: true,
+    disposition: { kind: "odloz" },
+  },
 };

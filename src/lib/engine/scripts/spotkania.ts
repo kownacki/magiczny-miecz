@@ -147,6 +147,58 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
     effect: { op: "nic" },
     disposition: { kind: "po-turach", turns: 1 },
   },
+  /**
+   * The Beast's tax, and one of the few cards that reaches across the whole
+   * board rather than at whoever drew it.
+   *
+   * The die does not decide what happens — it decides *who it happens to*, and
+   * the six groups are three Natury and three Kręgi. "Nie posiadający złota
+   * tracą 1 Życie" is not an alternative the payer chooses: it is what happens
+   * to somebody with an empty purse, so it is the second step rather than a
+   * `wybor`.
+   */
+  danina: {
+    effect: {
+      op: "rzut",
+      faces: Object.fromEntries(
+        (
+          [
+            [1, "dobrzy"],
+            [2, "chaotyczni"],
+            [3, "zli"],
+            [4, "w-dolnym-kregu"],
+            [5, "w-srodkowym-kregu"],
+            [6, "w-gornym-kregu"],
+          ] as const
+        ).map(([face, target]) => [
+          face,
+          {
+            op: "gdy",
+            warunek: { is: "ma-zloto" },
+            to: { op: "punkty", stat: "zloto", delta: -1, target },
+            inaczej: { op: "punkty", stat: "zycie", delta: -1, target },
+          },
+        ]),
+      ),
+    },
+    disposition: { kind: "odloz" },
+  },
+
+  /**
+   * The flute stills the board for a turn — everyone, including the character
+   * who drew it, except the five the card names. Two of those five (Czarodziejka,
+   * Szczęściarz) are expansion characters and simply never match.
+   */
+  "zaklinacz-czasu": {
+    effect: {
+      op: "tura-stracona",
+      turns: 1,
+      target: "wszyscy",
+      oprocz: ["elf", "hummit", "spryciarz", "czarodziejka", "szczesciarz"],
+    },
+    disposition: { kind: "po-turach", turns: 1 },
+  },
+
   // Every Zaklęcie in the game goes, in every Krąg — not just the drawer's.
   przesilenie: {
     effect: { op: "strata", co: "zaklecie", target: "wszyscy" },

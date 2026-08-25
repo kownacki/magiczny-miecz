@@ -64,6 +64,7 @@ const MANUAL: Readonly<Record<string, string>> = {
   chochlik: "Kosztuje 1 punkt Życia na wstępie. Pozwala obejrzeć 2 Karty Zaklęć i wybrać.",
   krzyzowiec: "Ma przy sobie 1 Zaklęcie, którego użyje na twoje życzenie.",
   giermek: "Po przegranej rzuć kostką: 1 oznacza, że ginie Giermek zamiast twojego punktu.",
+  alchemik: "Zamiana jest nieodwracalna — Karta Przedmiotu wraca na stos.",
   "poszukiwacz-przygod":
     "Sam atakuje Postać lub Wroga do 3 Obszarów stąd, własnymi 3 punktami Miecza.",
   tragarz: "Bez zapłaty 1 Sz. Z. odchodzi. Tracąc go, tracisz też niesione Przedmioty.",
@@ -71,7 +72,7 @@ const MANUAL: Readonly<Record<string, string>> = {
   wladca: "Możesz oddać jego Kartę w Twierdzy za 3 Sztuki Złota.",
 
   // --- cards whose disposition is handled but whose body is not -------------
-  targowisko: "Kupno rozliczcie sami: zdejmijcie złoto i weźcie Kartę Przedmiotu.",
+
   sztukmistrz: "Kupno Zaklęcia rozliczcie sami, o ile pozwala na to Magia.",
   "kapliczka-nemed": "Rozpatrzcie modlitwę tak jak w Świątyni Bogini Nemed.",
   "kapliczka-tolimana": "Rozpatrzcie modlitwę tak jak w Świątyni Tolimana.",
