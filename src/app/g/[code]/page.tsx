@@ -910,6 +910,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             : {
                 onGrant: (cardId: string) => post("debug", { action: "grant", cardId }),
                 onTeleport: (fieldId: FieldId) => post("debug", { action: "teleport", fieldId }),
+                // The drawer closes behind it: a fight opens a sheet of its
+                // own, and it would open underneath this one.
+                onFight: (cardId: string) => {
+                  setLibraryOpen(false);
+                  post("debug", { action: "fight", cardId });
+                },
               })}
           onClose={() => setLibraryOpen(false)}
         />

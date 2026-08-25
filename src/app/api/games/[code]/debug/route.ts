@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { grantCard, placeSeat } from "@/lib/game/turnStore";
+import { grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
 
 /**
  * Shortcuts for reaching a game state without playing to it.
@@ -43,6 +43,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "teleport":
         await placeSeat(game.id, seatId, String(body.fieldId), "tryb testowy");
+        break;
+      case "fight":
+        // Picks a fight with a named Wróg. Reaching one legitimately means
+        // walking until the deck hands it over, and there are a hundred and
+        // forty-five other cards in it.
+        await stageFight(game.id, seatId, String(body.cardId));
         break;
       default:
         return NextResponse.json({ error: "Nieznane działanie." }, { status: 400 });

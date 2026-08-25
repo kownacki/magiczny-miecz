@@ -232,6 +232,7 @@ export function CardLibrary({
   nature = null,
   onGrant,
   onTeleport,
+  onFight,
 }: {
   onClose: () => void;
   /**
@@ -243,6 +244,8 @@ export function CardLibrary({
    */
   onGrant?: (cardId: string) => void;
   onTeleport?: (fieldId: FieldId) => void;
+  /** Picks a fight with this Wróg, on your own turn. Testing only, like the rest. */
+  onFight?: (cardId: string) => void;
   /** The reader's own Natura, so a 5.3 restriction says whether it shuts them out. */
   nature?: Nature | null;
   /**
@@ -405,6 +408,17 @@ export function CardLibrary({
                     nature={nature}
                     onClick={() => setOpen(card)}
                   >
+                    {/* A Wróg is not taken, it is fought. The same shortcut in
+                        the same place, for the shelf where "have one" makes no
+                        sense and "meet one" is the thing you came for. */}
+                    {onFight && section.key === "wrog" && (
+                      <button
+                        onClick={() => onFight(card.cardId)}
+                        className="text-[9px] text-vermilion/80 underline transition hover:text-vermilion"
+                      >
+                        walcz (test)
+                      </button>
+                    )}
                     {onGrant && card.holdable && (
                       <button
                         onClick={() => onGrant(card.cardId)}

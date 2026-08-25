@@ -786,6 +786,58 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
 }
 
 /**
+ * Picks a fight with a chosen creature, for testing.
+ *
+ * DEVELOPMENT ONLY — reached through the debug route, which a deployed build
+ * refuses outright. Getting to a particular Wróg legitimately means walking the
+ * board until the deck hands it to you, and the deck has a hundred and
+ * forty-five other cards in it.
+ *
+ * It stages the situation and then leaves: the character is put on its own
+ * field with the creature in front of it, and `beginFight` does the rest —
+ * 17.5's combining, the Miecz a character brings with it, 17.3's window. A
+ * shortcut that fought the creature *itself* would be a second implementation
+ * of combat, tested by nobody, quietly disagreeing with the one the game uses.
+ *
+ * Only on your own turn, because a fight is a turn's worth of events and the
+ * player whose turn it is would find one happening around them.
+ */
+export async function stageFight(
+  gameId: string,
+  seatId: string,
+  cardId: string,
+): Promise<void> {
+  const game = await loadGame(gameId);
+  const seats = await seatsFor(gameId);
+  const seat = seats.find((s) => s.id === seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+  if (seat.seat_index !== game.active_seat) throw new Error("To nie twoja tura.");
+  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+
+  const card = EVENTS.find((c) => c.id === cardId);
+  if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+  if (!combatValueOf(card)) throw new Error(`${card.name} nie jest Wrogiem.`);
+
+  // The field as it would be if the card had just been drawn there, minus the
+  // draw: nothing is taken out of the deck, so a staged fight does not thin it.
+  await db
+    .from("games")
+    .update({
+      turn_state: {
+        phase: "pole",
+        fieldId: seat.field_id,
+        from: null,
+        draw: 0,
+        drawn: [{ cardId: card.id, cardClass: card.cardClass }],
+        fought: [],
+      },
+    })
+    .eq("id", gameId);
+  await bumpRevision(gameId);
+  await beginFight(gameId, [card.id]);
+}
+
+/**
  * Speaks a Zaklęcie (9.6).
  *
  * The card leaves the caster's hand for the used pile and the table is told
