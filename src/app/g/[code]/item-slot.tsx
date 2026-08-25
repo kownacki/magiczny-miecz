@@ -34,14 +34,13 @@ export const SLOT_ART_HEIGHT = Math.round(SLOT_WIDTH * (155 / 240));
 /**
  * How far a card steps aside to show where a carried one is going.
  *
- * A quarter of one, and no more, because a card is clipped to its own square:
- * whatever it slides is taken off the far edge of it. Enough to open a sliver
- * of the place behind and to read as movement, little enough to leave the card
- * recognisable and its name legible. A whole square would be truer to the
- * arithmetic and impossible here anyway — the pack wraps, and the card at the
- * end of a row has no square beside it to move into.
+ * Not a whole square. The place is drawn behind the card in the square it is
+ * vacating, so what opens is a sliver of it — enough to see that there is a
+ * place there and where, with the card that made room still overlapping most
+ * of it. A whole square is impossible here anyway: the pack wraps, and the card
+ * at the end of a row has no square beside it to move into.
  */
-const STEP_ASIDE = Math.round(SLOT_WIDTH * 0.28);
+const STEP_ASIDE = Math.round(SLOT_WIDTH * 0.45);
 
 export interface SlotOccupant {
   holdingId: string;
@@ -196,13 +195,7 @@ export function ItemSlot({
       onPointerLeave={onPointerLeave}
       {...handlers}
       style={{ width: SLOT_WIDTH }}
-      // Clipped to itself, so a card that has stepped aside cannot be seen
-      // outside the square it belongs to. Otherwise the picture and the place
-      // disagree by however far it stepped, and you can point straight at a
-      // card while aiming at the square next door — which is what a row of
-      // stepped cards looked like: every picture forty pixels away from the
-      // square it answers for.
-      className="relative shrink-0 overflow-hidden"
+      className="relative shrink-0"
     >
       {/* The place, drawn behind whatever is in this square — so the sliver a
           card uncovers by sliding aside is the part you see. Behind every card

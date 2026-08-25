@@ -251,10 +251,16 @@ export function SlotPanel({
                     type="button"
                     onClick={() => onTakeOff(item.holdingId)}
                     disabled={busy}
-                    title="Zdejmij"
-                    className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 text-[13px] leading-tight text-muted transition hover:text-vermilion disabled:opacity-40"
+                    title="Zdejmij — wraca do plecaka"
+                    className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 text-[13px] leading-none text-muted transition hover:text-ochre disabled:opacity-40"
                   >
-                    ×
+                    {/* Down into the pack, which is where it goes and where the
+                        pack is drawn. A cross means "gone" everywhere else in
+                        this app — it is what the shop shows for a card the
+                        Wyposażenie has run out of, and what an unwearable card
+                        gets — and taking your Zbroja off does not destroy it.
+                        Hence ochre on hover rather than red: nothing is lost. */}
+                    <span className="block pb-0.5 text-[14px]">↓</span>
                   </button>
                 ) : null
               }
