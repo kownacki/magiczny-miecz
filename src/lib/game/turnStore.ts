@@ -3889,9 +3889,29 @@ export async function applyEffect(
       for (const target of hit) {
         const row = seats.find((candidate) => candidate.seat_index === target.seatIndex);
         if (!row) continue;
+        /**
+         * 16.1 spends the loss on the turn in progress, not on a future one.
+         *
+         * "Jeżeli spowodowałoby to utratę tury przez Postać, musi ona
+         * powstrzymać się od podejmowania jakichkolwiek dalszych działań — TA
+         * WŁAŚNIE tura liczy się jako stracona." The player who draws the
+         * Karczma's 3 has already moved and already arrived; what the card
+         * takes is the rest of that turn.
+         *
+         * Counting it forward instead cost them two turns for the price of one
+         * — they finished the turn the card ended, and were skipped on the next
+         * — and let them keep acting through a turn the rules had closed.
+         *
+         * Everybody else banks it, because for them it is genuinely a turn that
+         * has not started: the Burza costs a turn to characters who are not
+         * playing at the time.
+         */
+        const isPlaying = row.seat_index === game.active_seat;
         await db
           .from("seats")
-          .update({ turns_lost: row.turns_lost + effect.turns })
+          .update({
+            turns_lost: row.turns_lost + (isPlaying ? effect.turns - 1 : effect.turns),
+          })
           .eq("id", row.id);
         // Its own kind, and not marked manual. `adjust` writes a "korekta" flagged
         // as a human override, and a card doing what the card says is the exact
@@ -3904,6 +3924,25 @@ export async function applyEffect(
         names.push(row.player_name ?? `miejsce ${row.seat_index + 1}`);
       }
       await bumpRevision(gameId);
+
+      /**
+       * And the turn in progress stops here (16.1).
+       *
+       * "musi ona powstrzymać się od podejmowania jakichkolwiek dalszych
+       * działań" — so the phase goes to `koniec`, where the only control left
+       * is the one that passes play on. Without this the arithmetic above would
+       * make the card do nothing at all to the player who drew it: it takes no
+       * future turn from them, so it has to take this one.
+       *
+       * Whatever they drew and did not resolve stays on the Obszar, face up,
+       * which is 16.8 and which `finishTurn` already does.
+       */
+      if (hit.some((target) => target.seatIndex === game.active_seat)) {
+        await db
+          .from("games")
+          .update({ turn_state: endTurn() })
+          .eq("id", gameId);
+      }
 
       if (hit.length === 0) return { did: ["nikogo to nie dotyczy"], pending: null };
       const onlyMe = hit.length === 1 && hit[0].seatIndex === actor?.seat_index;
