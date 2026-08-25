@@ -915,6 +915,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           the things this card lets you do under it. */}
       {active &&
         (game.turn_state.phase === "walka" ||
+          game.turn_state.phase === "ruch" ||
           (game.turn_state.phase === "pole" &&
             (game.turn_state.drawn.length > 0 ||
               // A field nobody may walk past opens it too, even with nothing
@@ -938,6 +939,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             }
             fought={game.turn_state.phase === "pole" ? (game.turn_state.fought ?? []) : []}
             fight={game.turn_state.phase === "walka" ? game.turn_state.fight : null}
+            // The direction choice, which used to be a panel of its own below
+            // the queue. It is the same shape as everything else in here: one
+            // thing you are asked to do, with the table watching.
+            move={
+              game.turn_state.phase === "ruch"
+                ? { roll: game.turn_state.roll, options: game.turn_state.options }
+                : null
+            }
             fieldOffer={
               game.turn_state.phase === "pole" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
             }
@@ -1340,6 +1349,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   }
                   windows={turnWindows}
                   canEnd={game.turn_state.phase !== "walka"}
+                  canRoll={game.turn_state.phase === "rzut"}
+                  onRoll={() => post("turn", { action: "roll" })}
                   busy={busy}
                   onOpen={(id) => {
                     // The two the draw modal already owns open themselves; the

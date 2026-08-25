@@ -23,7 +23,7 @@ import {
   spellScript,
   type SpellTiming,
 } from "@/lib/engine/spells";
-import type { Fight } from "@/lib/engine/turn";
+import { DIRECTION_LABEL, type Fight, type TurnMoveOption } from "@/lib/engine/turn";
 
 const EVENTS = events as EventCard[];
 
@@ -67,6 +67,7 @@ export function DrawModal({
   resolved,
   fought,
   fight,
+  move,
   fieldOffer,
   simulated,
   myEscape,
@@ -132,6 +133,15 @@ export function DrawModal({
   fought: string[];
   /** The fight in progress, which is fought here rather than behind the modal. */
   fight: Fight | null;
+  /**
+   * The die has been thrown and the character is standing between two roads.
+   *
+   * Here rather than in a panel because it is the same shape as everything else
+   * in this window: a thing you are being asked to do, once, with the table
+   * watching. Where somebody is headed is public, and it used to be drawn only
+   * on their own device.
+   */
+  move: { roll: number; options: TurnMoveOption[] } | null;
   /**
    * A field's compulsory table, when the character is standing on one.
    *
@@ -235,6 +245,63 @@ export function DrawModal({
   // equipment mid-fight (17.3 puts the spells before the dice and 17.4 gives
   // you one weapon), so there is nothing behind this worth reaching for — and
   // the two dice are the only thing anyone at the table is looking at.
+  // The move, before anything drawn — you cannot have drawn a card on an
+  // Obszar you have not arrived at yet, so these never overlap. It is only
+  // ordered first because a fight is checked below and cannot be running here.
+  if (move) {
+    return (
+      <Shell
+        label={`Wyrzucono ${move.roll}`}
+        art={null}
+        watching={canAct ? null : `${who} wybiera drogę`}
+        minimized={minimized && !canAct}
+        onMinimize={canAct ? null : onMinimize}
+        onRestore={onRestore}
+        onAbandon={null}
+        error={error}
+        wide
+      >
+        <p className="mb-3 text-sm text-muted">
+          {canAct ? "Wybierz kierunek." : `${who} wybiera kierunek.`}
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {move.options.map((option) => (
+            <button
+              key={`${option.direction}-${option.fieldId}-${option.bridge ? "most" : "ring"}`}
+              disabled={busy || !canAct}
+              onClick={() =>
+                onAction({
+                  action: "move",
+                  fieldId: option.fieldId,
+                  ...(option.bridge ? { viaBridge: true } : {}),
+                })
+              }
+              className={`rounded border bg-raised px-4 py-3 text-left transition disabled:opacity-50 ${
+                option.bridge
+                  ? "border-vermilion/50 hover:border-vermilion"
+                  : "border-edge hover:border-ochre"
+              }`}
+            >
+              <span className="block font-medium text-ink">
+                {option.bridge ? "Kamienny Most" : option.fieldName}
+              </span>
+              <span className="block text-[11px] text-muted">
+                {option.bridge
+                  ? `skręć z ${option.fieldName} — czeka ${option.bridge.guardian}`
+                  : DIRECTION_LABEL[option.direction]}
+              </span>
+              {option.through.length > 0 && (
+                <span className="mt-1 block text-[11px] text-muted/70">
+                  przez: {option.through.join(" → ")}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </Shell>
+    );
+  }
+
   if (fight) {
     return (
       <Shell

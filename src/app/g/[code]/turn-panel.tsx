@@ -156,11 +156,7 @@ export function TurnPanel({
    * box, so those two phases have nothing left to draw here either — and an
    * empty bordered box is worse than no box.
    */
-  const controls =
-    phase.phase === "rzut" ||
-    phase.phase === "ruch" ||
-    phase.phase === "most" ||
-    phase.phase === "pole";
+  const controls = phase.phase === "most" || phase.phase === "pole";
   if (!isMine || (!controls && !actingForOther)) return null;
 
   return (
@@ -503,58 +499,16 @@ function PhaseControls({
   onTake,
 }: Pick<Props, "phase" | "dieSource" | "mode" | "busy" | "onAction" | "onSuggestion" | "onTake">) {
   switch (phase.phase) {
+    // "Rzuć kostką" is in the box beside the queue, where the two controls
+    // pressed every single turn keep their place. Nothing to decide about a
+    // roll, so it is a button and not a window.
     case "rzut":
-      return (
-        <RollControls
-          dieSource={dieSource}
-          simulated={mode === "simulation"}
-          busy={busy}
-          onAction={onAction}
-        />
-      );
+      return null;
+    // The direction the die bought is a decision, and it is made in the action
+    // window with the table watching — see `DrawModal`. Where somebody is
+    // headed is public, and it used to be drawn only on their own device.
     case "ruch":
-      return (
-        <div>
-          <p className="mb-3 text-sm text-muted">
-            Wyrzucono <span className="tnum text-2xl font-medium text-ink">{phase.roll}</span> —
-            wybierz kierunek.
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {phase.options.map((option) => (
-              <button
-                key={`${option.direction}-${option.fieldId}-${option.bridge ? "most" : "ring"}`}
-                disabled={busy}
-                onClick={() =>
-                  onAction({
-                    action: "move",
-                    fieldId: option.fieldId,
-                    ...(option.bridge ? { viaBridge: true } : {}),
-                  })
-                }
-                className={`rounded border bg-raised px-4 py-3 text-left transition disabled:opacity-50 ${
-                  option.bridge
-                    ? "border-vermilion/50 hover:border-vermilion"
-                    : "border-edge hover:border-ochre"
-                }`}
-              >
-                <span className="block font-medium text-ink">
-                  {option.bridge ? "Kamienny Most" : option.fieldName}
-                </span>
-                <span className="block text-[11px] text-muted">
-                  {option.bridge
-                    ? `skręć z ${option.fieldName} — czeka ${option.bridge.guardian}`
-                    : DIRECTION_LABEL[option.direction]}
-                </span>
-                {option.through.length > 0 && (
-                  <span className="mt-1 block text-[11px] text-muted/70">
-                    przez: {option.through.join(" → ")}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      );
+      return null;
     case "most":
       return (
         <BridgeControls
@@ -732,13 +686,9 @@ function FieldControls({
         <DrawnCards drawn={phase.drawn} />
       )}
 
-      <button
-        disabled={busy}
-        onClick={() => onAction({ action: "end" })}
-        className="self-start rounded border border-edge bg-raised px-4 py-2 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
-      >
-        Zakończ turę
-      </button>
+      {/* No "Zakończ turę" here: it is in the box beside the queue, where it
+          keeps its place whatever the turn is doing. Two of them on one screen
+          made the box's look like a different button. */}
     </div>
   );
 }

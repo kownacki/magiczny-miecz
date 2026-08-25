@@ -21,8 +21,10 @@ export function NowBox({
   fieldName,
   windows,
   canEnd,
+  canRoll,
   busy,
   onOpen,
+  onRoll,
   onEnd,
 }: {
   playerName: string;
@@ -32,8 +34,11 @@ export function NowBox({
   /** What this turn is offering — see `windowsFor`. */
   windows: readonly TurnWindow[];
   canEnd: boolean;
+  /** The turn has not been rolled yet — 10.2 makes this the first thing it does. */
+  canRoll: boolean;
   busy: boolean;
   onOpen: (id: WindowId) => void;
+  onRoll: () => void;
   onEnd: () => void;
 }) {
   return (
@@ -82,8 +87,21 @@ export function NowBox({
         ))}
       </div>
 
-      {/* The one control pressed every single turn, so it keeps its place at
-          the bottom rather than being buried a window deep with the rest. */}
+      {/* The two controls pressed every single turn, so they keep their place
+          at the bottom rather than being buried a window deep with the rest.
+          The roll is the whole of 10.2's first half — "wykonanie rzutu kostką"
+          — and there is nothing to decide about it, so it is a button and not
+          a window. What the die then asks IS a decision, and that opens the
+          action window like everything else. */}
+      {isMine && canRoll && (
+        <button
+          onClick={onRoll}
+          disabled={busy}
+          className="mt-2 shrink-0 rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
+        >
+          Rzuć kostką
+        </button>
+      )}
       {isMine && (
         <button
           onClick={onEnd}
