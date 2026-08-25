@@ -129,8 +129,11 @@ create table if not exists magiczny_miecz.holdings (
   face text not null default 'open' check (face in ('open', 'hidden')),
   -- Where it is worn, in the slotted variant only; null means the pack, which
   -- is the only place anything is in klasyczny play.
+  -- The last two are not gear: they are the Magiczny Miecz and the Tarcza
+  -- Tolimana, which only have to be found (p3). See RELICS in slots.ts.
   slot text check (slot in ('glowa', 'amulet', 'tulow', 'reka-glowna',
-    'reka-pomocnicza', 'rekawice', 'pierscien', 'wierzchowiec', 'sakwa')),
+    'reka-pomocnicza', 'rekawice', 'pierscien', 'wierzchowiec', 'sakwa',
+    'magiczny-miecz', 'tarcza-tolimana')),
   created_at timestamptz not null default now()
 );
 
