@@ -132,6 +132,10 @@ export function FieldModal({
 
   if (!field) return null;
 
+  // 12.1 gives the right to take what is lying here to the character whose move
+  // ENDS here, and only until the end of that turn.
+  const arrived = phase === "pole";
+
   return (
     <div
       role="dialog"
@@ -214,7 +218,7 @@ export function FieldModal({
                           {text}
                         </p>
                       </div>
-                      {takeable && standingHere && canAct && (
+                      {takeable && standingHere && canAct && arrived && (
                         <button
                           disabled={busy}
                           onClick={() => onTake(lying.id)}
@@ -231,6 +235,18 @@ export function FieldModal({
             {/* 13.1 and 12.1: things happen on the field your move ended on, so
                 a player reading about somewhere else is told why there is no
                 button rather than left to wonder. */}
+            {/* Standing on it is not enough: 12.1 gives this to the character
+                whose move ENDS here, and only until the end of that turn. Said
+                rather than left as a missing button, because a player looking
+                at a card they left behind yesterday needs to know why they
+                cannot pick it up rather than assume the app is broken. */}
+            {cards.length > 0 && standingHere && !arrived && (
+              <p className="mt-2 text-[11px] text-muted/70">
+                Zabrać można dopiero po zakończeniu tu ruchu (12.1) — te Karty
+                czekają na Postać, która skończy tutaj swój ruch.
+              </p>
+            )}
+
             {cards.length > 0 && !standingHere && (
               <p className="mt-2 text-[11px] text-muted/70">
                 Zbierać można tylko z Obszaru, na którym się stoi (12.1).

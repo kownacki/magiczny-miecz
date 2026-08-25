@@ -4488,6 +4488,39 @@ export async function takeFromField(
     throw new Error("Można zabierać tylko z Obszaru, na którym się stoi (12.1).");
   }
 
+  /**
+   * 12.1 grants this to "Postać, której ruch KOŃCZY SIĘ na danym Obszarze", and
+   * only "aż do końca swojej tury". The Obszar you begin a turn standing on is
+   * the one you finished the last turn on, and that window has closed — 13.1
+   * puts it as a prohibition from the other side, "ani wogóle podejmować
+   * żadnych czynności na Obszarze, z którego rozpoczynają ruch".
+   *
+   * 12.1's own worked example is exactly this: the Książę leaves the Sztylet,
+   * the Rękawice and the Srebrna Strzała on the Ruchome Skały, standing on
+   * them, and they wait "na Postać, która zakończy tutaj ruch".
+   */
+  if (game.turn_state.phase !== "pole") {
+    throw new Error("Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).");
+  }
+
+  // 12.1 a) and b): what is lying here is not reachable while a Wróg is on it
+  // or while the Obszar still owes Karty. "W wymienionych przypadkach należy
+  // najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych
+  // Kart."
+  const fought = game.turn_state.fought ?? [];
+  const guarded = (await fieldCardsFor(gameId)).some(
+    (row) =>
+      row.field_id === seat.field_id &&
+      EVENTS.find((card) => card.id === row.card_id)?.cardClass === "wrog" &&
+      !fought.includes(row.card_id),
+  );
+  if (guarded) {
+    throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");
+  }
+  if (game.turn_state.draw > game.turn_state.drawn.length) {
+    throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
+  }
+
   // Off the field first, so the carrying limit and 21.2's stock — both of which
   // count copies in play — do not see the same card twice.
   await db.from("field_cards").delete().eq("id", fieldCardId);
