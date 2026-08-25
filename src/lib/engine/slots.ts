@@ -35,6 +35,9 @@ export const SLOTS = [
   "pierscien",
   "wierzchowiec",
   "sakwa",
+  // The two that only have to be found. See RELICS.
+  "magiczny-miecz",
+  "tarcza-tolimana",
 ] as const;
 
 export type Slot = (typeof SLOTS)[number];
@@ -44,6 +47,8 @@ export const SLOT_LABEL: Record<Slot, string> = {
   amulet: "Amulet",
   tulow: "Tułów",
   "reka-glowna": "Ręka główna",
+  "magiczny-miecz": "Magiczny Miecz",
+  "tarcza-tolimana": "Tarcza Tolimana",
   "reka-pomocnicza": "Ręka pomocnicza",
   rekawice: "Rękawice",
   pierscien: "Pierścień",
@@ -87,7 +92,7 @@ export const SLOT_OF: Partial<Record<CardId, readonly Slot[]>> = {
   // Broń i różdżki — ręka główna.
   miecz: ["reka-glowna"],
   sztylet: ["reka-glowna"],
-  "magiczny-miecz": ["reka-glowna"],
+  "magiczny-miecz": ["magiczny-miecz"],
   arondight: ["reka-glowna"],
   excalibur: ["reka-glowna"],
   "miecz-chaosu": ["reka-glowna"],
@@ -98,8 +103,8 @@ export const SLOT_OF: Partial<Record<CardId, readonly Slot[]>> = {
 
   // Tarcze — ręka pomocnicza.
   tarcza: ["reka-pomocnicza"],
-  "tarcza-tolimana": ["reka-pomocnicza"],
-  "tarcza-boga-tolimana": ["reka-pomocnicza"],
+  "tarcza-tolimana": ["tarcza-tolimana"],
+  "tarcza-boga-tolimana": ["tarcza-tolimana"],
 
   // Wierzchowce i sakwy.
   kon: ["wierzchowiec"],
@@ -110,6 +115,27 @@ export const SLOT_OF: Partial<Record<CardId, readonly Slot[]>> = {
   "magiczna-sakwa": ["sakwa"],
   "tajemna-sakwa": ["sakwa"],
 };
+
+/**
+ * The two that only have to be found.
+ *
+ * Neither adds anything to a fight. p3: "Magiczne Miecze i Tarcze Tolimana są
+ * przedmiotami wyjątkowymi" — one lets a character onto the Kamienny Most and
+ * the other into the Zamek, and that is the whole of what they do. Carrying
+ * them is not a choice anybody makes, so they get places of their own instead
+ * of competing with a real weapon for a hand.
+ *
+ * DELIBERATE DEVIATION, documented per CLAUDE.md: they also stop counting
+ * against 5.4. The rulebook exempts only Sztuki Złota from the four-item limit
+ * and says nothing about these — so this is a house rule, not the book. It
+ * exists because spending two of your four places on things you cannot use is
+ * a tax on attempting to win at all.
+ */
+export const RELICS: ReadonlySet<string> = new Set([
+  "magiczny-miecz",
+  "tarcza-tolimana",
+  "tarcza-boga-tolimana",
+]);
 
 /** The places this Przedmiot may be worn; empty when it is only ever carried. */
 export function slotsFor(cardId: string): readonly Slot[] {

@@ -2,7 +2,7 @@
 
 import type { Item, Nature } from "@/data/types";
 import type { Holding, Seat } from "./state";
-import type { EqMode } from "./slots";
+import { RELICS, type EqMode } from "./slots";
 import {
   carryLimit as abilityCarryLimit,
   heldAbilities,
@@ -186,7 +186,13 @@ export function carriedCount(
   eqMode: EqMode = "klasyczny",
 ): number {
   return holdings.filter(
-    (held) => held.kind === "item" && (eqMode === "klasyczny" || held.slot == null),
+    (held) =>
+      held.kind === "item" &&
+      // House rule, not the book — see RELICS. The Magiczny Miecz and the
+      // Tarcza Tolimana never count against the four of 5.4, in either variant,
+      // because neither is a thing anybody chooses to carry.
+      !RELICS.has(held.cardId) &&
+      (eqMode === "klasyczny" || held.slot == null),
   ).length;
 }
 

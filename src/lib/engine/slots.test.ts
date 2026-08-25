@@ -41,10 +41,22 @@ describe("slotted equipment", () => {
       expect(fitsIn(weapon, "reka-glowna")).toBe(true);
       expect(fitsIn(weapon, "reka-pomocnicza")).toBe(false);
     }
-    for (const shield of ["tarcza", "tarcza-tolimana", "tarcza-boga-tolimana"]) {
-      expect(fitsIn(shield, "reka-glowna")).toBe(false);
-      expect(fitsIn(shield, "reka-pomocnicza")).toBe(true);
+    expect(fitsIn("tarcza", "reka-glowna")).toBe(false);
+    expect(fitsIn("tarcza", "reka-pomocnicza")).toBe(true);
+  });
+
+  it("gives the two you only have to find places of their own", () => {
+    // Neither adds anything to a fight: one lets you onto the Most and the
+    // other into the Zamek (p3). Leaving them in the hands meant the price of
+    // going for the win was fighting the rest of the game unarmed.
+    expect(fitsIn("magiczny-miecz", "magiczny-miecz")).toBe(true);
+    expect(fitsIn("magiczny-miecz", "reka-glowna")).toBe(false);
+    for (const shield of ["tarcza-tolimana", "tarcza-boga-tolimana"]) {
+      expect(fitsIn(shield, "tarcza-tolimana")).toBe(true);
+      expect(fitsIn(shield, "reka-pomocnicza")).toBe(false);
     }
+    // And an ordinary Tarcza cannot squat in the relic's place.
+    expect(fitsIn("tarcza", "tarcza-tolimana")).toBe(false);
   });
 
   it("leaves the relics and the crystals in the pack, where they work", () => {

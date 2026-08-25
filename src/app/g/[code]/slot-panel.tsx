@@ -50,6 +50,11 @@ const LAYOUT: Record<Slot, string> = {
   rekawice: "3 / 1 / 4 / 2",
   wierzchowiec: "3 / 2 / 4 / 3",
   sakwa: "3 / 3 / 4 / 4",
+  // A row of their own, under the body. They are not worn in any sense a
+  // person would recognise — they are the two things you must have found — so
+  // they sit apart from the places that hold real gear.
+  "magiczny-miecz": "4 / 1 / 5 / 2",
+  "tarcza-tolimana": "4 / 3 / 5 / 4",
 };
 
 /** Drawn in the empty places, so a gap says which gap it is. */
@@ -63,6 +68,8 @@ const GLYPH: Record<Slot, string> = {
   pierscien: "◯",
   wierzchowiec: "🐴",
   sakwa: "🎒",
+  "magiczny-miecz": "✦",
+  "tarcza-tolimana": "✧",
 };
 
 /** What a drag carries: the id of the holding being moved. */
