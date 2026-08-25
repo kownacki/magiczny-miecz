@@ -13,7 +13,7 @@ describe("what an item gives, and when", () => {
   it("says the same item works from the pack in klasyczny", () => {
     // 5.4 has one kind of possession: a Miecz in the pack is a Miecz. Only the
     // slotted variant makes wearing it the condition.
-    expect(itemProfile("miecz", "klasyczny").facts[0].when).toBe("w plecaku");
+    expect(itemProfile("miecz", "klasyczny").facts[0].when).toBe("gdy w plecaku");
   });
 
   it("knows the Bojowy Rumak's two rules and that both are combat-only", () => {
@@ -24,10 +24,11 @@ describe("what an item gives, and when", () => {
       "ginie-zamiast-ciebie",
     ]);
     expect(rumak.facts[0].what).toContain("Magii");
-    // Both halves are said, because they are independent questions: it has to
-    // be worn AND it only matters in a fight. Saying only one left the player
-    // guessing about the other.
-    for (const fact of rumak.facts) expect(fact.when).toBe("w walce, gdy założony");
+    // The label says WHERE it has to be and nothing else. That it only matters
+    // in a fight is already in the text of both lines, so repeating it added
+    // nothing — and it was only ever added to four hand-picked kinds, which
+    // made the other seventeen look like they applied at moments they do not.
+    for (const fact of rumak.facts) expect(fact.when).toBe("gdy założony");
   });
 
   it("says carrying capacity is added to the four, not a cap of its own", () => {
@@ -53,12 +54,13 @@ describe("what an item gives, and when", () => {
     expect(itemProfile("1-sztuka-zlota", "slotowy").slotLabel).toBeNull();
   });
 
-  it("keeps a fight-only rule combat-only in both variants, and adds the slot in one", () => {
-    // Klasyczny has no places to wear anything, so there is nothing to add.
-    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "klasyczny")).toBe("w walce");
-    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "slotowy")).toBe(
-      "w walce, gdy założony",
-    );
+  it("labels only where a card must be, never when it fires", () => {
+    // A Sztylet's +1 Miecza matters only in a fight too, and never carried a
+    // combat label — so annotating the Tarcza and not the Sztylet was telling
+    // the player something untrue about the difference between them.
+    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "klasyczny")).toBe("gdy w plecaku");
+    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "slotowy")).toBe("gdy założony");
+    expect(whenApplies({ kind: "punkty", miecz: 1 }, "sztylet", "slotowy")).toBe("gdy założony");
   });
 
   it("says a carried-only item works from the pack even in slotowy", () => {

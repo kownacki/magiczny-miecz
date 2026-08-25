@@ -39,20 +39,7 @@ function fieldNames(fieldIds: readonly FieldId[]): string {
  * question with an existing answer: `slotsFor` knows if it has a place, and the
  * variant decides whether being in that place is required.
  */
-export type AbilityWhen =
-  | "w plecaku"
-  | "gdy założony"
-  | "w walce"
-  | "w walce, gdy założony"
-  | "warunek";
-
-/** Kinds that only ever apply while a fight is being resolved. */
-const ONLY_IN_A_FIGHT = new Set<Ability["kind"]>([
-  "oslona",
-  "magia-do-miecza",
-  "walczy-za-ciebie",
-  "ginie-zamiast-ciebie",
-]);
+export type AbilityWhen = "gdy w plecaku" | "gdy założony" | "warunek";
 
 export function whenApplies(ability: Ability, cardId: string, eqMode: EqMode): AbilityWhen {
   // A requirement is not something that happens at a moment; it is true or the
@@ -60,22 +47,20 @@ export function whenApplies(ability: Ability, cardId: string, eqMode: EqMode): A
   if (ability.kind === "tylko-natura") return "warunek";
 
   /**
-   * Two separate questions, and "zawsze" answered neither.
+   * Where the card has to be, and nothing else.
    *
-   * Where it has to be, and when it does anything, are independent: a Tarcza
-   * must be worn AND only matters in a fight, while a Koń must be worn and
-   * helps all the time. Saying "zawsze" for the second told a player nothing
-   * about the first — which is the half they act on when deciding what to put
-   * on before stepping onto the Most.
+   * It used to add "w walce" to four hand-picked kinds, which was wrong twice
+   * over. It was redundant — "osłona przy przegranej" and "walczy za ciebie"
+   * already say when they happen — and it was inconsistent, because a Sztylet's
+   * +1 Miecza only matters in a fight too and never carried the label. Picking
+   * four kinds out of twenty-one to annotate made the other seventeen look like
+   * they applied at moments they do not.
    *
-   * In klasyczny there is nowhere to put anything, so everything works from the
-   * pack: 5.4 has one kind of possession, and a Miecz in the pack is a Miecz.
+   * What is left is the half that is not in the text: whether the thing has to
+   * be worn. In klasyczny nothing does — 5.4 has one kind of possession, and a
+   * Miecz in the pack is a Miecz.
    */
-  const mustBeWorn = eqMode === "slotowy" && isWearable(cardId);
-  const onlyFighting = ONLY_IN_A_FIGHT.has(ability.kind);
-
-  if (onlyFighting) return mustBeWorn ? "w walce, gdy założony" : "w walce";
-  return mustBeWorn ? "gdy założony" : "w plecaku";
+  return eqMode === "slotowy" && isWearable(cardId) ? "gdy założony" : "gdy w plecaku";
 }
 
 /** One formalised line: what it gives, and when it gives it. */
