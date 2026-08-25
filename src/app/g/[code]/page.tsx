@@ -1382,7 +1382,7 @@ function Hand({
   onReorder?: (holdingIds: string[]) => void;
   onInspect: (card: TileCard) => void;
 }) {
-  /** Something is being carried over the pack. */
+  /** Something is being carried or dragged over the pack itself. */
   const [dragOver, setDragOver] = useState(false);
   /** The card a reordering drag is currently over, so it can show where it lands. */
   const [insertAt, setInsertAt] = useState<string | null>(null);
@@ -1441,6 +1441,24 @@ function Hand({
     onReorder(without);
   };
 
+  /**
+   * The pack is about to be dropped into, and whether it would take it.
+   *
+   * Quiet while the pointer is over one of the cards: the gap that opens in the
+   * row there says where the card lands, which is more than the rectangle can.
+   * And quiet when nothing is in the air, obviously.
+   *
+   * `refuses` is 5.4 — a card coming in from the body when there is no room for
+   * it — and never a card already in the pack, which is only being moved about
+   * inside a limit it already satisfies.
+   */
+  const landing = (carried !== null || dragOver) && insertAt === null;
+  const refuses =
+    landing &&
+    carried !== null &&
+    carried.from !== "plecak" &&
+    packed >= limit;
+
   // After the hooks, which have to run every render whatever is on show.
   //
   // Your own pack is always drawn, empty or not. It used to disappear until the
@@ -1464,15 +1482,33 @@ function Hand({
       {/* Cards, as cards. A player at a table recognises their Miecz by its
           picture long before they read the word, and the ability text that used
           to sit under every line now lives one tap away in the detail view. */}
-      {/* The pack lights up while something is being carried over it, the same
-          way a place on the body does. Without it the only drop target that
-          gave no sign of being one was the one you use most: everything comes
-          off into the pack. */}
+      {/* The pack is one place, and this rectangle is it.
+          
+          The free squares used to light up green one by one, which offered
+          something the pack does not have: a card dropped in the fourth square
+          does not go to the fourth square, it goes on the end, because the only
+          positions a pack has are the ones its cards are in. The squares are
+          how much room is left — 5.4's number, drawn — and nothing more.
+          
+          So the whole rectangle answers instead, and the one time it stays
+          quiet is when the pointer is over a card, because then the gap in the
+          row is already saying something more precise. */}
       <div
         onDragOver={(event) => {
           if (!canAct || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
           event.preventDefault();
           setDragOver(true);
+        }}
+        // Move rather than enter: a card is picked up by clicking one that is
+        // already inside the pack, so the pointer never crosses the boundary
+        // and `pointerenter` never fires. The guard keeps this from setting
+        // state on every pixel.
+        onPointerMove={() => {
+          if (carried && !dragOver) setDragOver(true);
+        }}
+        onPointerLeave={() => {
+          setDragOver(false);
+          setInsertAt(null);
         }}
         onDragLeave={(event) => {
           // Only when the pointer leaves the pack itself, not on its way across
@@ -1505,7 +1541,13 @@ function Hand({
           onPlaceInPack();
         }}
         className={`flex flex-wrap gap-2 rounded border border-dashed p-1 transition ${
-          dragOver ? "border-ochre bg-ochre/5" : "border-transparent"
+          !landing
+            ? "border-transparent"
+            : // Red when the card would not fit at all: 5.4 said while it is
+              // still in the air, rather than as a refusal after it lands.
+              refuses
+              ? "border-vermilion bg-vermilion/10"
+              : "border-verdigris bg-verdigris/10"
         }`}
       >
         {/* Your own Zaklęcia are not repeated here: they have their own panel
@@ -1667,39 +1709,19 @@ function Hand({
             has no business being a differently-sized span with a highlight of
             its own. */}
         {(() => {
-          // A card is in the air if it is on the cursor or being dragged over.
-          const moving = carried !== null || dragOver;
-          // No limit still shows one place, so there is somewhere to aim.
+          // How much room is left, drawn. Not places to aim at — see the
+          // rectangle above — so they never light up and never take a click of
+          // their own; one lands on the pack, which is the thing they are part
+          // of. No limit still shows one, so the row does not collapse.
           const free = Number.isFinite(limit) ? Math.max(0, limit - packed) : 1;
-
-          // Nothing will fit. Said while the card is still in the air rather
-          // than as a refusal after it lands (5.4, 5.6).
-          if (free === 0) {
-            return moving ? (
-              <ItemSlot item={null} label="pełny" glyph="✕" tone="rejects" disabled />
-            ) : null;
-          }
-
           return Array.from({ length: free }, (_, i) => (
             <ItemSlot
               key={`wolne-${i}`}
               item={null}
               label="wolne"
               glyph="+"
-              tone={moving ? "accepts" : "empty"}
-              // Clicking an empty place puts down what is carried — the same
-              // gesture that works on the body. A card already in the pack goes
-              // to the end of it rather than nowhere.
-              disabled={!canAct || carried === null}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (!carried) return;
-                if (carried.from === "plecak") {
-                  moveWithin(carried.holdingId, null);
-                  return onCarry(null);
-                }
-                onPlaceInPack();
-              }}
+              tone="empty"
+              disabled
             />
           ));
         })()}
