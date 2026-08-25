@@ -59,11 +59,34 @@ const GLYPH: Record<Slot, string> = {
 /** What a drag carries: the id of the holding being moved. */
 export const DRAG_TYPE = "application/x-magiczny-miecz-holding";
 
+/**
+ * Starts a drag, with the card itself stuck to the cursor.
+ *
+ * Left alone the browser drags a translucent snapshot of whatever was grabbed,
+ * anchored wherever inside it the pointer happened to be — so a card picked up
+ * by its corner trails behind the cursor at arm's length and does not read as
+ * being carried. The picture already on screen is the drag image, centred, so
+ * it goes where the hand goes.
+ */
+export function startHoldingDrag(event: React.DragEvent, holdingId: string): void {
+  event.dataTransfer.setData(DRAG_TYPE, holdingId);
+  event.dataTransfer.effectAllowed = "move";
+  const picture = event.currentTarget.querySelector("img");
+  if (picture instanceof HTMLImageElement && picture.complete) {
+    event.dataTransfer.setDragImage(
+      picture,
+      picture.offsetWidth / 2,
+      picture.offsetHeight / 2,
+    );
+  }
+}
+
 export function SlotPanel({
   worn,
   canAct,
   busy,
-  onInspect,
+  carrying,
+  onPickUp,
   onTakeOff,
   onDropInto,
 }: {
@@ -71,9 +94,11 @@ export function SlotPanel({
   worn: Partial<Record<Slot, SlotItem>>;
   canAct: boolean;
   busy: boolean;
-  onInspect: (card: TileCard) => void;
+  /** A card is on the cursor, so a click on a place puts it there. */
+  carrying: boolean;
+  onPickUp: (item: SlotItem, from: Slot) => void;
   onTakeOff: (holdingId: string) => void;
-  /** Something was dragged onto a place. */
+  /** Something was put into a place — dropped, or carried there and clicked. */
   onDropInto: (holdingId: string, slot: Slot) => void;
 }) {
   /** The place a drag is over, so it can say it will take it. */
@@ -119,11 +144,24 @@ export function SlotPanel({
             title={item ? undefined : SLOT_LABEL[slot]}
           >
             {item ? (
-              <WornCard item={item} canAct={canAct} onInspect={() => onInspect(item.card)} />
+              <WornCard
+                item={item}
+                canAct={canAct}
+                // One click picks it up; two take it straight off. Same pair as
+                // in the pack, so the gesture means one thing everywhere.
+                onPickUp={() => onPickUp(item, slot)}
+                onTakeOff={() => onTakeOff(item.holdingId)}
+              />
             ) : (
-              <span className="flex h-full items-center justify-center text-[26px] text-muted/30">
+              <button
+                type="button"
+                disabled={!canAct || !carrying}
+                onClick={() => onDropInto("", slot)}
+                title={SLOT_LABEL[slot]}
+                className="flex h-full w-full items-center justify-center text-[26px] text-muted/30 disabled:cursor-default"
+              >
                 {GLYPH[slot]}
-              </span>
+              </button>
             )}
 
             {/* Taking it off is a corner, not a row of its own: nine places
@@ -157,11 +195,13 @@ export function SlotPanel({
 function WornCard({
   item,
   canAct,
-  onInspect,
+  onPickUp,
+  onTakeOff,
 }: {
   item: SlotItem;
   canAct: boolean;
-  onInspect: () => void;
+  onPickUp: () => void;
+  onTakeOff: () => void;
 }) {
   const art = cardArtUrl(item.cardId);
   const full = cardImageUrl(item.cardId);
@@ -171,11 +211,9 @@ function WornCard({
       <button
         type="button"
         draggable={canAct}
-        onDragStart={(event) => {
-          event.dataTransfer.setData(DRAG_TYPE, item.holdingId);
-          event.dataTransfer.effectAllowed = "move";
-        }}
-        onClick={onInspect}
+        onDragStart={(event) => startHoldingDrag(event, item.holdingId)}
+        onClick={onPickUp}
+        onDoubleClick={onTakeOff}
         title={item.card.name}
         className="block h-full w-full cursor-grab active:cursor-grabbing"
       >

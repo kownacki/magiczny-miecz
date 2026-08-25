@@ -134,6 +134,20 @@ export function gainLife(seat: Seat, amount: number): Seat {
 export const BASE_CARRY_LIMIT = 4;
 
 /**
+ * How many the pack holds in the slotted variant.
+ *
+ * Not four. In klasyczny the limit of 5.4 is on everything a character has, and
+ * four is the whole of what it may own; in slotowy the worn things hang on the
+ * character and the pack is what is left over, so keeping it at four would make
+ * the variant *stricter* than the book while claiming to be a convenience.
+ *
+ * Sixteen is the Diablo grid this is modelled on, and it is a house number for
+ * a house rule. Transport still adds on top: a Koń in the mount place is eight
+ * more.
+ */
+export const SLOTTED_PACK_LIMIT = 16;
+
+/**
  * What a character can actually carry.
  *
  * Rule 5.4 says "unless the character has a means of transport", and this used
@@ -156,7 +170,8 @@ export function carryLimit(
   const counts = (held: Holding) =>
     held.kind !== "trophy" && (eqMode === "klasyczny" || held.slot != null);
   const carried = holdings.filter(counts).map((h) => h.cardId);
-  return abilityCarryLimit(heldAbilities(carried), BASE_CARRY_LIMIT);
+  const base = eqMode === "slotowy" ? SLOTTED_PACK_LIMIT : BASE_CARRY_LIMIT;
+  return abilityCarryLimit(heldAbilities(carried), base);
 }
 
 /**

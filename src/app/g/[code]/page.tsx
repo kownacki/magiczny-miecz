@@ -18,7 +18,8 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardBack, CardDetail, CardTile, type TileCard } from "./card-tile";
 import { CardLibrary } from "./card-library";
-import { DRAG_TYPE, SlotPanel, type SlotItem } from "./slot-panel";
+import { DRAG_TYPE, SlotPanel, startHoldingDrag, type SlotItem } from "./slot-panel";
+import { CarriedCard, type Carried } from "./carry";
 import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
@@ -777,6 +778,9 @@ function Hand({
   canAct,
   trophies,
   slotted,
+  carried,
+  onCarry,
+  onPlaceInPack,
   onDrop,
   onTrade,
   onEquip,
@@ -787,14 +791,19 @@ function Hand({
   canAct: boolean;
   slotted: boolean;
   trophies: number;
+  /** The card on the cursor, if any. */
+  carried: Carried | null;
+  onCarry: (carried: Carried | null) => void;
+  onPlaceInPack: () => void;
   onDrop: (holdingId: string) => void;
   onTrade: () => void;
   onEquip: (holdingId: string, slot: Slot | null) => void;
   onInspect: (card: TileCard) => void;
 }) {
-  const shown = seat.holdings.filter((held) => held.kind !== "spell");
-  if (shown.length === 0 && seat.hidden_count === 0) return null;
+  /** Something is being carried over the pack. */
+  const [dragOver, setDragOver] = useState(false);
 
+  const shown = seat.holdings.filter((held) => held.kind !== "spell");
   const packed = seat.holdings.filter(
     (held) => held.kind === "item" && (!slotted || held.slot == null),
   ).length;
@@ -802,6 +811,9 @@ function Hand({
     seat.holdings.map((h) => ({ cardId: h.cardId, kind: h.kind, face: h.face, slot: h.slot ?? null })),
     slotted ? "slotowy" : "klasyczny",
   );
+
+  // After the hooks, which have to run every render whatever is on show.
+  if (shown.length === 0 && seat.hidden_count === 0) return null;
 
   return (
     <div className="mt-3 border-t border-edge pt-3">
@@ -817,18 +829,35 @@ function Hand({
       {/* Cards, as cards. A player at a table recognises their Miecz by its
           picture long before they read the word, and the ability text that used
           to sit under every line now lives one tap away in the detail view. */}
+      {/* The pack lights up while something is being carried over it, the same
+          way a place on the body does. Without it the only drop target that
+          gave no sign of being one was the one you use most: everything comes
+          off into the pack. */}
       <div
         onDragOver={(event) => {
-          if (canAct && event.dataTransfer.types.includes(DRAG_TYPE)) event.preventDefault();
+          if (!canAct || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
+          event.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={(event) => {
+          // Only when the pointer leaves the pack itself, not on its way across
+          // a card inside it.
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragOver(false);
         }}
         onDrop={(event) => {
+          setDragOver(false);
           if (!canAct) return;
           const holdingId = event.dataTransfer.getData(DRAG_TYPE);
           if (!holdingId) return;
           event.preventDefault();
           onEquip(holdingId, null);
         }}
-        className="flex flex-wrap gap-2"
+        // Clicking the pack with something on the cursor puts it there, which
+        // is how a worn card comes off without aiming at a particular card.
+        onClick={() => carried && onPlaceInPack()}
+        className={`flex flex-wrap gap-2 rounded border border-dashed p-1 transition ${
+          dragOver ? "border-ochre bg-ochre/5" : "border-transparent"
+        }`}
       >
         {/* Your own Zaklęcia are not repeated here: they have their own panel
             above, face up and with the cast controls on them. What belongs on a
@@ -843,14 +872,35 @@ function Hand({
             card={tileFor(held)}
             badge={held.kind === "trophy" ? "trofeum" : undefined}
             dimmed={held.kind === "trophy"}
-            onClick={() => onInspect(tileFor(held))}
+            // One click picks it up, or puts down whatever is already on the
+            // cursor. Two put it straight on. With no variant running there is
+            // nowhere to put anything, so a click just reads the card.
+            onClick={() => {
+              if (!slotted || !canAct) return onInspect(tileFor(held));
+              if (carried) return onPlaceInPack();
+              if (held.kind === "item" && isWearable(held.cardId)) {
+                onCarry({
+                  holdingId: held.id,
+                  cardId: held.cardId,
+                  name: tileFor(held).name,
+                  from: "plecak",
+                });
+              } else {
+                onInspect(tileFor(held));
+              }
+            }}
+            onDoubleClick={() => {
+              if (!slotted || !canAct || held.kind !== "item") return;
+              const place = SLOTS.find((slot) => fitsIn(held.cardId, slot));
+              if (place) {
+                onCarry(null);
+                onEquip(held.id, place);
+              }
+            }}
             // Dragged onto a place to put it on — the same journey the
             // "załóż" button makes, for people who reach for the card.
             draggable={canAct && slotted && held.kind === "item" && isWearable(held.cardId)}
-            onDragStart={(event) => {
-              event.dataTransfer.setData(DRAG_TYPE, held.id);
-              event.dataTransfer.effectAllowed = "move";
-            }}
+            onDragStart={(event) => startHoldingDrag(event, held.id)}
           >
             {canAct && (
               <span className="flex items-center gap-2">
@@ -875,7 +925,9 @@ function Hand({
           Array.from({ length: Math.max(0, limit - packed) }, (_, i) => (
             <span
               key={`wolne-${i}`}
-              className="flex h-[131px] w-[92px] items-center justify-center rounded border border-dashed border-edge/60 text-[11px] text-muted/40"
+              className={`flex h-[131px] w-[92px] items-center justify-center rounded border border-dashed text-[11px] transition ${
+                dragOver ? "border-ochre/70 bg-ochre/10 text-ochre/70" : "border-edge/60 text-muted/40"
+              }`}
             >
               wolne
             </span>
@@ -996,6 +1048,24 @@ function SeatCard({
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
   const trophies = seat.holdings.filter((h) => h.kind === "trophy");
+
+  /**
+   * The card on the cursor.
+   *
+   * Held here rather than in either half, because the whole point of picking
+   * something up is to put it down somewhere else — and "somewhere else" is
+   * usually the other half.
+   */
+  const [carried, setCarried] = useState<Carried | null>(null);
+
+  /** Puts what is being carried into a place, or takes it back out. */
+  const place = (slot: Slot | null) => {
+    if (!carried) return;
+    if (carried.from === (slot ?? "plecak")) return setCarried(null); // put back
+    onEquip(carried.holdingId, slot);
+    setCarried(null);
+  };
+
   return (
     <article
       className={`rounded-lg border bg-panel p-4 transition ${
@@ -1052,9 +1122,19 @@ function SeatCard({
                 worn={wornBySlot(seat)}
                 canAct={canAdjust}
                 busy={false}
-                onInspect={onInspect}
-                onTakeOff={(holdingId) => onEquip(holdingId, null)}
-                onDropInto={(holdingId, slot) => onEquip(holdingId, slot)}
+                carrying={carried !== null}
+                onPickUp={(item, from) =>
+                  setCarried({ ...item, name: item.card.name, from })
+                }
+                onTakeOff={(holdingId) => {
+                  setCarried(null);
+                  onEquip(holdingId, null);
+                }}
+                // A drag carries an id; a click carries nothing and means
+                // "put down what I am holding".
+                onDropInto={(holdingId, slot) =>
+                  holdingId ? onEquip(holdingId, slot) : place(slot)
+                }
               />
             )}
           </div>
@@ -1087,11 +1167,15 @@ function SeatCard({
             canAct={canAdjust}
             slotted={slotted}
             trophies={trophies.length}
+            carried={carried}
+            onCarry={setCarried}
+            onPlaceInPack={() => place(null)}
             onDrop={onDrop}
             onTrade={onTrade}
             onEquip={onEquip}
             onInspect={onInspect}
           />
+          <CarriedCard carried={carried} />
           <p className="mt-3 text-xs text-muted">
             {seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—"}
           </p>

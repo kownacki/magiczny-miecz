@@ -323,10 +323,13 @@ up in one of them, `slots.ts` says what to add.
 
 ### Plecak
 
-What is not worn is in the **plecak**, and that is the four of 5.4 — the limit
-applies to the pack alone, since what a character is wearing hangs on the
-character. A Koń or a Sakwa raises it, but only while it is worn: a Koń in the
-pack pulls nothing.
+What is not worn is in the **plecak**, and in the variant it holds sixteen, not
+four. In klasyczny the limit of 5.4 is on everything a character owns; in
+slotowy the worn things hang on the character and the pack is what is left over,
+so keeping it at four would make the variant *stricter* than the book while
+claiming to be a convenience. Sixteen is the Diablo grid this is modelled on — a
+house number for a house rule. A Koń or a Sakwa still adds on top, and only
+while worn: a Koń in the pack pulls nothing.
 
 Taking something off puts it in the pack, so it can be refused: a character
 carrying four things has nowhere to put its helmet, and the rulebook's answer to
@@ -366,6 +369,8 @@ carried at all but kept for trading (1.4).
 | the pack drawn as its places, with the count | ✅ "Plecak n / 4" |
 | the illustration as the icon, whole card on hover | ✅ `cardArtUrl`, `export-card-art.mjs` |
 | dragging between the pack and a place, both ways | ✅ `slot-panel.tsx` |
+| one click carries a card, a second puts it down | ✅ `carry.tsx` — works on touch, unlike drag |
+| two clicks put it on or take it off | ✅ |
 | taking something off into a full pack is refused | ✅ `equipCard` |
 | two weapons at once, for a character that can | ❌ no character in the box has the ability |
 

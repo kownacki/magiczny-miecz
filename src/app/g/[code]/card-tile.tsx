@@ -32,6 +32,7 @@ export function CardTile({
   dimmed = false,
   badge,
   onClick,
+  onDoubleClick,
   draggable,
   onDragStart,
   children,
@@ -42,6 +43,8 @@ export function CardTile({
   /** A short flag drawn over the corner — a price, a count, "zakryte". */
   badge?: string;
   onClick?: () => void;
+  /** Two clicks put it straight on, in the slotted variant. */
+  onDoubleClick?: () => void;
   /** Draggable into an equipment place, in the slotted variant. */
   draggable?: boolean;
   onDragStart?: (event: React.DragEvent) => void;
@@ -57,6 +60,7 @@ export function CardTile({
       <button
         type="button"
         onClick={onClick}
+        onDoubleClick={onDoubleClick}
         disabled={!onClick}
         draggable={draggable}
         onDragStart={onDragStart}
