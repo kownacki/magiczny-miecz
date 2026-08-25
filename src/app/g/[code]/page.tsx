@@ -2202,7 +2202,12 @@ function SeatCard({
         active ? "border-ochre shadow-[0_0_0_1px_var(--color-ochre)]" : "border-edge"
       }`}
     >
-      <header className="mb-3 flex items-baseline gap-2">
+      {/* A fixed height, so a seat card does not jump when an effect appears or
+          wears off — the marks are as tall as a mark can be whether or not any
+          are there. And aligned to the top rather than to the baseline: a
+          picture has no baseline to sit on, so matching one stretched the row
+          to whatever the tallest mark happened to be. */}
+      <header className="mb-3 flex h-9 items-start gap-2">
         <h3 className="font-[family-name:var(--font-display)] text-ink">
           {/* A seat with a character but no name is somebody who joined without
               typing one, not an empty chair — calling it "wolne" made a player
@@ -2222,7 +2227,7 @@ function SeatCard({
             the person the name belongs to, and at the far edge of a wide seat
             card they read as belonging to whatever they happen to be next to. */}
         {seat.effects.length > 0 && (
-          <span className="flex shrink-0 items-center gap-1">
+          <span className="flex shrink-0 items-start gap-1">
             {seat.effects.map((mark) => (
               <EffectMark key={mark.id} mark={mark} nature={asNature(seat.nature)} />
             ))}
