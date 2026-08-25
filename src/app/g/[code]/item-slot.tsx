@@ -86,7 +86,7 @@ export function ItemSlot({
   eqMode = "klasyczny",
   nature = null,
   quiet = false,
-  shifted = false,
+  step = 0,
 }: {
   /** What is here, or null for an empty place. */
   item: SlotOccupant | null;
@@ -136,8 +136,8 @@ export function ItemSlot({
    * hover is for reading, and nobody is reading mid-drag.
    */
   quiet?: boolean;
-  /** A card would land at or before this one, so it has stepped aside to show where. */
-  shifted?: boolean;
+  /** Which way this card has stepped aside to show where a carried one lands. */
+  step?: -1 | 0 | 1;
 }) {
   // The hover is suppressed while the card is on the cursor: what is under the
   // pointer then is a hollow, and describing it as though it still held
@@ -208,10 +208,10 @@ export function ItemSlot({
          */
         style={{
           width: SLOT_WIDTH,
-          transform: shifted ? `translateX(${SLOT_WIDTH * 0.45}px)` : undefined,
+          transform: step === 0 ? undefined : `translateX(${step * SLOT_WIDTH * 0.45}px)`,
         }}
         className={`flex flex-col items-center gap-1 transition-transform duration-150 ${
-          shifted ? "pointer-events-none" : ""
+          step === 0 ? "" : "pointer-events-none"
         }`}
       >
         <div

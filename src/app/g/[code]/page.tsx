@@ -1454,32 +1454,53 @@ function Hand({
       : inPack;
 
   /**
-   * The two squares that mean "put it back" rather than "move it here".
+   * The one square that is not a place to put a card: the square it came from.
    *
-   * A card's own square is one of them. The other is the square immediately
-   * after: taking a card out of the row and putting it in front of the next one
-   * leaves it exactly where it started. Neither opens a gap, because a gap is a
-   * promise that something will change, and neither of these changes anything.
+   * No gap opens there, because the hollow left behind is already the answer —
+   * and dropping there used to do worse than nothing. It asked the row to put
+   * the card in front of itself, which stops being a position the moment the
+   * card is lifted out of the row to look for one, so it fell through to "no
+   * position given", which means the end of the queue. A card picked up and put
+   * straight back down came to rest at the back of the pack.
    *
-   * Its own square used to do worse than promise nothing. Dropping there asked
-   * the row to put the card in front of itself, which is not a position any
-   * more once the card has been taken out of the row to look for one — so it
-   * fell through to the end of the queue, and a card picked up and put straight
-   * back down came to rest at the back of the pack.
+   * The square *after* it is a place, even though landing there leaves the card
+   * exactly where it started. It was quiet for a while on the reasoning that a
+   * gap is a promise something will change — but every other square in the row
+   * answers, so the one next door staying dark reads as a hole in the
+   * interface rather than as an argument about identity. Nothing is written
+   * when nothing moves; that belongs on the write, not on the gap.
    */
   const liftedIndex = arranged.findIndex((held) => held.id === liftedHoldingId);
-  const putsItBack = (id: string) =>
-    liftedIndex >= 0 && (id === liftedHoldingId || arranged[liftedIndex + 1]?.id === id);
+  const itsOwnSquare = (id: string) => id === liftedHoldingId;
 
   /**
-   * The first card that has stepped aside, or -1 when none has.
+   * Which way each card steps aside, and how few of them have to.
+   *
+   * A card leaves a hollow where it was, and the row closes over it from
+   * whichever side the card is going. Aim to your left and the cards between
+   * there and the hollow step right, the way a hand opens a place. Aim to your
+   * right and they step *left* instead, into the hollow, because that is the
+   * direction they will really travel — everything from the target rightwards
+   * stays exactly where it is, since nothing past the landing place moves.
+   *
+   * Stepping one way for both was the wrong picture in half the cases: dropping
+   * on the far end pushed the whole tail of the pack sideways to make a place
+   * that was already there, five squares back.
+   *
+   * A card off the body leaves no hollow, so there is nothing to close and the
+   * row opens in front of the target as before.
    *
    * The gap is drawn by moving pictures and not by moving boxes (see
-   * `ItemSlot`), so every card from the insertion point onwards has to be told
-   * to step: laying it out would have slid the row sideways under the pointer
-   * and taken the card you were aiming at with it.
+   * `ItemSlot`): laying it out would slide the row sideways under the pointer
+   * and take the card you were aiming at with it.
    */
-  const stepAside = insertAt === null ? -1 : arranged.findIndex((held) => held.id === insertAt);
+  const insertIndex = insertAt === null ? -1 : arranged.findIndex((held) => held.id === insertAt);
+  const stepFor = (index: number): -1 | 0 | 1 => {
+    if (insertIndex < 0) return 0;
+    if (liftedIndex < 0) return index >= insertIndex ? 1 : 0;
+    if (insertIndex < liftedIndex) return index >= insertIndex && index < liftedIndex ? 1 : 0;
+    return index > liftedIndex && index < insertIndex ? -1 : 0;
+  };
 
   /** The pack's order with one card put before another, or on the end. */
   const orderWith = (holdingId: string, beforeId: string | null) => {
@@ -1489,11 +1510,20 @@ function Hand({
     return without;
   };
 
-  /** Moves a card already in the pack to sit before another, or on the end. */
+  /**
+   * Moves a card already in the pack to sit before another, or on the end.
+   *
+   * A move that changes nothing writes nothing. Dropping a card in front of the
+   * one that already follows it is a real aim at a real place, and the place
+   * happens to be the one it is in — so it is allowed, and answered with
+   * silence rather than with a round trip that reorders the pack into the order
+   * it is already in.
+   */
   const moveWithin = (holdingId: string, beforeId: string | null) => {
     if (!onReorder) return;
     if (!arranged.some((held) => held.id === holdingId)) return;
     const order = orderWith(holdingId, beforeId);
+    if (order.every((id, index) => arranged[index]?.id === id)) return;
     setWanted(order);
     onReorder(order);
   };
@@ -1660,7 +1690,7 @@ function Hand({
             // after it steps aside to show the space it is going into. Said
             // with a gap rather than by tinting the card under the pointer,
             // which reads as "this one is about to be replaced".
-            shifted={stepAside >= 0 && index >= stepAside}
+            step={stepFor(index)}
             // Reading and moving are different modes: no Karta opens over the
             // place you are aiming at while a card is in the air.
             quiet={moving}
@@ -1692,9 +1722,9 @@ function Hand({
                 // From the pack: it goes in front of this card. From the body:
                 // it is being taken off, which lands it at the end.
                 if (carried.from === "plecak") {
-                  // Its own square, or the one after it: putting it back, which
-                  // is the pack left exactly as it was.
-                  if (!putsItBack(held.id)) moveWithin(carried.holdingId, held.id);
+                  // Its own square is putting it back, which is the pack left
+                  // exactly as it was.
+                  if (!itsOwnSquare(held.id)) moveWithin(carried.holdingId, held.id);
                   return onCarry(null);
                 }
                 // Off the body, and in front of this card rather than on the
@@ -1750,7 +1780,7 @@ function Hand({
               event.preventDefault();
               // The same two squares that mean "put it back" under the pointer
               // mean it under a drag.
-              if (!putsItBack(held.id)) setInsertAt(held.id);
+              if (!itsOwnSquare(held.id)) setInsertAt(held.id);
             }}
             // No onDragLeave: unlike pointerleave, it fires on the way into a
             // child as well as on the way out, so a drag crossing the picture
@@ -1788,7 +1818,7 @@ function Hand({
              * has left.
              */
             onPointerEnter={() => {
-              if (!carried || putsItBack(held.id)) return;
+              if (!carried || itsOwnSquare(held.id)) return;
               setInsertAt(held.id);
             }}
             // Only this card's own gap: moving straight to the next card sets
