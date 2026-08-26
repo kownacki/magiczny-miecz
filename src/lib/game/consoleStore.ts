@@ -2,7 +2,7 @@
 
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
-import { FIELDS } from "@/lib/engine/board";
+import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 import {
   helpLines,
@@ -35,7 +35,9 @@ import {
   grantCard,
   placeCard,
   placeSeat,
+  removeCharacter,
   resolveFight,
+  reviveCharacter,
   stageFight,
   takeNewCharacter,
   turnToStone,
@@ -85,6 +87,18 @@ function characterName(id: string | null): string {
   if (!id) return "—";
   if (isRandomPick(id)) return "niespodzianka";
   return (characters as Character[]).find((one) => one.id === id)?.name ?? id;
+}
+
+/**
+ * What an Obszar is called, or an em dash for a figure that is nowhere.
+ *
+ * Takes a `FieldId` and not a string: `seatsFor` narrowed the column on the way
+ * in, so there is nothing to guard against here and a cast would only be this
+ * file forgetting that.
+ */
+function fieldName(fieldId: FieldId | null): string {
+  if (!fieldId) return "—";
+  return FIELDS.get(fieldId)?.name ?? fieldId;
 }
 
 /**
@@ -187,6 +201,25 @@ export async function runCommand(
     if (!hit) throw new Error(`Nie ma miejsca ${printed}.`);
     return hit;
   };
+
+  /**
+   * The seat a Postać command names: `3` or `MAGOG`, and never both.
+   *
+   * Both of these act on a *figure* rather than on a chair or a person, so the
+   * Karta's own printed name is as good a handle as the seat number — and for
+   * `revive` it is the better one, because the thing you are naming is exactly
+   * the card that is lying in the box.
+   */
+  const pickedSeat = (printed: number | null, characterId: string | null): SeatRow => {
+    if (printed !== null) return seatByNumber(printed);
+    if (characterId !== null) {
+      const hit = seats.find((seat) => seat.character_id === characterId);
+      if (!hit) throw new Error(`${characterName(characterId)} nie stoi przy tym stole.`);
+      return hit;
+    }
+    return seatOf(null);
+  };
+
 
   /**
    * What to call a seat in a line printed back.
@@ -411,9 +444,36 @@ export async function runCommand(
       return `${user.name} runs the table.`;
     }
 
-    case "remove":
-    case "revive":
-      throw new Error(`\`${command.kind}\` czeka na listę Postaci poza grą — jeszcze nie działa.`);
+    /* ----------------------------------------------------------------------
+     * Postacie in and out of the game (4.4).
+     * ------------------------------------------------------------------- */
+
+    /**
+     * A Postać out of the game, named by its seat or by what is printed on it.
+     *
+     * The console passes `byId: null`, which is what lets it take a *dead* one
+     * off 4.4's list — a host may only withdraw a Postać that is still playing.
+     * Both are journalled `manual`, because both are breaks in a rulebook that
+     * removes a Postać exactly once and never puts one back.
+     */
+    case "remove": {
+      const seat = pickedSeat(command.seat, command.characterId);
+      const { characterId, dropped } = await removeCharacter(gameId, seat.id, command.hard, null);
+      const spilled =
+        dropped.length === 0
+          ? ""
+          : ` Left on ${fieldName(seat.field_id)}: ${dropped.map((id) => cardName(id)).join(", ")}.`;
+      return `${characterName(characterId)} is out of the game${
+        command.hard ? " for good" : " — the Karta goes back in the pool"
+      }.${spilled}`;
+    }
+
+    /** The undo for a death that should not have happened. */
+    case "revive": {
+      const seat = pickedSeat(command.seat, command.characterId);
+      const back = await reviveCharacter(gameId, seat.id);
+      return `${characterName(back)} stands up again on ${fieldName(seat.field_id)}.`;
+    }
 
     case "give": {
       const seat = seatOf(null);

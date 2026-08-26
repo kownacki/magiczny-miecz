@@ -112,6 +112,22 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
 
   const gone: Changeset = {
     seats: [{ id: seatId, patch: { eliminated: true } }],
+    /**
+     * "Jej Kartę odłożyć do pozostałych nie biorących udziału w grze" (4.4).
+     *
+     * Written here because here is the only place that still knows which card
+     * it was. The seat keeps `character_id` for now — a dead seat showing whose
+     * figure fell is worth having, and `revive` needs it — but the moment its
+     * player picks again under 4.4 the column is overwritten, and then nothing
+     * anywhere would remember that the Kapłanka is out of this game.
+     *
+     * Read off the snapshot and written back whole, so two deaths in one turn
+     * cannot lose one: `merge` resolves two writes to a column as *later wins*,
+     * never as a sum. Nothing else writes this column in the same changeset.
+     */
+    ...(seat?.character_id && !snapshot.game.characters_out.includes(seat.character_id)
+      ? { game: { characters_out: [...snapshot.game.characters_out, seat.character_id] } }
+      : {}),
     journal: [
       {
         seatId,

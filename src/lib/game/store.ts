@@ -88,6 +88,16 @@ export interface GameRow {
   turn_state: unknown;
   /** Shuffled event deck; null in companion mode, where the table holds it. */
   deck: unknown;
+  /**
+   * The Karty Postaci that are out of the game (4.4).
+   *
+   * A list because nothing else remembers. "Jej Kartę odłożyć do pozostałych
+   * nie biorących udziału w grze" — and the dead character's id used to be read
+   * off the seat that held it, which works exactly until that player picks
+   * again and the id is overwritten. So 4.4 survived until the first death and
+   * then quietly returned every dead character to the pool.
+   */
+  characters_out: string[];
 }
 
 /**
@@ -96,7 +106,7 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 export const GAME_COLUMNS =
-  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck";
+  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =

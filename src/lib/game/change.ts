@@ -629,9 +629,18 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
     if (error) throw new Failure(`commit(fieldCards.delete): ${error.message}`);
   }
   if (writes.fieldCards?.insert?.length) {
-    const { error } = await db
-      .from("field_cards")
-      .insert(writes.fieldCards.insert.map((one) => ({ game_id: gameId, ...one })));
+    const { error } = await db.from("field_cards").insert(
+      writes.fieldCards.insert.map((one) => ({
+        game_id: gameId,
+        ...one,
+        // Spelled out rather than spread, exactly as the holdings insert above
+        // does it: the field is optional in a `Changeset` and `not null` in the
+        // table, and an omitted one spreads as `undefined`, which PostgREST
+        // sends as null and the column refuses. It cost a half-written commit
+        // the first time a card went down that nobody had conjured.
+        granted: one.granted ?? false,
+      })),
+    );
     if (error) throw new Failure(`commit(fieldCards.insert): ${error.message}`);
   }
 

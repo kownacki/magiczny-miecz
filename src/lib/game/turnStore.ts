@@ -100,6 +100,11 @@ import {
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
 import {
+  removeCharacter as removeCharacterOn,
+  reviveCharacter as reviveCharacterOn,
+  type Removed,
+} from "./commands/withdraw";
+import {
   TROPHY_RATE,
   buyGoods as buyGoodsFor,
   payHealer as payHealerFor,
@@ -832,6 +837,26 @@ export async function turnToStone(gameId: string, seatId: string): Promise<void>
     (snapshot) => ({ writes: turnToStoneOn(snapshot, { seatId }), result: undefined }),
     undefined,
   );
+}
+
+/**
+ * A Postać out of the game, and everything it carried onto its Obszar (12.1).
+ *
+ * `byId` null is the console, which may also take a *dead* one off 4.4's list —
+ * see `removeCharacter` for why that is a different permission from the rest.
+ */
+export async function removeCharacter(
+  gameId: string,
+  seatId: string,
+  hard: boolean,
+  byId: string | null,
+): Promise<Removed> {
+  return change(gameId, removeCharacterOn, { seatId, hard, byId });
+}
+
+/** A dead Postać standing up again, where it fell. Console-only. */
+export async function reviveCharacter(gameId: string, seatId: string): Promise<string> {
+  return change(gameId, reviveCharacterOn, { seatId });
 }
 
 /**

@@ -352,13 +352,21 @@ export async function takeNewCharacter(
     throw new Error("Ta Postać wciąż żyje.");
   }
 
-  // The dead character's own card is out of the game — "jej Kartę odłożyć do
-  // pozostałych nie biorących udziału w grze" — and so is everybody else's, so
-  // the choice is from what nobody has held. The surprise sentinel is in this
-  // set too and harmlessly matches no Karta Postaci.
-  const spent = new Set(
-    snapshot.seats.filter((s) => s.character_id).map((s) => s.character_id as string),
-  );
+  /**
+   * What is not available: what somebody is holding, and what is out of the game.
+   *
+   * The second half is 4.4 — "jej Kartę odłożyć do pozostałych nie biorących
+   * udziału w grze" — and it is a list on the games row rather than a fact
+   * about a seat, because the seat that held the dead card is the very seat
+   * about to overwrite it with the new one. Without `characters_out` a
+   * character died and was back in the pool one pick later.
+   *
+   * The surprise sentinel is in this set too and harmlessly matches no Karta.
+   */
+  const spent = new Set([
+    ...snapshot.seats.filter((s) => s.character_id).map((s) => s.character_id as string),
+    ...snapshot.game.characters_out,
+  ]);
 
   /**
    * The surprise, settled here and now.
@@ -377,6 +385,12 @@ export async function takeNewCharacter(
     wanted = left[await pickBelow(ports.random, left.length, "nowa Postać")].id;
   }
 
+  if (snapshot.game.characters_out.includes(wanted)) {
+    // Said apart from the one below it: "already in the game" is wrong about a
+    // card nobody is holding, and sends somebody looking round the table for a
+    // figure that is lying in the box.
+    throw new Error("Ta Postać wypadła już z gry (4.4).");
+  }
   if (spent.has(wanted)) throw new Error("Ta Postać jest już w grze.");
   const character = CHARACTERS.find((c) => c.id === wanted);
   if (!character) throw new Error(`Nieznana postać: ${wanted}`);
@@ -589,6 +603,12 @@ export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): O
     (other) => other.id !== seat.id && other.character_id === character.id,
   );
   if (rival) throw new Error(`${character.name} jest już wybrana przez kogoś innego.`);
+  // Only reachable at a table that has been played on and reopened — the
+  // poczekalnia has no dead characters — but the rule is the deal's, not the
+  // moment's.
+  if (snapshot.game.characters_out.includes(character.id)) {
+    throw new Error(`${character.name} wypadła już z gry (4.4).`);
+  }
 
   return {
     writes: merge(unready(snapshot, seat), {
@@ -664,9 +684,11 @@ export async function dealCharacters(
   // be holding it, and none of them is holding a card. `asCharacterId` is the
   // whole filter: it answers null both for "nothing chosen" and for "the
   // surprise", which are exactly the two that hold no card.
-  const taken = new Set(
-    snapshot.seats.map((seat) => asCharacterId(seat.character_id)).filter((id) => id !== null),
-  );
+  const taken = new Set([
+    ...snapshot.seats.map((seat) => asCharacterId(seat.character_id)).filter((id) => id !== null),
+    // 4.4's, and dealt around for the same reason it is chosen around.
+    ...snapshot.game.characters_out,
+  ]);
   const pool = CHARACTERS.filter((character) => !taken.has(character.id));
 
   /**

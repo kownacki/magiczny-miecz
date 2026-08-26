@@ -104,6 +104,8 @@ export function aTable(over: TableOver = {}): Snapshot {
     journal_seq: 12,
     turn_state: { phase: "roll" },
     deck: noDeck(),
+    /** 4.4's list, empty until somebody dies. */
+    characters_out: [],
     ...(over.game ?? {}),
   };
   const seats = over.seats ?? [aSeat()];

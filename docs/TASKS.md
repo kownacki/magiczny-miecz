@@ -403,20 +403,21 @@ See **Wariant: ekwipunek slotowy** in [COVERAGE.md](COVERAGE.md).
 
 ---
 
-# IN FLIGHT — separating people from Postacie
+# Separating people from Postacie — landed
 
-**The table is up.** The database was wiped and re-shaped and the app has
-followed it all the way out to the screen: the engine, the commands, the three
-stores, the routes, the console, the browser, and 1,720 tests. A game can be
-opened, joined, left, come back to and played.
+**Done.** The database was wiped and re-shaped and the app has followed it all
+the way out to the screen: the engine, the commands, the three stores, the
+routes, the console, the browser, and 1,737 tests. A game can be opened, joined,
+left, come back to and played; a Postać can die, be barred, and be stood back
+up.
 
-What is left is 4.4's list of Postacie out of the game, which nothing writes
-yet. That is the last item, and it is a rules gap rather than a migration one.
+`npx tsc --noEmit` was the work list and is clean. Eleven of the things these
+passes turned up were invisible to it and five reached the database — every
+write in `store.ts` goes through an untyped handle — so trust the prose here
+over the compiler.
 
-`npx tsc --noEmit` was the work list and is now clean, which means it has
-stopped being one: nothing that remains fails to compile. **Nine** things these
-two passes turned up were invisible to it and four reached the database — see
-**Done** — so trust the prose here over the compiler.
+What is left is not migration, and is written at the bottom under **Still
+open**.
 
 ## The model, in one paragraph
 
@@ -506,6 +507,18 @@ visible to `tsc`:
   player at it could seat nobody. It now skips chairs that are driven or have a
   Postać standing on them, which is what "free" means.
 
+And two from the 4.4 pass:
+
+- **`commit` sent `granted: undefined` to a `not null` column.** The field-cards
+  insert spread the row through where its sibling above it spells the default
+  out, so the first card put down by something that did not set the flag — a
+  coin, from a withdrawn Postać's purse — failed the statement half way through
+  a commit. Found by running it, not by reading it.
+- **`characters_out` was in the schema and nowhere in the code**: not on
+  `GameRow`, not in `GAME_COLUMNS`, read and written by nothing. The column had
+  been added with the migration and the code never caught up, so 4.4 was a
+  comment in `db/schema.sql` describing a rule the app did not have.
+
 ## The client, and the three things that had to arrive with it
 
 The envelope carries **`me`** and **`users`** now, and `me` is the whole of what
@@ -532,22 +545,37 @@ absence where the honest answer is an invitation. And people driving no chair
 are listed under the seats, which is the first time a spectator has been drawn
 anywhere at all.
 
-## Left
+## 4.4's list, and the two words that were waiting on it
 
-1. **4.4** — nothing writes `games.characters_out` yet. Death adds; soft
-   `remove` and `revive` take off; `pick` chooses from neither-seated-nor-listed.
-   Until this lands, a dead Postać silently returns to the pool. `remove` and
-   `revive` are the two console words still refused out loud.
+`games.characters_out` is written now. **Death adds** — in `killSeat`, which is
+the only place that still knows which card it was, since the seat's
+`character_id` is overwritten the moment its player picks again. **`pick`,
+`chooseCharacter` and the deal** all choose from what is neither seated nor
+listed, and a card that is out says so ("wypadła już z gry") rather than
+claiming somebody is holding it. And `commands/withdraw.ts` is the pair the
+rulebook has no word for:
 
-   **What went with `removeSeat`, and has to come back here.** The host's
-   removal used to spill the Postać's kit onto its Obszar under 12.1 — the
-   Przedmioty and Przyjaciele face up, the Złoto as one `1-sztuka-zlota` card
-   per coin, and *not* the Zaklęcia, which nobody ever saw (9.3). `leaveTable`
-   deliberately does none of that: it takes the person and leaves the figure
-   standing. So the rule now lives nowhere, and its tests went with the
-   function. `killSeat` in `life.ts` is the surviving half — 4.4's version,
-   which spills the same things but not the gold — and is the thing to write
-   `remove` against.
+- **`remove`** empties the chair and spills the kit onto its Obszar under 12.1 —
+  Przedmioty and Przyjaciele face up, the Złoto as one `1-sztuka-zlota` per
+  coin, the Zaklęcia back to the pile because nobody ever saw them (9.3). Soft
+  puts the Karta back in the pool; `hard` bars it. The permission is the settled
+  one: a host may withdraw a *living* Postać, and only the console may take a
+  **dead** one off the list.
+- **`revive`** stands a dead Postać back up where it fell, on its own points and
+  4.2's four Życia, and brings nothing back that was left on the field.
+
+Both are journalled `override` with `manual: true`, because both contradict a
+rulebook that removes a Postać exactly once and never puts one back.
+
+## Still open
+
+1. **Nothing calls `removeCharacter` with a `byId`.** The host's half of the
+   rule is written and tested; no button reaches it. The console passes null and
+   is the only caller, so a host who wants a Postać out has to type it.
+2. **Companion mode is still parked** (`COMPANION_PARKED`), and this work
+   touched it: `no_device` is gone, so the host seating somebody by hand is now
+   a chair nobody is driving. `mayChooseFor` and `dealCharacters` agree about
+   that. Nothing else has been checked against it, because nothing runs it.
 
 ## Two decisions a fresh session would otherwise re-derive
 
