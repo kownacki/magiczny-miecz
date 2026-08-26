@@ -576,6 +576,12 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
  *
  * Kept from a screen reader: the first token in the pile already announces the
  * parameter and its value, and this adds nothing a listener does not have.
+ *
+ * Drawn as a żeton and not as a control. It was a dashed outline over the panel
+ * for a while, which is the costume every button in this app wears — so the one
+ * square on the rail that does nothing was the one square that looked like it
+ * did. It wears the pile's own field and ink instead: last in the row, plainly
+ * part of it, and plainly not a number.
  */
 function MoreThanFits({
   stat,
@@ -587,19 +593,65 @@ function MoreThanFits({
   size: number;
   lift?: number;
 }) {
+  const { field, ink } = TOKEN_INK[stat] ?? TOKEN_INK.sword;
+  /**
+   * Three dots, drawn rather than typed.
+   *
+   * A "…" is text, and text on a line sits on its baseline: centring the line
+   * box in the square leaves the ink four and a half pixels low, because an
+   * ellipsis is all descender-less and hugs the bottom of the em. Measured, not
+   * guessed — but the correction is a share of Inter's own metrics, and a
+   * magic percentage that quietly stops being right if the font ever falls back
+   * is a worse thing to leave behind than three circles.
+   *
+   * Sized off `size` so they stay the same dots at whatever a żeton is drawn
+   * at, and heavy enough to read as the printed ink rather than as punctuation.
+   */
+  const dot = Math.max(2, Math.round(size * 0.18));
+  const gap = Math.max(1, Math.round(size * 0.07));
   return (
     <span
-      style={{ width: size, height: size, marginTop: lift }}
+      style={{ width: size, height: size, marginTop: lift, background: field }}
       aria-hidden
-      // Dashed, because everything printed in the box has a solid edge and this
-      // is the one square that is not a żeton. The padding is what lifts the
-      // ellipsis off its baseline into the middle of the square.
-      className={`flex items-center justify-center rounded-[2px] border border-dashed border-current/60 bg-night/70 pb-[4px] text-[13px] leading-none ${STAT_COLOUR[stat]}`}
+      // The coins carry a shadow because they overlap and a stack needs its
+      // edges; the żetony sit apart and do not. Whichever pile this ends, it
+      // is drawn the way the pictures above it are.
+      className={`flex items-center justify-center rounded-[2px] ${
+        lift === undefined ? "" : "shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
+      }`}
     >
-      …
+      {[0, 1, 2].map((index) => (
+        <span
+          key={index}
+          style={{
+            width: dot,
+            height: dot,
+            background: ink,
+            marginLeft: index === 0 ? 0 : gap,
+          }}
+          className="rounded-full"
+        />
+      ))}
     </span>
   );
 }
+
+/**
+ * The two colours printed on a żeton, read off the scans rather than guessed:
+ * the field it is printed on and the ink of the numeral standing on it.
+ *
+ * `MoreThanFits` is the one square on a rail that is drawn instead of
+ * photographed, and this is what keeps it from announcing the fact.
+ */
+const TOKEN_INK: Record<string, { field: string; ink: string }> = {
+  sword: { field: "#ff4f14", ink: "#fff300" },
+  magic: { field: "#404491", ink: "#f0f8f1" },
+  life: { field: "#009640", ink: "#fff508" },
+  // The coin is the one with nothing to copy: it carries no numeral, so it has
+  // no ink of its own and the dots take a dark gold — the colour a stamp on a
+  // coin would be, against the yellow the rest of the stack is.
+  gold: { field: "#fff300", ink: "#6f5300" },
+};
 
 function RailStat({
   label,
