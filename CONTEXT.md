@@ -42,6 +42,25 @@ Folding a **Changeset** into a **Snapshot** in memory, so a later step sees an
 earlier one's work without reading the table again.
 _Avoid_: reduce, project, simulate
 
+### Being told about a change
+
+**Envelope**:
+What one device is sent about the table, worked out from a **Snapshot** for one
+seat: the read-model counterpart to a **Changeset**. Two devices at the same
+table get two different Envelopes off the same Snapshot, because a spell hand
+is concealed (9.3).
+_Avoid_: payload, DTO, response, state (the browser's copy is an Envelope, not
+a Snapshot — it never sees the deck, and never sees another seat's hidden
+cards)
+
+**Permission**:
+Whether a seat may take a named action right now, and why — a pure question
+about a **Snapshot**, not about a session. Refusing one is 409: the seat is
+known and the moment is wrong.
+_Avoid_: auth, authorization, guard, policy (the seat is already identified by
+the time a Permission is asked for; a 403 has happened or not happened
+already)
+
 ### Where the effects come from
 
 **Port**:
@@ -70,6 +89,10 @@ moment, which is the whole reason they are ports.
 - A **Port** has one **Binding** per mode, plus a scripted one for tests
 - Commands live one per cluster under `src/lib/game/commands/`; `turnStore.ts`
   keeps the old name as a one-line entry point until everything has crossed
+- An **Envelope** and a **Changeset** are the two things a **Snapshot** turns
+  into: what one seat is told, and what the table becomes
+- A route handler does the I/O and nothing else — find the game, prove the
+  seat, ask for a **Permission**, run a **Command** or build an **Envelope**
 
 ## Example dialogue
 
