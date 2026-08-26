@@ -620,12 +620,36 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
 
           A latecomer gets it unasked, because for them it is not an offer:
           they have just sat down and there is nothing else on the screen for
-          them to do. Closing it still leaves the line above as the way back. */}
-      {mySeat?.eliminated && (reborn || !mySeat.character_id) && (
+          them to do. Closing it still leaves the line above as the way back.
+
+          Three ways to be sitting here with no Postać in play, and the gate
+          used to know two. A death leaves `eliminated` set and the Karta on the
+          seat; a latecomer arrives eliminated with no Karta at all. A *withdrawn*
+          Postać is neither — `remove` clears `eliminated` on purpose, because a
+          chair with nothing standing in it is waiting rather than dead — so its
+          player sat there reading "bez postaci" with nothing on screen to press.
+          The question the gate is really asking is whether this seat has a
+          Postać in play, so that is what it asks. */}
+      {mySeat &&
+        (mySeat.eliminated || !mySeat.character_id) &&
+        (reborn || !mySeat.character_id) && (
         <RebornModal
           characters={CHARACTERS}
+          /**
+           * Everything nobody may take: what is being played, and what 4.4 put
+           * aside.
+           *
+           * The second half used to be missing, so the picker offered a Postać
+           * that had died or been withdrawn for good and the server refused it
+           * on the way in. Being told no *after* choosing is worse than not
+           * being offered — and the list is on the games row already, so the
+           * client had it all along and was not looking.
+           */
           taken={
-            new Set(seats.map((seat) => seat.character_id).filter(Boolean) as string[])
+            new Set([
+              ...(seats.map((seat) => seat.character_id).filter(Boolean) as string[]),
+              ...(game.characters_out ?? []),
+            ])
           }
           arriving={!mySeat.character_id}
           busy={busy}

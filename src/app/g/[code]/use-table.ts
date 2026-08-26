@@ -56,6 +56,15 @@ export interface Game {
   mode: string;
   status: string;
   active_seat: number | null;
+  /**
+   * Karty Postaci that are out of the game — 4.4's "odłożyć do pozostałych nie
+   * biorących udziału w grze", plus anything withdrawn for good.
+   *
+   * Public, and it has to be: the picker uses it to stop offering a Postać the
+   * server would refuse, and being told no after choosing is worse than not
+   * being offered.
+   */
+  characters_out: string[];
   turn: number;
   revision: number;
   die_source: string;
