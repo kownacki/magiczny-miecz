@@ -60,10 +60,28 @@ anything.
   that holds `SEAT_COLOURS` cannot claim to be only the rules. Everything effectful arrives through a port. This is what makes
   the rules testable, and it is the only reason one engine can serve both a
   physical table and a browser simulation.
-- **Randomness and card identity are ports, not branches.** `RandomPort` is
-  bound to a human typing what they rolled, or to an RNG; `DeckPort` to a human
-  naming the card they drew, or to a shuffled virtual deck. Rules code must
-  never learn which. Mode is configuration.
+- **A write to the game goes through a Command.** A rule reads a `Snapshot`,
+  returns a `Changeset` naming the rows to write, and `commit` writes them under
+  a compare-and-swap on `games.revision` — the games row is taken first and acts
+  as the lock, so a loser writes nothing at all rather than half of something.
+  The sixteen files in `src/lib/game/commands/` are 5,600 lines of that one
+  shape, and `turnStore.ts` is the thin dispatcher over them: zero `db.from`,
+  zero hand-rolled journal writes. Do not add either back. Two traps worth
+  knowing before you write one: `merge` resolves two writes to the same column
+  as *later wins*, never a sum, so anything that reads a column and writes it
+  back — above all `game.deck` through `putOnPile` — must chain through
+  `apply(snapshot, soFar)`; and a command is a pure function of its snapshot and
+  its ports, which is the only reason every one of them has tests and none of
+  them needs a database. `src/lib/game/store.ts` is the last of the old pattern,
+  to be converted rather than copied.
+- **Randomness is a port, not a branch.** `RandomPort` is bound to a human
+  typing what they rolled, to an RNG, or to `scriptedRandom` in a test, and
+  rules code must never learn which. It is the only port left: `DeckPort` and
+  `ChoicePort` were deleted as furniture — see the note at the top of
+  `src/lib/engine/ports.ts`. Which card comes up is settled by handing a command
+  the shuffled pile, and a human choice arrives as `Decisions`, a list of
+  numbers the server re-walks the card against, so a card cannot be talked into
+  doing something it does not say.
 - **No client ever queries Supabase for game state.** Each player holds spells
   hidden from the others (9.3). RLS is on with zero policies; every read and
   write goes through a route handler that decides what that seat may see. The
