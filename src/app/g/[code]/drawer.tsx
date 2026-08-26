@@ -23,6 +23,15 @@ import { useEffect, useRef } from "react";
 import { LAYER } from "./layers";
 import { useEscape } from "./overlay";
 
+/**
+ * Every drawer currently on screen.
+ *
+ * A click has to be tested against all of them at once: with the shelf out on
+ * the left and the roster on the right, a click in one is outside the other,
+ * and each would have dismissed the one it was not in.
+ */
+const open = new Set<HTMLElement>();
+
 export function Drawer({
   side,
   title,
@@ -61,9 +70,28 @@ export function Drawer({
    */
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
+    const element = panel.current;
+    if (!element) return;
+    open.add(element);
+    return () => {
+      open.delete(element);
+    };
+  }, []);
+
+  useEffect(() => {
     const away = (event: PointerEvent) => {
       const target = event.target as Node | null;
-      if (target && !panel.current?.contains(target)) onClose();
+      if (!target) return;
+      // Outside *every* drawer, not just this one. A table can have one open
+      // down each side, and reaching into the other one is not leaving this
+      // one — it is the pair of them being used together, which is the whole
+      // reason they sit on opposite edges instead of taking turns.
+      for (const element of open) if (element.contains(target)) return;
+      // Nor is the bar elsewhere. It is what opens these, so a click on it is
+      // most often "and the other one too" — closing this one on the way would
+      // make the two mutually exclusive by accident.
+      if (target instanceof Element && target.closest("[data-table-bar]")) return;
+      onClose();
     };
     // `pointerdown`, not `click`: a drag that starts outside and ends inside
     // should still count as having left, and a click that never lands — the

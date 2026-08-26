@@ -236,7 +236,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /** A card somebody tapped, shown large with its full text. */
   const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
   /** The reference drawer of every card in the box. */
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  /**
+   * Which drawer is out on each side, at most one apiece.
+   *
+   * A side rather than a flag per drawer, because that is the rule: the two
+   * sit on opposite edges so both can be out at once, and a side has room for
+   * exactly one. Naming the side rather than the drawer means the third one to
+   * be written swaps with whatever is already there instead of being drawn on
+   * top of it, and nobody has to remember to close the other first.
+   */
+  const [leftDrawer, setLeftDrawer] = useState<"karty" | null>(null);
   /** The stacks, drawn as stacks (`piles.tsx`). */
   const [piles, setPiles] = useState(false);
   /**
@@ -310,7 +319,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /** Whether the "choose again" modal is open (4.4). */
   const [reborn, setReborn] = useState(false);
   /** The roster, open over the right-hand column. */
-  const [players, setPlayers] = useState(false);
+  const [rightDrawer, setRightDrawer] = useState<"gracze" | null>(null);
   /**
    * Something that happened to this character and has to be said out loud.
    *
@@ -1302,7 +1311,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           isHost={mySeat?.is_host === true}
           hostAway={seats.find((seat) => seat.is_host)?.abandoned_at !== null}
           onStart={() => post("start", {})}
-          onLibrary={() => setLibraryOpen(true)}
+          onLibrary={() => setLeftDrawer("karty")}
         />
       </>
     );
@@ -1359,7 +1368,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       <TableLayout
         drawer={
           <>
-          {libraryOpen && (
+          {leftDrawer === "karty" && (
             <CardLibrary
               eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
               nature={asNature(mySeat?.nature)}
@@ -1369,10 +1378,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               {...(testing && mySeatIndex !== null
                 ? { onGrant: (cardId: string) => post("debug", { action: "grant", cardId }) }
                 : {})}
-              onClose={() => setLibraryOpen(false)}
+              onClose={() => setLeftDrawer(null)}
             />
           )}
-            {players ? (
+            {rightDrawer === "gracze" ? (
             <PlayersDrawer
               // Every seat, in seat order, this one included — see the note on the
               // component about why the roster it replaces left you out.
@@ -1383,7 +1392,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               amHost={mySeat?.is_host === true}
               room={seats.length < MAX_SEATS}
               busy={busy}
-              onClose={() => setPlayers(false)}
+              onClose={() => setRightDrawer(null)}
               onInspect={setInspectingCard}
               onClaim={mySeatIndex === null ? claimSeat : undefined}
               onKick={
@@ -1395,7 +1404,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               onJoin={
                 mySeatIndex === null
                   ? () => {
-                      setPlayers(false);
+                      setRightDrawer(null);
                       join("");
                     }
                   : undefined
@@ -1447,13 +1456,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   not about the turn — so it lives up here with the rest of
                   them, and stays reachable while a fight is open. */}
               <button
-                onClick={() => setPlayers(true)}
+                onClick={() => setRightDrawer("gracze")}
                 className="text-ochre/80 transition hover:text-ochre"
               >
                 Gracze <span className="tnum text-muted">{seats.length}</span>
               </button>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
-              <button onClick={() => setLibraryOpen(true)} className="text-ochre/80 hover:text-ochre">
+              <button onClick={() => setLeftDrawer("karty")} className="text-ochre/80 hover:text-ochre">
                 Karty
               </button>
               {/* Loud on purpose while it is on. Everything it unlocks writes a
@@ -1749,7 +1758,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 own pack, and open while a fight is — see `players.tsx`. What
                 stays here is the one line that says it is there. */}
             <button
-              onClick={() => setPlayers(true)}
+              onClick={() => setRightDrawer("gracze")}
               className="mt-3 w-full rounded border border-edge/60 px-2 py-1.5 text-left text-[11px] text-muted transition hover:border-ochre hover:text-ink"
             >
               Gracze przy stole:{" "}

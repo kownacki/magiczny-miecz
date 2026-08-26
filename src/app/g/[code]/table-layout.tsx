@@ -48,6 +48,10 @@ export function TableLayout({
           moment that is least true. `bg-night` because the modals' own backdrop
           would otherwise show through it. */}
       <header
+        // Marked so a drawer can tell the bar apart from "elsewhere": clicking
+        // the bar is never a way of being finished with a drawer, and clicking
+        // it is usually a way of opening the other one. See `drawer.tsx`.
+        data-table-bar
         className={`relative flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-edge bg-night px-4 py-2 ${LAYER.bar}`}
       >
         {header}
