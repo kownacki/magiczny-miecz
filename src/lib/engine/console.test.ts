@@ -1,5 +1,5 @@
 import { describe as suite, expect, it } from "vitest";
-import { COMMANDS, complete, helpLines, parseCommand, pickPlayer } from "./console";
+import { COMMANDS, complete, helpLines, parseCommand, pickPlayer, statReply } from "./console";
 
 const ok = (line: string) => {
   const parsed = parseCommand(line);
@@ -16,7 +16,7 @@ suite("reading a line", () => {
   it("splits a verb from a number somebody glued to it", () => {
     // `sword+1` is what a hand types in a hurry. Split only where the sign or
     // the digit begins, so a name with a number in it is never broken.
-    expect(ok("sword+1")).toEqual({ kind: "stat", stat: "miecz", delta: 1, who: null });
+    expect(ok("sword+1")).toEqual({ kind: "stat", stat: "miecz", delta: 1, who: null, force: false });
     expect(ok("gold+5 Ola")).toMatchObject({ delta: 5, who: "Ola" });
     expect(ok("gold-2")).toMatchObject({ delta: -2 });
   });
@@ -42,9 +42,9 @@ suite("reading a line", () => {
 
 suite("moving a parameter", () => {
   it("reads a sign, and reads a bare number as a gain", () => {
-    expect(ok("gold +5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, who: null });
-    expect(ok("gold 5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, who: null });
-    expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, who: null });
+    expect(ok("gold +5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, who: null, force: false });
+    expect(ok("gold 5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, who: null, force: false });
+    expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, who: null, force: false });
   });
 
   it("knows the four parameters, and only by their English names", () => {
@@ -63,6 +63,15 @@ suite("moving a parameter", () => {
   it("takes a player after the amount, and nobody as yourself", () => {
     expect(ok("life -1 Ola")).toMatchObject({ who: "Ola" });
     expect(ok("life -1")).toMatchObject({ who: null });
+  });
+
+  it("takes `force` after the player, because it is about the change", () => {
+    expect(ok("magic -1 force")).toMatchObject({ who: null, force: true });
+    expect(ok("magic -1 Ola force")).toMatchObject({ who: "Ola", force: true });
+    expect(ok("magic -1 Ola")).toMatchObject({ who: "Ola", force: false });
+    // Only as the last word. Somebody actually called Force would be found by
+    // `pickPlayer` and told there is nobody by that name, which is the truth.
+    expect(ok("magic -1 force Ola")).toMatchObject({ who: "force Ola", force: false });
   });
 
   it("refuses an amount that is not a whole number of points", () => {
@@ -375,7 +384,7 @@ suite("finishing a half-typed line", () => {
  */
 const USAGE: Record<string, { line: string; becomes: unknown }> = {
   help: { line: "help", becomes: { kind: "help" } },
-  gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "zloto", delta: 5, who: "Ola" } },
+  gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "zloto", delta: 5, who: "Ola", force: false } },
   kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
   revive: {
     line: "revive Ola as MAGOG",
@@ -453,6 +462,54 @@ suite("every command, once each", () => {
     expect(ok("move Karczma")).toEqual(ok("go Karczma"));
     expect(ok("pass")).toEqual(ok("endturn"));
     expect(Object.keys(alias).length).toBe(7);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Saying what a parameter did.
+ * ------------------------------------------------------------------------ */
+
+suite("what the console says a parameter did", () => {
+  const said = (over: Partial<Parameters<typeof statReply>[0]>) =>
+    statReply({ who: "Michał", stat: "magia", asked: -1, moved: -1, now: 2, ...over });
+
+  it("says the change when the whole of it landed", () => {
+    expect(said({})).toBe("Michał: magia -1 → 2");
+    expect(said({ asked: 2, moved: 2, now: 5 })).toBe("Michał: magia +2 → 5");
+  });
+
+  /**
+   * The bug this exists for. A Magia at its floor answered "magia -1 → 3",
+   * which is the value it ended on and reads exactly like it worked — twice in
+   * a row, identically, which is how it was found.
+   */
+  it("says nothing happened, rather than printing the value it did not change", () => {
+    expect(said({ moved: 0, now: 3 })).toBe(
+      "Michał: magia stays at 3 — magia cannot go below the 3 this character started with (1.3, 2.3) — say `force` to.",
+    );
+  });
+
+  it("says how much of it landed when the floor took the rest", () => {
+    expect(said({ asked: -5, moved: -2, now: 3 })).toContain("magia -2 → 3, not -5");
+  });
+
+  it("does not offer `force` to somebody who already said it", () => {
+    expect(said({ moved: 0, now: 0, forced: true })).toBe(
+      "Michał: magia stays at 0 — magia cannot go below 0.",
+    );
+    expect(said({ forced: true })).toBe("Michał: magia -1 → 2 (forced)");
+  });
+
+  it("says the ceiling in its own words, not the floor's", () => {
+    expect(said({ asked: 500, moved: 0, now: 999 })).toBe(
+      "Michał: magia stays at 999 — magia stops at 999.",
+    );
+  });
+
+  it("says it for Złoto without quoting a rule about own points", () => {
+    expect(said({ stat: "zloto", moved: 0, now: 0 })).toBe(
+      "Michał: zloto stays at 0 — zloto cannot go below 0.",
+    );
   });
 });
 

@@ -28,7 +28,13 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
-import { helpLines, pickPlayer, type Command, type EffectName } from "@/lib/engine/console";
+import {
+  helpLines,
+  pickPlayer,
+  statReply,
+  type Command,
+  type EffectName,
+} from "@/lib/engine/console";
 import { type Effect } from "@/lib/engine/cardScript";
 import {
   afterFight,
@@ -92,7 +98,7 @@ import {
   type CrossOutcome,
 } from "./commands/bridge";
 import { claimFloor, releaseFloor } from "./commands/spellFloor";
-import { ADJUSTABLE, adjustSeat, type Adjustable } from "./commands/adjust";
+import { ADJUSTABLE, adjustSeat, type Adjustable, type Adjusted } from "./commands/adjust";
 import type { JournalKind } from "@/lib/engine/journal";
 import {
   dropCard as dropCardOn,
@@ -131,7 +137,7 @@ import {
 // Still this module's published surface while the rest of the store moves
 // across; both now live in `decks.ts`.
 export { freshDecks };
-export type { Adjustable };
+export type { Adjustable, Adjusted };
 export { STONE_TURNS, TROPHY_RATE };
 export type { BridgeOrdealResult, BridgeOutcome, CrossOutcome };
 export type { Decisions, Resolution, UseResult };
@@ -788,8 +794,9 @@ export async function adjust(
   delta: number,
   reason: string | null,
   record: { kind: JournalKind; manual: boolean } = { kind: "korekta", manual: true },
-): Promise<void> {
-  await change(gameId, adjustSeat, { seatId, stat, delta, reason, record });
+  force = false,
+): Promise<Adjusted> {
+  return change(gameId, adjustSeat, { seatId, stat, delta, reason, record, force });
 }
 
 /**
@@ -1385,10 +1392,26 @@ export async function runCommand(
 
     case "stat": {
       const seat = seatOf(command.who);
-      await adjust(gameId, seat.id, command.stat as Adjustable, command.delta, "tryb testowy");
-      const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
-      const now = after ? (after as unknown as Record<string, number>)[ADJUSTABLE[command.stat]] : "?";
-      return `${named(seat)}: ${command.stat} ${command.delta > 0 ? "+" : ""}${command.delta} → ${now}`;
+      const done = await adjust(
+        gameId,
+        seat.id,
+        command.stat as Adjustable,
+        command.delta,
+        command.force ? "tryb testowy (wymuszone)" : "tryb testowy",
+        undefined,
+        command.force,
+      );
+      // The sentence is `statReply`'s, in the pure half, and it is written
+      // against `moved` rather than against the delta: a change the floor
+      // swallowed used to be reported as though it had happened.
+      return statReply({
+        who: named(seat),
+        stat: command.stat,
+        asked: command.delta,
+        moved: done.moved,
+        now: done.to,
+        forced: command.force,
+      });
     }
 
     case "kill": {

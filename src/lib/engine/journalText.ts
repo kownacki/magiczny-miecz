@@ -121,6 +121,37 @@ function cardName(id: unknown): string {
  * payload has no field at all, and the raw value when it names one the board
  * has never heard of.
  */
+/**
+ * What the floor did to a change, when it did anything.
+ *
+ * 1.3 and 2.3 hold a character's own Miecz and Magia at or above the values it
+ * started with, and Życie and Złoto at nothing, so a card that takes a point
+ * from a character with none to give does nothing at all. It still *happened* —
+ * the card was drawn, the rule was applied, and two turns later somebody will
+ * ask why that Magia is still 3 — so the line says both: what was taken, and
+ * that it came to nothing.
+ *
+ * Empty when the whole of it landed, which is almost always, so the common line
+ * is the short one.
+ */
+function held(data: Record<string, unknown>): string {
+  if (typeof data.from !== "number" || typeof data.to !== "number") return "";
+  const asked = num(data.delta);
+  const moved = data.to - data.from;
+  if (moved === asked || asked === 0) return "";
+
+  const stat = data.stat === "miecz" ? "Miecz" : data.stat === "magia" ? "Magia" : null;
+  const why =
+    asked > 0
+      ? `wyżej niż ${data.to} nie idzie`
+      : stat
+        ? `${stat} nie spada poniżej ${data.to} (1.3, 2.3)`
+        : "nie ma poniżej czego zejść";
+  return moved === 0
+    ? ` — bez zmiany: ${why}`
+    : ` — z tego ${Math.abs(moved)}: ${why}`;
+}
+
 function fieldName(id: unknown): string {
   if (typeof id !== "string") return "?";
   const known = asFieldId(id);
@@ -415,6 +446,7 @@ export function describe(
       const sign = delta > 0 ? `+${delta}` : String(delta);
       return line(
         `${who}: ${String(data.stat ?? "?")} ${sign} (${num(data.from)} → ${num(data.to)})` +
+          `${data.forced === true ? " — wymuszone" : held(data)}` +
           `${data.reason ? ` — ${data.reason}` : ""}.`,
       );
     }
@@ -433,6 +465,7 @@ export function describe(
               `${data.stat === "miecz" ? "Miecza" : "Magii"}`;
       return line(
         `${who} ${delta > 0 ? "zyskuje" : "traci"} ${what}` +
+          `${held(data)}` +
           `${typeof data.reason === "string" && data.reason ? ` — ${data.reason}` : ""}.`,
       );
     }

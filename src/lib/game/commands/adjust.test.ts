@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { aSeat, aTable } from "../fixture";
-import { adjustSeat } from "./adjust";
+import { CEILING, adjustSeat } from "./adjust";
 
 const table = (over: Parameters<typeof aSeat>[0] = {}) =>
   aTable({
@@ -94,5 +94,92 @@ describe("correcting somebody down to nothing", () => {
   it("does not kill anybody on the way down to a number above zero", () => {
     const { writes } = correct({ zycie: 4 }, "zycie", -1);
     expect(writes.journal?.map((line) => line.kind)).toEqual(["korekta"]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * The floor, the ceiling, and the one way past the floor.
+ * ------------------------------------------------------------------------ */
+
+describe("what a change is allowed to reach", () => {
+  const floored = () => table({ magia_own: 3, magia_floor: 3, miecz_own: 5, miecz_floor: 2 });
+
+  it("reports what moved, which is not always what was asked for", () => {
+    const { result } = adjustSeat(floored(), {
+      seatId: "seat-a",
+      stat: "magia",
+      delta: -1,
+      reason: null,
+    });
+    // The number nothing was reading. Both surfaces that talk about a change —
+    // the console's reply and the card's notice — used to say the delta, and so
+    // reported a change the floor had swallowed as though it had happened.
+    expect(result).toEqual({ moved: 0, to: 3 });
+  });
+
+  it("takes only as much as there is above the floor", () => {
+    const { result } = adjustSeat(floored(), {
+      seatId: "seat-a",
+      stat: "miecz",
+      delta: -9,
+      reason: null,
+    });
+    expect(result).toEqual({ moved: -3, to: 2 });
+  });
+
+  /**
+   * `force` lifts 1.3 and 2.3, which is the whole of what test mode is for: a
+   * character weaker than the one printed on its card is otherwise unreachable,
+   * because the floor *is* the printed value and nothing in the box lowers it.
+   */
+  it("goes below the floor when forced, and says so in the journal", () => {
+    const { writes, result } = adjustSeat(floored(), {
+      seatId: "seat-a",
+      stat: "magia",
+      delta: -2,
+      reason: "tryb testowy",
+      force: true,
+    });
+    expect(result).toEqual({ moved: -2, to: 1 });
+    expect(writes.journal?.[0]).toMatchObject({ payload: { forced: true, from: 3, to: 1 } });
+  });
+
+  it("stops at nothing even when forced, because below zero is not weaker", () => {
+    const { result } = adjustSeat(floored(), {
+      seatId: "seat-a",
+      stat: "magia",
+      delta: -50,
+      reason: null,
+      force: true,
+    });
+    expect(result).toEqual({ moved: -3, to: 0 });
+  });
+
+  it("leaves an ordinary change unmarked, so `forced` means something", () => {
+    const { writes } = adjustSeat(floored(), {
+      seatId: "seat-a",
+      stat: "zloto",
+      delta: 1,
+      reason: null,
+    });
+    expect(writes.journal?.[0].payload).not.toHaveProperty("forced");
+  });
+
+  /**
+   * Two orders of magnitude above anything in the box, so it can only ever
+   * catch a typo — or a test reaching for a number to see what the interface
+   * does with it. `force` lifts a rule; it does not lift arithmetic.
+   */
+  it("holds every number under the ceiling, forced or not", () => {
+    for (const force of [false, true]) {
+      const { result } = adjustSeat(table({ zloto: 5 }), {
+        seatId: "seat-a",
+        stat: "zloto",
+        delta: 50_000,
+        reason: null,
+        force,
+      });
+      expect(result).toEqual({ moved: CEILING - 5, to: CEILING });
+    }
   });
 });

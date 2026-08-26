@@ -57,7 +57,7 @@ export type EffectName = "fog" | "frozen" | "barred";
 export type Command =
   | { kind: "help" }
   | { kind: "kill"; who: string | null }
-  | { kind: "stat"; stat: StatName; delta: number; who: string | null }
+  | { kind: "stat"; stat: StatName; delta: number; who: string | null; force: boolean }
   | { kind: "give"; cardId: string }
   | { kind: "place"; cardId: string; fieldId: FieldId | null }
   | { kind: "go"; fieldId: FieldId }
@@ -95,8 +95,8 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "gold",
     aliases: ["sword", "magic", "life"],
-    usage: "gold +5 [player]",
-    summary: "move a parameter by a signed amount",
+    usage: "gold +5 [player] [force]",
+    summary: "move a parameter — `force` pushes past 1.3's floor, down to 0",
   },
   { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
   {
@@ -246,14 +246,22 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "help" || word === "?") return { ok: { kind: "help" } };
 
   if (word in STATS) {
-    const [amount, ...who] = tail.split(/\s+/).filter(Boolean);
+    const [amount, ...rest2] = tail.split(/\s+/).filter(Boolean);
     if (!amount) return { error: `How much? ${usageOf("gold")}` };
     // A bare number is a gain, because "gold 5" plainly means five more of it.
     const delta = Number(amount.startsWith("+") ? amount.slice(1) : amount);
     if (!Number.isInteger(delta) || delta === 0) {
       return { error: `\`${amount}\` is not a whole number of points.` };
     }
-    return { ok: { kind: "stat", stat: STATS[word], delta, who: who.join(" ") || null } };
+    /**
+     * `force` last, after the player, because it is about the change and not
+     * about who it lands on: `magic -1 Ola force`. A word rather than a flag,
+     * so it reads as the sentence it is and Tab finishes it like everything
+     * else — and last, so the common line never has to step over it.
+     */
+    const force = rest2.length > 0 && rest2[rest2.length - 1].toLowerCase() === "force";
+    const who = (force ? rest2.slice(0, -1) : rest2).join(" ");
+    return { ok: { kind: "stat", stat: STATS[word], delta, who: who || null, force } };
   }
 
   if (word === "kill") return { ok: { kind: "kill", who: tail || null } };
@@ -383,6 +391,50 @@ function usageOf(command: string): string {
 }
 
 /**
+ * What to say about a parameter that was asked to move.
+ *
+ * Written against what actually moved, never against what was asked for. The
+ * store clamps — 1.3 and 2.3 hold own Miecz and Magia at or above the values
+ * the character started with, Życie and Złoto at nothing, and everything at
+ * `CEILING` — and it clamps silently, which is right, because the rule is the
+ * rule. The console then printed the resulting value, so asking to take a point
+ * off a Magia already at its floor answered "magia -1 → 3" and read exactly
+ * like it had worked. Twice in a row, identically, which is how it was found.
+ *
+ * Here rather than beside the database, because that is where the mistake was:
+ * a sentence assembled where nothing could ask it what it would say.
+ */
+export function statReply(said: {
+  who: string;
+  stat: StatName;
+  /** What the line asked for. */
+  asked: number;
+  /** What the parameter moved by, which a floor or the ceiling may have cut. */
+  moved: number;
+  /** Where it ended up. */
+  now: number;
+  /** Whether the line said `force`, which lifts the floor under own points. */
+  forced?: boolean;
+}): string {
+  const signed = (n: number) => `${n > 0 ? "+" : ""}${n}`;
+  const mark = said.forced ? " (forced)" : "";
+  if (said.moved === said.asked) {
+    return `${said.who}: ${said.stat} ${signed(said.moved)} → ${said.now}${mark}`;
+  }
+
+  const own = said.stat === "miecz" || said.stat === "magia";
+  const limit =
+    said.asked > 0
+      ? `${said.stat} stops at ${said.now}`
+      : own && !said.forced
+        ? `${said.stat} cannot go below the ${said.now} this character started with (1.3, 2.3) — say \`force\` to`
+        : `${said.stat} cannot go below ${said.now}`;
+  return said.moved === 0
+    ? `${said.who}: ${said.stat} stays at ${said.now} — ${limit}.`
+    : `${said.who}: ${said.stat} ${signed(said.moved)} → ${said.now}, not ${signed(said.asked)} — ${limit}.`;
+}
+
+/**
  * Which of the people at the table a `[player]` names.
  *
  * By player, by character, or by seat number — whichever is on the screen when
@@ -466,7 +518,7 @@ export function complete(
     }
     // A stat takes its amount first and a player after it; everything else
     // takes its one argument straight away.
-    if (stat) return { pool: [...players], at: 2 };
+    if (stat) return { pool: [...players, "force"], at: 2 };
     if (verb === "give" || verb === "card") return { pool: HOLDABLE.map((c) => c.name), at: 1 };
     if (verb === "place" || verb === "put" || verb === "drop") {
       // Which half of the line is being typed. Past the `at`, the names on

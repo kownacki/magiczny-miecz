@@ -427,6 +427,62 @@ const PAYLOADS: Record<string, Record<string, unknown>> = {
   punkty: { stat: "zycie", delta: -1 },
 };
 
+/* ---------------------------------------------------------------------------
+ * A change the floor refused.
+ * ------------------------------------------------------------------------ */
+
+suite("points a rule would not let through", () => {
+  /**
+   * It happened, and it came to nothing, and the journal owes the table both.
+   *
+   * A card that takes a Magia off a character with none to give was read off
+   * the delta alone — "traci 1 punkt Magii" — so the feed said a point was lost
+   * and the number beside the character never moved. Two turns later somebody
+   * asks why, and the record of the game is what they ask.
+   */
+  it("says a card's point was taken and that nothing came of it", () => {
+    expect(text("punkty", { stat: "magia", delta: -1, from: 3, to: 3 })).toBe(
+      "Michał (GOBLIN) traci 1 punkt Magii — bez zmiany: Magia nie spada poniżej 3 (1.3, 2.3).",
+    );
+  });
+
+  it("says how much of it landed when only part did", () => {
+    expect(text("punkty", { stat: "miecz", delta: -3, from: 4, to: 2 })).toBe(
+      "Michał (GOBLIN) traci 3 punkty Miecza — z tego 2: Miecz nie spada poniżej 2 (1.3, 2.3).",
+    );
+  });
+
+  it("does not quote a rule about own points at Złoto", () => {
+    expect(text("punkty", { stat: "zloto", delta: -2, from: 0, to: 0 })).toContain(
+      "bez zmiany: nie ma poniżej czego zejść",
+    );
+  });
+
+  it("says the ceiling in its own words", () => {
+    expect(text("punkty", { stat: "zloto", delta: 5, from: 999, to: 999 })).toContain(
+      "bez zmiany: wyżej niż 999 nie idzie",
+    );
+  });
+
+  it("says nothing extra when the whole of it landed", () => {
+    expect(text("punkty", { stat: "magia", delta: -1, from: 4, to: 3 })).toBe(
+      "Michał (GOBLIN) traci 1 punkt Magii.",
+    );
+  });
+
+  it("marks a correction that was forced past the floor", () => {
+    expect(text("korekta", { stat: "magia", delta: -2, from: 3, to: 1, forced: true })).toBe(
+      "Michał (GOBLIN): magia -2 (3 → 1) — wymuszone.",
+    );
+  });
+
+  it("says as much on a correction the floor refused", () => {
+    expect(text("korekta", { stat: "magia", delta: -1, from: 3, to: 3 })).toContain(
+      "bez zmiany: Magia nie spada poniżej 3",
+    );
+  });
+});
+
 suite("spending a card by using it", () => {
   it("says it the same way for every card", () => {
     expect(text("uzycie", { cardId: "eliksir-sily" })).toBe("Michał (GOBLIN) używa: ELIKSIR SIŁY.");

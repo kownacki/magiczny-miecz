@@ -196,6 +196,8 @@ async function walk(
       if (hit.length === 0) return nothing(["nikogo to nie dotyczy"]);
 
       let writes: Changeset = {};
+      /** What the seats actually moved by, which the floor under own points may cut. */
+      const each: number[] = [];
       for (const target of hit) {
         const row = snapshot.seats.find((s) => s.seat_index === target.seatIndex);
         if (!row) continue;
@@ -209,10 +211,27 @@ async function walk(
           record: { kind: "punkty", manual: false },
         });
         writes = merge(writes, done.writes);
+        each.push(done.result.moved);
       }
       const sign = effect.delta > 0 ? "+" : "−";
       const many = Math.abs(effect.delta);
-      return { writes, result: { did: [`${sign}${many} ${amountOf(effect.stat, many)}`], pending: null } };
+      const asked = `${sign}${many} ${amountOf(effect.stat, many)}`;
+      /**
+       * What it did, and not what the card asked for.
+       *
+       * 1.3 and 2.3 put a floor under own points, so a card taking a Magia off
+       * a character that has none to give does nothing — and this line, read
+       * off the delta, used to say "−1 Magii" anyway. The player then holds a
+       * card that plainly did not work and a message saying it did.
+       */
+      const stopped = each.length > 0 && each.every((moved) => moved === 0);
+      return {
+        writes,
+        result: {
+          did: [stopped ? `${asked} — bez zmiany, nie ma poniżej czego zejść` : asked],
+          pending: null,
+        },
+      };
     }
 
     case "tura-stracona": {
