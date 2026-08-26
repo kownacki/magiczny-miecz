@@ -39,6 +39,69 @@ import { useEscape } from "./overlay";
  */
 const open: HTMLElement[] = [];
 
+/**
+ * The two ways out, for anything laid over the table.
+ *
+ * Extracted because the console is one of these and was not built as one. It
+ * is docked along the bottom rather than down a side and keeps its own chrome,
+ * but "Escape closes the newest thing" and "a click on the game closes the
+ * newest thing" are not properties of a shape — they are the rules of the
+ * surface, and a surface outside them is the one that breaks them for
+ * everybody. The console had an Escape of its own on its input, so one press
+ * ran that *and* the stack: the console closed and a drawer went with it.
+ *
+ * Pass null to switch it off. The console stays mounted and renders nothing
+ * while shut, so without that it would sit in both registries invisibly and
+ * swallow the first Escape meant for something else.
+ */
+export function useDismissable<T extends HTMLElement>(onClose: (() => void) | null) {
+  useEscape(onClose);
+
+  const panel = useRef<T>(null);
+  const enabled = onClose !== null;
+
+  useEffect(() => {
+    const element = panel.current;
+    if (!enabled || !element) return;
+    open.push(element);
+    return () => {
+      const at = open.lastIndexOf(element);
+      if (at !== -1) open.splice(at, 1);
+    };
+    // Only opening and closing may reorder this — see the note on `open`. The
+    // callback is deliberately not a dependency: a parent re-rendering with a
+    // fresh closure would otherwise move this surface back to the top and hand
+    // it a dismissal meant for whatever is really newest.
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const away = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      // Inside *any* of them, not just this one. With the shelf out on the
+      // left and the roster on the right, a click in one is outside the other,
+      // and each would have dismissed the one it was not in.
+      for (const element of open) if (element.contains(target)) return;
+      // Nor is the bar elsewhere. It is what opens these, so a click on it is
+      // most often "and the other one too" — closing this one on the way would
+      // make them mutually exclusive by accident.
+      if (target instanceof Element && target.closest("[data-table-bar]")) return;
+      // And only the newest leaves. Whichever edge it is on, one click away
+      // closes one surface and the next closes the one under it.
+      if (open[open.length - 1] !== panel.current) return;
+      onClose?.();
+    };
+    // `pointerdown`, not `click`: a drag that starts outside and ends inside
+    // should still count as having left, and a click that never lands — the
+    // pointer moving off before release — should not leave it open.
+    window.addEventListener("pointerdown", away);
+    return () => window.removeEventListener("pointerdown", away);
+  }, [enabled, onClose]);
+
+  return panel;
+}
+
 export function Drawer({
   side,
   title,
@@ -56,8 +119,6 @@ export function Drawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  useEscape(onClose);
-
   /**
    * Clicking away, without covering the page to notice it.
    *
@@ -75,43 +136,7 @@ export function Drawer({
    * from the page being live rather than being a separate decision: a drawer
    * you can scroll behind is a drawer you can click behind.
    */
-  const panel = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const element = panel.current;
-    if (!element) return;
-    open.push(element);
-    return () => {
-      const at = open.lastIndexOf(element);
-      if (at !== -1) open.splice(at, 1);
-    };
-  }, []);
-
-  useEffect(() => {
-    const away = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      // Outside *every* drawer, not just this one. A table can have one open
-      // down each side, and reaching into the other one is not leaving this
-      // one — it is the pair of them being used together, which is the whole
-      // reason they sit on opposite edges instead of taking turns.
-      for (const element of open) if (element.contains(target)) return;
-      // And only the newest leaves. Whichever side it is on, one click away
-      // closes one drawer; the next closes the one under it. Closing both at
-      // once was the old behaviour and it never had a reason — with two open
-      // you are using two, and the pair is the point.
-      if (open[open.length - 1] !== panel.current) return;
-      // Nor is the bar elsewhere. It is what opens these, so a click on it is
-      // most often "and the other one too" — closing this one on the way would
-      // make the two mutually exclusive by accident.
-      if (target instanceof Element && target.closest("[data-table-bar]")) return;
-      onClose();
-    };
-    // `pointerdown`, not `click`: a drag that starts outside and ends inside
-    // should still count as having left, and a click that never lands — the
-    // pointer moving off before release — should not leave it open.
-    window.addEventListener("pointerdown", away);
-    return () => window.removeEventListener("pointerdown", away);
-  }, [onClose]);
+  const panel = useDismissable<HTMLElement>(onClose);
 
   return (
     <aside

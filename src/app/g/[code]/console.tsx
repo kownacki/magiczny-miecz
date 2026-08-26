@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
 import { COMMANDS, complete } from "@/lib/engine/console";
 import { LAYER } from "./layers";
+import { useDismissable } from "./drawer";
 
 /**
  * A line to type at, instead of a button for every test.
@@ -38,6 +39,17 @@ export function TestConsole({
   /** Runs one line and answers with what to print — the reply, or the refusal. */
   onRun: (line: string) => Promise<string>;
 }) {
+  /**
+   * The bottom edge of the same system the drawers are in.
+   *
+   * It is not shaped like them — docked across the foot, its own chrome, above
+   * the modals rather than under them — but it is dismissed like them: Escape
+   * and a click on the game both take the newest surface and only that one.
+   * `open` gates it, because this component stays mounted and draws nothing
+   * while shut, and a shut console must not be holding anybody's Escape.
+   */
+  const panel = useDismissable<HTMLElement>(open ? onClose : null);
+
   const [line, setLine] = useState("");
   /**
    * Whether the log is given most of the window, the way the Dziennik's
@@ -122,6 +134,7 @@ export function TestConsole({
 
   return (
     <section
+      ref={panel}
       /**
        * Above everything, including the sheets.
        *
@@ -197,7 +210,9 @@ export function TestConsole({
           onChange={(event) => setLine(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") return void run();
-            if (event.key === "Escape") return onClose();
+            // Escape is not handled here. It belongs to the stack in
+            // `overlay.tsx`, which closes the newest surface and nothing else —
+            // and a second handler on the input meant one press ran both.
             /**
              * Tab finishes what is being typed.
              *
