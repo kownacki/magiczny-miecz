@@ -110,6 +110,10 @@ for use as an icon where a whole card would be a grey smear.
 `node scripts/export-tokens.mjs` cuts the thirteen Żetony Pomocnicze — Miecz,
 Magia and Życie in denominations of 1 to 4, and the Sztuka Złota — off `MM -
 Żetony.pdf` into `public/tokens/`, which is committed.
+`node scripts/export-card-back.mjs` cuts the one card back the box prints —
+five ZDARZENIE backs share sheet 9's reverse with the Zamieniony w Kamień
+cards, the Dobry/Zły markers and the standees, which is why there is no
+"(tyły)" sheet to look for — into `public/cards/back.jpg`, committed.
 `node scripts/generate-ids.mjs` regenerates `src/data/ids.ts` — the literal
 id types — and must be re-run after anything that renames a card or a
 character. Then `node scripts/export-card-images.mjs` writes the

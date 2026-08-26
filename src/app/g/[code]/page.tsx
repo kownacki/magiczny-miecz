@@ -59,9 +59,20 @@ import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { describeResult } from "@/lib/engine/noticeText";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { PlayersDrawer } from "./players";
+import { PilesView } from "./piles";
 import { dismissableOpen } from "./overlay";
 
 const CHARACTERS = characters as Character[];
+
+/**
+ * How many of each the box prints — 165 and 30, said on the manual's first page
+ * and counted again by the slicer, which cut exactly that many out of the scans.
+ *
+ * Read off the data rather than typed in, so the day a card turns out to be
+ * missing from a scan this number moves with it instead of quietly disagreeing.
+ */
+const PRINTED_EVENTS = (events as EventCard[]).length;
+const PRINTED_SPELLS = (spells as Spell[]).length;
 const EVENTS = events as EventCard[];
 
 /**
@@ -226,6 +237,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
   /** The reference drawer of every card in the box. */
   const [libraryOpen, setLibraryOpen] = useState(false);
+  /** The stacks, drawn as stacks (`piles.tsx`). */
+  const [piles, setPiles] = useState(false);
   /**
    * Testing rather than playing — see `testMode.ts`.
    *
@@ -1014,6 +1027,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
 
+      {piles && game.deckCounts && (
+        <PilesView
+          counts={game.deckCounts}
+          printed={{ events: PRINTED_EVENTS, spells: PRINTED_SPELLS }}
+          onClose={() => setPiles(false)}
+        />
+      )}
+
       {/* Offered, never forced — 4.4 says *może*. Opened from the line on the
           dead character's card and closed back to it.
 
@@ -1399,7 +1420,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   trace. The number after the slash is the stos zużytych — what
                   a reshuffle will bring back. */}
               {game.deckCounts && (
-                <span className="flex items-baseline gap-3 text-[11px] text-muted/70">
+                <button
+                  onClick={() => setPiles(true)}
+                  title="Zobacz stosy"
+                  className="flex items-baseline gap-3 text-[11px] text-muted/70 transition hover:text-ink"
+                >
                   <span title="Karty Zdarzeń: w talii / na stosie zużytych">
                     Zdarzenia{" "}
                     <span className="tnum text-ink/70">
@@ -1414,7 +1439,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       <span className="text-muted/50">/{game.deckCounts.spells.discard}</span>
                     </span>
                   </span>
-                </span>
+                </button>
               )}
             </div>
             <div className="flex items-center gap-4 text-[11px]">
