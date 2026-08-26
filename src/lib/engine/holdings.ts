@@ -25,11 +25,11 @@ export type HoldingKind = Holding["kind"];
  */
 export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | null {
   switch (card.cardClass) {
-    case "przedmiot":
+    case "item":
       return "item";
-    case "przyjaciel":
+    case "friend":
       return "friend";
-    case "wrog":
+    case "foe":
       return "trophy";
     default:
       // Spotkania, Nieznajomi and Miejsca are resolved and set aside; nobody

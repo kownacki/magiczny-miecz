@@ -118,8 +118,8 @@ describe("taking a card", () => {
       game: {
         turn_state: onField({
           drawn: [
-            { cardId: "cyklop", cardClass: "wrog" },
-            { cardId: "helm", cardClass: "przedmiot" },
+            { cardId: "cyklop", cardClass: "foe" },
+            { cardId: "helm", cardClass: "item" },
           ],
         }),
       },
@@ -133,7 +133,7 @@ describe("taking a card", () => {
     const beaten = table({
       game: {
         turn_state: onField({
-          drawn: [{ cardId: "cyklop", cardClass: "wrog" }],
+          drawn: [{ cardId: "cyklop", cardClass: "foe" }],
           fought: ["cyklop"],
         }),
       },
@@ -208,8 +208,8 @@ describe("taking a card", () => {
       game: {
         turn_state: onField({
           drawn: [
-            { cardId: "helm", cardClass: "przedmiot" },
-            { cardId: "tarcza", cardClass: "przedmiot" },
+            { cardId: "helm", cardClass: "item" },
+            { cardId: "tarcza", cardClass: "item" },
           ],
         }),
       },

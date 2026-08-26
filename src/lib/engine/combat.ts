@@ -77,13 +77,13 @@ export function attackAsOne(
  * which is why `preventable` is reported alongside.
  */
 export interface Spoils {
-  options: readonly ["zycie", "przedmiot", "zloto"];
+  options: readonly ["zycie", "item", "zloto"];
   preventable: boolean;
 }
 
 export function spoilsFor(kind: CombatKind): Spoils {
   return {
-    options: ["zycie", "przedmiot", "zloto"] as const,
+    options: ["zycie", "item", "zloto"] as const,
     // 17.9 lets an item or spell prevent the point of Życie in ordinary combat;
     // 18.2b removes that possibility entirely in magical combat.
     preventable: kind === "zwykla",

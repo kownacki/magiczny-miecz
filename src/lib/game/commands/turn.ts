@@ -67,7 +67,7 @@ export function tickEffects(snapshot: Snapshot, seatId: string): Changeset {
  * its work by the end of the turn, because 16.1 and 16.5 make obeying it
  * compulsory. A Przedmiot is not like that.
  */
-const CONSUMED_BY_READING = new Set(["spotkanie", "nieznajomy", "miejsce"]);
+const CONSUMED_BY_READING = new Set(["encounter", "stranger", "place"]);
 
 export function leaveCardsBehind(
   snapshot: Snapshot,

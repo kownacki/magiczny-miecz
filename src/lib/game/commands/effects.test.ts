@@ -465,7 +465,7 @@ describe("a Karta drawn onto the Obszar (16.1)", () => {
           fieldId: "karczma",
           from: null,
           draw: 1,
-          drawn: [{ cardId, cardClass: "spotkanie" }],
+          drawn: [{ cardId, cardClass: "encounter" }],
         },
       },
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],

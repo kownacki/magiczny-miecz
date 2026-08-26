@@ -9,36 +9,39 @@ import type { CharacterId, EventId, ItemId, SpellId } from "./ids";
  * not cosmetic. Sorting by them is how a turn gets resolved correctly.
  */
 export const CARD_CLASS = {
-  spotkanie: 1,
-  wrog: 2,
+  encounter: 1,
+  foe: 2,
   // III is not used by any base-game card. Rule 16.3 singles out the Demon as a
   // second kind of Wróg, which is the likeliest owner of the gap; no card was
   // found printing it.
-  nieznajomy: 4,
+  stranger: 4,
   // Przedmiot and Przyjaciel BOTH print V — verified against the card headers,
   // and matching rule 16.6, which names "Przedmioty, Przedmioty Magiczne i
   // Przyjaciele" together in a single clause. They resolve as equals, and the
   // sort is stable, so cards of equal rank keep the order they were drawn in.
-  przyjaciel: 5,
-  przedmiot: 5,
-  miejsce: 6,
+  friend: 5,
+  item: 5,
+  place: 6,
 } as const;
 
 export type CardClass = keyof typeof CARD_CLASS;
 
 /**
- * How each class is actually printed on the cards. The keys are ASCII-folded
- * because they are identifiers; the board and the cards say "Wróg" and
- * "Przyjaciel", so anything shown to a player has to come from here rather than
- * from the key.
+ * How each class is actually printed on the cards.
+ *
+ * The keys are English because they are identifiers and the code branches on
+ * them; the board and the cards say "Wróg" and "Przyjaciel", so anything shown
+ * to a player comes from here rather than from the key. The card *names* are
+ * another matter and stay as printed — MAGICZNY MIECZ is what the card is
+ * called, not a term this app chose.
  */
 export const CARD_CLASS_LABEL: Record<CardClass, string> = {
-  spotkanie: "Spotkanie",
-  wrog: "Wróg",
-  nieznajomy: "Nieznajomy",
-  przyjaciel: "Przyjaciel",
-  przedmiot: "Przedmiot",
-  miejsce: "Miejsce",
+  encounter: "Spotkanie",
+  foe: "Wróg",
+  stranger: "Nieznajomy",
+  friend: "Przyjaciel",
+  item: "Przedmiot",
+  place: "Miejsce",
 };
 
 export type Nature = "dobra" | "zla" | "chaotyczna";

@@ -548,7 +548,7 @@ export function takeFromField(
   const guarded = snapshot.fieldCards.some(
     (row) =>
       row.field_id === seat.field_id &&
-      EVENTS.find((card) => card.id === row.card_id)?.cardClass === "wrog" &&
+      EVENTS.find((card) => card.id === row.card_id)?.cardClass === "foe" &&
       !fought.includes(row.card_id),
   );
   if (guarded) throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");

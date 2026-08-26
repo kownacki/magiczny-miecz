@@ -333,7 +333,7 @@ describe("ruch (10.2, 13.4)", () => {
     expect(writes.fieldCards).toEqual({ delete: ["fc-1"] });
     expect(writes.game?.turn_state).toMatchObject({
       draw: 3,
-      drawn: [{ cardId: "helm", cardClass: "przedmiot" }],
+      drawn: [{ cardId: "helm", cardClass: "item" }],
     });
   });
 

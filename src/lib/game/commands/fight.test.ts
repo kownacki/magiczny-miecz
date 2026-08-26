@@ -20,7 +20,7 @@ const pole = (over: Partial<Extract<TurnPhase, { phase: "pole" }>> = {}): TurnPh
   fieldId: "mroczna-polana",
   from: null,
   draw: 1,
-  drawn: [{ cardId: "cyklop", cardClass: "wrog" }],
+  drawn: [{ cardId: "cyklop", cardClass: "foe" }],
   ...over,
 });
 
@@ -38,7 +38,7 @@ const walka = (over: Partial<Fight> = {}): TurnPhase => ({
     result: null,
     fieldId: "mroczna-polana",
     draw: 1,
-    drawn: [{ cardId: "cyklop", cardClass: "wrog" }],
+    drawn: [{ cardId: "cyklop", cardClass: "foe" }],
     fought: ["cyklop"],
     ...over,
   } as Fight,
@@ -90,8 +90,8 @@ describe("otwarcie walki (17.4, 17.5)", () => {
 
   it("sums several creatures into one opponent (17.5)", () => {
     const two = table({ drawn: [
-      { cardId: "cyklop", cardClass: "wrog" },
-      { cardId: "nobbin", cardClass: "wrog" },
+      { cardId: "cyklop", cardClass: "foe" },
+      { cardId: "nobbin", cardClass: "foe" },
     ] });
     const { writes } = beginFight(two, { cardIds: ["cyklop", "nobbin"] });
     expect(fightIn(writes)).toMatchObject({ enemyTotal: 8, cardName: "CYKLOP + NOBBIN" });
@@ -105,7 +105,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
   });
 
   it("reads Magia against a magiczny Wróg (18.2)", () => {
-    const magical = table({ drawn: [{ cardId: "demon", cardClass: "wrog" }] });
+    const magical = table({ drawn: [{ cardId: "demon", cardClass: "foe" }] });
     const { writes } = beginFight(magical, { cardIds: ["demon"] });
     expect(fightIn(writes)).toMatchObject({ kind: "magiczna", enemyTotal: 6, playerTotal: 1 });
   });
@@ -128,7 +128,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
   /** A staged fight is one the deck never dealt, and the sheet says so. */
   it("carries the staged mark through from the stack", () => {
     const staged = table({
-      drawn: [{ cardId: "cyklop", cardClass: "wrog", granted: true }],
+      drawn: [{ cardId: "cyklop", cardClass: "foe", granted: true }],
     });
     const { writes } = beginFight(staged, { cardIds: ["cyklop"] });
     expect(fightIn(writes).granted).toBe(true);
@@ -532,8 +532,8 @@ describe("ucieczka (17.6, 19)", () => {
     });
 
   const twoWrogowie = [
-    { cardId: "cyklop", cardClass: "wrog" as const },
-    { cardId: "nobbin", cardClass: "wrog" as const },
+    { cardId: "cyklop", cardClass: "foe" as const },
+    { cardId: "nobbin", cardClass: "foe" as const },
   ];
 
   it("takes the character away from everything standing here, not just the one it faced (19.1)", () => {

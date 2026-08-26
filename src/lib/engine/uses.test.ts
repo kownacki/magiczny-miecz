@@ -4,7 +4,7 @@ import type { EventCard } from "@/data/types";
 import { USES, USE_VERB, USE_VERB_PAST, askAbout, isUsable, usageOf } from "./uses";
 import { isConsumedOnResolve } from "./cardScript";
 
-const PRZEDMIOTY = (events as EventCard[]).filter((card) => card.cardClass === "przedmiot");
+const PRZEDMIOTY = (events as EventCard[]).filter((card) => card.cardClass === "item");
 const byId = new Map<string, EventCard>(PRZEDMIOTY.map((card) => [card.id, card]));
 
 describe("which cards are spent by using them", () => {

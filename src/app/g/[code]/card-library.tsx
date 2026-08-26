@@ -43,20 +43,20 @@ type Shelf = "zaklecia" | "wyposazenie" | "postacie" | "obszary" | CardClass;
 const TAKEABLE: ReadonlySet<Shelf> = new Set<Shelf>([
   "zaklecia",
   "wyposazenie",
-  "przedmiot",
-  "przyjaciel",
+  "item",
+  "friend",
 ]);
 
 const SHELVES: { key: Shelf; label: string }[] = [
   { key: "zaklecia", label: "Zaklęcia" },
   { key: "wyposazenie", label: "Wyposażenie" },
   { key: "postacie", label: "Postacie" },
-  { key: "przedmiot", label: "Przedmioty" },
-  { key: "przyjaciel", label: "Przyjaciele" },
-  { key: "wrog", label: "Wrogowie" },
-  { key: "spotkanie", label: "Spotkania" },
-  { key: "nieznajomy", label: "Nieznajomi" },
-  { key: "miejsce", label: "Miejsca" },
+  { key: "item", label: "Przedmioty" },
+  { key: "friend", label: "Przyjaciele" },
+  { key: "foe", label: "Wrogowie" },
+  { key: "encounter", label: "Spotkania" },
+  { key: "stranger", label: "Nieznajomi" },
+  { key: "place", label: "Miejsca" },
 ];
 
 /**

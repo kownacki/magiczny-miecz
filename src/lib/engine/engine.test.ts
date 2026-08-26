@@ -285,9 +285,9 @@ describe("the Beast (14.7)", () => {
 describe("card resolution order (15.2, 16.4)", () => {
   it("resolves by ascending class numeral", () => {
     const drawn = [
-      { cardId: "zloto", cardClass: "przedmiot" as const },
-      { cardId: "niedzwiedz", cardClass: "wrog" as const },
-      { cardId: "sciezka", cardClass: "spotkanie" as const },
+      { cardId: "zloto", cardClass: "item" as const },
+      { cardId: "niedzwiedz", cardClass: "foe" as const },
+      { cardId: "sciezka", cardClass: "encounter" as const },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual([
       "sciezka",
@@ -298,8 +298,8 @@ describe("card resolution order (15.2, 16.4)", () => {
 
   it("keeps draw order within one class", () => {
     const drawn = [
-      { cardId: "a", cardClass: "wrog" as const },
-      { cardId: "b", cardClass: "wrog" as const },
+      { cardId: "a", cardClass: "foe" as const },
+      { cardId: "b", cardClass: "foe" as const },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["a", "b"]);
   });

@@ -95,7 +95,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
     const { writes } = drawCard(table(), { named: null, shuffle: never });
     expect(writes.game?.turn_state).toMatchObject({
       phase: "pole",
-      drawn: [{ cardId: "cyklop", cardClass: "wrog", ref: eventRef("cyklop") }],
+      drawn: [{ cardId: "cyklop", cardClass: "foe", ref: eventRef("cyklop") }],
     });
   });
 
@@ -128,7 +128,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
       game: {
         turn_state: onField({
           draw: 2,
-          drawn: [{ cardId: "helm", cardClass: "przedmiot", ref: eventRef("helm") }],
+          drawn: [{ cardId: "helm", cardClass: "item", ref: eventRef("helm") }],
         }),
         deck: piles({ events: pile([eventRef("cyklop")]) }),
       },
@@ -192,7 +192,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
 
     it("takes the named card and never touches a pile", () => {
       const { writes, result } = drawCard(physical(), {
-        named: { cardId: "cyklop", cardClass: "wrog" },
+        named: { cardId: "cyklop", cardClass: "foe" },
         shuffle: never,
       });
 
@@ -202,14 +202,14 @@ describe("ciągnięcie Karty Zdarzeń", () => {
         seatId: "seat-a",
         turn: 3,
         kind: "karta",
-        payload: { cardId: "cyklop", cardClass: "wrog", source: "fizyczna" },
+        payload: { cardId: "cyklop", cardClass: "foe", source: "fizyczna" },
       });
     });
 
     /** The referee is usable before the deck is transcribed: an unknown id is not an error. */
     it("still records a card nobody has transcribed", () => {
       const { result } = drawCard(physical(), {
-        named: { cardId: "smok-z-tarnowa", cardClass: "wrog" },
+        named: { cardId: "smok-z-tarnowa", cardClass: "foe" },
         shuffle: never,
       });
       expect(result.card).toBeNull();

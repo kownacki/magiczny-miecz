@@ -804,7 +804,7 @@ export function escape(
     const sweep =
       byAbility && przed === "wrog"
         ? before.fight.drawn
-            .filter((entry) => entry.cardClass === "wrog")
+            .filter((entry) => entry.cardClass === "foe")
             .map((entry) => entry.cardId)
         : [];
     left = {
@@ -824,7 +824,7 @@ export function escape(
      * to be fought. Succeeding looked exactly like failing.
      */
     const fled = byAbility
-      ? before.drawn.filter((entry) => entry.cardClass === "wrog").map((entry) => entry.cardId)
+      ? before.drawn.filter((entry) => entry.cardClass === "foe").map((entry) => entry.cardId)
       : [];
     if (fled.length > 0) {
       left = {

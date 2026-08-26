@@ -6,7 +6,7 @@ import { SLOTS, SLOT_LABEL, SLOT_OF, fitsIn, isWearable, slotsFor } from "./slot
 
 /** Every Przedmiot in the box, by id, from both the event deck and the shop. */
 const ITEM_IDS = new Set<string>([
-  ...(events as EventCard[]).filter((c) => c.cardClass === "przedmiot").map((c) => c.id),
+  ...(events as EventCard[]).filter((c) => c.cardClass === "item").map((c) => c.id),
   ...(items as Item[]).map((i) => i.id),
 ]);
 

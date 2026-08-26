@@ -174,13 +174,13 @@ describe("momentsIn", () => {
     const onField = (drawn: { cardId: string; cardClass: string }[]): TurnPhase =>
       ({ phase: "pole", fieldId: "step-1", from: null, draw: 1, drawn } as unknown as TurnPhase);
 
-    expect(momentsIn(onField([{ cardId: "helm", cardClass: "przedmiot" }]))).toEqual(
+    expect(momentsIn(onField([{ cardId: "helm", cardClass: "item" }]))).toEqual(
       expect.arrayContaining(["po-ruchu", "po-karcie"]),
     );
-    expect(momentsIn(onField([{ cardId: "helm", cardClass: "przedmiot" }]))).not.toContain(
+    expect(momentsIn(onField([{ cardId: "helm", cardClass: "item" }]))).not.toContain(
       "spotkanie",
     );
-    expect(momentsIn(onField([{ cardId: "goblin", cardClass: "wrog" }]))).toEqual(
+    expect(momentsIn(onField([{ cardId: "goblin", cardClass: "foe" }]))).toEqual(
       expect.arrayContaining(["spotkanie", "przed-walka"]),
     );
   });

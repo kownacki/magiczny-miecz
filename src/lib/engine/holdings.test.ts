@@ -10,22 +10,22 @@ const held = (cardId: string, kind: Holding["kind"], face: Holding["face"] = "op
 
 describe("which pile a card joins (16.6, 1.4)", () => {
   it("files an item as equipment", () => {
-    expect(kindForCard({ cardClass: "przedmiot" })).toBe("item");
+    expect(kindForCard({ cardClass: "item" })).toBe("item");
   });
 
   it("files a friend as a companion", () => {
-    expect(kindForCard({ cardClass: "przyjaciel" })).toBe("friend");
+    expect(kindForCard({ cardClass: "friend" })).toBe("friend");
   });
 
   it("files a beaten enemy as a trophy, not equipment", () => {
     // Otherwise beating a Cyklop would hand its Miecz 6 to the winner.
-    expect(kindForCard({ cardClass: "wrog" })).toBe("trophy");
+    expect(kindForCard({ cardClass: "foe" })).toBe("trophy");
   });
 
   it("keeps nothing for cards that are simply resolved", () => {
-    expect(kindForCard({ cardClass: "spotkanie" })).toBeNull();
-    expect(kindForCard({ cardClass: "miejsce" })).toBeNull();
-    expect(kindForCard({ cardClass: "nieznajomy" })).toBeNull();
+    expect(kindForCard({ cardClass: "encounter" })).toBeNull();
+    expect(kindForCard({ cardClass: "place" })).toBeNull();
+    expect(kindForCard({ cardClass: "stranger" })).toBeNull();
   });
 });
 

@@ -77,7 +77,7 @@ describe("passing the turn (10.1)", () => {
           fieldId: asFieldId("mroczna-polana")!,
           from: null,
           draw: 1,
-          drawn: [{ cardId: "helm", cardClass: "przedmiot" }],
+          drawn: [{ cardId: "helm", cardClass: "item" }],
         },
       },
     });
@@ -106,7 +106,7 @@ describe("passing the turn (10.1)", () => {
           fieldId: asFieldId("mroczna-polana")!,
           from: null,
           draw: 1,
-          drawn: [{ cardId: "wilkolak", cardClass: "wrog", granted: true }],
+          drawn: [{ cardId: "wilkolak", cardClass: "foe", granted: true }],
         },
       },
     });

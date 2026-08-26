@@ -646,7 +646,7 @@ describe("Gra ze Śmiercią", () => {
           fieldId: "gra-ze-smiercia",
           from: null,
           draw: 0,
-          drawn: [{ cardId: "cyklop", cardClass: "wrog" }],
+          drawn: [{ cardId: "cyklop", cardClass: "foe" }],
         },
       },
       seats: [

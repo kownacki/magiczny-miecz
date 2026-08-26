@@ -334,7 +334,7 @@ export function momentsIn(state: TurnPhase): SpellTiming[] {
       (state.fight.playerRoll !== null || state.fight.enemyRoll !== null),
     cardJustDrawn: state.phase === "pole" && state.drawn.length > 0,
     meeting:
-      state.phase === "pole" && state.drawn.some((entry) => entry.cardClass === "wrog"),
+      state.phase === "pole" && state.drawn.some((entry) => entry.cardClass === "foe"),
   });
 }
 

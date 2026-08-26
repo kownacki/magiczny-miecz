@@ -182,7 +182,7 @@ export const COMMANDS: CommandSpec[] = [
 const VERBS = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
 
 /** Every card that can be fought: only a Wróg has a Miecz or a Magia to roll against. */
-const FOES = (events as EventCard[]).filter((card) => card.cardClass === "wrog");
+const FOES = (events as EventCard[]).filter((card) => card.cardClass === "foe");
 
 /**
  * Everything nameable as a card.

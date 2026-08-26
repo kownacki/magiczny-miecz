@@ -29,7 +29,7 @@ export interface CombatValue {
  * marks by printing Magia instead of Miecz.
  */
 export function combatValueOf(card: Pick<EventCard, "cardClass" | "miecz" | "magia">): CombatValue | null {
-  if (card.cardClass !== "wrog") return null;
+  if (card.cardClass !== "foe") return null;
   if (typeof card.magia === "number") return { kind: "magiczna", total: card.magia };
   if (typeof card.miecz === "number") return { kind: "zwykla", total: card.miecz };
   return null;
@@ -48,7 +48,7 @@ export interface CardBonus {
  * mechanism entirely and deliberately not counted here.
  */
 export function bonusOf(card: Pick<EventCard, "cardClass" | "miecz" | "magia">): CardBonus | null {
-  if (card.cardClass !== "przedmiot" && card.cardClass !== "przyjaciel") return null;
+  if (card.cardClass !== "item" && card.cardClass !== "friend") return null;
   const miecz = card.miecz ?? 0;
   const magia = card.magia ?? 0;
   if (miecz === 0 && magia === 0) return null;

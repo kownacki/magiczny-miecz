@@ -43,7 +43,7 @@ export interface CardScript {
    * Nothing about it survives to be carried, so it costs nothing against the
    * four-item limit of 5.4 and there is nothing to lose on the Bagna later.
    *
-   * Class alone cannot tell you this — `kindForCard` sees "przedmiot" and says
+   * Class alone cannot tell you this — `kindForCard` sees "item" and says
    * "item", which is how gold ended up sitting in players' packs with a discard
    * button under it. The script is what knows.
    */

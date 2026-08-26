@@ -142,14 +142,14 @@ suite("journal vocabulary", () => {
   });
 
   it("says what a card took off you", () => {
-    expect(text("strata", { co: "przedmiot", cardIds: ["magiczny-miecz"] })).toBe(
+    expect(text("strata", { co: "item", cardIds: ["magiczny-miecz"] })).toBe(
       "Michał (GOBLIN) traci: MAGICZNY MIECZ.",
     );
     expect(text("strata", { co: "zloto", zloto: 3 })).toBe("Michał (GOBLIN) traci: 3 Sztuki Złota.");
   });
 
   it("says nothing when a loss took nothing", () => {
-    expect(text("strata", { co: "przedmiot", cardIds: [] })).toBeNull();
+    expect(text("strata", { co: "item", cardIds: [] })).toBeNull();
   });
 
   it("marks a manual correction as one", () => {

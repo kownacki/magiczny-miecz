@@ -203,8 +203,8 @@ describe("factsIn", () => {
 
   it("counts only the cards still waiting (16.4)", () => {
     const drawn = [
-      { cardId: "goblin", cardClass: "wrog" },
-      { cardId: "helm", cardClass: "przedmiot" },
+      { cardId: "goblin", cardClass: "foe" },
+      { cardId: "helm", cardClass: "item" },
     ];
     expect(onField("uroczysko", drawn).cardsWaiting).toBe(2);
     expect(onField("uroczysko", drawn, ["goblin"]).cardsWaiting).toBe(1);

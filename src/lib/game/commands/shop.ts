@@ -71,7 +71,7 @@ export function tradeTrophies(
 
   const points = trophies.reduce((sum, t) => {
     const card = EVENTS.find((c) => c.id === t.card_id);
-    return sum + (combatValueOf(card ?? { cardClass: "wrog" })?.total ?? 0);
+    return sum + (combatValueOf(card ?? { cardClass: "foe" })?.total ?? 0);
   }, 0);
   const gained = Math.floor(points / TROPHY_RATE);
   if (gained < 1) throw new Error(`Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów.`);

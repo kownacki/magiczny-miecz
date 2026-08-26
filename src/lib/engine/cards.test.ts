@@ -25,7 +25,7 @@ describe("combat values (16.2, 16.3)", () => {
   it("offers a fight for every Wróg that prints a value, and no one else", () => {
     for (const card of EVENTS) {
       const value = combatValueOf(card);
-      if (value) expect(card.cardClass).toBe("wrog");
+      if (value) expect(card.cardClass).toBe("foe");
     }
   });
 });

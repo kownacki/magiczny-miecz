@@ -97,9 +97,9 @@ describe("turn phases (10.1)", () => {
 
   it("keeps drawn cards in resolution order however they arrive (15.2)", () => {
     let phase: TurnPhase = afterMove(DOLNY_KRAG.find((f) => f.id === "bezdroza")!);
-    phase = afterDraw(phase, { cardId: "zloto", cardClass: "przedmiot" });
-    phase = afterDraw(phase, { cardId: "wilk", cardClass: "wrog" });
-    phase = afterDraw(phase, { cardId: "mgla", cardClass: "spotkanie" });
+    phase = afterDraw(phase, { cardId: "zloto", cardClass: "item" });
+    phase = afterDraw(phase, { cardId: "wilk", cardClass: "foe" });
+    phase = afterDraw(phase, { cardId: "mgla", cardClass: "encounter" });
     if (phase.phase !== "pole") throw new Error("expected pole");
     expect(phase.drawn.map((c) => c.cardId)).toEqual(["mgla", "wilk", "zloto"]);
   });
@@ -148,7 +148,7 @@ describe("fights", () => {
   });
 
   it("returns to the field it interrupted, drawn cards intact", () => {
-    let phase: TurnPhase = afterDraw(field, { cardId: "cyklop", cardClass: "wrog" });
+    let phase: TurnPhase = afterDraw(field, { cardId: "cyklop", cardClass: "foe" });
     phase = startFight(
       phase,
       { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
@@ -161,7 +161,7 @@ describe("fights", () => {
   });
 
   it("writes the enemy down as fought, so it cannot be rolled against twice (17.4)", () => {
-    let phase: TurnPhase = afterDraw(field, { cardId: "cyklop", cardClass: "wrog" });
+    let phase: TurnPhase = afterDraw(field, { cardId: "cyklop", cardClass: "foe" });
     phase = startFight(
       phase,
       { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
@@ -178,8 +178,8 @@ describe("fights", () => {
   });
 
   it("settles every creature of a pack that attacked as one (17.5)", () => {
-    let phase: TurnPhase = afterDraw(field, { cardId: "wilk", cardClass: "wrog" });
-    phase = afterDraw(phase, { cardId: "wilki", cardClass: "wrog" });
+    let phase: TurnPhase = afterDraw(field, { cardId: "wilk", cardClass: "foe" });
+    phase = afterDraw(phase, { cardId: "wilki", cardClass: "foe" });
     phase = startFight(
       phase,
       {
@@ -243,9 +243,9 @@ describe("turn order", () => {
 describe("resolution numerals (15.2, 16.6)", () => {
   it("puts Nieznajomy (IV) after Wróg (II) and before Przedmiot (V)", () => {
     const drawn = [
-      { cardId: "zloto", cardClass: "przedmiot" as const },
-      { cardId: "cudotworca", cardClass: "nieznajomy" as const },
-      { cardId: "cyklop", cardClass: "wrog" as const },
+      { cardId: "zloto", cardClass: "item" as const },
+      { cardId: "cudotworca", cardClass: "stranger" as const },
+      { cardId: "cyklop", cardClass: "foe" as const },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual([
       "cyklop",
@@ -258,8 +258,8 @@ describe("resolution numerals (15.2, 16.6)", () => {
     // Rule 16.6 names them in one clause and the cards agree, so drawing order
     // decides between them rather than an invented precedence.
     const drawn = [
-      { cardId: "alchemik", cardClass: "przyjaciel" as const },
-      { cardId: "zloto", cardClass: "przedmiot" as const },
+      { cardId: "alchemik", cardClass: "friend" as const },
+      { cardId: "zloto", cardClass: "item" as const },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["alchemik", "zloto"]);
     const reversed = [drawn[1], drawn[0]];
@@ -268,8 +268,8 @@ describe("resolution numerals (15.2, 16.6)", () => {
 
   it("still puts Miejsce (VI) last", () => {
     const drawn = [
-      { cardId: "swiatynia", cardClass: "miejsce" as const },
-      { cardId: "mgla", cardClass: "spotkanie" as const },
+      { cardId: "swiatynia", cardClass: "place" as const },
+      { cardId: "mgla", cardClass: "encounter" as const },
     ];
     expect(resolutionOrder(drawn)[0].cardId).toBe("mgla");
   });
