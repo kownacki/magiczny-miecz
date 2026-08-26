@@ -479,11 +479,9 @@ suite("points a rule would not let through", () => {
     );
   });
 
-  it("says a number under its floor is held where it is, not where the rule wants it", () => {
-    // Only `force` can arrange this, and the rule is about going down — so the
-    // line says the number stayed, and does not quote a minimum it is under.
+  it("says the same about a number under its floor as one sitting on it", () => {
     expect(text("punkty", { stat: "magia", delta: -1, from: 1, to: 1, floor: 3 })).toBe(
-      "Michał (GOBLIN) traci 1 punkt Magii — bez zmiany: Magia jest już poniżej swojego minimum (3).",
+      "Michał (GOBLIN) traci 1 punkt Magii — bez zmiany: Magia nie spada poniżej 3 (1.3, 2.3).",
     );
   });
 

@@ -149,17 +149,16 @@ function held(data: Record<string, unknown>): string {
   // saying "poniżej swojego minimum" of a number somebody deliberately pushed
   // under it names the wrong limit.
   const floor = data.forced === true ? 0 : data.floor;
+  // One sentence for the floor, whether the number is sitting on it or — which
+  // only the test console can arrange — under it. The second case is held where
+  // it is rather than at the rule's value, and saying so took a whole clause to
+  // draw a distinction nobody reading a journal is asking about.
   const why =
     asked > 0
       ? `wyżej niż ${data.to} nie idzie`
       : !stat || floor === 0
         ? "nie ma poniżej czego zejść"
-        : data.to < floor
-          ? // Under its own floor already, which nothing in the game can do —
-            // only the test console, forcing. The rule is about going down, so
-            // it holds the number where it is rather than pulling it back up.
-            `${stat} jest już poniżej swojego minimum (${floor})`
-          : `${stat} nie spada poniżej ${floor} (1.3, 2.3)`;
+        : `${stat} nie spada poniżej ${floor} (1.3, 2.3)`;
   return moved === 0
     ? ` — bez zmiany: ${why}`
     : ` — z tego ${Math.abs(moved)}: ${why}`;

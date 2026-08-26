@@ -425,6 +425,17 @@ export function statReply(said: {
   }
 
   const floor = said.floor ?? 0;
+  /**
+   * One sentence for the floor, whether the number is sitting on it or under
+   * it.
+   *
+   * Under it is a state only `force` can arrange, and it does behave a little
+   * differently — the number is held where it is rather than at the rule's
+   * value — but saying so took a second sentence to explain a distinction
+   * nobody typing into a test console needs drawn. What both cases need is the
+   * same: it did not move, here is the rule, here is the word that gets past
+   * it.
+   */
   const limit =
     said.asked > 0
       ? // Nothing can be above the ceiling to begin with, so this is the only
@@ -432,12 +443,7 @@ export function statReply(said: {
         `${said.stat} stops at ${said.now}`
       : said.forced || floor === 0
         ? `${said.stat} cannot go below ${said.now}`
-        : said.now < floor
-          ? // Below its floor already, which only `force` can arrange. The rule
-            // is about going down, so it holds the number where it is rather
-            // than hauling it back up to where it should be.
-            `${said.stat} is already under its floor of ${floor}; only \`force\` goes lower`
-          : `${said.stat} cannot go below the ${floor} this character started with (1.3, 2.3) — say \`force\` to`;
+        : `${said.stat} cannot go below the ${floor} this character started with (1.3, 2.3) — say \`force\` to`;
   return said.moved === 0
     ? `${said.who}: ${said.stat} stays at ${said.now} — ${limit}.`
     : `${said.who}: ${said.stat} ${signed(said.moved)} → ${said.now}, not ${signed(said.asked)} — ${limit}.`;

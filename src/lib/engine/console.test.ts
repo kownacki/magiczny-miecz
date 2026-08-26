@@ -500,11 +500,12 @@ suite("what the console says a parameter did", () => {
     expect(said({ forced: true })).toBe("Michał: magia -1 → 2 (forced)");
   });
 
-  it("says a number under its floor is held where it is", () => {
-    // The state only `force` can arrange. Quoting the floor here would be
-    // quoting a number the value is under, which explains nothing.
+  it("says the same thing about a number under its floor as one sitting on it", () => {
+    // Under the floor is `force`'s doing and behaves a shade differently, but
+    // what somebody typing needs is the same either way: it did not move, here
+    // is the rule, here is the word that gets past it.
     expect(said({ moved: 0, now: 1 })).toBe(
-      "Michał: magia stays at 1 — magia is already under its floor of 3; only `force` goes lower.",
+      "Michał: magia stays at 1 — magia cannot go below the 3 this character started with (1.3, 2.3) — say `force` to.",
     );
   });
 
