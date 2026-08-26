@@ -102,6 +102,14 @@ anything.
   2.2–2.6: only a character's own Miecz/Magia is tracked and it can never fall
   below its starting value; points from items and friends are computed at read
   time. Never store a total.
+- **Every write goes through `src/lib/game/tables.ts`.** `db` is an untyped
+  `SupabaseClient`, so `.from("seats").insert({...})` takes anything — a column
+  dropped last week typechecks, builds, and fails at the database on the first
+  request that runs it. That is not hypothetical: the seats/users split moved
+  eight columns with `tsc` clean the whole way while five writes still named the
+  old ones, and three of those broke opening a table. `tables.ts` is the same
+  discipline as "an id is never a `string`", carried the last few feet. Reads
+  still go through `db` directly — they are narrowed by their own column lists.
 - **The database is biggerfish's, shared four ways.** This is a `magiczny_miecz`
   schema in project `aqqdamoqwxiquhkzzcix`, alongside finalbid and wheatbid, and
   the service-role key grants all of them. Two of those take real payments.

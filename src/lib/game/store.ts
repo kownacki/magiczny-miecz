@@ -2,6 +2,7 @@
 
 import type { EqMode } from "@/lib/engine/slots";
 import { db } from "@/lib/supabase";
+import * as tables from "./tables";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import { MAX_SEATS, type GameMode } from "./modes";
 import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
@@ -169,12 +170,10 @@ export async function createGame(
      * is nothing to fix it with.
      */
     const hostToken = makeClaimToken();
-    const { error: seatError } = await db
-      .from("seats")
-      .insert({ game_id: data.id, seat_index: 0 });
+    const { error: seatError } = await tables.seats.insert({ game_id: data.id, seat_index: 0 });
     if (seatError) throw new Error(`createGame seat: ${seatError.message}`);
 
-    const { error: userError } = await db.from("users").insert({
+    const { error: userError } = await tables.users.insert({
       id: makeUserId(),
       game_id: data.id,
       name: hostName ?? "Gospodarz",
@@ -438,9 +437,7 @@ export async function joinGame(
 
     let seat: SeatRow | null = null;
     if (seatIndex !== null && !taken.has(seatIndex)) {
-      const made = await db
-        .from("seats")
-        .insert({ game_id: gameId, seat_index: seatIndex, eliminated: midGame })
+      const made = await tables.seats.insert({ game_id: gameId, seat_index: seatIndex, eliminated: midGame })
         .select(SEAT_COLUMNS)
         .single();
       if (made.error) {
@@ -605,7 +602,7 @@ export async function markSeenUser(userId: string): Promise<void> {
  * it — before the split they had no row to say it with.
  */
 export async function sayGoodbye(userId: string): Promise<void> {
-  await db.from("users").update({ left_at: new Date().toISOString() }).eq("id", userId);
+  await tables.users.update({ left_at: new Date().toISOString() }).eq("id", userId);
 }
 
 /**

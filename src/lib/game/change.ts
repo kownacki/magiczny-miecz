@@ -1,6 +1,7 @@
 /** One change to one game: the snapshot it reads, the changeset it writes, and the commit that makes the whole of it true at once. */
 
 import { db } from "@/lib/supabase";
+import * as tables from "./tables";
 import {
   GAME_COLUMNS,
   fieldCardsFor,
@@ -590,7 +591,10 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
     if (error) throw new Failure(`commit(seatsRemoved): ${error.message}`);
   }
   for (const seat of writes.seats ?? []) {
-    const { error } = await db.from("seats").update(seat.patch).eq("id", seat.id);
+    // Passed whole rather than spread into a literal, so the excess-property
+    // check does not fire here — `SeatPatch` is what guards this one, and it is
+    // built off `SeatRow` for exactly that reason.
+    const { error } = await tables.seats.update(seat.patch).eq("id", seat.id);
     if (error) throw new Failure(`commit(seats): ${error.message}`);
   }
 
@@ -601,11 +605,14 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   if (writes.usersNew?.length) {
     const { error } = await db
       .from("users")
+      // A spread suppresses the excess-property check, so what protects this is
+      // `NewUser` upstream rather than the door itself. One of the three writes
+      // in this file the compiler cannot see into — see `tables.ts`.
       .insert(writes.usersNew.map((fresh) => ({ ...fresh, game_id: gameId })));
     if (error) throw new Failure(`commit(usersNew): ${error.message}`);
   }
   for (const user of writes.users ?? []) {
-    const { error } = await db.from("users").update(user.patch).eq("id", user.id);
+    const { error } = await tables.users.update(user.patch).eq("id", user.id);
     if (error) throw new Failure(`commit(users): ${error.message}`);
   }
 
@@ -614,7 +621,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
     if (error) throw new Failure(`commit(holdings.delete): ${error.message}`);
   }
   for (const held of writes.holdings?.patch ?? []) {
-    const { error } = await db.from("holdings").update(held.patch).eq("id", held.id);
+    const { error } = await tables.holdings.update(held.patch).eq("id", held.id);
     if (error) throw new Failure(`commit(holdings.patch): ${error.message}`);
   }
   if (writes.holdings?.insert?.length) {
@@ -629,7 +636,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
     if (error) throw new Failure(`commit(fieldCards.delete): ${error.message}`);
   }
   if (writes.fieldCards?.insert?.length) {
-    const { error } = await db.from("field_cards").insert(
+    const { error } = await tables.fieldCards.insert(
       writes.fieldCards.insert.map((one) => ({
         game_id: gameId,
         ...one,
@@ -649,7 +656,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
     if (error) throw new Failure(`commit(effects.delete): ${error.message}`);
   }
   for (const effect of writes.effects?.patch ?? []) {
-    const { error } = await db.from("seat_effects").update(effect.patch).eq("id", effect.id);
+    const { error } = await tables.seatEffects.update(effect.patch).eq("id", effect.id);
     if (error) throw new Failure(`commit(effects.patch): ${error.message}`);
   }
   if (writes.effects?.insert?.length) {
@@ -682,7 +689,7 @@ async function appendJournal(
   from: number,
   lines: readonly JournalWrite[],
 ): Promise<void> {
-  const { error } = await db.from("moves").insert(
+  const { error } = await tables.moves.insert(
     lines.map((line, index) => ({
       game_id: gameId,
       seq: from + 1 + index,
