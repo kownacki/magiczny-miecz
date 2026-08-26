@@ -89,15 +89,25 @@ export function leaveCardsBehind(
   const discarded = putOnPile(
     snapshot,
     "events",
-    // Straight off the deck this turn, so never a granted one.
-    input.remaining.filter(spentByReading).map((card) => ({ cardId: card.cardId })),
+    input.remaining.filter(spentByReading).map((card) => ({
+      cardId: card.cardId,
+      granted: card.granted,
+    })),
   );
 
   if (stays.length === 0) return discarded;
 
   return merge(discarded, {
     fieldCards: {
-      insert: stays.map((card) => ({ field_id: input.fieldId, card_id: card.cardId })),
+      // The mark travels onto the field with the card. A Wróg the test console
+      // staged is one the deck never gave up, and left lying here without it it
+      // becomes a real card the moment somebody picks it up — and then a
+      // phantom on the used pile the moment they put it down.
+      insert: stays.map((card) => ({
+        field_id: input.fieldId,
+        card_id: card.cardId,
+        granted: card.granted === true,
+      })),
     },
     // 16.8 leaves them lying face up, so what was left and where is something
     // the whole table can see — and therefore something the journal owes it.
