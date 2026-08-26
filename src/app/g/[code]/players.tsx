@@ -26,7 +26,7 @@ import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import type { PublicSeat } from "./table-layout";
-import { LAYER } from "./layers";
+import { Drawer } from "./drawer";
 
 export function PlayersDrawer({
   seats,
@@ -67,25 +67,16 @@ export function PlayersDrawer({
   const byId = new Map(characters.map((character) => [character.id, character]));
 
   return (
-    <aside
-      role="dialog"
-      aria-label="Gracze"
-      // Absolute inside the layout's content row rather than fixed to the
-      // window, so it begins under the bar instead of beside it. Its z still
-      // counts globally — the row makes no stacking context of its own — so it
-      // is over the modals exactly as intended.
-      className={`absolute inset-y-0 right-0 flex w-full max-w-sm flex-col border-l border-ochre/40 bg-night shadow-[-8px_0_30px_rgba(0,0,0,0.6)] ${LAYER.players}`}
-    >
-      <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-edge px-3 py-2">
-        <h2 className="text-[11px] uppercase tracking-widest text-ochre">
+    <Drawer
+      side="right"
+      title={
+        <>
           Gracze <span className="tnum text-muted">{seats.length}/6</span>
-        </h2>
-        <button onClick={onClose} className="text-[11px] text-muted hover:text-ink">
-          zamknij
-        </button>
-      </header>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+        </>
+      }
+      onClose={onClose}
+    >
+      <div className="flex flex-col gap-2 p-3">
         {seats.map((seat) => {
           const real = asCharacterId(seat.characterId);
           const character = real ? (byId.get(real) ?? null) : null;
@@ -242,7 +233,7 @@ export function PlayersDrawer({
           </button>
         )}
       </div>
-    </aside>
+    </Drawer>
   );
 }
 

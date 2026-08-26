@@ -1,0 +1,64 @@
+"use client";
+
+/**
+ * A panel laid over a column, with the board left showing beside it.
+ *
+ * Both of the table's own surfaces are one of these — who is playing, and every
+ * card in the box — and they used to be two different things: a roster tucked
+ * into the right-hand column, and a library that took the whole screen. Neither
+ * shape was right. The questions they answer are asked *while* something else is
+ * on screen ("what is the Wilkołak's Miecz", "what is Karol carrying"), so
+ * covering the board to answer one is covering the thing being asked about.
+ *
+ * `side` is which column it eats. Right for the players, because that column is
+ * yours and they are the same kind of thing; left for the cards, over the board,
+ * because a card you are looking up is not about the board at that moment.
+ *
+ * It is laid *inside* the layout's content row rather than fixed to the window,
+ * so it begins under the bar instead of level with it — see `table-layout.tsx`.
+ * Its z still counts globally, which is what keeps it over the modals.
+ */
+
+import { LAYER } from "./layers";
+
+export function Drawer({
+  side,
+  title,
+  /** Tailwind max-width. The cards want more room than the players do. */
+  width = "max-w-sm",
+  head,
+  onClose,
+  children,
+}: {
+  side: "left" | "right";
+  title: React.ReactNode;
+  width?: string;
+  /** A row under the title — a search box, a tally, whatever the surface needs. */
+  head?: React.ReactNode;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <aside
+      role="dialog"
+      aria-label={typeof title === "string" ? title : undefined}
+      className={`absolute inset-y-0 flex w-full flex-col bg-night ${width} ${LAYER.drawer} ${
+        side === "right"
+          ? "right-0 border-l border-ochre/40 shadow-[-8px_0_30px_rgba(0,0,0,0.6)]"
+          : "left-0 border-r border-ochre/40 shadow-[8px_0_30px_rgba(0,0,0,0.6)]"
+      }`}
+    >
+      <header className="shrink-0 border-b border-edge px-3 py-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-[11px] uppercase tracking-widest text-ochre">{title}</h2>
+          <button onClick={onClose} className="text-[11px] text-muted hover:text-ink">
+            zamknij
+          </button>
+        </div>
+        {head}
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+    </aside>
+  );
+}

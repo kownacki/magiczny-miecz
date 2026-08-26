@@ -14,7 +14,7 @@ import { CardDetail, CardTile, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
-import { LAYER } from "./layers";
+import { Drawer } from "./drawer";
 
 /**
  * Every card in the box, to look at.
@@ -294,41 +294,42 @@ export function CardLibrary({
   const cards = useMemo(() => sections.flatMap((section) => section.cards), [sections]);
 
   return (
-    <div className={`fixed inset-0 ${LAYER.library} flex flex-col bg-night`}>
+    <>
       {open && <CardDetail card={open} onClose={() => setOpen(null)} />}
-
-      <header className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-edge px-4 py-3">
-        <h2 className="font-[family-name:var(--font-display)] text-lg text-ochre">
-          Karty do wglądu
-        </h2>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="szukaj po nazwie lub treści…"
-          className="min-w-0 flex-1 rounded border border-edge bg-panel px-2 py-1 text-sm text-ink outline-none focus:border-ochre"
-        />
-        <button onClick={onClose} className="text-sm text-muted hover:text-ink">
-          zamknij
-        </button>
-      </header>
-
-      <nav className="flex flex-wrap gap-1 border-b border-edge px-4 py-2">
-        {[...SHELVES, FIELD_SHELF].map((entry) => (
-          <button
-            key={entry.key}
-            onClick={() => setShelf(entry.key)}
-            className={`rounded border px-2 py-1 text-[11px] transition ${
-              shelf === entry.key
-                ? "border-ochre text-ochre"
-                : "border-edge text-muted hover:border-ochre hover:text-ink"
-            }`}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="flex-1 overflow-y-auto p-4">
+      <Drawer
+        side="left"
+        // Half again as wide as the players, because a shelf of cards is a grid
+        // and a list of people is a list.
+        width="max-w-2xl"
+        title="Karty do wglądu"
+        onClose={onClose}
+        head={
+          <>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="szukaj po nazwie lub treści…"
+              className="mt-2 w-full rounded border border-edge bg-panel px-2 py-1 text-sm text-ink outline-none focus:border-ochre"
+            />
+            <nav className="mt-2 flex flex-wrap gap-1">
+              {[...SHELVES, FIELD_SHELF].map((entry) => (
+                <button
+                  key={entry.key}
+                  onClick={() => setShelf(entry.key)}
+                  className={`rounded border px-2 py-1 text-[11px] transition ${
+                    shelf === entry.key
+                      ? "border-ochre text-ochre"
+                      : "border-edge text-muted hover:border-ochre hover:text-ink"
+                  }`}
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </nav>
+          </>
+        }
+      >
+      <div className="p-4">
         <p className="mb-3 text-[11px] text-muted">
           {/* The board is not the deck: counting it in "kart" said 0, because
               no card in the box has a field on it. */}
@@ -408,6 +409,7 @@ export function CardLibrary({
         </div>
         )}
       </div>
-    </div>
+      </Drawer>
+    </>
   );
 }

@@ -17,12 +17,12 @@
  * out. Those answer questions a player has *while* stuck in a fight, and half
  * of them exist to unstick it.
  *
- * Which is why the bar sits above the modals and *below* the table surfaces it
- * opens. Putting it above those instead was the first way of getting this
- * wrong: the bar is opaque and full-width, so it sliced the top off the Karty
- * library and took its search box and its `zamknij` with it. A surface that
- * covers the screen and carries its own way out does not want a bar across it;
- * it wants to be the thing you are looking at until you close it.
+ * The bar sits above the modals, and the drawers begin *below* it rather than
+ * fighting it for the same strip — they are laid inside the layout's content
+ * row, which already starts under it (`table-layout.tsx`). Ranking the two
+ * against each other was the first way of getting this wrong: with the bar on
+ * top it sliced the search box and the `zamknij` off the Karty library, and
+ * with the drawer on top the roster hid Karty and the console behind it.
  *
  * Anything added here belongs above `modal` if somebody would want it while a
  * modal is open, and below if they would not.
@@ -36,10 +36,13 @@ export const LAYER = {
   modal: "z-50",
   /** The table's own bar: code, decks, Karty, Gracze, the way out. */
   bar: "z-[60]",
-  /** Who is at this table, and what the host can do about them. */
-  players: "z-[70]",
-  /** Every card in the box, to look one up. */
-  library: "z-[80]",
+  /**
+   * The table's own surfaces, laid over a column: who is playing, and every
+   * card in the box. One layer because they are one component (`drawer.tsx`)
+   * and because they sit down opposite sides — the only way to see both at
+   * once is to open both, and then neither is in the other's way.
+   */
+  drawer: "z-[70]",
   /** The test console, which exists to escape everything above. */
   console: "z-[110]",
   /**

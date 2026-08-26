@@ -1215,19 +1215,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           }}
         />
       )}
-      {libraryOpen && (
-        <CardLibrary
-          eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
-          nature={asNature(mySeat?.nature)}
-          // "walcz" and the Obszary chips became `fight` and `go` in the
-          // console; taking a card stayed, because this shelf is where somebody
-          // already is when they want one, with the picture in front of them.
-          {...(testing && mySeatIndex !== null
-            ? { onGrant: (cardId: string) => post("debug", { action: "grant", cardId }) }
-            : {})}
-          onClose={() => setLibraryOpen(false)}
-        />
-      )}
     </>
   );
 
@@ -1349,7 +1336,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {overlays}
       <TableLayout
         drawer={
-          players ? (
+          <>
+          {libraryOpen && (
+            <CardLibrary
+              eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+              nature={asNature(mySeat?.nature)}
+              // "walcz" and the Obszary chips became `fight` and `go` in the
+              // console; taking a card stayed, because this shelf is where somebody
+              // already is when they want one, with the picture in front of them.
+              {...(testing && mySeatIndex !== null
+                ? { onGrant: (cardId: string) => post("debug", { action: "grant", cardId }) }
+                : {})}
+              onClose={() => setLibraryOpen(false)}
+            />
+          )}
+            {players ? (
             <PlayersDrawer
               // Every seat, in seat order, this one included — see the note on the
               // component about why the roster it replaces left you out.
@@ -1378,7 +1379,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   : undefined
               }
             />
-          ) : null
+            ) : null}
+          </>
         }
         header={
           <>
