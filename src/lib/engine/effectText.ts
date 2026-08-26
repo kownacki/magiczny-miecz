@@ -4,6 +4,8 @@ import type { Condition, Destination, Effect, Target } from "./cardScript";
 import {
   characterName,
   fieldName,
+  NATURE_LABEL,
+  LOST_COUNTED,
   LOST_LABEL,
   plural,
   STAT_LABEL,
@@ -57,7 +59,9 @@ function where(destination: Destination): string {
 export function describeCondition(condition: Condition): string {
   switch (condition.is) {
     case "natura":
-      return `jeśli ${condition.jedna_z.map((n) => (n === "evil" ? "zła" : n)).join(" lub ")}`;
+      // `NATURE_LABEL` and not a lone `evil` ternary: this translated one of
+              // the three and left "jeśli good" on a Polish table.
+              return `jeśli ${condition.jedna_z.map((n) => NATURE_LABEL[n] ?? n).join(" lub ")}`;
     case "prog":
       return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
     case "ma-zloto":
@@ -111,8 +115,12 @@ function runs(faces: number[]): string {
  */
 export function describeLoss(effect: Extract<Effect, { op: "strata" }>): string {
   const how = effect.wybor === "losowo" ? " (losowo)" : "";
-  const many = effect.count && effect.count > 1 ? `${effect.count} ` : "";
-  return `tracisz ${many}${LOST_LABEL[effect.co]}${how}`;
+  const count = effect.count ?? 1;
+  const many = count > 1 ? `${count} ` : "";
+  const forms = LOST_COUNTED[effect.co];
+  const what =
+    count > 1 && forms ? plural(count, forms[0], forms[1], forms[2]) : LOST_LABEL[effect.co];
+  return `tracisz ${many}${what}${how}`;
 }
 
 /**

@@ -123,6 +123,29 @@ export const LOST_LABEL: Record<Loss, string> = {
 };
 
 /**
+ * The three forms a counted loss needs, for the three ways Polish counts.
+ *
+ * `LOST_LABEL` above is the accusative singular — "tracisz Przyjaciela" — and
+ * putting a numeral in front of it gives "tracisz 5 Przyjaciela", which is not
+ * a sentence. It went unnoticed because nothing in the corpus takes more than
+ * one of anything: every `strata` in the box either has no count or has a count
+ * of one, and the two `wszystkie-` entries are already plural by construction.
+ *
+ * So this is here before the card that needs it rather than after. Only the
+ * three countable losses are listed; złoto and the two `wszystkie-` forms are
+ * never counted, and a `Partial` says so rather than inventing forms nothing
+ * will ask for.
+ *
+ * Masculine personal nouns take the genitive plural for 2-4 as well as for 5+,
+ * which is why Przyjaciel has the same word twice and Przedmiot does not.
+ */
+export const LOST_COUNTED: Partial<Record<Loss, readonly [string, string, string]>> = {
+  przedmiot: ["Przedmiot", "Przedmioty", "Przedmiotów"],
+  przyjaciel: ["Przyjaciela", "Przyjaciół", "Przyjaciół"],
+  zaklecie: ["Zaklęcie", "Zaklęcia", "Zaklęć"],
+};
+
+/**
  * Who an effect lands on, in the card's own shorthand.
  *
  * Read hanging off the end of an effect that has already named itself — "+2

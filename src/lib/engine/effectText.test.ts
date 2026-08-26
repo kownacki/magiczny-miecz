@@ -28,18 +28,24 @@ describe("what a loss takes off you", () => {
     // "tracisz 1 Przedmiot" reads as a card with a number printed on it. The
     // card says "tracisz Przedmiot" and so does this.
     expect(describeLoss({ op: "strata", co: "przedmiot", count: 1 })).toBe("tracisz Przedmiot");
-    expect(describeLoss({ op: "strata", co: "przedmiot", count: 2 })).toBe("tracisz 2 Przedmiot");
+    expect(describeLoss({ op: "strata", co: "przedmiot", count: 2 })).toBe("tracisz 2 Przedmioty");
   });
 
-  it("does not decline the noun it counts, and no card in the box asks it to", () => {
-    // "tracisz 2 Przedmiot" is not Polish — it wants "Przedmioty". `LOST_LABEL`
-    // holds one form per loss and `plural` would need three, so the counted
-    // form is simply not available yet. Nothing in the corpus sets `count`
-    // above 1, which is why both copies of this sentence got away with it for
-    // as long as there were two of them. Pinned here so that transcribing the
-    // first card that does breaks a test rather than a sentence.
+  it("declines the noun it counts, all three ways", () => {
+    /**
+     * This used to say "tracisz 5 Przyjaciela", and was pinned as a wart on the
+     * grounds that no card in the box sets a count above one — which is true,
+     * and is exactly why it survived being written twice.
+     *
+     * Masculine personal nouns take the genitive plural at 2-4 as well as at
+     * 5+, so Przyjaciel reads the same in both and Przedmiot does not. That is
+     * the reason the forms are a table rather than a suffix rule.
+     */
+    expect(describeLoss({ op: "strata", co: "przyjaciel", count: 2 })).toBe(
+      "tracisz 2 Przyjaciół",
+    );
     expect(describeLoss({ op: "strata", co: "przyjaciel", count: 5 })).toBe(
-      "tracisz 5 Przyjaciela",
+      "tracisz 5 Przyjaciół",
     );
   });
 
@@ -73,7 +79,7 @@ describe("the clause a conditional effect opens with", () => {
 
   it("joins two Natury with an alternative", () => {
     expect(describeCondition({ is: "natura", jedna_z: ["evil", "chaotic"] })).toBe(
-      "jeśli zła lub chaotic",
+      "jeśli zła lub chaotyczna",
     );
   });
 
@@ -247,22 +253,22 @@ describe("what one row of a field's table says", () => {
   });
 
   /**
-   * A wart, pinned so it is visible rather than lost.
+   * Both registers at once, which is the point of sharing the helper.
    *
-   * The condition is worded by `describeCondition`, shared with the long
-   * register, and it translates only `evil` — the other two Natury reach a
-   * Polish table in English. `NATURE_LABEL` in `polish.ts` is the map that
-   * would fix it, for both registers at once. Left alone here because it is
-   * `describeEffect`'s helper and predates this function's move into the file.
+   * `describeCondition` translated `evil` and left the other two in English, so
+   * a Polish table read "jeśli good". It went unseen because the map that fixes
+   * it — `NATURE_LABEL` — was three files away and already complete: the words
+   * existed, and this was the one place that did not ask for them.
    */
-  it("still prints two of the three Natury in English, which polish.ts's map would fix", () => {
+  it("names every Natura in Polish, here and in the long register alike", () => {
     expect(
       summariseEffect({
         op: "gdy",
         warunek: { is: "natura", jedna_z: ["good"] },
         to: { op: "nic" },
       }),
-    ).toBe("jeśli good: nic się nie dzieje");
+    ).toBe("jeśli dobra: nic się nie dzieje");
+    expect(describeCondition({ is: "natura", jedna_z: ["chaotic"] })).toBe("jeśli chaotyczna");
   });
 
   it("says nothing happened rather than saying nothing", () => {
