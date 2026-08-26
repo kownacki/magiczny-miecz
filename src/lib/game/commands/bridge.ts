@@ -18,9 +18,7 @@ import {
   rollDice,
   trapOutcome,
 } from "@/lib/engine/bridge";
-import { crossingDice, heldAbilities, tollIsWaived } from "@/lib/engine/abilities";
-import { inEffect } from "@/lib/engine/holdings";
-import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
+import { crossingDice, tollIsWaived } from "@/lib/engine/abilities";
 import type { CombatResult } from "@/lib/engine/combat";
 import {
   afterMove,
@@ -43,7 +41,7 @@ import {
 import { cardName } from "./holdings";
 import { asReturnable, putOnPile } from "./piles";
 import { spendLife } from "./life";
-import { activeSeat, eqModeOf, holdingsOf, pointsOf } from "./seat";
+import { activeSeat, pointsOf, seatView } from "./seat";
 
 /* --------------------------------------------------------------------------
  * The small pure things these commands need.
@@ -67,14 +65,6 @@ export type FightOutcome = CombatResult["outcome"];
  * `inEffect` first, so a Przewoźnik lying unworn in the slot variant is a
  * friend you do not have.
  */
-function abilitiesAt(snapshot: Snapshot, seatId: string, characterId: string | null) {
-  return [
-    ...heldAbilities(
-      inEffect(holdingsOf(snapshot, seatId), eqModeOf(snapshot.game)).map((h) => h.cardId),
-    ),
-    ...abilitiesOfCharacter(asCharacterId(characterId)),
-  ];
-}
 
 /* --------------------------------------------------------------------------
  * Settling a doorway. Shared with the fight cluster, which reaches both of
@@ -381,7 +371,7 @@ export function payFerry(
   if (command.pay) {
     // The Przewoźnik among your Przyjaciele is the ferryman's colleague: "nie
     // będziesz musiał płacić 1 Sztuki Złota za Przeprawę".
-    const toll = tollIsWaived(abilitiesAt(snapshot, seat.id, seat.character_id), here)
+    const toll = tollIsWaived(seatView(snapshot, seat.id).abilities, here)
       ? 0
       : FERRY_TOLL;
     if (seat.zloto < toll) {
@@ -472,7 +462,7 @@ export async function crossRing(
     // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
     // of two, which is the difference between a hard crossing and a likely one.
     const count = crossingDice(
-      abilitiesAt(snapshot, seat.id, seat.character_id),
+      seatView(snapshot, seat.id).abilities,
       crossing.obstacle,
       crossing.test.dice,
     );

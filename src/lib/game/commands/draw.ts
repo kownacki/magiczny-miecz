@@ -2,16 +2,15 @@
 
 import type { CardClass, EventCard } from "@/data/types";
 import type { EventId } from "@/data/ids";
-import { heldAbilities } from "@/lib/engine/abilities";
 import { spellsAtSetup } from "@/lib/engine/characters";
 import { drawFrom, type Shuffle } from "@/lib/engine/deck";
 import { plural } from "@/lib/engine/polish";
-import { spellAllowance, wandRefills } from "@/lib/engine/derive";
+import { wandRefills } from "@/lib/engine/derive";
 import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { afterDraw } from "@/lib/engine/turn";
 import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
-import { activeSeat, holdingsOf, pointsOf, seatById } from "./seat";
+import { activeSeat, holdingsOf, seatById, seatView } from "./seat";
 
 /* --------------------------------------------------------------------------
  * Where the reshuffle's order comes from.
@@ -185,13 +184,9 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
   const mine = holdingsOf(snapshot, seat.id);
   const held = mine.filter((h) => h.kind === "spell").length;
 
-  const capacity = spellAllowance(
-    pointsOf(snapshot, seat.id, "parametr").magia,
-    spellsAtSetup(seat.character_id),
-    // "Właściciel Różdżki" — owning it is the whole condition, so the pack
-    // counts as much as the body does, in either eq variant.
-    heldAbilities(mine.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
-  );
+  // "Właściciel Różdżki" — owning it is the whole condition, so the pack counts
+  // as much as the body does, in either eq variant. See `fromCards`.
+  const capacity = seatView(snapshot, seat.id).spellCapacity;
 
   if (held >= capacity) {
     // Polish numerals agree with the noun: 2-4 take "Zaklęcia", 5 and up take

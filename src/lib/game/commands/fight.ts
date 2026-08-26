@@ -36,7 +36,7 @@ import {
   type Snapshot,
 } from "../change";
 import { asReturnable, putOnPile } from "./piles";
-import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById } from "./seat";
+import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById, seatView } from "./seat";
 import { floorOf } from "./spellFloor";
 import { afterFight } from "@/lib/engine/status";
 import { keepOnly, statusesOf } from "./turn";
@@ -537,12 +537,7 @@ export async function shieldSaves(
   if (command.kind === "magiczna") return { writes: {}, result: false };
 
   const seat = seatById(snapshot, command.seatId);
-  const abilities = [
-    ...heldAbilities(
-      inEffect(holdingsOf(snapshot, seat.id), eqModeOf(snapshot.game)).map((h) => h.cardId),
-    ),
-    ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
-  ];
+  const abilities = seatView(snapshot, seat.id).abilities;
   const upTo = bestShield(abilities);
   if (upTo === 0) return { writes: {}, result: false };
 

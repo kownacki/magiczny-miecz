@@ -32,7 +32,7 @@ import { cardName } from "./holdings";
 import { healSeat } from "./life";
 import { putOnPile } from "./piles";
 import { turnToStone } from "./stone";
-import { activeSeat } from "./seat";
+import { activeSeat, seatView } from "./seat";
 import { addEffect } from "./turn";
 
 /**
@@ -81,20 +81,6 @@ function amountOf(stat: "miecz" | "magia" | "zycie" | "zloto", count: number): s
   return plural(count, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota");
 }
 
-/** A seat row as the target rules see it. */
-function asTargetSeat(row: SeatRow): TargetSeat {
-  const nature =
-    row.nature === "dobra" || row.nature === "zla" || row.nature === "chaotyczna"
-      ? row.nature
-      : null;
-  return {
-    seatIndex: row.seat_index,
-    characterId: row.character_id,
-    fieldId: row.field_id,
-    nature,
-    eliminated: row.eliminated,
-  };
-}
 
 function named(row: SeatRow): string {
   return row.player_name ?? `miejsce ${row.seat_index + 1}`;
@@ -495,8 +481,8 @@ function targeted(
   const actor = snapshot.seats.find((row) => row.id === seatId);
   return seatsTargeted(
     target,
-    snapshot.seats.map(asTargetSeat),
-    actor ? asTargetSeat(actor) : undefined,
+    snapshot.seats.map((row) => seatView(snapshot, row.id).asTarget),
+    actor ? seatView(snapshot, actor.id).asTarget : undefined,
     oprocz,
   );
 }

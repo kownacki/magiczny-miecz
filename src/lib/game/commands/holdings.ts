@@ -3,18 +3,15 @@
 import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item, Nature } from "@/data/types";
-import { heldAbilities } from "@/lib/engine/abilities";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import type { FieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
-import { spellsAtSetup } from "@/lib/engine/characters";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
 import {
   BASE_CARRY_LIMIT,
   carriedCount,
   carryLimit,
   mayHold,
-  spellAllowance,
 } from "@/lib/engine/derive";
 import { kindForCard } from "@/lib/engine/holdings";
 import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
@@ -30,7 +27,7 @@ import {
 } from "../change";
 import type { HoldingRow } from "../store";
 import { asReturnable, pushOntoPile, putOnPile } from "./piles";
-import { eqModeOf, holdingsOf, pointsOf, seatById } from "./seat";
+import { eqModeOf, holdingsOf, seatById, seatView } from "./seat";
 
 /* --------------------------------------------------------------------------
  * The small pure things these commands need, which the store keeps as queries.
@@ -305,13 +302,9 @@ export function dropCard(
   if (held?.kind === "spell") {
     const seat = snapshot.seats.find((s) => s.id === held.seat_id);
     if (seat) {
-      const mine = holdingsOf(snapshot, seat.id);
-      const spells = mine.filter((h) => h.kind === "spell");
-      const allowed = spellAllowance(
-        pointsOf(snapshot, seat.id, "parametr").magia,
-        spellsAtSetup(seat.character_id),
-        heldAbilities(mine.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
-      );
+      const view = seatView(snapshot, seat.id);
+      const spells = view.holdings.filter((h) => h.kind === "spell");
+      const allowed = view.spellCapacity;
       if (spells.length <= allowed) {
         throw new Error(
           `Zaklęć nie odrzuca się, dopóki nie masz ich więcej niż ${allowed} (9.4, 2.6).`,

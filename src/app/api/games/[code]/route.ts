@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { spellAllowance } from "@/lib/engine/derive";
 import {
   AWAY_AFTER_MS,
   deleteGame,
@@ -11,10 +10,11 @@ import {
   sweepLobby,
   verifySeat,
 } from "@/lib/game/store";
-import { bonusFromHoldings, visibleTo } from "@/lib/engine/holdings";
-import { heldAbilities } from "@/lib/engine/abilities";
-import { asCharacterId, startingKit } from "@/lib/engine/characters";
-import { allStatuses, bonusFrom, markOf } from "@/lib/engine/status";
+import { visibleTo } from "@/lib/engine/holdings";
+import { seatView } from "@/lib/game/commands/seat";
+import type { GameRow } from "@/lib/game/store";
+import type { TurnPhase } from "@/lib/engine/turn";
+import { bonusFrom, markOf } from "@/lib/engine/status";
 import { effectsFor, shopStock } from "@/lib/game/turnStore";
 import type { Slot } from "@/lib/engine/slots";
 
@@ -95,6 +95,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     effectsFor(game.id),
   ]);
 
+  // Everything the seat views are read off, in the shape a command reads. Not
+  // a `loadSnapshot` call: the five lists are already in hand from the fetch
+  // above, and this request is the busiest in the app. `journalSeq` is nothing
+  // to a reader, which is why it is the only field made up.
+  const table = {
+    game: game as GameRow & { turn_state: TurnPhase },
+    seats,
+    holdings,
+    fieldCards,
+    effects,
+    journalSeq: 0,
+  };
+
   // The poll is the heartbeat. A device asking for the state is a device still
   // at the table, so no separate ping is needed — and a seat that stops asking
   // goes quiet by itself, which is the difference between somebody who left and
@@ -147,43 +160,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       // player's device at all. Totals are still reported in full, because a
       // character's strength is public even when the source of it is not.
       const seen = visibleTo(own, { own: mine?.id === seat.id, mode: game.mode });
-      // In slotowy a card only counts where it is worn, so the totals every
-      // device reads are computed from what is on the character, not from the
-      // pack. See `inEffect`.
-      // The character's parameter, not their fight strength. 1.5's example is
-      // exactly this distinction: the Troll's "parametr Miecza" is 8 and he is
-      // worth 11 "podczas walki", and it is the 8 that belongs on his card.
-      const mode = game.eq_mode === "slotowy" ? "slotowy" : "klasyczny";
-      const bonus = bonusFromHoldings(own, mode, "parametr");
-      // Both, because the rulebook quotes both and a player about to pick a
+      // Asked of the same reading the commands enforce against, rather than
+      // worked out again here. In slotowy a card only counts where it is worn,
+      // so the totals every device sees come from what is on the character and
+      // not from the pack (see `inEffect`) — and `parametr` is the character's
+      // number rather than their fight strength. 1.5's example is exactly that
+      // distinction: the Troll's "parametr Miecza" is 8 and he is worth 11
+      // "podczas walki", and it is the 8 that belongs on his card. Both are
+      // sent, because the rulebook quotes both and a player about to pick a
       // fight is asking about the other one.
-      const inFight = bonusFromHoldings(own, mode, "walka");
-
-      // Everything the character is under, from both halves of the model: the
-      // stored effects and the four ad-hoc columns the turn engine reads. One
-      // list, because which half an effect lives in is the app's problem.
-      const under = allStatuses(
-        effects
-          .filter((row) => row.seat_id === seat.id)
-          .map((row) => ({
-            id: row.id,
-            source: row.source,
-            label: row.label,
-            modifier: row.modifier,
-            ends: row.ends,
-          })),
-        {
-          turnsLost: seat.turns_lost,
-          stoneUntilTurn: seat.stone_until_turn,
-          bridgeBlockedUntilTurn: seat.bridge_blocked_until_turn,
-          natureChangedTurn: seat.nature_changed_turn,
-        },
-        game.turn,
-      );
+      //
+      // `statuses` folds the stored effects together with the four ad-hoc
+      // columns the turn engine reads, so the browser gets one list and never
+      // has to know there were two halves.
+      const view = seatView(table, seat.id);
       // 1.2 and 2.2 keep these off the żetony, exactly as they keep a
       // Przedmiot's points off them: an effect is added at read time and never
       // written into own points, or it would outlive its own expiry.
-      const spell = bonusFrom(under);
+      const spell = bonusFrom(view.statuses);
 
       const lastSeen = seat.seen_at ? Date.parse(seat.seen_at) : 0;
       return {
@@ -198,26 +192,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           seat.abandoned_at === null && lastSeen > 0 && Date.now() - lastSeen > AWAY_AFTER_MS,
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
-        miecz_total: seat.miecz_own + bonus.miecz + spell.miecz,
-        magia_total: seat.magia_own + bonus.magia + spell.magia,
+        miecz_total: view.parametr.miecz + spell.miecz,
+        magia_total: view.parametr.magia + spell.magia,
         // 2.6, worked out here for the same reason the totals are: this is the
         // number the server refuses a draw against, so it is the number to
         // show. Deliberately *not* off `magia_total` — a spell's own bonus is
         // not in the basis the enforcement uses, and a cap that moved when a
         // Zaklęcie landed would be a cap nothing honoured.
-        spell_capacity: spellAllowance(
-          seat.magia_own + bonus.magia,
-          startingKit(asCharacterId(seat.character_id)).spells ?? 0,
-          // Not `own` filtered by eq mode: the Różdżka says "Właściciel", and
-          // owning it is the whole condition — a wand in the pack raises the
-          // limit exactly as one on the body does.
-          heldAbilities(own.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
-        ),
-        miecz_walka: seat.miecz_own + inFight.miecz + spell.miecz,
-        magia_walka: seat.magia_own + inFight.magia + spell.magia,
+        // Deliberately *not* off `magia_total` — a spell's own bonus is not in
+        // the basis the enforcement uses, and a cap that moved when a Zaklęcie
+        // landed would be a cap nothing honoured. See `fromCards` for why a
+        // wand in the pack counts as much as one on the body.
+        spell_capacity: view.spellCapacity,
+        miecz_walka: view.walka.miecz + spell.miecz,
+        magia_walka: view.walka.magia + spell.magia,
         // What a player is shown beside their name, already worked out: the
         // browser gets marks, not a modelling problem.
-        effects: under.map((status) => ({
+        effects: view.statuses.map((status) => ({
           id: status.id,
           // The card that put it there, so the browser can draw its picture
           // rather than a shape standing in for it.
