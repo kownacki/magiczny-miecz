@@ -41,6 +41,7 @@ import {
   type Snapshot,
 } from "../change";
 import { cardName } from "./holdings";
+import { asReturnable, putOnPile } from "./piles";
 import { spendLife } from "./life";
 import { activeSeat, eqModeOf, holdingsOf, pointsOf } from "./seat";
 
@@ -587,13 +588,19 @@ export async function resolveBridgeOrdeal(
     const rolls = await rollDice(ports.random, carried.length, "pulapka: co zostaje w rękach");
     const { kept, lost } = keptAfterFall(carried, rolls);
 
+    // 14.5: "Postać traci Przedmiot lub Przyjaciela (należy odłożyć ich Karty)".
+    // Odłożyć, which everywhere else in the book is the stos zużytych — 1.4,
+    // 4.4 and 9.6 all say so in as many words, and nothing in this game removes
+    // a card from it for good. Chained through `apply` because `putOnPile`
+    // reads the deck the shed cards are being added to.
+    const shed: Changeset =
+      lost.length > 0 ? { holdings: { delete: lost.map((h) => h.id) } } : {};
+    const shelved = putOnPile(apply(snapshot, shed), "events", lost.map(asReturnable));
+
     return {
       writes: mergeAll(
-        // Deleted rather than put on the used pile, which is what the store did
-        // and is preserved here deliberately — see the note at the bottom of
-        // this file. A conversion that quietly fixed it would be two changes
-        // wearing one commit.
-        lost.length > 0 ? { holdings: { delete: lost.map((h) => h.id) } } : {},
+        shed,
+        shelved,
         { seats: [{ id: seat.id, patch: { field_id: fall.fieldId } }] },
         {
           journal: [
@@ -717,19 +724,3 @@ export async function resolveBridgeOrdeal(
     result: { field: here, kind: "straznik", dice, enemyTotal: strength, outcome: creature.name },
   };
 }
-
-/**
- * The one thing here that is knowingly wrong, and why it is still wrong.
- *
- * 14.5's second half says of the cards a fall shakes loose that a character has
- * to "odłożyć ich Karty" — which everywhere else in this codebase means the
- * stos zużytych Kart Zdarzeń, reached through `putOnPile`. The store deleted
- * them instead, and the comment sitting above that delete claimed the discard
- * pile while the code took the cards out of the game for good. So a fall off
- * the bridge is currently the one way to make a Smok or a Koń unavailable to
- * everybody for the rest of the game.
- *
- * It is preserved because this file is a conversion and nothing more: the fix
- * is one `putOnPile` and a chained `apply`, and it belongs in its own change
- * with its own test, not folded into a move where nobody would see it.
- */

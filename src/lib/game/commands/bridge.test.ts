@@ -14,6 +14,7 @@ import {
   settleBridge,
   settleCrossing,
 } from "./bridge";
+import { EVENT_COPIES } from "../decks";
 
 /** The board's own two entrances, read off `board.ts` rather than written out. */
 const RUINY = BRIDGE_ENTRANCES.find((e) => e.from === "ruiny-twierdzy")!;
@@ -506,6 +507,37 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
   });
 
   /** The mirror table on the Wymarłe Miasto side is read against Magia. */
+  /**
+   * 14.5: "Postać traci Przedmiot lub Przyjaciela (należy odłożyć ich Karty)".
+   *
+   * Odłożyć — the stos zużytych, which is what 1.4, 4.4 and 9.6 all spell out
+   * and what nothing in this game does without. The store deleted them, under a
+   * comment claiming the pile, so a fall off the Kamienny Most was the one way
+   * to put a Smok beyond everybody's reach for the rest of the game.
+   */
+  it("puts what the fall shook loose on the used pile, not out of the game", async () => {
+    const fallen = inTheTrap("pulapka", { miecz_own: 2 }, [
+      aHolding({ id: "h-2", card_id: "rusalka", kind: "friend" }),
+    ]);
+    const { writes } = await resolveBridgeOrdeal(fallen, undefined, dice(2, 2, 2, 6));
+
+    expect(writes.holdings?.delete).toEqual(["h-2"]);
+    const decks = writes.game?.deck as { events: { discard: string[] } };
+    const copies = EVENT_COPIES.get("rusalka") ?? [];
+    expect(copies.length).toBeGreaterThan(0);
+    expect(decks.events.discard).toEqual([copies[0]]);
+  });
+
+  /** A conjured card belongs to no pile, so it joins none — see `putOnPile`. */
+  it("does not hand the pile a card the deck never gave up", async () => {
+    const fallen = inTheTrap("pulapka", { miecz_own: 2 }, [
+      aHolding({ id: "h-3", card_id: "rusalka", kind: "friend", granted: true }),
+    ]);
+    const { writes } = await resolveBridgeOrdeal(fallen, undefined, dice(2, 2, 2, 6));
+    expect(writes.holdings?.delete).toEqual(["h-3"]);
+    expect(writes.game?.deck).toBeUndefined();
+  });
+
   it("weighs Magia in the Magiczna Pułapka", async () => {
     const strong = await resolveBridgeOrdeal(
       inTheTrap("magiczna-pulapka", { miecz_own: 1, magia_own: 9 }),
