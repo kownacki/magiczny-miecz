@@ -74,7 +74,7 @@ describe("passing the turn (10.1)", () => {
         turn: 3,
         turn_state: {
           phase: "pole",
-          fieldId: asFieldId("zaczarowane-wzgorza")!,
+          fieldId: asFieldId("mroczna-polana")!,
           from: null,
           draw: 1,
           drawn: [{ cardId: "helm", cardClass: "przedmiot" }],
@@ -83,7 +83,7 @@ describe("passing the turn (10.1)", () => {
     });
     const writes = passTurn(table);
     expect(writes.fieldCards?.insert).toEqual([
-      { field_id: "zaczarowane-wzgorza", card_id: "helm" },
+      { field_id: "mroczna-polana", card_id: "helm" },
     ]);
     expect(writes.journal?.map((line) => line.kind)).toEqual(["zostawienie", "koniec-tury"]);
   });

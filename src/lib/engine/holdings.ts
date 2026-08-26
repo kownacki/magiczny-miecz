@@ -8,6 +8,7 @@ import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
 import { isWearable } from "./slots";
 import type { Holding } from "./state";
+import type { FieldId } from "./board";
 
 const EVENTS = events as EventCard[];
 
@@ -134,15 +135,38 @@ export function inEffect<T extends { cardId: string; slot?: string | null }>(
  */
 export type Reckoning = keyof Lent;
 
+/**
+ * The Obszary where a Przedmiot lends nothing.
+ *
+ * One, and it says so on the board: "Na tym Obszarze nie możesz liczyć na Miecz
+ * i Magię czerpane z Przedmiotów i Przedmiotów Magicznych. Nie możesz też
+ * rzucać Zaklęć." Both halves of that sentence, and note that it is every
+ * Przedmiot rather than only the magical ones — the second clause names the
+ * magical ones as well as, not instead of.
+ *
+ * Przyjaciele are not Przedmioty and keep lending what they lend. A character
+ * standing here is worth its own points plus its friends', and nothing else.
+ */
+export const NO_ITEM_BONUS: ReadonlySet<FieldId> = new Set<FieldId>(["zaczarowane-wzgorza"]);
+
+/** Whether this Obszar suspends what a Przedmiot is worth. */
+export function suppressesItems(fieldId: FieldId | null): boolean {
+  return fieldId !== null && NO_ITEM_BONUS.has(fieldId);
+}
+
 export function bonusFromHoldings(
   holdings: readonly Holding[],
   eqMode: EqMode,
   as: Reckoning,
+  /** Where the character is standing, when that changes what its cards are worth. */
+  standingOn: FieldId | null = null,
 ): HeldTotals {
+  const noItems = suppressesItems(standingOn);
   let miecz = 0;
   let magia = 0;
   for (const holding of inEffect(holdings, eqMode)) {
     if (holding.kind !== "item" && holding.kind !== "friend") continue;
+    if (noItems && holding.kind === "item") continue;
     const bonus = BONUS_BY_ID.get(holding.cardId);
     if (!bonus) continue;
     miecz += bonus[as].miecz;

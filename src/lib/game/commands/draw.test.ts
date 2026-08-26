@@ -44,7 +44,7 @@ const never: Shuffle = () => {
   throw new Error("nothing should have been reshuffled");
 };
 
-const HERE = asFieldId("zaczarowane-wzgorza")!;
+const HERE = asFieldId("mroczna-polana")!;
 
 const onField = (over: Partial<Extract<TurnPhase, { phase: "pole" }>> = {}): TurnPhase => ({
   phase: "pole",

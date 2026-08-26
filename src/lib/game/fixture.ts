@@ -22,7 +22,7 @@ export function aSeat(over: Partial<SeatRow> = {}): SeatRow {
     seat_index: 0,
     player_name: "Michał",
     character_id: asSeatCharacter("goblin"),
-    field_id: asFieldId("zaczarowane-wzgorza"),
+    field_id: asFieldId("mroczna-polana"),
     miecz_own: 2,
     magia_own: 1,
     miecz_floor: 2,

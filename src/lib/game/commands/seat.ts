@@ -115,8 +115,10 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
   const holdings = holdingsOf(snapshot, seatId);
   const mine = abilitiesOfCharacter(asCharacterId(row.character_id));
 
-  const parametr = bonusFromHoldings(holdings, mode, "parametr");
-  const walka = bonusFromHoldings(holdings, mode, "walka");
+  // Where the character is standing can change what its cards are worth: the
+  // Zaczarowane Wzgórza suspend every Przedmiot, by the board's own words.
+  const parametr = bonusFromHoldings(holdings, mode, "parametr", row.field_id);
+  const walka = bonusFromHoldings(holdings, mode, "walka", row.field_id);
   const fromCards = heldAbilities(
     holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId),
   );

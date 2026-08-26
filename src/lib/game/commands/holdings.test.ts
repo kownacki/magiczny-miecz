@@ -16,7 +16,7 @@ import {
 } from "./holdings";
 
 /** Real fields, read through the board's own guard rather than written as strings. */
-const HERE = asFieldId("zaczarowane-wzgorza")!;
+const HERE = asFieldId("mroczna-polana")!;
 const ELSEWHERE = asFieldId("grod")!;
 
 /** The turn stopped on an Obszar, which is the only phase 12.1 opens. */

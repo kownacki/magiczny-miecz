@@ -62,7 +62,7 @@ describe("śmierć (4.4)", () => {
   it("leaves the gear and the friends lying on the Obszar", () => {
     const writes = killSeat(table(), "seat-a");
     expect(writes.fieldCards?.insert?.map((card) => card.card_id)).toEqual(["helm", "wilk"]);
-    expect(writes.fieldCards?.insert?.every((c) => c.field_id === "zaczarowane-wzgorza")).toBe(true);
+    expect(writes.fieldCards?.insert?.every((c) => c.field_id === "mroczna-polana")).toBe(true);
   });
 
   it("empties the hand completely, spells and trophies included", () => {
@@ -75,7 +75,7 @@ describe("śmierć (4.4)", () => {
     expect(writes.seats).toContainEqual({ id: "seat-a", patch: { eliminated: true } });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "smierc",
-      payload: { droppedOnField: ["helm", "wilk"], spellsDiscarded: 1, field: "zaczarowane-wzgorza" },
+      payload: { droppedOnField: ["helm", "wilk"], spellsDiscarded: 1, field: "mroczna-polana" },
     });
   });
 

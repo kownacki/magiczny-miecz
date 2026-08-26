@@ -111,7 +111,7 @@ describe("przestawienie figury", () => {
     expect(writes.journal?.[0]).toMatchObject({
       kind: "przestawienie",
       manual: true,
-      payload: { from: "zaczarowane-wzgorza", to: "osada", reason: "test" },
+      payload: { from: "mroczna-polana", to: "osada", reason: "test" },
     });
   });
 
@@ -129,7 +129,7 @@ describe("przestawienie figury", () => {
       game: {
         turn_state: {
           phase: "pole",
-          fieldId: "zaczarowane-wzgorza",
+          fieldId: "mroczna-polana",
           from: null,
           draw: 2,
           drawn: [],

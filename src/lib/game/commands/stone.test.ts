@@ -22,7 +22,7 @@ describe("Zamieniony w Kamień (20.1-20.5)", () => {
       { seatId: "seat-a" },
     );
     expect(writes.fieldCards?.insert).toEqual([
-      { field_id: "zaczarowane-wzgorza", card_id: "helm" },
+      { field_id: "mroczna-polana", card_id: "helm" },
     ]);
     expect(writes.holdings?.delete).toContain("h1");
   });
@@ -30,9 +30,9 @@ describe("Zamieniony w Kamień (20.1-20.5)", () => {
   it("turns the purse into that many Sztuki Złota on the ground", () => {
     const writes = turnToStone(table([], 3), { seatId: "seat-a" });
     expect(writes.fieldCards?.insert).toEqual([
-      { field_id: "zaczarowane-wzgorza", card_id: "1-sztuka-zlota" },
-      { field_id: "zaczarowane-wzgorza", card_id: "1-sztuka-zlota" },
-      { field_id: "zaczarowane-wzgorza", card_id: "1-sztuka-zlota" },
+      { field_id: "mroczna-polana", card_id: "1-sztuka-zlota" },
+      { field_id: "mroczna-polana", card_id: "1-sztuka-zlota" },
+      { field_id: "mroczna-polana", card_id: "1-sztuka-zlota" },
     ]);
     expect(writes.seats?.[0].patch).toMatchObject({ zloto: 0 });
   });

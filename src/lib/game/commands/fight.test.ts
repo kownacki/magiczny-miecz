@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { asFieldId } from "@/lib/engine/board";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Fight, TurnPhase } from "@/lib/engine/turn";
 import type { DeckState } from "@/lib/engine/deck";
@@ -16,7 +17,7 @@ import {
 /** A character standing where its move ended, with cards turned over in front of it. */
 const pole = (over: Partial<Extract<TurnPhase, { phase: "pole" }>> = {}): TurnPhase => ({
   phase: "pole",
-  fieldId: "zaczarowane-wzgorza",
+  fieldId: "mroczna-polana",
   from: null,
   draw: 1,
   drawn: [{ cardId: "cyklop", cardClass: "wrog" }],
@@ -35,7 +36,7 @@ const walka = (over: Partial<Fight> = {}): TurnPhase => ({
     playerRoll: null,
     enemyRoll: null,
     result: null,
-    fieldId: "zaczarowane-wzgorza",
+    fieldId: "mroczna-polana",
     draw: 1,
     drawn: [{ cardId: "cyklop", cardClass: "wrog" }],
     fought: ["cyklop"],
@@ -318,7 +319,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         aHolding({ id: "s-1", seat_id: "seat-a", card_id: "siewca-spustoszenia", kind: "spell" }),
       ],
       fieldCards: [
-        { id: "fc-1", field_id: "zaczarowane-wzgorza", card_id: "cyklop", granted: false },
+        { id: "fc-1", field_id: "mroczna-polana", card_id: "cyklop", granted: false },
       ],
     });
 
@@ -468,7 +469,7 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
     expect(writes.journal).toEqual([
       expect.objectContaining({
         kind: "pojedynek",
-        payload: { target: 1, field: "zaczarowane-wzgorza" },
+        payload: { target: 1, field: "mroczna-polana" },
       }),
     ]);
   });
@@ -723,5 +724,27 @@ describe("osłona (17.4, 18.2b)", () => {
       ports({ random: scriptedRandom([]) }),
     );
     expect(result).toBe(false);
+  });
+});
+
+describe("Zaczarowane Wzgórza and the spoken word", () => {
+  /** "Nie możesz też rzucać Zaklęć." The other half of the same sentence. */
+  it("refuses a Zaklęcie spoken from the Wzgórza", () => {
+    const there = aTable({
+      game: { active_seat: 0 },
+      seats: [
+        aSeat({
+          id: "seat-a",
+          seat_index: 0,
+          field_id: asFieldId("zaczarowane-wzgorza"),
+        }),
+      ],
+      holdings: [aHolding({ id: "s1", card_id: "krag-plomieni", kind: "spell" })],
+    });
+    // `castSpell` is synchronous — it needs no die — so this throws rather
+    // than rejecting.
+    expect(() => castSpell(there, { seatId: "seat-a", holdingId: "s1" }, ports())).toThrow(
+      /Zaczarowanych Wzgórzach nie rzuca/,
+    );
   });
 });

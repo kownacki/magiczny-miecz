@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { asSeatCharacter } from "@/lib/engine/characters";
+import { asFieldId } from "@/lib/engine/board";
 import { afterRoll } from "@/lib/engine/turn";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { HoldingRow } from "../store";
@@ -164,7 +165,9 @@ const rolling = (
 ) =>
   aTable({
     game: { active_seat: 0, turn: 3, turn_state: { phase: "rzut" } },
-    seats: [aSeat({ seat_index: 0, ...seat })],
+    // Named rather than leant on: the fixture's own Obszar is deliberately one
+    // with no rule of its own, and these tests are about this one's neighbours.
+    seats: [aSeat({ seat_index: 0, field_id: asFieldId("zaczarowane-wzgorza"), ...seat })],
     holdings,
   });
 

@@ -12,7 +12,7 @@ import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
 import { combatValueOf } from "@/lib/engine/cards";
 import { attackAsOne, type CombatKind } from "@/lib/engine/combat";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
-import { inEffect } from "@/lib/engine/holdings";
+import { inEffect, suppressesItems } from "@/lib/engine/holdings";
 import {
   castableNow,
   momentsIn,
@@ -299,6 +299,13 @@ export function castSpell(
 
   // 9.7: "Żadne Zaklęcie nie działa na istoty napotkane na Kamiennym Moście ani
   // na samą Bestię." Where the caster stands is what decides it.
+  // "Nie możesz też rzucać Zaklęć." The same sentence that suspends the
+  // Przedmioty here, and the half of it that is about speaking rather than
+  // carrying.
+  if (suppressesItems(caster.field_id)) {
+    throw new Error("Na Zaczarowanych Wzgórzach nie rzuca się Zaklęć.");
+  }
+
   const onTheBridge = caster.field_id ? ringOf(caster.field_id) === KAMIENNY_MOST : false;
   const aimedAtSomethingThere =
     script?.target === "wrog" || script?.target === "postac-lub-wrog";

@@ -141,3 +141,47 @@ describe("what a character is under", () => {
     expect(seatView(table, "seat-a").statuses.length).toBeGreaterThan(1);
   });
 });
+
+/* --------------------------------------------------------------------------
+ * The one Obszar that changes what a card is worth.
+ * ----------------------------------------------------------------------- */
+
+describe("Zaczarowane Wzgórza", () => {
+  /**
+   * The board's own words: "Na tym Obszarze nie możesz liczyć na Miecz i Magię
+   * czerpane z Przedmiotów i Przedmiotów Magicznych. Nie możesz też rzucać
+   * Zaklęć."
+   *
+   * Every Przedmiot, not only the magical ones — the sentence names the magical
+   * ones as well as, not instead of.
+   */
+  const withSword = (fieldId: string) =>
+    view({ miecz_own: 2, field_id: asFieldId(fieldId) }, [
+      aHolding({ id: "h1", card_id: "excalibur", kind: "item" }),
+    ]);
+
+  it("suspends what a Przedmiot lends while a character stands there", () => {
+    const away = withSword("mroczna-polana");
+    const here = withSword("zaczarowane-wzgorza");
+    expect(away.parametr.miecz).toBeGreaterThan(2);
+    expect(here.parametr.miecz).toBe(2);
+    expect(here.walka.miecz).toBe(2);
+  });
+
+  /** Przyjaciele are not Przedmioty, and the sentence names Przedmioty. */
+  it("leaves the Przyjaciele lending what they lend", () => {
+    const friend = (fieldId: string) =>
+      view({ miecz_own: 2, field_id: asFieldId(fieldId) }, [
+        aHolding({ id: "f1", card_id: "rusalka", kind: "friend" }),
+      ]);
+    expect(friend("zaczarowane-wzgorza").parametr).toEqual(
+      friend("mroczna-polana").parametr,
+    );
+  });
+
+  it("gives the points back the moment the character leaves", () => {
+    expect(withSword("mroczna-polana").parametr.miecz).toBeGreaterThan(
+      withSword("zaczarowane-wzgorza").parametr.miecz,
+    );
+  });
+});
