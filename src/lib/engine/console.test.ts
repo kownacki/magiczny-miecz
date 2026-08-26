@@ -47,18 +47,17 @@ suite("moving a parameter", () => {
     expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, who: null });
   });
 
-  it("knows the four parameters in both languages", () => {
+  it("knows the four parameters, and only by their English names", () => {
     expect(ok("sword +1")).toMatchObject({ stat: "miecz" });
     expect(ok("magic +1")).toMatchObject({ stat: "magia" });
     expect(ok("life -1")).toMatchObject({ stat: "zycie" });
     expect(ok("gold +1")).toMatchObject({ stat: "zloto" });
-    // The one place this console has any business in Polish: these are the
-    // words printed on the card somebody is looking at while they type, and the
-    // ± that used to sit under the number is gone in test mode.
-    expect(ok("miecz +1")).toMatchObject({ stat: "miecz" });
-    expect(ok("magia +1")).toMatchObject({ stat: "magia" });
-    expect(ok("zycie -1")).toMatchObject({ stat: "zycie" });
-    expect(ok("zloto +1")).toMatchObject({ stat: "zloto" });
+    // The line between the two languages: what you type is English, what you
+    // name keeps the name printed on it. A stat is typed.
+    expect(err("miecz +1")).toMatch(/No command/);
+    expect(err("magia +1")).toMatch(/No command/);
+    expect(err("zycie -1")).toMatch(/No command/);
+    expect(err("zloto +1")).toMatch(/No command/);
   });
 
   it("takes a player after the amount, and nobody as yourself", () => {
@@ -76,6 +75,21 @@ suite("moving a parameter", () => {
 });
 
 suite("naming a card, a field or a creature", () => {
+  /**
+   * The line between the two languages, in one test.
+   *
+   * Everything you type at this console is English, because the words are the
+   * names of functions. Everything you name keeps the name printed on it,
+   * because those are the names on the cards and the board in front of you.
+   */
+  it("types English and names Polish", () => {
+    expect(ok("magic +1")).toMatchObject({ stat: "magia" });
+    expect(err("magia +1")).toMatch(/No command/);
+    expect(ok("give MAGICZNY MIECZ")).toMatchObject({ cardId: "magiczny-miecz" });
+    expect(ok("go Świątynia Tolimana")).toMatchObject({ fieldId: "swiatynia-tolimana" });
+    expect(ok("revive as BŁĘDNY RYCERZ")).toMatchObject({ characterId: "bledny-rycerz" });
+  });
+
   it("finds a card by the name printed on it", () => {
     expect(ok("give MAGICZNY MIECZ")).toEqual({ kind: "give", cardId: "magiczny-miecz" });
   });
@@ -237,7 +251,7 @@ suite("help", () => {
     // Not a sample: the parser refuses anything outside the printed list before
     // it looks at it, so `help` is the whole vocabulary by construction.
     const printed = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
-    for (const word of ["win", "lose", "grant", "walcz", "teleport"]) {
+    for (const word of ["miecz", "magia", "win", "lose", "grant", "walcz", "teleport"]) {
       expect(printed.has(word), word).toBe(false);
       expect(err(word)).toMatch(/No command/);
     }
