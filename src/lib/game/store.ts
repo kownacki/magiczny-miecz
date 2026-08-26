@@ -7,6 +7,7 @@ import { MAX_SEATS, type GameMode } from "./modes";
 import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
 import { Failure } from "./failure";
+import type { TurnPhase } from "@/lib/engine/turn";
 
 export interface SeatRow {
   id: string;
@@ -170,6 +171,57 @@ export async function findGame(joinCode: string): Promise<GameRow | null> {
     .maybeSingle();
   if (error) throw new Failure(`findGame: ${error.message}`);
   return (data as GameRow) ?? null;
+}
+
+/**
+ * One game by its row id, for callers that already have one.
+ *
+ * `findGame` takes a join code, which is what a URL carries; everything past
+ * the route already holds the id. This lived in `turnStore.ts` as a private
+ * `loadGame` — the one `db` call left outside this file, and invisible to a
+ * `db.from` grep because the handle and the call sat on separate lines.
+ *
+ * `GAME_COLUMNS` and not a hand-written list: the copy that used to be here
+ * drifted the moment a column was added, and a game that does not know its own
+ * `eq_mode` silently behaves as though the variant were off.
+ */
+export async function gameById(
+  gameId: string,
+): Promise<GameRow & { turn_state: TurnPhase }> {
+  const { data, error } = await db
+    .from("games")
+    .select(GAME_COLUMNS)
+    .eq("id", gameId)
+    .single();
+  if (error) throw new Failure(`gameById: ${error.message}`);
+  return data as GameRow & { turn_state: TurnPhase };
+}
+
+/**
+ * The tail of a game's journal, as rows.
+ *
+ * Turning them into sentences is `journalText.ts`'s and happens in the route,
+ * because `moves` is the complete private record and some of what it holds is
+ * nobody else's business (9.3). Reading it is this file's, like every other
+ * query: the route that owns this one was the last place in the app holding
+ * the service-role handle itself.
+ *
+ * Newest first, so a window is the tail of a long game rather than its opening.
+ */
+export async function journalRows(
+  gameId: string,
+  options: { after: number; limit: number },
+): Promise<Record<string, unknown>[]> {
+  let query = db
+    .from("moves")
+    .select("seq,seat_id,turn,kind,payload,manual")
+    .eq("game_id", gameId)
+    .order("seq", { ascending: false })
+    .limit(options.limit);
+  if (options.after > 0) query = query.gt("seq", options.after);
+  const { data, error } = await query;
+  if (error) throw new Failure(`journalRows: ${error.message}`);
+  return (data ?? []) as Record<string, unknown>[];
 }
 
 export async function seatsFor(gameId: string): Promise<SeatRow[]> {

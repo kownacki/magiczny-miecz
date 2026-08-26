@@ -65,8 +65,12 @@ anything.
   a compare-and-swap on `games.revision` — the games row is taken first and acts
   as the lock, so a loser writes nothing at all rather than half of something.
   The sixteen files in `src/lib/game/commands/` are 5,600 lines of that one
-  shape, and `turnStore.ts` is the thin dispatcher over them: zero `db.from`,
-  zero hand-rolled journal writes. Do not add either back. Two traps worth
+  shape, and `turnStore.ts` is the thin dispatcher over them. Do not add a
+  database call or a hand-rolled journal write back into it. The invariant to
+  check is `grep -rl 'from "@/lib/supabase"' src`, which must answer with
+  `store.ts` and `change.ts` and nothing else — grepping for `db.from` looks
+  equivalent and is not, because the handle and the call can sit on separate
+  lines, which is exactly how the last two escapees stayed hidden. Two traps worth
   knowing before you write one: `merge` resolves two writes to the same column
   as *later wins*, never a sum, so anything that reads a column and writes it
   back — above all `game.deck` through `putOnPile` — must chain through

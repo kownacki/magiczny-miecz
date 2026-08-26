@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { findGame, seatsFor, verifySeat } from "@/lib/game/store";
-import { db } from "@/lib/supabase";
+import { findGame, journalRows, seatsFor, verifySeat } from "@/lib/game/store";
 import { journalLines, type JournalEntry } from "@/lib/engine/journalText";
 import { asJournalKind } from "@/lib/engine/journal";
 
@@ -36,16 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   const seat = token ? await verifySeat(game.id, token) : null;
   const seats = await seatsFor(game.id);
 
-  let query = db
-    .from("moves")
-    .select("seq,seat_id,turn,kind,payload,manual")
-    .eq("game_id", game.id)
-    .order("seq", { ascending: false })
-    .limit(WINDOW);
-  if (after > 0) query = query.gt("seq", after);
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: "Nie udało się wczytać dziennika." }, { status: 500 });
+  const data = await journalRows(game.id, { after, limit: WINDOW });
 
   // The one place a stored `kind` becomes a `JournalKind`, so nothing
   // downstream has to wonder. A row written by a version that knew a kind this

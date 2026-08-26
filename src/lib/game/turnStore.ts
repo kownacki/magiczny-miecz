@@ -2,9 +2,7 @@
 
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
-import { db } from "@/lib/supabase";
 import {
-  GAME_COLUMNS,
   fieldCardsFor,
   type HoldingRow,
 } from "./store";
@@ -21,7 +19,6 @@ import {
 } from "@/lib/engine/characters";
 import {
   endFight,
-  type TurnPhase,
 } from "@/lib/engine/turn";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
@@ -201,8 +198,7 @@ export type { Decks };
 
 /** Reads the stored decks, tolerating a game started before spells existed. */
 import type { Slot } from "@/lib/engine/slots";
-import { holdingsFor, seatsFor, type GameRow } from "./store";
-import { Failure } from "./failure";
+import { gameById, holdingsFor, seatsFor } from "./store";
 import { cardName } from "@/lib/engine/polish";
 
 /**
@@ -210,27 +206,6 @@ import { cardName } from "@/lib/engine/polish";
  * one of these call sites used to drop on the floor while building the same
  * object by hand.
  */
-/**
- * The table's equipment variant, as the engine's type.
- *
- * A column rather than an enum in here, so this is where the string becomes
- * something the rules can switch on — and where an unrecognised value falls
- * back to the game as printed rather than to a house rule.
- */
-
-
-async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
-  const { data, error } = await db
-    .from("games")
-    // The shared list, not a copy: this one had drifted the moment a column
-    // was added, and a game that does not know its own eq_mode silently
-    // behaves as though the variant were off.
-    .select(GAME_COLUMNS)
-    .eq("id", gameId)
-    .single();
-  if (error) throw new Failure(`loadGame: ${error.message}`);
-  return data as GameRow & { turn_state: TurnPhase };
-}
 
 export async function startGame(gameId: string): Promise<void> {
   // Everybody who asked to be surprised finds out now, and not a moment
@@ -1506,7 +1481,7 @@ export async function runCommand(
       if (seat.eliminated) throw new Error(`${named(seat)} nie żyje — try \`revive\`.`);
       const players = seats.filter((s) => s.character_id && !s.eliminated).length;
       for (let pass = 0; pass <= players * 8; pass++) {
-        const game = await loadGame(gameId);
+        const game = await gameById(gameId);
         if (game.active_seat === seat.seat_index) {
           return pass === 0
             ? `It is already ${named(seat)}'s turn.`
