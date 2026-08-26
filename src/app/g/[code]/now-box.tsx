@@ -27,6 +27,8 @@ export function NowBox({
   whyNotEnd,
   canRoll,
   canDraw,
+  away,
+  since,
   busy,
   onOpen,
   onRoll,
@@ -50,6 +52,16 @@ export function NowBox({
   canRoll: boolean;
   /** The Obszar still owes cards (13.4 counts what is already lying there). */
   canDraw: boolean;
+  /** The player whose turn it is has stopped checking in (AWAY_AFTER_MS). */
+  away?: boolean;
+  /**
+   * The table's revision, used only to restart the wait.
+   *
+   * Anything that happens bumps it, so keying the indicator on it is the same
+   * as saying "nothing has happened since". No timer and no re-render a second:
+   * the animation is given a delay, and a new key starts the delay again.
+   */
+  since?: number;
   busy: boolean;
   onOpen: (id: WindowId) => void;
   onRoll: () => void;
@@ -88,6 +100,15 @@ export function NowBox({
         {/* Where the figure is standing. The board says it too, but the board
             is on the other side of the screen and this is the line you read
             without looking away from what you are about to press. */}
+        {/* A seat that has stopped checking in is not thinking, and saying so
+            is worth more than any amount of animation: the table needs to know
+            whether to wait or to take over. It replaces the pulse rather than
+            joining it — two signals for one silence. */}
+        {away && (
+          <p className="mb-0.5 truncate text-[11px] text-vermilion">
+            {isMine ? "Twoje urządzenie milczy." : `${playerName} nie odpowiada.`}
+          </p>
+        )}
         <p className="truncate text-[11px] text-muted" title={fieldName}>
           {fieldId ? (
             <Lookable kind="field" id={fieldId} name={fieldName} />
@@ -110,13 +131,34 @@ export function NowBox({
             <span key={step.label} className="flex items-center gap-1">
               {at > 0 && <span className="text-edge">·</span>}
               <span
-                className={
+                /**
+                 * The step being waited on breathes, once waiting is a thing.
+                 *
+                 * Not from the moment the step arrives: a turn in progress is
+                 * somebody reading a card, and a screen that pulses at them
+                 * from the first second is a screen that pulses all game. The
+                 * delay is what makes it mean something — nothing has happened
+                 * for a while, and this is the thing that has not happened.
+                 *
+                 * `key` is the revision, so any move at the table starts the
+                 * wait over. `motion-safe` because this is decoration, and a
+                 * player who has asked their machine to stop moving things has
+                 * asked for a reason.
+                 */
+                key={since}
+                className={`${
                   step.state === "zrobione"
                     ? "text-verdigris"
                     : step.state === "teraz"
                       ? "text-ochre"
                       : "text-muted/50"
-                }
+                } ${
+                  step.state === "teraz" && !away ? "motion-safe:animate-pulse" : ""
+                }`}
+                // The delay is a style rather than a class: Tailwind's
+                // arbitrary values are found by scanning source text, and this
+                // one lives inside a template string where it was not.
+                style={step.state === "teraz" && !away ? { animationDelay: "12s" } : undefined}
               >
                 {step.label}
                 {step.state === "zrobione" && " \u2713"}

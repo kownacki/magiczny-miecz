@@ -1589,6 +1589,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       phase: game.turn_state.phase,
                     }),
                   )}
+                  // Who we are waiting for, and since when. The revision is
+                  // "since when" already: everything that happens bumps it.
+                  away={active.away}
+                  since={game.revision}
                   canRoll={game.turn_state.phase === "roll"}
                   onRoll={() => post("turn", { action: "roll" })}
                   // 13.4: what is already lying here counts against the number
