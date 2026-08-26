@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { normaliseJoinCode } from "@/lib/game/codes";
-import { readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
+import { readSeatToken, takeRemovedNotice, writeSeatToken } from "@/lib/game/seatToken";
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { isCharacterId } from "@/data/ids";
@@ -72,6 +72,18 @@ export default function Home() {
   const [games, setGames] = useState<GameSummary[] | null>(null);
   /** Which table is one more click from being deleted. */
   const [deleting, setDeleting] = useState<string | null>(null);
+  /**
+   * The table this window was just put out of, if it was.
+   *
+   * Read once and cleared by the reading, because it is about the journey that
+   * ended here and not about this page: a second visit is somebody coming back,
+   * and telling them again what happened last time is telling them about
+   * nothing. Lazily rather than in an effect, so it is gone before the first
+   * paint and cannot flash on and off.
+   */
+  const [removedFrom] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : takeRemovedNotice(),
+  );
 
   // A game of this length spans several sittings, so "which table were we on?"
   // is a real question and the list is worth having before it is asked.
@@ -159,6 +171,20 @@ export default function Home() {
           onCancel={() => setIntent(null)}
           onJoin={(name) => joinTable(intent.code, name)}
         />
+      )}
+
+      {/* Why this window is here rather than at the table it was at. Above the
+          title, because it is the answer to a question the person arrived
+          holding — anywhere further down it is a footnote to a page they did
+          not ask for. */}
+      {removedFrom && (
+        <p
+          role="status"
+          className="rounded border border-vermilion/50 bg-vermilion/10 px-3 py-2 text-center text-sm text-vermilion"
+        >
+          Gospodarz usunął cię ze stołu {removedFrom}. Postać została w grze — możesz
+          wrócić na to miejsce, jeśli nikt go nie zajmie.
+        </p>
       )}
 
       <header className="text-center">

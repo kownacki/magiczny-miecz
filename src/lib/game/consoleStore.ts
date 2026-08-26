@@ -16,6 +16,7 @@ import type { Modifier } from "@/lib/engine/status";
 import { change } from "./change";
 import { ADJUSTABLE, type Adjustable } from "./commands/adjust";
 import { STONE_TURNS } from "./commands/stone";
+import { leaveGame } from "./lobbyStore";
 import { gameById, seatsFor } from "./store";
 import {
   abandonFight,
@@ -172,6 +173,29 @@ export async function runCommand(
       // handed on — happens here too (4.4).
       await adjust(gameId, seat.id, "life", -seat.life, null);
       return `${named(seat)} ginie.`;
+    }
+
+    /**
+     * A player out of their seat, and the character left where it stands.
+     *
+     * The same door `leave` goes through, which is the whole point of it being
+     * that door: mid-game a seat is not deleted but *abandoned* — the character
+     * keeps its Obszar, its cards and its żetony, the seat is marked as having
+     * nobody behind it, and a fresh claim token is issued so the device that
+     * held it stops holding it. Somebody takes it over later, or the same
+     * person does from another tab. Only in the poczekalnia, where a seat is an
+     * intention and not yet a character, does leaving actually delete it.
+     *
+     * Which also means this cannot strand the table: `leaveSeat` hands the turn
+     * on when the seat it empties is the one whose turn it is.
+     */
+    case "kick": {
+      const seat = seatOf(command.who);
+      const { removed, passedTo } = await leaveGame(gameId, seat.id);
+      const turn = passedTo === null ? "" : ` Turn passes to seat ${passedTo + 1}.`;
+      return removed
+        ? `${named(seat)} is off the table.`
+        : `${named(seat)} is out of their seat; the character stays.${turn}`;
     }
 
     case "give": {

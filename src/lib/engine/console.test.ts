@@ -442,6 +442,8 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   help: { line: "help", becomes: { kind: "help", about: null } },
   gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "gold", delta: 5, set: null, who: "Ola", force: false } },
   kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
+  kick: { line: "kick Ola", becomes: { kind: "kick", who: "Ola" } },
+  kick: { line: "kick Ola", becomes: { kind: "kick", who: "Ola" } },
   revive: {
     line: "revive Ola as MAGOG",
     becomes: { kind: "revive", who: "Ola", characterId: "magog" },
@@ -469,6 +471,25 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   endturn: { line: "endturn", becomes: { kind: "endturn" } },
   spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola" } },
 };
+
+suite("kick, which is the one that will not guess who", () => {
+  it("takes the player it is given", () => {
+    expect(ok("kick Ola")).toEqual({ kind: "kick", who: "Ola" });
+  });
+
+  /**
+   * Every other `[player]` command means you when you leave it off, which is
+   * right when the worst case is a Życie you can put back. This one takes a
+   * seat away and cannot be undone by typing it again.
+   */
+  it("refuses a bare kick rather than reading it as `kick me`", () => {
+    expect(err("kick")).toBe("Kick whom?");
+  });
+
+  it("finishes a player's name like the other commands that take one", () => {
+    expect(complete("kick O", ["Ola", "Michał"]).line).toBe("kick Ola ");
+  });
+});
 
 suite("every command, once each", () => {
   it("has a worked line for every command, and no line for a command that went", () => {

@@ -57,6 +57,7 @@ export type EffectName = "fog" | "frozen" | "barred";
 export type Command =
   | { kind: "help"; about: string | null }
   | { kind: "kill"; who: string | null }
+  | { kind: "kick"; who: string }
   /**
    * A parameter moved, or put where you want it.
    *
@@ -119,6 +120,12 @@ export const COMMANDS: CommandSpec[] = [
     summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor",
   },
   { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
+  {
+    name: "kick",
+    aliases: [],
+    usage: "kick <player>",
+    summary: "put a player out of their seat — the character stays on the board",
+  },
   {
     name: "revive",
     aliases: [],
@@ -313,6 +320,18 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
 
   if (word === "kill") return { ok: { kind: "kill", who: tail || null } };
+  /**
+   * The one command here that will not default to you.
+   *
+   * Everything else takes `[player]` and means yourself when it is left off,
+   * which is right when the worst case is a Życie you can put back. This one
+   * takes the seat away from whoever it names and cannot be undone by typing it
+   * again, and a bare `kick` meaning "kick me" is a way to lose your own table
+   * to a fumbled line.
+   */
+  if (word === "kick") {
+    return tail ? { ok: { kind: "kick", who: tail } } : { error: "Kick whom?" };
+  }
   if (word === "spell") return { ok: { kind: "spell", who: tail || null } };
   // Spelled out, because `win` alone is two different things: the fight in
   // front of you, and the game.
@@ -595,7 +614,13 @@ export function complete(
     }
     if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "go" || verb === "move") return { pool: PLACES.map((f) => f.name), at: 1 };
-    if (verb === "kill" || verb === "spell" || verb === "turn" || verb === "stone") {
+    if (
+      verb === "kill" ||
+      verb === "kick" ||
+      verb === "spell" ||
+      verb === "turn" ||
+      verb === "stone"
+    ) {
       return { pool: [...players], at: 1 };
     }
     if (verb === "effect") {

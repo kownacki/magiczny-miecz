@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
+import {
+  forgetSeatToken,
+  noteRemoved,
+  readSeatToken,
+  writeSeatToken,
+} from "@/lib/game/seatToken";
 import { watchRevision } from "@/lib/game/liveRevision";
 import type { CardId } from "@/data/ids";
 import type { FieldId } from "@/lib/engine/board";
@@ -171,6 +176,26 @@ export function useTable(code: string): Table {
     if (isStale(data.game.revision, seenRevision.current)) return;
     seenRevision.current = data.game.revision;
 
+    /**
+     * We held a seat and the table says we do not.
+     *
+     * Which is what being put out of one looks like from in here: the token
+     * still in this window no longer opens anything, because `leaveSeat` issued
+     * a new one for that seat when it emptied it. Nothing else can produce this
+     * — a spectator sends no token, and a player who gave the seat up forgot
+     * theirs on the way out, so both arrive with `stored` already null.
+     *
+     * Said and then left, rather than left to be worked out. Staying would show
+     * the join gate over a table this person was just removed from, which reads
+     * as the app having lost them rather than as somebody having done it.
+     */
+    if (stored && data.mySeatIndex === null) {
+      forgetSeatToken(code);
+      noteRemoved(code);
+      router.push("/");
+      return;
+    }
+
     setGame(data.game);
     setSeats(data.seats);
     const now = Date.now();
@@ -197,7 +222,7 @@ export function useTable(code: string): Table {
       watched.current = reading;
       if (said) setAnnouncement(said);
     }
-  }, [code]);
+  }, [code, router]);
 
   useEffect(() => {
     // Polling stands in for the Realtime revision ping. Two seconds is
