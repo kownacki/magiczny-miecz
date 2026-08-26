@@ -87,8 +87,12 @@ moment, which is the whole reason they are ports.
 - `change()` is the only thing that both reads a **Snapshot** and performs a **Commit**
 - A **Commit** either advances the game's `revision` by one or raises a **Conflict**
 - A **Port** has one **Binding** per mode, plus a scripted one for tests
-- Commands live one per cluster under `src/lib/game/commands/`; `turnStore.ts`
-  keeps the old name as a one-line entry point until everything has crossed
+- Commands live one per cluster under `src/lib/game/commands/`; two files above
+  them are the edges — `turnStore.ts` for the game, `lobbyStore.ts` for the
+  poczekalnia — and they exist to do the three things a **Command** may not:
+  read, mint (a claim token, a shuffle), and write the one row a **Changeset**
+  cannot name, which is the game itself
+- `store.ts` is rows and reads. Nothing decides anything in it
 - An **Envelope** and a **Changeset** are the two things a **Snapshot** turns
   into: what one seat is told, and what the table becomes
 - A route handler does the I/O and nothing else — find the game, prove the
