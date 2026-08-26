@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
 import { COMMANDS, complete } from "@/lib/engine/console";
 import { LAYER } from "./layers";
-import { useDismissable } from "./overlay";
+import { AnswersEscape, useDismissable } from "./overlay";
+import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
 
 /**
  * A line to type at, instead of a button for every test.
@@ -84,13 +85,52 @@ export function TestConsole({
    * and a click on the game both take the newest surface and only that one.
    * `shown` is what a shut console passes, because this component stays mounted
    * and draws nothing while closed, and a shut console must not be holding
-   * anybody's Escape; `onClose: null` is what a pinned one passes, which keeps
-   * it counted as somewhere a click lands inside while it answers nothing.
+   * anybody's Escape. `onClose: null` is what a pinned *or* a minimised one
+   * passes: both are deliberate ways of keeping it, and Escape landing on a
+   * console you shrank to a strip would throw away the session in it. Either
+   * way it stays counted as somewhere a click lands inside.
    */
   const panel = useDismissable<HTMLElement>({
     shown: open,
-    onClose: pinned ? null : onClose,
+    onClose: pinned || size === "mini" ? null : onClose,
   });
+
+  /**
+   * How much of the foot of the column it is covering, in pixels, on the root.
+   *
+   * The column it is docked to scrolls, and the console is `fixed` — so it
+   * pushes nothing, and whatever is last in that column sits under it at the
+   * bottom of the scroll where nobody can reach it. Reserving a fixed strip was
+   * the first attempt and it only worked shut: opened to its usual height, or
+   * to most of the window, it buried the same things again.
+   *
+   * Measured rather than guessed, because the height is three states plus a log
+   * that grows, and a number written here would be wrong for two of them. A
+   * custom property because the thing that has to reserve the room is a section
+   * two components away, and threading a pixel count through the layout to say
+   * "leave this much" is a worse cable than one line of CSS.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    const element = panel.current;
+    const clear = () => root.style.setProperty("--console-h", "0px");
+    if (!open || !element) {
+      clear();
+      return;
+    }
+    const measure = () => root.style.setProperty("--console-h", `${element.offsetHeight}px`);
+    measure();
+    const watching = new ResizeObserver(measure);
+    watching.observe(element);
+    return () => {
+      watching.disconnect();
+      clear();
+    };
+    // `panel` is a ref and never changes identity; `size` is here because a
+    // fold or a stretch changes the height without resizing anything the
+    // observer is watching until after the fact.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, size]);
 
   const [line, setLine] = useState("");
   /**
@@ -176,6 +216,7 @@ export function TestConsole({
   };
 
   return (
+    <AnswersEscape.Provider value={!pinned && size !== "mini"}>
     <section
       ref={panel}
       /**
@@ -188,59 +229,73 @@ export function TestConsole({
        * the thing you are escaping paints over is not a way out. So it clears
        * the modals' backdrop as well as their z-order, and is not dimmed by it.
        */
-      className={`fixed inset-x-0 bottom-0 ${LAYER.console} border-t border-vermilion/40 bg-night/95 shadow-[0_-8px_30px_rgba(0,0,0,0.6)]`}
+      /**
+       * As wide as the column it belongs to, and no wider.
+       *
+       * It used to run the full width of the window, which put it over the
+       * bottom of the board and over the Dziennik — the two things you are
+       * most often reading *while* typing at it. Neither is on this side. The
+       * console is the table's own surface in the same sense the panels are, so
+       * it takes the panels' share of the width and leaves the map alone.
+       */
+      className={`fixed bottom-0 right-0 w-full lg:w-[61.8%] ${LAYER.console} border-t border-l border-vermilion/40 bg-night/95 shadow-[-4px_-8px_30px_rgba(0,0,0,0.6)]`}
     >
-      <div className="mx-auto flex max-w-4xl flex-col gap-1 p-2">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[10px] uppercase tracking-widest text-vermilion">
-            tryb testowy — konsola
-          </p>
-          <div className="flex items-baseline gap-3">
+      <SurfaceHead
+        title="tryb testowy — konsola"
+        tone="text-vermilion"
+        onExpand={mini ? () => setSize("normal") : undefined}
+        aside={
+          /* On the bar rather than in the log, because the log is the record of
+             what somebody typed and nobody typed this. It stays until it is
+             dismissed: a failure that scrolls away unread is a failure that did
+             not happen, as far as anyone is concerned. */
+          failure ? (
+            <p
+              className="min-w-0 flex-1 truncate font-mono text-[11px] text-vermilion"
+              title={failure}
+            >
+              {failure}
+            </p>
+          ) : null
+        }
+        controls={
+          <>
             {/* Pinning first, because it is the one that changes what the
-                other two mean: pinned, Escape is no longer a way out and the
-                label stops claiming it is. */}
-            <button
-              onClick={() => setPinned((was) => !was)}
-              aria-pressed={pinned}
+                other two mean: pinned, Escape is no longer a way out and
+                `zamknij` stops claiming it is. */}
+            <ChromeButton
+              glyph={pinned ? "unpin" : "pin"}
+              active={pinned}
               title={
                 pinned
                   ? "Przypięta — nie zamknie jej ani Esc, ani kliknięcie w grę"
                   : "Przypnij, żeby została otwarta mimo klikania w grę"
               }
-              className={`text-[11px] transition ${
-                pinned ? "text-vermilion" : "text-muted/70 hover:text-ink"
-              }`}
-            >
-              {pinned ? "odepnij" : "przypnij"}
-            </button>
-            <button
-              onClick={() => setSize(mini ? "normal" : "mini")}
-              aria-expanded={!mini}
+              onClick={() => setPinned((was) => !was)}
+            />
+            <ChromeButton
+              glyph={mini ? "restore" : "minimise"}
               title={mini ? "Pokaż konsolę" : "Zwiń do paska — log zostaje"}
-              className="text-[11px] text-ochre/80 transition hover:text-ochre"
-            >
-              {mini ? "pokaż" : "schowaj"}
-            </button>
+              onClick={() => setSize(mini ? "normal" : "mini")}
+            />
             {!mini && (
-              <button
+              <ChromeButton
+                glyph={big ? "collapse" : "expand"}
+                title={big ? "Zwiń do zwykłej wysokości" : "Rozwiń na większość okna"}
                 onClick={() => setSize(big ? "normal" : "big")}
-                aria-expanded={big}
-                className="text-[11px] text-ochre/80 transition hover:text-ochre"
-              >
-                {big ? "zwiń" : "rozwiń"}
-              </button>
+              />
             )}
-            <button
-              onClick={onClose}
-              className="text-[11px] text-muted underline transition hover:text-ink"
-            >
-              {pinned ? "zamknij" : "zamknij (Esc)"}
-            </button>
-          </div>
-        </div>
+            <CloseButton onClose={onClose} />
+          </>
+        }
+      />
 
-        {!mini && (
-        <>
+      {/* No inner cap on the body. The console used to float in the middle of
+          the window and a measure was the right thing for it; docked to the
+          right-hand column it *is* that column, and a centred four-em strip
+          inside it left two margins of nothing either side of the transcript. */}
+      {!mini && (
+        <div className="flex flex-col gap-1 p-2 pt-1.5">
         <div
           ref={tail}
           className={`tnum overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed ${
@@ -322,9 +377,9 @@ export function TestConsole({
           autoComplete="off"
           className="w-full rounded border border-edge bg-panel px-2 py-1 font-mono text-xs text-ink outline-none focus:border-vermilion disabled:opacity-50"
         />
-        </>
-        )}
-      </div>
+        </div>
+      )}
     </section>
+    </AnswersEscape.Provider>
   );
 }
