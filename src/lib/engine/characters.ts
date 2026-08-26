@@ -281,3 +281,15 @@ export function notesForCharacter(characterId: CharacterId | null): readonly str
 export function startingKit(characterId: CharacterId | null): StartingKit {
   return characterId ? (STARTING_KIT[characterId] ?? {}) : {};
 }
+
+/**
+ * How many Zaklęcia a character was dealt at setup (9.5).
+ *
+ * The Różdżka Zaklęć is measured against this rather than against 2.6's table,
+ * so the limit cannot be worked out from Magia alone — see `spellAllowance` and
+ * `wandRefills`. A stored `character_id` is narrowed on the way in, and an
+ * unseated seat has no starting hand.
+ */
+export function spellsAtSetup(characterId: string | null): number {
+  return startingKit(asCharacterId(characterId)).spells ?? 0;
+}

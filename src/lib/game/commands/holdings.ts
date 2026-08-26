@@ -7,7 +7,7 @@ import { heldAbilities } from "@/lib/engine/abilities";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import type { FieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
-import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import { spellsAtSetup } from "@/lib/engine/characters";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
 import {
   BASE_CARRY_LIMIT,
@@ -58,11 +58,6 @@ export function cardName(cardId: string): string {
 function forbiddenFor(card: EventCard): ("dobra" | "zla" | "chaotyczna")[] | undefined {
   const forbidden = forbiddenNatures(card.id);
   return forbidden ? [...forbidden] : undefined;
-}
-
-/** How many Zaklęcia this character was dealt at setup (9.5), for 2.6's ceiling. */
-function spellsAtSetup(characterId: string | null): number {
-  return startingKit(asCharacterId(characterId)).spells ?? 0;
 }
 
 /**

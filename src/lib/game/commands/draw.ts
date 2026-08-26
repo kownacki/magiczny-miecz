@@ -3,8 +3,9 @@
 import type { CardClass, EventCard } from "@/data/types";
 import type { EventId } from "@/data/ids";
 import { heldAbilities } from "@/lib/engine/abilities";
-import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import { spellsAtSetup } from "@/lib/engine/characters";
 import { drawFrom, type Shuffle } from "@/lib/engine/deck";
+import { plural } from "@/lib/engine/polish";
 import { spellAllowance, wandRefills } from "@/lib/engine/derive";
 import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { afterDraw } from "@/lib/engine/turn";
@@ -42,6 +43,14 @@ import { activeSeat, holdingsOf, pointsOf, seatById } from "./seat";
  * than it looks: a retry re-reads the snapshot, so it is not even the same
  * pile being turned over, and unlike a die nobody has seen the discarded
  * attempt's card.
+ *
+ * One thread of the old binding is still attached and cannot be cut from here:
+ * `decksOf` builds a pile with `decks.ts`'s module-level `shuffle` when the
+ * stored row has none — a game opened before the spell pile existed, or a
+ * simulation whose `deck` is somehow null. Neither branch is reachable through
+ * a companion table, which refuses before the piles are read, so in practice
+ * only a legacy row can find it. Closing it means `decksOf` taking a `Shuffle`
+ * too, which is `decks.ts`'s change and not this file's.
  */
 export interface FromThePile {
   shuffle: Shuffle;
@@ -161,19 +170,6 @@ export interface DrawSpell extends FromThePile {
 }
 
 /**
- * How many Zaklęcia a character was dealt at setup (9.5).
- *
- * 2.6's ceiling and the Różdżka both measure themselves against the hand a
- * character *began* with rather than against its Magia, so the number has to
- * come off the Karta Postaci. Written out here as well as in `holdings.ts`
- * because it is one expression and neither module exports it; if a third asks
- * for it, it belongs in `characters.ts` beside `startingKit`.
- */
-function spellsAtSetup(characterId: string | null): number {
-  return startingKit(asCharacterId(characterId)).spells ?? 0;
-}
-
-/**
  * Deals a Zaklęcie to a seat, if its Magia allows one more (2.6, 9.2).
  *
  * The capacity check is the rule that actually bites: a character with Magia 1
@@ -200,7 +196,10 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
   if (held >= capacity) {
     // Polish numerals agree with the noun: 2-4 take "Zaklęcia", 5 and up take
     // "Zaklęć". The capacity table tops out at 3, so both forms occur.
-    const noun = capacity >= 2 && capacity <= 4 ? "Zaklęcia" : "Zaklęć";
+    // Was a two-way ternary with no branch for one, so a Magia of 2 — capacity
+    // one — read "najwyżej 1 Zaklęć". The rule has three forms and `plural`
+    // knows all three.
+    const noun = plural(capacity, "Zaklęcie", "Zaklęcia", "Zaklęć");
     throw new Error(
       capacity === 0
         ? "Magia tej Postaci nie pozwala na żadne Zaklęcia (2.6)."
