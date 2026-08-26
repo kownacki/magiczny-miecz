@@ -896,9 +896,9 @@ export async function resolveFight(
     const outcome = fight.result.outcome;
     const at = apply(snapshot, cleared);
     const settled =
-      fight.guardian.kind === "most"
+      fight.guardian.kind === "bridge"
         ? settleBridge(at, fight.guardian.entrance, outcome).writes
-        : fight.guardian.kind !== "most-pole"
+        : fight.guardian.kind !== "bridge-field"
           ? settleCrossing(at, fight.guardian.crossing, outcome).writes
           : {};
 
@@ -920,7 +920,7 @@ export async function resolveFight(
     // line above so the journal reads in the order it happened: beaten by the
     // creature, then dead of it.
     const soFar = mergeAll(cleared, settled, said);
-    if (fight.guardian.kind !== "most-pole" || outcome !== "przegrana") {
+    if (fight.guardian.kind !== "bridge-field" || outcome !== "przegrana") {
       return { writes: soFar, result: undefined };
     }
     const cost = spendLife(apply(snapshot, soFar), seat.id, 1);

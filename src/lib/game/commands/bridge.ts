@@ -238,7 +238,7 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
     return {
       writes: {
         game: {
-          turn_state: startGuardianFight({ kind: "most", entrance }, totals, seat.field_id),
+          turn_state: startGuardianFight({ kind: "bridge", entrance }, totals, seat.field_id),
         },
         journal: [
           {
@@ -254,13 +254,13 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
   }
 
   const crossing = crossingFrom(seat.field_id);
-  if (!crossing || crossing.test?.kind !== "walka") {
+  if (!crossing || crossing.test?.kind !== "fight") {
     throw new Error("Nie ma tu nikogo, z kim trzeba walczyć.");
   }
   return {
     writes: {
       game: {
-        turn_state: startGuardianFight({ kind: "przeprawa", crossing }, totals, seat.field_id),
+        turn_state: startGuardianFight({ kind: "crossing", crossing }, totals, seat.field_id),
       },
       journal: [
         {
@@ -454,7 +454,7 @@ export async function crossRing(
   let dice: number[] | undefined;
   let magia: number | undefined;
 
-  if (crossing.test?.kind === "magia") {
+  if (crossing.test?.kind === "magic") {
     // The app owns this one: it is a threshold against a number it already
     // knows, so there is nothing for a player to adjudicate. A physical die
     // still overrides, through the port rather than through a branch in here.
@@ -691,7 +691,7 @@ export async function resolveBridgeOrdeal(
   const strength = guardianStrength(dice);
   const phase = recordGuardianStrength(
     startGuardianFight(
-      { kind: "most-pole", fieldId: here, name: creature.name, combat: creature.kind },
+      { kind: "bridge-field", fieldId: here, name: creature.name, combat: creature.kind },
       totals,
       here,
     ),

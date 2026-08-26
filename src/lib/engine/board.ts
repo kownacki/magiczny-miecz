@@ -188,7 +188,7 @@ export function fieldByName(name: string): BoardField | undefined {
   return all.find((field) => field.name === name) ?? all.find((field) => printedName(field.name) === name);
 }
 
-export type Direction = "zgodnie" | "przeciwnie";
+export type Direction = "clockwise" | "widdershins";
 
 /**
  * Where a character lands moving `steps` fields around a ring.
@@ -205,7 +205,7 @@ export function destination(
 ): BoardField | null {
   const at = ring.findIndex((field) => field.id === fromId);
   if (at === -1) return null;
-  const delta = direction === "zgodnie" ? steps : -steps;
+  const delta = direction === "clockwise" ? steps : -steps;
   const index = (((at + delta) % ring.length) + ring.length) % ring.length;
   return ring[index];
 }
@@ -231,7 +231,7 @@ export function moveOptions(
   fromId: string,
   steps: number,
 ): MoveOption[] {
-  const directions: Direction[] = ["zgodnie", "przeciwnie"];
+  const directions: Direction[] = ["clockwise", "widdershins"];
   return directions.flatMap((direction) => {
     const field = destination(ring, fromId, steps, direction);
     if (!field) return [];

@@ -145,14 +145,14 @@ export interface SpellFloor {
 }
 
 export type GuardianFight =
-  | { kind: "most"; entrance: BridgeEntrance }
-  | { kind: "przeprawa"; crossing: Crossing }
+  | { kind: "bridge"; entrance: BridgeEntrance }
+  | { kind: "crossing"; crossing: Crossing }
   /**
    * The Demon Zagłady and the Monstrum, which stand on the bridge itself rather
    * than at its entrance (14.6). Their strength is two dice rather than the
    * entrances' one-plus-four, and a character cannot pass until one is dead.
    */
-  | { kind: "most-pole"; fieldId: FieldId; name: string; combat: CombatKind };
+  | { kind: "bridge-field"; fieldId: FieldId; name: string; combat: CombatKind };
 
 export interface TurnMoveOption {
   direction: Direction;
@@ -169,8 +169,8 @@ export interface TurnMoveOption {
 }
 
 export const DIRECTION_LABEL: Record<Direction, string> = {
-  zgodnie: "zgodnie ze wskazówkami zegara",
-  przeciwnie: "przeciwnie do wskazówek zegara",
+  clockwise: "zgodnie ze wskazówkami zegara",
+  widdershins: "przeciwnie do wskazówek zegara",
 };
 
 /** A turn always opens on the roll. */
@@ -196,7 +196,7 @@ export function bridgeOptions(fieldId: FieldId): TurnMoveOption[] {
   // The bridge is a line, not a ring, so an entrance has only one neighbour.
   if (onward) {
     options.push({
-      direction: "zgodnie",
+      direction: "clockwise",
       fieldId: onward.id,
       fieldName: onward.name,
       through: [],
@@ -204,7 +204,7 @@ export function bridgeOptions(fieldId: FieldId): TurnMoveOption[] {
   }
   if (back) {
     options.push({
-      direction: "przeciwnie",
+      direction: "widdershins",
       fieldId: back.id,
       fieldName: back.name,
       through: [],
@@ -396,26 +396,26 @@ export function startGuardianFight(
   playerTotals: { miecz: number; magia: number },
   fieldId: FieldId,
 ): TurnPhase {
-  const rolled = guardian.kind === "most" || guardian.kind === "most-pole";
+  const rolled = guardian.kind === "bridge" || guardian.kind === "bridge-field";
   const stat =
-    guardian.kind === "most"
+    guardian.kind === "bridge"
       ? guardian.entrance.stat
-      : guardian.kind === "most-pole"
+      : guardian.kind === "bridge-field"
         ? guardian.combat === "magical"
           ? "magic"
           : "sword"
         : "sword";
   const kind: CombatKind = stat === "magic" ? "magical" : "ordinary";
   const name =
-    guardian.kind === "most"
+    guardian.kind === "bridge"
       ? guardian.entrance.guardian
-      : guardian.kind === "most-pole"
+      : guardian.kind === "bridge-field"
         ? guardian.name
-        : guardian.crossing.test?.kind === "walka"
+        : guardian.crossing.test?.kind === "fight"
           ? guardian.crossing.test.guardian
           : "Strażnik";
   const printed =
-    guardian.kind === "przeprawa" && guardian.crossing.test?.kind === "walka"
+    guardian.kind === "crossing" && guardian.crossing.test?.kind === "fight"
       ? guardian.crossing.test.miecz
       : 0;
 
@@ -460,7 +460,7 @@ export function strengthPending(fight: Fight): boolean {
  */
 export function recordGuardianStrength(phase: TurnPhase, roll: number): TurnPhase {
   if (phase.phase !== "fight") return phase;
-  const onTheBridgeItself = phase.fight.guardian?.kind === "most-pole";
+  const onTheBridgeItself = phase.fight.guardian?.kind === "bridge-field";
   return {
     ...phase,
     fight: {

@@ -18,7 +18,7 @@ describe("a character can reach the Beast from where it starts", () => {
 
   it("walks the inner ring to its only crossing", () => {
     // Karczma to Uroczysko is one step clockwise, up the left-hand side.
-    expect(destination(DOLNY_KRAG, "karczma", 1, "zgodnie")?.id).toBe("uroczysko");
+    expect(destination(DOLNY_KRAG, "karczma", 1, "clockwise")?.id).toBe("uroczysko");
     expect(crossingFrom("uroczysko")).toBeDefined();
   });
 
@@ -41,8 +41,8 @@ describe("a character can reach the Beast from where it starts", () => {
       (at - target + SRODKOWY_KRAG.length) % SRODKOWY_KRAG.length,
     );
     expect(steps).toBeGreaterThan(0);
-    expect(destination(SRODKOWY_KRAG, from, steps, "zgodnie")?.id === to ||
-      destination(SRODKOWY_KRAG, from, steps, "przeciwnie")?.id === to).toBe(true);
+    expect(destination(SRODKOWY_KRAG, from, steps, "clockwise")?.id === to ||
+      destination(SRODKOWY_KRAG, from, steps, "widdershins")?.id === to).toBe(true);
   });
 
   it("crosses the Lodowy Las into the outer ring (11.5)", () => {

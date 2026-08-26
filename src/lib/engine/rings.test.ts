@@ -151,13 +151,13 @@ describe("which way a crossing is defended (11.3, 11.7)", () => {
 describe("what each crossing demands", () => {
   it("makes the Trzęsawiska a test of Magia against two dice (11.3)", () => {
     const test = crossingFrom("uroczysko")!.test;
-    expect(test).toEqual({ kind: "magia", dice: 2 });
+    expect(test).toEqual({ kind: "magic", dice: 2 });
   });
 
   it("makes the Lodowy Las a fight with a printed Miecz (11.7)", () => {
     const test = crossingFrom("przelecz-wichrow")!.test;
     expect(test).toEqual({
-      kind: "walka",
+      kind: "fight",
       guardian: "Rycerz Wiecznych Śniegów",
       miecz: 10,
     });

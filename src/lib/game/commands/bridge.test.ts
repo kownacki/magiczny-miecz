@@ -182,7 +182,7 @@ describe("stawanie do walki ze strażnikiem", () => {
     const { writes } = fightGuardian(table);
     const phase = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
     expect(phase.phase).toBe("fight");
-    expect(phase.fight.guardian).toEqual({ kind: "most", entrance: RUINY });
+    expect(phase.fight.guardian).toEqual({ kind: "bridge", entrance: RUINY });
     expect(phase.fight.playerTotal).toBe(6);
     // The two entrance guardians have no strength until a die is thrown.
     expect(phase.fight.enemyTotal).toBe(0);
@@ -225,7 +225,7 @@ describe("siła strażnika Wejścia na Most", () => {
       seats: [aSeat({ field_id: "ruiny-twierdzy" })],
       game: {
         turn_state: {
-          ...startGuardianFight({ kind: "most", entrance: RUINY }, { miecz: 6, magia: 2 }, "ruiny-twierdzy"),
+          ...startGuardianFight({ kind: "bridge", entrance: RUINY }, { miecz: 6, magia: 2 }, "ruiny-twierdzy"),
           ...over,
         } as TurnPhase,
       },
@@ -265,7 +265,7 @@ describe("siła strażnika Wejścia na Most", () => {
       seats: [aSeat({ field_id: "ruiny-twierdzy" })],
       game: {
         turn_state: recordGuardianStrength(
-          startGuardianFight({ kind: "most", entrance: RUINY }, { miecz: 6, magia: 2 }, "ruiny-twierdzy"),
+          startGuardianFight({ kind: "bridge", entrance: RUINY }, { miecz: 6, magia: 2 }, "ruiny-twierdzy"),
           3,
         ),
       },
@@ -723,7 +723,7 @@ describe("Demon Zagłady i Monstrum (14.6)", () => {
     expect(phase.fight.enemyTotal).toBe(7);
     expect(phase.fight.playerTotal).toBe(5);
     expect(phase.fight.guardian).toEqual({
-      kind: "most-pole",
+      kind: "bridge-field",
       fieldId: "demon-zaglady",
       name: "Demon Zagłady",
       combat: "magical",

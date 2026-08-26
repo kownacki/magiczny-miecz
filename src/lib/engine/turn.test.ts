@@ -43,18 +43,18 @@ describe("the ring (10.2)", () => {
   it("walks clockwise and anticlockwise from the same square", () => {
     // Clockwise from Osada runs along the top edge of the ring and down its
     // right-hand side, which is the direction the board is printed in.
-    expect(destination(DOLNY_KRAG, "osada", 3, "zgodnie")?.id).toBe("czarci-mlyn");
-    expect(destination(DOLNY_KRAG, "osada", 3, "przeciwnie")?.id).toBe("step-2");
+    expect(destination(DOLNY_KRAG, "osada", 3, "clockwise")?.id).toBe("czarci-mlyn");
+    expect(destination(DOLNY_KRAG, "osada", 3, "widdershins")?.id).toBe("step-2");
   });
 
   it("wraps round the ring", () => {
     // Karczma is index 0, so stepping back off it has to wrap to the far end.
-    expect(destination(DOLNY_KRAG, "mrozne-pustkowie", 1, "zgodnie")?.id).toBe("karczma");
-    expect(destination(DOLNY_KRAG, "karczma", 1, "przeciwnie")?.id).toBe("mrozne-pustkowie");
+    expect(destination(DOLNY_KRAG, "mrozne-pustkowie", 1, "clockwise")?.id).toBe("karczma");
+    expect(destination(DOLNY_KRAG, "karczma", 1, "widdershins")?.id).toBe("mrozne-pustkowie");
   });
 
   it("returns to the start after a full lap", () => {
-    expect(destination(DOLNY_KRAG, "grod", 14, "zgodnie")?.id).toBe("grod");
+    expect(destination(DOLNY_KRAG, "grod", 14, "clockwise")?.id).toBe("grod");
   });
 
   it("reports the fields walked through, excluding the landing square", () => {
@@ -394,7 +394,7 @@ describe("fighting a guardian", () => {
   const totals = { miecz: 5, magia: 2 };
 
   it("starts a bridge guardian with no strength until its die is thrown", () => {
-    const phase = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    const phase = startGuardianFight({ kind: "bridge", entrance: ruins }, totals, "ruiny-twierdzy");
     if (phase.phase !== "fight") throw new Error("expected walka");
     expect(strengthPending(phase.fight)).toBe(true);
     expect(phase.fight.enemyTotal).toBe(0);
@@ -404,7 +404,7 @@ describe("fighting a guardian", () => {
   });
 
   it("reads the board's table as a die plus four", () => {
-    const opened = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    const opened = startGuardianFight({ kind: "bridge", entrance: ruins }, totals, "ruiny-twierdzy");
     for (const [roll, strength] of [
       [1, 5],
       [2, 6],
@@ -422,14 +422,14 @@ describe("fighting a guardian", () => {
 
   it("refuses combat dice while the strength die is owed", () => {
     // Rolling early would compare against zero and hand over a free win.
-    const opened = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    const opened = startGuardianFight({ kind: "bridge", entrance: ruins }, totals, "ruiny-twierdzy");
     const same = recordFightRoll(opened, "player", 6);
     expect(same).toEqual(opened);
   });
 
   it("fights the Duch Skał on Magia, not Miecz", () => {
     const city = BRIDGE_ENTRANCES.find((e) => e.from === "wymarle-miasto")!;
-    const phase = startGuardianFight({ kind: "most", entrance: city }, totals, "wymarle-miasto");
+    const phase = startGuardianFight({ kind: "bridge", entrance: city }, totals, "wymarle-miasto");
     if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.kind).toBe("magical");
     expect(phase.fight.playerTotal).toBe(2);
@@ -437,7 +437,7 @@ describe("fighting a guardian", () => {
 
   it("gives the Rycerz his printed Miecz and asks for no strength die", () => {
     const crossing = crossingFrom("przelecz-wichrow")!;
-    const phase = startGuardianFight({ kind: "przeprawa", crossing }, totals, "przelecz-wichrow");
+    const phase = startGuardianFight({ kind: "crossing", crossing }, totals, "przelecz-wichrow");
     if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.cardName).toBe("Rycerz Wiecznych Śniegów");
     expect(phase.fight.enemyTotal).toBe(10);
@@ -445,9 +445,9 @@ describe("fighting a guardian", () => {
   });
 
   it("carries what the fight is for, so its outcome can be routed", () => {
-    const phase = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
+    const phase = startGuardianFight({ kind: "bridge", entrance: ruins }, totals, "ruiny-twierdzy");
     if (phase.phase !== "fight") throw new Error("expected walka");
-    expect(phase.fight.guardian).toEqual({ kind: "most", entrance: ruins });
+    expect(phase.fight.guardian).toEqual({ kind: "bridge", entrance: ruins });
   });
 });
 

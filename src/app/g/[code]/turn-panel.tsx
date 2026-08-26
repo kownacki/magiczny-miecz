@@ -322,7 +322,7 @@ export function Crossing({
         </button>
       )}
 
-      {test?.kind === "magia" && (
+      {test?.kind === "magic" && (
         <>
           <p className="mb-2 text-[11px] text-muted/80">
             Dwie kostki przeciw twojej Magii: wynik mniejszy lub równy — przeprawa
@@ -338,7 +338,7 @@ export function Crossing({
         </>
       )}
 
-      {test?.kind === "walka" && (
+      {test?.kind === "fight" && (
         <>
           <p className="mb-2 text-[11px] text-muted/80">
             Drogę zagradza <span className="text-vermilion">{test.guardian}</span>{" "}
@@ -604,7 +604,7 @@ function FightVerdict({
   const guardian = fight.guardian;
 
   if (outcome === "remis") {
-    if (guardian?.kind === "most") {
+    if (guardian?.kind === "bridge") {
       return (
         <span className="text-muted">
           Remis — nic nie tracisz, ale nie wchodzisz na Most i nie spróbujesz
@@ -623,7 +623,7 @@ function FightVerdict({
   }
 
   if (outcome === "wygrana") {
-    if (guardian?.kind === "most") {
+    if (guardian?.kind === "bridge") {
       return <span className="text-verdigris">Pokonany — wchodzisz na Most (11.10).</span>;
     }
     if (guardian) {
@@ -636,7 +636,7 @@ function FightVerdict({
     );
   }
 
-  if (guardian?.kind === "most") {
+  if (guardian?.kind === "bridge") {
     const stat = guardian.entrance.stat === "magic" ? "Magii" : "Miecza";
     return (
       <span className="text-vermilion">

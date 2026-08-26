@@ -283,7 +283,7 @@ describe("ruch (10.2, 13.4)", () => {
         seatId: "seat-a",
         turn: 3,
         kind: "move",
-        payload: { from: "zaczarowane-wzgorza", to: "pustelnia", direction: "zgodnie" },
+        payload: { from: "zaczarowane-wzgorza", to: "pustelnia", direction: "clockwise" },
       },
     ]);
   });
@@ -292,7 +292,7 @@ describe("ruch (10.2, 13.4)", () => {
     const { writes } = moveTo(walking("zaczarowane-wzgorza"), { destination: "plaskowyz-mgiel" });
     // "WYCIĄGNIJ 3 KARTY", walked anticlockwise.
     expect(writes.game?.turn_state).toMatchObject({ draw: 3 });
-    expect(writes.journal?.[0]).toMatchObject({ payload: { direction: "przeciwnie" } });
+    expect(writes.journal?.[0]).toMatchObject({ payload: { direction: "widdershins" } });
   });
 
   it("refuses a field the roll does not reach", () => {

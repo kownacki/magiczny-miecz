@@ -112,23 +112,23 @@ export interface Crossing {
 
 export type CrossingTest =
   /** Uroczysko: "Rzuć dwoma kostkami: wynik mniejszy lub równy twojej Magii". */
-  | { kind: "magia"; dice: number }
+  | { kind: "magic"; dice: number }
   /** Przełęcz Wichrów: "musisz pokonać ... Rycerza Wiecznych Śniegów (Miecz 10)". */
-  | { kind: "walka"; guardian: string; miecz: number };
+  | { kind: "fight"; guardian: string; miecz: number };
 
 export const CROSSINGS: readonly Crossing[] = [
   {
     from: "uroczysko",
     to: "las-blednych-ogni",
     obstacle: "trzesawiska",
-    test: { kind: "magia", dice: 2 },
+    test: { kind: "magic", dice: 2 },
   },
   { from: "las-blednych-ogni", to: "uroczysko", obstacle: "trzesawiska" },
   {
     from: "przelecz-wichrow",
     to: "dolina-czaszek",
     obstacle: "lodowy-las",
-    test: { kind: "walka", guardian: "Rycerz Wiecznych Śniegów", miecz: 10 },
+    test: { kind: "fight", guardian: "Rycerz Wiecznych Śniegów", miecz: 10 },
   },
   { from: "dolina-czaszek", to: "przelecz-wichrow", obstacle: "lodowy-las" },
 ];
