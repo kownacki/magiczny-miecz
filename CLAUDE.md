@@ -156,9 +156,10 @@ The frame is the box's, and it comes in **pieces**. A card here is a white
 field with a quarter-circle bitten out of each corner and nothing else — the
 straight edges carry no printing — so `buildCard` cuts the four corners off
 sheet 9's `Zły` and stands them on a white field of any shape with the teal
-painted round it. That is what lets this card be half again as wide as the
-illustrations (`NATURE_CARD_RATIO`) so `CHAOTYCZNY` fits at the same size as
-`ZŁY`, with nothing squashed. Corners scale off the shorter side, because a
+painted round it. That is what lets this card lie **on its side**
+(`NATURE_CARD_RATIO`) so `CHAOTYCZNY` fits at the same size as `ZŁY` with
+nothing squashed — turned, not reshaped: it keeps the printed card's own 398 by
+705, which the script re-measures and warns about on every run. Corners scale off the shorter side, because a
 bitten corner is a fixed thing a blade did. If an expansion card turns out to
 have a rule down its edges, a fifth and sixth piece go in there.
 

@@ -175,16 +175,20 @@ const NATURE_FACE: Record<string, string> = {
 };
 
 /**
- * Wider than the illustrations, and wide on purpose.
+ * The printed card's own proportions, turned on its side.
  *
- * `CHAOTYCZNY` is twice the word `DOBRY` is. On a card the shape of everything
- * else here it had to be set half as tall as its neighbours to fit, which reads
- * as a caption rather than as the same kind of object — so the card is half
- * again as wide and all three words are set at one size. See
- * `scripts/export-nature-card.mjs`, where the frame is built from the printed
- * card's corners precisely so its shape is not fixed by the scan.
+ * The Karta Zmiany Natury is a card like the rest of them and is exactly as
+ * proportioned as one — 398 by 705 off the scan — just lying down. It lies down
+ * because `CHAOTYCZNY` is twice the word `DOBRY` is: standing up, at one size,
+ * it had to be set half as tall as its neighbours to fit, which reads as a
+ * caption rather than as the same kind of object.
+ *
+ * Turning it is only possible because the frame is built from the printed
+ * card's four corners rather than cut from it whole — see
+ * `scripts/export-nature-card.mjs`, which measures these two numbers off the
+ * sheet on every run and says so if they ever move.
  */
-export const NATURE_CARD_RATIO = 360 / 209;
+export const NATURE_CARD_RATIO = 705 / 398;
 
 export function natureCardUrl(nature: string | null): string | null {
   const face = nature === null ? undefined : NATURE_FACE[nature];

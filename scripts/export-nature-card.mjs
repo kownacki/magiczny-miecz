@@ -84,14 +84,33 @@ const FACES = [
 const LOOK = { left: 0.79, top: 0.243, right: 0.975, bottom: 0.465 };
 
 /**
- * The corner bite, as a share of the card's shorter side.
+ * The printed card, measured — and everything shaped by it.
  *
- * Measured: 76 pixels down the left edge and 75 across the top of a card 398
- * wide, which is one radius both ways and so a circle rather than an ellipse.
- * Taken off the shorter side because that is what keeps it one — a corner
- * scaled by the width of a card half as tall as it is wide would eat the card.
+ * `NOTCH` is the corner bite: 76 pixels down the left edge and 75 across the
+ * top, which is one radius both ways and so a circle rather than an ellipse.
+ * Kept as a share of the shorter side, because that is what keeps it a circle —
+ * a corner scaled by the width of a card half as tall as it is wide would eat
+ * the card.
+ *
+ * `RATIO` is the card itself, turned on its side. Turned and not invented: a
+ * Karta Zmiany Natury lying down is then exactly as proportioned as one
+ * standing up, and is the same object as every other card in the box rather
+ * than a rectangle somebody chose. Lying down for a reason — `CHAOTYCZNY` is
+ * twice the word `DOBRY` is, and on an upright card at one size it had to be
+ * set half as tall as its neighbours to fit, reading as a caption rather than
+ * as the same kind of thing. Turning the card is the answer that does not touch
+ * the type, and the frame comes in pieces now, so its shape is not fixed by the
+ * scan.
+ *
+ * Checked against that scan on every run: see the warning below `paperIn`.
  */
-const NOTCH = 75 / 398;
+const PRINTED = { width: 398, height: 705 };
+const NOTCH = 75 / PRINTED.width;
+const RATIO = PRINTED.height / PRINTED.width;
+
+/** How big the built card is, and how much of it the word may have. */
+const OUT_WIDTH = 720;
+const WORD = { left: 0.06, right: 0.94, top: 0.14, bottom: 0.86 };
 
 /**
  * The blue everything in this box is printed on.
@@ -104,20 +123,6 @@ const TEAL = { r: 16, g: 108, b: 140 };
 
 /** How much of it shows round the card, as a share of the card's shorter side. */
 const BORDER = 0.085;
-
-/**
- * The shape of the card, and how much of it the word may have.
- *
- * A wide rectangle, and wide on purpose. `CHAOTYCZNY` is twice the word `DOBRY`
- * is, and every attempt to fit both on one card at one size ended with the long
- * one set half as tall as the short one — reading as a caption rather than as
- * the same kind of thing as its neighbours. Widening the card is the answer
- * that does not touch the type, and the frame comes in pieces now, so widening
- * it costs nothing.
- */
-const RATIO = 360 / 209;
-const OUT_WIDTH = 720;
-const WORD = { left: 0.06, right: 0.94, top: 0.14, bottom: 0.86 };
 
 /**
  * One face, one size, and no fitting word by word.
@@ -293,6 +298,18 @@ const paper = await paperIn(rendered, {
   height: Math.round(page.height * (LOOK.bottom - LOOK.top)),
 });
 if (!paper) throw new Error("no white card where the Karta Zmiany Natury should be");
+
+// The shape the output is built to is the shape the card actually is, so say so
+// if a re-scan ever moves it. One percent is well inside what finding an edge
+// on a printed scan is worth arguing about, and well outside a real change.
+const measured = paper.width / paper.height;
+const printed = PRINTED.width / PRINTED.height;
+if (Math.abs(measured - printed) / printed > 0.01) {
+  console.warn(
+    `PRINTED says ${PRINTED.width}x${PRINTED.height}; this scan measures ` +
+      `${paper.width}x${paper.height}. RATIO and NOTCH are both off it.`,
+  );
+}
 
 const out = { width: OUT_WIDTH, height: Math.round(OUT_WIDTH / RATIO) };
 const blank = await buildCard(await cornersOf(rendered, paper), out);
