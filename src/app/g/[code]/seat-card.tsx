@@ -848,14 +848,15 @@ function NatureLine({
 }
 
 /**
- * Well under half the Karta Postaci it lies below.
+ * Under a third of the Karta Postaci it lies below.
  *
- * The card is 192 across and this is the smaller object of the two — a marker
- * put down next to a card, not a second card. Still wide enough for
- * CHAOTYCZNY, which is the longest of the three words and the one fitted by
- * its width rather than its height.
+ * The card is 192 across and this is much the smaller object of the two — a
+ * marker put down beside a card, not a second card, and a marker that has to
+ * stay a marker when four seats are on screen at once. Small enough that
+ * CHAOTYCZNY, the longest of the three words and the one fitted by its width,
+ * is at the edge of what a glance will take; the hover names it either way.
  */
-const NATURE_CARD_WIDTH = 88;
+const NATURE_CARD_WIDTH = 59;
 
 function EffectMark({
   mark,

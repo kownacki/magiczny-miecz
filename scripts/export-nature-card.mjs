@@ -123,15 +123,20 @@ const LOOK = { left: 0.79, top: 0.243, right: 0.975, bottom: 0.465 };
  * calligraphy, the first attempt left the tail showing as a ghost under
  * `DOBRY`.
  *
- * `word` is where the three are then set, and it is *not* where the printed one
- * was. On the card as printed the word sits in the upper third, which is what a
- * tall card does with a short word — but squashed into a landscape frame that
- * upper third becomes a word pinned near the top with half the card empty under
- * it. Faithful placement stops meaning anything once the proportions are gone,
- * so it is centred.
+ * The two are measured against different things, because they happen at
+ * different moments. `erase` is fractions of the card as printed and is painted
+ * on before the squash, since what it has to cover is printed at those
+ * proportions. `word` is fractions of the squashed card and is set on after,
+ * because the lettering is the one thing here that must *not* be squashed: a
+ * frame can be any shape and still read as a frame, and a word cannot.
+ *
+ * `word` is also not where the printed one sat. The upper third is what a tall
+ * card does with a short word; in a landscape frame it is a word pinned near
+ * the top with half the card empty under it. Faithful placement stops meaning
+ * anything once the proportions are gone, so it is centred.
  */
 const ERASE = { left: 0.04, right: 0.96, top: 0.13, bottom: 0.50 };
-const WORD = { left: 0.10, right: 0.90, top: 0.26, bottom: 0.64 };
+const WORD = { left: 0.09, right: 0.91, top: 0.18, bottom: 0.74 };
 
 /**
  * The shape every other illustration in the app is drawn in.
@@ -329,14 +334,12 @@ if (!paper) throw new Error("no white card where the Karta Zmiany Natury should 
 const blue = await fieldColour(sheets.front, paper);
 const card = await sharp(sheets.front).extract(paper).png().toBuffer();
 
-const rect = (box) => ({
-  left: Math.round(paper.width * box.left),
-  top: Math.round(paper.height * box.top),
-  width: Math.round(paper.width * (box.right - box.left)),
-  height: Math.round(paper.height * (box.bottom - box.top)),
-});
-const erase = rect(ERASE);
-const band = rect(WORD);
+const erase = {
+  left: Math.round(paper.width * ERASE.left),
+  top: Math.round(paper.height * ERASE.top),
+  width: Math.round(paper.width * (ERASE.right - ERASE.left)),
+  height: Math.round(paper.height * (ERASE.bottom - ERASE.top)),
+};
 
 /**
  * The card with nothing written on it.
@@ -356,13 +359,27 @@ const plate = await sharp(card)
   .png()
   .toBuffer();
 
-/** Squashed to the app's rectangle, then framed in an even margin of its own blue. */
+/**
+ * The blank card, squashed to the app's rectangle and framed in an even margin
+ * of its own blue. Three faces, one plate: this is made once.
+ */
 const out = { width: OUT_WIDTH, height: Math.round(OUT_WIDTH / ART_RATIO) };
 const margin = Math.round(OUT_WIDTH * BORDER);
-const framed = (written) =>
-  sharp(written)
-    .resize(out.width - margin * 2, out.height - margin * 2, { fit: "fill" })
-    .extend({ top: margin, bottom: margin, left: margin, right: margin, background: blue });
+const blank = await sharp(plate)
+  .resize(out.width - margin * 2, out.height - margin * 2, { fit: "fill" })
+  .extend({ top: margin, bottom: margin, left: margin, right: margin, background: blue })
+  .png()
+  .toBuffer();
+
+// Where a word goes on the finished card, which is where the card is inside its
+// own frame and then `WORD` inside that.
+const inner = { width: out.width - margin * 2, height: out.height - margin * 2 };
+const band = {
+  left: margin + Math.round(inner.width * WORD.left),
+  top: margin + Math.round(inner.height * WORD.top),
+  width: Math.round(inner.width * (WORD.right - WORD.left)),
+  height: Math.round(inner.height * (WORD.bottom - WORD.top)),
+};
 
 fs.mkdirSync("public/cards", { recursive: true });
 
@@ -395,7 +412,8 @@ for (const face of FACES) {
     .resize({ ...band, fit: "inside" })
     .toBuffer({ resolveWithObject: true });
 
-  const written = await sharp(plate)
+  const file = `public/cards/natura-${face.id}.jpg`;
+  await sharp(blank)
     .composite([
       {
         input: word.data,
@@ -403,11 +421,8 @@ for (const face of FACES) {
         top: band.top + Math.round((band.height - word.info.height) / 2),
       },
     ])
-    .png()
-    .toBuffer();
-
-  const file = `public/cards/natura-${face.id}.jpg`;
-  await framed(written).jpeg({ quality: 92 }).toFile(file);
+    .jpeg({ quality: 92 })
+    .toFile(file);
 
   console.log(`${file} — ${out.width}x${out.height}, word ${ink.width}x${ink.height}`);
 }
