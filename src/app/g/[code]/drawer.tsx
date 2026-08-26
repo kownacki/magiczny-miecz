@@ -19,6 +19,7 @@
  * Its z still counts globally, which is what keeps it over the modals.
  */
 
+import { useEffect, useRef } from "react";
 import { LAYER } from "./layers";
 import { useEscape } from "./overlay";
 
@@ -41,22 +42,39 @@ export function Drawer({
 }) {
   useEscape(onClose);
 
+  /**
+   * Clicking away, without covering the page to notice it.
+   *
+   * This was a transparent catcher stretched over the columns, which worked for
+   * clicks and quietly ate everything else — the wheel included. With a drawer
+   * open the board and the panels behind it stopped scrolling, which is most of
+   * what a drawer is for: you open the roster *because* you want to look at
+   * something else at the same time.
+   *
+   * A listener sees the same clicks and covers nothing. The page stays live
+   * underneath — scroll it, and the drawer scrolls on its own when the pointer
+   * is over it, because that is simply where the wheel is pointing.
+   *
+   * The cost is that a click outside both dismisses and lands. That follows
+   * from the page being live rather than being a separate decision: a drawer
+   * you can scroll behind is a drawer you can click behind.
+   */
+  const panel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const away = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && !panel.current?.contains(target)) onClose();
+    };
+    // `pointerdown`, not `click`: a drag that starts outside and ends inside
+    // should still count as having left, and a click that never lands — the
+    // pointer moving off before release — should not leave it open.
+    window.addEventListener("pointerdown", away);
+    return () => window.removeEventListener("pointerdown", away);
+  }, [onClose]);
+
   return (
-    <>
-      {/* Clicking away, without the board going dark for it.
-          
-          The drawer is a thing you opened to look something up, over a game
-          that is still there — dimming it would undo the reason it is a drawer
-          and not a modal. So the catcher is invisible, and what it costs is
-          that a click on the board closes the drawer instead of reaching the
-          board. That is the right trade: the alternative is dismissing a
-          roster by moving somebody's figure. */}
-      <div
-        aria-hidden
-        onClick={onClose}
-        className={`absolute inset-0 ${LAYER.drawerAway}`}
-      />
-      <aside
+    <aside
+      ref={panel}
       role="dialog"
       aria-label={typeof title === "string" ? title : undefined}
       className={`absolute inset-y-0 flex w-full flex-col bg-night ${width} ${LAYER.drawer} ${
@@ -81,7 +99,6 @@ export function Drawer({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
         {children}
       </div>
-      </aside>
-    </>
+    </aside>
   );
 }
