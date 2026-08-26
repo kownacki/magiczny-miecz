@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import { findGame, verifySeat } from "@/lib/game/store";
+import { findGame, verifyActor } from "@/lib/game/store";
 import { mayAct } from "@/lib/game/permission";
 import {
   attackSeat,
@@ -53,11 +53,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const seat = await verifySeat(game.id, String(body.token ?? ""));
-  if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  const actor = await verifyActor(game.id, String(body.token ?? ""));
+  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  // Watching is not acting. A spectator holds a perfectly good token and drives
+  // no Postać, which every action below this line is about.
+  const seat = actor.seat;
+  if (!seat) {
+    return NextResponse.json({ error: "Nie prowadzisz żadnej Postaci." }, { status: 403 });
+  }
   // Every rule about who may press what, and the four exceptions to "not your
   // turn", live in `mayAct`.
-  const { allowed, tableScreen } = mayAct(game, seat, body.action);
+  const { allowed, tableScreen } = mayAct(game, actor.user, body.action);
   if (!allowed) {
     return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findGame, journalRows, seatsFor, verifySeat } from "@/lib/game/store";
+import { findGame, journalRows, seatsFor, usersFor, verifyActor } from "@/lib/game/store";
 import { journalLines, type JournalEntry } from "@/lib/engine/journalText";
 import { asJournalKind } from "@/lib/engine/journal";
 
@@ -32,8 +32,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   // A seat is not required: somebody watching the table sees the same public
   // record everyone at it can see. Holding one only decides whose lines could
   // ever be privileged, which today is nobody's.
-  const seat = token ? await verifySeat(game.id, token) : null;
-  const seats = await seatsFor(game.id);
+  const actor = token ? await verifyActor(game.id, token) : null;
+  const [seats, users] = await Promise.all([seatsFor(game.id), usersFor(game.id)]);
 
   const data = await journalRows(game.id, { after, limit: WINDOW });
 
@@ -62,8 +62,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     lines: journalLines(entries.reverse(), seats.map((row) => ({
       id: row.id,
       seatIndex: row.seat_index,
-      playerName: row.player_name,
+      // Whoever is driving it now. A line's own `actor_name` is what the
+      // reader prefers where it has one — see `moves` — so this is only the
+      // fallback for rows written before the split.
+      playerName: users.find((one) => one.seat_index === row.seat_index)?.name ?? null,
       characterId: row.character_id,
-    })), seat?.id ?? null),
+    })), actor?.seat?.id ?? null),
   });
 }

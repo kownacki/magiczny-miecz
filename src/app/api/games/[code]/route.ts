@@ -5,9 +5,10 @@ import {
   fieldCardsFor,
   findGame,
   holdingsFor,
-  markSeen,
   seatsFor,
-  verifySeat,
+  verifyActor,
+  markSeenUser,
+  usersFor,
 } from "@/lib/game/store";
 import { AWAY_AFTER_MS } from "@/lib/game/commands/lobby";
 import { sweepLobby } from "@/lib/game/lobbyStore";
@@ -45,9 +46,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   // in the app — every device asks for it every couple of seconds — and these
   // four do not depend on each other, so running them in sequence spent four
   // round trips to make one answer.
-  const [mine, seats, holdings, fieldCards, effects] = await Promise.all([
-    token ? verifySeat(game.id, token) : Promise.resolve(null),
+  const [mine, seats, users, holdings, fieldCards, effects] = await Promise.all([
+    token ? verifyActor(game.id, token) : Promise.resolve(null),
     seatsFor(game.id),
+    // Everybody at the table, seated or watching — presence and names live
+    // here now, and the seat views are read against them.
+    usersFor(game.id),
     holdingsFor(game.id),
     // Face up on the board by rule 16.8, so there is nothing to conceal and
     // every seat is sent the same list.
@@ -64,6 +68,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   const table = {
     game: game as GameRow & { turn_state: TurnPhase },
     seats,
+    users,
     holdings,
     fieldCards,
     effects,
@@ -81,12 +86,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   // table sitting still. It is also written whenever the page said goodbye, so
   // that a reload cancels it.
   if (mine) {
-    const row = seats.find((seat) => seat.id === mine.id);
-    const lastSeen = row?.seen_at ? Date.parse(row.seen_at) : 0;
-    if (row?.left_at || Date.now() - lastSeen > AWAY_AFTER_MS / 3) await markSeen(mine.id);
+    const lastSeen = mine.user.seen_at ? Date.parse(mine.user.seen_at) : 0;
+    if (mine.user.left_at || Date.now() - lastSeen > AWAY_AFTER_MS / 3) {
+      await markSeenUser(mine.user.id);
+    }
   }
 
-  return NextResponse.json(envelopeFor(table, mine?.id ?? null, Date.now()));
+  return NextResponse.json(envelopeFor(table, mine?.user.id ?? null, Date.now()));
 }
 
 /**

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import { findGame, verifySeat } from "@/lib/game/store";
+import { findGame, verifyActor } from "@/lib/game/store";
 import { abandonFight, grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
 import { runCommand } from "@/lib/game/consoleStore";
 import { parseCommand } from "@/lib/engine/console";
@@ -32,12 +32,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const actor = await verifySeat(game.id, String(body.token ?? ""));
+  const actor = await verifyActor(game.id, String(body.token ?? ""));
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
-
+  const seat = actor.seat;
+  // Watching is not acting: a spectator holds a good token and drives no
+  // Postać, which every route below this line is about.
+  if (!seat) {
+    return NextResponse.json({ error: "Nie prowadzisz żadnej Postaci." }, { status: 403 });
+  }
   // Acting on your own seat unless another is named, which matches every other
   // route here: at a table people fix each other's boards.
-  const seatId = String(body.seatId ?? actor.id);
+  const seatId = String(body.seatId ?? seat.id);
 
   try {
     switch (body.action) {

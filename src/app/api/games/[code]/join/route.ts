@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { bumpRevision, findGame, joinGame, seatsFor } from "@/lib/game/store";
-import { claimSeat } from "@/lib/game/lobbyStore";
+import { bumpRevision, findGame, joinGame, seatsFor, verifyActor } from "@/lib/game/store";
+import { takeSeat } from "@/lib/game/lobbyStore";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -11,26 +11,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
 
   try {
-    // Taking over a seat somebody walked away from, rather than opening a new
-    // one. This is also how a player comes back after closing the tab, which is
-    // the commonest way a seat ends up empty.
+    // Sitting down in a seat, which somebody already at the table does without
+    // joining it again — a spectator taking a free chair, or a player moving to
+    // one that was left empty.
     if (body.seatId) {
-      const token = await claimSeat(game.id, String(body.seatId), name);
+      const actor = await verifyActor(game.id, String(body.token ?? ""));
+      if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
       const seats = await seatsFor(game.id);
-      const claimed = seats.find((s) => s.id === body.seatId);
-      return NextResponse.json({ seatIndex: claimed?.seat_index ?? null, token });
+      const wanted = seats.find((one) => one.id === body.seatId);
+      if (!wanted) return NextResponse.json({ error: "Nie ma takiego miejsca." }, { status: 404 });
+      await takeSeat(game.id, actor.user.id, wanted.seat_index);
+      return NextResponse.json({
+        userId: actor.user.id,
+        seatIndex: wanted.seat_index,
+        token: String(body.token),
+      });
     }
 
     // A table already playing takes newcomers too (LOBBY.md). The seat arrives
     // out of play and joins the round once its player has picked a character.
-    const { seat, token } = await joinGame(
+    // A full table takes newcomers too, as spectators — six seats is a limit on
+    // Postacie, not on people. `seatIndex` comes back null for them, which is
+    // what the client reads to know it is watching.
+    const { user, seat, token } = await joinGame(
       game.id,
       name,
-      body.local === true,
+      typeof body.deviceId === "string" ? body.deviceId : null,
       game.status === "playing",
     );
     await bumpRevision(game.id);
-    return NextResponse.json({ seatIndex: seat.seat_index, token });
+    return NextResponse.json({ userId: user.id, seatIndex: seat?.seat_index ?? null, token });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 409 });
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findGame, sayGoodbye, verifySeat } from "@/lib/game/store";
+import { findGame, sayGoodbye, verifyActor } from "@/lib/game/store";
 
 /**
  * "My page is going away."
@@ -35,7 +35,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const game = await findGame(code.toUpperCase());
   if (!game) return new NextResponse(null, { status: 204 });
 
-  const seat = await verifySeat(game.id, token);
+  const actor = await verifyActor(game.id, token);
+  const seat = actor?.seat ?? null;
   if (seat) await sayGoodbye(seat.id);
 
   // No revision bump. Nothing has actually changed yet — the countdown may well

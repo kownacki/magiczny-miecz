@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findGame, verifySeat } from "@/lib/game/store";
+import { findGame, verifyActor } from "@/lib/game/store";
 import { claimTableScreen } from "@/lib/game/lobbyStore";
 
 /**
@@ -15,12 +15,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const seat = await verifySeat(game.id, String(body.token ?? ""));
-  if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  const actor = await verifyActor(game.id, String(body.token ?? ""));
+  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
 
-  const target = typeof body.seatId === "string" ? body.seatId : seat.id;
+  // The host is a person now, so this names one — which is also how a table
+  // ends up hosted by somebody who is only watching, and that is allowed.
+  const target = typeof body.userId === "string" ? body.userId : actor.user.id;
   try {
-    await claimTableScreen(game.id, target, seat.id);
+    await claimTableScreen(game.id, target, actor.user.id);
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 403 });
   }

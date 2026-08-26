@@ -3,11 +3,11 @@
 import { change } from "./change";
 import { makeClaimToken } from "./codes";
 import {
-  claimSeat as claimSeatOn,
-  leaveSeat as leaveSeatOn,
+  takeSeat as takeSeatOn,
+  unseat as unseatOn,
+  leaveTable as leaveTableOn,
   needsSweep,
-  removeSeat as removeSeatOn,
-  renameSeat as renameSeatOn,
+  renameUser as renameUserOn,
   setReady as setReadyOn,
   sweepLobby as sweepLobbyOn,
   takeHostRole as takeHostRoleOn,
@@ -123,54 +123,53 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
  * One Command each.
  * ----------------------------------------------------------------------- */
 
-/** Says whether a player is ready to start (docs/LOBBY.md). Only ever your own seat. */
-export async function setReady(gameId: string, seatId: string, ready: boolean): Promise<void> {
-  await change(gameId, setReadyOn, { seatId, ready });
+/** Says whether somebody is ready to start (docs/LOBBY.md). Only ever yourself. */
+export async function setReady(gameId: string, userId: string, ready: boolean): Promise<void> {
+  await change(gameId, setReadyOn, { userId, ready });
 }
 
-/** Changes the name shown for a seat. Only ever your own. */
-export async function renameSeat(
-  gameId: string,
-  seatId: string,
-  name: string | null,
-): Promise<void> {
-  await change(gameId, renameSeatOn, { seatId, name });
+/** Changes what somebody is called. Unique per table, so it can be refused. */
+export async function renameUser(gameId: string, userId: string, name: string): Promise<void> {
+  await change(gameId, renameUserOn, { userId, name });
+}
+
+/** Out of the chair, still at the table. The Postać stays exactly where it is. */
+export async function unseat(gameId: string, userId: string): Promise<LeaveResult> {
+  return change(gameId, unseatOn, { userId });
 }
 
 /**
- * Gives up a seat: deleted before the game starts, retired once it has begun.
+ * Out of the table altogether — by their own choice, or by somebody else's.
  *
- * The fresh token is minted here and rotated in by the rule, so the departing
- * device cannot act as this seat any more. One token per call rather than one
- * per attempt, so a retried commit places the same one.
+ * The only difference the two make is the line in the journal, and it is worth
+ * making: being thrown off a table is not the same event as walking away from
+ * one, and a log that cannot tell them apart cannot settle the argument it will
+ * be opened to settle.
  */
-export async function leaveGame(gameId: string, seatId: string): Promise<LeaveResult> {
-  return change(gameId, leaveSeatOn, { seatId, token: makeClaimToken() });
-}
-
-/** Picks up a seat nobody is behind, and returns the token that now holds it. */
-export async function claimSeat(
+export async function leaveTable(
   gameId: string,
-  seatId: string,
-  playerName: string | null = null,
-): Promise<string> {
-  const token = makeClaimToken();
-  await change(gameId, claimSeatOn, { seatId, playerName, token });
-  return token;
+  userId: string,
+  kicked = false,
+): Promise<LeaveResult> {
+  return change(gameId, leaveTableOn, { userId, kicked });
 }
 
-/** Takes a seat out of the table, leaving what it was carrying on its Obszar (12.1). */
-export async function removeSeat(gameId: string, seatId: string, byId: string): Promise<void> {
-  await change(gameId, removeSeatOn, { seatId, byId });
+/** Sits somebody down in a seat. Refused only if somebody is actively driving it. */
+export async function takeSeat(
+  gameId: string,
+  userId: string,
+  seatIndex: number,
+): Promise<void> {
+  await change(gameId, takeSeatOn, { userId, seatIndex });
 }
 
-/** Hands the host role to a seat, or takes it from a host who has gone. */
+/** Hands the host role to somebody, or takes it from a host who has gone. */
 export async function claimTableScreen(
   gameId: string,
-  seatId: string,
+  userId: string,
   byId: string,
 ): Promise<void> {
-  await change(gameId, takeHostRoleOn, { seatId, byId });
+  await change(gameId, takeHostRoleOn, { userId, byId });
 }
 
 /**
@@ -181,8 +180,8 @@ export async function claimTableScreen(
  * The cheap question first. This is called from the busiest request in the app
  * — every device asks for the state every two seconds and every one of those
  * polls comes through here — and the answer is almost always "nobody". A
- * snapshot is five reads; the seat list is one, and it is enough to know
- * whether the other four are worth paying for. Callers holding the seats
+ * snapshot is six reads; the user list is one, and it is enough to know
+ * whether the other five are worth paying for. Callers holding the users
  * already may pass them and pay nothing at all.
  */
 export async function sweepLobby(
@@ -191,8 +190,8 @@ export async function sweepLobby(
   known?: Parameters<typeof needsSweep>[0],
 ): Promise<boolean> {
   if (status !== "lobby") return false;
-  const seats = known ?? (await seatsFor(gameId));
-  if (!needsSweep(seats, Date.now())) return false;
+  const here = known ?? (await usersFor(gameId));
+  if (!needsSweep(here, Date.now())) return false;
 
   const { gameGone } = await change(gameId, sweepLobbyOn, undefined);
   if (gameGone) await deleteGame(gameId);

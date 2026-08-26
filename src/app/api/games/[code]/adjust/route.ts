@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import { findGame, verifySeat } from "@/lib/game/store";
+import { findGame, verifyActor } from "@/lib/game/store";
 import { adjust, placeSeat, type Adjustable } from "@/lib/game/turnStore";
 
 /**
@@ -14,9 +14,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const actor = await verifySeat(game.id, String(body.token ?? ""));
+  const actor = await verifyActor(game.id, String(body.token ?? ""));
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
-
   try {
     // Position is the other override. It is not a delta like the rest — you do
     // not nudge a figure two fields, you say where it is — so it takes a field

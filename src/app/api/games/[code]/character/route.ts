@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import { findGame, verifySeat } from "@/lib/game/store";
+import { findGame, verifyActor } from "@/lib/game/store";
 import { change } from "@/lib/game/change";
 import { chooseCharacter, dealCharacters } from "@/lib/game/commands/character";
 import { takeNewCharacter } from "@/lib/game/turnStore";
@@ -13,14 +13,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const body = await request.json().catch(() => ({}));
   // The token is what proves this device owns the seat it is editing; without
   // it any player could assign characters to anyone.
-  const actor = await verifySeat(game.id, String(body.token ?? ""));
+  const actor = await verifyActor(game.id, String(body.token ?? ""));
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  const seat = actor.seat;
+  // Watching is not acting: a spectator holds a good token and drives no
+  // Postać, which every route below this line is about.
+  if (!seat) {
+    return NextResponse.json({ error: "Nie prowadzisz żadnej Postaci." }, { status: 403 });
+  }
 
   try {
     // The rulebook's default: shuffle the Karty Postaci and deal one to each
     // player. Host-only, because it decides for the whole table at once.
     if (body.deal === true) {
-      if (!actor.is_host) {
+      if (!actor.user.is_host) {
         return NextResponse.json({ error: "Tylko gospodarz rozdaje." }, { status: 403 });
       }
       if (game.status !== "lobby") {
@@ -42,9 +48,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     if (body.again === true) {
       await takeNewCharacter(
         game.id,
-        String(body.seatId ?? actor.id),
+        String(body.seatId ?? seat.id),
         String(body.characterId ?? ""),
-        actor.id,
+        seat.id,
       );
       return NextResponse.json({ ok: true });
     }
@@ -52,9 +58,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // Which seat this may be aimed at is `mayChooseFor`'s, not this file's:
     // your own, or somebody at the table with no device of their own.
     await change(game.id, chooseCharacter, {
-      seatId: body.seatId ? String(body.seatId) : actor.id,
+      seatId: body.seatId ? String(body.seatId) : seat.id,
       characterId: String(body.characterId ?? ""),
-      byId: actor.id,
+      byId: seat.id,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

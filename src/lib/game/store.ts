@@ -313,12 +313,25 @@ export async function seatsFor(gameId: string): Promise<SeatRow[]> {
   }));
 }
 
-/** Adds a seat and returns its token. The 2-6 of `modes.ts` is enforced here. */
+/**
+ * Somebody arrives, and sits down if there is anywhere to sit.
+ *
+ * Two rows now, and they are not the same kind of thing. The **user** is the
+ * person, and there is always room for one: a table can hold any number of
+ * people watching. The **seat** is the place at the table, and there are six.
+ * So joining a full table is not a refusal any more — it is arriving as a
+ * spectator, which is a thing to be.
+ *
+ * Which place is free can only be decided by looking at the others, and by the
+ * time the insert lands somebody else may have taken it. So the database
+ * decides: `unique (game_id, seat_index)` rejects the loser of a tie and it
+ * looks again. Working it out more cleverly cannot help — between any read and
+ * any write there is a gap.
+ */
 export async function joinGame(
   gameId: string,
   playerName: string | null,
-  /** True when the host is seating somebody who has no device of their own. */
-  noDevice = false,
+  deviceId: string | null = null,
   /**
    * True when the table is already playing.
    *
@@ -329,62 +342,101 @@ export async function joinGame(
    * coming back from a death — see the note there.
    */
   midGame = false,
-): Promise<{ seat: SeatRow; token: string }> {
+): Promise<{ user: UserRow; seat: SeatRow | null; token: string }> {
   const token = makeClaimToken();
+  const name = (playerName ?? "").trim() || null;
 
-  // Which place is free can only be decided by looking at the others, and by
-  // the time the insert lands somebody else may have taken it. So the database
-  // decides: `unique (game_id, seat_index)` rejects the loser of a tie and it
-  // simply looks again. Working out the answer more cleverly in here cannot
-  // help — between any read and any write there is a gap.
-  for (let attempt = 0; attempt < MAX_SEATS + 2; attempt++) {
+  // A name has to be unique at the table for `kick Michał` to mean one person,
+  // so the collision is refused rather than quietly suffixed.
+  if (name) {
+    const here = await usersFor(gameId);
+    if (here.some((one) => one.name === name)) {
+      throw new Error(`Przy stole jest już ${name}.`);
+    }
+  }
+
+  for (let attempt = 0; attempt < MAX_SEATS + 4; attempt++) {
     const existing = await seatsFor(gameId);
+    const driven = new Set(
+      (await usersFor(gameId))
+        .map((one) => one.seat_index)
+        .filter((at): at is number => at !== null),
+    );
 
-    // Every seat that exists is already claimed by a device — the host's
-    // included, created with the table. An earlier version handed a joiner any
-    // seat with no player_name, which meant the second person to arrive
-    // silently took over the unnamed host's seat and overwrote their character.
-    // Joining always adds a seat; it never adopts one.
-    if (existing.length >= MAX_SEATS) {
-      throw new Error("Stół jest pełny — gra jest na 2-6 graczy.");
+    // The lowest place nobody is in, and none at all when the table is full —
+    // which seats them as a spectator rather than turning them away.
+    const taken = new Set(existing.map((seat) => seat.seat_index));
+    let seatIndex: number | null = 0;
+    while (seatIndex < MAX_SEATS && (taken.has(seatIndex) || driven.has(seatIndex))) seatIndex++;
+    if (seatIndex >= MAX_SEATS) seatIndex = null;
+
+    let seat: SeatRow | null = null;
+    if (seatIndex !== null && !taken.has(seatIndex)) {
+      const made = await db
+        .from("seats")
+        .insert({ game_id: gameId, seat_index: seatIndex, eliminated: midGame })
+        .select(SEAT_COLUMNS)
+        .single();
+      if (made.error) {
+        if (made.error.code !== "23505") throw new Failure(`joinGame(seat): ${made.error.message}`);
+        continue; // Somebody took that place between the read and the write.
+      }
+      seat = made.data as SeatRow;
+    } else if (seatIndex !== null) {
+      seat = existing.find((one) => one.seat_index === seatIndex) ?? null;
     }
 
-    // The lowest place nobody is in, rather than one past the end: seats are
-    // deleted from the middle now — the host removes somebody, or a tab closes
-    // in the poczekalnia — so counting them gives a number already in use.
-    const taken = new Set(existing.map((seat) => seat.seat_index));
-    let seatIndex = 0;
-    while (taken.has(seatIndex)) seatIndex++;
-
     const { data, error } = await db
-      .from("seats")
+      .from("users")
       .insert({
+        id: makeUserId(),
         game_id: gameId,
-        seat_index: seatIndex,
+        name: name ?? `Gracz ${(existing.length + 1).toString()}`,
+        device_id: deviceId,
         claim_token: token,
-        player_name: playerName,
-        no_device: noDevice,
-        eliminated: midGame,
+        seat_index: seatIndex,
       })
-      .select(SEAT_COLUMNS)
+      .select(USER_COLUMNS)
       .single();
 
-    if (!error) return { seat: data as SeatRow, token };
-    if (error.code !== "23505") throw new Failure(`joinGame: ${error.message}`);
-    // Somebody took that place between the read and the write. Look again.
+    if (!error) return { user: data as UserRow, seat, token };
+    // A minted id already in use, or a seat somebody took first. Both are the
+    // unique index doing its job; both are answered by trying again.
+    if (error.code !== "23505") throw new Failure(`joinGame(user): ${error.message}`);
   }
   throw new Error("Nie udało się usiąść — spróbujcie jeszcze raz.");
 }
 
-export async function verifySeat(gameId: string, token: string): Promise<SeatRow | null> {
+/**
+ * Who a device's token proves it is, and what they are driving.
+ *
+ * Both, because almost every route wants both: the person is who may act, and
+ * the seat is what they act *on*. A spectator holds a perfectly good token and
+ * drives nothing, so the seat is null and the route decides whether that is a
+ * refusal — which is the question that used to be impossible to ask, back when
+ * holding a token and holding a seat were the same fact.
+ */
+export async function verifyActor(
+  gameId: string,
+  token: string,
+): Promise<{ user: UserRow; seat: SeatRow | null } | null> {
+  const user = await verifyUser(gameId, token);
+  if (!user) return null;
+  if (user.seat_index === null) return { user, seat: null };
+  const seats = await seatsFor(gameId);
+  return { user, seat: seats.find((one) => one.seat_index === user.seat_index) ?? null };
+}
+
+/** The person a device's token proves it is, or nobody. */
+export async function verifyUser(gameId: string, token: string): Promise<UserRow | null> {
   const { data, error } = await db
-    .from("seats")
-    .select(SEAT_COLUMNS)
+    .from("users")
+    .select(USER_COLUMNS)
     .eq("game_id", gameId)
     .eq("claim_token", token)
     .maybeSingle();
-  if (error) throw new Failure(`verifySeat: ${error.message}`);
-  return (data as SeatRow) ?? null;
+  if (error) throw new Failure(`verifyUser: ${error.message}`);
+  return (data as UserRow) ?? null;
 }
 
 export interface HoldingRow {
@@ -464,14 +516,14 @@ export async function deleteGame(gameId: string): Promise<void> {
 }
 
 /** Records that this seat's device is still there. */
-export async function markSeen(seatId: string): Promise<void> {
+export async function markSeenUser(userId: string): Promise<void> {
   // Also cancels a goodbye. A page that said it was going away and then asked
   // for the state has come back — a reload, or a tab restored — and reloading
   // is the commonest reason a page goes away at all.
   await db
-    .from("seats")
+    .from("users")
     .update({ seen_at: new Date().toISOString(), left_at: null })
-    .eq("id", seatId);
+    .eq("id", userId);
 }
 
 /**

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import { findGame, verifySeat } from "@/lib/game/store";
-import { leaveGame, removeSeat } from "@/lib/game/lobbyStore";
+import { findGame, verifyActor } from "@/lib/game/store";
+import { leaveTable, unseat } from "@/lib/game/lobbyStore";
 
 /**
  * Gives up the seat this device holds.
@@ -16,17 +16,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const seat = await verifySeat(game.id, String(body.token ?? ""));
-  if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  const actor = await verifyActor(game.id, String(body.token ?? ""));
+  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
 
   try {
-    // A seatId means "remove that one" — the lobby's tidy-up, available to
-    // anyone already at the table. Without it, you are giving up your own.
-    if (body.seatId && body.seatId !== seat.id) {
-      await removeSeat(game.id, String(body.seatId), seat.id);
-      return NextResponse.json({ removed: true, passedTo: null, gameFinished: false });
+    // Naming somebody else is a kick, which is the host's. Naming nobody is
+    // going yourself — and `standing` says whether you are leaving the chair or
+    // the table, which are different things now and get different journal
+    // lines.
+    const target = typeof body.userId === "string" ? body.userId : actor.user.id;
+    if (target !== actor.user.id) {
+      return NextResponse.json(await leaveTable(game.id, target, true));
     }
-    return NextResponse.json(await leaveGame(game.id, seat.id));
+    return NextResponse.json(
+      body.standing === true
+        ? await unseat(game.id, actor.user.id)
+        : await leaveTable(game.id, actor.user.id),
+    );
   } catch (error) {
     return refused(error);
   }

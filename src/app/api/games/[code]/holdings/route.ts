@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import { findGame, verifySeat } from "@/lib/game/store";
+import { findGame, verifyActor } from "@/lib/game/store";
 import type { Slot } from "@/lib/engine/slots";
 import {
   buyGoods,
@@ -35,20 +35,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const actor = await verifySeat(game.id, String(body.token ?? ""));
+  const actor = await verifyActor(game.id, String(body.token ?? ""));
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
-
+  const seat = actor.seat;
+  // Watching is not acting: a spectator holds a good token and drives no
+  // Postać, which every route below this line is about.
+  if (!seat) {
+    return NextResponse.json({ error: "Nie prowadzisz żadnej Postaci." }, { status: 403 });
+  }
   try {
     switch (body.action) {
       case "take":
-        await takeCard(game.id, String(body.seatId ?? actor.id), String(body.cardId));
+        await takeCard(game.id, String(body.seatId ?? seat.id), String(body.cardId));
         break;
       case "take-field":
         // From the board rather than from the turn's stack — see
         // `takeFromField`.
         await takeFromField(
           game.id,
-          String(body.seatId ?? actor.id),
+          String(body.seatId ?? seat.id),
           String(body.fieldCardId),
         );
         break;
@@ -66,21 +71,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "order":
         await reorderPack(
           game.id,
-          String(body.seatId ?? actor.id),
+          String(body.seatId ?? seat.id),
           Array.isArray(body.holdingIds) ? body.holdingIds.map(String) : [],
         );
         break;
       // The three establishment verbs. What each of them costs is read off the
       // board inside these, never taken from the request.
       case "buy":
-        await buyGoods(game.id, String(body.seatId ?? actor.id), String(body.cardId));
+        await buyGoods(game.id, String(body.seatId ?? seat.id), String(body.cardId));
         break;
       case "sell":
-        await sellHolding(game.id, String(body.seatId ?? actor.id), String(body.holdingId));
+        await sellHolding(game.id, String(body.seatId ?? seat.id), String(body.holdingId));
         break;
       case "heal-paid":
         return NextResponse.json(
-          await payHealer(game.id, String(body.seatId ?? actor.id), Number(body.points)),
+          await payHealer(game.id, String(body.seatId ?? seat.id), Number(body.points)),
         );
       case "equip":
         // `slot: null` takes it off. The slot itself is validated in
@@ -99,7 +104,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         return NextResponse.json(
           await castSpell(
             game.id,
-            String(body.seatId ?? actor.id),
+            String(body.seatId ?? seat.id),
             String(body.holdingId),
             {
               ...(typeof body.targetSeat === "number" ? { seatIndex: body.targetSeat } : {}),
@@ -112,14 +117,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         );
       case "spell":
         return NextResponse.json({
-          spellId: await drawSpell(game.id, String(body.seatId ?? actor.id)),
+          spellId: await drawSpell(game.id, String(body.seatId ?? seat.id)),
         });
       case "wand-spell":
         // The Różdżka Zaklęć refilling a hand back up to its setup size. A
         // separate action rather than a flag on the one above, because the
         // condition is the card's and not 2.6's.
         return NextResponse.json({
-          spellId: await drawSpellWithWand(game.id, String(body.seatId ?? actor.id)),
+          spellId: await drawSpellWithWand(game.id, String(body.seatId ?? seat.id)),
         });
       case "nature": {
         const nature = body.nature;
@@ -127,19 +132,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           return NextResponse.json({ error: "Nieznana Natura." }, { status: 400 });
         }
         return NextResponse.json(
-          await changeNature(game.id, String(body.seatId ?? actor.id), nature),
+          await changeNature(game.id, String(body.seatId ?? seat.id), nature),
         );
       }
       case "heal":
         return NextResponse.json({
-          life: await healSeat(game.id, String(body.seatId ?? actor.id)),
+          life: await healSeat(game.id, String(body.seatId ?? seat.id)),
         });
       case "stone":
-        await turnToStone(game.id, String(body.seatId ?? actor.id));
+        await turnToStone(game.id, String(body.seatId ?? seat.id));
         break;
       case "trade":
         return NextResponse.json({
-          gained: await tradeTrophies(game.id, String(body.seatId ?? actor.id)),
+          gained: await tradeTrophies(game.id, String(body.seatId ?? seat.id)),
         });
       default:
         return NextResponse.json({ error: "Nieznana akcja." }, { status: 400 });
