@@ -5,11 +5,13 @@ import { heldAbilities } from "@/lib/engine/abilities";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
 import { fieldScriptFor } from "@/lib/engine/fieldScript";
 import { HEAL_CEILING } from "@/lib/engine/derive";
+import { goodsId } from "@/lib/engine/goods";
 import type { FieldId } from "@/lib/engine/board";
 import { EVENTS } from "../decks";
 import { apply, merge, type Outcome, type Snapshot } from "../change";
 import type { SeatRow } from "../store";
 import { asReturnable, putOnPile } from "./piles";
+import { cardName, takeCard, type Taken } from "./holdings";
 import { seatById } from "./seat";
 
 /** 1.4: seven points of beaten Wróg buy one point of Miecz. */
@@ -180,5 +182,48 @@ export function payHealer(
       ],
     },
     result: { healed: wanted, paid },
+  };
+}
+
+/**
+ * Buys from a shelf printed on the board (21.1).
+ *
+ * One change, which is the point of doing it here. The store took the card in
+ * one write and then paid for it in another, against a purse it had read
+ * before the take — so a coin spent in between was overwritten and the buyer
+ * got the card for free. Every gold mutation in that file was an absolute
+ * `zloto: <computed>` for the same reason; this one is not.
+ */
+export function buyGoods(
+  snapshot: Snapshot,
+  command: { seatId: string; cardId: string },
+): Outcome<Taken> {
+  const seat = standingShopper(snapshot, command.seatId);
+  const shop = offerOn(snapshot, seat.field_id as FieldId, "kup");
+  if (!shop) throw new Error("Na tym Obszarze nie ma czego kupić.");
+
+  const entry = shop.towar.find((t) => goodsId(t.co) === command.cardId);
+  if (!entry) throw new Error(`${cardName(command.cardId)} nie jest tu na sprzedaż.`);
+  if (seat.zloto < entry.cena) {
+    throw new Error(`Za mało złota: ${entry.co} kosztuje ${entry.cena} Sz. Z.`);
+  }
+
+  // Taking it and paying for it are one changeset. `takeCard` writes holdings,
+  // the turn stack and possibly the deck, and none of those is the purse, so
+  // there is nothing here for the merge to overwrite.
+  const taken = takeCard(snapshot, { seatId: seat.id, cardId: command.cardId });
+  return {
+    writes: merge(taken.writes, {
+      seats: [{ id: seat.id, patch: { zloto: seat.zloto - entry.cena } }],
+      journal: [
+        {
+          seatId: seat.id,
+          turn: snapshot.game.turn,
+          kind: "kupno",
+          payload: { cardId: command.cardId, price: entry.cena },
+        },
+      ],
+    }),
+    result: taken.result,
   };
 }

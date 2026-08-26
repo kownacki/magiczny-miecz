@@ -37,7 +37,7 @@ import { eqModeOf, holdingsOf, pointsOf, seatById } from "./seat";
  * ----------------------------------------------------------------------- */
 
 /** A card's printed name, for messages a player reads. */
-function cardName(cardId: string): string {
+export function cardName(cardId: string): string {
   return (
     (events as EventCard[]).find((card) => card.id === cardId)?.name ??
     (items as Item[]).find((item) => item.id === cardId)?.name ??

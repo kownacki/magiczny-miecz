@@ -3,7 +3,8 @@ import { asFieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
 import { EVENTS } from "../decks";
 import { aHolding, aSeat, aTable } from "../fixture";
-import { TROPHY_RATE, offerOn, payHealer, sellHolding, tradeTrophies } from "./shop";
+import { TROPHY_RATE, buyGoods, offerOn, payHealer, sellHolding, tradeTrophies } from "./shop";
+import { goodsId } from "@/lib/engine/goods";
 
 /** The board's own establishments, read off `fieldScript.ts` rather than guessed. */
 const GROD = asFieldId("grod")!; // Lichwiarz, 1 Sz. Z.
@@ -200,5 +201,54 @@ describe("a seat that is not standing anywhere", () => {
       /nie stoi jeszcze/,
     );
     expect(() => payHealer(nowhere, { seatId: "seat-a", points: 1 })).toThrow(/nie stoi jeszcze/);
+  });
+});
+
+describe("buying from a shelf (21.1)", () => {
+  /** Osada's shop, whose prices are printed in `fieldScript.ts`. */
+  const shopping = (zloto: number) =>
+    aTable({ seats: [aSeat({ id: "seat-a", field_id: OSADA, zloto })] });
+
+  const forSale = () => {
+    const shop = offerOn(shopping(9), OSADA, "kup");
+    if (!shop) throw new Error("Osada should have a shop — read fieldScript.ts");
+    return shop.towar;
+  };
+
+  it("refuses where there is no shelf", () => {
+    const nowhere = aTable({ seats: [aSeat({ id: "seat-a", field_id: STEP, zloto: 9 })] });
+    expect(() => buyGoods(nowhere, { seatId: "seat-a", cardId: "helm" })).toThrow(
+      /nie ma czego kupić/,
+    );
+  });
+
+  it("refuses a card this shelf does not carry", () => {
+    expect(() => buyGoods(shopping(9), { seatId: "seat-a", cardId: "excalibur" })).toThrow(
+      /nie jest tu na sprzedaż/,
+    );
+  });
+
+  it("refuses a purse that cannot cover it", () => {
+    const [first] = forSale();
+    expect(() =>
+      buyGoods(shopping(0), { seatId: "seat-a", cardId: goodsId(first.co)! }),
+    ).toThrow(/Za mało złota/);
+  });
+
+  /**
+   * Taking it and paying for it are one change.
+   *
+   * The store read the purse, took the card across four to six round trips, and
+   * then wrote an absolute `zloto` computed from the reading it took first — so
+   * a coin spent in that window was refunded by the purchase that followed it.
+   */
+  it("takes the card and pays for it in one changeset", () => {
+    const [first] = forSale();
+    const cardId = goodsId(first.co)!;
+    const { writes } = buyGoods(shopping(9), { seatId: "seat-a", cardId });
+
+    expect(writes.holdings?.insert?.[0]).toMatchObject({ seat_id: "seat-a", card_id: cardId });
+    expect(writes.seats).toContainEqual({ id: "seat-a", patch: { zloto: 9 - first.cena } });
+    expect(writes.journal?.map((line) => line.kind)).toContain("kupno");
   });
 });

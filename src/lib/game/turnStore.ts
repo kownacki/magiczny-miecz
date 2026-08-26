@@ -78,7 +78,6 @@ import {
 import { describeEffect } from "@/lib/engine/effectText";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { isSettled } from "@/lib/engine/resolve";
-import { goodsId } from "@/lib/engine/goods";
 import {
   drawFrom,
 } from "@/lib/engine/deck";
@@ -95,7 +94,6 @@ import {
 import {
   change,
   effectRowsFor,
-  loadSnapshot,
   type EffectRow,
 } from "./change";
 import { appRandom, supplied } from "./random";
@@ -137,10 +135,9 @@ import {
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
 import {
   TROPHY_RATE,
-  offerOn as offerIn,
+  buyGoods as buyGoodsFor,
   payHealer as payHealerFor,
   sellHolding as sellHoldingFor,
-  standingShopper,
   tradeTrophies as tradeTrophiesFor,
 } from "./commands/shop";
 
@@ -2393,18 +2390,8 @@ export async function takeNewCharacter(
  * on the board. Looking in both places is what lets them be bought from with
  * the same three verbs.
  */
-async function offerOn<K extends Effect["op"]>(
-  gameId: string,
-  fieldId: FieldId,
-  op: K,
-): Promise<Extract<Effect, { op: K }> | null> {
-  return offerIn(await loadSnapshot(gameId), fieldId, op);
-}
 
 /** The seat acting, with the field it is standing on. */
-async function shopper(gameId: string, seatId: string): Promise<SeatRow> {
-  return standingShopper(await loadSnapshot(gameId), seatId);
-}
 
 /**
  * Buys one card from the shop on the field the character is standing on.
@@ -2419,21 +2406,10 @@ export async function buyGoods(
   seatId: string,
   cardId: string,
 ): Promise<void> {
-  const seat = await shopper(gameId, seatId);
-  const shop = await offerOn(gameId, seat.field_id!, "kup");
-  if (!shop) throw new Error("Na tym Obszarze nie ma czego kupić.");
-
-  const entry = shop.towar.find((t) => goodsId(t.co) === cardId);
-  if (!entry) throw new Error(`${cardName(cardId)} nie jest tu na sprzedaż.`);
-  if (seat.zloto < entry.cena) {
-    throw new Error(`Za mało złota: ${entry.co} kosztuje ${entry.cena} Sz. Z.`);
+  const bought = await change(gameId, buyGoodsFor, { seatId, cardId });
+  if (bought.resolve) {
+    await applyEffect(gameId, seatId, bought.resolve.effect, bought.resolve.reason);
   }
-
-  await takeCard(gameId, seatId, cardId);
-  await db.from("seats").update({ zloto: seat.zloto - entry.cena }).eq("id", seatId);
-  const game = await loadGame(gameId);
-  await journal(gameId, seatId, game.turn, "kupno", { cardId, price: entry.cena });
-  await bumpRevision(gameId);
 }
 
 /**
