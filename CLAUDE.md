@@ -13,6 +13,7 @@ anything.
 
 ## Read these first
 
+- **[CONTEXT.md](CONTEXT.md)** — the referee's own vocabulary: Snapshot, Changeset, Command
 - **[docs/TASKS.md](docs/TASKS.md)** — the live checklist; what is done and what is next
 - **[docs/COVERAGE.md](docs/COVERAGE.md)** — every numbered rule, and whether the app carries it
 - **[docs/LOBBY.md](docs/LOBBY.md)** — host, players, presence: the part that is not Magiczny Miecz
