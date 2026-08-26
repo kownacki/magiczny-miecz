@@ -458,11 +458,11 @@ export async function runCommand(
      */
     case "remove": {
       const seat = pickedSeat(command.seat, command.characterId);
-      const { characterId, dropped } = await removeCharacter(gameId, seat.id, command.hard, null);
+      const { characterId, returned } = await removeCharacter(gameId, seat.id, command.hard, null);
       const spilled =
-        dropped.length === 0
+        returned.length === 0
           ? ""
-          : ` Left on ${fieldName(seat.field_id)}: ${dropped.map((id) => cardName(id)).join(", ")}.`;
+          : ` Back on the piles: ${returned.map((id) => cardName(id)).join(", ")}.`;
       return `${characterName(characterId)} is out of the game${
         command.hard ? " for good" : " — the Karta goes back in the pool"
       }.${spilled}`;

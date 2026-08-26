@@ -50,15 +50,12 @@ export interface RemoveCharacter {
 
 export interface Removed {
   characterId: string;
-  /** What was left standing on the Obszar, in the order it was put down. */
-  dropped: string[];
+  /** What went back on the piles. Nothing is left on the Obszar. */
+  returned: string[];
 }
 
-/** One coin, one card — what a Sztuka Złota is when it is lying on a field. */
-const COIN = "1-sztuka-zlota";
-
 /**
- * A Postać out of the game, and everything it was carrying onto its Obszar.
+ * A Postać out of the game, and everything it was carrying back onto the piles.
  *
  * 12.1 is why the kit is spilled rather than deleted: "Karty, które pozostały
  * na Obszarze, może wziąć każda Postać, która się na nim zatrzyma". Deleting
@@ -97,40 +94,44 @@ export function removeCharacter(
   const trophies = mine.filter((held) => held.kind === "trophy");
 
   /**
-   * The kit, then the purse, in that order and each carrying its own flags.
+   * Everything they were carrying goes back into circulation — and nothing is
+   * left lying on the Obszar.
    *
-   * Built off the holdings rather than looked back up by `card_id`: a field can
-   * hold two of the same Przedmiot and only one of them may have been conjured
-   * for a test, so matching on the name would hand the wrong card the wrong
-   * flag. A coin was never granted by anybody — it is a number becoming cards.
+   * This is the whole of what separates a withdrawal from a death. 4.4 leaves a
+   * dead character's Przedmioty and Przyjaciele "na Obszarze, na którym
+   * zginęła", face up for whoever comes next, because the character fell there
+   * and dropped them. A withdrawn one did not fall: it walked out of the realm
+   * and took its things with it, so there is nothing on the ground to find.
+   *
+   * There was a version of this that spilled the kit and the purse onto the
+   * field. It came from `removeSeat`, which removed a *player* mid-game and was
+   * right to spill — 12.1 lets the next character along pick the pile up, and
+   * deleting it silently would have made the board poorer. But that command was
+   * deleted on purpose, and this one is not its successor: it withdraws a
+   * Postać, and it has the opposite rule.
+   *
+   * The Karty still go somewhere. "Out of the game" would shrink the deck by a
+   * Miecz every time somebody was withdrawn, with nothing saying so — the exact
+   * trap `putOnPile` was written to close. So the fiction covers the Obszar and
+   * the pile covers the deck: he leaves with them, and the box stays whole.
    */
-  const spill = seat.field_id
-    ? [
-        ...left.map((held) => ({
-          field_id: seat.field_id as string,
-          card_id: held.card_id,
-          granted: held.granted,
-        })),
-        ...Array.from({ length: seat.gold }, () => ({
-          field_id: seat.field_id as string,
-          card_id: COIN,
-          granted: false,
-        })),
-      ]
-    : [];
-  const dropped = spill.map((card) => card.card_id);
-
-  const spilled: Changeset = spill.length > 0 ? { fieldCards: { insert: spill } } : {};
-
-  const emptied: Changeset =
+  const put: Changeset =
     mine.length > 0 ? { holdings: { delete: mine.map((held) => held.id) } } : {};
 
-  // Chained rather than merged: both write `deck`, and a merge would let the
-  // second overwrite the first's pile instead of adding to it.
-  const put = mergeAll(spilled, emptied);
-  const spellsBack = putOnPile(apply(snapshot, put), "spells", spellCards.map(asReturnable));
+  /**
+   * Chained rather than merged: every one of these writes `deck`, and a merge
+   * would let the last overwrite the others' piles instead of adding to them.
+   *
+   * Przedmioty and Przyjaciele are Karty Zdarzeń, so they go back on that pile
+   * — where `putOnPile` already knows to keep the Wyposażenie out of it (21.2:
+   * a bought Hełm returns to the stock it can be bought from, and pushing it
+   * here would hand the deck a thirteenth one).
+   */
+  const kitBack = putOnPile(apply(snapshot, put), "events", left.map(asReturnable));
+  const withKit = mergeAll(put, kitBack);
+  const spellsBack = putOnPile(apply(snapshot, withKit), "spells", spellCards.map(asReturnable));
   const trophiesBack = putOnPile(
-    apply(snapshot, mergeAll(put, spellsBack)),
+    apply(snapshot, mergeAll(withKit, spellsBack)),
     "events",
     trophies.map(asReturnable),
   );
@@ -182,7 +183,7 @@ export function removeCharacter(
       ? { game: { characters_out: out.filter((id) => id !== character) } }
       : {};
 
-  const soFar = mergeAll(put, spellsBack, trophiesBack, cleared, listed, {
+  const soFar = mergeAll(put, kitBack, spellsBack, trophiesBack, cleared, listed, {
     journal: [
       {
         seatId: seat.id,
@@ -193,8 +194,11 @@ export function removeCharacter(
           what: "remove",
           character,
           hard: command.hard,
-          droppedOnField: dropped,
+          // What went back on the piles, which is all of it: nothing is left
+          // on the Obszar for anybody to find.
+          returned: [...left, ...trophies].map((held) => held.card_id),
           spellsDiscarded: spellCards.length,
+          gold: seat.gold,
           field: seat.field_id,
         },
       },
@@ -207,7 +211,8 @@ export function removeCharacter(
   const moved =
     snapshot.game.active_seat === seat.seat_index ? passTurn(after) : ({} as Changeset);
 
-  return { writes: merge(soFar, moved), result: { characterId: character, dropped } };
+  const returned = [...left, ...trophies].map((held) => held.card_id);
+  return { writes: merge(soFar, moved), result: { characterId: character, returned } };
 }
 
 /* --------------------------------------------------------------------------

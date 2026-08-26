@@ -59,15 +59,21 @@ describe("wycofanie Postaci z gry", () => {
     expect(result.characterId).toBe("goblin");
   });
 
-  it("leaves the kit on the Obszar, where 12.1 lets the next comer take it", () => {
+  it("takes the kit out of the world and back onto the pile, leaving nothing behind", () => {
     /**
-     * "Karty, które pozostały na Obszarze, może wziąć każda Postać, która się na
-     * nim zatrzyma." Deleting them would take the Przedmioty and Przyjaciele
-     * out of the game silently, and the board would be quietly poorer for it.
-     * The gold goes down as coins, one card each, because that is what a Sztuka
-     * Złota is on a field.
+     * The whole of what separates a withdrawal from a death.
+     *
+     * 4.4 leaves a dead character's Przedmioty and Przyjaciele "na Obszarze, na
+     * którym zginęła" — it fell there and dropped them. A withdrawn Postać did
+     * not fall: it walked out of the realm and took its things with it, so
+     * there is nothing on the ground for 12.1 to offer anybody.
+     *
+     * They still go back on the pile rather than out of the game, or the deck
+     * would lose a Hełm every time somebody was withdrawn with nothing saying
+     * so. The gold simply goes: there is no bank to return coins to, and this
+     * game never counts them out of one.
      */
-    const { writes } = removeCharacter(
+    const { writes, result } = removeCharacter(
       table(
         { field_id: asFieldId("osada"), gold: 2 },
         {
@@ -79,13 +85,10 @@ describe("wycofanie Postaci z gry", () => {
       ),
       { seatId: "seat-a", ...console_ },
     );
-    expect(writes.fieldCards?.insert?.map((card) => card.card_id)).toEqual([
-      "helm",
-      "wilk",
-      "1-sztuka-zlota",
-      "1-sztuka-zlota",
-    ]);
+    expect(writes.fieldCards).toBeUndefined();
     expect(writes.holdings?.delete).toEqual(["h1", "h2"]);
+    expect(result.returned).toEqual(["helm", "wilk"]);
+    expect(writes.seats?.[0].patch.gold).toBe(0);
   });
 
   it("does not spill the Zaklęcia, which nobody ever saw (9.3)", () => {
@@ -112,7 +115,7 @@ describe("wycofanie Postaci z gry", () => {
     expect(writes.holdings?.delete).toEqual(["h1"]);
   });
 
-  it("takes nothing off a figure that is not on the board", () => {
+  it("has nothing to leave behind wherever the figure was standing", () => {
     const { writes } = removeCharacter(
       table(
         { field_id: null, gold: 3 },
