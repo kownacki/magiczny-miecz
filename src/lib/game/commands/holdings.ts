@@ -1,6 +1,5 @@
 /** What a character is carrying: picking it up (12.1, 16.6, 21.1), putting it down (5.5, 6.4, 9.4), wearing it, and the two test shortcuts that conjure a card. */
 
-import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
@@ -16,7 +15,7 @@ import {
 import { kindForCard } from "@/lib/engine/holdings";
 import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
-import { EVENTS, SPELLS, SPELL_BY_ID } from "../decks";
+import { EVENTS, SPELLS } from "../decks";
 import {
   apply,
   merge,
@@ -28,22 +27,11 @@ import {
 import type { HoldingRow } from "../store";
 import { asReturnable, pushOntoPile, putOnPile } from "./piles";
 import { eqModeOf, holdingsOf, seatById, seatView } from "./seat";
+import { cardName } from "@/lib/engine/polish";
 
 /* --------------------------------------------------------------------------
  * The small pure things these commands need, which the store keeps as queries.
  * ----------------------------------------------------------------------- */
-
-/** A card's printed name, for messages a player reads. */
-export function cardName(cardId: string): string {
-  return (
-    (events as EventCard[]).find((card) => card.id === cardId)?.name ??
-    (items as Item[]).find((item) => item.id === cardId)?.name ??
-    // Zaklęcia are cards too, and are named on the one occasion the app says
-    // so out loud: 12.5 has a cast spoken, and the console reports a draw.
-    SPELL_BY_ID.get(cardId)?.name ??
-    cardId
-  );
-}
 
 /**
  * Which Natury a card refuses, as `mayHold` wants it.

@@ -10,7 +10,7 @@ import { usageOf } from "@/lib/engine/uses";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, goldLost, lossTaken, reachableBy } from "@/lib/engine/losses";
 import { endTurn } from "@/lib/engine/turn";
-import { NATURE_LABEL, plural } from "@/lib/engine/polish";
+import { cardName, NATURE_LABEL, plural } from "@/lib/engine/polish";
 import type { Effect } from "@/lib/engine/cardScript";
 import type { FieldId } from "@/lib/engine/board";
 import type { Nature } from "@/data/types";
@@ -28,7 +28,7 @@ import { adjustSeat } from "./adjust";
 import { changeNature, pickBelow, placeSeat } from "./character";
 import { drawCard, drawSpell } from "./draw";
 import { beginNamedFight } from "./fight";
-import { cardName } from "./holdings";
+
 import { healSeat } from "./life";
 import { putOnPile } from "./piles";
 import { turnToStone } from "./stone";

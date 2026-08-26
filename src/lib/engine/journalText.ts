@@ -202,13 +202,6 @@ function personName(
   return character ? `${who.playerName} (${character})` : who.playerName;
 }
 
-function nameOf(seat: JournalSeat | undefined): string {
-  if (!seat) return "Ktoś";
-  if (seat.playerName) return seat.playerName;
-  if (seat.characterId) return characterName(seat.characterId);
-  return `Miejsce ${seat.seatIndex + 1}`;
-}
-
 /** The cards print "zła", not "evil". Null when there is no Natura to name. */
 function natura(value: unknown): string | null {
   if (typeof value !== "string" || value === "") return null;

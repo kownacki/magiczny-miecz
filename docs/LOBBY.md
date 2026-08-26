@@ -38,9 +38,15 @@ behind.
 | hand the host role to another player | any time |
 | start the game | once the two conditions below are met |
 
-**Starting the game** needs at least two characters chosen and everybody
-holding one to have said they are ready. The server enforces both conditions;
-the button carries whichever one is missing as its label.
+**Starting the game** needs at least one character chosen and everybody holding
+one to have said they are ready. The server enforces both conditions; the
+button carries whichever one is missing as its label.
+
+One, not two, and deliberately — see `startGame`. The box says 2-6 players but
+the rulebook never states a count, the only rule that assumes company is 17.4
+where "jeden z pozostałych graczy" throws the enemy's die, and in simulation
+the app throws it. The victory condition is beating the Bestia, which one
+character can do alone.
 
 It is the host's, and this page said the opposite for a while. The argument
 against was a good one — readiness is already unanimous consent, so by the time

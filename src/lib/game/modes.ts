@@ -37,11 +37,16 @@ export const COMPANION_PARKED = true;
 /**
  * How many can sit at one table.
  *
- * The box says 2-6, and it is a rule rather than a limit of this app — so it
- * lives beside the other thing about a table that is decided before anybody
- * plays. `store.ts` enforces the ceiling on the way in, because a stale lobby
- * page must not be able to squeeze in a seventh; the lobby reads it to know
+ * The ceiling only. `store.ts` enforces it on the way in, because a stale lobby
+ * page must not be able to squeeze in a seventh, and the lobby reads it to know
  * whether to offer a chair at all.
+ *
+ * There is no floor. `MIN_SEATS = 2` lived here unread by anything, because the
+ * rule it claimed to state is not one this app keeps: `startGame` needs one
+ * character, and says why at length — the box prints 2-6 on its lid but the
+ * rulebook never states a count, the only rule that assumes company is 17.4's
+ * "jeden z pozostałych graczy" throwing the enemy's die, and in simulation the
+ * app throws it. A constant nothing reads is harmless; a constant nothing reads
+ * that contradicts a decision taken elsewhere is a trap for whoever wires it up.
  */
-export const MIN_SEATS = 2;
 export const MAX_SEATS = 6;

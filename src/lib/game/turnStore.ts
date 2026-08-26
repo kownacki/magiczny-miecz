@@ -23,9 +23,7 @@ import {
   endFight,
   type TurnPhase,
 } from "@/lib/engine/turn";
-import events from "@/data/events.json";
-import items from "@/data/items.json";
-import type { CardClass, EventCard, Item } from "@/data/types";
+import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import {
   helpLines,
@@ -45,7 +43,6 @@ import {
 } from "@/lib/engine/deck";
 import {
   EVENTS,
-  SPELL_BY_ID,
   freshDecks,
   shuffle,
   type Decks,
@@ -206,6 +203,7 @@ export type { Decks };
 import type { Slot } from "@/lib/engine/slots";
 import { holdingsFor, seatsFor, type GameRow } from "./store";
 import { Failure } from "./failure";
+import { cardName } from "@/lib/engine/polish";
 
 /**
  * A stored row as the engine wants it — including where it is worn, which every
@@ -219,18 +217,6 @@ import { Failure } from "./failure";
  * something the rules can switch on — and where an unrecognised value falls
  * back to the game as printed rather than to a house rule.
  */
-
-/** A card's printed name, for messages a player reads. */
-function cardName(cardId: string): string {
-  return (
-    (events as EventCard[]).find((card) => card.id === cardId)?.name ??
-    (items as Item[]).find((item) => item.id === cardId)?.name ??
-    // Zaklęcia are cards too, and are named on the one occasion the app says
-    // so out loud: 12.5 has a cast spoken, and the console reports a draw.
-    SPELL_BY_ID.get(cardId)?.name ??
-    cardId
-  );
-}
 
 
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {

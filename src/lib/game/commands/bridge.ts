@@ -1,5 +1,6 @@
 /** The Kamienny Most and the two river crossings: getting onto it (11.9-11.11), walking it (14.5-14.6), crossing between rings (11.1-11.8), and the ferryman's toll. */
 
+import { cardName } from "@/lib/engine/polish";
 import {
   FERRY_TOLL,
   FIELDS,
@@ -38,7 +39,7 @@ import {
   type SeatPatch,
   type Snapshot,
 } from "../change";
-import { cardName } from "./holdings";
+
 import { asReturnable, putOnPile } from "./piles";
 import { spendLife } from "./life";
 import { activeSeat, pointsOf, seatView } from "./seat";

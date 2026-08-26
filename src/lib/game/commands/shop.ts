@@ -11,7 +11,8 @@ import { EVENTS } from "../decks";
 import { apply, merge, type Outcome, type Snapshot } from "../change";
 import type { SeatRow } from "../store";
 import { asReturnable, putOnPile } from "./piles";
-import { cardName, takeCard, type Taken } from "./holdings";
+import { takeCard, type Taken } from "./holdings";
+import { cardName } from "@/lib/engine/polish";
 import { seatById } from "./seat";
 
 /** 1.4: seven points of beaten Wróg buy one point of Miecz. */
