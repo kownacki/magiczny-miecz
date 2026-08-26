@@ -30,18 +30,18 @@ suite("journal vocabulary", () => {
   });
 
   it("resolves card ids to their printed names", () => {
-    expect(text("zabranie", { cardId: "magiczny-miecz" })).toBe("Michał zdobywa: MAGICZNY MIECZ.");
+    expect(text("zabranie", { cardId: "magiczny-miecz" })).toBe("Michał (GOBLIN) zdobywa: MAGICZNY MIECZ.");
   });
 
   it("falls back to the raw id for a card it does not know", () => {
     // The deck is transcribed progressively, so an unknown id is normal and
     // must not blank the line.
-    expect(text("zabranie", { cardId: "nie-ma-takiej" })).toBe("Michał zdobywa: nie-ma-takiej.");
+    expect(text("zabranie", { cardId: "nie-ma-takiej" })).toBe("Michał (GOBLIN) zdobywa: nie-ma-takiej.");
   });
 
   it("resolves field ids to their board names", () => {
     expect(text("ruch", { from: "karczma", to: "kurhan" })).toBe(
-      "Michał idzie z Karczma na Kurhan.",
+      "Michał (GOBLIN) idzie z Karczma na Kurhan.",
     );
   });
 
@@ -52,21 +52,21 @@ suite("journal vocabulary", () => {
   });
 
   it("names the other player in a duel", () => {
-    expect(text("pojedynek", { target: 1 })).toBe("Michał atakuje: Ania.");
+    expect(text("pojedynek", { target: 1 })).toBe("Michał (GOBLIN) atakuje: Ania (KAPŁANKA).");
   });
 
   it("says a card took a turn away, and names the card", () => {
     // Distinct from the seat later sitting out, which describeTurnChange says.
     expect(text("tura-stracona", { turns: 1, reason: "ZAKLINACZ CZASU" })).toBe(
-      "Michał traci 1 turę — ZAKLINACZ CZASU.",
+      "Michał (GOBLIN) traci 1 turę — ZAKLINACZ CZASU.",
     );
-    expect(text("tura-stracona", { turns: 2 })).toBe("Michał traci 2 tury.");
+    expect(text("tura-stracona", { turns: 2 })).toBe("Michał (GOBLIN) traci 2 tury.");
   });
 
   it("says what was left behind, and on which field", () => {
     expect(
       text("zostawienie", { fieldId: "kurhan", cardIds: ["magiczny-miecz", "upior"] }),
-    ).toBe("Michał zostawia na polu Kurhan: MAGICZNY MIECZ, UPIÓR.");
+    ).toBe("Michał (GOBLIN) zostawia na polu Kurhan: MAGICZNY MIECZ, UPIÓR.");
   });
 
   it("says nothing when nothing was left", () => {
@@ -80,6 +80,9 @@ suite("journal vocabulary", () => {
       null,
     );
     expect(line?.refs).toEqual([
+      // The character comes first because the sentence opens with whoever did
+      // it, and the list is recorded in the order the names were resolved.
+      { kind: "character", id: "goblin", name: "GOBLIN" },
       { kind: "field", id: "kurhan", name: "Kurhan" },
       { kind: "card", id: "magiczny-miecz", name: "MAGICZNY MIECZ" },
       { kind: "card", id: "upior", name: "UPIÓR" },
@@ -89,8 +92,23 @@ suite("journal vocabulary", () => {
     for (const ref of line!.refs!) expect(line!.text).toContain(ref.name);
   });
 
-  it("records nothing for a line that names nothing", () => {
-    expect(describe(entry("start", { seats: 2 }), SEATS, null)?.refs).toBeUndefined();
+  it("records nothing for a line that names nobody", () => {
+    // "Gra się zaczyna" belongs to the table rather than to a player, so the
+    // row carries no seat and the sentence names nothing to look at.
+    expect(
+      describe(entry("start", { seats: 2 }, { seatId: null }), SEATS, null)?.refs,
+    ).toBeUndefined();
+  });
+
+  it("records the character of whoever acted, so the Karta is a hover away", () => {
+    const line = describe(entry("ucieczka"), SEATS, null);
+    expect(line?.refs).toEqual([{ kind: "character", id: "goblin", name: "GOBLIN" }]);
+  });
+
+  it("names a seat with no character by its number, and records nothing", () => {
+    expect(text("ucieczka", {}, "d")).toBe("Miejsce 4 ucieka z walki.");
+    expect(describe(entry("ucieczka", {}, { seatId: "d" }), SEATS, null)?.refs)
+      .toBeUndefined();
   });
 
   it("does not record the same name twice", () => {
@@ -104,30 +122,30 @@ suite("journal vocabulary", () => {
 
   it("says what a card gave or took, and is not a correction", () => {
     expect(text("punkty", { stat: "zloto", delta: 1, reason: "1 SZTUKA ZŁOTA" })).toBe(
-      "Michał zyskuje 1 Sztukę Złota — 1 SZTUKA ZŁOTA.",
+      "Michał (GOBLIN) zyskuje 1 Sztukę Złota — 1 SZTUKA ZŁOTA.",
     );
-    expect(text("punkty", { stat: "zycie", delta: -2 })).toBe("Michał traci 2 Życia.");
-    expect(text("punkty", { stat: "miecz", delta: 1 })).toBe("Michał zyskuje 1 punkt Miecza.");
-    expect(text("punkty", { stat: "magia", delta: 3 })).toBe("Michał zyskuje 3 punkty Magii.");
+    expect(text("punkty", { stat: "zycie", delta: -2 })).toBe("Michał (GOBLIN) traci 2 Życia.");
+    expect(text("punkty", { stat: "miecz", delta: 1 })).toBe("Michał (GOBLIN) zyskuje 1 punkt Miecza.");
+    expect(text("punkty", { stat: "magia", delta: 3 })).toBe("Michał (GOBLIN) zyskuje 3 punkty Magii.");
   });
 
   it("says which Natura was left behind, not only the new one", () => {
     // What everybody has been playing against all game — whether the Święta
     // Włócznia still works, whether the Czarci Młyn heals or hurts.
     expect(text("zmiana-natury", { from: "dobra", to: "zla" })).toBe(
-      "Michał zmienia naturę z dobra na zła.",
+      "Michał (GOBLIN) zmienia naturę z dobra na zła.",
     );
     // Nothing known to have been left: say only where it went.
     expect(text("zmiana-natury", { to: "chaotyczna" })).toBe(
-      "Michał zmienia naturę na: chaotyczna.",
+      "Michał (GOBLIN) zmienia naturę na: chaotyczna.",
     );
   });
 
   it("says what a card took off you", () => {
     expect(text("strata", { co: "przedmiot", cardIds: ["magiczny-miecz"] })).toBe(
-      "Michał traci: MAGICZNY MIECZ.",
+      "Michał (GOBLIN) traci: MAGICZNY MIECZ.",
     );
-    expect(text("strata", { co: "zloto", zloto: 3 })).toBe("Michał traci: 3 Sztuki Złota.");
+    expect(text("strata", { co: "zloto", zloto: 3 })).toBe("Michał (GOBLIN) traci: 3 Sztuki Złota.");
   });
 
   it("says nothing when a loss took nothing", () => {
@@ -180,7 +198,7 @@ suite("what the journal does not say", () => {
   it("names a spell that was cast, because casting is spoken aloud", () => {
     // 12.5 — the cast payload carries cardId/name.
     expect(text("zaklecie", { cardId: "formula-czasu", name: "FORMUŁA CZASU" })).toBe(
-      "Michał wypowiada Zaklęcie: FORMUŁA CZASU.",
+      "Michał (GOBLIN) wypowiada Zaklęcie: FORMUŁA CZASU.",
     );
   });
 
@@ -196,7 +214,7 @@ suite("what the journal does not say", () => {
     // 9.3 keeps those hidden — the holding is even stored face:"hidden" — so
     // naming one here would undo the concealment the rest of the app enforces.
     const drawn = text("zaklecie", { spellId: "formula-czasu" });
-    expect(drawn).toBe("Michał dobiera Zaklęcie.");
+    expect(drawn).toBe("Michał (GOBLIN) dobiera Zaklęcie.");
     expect(drawn).not.toContain("FORMUŁA");
     expect(drawn).not.toContain("formula-czasu");
   });
@@ -266,10 +284,10 @@ suite("the end of a turn", () => {
       SEATS,
     );
     expect(lines.map((line) => line.text)).toEqual([
-      "Ania traci turę.",
+      "Ania (KAPŁANKA) traci turę.",
       "TROLL traci turę.",
-      "Michał kończy turę.",
-      "Michał zaczyna turę.",
+      "Michał (GOBLIN) kończy turę.",
+      "Michał (GOBLIN) zaczyna turę.",
     ]);
   });
 
@@ -283,8 +301,8 @@ suite("the end of a turn", () => {
   it("still says the handover when nobody was passed over", () => {
     const lines = describeTurnChange(entry("koniec-tury", { next: 1, skipped: [] }), SEATS);
     expect(lines.map((line) => line.text)).toEqual([
-      "Michał kończy turę.",
-      "Ania zaczyna turę.",
+      "Michał (GOBLIN) kończy turę.",
+      "Ania (KAPŁANKA) zaczyna turę.",
     ]);
   });
 
@@ -292,7 +310,7 @@ suite("the end of a turn", () => {
     // Everyone left is eliminated or frozen; finishTurn parks active_seat at
     // null and there is no next player to name.
     const lines = describeTurnChange(entry("koniec-tury", { next: null, skipped: [] }), SEATS);
-    expect(lines.map((line) => line.text)).toEqual(["Michał kończy turę."]);
+    expect(lines.map((line) => line.text)).toEqual(["Michał (GOBLIN) kończy turę."]);
   });
 
   it("names the round when play comes back round to the first seat", () => {
@@ -306,9 +324,9 @@ suite("the end of a turn", () => {
     // next player is about to take, so after them it would be announcing a
     // round that had already started a line earlier.
     expect(lines.map((line) => line.text)).toEqual([
-      "Michał kończy turę.",
+      "Michał (GOBLIN) kończy turę.",
       "Tura 4",
-      "Michał zaczyna turę.",
+      "Michał (GOBLIN) zaczyna turę.",
     ]);
     const marker = lines.find((line) => line.marker)!;
     expect(marker.seatIndex).toBeNull();
@@ -342,11 +360,11 @@ suite("journalLines", () => {
       null,
     );
     expect(lines.map((line) => line.text)).toEqual([
-      "Michał zdobywa: MAGICZNY MIECZ.",
-      "Ania traci turę.",
-      "Michał kończy turę.",
-      "Ania zaczyna turę.",
-      "Michał idzie z Karczma na Kurhan.",
+      "Michał (GOBLIN) zdobywa: MAGICZNY MIECZ.",
+      "Ania (KAPŁANKA) traci turę.",
+      "Michał (GOBLIN) kończy turę.",
+      "Ania (KAPŁANKA) zaczyna turę.",
+      "Michał (GOBLIN) idzie z Karczma na Kurhan.",
     ]);
   });
 
@@ -411,19 +429,19 @@ const PAYLOADS: Record<string, Record<string, unknown>> = {
 
 suite("spending a card by using it", () => {
   it("says it the same way for every card", () => {
-    expect(text("uzycie", { cardId: "eliksir-sily" })).toBe("Michał używa: ELIKSIR SIŁY.");
+    expect(text("uzycie", { cardId: "eliksir-sily" })).toBe("Michał (GOBLIN) używa: ELIKSIR SIŁY.");
     expect(text("uzycie", { cardId: "owoc-jarzebiny-wiedzy" })).toContain("używa");
     expect(text("uzycie", { cardId: "rozdzka-przeznaczenia" })).toContain("używa");
   });
 
   it("quotes the die where the app threw one", () => {
     expect(text("uzycie", { cardId: "tajemnicza-szkatula", face: 4 })).toBe(
-      "Michał używa: TAJEMNICZA SZKATUŁA — wypadło 4.",
+      "Michał (GOBLIN) używa: TAJEMNICZA SZKATUŁA — wypadło 4.",
     );
   });
 
   it("still names a card it has no entry for", () => {
-    expect(text("uzycie", { cardId: "nie-ma-takiej" })).toBe("Michał używa: nie-ma-takiej.");
+    expect(text("uzycie", { cardId: "nie-ma-takiej" })).toBe("Michał (GOBLIN) używa: nie-ma-takiej.");
   });
 
   it("says which pile turned over, and belongs to no player", () => {
@@ -440,7 +458,7 @@ suite("spending a card by using it", () => {
     // way out of a staged fight is to test the fights, and a row saying
     // "ucieka z walki" would be the one row you could not trust while doing it.
     const said = text("test-koniec-walki", { cardName: "CYKLOP" });
-    expect(said).toBe("Michał przerywa walkę z: CYKLOP.");
+    expect(said).toBe("Michał (GOBLIN) przerywa walkę z: CYKLOP.");
     expect(said).not.toContain("ucieka");
     // The badge on a manual row says this, and said it twice while the
     // sentence did too.
@@ -458,10 +476,10 @@ suite("spending a card by using it", () => {
     // It used to write a row no case could render, so granting a card in test
     // mode left the journal silent about where it came from.
     expect(text("test-karta-obszar", { cardId: "miecz", fieldId: "kurhan" })).toBe(
-      "Michał kładzie na polu Kurhan: MIECZ.",
+      "Michał (GOBLIN) kładzie na polu Kurhan: MIECZ.",
     );
     expect(text("test-karta", { cardId: "swiety-graal", kind: "item" })).toBe(
-      "Michał bierze z talii: ŚWIĘTY GRAAL.",
+      "Michał (GOBLIN) bierze z talii: ŚWIĘTY GRAAL.",
     );
   });
 });
@@ -472,7 +490,7 @@ suite("sitting down at a table already running", () => {
     // player has lost a character, the other never had one. A table reading
     // its own history back should be able to tell which happened.
     expect(text("dosiadka", { characterId: "troll" })).toBe(
-      "Michał dosiada się do stołu jako TROLL.",
+      "Michał (GOBLIN) dosiada się do stołu jako TROLL.",
     );
     expect(text("dosiadka", { characterId: "troll" })).not.toContain("zgin");
   });
@@ -480,14 +498,14 @@ suite("sitting down at a table already running", () => {
 
 suite("choosing again after death", () => {
   it("names the new character", () => {
-    expect(text("nowa-postac", { characterId: "troll" })).toBe("Michał gra dalej jako: TROLL.");
+    expect(text("nowa-postac", { characterId: "troll" })).toBe("Michał (GOBLIN) gra dalej jako: TROLL.");
   });
 
   it("says when the pile chose rather than the player", () => {
     // Which card it is, is public either way; that it was drawn is a different
     // decision from picking it, and worth the word.
     expect(text("nowa-postac", { characterId: "troll", losowa: true })).toBe(
-      "Michał gra dalej jako: TROLL (wylosowana).",
+      "Michał (GOBLIN) gra dalej jako: TROLL (wylosowana).",
     );
   });
 });
@@ -496,10 +514,10 @@ suite("something a character is under", () => {
   it("says what it is and how long it lasts", () => {
     expect(
       text("efekt", { source: "eliksir-sily", label: "+2 Miecza", ends: { kind: "tur", turns: 1 } }),
-    ).toBe("Michał: +2 Miecza — do końca tej tury.");
+    ).toBe("Michał (GOBLIN): +2 Miecza — do końca tej tury.");
   });
 
   it("still says something when the shape is older than the sentence", () => {
-    expect(text("efekt", { label: "coś" })).toBe("Michał: coś.");
+    expect(text("efekt", { label: "coś" })).toBe("Michał (GOBLIN): coś.");
   });
 });

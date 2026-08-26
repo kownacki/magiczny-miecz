@@ -41,7 +41,7 @@ export interface JournalSeat {
  * without the sentence having to be built out of fragments.
  */
 export interface JournalRef {
-  kind: "card" | "field";
+  kind: "card" | "field" | "character";
   id: string;
   name: string;
 }
@@ -138,6 +138,27 @@ function num(value: unknown, fallback = 0): number {
 }
 
 /** How the table refers to a seat: the player's name, else their character. */
+/**
+ * Who, and as whom — with the character recorded so its Karta is a hover away.
+ *
+ * `remember` is passed in because only `describe` keeps a list; the turn-change
+ * lines want the same words and the same lookup, and building the sentence in
+ * two places is how the two drifted apart before.
+ */
+function personName(
+  who: JournalSeat | undefined,
+  remember?: (kind: JournalRef["kind"], id: unknown, name: string) => string,
+): string {
+  if (!who) return "Ktoś";
+  const named = who.characterId ? characterName(who.characterId) : null;
+  const character =
+    named && who.characterId
+      ? (remember ? remember("character", who.characterId, named) : named)
+      : null;
+  if (!who.playerName) return character ?? `Miejsce ${who.seatIndex + 1}`;
+  return character ? `${who.playerName} (${character})` : who.playerName;
+}
+
 function nameOf(seat: JournalSeat | undefined): string {
   if (!seat) return "Ktoś";
   if (seat.playerName) return seat.playerName;
@@ -173,7 +194,7 @@ export function describe(
   if (UNSPOKEN.has(entry.kind)) return null;
 
   const seat = seats.find((candidate) => candidate.id === entry.seatId);
-  const who = nameOf(seat);
+
   const data = entry.payload;
 
   // Every name the sentence resolves is remembered as it is resolved, so the
@@ -188,6 +209,20 @@ export function describe(
   };
   const card = (id: unknown) => remember("card", id, cardName(id));
   const field = (id: unknown) => remember("field", id, fieldName(id));
+
+  /**
+   * Who did it: the player, and the character they are playing.
+   *
+   * Both, because neither is enough on its own. A journal read three turns
+   * later is full of "Michał" and "Karol", and which of them was the Goblin is
+   * exactly what you have lost by then — while a column of character names
+   * alone stops saying who at the table is doing anything. The Karta Postaci
+   * is a hover away on the character, because half of what a character can do
+   * is prose on it and that is usually the question being asked.
+   */
+  const person = (who: JournalSeat | undefined) => personName(who, remember);
+
+  const who = person(seat);
 
   const line = (text: string): JournalLine => ({
     seq: entry.seq,
@@ -265,13 +300,27 @@ export function describe(
         (typeof data.nazwa === "string" ? data.nazwa : "wroga");
       return line(`${who} walczy z: ${foe} (${num(data.enemyTotal)}).`);
     }
-    case "walka-koniec":
-      return line(
-        `${who} ${data.outcome === "wygrana" ? "wygrywa" : data.outcome === "remis" ? "remisuje" : "przegrywa"} walkę z: ${card(data.cardId)}.`,
-      );
+    case "walka-koniec": {
+      // 17.5 packs several Wrogowie into one fight and `beginFight` joins their
+      // ids with a "+", so the id here is not always an id. Split it, and each
+      // of them is a card you can look at — which is the moment you most want
+      // to, since the fight has just been decided by their combined Miecz.
+      const foes = String(data.cardId ?? "")
+        .split("+")
+        .filter(Boolean)
+        .map((id) => card(id))
+        .join(" i ");
+      const how =
+        data.outcome === "wygrana"
+          ? "wygrywa"
+          : data.outcome === "remis"
+            ? "remisuje"
+            : "przegrywa";
+      return line(`${who} ${how} walkę z: ${foes || "przeciwnikiem"}.`);
+    }
     case "pojedynek": {
       const target = seats.find((candidate) => candidate.seatIndex === num(data.target, -1));
-      return line(`${who} atakuje: ${nameOf(target)}.`);
+      return line(`${who} atakuje: ${person(target)}.`);
     }
     case "ucieczka":
       return line(`${who} ucieka z walki.`);
@@ -508,14 +557,26 @@ export function describeTurnChange(
   const at_ = () => entry.seq + at++ / 1000;
   const lines: JournalLine[] = [];
 
+  /** One line's worth of names, so each carries only what it mentions. */
+  const named = (who: JournalSeat | undefined) => {
+    const refs: JournalRef[] = [];
+    const text = personName(who, (kind, id, name) => {
+      if (typeof id === "string") refs.push({ kind, id, name });
+      return name;
+    });
+    return { text, refs: refs.length > 0 ? refs : undefined };
+  };
+
   for (const index of skipped) {
     const missed = seats.find((candidate) => candidate.seatIndex === index);
+    const it = named(missed);
     lines.push({
       seq: at_(),
       turn: entry.turn,
-      text: `${nameOf(missed)} traci turę.`,
+      text: `${it.text} traci turę.`,
       manual: false,
       seatIndex: missed?.seatIndex ?? null,
+      ...(it.refs ? { refs: it.refs } : {}),
     });
   }
 
@@ -526,9 +587,10 @@ export function describeTurnChange(
   lines.push({
     seq: at_(),
     turn: entry.turn,
-    text: `${nameOf(seat)} kończy turę.`,
+    text: `${named(seat).text} kończy turę.`,
     manual: false,
     seatIndex: seat?.seatIndex ?? null,
+    ...(named(seat).refs ? { refs: named(seat).refs } : {}),
   });
 
   // A round, not a player's turn: the counter that 20.1's three turns of Stone
@@ -557,9 +619,10 @@ export function describeTurnChange(
       // beneath the heading above rather than the one before it.
       seq: at_(),
       turn: wrapped ? num(data.turnAfter) : entry.turn,
-      text: `${nameOf(next)} zaczyna turę.`,
+      text: `${named(next).text} zaczyna turę.`,
       manual: false,
       seatIndex: next.seatIndex,
+      ...(named(next).refs ? { refs: named(next).refs } : {}),
     });
   }
 
