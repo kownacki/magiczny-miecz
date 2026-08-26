@@ -62,7 +62,16 @@ function forbiddenFor(card: EventCard): Nature[] | undefined {
  */
 export function changeNature(
   snapshot: Snapshot,
-  command: { seatId: string; nature: Nature },
+  /**
+   * `force` is the test console's, and lifts 7.3 rather than working around it.
+   *
+   * The rule is a memory of which turn the Natura last changed on, so the only
+   * other way to set one twice in a turn would be to clear that memory behind
+   * the command's back — which is the same act with the rule out of sight. It
+   * marks the journal row manual as well, because a Natura that moved because
+   * somebody typed it must not read like one that moved because a card said so.
+   */
+  command: { seatId: string; nature: Nature; force?: boolean },
 ): Outcome<{ nowForbidden: string[] }> {
   const seat = seatById(snapshot, command.seatId);
   // Not a change, so not a use of 7.3's one change per turn either.
@@ -76,7 +85,7 @@ export function changeNature(
   const freely = abilitiesOfCharacter(asCharacterId(seat.character_id)).some(
     (ability) => ability.kind === "natura-dowolna",
   );
-  if (!freely && seat.nature_changed_turn === snapshot.game.turn) {
+  if (!freely && !command.force && seat.nature_changed_turn === snapshot.game.turn) {
     throw new Error("Naturę można zmienić najwyżej raz na turę (7.3).");
   }
 
@@ -103,6 +112,7 @@ export function changeNature(
           turn: snapshot.game.turn,
           kind: "zmiana-natury",
           payload: { from: seat.nature, to: command.nature, nowForbidden },
+          manual: command.force ?? false,
         },
       ],
     },

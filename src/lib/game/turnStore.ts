@@ -1,5 +1,7 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
+import characters from "@/data/characters.json";
+import type { Character } from "@/data/types";
 import { db } from "@/lib/supabase";
 import {
   GAME_COLUMNS,
@@ -16,6 +18,7 @@ import {
 import {
 } from "@/lib/engine/bridge";
 import {
+  RANDOM_CHARACTER_ID,
 } from "@/lib/engine/characters";
 import {
   endFight,
@@ -847,8 +850,9 @@ export async function changeNature(
   gameId: string,
   seatId: string,
   nature: "dobra" | "zla" | "chaotyczna",
+  force = false,
 ): Promise<{ nowForbidden: string[] }> {
-  return change(gameId, changeNatureOn, { seatId, nature });
+  return change(gameId, changeNatureOn, { seatId, nature, force });
 }
 
 /**
@@ -1392,6 +1396,66 @@ export async function runCommand(
       const seat = seatOf(null);
       const where = await placeCard(gameId, seat.id, command.cardId, command.fieldId);
       return `${cardName(command.cardId)} lies on ${FIELDS.get(where)?.name ?? where}.`;
+    }
+
+    case "nature": {
+      const seat = seatOf(command.who);
+      const { nowForbidden } = await changeNature(gameId, seat.id, command.nature, true);
+      // 7.4 by way of 5.5: the cards the new Natura may not hold have to go,
+      // and a tester who was not told which they are would find out two turns
+      // later. `changeNature` works this out already; nothing was reading it.
+      const dropped =
+        nowForbidden.length > 0
+          ? ` Now forbidden: ${nowForbidden.map((id) => cardName(id)).join(", ")}.`
+          : "";
+      return `${named(seat)} is ${command.nature}.${dropped}`;
+    }
+
+    /**
+     * A seat that died taking a character again (4.4).
+     *
+     * The same door the reborn modal goes through, which is the point: the
+     * modal is on the dead player's own device, and a tester driving four seats
+     * from one browser cannot reach it. Naming a character is the reason this
+     * is worth a command at all — a particular Charakterystyka is otherwise
+     * reachable only by re-dealing the whole table.
+     */
+    case "revive": {
+      const seat = seatOf(command.who);
+      await takeNewCharacter(gameId, seat.id, command.characterId ?? RANDOM_CHARACTER_ID);
+      const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
+      const now = (characters as Character[]).find((one) => one.id === after?.character_id);
+      return `${named(seat)} plays ${now?.name ?? after?.character_id ?? "?"}.`;
+    }
+
+    /**
+     * Hands play round until it is somebody's turn.
+     *
+     * By passing, not by writing `active_seat`: 10.1's order is not a number to
+     * be set, and going round properly is what spends the lost turns, ticks the
+     * effects, leaves the drawn cards on their field and advances the counter
+     * that 20.1 measures stone in. So a seat that is stoned is reached by the
+     * stone running out, which is the honest answer to asking for its turn.
+     *
+     * Bounded, because a seat can be unreachable — eliminated, or a table where
+     * everybody owes turns. The bound is generous enough to outlast three turns
+     * of stone and is a backstop rather than the exit.
+     */
+    case "turn": {
+      const seat = seatOf(command.who);
+      if (!seat.character_id) throw new Error(`${named(seat)} has no character.`);
+      if (seat.eliminated) throw new Error(`${named(seat)} nie żyje — try \`revive\`.`);
+      const players = seats.filter((s) => s.character_id && !s.eliminated).length;
+      for (let pass = 0; pass <= players * 8; pass++) {
+        const game = await loadGame(gameId);
+        if (game.active_seat === seat.seat_index) {
+          return pass === 0
+            ? `It is already ${named(seat)}'s turn.`
+            : `${named(seat)} to play — ${pass} ${pass === 1 ? "turn" : "turns"} passed.`;
+        }
+        await finishTurn(gameId);
+      }
+      throw new Error(`Could not reach ${named(seat)} — stone, or turns owed all round.`);
     }
 
     case "go": {

@@ -112,6 +112,38 @@ suite("naming a card, a field or a creature", () => {
     expect(ok("place tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
   });
 
+  it("takes a Natura by its English name, and says which three there are", () => {
+    expect(ok("nature evil")).toEqual({ kind: "nature", nature: "zla", who: null });
+    expect(ok("nature good Ola")).toEqual({ kind: "nature", nature: "dobra", who: "Ola" });
+    expect(ok("nature chaotic")).toMatchObject({ nature: "chaotyczna" });
+    expect(err("nature")).toMatch(/good, evil, chaotic/);
+    expect(err("nature zla")).toMatch(/Which Natura/);
+  });
+
+  it("revives a seat with a drawn character, or the one named after `as`", () => {
+    expect(ok("revive")).toEqual({ kind: "revive", who: null, characterId: null });
+    expect(ok("revive Ola")).toEqual({ kind: "revive", who: "Ola", characterId: null });
+    expect(ok("revive Ola as MAGOG")).toEqual({
+      kind: "revive",
+      who: "Ola",
+      characterId: "magog",
+    });
+    expect(ok("revive as magog")).toMatchObject({ who: null, characterId: "magog" });
+    expect(err("revive Ola as Gandalf")).toContain("Gandalf");
+  });
+
+  it("hands the turn to whoever is named", () => {
+    expect(ok("turn Ola")).toEqual({ kind: "turn", who: "Ola" });
+    expect(ok("turn")).toEqual({ kind: "turn", who: null });
+  });
+
+  it("names a Zaklęcie where a hand can hold one, and not where a field cannot", () => {
+    // 9.3 keeps a granted spell face down; `grantCard` has always taken one.
+    expect(ok("give kamien filozoficzny")).toMatchObject({ cardId: "kamien-filozoficzny" });
+    // 9.6 sends a spent spell to the used pile, and none lies on a board.
+    expect(err("place kamien filozoficzny")).toMatch(/No card/);
+  });
+
   it("finds an Obszar", () => {
     expect(ok("go Karczma")).toEqual({ kind: "go", fieldId: "karczma" });
   });
@@ -248,6 +280,22 @@ suite("finishing a half-typed line", () => {
     // The half being typed decides the list, so a field name never turns up
     // where a card goes.
     expect(tab("drop kar").options).toEqual([]);
+  });
+
+  it("finishes a Natura, then who it belongs to", () => {
+    expect(tab("nature ev").line).toBe("nature evil ");
+    expect(tab("nature evil o").line).toBe("nature evil Ola ");
+  });
+
+  it("offers players before the `as` and Postacie after it", () => {
+    expect(tab("revive o").line).toBe("revive Ola ");
+    // MAG and MAGOG are both at the table's disposal, so this is the shell's
+    // answer: as far as they agree, and the list.
+    expect(tab("revive Ola as mag")).toEqual({
+      line: "revive Ola as MAG",
+      options: ["MAG", "MAGOG"],
+    });
+    expect(tab("revive Ola as mago").line).toBe("revive Ola as MAGOG ");
   });
 
   it("offers only Wrogowie to a fight", () => {

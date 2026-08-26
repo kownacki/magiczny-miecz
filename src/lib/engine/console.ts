@@ -1,8 +1,10 @@
 /** The test console's grammar: turning a typed line into something the store can carry out. */
 
+import characters from "@/data/characters.json";
 import events from "@/data/events.json";
 import itemCards from "@/data/items.json";
-import type { EventCard, Item } from "@/data/types";
+import spells from "@/data/spells.json";
+import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { findByName, fold } from "./search";
 
@@ -37,6 +39,9 @@ export interface CommandSpec {
 /** Which parameter a stat command moves. The column names, as the store knows them. */
 export type StatName = "miecz" | "magia" | "zycie" | "zloto";
 
+/** The three a character can have. 3.2's fourth, "dowolna", is a card's word, not a state. */
+export type Nature = "dobra" | "zla" | "chaotyczna";
+
 export type Command =
   | { kind: "help" }
   | { kind: "kill"; who: string | null }
@@ -49,7 +54,10 @@ export type Command =
   | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
   | { kind: "endturn" }
-  | { kind: "spell"; who: string | null };
+  | { kind: "spell"; who: string | null }
+  | { kind: "nature"; nature: Nature; who: string | null }
+  | { kind: "revive"; who: string | null; characterId: string | null }
+  | { kind: "turn"; who: string | null };
 
 /**
  * The four parameters, under the words you type at them.
@@ -76,12 +84,30 @@ export const COMMANDS: CommandSpec[] = [
     summary: "move a parameter by a signed amount",
   },
   { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
+  {
+    name: "revive",
+    aliases: [],
+    usage: "revive [player] as MAGOG",
+    summary: "a dead seat takes a new character, drawn unless named (4.4)",
+  },
+  {
+    name: "nature",
+    aliases: [],
+    usage: "nature good|evil|chaotic [player]",
+    summary: "set a Natura, ignoring 7.3's once a turn",
+  },
+  {
+    name: "turn",
+    aliases: [],
+    usage: "turn [player]",
+    summary: "pass until it is their turn (10.1)",
+  },
   { name: "give", aliases: ["card"], usage: "give MAGICZNY MIECZ", summary: "put a card in a hand" },
   {
     name: "place",
     aliases: ["put", "drop"],
     usage: "place MIECZ at Karczma",
-    summary: "leave a card lying on an Obszar — yours, unless you name one",
+    summary: "leave a card on an Obszar, the one you stand on unless named",
   },
   { name: "go", aliases: ["move"], usage: "go Karczma", summary: "stand on an Obszar" },
   { name: "fight", aliases: [], usage: "fight WILKOŁAK", summary: "pick a fight with a Wróg" },
@@ -128,10 +154,39 @@ const CARDS: { id: string; name: string }[] = [
   ...(events as EventCard[]),
   ...(itemCards as Item[]).filter((item) => !events.some((card) => card.id === item.id)),
 ];
+
+/**
+ * What a hand can hold, which is the above plus the Zaklęcia.
+ *
+ * `grantCard` has always taken a spell — 9.3 keeps it face down even when it
+ * arrived by fiat — but the console could not name one, so the thirteen spells
+ * that may be cast "w dowolnej chwili" were reachable only by drawing until one
+ * turned up. Kept out of `place`, where 9.6 refuses them anyway: a list that
+ * offers what the next line will reject is worse than a shorter list.
+ */
+const HOLDABLE: { id: string; name: string }[] = [...CARDS, ...(spells as Spell[])];
+
+const PEOPLE = characters as Character[];
+
+/** The three Natury, under the words typed at them. English, like every verb here. */
+const NATURES: Record<string, Nature> = {
+  good: "dobra",
+  evil: "zla",
+  chaotic: "chaotyczna",
+};
 const PLACES = [...FIELDS.values()];
 
 /** Where `at` splits `place MIECZ at Karczma` into its two names. */
 const AT = /\s+at\s+/i;
+
+/**
+ * And `as`, which does the same for `revive Ola as MAGOG`.
+ *
+ * Allowed at the very start as well, because the player is optional: `revive as
+ * MAGOG` is your own seat, and requiring a space before the word would have
+ * read that whole line as somebody's name.
+ */
+const AS = /(^|\s+)as\s+/i;
 
 /**
  * Reads one line.
@@ -177,7 +232,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
 
   if (word === "give" || word === "card") {
-    return name(CARDS, (card) => card.name, tail, "card", (card) => ({
+    return name(HOLDABLE, (card) => card.name, tail, "card", (card) => ({
       kind: "give",
       cardId: card.id,
     }));
@@ -209,6 +264,38 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
       fieldId,
     }));
   }
+
+  if (word === "nature") {
+    const [said, ...who] = tail.split(/\s+/).filter(Boolean);
+    const nature = NATURES[(said ?? "").toLowerCase()];
+    if (!nature) {
+      return { error: `Which Natura — ${Object.keys(NATURES).join(", ")}?` };
+    }
+    return { ok: { kind: "nature", nature, who: who.join(" ") || null } };
+  }
+
+  /**
+   * A dead seat taking a character again (4.4).
+   *
+   * `as` splits it the way `at` splits a `place`, and for the same reason: two
+   * names in one line and nothing else here takes two. Without it the character
+   * is drawn, which is what 4.4 describes and what the modal does.
+   */
+  if (word === "revive") {
+    const cut = tail.search(AS);
+    const whoPart = cut === -1 ? tail : tail.slice(0, cut);
+    const asPart = cut === -1 ? "" : tail.slice(cut).replace(AS, "");
+    let characterId: string | null = null;
+    if (asPart !== "") {
+      const hit = findByName(PEOPLE, (person) => person.name, asPart);
+      if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
+      if ("missing" in hit) return { error: `No Postać called \`${asPart}\`.` };
+      characterId = hit.found.id;
+    }
+    return { ok: { kind: "revive", who: whoPart.trim() || null, characterId } };
+  }
+
+  if (word === "turn") return { ok: { kind: "turn", who: tail || null } };
 
   if (word === "fight") {
     return name(FOES, (card) => card.name, tail, "Wróg", (card) => ({
@@ -287,7 +374,7 @@ export function complete(
     // A stat takes its amount first and a player after it; everything else
     // takes its one argument straight away.
     if (stat) return { pool: [...players], at: 2 };
-    if (verb === "give" || verb === "card") return { pool: CARDS.map((c) => c.name), at: 1 };
+    if (verb === "give" || verb === "card") return { pool: HOLDABLE.map((c) => c.name), at: 1 };
     if (verb === "place" || verb === "put" || verb === "drop") {
       // Which half of the line is being typed. Past the `at`, the names on
       // offer are the board's; before it, the deck's.
@@ -298,7 +385,21 @@ export function complete(
     }
     if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "go" || verb === "move") return { pool: PLACES.map((f) => f.name), at: 1 };
-    if (verb === "kill" || verb === "spell") return { pool: [...players], at: 1 };
+    if (verb === "kill" || verb === "spell" || verb === "turn") {
+      return { pool: [...players], at: 1 };
+    }
+    if (verb === "nature") {
+      // The Natura first, then who it belongs to.
+      return parts.length === 2
+        ? { pool: Object.keys(NATURES), at: 1 }
+        : { pool: [...players], at: 2 };
+    }
+    if (verb === "revive") {
+      const said = parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "as");
+      return said === -1
+        ? { pool: [...players], at: 1 }
+        : { pool: PEOPLE.map((person) => person.name), at: said + 1 };
+    }
     return { pool: [], at: parts.length - 1 };
   };
 

@@ -45,6 +45,26 @@ describe("zmiana Natury (7.2-7.4)", () => {
     expect(writes.seats?.[0].patch).toMatchObject({ nature_changed_turn: 5 });
   });
 
+  /**
+   * The test console's, and the reason it is a flag rather than a caller
+   * quietly clearing `nature_changed_turn` first — which is the same act with
+   * the rule out of sight.
+   */
+  it("lets the console past 7.3, and says in the journal that somebody typed it", () => {
+    const { writes } = changeNature(table({ nature_changed_turn: 5 }), {
+      seatId: "seat-a",
+      nature: "zla",
+      force: true,
+    });
+    expect(writes.seats?.[0].patch).toMatchObject({ nature: "zla" });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "zmiana-natury", manual: true });
+  });
+
+  it("marks an ordinary change as what it is: not manual", () => {
+    const { writes } = changeNature(table(), { seatId: "seat-a", nature: "zla" });
+    expect(writes.journal?.[0].manual ?? false).toBe(false);
+  });
+
   /** Magog's own card lets it change freely, and 8.2 puts that above 7.3. */
   it("lets Magog change as often as it likes", () => {
     const magog = table({ character_id: asSeatCharacter("magog"), nature_changed_turn: 5 });
