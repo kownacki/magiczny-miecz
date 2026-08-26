@@ -14,6 +14,7 @@ import { CardDetail, CardTile, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
+import { fold } from "@/lib/engine/search";
 import { Drawer } from "./drawer";
 
 /**
@@ -197,15 +198,6 @@ function shelfTally(shelf: Shelf): string {
   const named = `${cards} ${plural(cards, "karta", "karty", "kart")}`;
   if (designs === cards) return named;
   return `${designs} ${plural(designs, "rodzaj", "rodzaje", "rodzajów")} · ${named}`;
-}
-
-/** Folds Polish diacritics so "zaklecie" finds "Zaklęcie" without a Polish keyboard. */
-function fold(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/ł/g, "l");
 }
 
 export function CardLibrary({

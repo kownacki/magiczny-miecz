@@ -3,7 +3,7 @@
 import { use, useEffect, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
-import { FIELDS, type FieldId } from "@/lib/engine/board";
+import { FIELDS, ringFields, type FieldId } from "@/lib/engine/board";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
@@ -21,7 +21,9 @@ import {
 import { CardLibrary } from "./card-library";
 import { useTable } from "./use-table";
 import { TestConsole } from "./console";
-import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
+import { Lobby } from "./lobby";
+import { JoinGate, LeaveButton, TakeOverGate } from "./door";
+import { type LobbySeat } from "./lobby-view";
 import { TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
@@ -34,7 +36,7 @@ import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
-import { DrawModal, ringFields } from "./draw-modal";
+import { DrawModal } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
 import { AnnouncementModal } from "./announcement";
 import { ConfirmDialog, type Confirmation } from "./confirm";

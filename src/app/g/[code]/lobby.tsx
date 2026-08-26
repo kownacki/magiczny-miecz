@@ -1,41 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import type { Character } from "@/data/types";
-import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
-import { ConfirmDialog, type Confirmation } from "./confirm";
-import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
-import { MAX_SEATS } from "@/lib/game/modes";
-import { characterTitle } from "@/lib/engine/polish";
-
 /**
- * The border on the surprise when more than one player has taken it.
+ * The poczekalnia itself: the screen a table is put together on.
  *
- * Every other card carries the colour of the one seat that holds it. Two seats
- * cannot share a border, and picking either of their colours would name the
- * wrong person, so it goes to the neutral grey of `--color-muted` — which reads
- * as "several" rather than as anybody in particular.
+ * What is left here is the arrangement and the two questions it asks. The
+ * decisions behind it are `lobby-view.ts`'s, one chair is `seat-slot.tsx`'s,
+ * choosing a Karta Postaci is `character-picker.tsx`'s, and the ways in and out
+ * of a table are `door.tsx`'s.
  */
-const MANY_TAKERS = "#9aa2bd";
 
-export interface LobbySeat {
-  id: string;
-  seatIndex: number;
-  playerName: string | null;
-  characterId: SeatCharacter | null;
-  isHost: boolean;
-  /** Nobody is behind this seat — see `leaveGame`. */
-  abandoned: boolean;
-  /** Device has gone quiet, which is not the same as having left. */
-  away: boolean;
-  /** Said they are ready to start. */
-  ready: boolean;
-  /** Seated by the host in companion mode; has no device of their own. */
-  noDevice: boolean;
-}
-
+import { useEffect, useRef, useState } from "react";
+import type { Character } from "@/data/types";
+import { ConfirmDialog, type Confirmation } from "./confirm";
+import type { SeatCharacter } from "@/lib/engine/characters";
+import { MAX_SEATS } from "@/lib/game/modes";
+import { CharacterStrip, ReadingCard } from "./character-picker";
+import { JoinCode, LeaveButton } from "./door";
+import { EmptySlot, SeatSlot } from "./seat-slot";
+import {
+  aimedAt,
+  cardLookup,
+  chosenSeats,
+  mayAdminister,
+  mayChooseFor,
+  mySeat,
+  readingCharacter,
+  seatName,
+  seatNameInline,
+  startRefusal,
+  withDraftName,
+  type Aiming,
+  type LobbySeat,
+} from "./lobby-view";
 
 /**
  * Where a game is put together, laid out like the game screen: one viewport,
@@ -97,77 +93,24 @@ export function Lobby({
   onStart: () => void;
   onLibrary: () => void;
 }) {
-  const canAdminister = isHost || hostAway;
-
   /**
    * What you have typed into the name field but the server has not been told
-   * about yet.
-   *
-   * Your name appears above your character and across the foot of the card you
-   * took, and it should follow the keystrokes — waiting for a round trip to see
-   * your own typing is what makes a field feel broken. What the server hears is
-   * debounced; what you see is not.
+   * about yet. See `withDraftName`.
    */
   const [draftName, setDraftName] = useState<string | null>(null);
-  const seats =
-    draftName === null
-      ? seatsFromServer
-      : seatsFromServer.map((seat) =>
-          seat.seatIndex === mySeatIndex
-            ? // An empty field keeps showing the saved name rather than
-              // flashing "Miejsce 2" at somebody who is only retyping it.
-              { ...seat, playerName: draftName.trim() || seat.playerName }
-            : seat,
-        );
+  const seats = withDraftName(seatsFromServer, mySeatIndex, draftName);
 
-  const me = seats.find((seat) => seat.seatIndex === mySeatIndex) ?? null;
-  const chosen = seats.filter((seat) => seat.characterId);
-  const waitingOn = chosen.filter((seat) => !seat.ready && !seat.abandoned);
-  const byId = new Map(characters.map((character) => [character.id, character]));
-
-  /**
-   * The Karta a seat is showing, or null.
-   *
-   * Null for both "nothing chosen" and "the surprise", which is what
-   * `asCharacterId` answers and why the lookup goes through it: the sentinel is
-   * a seat state, not a card, and there is nothing in `byId` to find for it.
-   */
-  const cardFor = (id: SeatCharacter | null): Character | null => {
-    const real = asCharacterId(id);
-    return real ? (byId.get(real) ?? null) : null;
-  };
-
-  // Alphabetical, in Polish — Ł after L, Ż after Z. The data file already
-  // happens to be in this order; sorting here means the strip stays in it
-  // whatever order a card is added to the file in.
-  const inOrder = [...characters].sort((a, b) => a.name.localeCompare(b.name, "pl"));
-
-  // Read left to right, then wrap: two rows of fourteen for the 27 characters
-  // plus the surprise. Derived rather than written down, so adding a card moves
-  // the wrap instead of pushing one tile onto a third row nobody sized for.
-  const columns = Math.ceil((inOrder.length + 1) / 2);
-
-  /**
-   * Whose character you may choose.
-   *
-   * Your own, always — and it is what the strip is aimed at unless you say
-   * otherwise. The one exception is companion mode, where the host seats people
-   * who have no device of their own and so has to choose for them.
-   *
-   * Nobody else's. An earlier version let any visitor aim at any slot, which
-   * meant a stranger could hand you a Kat.
-   */
-  const mayChooseFor = (seat: LobbySeat) =>
-    seat.seatIndex === mySeatIndex ||
-    (canAdminister && mode === "companion" && seat.noDevice);
-
-  const target = pickingFor && mayChooseFor(pickingFor) ? pickingFor : me;
+  const aiming: Aiming = { mySeatIndex, canAdminister: mayAdminister(isHost, hostAway), mode };
+  const me = mySeat(seats, mySeatIndex);
+  const target = aimedAt(seats, pickingFor, aiming);
+  const chosen = chosenSeats(seats);
+  const refusal = startRefusal(seats);
+  const cardFor = cardLookup(characters);
 
   // Which character the reading column shows. Whatever the cursor is over wins
-  // — running along the strip and reading each one is how you choose — falling
-  // back to the character of whoever you are choosing for, so the column is
-  // never blank once anything has been picked.
+  // — running along the strip and reading each one is how you choose.
   const [preview, setPreview] = useState<SeatCharacter | null>(null);
+  const reading = readingCharacter(preview, target, me);
 
   /**
    * The question on screen, or null.
@@ -178,25 +121,6 @@ export function Lobby({
    * that could all be open at once.
    */
   const [ask, setAsk] = useState<Confirmation | null>(null);
-
-  /** How a seat is named in a question about it. */
-  const nameOf = (seat: LobbySeat) =>
-    seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`;
-  const reading = preview ?? target?.characterId ?? me?.characterId ?? null;
-
-  /** characterId -> the seat holding it. There is only ever one of each card. */
-  const ownerOf = new Map<string, LobbySeat>();
-  for (const seat of seats) {
-    if (seat.characterId && !isRandomPick(seat.characterId)) {
-      ownerOf.set(seat.characterId, seat);
-    }
-  }
-
-  // The surprise is the one tile several people can be standing on at once, so
-  // it keeps a list where every other character keeps an owner.
-  const surprised = seats
-    .filter((seat) => isRandomPick(seat.characterId))
-    .sort((a, b) => a.seatIndex - b.seatIndex);
 
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
@@ -270,23 +194,21 @@ export function Lobby({
                   },
                 })
               }
-              disabled={busy || chosen.length < 1 || waitingOn.length > 0}
+              disabled={busy || refusal !== null}
               title={
-                chosen.length < 1
-                  ? "Nikt jeszcze nie wybrał Postaci"
-                  : waitingOn.length > 0
-                    ? `Czekamy na: ${waitingOn
-                        .map((seat) => seat.playerName ?? `miejsce ${seat.seatIndex + 1}`)
-                        .join(", ")}`
-                    : undefined
+                refusal === null
+                  ? undefined
+                  : refusal.because === "nobody"
+                    ? "Nikt jeszcze nie wybrał Postaci"
+                    : `Czekamy na: ${refusal.on.map(seatNameInline).join(", ")}`
               }
               className="rounded border border-ochre bg-ochre/10 px-4 py-1 font-[family-name:var(--font-display)] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
             >
-              {chosen.length < 1
-                ? "Rozpocznij grę — nikt nie wybrał Postaci"
-                : waitingOn.length > 0
-                  ? `Rozpocznij grę — czekamy na ${waitingOn.length}`
-                  : "Rozpocznij grę"}
+              {refusal === null
+                ? "Rozpocznij grę"
+                : refusal.because === "nobody"
+                  ? "Rozpocznij grę — nikt nie wybrał Postaci"
+                  : `Rozpocznij grę — czekamy na ${refusal.on.length}`}
             </button>
           )}
         </div>
@@ -297,258 +219,109 @@ export function Lobby({
             refused to shrink below the width of the character strip and pushed
             the reading column clean off the screen. */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <section className="flex min-h-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-4 py-3">
-        {Array.from({ length: MAX_SEATS }, (_, index) => {
-          const seat = seats[index];
-          if (!seat) {
-            return (
-              <EmptySlot
-                key={`empty-${index}`}
-                // Only companion mode adds players by hand. There, one screen
-                // sits in the middle of a real table and nobody else has a
-                // device. In simulation everyone has their own and joins with
-                // the code, so a slot the host fills in would be a way of
-                // taking somebody else's seat before they arrive.
-                canAdd={canAdminister && mode === "companion"}
-                busy={busy}
-                onAdd={onAddLocal}
-              />
-            );
-          }
-          const character = cardFor(seat.characterId);
-          return (
-            <SeatSlot
-              key={seat.id}
-              seat={seat}
-              character={character ?? null}
-              isMine={seat.seatIndex === mySeatIndex}
-              isTarget={target?.id === seat.id}
-              selectable={mayChooseFor(seat)}
-              canAdminister={canAdminister}
-              busy={busy}
-              onSelect={() => onPickFor(target?.id === seat.id ? null : seat)}
-              // Both of these happen to somebody else and cannot be undone by
-              // the person they happen to, so both are asked first. The slot
-              // raises the question; the answer runs the same handler it always
-              // did.
-              onRemove={() =>
-                setAsk({
-                  title: "Usunąć ze stołu?",
-                  body:
-                    `${nameOf(seat)} straci swoje miejsce${seat.characterId ? " razem z wybraną Postacią" : ""}. ` +
-                    "Może dołączyć ponownie, jeśli poda kod stołu.",
-                  confirmLabel: "Usuń",
-                  tone: "grave",
-                  onConfirm: () => {
-                    setAsk(null);
-                    onRemove(seat);
-                  },
-                })
-              }
-              onMakeHost={() =>
-                setAsk({
-                  title: "Przekazać rolę gospodarza?",
-                  body:
-                    `${nameOf(seat)} będzie od tej chwili prowadzić stół: rozpocznie grę, ` +
-                    "usunie graczy i przekaże rolę dalej. Ty przestaniesz to móc.",
-                  confirmLabel: "Przekaż",
-                  onConfirm: () => {
-                    setAsk(null);
-                    onMakeHost(seat);
-                  },
-                })
-              }
-              onReady={seat.seatIndex === mySeatIndex ? onReady : undefined}
-              onPreview={setPreview}
-            />
-          );
-        })}
-      </section>
-
-      <section className="shrink-0 border-t border-edge px-4 py-2">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h2 className="text-[12px] uppercase tracking-widest text-muted">
-            {target && target.seatIndex !== mySeatIndex
-              ? `Postać dla: ${target.playerName ?? `miejsce ${target.seatIndex + 1}`}`
-              : "Postacie"}
-          </h2>
-          <span className="flex items-center gap-3">
-            {/* The book deals these at random and treats free choice as the
-                variant everybody has to agree to. Offered rather than imposed,
-                because the variant is the one every table I know plays. */}
-            {canAdminister && seats.some((seat) => !seat.characterId) && (
-              <button
-                onClick={onDeal}
-                disabled={busy}
-                title="Potasuj Karty Postaci i rozłóż po jednej — tak, jak każe Instrukcja"
-                className="text-[12px] text-ochre/80 underline transition hover:text-ochre disabled:opacity-40"
-              >
-                rozlosuj postacie
-              </button>
-            )}
-            {pickingFor && (
-              <button
-                onClick={() => onPickFor(null)}
-                className="text-[12px] text-muted underline hover:text-ink"
-              >
-                anuluj wybór
-              </button>
-            )}
-          </span>
-        </div>
-        {/* Two rows deep: one row of 28 needed a long horizontal drag to reach
-            the far half of the roster, and the characters at the end were the
-            ones nobody ever looked at. Height is left to the content — a cap
-            here silently cut the second row's names off. */}
-        {/* `w-fit` + `mx-auto`: a full-width grid pushed the columns apart, so
-            27 cards sat in a thin spread across the whole screen instead of
-            side by side with margins either side of them. When they do not fit,
-            the margins collapse to nothing and this scrolls. */}
-        <div className="overflow-x-auto pb-1">
-          {/* The columns share whatever width is left, so all 28 tiles are on
-              screen at once and each is as large as that allows — capped,
-              because past a point they stop being easier to read and start
-              being a poster.
-              Sizing them in fixed pixels instead pushed five characters off the
-              right-hand edge, which is the drag-to-find problem that put them
-              in two rows in the first place. */}
-          {/* Row by row. Filling column-first put Awanturnik above Barbarzyńca
-              and Błędny Rycerz in the next column along, so the alphabet ran
-              down-then-across and finding a name meant reading a boustrophedon.
-              Explicit columns rather than `grid-flow-col grid-rows-2`, because
-              row-first flow has no way to say "two rows" — it has to be told
-              how wide a row is. */}
-          <div
-            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-            className="mx-auto grid w-full max-w-[1708px] gap-2"
-          >
-          <RandomChoice
-            takenBy={surprised}
-            mine={isRandomPick(target?.characterId ?? null)}
-            aimed={target !== null}
-            busy={busy || pendingCharacterId !== null || !target}
-            pending={pendingCharacterId === RANDOM_CHARACTER_ID}
-            dimmed={pendingCharacterId !== null && pendingCharacterId !== RANDOM_CHARACTER_ID}
-            onPreview={setPreview}
-            onPick={() => target && onChooseCharacter(target, RANDOM_CHARACTER_ID)}
-          />
-          {inOrder.map((character) => {
-            // Every character somebody holds is out, and wears the colour of
-            // whoever holds it — the same colour as their dot on the board and
-            // the stripe on their slot. Who took Kapłanka is a question people
-            // ask out loud, and the answer was only readable by comparing the
-            // strip against six seat cards one at a time.
-            const ownerSeat = ownerOf.get(character.id) ?? null;
-            const owner = ownerSeat
-              ? SEAT_COLOURS[ownerSeat.seatIndex % SEAT_COLOURS.length]
-              : null;
-            const isTargets = target?.characterId === character.id;
-            // While a request is out, the one card it is about stays lit and
-            // the rest step back. Anything else — dimming all of them, or
-            // dimming none — leaves the player unable to tell whether their
-            // click registered, which is the whole complaint.
-            const isPending = pendingCharacterId === character.id;
-            const waiting = pendingCharacterId !== null && !isPending;
-            // The mała Karta — the one that goes in a plastic stand. It carries
-            // its own name in print and is a figure rather than a page, which
-            // is what makes 27 of them scannable at this size where 27 pages of
-            // small type were not.
-            const standee = characterStandeeUrl(character.id);
-            // The dimming goes on the picture, not on the card. Fading the
-            // whole tile faded the border with it, which is the one part
-            // carrying information — whose it is — and the only reason the
-            // colour is there at all. Yours a shade brighter than the rest,
-            // since "which did I pick?" is the one you go looking for.
-            // Every opacity in this tile lives here, on the picture.
-            //
-            // It used to be split: the owner-dimming on the picture and the
-            // waiting-dimming on the button. Clicking a character dropped the
-            // first instantly and faded the second in over the transition, so
-            // every already-taken card flashed to full brightness for a moment
-            // and then sank — which is exactly what it looked like.
-            const dim = isPending
-              ? "opacity-100"
-              : waiting
-                ? "opacity-20"
-                : owner
-                  ? isTargets
-                    ? "opacity-70"
-                    : "opacity-35"
-                  : target
-                    ? "opacity-100"
-                    : "opacity-40";
-            return (
-              // Pointing at a card reads it, and that has to work for cards
-              // nobody can choose. A disabled button fires no mouse events at
-              // all, so with the handlers on the button itself every character
-              // somebody had already taken became unreadable — which is exactly
-              // when you most want to know what it does.
-              <div
-                key={character.id}
-                className="min-w-0"
-                onMouseEnter={() => setPreview(character.id)}
-                onMouseLeave={() => setPreview(null)}
-              >
-              <button
-                // Already theirs: nothing to ask for. Re-sending it would
-                // rewrite the seat with the values it already has and, worse,
-                // clear the ready flag — so the one thing a second click on
-                // your own character could do is un-ready you.
-                disabled={busy || owner !== null || !target || pendingCharacterId !== null}
-                onClick={() => target && onChooseCharacter(target, character.id)}
-                onFocus={() => setPreview(character.id)}
-                onBlur={() => setPreview(null)}
-                title={characterTitle(character)}
-                // Whoever holds it, holds it — including while somebody else's
-                // pick is in flight. Dropping the colour during `waiting` left
-                // the border with no colour class at all, so it fell back to
-                // `currentColor` and every taken card turned gold for as long
-                // as the request took.
-                style={owner && !isPending ? { borderColor: owner, borderWidth: 2 } : undefined}
-                className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
-                  isPending
-                    ? "animate-pulse border-ochre"
-                    : owner
-                      ? "" // the border colour is set inline, and stays lit
-                      : "border-edge hover:border-ochre"
-                }`}
-              >
-                {standee ? (
-                  <Image
-                    src={standee}
-                    alt={character.name}
-                    width={114}
-                    height={190}
-                    className={`h-auto w-full transition-opacity ${dim}`}
+          <section className="flex min-h-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-4 py-3">
+            {Array.from({ length: MAX_SEATS }, (_, index) => {
+              const seat = seats[index];
+              if (!seat) {
+                return (
+                  <EmptySlot
+                    key={`empty-${index}`}
+                    canAdd={aiming.canAdminister && mode === "companion"}
+                    busy={busy}
+                    onAdd={onAddLocal}
                   />
-                ) : (
-                  <span
-                    className={`flex aspect-[114/190] items-center p-2 text-center text-[12px] text-ink transition-opacity ${dim}`}
+                );
+              }
+              return (
+                <SeatSlot
+                  key={seat.id}
+                  seat={seat}
+                  character={cardFor(seat.characterId)}
+                  isMine={seat.seatIndex === mySeatIndex}
+                  isTarget={target?.id === seat.id}
+                  selectable={mayChooseFor(seat, aiming)}
+                  canAdminister={aiming.canAdminister}
+                  busy={busy}
+                  onSelect={() => onPickFor(target?.id === seat.id ? null : seat)}
+                  // Both of these happen to somebody else and cannot be undone by
+                  // the person they happen to, so both are asked first. The slot
+                  // raises the question; the answer runs the same handler it always
+                  // did.
+                  onRemove={() =>
+                    setAsk({
+                      title: "Usunąć ze stołu?",
+                      body:
+                        `${seatName(seat)} straci swoje miejsce${seat.characterId ? " razem z wybraną Postacią" : ""}. ` +
+                        "Może dołączyć ponownie, jeśli poda kod stołu.",
+                      confirmLabel: "Usuń",
+                      tone: "grave",
+                      onConfirm: () => {
+                        setAsk(null);
+                        onRemove(seat);
+                      },
+                    })
+                  }
+                  onMakeHost={() =>
+                    setAsk({
+                      title: "Przekazać rolę gospodarza?",
+                      body:
+                        `${seatName(seat)} będzie od tej chwili prowadzić stół: rozpocznie grę, ` +
+                        "usunie graczy i przekaże rolę dalej. Ty przestaniesz to móc.",
+                      confirmLabel: "Przekaż",
+                      onConfirm: () => {
+                        setAsk(null);
+                        onMakeHost(seat);
+                      },
+                    })
+                  }
+                  onReady={seat.seatIndex === mySeatIndex ? onReady : undefined}
+                  onPreview={setPreview}
+                />
+              );
+            })}
+          </section>
+
+          <section className="shrink-0 border-t border-edge px-4 py-2">
+            <div className="mb-1 flex items-baseline justify-between">
+              <h2 className="text-[12px] uppercase tracking-widest text-muted">
+                {target && target.seatIndex !== mySeatIndex
+                  ? `Postać dla: ${seatNameInline(target)}`
+                  : "Postacie"}
+              </h2>
+              <span className="flex items-center gap-3">
+                {/* The book deals these at random and treats free choice as the
+                    variant everybody has to agree to. Offered rather than imposed,
+                    because the variant is the one every table I know plays. */}
+                {aiming.canAdminister && seats.some((seat) => !seat.characterId) && (
+                  <button
+                    onClick={onDeal}
+                    disabled={busy}
+                    title="Potasuj Karty Postaci i rozłóż po jednej — tak, jak każe Instrukcja"
+                    className="text-[12px] text-ochre/80 underline transition hover:text-ochre disabled:opacity-40"
                   >
-                    {character.name}
-                  </span>
+                    rozlosuj postacie
+                  </button>
                 )}
-                {/* Whose it is, written across the foot of the card in their
-                    colour. The colour alone says somebody has it; six people
-                    round a table need it to say *who*, and the seat cards are
-                    too far from the strip to answer that by comparison. */}
-                {ownerSeat && (
-                  <span
-                    style={{ background: owner ?? undefined }}
-                    className="absolute inset-x-0 bottom-0 flex h-[14.3%] min-h-[21px] items-center justify-center overflow-hidden px-0.5 text-[13px] font-medium leading-none text-night"
+                {pickingFor && (
+                  <button
+                    onClick={() => onPickFor(null)}
+                    className="text-[12px] text-muted underline hover:text-ink"
                   >
-                    <span className="truncate">
-                      {ownerSeat.playerName ?? `miejsce ${ownerSeat.seatIndex + 1}`}
-                    </span>
-                  </span>
+                    anuluj wybór
+                  </button>
                 )}
-              </button>
-              </div>
-            );
-          })}
-          </div>
-        </div>
-      </section>
+              </span>
+            </div>
+            <CharacterStrip
+              characters={characters}
+              seats={seats}
+              target={target}
+              pendingCharacterId={pendingCharacterId}
+              busy={busy}
+              onPreview={setPreview}
+              onPick={(characterId) => target && onChooseCharacter(target, characterId)}
+            />
+          </section>
         </div>
 
         {/* Settings at the top, the card at the foot, and the space between
@@ -567,448 +340,19 @@ export function Lobby({
                   drafted name would tell it nothing had changed — the draft is
                   its own output — and it would never save anything. */}
               <RenameField
-                name={
-                  seatsFromServer.find((seat) => seat.seatIndex === mySeatIndex)?.playerName ??
-                  null
-                }
+                name={mySeat(seatsFromServer, mySeatIndex)?.playerName ?? null}
                 onDraft={setDraftName}
                 onSave={onRename}
               />
             </label>
           )}
 
-          {/* The Karta Postaci, big enough to read. A character is four numbered
-              clauses of Charakterystyka and two numbers, and every one of them
-              matters to the choice being made to the left of it — but at strip
-              size the print is a grey smudge, and a player picking Kat has no
-              way to find out what Kat does without picking it first. */}
           <div className="mt-auto flex min-h-0 flex-col items-center justify-end">
-            {isRandomPick(reading) ? (
-              <RandomCard />
-            ) : reading ? (
-              <BigCard character={cardFor(reading)} />
-            ) : (
-              <p className="max-w-[16rem] text-center text-[12px] leading-relaxed text-muted/70">
-                Najedź na postać, żeby przeczytać jej Kartę.
-              </p>
-            )}
+            <ReadingCard reading={reading} character={cardFor(reading)} />
           </div>
         </aside>
       </div>
     </main>
-  );
-}
-
-/** The big card, filling the column and never overflowing it. */
-/**
- * The first tile in the strip: take whatever comes.
- *
- * Sits ahead of the 27 printed characters because it is the rulebook's own
- * default — "należy potasować Karty Postaci, a następnie rozłożyć losowo" — and
- * choosing from the strip is the variant everybody has to agree to. Picking it
- * is a decision, not a deferral: the seat can be ready, and what it turns into
- * is not settled until the game starts.
- *
- * The one tile that is never unavailable. There is a single Kapłanka, but no
- * limit on how many people want a surprise, so this is never dimmed for being
- * taken and never disabled for somebody else holding it — it behaves exactly
- * like a card nobody has picked, because in the only sense that matters to a
- * player looking at the strip, nobody has. Who *has* picked it is carried by
- * the border and the row of names instead.
- */
-function RandomChoice({
-  takenBy,
-  mine,
-  aimed,
-  busy,
-  pending,
-  dimmed,
-  onPreview,
-  onPick,
-}: {
-  /** Every seat holding the surprise, in seat order. */
-  takenBy: LobbySeat[];
-  mine: boolean;
-  /** Whether there is a seat to choose for at all. */
-  aimed: boolean;
-  busy: boolean;
-  pending: boolean;
-  dimmed: boolean;
-  onPreview: (characterId: SeatCharacter | null) => void;
-  onPick: () => void;
-}) {
-  const standee = characterStandeeUrl(RANDOM_CHARACTER_ID);
-  // One taker wears their colour, as any other card would. Several cannot —
-  // there is no such thing as two thirds of a border — so it goes grey, which
-  // reads as "more than one person" rather than as anybody in particular.
-  const border =
-    takenBy.length === 0
-      ? null
-      : takenBy.length === 1
-        ? SEAT_COLOURS[takenBy[0].seatIndex % SEAT_COLOURS.length]
-        : MANY_TAKERS;
-  // The same ladder the other tiles use, minus the owner-dimming: a card that
-  // cannot be taken away from you is never the greyed-out kind.
-  const dim = pending
-    ? "opacity-100"
-    : dimmed
-      ? "opacity-20"
-      : mine || aimed
-        ? "opacity-100"
-        : "opacity-40";
-
-  return (
-    <div
-      className="min-w-0"
-      onMouseEnter={() => onPreview(RANDOM_CHARACTER_ID)}
-      onMouseLeave={() => onPreview(null)}
-    >
-      <button
-        // Live even while somebody else holds it — unless that somebody is you,
-        // in which case there is nothing to ask for and a second click could
-        // only un-ready you.
-        disabled={busy || mine}
-        onClick={onPick}
-        onFocus={() => onPreview(RANDOM_CHARACTER_ID)}
-        onBlur={() => onPreview(null)}
-        title="Losowa — Karta Postaci zostanie wylosowana i odsłonięta po rozpoczęciu gry"
-        style={border && !pending ? { borderColor: border, borderWidth: 2 } : undefined}
-        className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
-          pending ? "animate-pulse border-ochre" : border ? "" : "border-edge hover:border-ochre"
-        }`}
-      >
-        {standee && (
-          <Image
-            src={standee}
-            alt="Losowa postać"
-            width={114}
-            height={190}
-            className={`h-auto w-full transition-opacity ${dim}`}
-          />
-        )}
-        {/* Everybody who wants a surprise, stacked in seat order — the same
-            order they sit in above, so the strip and the roster read as one
-            list. The other tiles need only one of these; this is the only
-            place two people can be standing on the same card. */}
-        {takenBy.length > 0 && (
-          <span className="absolute inset-x-0 bottom-0 flex flex-col">
-            {takenBy.map((seat) => (
-              <span
-                key={seat.id}
-                style={{ background: SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length] }}
-                className="flex min-h-[21px] items-center justify-center overflow-hidden px-0.5 text-[13px] font-medium leading-none text-night"
-              >
-                <span className="truncate">
-                  {seat.playerName ?? `miejsce ${seat.seatIndex + 1}`}
-                </span>
-              </span>
-            ))}
-          </span>
-        )}
-      </button>
-    </div>
-  );
-}
-
-/** The reading column's version: the card itself, and nothing said about it. */
-function RandomCard() {
-  const src = characterImageUrl(RANDOM_CHARACTER_ID);
-  if (!src) return null;
-  return (
-    <Image
-      src={src}
-      alt="Karta Postaci: losowa"
-      width={780}
-      height={972}
-      className="max-h-full w-auto rounded border border-edge object-contain"
-      priority
-    />
-  );
-}
-
-function BigCard({ character }: { character: Character | null }) {
-  if (!character) return null;
-  const src = characterImageUrl(character.id);
-  if (!src) {
-    return (
-      <p className="text-center text-[12px] text-muted">
-        {character.name} — brak skanu Karty
-      </p>
-    );
-  }
-  return (
-    <Image
-      src={src}
-      alt={`Karta Postaci: ${character.name}`}
-      width={780}
-      height={972}
-      className="max-h-full w-auto rounded border border-edge object-contain"
-      // The one image on the page somebody actually reads, so it is worth
-      // fetching before it is asked for rather than after.
-      priority
-    />
-  );
-}
-
-/**
- * One seat, tall rather than wide: six have to sit side by side, and what a slot
- * shows — a portrait, a name, a state — stacks naturally.
- */
-function SeatSlot({
-  seat,
-  character,
-  isMine,
-  isTarget,
-  selectable,
-  canAdminister,
-  busy,
-  onSelect,
-  onRemove,
-  onMakeHost,
-  onReady,
-  onPreview,
-}: {
-  seat: LobbySeat;
-  character: Character | null;
-  isMine: boolean;
-  isTarget: boolean;
-  selectable: boolean;
-  canAdminister: boolean;
-  busy: boolean;
-  onSelect: () => void;
-  onRemove: () => void;
-  onMakeHost: () => void;
-  /** Only your own slot gets this. */
-  onReady?: (ready: boolean) => void;
-  /** Points the reading column at this player's character while pointed at. */
-  onPreview: (characterId: SeatCharacter | null) => void;
-}) {
-  // The small card, because that is the piece standing on the board for this
-  // player — it is what "which one are you?" is answered with at a table.
-  // The surprise has a card of its own, so a seat holding it shows a picture
-  // like everybody else rather than the "still choosing" placeholder — which
-  // would be wrong twice over, since that seat has chosen and can be ready.
-  const portrait = character
-    ? characterStandeeUrl(character.id)
-    : isRandomPick(seat.characterId)
-      ? characterStandeeUrl(RANDOM_CHARACTER_ID)
-      : null;
-  // The same colour this player's dot has on the board, and it never changes:
-  // it comes from the seat index, so "the blue one" means one person all game.
-  const colour = SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
-
-  return (
-    <div
-      onMouseEnter={() => onPreview(seat.characterId)}
-      onMouseLeave={() => onPreview(null)}
-      style={{ borderTopColor: colour, borderTopWidth: 3 }}
-      className={`relative flex h-full max-h-[340px] w-[190px] shrink-0 flex-col rounded-lg border p-2 ${
-        isTarget
-          ? "border-ochre bg-panel"
-          : seat.ready
-            ? "border-verdigris/60 bg-panel"
-            : isMine
-              ? "border-ochre/50 bg-panel"
-              : "border-edge bg-panel/50"
-      }`}
-    >
-      {/* Everything above the card, at a height that never changes.
-          
-          The standee is the one thing on this slot you read at a glance across
-          a table, and it used to grow and shrink: it took whatever vertical
-          space was left over, so a seat gained height when "zrób gospodarzem"
-          went away and lost it when the host badge appeared. Six slots side by
-          side, each with a different-sized figure, and none of the differences
-          meaning anything. Every row around the card is now a fixed height and
-          the card gets the constant remainder. */}
-      <div className="flex h-[48px] shrink-0 flex-col">
-        <p className="flex h-6 items-center gap-1.5 truncate pr-4 font-[family-name:var(--font-display)] text-base text-ink">
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full"
-            style={{ background: colour }}
-            aria-hidden
-          />
-          <span className="truncate">{seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}</span>
-        </p>
-        {/* One row for who this seat is and what can be done about it.
-            
-            They belong together and they are mutually exclusive: a seat that is
-            already the host is never offered "zrób gospodarzem", so the badge
-            and the button occupy the same line rather than two, and the same
-            line on every slot. Two rows meant Michał's "gospodarz" sat a line
-            above Ola's button, which read as a misalignment because it was one.
-
-            Removing lives here too, next to promoting, instead of as an × in
-            the corner: both are things the host does to somebody else's seat,
-            and a × the size of a full stop is a poor control for taking a
-            player's seat away. */}
-        <div className="mt-0.5 flex h-[22px] items-center gap-1">
-          <p className="min-w-0 flex-1 truncate text-[12px] leading-none">
-            {seat.isHost && <span className="text-ochre">gospodarz</span>}
-            {seat.isHost && (seat.abandoned || seat.away || isMine) && (
-              <span className="text-muted"> · </span>
-            )}
-            {seat.abandoned ? (
-              <span className="text-vermilion/80">bez gracza</span>
-            ) : seat.away ? (
-              <span className="text-muted/70">nieobecny</span>
-            ) : isMine ? (
-              <span className="text-ochre/70">to ty</span>
-            ) : null}
-          </p>
-          {canAdminister && !seat.isHost && !seat.abandoned && (
-            <button
-              onClick={onMakeHost}
-              disabled={busy}
-              title={`Przekaż rolę gospodarza: ${seat.playerName ?? `miejsce ${seat.seatIndex + 1}`}`}
-              className="shrink-0 rounded border border-edge px-1 py-0.5 text-[11px] leading-none text-muted transition hover:border-ochre hover:text-ochre disabled:opacity-40"
-            >
-              zrób gospodarzem
-            </button>
-          )}
-          {/* Never your own seat: leaving is "Opuść stół", and a host who
-              removes themselves has done something they meant to spell
-              differently. */}
-          {canAdminister && !isMine && (
-            <button
-              onClick={onRemove}
-              disabled={busy}
-              title={`Usuń ze stołu: ${seat.playerName ?? `miejsce ${seat.seatIndex + 1}`}`}
-              className="shrink-0 rounded border border-edge px-1 py-0.5 text-[11px] leading-none text-muted transition hover:border-vermilion hover:text-vermilion disabled:opacity-40"
-            >
-              usuń
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Tapping the slot aims the character strip at it. */}
-      {/* The portrait gives height back on a short screen but is capped, since
-          a slot that grows to whatever is left over turns an empty seat into a
-          very tall grey rectangle. */}
-      {/* Your own slot is not a button. The strip is already aimed at you, so
-          clicking it could only un-aim it, and lighting up under the cursor
-          promised something there was nothing behind. The host aiming at a
-          player they seated by hand is the one case where tapping a slot does
-          anything, so that one keeps the affordance. */}
-      <button
-        onClick={onSelect}
-        disabled={busy || !selectable || isMine}
-        title={
-          isMine
-            ? undefined
-            : selectable
-              ? "Wybierz postać dla tego miejsca"
-              : "Tylko właściciel miejsca wybiera swoją postać"
-        }
-        className={`max-h-[270px] min-h-[120px] w-full flex-1 overflow-hidden rounded border transition ${
-          selectable && !isMine
-            ? "border-edge/60 hover:border-ochre"
-            : "cursor-default border-edge/40"
-        }`}
-      >
-        {portrait ? (
-          <Image
-            src={portrait}
-            alt={character?.name ?? "Losowa postać"}
-            width={174}
-            height={270}
-            // Contained, not cropped: the small card is a whole illustration
-            // with its name printed at the top, and cropping it cuts the name
-            // off — which is the one thing on it.
-            className="h-full w-full object-contain"
-          />
-        ) : (
-          // The empty card says what is happening; the line below stays quiet
-          // until there is something else to report. Saying it twice, once in
-          // the box and once under it, was one sentence broken in half.
-          <span className="flex h-full items-center justify-center p-2 text-center text-[12px] leading-snug text-muted">
-            wybiera postać…
-          </span>
-        )}
-      </button>
-
-      {/* The three states a player is ever in: still choosing, chosen, ready —
-          and the same line says which, for you and for everybody else. Yours is
-          a button because saying you are ready is the only thing left to do
-          once you have a character; theirs is a word because it is news. */}
-      <div className="mt-1 flex h-[27px] shrink-0 items-stretch">
-        {onReady ? (
-          <button
-            disabled={busy || !seat.characterId}
-            onClick={() => onReady(!seat.ready)}
-            title={seat.characterId ? undefined : "Najpierw wybierz postać"}
-            className={`w-full rounded border px-2 text-[12px] transition disabled:opacity-40 ${
-              seat.ready
-                ? "border-verdigris bg-verdigris/10 text-verdigris"
-                : "border-edge text-ink hover:border-ochre"
-            }`}
-          >
-            {seat.ready ? "Gotów ✓" : "Jestem gotów"}
-          </button>
-        ) : (
-          <p
-            className={`flex items-center truncate text-[12px] ${
-              seat.ready ? "text-verdigris" : "text-muted/60"
-            }`}
-          >
-            {seat.abandoned || !seat.characterId ? "" : seat.ready ? "gotów ✓" : "niegotowy"}
-          </p>
-        )}
-      </div>
-
-
-    </div>
-  );
-}
-
-function EmptySlot({
-  canAdd,
-  busy,
-  onAdd,
-}: {
-  canAdd: boolean;
-  busy: boolean;
-  onAdd: (name: string) => void;
-}) {
-  const [name, setName] = useState("");
-
-  if (!canAdd) {
-    return (
-      <div className="flex h-full max-h-[340px] w-[190px] shrink-0 items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[12px] leading-snug text-muted/60">
-        wolne miejsce — dołączcie kodem
-      </div>
-    );
-  }
-
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!name.trim()) return;
-        onAdd(name);
-        setName("");
-      }}
-      className="flex h-full max-h-[340px] w-[190px] shrink-0 flex-col justify-center gap-2 rounded-lg border border-dashed border-edge p-2"
-    >
-      <span className="text-center text-[12px] uppercase tracking-widest text-muted">
-        Dodaj gracza
-      </span>
-      <input
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        placeholder="imię"
-        maxLength={24}
-        className="rounded border border-edge bg-night px-2 py-1 text-center text-sm text-ink outline-none focus:border-ochre"
-      />
-      <button
-        type="submit"
-        disabled={busy || !name.trim()}
-        className="rounded border border-edge px-2 py-1 text-sm text-ink transition hover:border-ochre disabled:opacity-40"
-      >
-        + Dodaj
-      </button>
-    </form>
   );
 }
 
@@ -1064,283 +408,5 @@ function RenameField({
       maxLength={24}
       className="min-w-0 rounded border border-edge bg-night px-2 py-1 text-[12px] text-ink outline-none focus:border-ochre"
     />
-  );
-}
-
-/**
- * The door.
- *
- * There used to be a two-step way in: open the table as a spectator, then press
- * "Usiądź" to take a seat. That second step was invented for nobody. Everyone
- * plays on their own device and opens the link for exactly one reason, so the
- * link *is* the joining — and the only thing still missing at that point is a
- * name, which the table needs and which nobody ever supplies later if asked
- * later.
- *
- * So there is no seatless state to be in any more: you give a name and you are
- * at the table, with a character still to choose. (The host seating somebody
- * device-less in companion mode is the one way a seat appears without this.)
- */
-export function JoinGate({
-  code,
-  seats,
-  busy,
-  onJoin,
-}: {
-  code: string;
-  seats: LobbySeat[];
-  busy: boolean;
-  onJoin: (name: string) => void;
-}) {
-  const [name, setName] = useState("");
-  const here = seats.filter((seat) => seat.playerName);
-
-  return (
-    <main className="flex h-[100dvh] flex-col items-center justify-center gap-6 px-6">
-      <header className="text-center">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-ochre">
-          Magiczny Miecz
-        </h1>
-        <p className="mt-2 text-xs text-muted">
-          stół <span className="tnum tracking-[0.25em] text-ink">{code}</span>
-        </p>
-      </header>
-
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (name.trim()) onJoin(name);
-        }}
-        className="flex w-full max-w-xs flex-col gap-2"
-      >
-        <label htmlFor="join-name" className="text-xs uppercase tracking-widest text-muted">
-          Twoje imię
-        </label>
-        <input
-          id="join-name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="np. Michał"
-          maxLength={24}
-          autoFocus
-          className="rounded border border-edge bg-panel px-3 py-2 text-center text-lg text-ink outline-none focus:border-ochre"
-        />
-        <button
-          type="submit"
-          disabled={busy || !name.trim() || seats.length >= MAX_SEATS}
-          className="rounded-lg border border-ochre bg-ochre/10 px-6 py-3 font-[family-name:var(--font-display)] text-lg tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
-        >
-          {seats.length >= MAX_SEATS ? "Stół jest pełny" : "Dołącz do stołu"}
-        </button>
-      </form>
-
-      {here.length > 0 && (
-        <p className="max-w-sm text-center text-[12px] leading-relaxed text-muted">
-          Przy stole:{" "}
-          {here.map((seat) => seat.playerName).join(", ")}
-        </p>
-      )}
-    </main>
-  );
-}
-
-/**
- * Leaving, confirmed by a second click rather than a browser dialog.
- *
- * It says what actually happens, which is much less than it used to: the
- * character stays in the game exactly as it is and somebody can pick it up
- * again. Only this device stops speaking for it.
- */
-export function LeaveButton({
-  playing,
-  busy,
-  onLeave,
-}: {
-  playing: boolean;
-  busy: boolean;
-  onLeave: () => void;
-}) {
-  const [armed, setArmed] = useState(false);
-  if (!armed) {
-    return (
-      <button onClick={() => setArmed(true)} className="text-muted hover:text-vermilion">
-        Opuść stół
-      </button>
-    );
-  }
-  return (
-    <span className="flex items-center gap-2">
-      <span className="text-vermilion">
-        {playing ? "Postać zostanie w grze bez gracza — na pewno?" : "Na pewno?"}
-      </span>
-      <button
-        onClick={onLeave}
-        disabled={busy}
-        className="rounded border border-vermilion/60 px-1.5 text-vermilion disabled:opacity-50"
-      >
-        tak
-      </button>
-      <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
-        nie
-      </button>
-    </span>
-  );
-}
-
-/**
- * The join code, big enough to read across a room.
- *
- * This is the whole of the lobby's job for everybody not already at the table:
- * somebody reads it out, or sends the link. Clicking copies the link rather
- * than the code — the code is what you say, the link is what you paste, and
- * whichever one is wanted, one of them is now to hand.
- */
-function JoinCode({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <div className="flex flex-col items-center leading-none">
-      <span className="mb-1 text-[12px] uppercase tracking-widest text-muted">
-        Kod stołu
-      </span>
-      <button
-        onClick={() => {
-          navigator.clipboard
-            ?.writeText(window.location.href)
-            .then(() => setCopied(true))
-            .catch(() => {});
-        }}
-        title="Skopiuj link do stołu"
-        className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.3em] text-ochre transition hover:text-ink"
-      >
-        {code}
-      </button>
-      <span className="mt-1 h-3 text-[12px] text-muted">
-        {copied ? "skopiowano link" : ""}
-      </span>
-    </div>
-  );
-}
-
-/**
- * Arriving at a table that is already playing.
- *
- * There is no joining a game in progress — the characters were dealt at setup
- * and the board is halfway round. What there *is* is picking up a character
- * nobody is behind any more: somebody left, or closed the tab, and the figure
- * is still standing on its Obszar with everything it owns. That is the game's
- * own answer to a player disappearing, so it is the first thing offered rather
- * than a button hidden inside somebody's card.
- *
- * Watching is the other option, and the honest one when every seat is taken.
- */
-export function TakeOverGate({
-  code,
-  free,
-  taken,
-  room,
-  busy,
-  onTakeOver,
-  onJoin,
-  onWatch,
-}: {
-  code: string;
-  /** Characters with nobody behind them. */
-  free: { seatId: string; playerName: string | null; characterName: string; why: string }[];
-  /** How many seats are being played, for when none are free. */
-  taken: number;
-  /** Whether the table has room for one more (2-6 players). */
-  room: boolean;
-  busy: boolean;
-  onTakeOver: (seatId: string, name: string | null) => void;
-  /** Sit down as somebody new, mid-game. */
-  onJoin: (name: string | null) => void;
-  onWatch: () => void;
-}) {
-  // Blank by default: the commonest takeover by a long way is the same person
-  // on a new tab, and the table already knows what to call them. Somebody else
-  // picking the character up types over it.
-  const [name, setName] = useState("");
-
-  return (
-    <main className="flex h-[100dvh] flex-col items-center justify-center gap-6 px-6">
-      <header className="text-center">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-ochre">
-          Magiczny Miecz
-        </h1>
-        <p className="mt-2 text-xs text-muted">
-          stół <span className="tnum tracking-[0.25em] text-ink">{code}</span> · gra już trwa
-        </p>
-      </header>
-
-      {free.length > 0 ? (
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="twoje imię — puste zostawia dotychczasowe"
-            maxLength={24}
-            className="rounded border border-edge bg-panel px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-muted/60 focus:border-ochre"
-          />
-          <p className="text-xs uppercase tracking-widest text-muted">Wolne postacie</p>
-          {free.map((seat) => (
-            <button
-              key={seat.seatId}
-              onClick={() => onTakeOver(seat.seatId, name.trim() || null)}
-              disabled={busy}
-              className="rounded-lg border border-ochre/60 bg-ochre/5 px-3 py-2 text-left transition hover:bg-ochre/15 disabled:opacity-40"
-            >
-              <span className="block font-[family-name:var(--font-display)] text-ochre">
-                {seat.characterName}
-              </span>
-              <span className="block text-[12px] text-muted">
-                {seat.playerName ? `grał(a) ${seat.playerName} · ` : ""}
-                {seat.why}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p className="max-w-sm text-center text-sm text-muted">
-          Wszystkie {taken} postaci mają swoich graczy.
-          {room
-            ? " Możesz dosiąść się nową Postacią albo oglądać."
-            : " Stół jest pełny (2-6 graczy) — możesz oglądać. Jeśli ktoś odejdzie, jego postać pojawi się tutaj do przejęcia."}
-        </p>
-      )}
-
-      {/* Sitting down at a table that is already running. A late arrival takes
-          a Postać nobody is holding and starts from its MGR, which is what 4.4
-          already does for a player whose character died — the same act, and
-          the same machinery. The alternative was watching until somebody left,
-          which is not a thing to ask of somebody who came to play. */}
-      {room && (
-        <div className="flex w-full max-w-sm flex-col gap-2">
-          {free.length === 0 && (
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="twoje imię"
-              maxLength={24}
-              className="rounded border border-edge bg-panel px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-muted/60 focus:border-ochre"
-            />
-          )}
-          <button
-            onClick={() => onJoin(name.trim() || null)}
-            disabled={busy}
-            className="rounded-lg border border-ochre/60 px-3 py-2 text-sm text-ochre transition hover:bg-ochre/10 disabled:opacity-40"
-          >
-            Dosiądź się nową Postacią
-          </button>
-        </div>
-      )}
-
-      <button
-        onClick={onWatch}
-        className="text-[12px] text-muted underline transition hover:text-ink"
-      >
-        oglądaj stół
-      </button>
-    </main>
   );
 }
