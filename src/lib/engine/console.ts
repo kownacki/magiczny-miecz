@@ -76,17 +76,24 @@ export type Command =
 /**
  * The four parameters, under the words you type at them.
  *
- * English on the left and the store's column names on the right. There were
- * Polish spellings here too — `miecz`, `zloto` — and they were the reason `help`
- * looked incomplete: a word the parser answered to that nothing ever offered,
- * uncompletable by Tab because Tab reads the same list `help` prints. One
- * vocabulary or none.
+ * Both languages, which is the one place this console has any business in
+ * Polish: these are not names of functions, they are the four words printed on
+ * the character card somebody is looking at while they type. They were taken
+ * out for being unadvertised — a word the parser answered to that `help` never
+ * listed and Tab could not finish — and that was the wrong end to fix. Nobody
+ * playing this game types `sword` at a card that says MIECZ, and the ± that
+ * used to be under the number is gone in test mode, so `miecz +1` failing left
+ * no way at all to do it. They are listed and completable now.
  */
 const STATS: Record<string, StatName> = {
   sword: "miecz",
+  miecz: "miecz",
   magic: "magia",
+  magia: "magia",
   life: "zycie",
+  zycie: "zycie",
   gold: "zloto",
+  zloto: "zloto",
 };
 
 export const COMMANDS: CommandSpec[] = [
@@ -94,8 +101,11 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "gold",
     aliases: ["sword", "magic", "life"],
+    // The Polish four are in the summary rather than in the row: eight words
+    // joined by pipes is a line nobody can read, and the row's job is to show
+    // the shape of the command.
     usage: "gold +5 [player]",
-    summary: "move a parameter by a signed amount",
+    summary: "move a parameter — or zloto, miecz, magia, zycie — by a signed amount",
   },
   { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
   {
@@ -158,7 +168,14 @@ export const COMMANDS: CommandSpec[] = [
  * the opposite mistake — advertising something nothing carries out — and the
  * tests catch that by typing every line `help` prints.
  */
-const VERBS = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
+const VERBS = new Set([
+  ...COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]),
+  // The four parameters' Polish spellings, which the `gold` row advertises in
+  // its summary rather than in its list of words — eight of those joined by
+  // pipes is a line nobody reads. Advertised is advertised; the gate is about
+  // what `help` says, not about where on the line it says it.
+  ...Object.keys(STATS),
+]);
 
 /** Every card that can be fought: only a Wróg has a Miecz or a Magia to roll against. */
 const FOES = (events as EventCard[]).filter((card) => card.cardClass === "wrog");
@@ -228,9 +245,17 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   const trimmed = line.trim().replace(/^\//, "");
   if (trimmed === "") return { error: "Type a command, or `help`." };
 
-  const [verb, ...rest] = trimmed.split(/\s+/);
+  const [first, ...rest] = trimmed.split(/\s+/);
+  /**
+   * `sword+1` and `gold-2`, split where a person forgot the space.
+   *
+   * Only where the sign or the digit begins, so it can never break a name: no
+   * command has a number in it, and a card that does is one argument later.
+   */
+  const glued = /^([a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+)([+-]?\d.*)$/.exec(first);
+  const verb = glued ? glued[1] : first;
   const word = verb.toLowerCase();
-  const tail = rest.join(" ").trim();
+  const tail = [...(glued ? [glued[2]] : []), ...rest].join(" ").trim();
 
   if (!VERBS.has(word)) return { error: `No command \`${word}\`. Type \`help\` for the list.` };
 
@@ -402,10 +427,7 @@ export function complete(
   /** Every name this position could take, and where the fragment being typed starts. */
   const from = (): { pool: string[]; at: number } => {
     if (typingVerb) {
-      return {
-        pool: COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]),
-        at: 0,
-      };
+      return { pool: [...VERBS], at: 0 };
     }
     // A stat takes its amount first and a player after it; everything else
     // takes its one argument straight away.

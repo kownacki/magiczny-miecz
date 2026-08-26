@@ -13,6 +13,14 @@ const err = (line: string) => {
 };
 
 suite("reading a line", () => {
+  it("splits a verb from a number somebody glued to it", () => {
+    // `sword+1` is what a hand types in a hurry. Split only where the sign or
+    // the digit begins, so a name with a number in it is never broken.
+    expect(ok("sword+1")).toEqual({ kind: "stat", stat: "miecz", delta: 1, who: null });
+    expect(ok("gold+5 Ola")).toMatchObject({ delta: 5, who: "Ola" });
+    expect(ok("gold-2")).toMatchObject({ delta: -2 });
+  });
+
   it("takes the slash a person types out of habit, and without it", () => {
     expect(ok("/help")).toEqual({ kind: "help" });
     expect(ok("help")).toEqual({ kind: "help" });
@@ -39,15 +47,18 @@ suite("moving a parameter", () => {
     expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, who: null });
   });
 
-  it("knows the four parameters by their English names, and only those", () => {
+  it("knows the four parameters in both languages", () => {
     expect(ok("sword +1")).toMatchObject({ stat: "miecz" });
     expect(ok("magic +1")).toMatchObject({ stat: "magia" });
     expect(ok("life -1")).toMatchObject({ stat: "zycie" });
     expect(ok("gold +1")).toMatchObject({ stat: "zloto" });
-    // The console is the one thing here that is not in Polish, and a spelling
-    // it answered to but never offered was the reason `help` read short.
-    expect(err("miecz +1")).toMatch(/No command/);
-    expect(err("zloto +1")).toMatch(/No command/);
+    // The one place this console has any business in Polish: these are the
+    // words printed on the card somebody is looking at while they type, and the
+    // ± that used to sit under the number is gone in test mode.
+    expect(ok("miecz +1")).toMatchObject({ stat: "miecz" });
+    expect(ok("magia +1")).toMatchObject({ stat: "magia" });
+    expect(ok("zycie -1")).toMatchObject({ stat: "zycie" });
+    expect(ok("zloto +1")).toMatchObject({ stat: "zloto" });
   });
 
   it("takes a player after the amount, and nobody as yourself", () => {
@@ -226,7 +237,7 @@ suite("help", () => {
     // Not a sample: the parser refuses anything outside the printed list before
     // it looks at it, so `help` is the whole vocabulary by construction.
     const printed = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
-    for (const word of ["miecz", "win", "lose", "grant", "walcz", "teleport"]) {
+    for (const word of ["win", "lose", "grant", "walcz", "teleport"]) {
       expect(printed.has(word), word).toBe(false);
       expect(err(word)).toMatch(/No command/);
     }
