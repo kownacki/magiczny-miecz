@@ -159,12 +159,18 @@ export function TestConsole({
         <div
           ref={tail}
           className={`tnum overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed ${
-            // A share of the window rather than a number of lines, because what
-            // has to fit is an answer whose length nobody knows in advance.
-            // Collapsed, it holds a whole `help` — seventeen rows and the line
-            // that asked for them — but never more of the window than the game
-            // it is being typed at. Whichever of the two is smaller.
-            big ? "h-[70vh]" : "max-h-[min(24rem,45vh)]"
+            // Collapsed, about ten lines: enough to read the answer to what was
+            // just typed without the console becoming the thing on screen. It
+            // used to hold a whole `help` — seventeen rows — which meant one
+            // curious command covered half the game and stayed there.
+            //
+            // A share of the window as well as a number of lines, so a short
+            // laptop does not get a console taller than the board it is being
+            // typed at. Whichever of the two is smaller.
+            //
+            // `rozwiń` is the other half of the bargain and is unchanged: the
+            // long answers are still readable, on purpose, one click away.
+            big ? "h-[70vh]" : "max-h-[min(12rem,35vh)]"
           }`}
         >
           {log.length === 0 ? (
