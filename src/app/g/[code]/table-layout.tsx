@@ -28,23 +28,12 @@ export function TableLayout({
   map,
   right,
   drawer,
-  footed = false,
 }: {
   header: React.ReactNode;
   map: React.ReactNode;
   right: React.ReactNode;
   /** Laid over the columns, below the bar — see the note on the row below. */
   drawer?: React.ReactNode;
-  /**
-   * The console is docked along the foot of this column.
-   *
-   * It is `fixed`, so it does not push anything: without this the last thing in
-   * the right-hand column sits under it, and the column scrolls to a bottom you
-   * cannot see. The reserve is the height of the console shut down to its
-   * chrome — that much is always in the way while it is open, and the rest of
-   * it is a thing you asked for and can shrink again.
-   */
-  footed?: boolean;
 }) {
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
@@ -82,8 +71,13 @@ export function TableLayout({
         <section className="flex min-h-0 shrink-0 items-center justify-center border-edge px-3 pt-3 lg:h-full lg:w-[38.2%] lg:shrink lg:border-r">
           {map}
         </section>
+        {/* The console sets `--console-h` while it is open — see the note on it.
+            Padding rather than a shorter column, so nothing reflows when it is
+            resized: the panel keeps its height and its last row simply scrolls
+            clear of what is parked over it. */}
         <section
-          className={`min-h-0 flex-1 overflow-y-auto p-3 lg:w-[61.8%] ${footed ? "pb-11" : ""}`}
+          style={{ paddingBottom: "calc(0.75rem + var(--console-h, 0px))" }}
+          className="min-h-0 flex-1 overflow-y-auto p-3 lg:w-[61.8%]"
         >
           {right}
         </section>
