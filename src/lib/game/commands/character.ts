@@ -196,7 +196,7 @@ export function placeSeat(
  * make the first nine of them twice as likely as the other eighteen — a loaded
  * deal rather than a shuffle.
  */
-async function pickBelow(random: RandomPort, n: number, reason: string): Promise<number> {
+export async function pickBelow(random: RandomPort, n: number, reason: string): Promise<number> {
   if (n <= 1) return 0;
   let range = 1;
   let digits = 0;

@@ -27,7 +27,15 @@ export interface Losable {
  * Miecz, not a thing in your pack — so a card taking "1 Przedmiot" must not be
  * able to take one, however much they look alike in the holdings table.
  */
-function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
+/**
+ * Which pile a loss can reach into, or null when it takes no card at all.
+ *
+ * Exported because a caller that has to roll for the picks needs to know how
+ * many it will be asked for before it asks — and that is this, counted against
+ * what the seat is actually holding. Rolling a fixed number instead would spend
+ * dice on picks nobody makes, which a scripted port notices.
+ */
+export function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
   switch (loss) {
     case "przedmiot":
     case "wszystkie-przedmioty":

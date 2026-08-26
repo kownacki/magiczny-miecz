@@ -13,20 +13,17 @@ import {
 } from "@/lib/engine/board";
 import {
 } from "@/lib/engine/abilities";
-import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
-import { chooseLosses, describeLoss, goldLost } from "@/lib/engine/losses";
 import {
 } from "@/lib/engine/bridge";
 import {
 } from "@/lib/engine/characters";
 import {
   endFight,
-  endTurn,
   type TurnPhase,
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
-import type { CardClass, EventCard, Item, Nature } from "@/data/types";
+import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { helpLines, type Command } from "@/lib/engine/console";
 import { findByName } from "@/lib/engine/search";
@@ -40,7 +37,6 @@ import {
 } from "@/lib/engine/status";
 import { describeEffect } from "@/lib/engine/effectText";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
-import { isSettled } from "@/lib/engine/resolve";
 import {
 } from "@/lib/engine/deck";
 import {
@@ -70,9 +66,13 @@ import {
 import { healSeat as healCommand } from "./commands/life";
 import { fightBeast as fightBeastCommand } from "./commands/beast";
 import {
+  applyEffect as applyEffectOn,
+  type Decisions,
+  type Resolution,
+} from "./commands/effects";
+import {
   attackSeat as attackSeatOn,
   beginFight as beginFightOn,
-  beginNamedFight as beginNamedFightOn,
   castSpell as castSpellOn,
   escape as escapeOn,
   fightRoll as fightRollOn,
@@ -132,6 +132,7 @@ export { freshDecks };
 export type { Adjustable };
 export { STONE_TURNS, TROPHY_RATE };
 export type { BridgeOrdealResult, BridgeOutcome, CrossOutcome };
+export type { Decisions, Resolution };
 export type { Decks };
 
 
@@ -1662,21 +1663,6 @@ export async function placeSeat(
  * that is a place rather than an option — "przenieś się na dowolny Obszar w
  * tym Kręgu".
  */
-export interface Decisions {
-  choices?: number[];
-  destination?: FieldId;
-}
-
-export interface Resolution {
-  /** One line per thing that happened, for the notice and the journal. */
-  did: string[];
-  /**
-   * The part still owed to a player's decision, if any. Null when the whole
-   * effect has been carried out.
-   */
-  pending: Effect | null;
-}
-
 /**
  * How many of a thing, in Polish.
  *
@@ -1685,13 +1671,6 @@ export interface Resolution {
  * deltas in this game are almost always one, which is exactly the case a single
  * fixed form gets wrong.
  */
-function amountOf(stat: "miecz" | "magia" | "zycie" | "zloto", count: number): string {
-  if (stat !== "zloto") {
-    return { miecz: "Miecza", magia: "Magii", zycie: "Życia" }[stat];
-  }
-  if (count === 1) return "Sztukę Złota";
-  return count >= 2 && count <= 4 ? "Sztuki Złota" : "Sztuk Złota";
-}
 
 /**
  * Applies one effect to one seat, as far as it goes.
@@ -1702,340 +1681,15 @@ function amountOf(stat: "miecz" | "magia" | "zycie" | "zloto", count: number): s
  * tested against every card in the box.
  */
 /** A seat row as the target rules see it: where it stands, what it is, whether it is still playing. */
-function asTargetSeat(row: SeatRow): TargetSeat {
-  const nature =
-    row.nature === "dobra" || row.nature === "zla" || row.nature === "chaotyczna"
-      ? row.nature
-      : null;
-  return {
-    seatIndex: row.seat_index,
-    characterId: row.character_id,
-    fieldId: row.field_id,
-    nature,
-    eliminated: row.eliminated,
-  };
-}
 
 export async function applyEffect(
   gameId: string,
   seatId: string,
   effect: Effect,
   reason: string,
-  /**
-   * What the player has already decided, in the order the effect asks.
-   *
-   * The client never sends an effect — it sends *which option it picked*, and
-   * the server re-walks the card it owns and takes that branch. A card cannot
-   * therefore be talked into doing something it does not say, which is the
-   * whole reason the decision travels as a number.
-   */
   decided: Decisions = {},
 ): Promise<Resolution> {
-  // A decision the player has already made turns an unsettled effect into a
-  // settled one, so this is asked after the choices have been consumed rather
-  // than before.
-  if (effect.op === "wybor") {
-    const pick = decided.choices?.shift();
-    const option = pick === undefined ? undefined : effect.options[pick];
-    if (!option) return { did: [], pending: effect };
-    const done = await applyEffect(gameId, seatId, option.effect, `${reason}: ${option.label}`, decided);
-    // The label only when it adds something. An option called "+1 Magii" whose
-    // effect reports "+1 Magii" would otherwise be written down twice.
-    const said = done.did[0] === option.label ? done.did : [option.label, ...done.did];
-    return { did: said, pending: done.pending };
-  }
-
-  if (effect.op === "przenies" && effect.to.kind !== "pole") {
-    const where = decided.destination;
-    if (!where) return { did: [], pending: effect };
-    await placeSeat(gameId, seatId, where, reason);
-    return {
-      did: [`przenosisz się na: ${FIELDS.get(where)?.name ?? where}`],
-      pending: null,
-    };
-  }
-
-  if (!isSettled(effect)) return { did: [], pending: effect };
-
-  switch (effect.op) {
-    case "nic":
-      return { did: ["nic się nie dzieje"], pending: null };
-
-    case "po-kolei": {
-      const did: string[] = [];
-      for (const step of effect.steps) {
-        const step_ = await applyEffect(gameId, seatId, step, reason, decided);
-        // A step nobody has decided yet stops the sequence: what follows it may
-        // depend on it, and doing the rest first would resolve the card out of
-        // its own order.
-        if (step_.pending) return { did, pending: step_.pending };
-        did.push(...step_.did);
-      }
-      return { did, pending: null };
-    }
-
-    case "gdy": {
-      const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
-      if (!seat) throw new Error("Nieznane miejsce.");
-      const nature = seat.nature as Nature | null;
-      const holds = effect.warunek.is === "natura"
-        ? nature !== null && effect.warunek.jedna_z.includes(nature)
-        : effect.warunek.is === "ma-zloto"
-          ? seat.zloto > 0
-          : (effect.warunek.stat === "miecz" ? seat.miecz_own : seat.magia_own) <
-            effect.warunek.ponizej;
-      const branch = holds ? effect.to : effect.inaczej;
-      return branch
-        ? applyEffect(gameId, seatId, branch, reason, decided)
-        : { did: ["warunek niespełniony — nic się nie dzieje"], pending: null };
-    }
-
-    case "punkty": {
-      const seats = await seatsFor(gameId);
-      const actor = seats.find((row) => row.id === seatId);
-      const hit = seatsTargeted(
-        effect.target,
-        seats.map(asTargetSeat),
-        actor ? asTargetSeat(actor) : undefined,
-        [],
-      );
-      // Waits for somebody to arrive, or for the holder to choose.
-      if (hit === null) return { did: [], pending: effect };
-      for (const target of hit) {
-        const row = seats.find((candidate) => candidate.seat_index === target.seatIndex);
-        if (!row) continue;
-        await adjust(gameId, row.id, effect.stat, effect.delta, reason, {
-          kind: "punkty",
-          manual: false,
-        });
-      }
-      if (hit.length === 0) return { did: ["nikogo to nie dotyczy"], pending: null };
-      const sign = effect.delta > 0 ? "+" : "−";
-      const many = Math.abs(effect.delta);
-      return {
-        did: [`${sign}${many} ${amountOf(effect.stat, many)}`],
-        pending: null,
-      };
-    }
-
-    case "tura-stracona": {
-      const seats = await seatsFor(gameId);
-      const actor = seats.find((row) => row.id === seatId);
-      const hit = seatsTargeted(
-        effect.target,
-        seats.map(asTargetSeat),
-        actor ? asTargetSeat(actor) : undefined,
-        effect.oprocz ?? [],
-      );
-      // Waits for somebody to arrive, or for the holder to choose: still not
-      // this applier's to finish.
-      if (hit === null) return { did: [], pending: effect };
-
-      const game = await loadGame(gameId);
-      const names: string[] = [];
-      for (const target of hit) {
-        const row = seats.find((candidate) => candidate.seat_index === target.seatIndex);
-        if (!row) continue;
-        /**
-         * 16.1 spends the loss on the turn in progress, not on a future one.
-         *
-         * "Jeżeli spowodowałoby to utratę tury przez Postać, musi ona
-         * powstrzymać się od podejmowania jakichkolwiek dalszych działań — TA
-         * WŁAŚNIE tura liczy się jako stracona." The player who draws the
-         * Karczma's 3 has already moved and already arrived; what the card
-         * takes is the rest of that turn.
-         *
-         * Counting it forward instead cost them two turns for the price of one
-         * — they finished the turn the card ended, and were skipped on the next
-         * — and let them keep acting through a turn the rules had closed.
-         *
-         * Everybody else banks it, because for them it is genuinely a turn that
-         * has not started: the Burza costs a turn to characters who are not
-         * playing at the time.
-         */
-        const isPlaying = row.seat_index === game.active_seat;
-        await db
-          .from("seats")
-          .update({
-            turns_lost: row.turns_lost + (isPlaying ? effect.turns - 1 : effect.turns),
-          })
-          .eq("id", row.id);
-        // Its own kind, and not marked manual. `adjust` writes a "korekta" flagged
-        // as a human override, and a card doing what the card says is the exact
-        // opposite of somebody overruling the referee — the journal draws those
-        // differently and would have been calling every one of these a correction.
-        await journal(gameId, row.id, game.turn, "tura-stracona", {
-          turns: effect.turns,
-          reason,
-        });
-        names.push(row.player_name ?? `miejsce ${row.seat_index + 1}`);
-      }
-      await bumpRevision(gameId);
-
-      /**
-       * And the turn in progress stops here (16.1).
-       *
-       * "musi ona powstrzymać się od podejmowania jakichkolwiek dalszych
-       * działań" — so the phase goes to `koniec`, where the only control left
-       * is the one that passes play on. Without this the arithmetic above would
-       * make the card do nothing at all to the player who drew it: it takes no
-       * future turn from them, so it has to take this one.
-       *
-       * Whatever they drew and did not resolve stays on the Obszar, face up,
-       * which is 16.8 and which `finishTurn` already does.
-       */
-      if (hit.some((target) => target.seatIndex === game.active_seat)) {
-        await db
-          .from("games")
-          .update({ turn_state: endTurn() })
-          .eq("id", gameId);
-      }
-
-      if (hit.length === 0) return { did: ["nikogo to nie dotyczy"], pending: null };
-      const onlyMe = hit.length === 1 && hit[0].seatIndex === actor?.seat_index;
-      return {
-        did: [onlyMe ? `tracisz ${effect.turns} turę` : `tracą turę: ${names.join(", ")}`],
-        pending: null,
-      };
-    }
-
-    case "strata": {
-      const seats = await seatsFor(gameId);
-      const actor = seats.find((row) => row.id === seatId);
-      const hit = seatsTargeted(
-        effect.target,
-        seats.map(asTargetSeat),
-        actor ? asTargetSeat(actor) : undefined,
-        [],
-      );
-      if (hit === null) return { did: [], pending: effect };
-
-      const game = await loadGame(gameId);
-      const holdings = await holdingsFor(gameId);
-      const said: string[] = [];
-
-      for (const target of hit) {
-        const row = seats.find((candidate) => candidate.seat_index === target.seatIndex);
-        if (!row) continue;
-
-        const mine = holdings
-          .filter((held) => held.seat_id === row.id)
-          .map((held) => ({
-            id: held.id,
-            cardId: held.card_id,
-            kind: held.kind,
-            granted: held.granted,
-          }));
-        // Null means the holder has to pick, which 5.6 makes their right. It
-        // should not reach here — isSettled asks first — but a card that starts
-        // saying "wybierz" tomorrow should stop, not choose for somebody.
-        const gone = chooseLosses(mine, effect, (upTo) => Math.floor(Math.random() * upTo));
-        if (gone === null) return { did: [], pending: effect };
-
-        const gold = goldLost(effect, row.zloto);
-        if (gone.length > 0) {
-          await db.from("holdings").delete().in("id", gone);
-          // 6.4's "muszą zostać odrzuceni z innych przyczyn": a card taken by
-          // an effect rather than put down by its owner is not left lying on
-          // the Obszar — it is gone, and gone means the used pile.
-          const lost = mine.filter((held) => gone.includes(held.id));
-          await returnToPile(
-            gameId,
-            "spells",
-            lost.filter((held) => held.kind === "spell"),
-          );
-          await returnToPile(
-            gameId,
-            "events",
-            lost.filter((held) => held.kind !== "spell"),
-          );
-        }
-        if (gold > 0) {
-          await db.from("seats").update({ zloto: row.zloto - gold }).eq("id", row.id);
-        }
-        if (gone.length === 0 && gold === 0) continue;
-
-        const names = gone
-          .map((id) => mine.find((held) => held.id === id)?.cardId)
-          .filter((id): id is string => typeof id === "string")
-          .map(cardName);
-        // Its own kind, unflagged: a card doing what it says is not somebody
-        // overruling the referee, and the journal draws those two differently.
-        await journal(gameId, row.id, game.turn, "strata", {
-          co: effect.co,
-          cardIds: gone.map((id) => mine.find((held) => held.id === id)?.cardId).filter(Boolean),
-          zloto: gold,
-        });
-        said.push(
-          `${row.player_name ?? `miejsce ${row.seat_index + 1}`}: ` +
-            [names.join(", "), gold > 0 ? `${gold} Sz. Z.` : ""].filter(Boolean).join(", "),
-        );
-      }
-
-      await bumpRevision(gameId);
-      return {
-        did: said.length > 0 ? [`tracą ${describeLoss(effect)} — ${said.join("; ")}`] : ["nie ma czego stracić"],
-        pending: null,
-      };
-    }
-
-    case "uzdrow": {
-      const healed = await healSeat(gameId, seatId, effect.upTo);
-      return {
-        did: [healed > 0 ? `+${healed} Życia (4.7)` : "Życie już na poziomie początkowym"],
-        pending: null,
-      };
-    }
-
-    case "zaklecie": {
-      const names: string[] = [];
-      for (let i = 0; i < effect.count; i++) names.push(await drawSpell(gameId, seatId));
-      return { did: [`Zaklęcie: ${names.join(", ")}`], pending: null };
-    }
-
-    case "kamien":
-      await turnToStone(gameId, seatId);
-      return { did: ["Zamiana w Kamień (20.1)"], pending: null };
-
-    case "natura":
-      await changeNature(gameId, seatId, effect.na);
-      return { did: [`Natura: ${effect.na === "zla" ? "zła" : effect.na}`], pending: null };
-
-    case "przenies": {
-      if (effect.to.kind !== "pole") return { did: [], pending: effect };
-      await placeSeat(gameId, seatId, effect.to.fieldId, reason);
-      return {
-        did: [`przenosisz się na: ${FIELDS.get(effect.to.fieldId)?.name ?? effect.to.fieldId}`],
-        pending: null,
-      };
-    }
-
-    case "walka": {
-      // A creature the card conjures rather than a card on the field, so the
-      // fight is opened directly with its printed strength.
-      await change(gameId, (snapshot) =>
-        beginNamedFightOn(snapshot, {
-          name: effect.nazwa,
-          miecz: effect.miecz,
-          magia: effect.magia,
-        }),
-      undefined);
-      return { did: [`walka: ${effect.nazwa}`], pending: null };
-    }
-
-    case "ruch-dodatkowy":
-      return { did: ["dodatkowy ruch — rzuć jeszcze raz"], pending: null };
-
-    case "wyciagnij": {
-      for (let i = 0; i < effect.count; i++) await drawCard(gameId, null);
-      return { did: [`wyciągnięto ${effect.count} Kart`], pending: null };
-    }
-
-    default:
-      // `isSettled` said yes and this says how — so a new settled op that
-      // forgets to be handled here is a loud failure rather than a silent one.
-      throw new Error(`Nie wiem, jak wykonać: ${effect.op}`);
-  }
+  return change(gameId, applyEffectOn, { seatId, effect, reason, decided, shuffle });
 }
 
 /**

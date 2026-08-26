@@ -1,0 +1,311 @@
+import { describe, expect, it } from "vitest";
+import { scriptedRandom } from "@/lib/engine/ports";
+import type { Effect } from "@/lib/engine/cardScript";
+import { aHolding, aSeat, aTable, ports } from "../fixture";
+import { applyEffect } from "./effects";
+import { asSeatCharacter } from "@/lib/engine/characters";
+
+/** Piles are not shuffled in these; the order in is the order out. */
+const asIs = <T,>(items: readonly T[]): T[] => [...items];
+
+const run = (
+  effect: Effect,
+  table = aTable({ seats: [aSeat({ id: "seat-a", seat_index: 0 })] }),
+  over: { decided?: Parameters<typeof applyEffect>[1]["decided"]; random?: ReturnType<typeof scriptedRandom> } = {},
+) =>
+  applyEffect(
+    table,
+    { seatId: "seat-a", effect, reason: "KARTA", decided: over.decided, shuffle: asIs },
+    ports(over.random ? { random: over.random } : {}),
+  );
+
+describe("carrying out what a Karta says", () => {
+  it("does nothing, and says so", async () => {
+    const { writes, result } = await run({ op: "nic" });
+    expect(writes).toEqual({});
+    expect(result).toEqual({ did: ["nic się nie dzieje"], pending: null });
+  });
+
+  it("moves points and declines the noun", async () => {
+    const { writes, result } = await run({ op: "punkty", stat: "miecz", delta: 2, target: "ty" });
+    expect(result.did).toEqual(["+2 Miecza"]);
+    expect(writes.seats?.[0]).toMatchObject({ id: "seat-a", patch: { miecz_own: 4 } });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "punkty", manual: false });
+  });
+
+  it("declines Złoto, which is the one that declines", async () => {
+    expect((await run({ op: "punkty", stat: "zloto", delta: 1, target: "ty" })).result.did).toEqual([
+      "+1 Sztukę Złota",
+    ]);
+    expect((await run({ op: "punkty", stat: "zloto", delta: 3, target: "ty" })).result.did).toEqual([
+      "+3 Sztuki Złota",
+    ]);
+    expect((await run({ op: "punkty", stat: "zloto", delta: 7, target: "ty" })).result.did).toEqual([
+      "+7 Sztuk Złota",
+    ]);
+  });
+
+  /**
+   * The property the whole shape exists for.
+   *
+   * Each step reads a table that already shows what the step before it wrote.
+   * Against the raw snapshot both steps would compute from Miecz 2 and the
+   * second would overwrite the first, so +1 then +1 would land on 3.
+   */
+  it("lets a later step see what an earlier one did", async () => {
+    const { writes } = await run({
+      op: "po-kolei",
+      steps: [
+        { op: "punkty", stat: "miecz", delta: 1, target: "ty" },
+        { op: "punkty", stat: "miecz", delta: 1, target: "ty" },
+      ],
+    });
+    // Two patches for one row, folded in order by `apply` exactly as `commit`
+    // applies them: 2 → 3 → 4.
+    expect(writes.seats?.map((s) => s.patch)).toEqual([{ miecz_own: 3 }, { miecz_own: 4 }]);
+  });
+
+  /**
+   * `isSettled` asks about the whole sequence before any of it runs, and a
+   * `po-kolei` is settled only if every step is — so one undecided step stops
+   * the card at the door rather than half-way down it. Nothing is written, and
+   * the player is asked.
+   */
+  it("does not start a sequence that has an undecided step in it", async () => {
+    const undecided: Effect = {
+      op: "po-kolei",
+      steps: [
+        { op: "punkty", stat: "miecz", delta: 1, target: "ty" },
+        { op: "wybor", options: [{ label: "A", effect: { op: "nic" } }] },
+      ],
+    };
+    const { writes, result } = await run(undecided);
+    expect(writes).toEqual({});
+    expect(result).toEqual({ did: [], pending: undecided });
+  });
+});
+
+describe("a choice the player makes", () => {
+  const choice: Effect = {
+    op: "wybor",
+    options: [
+      { label: "+1 Miecza", effect: { op: "punkty", stat: "miecz", delta: 1, target: "ty" } },
+      { label: "nic", effect: { op: "nic" } },
+    ],
+  };
+
+  it("waits when nobody has picked", async () => {
+    const { writes, result } = await run(choice);
+    expect(writes).toEqual({});
+    expect(result.pending).toBe(choice);
+  });
+
+  it("takes the branch the number points at", async () => {
+    const { result } = await run(choice, undefined, { decided: { choices: [1] } });
+    expect(result).toEqual({ did: ["nic", "nic się nie dzieje"], pending: null });
+  });
+
+  /** An option called "+1 Miecza" whose effect says "+1 Miecza" is not said twice. */
+  it("does not write the label down twice", async () => {
+    const { result } = await run(choice, undefined, { decided: { choices: [0] } });
+    expect(result.did).toEqual(["+1 Miecza"]);
+  });
+});
+
+describe("a condition on the character (gdy)", () => {
+  const onNature = (na: "dobra" | "zla"): Effect => ({
+    op: "gdy",
+    warunek: { is: "natura", jedna_z: [na] },
+    to: { op: "punkty", stat: "magia", delta: 1, target: "ty" },
+  });
+
+  it("takes the branch when it holds", async () => {
+    const good = aTable({ seats: [aSeat({ id: "seat-a", nature: "dobra" })] });
+    expect((await run(onNature("dobra"), good)).result.did).toEqual(["+1 Magii"]);
+  });
+
+  it("says so when it does not, rather than doing nothing quietly", async () => {
+    const good = aTable({ seats: [aSeat({ id: "seat-a", nature: "dobra" })] });
+    const { writes, result } = await run(onNature("zla"), good);
+    expect(writes).toEqual({});
+    expect(result.did).toEqual(["warunek niespełniony — nic się nie dzieje"]);
+  });
+
+  it("reads the purse for ma-zloto", async () => {
+    const broke = aTable({ seats: [aSeat({ id: "seat-a", zloto: 0 })] });
+    const { result } = await run(
+      { op: "gdy", warunek: { is: "ma-zloto" }, to: { op: "nic" } },
+      broke,
+    );
+    expect(result.did).toEqual(["warunek niespełniony — nic się nie dzieje"]);
+  });
+});
+
+describe("losing a turn (16.1)", () => {
+  const table = () =>
+    aTable({
+      game: { active_seat: 0 },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, player_name: "Michał" }),
+        aSeat({
+          id: "seat-b",
+          seat_index: 1,
+          player_name: "Ania",
+          character_id: asSeatCharacter("mag"),
+        }),
+      ],
+    });
+
+  /**
+   * "TA WŁAŚNIE tura liczy się jako stracona."
+   *
+   * The player who drew it has already moved and already arrived; what the card
+   * takes is the rest of this turn. Banking it forward as well would cost them
+   * two turns for one — and let them keep acting through a turn the rules had
+   * closed, which is why the phase goes to `koniec`.
+   */
+  it("spends the turn in progress on the character who drew it", async () => {
+    const { writes, result } = await run({ op: "tura-stracona", turns: 1, target: "ty" }, table());
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { turns_lost: 0 } }]);
+    expect(writes.game?.turn_state).toEqual({ phase: "koniec" });
+    expect(result.did).toEqual(["tracisz 1 turę"]);
+  });
+
+  it("banks it for everybody who is not playing", async () => {
+    const { writes, result } = await run(
+      { op: "tura-stracona", turns: 1, target: "wszyscy" },
+      table(),
+    );
+    expect(writes.seats).toEqual([
+      { id: "seat-a", patch: { turns_lost: 0 } },
+      { id: "seat-b", patch: { turns_lost: 1 } },
+    ]);
+    expect(result.did).toEqual(["tracą turę: Michał, Ania"]);
+  });
+
+  /** `oprocz` names Karty Postaci the card lets off, not seats. */
+  it("leaves the turn alone when it lands on nobody who is playing", async () => {
+    const { writes } = await run(
+      { op: "tura-stracona", turns: 1, target: "wszyscy", oprocz: ["goblin"] },
+      table(),
+    );
+    expect(writes.seats).toEqual([{ id: "seat-b", patch: { turns_lost: 1 } }]);
+    expect(writes.game).toBeUndefined();
+  });
+});
+
+describe("losing what you carry (strata)", () => {
+  const carrying = () =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", zloto: 3 })],
+      holdings: [
+        aHolding({ id: "h1", card_id: "helm", kind: "item" }),
+        aHolding({ id: "h2", card_id: "miecz", kind: "item" }),
+        aHolding({ id: "s1", card_id: "krag-plomieni", kind: "spell" }),
+      ],
+    });
+
+  it("takes everything of a kind when the card says wszystkie", async () => {
+    const { writes } = await run({ op: "strata", co: "wszystkie-przedmioty", target: "ty" }, carrying());
+    expect(writes.holdings?.delete?.sort()).toEqual(["h1", "h2"]);
+  });
+
+  /** The die picks, and it picks from a pool that shrinks — see the comment. */
+  it("picks at random when the card says losowo, and spends one die per pick", async () => {
+    const random = scriptedRandom([1]);
+    const { writes } = await run(
+      { op: "strata", co: "przedmiot", count: 1, wybor: "losowo", target: "ty" },
+      carrying(),
+      { random },
+    );
+    expect(writes.holdings?.delete).toHaveLength(1);
+    // Exactly one pick was asked for, so exactly one die was spent.
+    await expect(random.rollD6("a second")).rejects.toThrow(/exhausted/);
+  });
+
+  it("waits rather than choosing for somebody when the choice is theirs (5.6)", async () => {
+    const { writes, result } = await run(
+      { op: "strata", co: "przedmiot", count: 1, wybor: "ty", target: "ty" },
+      carrying(),
+    );
+    expect(writes).toEqual({});
+    expect(result.pending).toMatchObject({ op: "strata" });
+  });
+
+  it("takes gold off the seat rather than out of the pack (3.5)", async () => {
+    const { writes } = await run({ op: "strata", co: "zloto", count: 2, target: "ty" }, carrying());
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zloto: 1 } }]);
+    expect(writes.holdings).toBeUndefined();
+  });
+
+  it("says there was nothing to lose rather than pretending something happened", async () => {
+    const empty = aTable({ seats: [aSeat({ id: "seat-a", zloto: 0 })] });
+    const { writes, result } = await run(
+      { op: "strata", co: "wszystkie-przedmioty", target: "ty" },
+      empty,
+    );
+    expect(writes).toEqual({});
+    expect(result.did).toEqual(["nie ma czego stracić"]);
+  });
+});
+
+describe("the rest of the vocabulary", () => {
+  it("heals up to the starting level, and says so when there is nothing to heal", async () => {
+    const hurt = aTable({ seats: [aSeat({ id: "seat-a", zycie: 2 })] });
+    expect((await run({ op: "uzdrow", upTo: 1 }, hurt)).result.did).toEqual(["+3 Życia (4.7)"]);
+
+    const whole = aTable({ seats: [aSeat({ id: "seat-a", zycie: 4 })] });
+    const { writes, result } = await run({ op: "uzdrow", upTo: 1 }, whole);
+    expect(writes).toEqual({});
+    expect(result.did).toEqual(["Życie już na poziomie początkowym"]);
+  });
+
+  it("turns a character to stone", async () => {
+    const { writes, result } = await run({ op: "kamien" });
+    expect(result.did).toEqual(["Zamiana w Kamień (20.1)"]);
+    expect(writes.journal?.[0]).toMatchObject({ kind: "kamien" });
+  });
+
+  it("changes a Natura and names it the way Polish does", async () => {
+    const { result } = await run({ op: "natura", na: "zla" });
+    expect(result.did).toEqual(["Natura: zła"]);
+  });
+
+  it("moves a figure to the Obszar the card names", async () => {
+    const { writes, result } = await run({
+      op: "przenies",
+      to: { kind: "pole", fieldId: "karczma" },
+    });
+    expect(result.did).toEqual(["przenosisz się na: Karczma"]);
+    expect(writes.seats?.[0]).toMatchObject({ patch: { field_id: "karczma" } });
+  });
+
+  it("waits for a destination when the card leaves it open", async () => {
+    const open: Effect = { op: "przenies", to: { kind: "dowolne-w-kregu" } };
+    const { writes, result } = await run(open);
+    expect(writes).toEqual({});
+    expect(result.pending).toBe(open);
+  });
+
+  it("opens a fight with a creature the card conjures", async () => {
+    const arrived = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: { phase: "pole", fieldId: "karczma", from: null, draw: 0, drawn: [] },
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
+    });
+    const { writes, result } = await run(
+      { op: "walka", nazwa: "miejscowy osiłek", miecz: 4 },
+      arrived,
+    );
+    expect(result.did).toEqual(["walka: miejscowy osiłek"]);
+    expect((writes.game?.turn_state as { phase: string }).phase).toBe("walka");
+  });
+
+  it("hands an extra move back to the turn rather than taking it itself", async () => {
+    const { writes, result } = await run({ op: "ruch-dodatkowy" });
+    expect(writes).toEqual({});
+    expect(result.did).toEqual(["dodatkowy ruch — rzuć jeszcze raz"]);
+  });
+});
