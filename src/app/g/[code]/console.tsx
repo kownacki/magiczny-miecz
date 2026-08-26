@@ -23,6 +23,9 @@ import { useDismissable } from "./overlay";
  */
 export function TestConsole({
   open,
+  folded,
+  failure,
+  onDismissFailure,
   table,
   busy,
   players,
@@ -30,6 +33,17 @@ export function TestConsole({
   onRun,
 }: {
   open: boolean;
+  /**
+   * Opened by something breaking rather than by somebody asking.
+   *
+   * It comes up as the bar it already knows how to be — `mini` — because a
+   * failure is not an invitation to type. The message is on the bar; opening it
+   * properly is one click away for whoever wants to.
+   */
+  folded?: boolean;
+  /** The last thing that broke: English, and not the player's fault. */
+  failure?: string | null;
+  onDismissFailure?: () => void;
   /** Which table this is, so two of them are two conversations. */
   table: string;
   busy: boolean;
@@ -60,7 +74,7 @@ export function TestConsole({
    * chrome at the foot of the screen and nothing else, and one click has it
    * back exactly as it was, log and all.
    */
-  const [size, setSize] = useState<"mini" | "normal" | "big">("normal");
+  const [size, setSize] = useState<"mini" | "normal" | "big">(folded ? "mini" : "normal");
 
   /**
    * The bottom edge of the same system the drawers are in.

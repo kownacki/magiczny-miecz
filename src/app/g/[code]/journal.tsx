@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { ChromeButton } from "./chrome";
 import { readSeatToken } from "@/lib/game/seatToken";
 import { Lookable } from "./lookable";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
@@ -94,23 +95,18 @@ export function Journal({
     >
       <header className="flex shrink-0 items-center justify-between border-b border-edge/60 px-3 py-1">
         <h2 className="text-[11px] uppercase tracking-wide text-muted">Dziennik</h2>
-        <div className="flex items-baseline gap-3">
-          <button
-            onClick={() => setSize(mini ? "normal" : "mini")}
-            aria-expanded={!mini}
+        <div className="flex items-center gap-3">
+          <ChromeButton
+            glyph={mini ? "restore" : "minimise"}
             title={mini ? "Pokaż Dziennik" : "Zwiń do paska — Dziennik nadal spisuje"}
-            className="text-[11px] text-ochre/80 transition hover:text-ochre"
-          >
-            {mini ? "pokaż" : "schowaj"}
-          </button>
+            onClick={() => setSize(mini ? "normal" : "mini")}
+          />
           {!mini && (
-            <button
+            <ChromeButton
+              glyph={expanded ? "collapse" : "expand"}
+              title={expanded ? "Zwiń — pokaż planszę" : "Rozwiń na całą planszę"}
               onClick={() => setSize(expanded ? "normal" : "big")}
-              aria-expanded={expanded}
-              className="text-[11px] text-ochre/80 transition hover:text-ochre"
-            >
-              {expanded ? "zwiń — pokaż planszę" : "rozwiń"}
-            </button>
+            />
           )}
         </div>
       </header>

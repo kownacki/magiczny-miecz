@@ -130,6 +130,16 @@ interface Game {
 }
 
 /** The shared table screen: the whole game state everyone is allowed to see. */
+/**
+ * Whether companion's own status line is drawn at all.
+ *
+ * `false` while COMPANION_PARKED keeps every new table in simulation, where
+ * `game.mode` can never be "companion" — so the line was unreachable anyway and
+ * only cost a reader the time to work that out. Kept rather than deleted, like
+ * the rest of that mode: one boolean brings it back.
+ */
+const COMPANION_LINE = false;
+
 export default function Table({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const [game, setGame] = useState<Game | null>(null);
@@ -171,6 +181,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * it never lands in a Polish word being typed anywhere else.
    */
   const [consoleOpen, setConsoleOpen] = useState(false);
+  /** The last thing that broke, as opposed to the last thing that was refused. */
+  const [failure, setFailure] = useState<string | null>(null);
 
   /**
    * Two keys, on the same physical one.
@@ -472,7 +484,20 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           body: JSON.stringify({ ...body, token: readSeatToken(code) }),
         });
         if (!response.ok) {
-          setError((await response.json()).error);
+          /**
+           * A refusal is the rules; a failure is not.
+           *
+           * "To nie twoja tura" is the game working, and goes where the rest of
+           * what the game says goes. `commit(moves): duplicate key value…` is
+           * the machine, in English, and is nobody at the table's fault — so it
+           * goes to the console, which opens itself for it, folded to a line.
+           * That is a developer's surface and it appears outside test mode only
+           * for this: something broke, and the person who can fix it should not
+           * have to be told twice.
+           */
+          const said = await response.json().catch(() => ({}));
+          if (said.failure) setFailure(String(said.error ?? "Coś poszło nie tak."));
+          else setError(said.error);
         } else {
           // Anything the app decided on the player's behalf has to be visible,
           // or the table is being asked to take the referee's word for it. The
@@ -906,15 +931,24 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
 
   const overlays = (
     <>
-      {testing && (
+      {/* Drawn in test mode, and — folded to one line — whenever something has
+          broken, which is the one time this surface is any use to somebody who
+          is only playing. */}
+      {(testing || failure !== null) && (
         <TestConsole
-          open={consoleOpen}
+          open={consoleOpen || failure !== null}
+          folded={!consoleOpen && failure !== null}
+          failure={failure}
+          onDismissFailure={() => setFailure(null)}
           table={code}
           busy={busy}
           players={seats
             .filter((seat) => seat.character_id)
             .map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`)}
-          onClose={() => setConsoleOpen(false)}
+          onClose={() => {
+            setConsoleOpen(false);
+            setFailure(null);
+          }}
           onRun={runConsole}
         />
       )}
@@ -1540,14 +1574,26 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               />
             </div>
             {error && <p className="text-sm text-vermilion">{error}</p>}
-            {/* Only when there is no window open to say it in. What the app
-                decided has to be visible — it threw the die — but it belongs
-                where the thing was done, not in a bordered box behind it. */}
-            {notice && !error && inspecting === null && (
-              <p className="px-1 text-sm text-ochre">{notice}</p>
-            )}
+            {/* The notice is gone from here.
 
-            {game.mode === "companion" && mySeatIndex !== null && (
+                It said what the app had just decided — "ELIKSIR SIŁY: +2
+                Miecza" — in the gap between the turn queue and the Karta,
+                whenever no window was open to say it in. Which was the
+                admission: it belonged where the thing was done, and it only
+                appeared here because nothing else was.
+
+                It was also the same fact twice. The call that answered with it
+                wrote the journal row on the way, so "Michał używa: ELIKSIR
+                SIŁY" is in the feed either way, and the feed is what a table
+                argues over two turns later. What is lost is proximity, and the
+                place to give that back is the window the button was in — not a
+                line of text behind everything. */}
+
+            {/* Companion's own line — who is driving the table, and the offer
+                to take it over — which cannot appear while COMPANION_PARKED
+                keeps every new table in simulation. Kept rather than deleted,
+                like the rest of that mode: one boolean brings it back. */}
+            {COMPANION_LINE && game.mode === "companion" && mySeatIndex !== null && (
               <p className="rounded border border-edge/60 bg-panel/50 px-2 py-1 text-[11px] text-muted">
                 {isTableScreen ? (
                   <span className="text-ochre">To urządzenie prowadzi wszystkich graczy.</span>

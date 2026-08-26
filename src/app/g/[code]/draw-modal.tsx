@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { CardMark } from "./card-mark";
 import { Overlay, dismissableOpen } from "./overlay";
+import { ChromeButton } from "./chrome";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
@@ -925,12 +926,11 @@ function Shell({
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {onMinimize && (
-              <button
+              <ChromeButton
+                glyph="minimise"
+                title="Zwiń do paska — plansza znowu widoczna"
                 onClick={onMinimize}
-                className="text-[11px] text-muted underline transition hover:text-ink"
-              >
-                zwiń
-              </button>
+              />
             )}
           </div>
         </header>
