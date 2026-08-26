@@ -465,13 +465,19 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
     const PER_STACK = 10;
     const REVEAL = Math.floor((STACK_HEIGHT - SIZE) / (PER_STACK - 1));
     const stacks = Math.min(COLUMNS_MAX, Math.ceil(points / PER_STACK));
+    // Past thirty the top coin stands down and says so — see `MoreThanFits`.
+    // A coin of picture is nothing to give up on a stack this deep, and what
+    // is bought with it is the difference between a full pile and a full pile
+    // that has stopped counting.
+    const cut = points > COLUMNS_MAX * PER_STACK;
+    const coins = cut ? COLUMNS_MAX * PER_STACK - 1 : points;
 
     return (
       <span className="flex items-start gap-0.5" title={`${label}: ${points}`}>
         {Array.from({ length: stacks }, (_, stack) => (
           <span key={stack} className="flex flex-col items-center">
             {Array.from(
-              { length: Math.min(PER_STACK, points - stack * PER_STACK) },
+              { length: Math.min(PER_STACK, coins - stack * PER_STACK) },
               (_, index) => (
                 <Image
                   key={index}
@@ -484,6 +490,9 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
                   unoptimized
                 />
               ),
+            )}
+            {cut && stack === stacks - 1 && (
+              <MoreThanFits stat={stat} size={SIZE} lift={REVEAL - SIZE} />
             )}
           </span>
         ))}
@@ -518,12 +527,18 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
   // dropped is the tail, and `tokensFor` puts the big denominations first — so
   // a pile too large to draw still shows the part of itself worth looking at.
   const columns = Math.min(COLUMNS_MAX, Math.ceil(tokens.length / PER_COLUMN));
+  // The last square goes to the mark when there is a tail to drop — see
+  // `MoreThanFits`. Fifteen fours is sixty and also nine hundred, and a rail
+  // that looks the same either way is the pile telling a lie the numeral
+  // underneath then quietly corrects.
+  const cut = tokens.length > COLUMNS_MAX * PER_COLUMN;
+  const drawn = cut ? tokens.slice(0, COLUMNS_MAX * PER_COLUMN - 1) : tokens;
 
   return (
     <span className="flex items-start gap-0.5" title={`${label}: ${points}`}>
       {Array.from({ length: columns }, (_, column) => (
         <span key={column} className="flex flex-col items-center gap-0.5">
-          {tokens
+          {drawn
             .slice(column * PER_COLUMN, (column + 1) * PER_COLUMN)
             .map((token, index) => (
               <Image
@@ -539,8 +554,49 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
                 unoptimized
               />
             ))}
+          {cut && column === columns - 1 && <MoreThanFits stat={stat} size={SIZE} />}
         </span>
       ))}
+    </span>
+  );
+}
+
+/**
+ * The last square of a pile that has outgrown its rail.
+ *
+ * Three columns is the ceiling (`COLUMNS_MAX`), and a rail filled to it used to
+ * look exactly like a rail that merely happened to be full: fifteen żetony of
+ * four read as sixty whether the seat had sixty or nine hundred, and the only
+ * thing that knew the difference was the numeral underneath. The picture had
+ * stopped counting without admitting it.
+ *
+ * So the last token stands down and says there is more. One square of picture
+ * is a cheap price at a size where nobody is counting the pile anyway, and
+ * anybody who misses the mark still has the exact figure printed below it.
+ *
+ * Kept from a screen reader: the first token in the pile already announces the
+ * parameter and its value, and this adds nothing a listener does not have.
+ */
+function MoreThanFits({
+  stat,
+  size,
+  /** The overlap a coin in a gold stack sits at, so the mark stacks like one. */
+  lift,
+}: {
+  stat: string;
+  size: number;
+  lift?: number;
+}) {
+  return (
+    <span
+      style={{ width: size, height: size, marginTop: lift }}
+      aria-hidden
+      // Dashed, because everything printed in the box has a solid edge and this
+      // is the one square that is not a żeton. The padding is what lifts the
+      // ellipsis off its baseline into the middle of the square.
+      className={`flex items-center justify-center rounded-[2px] border border-dashed border-current/60 bg-night/70 pb-[4px] text-[13px] leading-none ${STAT_COLOUR[stat]}`}
+    >
+      …
     </span>
   );
 }

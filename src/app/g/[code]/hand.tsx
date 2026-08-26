@@ -78,6 +78,16 @@ export function Hand({
    * matching the pack and is ignored.
    */
   const [wanted, setWanted] = useState<string[] | null>(null);
+  /**
+   * Whether the pack is showing, the way the Zdolności below it fold away.
+   *
+   * Open to begin with, unlike the Zdolności: a pack is the half of a seat card
+   * that changes, and one that started shut would have to be opened before the
+   * card said anything at all. Folding it is for the seats you are not playing,
+   * where four squares of somebody else's luggage is four squares between you
+   * and the next thing you wanted to read.
+   */
+  const [showing, setShowing] = useState(true);
 
   /**
    * The Różdżka Zaklęć's condition, asked of the engine where its button is
@@ -280,16 +290,33 @@ export function Hand({
   if (!isMine && shown.length === 0 && seat.hidden_count === 0) return null;
 
   return (
-    <div className="mt-3 border-t border-edge pt-3">
+    /**
+     * A card in the air holds the pack open whatever the summary was last told,
+     * because a place to put things down that is folded away is not a place to
+     * put things down.
+     *
+     * Which is why `open` is driven from here and the browser's own toggling is
+     * cancelled on the summary: two things setting one attribute agree right up
+     * until they don't, and then the pack is shut with a card in the air and no
+     * click will open it.
+     */
+    <details open={showing || landing} className="mt-3 border-t border-edge pt-3">
       {/* What is in the pack, against what will fit. In the variant a place on
           the body is not the pack, so the number here is the one 5.4 is about —
-          and seeing it beats finding out by being refused. */}
-      <p className="mb-2 text-[11px] uppercase tracking-widest text-muted">
+          and seeing it beats finding out by being refused. Left visible when
+          the pack is folded away: the count is the part worth keeping. */}
+      <summary
+        onClick={(event) => {
+          event.preventDefault();
+          setShowing(!showing);
+        }}
+        className="mb-2 cursor-pointer text-[11px] uppercase tracking-widest text-muted"
+      >
         Plecak{" "}
         <span className={packed >= limit ? "text-vermilion" : "text-muted/70"}>
           {packed} / {Number.isFinite(limit) ? limit : "∞"}
         </span>
-      </p>
+      </summary>
       {/* Cards, as cards. A player at a table recognises their Miecz by its
           picture long before they read the word, and the ability text that used
           to sit under every line now lives one tap away in the detail view. */}
@@ -675,7 +702,7 @@ export function Hand({
           Wymień trofea na punkty Miecza (1.4)
         </button>
       )}
-    </div>
+    </details>
   );
 }
 

@@ -77,6 +77,8 @@ export function SpellHand({
   onInspect: (card: TileCard) => void;
 }) {
   const [aiming, setAiming] = useState<string | null>(null);
+  /** Whether the hand is showing. Before the early return, like every hook. */
+  const [showing, setShowing] = useState(true);
   // An empty hand under the pack is still worth a line, for the same reason an
   // empty pack is drawn: the cap is the thing being said, and "0 / 2" says it.
   // In the fight sheet there is no cap to report and nothing to do, so nothing
@@ -112,20 +114,31 @@ export function SpellHand({
     );
 
   return (
-    <div
+    // Folded away like the pack above it and the Zdolności below. Open to begin
+    // with, because a hand you cannot see is a hand you cannot plan with — but
+    // six Zaklęcia is six squares, and a seat card is read for other things too.
+    //
+    // Controlled outright rather than left to the browser, which is the pack's
+    // arrangement kept for the sake of one behaviour rather than two.
+    <details
+      open={showing}
       className={
         section
           ? "mt-3 border-t border-edge pt-3"
           : "mt-4 rounded-lg border border-magia/30 bg-panel/60 p-3"
       }
     >
-      <h3
-        className={`mb-2 text-[11px] uppercase tracking-widest ${
+      <summary
+        onClick={(event) => {
+          event.preventDefault();
+          setShowing(!showing);
+        }}
+        className={`mb-2 cursor-pointer text-[11px] uppercase tracking-widest ${
           section ? "text-muted" : "text-magia"
         }`}
       >
         {title ?? (section ? "Zaklęcia" : "Twoje Zaklęcia")} {tally}
-      </h3>
+      </summary>
       {blocked && <p className="mb-2 text-[11px] text-muted">{blocked}</p>}
       {/* Face up, because they are yours — 9.3 hides them from everyone else,
           not from you, and a hand you cannot see is a hand you cannot plan
@@ -266,6 +279,6 @@ export function SpellHand({
         Rzucone Zaklęcie znika z ręki i trafia do dziennika — skutek rozpatrzcie sami.
         Podwójne kliknięcie Karty rzuca ją tak samo jak przycisk.
       </p>
-    </div>
+    </details>
   );
 }
