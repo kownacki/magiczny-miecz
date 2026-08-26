@@ -1460,7 +1460,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   a reshuffle will bring back. */}
               {game.deckCounts && (
                 <button
-                  onClick={() => setRightDrawer("stosy")}
+                  onClick={() => setRightDrawer((out) => (out === "stosy" ? null : "stosy"))}
                   title="Zobacz stosy"
                   className="flex items-baseline gap-3 text-[11px] text-muted/70 transition hover:text-ink"
                 >
@@ -1486,13 +1486,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   not about the turn — so it lives up here with the rest of
                   them, and stays reachable while a fight is open. */}
               <button
-                onClick={() => setRightDrawer("gracze")}
+                onClick={() => setRightDrawer((out) => (out === "gracze" ? null : "gracze"))}
                 className="text-ochre/80 transition hover:text-ochre"
               >
                 Gracze <span className="tnum text-muted">{seats.length}</span>
               </button>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
-              <button onClick={() => setLeftDrawer("karty")} className="text-ochre/80 hover:text-ochre">
+              <button
+                onClick={() => setLeftDrawer((out) => (out === "karty" ? null : "karty"))}
+                className="text-ochre/80 hover:text-ochre"
+              >
                 Karty
               </button>
               {/* Loud on purpose while it is on. Everything it unlocks writes a
