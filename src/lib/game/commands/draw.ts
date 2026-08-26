@@ -64,7 +64,7 @@ export interface DrawCard extends FromThePile {
    * The card a player at a physical table named, because the physical deck
    * decided. Null in simulation, where the app owns the pile and draws itself.
    *
-   * This is the `DeckPort` distinction made concrete, and it is the only thing
+   * This is the whole of the distinction between the two modes, and the only thing
    * either branch differs by: both end with a card added to the turn's stack in
    * 15.2 order.
    */

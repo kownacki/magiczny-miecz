@@ -32,6 +32,11 @@ _Avoid_: save, persist, flush
 Somebody else changed the game between reading the **Snapshot** and committing.
 _Avoid_: race, collision, stale write
 
+**Seat view**:
+Everything a rule asks about one character, worked out once from a **Snapshot** —
+totals, limits, abilities, what it is under. Never stored; only own points are.
+_Avoid_: player, profile, stats
+
 **Apply**:
 Folding a **Changeset** into a **Snapshot** in memory, so a later step sees an
 earlier one's work without reading the table again.
@@ -89,8 +94,12 @@ moment, which is the whole reason they are ports.
   in three neighbouring files — resolved: the table is a **Snapshot**,
   `turn_state` keeps its column name and is a `TurnPhase`, and React's is React's.
 - "port" was claimed for `DeckPort`, `ChoicePort` and `EnginePorts`, none of
-  which have a **Binding** or a caller — unresolved: they are interfaces
-  describing a layering the code does not have yet, and either get one or go.
+  which ever had a **Binding** or a caller — resolved: they are gone. The die is
+  the only effect a rule cannot work out for itself. Which card comes up is
+  settled by handing a **Command** the shuffled pile, and a human choice arrives
+  as `Decisions` — a list of numbers the server re-walks the card against, so a
+  card cannot be talked into doing something it does not say. Both are better
+  than the ports they replace, and neither is one.
 - "notice" and "journal line" render the same events and are NOT the same thing
   — resolved: the journal is third-person past and gender-neutral because a
   typed name cannot be declined (`journalText.ts`); the notice is second-person

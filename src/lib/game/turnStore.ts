@@ -332,7 +332,7 @@ export async function moveTo(
  *
  * Companion mode is told which card came up, because the physical deck decided.
  * Simulation mode draws one itself. Both end in the same place — a card added
- * to the turn's stack in rule 15.2 order — which is the DeckPort distinction
+ * to the turn's stack in rule 15.2 order — which is the whole of the distinction
  * made concrete.
  */
 export async function drawCard(
