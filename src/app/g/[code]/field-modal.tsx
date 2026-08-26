@@ -126,7 +126,7 @@ export function FieldModal({
 
   // 12.1 gives the right to take what is lying here to the character whose move
   // ENDS here, and only until the end of that turn.
-  const arrived = phase === "pole";
+  const arrived = phase === "field";
 
   return (
     <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
@@ -248,7 +248,7 @@ export function FieldModal({
               last turn on, and it is spent. `resolveFieldOffer` refuses it
               server-side too; this is so the button is not there to be pressed
               in the first place. */}
-          {standingHere && canAct && onAction && phase === "pole" && (
+          {standingHere && canAct && onAction && phase === "field" && (
             <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
               {/* 11.2's toll, which is a thing this Obszar asks of you and so
                   belongs with the rest of what it asks. */}
@@ -291,7 +291,7 @@ export function FieldModal({
               through more than once, because the Demon does not move and
               neither do you. Both are therefore offered before the roll as
               well as on arrival. */}
-          {standingHere && canAct && onAction && (phase === "pole" || phase === "rzut") && (
+          {standingHere && canAct && onAction && (phase === "field" || phase === "roll") && (
             <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
               {crossingFrom(fieldId) && (
                 <Crossing

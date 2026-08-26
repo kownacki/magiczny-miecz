@@ -59,19 +59,19 @@ describe("when a spell may be spoken", () => {
 
   it("offers the fight window when a fight is what is happening", () => {
     // 17.3 and 17.7: spells go in before the dice.
-    expect(momentOf({ phase: "walka" })).toBe("przed-walka");
-    expect(momentOf({ phase: "rzut" })).toBe("poczatek-tury");
-    expect(momentOf({ phase: "pole" })).toBe("po-ruchu");
+    expect(momentOf({ phase: "fight" })).toBe("przed-walka");
+    expect(momentOf({ phase: "roll" })).toBe("poczatek-tury");
+    expect(momentOf({ phase: "field" })).toBe("po-ruchu");
   });
 
   it("closes 17.3's window once a die has been thrown", () => {
     // Before the dice a fight is "przed walką"; after the first one it is not,
     // and only the spells that act on a roll are left. The phase is the same
     // for both, which is why the moment is more than the phase.
-    expect(momentsOf({ phase: "walka" })).toContain("przed-walka");
-    expect(momentsOf({ phase: "walka" })).not.toContain("w-walce");
-    expect(momentsOf({ phase: "walka", diceRolled: true })).toContain("w-walce");
-    expect(momentsOf({ phase: "walka", diceRolled: true })).not.toContain("przed-walka");
+    expect(momentsOf({ phase: "fight" })).toContain("przed-walka");
+    expect(momentsOf({ phase: "fight" })).not.toContain("w-walce");
+    expect(momentsOf({ phase: "fight", diceRolled: true })).toContain("w-walce");
+    expect(momentsOf({ phase: "fight", diceRolled: true })).not.toContain("przed-walka");
   });
 
   it("reaches every window it names", () => {
@@ -79,13 +79,13 @@ describe("when a spell may be spoken", () => {
     // cast, which is how "w walce", "po karcie", "spotkanie" and "zamiast
     // ruchu" were all unreachable at once.
     const reachable = new Set([
-      ...momentsOf({ phase: "rzut" }),
-      ...momentsOf({ phase: "ruch" }),
-      ...momentsOf({ phase: "pole" }),
-      ...momentsOf({ phase: "pole", cardJustDrawn: true }),
-      ...momentsOf({ phase: "pole", meeting: true }),
-      ...momentsOf({ phase: "walka" }),
-      ...momentsOf({ phase: "walka", diceRolled: true }),
+      ...momentsOf({ phase: "roll" }),
+      ...momentsOf({ phase: "move" }),
+      ...momentsOf({ phase: "field" }),
+      ...momentsOf({ phase: "field", cardJustDrawn: true }),
+      ...momentsOf({ phase: "field", meeting: true }),
+      ...momentsOf({ phase: "fight" }),
+      ...momentsOf({ phase: "fight", diceRolled: true }),
     ]);
     for (const timing of Object.keys(TIMING_LABEL) as SpellTiming[]) {
       expect(reachable.has(timing), timing).toBe(true);
@@ -135,7 +135,7 @@ describe("the two spells the app carries out (9.6)", () => {
  */
 describe("momentsIn", () => {
   const fight = (over: Partial<Fight> = {}): TurnPhase => ({
-    phase: "walka",
+    phase: "fight",
     fight: {
       cardId: "goblin",
       cardName: "GOBLIN",
@@ -153,7 +153,7 @@ describe("momentsIn", () => {
   });
 
   it("opens the pre-move windows before the die is thrown", () => {
-    expect(momentsIn({ phase: "rzut" })).toEqual(
+    expect(momentsIn({ phase: "roll" })).toEqual(
       expect.arrayContaining(["poczatek-tury", "przed-ruchem", "zamiast-ruchu"]),
     );
   });
@@ -172,7 +172,7 @@ describe("momentsIn", () => {
 
   it("notices a Wróg standing on the Obszar", () => {
     const onField = (drawn: { cardId: string; cardClass: string }[]): TurnPhase =>
-      ({ phase: "pole", fieldId: "step-1", from: null, draw: 1, drawn } as unknown as TurnPhase);
+      ({ phase: "field", fieldId: "step-1", from: null, draw: 1, drawn } as unknown as TurnPhase);
 
     expect(momentsIn(onField([{ cardId: "helm", cardClass: "item" }]))).toEqual(
       expect.arrayContaining(["po-ruchu", "po-karcie"]),
@@ -186,7 +186,7 @@ describe("momentsIn", () => {
   });
 
   it("always leaves dowolna-chwila open", () => {
-    for (const state of [{ phase: "rzut" } as TurnPhase, { phase: "koniec" } as TurnPhase]) {
+    for (const state of [{ phase: "roll" } as TurnPhase, { phase: "end" } as TurnPhase]) {
       expect(momentsIn(state)).toContain("dowolna-chwila");
     }
   });

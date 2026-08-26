@@ -40,12 +40,12 @@ export async function fightBeast(
   if (result.outcome === "wygrana") {
     return {
       writes: {
-        game: { status: "finished", turn_state: { phase: "koniec" } },
+        game: { status: "finished", turn_state: { phase: "end" } },
         journal: [
           {
             seatId: seat.id,
             turn: snapshot.game.turn,
-            kind: "zwyciestwo",
+            kind: "victory",
             payload: { kind, beastTotal, rolls: { kindDie, strengthDie, myDie, itsDie } },
           },
         ],
@@ -61,7 +61,7 @@ export async function fightBeast(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "bestia-porazka",
+          kind: "beast-loss",
           payload: { kind, beastTotal },
         },
       ],
@@ -80,7 +80,7 @@ export async function fightBeast(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "bestia-remis",
+          kind: "beast-draw",
           payload: { kind, beastTotal },
         },
       ],

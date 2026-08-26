@@ -92,7 +92,7 @@ export function tradeTrophies(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "wymiana-trofeow",
+          kind: "trophies-traded",
           payload: { points, gained, lost: points - gained * TROPHY_RATE },
         },
       ],
@@ -138,7 +138,7 @@ export function sellHolding(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "sprzedaz",
+          kind: "sold",
           payload: { cardId: held.card_id, price },
         },
       ],
@@ -176,7 +176,7 @@ export function payHealer(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "leczenie",
+          kind: "healing",
           payload: { points: wanted, paid },
         },
       ],
@@ -219,7 +219,7 @@ export function buyGoods(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "kupno",
+          kind: "bought",
           payload: { cardId: command.cardId, price: entry.cena },
         },
       ],

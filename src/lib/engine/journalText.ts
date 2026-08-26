@@ -101,12 +101,12 @@ function characterName(id: unknown): string {
  * rendered; move to a per-kind filter if anyone ever wants the rolls back.
  */
 const UNSPOKEN: ReadonlySet<JournalKind> = new Set<JournalKind>([
-  "rzut",
-  "walka-rzut",
-  "straznik-sila",
-  "karta-tabela",
-  "pole-tabela",
-  "wyposazenie-poczatkowe",
+  "roll",
+  "fight-roll",
+  "guardian-strength",
+  "card-table",
+  "field-table",
+  "starting-kit",
 ]);
 
 function cardName(id: unknown): string {
@@ -281,41 +281,41 @@ export function describe(
       return line(`Gra się zaczyna — ${num(data.seats)} postaci przy stole.`);
 
     // — where people are ————————————————————————————————————————————
-    case "ruch":
+    case "move":
       return line(`${who} idzie z ${field(data.from)} na ${field(data.to)}.`);
     // The same move, but aimed at the Most — 11.9 makes it an attempt that the
     // entrance's guardian can refuse, so it is worth saying differently.
-    case "proba-mostu":
+    case "bridge-attempt":
       return line(`${who} próbuje wejść na Most przez ${field(data.from)}.`);
-    case "przestawienie":
+    case "moved-by-hand":
       return line(
         `${who} — przestawienie na ${field(data.to)}${data.reason ? `, ${data.reason}` : ""}.`,
       );
-    case "przeprawa":
+    case "crossing":
       return line(`${who} przeprawia się przez ${String(data.obstacle ?? "przeszkodę")}.`);
-    case "przeprawa-nieudana":
+    case "crossing-failed":
       return line(`${who} nie daje rady przeprawić się przez ${String(data.obstacle ?? "przeszkodę")}.`);
-    case "przewoznik":
+    case "ferry":
       return line(`${who} płaci Przewoźnikowi ${sztuki(num(data.paid))}.`);
-    case "przewoznik-odmowa":
+    case "ferry-refused":
       return line(`${who} odmawia Przewoźnikowi i zostaje na miejscu.`);
 
     // — the bridge ——————————————————————————————————————————————————
-    case "wejscie-na-most":
+    case "bridge-entry":
       return line(`${who} wchodzi na Kamienny Most.`);
-    case "most-nieudane":
+    case "bridge-failed":
       return line(`${who} nie wchodzi na Most — zatrzymuje go ${String(data.guardian ?? "strażnik")}.`);
     // 14.6's two creatures, which stand in the middle of the bridge rather than
     // at its door. The table saw the fight end and never saw it begin, and the
     // strength is two dice rolled on the spot — so without this the line saying
     // somebody lost to the Monstrum never said what they were losing to.
-    case "straznik-mostu":
+    case "bridge-guardian":
       return line(
         `${who} staje przed: ${String(data.guardian ?? "strażnikiem")} (${num(data.strength)}).`,
       );
-    case "straznik-start":
+    case "guardian-start":
       return line(`${who} staje przed strażnikiem: ${String(data.guardian ?? "?")}.`);
-    case "straznik-koniec":
+    case "guardian-end":
       return line(
         `${who} ${data.outcome === "wygrana" ? "pokonuje" : "przegrywa z"}: ${String(data.guardian ?? "strażnik")}.`,
       );
@@ -324,15 +324,15 @@ export function describe(
     // box cannot be declined. Every other line in this file is built the same
     // way for the same reason — the seat acts, and what acted on it is named
     // after the dash.
-    case "most-cerber":
+    case "bridge-cerberus":
       return line(`${who} traci ${zycie(num(data.loss))} — Cerber.`);
-    case "most-pulapka":
+    case "bridge-trap":
       return line(`${who} wpada w Pułapkę.`);
-    case "most-gra-ze-smiercia":
+    case "bridge-death-game":
       return line(`${who} gra ze Śmiercią — ${String(data.outcome ?? "?")}.`);
 
     // — fighting ————————————————————————————————————————————————————
-    case "walka-start": {
+    case "fight-start": {
       // Usually cards; sometimes a creature a field conjured, which has a name
       // and no card at all — the Karczma's "miejscowy osiłek" is a line on the
       // board with a number after it. Saying "wroga" for those was the journal
@@ -343,7 +343,7 @@ export function describe(
         (typeof data.nazwa === "string" ? data.nazwa : "wroga");
       return line(`${who} walczy z: ${foe} (${num(data.enemyTotal)}).`);
     }
-    case "walka-koniec": {
+    case "fight-end": {
       // 17.5 packs several Wrogowie into one fight and `beginFight` joins their
       // ids with a "+", so the id here is not always an id. Split it, and each
       // of them is a card you can look at — which is the moment you most want
@@ -361,37 +361,37 @@ export function describe(
             : "przegrywa";
       return line(`${who} ${how} walkę z: ${foes || "przeciwnikiem"}.`);
     }
-    case "pojedynek": {
+    case "duel": {
       const target = seats.find((candidate) => candidate.seatIndex === num(data.target, -1));
       return line(`${who} atakuje: ${person(target)}.`);
     }
-    case "ucieczka":
+    case "escape":
       return line(`${who} ucieka z walki.`);
-    case "ucieczka-nieudana":
+    case "escape-failed":
       return line(`${who}: ucieczka się nie udaje.`);
-    case "oslona":
+    case "shielded":
       return line(data.saved ? `${who} osłania się przed ciosem.` : `${who} nie osłania się przed ciosem.`);
 
     // — what people have ————————————————————————————————————————————
-    case "zabranie":
+    case "taken":
       return line(`${who} zdobywa: ${card(data.cardId)}.`);
     // A card handed over by the test shortcut rather than won. Said, and marked
     // manual like every other override: a card that appeared by fiat must not
     // read like one that was earned, and a row nothing can render at all is
     // worse — the grant went in the journal and the journal stayed silent.
-    case "test-karta":
+    case "test-card":
       return line(`${who} bierze z talii: ${card(data.cardId)}.`);
     // Its counterpart: a card put on the board rather than into a hand. Worded
     // like a real `zostawienie`, because what the next visitor finds is exactly
     // that — the manual flag is what says where it came from, and saying it
     // twice would be the only difference the table cannot check.
-    case "test-karta-obszar":
+    case "test-card-field":
       return line(`${who} kładzie na polu ${field(data.fieldId)}: ${card(data.cardId)}.`);
     // Deliberately not worded as an ucieczka. 19.1 is a rule with conditions
     // and this is a switch that ignores them, so the journal keeps the two
     // apart — a test row that read "ucieka z walki" would be the one row you
     // could not trust while testing exactly that.
-    case "test-koniec-walki": {
+    case "test-fight-end": {
       // Not `card()`: a fight's name is a display string, and 17.5 joins a pack
       // into "Cyklop + Smok" while a duel carries the other player's name.
       // Neither is an id, and neither is something to link to.
@@ -404,7 +404,7 @@ export function describe(
     }
     // 16.8: what was not taken stays where it fell, face up. Saying where is the
     // whole point — a card on a field two turns later is otherwise unexplained.
-    case "zostawienie": {
+    case "left-behind": {
       const left = Array.isArray(data.cardIds) ? data.cardIds : [];
       if (left.length === 0) return null;
       return line(
@@ -414,7 +414,7 @@ export function describe(
 
     // A card taking something off you. Distinct from "odrzucenie", which is the
     // holder choosing to put a card down (5.5).
-    case "strata": {
+    case "lost-card": {
       const lost = Array.isArray(data.cardIds) ? data.cardIds : [];
       const gold = num(data.zloto);
       const parts = [
@@ -425,27 +425,27 @@ export function describe(
       return line(`${who} traci: ${parts.join(", ")}.`);
     }
 
-    case "odrzucenie":
+    case "discarded":
       return line(`${who} wyrzuca: ${card(data.cardId)}.`);
 
     // Spending a card by using it. One word for all nine — the cards have their
     // own idioms, but this is one act and the line is read as a list.
-    case "uzycie": {
+    case "used": {
       const face = typeof data.face === "number" ? ` — wypadło ${data.face}` : "";
       return line(`${who} ${USE_VERB_PAST}: ${card(data.cardId)}${face}.`);
     }
-    case "kupno":
+    case "bought":
       return line(`${who} kupuje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);
-    case "sprzedaz":
+    case "sold":
       return line(`${who} sprzedaje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);
-    case "wymiana-trofeow":
+    case "trophies-traded":
       return line(`${who} wymienia trofea — zyskuje ${num(data.gained)} Miecza.`);
-    case "karta":
+    case "card":
       return line(`${who} wyciąga: ${card(data.cardId)}.`);
     // 9.5's reshuffle, which belongs to the table rather than to a player —
     // hence no `who`. It is the one deck event everybody at a physical table
     // notices, and the app used to do it in complete silence.
-    case "przetasowanie":
+    case "reshuffle":
       return line(
         data.pile === "zaklecia"
           ? "Stos Kart Zaklęć się wyczerpał — zużyte Zaklęcia potasowano ponownie (9.5)."
@@ -453,7 +453,7 @@ export function describe(
       );
 
     // — what people are ————————————————————————————————————————————
-    case "korekta": {
+    case "override": {
       const delta = num(data.delta);
       const sign = delta > 0 ? `+${delta}` : String(delta);
       return line(
@@ -464,7 +464,7 @@ export function describe(
     }
     // A card giving or taking points. Distinct from "korekta", which is a person
     // overruling the referee and is drawn as such.
-    case "punkty": {
+    case "points": {
       const delta = num(data.delta);
       if (delta === 0) return null;
       const many = Math.abs(delta);
@@ -482,15 +482,15 @@ export function describe(
       );
     }
 
-    case "uzdrowienie":
+    case "healed":
       return line(`${who} wraca do ${zycie(num(data.to))}.`);
-    case "leczenie":
+    case "healing":
       return line(`${who} leczy ${zycie(num(data.points))} za ${sztuki(num(data.paid))}.`);
     // 7.2 puts a Karta Zmiany Natury next to the character showing the new one,
     // and the old one is what everybody has been playing against all game —
     // whether the Święta Włócznia still works, whether the Czarci Młyn heals or
     // hurts. Saying only the destination loses half the fact.
-    case "zmiana-natury": {
+    case "nature-change": {
       const to = natura(data.to) ?? "?";
       const from = natura(data.from);
       return line(
@@ -501,7 +501,7 @@ export function describe(
     }
     // A card taking a turn away, which is a different event from the seat later
     // sitting out — describeTurnChange says that one, when it happens.
-    case "tura-stracona":
+    case "turn-lost":
       return line(
         `${who} traci ${tury(num(data.turns, 1))}` +
           `${typeof data.reason === "string" && data.reason ? ` — ${data.reason}` : ""}.`,
@@ -510,23 +510,23 @@ export function describe(
     // Something a character is now under, and how long for. Public: 5.2 puts
     // what somebody carries on the table, and what they are under is weighed
     // the same way by anyone deciding whether to attack them.
-    case "efekt": {
+    case "effect": {
       const what = typeof data.label === "string" ? data.label : "efekt";
       const ends = data.ends as Ends | undefined;
       return line(`${who}: ${what}${ends ? ` — ${describeEnd(ends)}` : ""}.`);
     }
 
-    case "kamien":
+    case "stone":
       return line(`${who} zamienia się w Kamień — wraca w turze ${num(data.until)}.`);
-    case "smierc":
+    case "death":
       return line(`${who} ginie na polu ${field(data.field)}.`);
     // Somebody who was not at the table when it started. A different line from
     // "nowa-postac", because arriving is not the same event as coming back
     // from the dead and a table reading its own history should be able to tell
     // which of the two happened.
-    case "dosiadka":
+    case "joined":
       return line(`${who} dosiada się do stołu jako ${characterName(data.characterId)}.`);
-    case "nowa-postac":
+    case "new-character":
       return line(
         `${who} gra dalej jako: ${characterName(data.characterId)}` +
           `${data.losowa === true ? " (wylosowana)" : ""}.`,
@@ -546,7 +546,7 @@ export function describe(
      * Distinguishing on payload shape is thinner than it should be. The real fix
      * is a separate kind for the draw, in turnStore.ts.
      */
-    case "zaklecie": {
+    case "spell": {
       const cast = typeof data.cardId === "string" || typeof data.name === "string";
       if (!cast) return line(`${who} dobiera Zaklęcie.`);
       const named = typeof data.name === "string" ? data.name : card(data.cardId);
@@ -563,11 +563,11 @@ export function describe(
      * "pokonuje Bestię (0)" reads as a Bestia with no strength rather than as a
      * number nobody threw.
      */
-    case "zwyciestwo":
+    case "victory":
       return line(`${who} pokonuje Bestię${strength(data)} i wygrywa grę.`);
-    case "bestia-porazka":
+    case "beast-loss":
       return line(`${who} przegrywa z Bestią${strength(data)}.`);
-    case "bestia-remis":
+    case "beast-draw":
       return line(`${who} remisuje z Bestią${strength(data)}.`);
 
     default:
@@ -591,7 +591,7 @@ export function describeTurnChange(
   entry: JournalEntry,
   seats: readonly JournalSeat[],
 ): JournalLine[] {
-  if (entry.kind !== "koniec-tury") return [];
+  if (entry.kind !== "turn-end") return [];
   const data = entry.payload;
   const seat = seats.find((candidate) => candidate.id === entry.seatId);
   const skipped = Array.isArray(data.skipped) ? data.skipped : [];

@@ -181,7 +181,7 @@ function startingGear(seat: SeatRow): Changeset {
       {
         seatId: seat.id,
         turn: FIRST_TURN,
-        kind: "wyposazenie-poczatkowe",
+        kind: "starting-kit",
         payload: { character: seat.character_id, ...kit },
       },
     ],
@@ -222,7 +222,7 @@ export async function rollForMove(
   ports: CommandPorts,
 ): Promise<Outcome<number>> {
   const seat = activeSeat(snapshot);
-  if (snapshot.game.turn_state.phase !== "rzut") throw new Error("Nie czas na rzut.");
+  if (snapshot.game.turn_state.phase !== "roll") throw new Error("Nie czas na rzut.");
 
   const roll = await ports.random.rollD6("ruch: rzut kostką");
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
@@ -247,7 +247,7 @@ export async function rollForMove(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "rzut",
+          kind: "roll",
           payload: { roll, manual },
           manual,
         },
@@ -284,7 +284,7 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
   const viaBridge = command.viaBridge ?? false;
   const seat = activeSeat(snapshot);
   const phase = snapshot.game.turn_state;
-  if (phase.phase !== "ruch") throw new Error("Nie czas na ruch.");
+  if (phase.phase !== "move") throw new Error("Nie czas na ruch.");
 
   // Only the squares the roll actually reaches are accepted, so a stale page
   // cannot post a destination from a previous roll.
@@ -313,7 +313,7 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: chosen.bridge ? "proba-mostu" : "ruch",
+          kind: chosen.bridge ? "bridge-attempt" : "move",
           payload: {
             from: seat.field_id,
             to: fieldId,

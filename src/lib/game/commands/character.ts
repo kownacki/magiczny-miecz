@@ -110,7 +110,7 @@ export function changeNature(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "zmiana-natury",
+          kind: "nature-change",
           payload: { from: seat.nature, to: command.nature, nowForbidden },
           manual: command.force ?? false,
         },
@@ -153,7 +153,7 @@ export function placeSeat(
    */
   const phase = snapshot.game.turn_state.phase;
   const restage: Changeset =
-    seat.seat_index === snapshot.game.active_seat && phase !== "rzut" && phase !== "koniec"
+    seat.seat_index === snapshot.game.active_seat && phase !== "roll" && phase !== "end"
       ? {
           game: {
             // Freshly arrived: whatever was drawn belonged to the old field,
@@ -161,7 +161,7 @@ export function placeSeat(
             // than the field's printed count, because a figure put here by hand
             // did not walk here, and 15.1 makes drawing a consequence of
             // arriving.
-            turn_state: { phase: "pole", fieldId, from: null, draw: 0, drawn: [], fought: [] },
+            turn_state: { phase: "field", fieldId, from: null, draw: 0, drawn: [], fought: [] },
           },
         }
       : {};
@@ -174,7 +174,7 @@ export function placeSeat(
           {
             seatId: seat.id,
             turn: snapshot.game.turn,
-            kind: "przestawienie",
+            kind: "moved-by-hand",
             payload: { from: seat.field_id, to: fieldId, reason: command.reason },
             manual: true,
           },
@@ -379,7 +379,7 @@ export async function takeNewCharacter(
             {
               seatId: seat.id,
               turn: snapshot.game.turn,
-              kind: "wyposazenie-poczatkowe",
+              kind: "starting-kit",
               payload: { character: character.id, ...kit },
             },
           ],
@@ -398,7 +398,7 @@ export async function takeNewCharacter(
           // A death and a latecomer are not the same event, and the journal
           // says which: one is a Postać starting over, the other somebody
           // joining a table already running.
-          kind: seat.eliminated ? "nowa-postac" : "dosiadka",
+          kind: seat.eliminated ? "new-character" : "joined",
           payload: {
             characterId: character.id,
             // Which card it is, is public either way; that it was drawn rather

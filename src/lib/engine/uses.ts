@@ -78,8 +78,8 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
     rozpatruje: "aplikacja",
     efekt: {
       label: "+2 Miecza",
-      modifier: { kind: "punkty", miecz: 2 },
-      ends: { kind: "tur", turns: 1 },
+      modifier: { kind: "points", miecz: 2 },
+      ends: { kind: "turns", turns: 1 },
     },
   },
   "jablko-natchnienia": {

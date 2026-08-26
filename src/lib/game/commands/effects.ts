@@ -208,7 +208,7 @@ async function walk(
           reason,
           // A card doing what the card says is the opposite of somebody
           // overruling the referee, and the journal draws those differently.
-          record: { kind: "punkty", manual: false },
+          record: { kind: "points", manual: false },
         });
         writes = merge(writes, done.writes);
         each.push(done.result.moved);
@@ -268,7 +268,7 @@ async function walk(
         lines.push({
           seatId: row.id,
           turn: snapshot.game.turn,
-          kind: "tura-stracona",
+          kind: "turn-lost",
           payload: { turns: effect.turns, reason },
         });
         names.push(named(row));
@@ -380,7 +380,7 @@ async function walk(
             {
               seatId: row.id,
               turn: snapshot.game.turn,
-              kind: "strata",
+              kind: "lost-card",
               payload: { co: effect.co, cardIds: lost.map((h) => h.cardId), zloto: gold },
             },
           ],
@@ -513,7 +513,7 @@ function targeted(
 /** Notes a card or an offer as dealt with, so the turn stops asking about it. */
 function markResolved(snapshot: Snapshot, key: string): Changeset {
   const state = snapshot.game.turn_state;
-  if (state.phase !== "pole") return {};
+  if (state.phase !== "field") return {};
   const already = state.resolved ?? [];
   if (already.includes(key)) return {};
   return { game: { turn_state: { ...state, resolved: [...already, key] } } };
@@ -566,7 +566,7 @@ export async function spendHolding(
         {
           seatId,
           turn: snapshot.game.turn,
-          kind: "uzycie",
+          kind: "used",
           payload: { cardId, ...(face !== undefined ? { face } : {}) },
         },
       ],
@@ -634,7 +634,7 @@ export async function resolveFieldOffer(
 ): Promise<Outcome<{ offer: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
   if (!seat.field_id) throw new Error("Postać nie stoi na Obszarze.");
-  if (snapshot.game.turn_state.phase !== "pole") {
+  if (snapshot.game.turn_state.phase !== "field") {
     throw new Error("To rozpatruje się po wejściu na Obszar.");
   }
 
@@ -651,7 +651,7 @@ export async function resolveFieldOffer(
             {
               seatId: seat.id,
               turn: snapshot.game.turn,
-              kind: "pole-tabela",
+              kind: "field-table",
               payload: { offer: offer.name, face },
               manual: command.manual ?? false,
             },
@@ -696,7 +696,7 @@ export async function resolveDrawnCard(
 ): Promise<Outcome<{ card: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
   const state = snapshot.game.turn_state;
-  if (state.phase !== "pole") throw new Error("Nie ma czego rozpatrywać.");
+  if (state.phase !== "field") throw new Error("Nie ma czego rozpatrywać.");
   if (!state.drawn.some((entry) => entry.cardId === command.cardId)) {
     throw new Error("Tej Karty tu nie ma.");
   }
@@ -713,7 +713,7 @@ export async function resolveDrawnCard(
             {
               seatId: seat.id,
               turn: snapshot.game.turn,
-              kind: "karta-tabela",
+              kind: "card-table",
               payload: { cardId: command.cardId, face },
               manual: command.manual ?? false,
             },

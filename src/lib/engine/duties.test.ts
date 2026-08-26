@@ -4,7 +4,7 @@ import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "./duties";
 describe("duties before ending a turn", () => {
   it("owes the Bestia fight while standing in the Zamek", () => {
     const duties = dutiesBeforeEnding({ fieldId: "zamek-bestii", done: [] });
-    expect(duties.map((duty) => duty.kind)).toEqual(["bestia"]);
+    expect(duties.map((duty) => duty.kind)).toEqual(["beast"]);
     expect(mayEndTurn({ fieldId: "zamek-bestii", done: [] })).toBe(false);
   });
 
@@ -12,7 +12,7 @@ describe("duties before ending a turn", () => {
     // Compulsory, not repeatable: 14.7 is satisfied by fighting, whatever the
     // result. A loss costs two Życia and puts the character off the Most, and
     // that still counts as having fought.
-    expect(mayEndTurn({ fieldId: "zamek-bestii", done: ["bestia"] })).toBe(true);
+    expect(mayEndTurn({ fieldId: "zamek-bestii", done: ["beast"] })).toBe(true);
   });
 
   it("owes nothing anywhere else on the Most", () => {
@@ -51,22 +51,22 @@ describe("the move, which is not optional (10.1-10.2)", () => {
   it("will not let a turn end before it has moved", () => {
     // 10.1 makes a turn "a) ruch b) spotkania", and 10.2 gives no clause
     // turning a roll of 3 into a move of 0. The only choice is direction.
-    expect(mayEndTurn({ fieldId: "karczma", done: [], phase: "rzut" })).toBe(false);
-    expect(whyCannotEnd(dutiesBeforeEnding({ fieldId: "karczma", done: [], phase: "rzut" })))
+    expect(mayEndTurn({ fieldId: "karczma", done: [], phase: "roll" })).toBe(false);
+    expect(whyCannotEnd(dutiesBeforeEnding({ fieldId: "karczma", done: [], phase: "roll" })))
       .toContain("10.1");
   });
 
   it("lets it end once the character has arrived somewhere", () => {
-    expect(mayEndTurn({ fieldId: "karczma", done: [], phase: "pole" })).toBe(true);
+    expect(mayEndTurn({ fieldId: "karczma", done: [], phase: "field" })).toBe(true);
   });
 
   it("asks nothing of the Kamienny Most, which has no roll (10.3)", () => {
-    expect(mayEndTurn({ fieldId: "pulapka", done: [], phase: "most" })).toBe(true);
+    expect(mayEndTurn({ fieldId: "pulapka", done: [], phase: "bridge" })).toBe(true);
   });
 
   it("takes a move that happened another way as done", () => {
     // 10.2 allows for it: "Pewne specjalne zdolności i Zaklęcia umożliwiają
     // wykonywanie ruchu w inny sposób."
-    expect(mayEndTurn({ fieldId: "karczma", done: ["ruch"], phase: "rzut" })).toBe(true);
+    expect(mayEndTurn({ fieldId: "karczma", done: ["move"], phase: "roll" })).toBe(true);
   });
 });

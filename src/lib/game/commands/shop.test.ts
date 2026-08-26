@@ -76,7 +76,7 @@ describe("trading trophies (1.4)", () => {
     expect(result).toBe(Math.floor(worth / TROPHY_RATE));
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { miecz_own: 2 + result } }]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "wymiana-trofeow",
+      kind: "trophies-traded",
       payload: { points: worth, gained: result, lost: worth - result * TROPHY_RATE },
     });
   });
@@ -117,7 +117,7 @@ describe("selling to the Lichwiarz (21.2)", () => {
     expect(writes.holdings?.delete).toEqual(["h1"]);
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { zloto: 2 } }]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "sprzedaz",
+      kind: "sold",
       payload: { cardId: "helm", price: 1 },
     });
   });
@@ -249,6 +249,6 @@ describe("buying from a shelf (21.1)", () => {
 
     expect(writes.holdings?.insert?.[0]).toMatchObject({ seat_id: "seat-a", card_id: cardId });
     expect(writes.seats).toContainEqual({ id: "seat-a", patch: { zloto: 9 - first.cena } });
-    expect(writes.journal?.map((line) => line.kind)).toContain("kupno");
+    expect(writes.journal?.map((line) => line.kind)).toContain("bought");
   });
 });

@@ -20,8 +20,8 @@ function status(over: Partial<Status> = {}): Status {
     id: "a",
     source: "eliksir-sily",
     label: "+2 Miecza",
-    modifier: { kind: "punkty", miecz: 2 },
-    ends: { kind: "tur", turns: 1 },
+    modifier: { kind: "points", miecz: 2 },
+    ends: { kind: "turns", turns: 1 },
     ...over,
   };
 }
@@ -34,14 +34,14 @@ describe("what a character is under", () => {
     // at read time. A buff that wrote itself into miecz_own would outlive its
     // own expiry, because 1.3 forbids pushing own points back down.
     const under = [
-      status({ modifier: { kind: "punkty", miecz: 2 } }),
-      status({ id: "b", modifier: { kind: "punkty", miecz: 1, magia: 3 } }),
+      status({ modifier: { kind: "points", miecz: 2 } }),
+      status({ id: "b", modifier: { kind: "points", miecz: 1, magia: 3 } }),
     ];
     expect(bonusFrom(under)).toEqual({ miecz: 3, magia: 3 });
   });
 
   it("counts nothing when nothing gives points", () => {
-    expect(bonusFrom([status({ modifier: { kind: "bez-ruchu" } })])).toEqual({
+    expect(bonusFrom([status({ modifier: { kind: "frozen" } })])).toEqual({
       miecz: 0,
       magia: 0,
     });
@@ -51,20 +51,20 @@ describe("what a character is under", () => {
     // Mgła caps at one Obszar; Południca does too. Two caps do not add up, and
     // the stricter of them is the one being obeyed.
     const under = [
-      status({ modifier: { kind: "ruch-max", pola: 2 } }),
-      status({ id: "b", modifier: { kind: "ruch-max", pola: 1 } }),
+      status({ modifier: { kind: "move-max", pola: 2 } }),
+      status({ id: "b", modifier: { kind: "move-max", pola: 1 } }),
     ];
     expect(movementCap(under)).toBe(1);
     expect(movementCap([])).toBeNull();
   });
 
   it("knows when the holder cannot act at all", () => {
-    expect(frozen([status({ modifier: { kind: "bez-ruchu" } })])).toBe(true);
+    expect(frozen([status({ modifier: { kind: "frozen" } })])).toBe(true);
     expect(frozen([status()])).toBe(false);
   });
 
   it("reports a Natura being forced", () => {
-    expect(forcedNature([status({ modifier: { kind: "natura", na: "zla" } })])).toBe("zla");
+    expect(forcedNature([status({ modifier: { kind: "nature", na: "zla" } })])).toBe("zla");
     expect(forcedNature([status()])).toBeNull();
   });
 });
@@ -73,40 +73,40 @@ describe("what makes an effect stop", () => {
   it("counts down the holder's own turns, not the table's rounds", () => {
     // "Na 1 turę" on a card means one of yours. Measured in rounds it would
     // last longer at a table of six than at a table of two, which no card says.
-    const three = [status({ ends: { kind: "tur", turns: 3 } })];
+    const three = [status({ ends: { kind: "turns", turns: 3 } })];
     const two = afterTurn(three);
-    expect(two[0].ends).toEqual({ kind: "tur", turns: 2 });
+    expect(two[0].ends).toEqual({ kind: "turns", turns: 2 });
     expect(ids(afterTurn(afterTurn(two)))).toEqual([]);
   });
 
   it("leaves everything that is not counting turns alone", () => {
     const under = [
-      status({ id: "walka", ends: { kind: "walka" } }),
-      status({ id: "fatum", ends: { kind: "rozproszone" } }),
+      status({ id: "walka", ends: { kind: "fight" } }),
+      status({ id: "fatum", ends: { kind: "dispelled" } }),
     ];
     expect(ids(afterTurn(under))).toEqual(["walka", "fatum"]);
   });
 
   it("ends a one-fight effect however the fight ended", () => {
     // 17.4 ends a fight the moment the dice are compared — win, lose or draw.
-    const under = [status({ id: "magia-i-miecz", ends: { kind: "walka" } }), status({ id: "b" })];
+    const under = [status({ id: "magia-i-miecz", ends: { kind: "fight" } }), status({ id: "b" })];
     expect(ids(afterFight(under))).toEqual(["b"]);
   });
 
   it("ends an effect on the event it was waiting for, and no other", () => {
     const under = [
-      status({ id: "poludnica", ends: { kind: "zdarzenie", co: "przeprawa" } }),
-      status({ id: "most", ends: { kind: "zdarzenie", co: "wejscie-na-most" } }),
+      status({ id: "poludnica", ends: { kind: "event", co: "crossing" } }),
+      status({ id: "most", ends: { kind: "event", co: "bridge-entry" } }),
     ];
-    expect(ids(afterEvent(under, "przeprawa"))).toEqual(["most"]);
-    expect(ids(afterEvent(under, "smierc"))).toEqual(["poludnica", "most"]);
+    expect(ids(afterEvent(under, "crossing"))).toEqual(["most"]);
+    expect(ids(afterEvent(under, "death"))).toEqual(["poludnica", "most"]);
   });
 
   it("dispels only what was waiting to be dispelled", () => {
     // A countdown is not cancelled by being argued with.
     const under = [
-      status({ id: "fatum", ends: { kind: "rozproszone" } }),
-      status({ id: "eliksir", ends: { kind: "tur", turns: 1 } }),
+      status({ id: "fatum", ends: { kind: "dispelled" } }),
+      status({ id: "eliksir", ends: { kind: "turns", turns: 1 } }),
     ];
     expect(ids(dispel(under))).toEqual(["eliksir"]);
   });
@@ -114,21 +114,21 @@ describe("what makes an effect stop", () => {
 
 describe("telling the player how long", () => {
   it("says what it is waiting for, in every case", () => {
-    expect(describeEnd({ kind: "tur", turns: 1 })).toBe("do końca tej tury");
-    expect(describeEnd({ kind: "tur", turns: 3 })).toContain("3");
-    expect(describeEnd({ kind: "walka" })).toBe("do końca walki");
-    expect(describeEnd({ kind: "zdarzenie", co: "przeprawa" })).toContain("Trzęsawiska");
-    expect(describeEnd({ kind: "rozproszone" })).toContain("zdejmie");
+    expect(describeEnd({ kind: "turns", turns: 1 })).toBe("do końca tej tury");
+    expect(describeEnd({ kind: "turns", turns: 3 })).toContain("3");
+    expect(describeEnd({ kind: "fight" })).toBe("do końca walki");
+    expect(describeEnd({ kind: "event", co: "crossing" })).toContain("Trzęsawiska");
+    expect(describeEnd({ kind: "dispelled" })).toContain("zdejmie");
   });
 
   it("never leaves a player without an answer", () => {
     // The point of a closed list of endings: every one of them can be said.
     const all = [
-      { kind: "tur", turns: 2 },
-      { kind: "walka" },
-      { kind: "zdarzenie", co: "wejscie-na-most" },
-      { kind: "zdarzenie", co: "smierc" },
-      { kind: "rozproszone" },
+      { kind: "turns", turns: 2 },
+      { kind: "fight" },
+      { kind: "event", co: "bridge-entry" },
+      { kind: "event", co: "death" },
+      { kind: "dispelled" },
     ] as const;
     for (const ends of all) expect(describeEnd(ends).length).toBeGreaterThan(0);
   });
@@ -149,7 +149,7 @@ describe("the four ad-hoc columns, read as effects", () => {
   it("counts a lost turn, and leaves the number to the duration", () => {
     expect(fromColumns({ ...none, turnsLost: 2 }, 5)[0]).toMatchObject({
       label: "Traci turę",
-      ends: { kind: "tur", turns: 2 },
+      ends: { kind: "turns", turns: 2 },
     });
   });
 
@@ -157,7 +157,7 @@ describe("the four ad-hoc columns, read as effects", () => {
     // The column holds a turn number, not a countdown, so the remaining turns
     // are the difference — and it says nothing once that turn has arrived.
     expect(fromColumns({ ...none, stoneUntilTurn: 8 }, 5)[0].ends).toEqual({
-      kind: "tur",
+      kind: "turns",
       turns: 3,
     });
     expect(fromColumns({ ...none, stoneUntilTurn: 5 }, 5)).toEqual([]);
@@ -166,7 +166,7 @@ describe("the four ad-hoc columns, read as effects", () => {
   it("shows the Most being barred without calling it a freeze (11.11)", () => {
     // A character barred from the bridge walks normally everywhere else.
     const [barred] = fromColumns({ ...none, bridgeBlockedUntilTurn: 6 }, 5);
-    expect(barred.modifier).toEqual({ kind: "wzbroniony", place: "most" });
+    expect(barred.modifier).toEqual({ kind: "barred", place: "most" });
     expect(frozen([barred])).toBe(false);
   });
 
@@ -184,12 +184,12 @@ describe("the four ad-hoc columns, read as effects", () => {
 
 describe("what a player sees on a name", () => {
   it("marks a bonus up and a penalty down", () => {
-    expect(markOf(status({ modifier: { kind: "punkty", miecz: 2 } })).tone).toBe("dobry");
-    expect(markOf(status({ modifier: { kind: "punkty", miecz: -2 } })).tone).toBe("zly");
+    expect(markOf(status({ modifier: { kind: "points", miecz: 2 } })).tone).toBe("dobry");
+    expect(markOf(status({ modifier: { kind: "points", miecz: -2 } })).tone).toBe("zly");
   });
 
   it("says the whole thing, and how long, in the hover", () => {
-    const mark = markOf(status({ label: "+2 Miecza", ends: { kind: "tur", turns: 1 } }));
+    const mark = markOf(status({ label: "+2 Miecza", ends: { kind: "turns", turns: 1 } }));
     expect(mark.title).toBe("+2 Miecza — do końca tej tury");
   });
 
@@ -197,12 +197,12 @@ describe("what a player sees on a name", () => {
     // A closed union with a mark each: a new kind that forgets one is a
     // compile error, not a blank space on somebody's name.
     const all: Status["modifier"][] = [
-      { kind: "punkty", miecz: 1 },
-      { kind: "ruch-max", pola: 1 },
-      { kind: "bez-ruchu" },
-      { kind: "natura", na: "zla" },
-      { kind: "wzbroniony", place: "most" },
-      { kind: "adnotacja" },
+      { kind: "points", miecz: 1 },
+      { kind: "move-max", pola: 1 },
+      { kind: "frozen" },
+      { kind: "nature", na: "zla" },
+      { kind: "barred", place: "most" },
+      { kind: "note" },
     ];
     for (const modifier of all) {
       expect(markOf(status({ modifier })).glyph.length).toBeGreaterThan(0);

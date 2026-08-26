@@ -91,7 +91,7 @@ export interface Drawn {
  */
 export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> {
   const seat = activeSeat(snapshot);
-  if (snapshot.game.turn_state.phase !== "pole") {
+  if (snapshot.game.turn_state.phase !== "field") {
     throw new Error("Nie czas na ciągnięcie kart.");
   }
 
@@ -105,7 +105,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
           {
             seatId: seat.id,
             turn: snapshot.game.turn,
-            kind: "karta",
+            kind: "card",
             payload: { ...named, source: "fizyczna" },
           },
         ],
@@ -132,7 +132,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
         // zostanie wyczerpany, tasuje się Karty ... już użyte i korzysta z nich
         // ponownie." At a table that is the loudest thing that happens all
         // evening, and it used to happen in silence.
-        { seatId: null, turn: snapshot.game.turn, kind: "przetasowanie", payload: { pile: "zdarzenia" } },
+        { seatId: null, turn: snapshot.game.turn, kind: "reshuffle", payload: { pile: "zdarzenia" } },
       ]
     : [];
 
@@ -151,7 +151,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "karta",
+          kind: "card",
           payload: { cardId: card.id, ref: drawn[0], source: "talia", recycled },
         },
       ],
@@ -216,7 +216,7 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
     ? [
         // 9.5 in as many words: "Jeśli stos zostanie wyczerpany, tasuje się
         // Karty Zaklęć już użyte i korzysta z nich ponownie."
-        { seatId: null, turn: snapshot.game.turn, kind: "przetasowanie", payload: { pile: "zaklecia" } },
+        { seatId: null, turn: snapshot.game.turn, kind: "reshuffle", payload: { pile: "zaklecia" } },
       ]
     : [];
 
@@ -236,7 +236,7 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
       },
       journal: [
         ...recycledLine,
-        { seatId: seat.id, turn: snapshot.game.turn, kind: "zaklecie", payload: { spellId: spell.id } },
+        { seatId: seat.id, turn: snapshot.game.turn, kind: "spell", payload: { spellId: spell.id } },
       ],
     },
     result: spell.id,

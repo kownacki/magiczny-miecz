@@ -17,7 +17,7 @@ describe("what a player is interrupted for", () => {
 
   it("announces a lost turn, and quotes the rule that ends it (16.1)", () => {
     const said = announce(calm, { ...calm, turnsLost: 1 });
-    expect(said?.kind).toBe("tura-stracona");
+    expect(said?.kind).toBe("turn-lost");
     expect(said?.body).toContain("16.1");
   });
 
@@ -32,7 +32,7 @@ describe("what a player is interrupted for", () => {
 
   it("announces Kamień, which from outside looks the same as being skipped", () => {
     const said = announce(calm, { ...calm, stoneUntilTurn: 9 });
-    expect(said?.kind).toBe("kamien");
+    expect(said?.kind).toBe("stone");
     expect(said?.body).toContain("20.5");
   });
 
@@ -44,7 +44,7 @@ describe("what a player is interrupted for", () => {
   it("puts death above everything else it could say", () => {
     // A dead character is not also losing a turn in any sense worth saying.
     const said = announce(calm, { turnsLost: 3, stoneUntilTurn: 9, eliminated: true });
-    expect(said?.kind).toBe("smierc");
+    expect(said?.kind).toBe("death");
   });
 
   it("does not announce a death twice", () => {

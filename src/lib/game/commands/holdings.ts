@@ -67,7 +67,7 @@ function forbiddenFor(card: EventCard): ("dobra" | "zla" | "chaotyczna")[] | und
  */
 function liftOffField(snapshot: Snapshot, cardId: string): Changeset {
   const state = snapshot.game.turn_state;
-  if (state.phase !== "pole") return {};
+  if (state.phase !== "field") return {};
   const at = state.drawn.findIndex((entry) => entry.cardId === cardId);
   if (at === -1) return {};
   return {
@@ -163,7 +163,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
           {
             seatId,
             turn: snapshot.game.turn,
-            kind: "zabranie",
+            kind: "taken",
             payload: { cardId, kind: "gold" },
           },
         ],
@@ -192,7 +192,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   // "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec" —
   // the loot waits until the fight is settled.
   const state = snapshot.game.turn_state;
-  if (state.phase === "pole") {
+  if (state.phase === "field") {
     const settled = state.fought ?? [];
     const standing = state.drawn.find((entry) => {
       const foe = EVENTS.find((c) => c.id === entry.cardId);
@@ -266,7 +266,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   return {
     writes: mergeAll(discarded, kept, lifted, {
       journal: [
-        { seatId, turn: snapshot.game.turn, kind: "zabranie", payload: { cardId, kind } },
+        { seatId, turn: snapshot.game.turn, kind: "taken", payload: { cardId, kind } },
       ],
     }),
     result: { kind, resolve: null },
@@ -351,7 +351,7 @@ export function dropCard(
         {
           seatId: held?.seat_id ?? null,
           turn: snapshot.game.turn,
-          kind: "odrzucenie",
+          kind: "discarded",
           payload: {
             cardId: held?.card_id,
             kind: held?.kind,
@@ -536,7 +536,7 @@ export function takeFromField(
    * them, and they wait "na Postać, która zakończy tutaj ruch".
    */
   const state = snapshot.game.turn_state;
-  if (state.phase !== "pole") {
+  if (state.phase !== "field") {
     throw new Error("Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).");
   }
 
@@ -613,7 +613,7 @@ export function placeCard(
         {
           seatId: command.seatId,
           turn: snapshot.game.turn,
-          kind: "test-karta-obszar",
+          kind: "test-card-field",
           payload: { cardId: command.cardId, fieldId },
           manual: true,
         },
@@ -658,7 +658,7 @@ export function grantCard(
         {
           seatId,
           turn: snapshot.game.turn,
-          kind: "test-karta",
+          kind: "test-card",
           payload: { cardId, kind },
           manual: true,
         },

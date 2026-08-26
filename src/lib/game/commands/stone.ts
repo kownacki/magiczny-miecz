@@ -59,7 +59,7 @@ export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Ch
       {
         seatId: seat.id,
         turn: snapshot.game.turn,
-        kind: "kamien",
+        kind: "stone",
         payload: {
           until,
           left: dropped.length,

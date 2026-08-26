@@ -46,8 +46,8 @@ const never: Shuffle = () => {
 
 const HERE = asFieldId("mroczna-polana")!;
 
-const onField = (over: Partial<Extract<TurnPhase, { phase: "pole" }>> = {}): TurnPhase => ({
-  phase: "pole",
+const onField = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnPhase => ({
+  phase: "field",
   fieldId: HERE,
   from: null,
   draw: 1,
@@ -76,7 +76,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
 
   it("refuses before the move has finished on an Obszar", () => {
     expect(() =>
-      drawCard(table({ game: { turn_state: { phase: "rzut" } } }), {
+      drawCard(table({ game: { turn_state: { phase: "roll" } } }), {
         named: null,
         shuffle: never,
       }),
@@ -94,7 +94,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
   it("puts the card into the turn with the slice it came off", () => {
     const { writes } = drawCard(table(), { named: null, shuffle: never });
     expect(writes.game?.turn_state).toMatchObject({
-      phase: "pole",
+      phase: "field",
       drawn: [{ cardId: "cyklop", cardClass: "foe", ref: eventRef("cyklop") }],
     });
   });
@@ -105,7 +105,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
       {
         seatId: "seat-a",
         turn: 3,
-        kind: "karta",
+        kind: "card",
         payload: {
           cardId: "cyklop",
           ref: eventRef("cyklop"),
@@ -135,7 +135,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
     });
     const { writes } = drawCard(holding, { named: null, shuffle: never });
     expect(
-      (writes.game?.turn_state as Extract<TurnPhase, { phase: "pole" }>).drawn.map(
+      (writes.game?.turn_state as Extract<TurnPhase, { phase: "field" }>).drawn.map(
         (card) => card.cardId,
       ),
     ).toEqual(["cyklop", "helm"]);
@@ -156,11 +156,11 @@ describe("ciągnięcie Karty Zdarzeń", () => {
     expect(result.card?.id).toBe("cyklop");
     expect(result.recycled).toBe(true);
     expect(deckAfter(writes).events).toEqual({ draw: [eventRef("helm")], discard: [] });
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["przetasowanie", "karta"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["reshuffle", "card"]);
     expect(writes.journal?.[0]).toEqual({
       seatId: null,
       turn: 3,
-      kind: "przetasowanie",
+      kind: "reshuffle",
       payload: { pile: "zdarzenia" },
     });
     expect(writes.journal?.[1]).toMatchObject({ payload: { recycled: true } });
@@ -201,7 +201,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
       expect(writes.journal?.[0]).toEqual({
         seatId: "seat-a",
         turn: 3,
-        kind: "karta",
+        kind: "card",
         payload: { cardId: "cyklop", cardClass: "foe", source: "fizyczna" },
       });
     });
@@ -276,7 +276,7 @@ describe("rozdanie Zaklęcia", () => {
     ]);
     expect(deckAfter(writes).spells).toEqual({ draw: [], discard: [] });
     expect(writes.journal).toEqual([
-      { seatId: "seat-a", turn: 3, kind: "zaklecie", payload: { spellId: "krag-plomieni" } },
+      { seatId: "seat-a", turn: 3, kind: "spell", payload: { spellId: "krag-plomieni" } },
     ]);
   });
 
@@ -293,11 +293,11 @@ describe("rozdanie Zaklęcia", () => {
     const { writes, result } = drawSpell(dry, { seatId: "seat-a", shuffle: reversed });
 
     expect(result).toBe("krag-plomieni");
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["przetasowanie", "zaklecie"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["reshuffle", "spell"]);
     expect(writes.journal?.[0]).toEqual({
       seatId: null,
       turn: 3,
-      kind: "przetasowanie",
+      kind: "reshuffle",
       payload: { pile: "zaklecia" },
     });
     expect(deckAfter(writes).spells).toEqual({

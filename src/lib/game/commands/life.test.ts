@@ -8,7 +8,7 @@ describe("uzdrowienie (4.7)", () => {
     const { writes, result } = healSeat(table, { seatId: "seat-a" });
     expect(result).toBe(3);
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { zycie: 3 } }]);
-    expect(writes.journal?.[0]).toMatchObject({ kind: "uzdrowienie", payload: { from: 2, to: 3 } });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "healed", payload: { from: 2, to: 3 } });
   });
 
   it("refuses rather than charging for nothing at the ceiling", () => {
@@ -42,7 +42,7 @@ describe("spending Życie", () => {
       seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
     });
     const { writes } = spendLife(table, "seat-a", 4);
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["smierc", "koniec-tury"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["death", "turn-end"]);
   });
 });
 
@@ -74,7 +74,7 @@ describe("śmierć (4.4)", () => {
     const writes = killSeat(table(), "seat-a");
     expect(writes.seats).toContainEqual({ id: "seat-a", patch: { eliminated: true } });
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "smierc",
+      kind: "death",
       payload: { droppedOnField: ["helm", "wilk"], spellsDiscarded: 1, field: "mroczna-polana" },
     });
   });
@@ -94,12 +94,12 @@ describe("śmierć (4.4)", () => {
     });
     const writes = killSeat(dying, "seat-b");
     expect(writes.game?.active_seat).toBe(0);
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["smierc", "koniec-tury"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["death", "turn-end"]);
   });
 
   it("does not touch the turn when it was somebody else's", () => {
     const writes = killSeat(table(), "seat-b");
     expect(writes.game?.active_seat).toBeUndefined();
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["smierc"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["death"]);
   });
 });

@@ -115,7 +115,7 @@ export function leaveCardsBehind(
       {
         seatId: input.seatId,
         turn: input.turn,
-        kind: "zostawienie",
+        kind: "left-behind",
         payload: { fieldId: input.fieldId, cardIds: stays.map((card) => card.cardId) },
       },
     ],
@@ -136,7 +136,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
   const expired = seat ? tickEffects(snapshot, seat.id) : {};
 
   const left =
-    game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0
+    game.turn_state.phase === "field" && game.turn_state.drawn.length > 0
       ? leaveCardsBehind(apply(snapshot, expired), {
           fieldId: game.turn_state.fieldId,
           remaining: game.turn_state.drawn,
@@ -236,7 +236,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
       {
         seatId: seat?.id ?? null,
         turn: game.turn,
-        kind: "koniec-tury",
+        kind: "turn-end",
         payload: {
           next,
           skipped,
@@ -269,7 +269,7 @@ export function addEffect(
       {
         seatId: command.seatId,
         turn: snapshot.game.turn,
-        kind: "efekt",
+        kind: "effect",
         payload: { source, label, ends },
       },
     ],

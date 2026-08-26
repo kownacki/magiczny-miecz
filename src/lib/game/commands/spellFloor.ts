@@ -36,7 +36,7 @@ export function claimFloor(
   ports: CommandPorts,
 ): Outcome<void> {
   const state = snapshot.game.turn_state;
-  if (state.phase !== "walka") throw new Error("Nie ma walki.");
+  if (state.phase !== "fight") throw new Error("Nie ma walki.");
 
   const seat = seatById(snapshot, command.seatId);
   if (seat.eliminated) throw new Error("Zmarła Postać nie rzuca Zaklęć (4.4).");
@@ -84,7 +84,7 @@ export function releaseFloor(
 ): Outcome<void> {
   const state = snapshot.game.turn_state;
   const nothing: Changeset = {};
-  if (state.phase !== "walka") return { writes: nothing, result: undefined };
+  if (state.phase !== "fight") return { writes: nothing, result: undefined };
 
   const seat = seatById(snapshot, command.seatId);
   const held = floorOf(state.fight, ports.now());

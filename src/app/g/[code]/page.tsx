@@ -902,7 +902,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // Only the "pole" phase has a stack of drawn cards. Narrowed once here for
   // the controls further down that ask how much of the draw is left; what the
   // turn is *offering* is `factsIn`'s reading, not this one.
-  const onField = turnState.phase === "pole" ? turnState : null;
+  const onField = turnState.phase === "field" ? turnState : null;
 
   const overlays = (
     <>
@@ -924,7 +924,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         announcement={announcement}
         onDismiss={() => setAnnouncement(null)}
       >
-        {announcement?.kind === "smierc" && (
+        {announcement?.kind === "death" && (
           <button
             onClick={() => {
               setAnnouncement(null);
@@ -971,10 +971,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {/* The card you just turned over, at a size you can read, with exactly
           the things this card lets you do under it. */}
       {active &&
-        (game.turn_state.phase === "walka" ||
-          game.turn_state.phase === "ruch" ||
-          game.turn_state.phase === "most" ||
-          (game.turn_state.phase === "pole" &&
+        (game.turn_state.phase === "fight" ||
+          game.turn_state.phase === "move" ||
+          game.turn_state.phase === "bridge" ||
+          (game.turn_state.phase === "field" &&
             (game.turn_state.drawn.length > 0 ||
               // A field nobody may walk past opens it too, even with nothing
               // drawn: the Karczma happens to you the moment you arrive.
@@ -989,25 +989,25 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             minimized={folded}
             onMinimize={() => setFolded(true)}
             onRestore={() => setFolded(false)}
-            cards={game.turn_state.phase === "pole" ? game.turn_state.drawn : []}
+            cards={game.turn_state.phase === "field" ? game.turn_state.drawn : []}
             resolved={
-              game.turn_state.phase === "pole"
+              game.turn_state.phase === "field"
                 ? [...(game.turn_state.resolved ?? []), ...waved]
                 : []
             }
-            fought={game.turn_state.phase === "pole" ? (game.turn_state.fought ?? []) : []}
-            fight={game.turn_state.phase === "walka" ? game.turn_state.fight : null}
+            fought={game.turn_state.phase === "field" ? (game.turn_state.fought ?? []) : []}
+            fight={game.turn_state.phase === "fight" ? game.turn_state.fight : null}
             // The direction choice, which used to be a panel of its own below
             // the queue. It is the same shape as everything else in here: one
             // thing you are asked to do, with the table watching.
             move={
-              game.turn_state.phase === "ruch"
+              game.turn_state.phase === "move"
                 ? { roll: game.turn_state.roll, options: game.turn_state.options }
                 : null
             }
-            bridge={game.turn_state.phase === "most" ? game.turn_state.bridge : null}
+            bridge={game.turn_state.phase === "bridge" ? game.turn_state.bridge : null}
             fieldOffer={
-              game.turn_state.phase === "pole" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
+              game.turn_state.phase === "field" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
             }
             simulated={game.mode === "simulation"}
             /**
@@ -1034,7 +1034,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
             }))}
             floor={
-              game.turn_state.phase === "walka"
+              game.turn_state.phase === "fight"
                 ? (game.turn_state.fight.caster ?? null)
                 : null
             }
@@ -1070,7 +1070,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                shared screen keeps it too, since in companion mode it is the
                device the whole table is pressing. */
             myEscape={
-              game.turn_state.phase === "walka" &&
+              game.turn_state.phase === "fight" &&
               game.turn_state.fight.opponentSeat !== undefined &&
               (isTableScreen || game.turn_state.fight.opponentSeat === mySeatIndex)
             }
@@ -1084,7 +1084,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onResolveField={(choices) => {
               const offer = compulsoryOffer(
                 active.field_id,
-                game.turn_state.phase === "pole" ? (game.turn_state.resolved ?? []) : [],
+                game.turn_state.phase === "field" ? (game.turn_state.resolved ?? []) : [],
               );
               if (offer) post("turn", { action: "pole-tabela", offer: offer.name, choices });
             }}
@@ -1445,7 +1445,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               return byField;
             }, {})}
             highlight={
-              game.turn_state.phase === "ruch"
+              game.turn_state.phase === "move"
                 ? game.turn_state.options.map((option) => option.fieldId)
                 : []
             }
@@ -1482,7 +1482,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   // somebody walks away from it; and 10.1-10.2 make the move
                   // the first of the two things a turn is made of.
                   canEnd={
-                    game.turn_state.phase !== "walka" &&
+                    game.turn_state.phase !== "fight" &&
                     mayEndTurn({
                       fieldId: active.field_id,
                       done: [],
@@ -1496,7 +1496,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       phase: game.turn_state.phase,
                     }),
                   )}
-                  canRoll={game.turn_state.phase === "rzut"}
+                  canRoll={game.turn_state.phase === "roll"}
                   onRoll={() => post("turn", { action: "roll" })}
                   // 13.4: what is already lying here counts against the number
                   // the field asks for, which is why a silted-up Obszar draws

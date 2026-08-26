@@ -72,7 +72,7 @@ export interface BeginFight {
 export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<void> {
   const seat = activeSeat(snapshot);
   const state = snapshot.game.turn_state;
-  if (state.phase !== "pole") throw new Error("Nie czas na walkę.");
+  if (state.phase !== "field") throw new Error("Nie czas na walkę.");
   if (command.cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
 
   // 17.4 ends the fight when the dice are compared, whatever the result. A card
@@ -137,7 +137,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "walka-start",
+          kind: "fight-start",
           payload: {
             cardIds: [...command.cardIds],
             enemyTotal: total,
@@ -166,7 +166,7 @@ export function beginNamedFight(
 ): Outcome<void> {
   const seat = activeSeat(snapshot);
   const state = snapshot.game.turn_state;
-  if (state.phase !== "pole") throw new Error("Nie czas na walkę.");
+  if (state.phase !== "field") throw new Error("Nie czas na walkę.");
 
   const { name, miecz, magia } = command;
   return {
@@ -187,7 +187,7 @@ export function beginNamedFight(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "walka-start",
+          kind: "fight-start",
           payload: { nazwa: name, enemyTotal: miecz ?? magia },
         },
       ],
@@ -325,7 +325,7 @@ export function castSpell(
    * a single window before the dice could never hold that.
    */
   const state = snapshot.game.turn_state;
-  const inAFight = state.phase === "walka";
+  const inAFight = state.phase === "fight";
 
   // 9.1: a Zaklęcie has a moment it may be spoken in. The interface greys the
   // card out, which stops an honest player and nobody else — a request that
@@ -338,7 +338,7 @@ export function castSpell(
     throw new Error("Nie ta chwila na to Zaklęcie (9.1).");
   }
 
-  if (state.phase === "walka") {
+  if (state.phase === "fight") {
     const floor = floorOf(state.fight, ports.now());
     if (!floor || floor.seat !== caster.seat_index) {
       throw new Error(
@@ -372,7 +372,7 @@ export function castSpell(
       {
         seatId: caster.id,
         turn: snapshot.game.turn,
-        kind: "zaklecie",
+        kind: "spell",
         payload: {
           cardId: held.card_id,
           name: spell?.name ?? held.card_id,
@@ -405,7 +405,7 @@ export function castSpell(
    */
   const after = apply(snapshot, soFar).game.turn_state;
   const cleared: Changeset =
-    inAFight && after.phase === "walka"
+    inAFight && after.phase === "fight"
       ? {
           game: {
             turn_state: {
@@ -482,7 +482,7 @@ export async function fightRoll(
 ): Promise<Outcome<void>> {
   const seat = activeSeat(snapshot);
   const state = snapshot.game.turn_state;
-  if (state.phase !== "walka") throw new Error("Nie ma walki.");
+  if (state.phase !== "fight") throw new Error("Nie ma walki.");
 
   // 17.3 puts the spells before the dice, so the dice wait — but only while
   // somebody actually holds the floor, and only until it lapses. Checked here
@@ -508,7 +508,7 @@ export async function fightRoll(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "walka-rzut",
+          kind: "fight-roll",
           payload: { side: command.side, roll },
           manual,
         },
@@ -556,7 +556,7 @@ export async function shieldSaves(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "oslona",
+          kind: "shielded",
           payload: { die, upTo, saved },
         },
       ],
@@ -596,7 +596,7 @@ export function attackSeat(
     throw new Error("Spotkanie jest możliwe tylko na tym samym Obszarze (13.1).");
   }
   const state = snapshot.game.turn_state;
-  if (state.phase !== "pole") throw new Error("Nie czas na spotkanie.");
+  if (state.phase !== "field") throw new Error("Nie czas na spotkanie.");
 
   // 14.1: on the Kamienny Most characters meet at the two Wejścia and nowhere
   // else. The bridge is a single-file line above a valley — there is no room to
@@ -630,7 +630,7 @@ export function attackSeat(
         {
           seatId: attacker.id,
           turn: snapshot.game.turn,
-          kind: "pojedynek",
+          kind: "duel",
           payload: { target: target.seat_index, field: attacker.field_id },
         },
       ],
@@ -695,11 +695,11 @@ export function escape(
   const actorSeatId = command.actorSeatId ?? null;
   const state = snapshot.game.turn_state;
 
-  if (state.phase !== "walka" && state.phase !== "pole") {
+  if (state.phase !== "fight" && state.phase !== "field") {
     throw new Error("Nie ma przed czym uciekać.");
   }
 
-  const duelWith = state.phase === "walka" ? state.fight.opponentSeat : undefined;
+  const duelWith = state.phase === "fight" ? state.fight.opponentSeat : undefined;
 
   /**
    * 17.6: "Postać, która została zaatakowana, może próbować wymknąć się
@@ -756,7 +756,7 @@ export function escape(
    * any fight begins stays what 19.2 makes it — an ability, or nothing.
    */
   const circle =
-    byAbility || reported !== null || state.phase !== "walka"
+    byAbility || reported !== null || state.phase !== "fight"
       ? undefined
       : held.find((h) => h.kind === "spell" && h.card_id === KRAG_PLOMIENI);
 
@@ -771,7 +771,7 @@ export function escape(
         {
           seatId: fleeing.id,
           turn: snapshot.game.turn,
-          kind: "zaklecie",
+          kind: "spell",
           payload: {
             cardId: KRAG_PLOMIENI,
             name: SPELL_BY_ID.get(KRAG_PLOMIENI)?.name ?? KRAG_PLOMIENI,
@@ -799,7 +799,7 @@ export function escape(
   // decided against a table that knows the card is spent.
   const before = apply(snapshot, spoken).game.turn_state;
   let left: Changeset = {};
-  if (succeeded && before.phase === "walka") {
+  if (succeeded && before.phase === "fight") {
     const next = endFight(before);
     const sweep =
       byAbility && przed === "wrog"
@@ -810,12 +810,12 @@ export function escape(
     left = {
       game: {
         turn_state:
-          next.phase === "pole" && sweep.length > 0
+          next.phase === "field" && sweep.length > 0
             ? { ...next, fought: [...new Set([...(next.fought ?? []), ...sweep])] }
             : next,
       },
     };
-  } else if (succeeded && before.phase === "pole") {
+  } else if (succeeded && before.phase === "field") {
     /**
      * Slipping past what is lying here, before any fight began.
      *
@@ -844,7 +844,7 @@ export function escape(
         {
           seatId: fleeing.id,
           turn: snapshot.game.turn,
-          kind: succeeded ? "ucieczka" : "ucieczka-nieudana",
+          kind: succeeded ? "escape" : "escape-failed",
           payload: {
             onBridge,
             ...(circle && succeeded ? { spell: KRAG_PLOMIENI } : {}),
@@ -882,7 +882,7 @@ export async function resolveFight(
   ports: CommandPorts,
 ): Promise<Outcome<void>> {
   const state = snapshot.game.turn_state;
-  if (state.phase !== "walka") throw new Error("Nie ma walki.");
+  if (state.phase !== "fight") throw new Error("Nie ma walki.");
 
   const seat = activeSeat(snapshot);
   const { fight } = state;
@@ -907,7 +907,7 @@ export async function resolveFight(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "straznik-koniec",
+          kind: "guardian-end",
           payload: { guardian: fight.cardName, outcome, enemyTotal: fight.enemyTotal },
         },
       ],
@@ -959,7 +959,7 @@ export async function resolveFight(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "walka-koniec",
+          kind: "fight-end",
           payload: { cardId: fight.cardId, outcome: fight.result.outcome },
         },
       ],

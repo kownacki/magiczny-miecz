@@ -20,8 +20,8 @@ const HERE = asFieldId("mroczna-polana")!;
 const ELSEWHERE = asFieldId("grod")!;
 
 /** The turn stopped on an Obszar, which is the only phase 12.1 opens. */
-const onField = (over: Partial<Extract<TurnPhase, { phase: "pole" }>> = {}): TurnPhase => ({
-  phase: "pole",
+const onField = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnPhase => ({
+  phase: "field",
   fieldId: HERE,
   from: null,
   draw: 0,
@@ -60,7 +60,7 @@ describe("taking a card", () => {
       { seat_id: "seat-a", card_id: "helm", kind: "item", face: "open", granted: false },
     ]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "zabranie",
+      kind: "taken",
       payload: { cardId: "helm", kind: "item" },
     });
   });
@@ -89,7 +89,7 @@ describe("taking a card", () => {
     });
     expect(writes.holdings?.insert ?? []).toEqual([]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "zabranie",
+      kind: "taken",
       payload: { cardId: "1-sztuka-zlota", kind: "gold" },
     });
   });
@@ -216,7 +216,7 @@ describe("taking a card", () => {
     });
     const { writes } = takeCard(drawn, { seatId: "seat-a", cardId: "helm" });
     const after = apply(drawn, writes).game.turn_state;
-    expect(after.phase === "pole" && after.drawn.map((c) => c.cardId)).toEqual(["tarcza"]);
+    expect(after.phase === "field" && after.drawn.map((c) => c.cardId)).toEqual(["tarcza"]);
   });
 });
 
@@ -239,7 +239,7 @@ describe("dropping a card", () => {
     ]);
     expect(writes.journal?.[0]).toMatchObject({
       seatId: "seat-a",
-      kind: "odrzucenie",
+      kind: "discarded",
       payload: { cardId: "helm", kind: "item", onField: HERE },
     });
   });
@@ -516,7 +516,7 @@ describe("picking something up off the Obszar (12.1)", () => {
 
   /** 13.1 from the other side: nothing happens on the Obszar you start on. */
   it("refuses before the move has ended here", () => {
-    const rolling = table({ game: { turn_state: { phase: "rzut" } } });
+    const rolling = table({ game: { turn_state: { phase: "roll" } } });
     expect(() => takeFromField(rolling, { seatId: "seat-a", fieldCardId: "fc1" })).toThrow(
       "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).",
     );
@@ -601,7 +601,7 @@ describe("placing a card by fiat", () => {
       { field_id: HERE, card_id: "helm", granted: true },
     ]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "test-karta-obszar",
+      kind: "test-card-field",
       payload: { cardId: "helm", fieldId: HERE },
       manual: true,
     });
@@ -655,7 +655,7 @@ describe("granting a card by fiat", () => {
       },
     ]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "test-karta",
+      kind: "test-card",
       payload: { cardId: "helm", kind: "item" },
       manual: true,
     });

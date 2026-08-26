@@ -17,13 +17,13 @@ import type { Nature } from "@/data/types";
  */
 export type Ends =
   /** After this many more of the holder's own turns. Kamień is three (20.1). */
-  | { kind: "tur"; turns: number }
+  | { kind: "turns"; turns: number }
   /** When the next fight finishes, however it finishes (17.4). */
-  | { kind: "walka" }
+  | { kind: "fight" }
   /** When a particular thing happens to the holder. */
-  | { kind: "zdarzenie"; co: EndingEvent }
+  | { kind: "event"; co: EndingEvent }
   /** Never on its own — only when something takes it off. Fatum, Krąg Płomieni. */
-  | { kind: "rozproszone" };
+  | { kind: "dispelled" };
 
 /**
  * The events that end something.
@@ -34,34 +34,34 @@ export type Ends =
  */
 export type EndingEvent =
   /** Crossing the Trzęsawiska or the Lodowy Las — what sheds Południca. */
-  | "przeprawa"
+  | "crossing"
   /** Stepping onto the Kamienny Most. */
-  | "wejscie-na-most"
+  | "bridge-entry"
   /** The holder's own death (4.4). */
-  | "smierc";
+  | "death";
 
 /** What being under this effect actually does. */
 export type Modifier =
   /** Added to the total at read time, never written to own points (1.2-1.5). */
-  | { kind: "punkty"; miecz?: number; magia?: number }
+  | { kind: "points"; miecz?: number; magia?: number }
   /** A hard cap on how far the holder may move, whatever the die says. Mgła. */
-  | { kind: "ruch-max"; pola: number }
+  | { kind: "move-max"; pola: number }
   /** Cannot act at all: Kamień, and the turn a Zaklinacz Czasu takes. */
-  | { kind: "bez-ruchu" }
+  | { kind: "frozen" }
   /** Natura is forced to something while this lasts. */
-  | { kind: "natura"; na: Nature }
+  | { kind: "nature"; na: Nature }
   /**
    * Shut out of one place. 11.11 bars a failed attempt on the Kamienny Most
    * from trying again next turn, which is not a cap on movement and not a
    * freeze — the character walks normally everywhere else.
    */
-  | { kind: "wzbroniony"; place: "most" }
+  | { kind: "barred"; place: "most" }
   /**
    * Nothing mechanical, only worth saying. 7.2 limits how often a Natura may be
    * changed, so "changed this turn" is a fact a player has to be able to see
    * without it altering anything by itself.
    */
-  | { kind: "adnotacja" };
+  | { kind: "note" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -86,7 +86,7 @@ export function bonusFrom(statuses: readonly Status[]): { miecz: number; magia: 
   let miecz = 0;
   let magia = 0;
   for (const status of statuses) {
-    if (status.modifier.kind !== "punkty") continue;
+    if (status.modifier.kind !== "points") continue;
     miecz += status.modifier.miecz ?? 0;
     magia += status.modifier.magia ?? 0;
   }
@@ -96,20 +96,20 @@ export function bonusFrom(statuses: readonly Status[]): { miecz: number; magia: 
 /** The tightest cap in force, or null when nothing is limiting movement. */
 export function movementCap(statuses: readonly Status[]): number | null {
   const caps = statuses
-    .filter((status) => status.modifier.kind === "ruch-max")
-    .map((status) => (status.modifier as { kind: "ruch-max"; pola: number }).pola);
+    .filter((status) => status.modifier.kind === "move-max")
+    .map((status) => (status.modifier as { kind: "move-max"; pola: number }).pola);
   return caps.length > 0 ? Math.min(...caps) : null;
 }
 
 /** Whether anything is stopping the holder acting at all. */
 export function frozen(statuses: readonly Status[]): boolean {
-  return statuses.some((status) => status.modifier.kind === "bez-ruchu");
+  return statuses.some((status) => status.modifier.kind === "frozen");
 }
 
 /** The Natura being forced on the holder, if any. */
 export function forcedNature(statuses: readonly Status[]): Nature | null {
-  const forced = statuses.find((status) => status.modifier.kind === "natura");
-  return forced ? (forced.modifier as { kind: "natura"; na: Nature }).na : null;
+  const forced = statuses.find((status) => status.modifier.kind === "nature");
+  return forced ? (forced.modifier as { kind: "nature"; na: Nature }).na : null;
 }
 
 /**
@@ -122,25 +122,25 @@ export function forcedNature(statuses: readonly Status[]): Nature | null {
 export function afterTurn(statuses: readonly Status[]): Status[] {
   const left: Status[] = [];
   for (const status of statuses) {
-    if (status.ends.kind !== "tur") {
+    if (status.ends.kind !== "turns") {
       left.push(status);
       continue;
     }
     const turns = status.ends.turns - 1;
-    if (turns > 0) left.push({ ...status, ends: { kind: "tur", turns } });
+    if (turns > 0) left.push({ ...status, ends: { kind: "turns", turns } });
   }
   return left;
 }
 
 /** A fight has finished, however it finished (17.4). */
 export function afterFight(statuses: readonly Status[]): Status[] {
-  return statuses.filter((status) => status.ends.kind !== "walka");
+  return statuses.filter((status) => status.ends.kind !== "fight");
 }
 
 /** Something happened to the holder. */
 export function afterEvent(statuses: readonly Status[], event: EndingEvent): Status[] {
   return statuses.filter(
-    (status) => !(status.ends.kind === "zdarzenie" && status.ends.co === event),
+    (status) => !(status.ends.kind === "event" && status.ends.co === event),
   );
 }
 
@@ -152,25 +152,25 @@ export function afterEvent(statuses: readonly Status[], event: EndingEvent): Sta
  * being argued with.
  */
 export function dispel(statuses: readonly Status[]): Status[] {
-  return statuses.filter((status) => status.ends.kind !== "rozproszone");
+  return statuses.filter((status) => status.ends.kind !== "dispelled");
 }
 
 /** What a player is told about how long this lasts. */
 export function describeEnd(ends: Ends): string {
   switch (ends.kind) {
-    case "tur":
+    case "turns":
       return ends.turns === 1
         ? "do końca tej tury"
         : `jeszcze ${ends.turns} ${ends.turns <= 4 ? "tury" : "tur"}`;
-    case "walka":
+    case "fight":
       return "do końca walki";
-    case "zdarzenie":
-      return ends.co === "przeprawa"
+    case "event":
+      return ends.co === "crossing"
         ? "do przeprawy przez Trzęsawiska lub Lodowy Las"
-        : ends.co === "wejscie-na-most"
+        : ends.co === "bridge-entry"
           ? "do wejścia na Kamienny Most"
           : "do śmierci Postaci";
-    case "rozproszone":
+    case "dispelled":
       return "dopóki ktoś tego nie zdejmie";
   }
 }
@@ -206,8 +206,8 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
       // Just the fact. How many is the duration's to say, and saying it twice
       // gave "Traci 2 tury — jeszcze 2 tury".
       label: "Traci turę",
-      modifier: { kind: "bez-ruchu" },
-      ends: { kind: "tur", turns: seat.turnsLost },
+      modifier: { kind: "frozen" },
+      ends: { kind: "turns", turns: seat.turnsLost },
     });
   }
 
@@ -217,8 +217,8 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
       id: "kamien",
       source: "kamien",
       label: "Zamieniony w Kamień",
-      modifier: { kind: "bez-ruchu" },
-      ends: { kind: "tur", turns: seat.stoneUntilTurn - turn },
+      modifier: { kind: "frozen" },
+      ends: { kind: "turns", turns: seat.stoneUntilTurn - turn },
     });
   }
 
@@ -228,8 +228,8 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
       id: "most-zablokowany",
       source: "most",
       label: "Nie wejdziesz na Kamienny Most",
-      modifier: { kind: "wzbroniony", place: "most" },
-      ends: { kind: "tur", turns: seat.bridgeBlockedUntilTurn - turn },
+      modifier: { kind: "barred", place: "most" },
+      ends: { kind: "turns", turns: seat.bridgeBlockedUntilTurn - turn },
     });
   }
 
@@ -239,8 +239,8 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
       id: "natura-zmieniona",
       source: "natura",
       label: "Natura zmieniona w tej turze",
-      modifier: { kind: "adnotacja" },
-      ends: { kind: "tur", turns: 1 },
+      modifier: { kind: "note" },
+      ends: { kind: "turns", turns: 1 },
     });
   }
 
@@ -283,19 +283,19 @@ export function markOf(status: Status): Mark {
   const when = describeEnd(status.ends);
   const title = `${status.label} — ${when}`;
   switch (status.modifier.kind) {
-    case "punkty": {
+    case "points": {
       const up = (status.modifier.miecz ?? 0) + (status.modifier.magia ?? 0) >= 0;
       return { glyph: up ? "\u25B2" : "\u25BC", tone: up ? "dobry" : "zly", title };
     }
-    case "bez-ruchu":
+    case "frozen":
       return { glyph: "\u25A0", tone: "zly", title };
-    case "ruch-max":
+    case "move-max":
       return { glyph: "\u25B8", tone: "zly", title };
-    case "natura":
+    case "nature":
       return { glyph: "\u25D1", tone: "obojetny", title };
-    case "wzbroniony":
+    case "barred":
       return { glyph: "\u2298", tone: "zly", title };
-    case "adnotacja":
+    case "note":
       return { glyph: "\u25CB", tone: "obojetny", title };
   }
 }

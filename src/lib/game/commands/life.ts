@@ -31,7 +31,7 @@ export function healSeat(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "uzdrowienie",
+          kind: "healed",
           payload: { from: seat.zycie, to: healed },
         },
       ],
@@ -116,7 +116,7 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
       {
         seatId,
         turn: snapshot.game.turn,
-        kind: "smierc",
+        kind: "death",
         payload: {
           droppedOnField: left.map((h) => h.card_id),
           spellsDiscarded: spellCards.length,

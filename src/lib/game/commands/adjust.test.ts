@@ -16,7 +16,7 @@ describe("the manual override", () => {
     const { writes } = correct({ zloto: 3 }, "zloto", 2);
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { zloto: 5 } }]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "korekta",
+      kind: "override",
       manual: true,
       payload: { stat: "zloto", delta: 2, from: 3, to: 5, reason: "test" },
     });
@@ -28,9 +28,9 @@ describe("the manual override", () => {
       stat: "zloto",
       delta: 1,
       reason: null,
-      record: { kind: "punkty", manual: false },
+      record: { kind: "points", manual: false },
     });
-    expect(writes.journal?.[0]).toMatchObject({ kind: "punkty", manual: false });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "points", manual: false });
   });
 
   /** 1.3 and 2.3: own points never fall below what the character started with. */
@@ -79,21 +79,21 @@ describe("correcting somebody down to nothing", () => {
   it("kills them, exactly as losing the last point in a fight does (4.4)", () => {
     const { writes } = correct({ zycie: 2 }, "zycie", -2);
     expect(writes.journal?.map((line) => line.kind)).toEqual([
-      "korekta",
-      "smierc",
-      "koniec-tury",
+      "override",
+      "death",
+      "turn-end",
     ]);
     expect(writes.seats).toContainEqual({ id: "seat-a", patch: { eliminated: true } });
   });
 
   it("does not kill somebody already out", () => {
     const { writes } = correct({ zycie: 0, eliminated: true }, "zycie", -1);
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["korekta"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["override"]);
   });
 
   it("does not kill anybody on the way down to a number above zero", () => {
     const { writes } = correct({ zycie: 4 }, "zycie", -1);
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["korekta"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["override"]);
   });
 });
 

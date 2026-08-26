@@ -74,13 +74,13 @@ export interface TurnFacts {
  * Obszar on the board, so the Karczma offered a Przeprawa.
  */
 export function factsIn(state: TurnPhase, standingOn: FieldId | null): TurnFacts {
-  const onField = state.phase === "pole" ? state : null;
+  const onField = state.phase === "field" ? state : null;
   const settled = onField?.resolved ?? [];
   return {
     phase: state.phase,
     standingOn,
     cardsWaiting: onField?.drawn.filter((card) => !settled.includes(card.cardId)).length ?? 0,
-    fighting: state.phase === "walka",
+    fighting: state.phase === "fight",
     crossing: standingOn !== null && crossingFrom(standingOn) !== undefined,
     ordeal: standingOn !== null && BRIDGE_ORDEAL.has(standingOn),
     demands: onField !== null && compulsoryOffer(standingOn, settled) !== null,
@@ -105,7 +105,7 @@ export function windowsFor(facts: TurnFacts): TurnWindow[] {
   // The die has been thrown and the character is standing between two roads.
   // Not an offer either: the turn cannot go anywhere else until it is answered,
   // and there is nothing else on the board to look at meanwhile.
-  if (facts.phase === "ruch") {
+  if (facts.phase === "move") {
     windows.push({ id: "ruch", label: "Ruch", compulsory: true });
   }
 
@@ -131,7 +131,7 @@ export function windowsFor(facts: TurnFacts): TurnWindow[] {
   // próbowała przekroczyć granicę Kręgów" — so these are offered before the
   // roll as well as on arrival. Offering them only on arrival meant a failed
   // crossing could never be attempted again.
-  const canTryAgain = facts.phase === "pole" || facts.phase === "rzut";
+  const canTryAgain = facts.phase === "field" || facts.phase === "roll";
   if (facts.crossing && canTryAgain) {
     windows.push({ id: "przeprawa", label: "Przeprawa" });
   }
@@ -173,11 +173,11 @@ export function turnSteps(phase: string): TurnStep[] {
   // The Kamienny Most is not made of these: 10.3 has no roll at all there, one
   // Obszar a turn and an instruction to get through. Claiming a roll had
   // happened would be a lie, and claiming one was coming would be worse.
-  if (phase === "most") return [{ label: "Most", state: "teraz" }];
-  if (phase === "walka") return [{ label: "Walka", state: "teraz" }];
+  if (phase === "bridge") return [{ label: "Most", state: "teraz" }];
+  if (phase === "fight") return [{ label: "Walka", state: "teraz" }];
 
-  const order = ["rzut", "ruch", "pole"];
-  const at = phase === "koniec" ? order.length : order.indexOf(phase);
+  const order = ["roll", "move", "field"];
+  const at = phase === "end" ? order.length : order.indexOf(phase);
   if (at < 0) return [];
 
   return [

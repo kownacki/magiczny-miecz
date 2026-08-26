@@ -517,7 +517,7 @@ export async function stageFight(
         writes: {
           game: {
             turn_state: {
-              phase: "pole" as const,
+              phase: "field" as const,
               fieldId: seat.field_id,
               from: null,
               draw: 0,
@@ -559,7 +559,7 @@ export async function abandonFight(gameId: string): Promise<void> {
     gameId,
     (snapshot) => {
       const state = snapshot.game.turn_state;
-      if (state.phase !== "walka") throw new Error("Nie ma walki.");
+      if (state.phase !== "fight") throw new Error("Nie ma walki.");
       const seat = snapshot.seats.find((s) => s.seat_index === snapshot.game.active_seat);
       const { cardName } = state.fight;
       return {
@@ -575,7 +575,7 @@ export async function abandonFight(gameId: string): Promise<void> {
                   {
                     seatId: seat.id,
                     turn: snapshot.game.turn,
-                    kind: "test-koniec-walki" as const,
+                    kind: "test-fight-end" as const,
                     payload: { cardName },
                     manual: true,
                   },
@@ -823,7 +823,7 @@ export async function adjust(
   stat: Adjustable,
   delta: number,
   reason: string | null,
-  record: { kind: JournalKind; manual: boolean } = { kind: "korekta", manual: true },
+  record: { kind: JournalKind; manual: boolean } = { kind: "override", manual: true },
   force = false,
 ): Promise<Adjusted> {
   return change(gameId, adjustSeat, { seatId, stat, delta, reason, record, force });
@@ -1359,11 +1359,11 @@ export async function placeCard(
  * exactly like the card's.
  */
 const EFFECTS: Record<EffectName, { label: string; modifier: Modifier }> = {
-  fog: { label: "Mgła (tryb testowy)", modifier: { kind: "ruch-max", pola: 1 } },
-  frozen: { label: "Bez ruchu (tryb testowy)", modifier: { kind: "bez-ruchu" } },
+  fog: { label: "Mgła (tryb testowy)", modifier: { kind: "move-max", pola: 1 } },
+  frozen: { label: "Bez ruchu (tryb testowy)", modifier: { kind: "frozen" } },
   barred: {
     label: "Most zamknięty (tryb testowy)",
-    modifier: { kind: "wzbroniony", place: "most" },
+    modifier: { kind: "barred", place: "most" },
   },
 };
 
@@ -1569,7 +1569,7 @@ export async function runCommand(
         source: "tryb testowy",
         label,
         modifier,
-        ends: { kind: "tur", turns: 1 },
+        ends: { kind: "turns", turns: 1 },
       });
       return `${named(seat)}: ${label}.`;
     }
@@ -1602,7 +1602,7 @@ export async function runCommand(
         gameId,
         (snapshot) => {
           const state = snapshot.game.turn_state;
-          if (state.phase !== "walka") throw new Error("Nie ma walki.");
+          if (state.phase !== "fight") throw new Error("Nie ma walki.");
           const fight = state.fight;
           const settled =
             command.outcome === "remis"
@@ -1663,12 +1663,12 @@ export async function runCommand(
           gameId,
           (snapshot) => ({
             writes: {
-              game: { status: "finished", turn_state: { phase: "koniec" as const } },
+              game: { status: "finished", turn_state: { phase: "end" as const } },
               journal: [
                 {
                   seatId: seat.id,
                   turn: snapshot.game.turn,
-                  kind: "zwyciestwo" as const,
+                  kind: "victory" as const,
                   payload: { kind: "zwykla", beastTotal: 0 },
                 },
               ],
@@ -1687,7 +1687,7 @@ export async function runCommand(
               {
                 seatId: seat.id,
                 turn: snapshot.game.turn,
-                kind: "bestia-porazka" as const,
+                kind: "beast-loss" as const,
                 payload: { kind: "zwykla", beastTotal: 0 },
               },
             ],

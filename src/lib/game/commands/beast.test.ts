@@ -13,28 +13,28 @@ const table = (over: Parameters<typeof aSeat>[0] = {}) =>
 describe("Bestia (14.7, 22)", () => {
   it("ends the game when the character wins", async () => {
     const { writes } = await fightBeast(table({ miecz_own: 15 }), undefined, dice(1, 1, 6, 1));
-    expect(writes.game).toMatchObject({ status: "finished", turn_state: { phase: "koniec" } });
+    expect(writes.game).toMatchObject({ status: "finished", turn_state: { phase: "end" } });
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "zwyciestwo",
+      kind: "victory",
       payload: { kind: "zwykla", beastTotal: 10, rolls: { kindDie: 1, strengthDie: 1 } },
     });
   });
 
   it("costs two Życia to lose, not one", async () => {
     const { writes } = await fightBeast(table({ miecz_own: 2, zycie: 4 }), undefined, dice(1, 1, 1, 6));
-    expect(writes.journal?.[0]).toMatchObject({ kind: "bestia-porazka" });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "beast-loss" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { zycie: 2 } }]);
   });
 
   it("kills a character who cannot afford the two", async () => {
     const { writes } = await fightBeast(table({ miecz_own: 2, zycie: 2 }), undefined, dice(1, 1, 1, 6));
-    expect(writes.journal?.map((line) => line.kind)).toContain("smierc");
+    expect(writes.journal?.map((line) => line.kind)).toContain("death");
   });
 
   it("costs nothing on a draw, and does not end the game", async () => {
     const { writes } = await fightBeast(table({ miecz_own: 10 }), undefined, dice(1, 1, 3, 3));
     expect(writes.journal).toEqual([
-      expect.objectContaining({ kind: "bestia-remis", payload: { kind: "zwykla", beastTotal: 10 } }),
+      expect.objectContaining({ kind: "beast-draw", payload: { kind: "zwykla", beastTotal: 10 } }),
     ]);
     expect(writes.seats).toBeUndefined();
     expect(writes.game).toBeUndefined();
@@ -44,13 +44,13 @@ describe("Bestia (14.7, 22)", () => {
   it("weighs Magia when the first die makes it magical", async () => {
     const magical = table({ miecz_own: 99, magia_own: 15 });
     const { writes } = await fightBeast(magical, undefined, dice(4, 1, 6, 1));
-    expect(writes.journal?.[0]).toMatchObject({ kind: "zwyciestwo", payload: { kind: "magiczna" } });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "victory", payload: { kind: "magiczna" } });
 
     // The same dice with the Magia too low lose it, which is what proves Miecz
     // was not the number being read.
     const weak = table({ miecz_own: 99, magia_own: 1 });
     const lost = await fightBeast(weak, undefined, dice(4, 1, 6, 1));
-    expect(lost.writes.journal?.[0]).toMatchObject({ kind: "bestia-porazka" });
+    expect(lost.writes.journal?.[0]).toMatchObject({ kind: "beast-loss" });
   });
 
   it("asks for exactly four dice", async () => {

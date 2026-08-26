@@ -15,8 +15,8 @@ import {
 } from "./fight";
 
 /** A character standing where its move ended, with cards turned over in front of it. */
-const pole = (over: Partial<Extract<TurnPhase, { phase: "pole" }>> = {}): TurnPhase => ({
-  phase: "pole",
+const pole = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnPhase => ({
+  phase: "field",
   fieldId: "mroczna-polana",
   from: null,
   draw: 1,
@@ -26,7 +26,7 @@ const pole = (over: Partial<Extract<TurnPhase, { phase: "pole" }>> = {}): TurnPh
 
 /** A fight already open, so the things that happen inside one can be asked about. */
 const walka = (over: Partial<Fight> = {}): TurnPhase => ({
-  phase: "walka",
+  phase: "fight",
   fight: {
     cardId: "cyklop",
     cardName: "CYKLOP",
@@ -45,10 +45,10 @@ const walka = (over: Partial<Fight> = {}): TurnPhase => ({
 });
 
 const fightIn = (writes: { game?: { turn_state?: unknown } }) =>
-  (writes.game?.turn_state as Extract<TurnPhase, { phase: "walka" }>).fight;
+  (writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>).fight;
 
 const fieldIn = (writes: { game?: { turn_state?: unknown } }) =>
-  writes.game?.turn_state as Extract<TurnPhase, { phase: "pole" }>;
+  writes.game?.turn_state as Extract<TurnPhase, { phase: "field" }>;
 
 const pileIn = (writes: { game?: { deck?: unknown } }, which: "events" | "spells") =>
   (writes.game?.deck as Record<"events" | "spells", DeckState>)[which];
@@ -76,7 +76,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
     const { writes } = beginFight(table(), { cardIds: ["cyklop"] });
     expect(writes.journal).toEqual([
       expect.objectContaining({
-        kind: "walka-start",
+        kind: "fight-start",
         payload: { cardIds: ["cyklop"], enemyTotal: 6, together: false },
       }),
     ]);
@@ -121,7 +121,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
 
   it("refuses with nobody to fight, and off the field", () => {
     expect(() => beginFight(table(), { cardIds: [] })).toThrow(/Nie ma z kim/);
-    const rolling = aTable({ game: { active_seat: 0, turn_state: { phase: "rzut" } } });
+    const rolling = aTable({ game: { active_seat: 0, turn_state: { phase: "roll" } } });
     expect(() => beginFight(rolling, { cardIds: ["cyklop"] })).toThrow(/Nie czas na walkę/);
   });
 
@@ -183,7 +183,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       ports(),
     );
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "zaklecie",
+      kind: "spell",
       payload: { cardId: "wladca-gromu", name: "WŁADCA GROMU", target: "Ala", note: "na Cyklopa" },
     });
   });
@@ -353,7 +353,7 @@ describe("kostki w walce (17.3, 17.4)", () => {
     );
     expect(fightIn(writes).playerRoll).toBe(4);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "walka-rzut",
+      kind: "fight-roll",
       payload: { side: "player", roll: 4 },
       manual: false,
     });
@@ -468,7 +468,7 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
     expect(fightIn(writes).caster).toBeUndefined();
     expect(writes.journal).toEqual([
       expect.objectContaining({
-        kind: "pojedynek",
+        kind: "duel",
         payload: { target: 1, field: "mroczna-polana" },
       }),
     ]);
@@ -546,7 +546,7 @@ describe("ucieczka (17.6, 19)", () => {
     });
     const { writes, result } = escape(table, { reported: null });
     expect(result).toEqual({ succeeded: true, onBridge: false });
-    expect(fieldIn(writes).phase).toBe("pole");
+    expect(fieldIn(writes).phase).toBe("field");
     expect(fieldIn(writes).fought).toEqual(["cyklop", "nobbin"]);
   });
 
@@ -572,7 +572,7 @@ describe("ucieczka (17.6, 19)", () => {
     expect(result.succeeded).toBe(false);
     expect(writes.game).toBeUndefined();
     expect(writes.journal).toEqual([
-      expect.objectContaining({ kind: "ucieczka-nieudana", payload: { onBridge: false } }),
+      expect.objectContaining({ kind: "escape-failed", payload: { onBridge: false } }),
     ]);
   });
 
@@ -606,7 +606,7 @@ describe("ucieczka (17.6, 19)", () => {
       expect(result.succeeded).toBe(true);
       expect(writes.holdings?.delete).toEqual(["s-1"]);
       expect(pileIn(writes, "spells").discard).toHaveLength(1);
-      expect(writes.journal?.map((line) => line.kind)).toEqual(["zaklecie", "ucieczka"]);
+      expect(writes.journal?.map((line) => line.kind)).toEqual(["spell", "escape"]);
       expect(writes.journal?.[1].payload).toMatchObject({ spell: "krag-plomieni" });
     });
 
@@ -670,7 +670,7 @@ describe("ucieczka (17.6, 19)", () => {
   });
 
   it("says so when there is nothing to flee", () => {
-    const rolling = aTable({ game: { active_seat: 0, turn_state: { phase: "rzut" } } });
+    const rolling = aTable({ game: { active_seat: 0, turn_state: { phase: "roll" } } });
     expect(() => escape(rolling, { reported: null })).toThrow(/Nie ma przed czym uciekać/);
   });
 });
@@ -691,7 +691,7 @@ describe("osłona (17.4, 18.2b)", () => {
     );
     expect(result).toBe(true);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "oslona",
+      kind: "shielded",
       payload: { die: 1, upTo: 1, saved: true },
     });
   });

@@ -39,7 +39,7 @@ function seed(): Tables {
         active_seat: 0,
         turn: 3,
         revision: 7,
-        turn_state: { phase: "rzut" },
+        turn_state: { phase: "roll" },
         deck: null,
       },
     ],
@@ -80,18 +80,18 @@ describe("committing a change", () => {
     await change("g1", () => ({
       writes: {
         journal: [
-          { seatId: "s1", turn: 3, kind: "rzut" },
-          { seatId: "s1", turn: 3, kind: "ruch" },
-          { seatId: "s1", turn: 3, kind: "karta" },
+          { seatId: "s1", turn: 3, kind: "roll" },
+          { seatId: "s1", turn: 3, kind: "move" },
+          { seatId: "s1", turn: 3, kind: "card" },
         ],
       },
       result: undefined,
     }), undefined);
     expect(tables.moves.map((m) => m.seq)).toEqual([12, 13, 14, 15]);
     expect(tables.moves.slice(1).map((m) => m.kind)).toEqual([
-      "rzut",
-      "ruch",
-      "karta",
+      "roll",
+      "move",
+      "card",
     ]);
   });
 
@@ -110,7 +110,7 @@ describe("committing a change", () => {
     await expect(
       commit(snapshot, {
         seats: [{ id: "s1", patch: { zloto: 99 } }],
-        journal: [{ seatId: "s1", turn: 3, kind: "rzut" }],
+        journal: [{ seatId: "s1", turn: 3, kind: "roll" }],
       }),
     ).rejects.toThrow(Conflict);
     expect(tables.seats[0].zloto).toBe(1);
@@ -223,28 +223,28 @@ describe("two changes reaching the journal at once", () => {
     // has already taken seq 13, which is the number we are about to use.
     beforeWrite = () => {
       beforeWrite = undefined;
-      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "ruch" });
+      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "move" });
     };
 
-    await commit(snapshot, { journal: [{ seatId: "s1", turn: 3, kind: "rzut" }] });
+    await commit(snapshot, { journal: [{ seatId: "s1", turn: 3, kind: "roll" }] });
 
     expect(tables.moves.map((m) => m.seq).sort((a, b) => (a as number) - (b as number))).toEqual([
       12, 13, 14,
     ]);
-    expect(tables.moves.find((m) => m.seq === 14)?.kind).toBe("rzut");
+    expect(tables.moves.find((m) => m.seq === 14)?.kind).toBe("roll");
   });
 
   it("keeps a whole command's lines together after renumbering", async () => {
     const snapshot = await loadSnapshot("g1");
     beforeWrite = () => {
       beforeWrite = undefined;
-      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "ruch" });
+      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "move" });
     };
 
     await commit(snapshot, {
       journal: [
-        { seatId: "s1", turn: 3, kind: "rzut" },
-        { seatId: "s1", turn: 3, kind: "ruch" },
+        { seatId: "s1", turn: 3, kind: "roll" },
+        { seatId: "s1", turn: 3, kind: "move" },
       ],
     });
 

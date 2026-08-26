@@ -130,8 +130,8 @@ describe("what a character is under", () => {
           seat_id: "seat-a",
           source: "Eliksir",
           label: "+2 Miecza",
-          modifier: { kind: "punkty", miecz: 2 },
-          ends: { kind: "tur", turns: 1 },
+          modifier: { kind: "points", miecz: 2 },
+          ends: { kind: "turns", turns: 1 },
         },
       ],
     });

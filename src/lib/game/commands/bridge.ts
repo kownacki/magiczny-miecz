@@ -107,7 +107,7 @@ export function settleBridge(
           {
             seatId: seat.id,
             turn: snapshot.game.turn,
-            kind: "wejscie-na-most",
+            kind: "bridge-entry",
             payload: { from: entrance.from, guardian: entrance.guardian },
           },
         ],
@@ -146,7 +146,7 @@ export function settleBridge(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "most-nieudane",
+          kind: "bridge-failed",
           payload: { from: entrance.from, guardian: entrance.guardian, outcome },
         },
       ],
@@ -182,7 +182,7 @@ export function settleCrossing(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "przeprawa-nieudana",
+          kind: "crossing-failed",
           payload: { from: crossing.from, obstacle: crossing.obstacle, outcome, ...extra },
         },
       ],
@@ -203,7 +203,7 @@ export function settleCrossing(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "przeprawa",
+          kind: "crossing",
           payload: { from: crossing.from, to: crossing.to, obstacle: crossing.obstacle, ...extra },
         },
       ],
@@ -233,7 +233,7 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
 
   const totals = pointsOf(snapshot, seat.id, "walka");
 
-  if (snapshot.game.turn_state.phase === "most") {
+  if (snapshot.game.turn_state.phase === "bridge") {
     const entrance = snapshot.game.turn_state.bridge;
     return {
       writes: {
@@ -244,7 +244,7 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
           {
             seatId: seat.id,
             turn: snapshot.game.turn,
-            kind: "straznik-start",
+            kind: "guardian-start",
             payload: { guardian: entrance.guardian },
           },
         ],
@@ -266,7 +266,7 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "straznik-start",
+          kind: "guardian-start",
           payload: { guardian: crossing.test.guardian },
         },
       ],
@@ -293,7 +293,7 @@ export async function rollGuardianStrength(
 ): Promise<Outcome<{ strength: number }>> {
   const seat = activeSeat(snapshot);
   const phase = snapshot.game.turn_state;
-  if (phase.phase !== "walka") throw new Error("Nie ma walki.");
+  if (phase.phase !== "fight") throw new Error("Nie ma walki.");
   if (!strengthPending(phase.fight)) {
     throw new Error("Siła przeciwnika jest już znana.");
   }
@@ -309,13 +309,13 @@ export async function rollGuardianStrength(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "straznik-sila",
+          kind: "guardian-strength",
           payload: { roll },
           manual,
         },
       ],
     },
-    result: { strength: next.phase === "walka" ? next.fight.enemyTotal : 0 },
+    result: { strength: next.phase === "fight" ? next.fight.enemyTotal : 0 },
   };
 }
 
@@ -330,7 +330,7 @@ export function enterBridge(
   snapshot: Snapshot,
   command: { outcome: BridgeOutcome },
 ): Outcome<{ at: string | null }> {
-  if (snapshot.game.turn_state.phase !== "most") {
+  if (snapshot.game.turn_state.phase !== "bridge") {
     throw new Error("Nie ma teraz próby wejścia na Most.");
   }
   return settleBridge(
@@ -363,7 +363,7 @@ export function payFerry(
 ): Outcome<{ at: string }> {
   const seat = activeSeat(snapshot);
   const phase = snapshot.game.turn_state;
-  if (phase.phase !== "pole" || !isFerry(phase.fieldId)) {
+  if (phase.phase !== "field" || !isFerry(phase.fieldId)) {
     throw new Error("Nie stoisz na Przeprawie.");
   }
   const here = phase.fieldId;
@@ -387,7 +387,7 @@ export function payFerry(
           {
             seatId: seat.id,
             turn: snapshot.game.turn,
-            kind: "przewoznik",
+            kind: "ferry",
             payload: { field: here, paid: toll },
           },
         ],
@@ -408,7 +408,7 @@ export function payFerry(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          kind: "przewoznik-odmowa",
+          kind: "ferry-refused",
           payload: { field: here, back },
         },
       ],
@@ -561,7 +561,7 @@ export async function resolveBridgeOrdeal(
         writes: mergeAll(
           {
             journal: [
-              { seatId: seat.id, turn, kind: "most-pulapka", payload: { dice, result: 0 } },
+              { seatId: seat.id, turn, kind: "bridge-trap", payload: { dice, result: 0 } },
             ],
           },
           closed,
@@ -597,7 +597,7 @@ export async function resolveBridgeOrdeal(
             {
               seatId: seat.id,
               turn,
-              kind: "most-pulapka",
+              kind: "bridge-trap",
               payload: {
                 dice,
                 result: fall.result,
@@ -629,7 +629,7 @@ export async function resolveBridgeOrdeal(
     const played = mergeAll(
       {
         journal: [
-          { seatId: seat.id, turn, kind: "most-gra-ze-smiercia", payload: { mine, deaths, outcome } },
+          { seatId: seat.id, turn, kind: "bridge-death-game", payload: { mine, deaths, outcome } },
         ],
       },
       closed,
@@ -667,7 +667,7 @@ export async function resolveBridgeOrdeal(
     const [die] = await rollDice(ports.random, 1, "cerber");
     const loss = cerberLoss(die);
     const bitten = mergeAll(
-      { journal: [{ seatId: seat.id, turn, kind: "most-cerber", payload: { die, loss } }] },
+      { journal: [{ seatId: seat.id, turn, kind: "bridge-cerberus", payload: { die, loss } }] },
       closed,
     );
     // Same chain as the Gra ze Śmiercią above, and for the same reason: the dog
@@ -706,7 +706,7 @@ export async function resolveBridgeOrdeal(
         {
           seatId: seat.id,
           turn,
-          kind: "straznik-mostu",
+          kind: "bridge-guardian",
           payload: { guardian: creature.name, dice, strength },
         },
       ],

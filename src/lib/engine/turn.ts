@@ -27,10 +27,10 @@ import { compareCombat, type CombatKind, type CombatResult } from "./combat";
  * would hide the number the table is agreeing on.
  */
 export type TurnPhase =
-  | { phase: "rzut" }
-  | { phase: "ruch"; roll: number; options: TurnMoveOption[] }
+  | { phase: "roll" }
+  | { phase: "move"; roll: number; options: TurnMoveOption[] }
   | {
-      phase: "pole";
+      phase: "field";
       fieldId: FieldId;
       /** Where this move started, which the Przeprawa sends you back to. */
       from: FieldId | null;
@@ -60,10 +60,10 @@ export type TurnPhase =
        */
       fought?: string[];
     }
-  | { phase: "walka"; fight: Fight }
+  | { phase: "fight"; fight: Fight }
   /** Standing at a bridge entrance with its guardian in the way (11.9-11.11). */
-  | { phase: "most"; bridge: BridgeEntrance }
-  | { phase: "koniec" };
+  | { phase: "bridge"; bridge: BridgeEntrance }
+  | { phase: "end" };
 
 /**
  * A fight in progress, kept in the turn state so every device at the table
@@ -175,7 +175,7 @@ export const DIRECTION_LABEL: Record<Direction, string> = {
 
 /** A turn always opens on the roll. */
 export function startTurn(): TurnPhase {
-  return { phase: "rzut" };
+  return { phase: "roll" };
 }
 
 /**
@@ -233,7 +233,7 @@ export function afterRoll(
   // On the bridge the roll is ignored entirely (10.3) — one field per turn,
   // either onward or back the way you came.
   if (ringOf(fieldId) === KAMIENNY_MOST) {
-    return { phase: "ruch", roll, options: bridgeOptions(fieldId) };
+    return { phase: "move", roll, options: bridgeOptions(fieldId) };
   }
   const ring = ringOf(fieldId) ?? DOLNY_KRAG;
   const walks = moveOptions(ring, fieldId, roll);
@@ -264,7 +264,7 @@ export function afterRoll(
     }
   }
 
-  return { phase: "ruch", roll, options };
+  return { phase: "move", roll, options };
 }
 
 /**
@@ -286,7 +286,7 @@ export function afterMove(
   waiting: readonly TurnCard[] = [],
 ): TurnPhase {
   return {
-    phase: "pole",
+    phase: "field",
     fieldId: field.id,
     from,
     draw: field.draw ?? 0,
@@ -314,7 +314,7 @@ export function bridgeBlocked(blockedUntil: number | null, turn: number): boolea
 
 /** Stops the move at a bridge entrance, with the guardian still to be dealt with. */
 export function atBridge(bridge: BridgeEntrance): TurnPhase {
-  return { phase: "most", bridge };
+  return { phase: "bridge", bridge };
 }
 
 /**
@@ -322,12 +322,12 @@ export function atBridge(bridge: BridgeEntrance): TurnPhase {
  * rule 15.2 requires it to be resolved in — lowest class numeral first.
  */
 export function afterDraw(phase: TurnPhase, card: TurnCard): TurnPhase {
-  if (phase.phase !== "pole") return phase;
+  if (phase.phase !== "field") return phase;
   return { ...phase, drawn: resolutionOrder([...phase.drawn, card]) };
 }
 
 export function endTurn(): TurnPhase {
-  return { phase: "koniec" };
+  return { phase: "end" };
 }
 
 /**
@@ -355,11 +355,11 @@ export function startFight(
   },
   playerTotals: { miecz: number; magia: number },
 ): TurnPhase {
-  if (phase.phase !== "pole") return phase;
+  if (phase.phase !== "field") return phase;
   const kind: CombatKind = card.magia !== undefined ? "magiczna" : "zwykla";
   const enemyTotal = (kind === "magiczna" ? card.magia : card.miecz) ?? 0;
   return {
-    phase: "walka",
+    phase: "fight",
     fight: {
       cardId: card.cardId,
       cardName: card.cardName,
@@ -420,7 +420,7 @@ export function startGuardianFight(
       : 0;
 
   return {
-    phase: "walka",
+    phase: "fight",
     fight: {
       cardId: `guardian:${name}`,
       cardName: name,
@@ -459,7 +459,7 @@ export function strengthPending(fight: Fight): boolean {
  * passed in and used as it stands.
  */
 export function recordGuardianStrength(phase: TurnPhase, roll: number): TurnPhase {
-  if (phase.phase !== "walka") return phase;
+  if (phase.phase !== "fight") return phase;
   const onTheBridgeItself = phase.fight.guardian?.kind === "most-pole";
   return {
     ...phase,
@@ -472,7 +472,7 @@ export function recordGuardianStrength(phase: TurnPhase, roll: number): TurnPhas
 }
 
 export function setFightTotal(phase: TurnPhase, playerTotal: number): TurnPhase {
-  if (phase.phase !== "walka") return phase;
+  if (phase.phase !== "fight") return phase;
   return { ...phase, fight: { ...phase.fight, playerTotal: Math.max(0, playerTotal) } };
 }
 
@@ -486,7 +486,7 @@ export function recordFightRoll(
   side: "player" | "enemy",
   roll: number,
 ): TurnPhase {
-  if (phase.phase !== "walka") return phase;
+  if (phase.phase !== "fight") return phase;
   // Rolling for the fight before the guardian has a strength would compare
   // against zero and hand the player a free win.
   if (strengthPending(phase.fight)) return phase;
@@ -513,9 +513,9 @@ export function recordFightRoll(
  * rolling against it.
  */
 export function endFight(phase: TurnPhase): TurnPhase {
-  if (phase.phase !== "walka") return phase;
+  if (phase.phase !== "fight") return phase;
   const { fieldId, draw, drawn, fought } = phase.fight;
-  return { phase: "pole", fieldId, from: null, draw, drawn, fought: fought ?? [] };
+  return { phase: "field", fieldId, from: null, draw, drawn, fought: fought ?? [] };
 }
 
 /**

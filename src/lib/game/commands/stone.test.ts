@@ -70,7 +70,7 @@ describe("Zamieniony w Kamień (20.1-20.5)", () => {
       { seatId: "seat-a" },
     );
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "kamien",
+      kind: "stone",
       payload: { until: 8, left: 1, zloto: 2, friendsLost: 1 },
     });
   });

@@ -82,7 +82,7 @@ export function aTable(over: TableOver = {}): Snapshot {
     active_seat: 0,
     turn: 3,
     revision: 7,
-    turn_state: { phase: "rzut" },
+    turn_state: { phase: "roll" },
     deck: noDeck(),
     ...(over.game ?? {}),
   };

@@ -16,7 +16,7 @@ import type { FieldId } from "./board";
  * leaves the player free to do everything else in any order they like and still
  * cannot walk away from what the rules require.
  */
-export type DutyKind = "bestia" | "ruch";
+export type DutyKind = "beast" | "move";
 
 export interface Duty {
   kind: DutyKind;
@@ -58,9 +58,9 @@ export function dutiesBeforeEnding(input: {
    * anybody is asked to roll, and the Kamienny Most has its own phase because
    * 10.3 gives it no roll.
    */
-  if (input.phase === "rzut" && !input.done.includes("ruch")) {
+  if (input.phase === "roll" && !input.done.includes("move")) {
     duties.push({
-      kind: "ruch",
+      kind: "move",
       label: "Rzuć kostką i wykonaj ruch",
       rule: "10.1-10.2",
     });
@@ -69,9 +69,9 @@ export function dutiesBeforeEnding(input: {
   // 14.7: reaching the Zamek means fighting the Bestia. There is no leaving
   // without it — a loss costs two Życia and puts the character off the Most,
   // but it is still the fight that ends the visit, not walking away from one.
-  if (input.fieldId === "zamek-bestii" && !input.done.includes("bestia")) {
+  if (input.fieldId === "zamek-bestii" && !input.done.includes("beast")) {
     duties.push({
-      kind: "bestia",
+      kind: "beast",
       label: "Stocz walkę z Bestią",
       rule: "14.7",
     });

@@ -16,7 +16,7 @@ const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
 describe("passing the turn (10.1)", () => {
   it("hands play to the next seat and starts them at the roll", () => {
     const writes = passTurn(two());
-    expect(writes.game).toMatchObject({ active_seat: 1, turn: 3, turn_state: { phase: "rzut" } });
+    expect(writes.game).toMatchObject({ active_seat: 1, turn: 3, turn_state: { phase: "roll" } });
   });
 
   /** 20.1 counts the round, so it has to advance when play comes back round. */
@@ -24,7 +24,7 @@ describe("passing the turn (10.1)", () => {
     const writes = passTurn(two({ game: { active_seat: 1, turn: 3 } }));
     expect(writes.game).toMatchObject({ active_seat: 0, turn: 4 });
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "koniec-tury",
+      kind: "turn-end",
       payload: { next: 0, wrapped: true, turnAfter: 4 },
     });
   });
@@ -73,7 +73,7 @@ describe("passing the turn (10.1)", () => {
         active_seat: 0,
         turn: 3,
         turn_state: {
-          phase: "pole",
+          phase: "field",
           fieldId: asFieldId("mroczna-polana")!,
           from: null,
           draw: 1,
@@ -85,7 +85,7 @@ describe("passing the turn (10.1)", () => {
     expect(writes.fieldCards?.insert).toEqual([
       { field_id: "mroczna-polana", card_id: "helm", granted: false },
     ]);
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["zostawienie", "koniec-tury"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["left-behind", "turn-end"]);
   });
 
   /**
@@ -102,7 +102,7 @@ describe("passing the turn (10.1)", () => {
         active_seat: 0,
         turn: 3,
         turn_state: {
-          phase: "pole",
+          phase: "field",
           fieldId: asFieldId("mroczna-polana")!,
           from: null,
           draw: 1,
@@ -126,15 +126,15 @@ describe("effects counting down", () => {
           seat_id: "seat-a",
           source: "Eliksir",
           label: "+1 Miecza",
-          modifier: { kind: "punkty", miecz: 1 },
-          ends: { kind: "tur", turns },
+          modifier: { kind: "points", miecz: 1 },
+          ends: { kind: "turns", turns },
         },
       ],
     });
 
   it("takes one turn off a countdown", () => {
     expect(tickEffects(withEffect(2), "seat-a").effects).toEqual({
-      patch: [{ id: "e1", patch: { ends: { kind: "tur", turns: 1 } } }],
+      patch: [{ id: "e1", patch: { ends: { kind: "turns", turns: 1 } } }],
     });
   });
 
@@ -151,8 +151,8 @@ describe("effects counting down", () => {
           seat_id: "seat-a",
           source: "Tarcza",
           label: "osłona",
-          modifier: { kind: "bez-ruchu" },
-          ends: { kind: "walka" },
+          modifier: { kind: "frozen" },
+          ends: { kind: "fight" },
         },
       ],
     });

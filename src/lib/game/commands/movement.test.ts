@@ -62,7 +62,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
       status: "playing",
       turn: 1,
       active_seat: 1,
-      turn_state: { phase: "rzut" },
+      turn_state: { phase: "roll" },
     });
     expect(writes.journal?.at(-1)).toMatchObject({
       seatId: null,
@@ -109,7 +109,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     expect(writes.journal?.[0]).toMatchObject({
       seatId: "seat-a",
       turn: 1,
-      kind: "wyposazenie-poczatkowe",
+      kind: "starting-kit",
       payload: { character: "ksiaze", items: ["helm", "miecz"], zloto: 5 },
     });
   });
@@ -145,7 +145,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     // The Mag owns two Zaklęcia and nothing else, so his line is written here
     // even though this change deals him no card.
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "wyposazenie-poczatkowe",
+      kind: "starting-kit",
       payload: { character: "mag", spells: 2 },
     });
     expect(writes.holdings?.insert?.map((h) => h.card_id)).toEqual(["miecz", "miecz", "tarcza"]);
@@ -164,7 +164,7 @@ const rolling = (
   holdings: HoldingRow[] = [],
 ) =>
   aTable({
-    game: { active_seat: 0, turn: 3, turn_state: { phase: "rzut" } },
+    game: { active_seat: 0, turn: 3, turn_state: { phase: "roll" } },
     // Named rather than leant on: the fixture's own Obszar is deliberately one
     // with no rule of its own, and these tests are about this one's neighbours.
     seats: [aSeat({ seat_index: 0, field_id: asFieldId("zaczarowane-wzgorza"), ...seat })],
@@ -175,7 +175,7 @@ describe("rzut na ruch (10.2)", () => {
   it("throws one die and offers both ways round the ring", async () => {
     const { writes, result } = await rollForMove(rolling(), {}, die(2));
     expect(result).toBe(2);
-    expect(writes.game?.turn_state).toMatchObject({ phase: "ruch", roll: 2 });
+    expect(writes.game?.turn_state).toMatchObject({ phase: "move", roll: 2 });
     const options = (writes.game?.turn_state as { options: { fieldId: string }[] }).options;
     expect(options.map((option) => option.fieldId)).toEqual(["pustelnia", "plaskowyz-mgiel"]);
   });
@@ -189,7 +189,7 @@ describe("rzut na ruch (10.2)", () => {
   it("records the roll, and that the app threw it", async () => {
     const { writes } = await rollForMove(rolling(), {}, die(5));
     expect(writes.journal).toEqual([
-      { seatId: "seat-a", turn: 3, kind: "rzut", payload: { roll: 5, manual: false }, manual: false },
+      { seatId: "seat-a", turn: 3, kind: "roll", payload: { roll: 5, manual: false }, manual: false },
     ]);
   });
 
@@ -201,7 +201,7 @@ describe("rzut na ruch (10.2)", () => {
 
   it("refuses when the turn is not at the roll", async () => {
     const table = aTable({
-      game: { active_seat: 0, turn_state: { phase: "ruch", roll: 2, options: [] } },
+      game: { active_seat: 0, turn_state: { phase: "move", roll: 2, options: [] } },
       seats: [aSeat({ seat_index: 0 })],
     });
     await expect(rollForMove(table, {}, die(2))).rejects.toThrow("Nie czas na rzut.");
@@ -271,7 +271,7 @@ describe("ruch (10.2, 13.4)", () => {
     const { writes } = moveTo(walking("zaczarowane-wzgorza"), { destination: "pustelnia" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "pustelnia" } }]);
     expect(writes.game?.turn_state).toEqual({
-      phase: "pole",
+      phase: "field",
       fieldId: "pustelnia",
       from: "zaczarowane-wzgorza",
       // Pustelnia prints no "WYCIĄGNIJ" instruction.
@@ -282,7 +282,7 @@ describe("ruch (10.2, 13.4)", () => {
       {
         seatId: "seat-a",
         turn: 3,
-        kind: "ruch",
+        kind: "move",
         payload: { from: "zaczarowane-wzgorza", to: "pustelnia", direction: "zgodnie" },
       },
     ]);
@@ -309,7 +309,7 @@ describe("ruch (10.2, 13.4)", () => {
 
   it("refuses when the turn is not at the move", () => {
     const table = aTable({
-      game: { active_seat: 0, turn_state: { phase: "rzut" } },
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
       seats: [aSeat({ seat_index: 0 })],
     });
     expect(() => moveTo(table, { destination: "pustelnia" })).toThrow("Nie czas na ruch.");
@@ -349,7 +349,7 @@ describe("ruch (10.2, 13.4)", () => {
       const { writes } = moveTo(table(), { destination: "ruiny-twierdzy", viaBridge: true });
       expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "ruiny-twierdzy" } }]);
       expect(writes.game?.turn_state).toEqual({
-        phase: "most",
+        phase: "bridge",
         bridge: {
           from: "ruiny-twierdzy",
           guardian: "Kamienny Potwór",
@@ -358,7 +358,7 @@ describe("ruch (10.2, 13.4)", () => {
         },
       });
       expect(writes.journal?.[0]).toMatchObject({
-        kind: "proba-mostu",
+        kind: "bridge-attempt",
         payload: { to: "ruiny-twierdzy", guardian: "Kamienny Potwór" },
       });
     });

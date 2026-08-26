@@ -76,7 +76,7 @@ export interface Adjusted {
 
 export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adjusted> {
   const seat = seatById(snapshot, command.seatId);
-  const record = command.record ?? { kind: "korekta", manual: true };
+  const record = command.record ?? { kind: "override", manual: true };
 
   const column = ADJUSTABLE[command.stat];
   // An unrecognised stat used to update a column called `undefined`, which

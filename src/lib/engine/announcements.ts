@@ -14,7 +14,7 @@
  * The test is whether a player who missed it would be confused later — losing a
  * turn passes, gaining a Sztuka Złota does not.
  */
-export type AnnouncementKind = "tura-stracona" | "kamien" | "smierc";
+export type AnnouncementKind = "turn-lost" | "stone" | "death";
 
 export interface Announcement {
   kind: AnnouncementKind;
@@ -57,7 +57,7 @@ export function announce(before: Watched | null, now: Watched): Announcement | n
   // a turn in any sense worth saying.
   if (now.eliminated && !before.eliminated) {
     return {
-      kind: "smierc",
+      kind: "death",
       // "MGR" is what the Karta Postaci prints beside the field name, and it is
       // legible there because the field is printed next to it. In a sentence it
       // is three letters standing for nothing a player has been told.
@@ -73,7 +73,7 @@ export function announce(before: Watched | null, now: Watched): Announcement | n
   // saying, because from the outside it looks exactly like being skipped.
   if (now.stoneUntilTurn !== null && now.stoneUntilTurn !== before.stoneUntilTurn) {
     return {
-      kind: "kamien",
+      kind: "stone",
       title: "Zamieniony w Kamień",
       body:
         "Przez 3 tury nie możesz się poruszać ani nic posiadać (20.1-20.4). " +
@@ -88,7 +88,7 @@ export function announce(before: Watched | null, now: Watched): Announcement | n
   if (now.turnsLost > before.turnsLost) {
     const lost = now.turnsLost - before.turnsLost;
     return {
-      kind: "tura-stracona",
+      kind: "turn-lost",
       title: lost === 1 ? "Tracisz turę" : `Tracisz ${lost} tury`,
       body:
         "Nie podejmujesz już żadnych działań — ta tura liczy się jako " +

@@ -330,11 +330,11 @@ export function momentsIn(state: TurnPhase): SpellTiming[] {
   return momentsOf({
     phase: state.phase,
     diceRolled:
-      state.phase === "walka" &&
+      state.phase === "fight" &&
       (state.fight.playerRoll !== null || state.fight.enemyRoll !== null),
-    cardJustDrawn: state.phase === "pole" && state.drawn.length > 0,
+    cardJustDrawn: state.phase === "field" && state.drawn.length > 0,
     meeting:
-      state.phase === "pole" && state.drawn.some((entry) => entry.cardClass === "foe"),
+      state.phase === "field" && state.drawn.some((entry) => entry.cardClass === "foe"),
   });
 }
 
@@ -342,20 +342,20 @@ export function momentsIn(state: TurnPhase): SpellTiming[] {
 export function momentsOf(at: TurnMoment): SpellTiming[] {
   const now: SpellTiming[] = ["dowolna-chwila"];
   switch (at.phase) {
-    case "rzut":
+    case "roll":
       // Nothing has happened yet: the start of the turn, and everything that
       // has to come before the move.
       now.push("poczatek-tury", "przed-ruchem", "zamiast-ruchu");
       break;
-    case "ruch":
+    case "move":
       now.push("przed-ruchem");
       break;
-    case "pole":
+    case "field":
       now.push("po-ruchu");
       if (at.cardJustDrawn) now.push("po-karcie");
       if (at.meeting) now.push("spotkanie", "przed-walka");
       break;
-    case "walka":
+    case "fight":
       // Before the dice both windows are open; once one is thrown, 17.3 has
       // passed and only the spells that act on a roll are left.
       now.push(at.diceRolled ? "w-walce" : "przed-walka", "spotkanie");

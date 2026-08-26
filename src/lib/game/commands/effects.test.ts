@@ -32,7 +32,7 @@ describe("carrying out what a Karta says", () => {
     const { writes, result } = await run({ op: "punkty", stat: "miecz", delta: 2, target: "ty" });
     expect(result.did).toEqual(["+2 Miecza"]);
     expect(writes.seats?.[0]).toMatchObject({ id: "seat-a", patch: { miecz_own: 4 } });
-    expect(writes.journal?.[0]).toMatchObject({ kind: "punkty", manual: false });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "points", manual: false });
   });
 
   it("declines Złoto, which is the one that declines", async () => {
@@ -169,7 +169,7 @@ describe("losing a turn (16.1)", () => {
   it("spends the turn in progress on the character who drew it", async () => {
     const { writes, result } = await run({ op: "tura-stracona", turns: 1, target: "ty" }, table());
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { turns_lost: 0 } }]);
-    expect(writes.game?.turn_state).toEqual({ phase: "koniec" });
+    expect(writes.game?.turn_state).toEqual({ phase: "end" });
     expect(result.did).toEqual(["tracisz 1 turę"]);
   });
 
@@ -265,7 +265,7 @@ describe("the rest of the vocabulary", () => {
   it("turns a character to stone", async () => {
     const { writes, result } = await run({ op: "kamien" });
     expect(result.did).toEqual(["Zamiana w Kamień (20.1)"]);
-    expect(writes.journal?.[0]).toMatchObject({ kind: "kamien" });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "stone" });
   });
 
   it("changes a Natura and names it the way Polish does", async () => {
@@ -293,7 +293,7 @@ describe("the rest of the vocabulary", () => {
     const arrived = aTable({
       game: {
         active_seat: 0,
-        turn_state: { phase: "pole", fieldId: "karczma", from: null, draw: 0, drawn: [] },
+        turn_state: { phase: "field", fieldId: "karczma", from: null, draw: 0, drawn: [] },
       },
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
     });
@@ -302,7 +302,7 @@ describe("the rest of the vocabulary", () => {
       arrived,
     );
     expect(result.did).toEqual(["walka: miejscowy osiłek"]);
-    expect((writes.game?.turn_state as { phase: string }).phase).toBe("walka");
+    expect((writes.game?.turn_state as { phase: string }).phase).toBe("fight");
   });
 
   it("hands an extra move back to the turn rather than taking it itself", async () => {
@@ -351,8 +351,8 @@ describe("spending a Karta that is used up by using it", () => {
     expect(writes.holdings?.delete).toEqual(["h1"]);
     expect(writes.effects?.insert?.[0]).toMatchObject({
       source: "eliksir-sily",
-      modifier: { kind: "punkty", miecz: 2 },
-      ends: { kind: "tur", turns: 1 },
+      modifier: { kind: "points", miecz: 2 },
+      ends: { kind: "turns", turns: 1 },
     });
     expect(result).toEqual({ card: "ELIKSIR SIŁY", did: ["+2 Miecza"], stol: false });
   });
@@ -402,7 +402,7 @@ describe("an Obszar's own table (15.1)", () => {
     return aTable({
       game: {
         active_seat: 0,
-        turn_state: { phase: "pole", fieldId, from: null, draw: 0, drawn: [] },
+        turn_state: { phase: "field", fieldId, from: null, draw: 0, drawn: [] },
       },
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: fieldId })],
     });
@@ -416,7 +416,7 @@ describe("an Obszar's own table (15.1)", () => {
 
   it("refuses before the character has arrived", async () => {
     const rolling = aTable({
-      game: { active_seat: 0, turn_state: { phase: "rzut" } },
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
     });
     await expect(
@@ -432,7 +432,7 @@ describe("an Obszar's own table (15.1)", () => {
     );
     expect(result.offer).toBe("Karczma");
     expect(result.face).toBe(1);
-    expect(writes.journal?.[0]).toMatchObject({ kind: "pole-tabela", payload: { face: 1 } });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "field-table", payload: { face: 1 } });
     const state = writes.game?.turn_state as { resolved?: string[] };
     expect(state.resolved).toContain("pole:Karczma");
   });
@@ -461,7 +461,7 @@ describe("a Karta drawn onto the Obszar (16.1)", () => {
       game: {
         active_seat: 0,
         turn_state: {
-          phase: "pole",
+          phase: "field",
           fieldId: "karczma",
           from: null,
           draw: 1,

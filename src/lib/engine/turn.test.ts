@@ -78,13 +78,13 @@ describe("the ring (10.2)", () => {
 
 describe("turn phases (10.1)", () => {
   it("opens on the roll", () => {
-    expect(startTurn()).toEqual({ phase: "rzut" });
+    expect(startTurn()).toEqual({ phase: "roll" });
   });
 
   it("offers two destinations after a roll", () => {
     const phase = afterRoll("karczma", 2);
-    expect(phase.phase).toBe("ruch");
-    if (phase.phase !== "ruch") return;
+    expect(phase.phase).toBe("move");
+    if (phase.phase !== "move") return;
     expect(phase.roll).toBe(2);
     expect(phase.options).toHaveLength(2);
   });
@@ -92,7 +92,7 @@ describe("turn phases (10.1)", () => {
   it("carries the field's draw count on landing (13.4)", () => {
     const bezdroza = DOLNY_KRAG.find((f) => f.id === "bezdroza")!;
     const phase = afterMove(bezdroza);
-    expect(phase).toMatchObject({ phase: "pole", fieldId: "bezdroza", draw: 2 });
+    expect(phase).toMatchObject({ phase: "field", fieldId: "bezdroza", draw: 2 });
   });
 
   it("keeps drawn cards in resolution order however they arrive (15.2)", () => {
@@ -100,7 +100,7 @@ describe("turn phases (10.1)", () => {
     phase = afterDraw(phase, { cardId: "zloto", cardClass: "item" });
     phase = afterDraw(phase, { cardId: "wilk", cardClass: "foe" });
     phase = afterDraw(phase, { cardId: "mgla", cardClass: "encounter" });
-    if (phase.phase !== "pole") throw new Error("expected pole");
+    if (phase.phase !== "field") throw new Error("expected pole");
     expect(phase.drawn.map((c) => c.cardId)).toEqual(["mgla", "wilk", "zloto"]);
   });
 });
@@ -114,7 +114,7 @@ describe("fights", () => {
       { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
       { miecz: 3, magia: 5 },
     );
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.kind).toBe("zwykla");
     expect(phase.fight.enemyTotal).toBe(6);
     expect(phase.fight.playerTotal).toBe(3);
@@ -126,7 +126,7 @@ describe("fights", () => {
       { cardId: "demon", cardName: "DEMON", magia: 7 },
       { miecz: 3, magia: 5 },
     );
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.kind).toBe("magiczna");
     expect(phase.fight.enemyTotal).toBe(7);
     expect(phase.fight.playerTotal).toBe(5);
@@ -139,11 +139,11 @@ describe("fights", () => {
       { miecz: 3, magia: 5 },
     );
     phase = recordFightRoll(phase, "player", 6);
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.result).toBeNull();
 
     phase = recordFightRoll(phase, "enemy", 1);
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.result).toMatchObject({ outcome: "wygrana" });
   });
 
@@ -155,8 +155,8 @@ describe("fights", () => {
       { miecz: 3, magia: 5 },
     );
     const back = endFight(phase);
-    expect(back).toMatchObject({ phase: "pole", fieldId: "kurhan" });
-    if (back.phase !== "pole") return;
+    expect(back).toMatchObject({ phase: "field", fieldId: "kurhan" });
+    if (back.phase !== "field") return;
     expect(back.drawn).toHaveLength(1);
   });
 
@@ -170,7 +170,7 @@ describe("fights", () => {
     phase = recordFightRoll(phase, "player", 1);
     phase = recordFightRoll(phase, "enemy", 6);
     const back = endFight(phase);
-    if (back.phase !== "pole") throw new Error("expected pole");
+    if (back.phase !== "field") throw new Error("expected pole");
     // Lost, so the Cyklop is still on the field — and still not something to
     // roll against again this turn.
     expect(back.drawn.map((c) => c.cardId)).toEqual(["cyklop"]);
@@ -191,7 +191,7 @@ describe("fights", () => {
       { miecz: 3, magia: 5 },
     );
     const back = endFight(phase);
-    if (back.phase !== "pole") throw new Error("expected pole");
+    if (back.phase !== "field") throw new Error("expected pole");
     expect(back.fought).toEqual(["wilk", "wilki"]);
   });
 
@@ -202,7 +202,7 @@ describe("fights", () => {
       { miecz: 3, magia: 5 },
     );
     const back = endFight(phase);
-    if (back.phase !== "pole") throw new Error("expected pole");
+    if (back.phase !== "field") throw new Error("expected pole");
     expect(back.fought).toEqual([]);
   });
 });
@@ -278,7 +278,7 @@ describe("resolution numerals (15.2, 16.6)", () => {
 describe("the Kamienny Most (10.3, 10.4)", () => {
   it("moves one field per turn regardless of the die", () => {
     const rolled6 = afterRoll("gra-ze-smiercia", 6);
-    if (rolled6.phase !== "ruch") throw new Error("expected ruch");
+    if (rolled6.phase !== "move") throw new Error("expected ruch");
     // Six pips, but the bridge only ever offers its two neighbours.
     expect(rolled6.options.map((o) => o.fieldId)).toEqual([
       "demon-zaglady",
@@ -288,14 +288,14 @@ describe("the Kamienny Most (10.3, 10.4)", () => {
 
   it("offers going back, since a character may leave at any time (10.4)", () => {
     const phase = afterRoll("monstrum", 1);
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     expect(phase.options.map((o) => o.fieldId)).toContain("zamek-bestii");
     expect(phase.options.map((o) => o.fieldId)).toContain("cerber");
   });
 
   it("offers only one way from an entrance, which is the end of the bridge", () => {
     const phase = afterRoll("wejscie-na-most-a", 3);
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     expect(phase.options).toHaveLength(1);
     expect(phase.options[0].fieldId).toBe("pulapka");
   });
@@ -303,7 +303,7 @@ describe("the Kamienny Most (10.3, 10.4)", () => {
   it("still uses the die on an ordinary ring", () => {
     // Karczma is index 0, so three steps back wraps round to Bezdroża.
     const phase = afterRoll("karczma", 3);
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     expect(phase.options.map((o) => o.fieldId)).toEqual(["mokradla-2", "bezdroza"]);
   });
 });
@@ -315,7 +315,7 @@ describe("stepping onto the Kamienny Most (11.10)", () => {
 
   it("offers the bridge when the walk passes an entrance with a step to spare", () => {
     const phase = afterRoll(from, 2, { bridgeOffered: true });
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     const bridge = phase.options.find((option) => option.bridge);
     expect(bridge?.bridge?.guardian).toBe("Kamienny Potwór");
     expect(bridge?.fieldId).toBe("ruiny-twierdzy");
@@ -326,20 +326,20 @@ describe("stepping onto the Kamienny Most (11.10)", () => {
     // "Postać, której ruch kończy się dokładnie na Obszarze Wymarłego Miasta
     // albo Ruin Twierdzy, nie może podjąć próby wkroczenia na Most."
     const phase = afterRoll(from, 1, { bridgeOffered: true });
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     expect(phase.options.some((option) => option.fieldId === "ruiny-twierdzy")).toBe(true);
     expect(phase.options.some((option) => option.bridge)).toBe(false);
   });
 
   it("does not offer it at all without a sword, or while barred by 11.11", () => {
     const phase = afterRoll(from, 2);
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     expect(phase.options.some((option) => option.bridge)).toBe(false);
   });
 
   it("keeps the ordinary walk alongside the diversion", () => {
     const phase = afterRoll(from, 2, { bridgeOffered: true });
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     // Both ways round the ring, plus the turn onto the bridge.
     expect(phase.options).toHaveLength(3);
     expect(phase.options.filter((option) => !option.bridge)).toHaveLength(2);
@@ -347,7 +347,7 @@ describe("stepping onto the Kamienny Most (11.10)", () => {
 
   it("stops the walk short at the entrance rather than at the landing square", () => {
     const phase = afterRoll(from, 3, { bridgeOffered: true });
-    if (phase.phase !== "ruch") throw new Error("expected ruch");
+    if (phase.phase !== "move") throw new Error("expected ruch");
     const bridge = phase.options.find((option) => option.bridge)!;
     // Walked from Urwisko straight to the ruins: nothing in between.
     expect(bridge.through).toEqual([]);
@@ -368,7 +368,7 @@ describe("where a move started", () => {
   it("is carried into the field phase, for the ferryman to send you back to", () => {
     const ring = DOLNY_KRAG;
     const phase = afterMove(ring[3], "karczma");
-    if (phase.phase !== "pole") throw new Error("expected pole");
+    if (phase.phase !== "field") throw new Error("expected pole");
     expect(phase.from).toBe("karczma");
   });
 });
@@ -395,7 +395,7 @@ describe("fighting a guardian", () => {
 
   it("starts a bridge guardian with no strength until its die is thrown", () => {
     const phase = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(strengthPending(phase.fight)).toBe(true);
     expect(phase.fight.enemyTotal).toBe(0);
     // Kamienny Potwór is fought on Miecz, so the character brings its Miecz.
@@ -414,7 +414,7 @@ describe("fighting a guardian", () => {
       [6, 10],
     ]) {
       const phase = recordGuardianStrength(opened, roll);
-      if (phase.phase !== "walka") throw new Error("expected walka");
+      if (phase.phase !== "fight") throw new Error("expected walka");
       expect(phase.fight.enemyTotal, `roll ${roll}`).toBe(strength);
       expect(strengthPending(phase.fight)).toBe(false);
     }
@@ -430,7 +430,7 @@ describe("fighting a guardian", () => {
   it("fights the Duch Skał on Magia, not Miecz", () => {
     const city = BRIDGE_ENTRANCES.find((e) => e.from === "wymarle-miasto")!;
     const phase = startGuardianFight({ kind: "most", entrance: city }, totals, "wymarle-miasto");
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.kind).toBe("magiczna");
     expect(phase.fight.playerTotal).toBe(2);
   });
@@ -438,7 +438,7 @@ describe("fighting a guardian", () => {
   it("gives the Rycerz his printed Miecz and asks for no strength die", () => {
     const crossing = crossingFrom("przelecz-wichrow")!;
     const phase = startGuardianFight({ kind: "przeprawa", crossing }, totals, "przelecz-wichrow");
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.cardName).toBe("Rycerz Wiecznych Śniegów");
     expect(phase.fight.enemyTotal).toBe(10);
     expect(strengthPending(phase.fight)).toBe(false);
@@ -446,7 +446,7 @@ describe("fighting a guardian", () => {
 
   it("carries what the fight is for, so its outcome can be routed", () => {
     const phase = startGuardianFight({ kind: "most", entrance: ruins }, totals, "ruiny-twierdzy");
-    if (phase.phase !== "walka") throw new Error("expected walka");
+    if (phase.phase !== "fight") throw new Error("expected walka");
     expect(phase.fight.guardian).toEqual({ kind: "most", entrance: ruins });
   });
 });

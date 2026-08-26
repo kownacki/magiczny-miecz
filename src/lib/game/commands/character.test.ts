@@ -22,7 +22,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
       { id: "seat-a", patch: { nature: "zla", nature_changed_turn: 5 } },
     ]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "zmiana-natury",
+      kind: "nature-change",
       payload: { from: "dobra", to: "zla", nowForbidden: [] },
     });
   });
@@ -57,7 +57,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
       force: true,
     });
     expect(writes.seats?.[0].patch).toMatchObject({ nature: "zla" });
-    expect(writes.journal?.[0]).toMatchObject({ kind: "zmiana-natury", manual: true });
+    expect(writes.journal?.[0]).toMatchObject({ kind: "nature-change", manual: true });
   });
 
   it("marks an ordinary change as what it is: not manual", () => {
@@ -129,14 +129,14 @@ describe("przestawienie figury", () => {
     const { writes } = placeSeat(table(), { seatId: "seat-a", target: "osada", reason: "test" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "osada" } }]);
     expect(writes.journal?.[0]).toMatchObject({
-      kind: "przestawienie",
+      kind: "moved-by-hand",
       manual: true,
       payload: { from: "mroczna-polana", to: "osada", reason: "test" },
     });
   });
 
   it("leaves the turn alone before the character has moved this turn", () => {
-    const { writes } = placeSeat(table({ game: { turn_state: { phase: "rzut" } } }), {
+    const { writes } = placeSeat(table({ game: { turn_state: { phase: "roll" } } }), {
       seatId: "seat-a",
       target: "grod",
       reason: null,
@@ -148,7 +148,7 @@ describe("przestawienie figury", () => {
     const mid = table({
       game: {
         turn_state: {
-          phase: "pole",
+          phase: "field",
           fieldId: "mroczna-polana",
           from: null,
           draw: 2,
@@ -159,7 +159,7 @@ describe("przestawienie figury", () => {
     });
     const { writes } = placeSeat(mid, { seatId: "seat-a", target: "grod", reason: null });
     expect(writes.game?.turn_state).toEqual({
-      phase: "pole",
+      phase: "field",
       fieldId: "grod",
       from: null,
       draw: 0,
@@ -170,9 +170,9 @@ describe("przestawienie figury", () => {
 
   /** The commonest reason to reach for this is a table stuck mid-something. */
   it("drags a turn stuck past the roll onto the new Obszar too", () => {
-    const stuck = table({ game: { turn_state: { phase: "ruch", roll: 4, options: [] } } });
+    const stuck = table({ game: { turn_state: { phase: "move", roll: 4, options: [] } } });
     const { writes } = placeSeat(stuck, { seatId: "seat-a", target: "grod", reason: null });
-    expect(writes.game?.turn_state).toMatchObject({ phase: "pole", fieldId: "grod" });
+    expect(writes.game?.turn_state).toMatchObject({ phase: "field", fieldId: "grod" });
   });
 
   it("does not restage anybody else's turn", () => {
@@ -180,7 +180,7 @@ describe("przestawienie figury", () => {
       game: {
         active_seat: 1,
         turn_state: {
-          phase: "pole",
+          phase: "field",
           fieldId: "grod",
           from: null,
           draw: 0,
@@ -237,7 +237,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     expect(writes.journal?.at(-1)).toMatchObject({
       seatId: "seat-a",
       turn: 9,
-      kind: "nowa-postac",
+      kind: "new-character",
       payload: { characterId: "zdobywca" },
     });
     expect(writes.journal?.at(-1)?.payload).not.toHaveProperty("losowa");
@@ -267,8 +267,8 @@ describe("nowa Postać po śmierci (4.4)", () => {
     ]);
     expect(writes.seats?.[0].patch).toMatchObject({ zloto: 5 });
     expect(writes.journal?.map((line) => line.kind)).toEqual([
-      "wyposazenie-poczatkowe",
-      "nowa-postac",
+      "starting-kit",
+      "new-character",
     ]);
     expect(writes.journal?.[0].payload).toEqual({
       character: "ksiaze",
@@ -284,7 +284,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
       { seatId: "seat-a", characterId: "awanturnik" },
       ports(),
     );
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["nowa-postac"]);
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["new-character"]);
   });
 
   /**
@@ -304,8 +304,8 @@ describe("nowa Postać po śmierci (4.4)", () => {
     expect(writes.holdings).toBeUndefined();
     expect(writes.game).toBeUndefined();
     expect(writes.journal?.map((line) => line.kind)).toEqual([
-      "wyposazenie-poczatkowe",
-      "nowa-postac",
+      "starting-kit",
+      "new-character",
     ]);
     expect(writes.journal?.[0].payload).toEqual({ character: "mag", spells: 2 });
   });
@@ -366,7 +366,7 @@ describe("dosiadka: a latecomer to a table already running", () => {
     );
     expect(writes.journal?.at(-1)).toMatchObject({
       turn: 4,
-      kind: "dosiadka",
+      kind: "joined",
       payload: { characterId: "zdobywca" },
     });
     expect(writes.seats?.[0].patch).toMatchObject({ character_id: "zdobywca", ready: true });
@@ -403,7 +403,7 @@ describe("losowa Postać", () => {
     );
     const free = CHARACTERS.filter((c) => c.id !== "goblin" && c.id !== "mag");
     expect(writes.journal?.at(-1)).toMatchObject({
-      kind: "nowa-postac",
+      kind: "new-character",
       payload: { characterId: free[0].id, losowa: true },
     });
   });

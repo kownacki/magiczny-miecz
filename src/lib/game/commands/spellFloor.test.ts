@@ -4,7 +4,7 @@ import { FLOOR_MS, claimFloor, floorOf, releaseFloor } from "./spellFloor";
 import type { Fight, TurnPhase } from "@/lib/engine/turn";
 
 const fighting = (over: Partial<Fight> = {}): TurnPhase => ({
-  phase: "walka",
+  phase: "fight",
   fight: {
     cardId: "goblin",
     cardName: "GOBLIN",
@@ -34,7 +34,7 @@ const table = (over: Partial<Fight> = {}, holdings = [spell]) =>
 describe("claiming the floor (17.3)", () => {
   it("takes it for thirty seconds", () => {
     const { writes } = claimFloor(table(), { seatId: "seat-a" }, ports());
-    const state = writes.game?.turn_state as Extract<TurnPhase, { phase: "walka" }>;
+    const state = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
     expect(state.fight.caster).toEqual({ seat: 0, until: NOW + FLOOR_MS });
   });
 
@@ -88,7 +88,7 @@ describe("giving it up", () => {
   it("clears the claim", () => {
     const mine = table({ caster: { seat: 0, until: NOW + 1000 } });
     const { writes } = releaseFloor(mine, { seatId: "seat-a" }, ports());
-    const state = writes.game?.turn_state as Extract<TurnPhase, { phase: "walka" }>;
+    const state = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
     expect(state.fight.caster).toBeNull();
   });
 

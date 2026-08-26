@@ -5,7 +5,7 @@ import { offerKey } from "./fieldScript";
 import type { TurnPhase } from "./turn";
 
 const quiet: TurnFacts = {
-  phase: "pole",
+  phase: "field",
   standingOn: "karczma",
   cardsWaiting: 0,
   fighting: false,
@@ -74,17 +74,17 @@ describe("the two that come back next turn", () => {
     // "czy będzie ponownie próbowała przekroczyć granicę Kręgów" — retrying is
     // the point of the next turn, so offering it only on arrival meant a failed
     // crossing could never be attempted again.
-    expect(ids({ crossing: true, phase: "pole" })).toContain("przeprawa");
-    expect(ids({ crossing: true, phase: "rzut" })).toContain("przeprawa");
+    expect(ids({ crossing: true, phase: "field" })).toContain("przeprawa");
+    expect(ids({ crossing: true, phase: "roll" })).toContain("przeprawa");
   });
 
   it("does not offer one in the middle of a fight", () => {
-    expect(ids({ crossing: true, phase: "walka" })).not.toContain("przeprawa");
+    expect(ids({ crossing: true, phase: "fight" })).not.toContain("przeprawa");
   });
 
   it("offers a bridge ordeal on the same terms", () => {
-    expect(ids({ ordeal: true, phase: "rzut" })).toContain("most");
-    expect(ids({ ordeal: true, phase: "walka" })).not.toContain("most");
+    expect(ids({ ordeal: true, phase: "roll" })).toContain("most");
+    expect(ids({ ordeal: true, phase: "fight" })).not.toContain("most");
   });
 
   it("keeps them after the Obszar, which is the thing they are on", () => {
@@ -101,19 +101,19 @@ describe("the move itself", () => {
     // The die is thrown and the character is standing between two roads: the
     // turn goes nowhere until that is answered, so the box opens it rather
     // than offering it.
-    const [first] = windowsFor({ ...quiet, phase: "ruch" });
+    const [first] = windowsFor({ ...quiet, phase: "move" });
     expect(first.id).toBe("ruch");
     expect(first.compulsory).toBe(true);
-    expect(opensItself(windowsFor({ ...quiet, phase: "ruch" }))).toBe("ruch");
+    expect(opensItself(windowsFor({ ...quiet, phase: "move" }))).toBe("ruch");
   });
 
   it("still comes second to a fight", () => {
-    expect(ids({ phase: "ruch", fighting: true })).toEqual(["walka", "ruch", "obszar"]);
+    expect(ids({ phase: "move", fighting: true })).toEqual(["walka", "ruch", "obszar"]);
   });
 
   it("is not offered in any other phase", () => {
-    expect(ids({ phase: "pole" })).not.toContain("ruch");
-    expect(ids({ phase: "rzut" })).not.toContain("ruch");
+    expect(ids({ phase: "field" })).not.toContain("ruch");
+    expect(ids({ phase: "roll" })).not.toContain("ruch");
   });
 });
 
@@ -122,29 +122,29 @@ describe("how far through the turn you are", () => {
     turnSteps(phase).map((step) => `${step.label}:${step.state}`);
 
   it("has not rolled yet at the start", () => {
-    expect(shape("rzut")).toEqual(["Rzut:teraz", "Ruch:przed", "Obszar:przed"]);
+    expect(shape("roll")).toEqual(["Rzut:teraz", "Ruch:przed", "Obszar:przed"]);
   });
 
   it("has rolled once there is a direction to choose", () => {
-    expect(shape("ruch")).toEqual(["Rzut:zrobione", "Ruch:teraz", "Obszar:przed"]);
+    expect(shape("move")).toEqual(["Rzut:zrobione", "Ruch:teraz", "Obszar:przed"]);
   });
 
   it("has rolled and moved once it is standing somewhere", () => {
-    expect(shape("pole")).toEqual(["Rzut:zrobione", "Ruch:zrobione", "Obszar:teraz"]);
+    expect(shape("field")).toEqual(["Rzut:zrobione", "Ruch:zrobione", "Obszar:teraz"]);
   });
 
   it("has done all three at the end", () => {
-    expect(shape("koniec").every((s) => s.endsWith("zrobione"))).toBe(true);
+    expect(shape("end").every((s) => s.endsWith("zrobione"))).toBe(true);
   });
 
   it("claims no roll on the Kamienny Most, which has none (10.3)", () => {
     // One Obszar a turn and an instruction to get through. Saying a roll had
     // happened would be a lie; saying one was coming would be worse.
-    expect(shape("most")).toEqual(["Most:teraz"]);
+    expect(shape("bridge")).toEqual(["Most:teraz"]);
   });
 
   it("says only that a fight is happening", () => {
-    expect(shape("walka")).toEqual(["Walka:teraz"]);
+    expect(shape("fight")).toEqual(["Walka:teraz"]);
   });
 });
 
@@ -156,13 +156,13 @@ describe("how far through the turn you are", () => {
  * test instead of as a comment.
  */
 describe("factsIn", () => {
-  const at = (fieldId: string, state: TurnPhase = { phase: "rzut" }) =>
+  const at = (fieldId: string, state: TurnPhase = { phase: "roll" }) =>
     factsIn(state, asFieldId(fieldId));
 
   const onField = (fieldId: string, drawn: { cardId: string; cardClass: string }[] = [], resolved: string[] = []) =>
     factsIn(
       {
-        phase: "pole",
+        phase: "field",
         fieldId: asFieldId(fieldId)!,
         from: null,
         draw: 1,
@@ -216,7 +216,7 @@ describe("factsIn", () => {
   });
 
   it("survives a character who is not on the board yet", () => {
-    const facts = factsIn({ phase: "rzut" }, null);
+    const facts = factsIn({ phase: "roll" }, null);
     expect(facts.standingOn).toBeNull();
     expect(facts.crossing).toBe(false);
     expect(facts.ordeal).toBe(false);

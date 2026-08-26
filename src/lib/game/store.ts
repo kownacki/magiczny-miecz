@@ -653,7 +653,7 @@ export async function leaveGame(
   const next = others.find((other) => other.seat_index > seat.seat_index) ?? others[0];
   await db
     .from("games")
-    .update({ active_seat: next.seat_index, turn_state: { phase: "rzut" } })
+    .update({ active_seat: next.seat_index, turn_state: { phase: "roll" } })
     .eq("id", gameId);
   return { removed: false, passedTo: next.seat_index, gameFinished: false };
 }
