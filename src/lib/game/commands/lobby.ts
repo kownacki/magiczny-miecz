@@ -1,7 +1,15 @@
 /** The poczekalnia: seats arriving, going quiet, being taken over, and going away. */
 
-import { mergeAll, type Changeset, type CommandPorts, type Outcome, type Snapshot } from "../change";
-import type { SeatRow } from "../store";
+import {
+  apply,
+  merge,
+  mergeAll,
+  type Changeset,
+  type CommandPorts,
+  type Outcome,
+  type Snapshot,
+} from "../change";
+import type { SeatRow, UserRow } from "../store";
 
 /**
  * The part that is not Magiczny Miecz.
@@ -83,12 +91,12 @@ export const GOODBYE_GRACE_MS = 10_000;
  * a given instant cannot be tested at all.
  */
 export function isQuiet(
-  seat: Pick<SeatRow, "seen_at">,
+  who: Pick<UserRow, "seen_at">,
   now: number,
   after = AWAY_AFTER_MS,
 ): boolean {
-  if (!seat.seen_at) return false;
-  return now - Date.parse(seat.seen_at) > after;
+  if (!who.seen_at) return false;
+  return now - Date.parse(who.seen_at) > after;
 }
 
 /* --------------------------------------------------------------------------
@@ -109,14 +117,11 @@ export function isQuiet(
  * Somebody who has themselves walked away is skipped; handing the role to an
  * empty chair is how a table ends up unstartable.
  */
-export function nextHost(seats: readonly SeatRow[], leaving: SeatRow): SeatRow | null {
+export function nextHost(users: readonly UserRow[], leaving: UserRow): UserRow | null {
   return (
-    seats
-      .filter((seat) => seat.id !== leaving.id && !seat.eliminated && !seat.abandoned_at)
-      .sort(
-        (a, b) =>
-          Date.parse(a.created_at) - Date.parse(b.created_at) || a.seat_index - b.seat_index,
-      )[0] ?? null
+    users
+      .filter((one) => one.id !== leaving.id)
+      .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))[0] ?? null
   );
 }
 
@@ -132,16 +137,51 @@ export function nextHost(seats: readonly SeatRow[], leaving: SeatRow): SeatRow |
  * outgoing seat is being removed in the same change the demotion patch lands on
  * nothing, which is exactly why removals are applied first (see `seatsRemoved`).
  */
-export function promoteHost(seats: readonly SeatRow[], leaving: SeatRow): Changeset {
+export function promoteHost(users: readonly UserRow[], leaving: UserRow): Changeset {
   if (!leaving.is_host) return {};
-  const candidate = nextHost(seats, leaving);
+  const candidate = nextHost(users, leaving);
   if (!candidate) return {};
   return {
-    seats: [
+    users: [
       { id: candidate.id, patch: { is_host: true } },
       { id: leaving.id, patch: { is_host: false } },
     ],
   };
+}
+
+/** The person, or a refusal naming the thing that is not there. */
+export function userOf(snapshot: Snapshot, userId: string): UserRow {
+  const user = snapshot.users.find((one) => one.id === userId);
+  if (!user) throw new Error("Nie ma takiego gracza.");
+  return user;
+}
+
+/** The seat somebody is driving, or a refusal. */
+export function seatUnder(snapshot: Snapshot, user: UserRow): SeatRow {
+  const seat =
+    user.seat_index === null
+      ? undefined
+      : snapshot.seats.find((one) => one.seat_index === user.seat_index);
+  if (!seat) throw new Error("Ten gracz nie prowadzi żadnej Postaci.");
+  return seat;
+}
+
+/** Whoever is driving this seat, or nobody. */
+export function driverOf(snapshot: Snapshot, seatIndex: number): UserRow | null {
+  return snapshot.users.find((one) => one.seat_index === seatIndex) ?? null;
+}
+
+/**
+ * What to call a seat in a sentence somebody reads.
+ *
+ * The person driving it, and the chair when nobody is — which is the honest
+ * answer rather than a fallback, because an empty seat is a real state now and
+ * has no name of its own. Seats used to carry `player_name` and every message
+ * reached for it; there is nothing to reach for any more, so this is the one
+ * place that decides.
+ */
+export function nameOfSeat(snapshot: Snapshot, seatIndex: number): string {
+  return driverOf(snapshot, seatIndex)?.name ?? `miejsce ${seatIndex + 1}`;
 }
 
 /** The seat, or a refusal naming the thing that is not there. */
@@ -165,25 +205,36 @@ function seatOf(snapshot: Snapshot, seatId: string): SeatRow {
  */
 export function setReady(
   snapshot: Snapshot,
-  command: { seatId: string; ready: boolean },
+  command: { userId: string; ready: boolean },
 ): Outcome<void> {
-  const seat = seatOf(snapshot, command.seatId);
-  if (seat.ready === command.ready) return { writes: {}, result: undefined };
+  const user = userOf(snapshot, command.userId);
+  if (user.ready === command.ready) return { writes: {}, result: undefined };
   return {
-    writes: { seats: [{ id: seat.id, patch: { ready: command.ready } }] },
+    writes: { users: [{ id: user.id, patch: { ready: command.ready } }] },
     result: undefined,
   };
 }
 
-/** Changes the name shown for a seat. Only ever your own. */
-export function renameSeat(
+/**
+ * Changes what somebody is called.
+ *
+ * Unique per table, and refused rather than quietly suffixed: the whole reason
+ * names are unique is that `kick Michał` has to mean one person, and a table
+ * holding a Michał and a "Michał (2)" has given that up to avoid one refusal.
+ */
+export function renameUser(
   snapshot: Snapshot,
-  command: { seatId: string; name: string | null },
+  command: { userId: string; name: string },
 ): Outcome<void> {
-  const seat = seatOf(snapshot, command.seatId);
-  if (seat.player_name === command.name) return { writes: {}, result: undefined };
+  const user = userOf(snapshot, command.userId);
+  const wanted = command.name.trim();
+  if (!wanted) throw new Error("Imię nie może być puste.");
+  if (user.name === wanted) return { writes: {}, result: undefined };
+  if (snapshot.users.some((one) => one.id !== user.id && one.name === wanted)) {
+    throw new Error(`Przy stole jest już ${wanted}.`);
+  }
   return {
-    writes: { seats: [{ id: seat.id, patch: { player_name: command.name } }] },
+    writes: { users: [{ id: user.id, patch: { name: wanted } }] },
     result: undefined,
   };
 }
@@ -200,216 +251,158 @@ export interface LeaveResult {
 }
 
 /**
- * Gives up a seat.
+ * Whoever plays after the seat at `seatIndex` stops being able to.
  *
- * Before the game starts the seat is deleted outright — nothing references it
- * and someone who joined the wrong table should leave no trace. Once play has
- * begun it is retired instead: the journal holds `seat_id` references to
- * everything that seat did, and deleting the row would cascade those away and
- * take the game's history with them.
- *
- * A player walking away is not a character dying. The figure stays on its
- * Obszar with its points, its Przedmioty and its Przyjaciele, because other
- * players may already have acted on all of them and 4.4's death is a different
- * event with different consequences. What is released is the *claim*: the token
- * is rotated so the departing device cannot act as this seat any more, and the
- * seat is marked as having nobody behind it — free for somebody to take over,
- * and shown as such.
- *
- * Seat indexes are deliberately not compacted. `nextSeat` walks the seat array
- * rather than counting indexes, so a gap is harmless, whereas renumbering would
- * silently change who `active_seat` points at.
- *
- * The fresh token comes in rather than being made here: minting one is
- * `node:crypto`, and a command that reached for it could not be replayed by a
- * retried commit (see `replayable`). The edge makes it, the rule places it.
+ * Wraps: the next seat by number that still has a Postać able to act, and the
+ * first of them when there is none after. Null when nobody is left, which is a
+ * table with nothing to pass to rather than an error.
  */
-export function leaveSeat(
-  snapshot: Snapshot,
-  command: { seatId: string; token: string },
-  ports: CommandPorts,
-): Outcome<LeaveResult> {
-  const seat = seatOf(snapshot, command.seatId);
+function playsNext(snapshot: Snapshot, seatIndex: number): number | null {
+  const able = snapshot.seats.filter(
+    (seat) => seat.character_id && !seat.eliminated && seat.seat_index !== seatIndex,
+  );
+  if (able.length === 0) return null;
+  const after = able.find((seat) => seat.seat_index > seatIndex) ?? able[0];
+  return after.seat_index;
+}
 
-  // Before the game starts a seat is just an intention, so leaving deletes it.
-  if (snapshot.game.status === "lobby") {
-    return {
-      writes: mergeAll({ seatsRemoved: [seat.id] }, promoteHost(snapshot.seats, seat)),
-      result: { removed: true, passedTo: null, gameFinished: false },
-    };
+/**
+ * Out of the seat, still at the table.
+ *
+ * The Postać stays exactly where it is standing with everything it owns, and
+ * the seat is left for somebody to take over — the same person on a new tab, or
+ * anybody else in the room. This is what the rulebook has no word for at all,
+ * because in 1993 everybody was in one room and a person who stood up came
+ * back.
+ *
+ * Play does not stop for an empty chair but must not wait on one either: if it
+ * was that seat's turn, it moves on.
+ */
+export function unseat(snapshot: Snapshot, command: { userId: string }): Outcome<LeaveResult> {
+  const user = userOf(snapshot, command.userId);
+  if (user.seat_index === null) {
+    return { writes: {}, result: { removed: false, passedTo: null, gameFinished: false } };
   }
 
-  const released: Changeset = {
-    seats: [
+  const released: Changeset = { users: [{ id: user.id, patch: { seat_index: null } }] };
+  if (snapshot.game.active_seat !== user.seat_index) {
+    return { writes: released, result: { removed: false, passedTo: null, gameFinished: false } };
+  }
+  const next = playsNext(snapshot, user.seat_index);
+  if (next === null) {
+    return { writes: released, result: { removed: false, passedTo: null, gameFinished: false } };
+  }
+  return {
+    writes: merge(released, {
+      game: { active_seat: next, turn_state: { phase: "roll" } },
+    }),
+    result: { removed: false, passedTo: next, gameFinished: false },
+  };
+}
+
+/**
+ * Out of the table altogether.
+ *
+ * Which is `unseat` and then the person themselves — the row goes, the name is
+ * free again, and the host role moves on if they were holding it. The Postać is
+ * untouched: it is not theirs to take away, and 4.4 is the only thing in the
+ * book that removes one.
+ *
+ * Two ways in, and the only difference is the journal. `leave` is somebody
+ * going by their own choice, or the tab closing, which is the same act without
+ * the click. `kick` is somebody else deciding — and being thrown off a table is
+ * worth being able to tell apart from having walked away from it.
+ */
+export function leaveTable(
+  snapshot: Snapshot,
+  command: { userId: string; kicked?: boolean },
+): Outcome<LeaveResult> {
+  const user = userOf(snapshot, command.userId);
+  const stood = unseat(snapshot, { userId: user.id });
+  const after = apply(snapshot, stood.writes);
+
+  const gone: Changeset = {
+    usersRemoved: [user.id],
+    journal: [
       {
-        id: seat.id,
-        patch: {
-          abandoned_at: new Date(ports.now()).toISOString(),
-          claim_token: command.token,
-        },
+        seatId: null,
+        turn: snapshot.game.turn,
+        kind: "left-behind",
+        payload: { user: user.id, name: user.name, kicked: command.kicked ?? false },
       },
     ],
   };
-  const handed = promoteHost(snapshot.seats, seat);
 
-  // Play does not stop for an empty chair, but it must not wait on one either:
-  // if it was their turn, it moves on.
-  if (snapshot.game.active_seat !== seat.seat_index) {
-    return {
-      writes: mergeAll(released, handed),
-      result: { removed: false, passedTo: null, gameFinished: false },
-    };
-  }
-  const others = snapshot.seats.filter(
-    (other) => other.character_id && !other.eliminated && other.id !== seat.id,
-  );
-  if (others.length === 0) {
-    return {
-      writes: mergeAll(released, handed),
-      result: { removed: false, passedTo: null, gameFinished: false },
-    };
-  }
-  const next = others.find((other) => other.seat_index > seat.seat_index) ?? others[0];
   return {
-    writes: mergeAll(released, handed, {
-      game: { active_seat: next.seat_index, turn_state: { phase: "roll" } },
-    }),
-    result: { removed: false, passedTo: next.seat_index, gameFinished: false },
+    writes: mergeAll(stood.writes, promoteHost(after.users, user), gone),
+    result: { ...stood.result, removed: true },
   };
 }
 
 /**
- * Picks up a seat nobody is behind.
+ * Somebody sits down.
  *
- * The counterpart to leaving: a fresh token is issued for that seat and handed
- * to the device asking, which then plays that character exactly as its previous
- * player did. This is also how somebody rejoins after closing the tab, which is
- * the commonest way a seat is abandoned in the first place.
+ * Refused only when a seat is actively being driven. A person who closed their
+ * tab never said they were leaving, so the seat is merely quiet — and refusing
+ * it would strand the Postać for the rest of the evening. The people in the
+ * room settle who picks it up; the server only refuses a chair somebody is
+ * using.
  */
-export function claimSeat(
+export function takeSeat(
   snapshot: Snapshot,
-  command: { seatId: string; playerName: string | null; token: string },
+  command: { userId: string; seatIndex: number },
   ports: CommandPorts,
 ): Outcome<void> {
-  const seat = seatOf(snapshot, command.seatId);
-
-  // Either nobody is behind it, or nobody has been for long enough that the
-  // difference stopped mattering. A player who closed their tab never said they
-  // were leaving, so the seat is only quiet — and refusing it would strand the
-  // character for the rest of the evening. The people in the room settle who
-  // picks it up; the server only refuses a seat somebody is actively using.
-  if (seat.no_device) {
-    throw new Error("Tym miejscem kieruje gospodarz przy wspólnym ekranie.");
-  }
-  if (!seat.abandoned_at && !isQuiet(seat, ports.now())) {
+  const user = userOf(snapshot, command.userId);
+  const driver = snapshot.users.find(
+    (one) => one.id !== user.id && one.seat_index === command.seatIndex,
+  );
+  if (driver && !isQuiet(driver, ports.now())) {
     throw new Error("To miejsce ma już swojego gracza.");
   }
+  if (user.seat_index === command.seatIndex) return { writes: {}, result: undefined };
 
+  // The quiet one is stood up first, or two people hold one seat and the unique
+  // index refuses the write with a message nobody can act on.
+  const displaced: Changeset = driver
+    ? { users: [{ id: driver.id, patch: { seat_index: null } }] }
+    : {};
   return {
-    writes: {
-      seats: [
-        {
-          id: seat.id,
-          patch: {
-            abandoned_at: null,
-            claim_token: command.token,
-            // Left alone when nobody supplied one, because the commonest
-            // takeover by far is the same person on a new tab, and renaming
-            // them to nothing — or making them retype it — would be the app
-            // being obtuse.
-            ...(command.playerName ? { player_name: command.playerName } : {}),
-          },
-        },
-      ],
-    },
+    writes: merge(displaced, {
+      users: [{ id: user.id, patch: { seat_index: command.seatIndex } }],
+    }),
     result: undefined,
   };
 }
 
 /**
- * Takes a seat out of the table.
+ * Hands the host role to somebody, or takes it from a host who has gone.
  *
- * Only by someone already seated, and removing somebody else is the host's job.
- * Removing yourself is not — that is just leaving, and nobody should need
- * permission for it. A lobby where the host cannot drop out is worse than one
- * where anybody can tidy up.
- *
- * Mid-game the character goes with the player and the seat is free for somebody
- * new, but what it was carrying does not vanish with it: the Przedmioty,
- * Przyjaciele and gold are left face up on its Obszar, where 12.1 lets the next
- * character to stop there pick them up. Deleting the row without that would
- * take them out of the game silently, and the board would be quietly poorer for
- * it. Zaklęcia are the exception, because 9.3 says nobody saw them.
- */
-export function removeSeat(
-  snapshot: Snapshot,
-  command: { seatId: string; byId: string },
-): Outcome<void> {
-  const by = seatOf(snapshot, command.byId);
-  if (!by.is_host && by.id !== command.seatId) {
-    throw new Error("Tylko gospodarz może usuwać graczy.");
-  }
-  const seat = seatOf(snapshot, command.seatId);
-
-  const field = seat.field_id;
-  const spilled: Changeset =
-    snapshot.game.status === "playing" && field
-      ? {
-          fieldCards: {
-            insert: [
-              ...snapshot.holdings
-                .filter((held) => held.seat_id === seat.id && held.kind !== "spell")
-                .map((held) => ({ field_id: field, card_id: held.card_id })),
-              ...Array.from({ length: seat.gold }, () => ({
-                field_id: field,
-                card_id: "1-sztuka-zlota",
-              })),
-            ],
-          },
-        }
-      : {};
-
-  return {
-    writes: mergeAll(
-      spilled,
-      { seatsRemoved: [seat.id] },
-      promoteHost(snapshot.seats, seat),
-    ),
-    result: undefined,
-  };
-}
-
-/**
- * Hands the host role to a seat.
- *
- * Two ways in, and only two. The host may give it away deliberately, and any
- * player may take it when the host's own seat has been abandoned — without that
- * second door, a table whose host closed their laptop can never be configured
- * or started again, which is the whole reason host migration exists. It also
- * recovers a table whose host seat became unreachable, which is easy to do by
- * joining twice from one browser and overwriting the stored token.
+ * Two ways in, and only two. The host may give it away deliberately, and
+ * anybody may take it when the host has gone quiet — without that second door,
+ * a table whose host closed their laptop can never be configured or started
+ * again, which is the whole reason host migration exists.
  *
  * Taking it from a host who is present is not a door. There is no co-host.
  */
 export function takeHostRole(
   snapshot: Snapshot,
-  command: { seatId: string; byId: string },
+  command: { userId: string; byId: string },
+  ports: CommandPorts,
 ): Outcome<void> {
-  const by = seatOf(snapshot, command.byId);
-  const host = snapshot.seats.find((seat) => seat.is_host);
-  if (host && host.id !== by.id && !host.abandoned_at) {
+  const by = userOf(snapshot, command.byId);
+  const host = snapshot.users.find((one) => one.is_host);
+  if (host && host.id !== by.id && !isQuiet(host, ports.now(), HOST_MISSING_AFTER_MS)) {
     throw new Error("Rolę gospodarza może przekazać tylko obecny gospodarz.");
   }
-  const target = seatOf(snapshot, command.seatId);
-  if (target.abandoned_at) throw new Error("To miejsce nie ma gracza.");
+  const target = userOf(snapshot, command.userId);
+  if (target.is_host) return { writes: {}, result: undefined };
 
   return {
     writes: {
-      seats: [
-        ...snapshot.seats
-          .filter((seat) => seat.is_host && seat.id !== target.id)
-          .map((seat) => ({ id: seat.id, patch: { is_host: false } })),
-        ...(target.is_host ? [] : [{ id: target.id, patch: { is_host: true } }]),
+      users: [
+        { id: target.id, patch: { is_host: true } },
+        ...(host ? [{ id: host.id, patch: { is_host: false } }] : []),
       ],
     },
     result: undefined,
@@ -421,13 +414,19 @@ export function takeHostRole(
  * ----------------------------------------------------------------------- */
 
 /**
- * The four columns presence is decided from, and nothing else.
+ * The three columns presence is decided from, and nothing else.
  *
- * A whole `SeatRow` is more than these questions need, and asking for one would
- * mean the list of tables could not answer them off the cut-down seat rows it
+ * A whole `UserRow` is more than these questions need, and asking for one would
+ * mean the list of tables could not answer them off the cut-down rows it
  * already fetches for every game at once. See `listGames`.
+ *
+ * `no_device` used to be a fourth. It marked a seat the host was playing on
+ * somebody's behalf, which had to be kept out of the sweep — and it is gone,
+ * because in a table where people and Postacie are different rows that seat is
+ * simply one nobody is driving. There is no user to sweep, so there is nothing
+ * to protect it from.
  */
-export type Presence = Pick<SeatRow, "no_device" | "left_at" | "seen_at" | "is_host">;
+export type Presence = Pick<UserRow, "left_at" | "seen_at" | "is_host">;
 
 /**
  * Which seats the poczekalnia has stopped hearing from.
@@ -440,14 +439,12 @@ export type Presence = Pick<SeatRow, "no_device" | "left_at" | "seen_at" | "is_h
  * driven from the shared screen, and sweeping it would delete players sitting
  * at the table.
  */
-export function goneFrom<T extends Presence>(seats: readonly T[], now: number): T[] {
-  return seats
-    .filter((seat) => !seat.no_device)
-    .filter(
-      (seat) =>
-        (seat.left_at !== null && now - Date.parse(seat.left_at) > GOODBYE_GRACE_MS) ||
-        isQuiet(seat, now, LOBBY_GONE_AFTER_MS),
-    );
+export function goneFrom<T extends Presence>(users: readonly T[], now: number): T[] {
+  return users.filter(
+    (one) =>
+      (one.left_at !== null && now - Date.parse(one.left_at) > GOODBYE_GRACE_MS) ||
+      isQuiet(one, now, LOBBY_GONE_AFTER_MS),
+  );
 }
 
 /**
@@ -458,9 +455,9 @@ export function goneFrom<T extends Presence>(seats: readonly T[], now: number): 
  * list the caller already has; only when it says yes does anybody pay for a
  * snapshot. See `sweepLobby` in `store.ts`.
  */
-export function needsSweep(seats: readonly Presence[], now: number): boolean {
-  if (goneFrom(seats, now).length > 0) return true;
-  const host = seats.find((seat) => !seat.no_device && seat.is_host);
+export function needsSweep(users: readonly Presence[], now: number): boolean {
+  if (goneFrom(users, now).length > 0) return true;
+  const host = users.find((one) => one.is_host);
   return host ? isQuiet(host, now, HOST_MISSING_AFTER_MS) : false;
 }
 
@@ -491,23 +488,19 @@ export function sweepLobby(
   }
 
   const now = ports.now();
-  const gone = goneFrom(snapshot.seats, now);
-  const goneIds = new Set(gone.map((seat) => seat.id));
-  const staying = snapshot.seats.filter((seat) => !goneIds.has(seat.id));
+  const gone = goneFrom(snapshot.users, now);
+  const goneIds = new Set(gone.map((one) => one.id));
+  const staying = snapshot.users.filter((one) => !goneIds.has(one.id));
 
   /**
    * Two ways the role has to move, and one place that decides where to.
    *
    * The host's tab closed, or the host has been quiet for longer than a table
-   * can be left unadministered. The successor is picked from the seats that are
-   * *staying*, which is the one thing the old version got wrong: it chose from
-   * everybody, so a seat about to be swept could be handed the role and then
-   * deleted a line later. It recovered — the second promotion pass caught it,
-   * because by then the newly-made host was one of the gone — but only by
-   * accident of ordering, and it left the table briefly hosted by somebody who
-   * had closed the tab.
+   * can be left unadministered. The successor is picked from those *staying*,
+   * because choosing from everybody would hand the role to somebody about to be
+   * swept a line later.
    */
-  const host = snapshot.seats.find((seat) => !seat.no_device && seat.is_host);
+  const host = snapshot.users.find((one) => one.is_host);
   const handover =
     host && (goneIds.has(host.id) || isQuiet(host, now, HOST_MISSING_AFTER_MS))
       ? promoteHost(staying, host)
@@ -516,17 +509,29 @@ export function sweepLobby(
   if (gone.length === 0) return { writes: handover, result: { gameGone: false } };
 
   /**
-   * Nobody left who could do anything.
+   * The chairs they were in go with them, and only here.
    *
-   * Seats the host filled in by hand have no device of their own, so a table
-   * holding only those is a table with nobody able to choose a character or
-   * start it — an empty room with figures set out, not a game waiting for
-   * anybody. No point handing the role on in that case; the table is going.
+   * Before the game starts a seat is an intention rather than a Postać: nothing
+   * has happened to it and nobody has acted on anything it owns, so a table
+   * showing four names when one person is present is worse than one showing
+   * one. Once play has begun the seat outlives everybody who ever drove it,
+   * which is the whole point of the split — and this never runs then.
    */
-  const gameGone = staying.every((seat) => seat.no_device);
+  const chairs = gone
+    .map((one) => one.seat_index)
+    .filter((at): at is number => at !== null)
+    .map((at) => snapshot.seats.find((seat) => seat.seat_index === at)?.id)
+    .filter((id): id is string => id !== undefined);
+
+  // Nobody left who could choose a character or start the table.
+  const gameGone = staying.length === 0;
 
   return {
-    writes: mergeAll({ seatsRemoved: [...goneIds] }, gameGone ? {} : handover),
+    writes: mergeAll(
+      { usersRemoved: [...goneIds] },
+      chairs.length > 0 ? { seatsRemoved: chairs } : {},
+      gameGone ? {} : handover,
+    ),
     result: { gameGone },
   };
 }

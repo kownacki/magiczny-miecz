@@ -249,6 +249,42 @@ export async function journalRows(
   return (data ?? []) as Record<string, unknown>[];
 }
 
+/**
+ * Everybody at the table, in join order.
+ *
+ * By `created_at` rather than by seat, because most of what asks this asks
+ * about people — who is host, who is quiet, who arrived first — and half of
+ * them are in no seat at all.
+ */
+export async function usersFor(gameId: string): Promise<UserRow[]> {
+  const { data, error } = await db
+    .from("users")
+    .select(USER_COLUMNS)
+    .eq("game_id", gameId)
+    .order("created_at");
+  if (error) throw new Failure(`usersFor: ${error.message}`);
+  return (data ?? []) as UserRow[];
+}
+
+/**
+ * A fresh id: four characters from an alphabet with no 0/O and no 1/l.
+ *
+ * Short enough to read off a roster and type into `kick`, and unique across the
+ * whole schema rather than per table, so a person can be pointed at without
+ * naming where they are sitting. Thirty characters to the power of four is
+ * eight hundred thousand of them; the caller retries on the unique violation
+ * rather than checking first, because checking first is a race.
+ */
+const ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+
+export function makeUserId(pick: () => number = Math.random): string {
+  let out = "";
+  for (let at = 0; at < 4; at++) {
+    out += ID_ALPHABET[Math.floor(pick() * ID_ALPHABET.length)];
+  }
+  return out;
+}
+
 export async function seatsFor(gameId: string): Promise<SeatRow[]> {
   const { data, error } = await db
     .from("seats")

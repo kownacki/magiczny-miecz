@@ -22,6 +22,7 @@ import {
 } from "../change";
 import type { GameRow, SeatRow } from "../store";
 import { activeSeat } from "./seat";
+import { driverOf, nameOfSeat } from "./lobby";
 
 /* --------------------------------------------------------------------------
  * Starting the game.
@@ -86,11 +87,14 @@ export function startGame(
 
   // Everybody with a character has to have said so (docs/LOBBY.md). A seat
   // nobody is behind cannot say anything, so it is not asked.
-  const dithering = chosen.filter((seat) => !seat.ready && !seat.abandoned_at);
+  const dithering = chosen.filter((seat) => {
+    const driver = driverOf(snapshot, seat.seat_index);
+    return driver !== null && !driver.ready;
+  });
   if (dithering.length > 0) {
     throw new Error(
       `Nie wszyscy są gotowi: ${dithering
-        .map((seat) => seat.player_name ?? `miejsce ${seat.seat_index + 1}`)
+        .map((seat) => nameOfSeat(snapshot, seat.seat_index))
         .join(", ")}.`,
     );
   }

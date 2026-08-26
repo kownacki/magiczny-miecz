@@ -1,6 +1,6 @@
 /** Which seat may press which button, on whose turn. */
 
-import type { GameRow, SeatRow } from "./store";
+import type { GameRow, UserRow } from "./store";
 
 /**
  * The gate on the turn route, written down.
@@ -37,11 +37,12 @@ export interface Permission {
 
 export function mayAct(
   game: Pick<GameRow, "active_seat" | "mode">,
-  seat: Pick<SeatRow, "seat_index" | "is_host">,
+  /** The person asking, and the seat they are driving — null while watching. */
+  who: Pick<UserRow, "is_host"> & { seat_index: number | null },
   action: unknown,
 ): Permission {
-  const isActiveSeat = seat.seat_index === game.active_seat;
-  const tableScreen = game.mode === "companion" && seat.is_host;
+  const isActiveSeat = who.seat_index !== null && who.seat_index === game.active_seat;
+  const tableScreen = game.mode === "companion" && who.is_host;
   // 17.7 is the one thing here a seat does on somebody else's turn: "przed
   // wykonaniem rzutu kostką obie Postacie mają możliwość użycia Zaklęć". A
   // window only the active player could close would not be a window.

@@ -404,7 +404,6 @@ export async function takeNewCharacter(
           stone_until_turn: null,
           bridge_blocked_until_turn: null,
           nature_changed_turn: null,
-          ready: true,
         },
       },
     ],
@@ -498,8 +497,11 @@ export interface ChooseCharacter {
  */
 export function mayChooseFor(snapshot: Snapshot, seatId: string, byId: string): boolean {
   if (seatId === byId) return true;
+  // A seat nobody is driving is one the host may act for: that is what
+  // `no_device` used to mark, and it needs no flag now that people and seats
+  // are different rows.
   const target = snapshot.seats.find((seat) => seat.id === seatId);
-  return target?.no_device === true;
+  return target !== undefined && !snapshot.users.some((one) => one.seat_index === target.seat_index);
 }
 
 /** The refusal both choosing paths share, so they cannot drift apart. */
@@ -547,7 +549,6 @@ export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): O
             id: seat.id,
             patch: {
               character_id: RANDOM_CHARACTER_ID,
-              ready: false,
               field_id: null,
               sword_own: 0,
               magic_own: 0,
@@ -580,7 +581,7 @@ export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): O
           // Swapping character un-readies you. Otherwise a player who said they
           // were ready and then changed their mind is still counted, and the
           // host starts a game somebody was still deciding about.
-          patch: { ...printedOn(character), ready: false },
+          patch: printedOn(character),
         },
       ],
     },
@@ -641,7 +642,6 @@ export async function dealCharacters(
       // A player who walked away is not dealt in. The seat stays, because the
       // journal refers to it and the host may yet give it to somebody; handing
       // it a Karta Postaci would seat a character nobody is behind.
-      !seat.abandoned_at &&
       (command.to === "surprises" ? isRandomPick(seat.character_id) : !seat.character_id),
   );
   if (toFill.length === 0) return { writes: {}, result: undefined };

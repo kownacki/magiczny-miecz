@@ -26,6 +26,7 @@ import {
   startFight,
 } from "@/lib/engine/turn";
 import { EVENTS, SPELL_BY_ID } from "../decks";
+import { nameOfSeat } from "./lobby";
 import {
   apply,
   merge,
@@ -364,7 +365,7 @@ export function castSpell(
 
   const victim =
     target.seatIndex !== undefined
-      ? (snapshot.seats.find((s) => s.seat_index === target.seatIndex)?.player_name ?? null)
+      ? nameOfSeat(snapshot, target.seatIndex)
       : null;
 
   const said: Changeset = {
@@ -490,10 +491,7 @@ export async function fightRoll(
   // through is not a claim.
   const floor = floorOf(state.fight, ports.now());
   if (floor) {
-    const who = snapshot.seats.find((s) => s.seat_index === floor.seat);
-    throw new Error(
-      `${who?.player_name ?? "Ktoś"} rzuca Zaklęcie (17.3) — kostki czekają.`,
-    );
+    throw new Error(`${nameOfSeat(snapshot, floor.seat)} rzuca Zaklęcie (17.3) — kostki czekają.`);
   }
 
   const roll = await ports.random.rollD6(
@@ -619,7 +617,7 @@ export function attackSeat(
           state,
           {
             cardId: `seat:${target.seat_index}`,
-            cardName: target.player_name ?? `Miejsce ${target.seat_index + 1}`,
+            cardName: nameOfSeat(snapshot, target.seat_index),
             miecz: theirs.miecz,
             opponentSeat: target.seat_index,
           },

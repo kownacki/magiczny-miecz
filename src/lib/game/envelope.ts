@@ -139,11 +139,18 @@ export function withoutDeck<T extends { deck: unknown }>(game: T) {
  */
 export function envelopeFor(
   table: Snapshot,
-  mySeatId: string | null,
+  /** Whoever is asking. Null is somebody watching, who is owed no secrets. */
+  myUserId: string | null,
   now: number,
 ): Envelope {
-  const { game, seats, holdings, fieldCards } = table;
-  const mine = seats.find((seat) => seat.id === mySeatId) ?? null;
+  const { game, seats, users, holdings, fieldCards } = table;
+  const me = users.find((one) => one.id === myUserId) ?? null;
+  // The seat *they are driving*, which is what decides whose hidden cards they
+  // may see (9.3). A spectator drives none and sees none.
+  const mine =
+    me?.seat_index === null || me === null
+      ? null
+      : (seats.find((seat) => seat.seat_index === me.seat_index) ?? null);
 
   return {
     game: withoutDeck(game),
@@ -200,7 +207,10 @@ export function envelopeFor(
       // written into own points, or it would outlive its own expiry.
       const spell = bonusFrom(view.statuses);
 
-      const lastSeen = seat.seen_at ? Date.parse(seat.seen_at) : 0;
+      // Presence is the driver's, not the chair's: a seat with nobody in it is
+      // not "away", it is empty, and those are different things to look at.
+      const driver = users.find((one) => one.seat_index === seat.seat_index) ?? null;
+      const lastSeen = driver?.seen_at ? Date.parse(driver.seen_at) : 0;
       return {
         ...seat,
         // Worked out here rather than in the browser so every device agrees on
@@ -209,7 +219,8 @@ export function envelopeFor(
         // seat that never checked in has no device behind it by design — the
         // host added it in companion mode — and calling that "nieobecny" made
         // a fresh lobby look like a room everybody had walked out of.
-        away: seat.abandoned_at === null && lastSeen > 0 && now - lastSeen > AWAY_AFTER_MS,
+        player_name: driver?.name ?? null,
+        away: driver !== null && lastSeen > 0 && now - lastSeen > AWAY_AFTER_MS,
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
         sword_total: view.parametr.miecz + spell.miecz,

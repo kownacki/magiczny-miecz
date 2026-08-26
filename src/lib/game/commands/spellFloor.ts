@@ -4,6 +4,7 @@ import { castableNow, momentsIn, spellScript } from "@/lib/engine/spells";
 import type { SpellFloor } from "@/lib/engine/turn";
 import type { Changeset, CommandPorts, Outcome, Snapshot } from "../change";
 import { seatById } from "./seat";
+import { nameOfSeat } from "./lobby";
 
 /**
  * How long a claim lasts before it lapses.
@@ -43,8 +44,7 @@ export function claimFloor(
 
   const held = floorOf(state.fight, ports.now());
   if (held && held.seat !== seat.seat_index) {
-    const who = snapshot.seats.find((s) => s.seat_index === held.seat);
-    throw new Error(`${who?.player_name ?? "Ktoś inny"} właśnie rzuca Zaklęcie — poczekaj.`);
+    throw new Error(`${nameOfSeat(snapshot, held.seat)} właśnie rzuca Zaklęcie — poczekaj.`);
   }
 
   // 17.4 ends the fight at the dice, so there is nothing left to react to.

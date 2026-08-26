@@ -6,10 +6,12 @@ import {
   fieldCardsFor,
   holdingsFor,
   seatsFor,
+  usersFor,
   type FieldCardRow,
   type GameRow,
   type HoldingRow,
   type SeatRow,
+  type UserRow,
 } from "./store";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { Ends, Modifier } from "@/lib/engine/status";
@@ -49,6 +51,8 @@ export interface EffectRow {
 export interface Snapshot {
   game: GameRow & { turn_state: TurnPhase };
   seats: SeatRow[];
+  /** Everybody at the table, seated or watching. */
+  users: UserRow[];
   holdings: HoldingRow[];
   fieldCards: FieldCardRow[];
   effects: EffectRow[];
@@ -72,6 +76,26 @@ export interface SeatPatch {
    * ever having held it.
    */
   patch: Partial<Omit<SeatRow, "id">> & { claim_token?: string };
+}
+
+export interface UserPatch {
+  id: string;
+  /**
+   * `claim_token` is writable here and readable nowhere, exactly as it was on a
+   * seat: a `UserRow` is sent to devices and the token is what proves a device
+   * is that person. Rotating it is how somebody is put out of a seat.
+   */
+  patch: Partial<Omit<UserRow, "id">> & { claim_token?: string };
+}
+
+/** Somebody arriving. The id is minted by the caller — see `makeUserId`. */
+export interface NewUser {
+  id: string;
+  name: string;
+  claim_token: string;
+  device_id?: string | null;
+  is_host?: boolean;
+  seat_index?: number | null;
 }
 
 export interface NewHolding {
@@ -153,6 +177,17 @@ export interface Changeset {
    * leaving is the one holding the host role.
    */
   seatsRemoved?: string[];
+  /**
+   * People, who unlike seats come and go all game.
+   *
+   * So this one does carry a symmetrical insert/patch/remove: a user row is not
+   * permanent by design the way a seat is, and nothing in the journal points at
+   * one that has to survive — `moves` keeps the name it printed rather than a
+   * reference to whoever holds it now.
+   */
+  users?: UserPatch[];
+  usersNew?: NewUser[];
+  usersRemoved?: string[];
   holdings?: { insert?: NewHolding[]; patch?: HoldingPatch[]; delete?: string[] };
   fieldCards?: { insert?: NewFieldCard[]; delete?: string[] };
   effects?: { insert?: NewEffect[]; patch?: EffectPatch[]; delete?: string[] };
@@ -218,6 +253,13 @@ export function merge(first: Changeset, second: Changeset): Changeset {
     ...(both(first.seats, second.seats) ? { seats: both(first.seats, second.seats) } : {}),
     ...(both(first.seatsRemoved, second.seatsRemoved)
       ? { seatsRemoved: both(first.seatsRemoved, second.seatsRemoved) }
+      : {}),
+    ...(both(first.users, second.users) ? { users: both(first.users, second.users) } : {}),
+    ...(both(first.usersNew, second.usersNew)
+      ? { usersNew: both(first.usersNew, second.usersNew) }
+      : {}),
+    ...(both(first.usersRemoved, second.usersRemoved)
+      ? { usersRemoved: both(first.usersRemoved, second.usersRemoved) }
       : {}),
     ...(first.holdings || second.holdings
       ? {
@@ -310,6 +352,28 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
       return patch ? ({ ...seat, ...patch } as SeatRow) : seat;
     });
 
+  const goneUsers = new Set(writes.usersRemoved ?? []);
+  const userPatches = byId(writes.users);
+  const users = [
+    ...snapshot.users
+      .filter((user) => !goneUsers.has(user.id))
+      .map((user) => {
+        const patch = userPatches.get(user.id);
+        return patch ? ({ ...user, ...patch } as UserRow) : user;
+      }),
+    ...(writes.usersNew ?? []).map((fresh) => ({
+      id: fresh.id,
+      name: fresh.name,
+      device_id: fresh.device_id ?? null,
+      is_host: fresh.is_host ?? false,
+      ready: false,
+      seat_index: fresh.seat_index ?? null,
+      seen_at: null,
+      left_at: null,
+      created_at: new Date(0).toISOString(),
+    })),
+  ];
+
   const goneHoldings = new Set(writes.holdings?.delete ?? []);
   const holdingPatches = byId(writes.holdings?.patch);
   const holdings = snapshot.holdings
@@ -358,6 +422,7 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
   return {
     game: patched,
     seats,
+    users,
     holdings,
     fieldCards,
     effects,
@@ -390,9 +455,10 @@ async function gameRow(gameId: string): Promise<Snapshot["game"]> {
 }
 
 export async function loadSnapshot(gameId: string): Promise<Snapshot> {
-  const [game, seats, holdings, fieldCards, effects] = await Promise.all([
+  const [game, seats, users, holdings, fieldCards, effects] = await Promise.all([
     gameRow(gameId),
     seatsFor(gameId),
+    usersFor(gameId),
     holdingsFor(gameId),
     fieldCardsFor(gameId),
     effectRowsFor(gameId),
@@ -401,7 +467,7 @@ export async function loadSnapshot(gameId: string): Promise<Snapshot> {
   // all. It used to be a sixth query — `max(seq)` — read at the same moment as
   // everything else and settled long before the journal line was written, which
   // is precisely the gap two changes used to meet in.
-  return { game, seats, holdings, fieldCards, effects, journalSeq: game.journal_seq };
+  return { game, seats, users, holdings, fieldCards, effects, journalSeq: game.journal_seq };
 }
 
 /** Somebody else changed this game while we were deciding what to do to it. */
@@ -442,6 +508,9 @@ export function isEmpty(writes: Changeset): boolean {
     !Object.keys(writes.game ?? {}).length &&
     !writes.seats?.length &&
     !writes.seatsRemoved?.length &&
+    !writes.users?.length &&
+    !writes.usersNew?.length &&
+    !writes.usersRemoved?.length &&
     !writes.holdings?.insert?.length &&
     !writes.holdings?.patch?.length &&
     !writes.holdings?.delete?.length &&
@@ -523,6 +592,21 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   for (const seat of writes.seats ?? []) {
     const { error } = await db.from("seats").update(seat.patch).eq("id", seat.id);
     if (error) throw new Failure(`commit(seats): ${error.message}`);
+  }
+
+  if (writes.usersRemoved?.length) {
+    const { error } = await db.from("users").delete().eq("game_id", gameId).in("id", writes.usersRemoved);
+    if (error) throw new Failure(`commit(usersRemoved): ${error.message}`);
+  }
+  if (writes.usersNew?.length) {
+    const { error } = await db
+      .from("users")
+      .insert(writes.usersNew.map((fresh) => ({ ...fresh, game_id: gameId })));
+    if (error) throw new Failure(`commit(usersNew): ${error.message}`);
+  }
+  for (const user of writes.users ?? []) {
+    const { error } = await db.from("users").update(user.patch).eq("id", user.id);
+    if (error) throw new Failure(`commit(users): ${error.message}`);
   }
 
   if (writes.holdings?.delete?.length) {

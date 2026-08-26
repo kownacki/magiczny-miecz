@@ -28,6 +28,7 @@ import { adjustSeat } from "./adjust";
 import { changeNature, pickBelow, placeSeat } from "./character";
 import { drawCard, drawSpell } from "./draw";
 import { beginNamedFight } from "./fight";
+import { nameOfSeat } from "./lobby";
 
 import { healSeat } from "./life";
 import { putOnPile } from "./piles";
@@ -82,8 +83,8 @@ function amountOf(stat: "sword" | "magic" | "life" | "gold", count: number): str
 }
 
 
-function named(row: SeatRow): string {
-  return row.player_name ?? `miejsce ${row.seat_index + 1}`;
+function named(snapshot: Snapshot, row: SeatRow): string {
+  return nameOfSeat(snapshot, row.seat_index);
 }
 
 /**
@@ -271,7 +272,7 @@ async function walk(
           kind: "turn-lost",
           payload: { turns: effect.turns, reason },
         });
-        names.push(named(row));
+        names.push(named(snapshot, row));
       }
 
       /**
@@ -387,7 +388,7 @@ async function walk(
         });
         writes = merge(writes, step);
         said.push(
-          `${named(row)}: ` +
+          `${named(snapshot, row)}: ` +
             [names.join(", "), gold > 0 ? `${gold} Sz. Z.` : ""].filter(Boolean).join(", "),
         );
       }
