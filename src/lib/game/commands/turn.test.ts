@@ -83,9 +83,36 @@ describe("passing the turn (10.1)", () => {
     });
     const writes = passTurn(table);
     expect(writes.fieldCards?.insert).toEqual([
-      { field_id: "mroczna-polana", card_id: "helm" },
+      { field_id: "mroczna-polana", card_id: "helm", granted: false },
     ]);
     expect(writes.journal?.map((line) => line.kind)).toEqual(["zostawienie", "koniec-tury"]);
+  });
+
+  /**
+   * The mark travels onto the field with the card.
+   *
+   * A Wróg the test console staged is one the deck never gave up. Left lying
+   * here without the flag it becomes a real card the moment somebody picks it
+   * up, and a phantom on the used pile the moment they put it down — which is
+   * the whole reason `granted` exists.
+   */
+  it("carries a granted card's mark onto the Obszar with it", () => {
+    const table = two({
+      game: {
+        active_seat: 0,
+        turn: 3,
+        turn_state: {
+          phase: "pole",
+          fieldId: asFieldId("mroczna-polana")!,
+          from: null,
+          draw: 1,
+          drawn: [{ cardId: "wilkolak", cardClass: "wrog", granted: true }],
+        },
+      },
+    });
+    expect(passTurn(table).fieldCards?.insert).toEqual([
+      { field_id: "mroczna-polana", card_id: "wilkolak", granted: true },
+    ]);
   });
 });
 
