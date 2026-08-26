@@ -12,6 +12,7 @@ const quiet: TurnFacts = {
   crossing: false,
   ordeal: false,
   demands: false,
+  beast: false,
 };
 
 const ids = (facts: Partial<TurnFacts>) =>
@@ -41,6 +42,42 @@ describe("what a turn is offering", () => {
     const [cards, obszar] = windowsFor({ ...quiet, cardsWaiting: 3 });
     expect(cards.count).toBe(3);
     expect(obszar.count).toBeUndefined();
+  });
+});
+
+describe("the Bestia, which is the end of the game (14.7)", () => {
+  it("is offered at the Zamek, and is not an offer", () => {
+    const [first] = windowsFor({ ...quiet, standingOn: "zamek-bestii", beast: true });
+    expect(first.id).toBe("bestia");
+    expect(first.compulsory).toBe(true);
+  });
+
+  it("opens itself, like a fight", () => {
+    expect(opensItself(windowsFor({ ...quiet, beast: true }))).toBe("bestia");
+  });
+
+  it("comes before the Obszar's own business", () => {
+    // Nothing is drawn at the Zamek and nothing else the turn could do matters
+    // once you are standing there.
+    expect(ids({ beast: true })).toEqual(["bestia", "obszar"]);
+  });
+
+  it("gives way to the fight once it has started", () => {
+    // `factsIn` stops calling it a duty the moment the dice are out: from then
+    // on it is the `walka` window like any other.
+    const fighting = factsIn(
+      { phase: "fight", fight: {} } as unknown as TurnPhase,
+      asFieldId("zamek-bestii"),
+    );
+    expect(fighting.beast).toBe(false);
+    // The Obszar stays offered, as it is everywhere a character is standing;
+    // what has gone is the Bestia as a thing still to be done.
+    expect(ids({ ...fighting, fighting: true })).toEqual(["walka", "obszar"]);
+  });
+
+  it("is not offered anywhere else on the board", () => {
+    expect(factsIn({ phase: "roll" } as TurnPhase, asFieldId("karczma")).beast).toBe(false);
+    expect(factsIn({ phase: "roll" } as TurnPhase, asFieldId("zamek-bestii")).beast).toBe(true);
   });
 });
 

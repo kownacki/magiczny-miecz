@@ -21,7 +21,14 @@ import { compulsoryOffer } from "./fieldScript";
  * walked past, a Karczma happens to you on arrival, and 11.4 makes retrying a
  * crossing the point of the next turn.
  */
-export type WindowId = "walka" | "ruch" | "karty" | "obszar" | "przeprawa" | "most";
+export type WindowId =
+  | "walka"
+  | "bestia"
+  | "ruch"
+  | "karty"
+  | "obszar"
+  | "przeprawa"
+  | "most";
 
 export interface TurnWindow {
   id: WindowId;
@@ -61,6 +68,16 @@ export interface TurnFacts {
   ordeal: boolean;
   /** This Obszar does something to whoever arrives, asked for or not. */
   demands: boolean;
+  /**
+   * Standing at the Zamek Bestii with the Bestia still to be fought (14.7).
+   *
+   * Not an offer. "There is no leaving without it" — `dutiesBeforeEnding` says
+   * so already and refuses to end the turn — so the window that starts it is
+   * compulsory, and the box opens it rather than waiting to be asked. It was a
+   * button behind a collapsed toggle in a strip beside the Karta, which is a
+   * strange place for the end of the game.
+   */
+  beast: boolean;
 }
 
 /**
@@ -82,6 +99,9 @@ export function factsIn(state: TurnPhase, standingOn: FieldId | null): TurnFacts
     cardsWaiting: onField?.drawn.filter((card) => !settled.includes(card.cardId)).length ?? 0,
     fighting: state.phase === "fight",
     crossing: standingOn !== null && crossingFrom(standingOn) !== undefined,
+    // Only while it is still to be done: once the fight is running it is the
+    // `walka` window, and afterwards the game is over.
+    beast: standingOn === "zamek-bestii" && state.phase !== "fight",
     ordeal: standingOn !== null && BRIDGE_ORDEAL.has(standingOn),
     demands: onField !== null && compulsoryOffer(standingOn, settled) !== null,
   };
@@ -100,6 +120,12 @@ export function windowsFor(facts: TurnFacts): TurnWindow[] {
   // A fight is not something you go back to later.
   if (facts.fighting) {
     windows.push({ id: "walka", label: "Walka", compulsory: true });
+  }
+
+  // 14.7, and the reason it comes before the cards: there is nothing to draw
+  // at the Zamek and nothing else this turn can be about.
+  if (facts.beast) {
+    windows.push({ id: "bestia", label: "Bestia", compulsory: true });
   }
 
   // The die has been thrown and the character is standing between two roads.
