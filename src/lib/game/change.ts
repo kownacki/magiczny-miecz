@@ -14,6 +14,7 @@ import {
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { Ends, Modifier } from "@/lib/engine/status";
 import type { RandomPort } from "@/lib/engine/ports";
+import type { JournalKind } from "@/lib/engine/journal";
 import { appRandom, replayable } from "./random";
 
 /** Something true of a seat for a while, as the row that records it. */
@@ -103,14 +104,13 @@ export interface EffectPatch {
  * high-water mark, so the numbering of a whole command is decided in one place
  * rather than by each line racing the last one to read `max(seq)`.
  *
- * `kind` is still a bare string, which is the half of the journal this does not
- * fix. What it does fix is that the write and the read now meet at one type, so
- * there is somewhere for the union to go.
+ * `kind` is a `JournalKind`, so a writer cannot invent one and a reader cannot
+ * forget one — see the note on `JOURNAL_KINDS`.
  */
 export interface JournalWrite {
   seatId: string | null;
   turn: number;
-  kind: string;
+  kind: JournalKind;
   payload?: Record<string, unknown>;
   manual?: boolean;
 }

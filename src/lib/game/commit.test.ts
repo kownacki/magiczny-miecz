@@ -80,18 +80,18 @@ describe("committing a change", () => {
     await change("g1", () => ({
       writes: {
         journal: [
-          { seatId: "s1", turn: 3, kind: "pierwsze" },
-          { seatId: "s1", turn: 3, kind: "drugie" },
-          { seatId: "s1", turn: 3, kind: "trzecie" },
+          { seatId: "s1", turn: 3, kind: "rzut" },
+          { seatId: "s1", turn: 3, kind: "ruch" },
+          { seatId: "s1", turn: 3, kind: "karta" },
         ],
       },
       result: undefined,
     }), undefined);
     expect(tables.moves.map((m) => m.seq)).toEqual([12, 13, 14, 15]);
     expect(tables.moves.slice(1).map((m) => m.kind)).toEqual([
-      "pierwsze",
-      "drugie",
-      "trzecie",
+      "rzut",
+      "ruch",
+      "karta",
     ]);
   });
 
@@ -110,7 +110,7 @@ describe("committing a change", () => {
     await expect(
       commit(snapshot, {
         seats: [{ id: "s1", patch: { zloto: 99 } }],
-        journal: [{ seatId: "s1", turn: 3, kind: "nie-powinno-byc" }],
+        journal: [{ seatId: "s1", turn: 3, kind: "rzut" }],
       }),
     ).rejects.toThrow(Conflict);
     expect(tables.seats[0].zloto).toBe(1);

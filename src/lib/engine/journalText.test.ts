@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync } from "node:fs";
 import { describe as suite, expect, it } from "vitest";
+import { JOURNAL_KINDS, asJournalKind, type JournalKind } from "./journal";
 import {
   describe,
   describeTurnChange,
@@ -15,11 +15,11 @@ const SEATS: JournalSeat[] = [
   { id: "d", seatIndex: 3, playerName: null, characterId: null },
 ];
 
-function entry(kind: string, payload: Record<string, unknown> = {}, over: Partial<JournalEntry> = {}) {
+function entry(kind: JournalKind, payload: Record<string, unknown> = {}, over: Partial<JournalEntry> = {}) {
   return { seq: 1, seatId: "a", turn: 2, kind, payload, manual: false, ...over };
 }
 
-const text = (kind: string, payload: Record<string, unknown> = {}, seatId = "a") =>
+const text = (kind: JournalKind, payload: Record<string, unknown> = {}, seatId = "a") =>
   describe(entry(kind, payload, { seatId }), SEATS, null)?.text ?? null;
 
 suite("journal vocabulary", () => {
@@ -152,13 +152,29 @@ suite("journal vocabulary", () => {
 suite("what the journal does not say", () => {
   it("stays silent on raw die rolls", () => {
     // Public at a table, but logging each one buries what the journal is for.
-    for (const kind of ["rzut", "walka-rzut", "straznik-sila", "karta-tabela", "pole-tabela"]) {
+    const dice: JournalKind[] = [
+      "rzut",
+      "walka-rzut",
+      "straznik-sila",
+      "karta-tabela",
+      "pole-tabela",
+    ];
+    for (const kind of dice) {
       expect(describe(entry(kind, { roll: 4 }), SEATS, null)).toBeNull();
     }
   });
 
+  /**
+   * A row written by a version that knew a kind this one does not.
+   *
+   * It cannot be typed as a `JournalKind` any more, which is the point — the
+   * only way one reaches `describe` is out of the database, and
+   * `asJournalKind` drops it at the boundary before it gets here. Both halves
+   * are checked: the guard refuses it, and the renderer survives it.
+   */
   it("stays silent on a kind it has no sentence for", () => {
-    expect(describe(entry("cos-nowego"), SEATS, null)).toBeNull();
+    expect(asJournalKind("cos-nowego")).toBeNull();
+    expect(describe(entry("cos-nowego" as JournalKind), SEATS, null)).toBeNull();
   });
 
   it("names a spell that was cast, because casting is spoken aloud", () => {
@@ -230,7 +246,7 @@ suite("Polish agreement", () => {
       "test-karta", "test-karta-obszar", "test-koniec-walki", "przetasowanie",
       "nowa-postac", "dosiadka", "zaklecie", "zwyciestwo", "bestia-porazka", "bestia-remis",
       "tura-stracona", "zostawienie", "punkty", "strata",
-    ];
+    ] satisfies JournalKind[];
     const gendered = /\b\w+(ął|ęła|iła|ył|yła|szedł|szła|any|ony|iony)\b/;
     for (const kind of kinds) {
       const rendered = text(kind, { loss: 1, saved: true, target: 1, price: 1, points: 1 });
@@ -345,60 +361,20 @@ suite("journalLines", () => {
 });
 
 /**
- * Every kind the store writes has a sentence here, or is deliberately silent.
+ * Every kind has a sentence here, or is deliberately silent.
  *
- * This is the check that would have caught `przestawienie`: the vocabulary had
- * the sentence for a manual re-placement from the start and nothing ever wrote
- * that row, so the one action most in need of being visible left no trace at
- * all — and nothing failed, because both halves were individually fine. Reading
- * the store's source is blunt, but the alternative is a hand-kept list of kinds
- * that goes stale exactly the way the journal did.
+ * This used to read the store's source with a regular expression and count the
+ * kinds it found — which caught the bug it was written for and then quietly
+ * stopped seeing things: a `kind` chosen by a ternary, one written on a single
+ * line, one with a comment between `turn:` and `kind:`, and one where `turn`
+ * was passed in shorthand. Four blind spots in one file, each found by accident.
+ *
+ * `JOURNAL_KINDS` is the list now, the writer is typed against it, and this
+ * walks it. A kind nobody can write is a kind nobody has to render, and the
+ * compiler is what says which is which.
  */
 suite("every event has a sentence", () => {
-  // Both halves of the store: what has not moved to a command yet, and what
-  // has. A converted command does not call `journal` at all — it puts a
-  // `JournalWrite` in its changeset — so the scan has to know both shapes or it
-  // would quietly stop seeing the kinds as each one crosses over.
-  const commands = new URL("../game/commands/", import.meta.url);
-  const source = [
-    readFileSync(new URL("../game/turnStore.ts", import.meta.url), "utf8"),
-    ...readdirSync(commands)
-      .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
-      .map((name) => readFileSync(new URL(name, commands), "utf8")),
-  ].join("\n");
-
-  // `journal(gameId, seatId, turn, "kind"` for the calls, and `turn:` followed
-  // by `kind:` for the changeset writes — that adjacency is `JournalWrite` and
-  // nothing else, which is what keeps this off a payload that happens to carry
-  // a `kind` of its own, as `zabranie`'s does. The
-  // two written through a variable (`record.kind`, and the move that is either
-  // a step or an attempt at the Most) are listed after, because a regex cannot
-  // read them.
-  const written = new Set([
-    ...[...source.matchAll(/await journal\(\s*[\s\S]{0,120}?"([a-z-]+)"/g)].map((m) => m[1]),
-    // `turn:` immediately followed by `kind:` is `JournalWrite` and nothing
-    // else — a payload with a `kind` of its own, as `zabranie`'s has, is not
-    // preceded by a turn. The value is taken as an expression rather than as a
-    // literal, because a line whose kind is chosen by a ternary is still a line:
-    // `nowa-postac`, `proba-mostu` and `dosiadka` all vanished from this scan
-    // the moment they moved into a command that writes them that way — and a
-    // comment is allowed to sit between the two, because one does.
-    ...[...source.matchAll(/turn: [^\n]+,(?:\s|\/\/[^\n]*)*kind: ([^,\n]+)/g)].flatMap((m) =>
-      [...m[1].matchAll(/"([a-z-]+)"/g)].map((k) => k[1]),
-    ),
-    "korekta",
-    "punkty",
-    "ruch",
-  ]);
-
-  it("finds the kinds in the store at all", () => {
-    // A guard on the guard: if the regex ever stops matching, this suite would
-    // pass by checking nothing.
-    expect(written.size).toBeGreaterThan(30);
-    expect(written.has("smierc")).toBe(true);
-  });
-
-  for (const kind of [...written].sort()) {
+  for (const kind of JOURNAL_KINDS) {
     it(`says something about "${kind}", or nothing on purpose`, () => {
       const said = describe(entry(kind, PAYLOADS[kind] ?? {}), SEATS, null);
       if (said) expect(said.text).not.toBe("");

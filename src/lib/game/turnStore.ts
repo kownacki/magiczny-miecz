@@ -91,6 +91,7 @@ import {
 } from "./commands/bridge";
 import { claimFloor, releaseFloor } from "./commands/spellFloor";
 import { ADJUSTABLE, adjustSeat, type Adjustable } from "./commands/adjust";
+import type { JournalKind } from "@/lib/engine/journal";
 import {
   dropCard as dropCardOn,
   equipCard as equipCardOn,
@@ -784,7 +785,7 @@ export async function adjust(
   stat: Adjustable,
   delta: number,
   reason: string | null,
-  record: { kind: string; manual: boolean } = { kind: "korekta", manual: true },
+  record: { kind: JournalKind; manual: boolean } = { kind: "korekta", manual: true },
 ): Promise<void> {
   await change(gameId, adjustSeat, { seatId, stat, delta, reason, record });
 }

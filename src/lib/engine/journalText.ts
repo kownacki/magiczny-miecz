@@ -10,13 +10,14 @@ import { asCharacterId } from "./characters";
 import { fieldName as nameOfField, plural } from "./polish";
 import { USE_VERB_PAST } from "./uses";
 import { describeEnd, type Ends } from "./status";
+import type { JournalKind } from "./journal";
 
 /** One row of `magiczny_miecz.moves`, as the route hands it over. */
 export interface JournalEntry {
   seq: number;
   seatId: string | null;
   turn: number;
-  kind: string;
+  kind: JournalKind;
   payload: Record<string, unknown>;
   manual: boolean;
 }
@@ -99,7 +100,7 @@ function characterName(id: unknown): string {
  * of numbers. The outcomes are journalled separately and those are what get
  * rendered; move to a per-kind filter if anyone ever wants the rolls back.
  */
-const UNSPOKEN = new Set([
+const UNSPOKEN: ReadonlySet<JournalKind> = new Set<JournalKind>([
   "rzut",
   "walka-rzut",
   "straznik-sila",

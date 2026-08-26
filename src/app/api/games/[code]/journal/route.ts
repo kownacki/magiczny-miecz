@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { findGame, seatsFor, verifySeat } from "@/lib/game/store";
 import { db } from "@/lib/supabase";
 import { journalLines, type JournalEntry } from "@/lib/engine/journalText";
+import { asJournalKind } from "@/lib/engine/journal";
 
 /** How many rows to read back. A long game runs to hundreds; a feed needs the tail. */
 const WINDOW = 120;
@@ -46,14 +47,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: "Nie udało się wczytać dziennika." }, { status: 500 });
 
-  const entries: JournalEntry[] = (data ?? []).map((row) => ({
-    seq: row.seq as number,
-    seatId: (row.seat_id as string | null) ?? null,
-    turn: row.turn as number,
-    kind: row.kind as string,
-    payload: (row.payload ?? {}) as Record<string, unknown>,
-    manual: Boolean(row.manual),
-  }));
+  // The one place a stored `kind` becomes a `JournalKind`, so nothing
+  // downstream has to wonder. A row written by a version that knew a kind this
+  // one does not is dropped rather than rendered as a blank: the journal is
+  // opened to settle arguments, and a line with no sentence settles none.
+  const entries: JournalEntry[] = (data ?? []).flatMap((row) => {
+    const kind = asJournalKind(row.kind);
+    if (!kind) return [];
+    return [
+      {
+        seq: row.seq as number,
+        seatId: (row.seat_id as string | null) ?? null,
+        turn: row.turn as number,
+        kind,
+        payload: (row.payload ?? {}) as Record<string, unknown>,
+        manual: Boolean(row.manual),
+      },
+    ];
+  });
 
   // Read newest-first so the window is the tail of a long game, then flipped:
   // the feed reads downwards like anything else written in order.

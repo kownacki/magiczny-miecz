@@ -1,6 +1,7 @@
 /** The manual override, and the card paths that borrow it: moving one tracked number and saying so. */
 
 import { apply, merge, type Outcome, type Snapshot } from "../change";
+import type { JournalKind } from "@/lib/engine/journal";
 import { killSeat } from "./life";
 import { seatById } from "./seat";
 
@@ -29,7 +30,7 @@ export interface Adjustment {
    * the card says is the opposite of that, so the card paths pass their own
    * kind and leave the manual flag alone.
    */
-  record?: { kind: string; manual: boolean };
+  record?: { kind: JournalKind; manual: boolean };
 }
 
 export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<void> {

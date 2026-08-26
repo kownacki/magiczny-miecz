@@ -5,10 +5,10 @@ import { aHolding, aSeat, aTable } from "./fixture";
 describe("merge", () => {
   it("keeps both sides' lists, in order", () => {
     const merged = merge(
-      { journal: [{ seatId: "a", turn: 1, kind: "pierwsze" }] },
-      { journal: [{ seatId: "a", turn: 1, kind: "drugie" }] },
+      { journal: [{ seatId: "a", turn: 1, kind: "rzut" }] },
+      { journal: [{ seatId: "a", turn: 1, kind: "ruch" }] },
     );
-    expect(merged.journal?.map((line) => line.kind)).toEqual(["pierwsze", "drugie"]);
+    expect(merged.journal?.map((line) => line.kind)).toEqual(["rzut", "ruch"]);
   });
 
   it("lets the later write win, column by column", () => {
@@ -64,8 +64,8 @@ describe("apply", () => {
     const table = aTable({ journalSeq: 12 });
     const after = apply(table, {
       journal: [
-        { seatId: null, turn: 1, kind: "a" },
-        { seatId: null, turn: 1, kind: "b" },
+        { seatId: null, turn: 1, kind: "rzut" },
+        { seatId: null, turn: 1, kind: "ruch" },
       ],
     });
     expect(after.journalSeq).toBe(14);
