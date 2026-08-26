@@ -55,6 +55,18 @@ create table if not exists magiczny_miecz.games (
   -- Bumped on every state change. Clients hold the last value they rendered and
   -- refetch when a Realtime ping carries a higher one.
   revision bigint not null default 0,
+  -- Karty Postaci that have been in this game and are out of it: 4.4's
+  -- "jej Kartę odłożyć do pozostałych nie biorących udziału w grze".
+  --
+  -- Needed as a list because nothing else remembers. A dead character's id used
+  -- to be read off the seat that held it, which works exactly until that
+  -- player picks again and the id is overwritten — so 4.4 survived until the
+  -- first death and then quietly returned every dead character to the pool.
+  --
+  -- Death adds to it. `remove` takes off it, which is the console's one real
+  -- rule-break and is journalled manual for that reason; `remove ... hard`
+  -- adds to it instead. `pick` chooses from characters neither seated nor here.
+  characters_out text[] not null default '{}',
   -- The last line number this game's journal has handed out.
   --
   -- Here rather than worked out from max(seq) in `moves`, so that claiming the
@@ -76,15 +88,31 @@ create table if not exists magiczny_miecz.games (
 
 -- ---------------------------------------------------------------------------
 
+-- A place at the table, and the Postać standing in it.
+--
+-- A seat is NOT a player. The rulebook is explicit about this in the two places
+-- it has occasion to be — 2.1's "Kazdy z grajacych KIERUJE jedna Postacia" and
+-- 4.4's "Gracz, ktory KIEROWAL niefortunna Postacia" — and the big Karta Postaci
+-- is laid in front of a player rather than owned by them. This table had the
+-- two flattened into one row, so a person leaving and a character dying were
+-- the same event to the schema. See `users` below for the other half.
+--
+-- Six of these per game, fixed, numbered from zero and shown from one. Seat
+-- order is turn order, which is why a character that dies leaves its seat
+-- standing empty rather than freeing it: the player picks another and keeps
+-- their place in the round, exactly as they would at a table.
+--
+-- Four states, on two independent axes — whether a Postac is here, and whether
+-- anyone is driving it:
+--
+--     character_id null, no user   -> free      nobody, nothing
+--     character_id null, a user    -> waiting   sitting there, choosing
+--     character_id set,  no user   -> empty     figure stands, nobody driving
+--     character_id set,  a user    -> taken     normal play
 create table if not exists magiczny_miecz.seats (
   id uuid primary key default gen_random_uuid(),
   game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
   seat_index integer not null,
-  player_name text,
-  -- Opaque secret handed to one device when it claims the seat. Possession of
-  -- it is what authorises seeing that seat's hidden cards.
-  claim_token text not null,
-  is_host boolean not null default false,
 
   character_id text,
   field_id text,
@@ -115,33 +143,80 @@ create table if not exists magiczny_miecz.seats (
   -- 7.3: at most one Natura change per turn, so the turn it happened on is
   -- recorded rather than a flag that would need clearing.
   nature_changed_turn integer,
-  -- A player walking away is not a character dying (4.4): the seat, its
-  -- character and everything it carries stay put and only the claim is
-  -- released, so somebody else — or the same person on a new device — can pick
-  -- it up. Null means somebody is behind it.
-  abandoned_at timestamptz,
-  -- Last heard from. The browser checks in every couple of seconds; a seat that
-  -- stops is shown as away rather than gone (see AWAY_AFTER_MS).
-  seen_at timestamptz,
-  -- Said they are ready to start. Not a host power: 3.1 has everybody choose.
-  ready boolean not null default false,
-  -- A seat the host is playing on somebody else's behalf, who has no device of
-  -- their own at the table. See docs/LOBBY.md.
-  no_device boolean not null default false,
+  -- Dead (4.4). Kept on the seat and not on the character, because it is the
+  -- seat that has to be skipped in turn order — and because the character is
+  -- gone from here the moment it dies: `characters_out` on the games row is
+  -- what remembers it, and this seat drops to `waiting` for its player to pick
+  -- again. So this flag is only ever true for the instant between the two, and
+  -- `remove` clears it along with everything else.
   eliminated boolean not null default false,
 
-  -- Join order. `seat_index` used to stand in for it, but places freed in the
-  -- middle are refilled by the next arrival, so a low index now means "sat in a
-  -- gap" rather than "got here first" — and host migration hands the table to
-  -- whoever has been at it longest.
   created_at timestamptz not null default now(),
+
+  unique (game_id, seat_index)
+);
+
+-- ---------------------------------------------------------------------------
+
+-- Somebody at the table. Unbounded, unlike the seats.
+--
+-- A user drives at most one seat and a seat is driven by at most one user; a
+-- user with no seat is a spectator, which is a first-class thing to be rather
+-- than the absence of one. 4.4 says a player whose character died "moze wybrac
+-- sobie nowa" — may, not must — so declining and watching is the rulebook's own
+-- state and not an invention.
+--
+-- The host is a user, not a seat. Which means the host need not be playing: a
+-- table screen can run the game without holding a Postac.
+create table if not exists magiczny_miecz.users (
+  -- Four characters, globally unique, from an alphabet with no 0/O and no 1/l:
+  -- short enough to read off a roster and type into `kick`, and unique across
+  -- the whole schema so a person can be talked about without naming their
+  -- table. See `makeUserId`.
+  id text primary key check (id ~ '^[a-hjkmnp-z2-9]{4}$'),
+  game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
+  -- Unique per table, and enforced here rather than in code, because it is what
+  -- makes `kick Michal` unambiguous.
+  name text not null,
+  -- What this browser calls itself, kept in localStorage rather than in the
+  -- per-window sessionStorage the claim uses. The two answer different
+  -- questions — "who is this person" and "may this window drive that seat" —
+  -- and only the first has to survive the tab closing. Without it, reopening a
+  -- crashed tab makes a stranger who cannot even reclaim their own name.
+  device_id text,
+  -- Opaque secret held by one window. Possession of it is what authorises
+  -- seeing the hidden cards of whatever seat this user is driving (9.3).
+  claim_token text not null,
+  is_host boolean not null default false,
+  -- Said they are ready to start. Not a host power: 3.1 has everybody choose.
+  ready boolean not null default false,
+  -- Which seat they drive; null is a spectator. No foreign key, deliberately:
+  -- the natural one is composite on (game_id, seat_index), and every action it
+  -- could take on a deleted seat is wrong — cascading would delete the person
+  -- because a chair went, and setting null cannot, since `game_id` is part of
+  -- the key and not nullable. Seats are fixed at six per game and never deleted
+  -- on their own, so the case does not arise; the uniqueness below is the part
+  -- that has to be true.
+  seat_index integer,
+  -- Last heard from. The browser checks in every couple of seconds; a user who
+  -- stops is shown as away rather than gone (see AWAY_AFTER_MS).
+  seen_at timestamptz,
   -- Set by a beacon as the page unloads: "my tab is going away". Not a
   -- departure — a reload fires the same event — so it starts a short countdown
   -- that the next poll cancels. See `sayGoodbye` and `GOODBYE_GRACE_MS`.
   left_at timestamptz,
+  -- Join order, which is how host migration picks a successor: whoever has been
+  -- at the table longest.
+  created_at timestamptz not null default now(),
 
+  unique (game_id, name),
+  -- One driver per seat. Postgres lets a unique index hold any number of nulls,
+  -- so this bounds the seated and leaves the spectators unbounded.
   unique (game_id, seat_index)
 );
+
+create index if not exists users_game_idx on magiczny_miecz.users(game_id);
+create index if not exists users_device_idx on magiczny_miecz.users(device_id);
 
 -- ---------------------------------------------------------------------------
 
@@ -240,6 +315,20 @@ create table if not exists magiczny_miecz.moves (
   game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
   seq bigint not null,
   seat_id uuid references magiczny_miecz.seats(id) on delete set null,
+  -- Who was driving that seat when this happened, and what they were called at
+  -- the time.
+  --
+  -- The name is a copy on purpose. The reader used to build every sentence from
+  -- the seat as it is *now*, so a takeover, a rename, or a player picking a new
+  -- Postac after a death re-rendered the whole history under today's names —
+  -- "Ola (GOBLIN) ginie" would become "Michal (WIEDZMA) ginie" three turns
+  -- later, and the log stopped being evidence. A journal is what you open when
+  -- the table disagrees; it may not change its mind.
+  --
+  -- The id is kept alongside for the cases that want to point at a person
+  -- rather than print one, and goes null with them without taking the name.
+  user_id text references magiczny_miecz.users(id) on delete set null,
+  actor_name text,
   turn integer not null default 0,
   -- The closed list `JournalKind` holds, spelled out so the database knows it
   -- too. A kind the reader does not recognise is dropped rather than rendered
