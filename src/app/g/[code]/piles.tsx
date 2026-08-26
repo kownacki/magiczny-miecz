@@ -39,6 +39,21 @@ const STEP = { x: 2, y: 2 };
 const CARD = { w: 92, h: 131 };
 
 /**
+ * The edge of one card in a stack.
+ *
+ * Pale, and it has to be: what you see of the cards underneath is a sliver of
+ * their left and bottom sides, and the Zaklęcie back is black to its own edge —
+ * so a dark border drew black on black and the whole pile fused into one
+ * shape, with only the top card legible. The Zdarzenie back is teal and hid
+ * this by being lighter than its own outline.
+ *
+ * A light hairline separates every card from the one under it whatever colour
+ * the card is, and the shadow underneath keeps the stack reading as depth
+ * rather than as a stripe.
+ */
+const EDGE = "border border-white/25 shadow-[-1px_1px_2px_rgba(0,0,0,0.6)]";
+
+/**
  * The box every stack is drawn in, whatever is in it.
  *
  * Tall enough for a full one and always that tall, so the four sit on a common
@@ -111,17 +126,9 @@ export function PilesDrawer({
           spent={counts.spells.discard}
           nameOf={nameOf}
           onInspect={onInspect}
-          note="9.5: gdy stos się wyczerpie, zużyte tasuje się i bierze ponownie."
+          note="Gdy stos się wyczerpie, zużyte tasuje się i bierze ponownie (9.5)."
         />
 
-        {/* What is in neither pile, said plainly rather than left as the
-            difference between two numbers nobody adds up. */}
-        <p className="border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-muted">
-          Czego tu nie ma: Karty w rękach graczy i leżące na Obszarach (16.8) —
-          te nie są w żadnym stosie, więc suma bywa mniejsza niż zawartość
-          pudełka. Wyposażenie (30 Kart) nie ma stosu zużytych: 21.2 czyni z
-          niego zapas, do którego Karta wraca, gdy przestaje być w grze.
-        </p>
       </div>
     </Drawer>
   );
@@ -162,8 +169,11 @@ function Deck({
           which puts the top of a full pile level with the line above it. */}
       <h3 className="relative z-10 mb-3 border-b border-edge/60 pb-1 text-[11px] uppercase tracking-wide text-ochre/80">
         {name}
-        <span className="ml-2 tnum text-[10px] normal-case tracking-normal text-muted">
-          {printed} w pudełku · {inPlay} w grze
+        <span
+          title="Karty, których nie ma w żadnym stosie: w rękach graczy i leżące na Obszarach (16.8)"
+          className="ml-2 tnum text-[10px] normal-case tracking-normal text-muted"
+        >
+          {printed} w pudełku · {inPlay} poza stosami
         </span>
       </h3>
 
@@ -200,7 +210,7 @@ function Pile({ label, count, back }: { label: string; count: number; back: stri
               // stack is drawn from underneath and the top card is a whole card
               // rather than an edge.
               style={{ bottom: index * STEP.y, left: index * STEP.x }}
-              className="absolute rounded border border-night/60 shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+              className={`absolute rounded ${EDGE}`}
             />
           ))
         )}
@@ -258,7 +268,7 @@ function Used({
                 onClick={() => card && onInspect(card)}
                 title={card?.name}
                 style={place}
-                className="absolute rounded border border-ochre/40 transition hover:border-ochre"
+                className={`absolute rounded transition hover:border-ochre ${EDGE}`}
               >
                 <Image
                   src={face}
@@ -272,7 +282,7 @@ function Used({
               <div
                 key={index}
                 style={{ ...place, width: CARD.w, height: CARD.h }}
-                className="absolute rounded border border-edge bg-panel"
+                className={`absolute rounded bg-panel ${EDGE}`}
               />
             );
           })
