@@ -441,13 +441,13 @@ suite("points a rule would not let through", () => {
    * asks why, and the record of the game is what they ask.
    */
   it("says a card's point was taken and that nothing came of it", () => {
-    expect(text("punkty", { stat: "magia", delta: -1, from: 3, to: 3 })).toBe(
+    expect(text("punkty", { stat: "magia", delta: -1, from: 3, to: 3, floor: 3 })).toBe(
       "Michał (GOBLIN) traci 1 punkt Magii — bez zmiany: Magia nie spada poniżej 3 (1.3, 2.3).",
     );
   });
 
   it("says how much of it landed when only part did", () => {
-    expect(text("punkty", { stat: "miecz", delta: -3, from: 4, to: 2 })).toBe(
+    expect(text("punkty", { stat: "miecz", delta: -3, from: 4, to: 2, floor: 2 })).toBe(
       "Michał (GOBLIN) traci 3 punkty Miecza — z tego 2: Miecz nie spada poniżej 2 (1.3, 2.3).",
     );
   });
@@ -470,6 +470,14 @@ suite("points a rule would not let through", () => {
     );
   });
 
+  it("says a number under its floor is held where it is, not where the rule wants it", () => {
+    // Only `force` can arrange this, and the rule is about going down — so the
+    // line says the number stayed, and does not quote a minimum it is under.
+    expect(text("punkty", { stat: "magia", delta: -1, from: 1, to: 1, floor: 3 })).toBe(
+      "Michał (GOBLIN) traci 1 punkt Magii — bez zmiany: Magia jest już poniżej swojego minimum (3).",
+    );
+  });
+
   it("marks a correction that was forced past the floor", () => {
     expect(text("korekta", { stat: "magia", delta: -2, from: 3, to: 1, forced: true })).toBe(
       "Michał (GOBLIN): magia -2 (3 → 1) — wymuszone.",
@@ -477,7 +485,7 @@ suite("points a rule would not let through", () => {
   });
 
   it("says as much on a correction the floor refused", () => {
-    expect(text("korekta", { stat: "magia", delta: -1, from: 3, to: 3 })).toContain(
+    expect(text("korekta", { stat: "magia", delta: -1, from: 3, to: 3, floor: 3 })).toContain(
       "bez zmiany: Magia nie spada poniżej 3",
     );
   });

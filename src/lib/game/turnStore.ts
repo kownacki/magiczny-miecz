@@ -1410,6 +1410,7 @@ export async function runCommand(
         asked: command.delta,
         moved: done.moved,
         now: done.to,
+        floor: done.floor,
         forced: command.force,
       });
     }

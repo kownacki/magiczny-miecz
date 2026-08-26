@@ -471,7 +471,7 @@ suite("every command, once each", () => {
 
 suite("what the console says a parameter did", () => {
   const said = (over: Partial<Parameters<typeof statReply>[0]>) =>
-    statReply({ who: "Michał", stat: "magia", asked: -1, moved: -1, now: 2, ...over });
+    statReply({ who: "Michał", stat: "magia", asked: -1, moved: -1, now: 2, floor: 3, ...over });
 
   it("says the change when the whole of it landed", () => {
     expect(said({})).toBe("Michał: magia -1 → 2");
@@ -500,6 +500,14 @@ suite("what the console says a parameter did", () => {
     expect(said({ forced: true })).toBe("Michał: magia -1 → 2 (forced)");
   });
 
+  it("says a number under its floor is held where it is", () => {
+    // The state only `force` can arrange. Quoting the floor here would be
+    // quoting a number the value is under, which explains nothing.
+    expect(said({ moved: 0, now: 1 })).toBe(
+      "Michał: magia stays at 1 — magia is already under its floor of 3; only `force` goes lower.",
+    );
+  });
+
   it("says the ceiling in its own words, not the floor's", () => {
     expect(said({ asked: 500, moved: 0, now: 999 })).toBe(
       "Michał: magia stays at 999 — magia stops at 999.",
@@ -507,7 +515,7 @@ suite("what the console says a parameter did", () => {
   });
 
   it("says it for Złoto without quoting a rule about own points", () => {
-    expect(said({ stat: "zloto", moved: 0, now: 0 })).toBe(
+    expect(said({ stat: "zloto", moved: 0, now: 0, floor: 0 })).toBe(
       "Michał: zloto stays at 0 — zloto cannot go below 0.",
     );
   });

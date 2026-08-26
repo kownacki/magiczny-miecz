@@ -114,7 +114,7 @@ describe("what a change is allowed to reach", () => {
     // The number nothing was reading. Both surfaces that talk about a change —
     // the console's reply and the card's notice — used to say the delta, and so
     // reported a change the floor had swallowed as though it had happened.
-    expect(result).toEqual({ moved: 0, to: 3 });
+    expect(result).toEqual({ moved: 0, to: 3, floor: 3 });
   });
 
   it("takes only as much as there is above the floor", () => {
@@ -124,7 +124,7 @@ describe("what a change is allowed to reach", () => {
       delta: -9,
       reason: null,
     });
-    expect(result).toEqual({ moved: -3, to: 2 });
+    expect(result).toEqual({ moved: -3, to: 2, floor: 2 });
   });
 
   /**
@@ -140,7 +140,7 @@ describe("what a change is allowed to reach", () => {
       reason: "tryb testowy",
       force: true,
     });
-    expect(result).toEqual({ moved: -2, to: 1 });
+    expect(result).toEqual({ moved: -2, to: 1, floor: 3 });
     expect(writes.journal?.[0]).toMatchObject({ payload: { forced: true, from: 3, to: 1 } });
   });
 
@@ -152,7 +152,7 @@ describe("what a change is allowed to reach", () => {
       reason: null,
       force: true,
     });
-    expect(result).toEqual({ moved: -3, to: 0 });
+    expect(result).toEqual({ moved: -3, to: 0, floor: 3 });
   });
 
   it("leaves an ordinary change unmarked, so `forced` means something", () => {
@@ -179,7 +179,54 @@ describe("what a change is allowed to reach", () => {
         reason: null,
         force,
       });
-      expect(result).toEqual({ moved: CEILING - 5, to: CEILING });
+      expect(result).toEqual({ moved: CEILING - 5, to: CEILING, floor: 0 });
     }
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * A number that is already below its floor.
+ * ------------------------------------------------------------------------ */
+
+/**
+ * A bound stops movement in one direction; it does not move the value.
+ *
+ * "Magia nie spada poniżej 3" is a rule about going down, not a claim that the
+ * number is at least 3 — and the two only come apart once something has put it
+ * below, which only `force` can. Clamping to the range dragged it back up: at
+ * 1, an ordinary +1 landed on 3, which is a floor behaving as a ceiling and
+ * two points nobody asked for.
+ */
+describe("a parameter already below its floor", () => {
+  const under = () => table({ magia_own: 1, magia_floor: 3 });
+  const move = (delta: number, force = false) =>
+    adjustSeat(under(), { seatId: "seat-a", stat: "magia", delta, reason: null, force }).result;
+
+  it("climbs by exactly what was asked, without being hauled up to the floor", () => {
+    expect(move(1)).toEqual({ moved: 1, to: 2, floor: 3 });
+  });
+
+  it("latches again the moment it arrives, and behaves as it always did", () => {
+    expect(move(2)).toEqual({ moved: 2, to: 3, floor: 3 });
+    const back = adjustSeat(table({ magia_own: 3, magia_floor: 3 }), {
+      seatId: "seat-a",
+      stat: "magia",
+      delta: -1,
+      reason: null,
+    });
+    expect(back.result).toEqual({ moved: 0, to: 3, floor: 3 });
+  });
+
+  it("may pass the floor on the way up in one go", () => {
+    expect(move(5)).toEqual({ moved: 5, to: 6, floor: 3 });
+  });
+
+  it("will not sink further without being forced", () => {
+    expect(move(-1)).toEqual({ moved: 0, to: 1, floor: 3 });
+  });
+
+  it("sinks when forced, and stops at nothing", () => {
+    expect(move(-1, true)).toEqual({ moved: -1, to: 0, floor: 3 });
+    expect(move(-9, true)).toEqual({ moved: -1, to: 0, floor: 3 });
   });
 });

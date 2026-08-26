@@ -413,6 +413,8 @@ export function statReply(said: {
   moved: number;
   /** Where it ended up. */
   now: number;
+  /** What the rule puts under it: the starting value, or nothing. */
+  floor?: number;
   /** Whether the line said `force`, which lifts the floor under own points. */
   forced?: boolean;
 }): string {
@@ -422,13 +424,20 @@ export function statReply(said: {
     return `${said.who}: ${said.stat} ${signed(said.moved)} → ${said.now}${mark}`;
   }
 
-  const own = said.stat === "miecz" || said.stat === "magia";
+  const floor = said.floor ?? 0;
   const limit =
     said.asked > 0
-      ? `${said.stat} stops at ${said.now}`
-      : own && !said.forced
-        ? `${said.stat} cannot go below the ${said.now} this character started with (1.3, 2.3) — say \`force\` to`
-        : `${said.stat} cannot go below ${said.now}`;
+      ? // Nothing can be above the ceiling to begin with, so this is the only
+        // way up that is ever refused.
+        `${said.stat} stops at ${said.now}`
+      : said.forced || floor === 0
+        ? `${said.stat} cannot go below ${said.now}`
+        : said.now < floor
+          ? // Below its floor already, which only `force` can arrange. The rule
+            // is about going down, so it holds the number where it is rather
+            // than hauling it back up to where it should be.
+            `${said.stat} is already under its floor of ${floor}; only \`force\` goes lower`
+          : `${said.stat} cannot go below the ${floor} this character started with (1.3, 2.3) — say \`force\` to`;
   return said.moved === 0
     ? `${said.who}: ${said.stat} stays at ${said.now} — ${limit}.`
     : `${said.who}: ${said.stat} ${signed(said.moved)} → ${said.now}, not ${signed(said.asked)} — ${limit}.`;

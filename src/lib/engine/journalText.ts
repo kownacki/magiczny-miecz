@@ -141,12 +141,18 @@ function held(data: Record<string, unknown>): string {
   if (moved === asked || asked === 0) return "";
 
   const stat = data.stat === "miecz" ? "Miecz" : data.stat === "magia" ? "Magia" : null;
+  const floor = typeof data.floor === "number" ? data.floor : 0;
   const why =
     asked > 0
       ? `wyżej niż ${data.to} nie idzie`
-      : stat
-        ? `${stat} nie spada poniżej ${data.to} (1.3, 2.3)`
-        : "nie ma poniżej czego zejść";
+      : !stat || floor === 0
+        ? "nie ma poniżej czego zejść"
+        : data.to < floor
+          ? // Under its own floor already, which nothing in the game can do —
+            // only the test console, forcing. The rule is about going down, so
+            // it holds the number where it is rather than pulling it back up.
+            `${stat} jest już poniżej swojego minimum (${floor})`
+          : `${stat} nie spada poniżej ${floor} (1.3, 2.3)`;
   return moved === 0
     ? ` — bez zmiany: ${why}`
     : ` — z tego ${Math.abs(moved)}: ${why}`;

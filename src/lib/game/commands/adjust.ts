@@ -63,6 +63,15 @@ export interface Adjusted {
   moved: number;
   /** Where it ended up. */
   to: number;
+  /**
+   * The floor the rule puts under this parameter — the character's starting
+   * Miecz or Magia (1.3, 2.3), or nothing for Życie and Złoto.
+   *
+   * Handed back because whoever reports the change cannot work out from `to`
+   * alone whether the number stopped at the rule's floor or at where it already
+   * was, and those are two different sentences.
+   */
+  floor: number;
 }
 
 export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adjusted> {
@@ -79,14 +88,34 @@ export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adj
   const current = seat[column] as number;
   // Rules 1.3 and 2.3: own Miecz and Magia can never be pushed below the value
   // the character started with. Życie and Złoto simply floor at zero.
-  const floor = command.force
-    ? 0
-    : command.stat === "miecz"
+  const floor =
+    command.stat === "miecz"
       ? seat.miecz_floor
       : command.stat === "magia"
         ? seat.magia_floor
         : 0;
-  const next = Math.min(CEILING, Math.max(floor, current + command.delta));
+
+  /**
+   * A bound stops movement in one direction. It does not move the value.
+   *
+   * "Magia nie spada poniżej 3" is a rule about going down, not a statement
+   * that the number is at least 3 — and the difference only shows once
+   * something has put it below, which only `force` can. Clamping to the range
+   * then dragged it back *up*: at 1, an ordinary +1 landed on 3, reported as
+   * "+2, not +1 — magia stops at 3", which is a floor being described as a
+   * ceiling while adding two points nobody asked for.
+   *
+   * So the floor that applies is whichever is lower, the rule's or where the
+   * number already is. Below the rule's floor you may climb freely and may not
+   * sink further; the moment you reach it, it latches and behaves as it always
+   * did. `force` takes it down to zero, and zero is the bottom either way.
+   *
+   * The ceiling is the same arrangement upside down, and never bites, because
+   * nothing can be above it to begin with.
+   */
+  const low = command.force ? 0 : Math.min(floor, current);
+  const high = Math.max(CEILING, current);
+  const next = Math.min(high, Math.max(low, current + command.delta));
   const moved = next - current;
 
   const writes = {
@@ -108,6 +137,10 @@ export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adj
           to: next,
           reason: command.reason,
           ...(command.force ? { forced: true } : {}),
+          // Only where something was cut, and only then, because it is the
+          // one fact the sentence cannot work out for itself: whether the
+          // number stopped at the rule's floor or at where it already was.
+          ...(moved === command.delta ? {} : { floor }),
         },
         manual: record.manual,
       },
@@ -115,13 +148,13 @@ export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adj
   };
 
   if (command.stat !== "zycie" || next !== 0 || seat.eliminated) {
-    return { writes, result: { moved, to: next } };
+    return { writes, result: { moved, to: next, floor } };
   }
   // Correcting somebody down to nothing kills them, exactly as losing the last
   // point in a fight does — and the death is decided against a table that
   // already shows the zero.
   return {
     writes: merge(writes, killSeat(apply(snapshot, writes), seat.id)),
-    result: { moved, to: next },
+    result: { moved, to: next, floor },
   };
 }
