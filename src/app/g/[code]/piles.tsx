@@ -173,12 +173,12 @@ function Deck({
           title="Karty, których nie ma w żadnym stosie: w rękach graczy i leżące na Obszarach (16.8)"
           className="ml-2 tnum text-[10px] normal-case tracking-normal text-muted"
         >
-          {printed} w pudełku · {inPlay} poza stosami
+{inPlay} poza stosami
         </span>
       </h3>
 
       <div className="flex items-start gap-6 pt-1">
-        <Pile label="stos" count={draw} back={back} />
+        <Pile label="stos" count={draw} of={printed} back={back} />
         <Used top={used} count={spent} nameOf={nameOf} onInspect={onInspect} />
       </div>
 
@@ -188,7 +188,18 @@ function Deck({
 }
 
 /** The face-down one, drawn as a stack of backs. */
-function Pile({ label, count, back }: { label: string; count: number; back: string }) {
+function Pile({
+  label,
+  count,
+  of,
+  back,
+}: {
+  label: string;
+  count: number;
+  /** What the box prints, so the count reads against something. */
+  of: number;
+  back: string;
+}) {
   const leaves = Math.min(count, LEAVES);
   return (
     <div className="flex flex-col items-center gap-1">
@@ -215,7 +226,13 @@ function Pile({ label, count, back }: { label: string; count: number; back: stri
           ))
         )}
       </div>
-      <p className="tnum text-sm text-ink">{count}</p>
+      {/* Against the whole deck, because "163" alone says nothing: the thing
+          worth knowing is how far through it the table has got, and a stack
+          only shows that once it is nearly gone. */}
+      <p className="tnum text-sm text-ink">
+        {count}
+        <span className="text-muted">/{of}</span>
+      </p>
       <p className="text-[10px] text-muted">{label}</p>
     </div>
   );
