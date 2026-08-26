@@ -19,7 +19,7 @@
 import { useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { cardImageUrl, characterImageUrl } from "@/lib/engine/cardImages";
+import { cardImageUrl, characterImageUrl } from "@/lib/view/cardImages";
 import { characterProfile, forbiddenNatures, itemProfile } from "@/lib/engine/abilityText";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";

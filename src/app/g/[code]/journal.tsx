@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SEAT_COLOURS } from "@/lib/engine/boardMap";
+import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { readSeatToken } from "@/lib/game/seatToken";
 import { fieldWithText } from "@/lib/engine/fieldText";
 import { asFieldId } from "@/lib/engine/board";

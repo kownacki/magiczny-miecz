@@ -15,7 +15,7 @@
  */
 
 import Image from "next/image";
-import { ART_RATIO, cardArtUrl } from "@/lib/engine/cardImages";
+import { ART_RATIO, cardArtUrl } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";

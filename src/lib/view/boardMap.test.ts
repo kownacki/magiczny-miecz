@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BRIDGE_ENTRANCES, DOLNY_KRAG, KAMIENNY_MOST, type FieldId } from "./board";
-import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
+import { BRIDGE_ENTRANCES, DOLNY_KRAG, KAMIENNY_MOST, type FieldId } from "@/lib/engine/board";
+import { GORNY_KRAG, SRODKOWY_KRAG } from "@/lib/engine/rings";
 import {
   BRIDGE_LINKS,
   CELLS,

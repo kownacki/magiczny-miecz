@@ -5,7 +5,7 @@ import Image from "next/image";
 import { CardMark } from "./card-mark";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
-import { cardImageUrl } from "@/lib/engine/cardImages";
+import { cardImageUrl } from "@/lib/view/cardImages";
 import { combatValueOf } from "@/lib/engine/cards";
 import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";

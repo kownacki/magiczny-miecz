@@ -21,8 +21,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
-import { characterStandeeUrl } from "@/lib/engine/cardImages";
-import { SEAT_COLOURS } from "@/lib/engine/boardMap";
+import { characterStandeeUrl } from "@/lib/view/cardImages";
+import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import type { PublicSeat } from "./table-layout";

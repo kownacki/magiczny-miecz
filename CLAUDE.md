@@ -41,7 +41,9 @@ anything.
   every real id was a string too.
 
 - **The engine in `src/lib/engine/` is pure.** No React, no Supabase, no I/O, no
-  `Math.random`. Everything effectful arrives through a port. This is what makes
+  `Math.random`. Nothing about how the game *looks* either — asset paths, SVG
+  geometry and which żeton to draw are `src/lib/view/`'s, because a directory
+  that holds `SEAT_COLOURS` cannot claim to be only the rules. Everything effectful arrives through a port. This is what makes
   the rules testable, and it is the only reason one engine can serve both a
   physical table and a browser simulation.
 - **Randomness and card identity are ports, not branches.** `RandomPort` is

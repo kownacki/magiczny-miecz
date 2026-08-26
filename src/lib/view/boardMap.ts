@@ -1,7 +1,7 @@
 /** Where every field sits on the drawn map, and the clockwise sense the printed board actually uses. */
 
-import { DOLNY_KRAG, KAMIENNY_MOST, type FieldId } from "./board";
-import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
+import { DOLNY_KRAG, KAMIENNY_MOST, type FieldId } from "@/lib/engine/board";
+import { GORNY_KRAG, SRODKOWY_KRAG } from "@/lib/engine/rings";
 
 /**
  * The map is drawn, not photographed.

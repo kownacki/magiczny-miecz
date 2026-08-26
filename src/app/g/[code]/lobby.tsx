@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
-import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
-import { SEAT_COLOURS } from "@/lib/engine/boardMap";
+import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
+import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
 import { MAX_SEATS } from "@/lib/game/modes";

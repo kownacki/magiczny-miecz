@@ -11,8 +11,8 @@
  */
 
 import Image from "next/image";
-import { SEAT_COLOURS } from "@/lib/engine/boardMap";
-import { characterStandeeUrl } from "@/lib/engine/cardImages";
+import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { characterStandeeUrl } from "@/lib/view/cardImages";
 import { plural } from "@/lib/engine/polish";
 import { DEFAULT_DEPTH, projectQueue, type QueueEntry } from "@/lib/engine/turnQueue";
 

@@ -8,8 +8,8 @@ import artManifest from "@/data/card-art.json";
 import portraits from "@/data/character-images.json";
 import standees from "@/data/character-standees.json";
 import type { EventCard, Item, Spell } from "@/data/types";
-import { cardRef } from "./deck";
-import { RANDOM_CHARACTER_ID } from "./characters";
+import { cardRef } from "@/lib/engine/deck";
+import { RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 
 /**
  * The shape each family of illustration is exported in.

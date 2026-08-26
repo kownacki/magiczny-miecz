@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { cardArtUrl } from "@/lib/engine/cardImages";
+import { cardArtUrl } from "@/lib/view/cardImages";
 
 /**
  * A card picked up and stuck to the pointer.

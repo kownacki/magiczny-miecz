@@ -2,7 +2,7 @@
 
 import type { FieldId } from "@/lib/engine/board";
 import type { CardId } from "@/data/ids";
-import { cardArtUrl } from "@/lib/engine/cardImages";
+import { cardArtUrl } from "@/lib/view/cardImages";
 
 import { useState } from "react";
 import {
@@ -13,7 +13,7 @@ import {
   VIEW,
   dotPositions,
   type Cell,
-} from "@/lib/engine/boardMap";
+} from "@/lib/view/boardMap";
 
 export interface MapSeat {
   id: string;

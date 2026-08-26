@@ -8,7 +8,7 @@ import {
   cardImageUrl,
   characterArtUrl,
   characterImageUrl,
-} from "@/lib/engine/cardImages";
+} from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
 import { CardMark } from "./card-mark";
 import type { EqMode } from "@/lib/engine/slots";

@@ -21,7 +21,7 @@ import {
   startingKit,
   type SeatCharacter,
 } from "@/lib/engine/characters";
-import { cardArtUrl, characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
+import { cardArtUrl, characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { SeatActions } from "./seat-actions";
@@ -30,7 +30,7 @@ import { CardBack, CardDetail, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
 import { CardLibrary } from "./card-library";
 import { TestConsole } from "./console";
-import { tokensFor } from "@/lib/engine/tokens";
+import { tokensFor } from "@/lib/view/tokens";
 import { DRAG_TYPE, SlotPanel, startHoldingDrag, type SlotItem } from "./slot-panel";
 import { ItemSlot, SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
 import { CarriedCard, type Carried } from "./carry";

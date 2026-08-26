@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { RANDOM_CHARACTER_ID, type SeatCharacter } from "@/lib/engine/characters";
-import { characterImageUrl, characterStandeeUrl } from "@/lib/engine/cardImages";
+import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
 
 /**
  * Choosing again, after dying.
