@@ -137,7 +137,7 @@ export function FieldModal({
           </h2>
           <button
             onClick={onClose}
-            className="text-[11px] text-muted transition hover:text-ink"
+            className="text-xs text-muted transition hover:text-ink"
           >
             zamknij
           </button>
