@@ -19,8 +19,17 @@ function entry(kind: JournalKind, payload: Record<string, unknown> = {}, over: P
   return { seq: 1, seatId: "a", turn: 2, kind, payload, manual: false, ...over };
 }
 
-const text = (kind: JournalKind, payload: Record<string, unknown> = {}, seatId = "a") =>
-  describe(entry(kind, payload, { seatId }), SEATS, null)?.text ?? null;
+/** The third argument is a seat id, or the whole entry when a test needs more of it. */
+const text = (
+  kind: JournalKind,
+  payload: Record<string, unknown> = {},
+  over: string | Partial<JournalEntry> = "a",
+) =>
+  describe(
+    entry(kind, payload, typeof over === "string" ? { seatId: over } : over),
+    SEATS,
+    null,
+  )?.text ?? null;
 
 suite("journal vocabulary", () => {
   it("names the player, then the character, then the seat", () => {
@@ -149,6 +158,23 @@ suite("journal vocabulary", () => {
   it("still says a typed correction as the number it is", () => {
     expect(text("override", { stat: "sword", delta: 1, from: 2, to: 3 })).toBe(
       "Michał (GOBLIN): sword +1 (2 → 3).",
+    );
+  });
+
+  /**
+   * A journal is what you open when the table disagrees, so it may not change
+   * its mind. Every sentence used to be built from the seat as it is *now*.
+   */
+  it("keeps the name the line was written under, whoever holds the seat now", () => {
+    // The seat is Michał's today; this line was written when Ola held it.
+    expect(text("points", { stat: "gold", delta: 1 }, { actorName: "Ola" })).toBe(
+      "Ola (GOBLIN) zyskuje 1 Sztukę Złota.",
+    );
+  });
+
+  it("falls back to the seat for lines written before the name was kept", () => {
+    expect(text("points", { stat: "gold", delta: 1 })).toBe(
+      "Michał (GOBLIN) zyskuje 1 Sztukę Złota.",
     );
   });
 

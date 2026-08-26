@@ -671,7 +671,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   // line that could not be written was silently dropped, which is the one
   // failure the journal must not have: it exists to be believed when the app
   // and the board disagree.
-  if (lines.length > 0) await appendJournal(gameId, snapshot.journalSeq, lines);
+  if (lines.length > 0) await appendJournal(gameId, snapshot.journalSeq, lines, snapshot);
 
   return next;
 }
@@ -688,12 +688,37 @@ async function appendJournal(
   gameId: string,
   from: number,
   lines: readonly JournalWrite[],
+  /** Read for one thing: who was driving each seat at the moment this happened. */
+  snapshot: Snapshot,
 ): Promise<void> {
+  /**
+   * The name is frozen here rather than looked up when the line is read.
+   *
+   * A journal is what you open when the table disagrees about what happened, so
+   * it may not change its mind — and it did. Every sentence was built from the
+   * seat *as it is now*, so a rename, a takeover, or somebody picking a new
+   * Postać after a death rewrote the whole history under today's names: "Ola
+   * (GOBLIN) ginie" became "Michał (WIEDŹMA) ginie" three turns later, and the
+   * log stopped being evidence of anything.
+   *
+   * Resolved here rather than by each command, because a command should not have
+   * to remember who is sitting where to say what it did — and there is exactly
+   * one place every line passes through on its way out.
+   */
+  const driving = (seatId: string | null) => {
+    if (!seatId) return null;
+    const seat = snapshot.seats.find((one) => one.id === seatId);
+    if (!seat) return null;
+    return snapshot.users.find((one) => one.seat_index === seat.seat_index) ?? null;
+  };
+
   const { error } = await tables.moves.insert(
     lines.map((line, index) => ({
       game_id: gameId,
       seq: from + 1 + index,
       seat_id: line.seatId,
+      user_id: driving(line.seatId)?.id ?? null,
+      actor_name: driving(line.seatId)?.name ?? null,
       turn: line.turn,
       kind: line.kind,
       payload: line.payload ?? {},

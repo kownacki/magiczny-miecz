@@ -20,6 +20,15 @@ export interface JournalEntry {
   kind: JournalKind;
   payload: Record<string, unknown>;
   manual: boolean;
+  /**
+   * What the person driving that seat was called *then*.
+   *
+   * Written when the line was, and preferred over the seat's current name for
+   * that reason: a journal that renames its own past every time somebody takes
+   * a seat over is not evidence of anything. Null on lines written before the
+   * column existed, which fall back to the live name as they always did.
+   */
+  actorName?: string | null;
 }
 
 export interface JournalSeat {
@@ -258,7 +267,18 @@ export function describe(
    */
   const person = (who: JournalSeat | undefined) => personName(who, remember);
 
-  const who = person(seat);
+  /**
+   * The name this line was written under, and only the seat's own as a
+   * fallback.
+   *
+   * The character is still read live, and deliberately: a Postać belongs to the
+   * seat rather than to whoever is driving it, so it is the same figure doing
+   * the same thing whoever speaks for it — and that is what the hover is for.
+   * It is the *person* that changes underneath.
+   */
+  const who = entry.actorName
+    ? person(seat ? { ...seat, playerName: entry.actorName } : undefined)
+    : person(seat);
 
   const line = (text: string): JournalLine => ({
     seq: entry.seq,
