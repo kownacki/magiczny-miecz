@@ -55,6 +55,7 @@ const seat = (over: Partial<Seat> = {}): Seat => ({
  */
 const item = (id: CardId, over: Partial<Item> = {}): Item => ({
   id: id as Item["id"],
+  set: "base",
   name: id.toUpperCase(),
   source: { sheet: "test", index: 1 },
   text: "",

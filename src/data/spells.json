@@ -1,6 +1,7 @@
 [
   {
     "id": "kamien-filozoficzny",
+    "set": "base",
     "name": "KAMIEŃ FILOZOFICZNY",
     "source": {
       "sheet": "zaklecia",
@@ -10,6 +11,7 @@
   },
   {
     "id": "krag-plomieni",
+    "set": "base",
     "name": "KRĄG PŁOMIENI",
     "source": {
       "sheet": "zaklecia",
@@ -19,6 +21,7 @@
   },
   {
     "id": "magia-i-miecz",
+    "set": "base",
     "name": "MAGIA I MIECZ",
     "source": {
       "sheet": "zaklecia",
@@ -28,6 +31,7 @@
   },
   {
     "id": "magia-i-miecz",
+    "set": "base",
     "name": "MAGIA I MIECZ",
     "source": {
       "sheet": "zaklecia",
@@ -37,6 +41,7 @@
   },
   {
     "id": "magiczna-wedrowka",
+    "set": "base",
     "name": "MAGICZNA WĘDRÓWKA",
     "source": {
       "sheet": "zaklecia",
@@ -46,6 +51,7 @@
   },
   {
     "id": "ocalony",
+    "set": "base",
     "name": "OCALONY",
     "source": {
       "sheet": "zaklecia",
@@ -55,6 +61,7 @@
   },
   {
     "id": "odmiana-losu",
+    "set": "base",
     "name": "ODMIANA LOSU",
     "source": {
       "sheet": "zaklecia",
@@ -64,6 +71,7 @@
   },
   {
     "id": "odrodzenie",
+    "set": "base",
     "name": "ODRODZENIE",
     "source": {
       "sheet": "zaklecia",
@@ -73,6 +81,7 @@
   },
   {
     "id": "olsnienie",
+    "set": "base",
     "name": "OLŚNIENIE",
     "source": {
       "sheet": "zaklecia",
@@ -82,6 +91,7 @@
   },
   {
     "id": "pan-bogactwa",
+    "set": "base",
     "name": "PAN BOGACTWA",
     "source": {
       "sheet": "zaklecia",
@@ -91,6 +101,7 @@
   },
   {
     "id": "pan-przyjaciol",
+    "set": "base",
     "name": "PAN PRZYJACIÓŁ",
     "source": {
       "sheet": "zaklecia",
@@ -100,6 +111,7 @@
   },
   {
     "id": "pan-trzesawisk",
+    "set": "base",
     "name": "PAN TRZĘSAWISK",
     "source": {
       "sheet": "zaklecia",
@@ -109,6 +121,7 @@
   },
   {
     "id": "powiew-smierci",
+    "set": "base",
     "name": "POWIEW ŚMIERCI",
     "source": {
       "sheet": "zaklecia",
@@ -118,6 +131,7 @@
   },
   {
     "id": "siedem-wichrow",
+    "set": "base",
     "name": "SIEDEM WICHRÓW",
     "source": {
       "sheet": "zaklecia",
@@ -127,6 +141,7 @@
   },
   {
     "id": "siedem-wichrow",
+    "set": "base",
     "name": "SIEDEM WICHRÓW",
     "source": {
       "sheet": "zaklecia",
@@ -136,6 +151,7 @@
   },
   {
     "id": "siewca-spustoszenia",
+    "set": "base",
     "name": "SIEWCA SPUSTOSZENIA",
     "source": {
       "sheet": "zaklecia",
@@ -145,6 +161,7 @@
   },
   {
     "id": "szalenstwo",
+    "set": "base",
     "name": "SZALEŃSTWO",
     "source": {
       "sheet": "zaklecia",
@@ -154,6 +171,7 @@
   },
   {
     "id": "wladca-czarow",
+    "set": "base",
     "name": "WŁADCA CZARÓW",
     "source": {
       "sheet": "zaklecia",
@@ -163,6 +181,7 @@
   },
   {
     "id": "wladca-gromu",
+    "set": "base",
     "name": "WŁADCA GROMU",
     "source": {
       "sheet": "zaklecia",
@@ -172,6 +191,7 @@
   },
   {
     "id": "wladca-lodu",
+    "set": "base",
     "name": "WŁADCA LODU",
     "source": {
       "sheet": "zaklecia",
@@ -181,6 +201,7 @@
   },
   {
     "id": "wladca-zaklec",
+    "set": "base",
     "name": "WŁADCA ZAKLĘĆ",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -190,6 +211,7 @@
   },
   {
     "id": "wladca-zaklec",
+    "set": "base",
     "name": "WŁADCA ZAKLĘĆ",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -199,6 +221,7 @@
   },
   {
     "id": "wladca-zdarzen",
+    "set": "base",
     "name": "WŁADCA ZDARZEŃ",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -208,6 +231,7 @@
   },
   {
     "id": "wojna-zywiolow",
+    "set": "base",
     "name": "WOJNA ŻYWIOŁÓW",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -217,6 +241,7 @@
   },
   {
     "id": "zwierciadlo",
+    "set": "base",
     "name": "ZWIERCIADŁO",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -226,6 +251,7 @@
   },
   {
     "id": "fatum",
+    "set": "base",
     "name": "FATUM",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -235,6 +261,7 @@
   },
   {
     "id": "formula-czasu",
+    "set": "base",
     "name": "FORMUŁA CZASU",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -244,6 +271,7 @@
   },
   {
     "id": "formula-przestrzeni",
+    "set": "base",
     "name": "FORMUŁA PRZESTRZENI",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -253,6 +281,7 @@
   },
   {
     "id": "golem",
+    "set": "base",
     "name": "GOLEM",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -262,6 +291,7 @@
   },
   {
     "id": "homunculus",
+    "set": "base",
     "name": "HOMUNCULUS",
     "source": {
       "sheet": "wyposazenie-zaklecia",

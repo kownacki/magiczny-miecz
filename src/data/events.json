@@ -1,6 +1,7 @@
 [
   {
     "id": "burza-siedmiu-slonc",
+    "set": "base",
     "name": "BURZA SIEDMIU SŁOŃC",
     "cardClass": "encounter",
     "source": {
@@ -11,6 +12,7 @@
   },
   {
     "id": "danina",
+    "set": "base",
     "name": "DANINA",
     "cardClass": "encounter",
     "source": {
@@ -21,6 +23,7 @@
   },
   {
     "id": "godzina-duchow",
+    "set": "base",
     "name": "GODZINA DUCHÓW",
     "cardClass": "encounter",
     "source": {
@@ -31,6 +34,7 @@
   },
   {
     "id": "kometa",
+    "set": "base",
     "name": "KOMETA",
     "cardClass": "encounter",
     "source": {
@@ -41,6 +45,7 @@
   },
   {
     "id": "magiczna-tablica",
+    "set": "base",
     "name": "MAGICZNA TABLICA",
     "cardClass": "encounter",
     "source": {
@@ -51,6 +56,7 @@
   },
   {
     "id": "mgla",
+    "set": "base",
     "name": "MGŁA",
     "cardClass": "encounter",
     "source": {
@@ -61,6 +67,7 @@
   },
   {
     "id": "poludnica",
+    "set": "base",
     "name": "POŁUDNICA",
     "cardClass": "encounter",
     "source": {
@@ -71,6 +78,7 @@
   },
   {
     "id": "poslancy-bogow",
+    "set": "base",
     "name": "POSŁAŃCY BOGÓW",
     "cardClass": "encounter",
     "source": {
@@ -81,6 +89,7 @@
   },
   {
     "id": "przesilenie",
+    "set": "base",
     "name": "PRZESILENIE",
     "cardClass": "encounter",
     "source": {
@@ -91,6 +100,7 @@
   },
   {
     "id": "sabat-czarownic",
+    "set": "base",
     "name": "SABAT CZAROWNIC",
     "cardClass": "encounter",
     "source": {
@@ -101,6 +111,7 @@
   },
   {
     "id": "slup-ognia",
+    "set": "base",
     "name": "SŁUP OGNIA",
     "cardClass": "encounter",
     "source": {
@@ -111,6 +122,7 @@
   },
   {
     "id": "straz",
+    "set": "base",
     "name": "STRAŻ",
     "cardClass": "encounter",
     "source": {
@@ -121,6 +133,7 @@
   },
   {
     "id": "turniej-rycerski",
+    "set": "base",
     "name": "TURNIEJ RYCERSKI",
     "cardClass": "encounter",
     "source": {
@@ -131,6 +144,7 @@
   },
   {
     "id": "uklad-planet",
+    "set": "base",
     "name": "UKŁAD PLANET",
     "cardClass": "encounter",
     "source": {
@@ -141,6 +155,7 @@
   },
   {
     "id": "zacmienie-slonc",
+    "set": "base",
     "name": "ZAĆMIENIE SŁOŃC",
     "cardClass": "encounter",
     "source": {
@@ -151,6 +166,7 @@
   },
   {
     "id": "zakleta-sciezka",
+    "set": "base",
     "name": "ZAKLĘTA ŚCIEŻKA",
     "cardClass": "encounter",
     "source": {
@@ -161,6 +177,7 @@
   },
   {
     "id": "zaraza",
+    "set": "base",
     "name": "ZARAZA",
     "cardClass": "encounter",
     "source": {
@@ -171,6 +188,7 @@
   },
   {
     "id": "zasadzka",
+    "set": "base",
     "name": "ZASADZKA",
     "cardClass": "encounter",
     "source": {
@@ -181,6 +199,7 @@
   },
   {
     "id": "zatrute-ziola",
+    "set": "base",
     "name": "ZATRUTE ZIOŁA",
     "cardClass": "encounter",
     "source": {
@@ -191,6 +210,7 @@
   },
   {
     "id": "zly-duch",
+    "set": "base",
     "name": "ZŁY DUCH",
     "cardClass": "encounter",
     "source": {
@@ -201,6 +221,7 @@
   },
   {
     "id": "cyklop",
+    "set": "base",
     "name": "CYKLOP",
     "cardClass": "foe",
     "source": {
@@ -212,6 +233,7 @@
   },
   {
     "id": "czarna-hybryda",
+    "set": "base",
     "name": "CZARNA HYBRYDA",
     "cardClass": "foe",
     "source": {
@@ -223,6 +245,7 @@
   },
   {
     "id": "czerwona-hybryda",
+    "set": "base",
     "name": "CZERWONA HYBRYDA",
     "cardClass": "foe",
     "source": {
@@ -234,6 +257,7 @@
   },
   {
     "id": "fomoraig",
+    "set": "base",
     "name": "FOMORAIG",
     "cardClass": "foe",
     "source": {
@@ -245,6 +269,7 @@
   },
   {
     "id": "hadron",
+    "set": "base",
     "name": "HADRON",
     "cardClass": "foe",
     "source": {
@@ -256,6 +281,7 @@
   },
   {
     "id": "hadron",
+    "set": "base",
     "name": "HADRON",
     "cardClass": "foe",
     "source": {
@@ -267,6 +293,7 @@
   },
   {
     "id": "lewiatan",
+    "set": "base",
     "name": "LEWIATAN",
     "cardClass": "foe",
     "source": {
@@ -278,6 +305,7 @@
   },
   {
     "id": "los",
+    "set": "base",
     "name": "ŁOŚ",
     "cardClass": "foe",
     "source": {
@@ -289,6 +317,7 @@
   },
   {
     "id": "los",
+    "set": "base",
     "name": "ŁOŚ",
     "cardClass": "foe",
     "source": {
@@ -300,6 +329,7 @@
   },
   {
     "id": "niedzwiedz",
+    "set": "base",
     "name": "NIEDŹWIEDŹ",
     "cardClass": "foe",
     "source": {
@@ -311,6 +341,7 @@
   },
   {
     "id": "nobbin",
+    "set": "base",
     "name": "NOBBIN",
     "cardClass": "foe",
     "source": {
@@ -322,6 +353,7 @@
   },
   {
     "id": "nobbin",
+    "set": "base",
     "name": "NOBBIN",
     "cardClass": "foe",
     "source": {
@@ -333,6 +365,7 @@
   },
   {
     "id": "przybysz-z-krainy-cieni",
+    "set": "base",
     "name": "PRZYBYSZ Z KRAINY CIENI",
     "cardClass": "foe",
     "source": {
@@ -344,6 +377,7 @@
   },
   {
     "id": "smok",
+    "set": "base",
     "name": "SMOK",
     "cardClass": "foe",
     "source": {
@@ -355,6 +389,7 @@
   },
   {
     "id": "sobowtor",
+    "set": "base",
     "name": "SOBOWTÓR",
     "cardClass": "foe",
     "source": {
@@ -365,6 +400,7 @@
   },
   {
     "id": "sniezne-monstrum",
+    "set": "base",
     "name": "ŚNIEŻNE MONSTRUM",
     "cardClass": "foe",
     "source": {
@@ -376,6 +412,7 @@
   },
   {
     "id": "trogglowy-smok",
+    "set": "base",
     "name": "TRÓGGŁOWY SMOK",
     "cardClass": "foe",
     "source": {
@@ -387,6 +424,7 @@
   },
   {
     "id": "wedrowiec",
+    "set": "base",
     "name": "WĘDROWIEC",
     "cardClass": "foe",
     "source": {
@@ -398,6 +436,7 @@
   },
   {
     "id": "wilk",
+    "set": "base",
     "name": "WILK",
     "cardClass": "foe",
     "source": {
@@ -409,6 +448,7 @@
   },
   {
     "id": "wilkolak",
+    "set": "base",
     "name": "WILKOŁAK",
     "cardClass": "foe",
     "source": {
@@ -420,6 +460,7 @@
   },
   {
     "id": "wilkolak",
+    "set": "base",
     "name": "WILKOŁAK",
     "cardClass": "foe",
     "source": {
@@ -431,6 +472,7 @@
   },
   {
     "id": "zloczynca",
+    "set": "base",
     "name": "ZŁOCZYŃCA",
     "cardClass": "foe",
     "source": {
@@ -442,6 +484,7 @@
   },
   {
     "id": "duch-ciemnosci",
+    "set": "base",
     "name": "DUCH CIEMNOŚCI",
     "cardClass": "foe",
     "source": {
@@ -453,6 +496,7 @@
   },
   {
     "id": "duch-zaglady",
+    "set": "base",
     "name": "DUCH ZAGŁADY",
     "cardClass": "foe",
     "source": {
@@ -464,6 +508,7 @@
   },
   {
     "id": "ksiaze-demonow",
+    "set": "base",
     "name": "KSIĄŻĘ DEMONÓW",
     "cardClass": "foe",
     "source": {
@@ -475,6 +520,7 @@
   },
   {
     "id": "ksiaze-demonow",
+    "set": "base",
     "name": "KSIĄŻĘ DEMONÓW",
     "cardClass": "foe",
     "source": {
@@ -486,6 +532,7 @@
   },
   {
     "id": "demon",
+    "set": "base",
     "name": "DEMON",
     "cardClass": "foe",
     "source": {
@@ -497,6 +544,7 @@
   },
   {
     "id": "upior",
+    "set": "base",
     "name": "UPIÓR",
     "cardClass": "foe",
     "source": {
@@ -508,6 +556,7 @@
   },
   {
     "id": "upior",
+    "set": "base",
     "name": "UPIÓR",
     "cardClass": "foe",
     "source": {
@@ -519,6 +568,7 @@
   },
   {
     "id": "wampir",
+    "set": "base",
     "name": "WAMPIR",
     "cardClass": "foe",
     "source": {
@@ -530,6 +580,7 @@
   },
   {
     "id": "widmo",
+    "set": "base",
     "name": "WIDMO",
     "cardClass": "foe",
     "source": {
@@ -541,6 +592,7 @@
   },
   {
     "id": "zjawa",
+    "set": "base",
     "name": "ZJAWA",
     "cardClass": "foe",
     "source": {
@@ -552,6 +604,7 @@
   },
   {
     "id": "cudotworca",
+    "set": "base",
     "name": "CUDOTWÓRCA",
     "cardClass": "stranger",
     "source": {
@@ -562,6 +615,7 @@
   },
   {
     "id": "czarodziej",
+    "set": "base",
     "name": "CZARODZIEJ",
     "cardClass": "stranger",
     "source": {
@@ -572,6 +626,7 @@
   },
   {
     "id": "dziki-rumak",
+    "set": "base",
     "name": "DZIKI RUMAK",
     "cardClass": "stranger",
     "source": {
@@ -582,6 +637,7 @@
   },
   {
     "id": "dobre-bostwo",
+    "set": "base",
     "name": "DOBRE BÓSTWO",
     "cardClass": "stranger",
     "source": {
@@ -592,6 +648,7 @@
   },
   {
     "id": "eremita",
+    "set": "base",
     "name": "EREMITA",
     "cardClass": "stranger",
     "source": {
@@ -602,6 +659,7 @@
   },
   {
     "id": "jednorozec",
+    "set": "base",
     "name": "JEDNOROŻEC",
     "cardClass": "stranger",
     "source": {
@@ -612,6 +670,7 @@
   },
   {
     "id": "koszmar",
+    "set": "base",
     "name": "KOSZMAR",
     "cardClass": "stranger",
     "source": {
@@ -622,6 +681,7 @@
   },
   {
     "id": "krol-lasu",
+    "set": "base",
     "name": "KRÓL LASU",
     "cardClass": "stranger",
     "source": {
@@ -632,6 +692,7 @@
   },
   {
     "id": "kuglarz",
+    "set": "base",
     "name": "KUGLARZ",
     "cardClass": "stranger",
     "source": {
@@ -642,6 +703,7 @@
   },
   {
     "id": "medrzec",
+    "set": "base",
     "name": "MĘDRZEC",
     "cardClass": "stranger",
     "source": {
@@ -652,6 +714,7 @@
   },
   {
     "id": "polbog",
+    "set": "base",
     "name": "PÓŁBÓG",
     "cardClass": "stranger",
     "source": {
@@ -662,6 +725,7 @@
   },
   {
     "id": "sztukmistrz",
+    "set": "base",
     "name": "SZTUKMISTRZ",
     "cardClass": "stranger",
     "source": {
@@ -672,6 +736,7 @@
   },
   {
     "id": "urocza-diablica",
+    "set": "base",
     "name": "UROCZA DIABLICA",
     "cardClass": "stranger",
     "source": {
@@ -682,6 +747,7 @@
   },
   {
     "id": "wielkolud",
+    "set": "base",
     "name": "WIELKOLUD",
     "cardClass": "stranger",
     "source": {
@@ -692,6 +758,7 @@
   },
   {
     "id": "wrozka",
+    "set": "base",
     "name": "WRÓŻKA",
     "cardClass": "stranger",
     "source": {
@@ -702,6 +769,7 @@
   },
   {
     "id": "zaklinacz-czasu",
+    "set": "base",
     "name": "ZAKLINACZ CZASU",
     "cardClass": "stranger",
     "source": {
@@ -712,6 +780,7 @@
   },
   {
     "id": "zlodziej-dobroczynca",
+    "set": "base",
     "name": "ZŁODZIEJ DOBROCZYŃCA",
     "cardClass": "stranger",
     "source": {
@@ -722,6 +791,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -732,6 +802,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -742,6 +813,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -752,6 +824,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -762,6 +835,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -772,6 +846,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -782,6 +857,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -792,6 +868,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -802,6 +879,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -812,6 +890,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -822,6 +901,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -832,6 +912,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -842,6 +923,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -852,6 +934,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -862,6 +945,7 @@
   },
   {
     "id": "1-sztuka-zlota",
+    "set": "base",
     "name": "1 SZTUKA ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -872,6 +956,7 @@
   },
   {
     "id": "2-sztuki-zlota",
+    "set": "base",
     "name": "2 SZTUKI ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -882,6 +967,7 @@
   },
   {
     "id": "2-sztuki-zlota",
+    "set": "base",
     "name": "2 SZTUKI ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -892,6 +978,7 @@
   },
   {
     "id": "2-sztuki-zlota",
+    "set": "base",
     "name": "2 SZTUKI ZŁOTA",
     "cardClass": "item",
     "source": {
@@ -902,6 +989,7 @@
   },
   {
     "id": "bojowy-rumak",
+    "set": "base",
     "name": "BOJOWY RUMAK",
     "cardClass": "item",
     "source": {
@@ -912,6 +1000,7 @@
   },
   {
     "id": "diament-krolow",
+    "set": "base",
     "name": "DIAMENT KRÓLÓW",
     "cardClass": "item",
     "source": {
@@ -922,6 +1011,7 @@
   },
   {
     "id": "gliniana-tabliczka",
+    "set": "base",
     "name": "GLINIANA TABLICZKA",
     "cardClass": "item",
     "source": {
@@ -932,6 +1022,7 @@
   },
   {
     "id": "helm",
+    "set": "base",
     "name": "HEŁM",
     "cardClass": "item",
     "source": {
@@ -942,6 +1033,7 @@
   },
   {
     "id": "kij-i-sznur",
+    "set": "base",
     "name": "KIJ I SZNUR",
     "cardClass": "item",
     "source": {
@@ -952,6 +1044,7 @@
   },
   {
     "id": "kon",
+    "set": "base",
     "name": "KOŃ",
     "cardClass": "item",
     "source": {
@@ -962,6 +1055,7 @@
   },
   {
     "id": "latarnia",
+    "set": "base",
     "name": "LATARNIA",
     "cardClass": "item",
     "source": {
@@ -972,6 +1066,7 @@
   },
   {
     "id": "lodz",
+    "set": "base",
     "name": "ŁÓDŹ",
     "cardClass": "item",
     "source": {
@@ -982,6 +1077,7 @@
   },
   {
     "id": "magiczny-manuskrypt",
+    "set": "base",
     "name": "MAGICZNY MANUSKRYPT",
     "cardClass": "item",
     "source": {
@@ -992,6 +1088,7 @@
   },
   {
     "id": "miecz",
+    "set": "base",
     "name": "MIECZ",
     "cardClass": "item",
     "source": {
@@ -1002,6 +1099,7 @@
   },
   {
     "id": "miecz",
+    "set": "base",
     "name": "MIECZ",
     "cardClass": "item",
     "source": {
@@ -1012,6 +1110,7 @@
   },
   {
     "id": "mul",
+    "set": "base",
     "name": "MUŁ",
     "cardClass": "item",
     "source": {
@@ -1022,6 +1121,7 @@
   },
   {
     "id": "rekawice",
+    "set": "base",
     "name": "RĘKAWICE",
     "cardClass": "item",
     "source": {
@@ -1032,6 +1132,7 @@
   },
   {
     "id": "sztylet",
+    "set": "base",
     "name": "SZTYLET",
     "cardClass": "item",
     "source": {
@@ -1043,6 +1144,7 @@
   },
   {
     "id": "tajemna-sakwa",
+    "set": "base",
     "name": "TAJEMNA SAKWA",
     "cardClass": "item",
     "source": {
@@ -1053,6 +1155,7 @@
   },
   {
     "id": "tajemnicza-szkatula",
+    "set": "base",
     "name": "TAJEMNICZA SZKATUŁA",
     "cardClass": "item",
     "source": {
@@ -1063,6 +1166,7 @@
   },
   {
     "id": "tarcza",
+    "set": "base",
     "name": "TARCZA",
     "cardClass": "item",
     "source": {
@@ -1073,6 +1177,7 @@
   },
   {
     "id": "wierzchowiec",
+    "set": "base",
     "name": "WIERZCHOWIEC",
     "cardClass": "item",
     "source": {
@@ -1083,6 +1188,7 @@
   },
   {
     "id": "zaprzeg",
+    "set": "base",
     "name": "ZAPRZĘG",
     "cardClass": "item",
     "source": {
@@ -1093,6 +1199,7 @@
   },
   {
     "id": "zbroja",
+    "set": "base",
     "name": "ZBROJA",
     "cardClass": "item",
     "source": {
@@ -1103,6 +1210,7 @@
   },
   {
     "id": "arondight",
+    "set": "base",
     "name": "ARONDIGHT",
     "cardClass": "item",
     "source": {
@@ -1114,6 +1222,7 @@
   },
   {
     "id": "czarodziejska-kosc",
+    "set": "base",
     "name": "CZARODZIEJSKA KOŚĆ",
     "cardClass": "item",
     "source": {
@@ -1124,6 +1233,7 @@
   },
   {
     "id": "eliksir-sily",
+    "set": "base",
     "name": "ELIKSIR SIŁY",
     "cardClass": "item",
     "source": {
@@ -1135,6 +1245,7 @@
   },
   {
     "id": "excalibur",
+    "set": "base",
     "name": "EXCALIBUR",
     "cardClass": "item",
     "source": {
@@ -1146,6 +1257,7 @@
   },
   {
     "id": "jablko-natchnienia",
+    "set": "base",
     "name": "JABŁKO NATCHNIENIA",
     "cardClass": "item",
     "source": {
@@ -1156,6 +1268,7 @@
   },
   {
     "id": "krysztal-losu",
+    "set": "base",
     "name": "KRYSZTAŁ LOSU",
     "cardClass": "item",
     "source": {
@@ -1166,6 +1279,7 @@
   },
   {
     "id": "krysztal-magow",
+    "set": "base",
     "name": "KRYSZTAŁ MAGÓW",
     "cardClass": "item",
     "source": {
@@ -1176,6 +1290,7 @@
   },
   {
     "id": "magiczna-sakwa",
+    "set": "base",
     "name": "MAGICZNA SAKWA",
     "cardClass": "item",
     "source": {
@@ -1186,6 +1301,7 @@
   },
   {
     "id": "magiczny-miecz",
+    "set": "base",
     "name": "MAGICZNY MIECZ",
     "cardClass": "item",
     "source": {
@@ -1196,6 +1312,7 @@
   },
   {
     "id": "magiczny-miecz",
+    "set": "base",
     "name": "MAGICZNY MIECZ",
     "cardClass": "item",
     "source": {
@@ -1206,6 +1323,7 @@
   },
   {
     "id": "miecz-chaosu",
+    "set": "base",
     "name": "MIECZ CHAOSU",
     "cardClass": "item",
     "source": {
@@ -1217,6 +1335,7 @@
   },
   {
     "id": "owoc-jarzebiny-wiedzy",
+    "set": "base",
     "name": "OWOC JARZĘBINY WIEDZY",
     "cardClass": "item",
     "source": {
@@ -1227,6 +1346,7 @@
   },
   {
     "id": "pierscien-mocy",
+    "set": "base",
     "name": "PIERŚCIEŃ MOCY",
     "cardClass": "item",
     "source": {
@@ -1238,6 +1358,7 @@
   },
   {
     "id": "relikwiarz",
+    "set": "base",
     "name": "RELIKWIARZ",
     "cardClass": "item",
     "source": {
@@ -1248,6 +1369,7 @@
   },
   {
     "id": "rozdzka-przeznaczenia",
+    "set": "base",
     "name": "RÓŻDŻKA PRZEZNACZENIA",
     "cardClass": "item",
     "source": {
@@ -1258,6 +1380,7 @@
   },
   {
     "id": "rozdzka-zaklec",
+    "set": "base",
     "name": "RÓŻDŻKA ZAKLĘĆ",
     "cardClass": "item",
     "source": {
@@ -1268,6 +1391,7 @@
   },
   {
     "id": "srebrna-strzala",
+    "set": "base",
     "name": "SREBRNA STRZAŁA",
     "cardClass": "item",
     "source": {
@@ -1278,6 +1402,7 @@
   },
   {
     "id": "swiety-graal",
+    "set": "base",
     "name": "ŚWIĘTY GRAAL",
     "cardClass": "item",
     "source": {
@@ -1288,6 +1413,7 @@
   },
   {
     "id": "swieta-wlocznia",
+    "set": "base",
     "name": "ŚWIĘTA WŁÓCZNIA",
     "cardClass": "item",
     "source": {
@@ -1298,6 +1424,7 @@
   },
   {
     "id": "talizman-ognia",
+    "set": "base",
     "name": "TALIZMAN OGNIA",
     "cardClass": "item",
     "source": {
@@ -1308,6 +1435,7 @@
   },
   {
     "id": "talizman-powietrza",
+    "set": "base",
     "name": "TALIZMAN POWIETRZA",
     "cardClass": "item",
     "source": {
@@ -1318,6 +1446,7 @@
   },
   {
     "id": "tarcza-boga-tolimana",
+    "set": "base",
     "name": "TARCZA BOGA TOLIMANA",
     "cardClass": "item",
     "source": {
@@ -1328,6 +1457,7 @@
   },
   {
     "id": "tarcza-boga-tolimana",
+    "set": "base",
     "name": "TARCZA BOGA TOLIMANA",
     "cardClass": "item",
     "source": {
@@ -1338,6 +1468,7 @@
   },
   {
     "id": "topor-swiatla-i-ciemnosci",
+    "set": "base",
     "name": "TOPÓR ŚWIATŁA I CIEMNOŚCI",
     "cardClass": "item",
     "source": {
@@ -1348,6 +1479,7 @@
   },
   {
     "id": "zwierciadlo-zniszczenia",
+    "set": "base",
     "name": "ZWIERCIADŁO ZNISZCZENIA",
     "cardClass": "item",
     "source": {
@@ -1358,6 +1490,7 @@
   },
   {
     "id": "alchemik",
+    "set": "base",
     "name": "ALCHEMIK",
     "cardClass": "friend",
     "source": {
@@ -1368,6 +1501,7 @@
   },
   {
     "id": "chochlik",
+    "set": "base",
     "name": "CHOCHLIK",
     "cardClass": "friend",
     "source": {
@@ -1378,6 +1512,7 @@
   },
   {
     "id": "elflin",
+    "set": "base",
     "name": "ELFLIN",
     "cardClass": "friend",
     "source": {
@@ -1388,6 +1523,7 @@
   },
   {
     "id": "giermek",
+    "set": "base",
     "name": "GIERMEK",
     "cardClass": "friend",
     "source": {
@@ -1398,6 +1534,7 @@
   },
   {
     "id": "gnom",
+    "set": "base",
     "name": "GNOM",
     "cardClass": "friend",
     "source": {
@@ -1408,6 +1545,7 @@
   },
   {
     "id": "krzyzowiec",
+    "set": "base",
     "name": "KRZYŻOWIEC",
     "cardClass": "friend",
     "source": {
@@ -1418,6 +1556,7 @@
   },
   {
     "id": "ksiezniczka",
+    "set": "base",
     "name": "KSIĘŻNICZKA",
     "cardClass": "friend",
     "source": {
@@ -1428,6 +1567,7 @@
   },
   {
     "id": "najemnik",
+    "set": "base",
     "name": "NAJEMNIK",
     "cardClass": "friend",
     "source": {
@@ -1438,6 +1578,7 @@
   },
   {
     "id": "opiekun",
+    "set": "base",
     "name": "OPIEKUN",
     "cardClass": "friend",
     "source": {
@@ -1448,6 +1589,7 @@
   },
   {
     "id": "opiekun",
+    "set": "base",
     "name": "OPIEKUN",
     "cardClass": "friend",
     "source": {
@@ -1458,6 +1600,7 @@
   },
   {
     "id": "pasterz",
+    "set": "base",
     "name": "PASTERZ",
     "cardClass": "friend",
     "source": {
@@ -1470,6 +1613,7 @@
   },
   {
     "id": "poszukiwacz-przygod",
+    "set": "base",
     "name": "POSZUKIWACZ PRZYGÓD",
     "cardClass": "friend",
     "source": {
@@ -1481,6 +1625,7 @@
   },
   {
     "id": "przewodnik",
+    "set": "base",
     "name": "PRZEWODNIK",
     "cardClass": "friend",
     "source": {
@@ -1491,6 +1636,7 @@
   },
   {
     "id": "przewodnik",
+    "set": "base",
     "name": "PRZEWODNIK",
     "cardClass": "friend",
     "source": {
@@ -1501,6 +1647,7 @@
   },
   {
     "id": "przewoznika",
+    "set": "base",
     "name": "PRZEWOŹNIKA",
     "cardClass": "friend",
     "source": {
@@ -1511,6 +1658,7 @@
   },
   {
     "id": "rusalka",
+    "set": "base",
     "name": "RUSAŁKA",
     "cardClass": "friend",
     "source": {
@@ -1521,6 +1669,7 @@
   },
   {
     "id": "rycerz",
+    "set": "base",
     "name": "RYCERZ",
     "cardClass": "friend",
     "source": {
@@ -1533,6 +1682,7 @@
   },
   {
     "id": "strzyga",
+    "set": "base",
     "name": "STRZYGA",
     "cardClass": "friend",
     "source": {
@@ -1544,6 +1694,7 @@
   },
   {
     "id": "tragarz",
+    "set": "base",
     "name": "TRAGARZ",
     "cardClass": "friend",
     "source": {
@@ -1554,6 +1705,7 @@
   },
   {
     "id": "wladca",
+    "set": "base",
     "name": "WŁADCA",
     "cardClass": "friend",
     "source": {
@@ -1564,6 +1716,7 @@
   },
   {
     "id": "drzewo-zycia",
+    "set": "base",
     "name": "DRZEWO ŻYCIA",
     "cardClass": "place",
     "source": {
@@ -1574,6 +1727,7 @@
   },
   {
     "id": "grota",
+    "set": "base",
     "name": "GROTA",
     "cardClass": "place",
     "source": {
@@ -1584,6 +1738,7 @@
   },
   {
     "id": "jezioro-magiczne",
+    "set": "base",
     "name": "JEZIORO MAGICZNE",
     "cardClass": "place",
     "source": {
@@ -1594,6 +1749,7 @@
   },
   {
     "id": "kapliczka-nemed",
+    "set": "base",
     "name": "KAPLICZKA NEMED",
     "cardClass": "place",
     "source": {
@@ -1604,6 +1760,7 @@
   },
   {
     "id": "kapliczka-tolimana",
+    "set": "base",
     "name": "KAPLICZKA TOLIMANA",
     "cardClass": "place",
     "source": {
@@ -1614,6 +1771,7 @@
   },
   {
     "id": "labirynt",
+    "set": "base",
     "name": "LABIRYNT",
     "cardClass": "place",
     "source": {
@@ -1624,6 +1782,7 @@
   },
   {
     "id": "nieznana-swiatynia",
+    "set": "base",
     "name": "NIEZNANA ŚWIĄTYNIA",
     "cardClass": "place",
     "source": {
@@ -1634,6 +1793,7 @@
   },
   {
     "id": "sidh",
+    "set": "base",
     "name": "SIDH",
     "cardClass": "place",
     "source": {
@@ -1644,6 +1804,7 @@
   },
   {
     "id": "skalne-wrota",
+    "set": "base",
     "name": "SKALNE WROTA",
     "cardClass": "place",
     "source": {
@@ -1654,6 +1815,7 @@
   },
   {
     "id": "spalona-ziemia",
+    "set": "base",
     "name": "SPALONA ZIEMIA",
     "cardClass": "place",
     "source": {
@@ -1664,6 +1826,7 @@
   },
   {
     "id": "tajemne-przejscie",
+    "set": "base",
     "name": "TAJEMNE PRZEJŚCIE",
     "cardClass": "place",
     "source": {
@@ -1674,6 +1837,7 @@
   },
   {
     "id": "targowisko",
+    "set": "base",
     "name": "TARGOWISKO",
     "cardClass": "place",
     "source": {
@@ -1684,6 +1848,7 @@
   },
   {
     "id": "zaklete-zrodlo",
+    "set": "base",
     "name": "ZAKLĘTE ŹRÓDŁO",
     "cardClass": "place",
     "source": {

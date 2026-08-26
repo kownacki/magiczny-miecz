@@ -58,9 +58,29 @@ export type StartingNature = Nature | "any";
 /** Which of the three rings a board field belongs to, or the bridge across them. */
 export type Region = "dolny" | "srodkowy" | "gorny" | "most";
 
+/**
+ * Which box a card came out of.
+ *
+ * One value today, and the whole point of writing it down now: the five
+ * expansions are out of scope (CLAUDE.md) but they exist, and a card's *home
+ * deck* is the fact nothing else can be derived from. 21.2 counts the printed
+ * copies of a card in play and a discarded card goes back to its own pile —
+ * both of which are implicit while there is one box and wrong the moment there
+ * are two.
+ *
+ * The id is deliberately NOT namespaced yet. Every trading-card game that has
+ * solved this keeps two identifiers with different jobs — the card as a rules
+ * object, and the printing it came from — and reaches for `set:slug` only when
+ * a name can collide. One namespace containing everything is noise, and the id
+ * union is generated, so the compiler will name every site that needs changing
+ * on the day a second set is transcribed.
+ */
+export type SetId = "base";
+
 export interface EventCard {
   /** Slug of the Polish name, unique across the deck. */
   id: EventId;
+  set: SetId;
   name: string;
   cardClass: CardClass;
   /** Sheet and 1-based position it was sliced from, so any card traces back to its scan. */
@@ -79,6 +99,7 @@ export interface EventCard {
 
 export interface Spell {
   id: SpellId;
+  set: SetId;
   name: string;
   source: { sheet: string; index: number };
   text: string;
@@ -86,6 +107,7 @@ export interface Spell {
 
 export interface Item {
   id: ItemId;
+  set: SetId;
   name: string;
   source: { sheet: string; index: number };
   text: string;
@@ -101,6 +123,7 @@ export interface Item {
 
 export interface Character {
   id: CharacterId;
+  set: SetId;
   name: string;
   source: { sheet: string; index: number };
   /** Kat prints "any" — the player chooses at setup. See StartingNature. */

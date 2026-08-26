@@ -106,5 +106,5 @@ moment, which is the whole reason they are ports.
   and immediate, which is why it can quote the dice (`noticeText.ts`). Two
   registers, deliberately.
 - **Own points** and derived points are never the same number, and neither is
-  ever called "total" in storage — only `miecz_own` / `magia_own` are stored, and
+  ever called "total" in storage — only `sword_own` / `magic_own` are stored, and
   the sum is computed at read time. See the non-negotiable in `CLAUDE.md`.

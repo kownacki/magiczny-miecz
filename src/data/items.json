@@ -1,6 +1,7 @@
 [
   {
     "id": "helm",
+    "set": "base",
     "name": "HEŁM",
     "source": {
       "sheet": "wyposazenie",
@@ -10,6 +11,7 @@
   },
   {
     "id": "helm",
+    "set": "base",
     "name": "HEŁM",
     "source": {
       "sheet": "wyposazenie",
@@ -19,6 +21,7 @@
   },
   {
     "id": "kij-i-sznur",
+    "set": "base",
     "name": "KIJ I SZNUR",
     "source": {
       "sheet": "wyposazenie",
@@ -28,6 +31,7 @@
   },
   {
     "id": "kij-i-sznur",
+    "set": "base",
     "name": "KIJ I SZNUR",
     "source": {
       "sheet": "wyposazenie",
@@ -37,6 +41,7 @@
   },
   {
     "id": "kij-i-sznur",
+    "set": "base",
     "name": "KIJ I SZNUR",
     "source": {
       "sheet": "wyposazenie",
@@ -46,6 +51,7 @@
   },
   {
     "id": "kon",
+    "set": "base",
     "name": "KOŃ",
     "source": {
       "sheet": "wyposazenie",
@@ -55,6 +61,7 @@
   },
   {
     "id": "kon",
+    "set": "base",
     "name": "KOŃ",
     "source": {
       "sheet": "wyposazenie",
@@ -64,6 +71,7 @@
   },
   {
     "id": "latarnia",
+    "set": "base",
     "name": "LATARNIA",
     "source": {
       "sheet": "wyposazenie",
@@ -73,6 +81,7 @@
   },
   {
     "id": "lodz",
+    "set": "base",
     "name": "ŁÓDŹ",
     "source": {
       "sheet": "wyposazenie",
@@ -82,6 +91,7 @@
   },
   {
     "id": "magiczny-miecz",
+    "set": "base",
     "name": "MAGICZNY MIECZ",
     "source": {
       "sheet": "wyposazenie",
@@ -92,6 +102,7 @@
   },
   {
     "id": "magiczny-miecz",
+    "set": "base",
     "name": "MAGICZNY MIECZ",
     "source": {
       "sheet": "wyposazenie",
@@ -102,6 +113,7 @@
   },
   {
     "id": "magiczny-miecz",
+    "set": "base",
     "name": "MAGICZNY MIECZ",
     "source": {
       "sheet": "wyposazenie",
@@ -112,6 +124,7 @@
   },
   {
     "id": "magiczny-miecz",
+    "set": "base",
     "name": "MAGICZNY MIECZ",
     "source": {
       "sheet": "wyposazenie",
@@ -122,6 +135,7 @@
   },
   {
     "id": "miecz",
+    "set": "base",
     "name": "MIECZ",
     "source": {
       "sheet": "wyposazenie",
@@ -132,6 +146,7 @@
   },
   {
     "id": "miecz",
+    "set": "base",
     "name": "MIECZ",
     "source": {
       "sheet": "wyposazenie",
@@ -142,6 +157,7 @@
   },
   {
     "id": "miecz",
+    "set": "base",
     "name": "MIECZ",
     "source": {
       "sheet": "wyposazenie",
@@ -152,6 +168,7 @@
   },
   {
     "id": "rekawice",
+    "set": "base",
     "name": "RĘKAWICE",
     "source": {
       "sheet": "wyposazenie",
@@ -161,6 +178,7 @@
   },
   {
     "id": "rekawice",
+    "set": "base",
     "name": "RĘKAWICE",
     "source": {
       "sheet": "wyposazenie",
@@ -170,6 +188,7 @@
   },
   {
     "id": "rekawice",
+    "set": "base",
     "name": "RĘKAWICE",
     "source": {
       "sheet": "wyposazenie",
@@ -179,6 +198,7 @@
   },
   {
     "id": "sztylet",
+    "set": "base",
     "name": "SZTYLET",
     "source": {
       "sheet": "wyposazenie",
@@ -189,6 +209,7 @@
   },
   {
     "id": "sztylet",
+    "set": "base",
     "name": "SZTYLET",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -199,6 +220,7 @@
   },
   {
     "id": "sztylet",
+    "set": "base",
     "name": "SZTYLET",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -209,6 +231,7 @@
   },
   {
     "id": "tarcza",
+    "set": "base",
     "name": "TARCZA",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -218,6 +241,7 @@
   },
   {
     "id": "tarcza",
+    "set": "base",
     "name": "TARCZA",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -227,6 +251,7 @@
   },
   {
     "id": "tarcza-tolimana",
+    "set": "base",
     "name": "TARCZA TOLIMANA",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -236,6 +261,7 @@
   },
   {
     "id": "tarcza-tolimana",
+    "set": "base",
     "name": "TARCZA TOLIMANA",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -245,6 +271,7 @@
   },
   {
     "id": "tarcza-tolimana",
+    "set": "base",
     "name": "TARCZA TOLIMANA",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -254,6 +281,7 @@
   },
   {
     "id": "tarcza-tolimana",
+    "set": "base",
     "name": "TARCZA TOLIMANA",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -263,6 +291,7 @@
   },
   {
     "id": "zbroja",
+    "set": "base",
     "name": "ZBROJA",
     "source": {
       "sheet": "wyposazenie-zaklecia",
@@ -272,6 +301,7 @@
   },
   {
     "id": "zbroja",
+    "set": "base",
     "name": "ZBROJA",
     "source": {
       "sheet": "wyposazenie-zaklecia",

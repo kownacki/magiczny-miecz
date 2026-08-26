@@ -1,6 +1,7 @@
 [
   {
     "id": "awanturnik",
+    "set": "base",
     "name": "AWANTURNIK",
     "source": {
       "sheet": "postacie-1",
@@ -17,6 +18,7 @@
   },
   {
     "id": "barbarzynca",
+    "set": "base",
     "name": "BARBARZYŃCA",
     "source": {
       "sheet": "postacie-1",
@@ -34,6 +36,7 @@
   },
   {
     "id": "bledny-rycerz",
+    "set": "base",
     "name": "BŁĘDNY RYCERZ",
     "source": {
       "sheet": "postacie-1",
@@ -52,6 +55,7 @@
   },
   {
     "id": "czarodziej",
+    "set": "base",
     "name": "CZARODZIEJ",
     "source": {
       "sheet": "postacie-1",
@@ -70,6 +74,7 @@
   },
   {
     "id": "demon",
+    "set": "base",
     "name": "DEMON",
     "source": {
       "sheet": "postacie-1",
@@ -88,6 +93,7 @@
   },
   {
     "id": "elf",
+    "set": "base",
     "name": "ELF",
     "source": {
       "sheet": "postacie-1",
@@ -105,6 +111,7 @@
   },
   {
     "id": "goblin",
+    "set": "base",
     "name": "GOBLIN",
     "source": {
       "sheet": "postacie-1",
@@ -122,6 +129,7 @@
   },
   {
     "id": "hobgoblin",
+    "set": "base",
     "name": "HOBGOBLIN",
     "source": {
       "sheet": "postacie-1",
@@ -140,6 +148,7 @@
   },
   {
     "id": "hummit",
+    "set": "base",
     "name": "HUMMIT",
     "source": {
       "sheet": "postacie-1",
@@ -159,6 +168,7 @@
   },
   {
     "id": "kaplan",
+    "set": "base",
     "name": "KAPŁAN",
     "source": {
       "sheet": "postacie-2",
@@ -176,6 +186,7 @@
   },
   {
     "id": "kaplanka",
+    "set": "base",
     "name": "KAPŁANKA",
     "source": {
       "sheet": "postacie-2",
@@ -193,6 +204,7 @@
   },
   {
     "id": "karzel",
+    "set": "base",
     "name": "KARZEŁ",
     "source": {
       "sheet": "postacie-2",
@@ -210,6 +222,7 @@
   },
   {
     "id": "kat",
+    "set": "base",
     "name": "KAT",
     "source": {
       "sheet": "postacie-2",
@@ -228,6 +241,7 @@
   },
   {
     "id": "krasnolud",
+    "set": "base",
     "name": "KRASNOLUD",
     "source": {
       "sheet": "postacie-2",
@@ -245,6 +259,7 @@
   },
   {
     "id": "ksiaze",
+    "set": "base",
     "name": "KSIĄŻĘ",
     "source": {
       "sheet": "postacie-2",
@@ -262,6 +277,7 @@
   },
   {
     "id": "lotr",
+    "set": "base",
     "name": "ŁOTR",
     "source": {
       "sheet": "postacie-2",
@@ -280,6 +296,7 @@
   },
   {
     "id": "mag",
+    "set": "base",
     "name": "MAG",
     "source": {
       "sheet": "postacie-2",
@@ -298,6 +315,7 @@
   },
   {
     "id": "magog",
+    "set": "base",
     "name": "MAGOG",
     "source": {
       "sheet": "postacie-2",
@@ -316,6 +334,7 @@
   },
   {
     "id": "obbol",
+    "set": "base",
     "name": "OBBOL",
     "source": {
       "sheet": "postacie-3",
@@ -333,6 +352,7 @@
   },
   {
     "id": "olbrzym",
+    "set": "base",
     "name": "OLBRZYM",
     "source": {
       "sheet": "postacie-3",
@@ -350,6 +370,7 @@
   },
   {
     "id": "pustelnik",
+    "set": "base",
     "name": "PUSTELNIK",
     "source": {
       "sheet": "postacie-3",
@@ -367,6 +388,7 @@
   },
   {
     "id": "quark",
+    "set": "base",
     "name": "QUARK",
     "source": {
       "sheet": "postacie-3",
@@ -384,6 +406,7 @@
   },
   {
     "id": "rycerz-ciemnosci",
+    "set": "base",
     "name": "RYCERZ CIEMNOŚCI",
     "source": {
       "sheet": "postacie-3",
@@ -402,6 +425,7 @@
   },
   {
     "id": "spryciarz",
+    "set": "base",
     "name": "SPRYCIARZ",
     "source": {
       "sheet": "postacie-3",
@@ -419,6 +443,7 @@
   },
   {
     "id": "troll",
+    "set": "base",
     "name": "TROLL",
     "source": {
       "sheet": "postacie-3",
@@ -435,6 +460,7 @@
   },
   {
     "id": "wiedzma",
+    "set": "base",
     "name": "WIEDŹMA",
     "source": {
       "sheet": "postacie-3",
@@ -451,6 +477,7 @@
   },
   {
     "id": "zdobywca",
+    "set": "base",
     "name": "ZDOBYWCA",
     "source": {
       "sheet": "postacie-3",

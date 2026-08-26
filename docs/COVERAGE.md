@@ -42,8 +42,8 @@ they are rules, and one of them was missing.
 | | rule | status | where |
 |---|---|---|---|
 | 1.1 | Miecz used in combat and to overcome obstacles | ✅ | `combat.ts`, guardians, crossings |
-| 1.2 | only own points are tracked; card bonuses added when needed | ✅ | `miecz_own` vs `derive.ts` |
-| 1.3 | losses recorded, never below the starting value | ✅ | `miecz_floor`, `adjustOwn` |
+| 1.2 | only own points are tracked; card bonuses added when needed | ✅ | `sword_own` vs `derive.ts` |
+| 1.3 | losses recorded, never below the starting value | ✅ | `sword_floor`, `adjustOwn` |
 | 1.4 | trophies trade at 1 Miecz per 7 points, remainder lost | ✅ | `tradeTrophies`, `TROPHY_RATE` |
 | 1.4 | the traded Wróg card goes to the stos zużytych | ✅ | `returnToPile` |
 | 1.5 | total = own + Przedmioty + Przyjaciele | ✅ | `totalsFor` |
