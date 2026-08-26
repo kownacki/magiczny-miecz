@@ -127,6 +127,23 @@ export interface JournalWrite {
 export interface Changeset {
   game?: Partial<GameRow>;
   seats?: SeatPatch[];
+  /**
+   * Seat rows to remove, by id — and deliberately not `seats: { delete }`.
+   *
+   * Holdings, field cards and effects come and go all game, so those three
+   * carry a symmetrical insert/patch/delete. A seat row does not: once play
+   * has begun it is permanent by design, because the journal holds `seat_id`
+   * references to everything that seat ever did and 4.4's death retires a
+   * character rather than erasing it. Only the poczekalnia deletes one — a
+   * player who joined the wrong table, or a tab that closed before the game
+   * started — and making that look as routine as discarding a card would say
+   * something about seats that is not true.
+   *
+   * Removals are applied before patches, here and in `apply`, so the two agree
+   * about a change that does both — which the lobby does whenever the seat
+   * leaving is the one holding the host role.
+   */
+  seatsRemoved?: string[];
   holdings?: { insert?: NewHolding[]; patch?: HoldingPatch[]; delete?: string[] };
   fieldCards?: { insert?: NewFieldCard[]; delete?: string[] };
   effects?: { insert?: NewEffect[]; patch?: EffectPatch[]; delete?: string[] };
@@ -190,6 +207,9 @@ export function merge(first: Changeset, second: Changeset): Changeset {
   return {
     ...(first.game || second.game ? { game: { ...first.game, ...second.game } } : {}),
     ...(both(first.seats, second.seats) ? { seats: both(first.seats, second.seats) } : {}),
+    ...(both(first.seatsRemoved, second.seatsRemoved)
+      ? { seatsRemoved: both(first.seatsRemoved, second.seatsRemoved) }
+      : {}),
     ...(first.holdings || second.holdings
       ? {
           holdings: drop({
@@ -272,11 +292,14 @@ function pendingId(): string {
 export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
   const patched = { ...snapshot.game, ...(writes.game ?? {}) } as Snapshot["game"];
 
+  const goneSeats = new Set(writes.seatsRemoved ?? []);
   const seatPatches = byId(writes.seats);
-  const seats = snapshot.seats.map((seat) => {
-    const patch = seatPatches.get(seat.id);
-    return patch ? ({ ...seat, ...patch } as SeatRow) : seat;
-  });
+  const seats = snapshot.seats
+    .filter((seat) => !goneSeats.has(seat.id))
+    .map((seat) => {
+      const patch = seatPatches.get(seat.id);
+      return patch ? ({ ...seat, ...patch } as SeatRow) : seat;
+    });
 
   const goneHoldings = new Set(writes.holdings?.delete ?? []);
   const holdingPatches = byId(writes.holdings?.patch);
@@ -395,10 +418,49 @@ export class Conflict extends Error {
  * last child write. Closing that needs a real transaction, which is a change of
  * commit and nothing else: no command knows how its changeset is written.
  */
+/**
+ * Whether a changeset asks for anything at all.
+ *
+ * A command that decided to do nothing is not the same as a command that
+ * failed, and both are ordinary: the lobby sweep runs on every poll from every
+ * device and finds nobody gone almost every time.
+ */
+export function isEmpty(writes: Changeset): boolean {
+  return (
+    !writes.game &&
+    !writes.seats?.length &&
+    !writes.seatsRemoved?.length &&
+    !writes.holdings?.insert?.length &&
+    !writes.holdings?.patch?.length &&
+    !writes.holdings?.delete?.length &&
+    !writes.fieldCards?.insert?.length &&
+    !writes.fieldCards?.delete?.length &&
+    !writes.effects?.insert?.length &&
+    !writes.effects?.patch?.length &&
+    !writes.effects?.delete?.length &&
+    !writes.journal?.length
+  );
+}
+
 export async function commit(snapshot: Snapshot, writes: Changeset): Promise<number> {
   const gameId = snapshot.game.id;
   const base = snapshot.game.revision;
   const next = base + 1;
+
+  /**
+   * Nothing to write, so nothing is written — not even the revision.
+   *
+   * The counter exists to tell the other devices that something changed, and
+   * `last_played_at` to say when the table was last played. A change that
+   * decided to do nothing did neither, and bumping anyway would wake every
+   * browser at the table and re-sort the list of games for it. That matters
+   * because of where the empty changeset comes from: the poczekalnia sweep runs
+   * on every poll from every device, and finds nobody gone almost every time.
+   *
+   * It also means a command can be written to return `{}` rather than
+   * hand-rolling its own "is there anything to do here" check at the call site.
+   */
+  if (isEmpty(writes)) return base;
 
   const lines = writes.journal ?? [];
   const { data: won, error: gameError } = await db
@@ -434,6 +496,12 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   if (gameError) throw new Failure(`commit(games): ${gameError.message}`);
   if (!won || won.length === 0) throw new Conflict(gameId, base);
 
+  // Removed before patched, in the order `apply` folds them, so that a change
+  // doing both to one seat lands the way it said it would.
+  if (writes.seatsRemoved?.length) {
+    const { error } = await db.from("seats").delete().in("id", writes.seatsRemoved);
+    if (error) throw new Failure(`commit(seatsRemoved): ${error.message}`);
+  }
   for (const seat of writes.seats ?? []) {
     const { error } = await db.from("seats").update(seat.patch).eq("id", seat.id);
     if (error) throw new Failure(`commit(seats): ${error.message}`);

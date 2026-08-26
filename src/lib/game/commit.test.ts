@@ -183,7 +183,9 @@ describe("losing the race", () => {
     await expect(
       change("g1", () => {
         calls += 1;
-        return { writes: {}, result: undefined };
+        // Something, rather than nothing: an empty changeset is not committed
+        // at all and so can never lose a race. See `isEmpty`.
+        return { writes: { seats: [{ id: "s1", patch: { life: 3 } }] }, result: undefined };
       }, undefined),
     ).rejects.toThrow(Conflict);
     expect(calls).toBeGreaterThan(1);
