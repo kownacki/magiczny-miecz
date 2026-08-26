@@ -96,6 +96,7 @@ export function Journal({
       <SurfaceHead
         title="Dziennik"
         tone="text-muted"
+        onExpand={mini ? () => setSize("normal") : undefined}
         controls={
           <>
             <ChromeButton

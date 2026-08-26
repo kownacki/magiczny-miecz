@@ -240,6 +240,52 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [reborn, setReborn] = useState(false);
   /** The roster, open over the right-hand column. */
   const [rightDrawer, setRightDrawer] = useState<"gracze" | null>(null);
+
+  /**
+   * A letter for each surface, being the letter it starts with.
+   *
+   * K for the Księga, S for the Stosy, G for the Gracze. They are the three
+   * things in the bar you open and shut all game, they are two clicks away
+   * across a wide screen, and the Polish names hand out three distinct initials
+   * for free — so there is nothing to learn beyond the word already on the
+   * button, which is where the letter is written.
+   *
+   * Bare letters rather than a modifier, because there is nothing here to
+   * collide with: the only keyboard input on this screen is the console line
+   * and the Księga search box, and both are fields. The same guard the console
+   * uses covers both, which is why it is spelled out twice rather than shared —
+   * that one is behind TESTING_POSSIBLE and this is not.
+   *
+   * Each toggles, exactly as its button does. Pressing K with the Księga open
+   * shuts it, which is what "the K window" means once you have one.
+   */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      const typing =
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (typing) return;
+      switch (event.key.toLowerCase()) {
+        case "k":
+          event.preventDefault();
+          setLeftDrawer((out) => (out === "ksiega" ? null : "ksiega"));
+          return;
+        case "s":
+          event.preventDefault();
+          setLeftDrawer((out) => (out === "stosy" ? null : "stosy"));
+          return;
+        case "g":
+          event.preventDefault();
+          setRightDrawer((out) => (out === "gracze" ? null : "gracze"));
+          return;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   /**
    * Something that happened to this character and has to be said out loud.
    *
@@ -1376,7 +1422,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   down a side at a time. */}
               <button
                 onClick={() => setLeftDrawer((out) => (out === "ksiega" ? null : "ksiega"))}
-                title="Każda Karta i każdy Obszar w grze — zdradzi ci tajemnicę"
+                title="Każda Karta i każdy Obszar w grze — zdradzi ci tajemnicę (K)"
                 className="text-[11px] text-ochre/80 transition hover:text-ochre"
               >
                 Księga Tolimana
@@ -1390,7 +1436,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               {game.deckCounts && (
                 <button
                   onClick={() => setLeftDrawer((out) => (out === "stosy" ? null : "stosy"))}
-                  title="Zobacz stosy"
+                  title="Stosy — co zostało w taliach (S)"
                   className="flex items-baseline gap-3 text-[11px] text-muted/70 transition hover:text-ink"
                 >
                   <span title="Karty Zdarzeń: w talii / na stosie zużytych">
@@ -1424,6 +1470,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   them, and stays reachable while a fight is open. */}
               <button
                 onClick={() => setRightDrawer((out) => (out === "gracze" ? null : "gracze"))}
+                title="Kto siedzi przy stole (G)"
                 className="text-ochre/80 transition hover:text-ochre"
               >
                 Gracze <span className="tnum text-muted">{seats.length}</span>

@@ -44,17 +44,30 @@ export function SurfaceHead({
   /** Between the title and the controls, and free to take the slack. */
   aside,
   controls,
+  onExpand,
   children,
 }: {
   title: React.ReactNode;
   tone?: string;
   aside?: React.ReactNode;
   controls: React.ReactNode;
+  /**
+   * Given while the surface is shrunk to this bar, which then *is* the way
+   * back. A strip of chrome with a title on it looks like a thing you press,
+   * so it had better be one: aiming for a thirteen-pixel chevron to undo
+   * something you did by pressing a thirteen-pixel chevron is a fiddle.
+   */
+  onExpand?: () => void;
   /** A row under the title — a search box, a rank of shelves. */
   children?: React.ReactNode;
 }) {
   return (
-    <header className="shrink-0 border-b border-edge px-3 py-1.5">
+    <header
+      onClick={onExpand}
+      className={`shrink-0 border-b border-edge px-3 py-1.5 ${
+        onExpand ? "cursor-pointer transition hover:bg-panel/40" : ""
+      }`}
+    >
       {/* Centred, not baselined. A baseline is a property of text and an SVG
           has none, so the browser falls back to the bottom edge of the button
           box — which sat the glyphs a few pixels above the words they share the
@@ -62,7 +75,15 @@ export function SurfaceHead({
       <div className="flex items-center justify-between gap-3">
         <h2 className={`shrink-0 text-[11px] uppercase tracking-widest ${tone}`}>{title}</h2>
         {aside}
-        <div className="flex shrink-0 items-center gap-3">{controls}</div>
+        {/* Their own clicks stop here. The bar restores the surface and the
+            buttons on it do their own thing; without this, `zamknij` on a
+            minimised console would close it and bring it back at once. */}
+        <div
+          className="flex shrink-0 items-center gap-3"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {controls}
+        </div>
       </div>
       {children}
     </header>
@@ -79,6 +100,14 @@ export function SurfaceHead({
  *
  * Dimmer than the word it follows. It is a reminder of a shortcut, not a second
  * thing you can press.
+ *
+ * Hidden rather than removed, and that is a bug fix rather than a preference.
+ * The controls sit at the right-hand end of the bar, so a label that changes
+ * width shoves every glyph beside it sideways — pinning the console took the
+ * hint away, the row slid across, and the next click at the same spot was no
+ * longer on the pin. A few toggles and one of them landed on `zamknij`, which
+ * is what "clicking the pin enough times closes the console" was. The slot is
+ * kept whether or not it says anything, so nothing moves.
  */
 export function CloseButton({
   onClose,
@@ -95,7 +124,7 @@ export function CloseButton({
       className="shrink-0 text-xs text-muted transition hover:text-ink"
     >
       {label}
-      {byEscape && <span className="text-muted/50"> (Esc)</span>}
+      <span className={byEscape ? "text-muted/50" : "invisible"}> (Esc)</span>
     </button>
   );
 }
