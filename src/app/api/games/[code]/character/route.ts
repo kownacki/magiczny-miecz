@@ -44,16 +44,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         game.id,
         String(body.seatId ?? actor.id),
         String(body.characterId ?? ""),
+        actor.id,
       );
       return NextResponse.json({ ok: true });
     }
 
-    // A seated player may choose for another seat, because players added at the
-    // table have no device of their own to choose from.
-    const target = body.seatId ? String(body.seatId) : actor.id;
+    // Which seat this may be aimed at is `mayChooseFor`'s, not this file's:
+    // your own, or somebody at the table with no device of their own.
     await change(game.id, chooseCharacter, {
-      seatId: target,
+      seatId: body.seatId ? String(body.seatId) : actor.id,
       characterId: String(body.characterId ?? ""),
+      byId: actor.id,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

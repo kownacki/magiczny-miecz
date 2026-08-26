@@ -9,6 +9,7 @@ import {
   changeNature,
   chooseCharacter,
   dealCharacters,
+  mayChooseFor,
   placeSeat,
   takeNewCharacter,
 } from "./character";
@@ -248,7 +249,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ game: { turn: 9 }, seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "zdobywca" },
+      { seatId: "seat-a", characterId: "zdobywca", byId: "seat-a" },
       ports(),
     );
     expect(writes.seats?.[0].patch).toEqual({
@@ -282,7 +283,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "kat" },
+      { seatId: "seat-a", characterId: "kat", byId: "seat-a" },
       ports(),
     );
     expect(writes.seats?.[0].patch).toMatchObject({ nature: null });
@@ -292,7 +293,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "ksiaze" },
+      { seatId: "seat-a", characterId: "ksiaze", byId: "seat-a" },
       ports(),
     );
     expect(writes.holdings?.insert).toEqual([
@@ -315,7 +316,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "awanturnik" },
+      { seatId: "seat-a", characterId: "awanturnik", byId: "seat-a" },
       ports(),
     );
     expect(writes.journal?.map((line) => line.kind)).toEqual(["new-character"]);
@@ -331,7 +332,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes, result } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "mag" },
+      { seatId: "seat-a", characterId: "mag", byId: "seat-a" },
       ports(),
     );
     expect(result).toEqual({ seatId: "seat-a", spells: 2 });
@@ -347,7 +348,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
   it("is owed none by a character who starts with no Zaklęcia", async () => {
     const { result } = await takeNewCharacter(
       aTable({ seats: [dead()] }),
-      { seatId: "seat-a", characterId: "ksiaze" },
+      { seatId: "seat-a", characterId: "ksiaze", byId: "seat-a" },
       ports(),
     );
     expect(result).toEqual({ seatId: "seat-a", spells: 0 });
@@ -356,7 +357,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
   it("refuses to swap a Postać that is still alive", async () => {
     const table = aTable({ seats: [aSeat({ eliminated: false })] });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag", byId: "seat-a" }, ports()),
     ).rejects.toThrow(/wciąż żyje/);
   });
 
@@ -366,23 +367,23 @@ describe("nowa Postać po śmierci (4.4)", () => {
       seats: [dead(), aSeat({ id: "seat-b", seat_index: 1, character_id: asSeatCharacter("mag") })],
     });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag", byId: "seat-a" }, ports()),
     ).rejects.toThrow(/już w grze/);
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "goblin" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "goblin", byId: "seat-a" }, ports()),
     ).rejects.toThrow(/już w grze/);
   });
 
   it("refuses a character id that is not on any card", async () => {
     const table = aTable({ seats: [dead()] });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "smok" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "smok", byId: "seat-a" }, ports()),
     ).rejects.toThrow(/Nieznana postać: smok/);
   });
 
   it("refuses a seat it does not know", async () => {
     await expect(
-      takeNewCharacter(aTable({ seats: [dead()] }), { seatId: "nobody", characterId: "mag" }, ports()),
+      takeNewCharacter(aTable({ seats: [dead()] }), { seatId: "nobody", characterId: "mag", byId: "nobody" }, ports()),
     ).rejects.toThrow(/Nieznane miejsce/);
   });
 });
@@ -395,7 +396,7 @@ describe("dosiadka: a latecomer to a table already running", () => {
     });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "zdobywca" },
+      { seatId: "seat-a", characterId: "zdobywca", byId: "seat-a" },
       ports(),
     );
     expect(writes.journal?.at(-1)).toMatchObject({
@@ -432,7 +433,7 @@ describe("losowa Postać", () => {
     });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "losowa" },
+      { seatId: "seat-a", characterId: "losowa", byId: "seat-a" },
       ports({ random: scriptedRandom([1, 1]) }),
     );
     const free = CHARACTERS.filter((c) => c.id !== "goblin" && c.id !== "mag");
@@ -452,7 +453,7 @@ describe("losowa Postać", () => {
     });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "losowa" },
+      { seatId: "seat-a", characterId: "losowa", byId: "seat-a" },
       // 6,6 is 35 — past 25 and discarded; 1,2 is 1.
       ports({ random: scriptedRandom([6, 6, 1, 2]) }),
     );
@@ -465,7 +466,7 @@ describe("losowa Postać", () => {
       seats: [dead({ character_id: null }), ...takenBy(CHARACTERS.map((c) => c.id))],
     });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "losowa" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "losowa", byId: "seat-a" }, ports()),
     ).rejects.toThrow(/Nie została żadna wolna Postać/);
   });
 });
@@ -488,11 +489,103 @@ const empty = (index: number, over: Parameters<typeof aSeat>[0] = {}) =>
     ...over,
   });
 
+/**
+ * Whose Postać you may choose, which turned out to be everybody's.
+ *
+ * The route took a `seatId` off the request body and used it, under a comment
+ * explaining the device-less case as though that were what the code said. Any
+ * seated player could post another player's `seatId` and take their Postać off
+ * the table — and choosing does not merely swap the card: it clears the points,
+ * the MGR, the Natura and the ready flag, so what is left behind is a blank
+ * seat. It needs no malice either; a stale `seatId` on a re-sent request does
+ * it by accident.
+ *
+ * The browser has always refused to aim anywhere but your own slot. A rule the
+ * client keeps and the server does not is not a rule, which is the whole of why
+ * these tests are here rather than in the strip.
+ */
+describe("whose Karta Postaci you may choose", () => {
+  const table = () =>
+    aTable({
+      game: { status: "lobby" },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, character_id: null }),
+        aSeat({ id: "seat-b", seat_index: 1, character_id: null, is_host: false }),
+        aSeat({
+          id: "seat-local",
+          seat_index: 2,
+          character_id: null,
+          is_host: false,
+          no_device: true,
+        }),
+      ],
+    });
+
+  it("is your own seat", () => {
+    expect(mayChooseFor(table(), "seat-a", "seat-a")).toBe(true);
+  });
+
+  it("is not anybody else's", () => {
+    expect(mayChooseFor(table(), "seat-b", "seat-a")).toBe(false);
+  });
+
+  it("is a seat with no device of its own", () => {
+    // The ordinary case at a table, not an edge case: one laptop in the middle
+    // and somebody sitting there who is not holding anything. It is the reason
+    // choosing for another seat exists at all.
+    expect(mayChooseFor(table(), "seat-local", "seat-a")).toBe(true);
+  });
+
+  it("is nothing at all for a seat that is not at this table", () => {
+    expect(mayChooseFor(table(), "seat-from-another-game", "seat-a")).toBe(false);
+  });
+
+  it("refuses the choice rather than quietly aiming it somewhere else", () => {
+    // Not silently redirected to the caller's own seat: a request aimed at the
+    // wrong seat is a bug or an attempt, and answering it with a different
+    // action would hide both.
+    expect(() =>
+      chooseCharacter(table(), { seatId: "seat-b", characterId: "kaplanka", byId: "seat-a" }),
+    ).toThrow("Postać wybiera się sobie");
+  });
+
+  it("lets the ordinary choice through untouched", () => {
+    const { writes } = chooseCharacter(table(), {
+      seatId: "seat-a",
+      characterId: "kaplanka",
+      byId: "seat-a",
+    });
+    expect(writes.seats?.[0].patch.character_id).toBe("kaplanka");
+  });
+
+  it("guards 4.4's second choice the same way", async () => {
+    /**
+     * The narrower half of the same hole. A dead seat is the only thing this
+     * path will touch, so the blast radius was smaller — but somebody else's
+     * new character after their death is still not yours to pick.
+     */
+    const dead = aTable({
+      game: { status: "playing" },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1, is_host: false, eliminated: true, character_id: null }),
+      ],
+    });
+    await expect(
+      takeNewCharacter(dead, { seatId: "seat-b", characterId: "kaplanka", byId: "seat-a" }, ports()),
+    ).rejects.toThrow("Postać wybiera się sobie");
+    await expect(
+      takeNewCharacter(dead, { seatId: "seat-b", characterId: "kaplanka", byId: "seat-b" }, ports()),
+    ).resolves.toBeTruthy();
+  });
+});
+
 describe("wybór Karty Postaci (0.2-0.4)", () => {
   it("seats the chosen character on its MGR with its printed points", () => {
     const { writes } = chooseCharacter(waiting(), {
       seatId: "seat-a",
       characterId: "kaplanka",
+      byId: "seat-a",
     });
     expect(writes.seats).toEqual([
       {
@@ -519,7 +612,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
    */
   it("refuses a Karta Postaci another seat is holding, and says which one", () => {
     const table = waiting([empty(0), empty(1, { character_id: asSeatCharacter("kaplanka") })]);
-    expect(() => chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka" })).toThrow(
+    expect(() => chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka", byId: "seat-1" })).toThrow(
       /KAPŁANKA jest już wybrana przez kogoś innego/,
     );
   });
@@ -527,7 +620,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
   it("does not count a seat's own card against it", () => {
     const table = waiting([empty(0, { character_id: asSeatCharacter("kaplanka") })]);
     expect(() =>
-      chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka" }),
+      chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka", byId: "seat-1" }),
     ).not.toThrow();
   });
 
@@ -538,12 +631,12 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
    */
   it("un-readies a seat that changed its mind", () => {
     const table = waiting([empty(0, { character_id: asSeatCharacter("mag"), ready: true })]);
-    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll" });
+    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll", byId: "seat-1" });
     expect(writes.seats?.[0].patch).toMatchObject({ character_id: "troll", ready: false });
   });
 
   it("puts the surprise on the seat and settles nothing else about it", () => {
-    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "losowa" });
+    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "losowa", byId: "seat-a" });
     expect(writes.seats?.[0].patch).toMatchObject({ character_id: "losowa", ready: false });
   });
 
@@ -564,7 +657,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
         nature: "chaotic",
       }),
     ]);
-    const { writes } = chooseCharacter(ksiaze, { seatId: "seat-1", characterId: "losowa" });
+    const { writes } = chooseCharacter(ksiaze, { seatId: "seat-1", characterId: "losowa", byId: "seat-1" });
     expect(writes.seats?.[0].patch).toEqual({
       character_id: "losowa",
       ready: false,
@@ -578,13 +671,13 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
   });
 
   it("refuses a character id that is not on any card", () => {
-    expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "smok" })).toThrow(
+    expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "smok", byId: "seat-a" })).toThrow(
       /Nieznana postać: smok/,
     );
   });
 
   it("refuses a seat it does not know", () => {
-    expect(() => chooseCharacter(waiting(), { seatId: "nobody", characterId: "mag" })).toThrow(
+    expect(() => chooseCharacter(waiting(), { seatId: "nobody", characterId: "mag", byId: "nobody" })).toThrow(
       /Nieznane miejsce/,
     );
   });
@@ -600,7 +693,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
    * Hobgoblin starts on the Step somebody would point at.
    */
   it("resolves an MGR two Obszary answer to onto the first of them in board order", () => {
-    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "hobgoblin" });
+    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "hobgoblin", byId: "seat-a" });
     expect(writes.seats?.[0].patch).toMatchObject({ field_id: "step-2" });
   });
 
@@ -609,6 +702,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
       const { writes } = chooseCharacter(waiting(), {
         seatId: "seat-a",
         characterId: character.id,
+        byId: "seat-a",
       });
       expect(FIELDS.has(writes.seats![0].patch.field_id!)).toBe(true);
     }
@@ -625,7 +719,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
     const printed = kat.start;
     kat.start = "Wyspa Skarbów";
     try {
-      expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "kat" })).toThrow(
+      expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "kat", byId: "seat-a" })).toThrow(
         /Obszar, którego nie ma na planszy: Wyspa Skarbów/,
       );
     } finally {

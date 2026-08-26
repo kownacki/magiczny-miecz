@@ -325,9 +325,13 @@ function printedOn(character: Character): SeatPatch["patch"] {
  */
 export async function takeNewCharacter(
   snapshot: Snapshot,
-  command: { seatId: string; characterId: string },
+  command: { seatId: string; characterId: string; byId: string },
   ports: CommandPorts,
 ): Promise<Outcome<OwedSpells>> {
+  // 4.4 is a choice the dead character's own player makes. It had the same hole
+  // `chooseCharacter` did, with a narrower blast radius only because the seat
+  // has to be eliminated or empty for this to get any further at all.
+  refuseUnlessMine(snapshot, command.seatId, command.byId);
   const seat = seatById(snapshot, command.seatId);
 
   /**
@@ -466,6 +470,43 @@ export async function takeNewCharacter(
 export interface ChooseCharacter {
   seatId: string;
   characterId: string;
+  /** The seat whose device is asking. See `mayChooseFor`. */
+  byId: string;
+}
+
+/**
+ * Whose Karta Postaci a device may choose.
+ *
+ * Your own, and a seat that has no device of its own. That second door is the
+ * ordinary case at a physical table rather than an edge case — one laptop in
+ * the middle and somebody who is sitting there but not holding anything — and
+ * it is why choosing for another seat is allowed at all.
+ *
+ * It was allowed for *every* seat, which is a different thing. The route took
+ * `body.seatId` and used it, with the comment above it explaining the
+ * device-less case as though that were what the code said. Any seated player
+ * could post another player's `seatId` and overwrite their Postać — and not
+ * merely overwrite it: choosing resets the seat's points, its MGR, its Natura
+ * and its ready flag, so a stranger could take a Książę off a table and leave
+ * a blank seat behind. Nobody would have to be malicious for it to happen once,
+ * either; a stale `seatId` on a re-sent request does it by accident.
+ *
+ * Enforced here rather than in the route because it is a rule, and because the
+ * browser has always had its own copy of it — the character strip refuses to
+ * aim at anybody else's slot. A rule the client keeps and the server does not
+ * is not a rule.
+ */
+export function mayChooseFor(snapshot: Snapshot, seatId: string, byId: string): boolean {
+  if (seatId === byId) return true;
+  const target = snapshot.seats.find((seat) => seat.id === seatId);
+  return target?.no_device === true;
+}
+
+/** The refusal both choosing paths share, so they cannot drift apart. */
+function refuseUnlessMine(snapshot: Snapshot, seatId: string, byId: string): void {
+  if (!mayChooseFor(snapshot, seatId, byId)) {
+    throw new Error("Postać wybiera się sobie — albo komuś, kto nie ma swojego urządzenia.");
+  }
 }
 
 /**
@@ -481,6 +522,7 @@ export interface ChooseCharacter {
  * later, which is the only part of this that needs a die.
  */
 export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): Outcome<void> {
+  refuseUnlessMine(snapshot, command.seatId, command.byId);
   const seat = seatById(snapshot, command.seatId);
 
   /**

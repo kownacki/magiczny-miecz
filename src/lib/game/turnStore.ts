@@ -1176,8 +1176,10 @@ export async function takeNewCharacter(
   gameId: string,
   seatId: string,
   characterId: string,
+  /** The seat whose device is asking — see `mayChooseFor`. */
+  byId: string,
 ): Promise<void> {
-  const owed = await change(gameId, takeNewCharacterOn, { seatId, characterId });
+  const owed = await change(gameId, takeNewCharacterOn, { seatId, characterId, byId });
   for (let n = 0; n < owed.spells; n++) await drawSpell(gameId, owed.seatId);
 }
 
@@ -1485,7 +1487,15 @@ export async function runCommand(
      */
     case "revive": {
       const seat = seatOf(command.who);
-      await takeNewCharacter(gameId, seat.id, command.characterId ?? RANDOM_CHARACTER_ID);
+      // The console acts as the seat it is naming: this is the test shortcut,
+      // and refusing it on `mayChooseFor` would refuse the one caller that is
+      // deliberately allowed to be anybody.
+      await takeNewCharacter(
+        gameId,
+        seat.id,
+        command.characterId ?? RANDOM_CHARACTER_ID,
+        seat.id,
+      );
       const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
       const now = (characters as Character[]).find((one) => one.id === after?.character_id);
       return `${named(seat)} plays ${now?.name ?? after?.character_id ?? "?"}.`;
