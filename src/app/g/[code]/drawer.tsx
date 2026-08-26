@@ -58,7 +58,12 @@ export function Drawer({
         {head}
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+      {/* A gutter that is always there, so a drawer sized to fit its contents
+          fits them whether the list is long enough to scroll or not — and so
+          the arithmetic behind `width` has one fewer unknown in it. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
+        {children}
+      </div>
     </aside>
   );
 }

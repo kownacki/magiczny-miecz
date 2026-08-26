@@ -298,9 +298,19 @@ export function CardLibrary({
       {open && <CardDetail card={open} onClose={() => setOpen(null)} />}
       <Drawer
         side="left"
-        // Half again as wide as the players — 36rem against their 24 — because a
-        // shelf of cards is a grid and a list of people is a list.
-        width="max-w-xl"
+        /**
+         * Sized to the shelf rather than to a scale.
+         *
+         * Five tiles across, which is what the section headings were laid out
+         * for and about half again the players' width: 5 x 92 (`CardTile`'s
+         * own) + 4 x 12 (`gap-3`) = 508, + 32 for the padding either side,
+         * + 16 for the scrollbar gutter the drawer always reserves = 556.
+         *
+         * A round `max-w-xl` was 36rem, which left a finger's width of dead
+         * panel past the last column — the shelf did not look narrow, it looked
+         * misaligned.
+         */
+        width="max-w-[556px]"
         title="Karty do wglądu"
         onClose={onClose}
         head={
