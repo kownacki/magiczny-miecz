@@ -240,6 +240,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [reborn, setReborn] = useState(false);
   /** The roster, open over the right-hand column. */
   const [rightDrawer, setRightDrawer] = useState<"gracze" | null>(null);
+  /** Which seat the players drawer should open on, when it was opened about one. */
+  const [askedAbout, setAskedAbout] = useState<string | null>(null);
 
   /**
    * A letter for each surface, being the letter it starts with.
@@ -1382,6 +1384,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               // Every seat, in seat order, this one included — see the note on the
               // component about why the roster it replaces left you out.
               seats={[...seats].sort((a, b) => a.seat_index - b.seat_index).map(asPublicSeat)}
+              openSeatId={askedAbout}
+              // Remounted per seat, so a drawer opened about somebody opens on
+              // them even if it was already open about somebody else.
+              key={askedAbout ?? "gracze"}
               characters={CHARACTERS}
               activeSeatIndex={game.active_seat}
               mySeatId={mySeat?.id ?? null}
@@ -1562,6 +1568,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 <NowBox
                   playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
                   seatIndex={active.seat_index}
+                  onPlayer={() => {
+                    setAskedAbout(active.id);
+                    setRightDrawer("gracze");
+                  }}
                   characterId={active.character_id}
                   characterName={
                     CHARACTERS.find((one) => one.id === active.character_id)?.name ?? null

@@ -19,6 +19,7 @@ import { Lookable } from "./lookable";
 
 export function NowBox({
   playerName,
+  onPlayer,
   characterId,
   characterName,
   seatIndex,
@@ -40,6 +41,8 @@ export function NowBox({
   onEnd,
 }: {
   playerName: string;
+  /** Opens the players drawer on this player, since the name is the question. */
+  onPlayer?: () => void;
   /**
    * The character being played, named the way the journal names it.
    *
@@ -84,6 +87,11 @@ export function NowBox({
   onDraw: () => void;
   onEnd: () => void;
 }) {
+  /** The whole of it, for the hover, since the line may not have room. */
+  const who = isMine
+    ? "Twoja tura"
+    : `${playerName}${characterName ? ` (${characterName})` : ""}`;
+
   return (
     <section
       // Named by the heading inside it rather than by a label nobody can see:
@@ -131,19 +139,41 @@ export function NowBox({
             style={{ background: SEAT_COLOURS[seatIndex % SEAT_COLOURS.length] }}
             aria-hidden
           />
-          <span className="truncate">{isMine ? "Twoja tura" : playerName}</span>
+          {/* In brackets after the name, the way the journal has always
+              written it: "Michał (BŁĘDNY RYCERZ)". Two names on one line in a
+              270-pixel box will sometimes lose an ellipsis off the end of a
+              WĘDRUJĄCY PUSTELNIK — the title carries the whole of it, and the
+              pairing being the same everywhere is worth more than the tail of
+              a long name. `Lookable`, like the Obszar below: the Karta Postaci
+              is where half of what a character can do is written. */}
+          <span className="truncate" title={who}>
+            {/* The name is a way in to the player it names: what is carried,
+                what is held, what the seat is doing. Only the name — the
+                character beside it is its own question and answers it with the
+                Karta, which is why they are two controls and not one. */}
+            {onPlayer ? (
+              <button
+                onClick={onPlayer}
+                className="underline decoration-dotted underline-offset-2 transition hover:text-ink"
+              >
+                {isMine ? "Twoja tura" : playerName}
+              </button>
+            ) : (
+              (isMine ? "Twoja tura" : playerName)
+            )}
+            {/* Never on your own turn. You know which of the six you are —
+                your Karta is the next thing down the column — so "Twoja tura
+                (BŁĘDNY RYCERZ)" spends the width telling you something you are
+                looking at. It is the other players' names that need it. */}
+            {!isMine && characterId && characterName && (
+              <>
+                {" ("}
+                <Lookable kind="character" id={characterId} name={characterName} />
+                {")"}
+              </>
+            )}
+          </span>
         </p>
-        {/* Under the name rather than beside it: a character's name is as long
-            as ŚWIĘTY WOJOWNIK and the box is 270 pixels wide, so on one line
-            one of the two would always be losing its end to an ellipsis. And
-            it is `Lookable`, like the Obszar below it — the Karta Postaci is a
-            hover away, which is where half of what a character can do is
-            written. */}
-        {characterId && characterName && (
-          <p className="truncate text-[11px] text-muted">
-            <Lookable kind="character" id={characterId} name={characterName} />
-          </p>
-        )}
         {/* Where the figure is standing. The board says it too, but the board
             is on the other side of the screen and this is the line you read
             without looking away from what you are about to press. */}

@@ -32,6 +32,7 @@ import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 
 export function PlayersDrawer({
   seats,
+  openSeatId,
   characters,
   activeSeatIndex,
   mySeatId,
@@ -47,6 +48,14 @@ export function PlayersDrawer({
 }: {
   /** Every seat, in seat order — yours among them. */
   seats: PublicSeat[];
+  /**
+   * A seat to open on, for a drawer that was opened *about* somebody.
+   *
+   * Arriving here from a player's name means the question was about them, and
+   * a list that opens with everything shut makes you ask it again with a
+   * click.
+   */
+  openSeatId?: string | null;
   characters: Character[];
   activeSeatIndex: number | null;
   mySeatId: string | null;
@@ -65,7 +74,7 @@ export function PlayersDrawer({
   /** Sit down as somebody new. Offered only to a device with no seat. */
   onJoin?: () => void;
 }) {
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(openSeatId ?? null);
   const byId = new Map(characters.map((character) => [character.id, character]));
 
   return (
