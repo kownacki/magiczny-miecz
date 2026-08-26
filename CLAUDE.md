@@ -146,8 +146,12 @@ card is *absent* for, which works at a table because the Karta Postaci is
 lying there saying what the character started as, and does not work for a
 referee that has to name the current Natura outright. So `natura-chaotyczny`
 is drawn — Bodoni set to match the printed `DOBRY` — and it is the only card
-image in `public/cards/` that was never on a sheet. The script is macOS-only
-(`sips`, and the system's own Bodoni) like the rest of the pipeline.
+image in `public/cards/` that was never on a sheet. The two faces are not
+printed alike (`Zły` is die-cut on blue, `DOBRY` is bare lettering on the
+reverse), so the card is cut once from the `Zły` face, its word painted out,
+and all three words set back into the same rectangle on that one plate. Cut to
+`ART_RATIO` like every other illustration. The script is macOS-only (`sips`,
+and the system's own Bodoni) like the rest of the pipeline.
 `node scripts/generate-ids.mjs` regenerates `src/data/ids.ts` — the literal
 id types — and must be re-run after anything that renames a card or a
 character. Then `node scripts/export-card-images.mjs` writes the

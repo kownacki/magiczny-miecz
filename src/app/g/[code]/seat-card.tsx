@@ -15,7 +15,7 @@ import { describeAbility } from "@/lib/engine/abilityText";
 import { abilitiesOfCharacter, asCharacterId, notesForCharacter } from "@/lib/engine/characters";
 import { type Slot } from "@/lib/engine/slots";
 import {
-  NATURE_CARD_RATIO,
+  ART_RATIO,
   cardArtUrl,
   characterImageUrl,
   natureCardUrl,
@@ -837,8 +837,10 @@ function NatureLine({
           ` na ${NATURE_LABEL[nature] ?? nature}`
         }
         width={NATURE_CARD_WIDTH}
-        height={Math.round(NATURE_CARD_WIDTH / NATURE_CARD_RATIO)}
-        className="rounded-[2px] border border-edge"
+        height={Math.round(NATURE_CARD_WIDTH / ART_RATIO)}
+        // No border of its own: the card is printed on a blue field with a
+        // die-cut edge, and an outline round that is an outline round an edge.
+        className="rounded-[2px]"
         unoptimized
       />
     </span>
@@ -846,14 +848,14 @@ function NatureLine({
 }
 
 /**
- * Narrower than half the Karta Postaci it lies beside.
+ * Well under half the Karta Postaci it lies below.
  *
  * The card is 192 across and this is the smaller object of the two — a marker
- * laid next to a card, not a second card. Wide enough that CHAOTYCZNY, the
- * longest of the three words and the one fitted by its width, is still read at
- * a glance.
+ * put down next to a card, not a second card. Still wide enough for
+ * CHAOTYCZNY, which is the longest of the three words and the one fitted by
+ * its width rather than its height.
  */
-const NATURE_CARD_WIDTH = 112;
+const NATURE_CARD_WIDTH = 88;
 
 function EffectMark({
   mark,

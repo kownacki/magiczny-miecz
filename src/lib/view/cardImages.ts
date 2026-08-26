@@ -178,6 +178,3 @@ export function natureCardUrl(nature: string | null): string | null {
   const face = nature === null ? undefined : NATURE_FACE[nature];
   return face ? `/cards/natura-${face}.jpg` : null;
 }
-
-/** What `export-nature-card.mjs` cuts every plaque to. */
-export const NATURE_CARD_RATIO = 260 / 90;
