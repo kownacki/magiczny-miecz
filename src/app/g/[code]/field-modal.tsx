@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Image from "next/image";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { cardArtUrl, cardImageUrl } from "@/lib/view/cardImages";
@@ -19,6 +18,7 @@ import type { CardId } from "@/data/ids";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
+import { Overlay } from "./overlay";
 
 const EVENTS = events as EventCard[];
 
@@ -122,14 +122,6 @@ export function FieldModal({
 }) {
   const field = fieldWithText(fieldId);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   if (!field) return null;
 
   // 12.1 gives the right to take what is lying here to the character whose move
@@ -137,17 +129,8 @@ export function FieldModal({
   const arrived = phase === "pole";
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={field.name}
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-night/80 p-4"
-    >
-      <div
-        onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)]"
-      >
+    <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
         <header className="flex items-baseline justify-between gap-3 border-b border-edge px-4 py-3">
           <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
             {field.name}
@@ -325,7 +308,7 @@ export function FieldModal({
           )}
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }
 

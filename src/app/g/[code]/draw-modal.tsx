@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { CardMark } from "./card-mark";
+import { Overlay, dismissableOpen } from "./overlay";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
@@ -255,7 +256,12 @@ export function DrawModal({
   useEffect(() => {
     if (!card || !canAct) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onLeave(card.cardId);
+      if (event.key !== "Escape") return;
+      // Not while something is open over this one. Escape belongs to whatever
+      // is on top, and leaving a Karta on the field is not the sort of thing to
+      // do as a side effect of closing the Karta you were reading.
+      if (dismissableOpen()) return;
+      onLeave(card.cardId);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -884,12 +890,13 @@ function Shell({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={label}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-night/85 p-4"
-    >
+    // The undismissable one, and it says so rather than merely lacking the
+    // handlers. This sheet is the game asking: a fight is not over because you
+    // pressed Escape, and a Karta you drew is drawn whether or not you would
+    // rather it were not. The ways out are the ones the rules have — fight it,
+    // flee it (19.1), leave it lying there (16.8) — plus `przerwij walkę` while
+    // testing, and folding it away if you are only watching.
+    <Overlay label={label} onDismiss={null}>
       <div
         className={`flex max-h-[90vh] w-full flex-col gap-3 overflow-hidden rounded-lg border border-ochre/40 bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] ${
           wide ? "max-w-5xl" : "max-w-3xl"
@@ -967,7 +974,7 @@ function Shell({
           </div>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }
 

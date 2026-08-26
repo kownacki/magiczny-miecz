@@ -44,6 +44,14 @@ export const LAYER = {
    */
   drawer: "z-[70]",
   /**
+   * The click-catcher under an open drawer.
+   *
+   * Under both of them, so with the roster and the shelf both out, clicking
+   * one does not dismiss the other — it lands on the drawer, which is where it
+   * was aimed.
+   */
+  drawerAway: "z-[65]",
+  /**
    * One card, opened to be read.
    *
    * Above the drawers because it is usually opened *from* one — a shelf in the

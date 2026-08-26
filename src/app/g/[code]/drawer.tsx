@@ -20,6 +20,7 @@
  */
 
 import { LAYER } from "./layers";
+import { useEscape } from "./overlay";
 
 export function Drawer({
   side,
@@ -38,8 +39,24 @@ export function Drawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  useEscape(onClose);
+
   return (
-    <aside
+    <>
+      {/* Clicking away, without the board going dark for it.
+          
+          The drawer is a thing you opened to look something up, over a game
+          that is still there — dimming it would undo the reason it is a drawer
+          and not a modal. So the catcher is invisible, and what it costs is
+          that a click on the board closes the drawer instead of reaching the
+          board. That is the right trade: the alternative is dismissing a
+          roster by moving somebody's figure. */}
+      <div
+        aria-hidden
+        onClick={onClose}
+        className={`absolute inset-0 ${LAYER.drawerAway}`}
+      />
+      <aside
       role="dialog"
       aria-label={typeof title === "string" ? title : undefined}
       className={`absolute inset-y-0 flex w-full flex-col bg-night ${width} ${LAYER.drawer} ${
@@ -64,6 +81,7 @@ export function Drawer({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
         {children}
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

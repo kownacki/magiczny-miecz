@@ -12,6 +12,8 @@
 
 import { useEffect, useRef } from "react";
 import type { Announcement } from "@/lib/engine/announcements";
+import { Overlay } from "./overlay";
+import { LAYER } from "./layers";
 
 export function AnnouncementModal({
   announcement,
@@ -25,11 +27,14 @@ export function AnnouncementModal({
 }) {
   const button = useRef<HTMLButtonElement>(null);
 
+  // Enter as well as Escape, which is this one's own: it reports rather than
+  // asks, so both keys mean the same "yes, I have read it". Escape and clicking
+  // away are `Overlay`'s.
   useEffect(() => {
     if (!announcement) return;
     button.current?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" || event.key === "Enter") onDismiss();
+      if (event.key === "Enter") onDismiss();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -39,18 +44,11 @@ export function AnnouncementModal({
   const grave = announcement.tone === "grave";
 
   return (
-    <div
-      role="alertdialog"
-      aria-modal="true"
-      aria-label={announcement.title}
-      // Dismissed by clicking away, like everything else here. There is nothing
-      // to lose by closing it: what it reports has already happened, and the
-      // journal keeps it.
-      onClick={onDismiss}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-night/85 p-4"
-    >
+    // Dismissed by clicking away, like everything else here. There is nothing
+    // to lose by closing it: what it reports has already happened, and the
+    // journal keeps it.
+    <Overlay label={announcement.title} onDismiss={onDismiss} alert layer={LAYER.card}>
       <div
-        onClick={(event) => event.stopPropagation()}
         className={`w-full max-w-sm rounded-lg border bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.6)] ${
           grave ? "border-vermilion/60" : "border-ochre/50"
         }`}
@@ -74,6 +72,6 @@ export function AnnouncementModal({
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

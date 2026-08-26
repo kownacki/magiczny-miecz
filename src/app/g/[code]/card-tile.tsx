@@ -12,6 +12,7 @@ import {
 import { useCardPreview } from "./card-preview";
 import { CardMark } from "./card-mark";
 import { LAYER } from "./layers";
+import { Overlay } from "./overlay";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -206,14 +207,8 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
   const note = card.character ? null : manualNote(card.cardId);
 
   return (
-    <div
-      className={`fixed inset-0 ${LAYER.card} flex items-center justify-center bg-night/85 p-4`}
-      onClick={onClose}
-    >
-      <div
-        className="flex max-h-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-lg border border-edge bg-panel p-4 sm:flex-row"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Overlay label={card.name} onDismiss={onClose} layer={LAYER.card}>
+      <div className="flex max-h-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-lg border border-edge bg-panel p-4 sm:flex-row">
         {src && (
           // `relative`, so the mark can sit on the card rather than beside it:
           // that is where it is true, and a reader looking at a picture of a
@@ -269,6 +264,6 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
           )}
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

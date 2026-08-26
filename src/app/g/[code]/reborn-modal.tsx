@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { RANDOM_CHARACTER_ID, type SeatCharacter } from "@/lib/engine/characters";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
+import { Overlay } from "./overlay";
 
 /**
  * Choosing again, after dying.
@@ -43,14 +44,6 @@ export function RebornModal({
   const [picked, setPicked] = useState<SeatCharacter | null>(null);
   const [hovered, setHovered] = useState<SeatCharacter | null>(null);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const free = characters.filter((character) => !taken.has(character.id));
   // What the reading column shows: whatever the cursor is over wins, because
   // running along the strip and reading each one is how you choose.
@@ -62,17 +55,13 @@ export function RebornModal({
   const randomStandee = characterStandeeUrl(RANDOM_CHARACTER_ID);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Wybierz nową Postać"
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-night/85 p-4"
-    >
-      <div
-        onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-ochre/40 bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.7)]"
-      >
+    // Dismissable, and 4.4 is why: choosing again is offered rather than
+    // demanded ("*może*"), and the line on the seat card is the way back in.
+    // The one who cannot dismiss it is a player who has only just sat down —
+    // they have no character at all, and nothing else on screen to do — but
+    // that is `page.tsx`'s to decide, since it is the one that knows which.
+    <Overlay label="Wybierz nową Postać" onDismiss={onClose}>
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-ochre/40 bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
         <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-edge px-4 py-3">
           <div>
             <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
@@ -209,6 +198,6 @@ export function RebornModal({
           </button>
         </footer>
       </div>
-    </div>
+    </Overlay>
   );
 }

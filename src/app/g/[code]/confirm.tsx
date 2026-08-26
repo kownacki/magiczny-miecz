@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Overlay } from "./overlay";
 
 /**
  * The one place this app asks "are you sure?".
@@ -40,35 +41,20 @@ export function ConfirmDialog({
 }) {
   const confirmRef = useRef<HTMLButtonElement>(null);
 
-  // Escape closes it, and the confirming button takes focus so the question can
-  // be answered from the keyboard without hunting for it.
+  // The confirming button takes focus so the question can be answered from the
+  // keyboard without hunting for it. Escape is `Overlay`'s, along with clicking
+  // away — and here both mean "no", which is the safest answer to arrive at by
+  // not deciding.
   useEffect(() => {
-    if (!ask) return;
-    confirmRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [ask, onCancel]);
+    if (ask) confirmRef.current?.focus();
+  }, [ask]);
 
   if (!ask) return null;
   const grave = ask.tone === "grave";
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={ask.title}
-      // Clicking away is a "no". The safest answer is the one you get by
-      // dismissing it, which is why cancelling is what the backdrop does.
-      onClick={onCancel}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-night/80 p-4"
-    >
-      <div
-        onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-sm rounded-lg border border-edge bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.6)]"
-      >
+    <Overlay label={ask.title} onDismiss={onCancel} tone="bg-night/80">
+      <div className="w-full max-w-sm rounded-lg border border-edge bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
         <h2 className="mb-1 font-[family-name:var(--font-display)] text-lg text-ink">
           {ask.title}
         </h2>
@@ -95,6 +81,6 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

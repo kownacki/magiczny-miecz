@@ -59,6 +59,7 @@ import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { describeResult } from "@/lib/engine/noticeText";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { PlayersDrawer } from "./players";
+import { dismissableOpen } from "./overlay";
 
 const CHARACTERS = characters as Character[];
 const EVENTS = events as EventCard[];
@@ -2679,7 +2680,8 @@ function SeatCard({
     const timer = setTimeout(() => {
       const putBack = () => setCarried(null);
       const onKey = (event: KeyboardEvent) => {
-        if (event.key === "Escape") setCarried(null);
+        // Not while a sheet is open over the table: Escape is the top one's.
+        if (event.key === "Escape" && !dismissableOpen()) setCarried(null);
       };
       window.addEventListener("click", putBack);
       window.addEventListener("keydown", onKey);
