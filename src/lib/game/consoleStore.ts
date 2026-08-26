@@ -113,6 +113,13 @@ export async function runCommand(
     return seats[hit.at];
   };
 
+  /** A seat by the number printed beside it, which counts from one. */
+  const seatByNumber = (printed: number) => {
+    const hit = seats.find((seat) => seat.seat_index === printed - 1);
+    if (!hit) throw new Error(`Nie ma miejsca ${printed}.`);
+    return hit;
+  };
+
   const named = (seat: { player_name: string | null; seat_index: number }) =>
     seat.player_name ?? `Miejsce ${seat.seat_index + 1}`;
 
@@ -189,7 +196,7 @@ export async function runCommand(
      * Which also means this cannot strand the table: `leaveSeat` hands the turn
      * on when the seat it empties is the one whose turn it is.
      */
-    case "kick": {
+    case "unseat": {
       const seat = seatOf(command.who);
       const { removed, passedTo } = await leaveGame(gameId, seat.id);
       const turn = passedTo === null ? "" : ` Turn passes to seat ${passedTo + 1}.`;
@@ -197,6 +204,26 @@ export async function runCommand(
         ? `${named(seat)} is off the table.`
         : `${named(seat)} is out of their seat; the character stays.${turn}`;
     }
+
+    /**
+     * Waiting on the `users` table.
+     *
+     * These are the commands that act on a person rather than on a Postać, and
+     * a person is not a thing this schema has yet — a seat still carries the
+     * name, the claim and the host flag. Refused out loud rather than quietly
+     * missing, so a line that `help` advertises never fails silently.
+     */
+    case "who":
+    case "kick":
+    case "seat":
+    case "leave":
+    case "rename":
+    case "host":
+      throw new Error(`\`${command.kind}\` czeka na tabelę users — jeszcze nie działa.`);
+
+    case "remove":
+    case "revive":
+      throw new Error(`\`${command.kind}\` czeka na listę Postaci poza grą — jeszcze nie działa.`);
 
     case "give": {
       const seat = seatOf(null);
@@ -232,8 +259,8 @@ export async function runCommand(
      * is worth a command at all — a particular Charakterystyka is otherwise
      * reachable only by re-dealing the whole table.
      */
-    case "revive": {
-      const seat = seatOf(command.who);
+    case "pick": {
+      const seat = command.seat === null ? seatOf(null) : seatByNumber(command.seat);
       // The console acts as the seat it is naming: this is the test shortcut,
       // and refusing it on `mayChooseFor` would refuse the one caller that is
       // deliberately allowed to be anybody.

@@ -57,7 +57,20 @@ export type EffectName = "fog" | "frozen" | "barred";
 export type Command =
   | { kind: "help"; about: string | null }
   | { kind: "kill"; who: string | null }
+  /* People. `who` is a user: their id, their name, or the number of the seat
+     they are driving — see `pickPlayer`. */
+  | { kind: "who" }
   | { kind: "kick"; who: string }
+  | { kind: "unseat"; who: string | null }
+  | { kind: "seat"; who: string; seat: number }
+  | { kind: "leave" }
+  | { kind: "rename"; who: string; name: string }
+  | { kind: "host"; who: string }
+  /* Postacie. `seat` is the number printed beside a seat, counting from one;
+     exactly one of the two is ever set. */
+  | { kind: "pick"; characterId: string | null; seat: number | null }
+  | { kind: "remove"; seat: number | null; characterId: string | null; hard: boolean }
+  | { kind: "revive"; seat: number | null; characterId: string | null }
   /**
    * A parameter moved, or put where you want it.
    *
@@ -84,7 +97,6 @@ export type Command =
   | { kind: "endturn" }
   | { kind: "spell"; who: string | null }
   | { kind: "nature"; nature: Nature; who: string | null }
-  | { kind: "revive"; who: string | null; characterId: string | null }
   | { kind: "turn"; who: string | null }
   | { kind: "stone"; who: string | null }
   | { kind: "effect"; effect: EffectName; who: string | null };
@@ -119,19 +131,42 @@ export const COMMANDS: CommandSpec[] = [
     usage: "gold +5|=12 [player] [force]",
     summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor",
   },
-  { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
+  { name: "who", aliases: [], usage: "who", summary: "everyone at the table, and which seat they drive" },
   {
-    name: "kick",
+    name: "seat",
     aliases: [],
-    usage: "kick <player>",
-    summary: "put a player out of their seat — the character stays on the board",
+    usage: "seat <player> 3",
+    summary: "put somebody in a seat; refuses one that is taken",
+  },
+  {
+    name: "unseat",
+    aliases: [],
+    usage: "unseat [player]",
+    summary: "out of the seat, still at the table — the Postać stays put",
+  },
+  { name: "kick", aliases: [], usage: "kick <player>", summary: "put somebody out of the table" },
+  { name: "leave", aliases: ["exit"], usage: "leave", summary: "go, by your own choice" },
+  { name: "rename", aliases: [], usage: "rename <player> as Ola", summary: "give somebody a name" },
+  { name: "host", aliases: [], usage: "host <player>", summary: "hand over the host role" },
+  {
+    name: "pick",
+    aliases: [],
+    usage: "pick [MAGOG] [3]",
+    summary: "a Postać into a seat — drawn unless named, yours unless numbered (4.4)",
+  },
+  {
+    name: "remove",
+    aliases: ["erase"],
+    usage: "remove 3|MAGOG [hard]",
+    summary: "a Postać out of the game, its Karty to the used piles — `hard` bars it for good",
   },
   {
     name: "revive",
     aliases: [],
-    usage: "revive [player] as MAGOG",
-    summary: "a dead seat takes a new character, drawn unless named (4.4)",
+    usage: "revive 3|MAGOG",
+    summary: "back to life where it fell, with its own points and no Przedmioty",
   },
+  { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
   {
     name: "nature",
     aliases: [],
@@ -386,25 +421,111 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "nature", nature, who: who.join(" ") || null } };
   }
 
+  if (word === "who") return { ok: { kind: "who" } };
+  if (word === "leave" || word === "exit") return { ok: { kind: "leave" } };
+  if (word === "unseat") return { ok: { kind: "unseat", who: tail || null } };
+
   /**
-   * A dead seat taking a character again (4.4).
+   * The one command here that will not default to you.
    *
-   * `as` splits it the way `at` splits a `place`, and for the same reason: two
-   * names in one line and nothing else here takes two. Without it the character
-   * is drawn, which is what 4.4 describes and what the modal does.
+   * Everything else that takes `[player]` means yourself when it is left off,
+   * which is right when the worst case is a Życie you can put back. This puts
+   * somebody out of the table and a bare `kick` meaning "kick me" is a way to
+   * lose your own seat to a fumbled line.
    */
-  if (word === "revive") {
+  if (word === "kick") {
+    return tail ? { ok: { kind: "kick", who: tail } } : { error: "Kick whom?" };
+  }
+  if (word === "host") {
+    return tail ? { ok: { kind: "host", who: tail } } : { error: "Hand it to whom?" };
+  }
+
+  /**
+   * `rename Ola as Basia` — two names in one line, split by the word that reads
+   * as English and appears in no Postać and no Obszar, exactly as `place` uses
+   * `at`. Without the split there is no telling where one name ends.
+   */
+  if (word === "rename") {
     const cut = tail.search(AS);
-    const whoPart = cut === -1 ? tail : tail.slice(0, cut);
-    const asPart = cut === -1 ? "" : tail.slice(cut).replace(AS, "");
+    if (cut === -1) return { error: `Rename them to what? ${usageOf("rename")}` };
+    const who = tail.slice(0, cut).trim();
+    const name = tail.slice(cut).replace(AS, "").trim();
+    if (!who) return { error: "Rename whom?" };
+    if (!name) return { error: "Rename them to what?" };
+    return { ok: { kind: "rename", who, name } };
+  }
+
+  /**
+   * `seat Ola 3` — the seat is the number on the end.
+   *
+   * No keyword between them, unlike `rename`, because the two arguments are not
+   * the same kind of thing: a seat is a bare number and no name here begins
+   * with a digit, so the line reads itself.
+   */
+  if (word === "seat") {
+    const parts = tail.split(/\s+/).filter(Boolean);
+    const last = parts[parts.length - 1] ?? "";
+    if (!/^\d+$/.test(last)) return { error: `Into which seat? ${usageOf("seat")}` };
+    const who = parts.slice(0, -1).join(" ");
+    if (!who) return { error: "Seat whom?" };
+    return { ok: { kind: "seat", who, seat: Number(last) } };
+  }
+
+  /**
+   * A Postać into a seat: 4.4's "moze wybrac sobie nowa", and a latecomer's
+   * first one, which are the same act for different reasons.
+   *
+   * Both arguments optional and told apart by shape. A trailing bare number is
+   * the seat — yours when it is left off — and whatever is in front of it is
+   * the Postać, drawn when that is left off too, which is what 4.4 describes.
+   */
+  if (word === "pick") {
+    const parts = tail.split(/\s+/).filter(Boolean);
+    const numbered = parts.length > 0 && /^\d+$/.test(parts[parts.length - 1]);
+    const seat = numbered ? Number(parts[parts.length - 1]) : null;
+    const said = (numbered ? parts.slice(0, -1) : parts).join(" ");
+    if (said === "") return { ok: { kind: "pick", characterId: null, seat } };
+    const hit = findByName(PEOPLE, (person) => person.name, said);
+    if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
+    if ("missing" in hit) return { error: `No Postać called \`${said}\`.` };
+    return { ok: { kind: "pick", characterId: hit.found.id, seat } };
+  }
+
+  /**
+   * A Postać out of the game, or back into it.
+   *
+   * Named by seat or by its own name, and the two are not interchangeable: a
+   * seat is where a Postać is standing, so only a living one has one, while a
+   * name reaches the dead as well. Which is the line between what a host may do
+   * and what only this console may — the rulebook says nothing at all about
+   * withdrawing a living Postać, and says exactly what happens to a dead one
+   * (4.4), so putting that Karta back is the break.
+   *
+   * `hard` last, the way `force` is, and for the same reason: it is about the
+   * removal rather than about who it lands on, and the common line never has to
+   * step over it.
+   */
+  if (word === "remove" || word === "erase" || word === "revive") {
+    const parts = tail.split(/\s+/).filter(Boolean);
+    const hard = parts.length > 0 && parts[parts.length - 1].toLowerCase() === "hard";
+    const said = (hard ? parts.slice(0, -1) : parts).join(" ");
+    if (said === "") return { error: `Which Postać? ${usageOf(word === "revive" ? "revive" : "remove")}` };
+
+    let seat: number | null = null;
     let characterId: string | null = null;
-    if (asPart !== "") {
-      const hit = findByName(PEOPLE, (person) => person.name, asPart);
+    if (/^\d+$/.test(said)) {
+      seat = Number(said);
+    } else {
+      const hit = findByName(PEOPLE, (person) => person.name, said);
       if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
-      if ("missing" in hit) return { error: `No Postać called \`${asPart}\`.` };
+      if ("missing" in hit) return { error: `No Postać called \`${said}\`.` };
       characterId = hit.found.id;
     }
-    return { ok: { kind: "revive", who: whoPart.trim() || null, characterId } };
+    if (word === "revive") {
+      if (hard) return { error: "`hard` is a removal's word, not a revival's." };
+      return { ok: { kind: "revive", seat, characterId } };
+    }
+    return { ok: { kind: "remove", seat, characterId, hard } };
   }
 
   if (word === "turn") return { ok: { kind: "turn", who: tail || null } };
@@ -617,11 +738,27 @@ export function complete(
     if (
       verb === "kill" ||
       verb === "kick" ||
+      verb === "unseat" ||
+      verb === "host" ||
       verb === "spell" ||
       verb === "turn" ||
       verb === "stone"
     ) {
       return { pool: [...players], at: 1 };
+    }
+    // `seat Ola 3` finishes the person; the seat is a digit and finishes
+    // itself.
+    if (verb === "seat") return { pool: [...players], at: 1 };
+    if (verb === "rename") {
+      // Only the person. What they are being renamed to is not a name anybody
+      // has yet, which is the point of typing it.
+      const said = parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "as");
+      return said === -1 ? { pool: [...players], at: 1 } : { pool: [], at: parts.length - 1 };
+    }
+    // Postacie by name — and for `remove` and `revive` a seat number would do
+    // just as well, but a number has nothing to finish.
+    if (verb === "pick" || verb === "remove" || verb === "erase" || verb === "revive") {
+      return { pool: PEOPLE.map((person) => person.name), at: 1 };
     }
     if (verb === "effect") {
       return parts.length === 2
@@ -633,12 +770,6 @@ export function complete(
       return parts.length === 2
         ? { pool: Object.keys(NATURES), at: 1 }
         : { pool: [...players], at: 2 };
-    }
-    if (verb === "revive") {
-      const said = parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "as");
-      return said === -1
-        ? { pool: [...players], at: 1 }
-        : { pool: PEOPLE.map((person) => person.name), at: said + 1 };
     }
     return { pool: [], at: parts.length - 1 };
   };
@@ -706,4 +837,28 @@ export function helpLines(about: string | null = null): string[] {
   const rows = COMMANDS.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
   const widest = Math.max(...rows.map((row) => row.length));
   return COMMANDS.map((spec, index) => `${rows[index].padEnd(widest)}  ${spec.summary}`);
+}
+
+/**
+ * Commands the console asks about before carrying out.
+ *
+ * The rule is: **confirm what no other command can undo.** A question you are
+ * asked once in a session is a question you read; one you are asked every third
+ * line is one you learn to dismiss, and a console full of those is a console
+ * that has stopped protecting anything.
+ *
+ * `kick` is here for a different reason from the rest. Nothing it does is
+ * unrecoverable — the person opens the link again — but it is the only one that
+ * is rude to somebody *else*, and being thrown off a table by a typo is worth a
+ * second of somebody's time. `leave` does the same thing to nobody but you, and
+ * is not here.
+ *
+ * `unseat` takes nothing away at all; the Postać stays exactly where it was
+ * standing. `remove` and `kill` scatter a hand of Karty that no command can
+ * gather back, whatever else can be undone afterwards.
+ */
+export function needsConfirming(command: Command): boolean {
+  return (
+    command.kind === "kick" || command.kind === "kill" || command.kind === "remove"
+  );
 }

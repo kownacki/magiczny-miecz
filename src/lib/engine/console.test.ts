@@ -1,5 +1,13 @@
 import { describe as suite, expect, it } from "vitest";
-import { COMMANDS, complete, helpLines, parseCommand, pickPlayer, statReply } from "./console";
+import {
+  COMMANDS,
+  complete,
+  helpLines,
+  needsConfirming,
+  parseCommand,
+  pickPlayer,
+  statReply,
+} from "./console";
 
 const ok = (line: string) => {
   const parsed = parseCommand(line);
@@ -114,7 +122,7 @@ suite("naming a card, a field or a creature", () => {
     expect(err("magia +1")).toMatch(/No command/);
     expect(ok("give MAGICZNY MIECZ")).toMatchObject({ cardId: "magiczny-miecz" });
     expect(ok("go Świątynia Tolimana")).toMatchObject({ fieldId: "swiatynia-tolimana" });
-    expect(ok("revive as BŁĘDNY RYCERZ")).toMatchObject({ characterId: "bledny-rycerz" });
+    expect(ok("pick BŁĘDNY RYCERZ")).toMatchObject({ characterId: "bledny-rycerz" });
   });
 
   it("finds a card by the name printed on it", () => {
@@ -172,16 +180,15 @@ suite("naming a card, a field or a creature", () => {
     expect(err("nature zla")).toMatch(/Which Natura/);
   });
 
-  it("revives a seat with a drawn character, or the one named after `as`", () => {
-    expect(ok("revive")).toEqual({ kind: "revive", who: null, characterId: null });
-    expect(ok("revive Ola")).toEqual({ kind: "revive", who: "Ola", characterId: null });
-    expect(ok("revive Ola as MAGOG")).toEqual({
-      kind: "revive",
-      who: "Ola",
-      characterId: "magog",
-    });
-    expect(ok("revive as magog")).toMatchObject({ who: null, characterId: "magog" });
-    expect(err("revive Ola as Gandalf")).toContain("Gandalf");
+  /**
+   * 4.4's "może wybrać sobie nową" and a latecomer's first Postać are the same
+   * act for different reasons, so they are one command.
+   */
+  it("puts a Postać into a seat — drawn unless named, yours unless numbered", () => {
+    expect(ok("pick")).toEqual({ kind: "pick", characterId: null, seat: null });
+    expect(ok("pick MAGOG")).toEqual({ kind: "pick", characterId: "magog", seat: null });
+    expect(ok("pick magog 2")).toEqual({ kind: "pick", characterId: "magog", seat: 2 });
+    expect(err("pick Gandalf")).toContain("Gandalf");
   });
 
   it("turns somebody to stone, and knows the three effects by name", () => {
@@ -387,15 +394,13 @@ suite("finishing a half-typed line", () => {
     expect(tab("stone o").line).toBe("stone Ola ");
   });
 
-  it("offers players before the `as` and Postacie after it", () => {
-    expect(tab("revive o").line).toBe("revive Ola ");
+  it("offers Postacie to the commands that name one", () => {
     // MAG and MAGOG are both at the table's disposal, so this is the shell's
     // answer: as far as they agree, and the list.
-    expect(tab("revive Ola as mag")).toEqual({
-      line: "revive Ola as MAG",
-      options: ["MAG", "MAGOG"],
-    });
-    expect(tab("revive Ola as mago").line).toBe("revive Ola as MAGOG ");
+    expect(tab("pick mag")).toEqual({ line: "pick MAG", options: ["MAG", "MAGOG"] });
+    expect(tab("pick mago").line).toBe("pick MAGOG ");
+    expect(tab("remove mago").line).toBe("remove MAGOG ");
+    expect(tab("revive mago").line).toBe("revive MAGOG ");
   });
 
   it("offers only Wrogowie to a fight", () => {
@@ -443,10 +448,18 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "gold", delta: 5, set: null, who: "Ola", force: false } },
   kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
   kick: { line: "kick Ola", becomes: { kind: "kick", who: "Ola" } },
-  revive: {
-    line: "revive Ola as MAGOG",
-    becomes: { kind: "revive", who: "Ola", characterId: "magog" },
+  who: { line: "who", becomes: { kind: "who" } },
+  seat: { line: "seat Ola 3", becomes: { kind: "seat", who: "Ola", seat: 3 } },
+  unseat: { line: "unseat Ola", becomes: { kind: "unseat", who: "Ola" } },
+  leave: { line: "leave", becomes: { kind: "leave" } },
+  rename: { line: "rename Ola as Basia", becomes: { kind: "rename", who: "Ola", name: "Basia" } },
+  host: { line: "host Ola", becomes: { kind: "host", who: "Ola" } },
+  pick: { line: "pick MAGOG 3", becomes: { kind: "pick", characterId: "magog", seat: 3 } },
+  remove: {
+    line: "remove 3",
+    becomes: { kind: "remove", seat: 3, characterId: null, hard: false },
   },
+  revive: { line: "revive MAGOG", becomes: { kind: "revive", seat: null, characterId: "magog" } },
   nature: {
     line: "nature evil Ola",
     becomes: { kind: "nature", nature: "evil", who: "Ola" },
@@ -471,22 +484,105 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola" } },
 };
 
-suite("kick, which is the one that will not guess who", () => {
-  it("takes the player it is given", () => {
-    expect(ok("kick Ola")).toEqual({ kind: "kick", who: "Ola" });
+suite("people and Postacie are addressed differently", () => {
+  it("reads a bare number on the end of `seat` as the seat", () => {
+    expect(ok("seat Ola 3")).toEqual({ kind: "seat", who: "Ola", seat: 3 });
+    // No name here begins with a digit, so the line tells itself apart without
+    // a keyword between the two arguments.
+    expect(ok("seat Anna Maria 2")).toEqual({ kind: "seat", who: "Anna Maria", seat: 2 });
+  });
+
+  it("wants to know which seat", () => {
+    expect(err("seat Ola")).toMatch(/Into which seat/);
+    expect(err("seat 3")).toBe("Seat whom?");
+  });
+
+  it("means me when `unseat` is given nobody", () => {
+    expect(ok("unseat")).toEqual({ kind: "unseat", who: null });
   });
 
   /**
    * Every other `[player]` command means you when you leave it off, which is
-   * right when the worst case is a Życie you can put back. This one takes a
-   * seat away and cannot be undone by typing it again.
+   * right when the worst case is a Życie you can put back. `kick` puts somebody
+   * out of the table, and a bare one reading as "kick me" is a way to lose your
+   * own seat to a fumbled line.
    */
   it("refuses a bare kick rather than reading it as `kick me`", () => {
     expect(err("kick")).toBe("Kick whom?");
   });
 
+  it("splits a rename on `as`, like `place` splits on `at`", () => {
+    expect(ok("rename Ola as Basia")).toEqual({ kind: "rename", who: "Ola", name: "Basia" });
+    expect(err("rename Ola")).toMatch(/Rename them to what/);
+  });
+
   it("finishes a player's name like the other commands that take one", () => {
     expect(complete("kick O", ["Ola", "Michał"]).line).toBe("kick Ola ");
+    expect(complete("unseat O", ["Ola", "Michał"]).line).toBe("unseat Ola ");
+  });
+});
+
+suite("a Postać into a seat, and out of one", () => {
+  it("takes the Postać, the seat, both or neither", () => {
+    expect(ok("pick MAGOG 3")).toEqual({ kind: "pick", characterId: "magog", seat: 3 });
+    expect(ok("pick MAGOG")).toEqual({ kind: "pick", characterId: "magog", seat: null });
+    // Nothing named at all is 4.4's own case: a Postać drawn, into your seat.
+    expect(ok("pick")).toEqual({ kind: "pick", characterId: null, seat: null });
+    expect(ok("pick 3")).toEqual({ kind: "pick", characterId: null, seat: 3 });
+  });
+
+  it("removes by seat or by name, and only a name reaches the dead", () => {
+    expect(ok("remove 3")).toEqual({ kind: "remove", seat: 3, characterId: null, hard: false });
+    expect(ok("remove MAGOG")).toEqual({
+      kind: "remove",
+      seat: null,
+      characterId: "magog",
+      hard: false,
+    });
+  });
+
+  it("takes `hard` last, the way a stat takes `force`", () => {
+    expect(ok("remove MAGOG hard")).toMatchObject({ characterId: "magog", hard: true });
+    expect(ok("erase 3 hard")).toMatchObject({ kind: "remove", seat: 3, hard: true });
+  });
+
+  it("refuses `hard` on a revival, which is not a removal", () => {
+    expect(err("revive MAGOG hard")).toMatch(/removal's word/);
+  });
+
+  it("says so when nothing is named", () => {
+    expect(err("remove")).toMatch(/Which Postać/);
+    expect(err("revive")).toMatch(/Which Postać/);
+  });
+
+  it("finishes a Postać's name", () => {
+    expect(complete("remove MAGO", []).line).toBe("remove MAGOG ");
+  });
+});
+
+suite("what the console asks about first", () => {
+  /**
+   * Confirm what no other command can undo. A question asked once is read; one
+   * asked every third line is dismissed, and a console full of those protects
+   * nothing.
+   */
+  it("asks before scattering a hand of Karty nothing can gather back", () => {
+    expect(needsConfirming(ok("remove 3"))).toBe(true);
+    expect(needsConfirming(ok("remove 3 hard"))).toBe(true);
+    expect(needsConfirming(ok("kill Ola"))).toBe(true);
+  });
+
+  it("asks before being rude to somebody else, and not before leaving yourself", () => {
+    expect(needsConfirming(ok("kick Ola"))).toBe(true);
+    expect(needsConfirming(ok("leave"))).toBe(false);
+  });
+
+  it("does not ask about what takes nothing away", () => {
+    // The Postać stays exactly where it was standing.
+    expect(needsConfirming(ok("unseat Ola"))).toBe(false);
+    expect(needsConfirming(ok("seat Ola 3"))).toBe(false);
+    expect(needsConfirming(ok("pick MAGOG"))).toBe(false);
+    expect(needsConfirming(ok("revive MAGOG"))).toBe(false);
   });
 });
 
