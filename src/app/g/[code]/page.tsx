@@ -59,7 +59,7 @@ import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { describeResult } from "@/lib/engine/noticeText";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { PlayersDrawer } from "./players";
-import { PilesView } from "./piles";
+import { PilesDrawer } from "./piles";
 import { dismissableOpen } from "./overlay";
 
 const CHARACTERS = characters as Character[];
@@ -72,6 +72,23 @@ const CHARACTERS = characters as Character[];
  * missing from a scan this number moves with it instead of quietly disagreeing.
  */
 const PRINTED_EVENTS = (events as EventCard[]).length;
+
+/**
+ * The card a slice ref came off, for a used pile showing the copy it spent.
+ *
+ * By ref and not by id: the box prints four Magiczne Miecze and two Upiory, and
+ * a pile that showed "some Upiór" would be showing a card rather than the card.
+ */
+const BY_REF = new Map<string, TileCard>(
+  [
+    ...(events as EventCard[]).map((card) => [card, "Karta Zdarzeń"] as const),
+    ...(spells as Spell[]).map((card) => [card, "Zaklęcie"] as const),
+  ].map(([card, kindLabel]) => [
+    `${card.source.sheet}#${card.source.index}`,
+    { cardId: card.id, name: card.name, text: card.text, ref: `${card.source.sheet}#${card.source.index}`, kindLabel },
+  ]),
+);
+const cardOfRef = (ref: string) => BY_REF.get(ref) ?? null;
 const PRINTED_SPELLS = (spells as Spell[]).length;
 const EVENTS = events as EventCard[];
 
@@ -218,6 +235,14 @@ interface Game {
     events: { draw: number; discard: number };
     spells: { draw: number; discard: number };
   } | null;
+  /**
+   * The card on top of each stos zużytych, by slice ref.
+   *
+   * Only the top one, and only ever this pile: what is next off the stos Kart
+   * Zdarzeń is the one thing at this table nobody may know, so the draw order
+   * never leaves the server. See the note in the route.
+   */
+  used?: { events: string | null; spells: string | null } | null;
 }
 
 /** The shared table screen: the whole game state everyone is allowed to see. */
@@ -247,7 +272,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   const [leftDrawer, setLeftDrawer] = useState<"karty" | null>(null);
   /** The stacks, drawn as stacks (`piles.tsx`). */
-  const [piles, setPiles] = useState(false);
   /**
    * Testing rather than playing — see `testMode.ts`.
    *
@@ -319,7 +343,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /** Whether the "choose again" modal is open (4.4). */
   const [reborn, setReborn] = useState(false);
   /** The roster, open over the right-hand column. */
-  const [rightDrawer, setRightDrawer] = useState<"gracze" | null>(null);
+  const [rightDrawer, setRightDrawer] = useState<"gracze" | "stosy" | null>(null);
   /**
    * Something that happened to this character and has to be said out loud.
    *
@@ -1036,13 +1060,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
       )}
 
-      {piles && game.deckCounts && (
-        <PilesView
-          counts={game.deckCounts}
-          printed={{ events: PRINTED_EVENTS, spells: PRINTED_SPELLS }}
-          onClose={() => setPiles(false)}
-        />
-      )}
 
       {/* Offered, never forced — 4.4 says *może*. Opened from the line on the
           dead character's card and closed back to it.
@@ -1381,7 +1398,20 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               onClose={() => setLeftDrawer(null)}
             />
           )}
-            {rightDrawer === "gracze" ? (
+            {rightDrawer === "stosy" && game.deckCounts && game.used ? (
+              <PilesDrawer
+                counts={game.deckCounts}
+                used={game.used}
+                printed={{ events: PRINTED_EVENTS, spells: PRINTED_SPELLS }}
+                backs={{
+                  events: "/cards/back-zdarzenie.jpg",
+                  spells: "/cards/back-zaklecie.jpg",
+                }}
+                nameOf={cardOfRef}
+                onInspect={setInspectingCard}
+                onClose={() => setRightDrawer(null)}
+              />
+            ) : rightDrawer === "gracze" ? (
             <PlayersDrawer
               // Every seat, in seat order, this one included — see the note on the
               // component about why the roster it replaces left you out.
@@ -1430,7 +1460,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   a reshuffle will bring back. */}
               {game.deckCounts && (
                 <button
-                  onClick={() => setPiles(true)}
+                  onClick={() => setRightDrawer("stosy")}
                   title="Zobacz stosy"
                   className="flex items-baseline gap-3 text-[11px] text-muted/70 transition hover:text-ink"
                 >

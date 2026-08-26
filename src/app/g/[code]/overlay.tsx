@@ -20,7 +20,7 @@
  * why, so the next person to wonder does not "fix" it.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { LAYER } from "./layers";
 
 /**
@@ -54,14 +54,34 @@ if (typeof window !== "undefined") {
  * are nowhere.
  */
 export function useEscape(onDismiss: (() => void) | null) {
+  /**
+   * The callback, kept current without moving the sheet in the stack.
+   *
+   * Registering `onDismiss` itself put the effect at the mercy of whoever
+   * passes it: a parent re-rendering with a fresh closure would unregister and
+   * re-register, which pushes that sheet back onto the *top* — so an Escape
+   * would then close the drawer opened first rather than the one opened last,
+   * depending on which component happened to re-render. The order has to be the
+   * order they opened in, and only mounting and unmounting may change it.
+   */
+  const latest = useRef(onDismiss);
+  // Written in an effect rather than during the render, which is the rule the
+  // lint is enforcing: a ref assigned while rendering is a value React has not
+  // agreed to yet, and a render that gets thrown away would leave it behind.
   useEffect(() => {
-    if (!onDismiss) return;
-    stack.push(onDismiss);
+    latest.current = onDismiss;
+  }, [onDismiss]);
+
+  const enabled = onDismiss !== null;
+  useEffect(() => {
+    if (!enabled) return;
+    const slot = () => latest.current?.();
+    stack.push(slot);
     return () => {
-      const at = stack.lastIndexOf(onDismiss);
+      const at = stack.lastIndexOf(slot);
       if (at !== -1) stack.splice(at, 1);
     };
-  }, [onDismiss]);
+  }, [enabled]);
 }
 
 /**

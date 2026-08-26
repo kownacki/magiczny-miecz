@@ -37,6 +37,34 @@ function withoutDeck(game: { deck: unknown }) {
     events?: { draw?: unknown[]; discard?: unknown[] };
     spells?: { draw?: unknown[]; discard?: unknown[] };
   } | null;
+  /**
+   * The used pile travels; the one waiting to be drawn from never does.
+   *
+   * Setup puts the Karty Zdarzeń "koszulkami do góry (w formie zakrytej)" and
+   * says the same of the Zaklęcia, so what is next off the top is the one thing
+   * at this table nobody may know — sending it would hand every device the
+   * whole game in order.
+   *
+   * The stos zużytych is the opposite, by the manual's own silence. It names
+   * that pile six times and never once calls it concealed, in a rulebook that
+   * says "w formie odkrytej" of a card left on an Obszar (16.8) and hides a
+   * spell hand outright (9.3). And 9.5 shuffles it before it comes back, so
+   * knowing what is in it tells nobody what is coming.
+   *
+   * Only the top card, though. Reading back through a used pile is a thing a
+   * table can do and this one does not offer yet, so sending the rest would be
+   * shipping the whole history of a game to every device for a feature nobody
+   * has asked for — and the count beside it already says how deep it goes.
+   *
+   * A slice ref rather than an id, so the pile shows the copy that was actually
+   * spent — the box prints four Magiczne Miecze and they are not interchangeable
+   * to a `DeckState` (see `deck.ts`).
+   */
+  const spent = (pile?: { discard?: unknown[] }) => {
+    const top = (pile?.discard ?? []).at(-1);
+    return typeof top === "string" ? top : null;
+  };
+
   return {
     ...rest,
     deckCounts: decks
@@ -50,6 +78,9 @@ function withoutDeck(game: { deck: unknown }) {
             discard: decks.spells?.discard?.length ?? 0,
           },
         }
+      : null,
+    used: decks
+      ? { events: spent(decks.events), spells: spent(decks.spells) }
       : null,
   };
 }
