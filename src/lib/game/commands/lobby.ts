@@ -342,7 +342,7 @@ export function leaveTable(
       {
         seatId: null,
         turn: snapshot.game.turn,
-        kind: "left-behind",
+        kind: "left-table",
         payload: { user: user.id, name: user.name, kicked: command.kicked ?? false },
       },
     ],

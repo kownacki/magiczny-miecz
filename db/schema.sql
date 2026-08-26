@@ -343,7 +343,7 @@ create table if not exists magiczny_miecz.moves (
     'crossing-failed', 'death', 'discarded', 'duel', 'effect', 'escape',
     'escape-failed', 'ferry', 'ferry-refused', 'field-table', 'fight-end',
     'fight-roll', 'fight-start', 'guardian-end', 'guardian-start',
-    'guardian-strength', 'healed', 'healing', 'joined', 'left-behind',
+    'guardian-strength', 'healed', 'healing', 'joined', 'left-behind', 'left-table',
     'lost-card', 'move', 'moved-by-hand', 'nature-change', 'new-character',
     'override', 'points', 'reshuffle', 'roll', 'shielded', 'sold', 'spell',
     'start', 'starting-kit', 'stone', 'taken', 'test-card',

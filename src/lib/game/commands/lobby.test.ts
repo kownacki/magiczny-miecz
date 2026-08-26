@@ -373,7 +373,7 @@ describe("off the table altogether", () => {
     expect(walked.writes.journal?.[0]).toEqual({
       seatId: null,
       turn: 3,
-      kind: "left-behind",
+      kind: "left-table",
       payload: { user: "usr-1", name: "Gracz 2", kicked: false },
     });
     expect(thrown.writes.journal?.[0].payload).toMatchObject({ kicked: true });

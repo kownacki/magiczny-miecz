@@ -129,6 +129,29 @@ suite("journal vocabulary", () => {
     expect(text("points", { stat: "magic", delta: 3 })).toBe("Michał (GOBLIN) zyskuje 3 punkty Magii.");
   });
 
+  /**
+   * `override` is "a person overruled the referee", which covers a typed stat
+   * correction and a host withdrawing a Postać. Only one of them is a number,
+   * and the reader used to assume both were.
+   */
+  it("says a withdrawal in words rather than as a stat change of nothing", () => {
+    expect(text("override", { what: "remove", character: "goblin", returned: ["helm"] })).toBe(
+      "GOBLIN znika z gry; 1 Karta na stos zużytych.",
+    );
+    expect(text("override", { what: "remove", character: "goblin", hard: true })).toBe(
+      "GOBLIN znika z gry na dobre.",
+    );
+    expect(text("override", { what: "revive", character: "goblin" })).toBe(
+      "Michał (GOBLIN) — GOBLIN wraca do gry.",
+    );
+  });
+
+  it("still says a typed correction as the number it is", () => {
+    expect(text("override", { stat: "sword", delta: 1, from: 2, to: 3 })).toBe(
+      "Michał (GOBLIN): sword +1 (2 → 3).",
+    );
+  });
+
   it("says which Natura was left behind, not only the new one", () => {
     // What everybody has been playing against all game — whether the Święta
     // Włócznia still works, whether the Czarci Młyn heals or hurts.

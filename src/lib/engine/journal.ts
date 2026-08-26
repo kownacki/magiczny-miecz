@@ -52,6 +52,8 @@ export const JOURNAL_KINDS = [
   "healed",
   "healing",
   "joined",
+  /** Somebody left the table, or was put out of it. Not the same as `left-behind`. */
+  "left-table",
   "left-behind",
   "lost-card",
   "move",

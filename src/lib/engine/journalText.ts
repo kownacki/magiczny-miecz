@@ -447,6 +447,28 @@ export function describe(
 
     // — what people are ————————————————————————————————————————————
     case "override": {
+      /**
+       * Two quite different overrides share this kind, and only one of them is
+       * a number.
+       *
+       * `override` means a person overruled the referee, which a host
+       * withdrawing a Postać is as much as a typed correction is — so the kind
+       * is right and it is the *payload* that varies. Without this branch a
+       * withdrawal rendered as "Ola: ? 0 (0 → 0)", every field of it missing,
+       * because the reader assumed the only override there had ever been.
+       */
+      if (data.what === "remove" || data.what === "revive") {
+        const postac = characterName(data.character);
+        const named = remember("character", data.character, postac);
+        if (data.what === "revive") return line(`${who} — ${named} wraca do gry.`);
+        const back = Array.isArray(data.returned) ? data.returned.length : 0;
+        return line(
+          `${named} znika z gry` +
+            (data.hard === true ? " na dobre" : "") +
+            (back > 0 ? `; ${back} ${plural(back, "Karta", "Karty", "Kart")} na stos zużytych` : "") +
+            ".",
+        );
+      }
       const delta = num(data.delta);
       const sign = delta > 0 ? `+${delta}` : String(delta);
       return line(
@@ -524,6 +546,25 @@ export function describe(
     // which of the two happened.
     case "joined":
       return line(`${who} dosiada się do stołu jako ${characterName(data.characterId)}.`);
+    /**
+     * Somebody left, and whether they chose to.
+     *
+     * Its own kind rather than `left-behind`, which means *cards* left lying on
+     * an Obszar and renders nothing at all without a `cardIds` — so a departure
+     * written there was a row that existed and a line that never appeared. A
+     * journal is what you open when the table disagrees about what happened,
+     * and "who took Ola off the table" is exactly the kind of thing it is
+     * opened about.
+     *
+     * The name is a copy, like every other name here: the row it belonged to is
+     * gone by the time anybody reads this.
+     */
+    case "left-table": {
+      const name = typeof data.name === "string" && data.name ? data.name : "Ktoś";
+      return line(
+        data.kicked === true ? `${name} zostaje usunięty od stołu.` : `${name} odchodzi od stołu.`,
+      );
+    }
     case "new-character":
       return line(
         `${who} gra dalej jako: ${characterName(data.characterId)}` +
