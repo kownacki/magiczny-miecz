@@ -65,6 +65,14 @@ export interface GameRow {
   active_seat: number | null;
   turn: number;
   revision: number;
+  /**
+   * The last line number this game's journal has handed out.
+   *
+   * On the games row rather than worked out from `max(seq)`, so that claiming
+   * the next line and winning the right to write at all are the same act: see
+   * `commit`.
+   */
+  journal_seq: number;
   turn_state: unknown;
   /** Shuffled event deck; null in companion mode, where the table holds it. */
   deck: unknown;
@@ -76,7 +84,7 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 export const GAME_COLUMNS =
-  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,turn_state,deck";
+  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =

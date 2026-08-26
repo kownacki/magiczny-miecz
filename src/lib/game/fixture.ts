@@ -82,6 +82,7 @@ export function aTable(over: TableOver = {}): Snapshot {
     active_seat: 0,
     turn: 3,
     revision: 7,
+    journal_seq: 12,
     turn_state: { phase: "roll" },
     deck: noDeck(),
     ...(over.game ?? {}),
@@ -92,7 +93,9 @@ export function aTable(over: TableOver = {}): Snapshot {
     holdings: over.holdings ?? [],
     fieldCards: over.fieldCards ?? [],
     effects: over.effects ?? [],
-    journalSeq: over.journalSeq ?? 12,
+    // The snapshot's copy of the games row's own counter; a test that sets
+    // one and not the other would be describing a table that cannot exist.
+    journalSeq: over.journalSeq ?? game.journal_seq,
   };
 }
 

@@ -253,6 +253,17 @@ because the app rolls, moves and computes everything.
       automate everything that is not a decision — and what is left comes back
       as `pending` for the interface to ask about, which is exactly the set of
       choices the rules actually give a player.
+- [ ] **A drift guard between `db/schema.sql` and the live database.** The file
+      is applied by hand and had already fallen behind it: `games.turn_state`,
+      `games.deck` and three columns of `seats` were live and unmentioned, so
+      rebuilding from the file would have thrown away the state of every turn.
+      It also granted nothing, which makes a table invisible to PostgREST — a
+      401 that reads exactly like a missing one. Both are fixed and nothing
+      stops either happening again. Wanted: a check that compares the two and
+      fails out loud. **Not yet** — the schema is still moving with the base
+      game, and a guard against drift is worth having once there is something to
+      hold still. After the base game is finished.
+
 - [ ] **Effects that reach other players are still `pending`.** `applyEffect`
       writes one seat, so a `target` of "wszyscy" or "wszyscy-w-kregu" comes
       back undone. The Danina and Przesilenie are the cards that want it.

@@ -55,6 +55,14 @@ create table if not exists magiczny_miecz.games (
   -- Bumped on every state change. Clients hold the last value they rendered and
   -- refetch when a Realtime ping carries a higher one.
   revision bigint not null default 0,
+  -- The last line number this game's journal has handed out.
+  --
+  -- Here rather than worked out from max(seq) in `moves`, so that claiming the
+  -- next line and winning the right to write at all are one statement: the
+  -- update below is conditional on `revision`, and it takes the range with it.
+  -- Counting off the journal instead meant two changes could hold the same
+  -- number and one of them lost its line to the unique constraint.
+  journal_seq bigint not null default 0,
   -- Touched on every change, so a list of tables can be ordered by what was
   -- actually being played rather than by when it was opened.
   last_played_at timestamptz not null default now(),
@@ -233,7 +241,26 @@ create table if not exists magiczny_miecz.moves (
   seq bigint not null,
   seat_id uuid references magiczny_miecz.seats(id) on delete set null,
   turn integer not null default 0,
-  kind text not null,
+  -- The closed list `JournalKind` holds, spelled out so the database knows it
+  -- too. A kind the reader does not recognise is dropped rather than rendered
+  -- blank — the journal is opened to settle arguments and a line with no
+  -- sentence settles none — so without this a typo'd kind is a line that
+  -- silently never appears. It is worth the migration a new kind now needs:
+  -- generated from JOURNAL_KINDS, which stays the source of truth.
+  kind text not null check (kind in (
+    'beast-draw', 'beast-loss', 'bought', 'bridge-attempt',
+    'bridge-cerberus', 'bridge-death-game', 'bridge-entry', 'bridge-failed',
+    'bridge-guardian', 'bridge-trap', 'card', 'card-table', 'crossing',
+    'crossing-failed', 'death', 'discarded', 'duel', 'effect', 'escape',
+    'escape-failed', 'ferry', 'ferry-refused', 'field-table', 'fight-end',
+    'fight-roll', 'fight-start', 'guardian-end', 'guardian-start',
+    'guardian-strength', 'healed', 'healing', 'joined', 'left-behind',
+    'lost-card', 'move', 'moved-by-hand', 'nature-change', 'new-character',
+    'override', 'points', 'reshuffle', 'roll', 'shielded', 'sold', 'spell',
+    'start', 'starting-kit', 'stone', 'taken', 'test-card',
+    'test-card-field', 'test-fight-end', 'trophies-traded', 'turn-end',
+    'turn-lost', 'used', 'victory'
+  )),
   payload jsonb not null default '{}'::jsonb,
   manual boolean not null default false,
   created_at timestamptz not null default now(),

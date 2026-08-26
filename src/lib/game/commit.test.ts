@@ -39,6 +39,9 @@ function seed(): Tables {
         active_seat: 0,
         turn: 3,
         revision: 7,
+        // The high-water mark lives on this row now, and the one line already
+        // in `moves` is where it stands.
+        journal_seq: 12,
         turn_state: { phase: "roll" },
         deck: null,
       },
@@ -59,7 +62,8 @@ beforeEach(() => {
   handle = fakeDb(tables, () => beforeWrite?.());
 });
 
-const game = () => tables.games[0] as unknown as { revision: number; turn: number };
+const game = () =>
+  tables.games[0] as unknown as { revision: number; turn: number; journal_seq: number };
 
 describe("committing a change", () => {
   it("advances the revision by exactly one", async () => {
@@ -217,40 +221,70 @@ describe("a command that refuses", () => {
  * line saying so, which is the one thing the journal must never lose.
  */
 describe("two changes reaching the journal at once", () => {
-  it("renumbers rather than failing, and keeps both lines", async () => {
+  /**
+   * The bug this describes reached somebody typing at a table.
+   *
+   *   > magic 1 1
+   *   commit(moves): duplicate key value violates unique constraint
+   *   "moves_game_id_seq_key"
+   *
+   * The line numbers came off `max(seq)` at snapshot time and the line was
+   * written last, after the seats and the holdings — so a second change could
+   * read the table, win the games row and reach the journal while the first was
+   * still working, both holding the same number. It cannot happen now: the
+   * range is claimed in the same statement that wins the row, and a writer that
+   * does not win that statement writes nothing at all.
+   */
+  it("hands the whole range to whoever wins the row", async () => {
     const snapshot = await loadSnapshot("g1");
-    // The other writer, arriving between our read and our journal insert: it
-    // has already taken seq 13, which is the number we are about to use.
-    beforeWrite = () => {
-      beforeWrite = undefined;
-      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "move" });
-    };
-
-    await commit(snapshot, { journal: [{ seatId: "s1", turn: 3, kind: "roll" }] });
-
-    expect(tables.moves.map((m) => m.seq).sort((a, b) => (a as number) - (b as number))).toEqual([
-      12, 13, 14,
-    ]);
-    expect(tables.moves.find((m) => m.seq === 14)?.kind).toBe("roll");
-  });
-
-  it("keeps a whole command's lines together after renumbering", async () => {
-    const snapshot = await loadSnapshot("g1");
-    beforeWrite = () => {
-      beforeWrite = undefined;
-      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "move" });
-    };
-
     await commit(snapshot, {
       journal: [
         { seatId: "s1", turn: 3, kind: "roll" },
         { seatId: "s1", turn: 3, kind: "move" },
       ],
     });
+    // Two lines taken, and the counter says so — which is what the next reader
+    // of this row will start from.
+    expect(tables.moves.map((m) => m.seq)).toEqual([12, 13, 14]);
+    expect(game().journal_seq).toBe(14);
+  });
 
-    // Consecutive, and after the interloper: a command's lines are read as one
-    // event and must not be interleaved with somebody else's.
-    const ours = tables.moves.filter((m) => m.id !== "m0" && m.id !== "m-other");
-    expect(ours.map((m) => m.seq)).toEqual([14, 15]);
+  it("gives the loser no line numbers at all", async () => {
+    const snapshot = await loadSnapshot("g1");
+    // Somebody else commits in the gap — properly, taking the row and the two
+    // numbers with it, which is the only way a line can be written.
+    beforeWrite = () => {
+      beforeWrite = undefined;
+      game().revision = 8;
+      game().journal_seq = 14;
+      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "move" });
+      tables.moves.push({ id: "m-other-2", game_id: "g1", seq: 14, kind: "card" });
+    };
+
+    await expect(
+      commit(snapshot, { journal: [{ seatId: "s1", turn: 3, kind: "roll" }] }),
+    ).rejects.toThrow(Conflict);
+
+    // Nothing of ours was written, so nothing of ours could have collided.
+    expect(tables.moves.map((m) => m.seq)).toEqual([12, 13, 14]);
+  });
+
+  it("numbers the retry from where the winner left off", async () => {
+    beforeWrite = () => {
+      beforeWrite = undefined;
+      game().revision = 8;
+      game().journal_seq = 13;
+      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "move" });
+    };
+
+    await change("g1", () => ({
+      writes: { journal: [{ seatId: "s1", turn: 3, kind: "roll" }] },
+      result: undefined,
+    }), undefined);
+
+    // The first attempt lost the row and wrote nothing; the retry read the
+    // counter the other writer left behind and took the line after it.
+    expect(tables.moves.map((m) => m.seq)).toEqual([12, 13, 14]);
+    expect(tables.moves.find((m) => m.seq === 14)?.kind).toBe("roll");
   });
 });

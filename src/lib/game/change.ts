@@ -346,17 +346,6 @@ export async function effectRowsFor(gameId: string): Promise<EffectRow[]> {
   return (data ?? []) as EffectRow[];
 }
 
-export async function highestSeq(gameId: string): Promise<number> {
-  const { data, error } = await db
-    .from("moves")
-    .select("seq")
-    .eq("game_id", gameId)
-    .order("seq", { ascending: false })
-    .limit(1);
-  if (error) throw new Error(`journalSeq: ${error.message}`);
-  return (data?.[0]?.seq as number) ?? 0;
-}
-
 async function gameRow(gameId: string): Promise<Snapshot["game"]> {
   const { data, error } = await db
     .from("games")
@@ -368,15 +357,18 @@ async function gameRow(gameId: string): Promise<Snapshot["game"]> {
 }
 
 export async function loadSnapshot(gameId: string): Promise<Snapshot> {
-  const [game, seats, holdings, fieldCards, effects, journalSeq] = await Promise.all([
+  const [game, seats, holdings, fieldCards, effects] = await Promise.all([
     gameRow(gameId),
     seatsFor(gameId),
     holdingsFor(gameId),
     fieldCardsFor(gameId),
     effectRowsFor(gameId),
-    highestSeq(gameId),
   ]);
-  return { game, seats, holdings, fieldCards, effects, journalSeq };
+  // Off the games row, which is also the row that has to be won to write at
+  // all. It used to be a sixth query — `max(seq)` — read at the same moment as
+  // everything else and settled long before the journal line was written, which
+  // is precisely the gap two changes used to meet in.
+  return { game, seats, holdings, fieldCards, effects, journalSeq: game.journal_seq };
 }
 
 /** Somebody else changed this game while we were deciding what to do to it. */
@@ -407,11 +399,30 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   const base = snapshot.game.revision;
   const next = base + 1;
 
+  const lines = writes.journal ?? [];
   const { data: won, error: gameError } = await db
     .from("games")
     .update({
       ...(writes.game ?? {}),
       revision: next,
+      /**
+       * The journal's line numbers, claimed in the same statement that wins
+       * the right to write anything.
+       *
+       * They used to be counted off `max(seq)` read at snapshot time and
+       * written last, after the seats and the holdings — so a second change
+       * could read the table, win this row, and reach the journal while the
+       * first was still working, both holding the same number. The constraint
+       * said so, out loud, to whoever was typing:
+       *
+       *   duplicate key value violates unique constraint "moves_game_id_seq_key"
+       *
+       * That was answered with a retry, which worked and left a race that
+       * merely had to be recovered from. Here the range is *claimed* rather
+       * than guessed: this update is the lock, only one writer can take it,
+       * and the numbers it takes are gone before anybody else reads the row.
+       */
+      journal_seq: snapshot.journalSeq + lines.length,
       // Every change is a moment the table was being played, which is what a
       // list of games needs to sort by — not when it was opened.
       last_played_at: new Date().toISOString(),
@@ -473,64 +484,39 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   // line that could not be written was silently dropped, which is the one
   // failure the journal must not have: it exists to be believed when the app
   // and the board disagree.
-  const lines = writes.journal ?? [];
   if (lines.length > 0) await appendJournal(gameId, snapshot.journalSeq, lines);
 
   return next;
 }
 
 /**
- * Numbers the lines and writes them, renumbering if somebody got there first.
+ * Writes the lines, numbered from the range this change has already claimed.
  *
- * `seq` is unique per game, and the number comes from the high-water mark the
- * snapshot read — which is settled long before this runs. The games row is the
- * lock for a change, and it is released the moment it is updated, so a second
- * change can read the table, win the lock and arrive here while the first is
- * still working through its seats and holdings. Both then think the next line
- * is the same line, and the constraint says so:
- *
- *   duplicate key value violates unique constraint "moves_game_id_seq_key"
- *
- * Which used to reach the person typing, after their change had been applied —
- * the parameter moved, the error appeared, and the journal quietly lost the
- * line that said so. Exactly the failure the journal must not have.
- *
- * So the collision is caught where it happens and only the numbering is done
- * again. Retrying the whole change would be wrong: by this point the games row,
- * the seats and everything else are already written, and running the command a
- * second time would apply it twice.
- *
- * A pause between tries, growing, because the row we collided with may still be
- * in flight — re-reading the mark the instant we lose it finds the same mark.
+ * No retry and nothing to recover from: `commit` took these numbers in the
+ * same statement that won the games row, so nobody else can be holding them.
+ * The unique constraint on (game_id, seq) stays as the thing that would say so
+ * if that ever stopped being true.
  */
-export async function appendJournal(
+async function appendJournal(
   gameId: string,
   from: number,
   lines: readonly JournalWrite[],
 ): Promise<void> {
-  let mark = from;
-  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-    const { error } = await db.from("moves").insert(
-      lines.map((line, index) => ({
-        game_id: gameId,
-        seq: mark + 1 + index,
-        seat_id: line.seatId,
-        turn: line.turn,
-        kind: line.kind,
-        payload: line.payload ?? {},
-        manual: line.manual ?? false,
-      })),
-    );
-    if (!error) return;
-    // 23505 is Postgres for a unique violation, and the only one worth trying
-    // again: every other error is about what is being written, not about who
-    // else is writing.
-    if (error.code !== "23505" || attempt === ATTEMPTS) {
-      throw new Error(`commit(moves): ${error.message}`);
-    }
-    await new Promise((wake) => setTimeout(wake, 10 * attempt));
-    mark = await highestSeq(gameId);
-  }
+  const { error } = await db.from("moves").insert(
+    lines.map((line, index) => ({
+      game_id: gameId,
+      seq: from + 1 + index,
+      seat_id: line.seatId,
+      turn: line.turn,
+      kind: line.kind,
+      payload: line.payload ?? {},
+      manual: line.manual ?? false,
+    })),
+  );
+  // Looked at, unlike every journal write before this one: a line that could
+  // not be written was dropped in silence, which is the single failure the
+  // journal must not have.
+  if (error) throw new Error(`commit(moves): ${error.message}`);
 }
 
 /** How many times a losing commit is worth re-deciding before giving up. */

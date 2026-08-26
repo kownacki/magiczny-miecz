@@ -52,10 +52,8 @@ import {
   type Decks,
 } from "./decks";
 import {
-  appendJournal,
   change,
   effectRowsFor,
-  highestSeq,
   type EffectRow,
 } from "./change";
 import { appRandom, supplied } from "./random";
@@ -245,32 +243,6 @@ async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPha
     .single();
   if (error) throw new Error(`loadGame: ${error.message}`);
   return data as GameRow & { turn_state: TurnPhase };
-}
-
-/**
- * Appends to the journal. Every mutation writes one, because at a physical
- * table the app and the board *will* disagree eventually, and the only way to
- * settle it is to show what the app thought happened.
- */
-/**
- * The three lines still written outside a changeset.
- *
- * Numbered and written by `appendJournal`, like every other line, because the
- * race it handles is not particular to changesets: two of these read the same
- * high-water mark just as readily, and this one used not to look at the error
- * at all — so a line that lost was dropped in silence.
- */
-async function journal(
-  gameId: string,
-  seatId: string | null,
-  turn: number,
-  kind: JournalKind,
-  payload: Record<string, unknown>,
-  manual = false,
-): Promise<void> {
-  await appendJournal(gameId, await highestSeq(gameId), [
-    { seatId, turn, kind, payload, manual },
-  ]);
 }
 
 export async function startGame(gameId: string): Promise<void> {
