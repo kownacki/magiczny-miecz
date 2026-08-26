@@ -12,8 +12,10 @@ export const CARD_CLASS = {
   encounter: 1,
   foe: 2,
   // III is not used by any base-game card. Rule 16.3 singles out the Demon as a
-  // second kind of Wróg, which is the likeliest owner of the gap; no card was
-  // found printing it.
+  // second kind of Wróg, which is the likeliest owner of the gap — and the
+  // expansions settle it: Krypta Upiorów prints `Wróg III Demon` across the top
+  // of five cards, the class name split around the numeral the way `Przedmiot V
+  // Magiczny` is. The gap is a Demon, and no base-game card fills it.
   stranger: 4,
   // Przedmiot and Przyjaciel BOTH print V — verified against the card headers,
   // and matching rule 16.6, which names "Przedmioty, Przedmioty Magiczne i
