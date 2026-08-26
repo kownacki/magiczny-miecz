@@ -53,7 +53,7 @@ export function PilesView({
             printed={printed.events}
             draw={counts.events.draw}
             discard={counts.events.discard}
-            back="/cards/back.jpg"
+            back="/cards/back-zdarzenie.jpg"
             note="Ciągnięte z wierzchu na każdym Obszarze, który tego wymaga (13.4)."
           />
           <Deck
@@ -61,8 +61,7 @@ export function PilesView({
             printed={printed.spells}
             draw={counts.spells.draw}
             discard={counts.spells.discard}
-            // No scan of this one exists — see `Pile`.
-            back={null}
+            back="/cards/back-zaklecie.jpg"
             note="9.5: gdy stos się wyczerpie, zużyte Zaklęcia tasuje się i bierze ponownie."
           />
 
@@ -128,18 +127,13 @@ function Deck({
 }
 
 /**
- * One stack, drawn with the back it has — or without one.
+ * One stack, drawn with its own back.
  *
- * Only the Karty Zdarzeń have a back to draw. The archive is a print-and-play
- * set and the "(tyły)" sheets are reverse sides *to print onto the back*: the
- * Zdarzenia got one, the Zaklęcia and the Wyposażenie never did, on Drive or
- * anywhere else. The physical cards must have some back, but nothing here knows
- * what it looks like.
- *
- * So the spells are drawn the way a concealed hand already is elsewhere in the
- * app (9.3, `CardBack`): a blank in the Magia colour. Putting the ZDARZENIE
- * back on that pile would have been the easy thing and a false one — every
- * other card picture in this app is a scan of the card it claims to be.
+ * Each pile has a real one — ZDARZENIE and ZAKLĘCIE are different cards and
+ * they look it. `back` stays nullable for the pile that has not been found yet
+ * (there is none at the moment) rather than falling back to whichever scan is
+ * nearest: every card picture in this app is a scan of the card it claims to
+ * be, and a pile is a picture.
  */
 function Pile({
   label,

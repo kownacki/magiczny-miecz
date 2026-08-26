@@ -1,3 +1,15 @@
+`node scripts/export-card-back.mjs` cuts one back per pile into
+`public/cards/back-*.jpg`, committed. The ZDARZENIE back was in the scans all
+along, filed where nobody would look — the five of them share sheet 9's reverse
+with the Zamieniony w Kamień cards, the Dobry/Zły markers and the standees,
+which is why there is no "Karty Zdarzeń (tyły)" file to go looking for. The
+ZAKLĘCIE and WYPOSAŻENIE backs were **not** in the Drive at all: they came from
+the community archive `oficjalne.rar` (linked from the *MAGICZNY MIECZ DO
+DRUKU* thread on forum.magiaimiecz.eu), which carries a `rewersy/` folder the
+Drive copy does not, at the same 2480x3508 as everything else. Those two are
+mirrored into `assets/raw/MM - Magiczny Miecz/Rewersy/` under the archive's own
+spelling. macOS `bsdtar` reads RAR; `unar` is not needed.
+
 # Magiczny Miecz
 
 A referee for the 1993 Polish board game *Magiczny Miecz* (Sfera, Adrian
