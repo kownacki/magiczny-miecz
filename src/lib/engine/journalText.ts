@@ -135,13 +135,20 @@ function cardName(id: unknown): string {
  * is the short one.
  */
 function held(data: Record<string, unknown>): string {
+  // `floor` is written by the store on every change it had to cut, and only
+  // then. Requiring it keeps this quiet about rows written before it existed,
+  // where the numbers are there but what stopped them is not.
+  if (typeof data.floor !== "number") return "";
   if (typeof data.from !== "number" || typeof data.to !== "number") return "";
   const asked = num(data.delta);
   const moved = data.to - data.from;
   if (moved === asked || asked === 0) return "";
 
   const stat = data.stat === "miecz" ? "Miecz" : data.stat === "magia" ? "Magia" : null;
-  const floor = typeof data.floor === "number" ? data.floor : 0;
+  // A forced change has no floor but zero, so it is that one it stopped at —
+  // saying "poniżej swojego minimum" of a number somebody deliberately pushed
+  // under it names the wrong limit.
+  const floor = data.forced === true ? 0 : data.floor;
   const why =
     asked > 0
       ? `wyżej niż ${data.to} nie idzie`
@@ -452,7 +459,7 @@ export function describe(
       const sign = delta > 0 ? `+${delta}` : String(delta);
       return line(
         `${who}: ${String(data.stat ?? "?")} ${sign} (${num(data.from)} → ${num(data.to)})` +
-          `${data.forced === true ? " — wymuszone" : held(data)}` +
+          `${data.forced === true ? " — wymuszone" : ""}${held(data)}` +
           `${data.reason ? ` — ${data.reason}` : ""}.`,
       );
     }

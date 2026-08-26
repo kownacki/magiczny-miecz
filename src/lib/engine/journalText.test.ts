@@ -453,14 +453,23 @@ suite("points a rule would not let through", () => {
   });
 
   it("does not quote a rule about own points at Złoto", () => {
-    expect(text("punkty", { stat: "zloto", delta: -2, from: 0, to: 0 })).toContain(
+    expect(text("punkty", { stat: "zloto", delta: -2, from: 0, to: 0, floor: 0 })).toContain(
       "bez zmiany: nie ma poniżej czego zejść",
     );
   });
 
   it("says the ceiling in its own words", () => {
-    expect(text("punkty", { stat: "zloto", delta: 5, from: 999, to: 999 })).toContain(
+    expect(text("punkty", { stat: "zloto", delta: 5, from: 999, to: 999, floor: 0 })).toContain(
       "bez zmiany: wyżej niż 999 nie idzie",
+    );
+  });
+
+  it("stays quiet about a row written before it knew what stopped things", () => {
+    // `floor` arrived with this sentence, so a row without one is older than
+    // the question. The numbers are there and what cut them is not, and a
+    // guess about that is worse than the plain line.
+    expect(text("punkty", { stat: "magia", delta: 1, from: 1, to: 3 })).toBe(
+      "Michał (GOBLIN) zyskuje 1 punkt Magii.",
     );
   });
 
@@ -478,8 +487,15 @@ suite("points a rule would not let through", () => {
     );
   });
 
+  it("says where a forced change stopped, which is nothing and not the floor", () => {
+    // Both halves: that it was forced, and that it still did not all land.
+    expect(
+      text("korekta", { stat: "magia", delta: -9, from: 6, to: 0, floor: 3, forced: true }),
+    ).toBe("Michał (GOBLIN): magia -9 (6 → 0) — wymuszone — z tego 6: nie ma poniżej czego zejść.");
+  });
+
   it("marks a correction that was forced past the floor", () => {
-    expect(text("korekta", { stat: "magia", delta: -2, from: 3, to: 1, forced: true })).toBe(
+    expect(text("korekta", { stat: "magia", delta: -2, from: 3, to: 1, floor: 3, forced: true })).toBe(
       "Michał (GOBLIN): magia -2 (3 → 1) — wymuszone.",
     );
   });

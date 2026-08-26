@@ -1392,12 +1392,19 @@ export async function runCommand(
 
     case "stat": {
       const seat = seatOf(command.who);
+      /**
+       * No reason string. The journal draws every manual row with "tryb
+       * testowy" beside it already, so passing the same words as the reason
+       * printed them twice — three times on a forced line, which also carries
+       * its own "wymuszone". What the console does is marked by the flag; the
+       * sentence should say what happened, once.
+       */
       const done = await adjust(
         gameId,
         seat.id,
         command.stat as Adjustable,
         command.delta,
-        command.force ? "tryb testowy (wymuszone)" : "tryb testowy",
+        null,
         undefined,
         command.force,
       );
@@ -1421,7 +1428,7 @@ export async function runCommand(
       // Through the same door a lost fight goes through, so what a death does
       // to a character — its cards on the field, its Zaklęcia spent, the turn
       // handed on — happens here too (4.4).
-      await adjust(gameId, seat.id, "zycie", -seat.zycie, "tryb testowy");
+      await adjust(gameId, seat.id, "zycie", -seat.zycie, null);
       return `${named(seat)} ginie.`;
     }
 
@@ -1526,7 +1533,7 @@ export async function runCommand(
 
     case "go": {
       const seat = seatOf(null);
-      await placeSeat(gameId, seat.id, command.fieldId, "tryb testowy");
+      await placeSeat(gameId, seat.id, command.fieldId, null);
       return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
     }
 
@@ -1617,7 +1624,7 @@ export async function runCommand(
         kind: "zwykla",
         beastTotal: 0,
       });
-      await adjust(gameId, seat.id, "zycie", -2, "tryb testowy");
+      await adjust(gameId, seat.id, "zycie", -2, null);
       const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
       return after?.eliminated
         ? `${named(seat)} loses to the Bestia and dies (14.7, 4.4).`
