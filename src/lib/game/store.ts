@@ -9,10 +9,17 @@ import { asFieldId, type FieldId } from "@/lib/engine/board";
 import { Failure } from "./failure";
 import type { TurnPhase } from "@/lib/engine/turn";
 
+/**
+ * A place at the table and the Postać standing in it — and nobody's name.
+ *
+ * The person who drives this is a `UserRow`, which is a different row for a
+ * different lifetime: figures stay in their seats for the whole game and people
+ * come and go past them. See db/schema.sql for the four states the two make
+ * between them.
+ */
 export interface SeatRow {
   id: string;
   seat_index: number;
-  player_name: string | null;
   /** One of the 27 cards, the surprise sentinel, or nothing chosen yet. */
   character_id: SeatCharacter | null;
   field_id: FieldId | null;
@@ -27,22 +34,36 @@ export interface SeatRow {
   stone_until_turn: number | null;
   /** 11.11: the turn a failed bridge attempt stops barring another. */
   bridge_blocked_until_turn: number | null;
-  /** Set when the player behind this seat walked away; the character stays. */
-  abandoned_at: string | null;
-  /** When this seat's device was last heard from (see `AWAY_AFTER_MS`). */
-  seen_at: string | null;
-  /** The player has said they are ready to start (docs/LOBBY.md). */
-  ready: boolean;
-  /** Seated by the host in companion mode; nobody behind it holds a device. */
-  no_device: boolean;
-  /** When this seat joined. Join order, now that seat_index no longer records it. */
   created_at: string;
-  /** Set when the device said its page was going away. See `sayGoodbye`. */
-  left_at: string | null;
   /** 7.3: the turn this seat last changed its Natura on. */
   nature_changed_turn: number | null;
   eliminated: boolean;
+}
+
+/**
+ * Somebody at the table. Unbounded, unlike the seats.
+ *
+ * `seat_index` is what they are driving and null is a spectator — which is a
+ * thing to be rather than the absence of one, since 4.4 lets a player whose
+ * Postać died decline to take another.
+ */
+export interface UserRow {
+  /** Four characters, globally unique. See `makeUserId`. */
+  id: string;
+  name: string;
+  /** What the browser calls itself, from localStorage. Survives the tab closing. */
+  device_id: string | null;
   is_host: boolean;
+  /** They have said they are ready to start (docs/LOBBY.md). */
+  ready: boolean;
+  /** The seat they drive; null while they are only watching. */
+  seat_index: number | null;
+  /** When this device was last heard from (see `AWAY_AFTER_MS`). */
+  seen_at: string | null;
+  /** Set when the device said its page was going away. See `sayGoodbye`. */
+  left_at: string | null;
+  /** Join order, which is how the host role finds a successor. */
+  created_at: string;
 }
 
 export interface GameRow {
@@ -79,7 +100,11 @@ export const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,no_device,eliminated,is_host,created_at,left_at";
+  "id,seat_index,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,eliminated,created_at";
+
+/** The same for a user. `claim_token` is never among them. */
+export const USER_COLUMNS =
+  "id,name,device_id,is_host,ready,seat_index,seen_at,left_at,created_at";
 
 /**
  * Creates a table and returns the host's seat token.
