@@ -1025,6 +1025,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {testing && (
         <TestConsole
           open={consoleOpen}
+          table={code}
           busy={busy}
           players={seats
             .filter((seat) => seat.character_id)

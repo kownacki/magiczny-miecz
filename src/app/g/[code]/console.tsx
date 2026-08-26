@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
 import { COMMANDS, complete } from "@/lib/engine/console";
 import { LAYER } from "./layers";
 
@@ -21,12 +22,15 @@ import { LAYER } from "./layers";
  */
 export function TestConsole({
   open,
+  table,
   busy,
   players,
   onClose,
   onRun,
 }: {
   open: boolean;
+  /** Which table this is, so two of them are two conversations. */
+  table: string;
   busy: boolean;
   /** Who is at the table, so a player's name can be finished like a card's. */
   players: string[];
@@ -45,9 +49,20 @@ export function TestConsole({
    * while it is being read: `zwiń` is one click and the game has not moved.
    */
   const [big, setBig] = useState(false);
-  const [log, setLog] = useState<{ said: string; mine: boolean }[]>([]);
+  /**
+   * Read once, lazily, rather than in an effect.
+   *
+   * Safe on the server because the console draws nothing until it is opened —
+   * both sides render null, so there is no markup to disagree about — and it
+   * avoids setting state from an effect on every mount.
+   */
+  const [log, setLog] = useState<ConsoleLine[]>(() =>
+    typeof window === "undefined" ? [] : readConsole(table).log,
+  );
   /** What has been typed before, newest last, for the up arrow. */
-  const past = useRef<string[]>([]);
+  const past = useRef<string[]>(
+    typeof window === "undefined" ? [] : readConsole(table).past,
+  );
   const back = useRef<number | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const tail = useRef<HTMLDivElement>(null);
@@ -55,6 +70,18 @@ export function TestConsole({
   useEffect(() => {
     if (open) input.current?.focus();
   }, [open]);
+
+  /**
+   * Written back whenever the transcript grows.
+   *
+   * Reloading is a normal part of using this — it is how you see whether the
+   * change you just made worked — and losing the record of how the table got
+   * into its current state at exactly that moment is the wrong trade. `past`
+   * rides along because every command that adds to it also adds to the log.
+   */
+  useEffect(() => {
+    writeConsole(table, { log, past: past.current });
+  }, [table, log]);
 
   /**
    * Puts the newest command at the top of the box, not the bottom.
