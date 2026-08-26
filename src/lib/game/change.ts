@@ -16,6 +16,7 @@ import type { Ends, Modifier } from "@/lib/engine/status";
 import type { RandomPort } from "@/lib/engine/ports";
 import type { JournalKind } from "@/lib/engine/journal";
 import { appRandom, replayable } from "./random";
+import { serially } from "./queue";
 
 /** Something true of a seat for a while, as the row that records it. */
 export interface EffectRow {
@@ -548,6 +549,20 @@ export async function change<C, T>(
   handler: Handler<C, T>,
   command: C,
   options: { random?: RandomPort; now?: () => number } = {},
+): Promise<T> {
+  // One change to a table at a time, in the order the table asked for them.
+  // The revision check below is what makes concurrent writes *correct*; the
+  // queue is what stops them being concurrent in the first place, within one
+  // server, which is what every board-game server does with a room. See
+  // `queue.ts` for why both.
+  return serially(gameId, () => attempt(gameId, handler, command, options));
+}
+
+async function attempt<C, T>(
+  gameId: string,
+  handler: Handler<C, T>,
+  command: C,
+  options: { random?: RandomPort; now?: () => number },
 ): Promise<T> {
   const base = options.random ?? appRandom();
   // Outlives the attempts, so a retry throws the same dice: see `replayable`.

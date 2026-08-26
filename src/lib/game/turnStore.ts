@@ -494,36 +494,46 @@ export async function stageFight(
   seatId: string,
   cardId: string,
 ): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-  if (seat.seat_index !== game.active_seat) throw new Error("To nie twoja tura.");
-  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
-
   const card = EVENTS.find((c) => c.id === cardId);
   if (!card) throw new Error(`Nieznana karta: ${cardId}`);
   if (!combatValueOf(card)) throw new Error(`${card.name} nie jest Wrogiem.`);
 
-  // The field as it would be if the card had just been drawn there, minus the
-  // draw: nothing is taken out of the deck, so a staged fight does not thin it.
-  await db
-    .from("games")
-    .update({
-      turn_state: {
-        phase: "pole",
-        fieldId: seat.field_id,
-        from: null,
-        draw: 0,
-        // Marked, because it was not drawn: `stageFight` reaches past the deck
-        // and the deck still holds this Wilkołak. Everything that draws the
-        // card from here on says so.
-        drawn: [{ cardId: card.id, cardClass: card.cardClass, granted: true }],
-        fought: [],
-      },
-    })
-    .eq("id", gameId);
-  await bumpRevision(gameId);
+  // Through `change`, like everything else that writes a game. It used to read
+  // the row, work out a turn_state and write it straight back — the
+  // read-modify-write with nothing checking that the row had not moved
+  // underneath, which is the one shape the whole `change` machinery exists to
+  // stop. Being a test path is no excuse: it writes the same column the game
+  // does, and a test that corrupts a table is worse than no test.
+  await change(
+    gameId,
+    (snapshot) => {
+      const seat = snapshot.seats.find((s) => s.id === seatId);
+      if (!seat) throw new Error("Nieznane miejsce.");
+      if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura.");
+      if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+      return {
+        // The field as it would be if the card had just been drawn there, minus
+        // the draw: nothing leaves the deck, so a staged fight does not thin it.
+        writes: {
+          game: {
+            turn_state: {
+              phase: "pole" as const,
+              fieldId: seat.field_id,
+              from: null,
+              draw: 0,
+              // Marked, because it was not drawn: `stageFight` reaches past the
+              // deck and the deck still holds this Wilkołak. Everything that
+              // draws the card from here on says so.
+              drawn: [{ cardId: card.id, cardClass: card.cardClass, granted: true }],
+              fought: [],
+            },
+          },
+        },
+        result: undefined,
+      };
+    },
+    undefined,
+  );
   await beginFight(gameId, [card.id]);
 }
 
@@ -545,22 +555,39 @@ export async function stageFight(
  * the test hatch indistinguishable from the thing it exists to test.
  */
 export async function abandonFight(gameId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
-
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.seat_index === game.active_seat);
-  const { cardName } = game.turn_state.fight;
-
-  // `endFight` puts the character back on its field with the fight's creatures
-  // already in `fought` — startFight settles them the moment it opens — so the
-  // field resumes with nothing outstanding rather than offering the same
-  // creature again the moment the modal closes.
-  await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
-  if (seat) {
-    await journal(gameId, seat.id, game.turn, "test-koniec-walki", { cardName }, true);
-  }
-  await bumpRevision(gameId);
+  await change(
+    gameId,
+    (snapshot) => {
+      const state = snapshot.game.turn_state;
+      if (state.phase !== "walka") throw new Error("Nie ma walki.");
+      const seat = snapshot.seats.find((s) => s.seat_index === snapshot.game.active_seat);
+      const { cardName } = state.fight;
+      return {
+        // `endFight` puts the character back on its field with the fight's
+        // creatures already in `fought` — startFight settles them the moment it
+        // opens — so the field resumes with nothing outstanding rather than
+        // offering the same creature again the moment the modal closes.
+        writes: {
+          game: { turn_state: endFight(state) },
+          ...(seat
+            ? {
+                journal: [
+                  {
+                    seatId: seat.id,
+                    turn: snapshot.game.turn,
+                    kind: "test-koniec-walki" as const,
+                    payload: { cardName },
+                    manual: true,
+                  },
+                ],
+              }
+            : {}),
+        },
+        result: undefined,
+      };
+    },
+    undefined,
+  );
 }
 
 /**
@@ -1558,40 +1585,48 @@ export async function runCommand(
        * of Życie, 4.4 if it was the last one, the guardian's own price on the
        * Kamienny Most.
        */
-      const game = await loadGame(gameId);
-      if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
-      const fight = game.turn_state.fight;
-      const settled =
-        command.outcome === "remis"
-          ? ({ outcome: "remis", kind: fight.kind } as const)
-          : ({
-              outcome: command.outcome,
-              kind: fight.kind,
-              winner: command.outcome === "wygrana" ? "Postać" : fight.cardName,
-              loser: command.outcome === "wygrana" ? fight.cardName : "Postać",
-            } as const);
-      await db
-        .from("games")
-        .update({
-          turn_state: {
-            ...game.turn_state,
-            // The dice are filled in as well, because everything downstream
-            // reads a settled fight as one that was rolled.
-            fight: {
-              ...fight,
-              playerRoll: fight.playerRoll ?? 0,
-              enemyRoll: fight.enemyRoll ?? 0,
-              result: settled,
+      const fightName = await change(
+        gameId,
+        (snapshot) => {
+          const state = snapshot.game.turn_state;
+          if (state.phase !== "walka") throw new Error("Nie ma walki.");
+          const fight = state.fight;
+          const settled =
+            command.outcome === "remis"
+              ? ({ outcome: "remis", kind: fight.kind } as const)
+              : ({
+                  outcome: command.outcome,
+                  kind: fight.kind,
+                  winner: command.outcome === "wygrana" ? "Postać" : fight.cardName,
+                  loser: command.outcome === "wygrana" ? fight.cardName : "Postać",
+                } as const);
+          return {
+            writes: {
+              game: {
+                turn_state: {
+                  ...state,
+                  // The dice are filled in as well, because everything
+                  // downstream reads a settled fight as one that was rolled.
+                  fight: {
+                    ...fight,
+                    playerRoll: fight.playerRoll ?? 0,
+                    enemyRoll: fight.enemyRoll ?? 0,
+                    result: settled,
+                  },
+                },
+              },
             },
-          },
-        })
-        .eq("id", gameId);
+            result: fight.cardName,
+          };
+        },
+        undefined,
+      );
       await resolveFight(gameId);
       return command.outcome === "remis"
         ? "Fight drawn."
         : command.outcome === "wygrana"
-          ? `Won against ${fight.cardName}.`
-          : `Lost to ${fight.cardName}.`;
+          ? `Won against ${fightName}.`
+          : `Lost to ${fightName}.`;
     }
 
     case "endgame": {
@@ -1610,23 +1645,44 @@ export async function runCommand(
        * the game does not have.
        */
       const seat = seatOf(null);
-      const game = await loadGame(gameId);
       if (command.won) {
-        await db
-          .from("games")
-          .update({ status: "finished", turn_state: { phase: "koniec" } })
-          .eq("id", gameId);
-        await journal(gameId, seat.id, game.turn, "zwyciestwo", {
-          kind: "zwykla",
-          beastTotal: 0,
-        });
-        await bumpRevision(gameId);
+        await change(
+          gameId,
+          (snapshot) => ({
+            writes: {
+              game: { status: "finished", turn_state: { phase: "koniec" as const } },
+              journal: [
+                {
+                  seatId: seat.id,
+                  turn: snapshot.game.turn,
+                  kind: "zwyciestwo" as const,
+                  payload: { kind: "zwykla", beastTotal: 0 },
+                },
+              ],
+            },
+            result: undefined,
+          }),
+          undefined,
+        );
         return `${named(seat)} beats the Bestia. Game over.`;
       }
-      await journal(gameId, seat.id, game.turn, "bestia-porazka", {
-        kind: "zwykla",
-        beastTotal: 0,
-      });
+      await change(
+        gameId,
+        (snapshot) => ({
+          writes: {
+            journal: [
+              {
+                seatId: seat.id,
+                turn: snapshot.game.turn,
+                kind: "bestia-porazka" as const,
+                payload: { kind: "zwykla", beastTotal: 0 },
+              },
+            ],
+          },
+          result: undefined,
+        }),
+        undefined,
+      );
       await adjust(gameId, seat.id, "zycie", -2, null);
       const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
       return after?.eliminated
