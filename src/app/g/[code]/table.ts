@@ -1,0 +1,173 @@
+/** What a device is told about the table, and the lookups it reads that with. */
+
+import characters from "@/data/characters.json";
+import events from "@/data/events.json";
+import items from "@/data/items.json";
+import spells from "@/data/spells.json";
+import type { Character, EventCard, Item, Nature, Spell } from "@/data/types";
+import type { CardId } from "@/data/ids";
+import type { FieldId } from "@/lib/engine/board";
+import type { SeatCharacter } from "@/lib/engine/characters";
+import type { Slot } from "@/lib/engine/slots";
+import type { Holding } from "@/lib/engine/state";
+import type { TileCard } from "./card-tile";
+import type { SlotItem } from "./slot-panel";
+
+const EVENTS = events as EventCard[];
+
+export const CHARACTERS = characters as Character[];
+
+/**
+ * Every card a seat can hold, by id, across all four decks.
+ *
+ * A hand mixes them: an item from the event deck, a Zaklęcie from the spell
+ * pile, a trophy that was a Wróg. Looking only in the event deck left spells
+ * showing their raw id.
+ */
+export const CARD_NAMES = new Map<string, string>([
+  ...EVENTS.map((c) => [c.id, c.name] as const),
+  ...(spells as Spell[]).map((c) => [c.id, c.name] as const),
+  ...(items as Item[]).map((c) => [c.id, c.name] as const),
+]);
+
+export const CARD_TEXTS = new Map<string, string>([
+  ...EVENTS.map((c) => [c.id, c.text] as const),
+  ...(spells as Spell[]).map((c) => [c.id, c.text] as const),
+  ...(items as Item[]).map((c) => [c.id, c.text ?? ""] as const),
+]);
+
+export interface Held {
+  /** Where it is worn in the slotted variant; null when it is in the pack. */
+  slot?: Slot | null;
+  id: string;
+  /** Any card in the box — 16.6 makes the event and equipment id spaces overlap. */
+  cardId: CardId;
+  kind: "spell" | "item" | "friend" | "trophy";
+  face: "open" | "hidden";
+  /** Conjured by the test shortcut — marked on the card, not just in the journal. */
+  granted?: boolean;
+}
+
+export interface Seat {
+  id: string;
+  seat_index: number;
+  player_name: string | null;
+  character_id: SeatCharacter | null;
+  /**
+   * Narrow here as well as on the server, because the server is what guarantees
+   * it: `seatsFor` turns the stored column into a `FieldId` or null before it
+   * ever reaches a response, so the browser is not trusting a wire value — it is
+   * naming the type the API already promises.
+   */
+  field_id: FieldId | null;
+  miecz_own: number;
+  magia_own: number;
+  /** Own points plus everything carried (1.5, 2.5), computed server-side. */
+  miecz_total: number;
+  magia_total: number;
+  /**
+   * How many Zaklęcia this hand may hold (2.6), computed server-side.
+   *
+   * Sent rather than worked out here so the number shown is the number the
+   * server refuses a draw against — the same basis, not one that happens to
+   * agree most of the time.
+   */
+  spell_capacity: number;
+  /** The same, reckoned for a fight — 1.5's other figure. */
+  miecz_walka: number;
+  magia_walka: number;
+  /**
+   * What the character is under, already worked out into marks.
+   *
+   * The server folds the stored effects together with the four ad-hoc columns
+   * the turn engine reads, so the browser gets one list and never has to know
+   * there were two halves.
+   */
+  effects: {
+    id: string;
+    /** The card that put it there, where a card did. */
+    source: string;
+    glyph: string;
+    tone: "dobry" | "zly" | "obojetny";
+    title: string;
+  }[];
+  zycie: number;
+  zloto: number;
+  nature: string | null;
+  turns_lost: number;
+  /** Turn the Kamień wears off on (20.1). Null when not petrified. */
+  stone_until_turn: number | null;
+  eliminated: boolean;
+  /** Set when the player behind this seat walked away; the character stays. */
+  abandoned_at: string | null;
+  /** Device has not checked in recently — a closed tab, not a decision. */
+  away: boolean;
+  ready: boolean;
+  no_device: boolean;
+  is_host: boolean;
+  holdings: Held[];
+  /** Cards this viewer is not allowed to see the faces of (9.3). */
+  hidden_count: number;
+}
+
+/**
+ * A seat's cards in the shape the engine's rules read them.
+ *
+ * The rules that count a pack live in `derive.ts` and are the same ones the
+ * server enforces with, so this is the whole of what the browser has to do to
+ * ask them. Counting the pack by hand instead is what put a Magiczny Miecz on
+ * the wrong side of 5.4 — `carriedCount` leaves the two relics out (see
+ * `RELICS`) and a filter written next to it did not.
+ */
+export function asHoldings(holdings: readonly Held[]): Holding[] {
+  return holdings.map((h) => ({
+    cardId: h.cardId,
+    kind: h.kind,
+    face: h.face,
+    slot: h.slot ?? null,
+  }));
+}
+
+/**
+ * The reader's own Natura, narrowed once.
+ *
+ * The column is a plain string, and 5.3 is answered against a Nature — so this
+ * is the boundary the guard belongs at, exactly like `asFieldId` elsewhere.
+ */
+export function asNature(value: string | null | undefined): Nature | null {
+  return value === "dobra" || value === "zla" || value === "chaotyczna" ? value : null;
+}
+
+export const KIND_LABEL: Record<Held["kind"], string> = {
+  item: "Przedmiot",
+  friend: "Przyjaciel",
+  trophy: "Trofeum",
+  spell: "Zaklęcie",
+};
+
+export function tileFor(held: Held): TileCard {
+  return {
+    cardId: held.cardId,
+    name: CARD_NAMES.get(held.cardId) ?? held.cardId,
+    text: CARD_TEXTS.get(held.cardId),
+    kindLabel: KIND_LABEL[held.kind],
+    // Travels with the card into every view that draws it — the hover, the
+    // whole Karta — rather than each of them being told separately.
+    granted: held.granted,
+  };
+}
+
+/** What this seat is wearing, keyed by place. */
+export function wornBySlot(seat: Seat): Partial<Record<Slot, SlotItem>> {
+  const worn: Partial<Record<Slot, SlotItem>> = {};
+  for (const held of seat.holdings) {
+    if (!held.slot) continue;
+    worn[held.slot] = {
+      holdingId: held.id,
+      cardId: held.cardId,
+      card: tileFor(held),
+      granted: held.granted,
+    };
+  }
+  return worn;
+}
