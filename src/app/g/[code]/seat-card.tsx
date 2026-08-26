@@ -15,7 +15,7 @@ import { describeAbility } from "@/lib/engine/abilityText";
 import { abilitiesOfCharacter, asCharacterId, notesForCharacter } from "@/lib/engine/characters";
 import { type Slot } from "@/lib/engine/slots";
 import {
-  ART_RATIO,
+  NATURE_CARD_RATIO,
   cardArtUrl,
   characterImageUrl,
   natureCardUrl,
@@ -832,15 +832,20 @@ function NatureLine({
       <Image
         src={art}
         alt={`Karta Zmiany Natury: ${NATURE_LABEL[nature] ?? nature}`}
+        // The whole of it in words, the way an effect's mark beside the name
+        // carries its own. A marker on a table is a reminder that something is
+        // true; what it means is a question you ask it, and the question mark
+        // on the cursor is what says it can be asked.
         title={
-          `Karta Zmiany Natury (7.2) — z ${NATURE_LABEL[printed] ?? printed}` +
-          ` na ${NATURE_LABEL[nature] ?? nature}`
+          `Karta Zmiany Natury (7.2): ${NATURE_LABEL[printed] ?? printed}` +
+          ` → ${NATURE_LABEL[nature] ?? nature}.` +
+          " Leży przy Karcie Postaci, dopóki natura nie wróci do wydrukowanej."
         }
         width={NATURE_CARD_WIDTH}
-        height={Math.round(NATURE_CARD_WIDTH / ART_RATIO)}
+        height={Math.round(NATURE_CARD_WIDTH / NATURE_CARD_RATIO)}
         // No border of its own: the card is printed on a blue field with a
         // die-cut edge, and an outline round that is an outline round an edge.
-        className="rounded-[2px]"
+        className="cursor-help rounded-[2px]"
         unoptimized
       />
     </span>
@@ -848,15 +853,15 @@ function NatureLine({
 }
 
 /**
- * Under a third of the Karta Postaci it lies below.
+ * Under half the Karta Postaci it lies below, and no taller than a line of it.
  *
  * The card is 192 across and this is much the smaller object of the two — a
  * marker put down beside a card, not a second card, and a marker that has to
- * stay a marker when four seats are on screen at once. Small enough that
- * CHAOTYCZNY, the longest of the three words and the one fitted by its width,
- * is at the edge of what a glance will take; the hover names it either way.
+ * stay a marker when four seats are on screen at once. Fifty-one tall, which
+ * is where it was when it was a third as wide: the card grew sideways to give
+ * CHAOTYCZNY its room, and growing in the other direction was never the point.
  */
-const NATURE_CARD_WIDTH = 59;
+const NATURE_CARD_WIDTH = 88;
 
 function EffectMark({
   mark,

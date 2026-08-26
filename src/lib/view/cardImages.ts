@@ -174,6 +174,18 @@ const NATURE_FACE: Record<string, string> = {
   chaotic: "chaotyczny",
 };
 
+/**
+ * Wider than the illustrations, and wide on purpose.
+ *
+ * `CHAOTYCZNY` is twice the word `DOBRY` is. On a card the shape of everything
+ * else here it had to be set half as tall as its neighbours to fit, which reads
+ * as a caption rather than as the same kind of object — so the card is half
+ * again as wide and all three words are set at one size. See
+ * `scripts/export-nature-card.mjs`, where the frame is built from the printed
+ * card's corners precisely so its shape is not fixed by the scan.
+ */
+export const NATURE_CARD_RATIO = 360 / 209;
+
 export function natureCardUrl(nature: string | null): string | null {
   const face = nature === null ? undefined : NATURE_FACE[nature];
   return face ? `/cards/natura-${face}.jpg` : null;

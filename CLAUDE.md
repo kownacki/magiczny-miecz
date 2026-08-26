@@ -136,25 +136,33 @@ got and the Zaklęcia and Wyposażenie never did. Checked against the Drive
 folder itself, not just the mirror. Draw a spell pile with the Magia-tinted
 blank `CardBack` already uses for a concealed hand (9.3) rather than borrowing
 the ZDARZENIE back for it.
-`node scripts/export-nature-card.mjs` cuts 7.2's Karta Zmiany Natury off the
-two faces of that same sheet 9 — `Zły` from the front, `DOBRY` from the
-reverse, one card with a face each way — into `public/cards/natura-*.jpg`,
-committed. **There is no third face and no scan of one**: not in the box and
-not in any of the five expansions, checked on the Gród, Labirynt Magów and
-Krypta Upiorów piony sheets and their reverses. Chaotyczna is the Natura the
-card is *absent* for, which works at a table because the Karta Postaci is
-lying there saying what the character started as, and does not work for a
-referee that has to name the current Natura outright. So `natura-chaotyczny`
-is drawn — Bodoni set to match the printed `DOBRY` — and it is the only card
-image in `public/cards/` that was never on a sheet. The two faces are not
-printed alike (`Zły` is die-cut on blue, `DOBRY` is bare lettering on the
-reverse), so the card is cut once from the `Zły` face, its word painted out,
-and all three words set back into the same rectangle on that one plate. The
-card is portrait and `ART_RATIO` is not, so it is **squashed** rather than
-cropped — all four die-cut corners kept, every proportion wrong by the same
-amount — and its blue border is built afterwards at an even margin instead of
-being squashed along with it. The script is macOS-only (`sips`,
-and the system's own Bodoni) like the rest of the pipeline.
+`node scripts/export-nature-card.mjs` builds 7.2's Karta Zmiany Natury, one
+per Natura, into `public/cards/natura-*.jpg`, committed. **There is no third
+face and no scan of one**: not in the box and not in any of the five
+expansions, checked on the Gród, Labirynt Magów and Krypta Upiorów piony
+sheets and their reverses. Chaotyczna is the Natura the card is *absent* for,
+which works at a table because the Karta Postaci is lying there saying what
+the character started as, and does not work for a referee that has to name the
+current Natura outright.
+
+None of the printed lettering is used. `Zły` is a calligraphic italic in title
+case and `DOBRY` is Roman capitals on the reverse — two thirds of one object
+that read as two objects, which a third in either hand makes worse rather than
+better. So all three words are **set here**, one face at one size, in Bodoni:
+the Didone nearest the sheet, and nearer than the Times `make-random-card.py`
+uses, which is that card's because it imitates a Karta Postaci title band.
+
+The frame is the box's, and it comes in **pieces**. A card here is a white
+field with a quarter-circle bitten out of each corner and nothing else — the
+straight edges carry no printing — so `buildCard` cuts the four corners off
+sheet 9's `Zły` and stands them on a white field of any shape with the teal
+painted round it. That is what lets this card be half again as wide as the
+illustrations (`NATURE_CARD_RATIO`) so `CHAOTYCZNY` fits at the same size as
+`ZŁY`, with nothing squashed. Corners scale off the shorter side, because a
+bitten corner is a fixed thing a blade did. If an expansion card turns out to
+have a rule down its edges, a fifth and sixth piece go in there.
+
+macOS-only (`sips`, and the system's own Bodoni) like the rest of the pipeline.
 `node scripts/generate-ids.mjs` regenerates `src/data/ids.ts` — the literal
 id types — and must be re-run after anything that renames a card or a
 character. Then `node scripts/export-card-images.mjs` writes the
