@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { bumpRevision, claimSeat, findGame, joinGame, seatsFor } from "@/lib/game/store";
+import { bumpRevision, findGame, joinGame, seatsFor } from "@/lib/game/store";
+import { claimSeat } from "@/lib/game/lobbyStore";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -15,7 +16,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // the commonest way a seat ends up empty.
     if (body.seatId) {
       const token = await claimSeat(game.id, String(body.seatId), name);
-      await bumpRevision(game.id);
       const seats = await seatsFor(game.id);
       const claimed = seats.find((s) => s.id === body.seatId);
       return NextResponse.json({ seatIndex: claimed?.seat_index ?? null, token });

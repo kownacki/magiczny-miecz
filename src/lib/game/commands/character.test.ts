@@ -3,8 +3,15 @@ import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { scriptedRandom } from "@/lib/engine/ports";
+import { FIELDS, asFieldId } from "@/lib/engine/board";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
-import { changeNature, placeSeat, takeNewCharacter } from "./character";
+import {
+  changeNature,
+  chooseCharacter,
+  dealCharacters,
+  placeSeat,
+  takeNewCharacter,
+} from "./character";
 
 const CHARACTERS = charactersData as Character[];
 
@@ -460,5 +467,328 @@ describe("losowa Postać", () => {
     await expect(
       takeNewCharacter(table, { seatId: "seat-a", characterId: "losowa" }, ports()),
     ).rejects.toThrow(/Nie została żadna wolna Postać/);
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * Setting up: choosing and dealing the Karty Postaci (0.1-0.4).
+ * ----------------------------------------------------------------------- */
+
+/** The poczekalnia: a table nobody has started, and a seat holding nothing. */
+const waiting = (seats = [aSeat({ character_id: null, field_id: null })]) =>
+  aTable({ game: { status: "lobby", turn: 0 }, seats });
+
+/** A seat in the poczekalnia, numbered so several can sit at one table. */
+const empty = (index: number, over: Parameters<typeof aSeat>[0] = {}) =>
+  aSeat({
+    id: `seat-${index + 1}`,
+    seat_index: index,
+    character_id: null,
+    field_id: null,
+    ...over,
+  });
+
+describe("wybór Karty Postaci (0.2-0.4)", () => {
+  it("seats the chosen character on its MGR with its printed points", () => {
+    const { writes } = chooseCharacter(waiting(), {
+      seatId: "seat-a",
+      characterId: "kaplanka",
+    });
+    expect(writes.seats).toEqual([
+      {
+        id: "seat-a",
+        patch: {
+          character_id: "kaplanka",
+          field_id: "uroczysko",
+          sword_own: 1,
+          magic_own: 5,
+          sword_floor: 1,
+          magic_floor: 5,
+          nature: "good",
+          ready: false,
+        },
+      },
+    ]);
+  });
+
+  /**
+   * 0.3, and the reason it is a rule rather than a greyed-out button: two
+   * devices can reach for the Kapłanka in the same second and only the server
+   * sees both. The refusal names her, because "ta postać jest zajęta" sends
+   * somebody back to a strip of 27 to work out which one they meant.
+   */
+  it("refuses a Karta Postaci another seat is holding, and says which one", () => {
+    const table = waiting([empty(0), empty(1, { character_id: asSeatCharacter("kaplanka") })]);
+    expect(() => chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka" })).toThrow(
+      /KAPŁANKA jest już wybrana przez kogoś innego/,
+    );
+  });
+
+  it("does not count a seat's own card against it", () => {
+    const table = waiting([empty(0, { character_id: asSeatCharacter("kaplanka") })]);
+    expect(() =>
+      chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka" }),
+    ).not.toThrow();
+  });
+
+  /**
+   * Otherwise a player who said they were ready and then changed their mind is
+   * still counted, and the host starts a game somebody was still deciding
+   * about.
+   */
+  it("un-readies a seat that changed its mind", () => {
+    const table = waiting([empty(0, { character_id: asSeatCharacter("mag"), ready: true })]);
+    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll" });
+    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "troll", ready: false });
+  });
+
+  it("puts the surprise on the seat and settles nothing else about it", () => {
+    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "losowa" });
+    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "losowa", ready: false });
+  });
+
+  /**
+   * A seat changing its mind out of the Książę and into the surprise would
+   * otherwise keep his 4/3 and his Gród, and keep them for good if the deal
+   * never ran — a Postać wearing somebody else's numbers.
+   */
+  it("clears what the last Karta Postaci left behind when a seat takes the surprise", () => {
+    const ksiaze = waiting([
+      empty(0, {
+        character_id: asSeatCharacter("ksiaze"),
+        field_id: asFieldId("grod"),
+        sword_own: 4,
+        magic_own: 3,
+        sword_floor: 4,
+        magic_floor: 3,
+        nature: "chaotic",
+      }),
+    ]);
+    const { writes } = chooseCharacter(ksiaze, { seatId: "seat-1", characterId: "losowa" });
+    expect(writes.seats?.[0].patch).toEqual({
+      character_id: "losowa",
+      ready: false,
+      field_id: null,
+      sword_own: 0,
+      magic_own: 0,
+      sword_floor: 0,
+      magic_floor: 0,
+      nature: null,
+    });
+  });
+
+  it("refuses a character id that is not on any card", () => {
+    expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "smok" })).toThrow(
+      /Nieznana postać: smok/,
+    );
+  });
+
+  it("refuses a seat it does not know", () => {
+    expect(() => chooseCharacter(waiting(), { seatId: "nobody", characterId: "mag" })).toThrow(
+      /Nieznane miejsce/,
+    );
+  });
+
+  /**
+   * Two Obszary answer to "Step", so no amount of slugifying it will ever
+   * produce a field id. Six characters were slugified onto fields that do not
+   * exist and started the game standing nowhere: Goblin, Hobgoblin, Karzeł,
+   * Magog, Obbol and Olbrzym.
+   *
+   * The first in board order is `step-2`, which is the one printed *Step I* —
+   * the numerals run the way a player walks the ring and the ids do not, so
+   * Hobgoblin starts on the Step somebody would point at.
+   */
+  it("resolves an MGR two Obszary answer to onto the first of them in board order", () => {
+    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "hobgoblin" });
+    expect(writes.seats?.[0].patch).toMatchObject({ field_id: "step-2" });
+  });
+
+  it("puts all 27 Karty Postaci on an Obszar the board actually has", () => {
+    for (const character of CHARACTERS) {
+      const { writes } = chooseCharacter(waiting(), {
+        seatId: "seat-a",
+        characterId: character.id,
+      });
+      expect(FIELDS.has(writes.seats![0].patch.field_id!)).toBe(true);
+    }
+  });
+
+  /**
+   * There is no such Karta Postaci, which is the point: the guard is there for
+   * a data error, so the test has to make one. Refusing the pick is the
+   * behaviour worth having — a seated-nowhere figure has no dot on the map, no
+   * directions to move in and a turn dead on arrival.
+   */
+  it("refuses a Karta Postaci whose MGR is not an Obszar on the board", () => {
+    const kat = CHARACTERS.find((c) => c.id === "kat")!;
+    const printed = kat.start;
+    kat.start = "Wyspa Skarbów";
+    try {
+      expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "kat" })).toThrow(
+        /Obszar, którego nie ma na planszy: Wyspa Skarbów/,
+      );
+    } finally {
+      kat.start = printed;
+    }
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * The deal (0.1), and the surprise it settles at the start of the game.
+ * ----------------------------------------------------------------------- */
+
+describe("rozdanie Kart Postaci (0.1)", () => {
+  /** Enough throws for six seats: `pickBelow` spends two on any pool over six. */
+  const ones = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+  /** Every 1 reads as digit 0, so each pick takes whatever is left on top. */
+  const offTheTop = () => ports({ random: scriptedRandom(ones) });
+
+  const dealt = (writes: { seats?: { id: string; patch: { character_id?: unknown } }[] }) =>
+    Object.fromEntries((writes.seats ?? []).map((s) => [s.id, s.patch.character_id]));
+
+  it("deals one card to every seat that has not chosen, in one changeset", async () => {
+    const { writes } = await dealCharacters(
+      waiting([empty(0), empty(1)]),
+      { to: "unchosen" },
+      offTheTop(),
+    );
+    expect(writes.seats).toHaveLength(2);
+    expect(dealt(writes)).toEqual({
+      "seat-1": CHARACTERS[0].id,
+      "seat-2": CHARACTERS[1].id,
+    });
+  });
+
+  it("deals the whole Karta Postaci, not just its name", async () => {
+    const { writes } = await dealCharacters(waiting([empty(0)]), { to: "unchosen" }, offTheTop());
+    expect(writes.seats?.[0].patch).toMatchObject({
+      character_id: "awanturnik",
+      field_id: "karczma",
+      sword_own: 3,
+      magic_own: 3,
+      sword_floor: 3,
+      magic_floor: 3,
+      nature: "chaotic",
+    });
+  });
+
+  /**
+   * One figure per card (0.3). The pool is what nobody is holding, and each
+   * card leaves it as it is dealt — so the same throw twice cannot hand the
+   * Awanturnik to two people.
+   */
+  it("never deals a Karta Postaci somebody is already holding", async () => {
+    const table = waiting([
+      empty(0),
+      empty(1, { character_id: asSeatCharacter("awanturnik") }),
+      empty(2),
+    ]);
+    const { writes } = await dealCharacters(table, { to: "unchosen" }, offTheTop());
+    const given = Object.values(dealt(writes));
+    expect(given).not.toContain("awanturnik");
+    expect(new Set(given).size).toBe(2);
+  });
+
+  /**
+   * The sentinel is not a card, so a seat holding it is not holding anything —
+   * but it has chosen, and the poczekalnia's deal is for people who have not.
+   */
+  it("leaves a seat that asked to be surprised waiting for the surprise", async () => {
+    const table = waiting([empty(0, { character_id: asSeatCharacter("losowa") }), empty(1)]);
+    const { writes } = await dealCharacters(table, { to: "unchosen" }, offTheTop());
+    expect(writes.seats?.map((s) => s.id)).toEqual(["seat-2"]);
+  });
+
+  it("skips a seat whose player has walked away", async () => {
+    const table = waiting([empty(0), empty(1, { abandoned_at: "2026-01-01T00:00:00Z" })]);
+    const { writes } = await dealCharacters(table, { to: "unchosen" }, offTheTop());
+    expect(writes.seats?.map((s) => s.id)).toEqual(["seat-1"]);
+  });
+
+  /**
+   * The old deal called `chooseCharacter`, which un-readies, and then had to
+   * put the flag back. Being dealt the card you asked to be surprised by is not
+   * changing your mind, and un-readying here would make the start button refuse
+   * the very table that just pressed it.
+   */
+  it("leaves readiness exactly where it found it", async () => {
+    const table = waiting([empty(0, { ready: true })]);
+    const { writes } = await dealCharacters(table, { to: "unchosen" }, offTheTop());
+    expect(writes.seats?.[0].patch).not.toHaveProperty("ready");
+  });
+
+  it("writes nothing at all when there is nobody to deal to", async () => {
+    const table = waiting([empty(0, { character_id: asSeatCharacter("mag") })]);
+    const { writes } = await dealCharacters(table, { to: "unchosen" }, ports());
+    expect(writes).toEqual({});
+  });
+
+  /**
+   * `change()` replays the same throws on a retried commit (see `replayable`),
+   * so a deal that came out differently the second time would hand somebody a
+   * different character for no reason they could see.
+   */
+  it("deals the same cards for the same dice", async () => {
+    const table = waiting([empty(0), empty(1), empty(2)]);
+    const once = await dealCharacters(table, { to: "unchosen" }, offTheTop());
+    const twice = await dealCharacters(table, { to: "unchosen" }, offTheTop());
+    expect(twice.writes).toEqual(once.writes);
+  });
+
+  it("reads the dice, not the order of the cards", async () => {
+    const table = waiting([empty(0)]);
+    // 1,3 is 2 in base six, and the third card in the pool.
+    const { writes } = await dealCharacters(
+      table,
+      { to: "unchosen" },
+      ports({ random: scriptedRandom([1, 3]) }),
+    );
+    expect(writes.seats?.[0].patch.character_id).toBe(CHARACTERS[2].id);
+  });
+});
+
+describe("rozstrzygnięcie losowań na starcie", () => {
+  const ones = [1, 1, 1, 1, 1, 1];
+
+  /**
+   * The difference from the poczekalnia's deal is deliberate: a seat that never
+   * picked anything has not agreed to play, and dealing it a character at the
+   * moment somebody presses start would put a stranger in the game.
+   */
+  it("fills the seats holding the surprise and nobody else", async () => {
+    const table = aTable({
+      game: { status: "lobby", turn: 0 },
+      seats: [
+        empty(0, { character_id: asSeatCharacter("losowa") }),
+        empty(1),
+        empty(2, { character_id: asSeatCharacter("mag") }),
+      ],
+    });
+    const { writes } = await dealCharacters(
+      table,
+      { to: "surprises" },
+      ports({ random: scriptedRandom(ones) }),
+    );
+    expect(writes.seats?.map((s) => s.id)).toEqual(["seat-1"]);
+    // And not the Mag, who is on the table already.
+    expect(writes.seats?.[0].patch.character_id).not.toBe("mag");
+  });
+
+  it("gives two seats that both asked for a surprise two different Postacie", async () => {
+    const table = aTable({
+      game: { status: "lobby", turn: 0 },
+      seats: [
+        empty(0, { character_id: asSeatCharacter("losowa") }),
+        empty(1, { character_id: asSeatCharacter("losowa") }),
+      ],
+    });
+    const { writes } = await dealCharacters(
+      table,
+      { to: "surprises" },
+      ports({ random: scriptedRandom(ones) }),
+    );
+    const given = writes.seats?.map((s) => s.patch.character_id);
+    expect(given).toEqual([CHARACTERS[0].id, CHARACTERS[1].id]);
   });
 });

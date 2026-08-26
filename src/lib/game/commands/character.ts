@@ -1,9 +1,10 @@
-/** The Postać on a seat: its Natura (7.2-7.4), where its figure stands, and taking a new one after death (4.4). */
+/** The Postać on a seat: choosing and dealing it (0.1-0.4), its Natura (7.2-7.4), where its figure stands, and taking a new one after death (4.4). */
 
 import charactersData from "@/data/characters.json";
 import type { Character, EventCard, Nature } from "@/data/types";
 import { requireFieldId, fieldByName, type FieldId } from "@/lib/engine/board";
 import {
+  RANDOM_CHARACTER_ID,
   abilitiesOfCharacter,
   asCharacterId,
   isRandomPick,
@@ -19,6 +20,7 @@ import {
   type Changeset,
   type CommandPorts,
   type Outcome,
+  type SeatPatch,
   type Snapshot,
 } from "../change";
 import type { OwedSpells } from "./movement";
@@ -269,6 +271,33 @@ function startingFieldId(name: string): FieldId {
 }
 
 /**
+ * What a Karta Postaci settles the moment it is put in front of somebody.
+ *
+ * The same seven columns whether the card was chosen (0.2), dealt (0.1) or
+ * taken after a death (4.4), which is why they are written once here. They used
+ * to be written out at each of the three, and the three had already drifted:
+ * the poczekalnia's copy passed a `string` field id where this one passes a
+ * `FieldId`.
+ */
+function printedOn(character: Character): SeatPatch["patch"] {
+  return {
+    character_id: character.id,
+    // 0.4: the Obszar the card marks MGR, and a real one — see `startingFieldId`.
+    field_id: startingFieldId(character.start),
+    // The starting Miecz and Magia become both the current value and the
+    // floor, because 1.3 and 2.3 forbid a character ever dropping below what
+    // it began with.
+    sword_own: character.miecz,
+    magic_own: character.magia,
+    sword_floor: character.miecz,
+    magic_floor: character.magia,
+    // Kat prints "any" and picks at setup, so it is left unset here
+    // for the player to choose rather than being silently defaulted.
+    nature: character.nature === "any" ? null : character.nature,
+  };
+}
+
+/**
  * Rule 4.4's second half: the player takes a new character and begins again.
  *
  * "Gracz, który kierował niefortunną Postacią, może wybrać sobie nową i
@@ -363,18 +392,7 @@ export async function takeNewCharacter(
       {
         id: seat.id,
         patch: {
-          character_id: character.id,
-          field_id: startingFieldId(character.start),
-          // The starting Miecz and Magia become both the current value and the
-          // floor, because 1.3 and 2.3 forbid a character ever dropping below
-          // what it began with.
-          sword_own: character.miecz,
-          magic_own: character.magia,
-          sword_floor: character.miecz,
-          magic_floor: character.magia,
-          // Kat prints "any" and picks at setup, so it is left unset here
-          // for the player to choose rather than being silently defaulted.
-          nature: character.nature === "any" ? null : character.nature,
+          ...printedOn(character),
           eliminated: false,
           life: 4,
           gold: kit.gold ?? 1,
@@ -439,4 +457,180 @@ export async function takeNewCharacter(
     }),
     result: { seatId: seat.id, spells: kit.spells ?? 0 },
   };
+}
+
+/* --------------------------------------------------------------------------
+ * Setting up the table: choosing and dealing the Karty Postaci (0.1-0.4).
+ * ----------------------------------------------------------------------- */
+
+export interface ChooseCharacter {
+  seatId: string;
+  characterId: string;
+}
+
+/**
+ * Gives a seat its Karta Postaci — or the sentinel that says "surprise me".
+ *
+ * 0.3: no two seats may hold the same one. The box has 27 Karty Postaci and one
+ * plastic figure per card, and setup deals *one* to each player — there is no
+ * second Kapłanka to hand out. The character strip greys a taken card out; this
+ * is the rule itself, because two devices can reach for the same one in the
+ * same second and only the server sees both.
+ *
+ * No dice: a choice is a choice. The surprise is drawn by `dealCharacters`
+ * later, which is the only part of this that needs a die.
+ */
+export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): Outcome<void> {
+  const seat = seatById(snapshot, command.seatId);
+
+  /**
+   * "Surprise me" is a choice, and several people can make it at once — there
+   * is only one Kapłanka, but no limit on wanting whatever comes. Nothing else
+   * is decided now: the points, the MGR and the kit all wait for the deal at
+   * the start of the game, which is exactly what makes it a surprise.
+   *
+   * What it does settle is that whatever this seat was holding is gone. A
+   * player changing their mind out of the Książę and into the surprise would
+   * otherwise keep his 4/3 and his Gród sitting on the seat, and would keep
+   * them for good if the deal never ran — a Postać wearing somebody else's
+   * numbers. Życie and Złoto are not in the list because the poczekalnia never
+   * writes them: 3.2's purse is dealt at the start of the game, by `startGame`,
+   * off the character that is holding the seat *then*.
+   */
+  if (isRandomPick(command.characterId)) {
+    return {
+      writes: {
+        seats: [
+          {
+            id: seat.id,
+            patch: {
+              character_id: RANDOM_CHARACTER_ID,
+              ready: false,
+              field_id: null,
+              sword_own: 0,
+              magic_own: 0,
+              sword_floor: 0,
+              magic_floor: 0,
+              nature: null,
+            },
+          },
+        ],
+      },
+      result: undefined,
+    };
+  }
+
+  const character = CHARACTERS.find((c) => c.id === command.characterId);
+  if (!character) throw new Error(`Nieznana postać: ${command.characterId}`);
+
+  // Named, not counted: "ta postać jest zajęta" sends somebody back to a strip
+  // of 27 to work out which one they meant.
+  const rival = snapshot.seats.find(
+    (other) => other.id !== seat.id && other.character_id === character.id,
+  );
+  if (rival) throw new Error(`${character.name} jest już wybrana przez kogoś innego.`);
+
+  return {
+    writes: {
+      seats: [
+        {
+          id: seat.id,
+          // Swapping character un-readies you. Otherwise a player who said they
+          // were ready and then changed their mind is still counted, and the
+          // host starts a game somebody was still deciding about.
+          patch: { ...printedOn(character), ready: false },
+        },
+      ],
+    },
+    result: undefined,
+  };
+}
+
+export interface DealCharacters {
+  /**
+   * Which seats the deal fills, which is the whole of the difference between
+   * the rulebook's setup and the moment the game starts.
+   *
+   * `unchosen` is 0.1 in the poczekalnia: everybody who has not got a card gets
+   * one. `surprises` is the start of the game, and fills *only* the seats
+   * holding the sentinel — a seat that never picked anything has not agreed to
+   * play, and dealing it a character at the moment somebody presses start would
+   * put a stranger in the game.
+   */
+  to: "unchosen" | "surprises";
+}
+
+/**
+ * Shuffles the Karty Postaci and deals one out, which is what the rulebook
+ * actually says to do:
+ *
+ * > Przed rozpoczęciem rozgrywki należy potasować Karty Postaci, a następnie
+ * > rozłożyć losowo, po jednej przed każdym z graczy. Jeżeli zgodzą się na to
+ * > wszyscy uczestnicy, można zrezygnować z losowego podziału […]
+ *
+ * Free choice (0.2) is the variant, agreed to by everybody; the random deal
+ * (0.1) is the default, and the app had only ever offered the variant.
+ *
+ * **One command with a parameter, not two.** These were two functions —
+ * `dealCharacters` and `resolveRandomPicks` — over one private helper, because
+ * each had to be its own little script of reads and writes. As a command
+ * there is nothing left to differ about: the same pool of unheld cards, the
+ * same draw, the same seven columns per seat, one changeset. Splitting them
+ * again would put the pool rule ("never a card somebody is holding") in two
+ * places, which is the one thing here that must never be written twice. What is
+ * genuinely different is *which seats are dealt to and why*, and a named
+ * parameter says that out loud at the call site, where the reason for it is.
+ *
+ * `ready` is deliberately absent from the patch. The old deal called
+ * `chooseCharacter`, which un-readies a seat because changing your mind about a
+ * character should — and then had to put the flag back, because being dealt the
+ * card you asked to be surprised by is not changing your mind, and un-readying
+ * here would make the start button refuse the very table that just pressed it.
+ * Building the patch directly means there is nothing to put back: what the deal
+ * does not write, it does not disturb.
+ */
+export async function dealCharacters(
+  snapshot: Snapshot,
+  command: DealCharacters,
+  ports: CommandPorts,
+): Promise<Outcome<void>> {
+  const toFill = snapshot.seats.filter(
+    (seat) =>
+      // A player who walked away is not dealt in. The seat stays, because the
+      // journal refers to it and the host may yet give it to somebody; handing
+      // it a Karta Postaci would seat a character nobody is behind.
+      !seat.abandoned_at &&
+      (command.to === "surprises" ? isRandomPick(seat.character_id) : !seat.character_id),
+  );
+  if (toFill.length === 0) return { writes: {}, result: undefined };
+
+  // The sentinel is not a character and cannot be "taken" — several seats may
+  // be holding it, and none of them is holding a card. `asCharacterId` is the
+  // whole filter: it answers null both for "nothing chosen" and for "the
+  // surprise", which are exactly the two that hold no card.
+  const taken = new Set(
+    snapshot.seats.map((seat) => asCharacterId(seat.character_id)).filter((id) => id !== null),
+  );
+  const pool = CHARACTERS.filter((character) => !taken.has(character.id));
+
+  /**
+   * Dealt off the top one at a time rather than shuffled and then dealt.
+   *
+   * The old version ran Fisher–Yates over all 27 cards with `randomInt` from
+   * `node:crypto` and took the first few — a second source of randomness inside
+   * something whose whole contract is that it has exactly one, and one a
+   * retried commit could not reproduce (see `replayable`). Drawing each seat's
+   * card out of what is left is the same deal by another name, on the only die
+   * the game has, and costs six picks rather than twenty-six.
+   */
+  const seats: SeatPatch[] = [];
+  for (const seat of toFill) {
+    // 27 cards against at most 6 seats, so unreachable — but not assumed.
+    if (pool.length === 0) break;
+    const drawn = await pickBelow(ports.random, pool.length, "rozdanie Postaci");
+    const [character] = pool.splice(drawn, 1);
+    seats.push({ id: seat.id, patch: printedOn(character) });
+  }
+
+  return { writes: { seats }, result: undefined };
 }

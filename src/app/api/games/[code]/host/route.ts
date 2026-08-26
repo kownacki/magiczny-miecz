@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { bumpRevision, claimTableScreen, findGame, verifySeat } from "@/lib/game/store";
+import { findGame, verifySeat } from "@/lib/game/store";
+import { claimTableScreen } from "@/lib/game/lobbyStore";
 
 /**
  * Hands the host role over.
@@ -19,10 +20,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
   const target = typeof body.seatId === "string" ? body.seatId : seat.id;
   try {
-    await claimTableScreen(game.id, target, seat);
+    await claimTableScreen(game.id, target, seat.id);
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 403 });
   }
-  await bumpRevision(game.id);
   return NextResponse.json({ ok: true });
 }

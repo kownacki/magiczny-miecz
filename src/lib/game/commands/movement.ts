@@ -56,13 +56,14 @@ export interface StartGame {
 /**
  * Opens the table (3.2, 9.5).
  *
- * Two things happen before this and cannot happen inside it. `resolveRandomPicks`
- * turns every "surprise me" into a real Karta Postaci, which is a shuffle of the
- * character cards and a write per seat, so it stays at the edge and the snapshot
- * is read *after* it — a seat still holding the sentinel here would be dealt no
- * kit at all. And the Zaklęcia of 9.5 are drawn afterwards: a spell draw checks
- * 2.6's capacity, takes a card off the pile and can reshuffle it, all of which
- * lives in the store's `drawSpell` and would have to be copied to be done here.
+ * Two things happen before this and cannot happen inside it.
+ * `dealCharacters({ to: "surprises" })` turns every "surprise me" into a real
+ * Karta Postaci, and takes its own commit so that the snapshot read here is one
+ * where everybody is holding a card — a seat still holding the sentinel would
+ * be dealt no kit at all. And the Zaklęcia of 9.5 are drawn afterwards: a spell
+ * draw checks 2.6's capacity, takes a card off the pile and can reshuffle it,
+ * all of which lives in the store's `drawSpell` and would have to be copied to
+ * be done here.
  * So this reports who is owed how many and lets the caller draw them, which is
  * also what puts them in the same journal they have always been in.
  *

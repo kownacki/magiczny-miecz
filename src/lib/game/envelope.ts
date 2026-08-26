@@ -6,7 +6,7 @@ import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
 import { seatView } from "./commands/seat";
 import type { Snapshot } from "./change";
-import { AWAY_AFTER_MS } from "./store";
+import { AWAY_AFTER_MS } from "./commands/lobby";
 
 /**
  * The read model, and the counterpart to `Changeset`.

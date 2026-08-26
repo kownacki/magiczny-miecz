@@ -1,23 +1,12 @@
 /** Every database read and write for a game, so route handlers never touch Supabase directly. */
 
-import { randomInt } from "node:crypto";
 import type { EqMode } from "@/lib/engine/slots";
 import { db } from "@/lib/supabase";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import { MAX_SEATS, type GameMode } from "./modes";
-import characters from "@/data/characters.json";
-import type { Character } from "@/data/types";
-import {
-  RANDOM_CHARACTER_ID,
-  asCharacterId,
-  asSeatCharacter,
-  isRandomPick,
-  type SeatCharacter,
-} from "@/lib/engine/characters";
-import { asFieldId, fieldByName, type FieldId } from "@/lib/engine/board";
+import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
+import { asFieldId, type FieldId } from "@/lib/engine/board";
 import { Failure } from "./failure";
-
-export const CHARACTERS = characters as Character[];
 
 export interface SeatRow {
   id: string;
@@ -143,84 +132,34 @@ export async function createGame(
   throw new Error("createGame: could not find a free join code");
 }
 
-export interface GameSummary {
-  joinCode: string;
-  status: string;
-  mode: string;
-  turn: number;
-  lastPlayedAt: string;
-  createdAt: string;
-  players: { name: string | null; characterId: string | null; abandoned: boolean }[];
-}
-
 /**
- * The tables that exist, most recently played first.
+ * The games worth listing, most recently played first.
  *
- * A game of this length is not finished in one sitting — the box is a two-hour
- * game and it takes longer — so "which table were we on?" is a real question,
- * and until now the only answer was a five-character code somebody had to have
- * written down.
- *
- * Everything here is already public to anyone holding the code, and this is a
- * private, unpublished app on a table people are sitting at together.
+ * A raw read, and the whole of what the database knows about the question.
+ * Which of these tables is still worth advertising, and which one everybody has
+ * closed their tab on, is a rule — it lives in `lobbyStore.ts` with the rest of
+ * the poczekalnia.
  */
-export async function listGames(limit = 20): Promise<GameSummary[]> {
+export async function recentGames(limit: number): Promise<Record<string, unknown>[]> {
   const { data, error } = await db
     .from("games")
     .select("id,join_code,status,mode,turn,last_played_at,created_at")
     .order("last_played_at", { ascending: false })
     .limit(limit);
-  if (error) throw new Failure(`listGames: ${error.message}`);
+  if (error) throw new Failure(`recentGames: ${error.message}`);
+  return (data ?? []) as Record<string, unknown>[];
+}
 
-  // A poczekalnia everybody closed their tab on has nobody polling it, so it
-  // never hears that it is empty. This is the other place anybody looks, and
-  // the list is precisely where an abandoned table does its damage: it reads as
-  // a game you could join.
-  const swept = new Set<string>();
-  for (const game of data ?? []) {
-    if (await sweepLobby(game.id as string, game.status as string)) {
-      swept.add(game.id as string);
-    }
-  }
-
-  const games = (data ?? []).filter((game) => !swept.has(game.id as string));
-  if (games.length === 0) return [];
-
-  const { data: seats } = await db
+/** Who is sitting at each of several tables, in one query rather than one each. */
+export async function seatsInGames(gameIds: readonly string[]): Promise<Record<string, unknown>[]> {
+  if (gameIds.length === 0) return [];
+  const { data, error } = await db
     .from("seats")
-    .select("game_id,seat_index,player_name,character_id,abandoned_at,seen_at,no_device")
-    .in("game_id", games.map((game) => game.id))
+    .select("game_id,seat_index,player_name,character_id,abandoned_at,seen_at,no_device,is_host")
+    .in("game_id", gameIds)
     .order("seat_index");
-
-  // A poczekalnia everybody has walked away from stops being advertised well
-  // before it is deleted. It has minutes left on the clock and is still listed
-  // as somewhere you could go and play, which is the one thing it is not; and
-  // deleting it the moment it looks quiet would take the table away from
-  // somebody whose laptop had merely gone to sleep. So: unlisted first, removed
-  // later.
-  const listed = games.filter((game) => {
-    if (game.status !== "lobby") return true;
-    const here = (seats ?? []).filter((seat) => seat.game_id === game.id);
-    return here.some(
-      (seat) => seat.no_device || !isQuiet({ seen_at: seat.seen_at as string | null }, HOST_MISSING_AFTER_MS),
-    );
-  });
-
-  return listed.map((game) => ({
-    joinCode: game.join_code as string,
-    status: game.status as string,
-    mode: game.mode as string,
-    turn: game.turn as number,
-    lastPlayedAt: game.last_played_at as string,
-    createdAt: game.created_at as string,
-    players: (seats ?? [])
-      .filter((seat) => seat.game_id === game.id)
-      .map((seat) => ({
-        name: seat.player_name as string | null,
-        characterId: seat.character_id as string | null,
-        abandoned: seat.abandoned_at !== null,
-      })),
-  }));
+  if (error) throw new Failure(`seatsInGames: ${error.message}`);
+  return (data ?? []) as Record<string, unknown>[];
 }
 
 export async function findGame(joinCode: string): Promise<GameRow | null> {
@@ -324,211 +263,6 @@ export async function joinGame(
   throw new Error("Nie udało się usiąść — spróbujcie jeszcze raz.");
 }
 
-/**
- * Assigns a character and sets the seat's opening values.
- *
- * The starting Miecz and Magia become both the current value and the floor,
- * because rules 1.3 and 2.3 forbid a character ever dropping below what it
- * began with. Życie starts at 4 (4.2) and Złoto at 1 (3.2) unless the card says
- * otherwise, and those are already the column defaults.
- */
-/**
- * Gives a seat its character.
- *
- * No two seats may hold the same one. The box has 27 Karty Postaci and one
- * plastic figure per card, and setup deals *one* to each player — there is no
- * second Kapłanka to hand out. The UI greys taken characters out; this is the
- * rule itself, since two devices can reach for the same one in the same second
- * and only the server sees both.
- */
-export async function chooseCharacter(
-  gameId: string,
-  seatId: string,
-  characterId: string,
-): Promise<void> {
-  // "Surprise me" is a choice, and several people can make it — there is only
-  // one Kapłanka but no limit on wanting whatever comes. Nothing else is
-  // decided now: the stats, the starting field and the kit all wait for
-  // `resolveRandomPicks` at the start of the game, which is the point.
-  if (isRandomPick(characterId)) {
-    const { error } = await db
-      .from("seats")
-      .update({
-        character_id: RANDOM_CHARACTER_ID,
-        ready: false,
-        // Cleared, in case this seat is changing its mind out of a real
-        // character. Leaving a Książę's five gold on a seat that is now taking
-        // a surprise would hand it to whoever the surprise turns out to be.
-        field_id: null,
-        sword_own: 0,
-        magic_own: 0,
-        sword_floor: 0,
-        magic_floor: 0,
-        nature: null,
-      })
-      .eq("id", seatId);
-    if (error) throw new Failure(`chooseCharacter: ${error.message}`);
-    return;
-  }
-
-  const character = CHARACTERS.find((c) => c.id === characterId);
-  if (!character) throw new Error(`Nieznana postać: ${characterId}`);
-
-  const { data: rivals } = await db
-    .from("seats")
-    .select("id,character_id")
-    .eq("game_id", gameId)
-    .eq("character_id", characterId);
-  if ((rivals ?? []).some((seat) => seat.id !== seatId)) {
-    throw new Error(`${character.name} jest już wybrana przez kogoś innego.`);
-  }
-
-  // Swapping character un-readies you. Otherwise a player who said they were
-  // ready and then changed their mind is still counted, and the host starts a
-  // game somebody was still deciding about.
-  await db.from("seats").update({ ready: false }).eq("id", seatId);
-
-  const field = startingFieldId(character.start);
-  const { error } = await db
-    .from("seats")
-    .update({
-      character_id: character.id,
-      field_id: field,
-      sword_own: character.miecz,
-      magic_own: character.magia,
-      sword_floor: character.miecz,
-      magic_floor: character.magia,
-      // Kat prints "any" and picks at setup, so it is left unset here for
-      // the player to choose rather than being silently defaulted.
-      nature: character.nature === "any" ? null : character.nature,
-    })
-    .eq("id", seatId);
-  if (error) throw new Failure(`chooseCharacter: ${error.message}`);
-}
-
-/**
- * Shuffles the Karty Postaci and deals one to each seat — which is what the
- * rulebook actually says to do:
- *
- * > Przed rozpoczęciem rozgrywki należy potasować Karty Postaci, a następnie
- * > rozłożyć losowo, po jednej przed każdym z graczy. Jeżeli zgodzą się na to
- * > wszyscy uczestnicy, można zrezygnować z losowego podziału […]
- *
- * Free choice is the variant, agreed to by everybody; the random deal is the
- * default, and the app had only ever offered the variant. Seats that already
- * hold a character keep it, so this fills the table in rather than overturning
- * choices people have made.
- */
-export async function dealCharacters(gameId: string): Promise<void> {
-  const seats = await seatsFor(gameId);
-  await dealTo(
-    gameId,
-    seats,
-    seats.filter((seat) => !seat.character_id && !seat.abandoned_at),
-  );
-}
-
-/**
- * Turns every "surprise me" into a real Karta Postaci.
- *
- * Called at the start of the game and nowhere else, which is what makes the
- * pick a surprise: the seat holds the sentinel for the whole poczekalnia, so
- * nobody — including the player — can see what is coming until the game is
- * running.
- *
- * Deliberately not `dealCharacters`. That one also fills seats that chose
- * nothing at all, and a seat that never picked has not agreed to play; dealing
- * it a character at the moment somebody presses start would put a stranger in
- * the game.
- */
-export async function resolveRandomPicks(gameId: string): Promise<void> {
-  const seats = await seatsFor(gameId);
-  await dealTo(
-    gameId,
-    seats,
-    seats.filter((seat) => isRandomPick(seat.character_id) && !seat.abandoned_at),
-  );
-}
-
-/** Deals a distinct character to each of `toFill`, avoiding everything held. */
-async function dealTo(
-  gameId: string,
-  seats: readonly SeatRow[],
-  toFill: readonly SeatRow[],
-): Promise<void> {
-  if (toFill.length === 0) return;
-
-  // The sentinel is not a character and cannot be "taken" — several seats may
-  // be holding it, and none of them is holding a card.
-  // `asCharacterId` is the whole filter: it answers null for both "nothing
-  // chosen" and "the surprise", which are exactly the two that hold no card.
-  const taken = new Set(
-    seats.map((seat) => asCharacterId(seat.character_id)).filter((id) => id !== null),
-  );
-  const pool = CHARACTERS.filter((character) => !taken.has(character.id));
-  // Fisher–Yates with a real CSPRNG. Nobody is attacking a character deal, but
-  // the one already in the file is correct and `Math.random` is not.
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1);
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-
-  for (const [index, seat] of toFill.entries()) {
-    const character = pool[index];
-    if (!character) break; // 27 cards, 6 seats — unreachable, but not assumed
-    await chooseCharacter(gameId, seat.id, character.id);
-    // `chooseCharacter` un-readies, because changing your mind about a
-    // character should. Being dealt the one you asked to be surprised by is not
-    // changing your mind, and un-readying here would make the start button
-    // refuse the very table that just pressed it.
-    if (seat.ready) await db.from("seats").update({ ready: true }).eq("id", seat.id);
-  }
-}
-
-/**
- * The field a character's MGR names.
- *
- * Matched on the printed name rather than slugified into an id, because eight
- * names on this board belong to two fields each — there are two Steps and two
- * Mokradła in the Dolny Krąg alone, so their ids are `step-1`/`step-2` and no
- * amount of slugifying "Step" will ever produce one of them. Six characters
- * were slugified onto fields that do not exist and started the game standing
- * nowhere: no dot on the map, no directions to move in, the turn dead on
- * arrival. Goblin, Hobgoblin, Karzeł, Magog, Obbol and Olbrzym.
- *
- * Where a name is ambiguous this takes the first in board order, which is
- * always the Dolny Krąg one — the ring every character starts in. Which of the
- * two identical fields a figure actually stands on is the players' to say, and
- * the position override is there for a table that wants the other one; what
- * matters here is that it is a real field.
- *
- * Throws rather than guessing. A character whose MGR is not on the board is a
- * data error, and it is better to refuse the pick than to seat somebody in a
- * place that does not exist — which is precisely the failure this replaces.
- */
-function startingFieldId(name: string): string {
-  const field = fieldByName(name);
-  if (!field) throw new Error(`Karta Postaci wskazuje Obszar, którego nie ma na planszy: ${name}`);
-  return field.id;
-}
-
-/**
- * Says whether a player is ready to start (docs/LOBBY.md).
- *
- * Only ever your own seat: readiness is a statement about yourself, and a host
- * who could mark everyone ready would have a start button with extra steps.
- */
-export async function setReady(seatId: string, ready: boolean): Promise<void> {
-  const { error } = await db.from("seats").update({ ready }).eq("id", seatId);
-  if (error) throw new Failure(`setReady: ${error.message}`);
-}
-
-/** Changes the name shown for a seat. Only ever your own. */
-export async function renameSeat(seatId: string, name: string | null): Promise<void> {
-  const { error } = await db.from("seats").update({ player_name: name }).eq("id", seatId);
-  if (error) throw new Failure(`renameSeat: ${error.message}`);
-}
-
 export async function verifySeat(gameId: string, token: string): Promise<SeatRow | null> {
   const { data, error } = await db
     .from("seats")
@@ -599,185 +333,6 @@ export async function fieldCardsFor(gameId: string): Promise<FieldCardRow[]> {
   return (data ?? []) as FieldCardRow[];
 }
 
-export interface LeaveResult {
-  removed: boolean;
-  /** Set when the leaver was the active player and the turn had to move on. */
-  passedTo: number | null;
-  gameFinished: boolean;
-}
-
-/**
- * Gives up a seat.
- *
- * Before the game starts the seat is deleted outright — nothing references it
- * and someone who joined the wrong table should leave no trace. Once play has
- * begun it is retired instead, by marking it eliminated: the journal holds
- * `seat_id` references to everything that seat did, and deleting the row would
- * cascade those away and take the game's history with them.
- *
- * Seat indexes are deliberately not compacted. `nextSeat` walks the seat array
- * rather than counting indexes, so a gap is harmless, whereas renumbering would
- * silently change who `active_seat` points at.
- */
-export async function leaveGame(
-  gameId: string,
-  seat: SeatRow,
-  status: string,
-  activeSeat: number | null,
-): Promise<LeaveResult> {
-  // Before the game starts a seat is just an intention, so leaving deletes it.
-  if (status === "lobby") {
-    const { error } = await db.from("seats").delete().eq("id", seat.id);
-    if (error) throw new Failure(`leaveGame: ${error.message}`);
-    await promoteHostIfNeeded(gameId, seat);
-    return { removed: true, passedTo: null, gameFinished: false };
-  }
-
-  // Once play has begun it is not. A player walking away is not a character
-  // dying: the figure stays on its Obszar with its points, its Przedmioty and
-  // its Przyjaciele, because other players may already have acted on all of
-  // them and 4.4's death is a different event with different consequences.
-  //
-  // What is released is the *claim*. The token is rotated so the departing
-  // device cannot act as this seat any more, and the seat is marked as having
-  // nobody behind it — free for somebody to take over, and shown as such.
-  const { error } = await db
-    .from("seats")
-    .update({ abandoned_at: new Date().toISOString(), claim_token: makeClaimToken() })
-    .eq("id", seat.id);
-  if (error) throw new Failure(`leaveGame: ${error.message}`);
-  await promoteHostIfNeeded(gameId, seat);
-
-  // Play does not stop for an empty chair, but it must not wait on one either:
-  // if it was their turn, it moves on.
-  if (activeSeat !== seat.seat_index) {
-    return { removed: false, passedTo: null, gameFinished: false };
-  }
-  const others = (await seatsFor(gameId)).filter(
-    (other) => other.character_id && !other.eliminated && other.id !== seat.id,
-  );
-  if (others.length === 0) {
-    return { removed: false, passedTo: null, gameFinished: false };
-  }
-  const next = others.find((other) => other.seat_index > seat.seat_index) ?? others[0];
-  await db
-    .from("games")
-    .update({ active_seat: next.seat_index, turn_state: { phase: "roll" } })
-    .eq("id", gameId);
-  return { removed: false, passedTo: next.seat_index, gameFinished: false };
-}
-
-/**
- * Picks up a seat nobody is behind.
- *
- * The counterpart to leaving: a fresh token is issued for that seat and handed
- * to the device asking, which then plays that character exactly as its previous
- * player did. This is also how somebody rejoins after closing the tab, which is
- * the commonest way a seat is abandoned in the first place.
- */
-export async function claimSeat(
-  gameId: string,
-  seatId: string,
-  /** A new player's name; null keeps whoever the table already knows this seat as. */
-  playerName: string | null = null,
-): Promise<string> {
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nie ma takiego miejsca.");
-  // Either nobody is behind it, or nobody has been for long enough that the
-  // difference stopped mattering. A player who closed their tab never said
-  // they were leaving, so the seat is only quiet — and refusing it would strand
-  // the character for the rest of the evening. The people in the room settle
-  // who picks it up; the server only refuses a seat somebody is actively using.
-  if (seat.no_device) {
-    throw new Error("Tym miejscem kieruje gospodarz przy wspólnym ekranie.");
-  }
-  if (!seat.abandoned_at && !isQuiet(seat)) {
-    throw new Error("To miejsce ma już swojego gracza.");
-  }
-
-  const token = makeClaimToken();
-  const { error } = await db
-    .from("seats")
-    .update({
-      abandoned_at: null,
-      claim_token: token,
-      // Left alone when nobody supplied one, because the commonest takeover by
-      // far is the same person on a new tab, and renaming them to nothing —
-      // or making them retype it — would be the app being obtuse.
-      ...(playerName ? { player_name: playerName } : {}),
-    })
-    .eq("id", seatId);
-  if (error) throw new Failure(`claimSeat: ${error.message}`);
-  return token;
-}
-
-/**
- * Moves the table-screen role to a seat.
- *
- * At a physical table the shared device changes hands — someone's laptop goes
- * flat, or the person who opened the table is not the one sitting in front of
- * it. Any seated player may claim it, which is the right trust model here:
- * they are all in the same room, and in companion mode the app holds nothing
- * the others cannot already see.
- *
- * It also recovers a table whose host seat became unreachable, which is easy to
- * do by joining twice from one browser and overwriting the stored token.
- */
-/**
- * Takes a seat out of the table before the game starts.
- *
- * Only in the lobby, and only by someone already seated. Once play has begun a
- * character cannot simply be deleted — its Przedmioty and Przyjaciele are on
- * the board and other players may have acted on them — so leaving mid-game is
- * `leaveGame`, which eliminates rather than erases (4.4).
- *
- * Removing yourself is allowed and behaves exactly the same; a lobby where the
- * host cannot drop out is worse than one where anybody can tidy up.
- */
-export async function removeSeat(
-  gameId: string,
-  seatId: string,
-  status: string,
-  by: SeatRow,
-): Promise<void> {
-  // Removing somebody else is the host's job. Removing yourself is not — that
-  // is just leaving, and nobody should need permission for it.
-  if (!by.is_host && by.id !== seatId) {
-    throw new Error("Tylko gospodarz może usuwać graczy.");
-  }
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nie ma takiego miejsca.");
-
-  // Mid-game the character goes with the player, and the seat is free for
-  // somebody new. What it was carrying does not vanish with it: the Przedmioty,
-  // Przyjaciele and gold are left face up on its Obszar, where 12.1 lets the
-  // next character to stop there pick them up. Deleting the row would take them
-  // out of the game silently, and the board would be quietly poorer for it.
-  if (status === "playing" && seat.field_id) {
-    const held = await holdingsFor(gameId);
-    const mine = held.filter((holding) => holding.seat_id === seatId);
-    const dropped = [
-      ...mine.filter((holding) => holding.kind !== "spell").map((holding) => holding.card_id),
-      ...Array.from({ length: seat.gold }, () => "1-sztuka-zlota"),
-    ];
-    if (dropped.length > 0) {
-      await db.from("field_cards").insert(
-        dropped.map((cardId) => ({
-          game_id: gameId,
-          field_id: seat.field_id,
-          card_id: cardId,
-        })),
-      );
-    }
-  }
-
-  const { error } = await db.from("seats").delete().eq("id", seatId);
-  if (error) throw new Failure(`removeSeat: ${error.message}`);
-  await promoteHostIfNeeded(gameId, seat);
-}
-
 /**
  * Removes a table and everything on it.
  *
@@ -795,151 +350,6 @@ export async function deleteGame(gameId: string): Promise<void> {
   if (error) throw new Failure(`deleteGame: ${error.message}`);
 }
 
-/**
- * Hands the host role to a seat.
- *
- * Two ways in, and only two. The host may give it away deliberately, and any
- * player may take it when the host's own seat has been abandoned — without that
- * second door, a table whose host closed their laptop can never be configured
- * or started again, which is the whole reason host migration exists.
- *
- * Taking it from a host who is present is not a door. There is no co-host.
- */
-export async function claimTableScreen(
-  gameId: string,
-  seatId: string,
-  by: SeatRow,
-): Promise<void> {
-  const seats = await seatsFor(gameId);
-  const host = seats.find((seat) => seat.is_host);
-
-  if (host && host.id !== by.id && !host.abandoned_at) {
-    throw new Error("Rolę gospodarza może przekazać tylko obecny gospodarz.");
-  }
-  const target = seats.find((seat) => seat.id === seatId);
-  if (!target) throw new Error("Nie ma takiego miejsca.");
-  if (target.abandoned_at) throw new Error("To miejsce nie ma gracza.");
-
-  for (const seat of seats) {
-    if (seat.is_host && seat.id !== seatId) {
-      await db.from("seats").update({ is_host: false }).eq("id", seat.id);
-    }
-  }
-  const { error } = await db.from("seats").update({ is_host: true }).eq("id", seatId);
-  if (error) throw new Failure(`claimTableScreen: ${error.message}`);
-}
-
-/**
- * How long a seat may go unheard-from before it is shown as away.
- *
- * The browser polls every two seconds, so this is generous: a tab in the
- * background, a phone that slept, or a slow network should not make somebody
- * look like they have left the table.
- */
-export const AWAY_AFTER_MS = 45_000;
-
-/**
- * A seat that checked in once and then stopped.
- *
- * A seat that has *never* checked in is not quiet — it is either brand new or a
- * player the host seated by hand, and neither is free for the taking.
- */
-export function isQuiet(seat: Pick<SeatRow, "seen_at">, after = AWAY_AFTER_MS): boolean {
-  if (!seat.seen_at) return false;
-  return Date.now() - new Date(seat.seen_at).getTime() > after;
-}
-
-/**
- * How long a seat in the poczekalnia may go unheard-from before it is taken off
- * the table.
- *
- * Much longer than `AWAY_AFTER_MS`, because a hidden tab is not a closed one.
- * Browsers throttle timers in background tabs to roughly once a minute, so
- * somebody who switched away to read something else is still checking in —
- * just slowly. Anything under two minutes evicts them for looking away.
- */
-export const LOBBY_GONE_AFTER_MS = 150_000;
-
-/**
- * How long the host may go unheard-from before the role moves on.
- *
- * Deliberately shorter than `LOBBY_GONE_AFTER_MS`. The two thresholds answer
- * different questions — "can this table still be administered?" and "is this
- * person still here?" — and the first has to be answered first. If the host
- * only lost the role at the moment their seat was deleted, then between the
- * host going quiet and the sweep catching it the table would have nobody able
- * to start it, and a table full of people who cannot start is worse than a
- * table with an absent host.
- *
- * The seat stays where it is. This moves the role, nothing else, so a host who
- * comes back is still at the table — just not running it any more.
- */
-export const HOST_MISSING_AFTER_MS = 60_000;
-
-/**
- * Clears out a poczekalnia that people have closed their tabs on.
- *
- * Before the game starts a seat is an intention, not a character: nothing has
- * happened to it, nobody has acted on anything it owns, and a table showing
- * four names when one person is present is worse than a table showing one. So
- * a seat nobody has been heard from is deleted outright rather than marked —
- * which is what leaving does too (see `leaveGame`), and closing the tab is the
- * same act without the click.
- *
- * The host role moves on the same rule it always does: to whoever has been at
- * the table longest of those remaining. And when the last seat goes the table
- * goes with it, because an empty poczekalnia is not a game anybody can join —
- * it is a code taking up space in the list.
- *
- * Returns true when the game itself was removed.
- */
-export async function sweepLobby(gameId: string, status: string): Promise<boolean> {
-  if (status !== "lobby") return false;
-
-  const seats = await seatsFor(gameId);
-  // A seat the host filled in by hand has no device and never checks in; it is
-  // driven from the shared screen, and sweeping it would delete players sitting
-  // at the table.
-  const own = seats.filter((seat) => !seat.no_device);
-
-  // Two ways to be gone: the page said so and did not come back inside the
-  // grace, or nothing has been heard for long enough that it does not matter
-  // what it would have said.
-  const gone = own.filter(
-    (seat) =>
-      (seat.left_at !== null && Date.now() - Date.parse(seat.left_at) > GOODBYE_GRACE_MS) ||
-      isQuiet(seat, LOBBY_GONE_AFTER_MS),
-  );
-
-  // The role moves before anybody is removed, and on its own timer. A host who
-  // is merely quiet keeps their seat and loses the role.
-  const host = own.find((seat) => seat.is_host);
-  if (host && !gone.includes(host) && isQuiet(host, HOST_MISSING_AFTER_MS)) {
-    await promoteHostIfNeeded(gameId, host);
-  }
-
-  if (gone.length === 0) return false;
-
-  const { error } = await db
-    .from("seats")
-    .delete()
-    .in("id", gone.map((seat) => seat.id));
-  if (error) throw new Failure(`sweepLobby: ${error.message}`);
-
-  // Nobody left who could do anything. Seats the host filled in by hand have no
-  // device of their own, so a table holding only those is a table with nobody
-  // able to choose a character or start it — an empty room with figures set
-  // out, not a game waiting for anybody.
-  const left = seats.filter((seat) => !gone.includes(seat));
-  if (left.every((seat) => seat.no_device)) {
-    await deleteGame(gameId);
-    return true;
-  }
-  for (const seat of gone) await promoteHostIfNeeded(gameId, seat);
-  await bumpRevision(gameId);
-  return false;
-}
-
 /** Records that this seat's device is still there. */
 export async function markSeen(seatId: string): Promise<void> {
   // Also cancels a goodbye. A page that said it was going away and then asked
@@ -950,17 +360,6 @@ export async function markSeen(seatId: string): Promise<void> {
     .update({ seen_at: new Date().toISOString(), left_at: null })
     .eq("id", seatId);
 }
-
-/**
- * How long a seat is held after its page said it was going away.
- *
- * A page fires `pagehide` when the tab closes and when it reloads, and those
- * are indistinguishable from the outside — so this is not a removal, it is a
- * countdown that reloading cancels. Long enough for a slow reload to land,
- * short enough that a closed tab frees the place while people are still
- * looking at the screen.
- */
-export const GOODBYE_GRACE_MS = 10_000;
 
 /**
  * A device saying its page is about to go away.
@@ -975,54 +374,43 @@ export async function sayGoodbye(seatId: string): Promise<void> {
 }
 
 /**
- * Keeps a table hosted. The host flag only decides who sees the lobby controls,
- * but a table whose host walked away with it would strand everyone else.
- */
-async function promoteHostIfNeeded(gameId: string, leaving: SeatRow): Promise<void> {
-  if (!leaving.is_host) return;
-  // Whoever has been at the table longest of those left takes over — a stable,
-  // explicable rule, which matters because nobody chose it in the moment.
-  //
-  // By `created_at` and not by `seat_index`: places freed in the middle are
-  // filled by the next person to arrive, so a low index now means "sat in a
-  // gap", not "got here first". Ties break on index, which is the old rule and
-  // is what every seat that predates the column will do.
-  //
-  // Somebody who has themselves walked away is skipped; handing the role to an
-  // empty chair is how a table ends up unstartable.
-  const candidate = (await seatsFor(gameId))
-    .filter((seat) => seat.id !== leaving.id && !seat.eliminated && !seat.abandoned_at)
-    .sort(
-      (a, b) =>
-        Date.parse(a.created_at) - Date.parse(b.created_at) || a.seat_index - b.seat_index,
-    )[0];
-  if (!candidate) return;
-
-  await db.from("seats").update({ is_host: true }).eq("id", candidate.id);
-  // Hand the flag over rather than copying it. A retired seat keeps its row so
-  // the journal's references survive, and leaving it marked host would leave
-  // the table with two — the outgoing one being a seat nobody is sitting in.
-  await db.from("seats").update({ is_host: false }).eq("id", leaving.id);
-}
-
-/**
- * Bumps the revision counter. Clients hold the last value they rendered and
- * refetch when they see a higher one, which is why every mutation must call
- * this — a change that does not bump is a change nobody else sees.
+ * Says the table changed, for the one change that is not a Command.
+ *
+ * Clients hold the last revision they rendered and refetch when they see a
+ * higher one. Everything that writes a game goes through `commit`, which claims
+ * the next revision in the same statement that wins the right to write at all —
+ * every mutation except one. `joinGame` inserts a seat row and hands its token
+ * back to the device that asked, and a `Changeset` can do neither: it has no
+ * seat insert, deliberately, and nothing in it comes back.
+ *
+ * So this is the last read-modify-write in the app, and it does the same
+ * compare-and-swap `commit` does rather than the bare read-then-write it used
+ * to. Two people joining a table in the same second both read revision 5 and
+ * both wrote 6, and the table advanced once for two changes — so a device that
+ * had already seen 6 never asked again, and sat there missing a player.
  */
 export async function bumpRevision(gameId: string): Promise<number> {
-  const { data, error } = await db
-    .from("games")
-    .select("revision")
-    .eq("id", gameId)
-    .single();
-  if (error) throw new Failure(`bumpRevision: ${error.message}`);
-  const next = (data.revision as number) + 1;
-  // Every change is a moment the table was being played, which is what a list
-  // of games needs to sort by — not when it was opened.
-  await db
-    .from("games")
-    .update({ revision: next, last_played_at: new Date().toISOString() })
-    .eq("id", gameId);
-  return next;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data, error } = await db
+      .from("games")
+      .select("revision")
+      .eq("id", gameId)
+      .single();
+    if (error) throw new Failure(`bumpRevision: ${error.message}`);
+    const base = data.revision as number;
+    const { data: won, error: raceError } = await db
+      .from("games")
+      .update({
+        revision: base + 1,
+        // Every change is a moment the table was being played, which is what a
+        // list of games needs to sort by — not when it was opened.
+        last_played_at: new Date().toISOString(),
+      })
+      .eq("id", gameId)
+      .eq("revision", base)
+      .select("revision");
+    if (raceError) throw new Failure(`bumpRevision: ${raceError.message}`);
+    if (won && won.length > 0) return base + 1;
+  }
+  throw new Failure("bumpRevision: przegrana z każdą próbą");
 }

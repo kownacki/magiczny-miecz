@@ -72,8 +72,12 @@ anything.
   back — above all `game.deck` through `putOnPile` — must chain through
   `apply(snapshot, soFar)`; and a command is a pure function of its snapshot and
   its ports, which is the only reason every one of them has tests and none of
-  them needs a database. `src/lib/game/store.ts` is the last of the old pattern,
-  to be converted rather than copied.
+  them needs a database. `store.ts` is now rows and reads only, and the two
+  files above it — `turnStore.ts` for the game, `lobbyStore.ts` for the
+  poczekalnia — are the thin edges that mint the tokens, hand in the shuffles
+  and run the commands. The one read-modify-write left in the app is
+  `bumpRevision`, for `joinGame`, which inserts a seat row and hands its token
+  back: a `Changeset` can do neither.
 - **Randomness is a port, not a branch.** `RandomPort` is bound to a human
   typing what they rolled, to an RNG, or to `scriptedRandom` in a test, and
   rules code must never learn which. It is the only port left: `DeckPort` and

@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
 import {
-  AWAY_AFTER_MS,
   deleteGame,
   fieldCardsFor,
   findGame,
   holdingsFor,
   markSeen,
   seatsFor,
-  sweepLobby,
   verifySeat,
 } from "@/lib/game/store";
+import { AWAY_AFTER_MS } from "@/lib/game/commands/lobby";
+import { sweepLobby } from "@/lib/game/lobbyStore";
 import { envelopeFor } from "@/lib/game/envelope";
 import type { GameRow } from "@/lib/game/store";
 import type { TurnPhase } from "@/lib/engine/turn";

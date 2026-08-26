@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import { bumpRevision, findGame, renameSeat, setReady, verifySeat } from "@/lib/game/store";
+import { findGame, verifySeat } from "@/lib/game/store";
+import { renameSeat, setReady } from "@/lib/game/lobbyStore";
 
 /**
  * The two things a player may say about themselves: that they are ready, and
@@ -20,12 +21,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
 
   try {
-    if (typeof body.ready === "boolean") await setReady(seat.id, body.ready);
+    // Each is its own change, and each writes nothing when it changes nothing:
+    // the browser sends the state it wants rather than a toggle, so a second
+    // click on a button already down used to bump the revision and wake the
+    // whole table for it.
+    if (typeof body.ready === "boolean") await setReady(game.id, seat.id, body.ready);
     if (typeof body.name === "string") {
       const name = body.name.trim();
-      await renameSeat(seat.id, name || null);
+      await renameSeat(game.id, seat.id, name || null);
     }
-    await bumpRevision(game.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return refused(error);

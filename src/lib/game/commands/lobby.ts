@@ -421,6 +421,15 @@ export function takeHostRole(
  * ----------------------------------------------------------------------- */
 
 /**
+ * The four columns presence is decided from, and nothing else.
+ *
+ * A whole `SeatRow` is more than these questions need, and asking for one would
+ * mean the list of tables could not answer them off the cut-down seat rows it
+ * already fetches for every game at once. See `listGames`.
+ */
+export type Presence = Pick<SeatRow, "no_device" | "left_at" | "seen_at" | "is_host">;
+
+/**
  * Which seats the poczekalnia has stopped hearing from.
  *
  * Two ways to be gone: the page said so and did not come back inside the grace,
@@ -431,7 +440,7 @@ export function takeHostRole(
  * driven from the shared screen, and sweeping it would delete players sitting
  * at the table.
  */
-export function goneFrom(seats: readonly SeatRow[], now: number): SeatRow[] {
+export function goneFrom<T extends Presence>(seats: readonly T[], now: number): T[] {
   return seats
     .filter((seat) => !seat.no_device)
     .filter(
@@ -449,7 +458,7 @@ export function goneFrom(seats: readonly SeatRow[], now: number): SeatRow[] {
  * list the caller already has; only when it says yes does anybody pay for a
  * snapshot. See `sweepLobby` in `store.ts`.
  */
-export function needsSweep(seats: readonly SeatRow[], now: number): boolean {
+export function needsSweep(seats: readonly Presence[], now: number): boolean {
   if (goneFrom(seats, now).length > 0) return true;
   const host = seats.find((seat) => !seat.no_device && seat.is_host);
   return host ? isQuiet(host, now, HOST_MISSING_AFTER_MS) : false;

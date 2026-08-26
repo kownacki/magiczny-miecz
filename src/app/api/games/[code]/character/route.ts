@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
-import {
-  bumpRevision,
-  chooseCharacter,
-  dealCharacters,
-  findGame,
-  verifySeat,
-} from "@/lib/game/store";
+import { findGame, verifySeat } from "@/lib/game/store";
+import { change } from "@/lib/game/change";
+import { chooseCharacter, dealCharacters } from "@/lib/game/commands/character";
 import { takeNewCharacter } from "@/lib/game/turnStore";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -33,8 +29,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           { status: 409 },
         );
       }
-      await dealCharacters(game.id);
-      await bumpRevision(game.id);
+      // Everybody without a card, which in the poczekalnia is what 0.1 means.
+      // The commit bumps the revision itself, so the devices hear about it
+      // without anybody having to remember to say so.
+      await change(game.id, dealCharacters, { to: "unchosen" });
       return NextResponse.json({ ok: true });
     }
 
@@ -53,8 +51,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // A seated player may choose for another seat, because players added at the
     // table have no device of their own to choose from.
     const target = body.seatId ? String(body.seatId) : actor.id;
-    await chooseCharacter(game.id, target, String(body.characterId ?? ""));
-    await bumpRevision(game.id);
+    await change(game.id, chooseCharacter, {
+      seatId: target,
+      characterId: String(body.characterId ?? ""),
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return refused(error);

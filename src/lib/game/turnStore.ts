@@ -6,7 +6,6 @@ import { db } from "@/lib/supabase";
 import {
   GAME_COLUMNS,
   fieldCardsFor,
-  resolveRandomPicks,
   type HoldingRow,
 } from "./store";
 import {
@@ -122,6 +121,7 @@ import {
 } from "./commands/movement";
 import {
   changeNature as changeNatureOn,
+  dealCharacters as dealCharactersOn,
   placeSeat as placeSeatOn,
   takeNewCharacter as takeNewCharacterOn,
 } from "./commands/character";
@@ -204,7 +204,7 @@ export type { Decks };
 
 /** Reads the stored decks, tolerating a game started before spells existed. */
 import type { Slot } from "@/lib/engine/slots";
-import { bumpRevision, holdingsFor, seatsFor, type GameRow } from "./store";
+import { holdingsFor, seatsFor, type GameRow } from "./store";
 import { Failure } from "./failure";
 
 /**
@@ -249,9 +249,10 @@ async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPha
 export async function startGame(gameId: string): Promise<void> {
   // Everybody who asked to be surprised finds out now, and not a moment
   // earlier — the sentinel sits in the seat for the whole poczekalnia so that
-  // no device, the player's included, can see what is coming. Done before the
-  // snapshot is read: a seat still holding the sentinel would be dealt no kit.
-  await resolveRandomPicks(gameId);
+  // no device, the player's included, can see what is coming. Its own commit,
+  // ahead of the one below: a seat still holding the sentinel when the start
+  // reads the table would be dealt no kit at all.
+  await change(gameId, dealCharactersOn, { to: "surprises" });
 
   const owed = await change(gameId, startGameOn, { decks: freshDecks() });
   // 9.5's deal, run through the same draw as every other Zaklęcie so that the

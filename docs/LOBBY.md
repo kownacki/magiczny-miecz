@@ -393,10 +393,13 @@ else — not who moved, not what they drew, and above all not anybody's Zaklęci
 (9.3). A device that hears a new number asks the server what happened, through
 the same route handler as always, and is told only what its seat may see.
 
-**Sent from a trigger, not from the route handlers.** Every mutation already
-funnels through `bumpRevision`, so `games.revision` is the one place that knows
-something happened. A trigger there (`magiczny_miecz.broadcast_revision`) cannot
-be forgotten by a new endpoint the way a broadcast call in a handler would be.
+**Sent from a trigger, not from the route handlers.** Every mutation claims the
+next `games.revision` — `commit` does, in the same statement that wins it the
+right to write anything at all, and `bumpRevision` does for the one change that
+is not a Command (`joinGame`, which inserts a row and hands its token back).
+So the column is the one place that knows something happened, and a trigger
+there (`magiczny_miecz.broadcast_revision`) cannot be forgotten by a new
+endpoint the way a broadcast call in a handler would be.
 
 ### What works, and what does not
 

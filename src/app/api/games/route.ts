@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createGame, listGames } from "@/lib/game/store";
+import { createGame } from "@/lib/game/store";
+import { listGames } from "@/lib/game/lobbyStore";
 import { COMPANION_PARKED, type GameMode } from "@/lib/game/modes";
 import type { EqMode } from "@/lib/engine/slots";
 

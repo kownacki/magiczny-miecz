@@ -20,9 +20,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * seat may see.
  *
  * Sent from a trigger on `games.revision` rather than from the route handlers.
- * Every mutation already funnels through `bumpRevision`, so the column is the
- * one place that knows something happened, and a trigger there cannot be
- * forgotten by a new endpoint the way a broadcast call would be.
+ * Every mutation claims the next revision — `commit` in the same statement that
+ * wins it the right to write at all, `bumpRevision` for the one change that is
+ * not a Command — so the column is the one place that knows something happened,
+ * and a trigger there cannot be forgotten by a new endpoint the way a broadcast
+ * call would be.
  *
  * The poll stays as a backstop. If Realtime is down, misconfigured, or blocked
  * by a network that dislikes WebSockets, the table still plays — just at the
