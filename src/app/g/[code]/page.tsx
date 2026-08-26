@@ -580,21 +580,30 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         />
       )}
 
-      {/* Your own turn, put aside — and the way back to it.
+      {/* The turn, put aside — and the way back into it. Everybody's, all
+          turn long.
 
-          Only ever your own: a watcher who folds a turn away gets the sheet's
-          own line at the foot of the screen, which says what somebody else is
-          doing. This says what *you* still owe, because that is the difference
-          between a notification and a thing to press. */}
-      {active && myTurn && !turnWindowOpen && (
+          It was the actor's only, and a watcher got the sheet's own folded
+          line instead. Two controls for one idea, and both of them conditional
+          on a sheet being open: on a quiet Obszar — somebody deciding whether
+          to end their turn — the rest of the table had nothing at the foot of
+          the screen and no way in to look. Whose turn it is changes the words
+          here; what may be pressed is decided inside the window, where the
+          rules for it already live. */}
+      {active && !turnWindowOpen && (
         <TurnFab
+          mine={myTurn}
+          playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
+          seatIndex={active.seat_index}
           owed={owedLabel(
             turnWindows,
             game.turn_state.phase === "fight" ? game.turn_state.fight.cardName : null,
           )}
           onOpen={() => {
-            // Back to whatever is owed: the sheet if it is a fight or a card,
-            // and the Obszar otherwise — which is where the turn is ended.
+            // Back to whatever the turn is on: the sheet if it is a fight or a
+            // card, and the Obszar otherwise — which for the player being asked
+            // is where the turn is ended, and for everybody else is where they
+            // can see what it is being ended on.
             setFolded(false);
             if (!turnWindows.some((window) => window.compulsory)) setInspecting(active.field_id);
           }}
@@ -613,7 +622,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             canAct={mySeatIndex === active.seat_index || isTableScreen}
             minimized={folded}
             onMinimize={() => setFolded(true)}
-            onRestore={() => setFolded(false)}
             cards={game.turn_state.phase === "field" ? game.turn_state.drawn : []}
             resolved={
               game.turn_state.phase === "field"

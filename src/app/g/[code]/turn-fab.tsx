@@ -1,33 +1,52 @@
 "use client";
 
+import { SEAT_COLOURS } from "@/lib/view/boardMap";
+
 /**
- * The way back to your own turn, when you have put it aside.
+ * The turn, at the foot of every screen at the table.
  *
- * A turn used to be something you could not fold away: the sheet that asks you
- * to fight is the thing the game is waiting on, and hiding it was how a table
- * stopped. So only a *watcher* could fold, and the player being asked was held
- * in front of the question until they answered it.
+ * Two things used to live here and they were the same thing. A watcher who
+ * folded a turn away got a pill saying "Halina walczy — pokaż"; the player
+ * being asked got one saying what they still owed. Which meant the control was
+ * written twice, appeared only while a sheet happened to be open, and vanished
+ * entirely on a quiet Obszar — so a table where somebody was deciding whether
+ * to end their turn showed the rest of the room nothing at all, and there was
+ * no way in to look.
  *
- * Which is right about the danger and wrong about the cure. A player mid-turn
- * has other things to do — put on the Zbroja they just picked up, read what
- * somebody is carrying, look at the board they are about to cross — and every
- * one of them is behind the sheet. Being unable to move it is not the same as
- * being able to act.
+ * So it is one button, and everybody has it for the whole of every turn. What
+ * changes is only whose turn it is describing:
  *
- * So the sheet folds, and this is what makes that safe: a button that cannot be
- * dismissed while it is your turn, and that says what is *owed* rather than
- * whose turn it is. "Walka: WILKOŁAK" is a thing to go back to. "Twoja tura" is
- * a thing you already knew.
+ *     ● TWOJA TURA · walka: DEMON      to the player being asked
+ *     ● TURA: MICHAŁ · walka: DEMON    to everybody else
  *
- * It is also the only way to end a turn. That is deliberate — ending a turn now
- * lives in the window this opens rather than in the box in the corner — so this
- * button is on the path of every turn that ever ends, which is the strongest
- * guarantee available that it is never missing.
+ * Both open the same window on the same thing. What differs is what may be
+ * pressed inside it, and that is decided there — by `canAct`, in one place —
+ * rather than by withholding the way in.
+ *
+ * A turn that is on screen has no need of a way back to itself, so this is
+ * drawn only while every window is shut. It is what the absence of the turn
+ * looks like, and there is no turn it is absent from.
  */
 export function TurnFab({
+  mine,
+  playerName,
+  seatIndex,
   owed,
   onOpen,
 }: {
+  /** Whether the viewer is the one being asked. Changes the words and the weight. */
+  mine: boolean;
+  /** Whose turn it is, for everybody who is not having it. */
+  playerName: string;
+  /**
+   * Whose colour to wear.
+   *
+   * The active seat's, not the viewer's — this says whose turn it is, and the
+   * colour is the app's word for "whose" everywhere else it appears: the figure
+   * on the board, the dot in the journal, the border of the Teraz box. On your
+   * own turn it is also where you learn what colour you are.
+   */
+  seatIndex: number;
   /**
    * What is still to be done, in the words the turn uses for it — or null when
    * nothing is owed and all that is left is to end the turn.
@@ -41,26 +60,43 @@ export function TurnFab({
   owed: string | null;
   onOpen: () => void;
 }) {
+  const colour = SEAT_COLOURS[seatIndex % SEAT_COLOURS.length];
   return (
     <button
       onClick={onOpen}
       /**
-       * Bottom centre, over everything, on the same pill the folded draw sheet
-       * has always used — because to a player it *is* that pill, and the two
-       * appearing in different shapes would read as two different features.
+       * Bottom centre, over everything, on the pill the folded sheet used to
+       * use — because to a player it *is* that pill.
        *
        * Below the console's layer and above the board's: this is the game
        * asking, and the console is the thing you type at while it asks.
+       *
+       * Full-strength border when the game is waiting on you, half when it is
+       * waiting on somebody else. The same button either way; the difference is
+       * whether it is a summons or a place to look.
        */
-      className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-ochre bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition hover:bg-ochre/10"
+      className={`fixed bottom-4 left-1/2 z-40 flex max-w-[min(90vw,28rem)] -translate-x-1/2 items-center gap-2 rounded-full border bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition ${
+        mine ? "border-ochre hover:bg-ochre/10" : "border-ochre/40 hover:border-ochre/70"
+      }`}
     >
-      {/* The same slow dot the folded sheet uses for "something is waiting". */}
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ochre motion-safe:animate-pulse" aria-hidden />
-      <span className="font-[family-name:var(--font-display)] tracking-wide">Twoja tura</span>
+      {/* The slow pulse is "somebody is being waited on", and it is true on
+          every screen — the difference between the two readings is the words
+          beside it, not whether the table is waiting. */}
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full motion-safe:animate-pulse"
+        style={{ background: colour }}
+        aria-hidden
+      />
+      <span className="truncate font-[family-name:var(--font-display)] tracking-wide">
+        {/* The player's name only, with no character after it: this is a
+            compact return control and the Teraz box two inches away carries
+            "Michał (WIKING)" in full. */}
+        {mine ? "Twoja tura" : `Tura: ${playerName}`}
+      </span>
       {owed && (
         <>
           <span className="text-muted">·</span>
-          <span className="text-ochre">{owed}</span>
+          <span className="shrink-0 text-ochre">{owed}</span>
         </>
       )}
     </button>
@@ -73,6 +109,10 @@ export function TurnFab({
  * Taken from `windowsFor`'s own ranking rather than worked out again here: the
  * first compulsory window is by definition the thing that cannot be walked past
  * — 16.4 puts the cards before the Obszar, and a fight before either.
+ *
+ * The same words on every screen. A watcher is told what the turn is waiting
+ * for, not what they may do about it — those are different questions and only
+ * one of them is answered by a button in the corner.
  *
  * Null where nothing is compulsory. What is left then is ending the turn, and
  * that is deliberately not said here: it is a decision, it belongs in the

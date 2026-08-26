@@ -35,7 +35,6 @@ export function DrawModal({
   canAct,
   minimized,
   onMinimize,
-  onRestore,
   error,
   spells,
   moment,
@@ -77,10 +76,9 @@ export function DrawModal({
    * say in somebody else's turn.
    */
   canAct: boolean;
-  /** Whether a watcher has folded the sheet away. Never the actor's. */
+  /** Whether whoever is looking at this has folded it away — anybody may. */
   minimized: boolean;
   onMinimize: () => void;
-  onRestore: () => void;
   /** A refusal from the last thing pressed, said inside the sheet that hides it. */
   error: string | null;
   /**
@@ -136,7 +134,7 @@ export function DrawModal({
   /** Nothing to do with this one — it stays on the field (16.8). */
   onLeave: (cardId: string) => void;
 }) {
-  const chrome: SheetChrome = { canAct, minimized, onMinimize, onRestore, error };
+  const chrome: SheetChrome = { canAct, minimized, onMinimize, error };
 
   if (move) {
     return (

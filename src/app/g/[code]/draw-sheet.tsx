@@ -42,7 +42,6 @@ export interface SheetChrome {
    */
   minimized: boolean;
   onMinimize: () => void;
-  onRestore: () => void;
   /** A refusal from the last thing pressed, said inside the sheet that hides it. */
   error: string | null;
 }
@@ -55,7 +54,6 @@ export function DrawSheet({
   watching,
   minimized,
   onMinimize,
-  onRestore,
   error,
   wide = false,
   children,
@@ -76,28 +74,13 @@ export function DrawSheet({
   wide?: boolean;
   children: React.ReactNode;
 }) {
-  // Folded away, this becomes a line at the foot of the screen instead of a
-  // sheet over it. It still says what is going on — which is most of what the
-  // modal was for — and the board is visible behind it again.
+  // Folded away, this draws nothing: what replaces it is `TurnFab`, one pill
+  // at the foot of every screen at the table, for the whole of every turn.
   //
-  // The player whose turn it is gets `TurnFab` instead of this, said in terms
-  // of what they owe rather than what they are doing, so nothing is drawn here
-  // for them.
-  if (minimized && canAct) return null;
-  if (minimized) {
-    return (
-      <button
-        onClick={onRestore}
-        className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-ochre/50 bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition hover:border-ochre"
-      >
-        <span
-          className="h-1.5 w-1.5 animate-pulse rounded-full bg-ochre"
-          aria-hidden
-        />
-        {watching} — <span className="text-ochre">pokaż</span>
-      </button>
-    );
-  }
+  // This used to draw its own — "Halina walczy — pokaż" — for watchers only,
+  // which made two buttons out of one idea and tied the way back in to whether
+  // a sheet happened to be open. See the note on `TurnFab`.
+  if (minimized) return null;
 
   return (
     // The undismissable one, and it says so rather than merely lacking the
