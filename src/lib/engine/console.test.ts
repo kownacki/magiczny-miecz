@@ -765,4 +765,29 @@ suite("which player a `[player]` names", () => {
     expect(no("Gandalf")).toContain("Gandalf");
     expect(no("   ")).toBe("Who?");
   });
+
+  /**
+   * The same question asked about *people*, where two things are different: a
+   * spectator drives no seat, and everybody has an id.
+   */
+  it("names somebody by the id off the roster, whole and exact", () => {
+    const room = [
+      { seat: 0, name: "Michał", character: "bledny-rycerz", id: "a3f9" },
+      { seat: null, name: "Ola", character: null, id: "b2k4" },
+    ];
+    expect(pickPlayer(room, "a3f9")).toEqual({ at: 0 });
+    expect(pickPlayer(room, "B2K4")).toEqual({ at: 1 });
+    // Four characters with no meaning in them: half of one is a coincidence.
+    expect(pickPlayer(room, "b2")).toEqual({ error: "Nobody called `b2` is at this table." });
+  });
+
+  it("finds somebody who is only watching, who has no seat to be named by", () => {
+    const room = [
+      { seat: 0, name: "Michał", character: "bledny-rycerz", id: "a3f9" },
+      { seat: null, name: "Kasia", character: null, id: "c5m1" },
+    ];
+    expect(pickPlayer(room, "Kasia")).toEqual({ at: 1 });
+    // And the number still means the chair, not the row: nobody is in seat 2.
+    expect(pickPlayer(room, "2")).toEqual({ error: "Nobody called `2` is at this table." });
+  });
 });

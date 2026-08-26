@@ -44,7 +44,7 @@ export function claimFloor(
 
   const held = floorOf(state.fight, ports.now());
   if (held && held.seat !== seat.seat_index) {
-    throw new Error(`${nameOfSeat(snapshot, held.seat)} właśnie rzuca Zaklęcie — poczekaj.`);
+    throw new Error(`${nameOfSeat(snapshot.users, held.seat)} właśnie rzuca Zaklęcie — poczekaj.`);
   }
 
   // 17.4 ends the fight at the dice, so there is nothing left to react to.

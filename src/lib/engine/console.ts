@@ -650,11 +650,23 @@ export function statReply(said: {
  * used to be only those with one, which quietly made `revive` unable to name
  * the seat it exists for — a latecomer's, whose character has not been dealt.
  *
+ * Asked about a *person* rather than a seat, the same three handles work and a
+ * fourth arrives: the id off the roster, for somebody who drives no seat at all
+ * and can therefore be named by nothing that is printed on the board. So
+ * `seat` is nullable here, and null is a spectator rather than a missing value.
+ *
  * Pure, and it answers with an index rather than a row, so the caller keeps
  * whatever kind of row it started with.
  */
 export function pickPlayer(
-  people: readonly { seat: number; name: string | null; character: string | null }[],
+  people: readonly {
+    /** The seat they drive; null for somebody watching. */
+    seat: number | null;
+    name: string | null;
+    character: string | null;
+    /** Four characters off the roster — see `makeUserId`. A seat has none. */
+    id?: string;
+  }[],
   who: string,
 ): { at: number } | { error: string } {
   const asked = who.trim();
@@ -666,9 +678,26 @@ export function pickPlayer(
     if (at !== -1) return { at };
   }
 
+  /**
+   * The id, whole and exact, and ahead of the names.
+   *
+   * Four characters with no meaning in them: a prefix of one is a coincidence
+   * rather than an abbreviation, so it is matched outright or not at all. It
+   * goes first because it is the one handle that is guaranteed to name exactly
+   * one person — which is what `who` prints it for.
+   */
+  const byId = people.findIndex((one) => one.id !== undefined && fold(one.id) === fold(asked));
+  if (byId !== -1) return { at: byId };
+
   const named = people.map((one, index) => ({
     index,
-    name: one.name ?? nameOfCharacter(one.character) ?? `${one.seat + 1}`,
+    name:
+      one.name ??
+      nameOfCharacter(one.character) ??
+      // A seat with neither is named by the number printed beside it. A person
+      // always has a name, so for them this is unreachable — and an empty
+      // string matches nothing, which is the honest answer if it ever is.
+      (one.seat === null ? "" : `${one.seat + 1}`),
     also: one.name ? nameOfCharacter(one.character) : null,
   }));
   // A character's name is as good a handle as its player's, so both are in the

@@ -365,7 +365,7 @@ export function castSpell(
 
   const victim =
     target.seatIndex !== undefined
-      ? nameOfSeat(snapshot, target.seatIndex)
+      ? nameOfSeat(snapshot.users, target.seatIndex)
       : null;
 
   const said: Changeset = {
@@ -491,7 +491,7 @@ export async function fightRoll(
   // through is not a claim.
   const floor = floorOf(state.fight, ports.now());
   if (floor) {
-    throw new Error(`${nameOfSeat(snapshot, floor.seat)} rzuca Zaklęcie (17.3) — kostki czekają.`);
+    throw new Error(`${nameOfSeat(snapshot.users, floor.seat)} rzuca Zaklęcie (17.3) — kostki czekają.`);
   }
 
   const roll = await ports.random.rollD6(
@@ -617,7 +617,7 @@ export function attackSeat(
           state,
           {
             cardId: `seat:${target.seat_index}`,
-            cardName: nameOfSeat(snapshot, target.seat_index),
+            cardName: nameOfSeat(snapshot.users, target.seat_index),
             miecz: theirs.miecz,
             opponentSeat: target.seat_index,
           },

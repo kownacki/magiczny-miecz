@@ -6,7 +6,7 @@ import { buildDeck, type DeckState } from "@/lib/engine/deck";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { CommandPorts, Snapshot } from "./change";
-import type { GameRow, HoldingRow, SeatRow } from "./store";
+import type { GameRow, HoldingRow, SeatRow, UserRow } from "./store";
 
 /**
  * Why this exists at all.
@@ -20,7 +20,6 @@ export function aSeat(over: Partial<SeatRow> = {}): SeatRow {
   return {
     id: "seat-a",
     seat_index: 0,
-    player_name: "Michał",
     character_id: asSeatCharacter("goblin"),
     field_id: asFieldId("mroczna-polana"),
     sword_own: 2,
@@ -34,14 +33,34 @@ export function aSeat(over: Partial<SeatRow> = {}): SeatRow {
     stone_until_turn: null,
     bridge_blocked_until_turn: null,
     nature_changed_turn: null,
-    abandoned_at: null,
-    seen_at: null,
-    ready: true,
-    no_device: false,
     created_at: "2026-01-01T00:00:00Z",
-    left_at: null,
     eliminated: false,
+    ...over,
+  };
+}
+
+/**
+ * Somebody at the table, driving seat 0 unless told otherwise.
+ *
+ * A default table has one seat and one person in it, which is what almost every
+ * test means by "a table" — and the ones that mean something else say so. Note
+ * that `aTable` builds a driver for every seat it is given, so a test that wants
+ * an *empty* chair has to pass `users: []` and mean it.
+ *
+ * The id looks like a real one on purpose: four characters from `makeUserId`'s
+ * alphabet, which has no `1` and no `l` in it.
+ */
+export function aUser(over: Partial<UserRow> = {}): UserRow {
+  return {
+    id: "usra",
+    name: "Michał",
+    device_id: null,
     is_host: true,
+    ready: true,
+    seat_index: 0,
+    seen_at: null,
+    left_at: null,
+    created_at: "2026-01-01T00:00:00Z",
     ...over,
   };
 }
@@ -87,9 +106,27 @@ export function aTable(over: TableOver = {}): Snapshot {
     deck: noDeck(),
     ...(over.game ?? {}),
   };
+  const seats = over.seats ?? [aSeat()];
   return {
     game,
-    seats: over.seats ?? [aSeat()],
+    seats,
+    /**
+     * One driver per seat, unless the test says otherwise.
+     *
+     * Built from the seats rather than defaulted to empty, because before the
+     * split every seat *was* a person and hundreds of tests assume somebody is
+     * behind one. A test about an empty chair passes `users: []`.
+     */
+    users:
+      over.users ??
+      seats.map((seat, at) =>
+        aUser({
+          id: `usr${String.fromCharCode(97 + at)}`,
+          name: at === 0 ? "Michał" : `Gracz ${at + 1}`,
+          is_host: at === 0,
+          seat_index: seat.seat_index,
+        }),
+      ),
     holdings: over.holdings ?? [],
     fieldCards: over.fieldCards ?? [],
     effects: over.effects ?? [],

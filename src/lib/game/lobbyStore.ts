@@ -1,7 +1,6 @@
 /** The poczekalnia's edge: the reads, the tokens, and one Command each. */
 
 import { change } from "./change";
-import { makeClaimToken } from "./codes";
 import {
   takeSeat as takeSeatOn,
   unseat as unseatOn,
@@ -15,19 +14,21 @@ import {
   HOST_MISSING_AFTER_MS,
   type LeaveResult,
 } from "./commands/lobby";
-import { deleteGame, recentGames, seatsFor, seatsInGames } from "./store";
+import { deleteGame, recentGames, seatsInGames, usersFor, usersInGames } from "./store";
 
 export type { LeaveResult };
 
 /**
  * What the rules in `commands/lobby.ts` cannot do for themselves.
  *
- * Three things, and they are the same three every edge in this app does:
- * reading, minting, and the one write a changeset cannot describe. A fresh
- * claim token is `node:crypto` and a command that reached for one could not be
- * replayed by a retried commit, so it is made here and handed in. And deleting
+ * Two things: reading, and the one write a changeset cannot describe. Deleting
  * the game is here because a changeset can write every table this app has
  * except the one it is a change *to*.
+ *
+ * Minting used to be a third. Leaving a seat issued a fresh claim token, so the
+ * device that held it stopped holding it — and there is nothing to reissue any
+ * more, because the token is the *person's*. `unseat` leaves them at the table
+ * holding it, and `leaveTable` takes the row and the token together.
  */
 
 /* --------------------------------------------------------------------------
@@ -59,18 +60,27 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
   const rows = await recentGames(limit);
   if (rows.length === 0) return [];
 
-  // Every table's seats in one query, and the reason it is worth the trouble is
-  // below: this used to read them a table at a time, inside the sweep, so
-  // opening the list of games cost one round trip per game on the list.
-  const seats = await seatsInGames(rows.map((game) => game.id as string));
+  // Every table's seats and everybody at them, in two queries rather than two
+  // per game: this used to read them a table at a time, inside the sweep, so
+  // opening the list of games cost a round trip per game on the list.
+  const ids = rows.map((game) => game.id as string);
+  const [seats, users] = await Promise.all([seatsInGames(ids), usersInGames(ids)]);
   const now = Date.now();
   const seatsOf = (gameId: unknown) => seats.filter((seat) => seat.game_id === gameId);
+  const usersOf = (gameId: unknown) => users.filter((one) => one.game_id === gameId);
+  /**
+   * Presence is a person's, and only a person's.
+   *
+   * It used to be read off the seats, which is why `no_device` was here: a chair
+   * the host had filled in by hand never checked in and had to be kept out of
+   * the sweep. There is no such chair any more — a seat nobody drives is simply
+   * one with no user behind it, and there is nothing to sweep.
+   */
   const presence = (gameId: unknown) =>
-    seatsOf(gameId).map((seat) => ({
-      no_device: seat.no_device as boolean,
-      left_at: seat.left_at as string | null,
-      seen_at: seat.seen_at as string | null,
-      is_host: seat.is_host as boolean,
+    usersOf(gameId).map((one) => ({
+      left_at: one.left_at as string | null,
+      seen_at: one.seen_at as string | null,
+      is_host: one.is_host as boolean,
     }));
 
   /**
@@ -99,9 +109,10 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
   const listed = rows.filter((game) => {
     if (swept.has(game.id as string)) return false;
     if (game.status !== "lobby") return true;
-    return presence(game.id).some(
-      (seat) => seat.no_device || !isQuiet(seat, now, HOST_MISSING_AFTER_MS),
-    );
+    // Somebody still there: anybody the table has heard from lately. The
+    // `no_device` half of this test went with the column — a chair nobody is
+    // driving is not somebody quietly sitting there any more.
+    return presence(game.id).some((one) => !isQuiet(one, now, HOST_MISSING_AFTER_MS));
   });
 
   return listed.map((game) => ({
@@ -111,11 +122,22 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
     turn: game.turn as number,
     lastPlayedAt: game.last_played_at as string,
     createdAt: game.created_at as string,
-    players: seatsOf(game.id).map((seat) => ({
-      name: seat.player_name as string | null,
-      characterId: seat.character_id as string | null,
-      abandoned: seat.abandoned_at !== null,
-    })),
+    /**
+     * One entry to a chair: what is standing in it, and who is driving it.
+     *
+     * "Abandoned" is now a fact about the pair rather than a column — a Postać
+     * with nobody behind it — which is exactly what somebody scanning this list
+     * wants to know before sitting down. People who are only watching are not
+     * here: this line says what is being played, not who is in the room.
+     */
+    players: seatsOf(game.id).map((seat) => {
+      const driver = usersOf(game.id).find((one) => one.seat_index === seat.seat_index);
+      return {
+        name: (driver?.name as string | undefined) ?? null,
+        characterId: seat.character_id as string | null,
+        abandoned: !driver && seat.character_id !== null,
+      };
+    }),
   }));
 }
 

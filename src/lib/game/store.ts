@@ -176,15 +176,34 @@ export async function recentGames(limit: number): Promise<Record<string, unknown
   return (data ?? []) as Record<string, unknown>[];
 }
 
-/** Who is sitting at each of several tables, in one query rather than one each. */
+/** What Postacie are standing at each of several tables, in one query rather than one each. */
 export async function seatsInGames(gameIds: readonly string[]): Promise<Record<string, unknown>[]> {
   if (gameIds.length === 0) return [];
   const { data, error } = await db
     .from("seats")
-    .select("game_id,seat_index,player_name,character_id,abandoned_at,seen_at,no_device,is_host")
+    .select("game_id,seat_index,character_id")
     .in("game_id", gameIds)
     .order("seat_index");
   if (error) throw new Failure(`seatsInGames: ${error.message}`);
+  return (data ?? []) as Record<string, unknown>[];
+}
+
+/**
+ * Who is *at* each of several tables — the other half of the same question.
+ *
+ * Two queries where there used to be one, because there are now two rows: the
+ * chair with a Postać in it and the person driving it. The list of tables needs
+ * both — what is being played, and whether anybody is still there to play it —
+ * and neither answers for the other.
+ */
+export async function usersInGames(gameIds: readonly string[]): Promise<Record<string, unknown>[]> {
+  if (gameIds.length === 0) return [];
+  const { data, error } = await db
+    .from("users")
+    .select("game_id,id,name,seat_index,is_host,seen_at,left_at")
+    .in("game_id", gameIds)
+    .order("created_at");
+  if (error) throw new Failure(`usersInGames: ${error.message}`);
   return (data ?? []) as Record<string, unknown>[];
 }
 
@@ -529,13 +548,17 @@ export async function markSeenUser(userId: string): Promise<void> {
 /**
  * A device saying its page is about to go away.
  *
- * Waiting for a seat to fall silent takes minutes, because a hidden tab polls
+ * Waiting for somebody to fall silent takes minutes, because a hidden tab polls
  * at whatever rate the browser feels like — so a table sat there showing people
  * who had closed it. The page now says so on the way out, and the difference is
  * between ten seconds and two and a half minutes.
+ *
+ * The *person's*, like `seen_at` beside it: a chair does not close a tab. Which
+ * also means somebody who is only watching says goodbye too, and is swept for
+ * it — before the split they had no row to say it with.
  */
-export async function sayGoodbye(seatId: string): Promise<void> {
-  await db.from("seats").update({ left_at: new Date().toISOString() }).eq("id", seatId);
+export async function sayGoodbye(userId: string): Promise<void> {
+  await db.from("users").update({ left_at: new Date().toISOString() }).eq("id", userId);
 }
 
 /**

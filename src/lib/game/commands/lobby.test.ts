@@ -4,57 +4,84 @@ import {
   GOODBYE_GRACE_MS,
   HOST_MISSING_AFTER_MS,
   LOBBY_GONE_AFTER_MS,
-  claimSeat,
+  driverOf,
   goneFrom,
   isQuiet,
-  leaveSeat,
+  leaveTable,
+  nameOfSeat,
   needsSweep,
   nextHost,
   promoteHost,
-  removeSeat,
-  renameSeat,
+  renameUser,
+  seatUnder,
   setReady,
   sweepLobby,
   takeHostRole,
+  takeSeat,
+  unseat,
+  userOf,
 } from "./lobby";
-import { aHolding, aSeat, aTable, ports } from "../fixture";
+import { aSeat, aTable, aUser, ports } from "../fixture";
 import { apply } from "../change";
-import type { SeatRow } from "../store";
+import type { SeatRow, UserRow } from "../store";
 
 /**
  * The part of this app that is not Magiczny Miecz.
  *
  * None of it has a rule number, because the rulebook has nothing to say about a
- * browser tab closing — it is all `docs/LOBBY.md`'s, and until now none of it
- * had a test either. That is the wrong way round for what it decides. Who runs
- * a table when the person who opened it has gone to bed, how long a phone may
- * sleep before its seat belongs to somebody else, and whether a character's
- * Przedmioty survive their player being removed are the sort of thing you find
- * out about in the middle of an evening, with five people watching.
+ * browser tab closing — it is all `docs/LOBBY.md`'s. Who runs a table when the
+ * person who opened it has gone to bed, how long a phone may sleep before its
+ * chair belongs to somebody else, and what happens to a Postać when the person
+ * driving it walks off are the sort of thing you find out about in the middle
+ * of an evening, with five people watching.
+ *
+ * Everything here is asked of *people* now. A seat is a place at the table with
+ * a Postać standing in it and it outlives everybody who ever drove it; a user
+ * is somebody in the room. The two used to be one row, and half of these tests
+ * are here because that made questions like "did the player leave or did the
+ * character die?" impossible to ask.
  */
 
 const NOW = Date.parse("2026-01-01T12:00:00Z");
 const at = (agoMs: number) => new Date(NOW - agoMs).toISOString();
 const clock = (now = NOW) => ports({ now: () => now });
 
-/** Seats in join order, oldest first, the host at the front. */
+/** Seats in board order, which is turn order. Nobody is in them yet. */
 function seated(...over: Partial<SeatRow>[]): SeatRow[] {
+  return over.map((one, index) => aSeat({ id: `seat-${index}`, seat_index: index, ...one }));
+}
+
+/**
+ * People in join order, oldest first, the host at the front.
+ *
+ * Driving the seat of the same number unless a test says otherwise, because
+ * that is the ordinary table — and the interesting ones are exactly those where
+ * the two lists do not line up.
+ */
+function here(...over: Partial<UserRow>[]): UserRow[] {
   return over.map((one, index) =>
-    aSeat({
-      id: `seat-${index}`,
-      seat_index: index,
+    aUser({
+      id: `usr-${index}`,
+      name: `Gracz ${index + 1}`,
       is_host: index === 0,
+      seat_index: index,
       created_at: new Date(NOW - (over.length - index) * 60_000).toISOString(),
       ...one,
     }),
   );
 }
 
-describe("a seat that has gone quiet", () => {
-  it("is not quiet before it has ever spoken", () => {
-    // A seat the host filled in by hand never checks in, and neither does one
-    // created a second ago. Calling either absent made a fresh poczekalnia look
-    // like a room everybody had walked out of.
+/** A table of `n` chairs with a person in each. */
+const table = (n: number) =>
+  aTable({
+    seats: seated(...Array.from({ length: n }, () => ({}))),
+    users: here(...Array.from({ length: n }, () => ({}))),
+  });
+
+describe("somebody who has gone quiet", () => {
+  it("is not quiet before they have ever spoken", () => {
+    // Somebody who joined a second ago has not checked in yet. Calling them
+    // absent made a fresh poczekalnia look like a room everybody had left.
     expect(isQuiet({ seen_at: null }, NOW)).toBe(false);
   });
 
@@ -66,41 +93,47 @@ describe("a seat that has gone quiet", () => {
   it("is measured against whichever window the caller is asking about", () => {
     // The same silence is three different answers. Two minutes is away, is not
     // yet gone from the poczekalnia, and has already cost you the host role.
-    const seat = { seen_at: at(120_000) };
-    expect(isQuiet(seat, NOW, AWAY_AFTER_MS)).toBe(true);
-    expect(isQuiet(seat, NOW, HOST_MISSING_AFTER_MS)).toBe(true);
-    expect(isQuiet(seat, NOW, LOBBY_GONE_AFTER_MS)).toBe(false);
+    const one = { seen_at: at(120_000) };
+    expect(isQuiet(one, NOW, AWAY_AFTER_MS)).toBe(true);
+    expect(isQuiet(one, NOW, HOST_MISSING_AFTER_MS)).toBe(true);
+    expect(isQuiet(one, NOW, LOBBY_GONE_AFTER_MS)).toBe(false);
   });
 
   it("reads the moment it is given rather than the clock on the wall", () => {
-    const seat = { seen_at: at(0) };
-    expect(isQuiet(seat, NOW)).toBe(false);
-    expect(isQuiet(seat, NOW + AWAY_AFTER_MS + 1)).toBe(true);
+    const one = { seen_at: at(0) };
+    expect(isQuiet(one, NOW)).toBe(false);
+    expect(isQuiet(one, NOW + AWAY_AFTER_MS + 1)).toBe(true);
   });
 });
 
 describe("who takes over the table", () => {
   it("is whoever has been here longest of those left", () => {
-    const seats = seated({}, {}, {});
-    expect(nextHost(seats, seats[0])?.id).toBe("seat-1");
+    const people = here({}, {}, {});
+    expect(nextHost(people, people[0])?.id).toBe("usr-1");
   });
 
-  it("is not the seat that is leaving", () => {
-    const seats = seated({}, {});
-    expect(nextHost(seats, seats[0])?.id).toBe("seat-1");
-    expect(nextHost(seats, seats[1])?.id).toBe("seat-0");
+  it("is not the person who is leaving", () => {
+    const people = here({}, {});
+    expect(nextHost(people, people[0])?.id).toBe("usr-1");
+    expect(nextHost(people, people[1])?.id).toBe("usr-0");
   });
 
-  it("skips a chair nobody is sitting in", () => {
-    // Handing the role to an abandoned seat is how a table ends up unstartable:
-    // the controls belong to a device that is not there.
-    const seats = seated({}, { abandoned_at: at(0) }, {});
-    expect(nextHost(seats, seats[0])?.id).toBe("seat-2");
+  it("skips somebody whose own page has said it is going away", () => {
+    // Handing the role to a tab that is closing is how a table ends up
+    // unstartable: the controls belong to a device that is not there.
+    const people = here({}, { left_at: at(0) }, {});
+    expect(nextHost(people, people[0])?.id).toBe("usr-2");
   });
 
-  it("skips a character that is out of the game", () => {
-    const seats = seated({}, { eliminated: true }, {});
-    expect(nextHost(seats, seats[0])?.id).toBe("seat-2");
+  it("takes somebody who is driving nothing, because watching is still being here", () => {
+    /**
+     * The one place the split changes this outright. A spectator used to be
+     * unrepresentable — no seat, no row, nobody — and is now an ordinary person
+     * at the table who can perfectly well run it. 4.4 makes them common: a
+     * player whose Postać died may decline to take another and stay.
+     */
+    const people = here({}, { seat_index: null });
+    expect(nextHost(people, people[0])?.id).toBe("usr-1");
   });
 
   it("goes by when somebody joined and not by where they sit", () => {
@@ -109,65 +142,91 @@ describe("who takes over the table", () => {
      * low seat index now means "sat in a gap", not "got here first". Seat 2
      * here is the older player and takes the table.
      */
-    const seats = [
-      aSeat({ id: "host", seat_index: 0, is_host: true, created_at: at(300_000) }),
-      aSeat({ id: "latecomer", seat_index: 1, is_host: false, created_at: at(10_000) }),
-      aSeat({ id: "veteran", seat_index: 2, is_host: false, created_at: at(200_000) }),
+    const people = [
+      aUser({ id: "host", seat_index: 0, is_host: true, created_at: at(300_000) }),
+      aUser({ id: "latecomer", seat_index: 1, is_host: false, created_at: at(10_000) }),
+      aUser({ id: "veteran", seat_index: 2, is_host: false, created_at: at(200_000) }),
     ];
-    expect(nextHost(seats, seats[0])?.id).toBe("veteran");
+    expect(nextHost(people, people[0])?.id).toBe("veteran");
   });
 
-  it("breaks a tie on the index, which is what every old row will do", () => {
-    const same = at(100_000);
-    const seats = [
-      aSeat({ id: "host", seat_index: 0, is_host: true, created_at: same }),
-      aSeat({ id: "b", seat_index: 2, is_host: false, created_at: same }),
-      aSeat({ id: "a", seat_index: 1, is_host: false, created_at: same }),
-    ];
-    expect(nextHost(seats, seats[0])?.id).toBe("a");
-  });
-
-  it("has nobody to hand it to at an emptying table", () => {
-    const seats = seated({}, { abandoned_at: at(0) });
-    expect(nextHost(seats, seats[0])).toBeNull();
+  it("has nobody to hand it to when everybody else is going", () => {
+    const people = here({}, { left_at: at(0) });
+    expect(nextHost(people, people[0])).toBeNull();
   });
 });
 
 describe("handing the role over", () => {
-  it("does nothing when the seat leaving was never running the table", () => {
-    const seats = seated({}, {});
-    expect(promoteHost(seats, seats[1])).toEqual({});
+  it("does nothing when the person leaving was never running the table", () => {
+    const people = here({}, {});
+    expect(promoteHost(people, people[1])).toEqual({});
   });
 
   it("hands it over rather than copying it", () => {
     /**
-     * Both halves matter. A retired seat keeps its row so the journal's
-     * references survive, and leaving it marked host would leave the table with
-     * two — the second being a seat nobody is sitting in.
+     * Both halves matter. Leaving the outgoing host's flag set would leave the
+     * table with two, the second being somebody who is not there — and when the
+     * outgoing row is being deleted in the same change the demotion lands on
+     * nothing, which is why removals are applied first.
      */
-    const seats = seated({}, {});
-    expect(promoteHost(seats, seats[0])).toEqual({
-      seats: [
-        { id: "seat-1", patch: { is_host: true } },
-        { id: "seat-0", patch: { is_host: false } },
+    const people = here({}, {});
+    expect(promoteHost(people, people[0])).toEqual({
+      users: [
+        { id: "usr-1", patch: { is_host: true } },
+        { id: "usr-0", patch: { is_host: false } },
       ],
     });
   });
 
   it("leaves the flag where it is when there is nobody to take it", () => {
-    // Better a table hosted by an absent seat than a table hosted by nobody:
+    // Better a table hosted by an absent person than a table hosted by nobody:
     // the second cannot be recovered, and `takeHostRole` can rescue the first.
-    const seats = seated({}, { abandoned_at: at(0) });
-    expect(promoteHost(seats, seats[0])).toEqual({});
+    const people = here({}, { left_at: at(0) });
+    expect(promoteHost(people, people[0])).toEqual({});
+  });
+});
+
+describe("finding a person, and naming a chair", () => {
+  it("refuses an id nobody at this table has", () => {
+    // The old version updated nothing and said it had worked, because a
+    // PostgREST update matching no rows is not an error.
+    expect(() => userOf(table(2), "usr-9")).toThrow("Nie ma takiego gracza");
+  });
+
+  it("says outright when somebody is driving nothing", () => {
+    const snapshot = aTable({ seats: seated({}), users: here({ seat_index: null }) });
+    expect(() => seatUnder(snapshot, snapshot.users[0])).toThrow("nie prowadzi żadnej Postaci");
+  });
+
+  it("names a seat after whoever is driving it", () => {
+    const snapshot = table(2);
+    expect(driverOf(snapshot.users, 1)?.id).toBe("usr-1");
+    expect(nameOfSeat(snapshot.users, 1)).toBe("Gracz 2");
+  });
+
+  it("names an empty chair after the chair, which is what it is", () => {
+    /**
+     * Not a fallback for a missing name — an empty seat is a real state now,
+     * and mid-game a common one: the Postać stands there with its Przedmioty
+     * while whoever was driving it has closed their laptop.
+     */
+    const snapshot = aTable({ seats: seated({}, {}), users: here({}) });
+    expect(driverOf(snapshot.users, 1)).toBeNull();
+    expect(nameOfSeat(snapshot.users, 1)).toBe("miejsce 2");
   });
 });
 
 describe("saying you are ready, and what you are called", () => {
-  const table = () => aTable({ game: { status: "lobby" }, seats: seated({ ready: false }, {}) });
+  const lobby = () =>
+    aTable({
+      game: { status: "lobby" },
+      seats: seated({}, {}),
+      users: here({ ready: false }, {}),
+    });
 
   it("writes the change", () => {
-    expect(setReady(table(), { seatId: "seat-0", ready: true }).writes).toEqual({
-      seats: [{ id: "seat-0", patch: { ready: true } }],
+    expect(setReady(lobby(), { userId: "usr-0", ready: true }).writes).toEqual({
+      users: [{ id: "usr-0", patch: { ready: true } }],
     });
   });
 
@@ -178,345 +237,329 @@ describe("saying you are ready, and what you are called", () => {
      * toggle, so a second click on a button that is already down would
      * otherwise bump the revision and wake every device at the table.
      */
-    expect(setReady(table(), { seatId: "seat-1", ready: true }).writes).toEqual({});
-    expect(renameSeat(table(), { seatId: "seat-0", name: "Michał" }).writes).toEqual({});
+    expect(setReady(lobby(), { userId: "usr-1", ready: true }).writes).toEqual({});
+    expect(renameUser(lobby(), { userId: "usr-0", name: "Gracz 1" }).writes).toEqual({});
   });
 
-  it("refuses a seat that is not at this table", () => {
-    // The old version updated nothing and said it had worked, because a
-    // PostgREST update matching no rows is not an error.
-    expect(() => setReady(table(), { seatId: "seat-9", ready: true })).toThrow(
-      "Nie ma takiego miejsca",
+  it("renames somebody", () => {
+    expect(renameUser(lobby(), { userId: "usr-0", name: "  Ola  " }).writes).toEqual({
+      users: [{ id: "usr-0", patch: { name: "Ola" } }],
+    });
+  });
+
+  it("refuses a name somebody else at this table is already using", () => {
+    /**
+     * The whole reason names are unique is that `kick Michał` has to mean one
+     * person, and a table holding a Michał and a "Michał (2)" has given that up
+     * to avoid one refusal.
+     */
+    expect(() => renameUser(lobby(), { userId: "usr-0", name: "Gracz 2" })).toThrow(
+      "Przy stole jest już Gracz 2",
     );
   });
 
-  it("takes a name away when one is given away", () => {
-    expect(renameSeat(table(), { seatId: "seat-0", name: null }).writes).toEqual({
-      seats: [{ id: "seat-0", patch: { player_name: null } }],
+  it("refuses an empty name", () => {
+    expect(() => renameUser(lobby(), { userId: "usr-0", name: "   " })).toThrow(
+      "Imię nie może być puste",
+    );
+  });
+});
+
+describe("out of the chair, still at the table", () => {
+  const playing = (people: Partial<UserRow>[], seats: number, activeSeat: number | null = 0) =>
+    aTable({
+      game: { status: "playing", active_seat: activeSeat },
+      seats: seated(...Array.from({ length: seats }, () => ({}))),
+      users: here(...people),
     });
-  });
-});
 
-describe("leaving before the game has started", () => {
-  const lobby = (...over: Partial<SeatRow>[]) =>
-    aTable({ game: { status: "lobby" }, seats: seated(...over) });
-
-  it("deletes the seat outright", () => {
-    // Nothing references it and somebody who joined the wrong table should
-    // leave no trace.
-    const { writes, result } = leaveSeat(lobby({}, {}), { seatId: "seat-1", token: "t" }, clock());
-    expect(writes.seatsRemoved).toEqual(["seat-1"]);
-    expect(writes.seats).toBeUndefined();
-    expect(result).toEqual({ removed: true, passedTo: null, gameFinished: false });
-  });
-
-  it("hands the table on in the same breath as the host leaves it", () => {
-    const { writes } = leaveSeat(lobby({}, {}), { seatId: "seat-0", token: "t" }, clock());
-    expect(writes.seatsRemoved).toEqual(["seat-0"]);
-    expect(writes.seats).toEqual([
-      { id: "seat-1", patch: { is_host: true } },
-      { id: "seat-0", patch: { is_host: false } },
-    ]);
-  });
-
-  it("leaves the table with exactly one host afterwards", () => {
+  it("releases the seat and touches nothing else", () => {
     /**
-     * The demotion lands on a row that is being deleted in the same change, so
-     * this is the case `seatsRemoved`-before-`seats` exists for. Asked of
-     * `apply`, which is what `commit` promises to do to the database.
-     */
-    const { writes } = leaveSeat(lobby({}, {}, {}), { seatId: "seat-0", token: "t" }, clock());
-    const after = apply(lobby({}, {}, {}), writes);
-    expect(after.seats.map((seat) => seat.id)).toEqual(["seat-1", "seat-2"]);
-    expect(after.seats.filter((seat) => seat.is_host).map((seat) => seat.id)).toEqual(["seat-1"]);
-  });
-});
-
-describe("leaving a game that is already being played", () => {
-  const playing = (over: Partial<SeatRow>[], activeSeat: number | null = 0) =>
-    aTable({ game: { status: "playing", active_seat: activeSeat }, seats: seated(...over) });
-
-  it("keeps the seat and releases the claim", () => {
-    /**
-     * A player walking away is not a character dying. The figure stays on its
+     * A player walking away is not a Postać dying. The figure stays on its
      * Obszar with its points, its Przedmioty and its Przyjaciele, because other
      * players may already have acted on all of them — 4.4's death is a
-     * different event with different consequences. And the seat row itself has
-     * to survive, because the journal holds `seat_id` references to everything
-     * that seat ever did.
+     * different event with different consequences.
      */
-    const { writes, result } = leaveSeat(
-      playing([{}, {}], 1),
-      { seatId: "seat-0", token: "fresh" },
-      clock(),
-    );
+    const { writes, result } = unseat(playing([{}, {}], 2, 1), { userId: "usr-0" });
+    expect(writes).toEqual({ users: [{ id: "usr-0", patch: { seat_index: null } }] });
+    expect(writes.seats).toBeUndefined();
     expect(writes.seatsRemoved).toBeUndefined();
-    expect(writes.seats?.[0]).toEqual({
-      id: "seat-0",
-      patch: { abandoned_at: new Date(NOW).toISOString(), claim_token: "fresh" },
-    });
-    expect(result.removed).toBe(false);
+    expect(result).toEqual({ removed: false, passedTo: null, gameFinished: false });
   });
 
-  it("rotates the token so the departing device cannot act as this seat again", () => {
-    const { writes } = leaveSeat(playing([{}, {}], 1), { seatId: "seat-0", token: "fresh" }, clock());
-    expect(writes.seats?.[0].patch.claim_token).toBe("fresh");
+  it("does nothing to somebody who was already driving nothing", () => {
+    const { writes } = unseat(playing([{}, { seat_index: null }], 2, 0), { userId: "usr-1" });
+    expect(writes).toEqual({});
   });
 
   it("does not stop play for an empty chair", () => {
-    const { writes, result } = leaveSeat(
-      playing([{}, {}], 1),
-      { seatId: "seat-0", token: "t" },
-      clock(),
-    );
+    const { writes, result } = unseat(playing([{}, {}], 2, 1), { userId: "usr-0" });
     expect(writes.game).toBeUndefined();
     expect(result.passedTo).toBeNull();
   });
 
   it("moves the turn on when it was theirs", () => {
     // Play does not wait on somebody who has gone.
-    const { writes, result } = leaveSeat(
-      playing([{}, {}, {}], 0),
-      { seatId: "seat-0", token: "t" },
-      clock(),
-    );
+    const { writes, result } = unseat(playing([{}, {}, {}], 3, 0), { userId: "usr-0" });
     expect(writes.game).toEqual({ active_seat: 1, turn_state: { phase: "roll" } });
     expect(result.passedTo).toBe(1);
   });
 
   it("wraps round to the first seat when the leaver was the last", () => {
-    const { result } = leaveSeat(playing([{}, {}, {}], 2), { seatId: "seat-2", token: "t" }, clock());
+    const { result } = unseat(playing([{}, {}, {}], 3, 2), { userId: "usr-2" });
     expect(result.passedTo).toBe(0);
   });
 
-  it("skips seats with no character and seats that are out", () => {
-    const { result } = leaveSeat(
-      playing([{}, { character_id: null }, { eliminated: true }, {}], 0),
-      { seatId: "seat-0", token: "t" },
-      clock(),
-    );
-    expect(result.passedTo).toBe(3);
+  it("skips seats with no Postać and seats that are out", () => {
+    const snapshot = aTable({
+      game: { status: "playing", active_seat: 0 },
+      seats: [
+        aSeat({ id: "seat-0", seat_index: 0 }),
+        aSeat({ id: "seat-1", seat_index: 1, character_id: null }),
+        aSeat({ id: "seat-2", seat_index: 2, eliminated: true }),
+        aSeat({ id: "seat-3", seat_index: 3 }),
+      ],
+      users: here({}, {}, {}, {}),
+    });
+    expect(unseat(snapshot, { userId: "usr-0" }).result.passedTo).toBe(3);
   });
 
   it("leaves the turn where it is when there is nobody to pass it to", () => {
-    const { writes, result } = leaveSeat(
-      playing([{}, { character_id: null }], 0),
-      { seatId: "seat-0", token: "t" },
-      clock(),
-    );
+    const snapshot = aTable({
+      game: { status: "playing", active_seat: 0 },
+      seats: [
+        aSeat({ id: "seat-0", seat_index: 0 }),
+        aSeat({ id: "seat-1", seat_index: 1, character_id: null }),
+      ],
+      users: here({}, {}),
+    });
+    const { writes, result } = unseat(snapshot, { userId: "usr-0" });
     expect(writes.game).toBeUndefined();
     expect(result.passedTo).toBeNull();
   });
 });
 
-describe("taking over a seat nobody is behind", () => {
-  const table = (over: Partial<SeatRow>) =>
-    aTable({ game: { status: "playing" }, seats: [aSeat({ id: "seat-0", ...over })] });
+describe("off the table altogether", () => {
+  const lobby = (...over: Partial<UserRow>[]) =>
+    aTable({
+      game: { status: "lobby" },
+      seats: seated(...over.map(() => ({}))),
+      users: here(...over),
+    });
 
-  it("issues the fresh token the edge minted", () => {
-    const { writes } = claimSeat(
-      table({ abandoned_at: at(0) }),
-      { seatId: "seat-0", playerName: "Ola", token: "new-token" },
-      clock(),
-    );
-    expect(writes.seats).toEqual([
-      {
-        id: "seat-0",
-        patch: { abandoned_at: null, claim_token: "new-token", player_name: "Ola" },
-      },
+  it("takes the person and leaves the Postać standing", () => {
+    /**
+     * It is not theirs to take away — 4.4 is the only thing in the book that
+     * removes a Postać — and the chair itself has to survive, because the
+     * journal holds `seat_id` references to everything that seat ever did. In
+     * the poczekalnia the sweep is what clears the empty chair afterwards.
+     */
+    const { writes, result } = leaveTable(lobby({}, {}), { userId: "usr-1" });
+    expect(writes.usersRemoved).toEqual(["usr-1"]);
+    expect(writes.seatsRemoved).toBeUndefined();
+    expect(writes.seats).toBeUndefined();
+    expect(result.removed).toBe(true);
+  });
+
+  it("writes down whether they walked or were thrown off", () => {
+    /**
+     * The only difference the two make, and it is worth making: being kicked is
+     * not the same event as leaving, and a log that cannot tell them apart
+     * cannot settle the argument it will be opened to settle.
+     */
+    const walked = leaveTable(lobby({}, {}), { userId: "usr-1" });
+    const thrown = leaveTable(lobby({}, {}), { userId: "usr-1", kicked: true });
+    expect(walked.writes.journal?.[0]).toEqual({
+      seatId: null,
+      turn: 3,
+      kind: "left-behind",
+      payload: { user: "usr-1", name: "Gracz 2", kicked: false },
+    });
+    expect(thrown.writes.journal?.[0].payload).toMatchObject({ kicked: true });
+  });
+
+  it("hands the table on in the same breath as the host leaves it", () => {
+    // Standing up, then the handover, then the row itself — leaving is
+    // `unseat` and one thing more, and all three land in one change.
+    const { writes } = leaveTable(lobby({}, {}), { userId: "usr-0" });
+    expect(writes.usersRemoved).toEqual(["usr-0"]);
+    expect(writes.users).toEqual([
+      { id: "usr-0", patch: { seat_index: null } },
+      { id: "usr-1", patch: { is_host: true } },
+      { id: "usr-0", patch: { is_host: false } },
     ]);
   });
 
-  it("keeps the name the table already knows when none is offered", () => {
-    // The commonest takeover by far is the same person on a new tab, and
-    // renaming them to nothing — or making them retype it — would be obtuse.
-    const { writes } = claimSeat(
-      table({ abandoned_at: at(0), player_name: "Michał" }),
-      { seatId: "seat-0", playerName: null, token: "t" },
-      clock(),
-    );
-    expect(writes.seats?.[0].patch).not.toHaveProperty("player_name");
-  });
-
-  it("takes a seat that never said it was leaving but has fallen silent", () => {
+  it("leaves the table with exactly one host afterwards", () => {
     /**
-     * A player who closed their tab never said so, so the seat is only quiet.
-     * Refusing it would strand the character for the rest of the evening, and
-     * the people in the room can settle who picks it up between them.
+     * The demotion lands on a row that is being deleted in the same change, so
+     * this is the case removals-before-patches exists for. Asked of `apply`,
+     * which is what `commit` promises to do to the database.
      */
-    const { writes } = claimSeat(
-      table({ seen_at: at(AWAY_AFTER_MS + 1) }),
-      { seatId: "seat-0", playerName: null, token: "t" },
-      clock(),
-    );
-    expect(writes.seats?.[0].patch.claim_token).toBe("t");
+    const before = lobby({}, {}, {});
+    const after = apply(before, leaveTable(before, { userId: "usr-0" }).writes);
+    expect(after.users.map((one) => one.id)).toEqual(["usr-1", "usr-2"]);
+    expect(after.users.filter((one) => one.is_host).map((one) => one.id)).toEqual(["usr-1"]);
   });
 
-  it("refuses a seat somebody is actively using", () => {
+  it("moves the turn on when the person leaving was the one to play", () => {
+    // Leaving is standing up and then going, so it inherits everything
+    // `unseat` decides about the turn.
+    const playing = aTable({
+      game: { status: "playing", active_seat: 0 },
+      seats: seated({}, {}),
+      users: here({}, {}),
+    });
+    const { writes, result } = leaveTable(playing, { userId: "usr-0" });
+    expect(writes.game).toEqual({ active_seat: 1, turn_state: { phase: "roll" } });
+    expect(result.passedTo).toBe(1);
+  });
+
+  it("refuses somebody who is not at this table", () => {
+    expect(() => leaveTable(lobby({}), { userId: "usr-9" })).toThrow("Nie ma takiego gracza");
+  });
+});
+
+describe("sitting down", () => {
+  const lobby = (people: Partial<UserRow>[], seats = 2) =>
+    aTable({
+      game: { status: "lobby" },
+      seats: seated(...Array.from({ length: seats }, () => ({}))),
+      users: here(...people),
+    });
+
+  it("puts somebody in a chair", () => {
+    const { writes } = takeSeat(
+      lobby([{}, { seat_index: null }]),
+      { userId: "usr-1", seatIndex: 1 },
+      clock(),
+    );
+    expect(writes).toEqual({ users: [{ id: "usr-1", patch: { seat_index: 1 } }] });
+  });
+
+  it("writes nothing when they are already in it", () => {
+    expect(takeSeat(lobby([{}, {}]), { userId: "usr-1", seatIndex: 1 }, clock()).writes).toEqual({});
+  });
+
+  it("refuses a seat somebody is actively driving", () => {
     expect(() =>
-      claimSeat(
-        table({ seen_at: at(1_000) }),
-        { seatId: "seat-0", playerName: null, token: "t" },
+      takeSeat(
+        lobby([{}, { seen_at: at(1_000) }]),
+        { userId: "usr-0", seatIndex: 1 },
         clock(),
       ),
     ).toThrow("To miejsce ma już swojego gracza");
   });
 
-  it("refuses a seat the host is driving from the shared screen", () => {
-    // It has no device of its own and never checks in, so every other test here
-    // would read it as long gone.
-    expect(() =>
-      claimSeat(
-        table({ no_device: true, abandoned_at: at(0) }),
-        { seatId: "seat-0", playerName: null, token: "t" },
-        clock(),
-      ),
-    ).toThrow("wspólnym ekranie");
-  });
-});
-
-describe("removing somebody from the table", () => {
-  const table = (status: string, ...over: Partial<SeatRow>[]) =>
-    aTable({
-      game: { status },
-      seats: seated(...over),
-      holdings: [
-        aHolding({ id: "h1", seat_id: "seat-1", card_id: "helm", kind: "item" }),
-        aHolding({ id: "h2", seat_id: "seat-1", card_id: "wilk", kind: "friend" }),
-        aHolding({ id: "h3", seat_id: "seat-1", card_id: "blyskawica", kind: "spell", face: "hidden" }),
-        aHolding({ id: "h4", seat_id: "seat-0", card_id: "miecz", kind: "item" }),
-      ],
-    });
-
-  it("is the host's job when it is somebody else", () => {
-    expect(() =>
-      removeSeat(table("lobby", {}, {}), { seatId: "seat-0", byId: "seat-1" }),
-    ).toThrow("Tylko gospodarz");
-  });
-
-  it("is nobody's permission to give when it is yourself", () => {
-    // Removing yourself is just leaving, and a lobby where the host cannot drop
-    // out is worse than one where anybody can tidy up.
-    const { writes } = removeSeat(table("lobby", {}, {}), { seatId: "seat-1", byId: "seat-1" });
-    expect(writes.seatsRemoved).toEqual(["seat-1"]);
-  });
-
-  it("leaves nothing behind in the poczekalnia", () => {
-    const { writes } = removeSeat(table("lobby", {}, {}), { seatId: "seat-1", byId: "seat-0" });
-    expect(writes.fieldCards).toBeUndefined();
-  });
-
-  it("leaves the kit on the Obszar mid-game, where 12.1 lets the next comer take it", () => {
+  it("takes over a seat whose driver has fallen silent, and stands them up first", () => {
     /**
-     * Deleting the row without this would take the Przedmioty and Przyjaciele
-     * out of the game silently, and the board would be quietly poorer for it.
-     * The gold goes down as coins, one card each, because that is what a
-     * Sztuka Złota is on a field.
+     * Somebody who closed their tab never said they were leaving, so the seat
+     * is merely quiet — and refusing it would strand the Postać for the rest of
+     * the evening. The people in the room settle who picks it up; the server
+     * only refuses a chair somebody is using.
+     *
+     * The quiet one is stood up in the same change, or two people hold one seat
+     * and the unique index refuses the write with a message nobody can act on.
      */
-    const { writes } = removeSeat(
-      table("playing", {}, { field_id: "osada", gold: 2 }),
-      { seatId: "seat-1", byId: "seat-0" },
+    const { writes } = takeSeat(
+      lobby([{ seat_index: null }, { seen_at: at(AWAY_AFTER_MS + 1) }]),
+      { userId: "usr-0", seatIndex: 1 },
+      clock(),
     );
-    expect(writes.fieldCards?.insert).toEqual([
-      { field_id: "osada", card_id: "helm" },
-      { field_id: "osada", card_id: "wilk" },
-      { field_id: "osada", card_id: "1-sztuka-zlota" },
-      { field_id: "osada", card_id: "1-sztuka-zlota" },
+    expect(writes.users).toEqual([
+      { id: "usr-1", patch: { seat_index: null } },
+      { id: "usr-0", patch: { seat_index: 1 } },
     ]);
   });
 
-  it("does not spill the Zaklęcia, which nobody ever saw (9.3)", () => {
-    const { writes } = removeSeat(
-      table("playing", {}, { field_id: "osada", gold: 0 }),
-      { seatId: "seat-1", byId: "seat-0" },
-    );
-    const dropped = (writes.fieldCards?.insert ?? []).map((card) => card.card_id);
-    expect(dropped).not.toContain("blyskawica");
-  });
-
-  it("takes nothing off a figure that is not on the board", () => {
-    const { writes } = removeSeat(
-      table("playing", {}, { field_id: null, gold: 3 }),
-      { seatId: "seat-1", byId: "seat-0" },
-    );
-    expect(writes.fieldCards).toBeUndefined();
-  });
-
-  it("hands the table on when the host removes themselves", () => {
-    const { writes } = removeSeat(table("lobby", {}, {}), { seatId: "seat-0", byId: "seat-0" });
-    expect(writes.seats).toEqual([
-      { id: "seat-1", patch: { is_host: true } },
-      { id: "seat-0", patch: { is_host: false } },
-    ]);
-  });
-
-  it("refuses a seat that is not there", () => {
-    expect(() =>
-      removeSeat(table("lobby", {}, {}), { seatId: "seat-9", byId: "seat-0" }),
-    ).toThrow("Nie ma takiego miejsca");
+  it("leaves nobody in two chairs at once", () => {
+    const before = lobby([{}, { seat_index: null }]);
+    const after = apply(before, takeSeat(before, { userId: "usr-0", seatIndex: 1 }, clock()).writes);
+    expect(after.users.map((one) => one.seat_index)).toEqual([1, null]);
   });
 });
 
 describe("taking the host role", () => {
-  const table = (...over: Partial<SeatRow>[]) =>
-    aTable({ game: { status: "lobby" }, seats: seated(...over) });
+  const lobby = (...over: Partial<UserRow>[]) =>
+    aTable({
+      game: { status: "lobby" },
+      seats: seated(...over.map(() => ({}))),
+      users: here(...over),
+    });
 
   it("may be given away by the host who holds it", () => {
-    const { writes } = takeHostRole(table({}, {}), { seatId: "seat-1", byId: "seat-0" });
-    expect(writes.seats).toEqual([
-      { id: "seat-0", patch: { is_host: false } },
-      { id: "seat-1", patch: { is_host: true } },
+    const { writes } = takeHostRole(lobby({}, {}), { userId: "usr-1", byId: "usr-0" }, clock());
+    expect(writes.users).toEqual([
+      { id: "usr-1", patch: { is_host: true } },
+      { id: "usr-0", patch: { is_host: false } },
     ]);
   });
 
-  it("may be taken from a host who has gone", () => {
+  it("may be taken from a host who has gone quiet", () => {
     /**
      * Without this door a table whose host closed their laptop can never be
-     * configured or started again. It is also how somebody recovers a table
-     * after joining twice from one browser and overwriting the stored token.
+     * configured or started again. The threshold is the host's own, and shorter
+     * than the one that sweeps them: a table nobody can administer is a problem
+     * before an absent player is.
      */
     const { writes } = takeHostRole(
-      table({ abandoned_at: at(0) }, {}),
-      { seatId: "seat-1", byId: "seat-1" },
+      lobby({ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, {}),
+      { userId: "usr-1", byId: "usr-1" },
+      clock(),
     );
-    expect(writes.seats).toContainEqual({ id: "seat-1", patch: { is_host: true } });
+    expect(writes.users).toContainEqual({ id: "usr-1", patch: { is_host: true } });
   });
 
   it("may not be taken from a host who is present", () => {
     // There is no co-host.
-    expect(() => takeHostRole(table({}, {}), { seatId: "seat-1", byId: "seat-1" })).toThrow(
-      "tylko obecny gospodarz",
-    );
+    expect(() =>
+      takeHostRole(lobby({ seen_at: at(1_000) }, {}), { userId: "usr-1", byId: "usr-1" }, clock()),
+    ).toThrow("tylko obecny gospodarz");
   });
 
-  it("may not be given to an empty chair", () => {
+  it("may not be given to somebody who is not at the table", () => {
     expect(() =>
-      takeHostRole(table({}, { abandoned_at: at(0) }), { seatId: "seat-1", byId: "seat-0" }),
-    ).toThrow("To miejsce nie ma gracza");
+      takeHostRole(lobby({}, {}), { userId: "usr-9", byId: "usr-0" }, clock()),
+    ).toThrow("Nie ma takiego gracza");
   });
 
   it("leaves one host behind it", () => {
-    const before = table({}, {}, {});
-    const after = apply(before, takeHostRole(before, { seatId: "seat-2", byId: "seat-0" }).writes);
-    expect(after.seats.filter((seat) => seat.is_host).map((seat) => seat.id)).toEqual(["seat-2"]);
+    const before = lobby({}, {}, {});
+    const after = apply(
+      before,
+      takeHostRole(before, { userId: "usr-2", byId: "usr-0" }, clock()).writes,
+    );
+    expect(after.users.filter((one) => one.is_host).map((one) => one.id)).toEqual(["usr-2"]);
   });
 
-  it("writes nothing when the seat already has it", () => {
-    expect(takeHostRole(table({}, {}), { seatId: "seat-0", byId: "seat-0" }).writes).toEqual({
-      seats: [],
-    });
+  it("writes nothing when they already have it", () => {
+    expect(
+      takeHostRole(lobby({}, {}), { userId: "usr-0", byId: "usr-0" }, clock()).writes,
+    ).toEqual({});
   });
 });
 
 describe("sweeping the poczekalnia", () => {
-  const lobby = (...over: Partial<SeatRow>[]) =>
-    aTable({ game: { status: "lobby" }, seats: seated(...over) });
-  const here = { seen_at: at(1_000) };
+  const lobby = (...over: Partial<UserRow>[]) =>
+    aTable({
+      game: { status: "lobby" },
+      seats: seated(...over.map(() => ({}))),
+      users: here(...over),
+    });
+  const watching = { seen_at: at(1_000) };
 
   it("does nothing to a game that is being played", () => {
-    // The sweep deletes seats outright, which is only ever right before a
-    // character exists to be attached to one.
-    const playing = aTable({ game: { status: "playing" }, seats: seated({ seen_at: at(10 ** 7) }) });
+    /**
+     * The sweep deletes people and their chairs outright, which is only ever
+     * right before a Postać exists to be attached to one. Once play has begun
+     * the seat outlives everybody who ever drove it — that is the whole point
+     * of the split — and a phone that went to sleep is not a resignation.
+     */
+    const playing = aTable({
+      game: { status: "playing" },
+      seats: seated({}),
+      users: here({ seen_at: at(10 ** 7) }),
+    });
     expect(sweepLobby(playing, undefined, clock())).toEqual({
       writes: {},
       result: { gameGone: false },
@@ -529,36 +572,48 @@ describe("sweeping the poczekalnia", () => {
      * every device, several times a second at a full table. An empty changeset
      * commits nothing, which is the only reason that is affordable.
      */
-    expect(sweepLobby(lobby(here, here), undefined, clock()).writes).toEqual({});
+    expect(sweepLobby(lobby(watching, watching), undefined, clock()).writes).toEqual({});
   });
 
-  it("removes a seat whose page said it was going and did not come back", () => {
+  it("removes somebody whose page said it was going and did not come back", () => {
     const { writes } = sweepLobby(
-      lobby(here, { ...here, left_at: at(GOODBYE_GRACE_MS + 1) }),
+      lobby(watching, { ...watching, left_at: at(GOODBYE_GRACE_MS + 1) }),
+      undefined,
+      clock(),
+    );
+    expect(writes.usersRemoved).toEqual(["usr-1"]);
+  });
+
+  it("takes the chair with them, and only here", () => {
+    // Before the game starts a seat is an intention rather than a Postać:
+    // nothing has happened to it and nobody has acted on anything it owns.
+    const { writes } = sweepLobby(
+      lobby(watching, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }),
       undefined,
       clock(),
     );
     expect(writes.seatsRemoved).toEqual(["seat-1"]);
   });
 
-  it("holds a seat whose page is still inside the grace", () => {
+  it("leaves no chair behind for somebody who was only watching", () => {
+    const { writes } = sweepLobby(
+      lobby(watching, { seat_index: null, seen_at: at(LOBBY_GONE_AFTER_MS + 1) }),
+      undefined,
+      clock(),
+    );
+    expect(writes.usersRemoved).toEqual(["usr-1"]);
+    expect(writes.seatsRemoved).toBeUndefined();
+  });
+
+  it("holds somebody whose page is still inside the grace", () => {
     // `pagehide` fires on a reload as well as on a close, and the two are
     // indistinguishable from here. The countdown is what a reload cancels.
     const { writes } = sweepLobby(
-      lobby(here, { ...here, left_at: at(GOODBYE_GRACE_MS - 1_000) }),
+      lobby(watching, { ...watching, left_at: at(GOODBYE_GRACE_MS - 1_000) }),
       undefined,
       clock(),
     );
     expect(writes).toEqual({});
-  });
-
-  it("removes a seat that simply stopped answering", () => {
-    const { writes } = sweepLobby(
-      lobby(here, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }),
-      undefined,
-      clock(),
-    );
-    expect(writes.seatsRemoved).toEqual(["seat-1"]);
   });
 
   it("gives a hidden tab far longer than an away marker does", () => {
@@ -568,41 +623,7 @@ describe("sweeping the poczekalnia", () => {
      * just slowly. Anything under two minutes evicts them for looking away.
      */
     const { writes } = sweepLobby(
-      lobby(here, { seen_at: at(AWAY_AFTER_MS + 1) }),
-      undefined,
-      clock(),
-    );
-    expect(writes).toEqual({});
-  });
-
-  it("never sweeps a seat the host filled in by hand", () => {
-    /**
-     * It has no device of its own and is driven from the shared screen, so
-     * sweeping it would delete a player sitting at the table.
-     *
-     * Given a stale `seen_at` and a goodbye on purpose. A hand-seated place
-     * normally has neither — `seen_at` is null and nothing ever says goodbye
-     * for it — which means a test using the ordinary shape passes whether the
-     * `no_device` filter is there or not: `isQuiet` already answers false for a
-     * seat that never spoke. This one fails the moment the filter goes.
-     */
-    const { writes } = sweepLobby(
-      lobby(here, {
-        no_device: true,
-        seen_at: at(LOBBY_GONE_AFTER_MS * 2),
-        left_at: at(GOODBYE_GRACE_MS * 2),
-      }),
-      undefined,
-      clock(),
-    );
-    expect(writes).toEqual({});
-  });
-
-  it("does not let a hand-seated place lose the host role either", () => {
-    // Same reasoning one threshold down: the shared screen is often the host,
-    // and it is the one seat at the table that cannot check in for itself.
-    const { writes } = sweepLobby(
-      lobby({ no_device: true, seen_at: at(HOST_MISSING_AFTER_MS * 3) }, here),
+      lobby(watching, { seen_at: at(AWAY_AFTER_MS + 1) }),
       undefined,
       clock(),
     );
@@ -617,41 +638,41 @@ describe("sweeping the poczekalnia", () => {
      * table full of people would otherwise have nobody able to start it.
      */
     const { writes, result } = sweepLobby(
-      lobby({ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, here),
+      lobby({ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, watching),
       undefined,
       clock(),
     );
-    expect(writes.seatsRemoved).toBeUndefined();
-    expect(writes.seats).toEqual([
-      { id: "seat-1", patch: { is_host: true } },
-      { id: "seat-0", patch: { is_host: false } },
+    expect(writes.usersRemoved).toBeUndefined();
+    expect(writes.users).toEqual([
+      { id: "usr-1", patch: { is_host: true } },
+      { id: "usr-0", patch: { is_host: false } },
     ]);
     expect(result.gameGone).toBe(false);
   });
 
   it("hands the role on when the host is the one being removed", () => {
     const { writes } = sweepLobby(
-      lobby({ seen_at: at(LOBBY_GONE_AFTER_MS + 1) }, here, here),
+      lobby({ seen_at: at(LOBBY_GONE_AFTER_MS + 1) }, watching, watching),
       undefined,
       clock(),
     );
-    expect(writes.seatsRemoved).toEqual(["seat-0"]);
-    expect(writes.seats).toContainEqual({ id: "seat-1", patch: { is_host: true } });
+    expect(writes.usersRemoved).toEqual(["usr-0"]);
+    expect(writes.users).toContainEqual({ id: "usr-1", patch: { is_host: true } });
   });
 
   it("never hands the role to somebody who is being swept in the same breath", () => {
     /**
      * The bug this replaces. The successor used to be chosen from everybody, so
-     * a seat about to be deleted could be made host and then removed a line
+     * somebody about to be deleted could be made host and then removed a line
      * later; the table recovered only because a second pass happened to catch
-     * it. Seat 1 has been silent as long as the host here, and seat 2 is the
-     * only one still watching.
+     * it. The second person here has been silent as long as the host, and the
+     * third is the only one still watching.
      */
     const gone = { seen_at: at(LOBBY_GONE_AFTER_MS + 1) };
-    const before = lobby(gone, gone, here);
+    const before = lobby(gone, gone, watching);
     const after = apply(before, sweepLobby(before, undefined, clock()).writes);
-    expect(after.seats.map((seat) => seat.id)).toEqual(["seat-2"]);
-    expect(after.seats.filter((seat) => seat.is_host).map((seat) => seat.id)).toEqual(["seat-2"]);
+    expect(after.users.map((one) => one.id)).toEqual(["usr-2"]);
+    expect(after.users.filter((one) => one.is_host).map((one) => one.id)).toEqual(["usr-2"]);
   });
 
   it("says the table itself should go when the last device leaves", () => {
@@ -669,20 +690,9 @@ describe("sweeping the poczekalnia", () => {
     expect(result.gameGone).toBe(true);
   });
 
-  it("says so too when only hand-seated players are left", () => {
-    // Seats with no device of their own cannot choose a character or start the
-    // game: an empty room with the figures set out, not a game waiting.
-    const { result } = sweepLobby(
-      lobby({ seen_at: at(LOBBY_GONE_AFTER_MS + 1) }, { no_device: true, seen_at: null }),
-      undefined,
-      clock(),
-    );
-    expect(result.gameGone).toBe(true);
-  });
-
   it("keeps a table one person is still sitting at", () => {
     const { result } = sweepLobby(
-      lobby({ seen_at: at(LOBBY_GONE_AFTER_MS + 1) }, here),
+      lobby({ seen_at: at(LOBBY_GONE_AFTER_MS + 1) }, watching),
       undefined,
       clock(),
     );
@@ -693,42 +703,46 @@ describe("sweeping the poczekalnia", () => {
 describe("the cheap question asked on every poll", () => {
   /**
    * `needsSweep` is what keeps the common path at one query. The sweep proper
-   * wants a whole snapshot — five reads — and finds nothing to do almost every
-   * time, so the route asks this first, off the seat list it already has, and
+   * wants a whole snapshot — six reads — and finds nothing to do almost every
+   * time, so the route asks this first, off the user list it already has, and
    * only pays for the snapshot when the answer is yes. Which means the two must
    * never disagree.
    */
-  const seats = (...over: Partial<SeatRow>[]) => seated(...over);
-  const here = { seen_at: at(1_000) };
+  const watching = { seen_at: at(1_000) };
 
   it("says no at a table everybody is watching", () => {
-    expect(needsSweep(seats(here, here), NOW)).toBe(false);
+    expect(needsSweep(here(watching, watching), NOW)).toBe(false);
   });
 
   it("says yes to somebody gone, and to a host merely quiet", () => {
-    expect(needsSweep(seats(here, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }), NOW)).toBe(true);
-    expect(needsSweep(seats({ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, here), NOW)).toBe(true);
+    expect(needsSweep(here(watching, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }), NOW)).toBe(true);
+    expect(needsSweep(here({ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, watching), NOW)).toBe(true);
   });
 
   it("agrees with the sweep itself on every table these tests describe", () => {
-    const cases: Partial<SeatRow>[][] = [
-      [here, here],
-      [here, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }],
-      [here, { ...here, left_at: at(GOODBYE_GRACE_MS + 1) }],
-      [here, { ...here, left_at: at(GOODBYE_GRACE_MS - 1_000) }],
-      [{ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, here],
-      [here, { no_device: true, seen_at: at(LOBBY_GONE_AFTER_MS * 2), left_at: at(GOODBYE_GRACE_MS * 2) }],
-      [{ no_device: true, seen_at: at(HOST_MISSING_AFTER_MS * 3) }, here],
-      [here, { seen_at: at(AWAY_AFTER_MS + 1) }],
+    const cases: Partial<UserRow>[][] = [
+      [watching, watching],
+      [watching, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }],
+      [watching, { ...watching, left_at: at(GOODBYE_GRACE_MS + 1) }],
+      [watching, { ...watching, left_at: at(GOODBYE_GRACE_MS - 1_000) }],
+      [{ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, watching],
+      [watching, { seen_at: at(AWAY_AFTER_MS + 1) }],
+      [watching, { seat_index: null, seen_at: at(LOBBY_GONE_AFTER_MS + 1) }],
     ];
-    for (const table of cases) {
-      const snapshot = aTable({ game: { status: "lobby" }, seats: seated(...table) });
+    for (const people of cases) {
+      const snapshot = aTable({
+        game: { status: "lobby" },
+        seats: seated(...people.map(() => ({}))),
+        users: here(...people),
+      });
       const { writes } = sweepLobby(snapshot, undefined, clock());
-      expect(needsSweep(snapshot.seats, NOW)).toBe(Object.keys(writes).length > 0);
+      expect(needsSweep(snapshot.users, NOW)).toBe(Object.keys(writes).length > 0);
     }
   });
 
-  it("counts nobody as gone at a table of hand-seated players", () => {
-    expect(goneFrom(seats({ no_device: true, seen_at: null }), NOW)).toEqual([]);
+  it("counts nobody as gone at a table nobody has spoken at yet", () => {
+    // Everybody has just arrived and none of them has polled once. A fresh
+    // poczekalnia is not a room everybody walked out of.
+    expect(goneFrom(here({}, {}), NOW)).toEqual([]);
   });
 });

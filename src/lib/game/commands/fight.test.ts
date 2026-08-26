@@ -3,7 +3,7 @@ import { asFieldId } from "@/lib/engine/board";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Fight, TurnPhase } from "@/lib/engine/turn";
 import type { DeckState } from "@/lib/engine/deck";
-import { aHolding, aSeat, aTable, NOW, ports } from "../fixture";
+import { aHolding, aSeat, aTable, aUser, NOW, ports } from "../fixture";
 import {
   attackSeat,
   beginFight,
@@ -25,6 +25,18 @@ const pole = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnP
 });
 
 /** A fight already open, so the things that happen inside one can be asked about. */
+/**
+ * The two people in a duel, seat 0 and seat 1.
+ *
+ * Ala is a *person's* name, which is why she is here and not on a seat row.
+ * What a fight against another Postać is called on screen is whoever is driving
+ * it — `nameOfSeat` — and a chair with nobody behind it is "miejsce 2".
+ */
+const duellists = () => [
+  aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+  aUser({ id: "usrb", name: "Ala", seat_index: 1, is_host: false }),
+];
+
 const walka = (over: Partial<Fight> = {}): TurnPhase => ({
   phase: "fight",
   fight: {
@@ -151,8 +163,9 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
           seat_index: 0,
           ...(over.fieldId ? { field_id: over.fieldId as never } : {}),
         }),
-        aSeat({ id: "seat-b", seat_index: 1, player_name: "Ala" }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
       ],
+      users: duellists(),
       holdings: [
         aHolding({
           id: "s-1",
@@ -275,8 +288,9 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       game: { active_seat: 0, turn_state: pole() },
       seats: [
         aSeat({ id: "seat-a", seat_index: 0 }),
-        aSeat({ id: "seat-b", seat_index: 1, player_name: "Ala" }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
       ],
+      users: duellists(),
       holdings: [
         aHolding({ id: "s-1", seat_id: "seat-a", card_id: "wladca-czarow", kind: "spell" }),
         aHolding({ id: "s-2", seat_id: "seat-b", card_id: "olsnienie", kind: "spell" }),
@@ -342,7 +356,8 @@ describe("kostki w walce (17.3, 17.4)", () => {
   const table = (over: Partial<Fight> = {}) =>
     aTable({
       game: { active_seat: 0, turn_state: walka(over) },
-      seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1, player_name: "Ala" })],
+      seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
+      users: duellists(),
     });
 
   it("records the die and says whose it was", async () => {
@@ -441,11 +456,11 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
         aSeat({
           id: "seat-b",
           seat_index: 1,
-          player_name: "Ala",
           sword_own: 2,
           ...(over.field ? { field_id: over.field as never } : {}),
         }),
       ],
+      users: duellists(),
       holdings: [aHolding({ id: "h-1", seat_id: "seat-b", card_id: "miecz-chaosu" })],
     });
 
@@ -596,7 +611,7 @@ describe("ucieczka (17.6, 19)", () => {
         game: { active_seat: 0, turn_state: walka({ opponentSeat: 1 }) },
         seats: [
           aSeat({ id: "seat-a", seat_index: 0 }),
-          aSeat({ id: "seat-b", seat_index: 1, player_name: "Ala" }),
+          aSeat({ id: "seat-b", seat_index: 1 }),
         ],
         holdings,
       });
@@ -637,7 +652,7 @@ describe("ucieczka (17.6, 19)", () => {
       game: { active_seat: 0, turn_state: walka({ opponentSeat: 1 }) },
       seats: [
         aSeat({ id: "seat-a", seat_index: 0 }),
-        aSeat({ id: "seat-b", seat_index: 1, player_name: "Ala" }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
       ],
     });
     expect(() => escape(table, { reported: true, actorSeatId: "seat-a" })).toThrow(

@@ -51,8 +51,14 @@ function seed(): Tables {
       },
     ],
     seats: [
-      { id: "s1", game_id: "g1", seat_index: 0, life: 4, gold: 1, turns_lost: 0, is_host: true },
-      { id: "s2", game_id: "g1", seat_index: 1, life: 4, gold: 1, turns_lost: 0, is_host: false },
+      { id: "s1", game_id: "g1", seat_index: 0, life: 4, gold: 1, turns_lost: 0 },
+      { id: "s2", game_id: "g1", seat_index: 1, life: 4, gold: 1, turns_lost: 0 },
+    ],
+    // The people driving them, which is a different table with a different
+    // lifetime: seats stay put and players come and go past them.
+    users: [
+      { id: "usra", game_id: "g1", name: "Michał", seat_index: 0, is_host: true, ready: true },
+      { id: "usrb", game_id: "g1", name: "Ola", seat_index: 1, is_host: false, ready: true },
     ],
     holdings: [],
     seat_effects: [],
@@ -323,18 +329,18 @@ describe("removing a seat", () => {
   });
 
   /**
-   * The lobby's own shape: the player who left was the host, so the seat goes
-   * and the role is handed to whoever has been at the table longest. Both in
-   * one change, because two would leave a table with no host in between.
+   * The sweep's own shape: the chairs of the people who went are dropped and
+   * whatever the same change says about the ones that stay still lands. Both in
+   * one write, because two would show the table a state neither of them meant.
    */
   it("patches the seats that stayed", async () => {
     const snapshot = await loadSnapshot("g1");
     await commit(snapshot, {
       seatsRemoved: ["s1"],
-      seats: [{ id: "s2", patch: { is_host: true } }],
+      seats: [{ id: "s2", patch: { gold: 4 } }],
     });
     expect(tables.seats.map((seat) => seat.id)).toEqual(["s2"]);
-    expect(tables.seats[0].is_host).toBe(true);
+    expect(tables.seats[0].gold).toBe(4);
   });
 
   /**

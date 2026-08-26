@@ -23,6 +23,8 @@ import {
   type SeatPatch,
   type Snapshot,
 } from "../change";
+import type { SeatRow } from "../store";
+import { driverOf } from "./lobby";
 import type { OwedSpells } from "./movement";
 import { seatById } from "./seat";
 
@@ -504,6 +506,21 @@ export function mayChooseFor(snapshot: Snapshot, seatId: string, byId: string): 
   return target !== undefined && !snapshot.users.some((one) => one.seat_index === target.seat_index);
 }
 
+/**
+ * Changing your mind un-readies you (docs/LOBBY.md).
+ *
+ * Otherwise somebody who said they were ready and then swapped their Postać is
+ * still counted, and the host starts a game somebody was still deciding about.
+ *
+ * On the *person*, because that is where readiness lives now — a chair cannot
+ * be ready — which also means a seat the host is choosing for on somebody's
+ * behalf has nobody to un-ready, and nothing is written.
+ */
+function unready(snapshot: Snapshot, seat: SeatRow): Changeset {
+  const driver = driverOf(snapshot.users, seat.seat_index);
+  return driver && driver.ready ? { users: [{ id: driver.id, patch: { ready: false } }] } : {};
+}
+
 /** The refusal both choosing paths share, so they cannot drift apart. */
 function refuseUnlessMine(snapshot: Snapshot, seatId: string, byId: string): void {
   if (!mayChooseFor(snapshot, seatId, byId)) {
@@ -543,7 +560,7 @@ export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): O
    */
   if (isRandomPick(command.characterId)) {
     return {
-      writes: {
+      writes: merge(unready(snapshot, seat), {
         seats: [
           {
             id: seat.id,
@@ -558,7 +575,7 @@ export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): O
             },
           },
         ],
-      },
+      }),
       result: undefined,
     };
   }
@@ -574,17 +591,9 @@ export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): O
   if (rival) throw new Error(`${character.name} jest już wybrana przez kogoś innego.`);
 
   return {
-    writes: {
-      seats: [
-        {
-          id: seat.id,
-          // Swapping character un-readies you. Otherwise a player who said they
-          // were ready and then changed their mind is still counted, and the
-          // host starts a game somebody was still deciding about.
-          patch: printedOn(character),
-        },
-      ],
-    },
+    writes: merge(unready(snapshot, seat), {
+      seats: [{ id: seat.id, patch: printedOn(character) }],
+    }),
     result: undefined,
   };
 }
@@ -637,12 +646,17 @@ export async function dealCharacters(
   command: DealCharacters,
   ports: CommandPorts,
 ): Promise<Outcome<void>> {
-  const toFill = snapshot.seats.filter(
-    (seat) =>
-      // A player who walked away is not dealt in. The seat stays, because the
-      // journal refers to it and the host may yet give it to somebody; handing
-      // it a Karta Postaci would seat a character nobody is behind.
-      (command.to === "surprises" ? isRandomPick(seat.character_id) : !seat.character_id),
+  /**
+   * Every chair that is waiting for one, driven or not.
+   *
+   * It used to skip a seat whose player had walked away, and there is no such
+   * seat to skip any more: a chair nobody is driving is either one the host set
+   * up for somebody in the room — which `mayChooseFor` lets them choose for, so
+   * the deal must fill it too — or one the sweep is about to take away. The two
+   * used to be told apart by `no_device`, which the split retired.
+   */
+  const toFill = snapshot.seats.filter((seat) =>
+    command.to === "surprises" ? isRandomPick(seat.character_id) : !seat.character_id,
   );
   if (toFill.length === 0) return { writes: {}, result: undefined };
 

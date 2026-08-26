@@ -84,7 +84,7 @@ function amountOf(stat: "sword" | "magic" | "life" | "gold", count: number): str
 
 
 function named(snapshot: Snapshot, row: SeatRow): string {
-  return nameOfSeat(snapshot, row.seat_index);
+  return nameOfSeat(snapshot.users, row.seat_index);
 }
 
 /**

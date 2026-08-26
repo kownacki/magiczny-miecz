@@ -4,15 +4,15 @@ import { asFieldId } from "@/lib/engine/board";
 import { afterRoll } from "@/lib/engine/turn";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { HoldingRow } from "../store";
-import { NOW, aHolding, aSeat, aTable, noDeck, ports } from "../fixture";
+import { NOW, aHolding, aSeat, aTable, aUser, noDeck, ports } from "../fixture";
 import { moveTo, rollForMove, startGame } from "./movement";
 
 /* --------------------------------------------------------------------------
  * Starting the game.
  * ----------------------------------------------------------------------- */
 
-const lobby = (seats: ReturnType<typeof aSeat>[]) =>
-  aTable({ game: { status: "lobby", turn: 0, active_seat: null, deck: null }, seats });
+const lobby = (seats: ReturnType<typeof aSeat>[], users?: ReturnType<typeof aUser>[]) =>
+  aTable({ game: { status: "lobby", turn: 0, active_seat: null, deck: null }, seats, users });
 
 describe("otwarcie stołu (3.2, 9.5)", () => {
   it("refuses a table where nobody has taken a character", () => {
@@ -29,26 +29,26 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
   });
 
   it("names whoever has not said they are ready", () => {
-    const table = lobby([
-      aSeat({ id: "seat-a", seat_index: 0, player_name: "Michał" }),
-      aSeat({ id: "seat-b", seat_index: 1, player_name: "Ola", ready: false }),
-    ]);
+    // Readiness is the person's, and so is the name in the refusal: the chair
+    // has neither.
+    const table = lobby(
+      [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
+      [
+        aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+        aUser({ id: "usrb", name: "Ola", seat_index: 1, ready: false }),
+      ],
+    );
     expect(() => startGame(table, { decks: noDeck() }, ports())).toThrow(
       "Nie wszyscy są gotowi: Ola.",
     );
   });
 
-  /** A seat nobody is behind cannot say anything, so it is not asked. */
-  it("does not wait on a seat whose player walked away", () => {
-    const table = lobby([
-      aSeat({ id: "seat-a", seat_index: 0 }),
-      aSeat({
-        id: "seat-b",
-        seat_index: 1,
-        ready: false,
-        abandoned_at: "2026-01-01T11:00:00Z",
-      }),
-    ]);
+  /** A chair nobody is behind cannot say anything, so it is not asked. */
+  it("does not wait on a seat nobody is driving", () => {
+    const table = lobby(
+      [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
+      [aUser({ id: "usra", name: "Michał", seat_index: 0 })],
+    );
     expect(() => startGame(table, { decks: noDeck() }, ports())).not.toThrow();
   });
 

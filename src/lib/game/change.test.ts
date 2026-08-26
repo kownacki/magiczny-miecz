@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { apply, isEmpty, merge, mergeAll, type Changeset } from "./change";
-import { aHolding, aSeat, aTable } from "./fixture";
+import { aHolding, aSeat, aTable, aUser } from "./fixture";
 
 describe("merge", () => {
   it("keeps both sides' lists, in order", () => {
@@ -77,26 +77,51 @@ describe("apply", () => {
   });
 
   /**
-   * The lobby writes both in one change whenever the player leaving is the one
-   * holding the host role: that seat goes, and the role is handed to somebody
-   * still sitting there. The seat that went stays gone — `commit` deletes
-   * before it patches, and a step reading its own work must not be shown a row
-   * the database is about to be told to drop.
+   * The sweep writes both in one change: the chairs of the people it is
+   * clearing out go, and whatever it patches on the ones that stay lands. The
+   * chair that went stays gone — `commit` deletes before it patches, and a step
+   * reading its own work must not be shown a row the database is about to be
+   * told to drop.
    */
   it("lets the removal win over a patch to the same seat", () => {
     const table = aTable({
-      seats: [aSeat({ id: "a", seat_index: 0, is_host: true }), aSeat({ id: "b", seat_index: 1, is_host: false })],
+      seats: [aSeat({ id: "a", seat_index: 0 }), aSeat({ id: "b", seat_index: 1 })],
     });
     const after = apply(table, {
       seats: [
-        { id: "a", patch: { player_name: "nikt" } },
-        { id: "b", patch: { is_host: true } },
+        { id: "a", patch: { gold: 9 } },
+        { id: "b", patch: { gold: 4 } },
       ],
       seatsRemoved: ["a"],
     });
     expect(after.seats.map((seat) => seat.id)).toEqual(["b"]);
     // and the other seat in that same changeset is patched as asked
-    expect(after.seats[0].is_host).toBe(true);
+    expect(after.seats[0].gold).toBe(4);
+  });
+
+  /**
+   * The same, one table over, and this is the one `leaveTable` actually writes:
+   * the person who left was the host, so their row goes and the role is handed
+   * to somebody still there. Both in one change, because two would leave a
+   * table with no host in between.
+   */
+  it("lets the removal win over a patch to the same person", () => {
+    const table = aTable({
+      seats: [aSeat({ id: "a", seat_index: 0 }), aSeat({ id: "b", seat_index: 1 })],
+      users: [
+        aUser({ id: "usra", seat_index: 0, is_host: true }),
+        aUser({ id: "usrb", seat_index: 1, is_host: false }),
+      ],
+    });
+    const after = apply(table, {
+      users: [
+        { id: "usrb", patch: { is_host: true } },
+        { id: "usra", patch: { is_host: false } },
+      ],
+      usersRemoved: ["usra"],
+    });
+    expect(after.users.map((one) => one.id)).toEqual(["usrb"]);
+    expect(after.users[0].is_host).toBe(true);
   });
 
   it("removes deleted holdings and keeps the rest", () => {

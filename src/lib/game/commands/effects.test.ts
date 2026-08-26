@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Effect } from "@/lib/engine/cardScript";
-import { aHolding, aSeat, aTable, ports } from "../fixture";
+import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { applyEffect, resolveDrawnCard, resolveFieldOffer, spendHolding } from "./effects";
 import { EVENT_COPIES } from "../decks";
 import { asFieldId } from "@/lib/engine/board";
@@ -148,13 +148,13 @@ describe("losing a turn (16.1)", () => {
     aTable({
       game: { active_seat: 0 },
       seats: [
-        aSeat({ id: "seat-a", seat_index: 0, player_name: "Michał" }),
-        aSeat({
-          id: "seat-b",
-          seat_index: 1,
-          player_name: "Ania",
-          character_id: asSeatCharacter("mag"),
-        }),
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1, character_id: asSeatCharacter("mag") }),
+      ],
+      // The names in a journal line are the players', not the chairs'.
+      users: [
+        aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+        aUser({ id: "usrb", name: "Ania", seat_index: 1, is_host: false }),
       ],
     });
 

@@ -114,13 +114,15 @@ export function isQuiet(
  * not "got here first". Ties break on index, which is the old rule and is what
  * every seat that predates the column will do.
  *
- * Somebody who has themselves walked away is skipped; handing the role to an
- * empty chair is how a table ends up unstartable.
+ * Somebody whose own page has said it is going away is skipped, and if that is
+ * everybody the role stays where it is: handing it to a tab that is closing is
+ * how a table ends up unstartable, and an absent host can at least be replaced
+ * through `takeHostRole`'s second door.
  */
 export function nextHost(users: readonly UserRow[], leaving: UserRow): UserRow | null {
   return (
     users
-      .filter((one) => one.id !== leaving.id)
+      .filter((one) => one.id !== leaving.id && one.left_at === null)
       .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))[0] ?? null
   );
 }
@@ -166,9 +168,16 @@ export function seatUnder(snapshot: Snapshot, user: UserRow): SeatRow {
   return seat;
 }
 
-/** Whoever is driving this seat, or nobody. */
-export function driverOf(snapshot: Snapshot, seatIndex: number): UserRow | null {
-  return snapshot.users.find((one) => one.seat_index === seatIndex) ?? null;
+/**
+ * Whoever is driving this seat, or nobody.
+ *
+ * Takes the people rather than the whole table, because the two callers that
+ * are not commands — the console and the roster — have a list of users and no
+ * `Snapshot` to put it in, and a rule that can only be asked from inside a
+ * command is one the edges quietly reimplement.
+ */
+export function driverOf(users: readonly UserRow[], seatIndex: number): UserRow | null {
+  return users.find((one) => one.seat_index === seatIndex) ?? null;
 }
 
 /**
@@ -180,15 +189,8 @@ export function driverOf(snapshot: Snapshot, seatIndex: number): UserRow | null 
  * reached for it; there is nothing to reach for any more, so this is the one
  * place that decides.
  */
-export function nameOfSeat(snapshot: Snapshot, seatIndex: number): string {
-  return driverOf(snapshot, seatIndex)?.name ?? `miejsce ${seatIndex + 1}`;
-}
-
-/** The seat, or a refusal naming the thing that is not there. */
-function seatOf(snapshot: Snapshot, seatId: string): SeatRow {
-  const seat = snapshot.seats.find((one) => one.id === seatId);
-  if (!seat) throw new Error("Nie ma takiego miejsca.");
-  return seat;
+export function nameOfSeat(users: readonly UserRow[], seatIndex: number): string {
+  return driverOf(users, seatIndex)?.name ?? `miejsce ${seatIndex + 1}`;
 }
 
 /* --------------------------------------------------------------------------

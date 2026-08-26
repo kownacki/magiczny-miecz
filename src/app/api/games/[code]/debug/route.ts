@@ -34,15 +34,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const body = await request.json().catch(() => ({}));
   const actor = await verifyActor(game.id, String(body.token ?? ""));
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
-  const seat = actor.seat;
-  // Watching is not acting: a spectator holds a good token and drives no
-  // Postać, which every route below this line is about.
-  if (!seat) {
-    return NextResponse.json({ error: "Nie prowadzisz żadnej Postaci." }, { status: 403 });
-  }
   // Acting on your own seat unless another is named, which matches every other
   // route here: at a table people fix each other's boards.
-  const seatId = String(body.seatId ?? seat.id);
+  const seatId = body.seatId ? String(body.seatId) : (actor.seat?.id ?? null);
+
+  /**
+   * Watching is not acting — for everything but the console.
+   *
+   * A spectator holds a good token and drives no Postać, which is what the
+   * three shortcuts below are about. The console is the exception on purpose:
+   * `who`, `seat` and `leave` are exactly the words somebody driving nothing
+   * reaches for, and it refuses a line that needs a Postać itself, seat by
+   * seat, rather than at the door.
+   */
+  const mustBeSeated = () =>
+    NextResponse.json({ error: "Nie prowadzisz żadnej Postaci." }, { status: 403 });
 
   try {
     switch (body.action) {
@@ -54,18 +60,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         if ("error" in parsed) {
           return NextResponse.json({ error: parsed.error }, { status: 400 });
         }
-        return NextResponse.json({ said: await runCommand(game.id, seatId, parsed.ok) });
+        const said = await runCommand(game.id, { userId: actor.user.id, seatId }, parsed.ok);
+        return NextResponse.json({ said });
       }
       case "grant":
+        if (!seatId) return mustBeSeated();
         await grantCard(game.id, seatId, String(body.cardId));
         break;
       case "teleport":
+        if (!seatId) return mustBeSeated();
         await placeSeat(game.id, seatId, String(body.fieldId), "tryb testowy");
         break;
       case "fight":
         // Picks a fight with a named Wróg. Reaching one legitimately means
         // walking until the deck hands it over, and there are a hundred and
         // forty-five other cards in it.
+        if (!seatId) return mustBeSeated();
         await stageFight(game.id, seatId, String(body.cardId));
         break;
       case "leave-fight":

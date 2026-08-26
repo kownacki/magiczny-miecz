@@ -8,6 +8,7 @@ interface Row {
 export interface Tables {
   games: Row[];
   seats: Row[];
+  users: Row[];
   holdings: Row[];
   seat_effects: Row[];
   field_cards: Row[];

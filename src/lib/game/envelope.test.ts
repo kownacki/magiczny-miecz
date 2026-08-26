@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { envelopeFor, withoutDeck } from "./envelope";
-import { aHolding, aSeat, aTable } from "./fixture";
+import { aHolding, aSeat, aTable, aUser } from "./fixture";
 import { AWAY_AFTER_MS } from "./commands/lobby";
 
 /**
@@ -27,8 +27,12 @@ const NOW = Date.parse("2026-01-01T12:00:00Z");
 function twoHands() {
   return aTable({
     seats: [
-      aSeat({ id: "seat-a", seat_index: 0, player_name: "Michał" }),
-      aSeat({ id: "seat-b", seat_index: 1, player_name: "Ola", is_host: false }),
+      aSeat({ id: "seat-a", seat_index: 0 }),
+      aSeat({ id: "seat-b", seat_index: 1 }),
+    ],
+    users: [
+      aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+      aUser({ id: "usrb", name: "Ola", seat_index: 1, is_host: false }),
     ],
     holdings: [
       aHolding({ id: "a-spell", seat_id: "seat-a", card_id: "blyskawica", kind: "spell", face: "hidden" }),
@@ -44,13 +48,13 @@ const seatIn = (envelope: ReturnType<typeof envelopeFor>, id: string) =>
 
 describe("a concealed hand (9.3)", () => {
   it("sends a seat its own Zaklęcie in full", () => {
-    const mine = seatIn(envelopeFor(twoHands(), "seat-a", NOW), "seat-a");
+    const mine = seatIn(envelopeFor(twoHands(), "usra", NOW), "seat-a");
     expect(mine.holdings.map((card) => card.cardId)).toEqual(["blyskawica", "helm"]);
     expect(mine.hidden_count).toBe(0);
   });
 
   it("sends the other seat a count instead of the card", () => {
-    const theirs = seatIn(envelopeFor(twoHands(), "seat-a", NOW), "seat-b");
+    const theirs = seatIn(envelopeFor(twoHands(), "usra", NOW), "seat-b");
     expect(theirs.holdings.map((card) => card.cardId)).toEqual(["helm"]);
     expect(theirs.hidden_count).toBe(1);
   });
@@ -65,8 +69,8 @@ describe("a concealed hand (9.3)", () => {
    * is the seat holding it.
    */
   it("gives each Zaklęcie to exactly one device, and it is its owner's", () => {
-    const toA = envelopeFor(twoHands(), "seat-a", NOW);
-    const toB = envelopeFor(twoHands(), "seat-b", NOW);
+    const toA = envelopeFor(twoHands(), "usra", NOW);
+    const toB = envelopeFor(twoHands(), "usrb", NOW);
     const sees = (envelope: ReturnType<typeof envelopeFor>, seatId: string, cardId: string) =>
       seatIn(envelope, seatId).holdings.some((card) => card.cardId === cardId);
 
@@ -84,7 +88,7 @@ describe("a concealed hand (9.3)", () => {
    * The rendered fields are checked above; this checks the bytes.
    */
   it("does not carry another seat's card anywhere in what is sent", () => {
-    const wire = JSON.stringify(envelopeFor(twoHands(), "seat-a", NOW));
+    const wire = JSON.stringify(envelopeFor(twoHands(), "usra", NOW));
     expect(wire).toContain("blyskawica");
     expect(wire).not.toContain("uzdrowienie");
   });
@@ -99,8 +103,8 @@ describe("a concealed hand (9.3)", () => {
     expect(JSON.stringify(anonymous)).not.toContain("blyskawica");
   });
 
-  it("treats a seat id that is not at this table as no seat at all", () => {
-    const stranger = envelopeFor(twoHands(), "seat-from-another-game", NOW);
+  it("treats an id that is not at this table as nobody at all", () => {
+    const stranger = envelopeFor(twoHands(), "zzzz", NOW);
     expect(stranger.mySeatIndex).toBeNull();
     expect(stranger.seats.map((seat) => seat.hidden_count)).toEqual([1, 1]);
   });
@@ -110,7 +114,7 @@ describe("a concealed hand (9.3)", () => {
     // one keeping the secret — see `visibleTo`.
     const table = twoHands();
     table.game.mode = "companion";
-    const theirs = seatIn(envelopeFor(table, "seat-a", NOW), "seat-b");
+    const theirs = seatIn(envelopeFor(table, "usra", NOW), "seat-b");
     expect(theirs.holdings.map((card) => card.cardId)).toEqual(["uzdrowienie", "helm"]);
     expect(theirs.hidden_count).toBe(0);
   });
@@ -127,8 +131,8 @@ describe("what is public even when its source is not", () => {
    * different ways to two different devices.
    */
   it("reports the same totals for a seat to every device", () => {
-    const own = seatIn(envelopeFor(twoHands(), "seat-b", NOW), "seat-b");
-    const other = seatIn(envelopeFor(twoHands(), "seat-a", NOW), "seat-b");
+    const own = seatIn(envelopeFor(twoHands(), "usrb", NOW), "seat-b");
+    const other = seatIn(envelopeFor(twoHands(), "usra", NOW), "seat-b");
     for (const key of [
       "sword_total",
       "magic_total",
@@ -144,38 +148,45 @@ describe("what is public even when its source is not", () => {
     // The token is kept out by `SEAT_COLUMNS` — a hand-written list of column
     // names in a string, one edit away from including it, with the seat row
     // spread wholesale into the envelope underneath. This is what says so.
-    const wire = JSON.stringify(envelopeFor(twoHands(), "seat-a", NOW));
+    const wire = JSON.stringify(envelopeFor(twoHands(), "usra", NOW));
     expect(wire).not.toContain("token");
   });
 });
 
 describe("presence, judged here so every device agrees", () => {
   const seenAt = (ms: number) => new Date(NOW - ms).toISOString();
+  /** One chair, and whoever is or is not behind it. */
+  const chair = (...driver: Partial<Parameters<typeof aUser>[0]>[]) =>
+    aTable({ seats: [aSeat({ seat_index: 0 })], users: driver.map((one) => aUser(one)) });
 
-  it("is not away when it has never been heard from", () => {
-    // A seat the host added in companion mode has no device behind it by
-    // design; calling that absent made a fresh lobby look abandoned.
-    const table = aTable({ seats: [aSeat({ seen_at: null })] });
-    expect(envelopeFor(table, null, NOW).seats[0].away).toBe(false);
+  it("is not away when they have never been heard from", () => {
+    // Somebody who joined a second ago has not polled once. Calling that absent
+    // made a fresh poczekalnia look like a room everybody had walked out of.
+    expect(envelopeFor(chair({ seen_at: null }), null, NOW).seats[0].away).toBe(false);
   });
 
-  it("is away once it has gone quiet for longer than the window", () => {
-    const quiet = aTable({ seats: [aSeat({ seen_at: seenAt(AWAY_AFTER_MS + 1000) })] });
-    const recent = aTable({ seats: [aSeat({ seen_at: seenAt(AWAY_AFTER_MS - 1000) })] });
+  it("is away once they have gone quiet for longer than the window", () => {
+    const quiet = chair({ seen_at: seenAt(AWAY_AFTER_MS + 1000) });
+    const recent = chair({ seen_at: seenAt(AWAY_AFTER_MS - 1000) });
     expect(envelopeFor(quiet, null, NOW).seats[0].away).toBe(true);
     expect(envelopeFor(recent, null, NOW).seats[0].away).toBe(false);
   });
 
-  it("is not away when the player walked off and left the character", () => {
-    const gone = aTable({
-      seats: [aSeat({ seen_at: seenAt(AWAY_AFTER_MS * 10), abandoned_at: seenAt(0) })],
-    });
-    expect(envelopeFor(gone, null, NOW).seats[0].away).toBe(false);
+  it("is not away when nobody is driving the chair at all", () => {
+    /**
+     * Presence is a person's, and an empty seat has none. Those are different
+     * things to look at — the Postać is standing there with its Przedmioty and
+     * whoever was driving it has gone — and marking it "nieobecny" says the
+     * quieter of the two.
+     */
+    const empty = chair();
+    expect(envelopeFor(empty, null, NOW).seats[0].away).toBe(false);
+    expect(envelopeFor(empty, null, NOW).seats[0].player_name).toBeNull();
   });
 
   it("reads the clock it is given rather than the one on the wall", () => {
     // Pure, which is the only reason the three tests above can exist.
-    const table = aTable({ seats: [aSeat({ seen_at: seenAt(0) })] });
+    const table = chair({ seen_at: seenAt(0) });
     const later = NOW + AWAY_AFTER_MS + 1000;
     expect(envelopeFor(table, null, NOW).seats[0].away).toBe(false);
     expect(envelopeFor(table, null, later).seats[0].away).toBe(true);

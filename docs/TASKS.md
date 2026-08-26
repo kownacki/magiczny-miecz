@@ -405,9 +405,16 @@ See **Wariant: ekwipunek slotowy** in [COVERAGE.md](COVERAGE.md).
 
 # IN FLIGHT — separating people from Postacie
 
-**The table is down.** The database was wiped and re-shaped; the code is
-part-way through following it. `npx tsc --noEmit` is the work list, and it is
-accurate: nothing here needs deciding, only doing.
+**The server is across; the browser is not.** The database was wiped and
+re-shaped, and everything behind a route handler now follows it — the engine,
+the commands, the three stores, the eleven routes, the console and 1,702 tests.
+What is left is the client, which still reads a player's name off a seat, and
+4.4's list of Postacie out of the game, which nothing writes yet.
+
+`npx tsc --noEmit` was the work list and is now clean, which means it has
+stopped being one: what remains does not fail to compile. Two of the six things
+the last pass turned up typechecked all the way to the database — see **Done**
+— so the next reader should trust the prose here over the compiler.
 
 ## The model, in one paragraph
 
@@ -453,25 +460,56 @@ Four states, on two independent axes:
 
 ## Done
 
-`c5189cc` schema · `aac3c70` console grammar (116 tests green) · `27aa4f7`
-migration applied + wipe · `89e4310` row types split · `eaf796d` `lobby.ts` ·
-`01578f4` all eleven API routes.
+`c5189cc` schema · `aac3c70` console grammar · `27aa4f7` migration applied +
+wipe · `89e4310` row types split · `eaf796d` `lobby.ts` · `01578f4` all eleven
+API routes · **the console and every test** — `npx tsc --noEmit` is clean and
+1,702 tests pass.
+
+Six things the console pass turned up, worth knowing because none of them was
+on the list and two of them typechecked all the way through:
+
+- `listGames` was reading `player_name`, `no_device`, `is_host` and
+  `abandoned_at` off **seat** rows. It compiled because `seatsInGames` hands
+  back `Record<string, unknown>`, and it would have failed at the database.
+  There is a `usersInGames` beside it now, and "abandoned" is a fact about the
+  pair — a Postać with nobody behind it — rather than a column.
+- `sayGoodbye` wrote `seats.left_at`, which is not a column any more. It is the
+  *person's*, like `seen_at` beside it, so `/bye` no longer needs a seat and a
+  spectator closing their tab is swept like anybody else.
+- `chooseCharacter` had silently stopped un-readying you when you swap Postać —
+  the comment saying it did outlived the code. It writes the driver's `ready`
+  now, and has nobody to un-ready on a chair the host is choosing for.
+- `dealCharacters` no longer skips a chair nobody is driving, and cannot: that
+  is either the host's local player — whom `mayChooseFor` lets them choose for,
+  so the deal has to fill it — or somebody the sweep is about to remove, and
+  `no_device` was the flag that told those two apart.
+- `nextHost` promised to skip somebody who had walked away and had lost the
+  column that said so. It skips `left_at` now.
+- `pickPlayer` learnt the four-character id and a null seat, which is the only
+  handle a **spectator** has — nothing printed on the board names them.
 
 ## Left, in order
 
-1. **`consoleStore.ts`** (~24) — `who`, `kick`, `seat`, `leave`, `rename` and
-   `host` currently throw "czeka na tabelę users". The functions they need now
-   exist in `lobbyStore`. `remove` and `revive` still need `characters_out`.
-2. **`lobby.test.ts`** (~85) and **`permission.test.ts`** (~27) — they speak the
-   old API. Then `envelope`, `fight`, `character`, `change`, `movement`,
-   `effects`, `commit` tests and `fixture.ts` (a `users: []` on the snapshot
-   fixes most of them).
-3. **Client** — `deviceId` in localStorage (see below), resume-or-join-as-
+1. **Client** — `deviceId` in localStorage (see below), resume-or-join-as-
    somebody-else, the four seat states in the roster, the kicked/removed
-   screens.
-4. **4.4** — nothing writes `games.characters_out` yet. Death adds; soft
+   screens. `page.tsx`, `players.tsx`, `lobby-view.ts`, `seat-card.tsx` and
+   `turn-queue.tsx` all still read `seat.player_name`; the envelope sends it,
+   worked out from the driver, so they are not broken — but the name is on the
+   wrong noun and the four states cannot be drawn from it.
+2. **4.4** — nothing writes `games.characters_out` yet. Death adds; soft
    `remove` and `revive` take off; `pick` chooses from neither-seated-nor-listed.
-   Until this lands, a dead Postać silently returns to the pool.
+   Until this lands, a dead Postać silently returns to the pool. `remove` and
+   `revive` are the two console words still refused out loud.
+
+   **What went with `removeSeat`, and has to come back here.** The host's
+   removal used to spill the Postać's kit onto its Obszar under 12.1 — the
+   Przedmioty and Przyjaciele face up, the Złoto as one `1-sztuka-zlota` card
+   per coin, and *not* the Zaklęcia, which nobody ever saw (9.3). `leaveTable`
+   deliberately does none of that: it takes the person and leaves the figure
+   standing. So the rule now lives nowhere, and its tests went with the
+   function. `killSeat` in `life.ts` is the surviving half — 4.4's version,
+   which spills the same things but not the gold — and is the thing to write
+   `remove` against.
 
 ## Two decisions a fresh session would otherwise re-derive
 

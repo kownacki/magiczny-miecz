@@ -3,7 +3,7 @@
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { FIELDS } from "@/lib/engine/board";
-import { RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
+import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 import {
   helpLines,
   pickPlayer,
@@ -15,9 +15,16 @@ import { cardName } from "@/lib/engine/polish";
 import type { Modifier } from "@/lib/engine/status";
 import { change } from "./change";
 import { ADJUSTABLE, type Adjustable } from "./commands/adjust";
+import { driverOf, isQuiet, nameOfSeat } from "./commands/lobby";
 import { STONE_TURNS } from "./commands/stone";
-import { leaveGame } from "./lobbyStore";
-import { gameById, seatsFor } from "./store";
+import {
+  claimTableScreen,
+  leaveTable,
+  renameUser,
+  takeSeat,
+  unseat,
+} from "./lobbyStore";
+import { gameById, seatsFor, usersFor, type SeatRow, type UserRow } from "./store";
 import {
   abandonFight,
   addEffect,
@@ -68,6 +75,32 @@ const EFFECTS: Record<EffectName, { label: string; modifier: Modifier }> = {
 };
 
 /**
+ * What is printed on a Karta Postaci, from what the column holds.
+ *
+ * The surprise is a state and not a card (`RANDOM_CHARACTER_ID`), so it says
+ * so rather than coming back as a missing name — a seat that has chosen to be
+ * dealt one is not the same as a seat that has chosen nothing.
+ */
+function characterName(id: string | null): string {
+  if (!id) return "—";
+  if (isRandomPick(id)) return "niespodzianka";
+  return (characters as Character[]).find((one) => one.id === id)?.name ?? id;
+}
+
+/**
+ * Who is typing, which is now two facts rather than one.
+ *
+ * A person and the Postać they drive are different rows with different
+ * lifetimes, and the console needs both: `kill` and `go` are about a figure on
+ * the board, `kick` and `leave` are about somebody in the room. `seatId` is
+ * null for a spectator, and the commands that need one say so themselves.
+ */
+export interface Actor {
+  userId: string;
+  seatId: string | null;
+}
+
+/**
  * Carries out one line from the test console.
  *
  * The grammar is in `console.ts` and is pure; this is the half with the
@@ -81,10 +114,13 @@ const EFFECTS: Record<EffectName, { label: string; modifier: Modifier }> = {
  */
 export async function runCommand(
   gameId: string,
-  actorSeatId: string,
+  actor: Actor,
   command: Command,
 ): Promise<string> {
-  const seats = await seatsFor(gameId);
+  const [seats, people] = await Promise.all([seatsFor(gameId), usersFor(gameId)]);
+
+  /** Whoever is driving a given seat, or nobody — `driverOf`'s, off the people here. */
+  const driver = (seatIndex: number) => driverOf(people, seatIndex);
 
   /**
    * Whose seat a command is about: the one named, or your own.
@@ -93,10 +129,10 @@ export async function runCommand(
    * when somebody types. Any seated player may act on any seat here, as they
    * may with the corrections: at a table people fix each other's boards.
    */
-  const seatOf = (who: string | null) => {
+  const seatOf = (who: string | null): SeatRow => {
     if (!who) {
-      const mine = seats.find((seat) => seat.id === actorSeatId);
-      if (!mine) throw new Error("Nieznane miejsce.");
+      const mine = seats.find((seat) => seat.id === actor.seatId);
+      if (!mine) throw new Error("Nie prowadzisz żadnej Postaci.");
       return mine;
     }
     // The matching itself is `pickPlayer`'s, in the pure half, where a table of
@@ -104,13 +140,45 @@ export async function runCommand(
     const hit = pickPlayer(
       seats.map((seat) => ({
         seat: seat.seat_index,
-        name: seat.player_name,
+        name: driver(seat.seat_index)?.name ?? null,
         character: seat.character_id,
       })),
       who,
     );
     if ("error" in hit) throw new Error(hit.error);
     return seats[hit.at];
+  };
+
+  /**
+   * Which *person* a command is about: the one named, or yourself.
+   *
+   * The same handles as a seat and one more — the four-character id, which is
+   * the only one a spectator has. That is the whole reason this is a second
+   * lookup rather than `seatOf` reading the driver off the row it found:
+   * somebody driving nothing cannot be named by a chair or by a Postać, and
+   * `kick`, `seat` and `rename` are precisely the words you reach for when
+   * they are.
+   */
+  const userOf = (who: string | null): UserRow => {
+    if (!who) {
+      const me = people.find((one) => one.id === actor.userId);
+      if (!me) throw new Error("Nie ma takiego gracza.");
+      return me;
+    }
+    const hit = pickPlayer(
+      people.map((one) => ({
+        seat: one.seat_index,
+        name: one.name,
+        character:
+          one.seat_index === null
+            ? null
+            : (seats.find((seat) => seat.seat_index === one.seat_index)?.character_id ?? null),
+        id: one.id,
+      })),
+      who,
+    );
+    if ("error" in hit) throw new Error(hit.error);
+    return people[hit.at];
   };
 
   /** A seat by the number printed beside it, which counts from one. */
@@ -120,8 +188,70 @@ export async function runCommand(
     return hit;
   };
 
-  const named = (seat: { player_name: string | null; seat_index: number }) =>
-    seat.player_name ?? `Miejsce ${seat.seat_index + 1}`;
+  /**
+   * What to call a seat in a line printed back.
+   *
+   * `nameOfSeat`'s and not this file's: whoever is driving it, and the chair
+   * when nobody is. An empty seat is a real state now rather than a missing
+   * name, and one place decides what it is called.
+   */
+  const named = (seat: { seat_index: number }) => nameOfSeat(people, seat.seat_index);
+
+  /** What a command that moved the turn on has to say about it. */
+  const turnMoved = (passedTo: number | null) =>
+    passedTo === null ? "" : ` Turn passes to seat ${passedTo + 1}.`;
+
+  /**
+   * The table written out: one line to a seat, and the watchers under it.
+   *
+   * The one answer in this file that is not a change, and the one that makes
+   * the rest of the person commands typeable. A seat is on the screen already
+   * and can be named by its number or its Postać; a **spectator** is on nobody's
+   * board and can be named by nothing but their id, which is what this prints
+   * and what nothing else shows.
+   *
+   * Read as four columns and a tail: whose turn it is, the number beside the
+   * chair, the Karta Postaci standing in it, and the person driving it. `†` is
+   * 4.4 — the Postać is out and the chair is still theirs.
+   */
+  const roster = async () => {
+    const now = Date.now();
+    const game = await gameById(gameId);
+    // Readiness is the poczekalnia's word and means nothing once play has
+    // started, so it is only printed where it can still be acted on.
+    const waiting = game.status === "lobby";
+
+    const person = (one: UserRow) => {
+      const marks = [
+        one.id === actor.userId ? "you" : null,
+        one.is_host ? "host" : null,
+        isQuiet(one, now) ? "away" : null,
+        waiting && !one.ready ? "not ready" : null,
+      ].filter((mark): mark is string => mark !== null);
+      return `${one.name} ${one.id}${marks.length > 0 ? ` (${marks.join(", ")})` : ""}`;
+    };
+
+    const seated = new Set<string>();
+    const rows = seats.map((seat) => {
+      const one = driver(seat.seat_index);
+      if (one) seated.add(one.id);
+      return {
+        at: `${game.active_seat === seat.seat_index ? "▸" : " "}${seat.seat_index + 1}`,
+        card: characterName(seat.character_id) + (seat.eliminated ? " †" : ""),
+        who: one ? person(one) : "—",
+      };
+    });
+
+    const wide = Math.max(0, ...rows.map((row) => row.card.length));
+    const lines = rows.map((row) => `${row.at}  ${row.card.padEnd(wide)}  ${row.who}`);
+
+    // Everybody the seats did not account for, which is what a spectator is:
+    // somebody at the table driving nothing (4.4 lets a player whose Postać
+    // died decline to take another, and a full table seats latecomers nowhere).
+    const watching = people.filter((one) => !seated.has(one.id));
+    if (watching.length > 0) lines.push(`watching: ${watching.map(person).join(", ")}`);
+    return lines.length > 0 ? lines.join("\n") : "Nobody is at this table.";
+  };
 
   switch (command.kind) {
     case "help":
@@ -182,44 +312,104 @@ export async function runCommand(
       return `${named(seat)} ginie.`;
     }
 
+    /* ----------------------------------------------------------------------
+     * People. Everything below acts on somebody rather than on a Postać.
+     * ------------------------------------------------------------------- */
+
     /**
-     * A player out of their seat, and the character left where it stands.
+     * The whole table in one answer: seats, Postacie, drivers and ids.
      *
-     * The same door `leave` goes through, which is the whole point of it being
-     * that door: mid-game a seat is not deleted but *abandoned* — the character
-     * keeps its Obszar, its cards and its żetony, the seat is marked as having
-     * nobody behind it, and a fresh claim token is issued so the device that
-     * held it stops holding it. Somebody takes it over later, or the same
-     * person does from another tab. Only in the poczekalnia, where a seat is an
-     * intention and not yet a character, does leaving actually delete it.
+     * The only command here that reads rather than writes, and the reason the
+     * rest of them are typeable at all — `kick`, `seat` and `host` all want a
+     * handle on somebody, and a spectator has exactly one: the four characters
+     * printed here. Everything else on the line is on the screen already; the
+     * id is not, because it is not a thing a player has any use for until
+     * somebody has to be pointed at.
+     */
+    case "who":
+      return roster();
+
+    /**
+     * A player out of their seat, and the Postać left where it stands.
      *
-     * Which also means this cannot strand the table: `leaveSeat` hands the turn
-     * on when the seat it empties is the one whose turn it is.
+     * Mid-game a seat is not deleted but *left*: the Postać keeps its Obszar,
+     * its cards and its żetony, and the chair is there for somebody to take
+     * over — the same person from another tab, or anybody else in the room.
+     * This is what the rulebook has no word for, because in 1993 everybody was
+     * in one room and a person who stood up came back.
+     *
+     * Which also means it cannot strand the table: `unseat` hands the turn on
+     * when the seat it empties is the one whose turn it is.
      */
     case "unseat": {
-      const seat = seatOf(command.who);
-      const { removed, passedTo } = await leaveGame(gameId, seat.id);
-      const turn = passedTo === null ? "" : ` Turn passes to seat ${passedTo + 1}.`;
-      return removed
-        ? `${named(seat)} is off the table.`
-        : `${named(seat)} is out of their seat; the character stays.${turn}`;
+      const user = userOf(command.who);
+      if (user.seat_index === null) return `${user.name} is not driving anything.`;
+      const { passedTo } = await unseat(gameId, user.id);
+      return `${user.name} is out of seat ${user.seat_index + 1}; the Postać stays.${turnMoved(
+        passedTo,
+      )}`;
     }
 
     /**
-     * Waiting on the `users` table.
+     * Somebody sits down, which is the one door into a seat.
      *
-     * These are the commands that act on a person rather than on a Postać, and
-     * a person is not a thing this schema has yet — a seat still carries the
-     * name, the claim and the host flag. Refused out loud rather than quietly
-     * missing, so a line that `help` advertises never fails silently.
+     * The number is checked against the seats that exist before the command is
+     * asked, because a person's `seat_index` is only refused by the rules for
+     * being *somebody else's* — nothing in there says the chair has to be
+     * there at all, and a typo would otherwise seat somebody in seat 47.
      */
-    case "who":
-    case "kick":
-    case "seat":
-    case "leave":
-    case "rename":
-    case "host":
-      throw new Error(`\`${command.kind}\` czeka na tabelę users — jeszcze nie działa.`);
+    case "seat": {
+      const user = userOf(command.who);
+      const seat = seatByNumber(command.seat);
+      await takeSeat(gameId, user.id, seat.seat_index);
+      return `${user.name} drives ${named(seat)}${
+        seat.character_id ? ` — ${characterName(seat.character_id)}` : ""
+      }.`;
+    }
+
+    /**
+     * Off the table, by somebody else's decision.
+     *
+     * The Postać is untouched: it is not theirs to take away, and 4.4 is the
+     * only thing in the book that removes one. What goes is the person — and
+     * the journal records that they were thrown off rather than that they
+     * walked, which is the difference `leave` exists to draw.
+     */
+    case "kick": {
+      const user = userOf(command.who);
+      const { passedTo } = await leaveTable(gameId, user.id, true);
+      return `${user.name} is off the table.${turnMoved(passedTo)}`;
+    }
+
+    /** The same exit, by your own choice. Only ever yourself — see the grammar. */
+    case "leave": {
+      const me = userOf(null);
+      const { passedTo } = await leaveTable(gameId, me.id, false);
+      return `${me.name} leaves the table.${turnMoved(passedTo)}`;
+    }
+
+    case "rename": {
+      const user = userOf(command.who);
+      const was = user.name;
+      await renameUser(gameId, user.id, command.name);
+      return `${was} is now ${command.name.trim()}.`;
+    }
+
+    /**
+     * The host role handed over.
+     *
+     * Handed over *by the host*, whoever typed it. `takeHostRole` refuses
+     * anybody else while the host is present and it is right to — there is no
+     * co-host — but this console is the one caller deliberately allowed to be
+     * anybody, exactly as `pick` is: a tester driving four people from one
+     * browser is every one of them at once.
+     */
+    case "host": {
+      const user = userOf(command.who);
+      const host = people.find((one) => one.is_host);
+      await claimTableScreen(gameId, user.id, host?.id ?? actor.userId);
+      return `${user.name} runs the table.`;
+    }
 
     case "remove":
     case "revive":
@@ -270,9 +460,8 @@ export async function runCommand(
         command.characterId ?? RANDOM_CHARACTER_ID,
         seat.id,
       );
-      const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
-      const now = (characters as Character[]).find((one) => one.id === after?.character_id);
-      return `${named(seat)} plays ${now?.name ?? after?.character_id ?? "?"}.`;
+      const after = (await seatsFor(gameId)).find((one) => one.id === seat.id);
+      return `${named(seat)} plays ${characterName(after?.character_id ?? null)}.`;
     }
 
     /**

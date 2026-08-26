@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mayAct } from "./permission";
-import { aSeat, aTable } from "./fixture";
+import { aTable, aUser } from "./fixture";
 
 /**
  * "It is not your turn" is one sentence and five rules.
@@ -13,8 +13,8 @@ import { aSeat, aTable } from "./fixture";
  */
 
 const playing = (over = {}) => aTable({ game: { active_seat: 0, ...over } }).game;
-const active = aSeat({ seat_index: 0, is_host: true });
-const waiting = aSeat({ id: "seat-b", seat_index: 1, is_host: false });
+const active = aUser({ seat_index: 0, is_host: true });
+const waiting = aUser({ id: "usrb", seat_index: 1, is_host: false });
 
 describe("the seat whose turn it is", () => {
   it("may do anything", () => {
@@ -85,7 +85,7 @@ describe("the shared screen in the middle of a companion table", () => {
   const shared = { mode: "companion" };
 
   it("acts for whoever is playing", () => {
-    expect(mayAct(playing(shared), aSeat({ seat_index: 3, is_host: true }), "roll")).toEqual({
+    expect(mayAct(playing(shared), aUser({ seat_index: 3, is_host: true }), "roll")).toEqual({
       allowed: true,
       tableScreen: true,
     });
@@ -104,7 +104,7 @@ describe("the shared screen in the middle of a companion table", () => {
       allowed: false,
       tableScreen: false,
     });
-    const hostWaiting = aSeat({ seat_index: 1, is_host: true });
+    const hostWaiting = aUser({ seat_index: 1, is_host: true });
     expect(mayAct(playing({ mode: "simulation" }), hostWaiting, "roll")).toEqual({
       allowed: false,
       tableScreen: false,
@@ -126,7 +126,7 @@ describe("the shared screen in the middle of a companion table", () => {
    * the verdict alone cannot tell the route which it is talking to.
    */
   it("says which of the two allowed a flight is", () => {
-    const host = aSeat({ seat_index: 3, is_host: true });
+    const host = aUser({ seat_index: 3, is_host: true });
     expect(mayAct(playing(shared), host, "escape")).toEqual({
       allowed: true,
       tableScreen: true,

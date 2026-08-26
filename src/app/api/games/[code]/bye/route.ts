@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findGame, sayGoodbye, verifyActor } from "@/lib/game/store";
+import { findGame, sayGoodbye, verifyUser } from "@/lib/game/store";
 
 /**
  * "My page is going away."
@@ -35,9 +35,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const game = await findGame(code.toUpperCase());
   if (!game) return new NextResponse(null, { status: 204 });
 
-  const actor = await verifyActor(game.id, token);
-  const seat = actor?.seat ?? null;
-  if (seat) await sayGoodbye(seat.id);
+  // Whoever holds the token, seated or not: a spectator's tab closing is a
+  // person leaving the table, which is exactly what the sweep is looking for.
+  const user = await verifyUser(game.id, token);
+  if (user) await sayGoodbye(user.id);
 
   // No revision bump. Nothing has actually changed yet — the countdown may well
   // be cancelled a second later by a reload — and waking every other device to

@@ -4,7 +4,7 @@ import type { Character } from "@/data/types";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { FIELDS, asFieldId } from "@/lib/engine/board";
-import { aHolding, aSeat, aTable, ports } from "../fixture";
+import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import {
   changeNature,
   chooseCharacter,
@@ -267,7 +267,6 @@ describe("nowa Postać po śmierci (4.4)", () => {
       stone_until_turn: null,
       bridge_blocked_until_turn: null,
       nature_changed_turn: null,
-      ready: true,
     });
     expect(writes.journal?.at(-1)).toMatchObject({
       seatId: "seat-a",
@@ -404,7 +403,7 @@ describe("dosiadka: a latecomer to a table already running", () => {
       kind: "joined",
       payload: { characterId: "zdobywca" },
     });
-    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "zdobywca", ready: true });
+    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "zdobywca" });
   });
 });
 
@@ -476,8 +475,10 @@ describe("losowa Postać", () => {
  * ----------------------------------------------------------------------- */
 
 /** The poczekalnia: a table nobody has started, and a seat holding nothing. */
-const waiting = (seats = [aSeat({ character_id: null, field_id: null })]) =>
-  aTable({ game: { status: "lobby", turn: 0 }, seats });
+const waiting = (
+  seats = [aSeat({ character_id: null, field_id: null })],
+  users?: ReturnType<typeof aUser>[],
+) => aTable({ game: { status: "lobby", turn: 0 }, seats, users });
 
 /** A seat in the poczekalnia, numbered so several can sit at one table. */
 const empty = (index: number, over: Parameters<typeof aSeat>[0] = {}) =>
@@ -510,14 +511,15 @@ describe("whose Karta Postaci you may choose", () => {
       game: { status: "lobby" },
       seats: [
         aSeat({ id: "seat-a", seat_index: 0, character_id: null }),
-        aSeat({ id: "seat-b", seat_index: 1, character_id: null, is_host: false }),
-        aSeat({
-          id: "seat-local",
-          seat_index: 2,
-          character_id: null,
-          is_host: false,
-          no_device: true,
-        }),
+        aSeat({ id: "seat-b", seat_index: 1, character_id: null }),
+        // The third chair has nobody behind it — somebody in the room the host
+        // set up, which is what `no_device` used to mark and what the split
+        // turned into the plain absence of a driver.
+        aSeat({ id: "seat-local", seat_index: 2, character_id: null }),
+      ],
+      users: [
+        aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+        aUser({ id: "usrb", name: "Ola", seat_index: 1, is_host: false }),
       ],
     });
 
@@ -568,7 +570,7 @@ describe("whose Karta Postaci you may choose", () => {
       game: { status: "playing" },
       seats: [
         aSeat({ id: "seat-a", seat_index: 0 }),
-        aSeat({ id: "seat-b", seat_index: 1, is_host: false, eliminated: true, character_id: null }),
+        aSeat({ id: "seat-b", seat_index: 1, eliminated: true, character_id: null }),
       ],
     });
     await expect(
@@ -598,7 +600,6 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
           sword_floor: 1,
           magic_floor: 5,
           nature: "good",
-          ready: false,
         },
       },
     ]);
@@ -628,16 +629,31 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
    * Otherwise a player who said they were ready and then changed their mind is
    * still counted, and the host starts a game somebody was still deciding
    * about.
+   *
+   * Written on the *person*, which is where readiness lives: the chair takes
+   * the Postać and the player takes back their word, in one change.
    */
-  it("un-readies a seat that changed its mind", () => {
-    const table = waiting([empty(0, { character_id: asSeatCharacter("mag"), ready: true })]);
+  it("un-readies whoever changed their mind", () => {
+    const table = waiting(
+      [empty(0, { character_id: asSeatCharacter("mag") })],
+      [aUser({ id: "usra", seat_index: 0, ready: true })],
+    );
     const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll", byId: "seat-1" });
-    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "troll", ready: false });
+    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "troll" });
+    expect(writes.users).toEqual([{ id: "usra", patch: { ready: false } }]);
+  });
+
+  it("has nobody to un-ready on a chair the host is choosing for", () => {
+    // A seat with no driver is somebody in the room whose Postać the host is
+    // setting up. There is no word to take back.
+    const table = waiting([empty(0, { character_id: asSeatCharacter("mag") })], []);
+    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll", byId: "seat-1" });
+    expect(writes.users).toBeUndefined();
   });
 
   it("puts the surprise on the seat and settles nothing else about it", () => {
     const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "losowa", byId: "seat-a" });
-    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "losowa", ready: false });
+    expect(writes.seats?.[0].patch).toMatchObject({ character_id: "losowa" });
   });
 
   /**
@@ -660,7 +676,6 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
     const { writes } = chooseCharacter(ksiaze, { seatId: "seat-1", characterId: "losowa", byId: "seat-1" });
     expect(writes.seats?.[0].patch).toEqual({
       character_id: "losowa",
-      ready: false,
       field_id: null,
       sword_own: 0,
       magic_own: 0,
@@ -794,10 +809,17 @@ describe("rozdanie Kart Postaci (0.1)", () => {
     expect(writes.seats?.map((s) => s.id)).toEqual(["seat-2"]);
   });
 
-  it("skips a seat whose player has walked away", async () => {
-    const table = waiting([empty(0), empty(1, { abandoned_at: "2026-01-01T00:00:00Z" })]);
+  /**
+   * It used to skip a seat whose player had walked away, and there is no such
+   * seat to skip any more. A chair nobody is driving is either one the host set
+   * up for somebody in the room — which `mayChooseFor` lets them choose for, so
+   * the deal has to fill it too — or one the sweep is about to take away, and
+   * `no_device` was the flag that told those two apart.
+   */
+  it("deals to a chair nobody is driving, the same as any other", async () => {
+    const table = waiting([empty(0), empty(1)], [aUser({ id: "usra", seat_index: 0 })]);
     const { writes } = await dealCharacters(table, { to: "unchosen" }, offTheTop());
-    expect(writes.seats?.map((s) => s.id)).toEqual(["seat-1"]);
+    expect(writes.seats?.map((s) => s.id)).toEqual(["seat-1", "seat-2"]);
   });
 
   /**
@@ -807,9 +829,9 @@ describe("rozdanie Kart Postaci (0.1)", () => {
    * the very table that just pressed it.
    */
   it("leaves readiness exactly where it found it", async () => {
-    const table = waiting([empty(0, { ready: true })]);
+    const table = waiting([empty(0)], [aUser({ id: "usra", seat_index: 0, ready: true })]);
     const { writes } = await dealCharacters(table, { to: "unchosen" }, offTheTop());
-    expect(writes.seats?.[0].patch).not.toHaveProperty("ready");
+    expect(writes.users).toBeUndefined();
   });
 
   it("writes nothing at all when there is nobody to deal to", async () => {
