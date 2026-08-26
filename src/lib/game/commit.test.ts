@@ -197,3 +197,60 @@ describe("a command that refuses", () => {
     expect(tables.moves).toHaveLength(1);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * Two changes, one line number.
+ * ------------------------------------------------------------------------ */
+
+/**
+ * The bug this describes reached somebody typing at a table.
+ *
+ *   > magic 1 1
+ *   commit(moves): duplicate key value violates unique constraint
+ *   "moves_game_id_seq_key"
+ *
+ * The games row is the lock for a change and it is released the moment it is
+ * updated — but the journal line is written last, after the seats and the
+ * holdings. So a second change can read the table, win the lock and reach the
+ * journal while the first is still working, and both think the next line is the
+ * same line. The parameter had already moved by then; what was lost was the
+ * line saying so, which is the one thing the journal must never lose.
+ */
+describe("two changes reaching the journal at once", () => {
+  it("renumbers rather than failing, and keeps both lines", async () => {
+    const snapshot = await loadSnapshot("g1");
+    // The other writer, arriving between our read and our journal insert: it
+    // has already taken seq 13, which is the number we are about to use.
+    beforeWrite = () => {
+      beforeWrite = undefined;
+      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "ruch" });
+    };
+
+    await commit(snapshot, { journal: [{ seatId: "s1", turn: 3, kind: "rzut" }] });
+
+    expect(tables.moves.map((m) => m.seq).sort((a, b) => (a as number) - (b as number))).toEqual([
+      12, 13, 14,
+    ]);
+    expect(tables.moves.find((m) => m.seq === 14)?.kind).toBe("rzut");
+  });
+
+  it("keeps a whole command's lines together after renumbering", async () => {
+    const snapshot = await loadSnapshot("g1");
+    beforeWrite = () => {
+      beforeWrite = undefined;
+      tables.moves.push({ id: "m-other", game_id: "g1", seq: 13, kind: "ruch" });
+    };
+
+    await commit(snapshot, {
+      journal: [
+        { seatId: "s1", turn: 3, kind: "rzut" },
+        { seatId: "s1", turn: 3, kind: "ruch" },
+      ],
+    });
+
+    // Consecutive, and after the interloper: a command's lines are read as one
+    // event and must not be interleaved with somebody else's.
+    const ours = tables.moves.filter((m) => m.id !== "m0" && m.id !== "m-other");
+    expect(ours.map((m) => m.seq)).toEqual([14, 15]);
+  });
+});

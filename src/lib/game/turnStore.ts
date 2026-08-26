@@ -52,8 +52,10 @@ import {
   type Decks,
 } from "./decks";
 import {
+  appendJournal,
   change,
   effectRowsFor,
+  highestSeq,
   type EffectRow,
 } from "./change";
 import { appRandom, supplied } from "./random";
@@ -250,24 +252,25 @@ async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPha
  * table the app and the board *will* disagree eventually, and the only way to
  * settle it is to show what the app thought happened.
  */
+/**
+ * The three lines still written outside a changeset.
+ *
+ * Numbered and written by `appendJournal`, like every other line, because the
+ * race it handles is not particular to changesets: two of these read the same
+ * high-water mark just as readily, and this one used not to look at the error
+ * at all — so a line that lost was dropped in silence.
+ */
 async function journal(
   gameId: string,
   seatId: string | null,
   turn: number,
-  kind: string,
+  kind: JournalKind,
   payload: Record<string, unknown>,
   manual = false,
 ): Promise<void> {
-  const { data } = await db
-    .from("moves")
-    .select("seq")
-    .eq("game_id", gameId)
-    .order("seq", { ascending: false })
-    .limit(1);
-  const seq = ((data?.[0]?.seq as number) ?? 0) + 1;
-  await db
-    .from("moves")
-    .insert({ game_id: gameId, seq, seat_id: seatId, turn, kind, payload, manual });
+  await appendJournal(gameId, await highestSeq(gameId), [
+    { seatId, turn, kind, payload, manual },
+  ]);
 }
 
 export async function startGame(gameId: string): Promise<void> {

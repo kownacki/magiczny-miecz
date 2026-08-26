@@ -345,7 +345,7 @@ export async function effectRowsFor(gameId: string): Promise<EffectRow[]> {
   return (data ?? []) as EffectRow[];
 }
 
-async function highestSeq(gameId: string): Promise<number> {
+export async function highestSeq(gameId: string): Promise<number> {
   const { data, error } = await db
     .from("moves")
     .select("seq")
@@ -473,11 +473,46 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   // failure the journal must not have: it exists to be believed when the app
   // and the board disagree.
   const lines = writes.journal ?? [];
-  if (lines.length > 0) {
+  if (lines.length > 0) await appendJournal(gameId, snapshot.journalSeq, lines);
+
+  return next;
+}
+
+/**
+ * Numbers the lines and writes them, renumbering if somebody got there first.
+ *
+ * `seq` is unique per game, and the number comes from the high-water mark the
+ * snapshot read — which is settled long before this runs. The games row is the
+ * lock for a change, and it is released the moment it is updated, so a second
+ * change can read the table, win the lock and arrive here while the first is
+ * still working through its seats and holdings. Both then think the next line
+ * is the same line, and the constraint says so:
+ *
+ *   duplicate key value violates unique constraint "moves_game_id_seq_key"
+ *
+ * Which used to reach the person typing, after their change had been applied —
+ * the parameter moved, the error appeared, and the journal quietly lost the
+ * line that said so. Exactly the failure the journal must not have.
+ *
+ * So the collision is caught where it happens and only the numbering is done
+ * again. Retrying the whole change would be wrong: by this point the games row,
+ * the seats and everything else are already written, and running the command a
+ * second time would apply it twice.
+ *
+ * A pause between tries, growing, because the row we collided with may still be
+ * in flight — re-reading the mark the instant we lose it finds the same mark.
+ */
+export async function appendJournal(
+  gameId: string,
+  from: number,
+  lines: readonly JournalWrite[],
+): Promise<void> {
+  let mark = from;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     const { error } = await db.from("moves").insert(
       lines.map((line, index) => ({
         game_id: gameId,
-        seq: snapshot.journalSeq + 1 + index,
+        seq: mark + 1 + index,
         seat_id: line.seatId,
         turn: line.turn,
         kind: line.kind,
@@ -485,10 +520,16 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
         manual: line.manual ?? false,
       })),
     );
-    if (error) throw new Error(`commit(moves): ${error.message}`);
+    if (!error) return;
+    // 23505 is Postgres for a unique violation, and the only one worth trying
+    // again: every other error is about what is being written, not about who
+    // else is writing.
+    if (error.code !== "23505" || attempt === ATTEMPTS) {
+      throw new Error(`commit(moves): ${error.message}`);
+    }
+    await new Promise((wake) => setTimeout(wake, 10 * attempt));
+    mark = await highestSeq(gameId);
   }
-
-  return next;
 }
 
 /** How many times a losing commit is worth re-deciding before giving up. */

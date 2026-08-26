@@ -87,7 +87,7 @@ export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
           one = true;
           return builder;
         },
-        then<T>(resolve: (value: { data: unknown; error: { message: string } | null }) => T) {
+        then<T>(resolve: (value: { data: unknown; error: { message: string; code?: string } | null }) => T) {
           if (mode !== "select") fire();
 
           if (mode === "update") {
@@ -96,6 +96,30 @@ export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
             return resolve({ data: hit.map((r) => ({ ...r })), error: null });
           }
           if (mode === "insert") {
+            /**
+             * `moves` has a unique constraint on (game_id, seq), and it is the
+             * only one in the schema that a race can trip. Without it here the
+             * fake accepts two lines numbered the same and the collision that
+             * reached a player at the table cannot be written down as a test.
+             *
+             * The real code reads `error.code`, so the fake has to speak
+             * Postgres: 23505 is a unique violation.
+             */
+            if (name === "moves") {
+              const clash = inserted.find((row) =>
+                rows().some((was) => was.game_id === row.game_id && was.seq === row.seq),
+              );
+              if (clash) {
+                return resolve({
+                  data: null,
+                  error: {
+                    code: "23505",
+                    message:
+                      'duplicate key value violates unique constraint "moves_game_id_seq_key"',
+                  },
+                });
+              }
+            }
             let n = 0;
             for (const row of inserted) {
               rows().push({ id: `${name}-${rows().length + ++n}`, ...row } as Row);
