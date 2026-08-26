@@ -10,7 +10,7 @@ import { usageOf } from "@/lib/engine/uses";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, describeLoss, goldLost, reachableBy } from "@/lib/engine/losses";
 import { endTurn } from "@/lib/engine/turn";
-import { plural } from "@/lib/engine/polish";
+import { NATURE_LABEL, plural } from "@/lib/engine/polish";
 import type { Effect } from "@/lib/engine/cardScript";
 import type { FieldId } from "@/lib/engine/board";
 import type { Nature } from "@/data/types";
@@ -437,9 +437,18 @@ async function walk(
 
     case "natura": {
       const done = changeNature(snapshot, { seatId, nature: effect.na });
+      const name = NATURE_LABEL[effect.na] ?? effect.na;
+      // Nothing written to the seat means the Natura was already the one the
+      // card asks for. Saying "Natura: zła" there would report a turn of the
+      // card that did not happen — see `changeNature`, which journals the
+      // attempt for the same reason.
+      const changed = (done.writes.seats?.length ?? 0) > 0;
       return {
         writes: done.writes,
-        result: { did: [`Natura: ${effect.na === "evil" ? "zła" : effect.na}`], pending: null },
+        result: {
+          did: [changed ? `Natura: ${name}` : `Natura bez zmian — już ${name}`],
+          pending: null,
+        },
       };
     }
 

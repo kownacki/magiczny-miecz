@@ -493,8 +493,13 @@ export function describe(
     case "nature-change": {
       const to = natura(data.to) ?? "?";
       const from = natura(data.from);
+      // A Natura set to the one already in force. The row exists because the
+      // attempt is worth seeing — a card did what it said and nothing moved —
+      // and it has to read that way rather than as a change, or the journal
+      // reports a turn of the card that never happened.
+      if (from === to) return line(`${who} ma już naturę: ${to} — nic się nie zmienia.`);
       return line(
-        from && from !== to
+        from
           ? `${who} zmienia naturę z ${from} na ${to}.`
           : `${who} zmienia naturę na: ${to}.`,
       );

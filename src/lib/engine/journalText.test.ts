@@ -141,6 +141,14 @@ suite("journal vocabulary", () => {
     );
   });
 
+  it("says when a Natura was set to the one already in force", () => {
+    // The row exists so the table can see a card that did what it said and had
+    // no effect. Reading it as a change would report a turn that never was.
+    expect(text("nature-change", { from: "evil", to: "evil" })).toBe(
+      "Michał (GOBLIN) ma już naturę: zła — nic się nie zmienia.",
+    );
+  });
+
   it("says what a card took off you", () => {
     expect(text("lost-card", { co: "item", cardIds: ["magiczny-miecz"] })).toBe(
       "Michał (GOBLIN) traci: MAGICZNY MIECZ.",

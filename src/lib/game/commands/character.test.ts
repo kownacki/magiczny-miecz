@@ -73,12 +73,6 @@ describe("zmiana Natury (7.2-7.4)", () => {
     });
   });
 
-  it("does nothing at all when the Natura is already that one", () => {
-    const { writes, result } = changeNature(table(), { seatId: "seat-a", nature: "good" });
-    expect(writes).toEqual({});
-    expect(result).toEqual({ nowForbidden: [] });
-  });
-
   /**
    * 7.4 with 5.5: the Święta Włócznia is forbidden to Złe Postacie, and a
    * character who turns Zła has to put it down at once. Naming it is the whole
@@ -96,6 +90,39 @@ describe("zmiana Natury (7.2-7.4)", () => {
       payload: { nowForbidden: ["swieta-wlocznia"] },
     });
     expect(writes.holdings).toBeUndefined();
+  });
+
+  /**
+   * A card that turns somebody Zły when they are already Zły did what it said
+   * and had no effect. The table can only learn that from the journal.
+   */
+  it("journals a Natura set to the one already in force", () => {
+    const { writes, result } = changeNature(table({ nature: "evil" }), {
+      seatId: "seat-a",
+      nature: "evil",
+    });
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "nature-change",
+      payload: { from: "evil", to: "evil", nowForbidden: [] },
+    });
+    expect(result.nowForbidden).toEqual([]);
+  });
+
+  it("does not spend 7.3's one change on a Natura that did not move", () => {
+    // Nothing written to the seat, so `nature_changed_turn` stays where it was
+    // and the real change this character might still make is available.
+    const { writes } = changeNature(table({ nature: "evil" }), {
+      seatId: "seat-a",
+      nature: "evil",
+    });
+    expect(writes.seats).toBeUndefined();
+    // And 7.3 does not refuse it either, however many times it is asked.
+    expect(() =>
+      changeNature(table({ nature: "evil", nature_changed_turn: 5 }), {
+        seatId: "seat-a",
+        nature: "evil",
+      }),
+    ).not.toThrow();
   });
 
   it("says nothing about a card the new Natura may keep", () => {

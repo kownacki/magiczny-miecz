@@ -74,8 +74,36 @@ export function changeNature(
   command: { seatId: string; nature: Nature; force?: boolean },
 ): Outcome<{ nowForbidden: string[] }> {
   const seat = seatById(snapshot, command.seatId);
-  // Not a change, so not a use of 7.3's one change per turn either.
-  if (seat.nature === command.nature) return { writes: {}, result: { nowForbidden: [] } };
+  /**
+   * Not a change — which is not nothing to say.
+   *
+   * A Zdarzenie that turns a character Zły when it is already Zły has done
+   * exactly what it says and had no effect, and the journal is the only place
+   * anybody at the table can learn that the attempt happened at all. Silence
+   * here reads as the card having been forgotten.
+   *
+   * Still not a use of 7.3's one change per turn: nothing is written to the
+   * seat, so `nature_changed_turn` is untouched and the real change this
+   * character might make later in the turn is still available. And nothing can
+   * become forbidden by 7.4 when the Natura it would be forbidden by is the one
+   * already in force.
+   */
+  if (seat.nature === command.nature) {
+    return {
+      writes: {
+        journal: [
+          {
+            seatId: seat.id,
+            turn: snapshot.game.turn,
+            kind: "nature-change",
+            payload: { from: seat.nature, to: command.nature, nowForbidden: [] },
+            manual: command.force ?? false,
+          },
+        ],
+      },
+      result: { nowForbidden: [] },
+    };
+  }
 
   // 7.3: "Żadna Postać nie może zmienić swojej Natury częściej niż raz w
   // trakcie tury gry." Magog is the exception — its own card says the Natura
