@@ -24,13 +24,20 @@ import { LAYER } from "./layers";
 import { useEscape } from "./overlay";
 
 /**
- * Every drawer currently on screen.
+ * Every drawer currently on screen, in the order they were opened.
  *
  * A click has to be tested against all of them at once: with the shelf out on
  * the left and the roster on the right, a click in one is outside the other,
  * and each would have dismissed the one it was not in.
+ *
+ * Ordered, and not a Set, for the other half of the same problem. Every drawer
+ * listens, so a click on the board reached both and closed the pair of them —
+ * one gesture undoing two decisions, the second of which you never asked about.
+ * Last in is the one that leaves, the way `overlay.tsx` already does Escape.
+ * Only mounting and unmounting may reorder this: it is the order they were
+ * opened in, and a re-render is not an opening.
  */
-const open = new Set<HTMLElement>();
+const open: HTMLElement[] = [];
 
 export function Drawer({
   side,
@@ -72,9 +79,10 @@ export function Drawer({
   useEffect(() => {
     const element = panel.current;
     if (!element) return;
-    open.add(element);
+    open.push(element);
     return () => {
-      open.delete(element);
+      const at = open.lastIndexOf(element);
+      if (at !== -1) open.splice(at, 1);
     };
   }, []);
 
@@ -87,6 +95,11 @@ export function Drawer({
       // one — it is the pair of them being used together, which is the whole
       // reason they sit on opposite edges instead of taking turns.
       for (const element of open) if (element.contains(target)) return;
+      // And only the newest leaves. Whichever side it is on, one click away
+      // closes one drawer; the next closes the one under it. Closing both at
+      // once was the old behaviour and it never had a reason — with two open
+      // you are using two, and the pair is the point.
+      if (open[open.length - 1] !== panel.current) return;
       // Nor is the bar elsewhere. It is what opens these, so a click on it is
       // most often "and the other one too" — closing this one on the way would
       // make the two mutually exclusive by accident.
