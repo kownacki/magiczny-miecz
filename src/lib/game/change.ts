@@ -17,6 +17,7 @@ import type { RandomPort } from "@/lib/engine/ports";
 import type { JournalKind } from "@/lib/engine/journal";
 import { appRandom, replayable } from "./random";
 import { serially } from "./queue";
+import { Failure } from "./failure";
 
 /** Something true of a seat for a while, as the row that records it. */
 export interface EffectRow {
@@ -342,7 +343,7 @@ export async function effectRowsFor(gameId: string): Promise<EffectRow[]> {
     .select("id,seat_id,source,label,modifier,ends")
     .eq("game_id", gameId)
     .order("created_at");
-  if (error) throw new Error(`effectsFor: ${error.message}`);
+  if (error) throw new Failure(`effectsFor: ${error.message}`);
   return (data ?? []) as EffectRow[];
 }
 
@@ -352,7 +353,7 @@ async function gameRow(gameId: string): Promise<Snapshot["game"]> {
     .select(GAME_COLUMNS)
     .eq("id", gameId)
     .single();
-  if (error) throw new Error(`loadGame: ${error.message}`);
+  if (error) throw new Failure(`loadGame: ${error.message}`);
   return data as Snapshot["game"];
 }
 
@@ -430,53 +431,53 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
     .eq("id", gameId)
     .eq("revision", base)
     .select("revision");
-  if (gameError) throw new Error(`commit(games): ${gameError.message}`);
+  if (gameError) throw new Failure(`commit(games): ${gameError.message}`);
   if (!won || won.length === 0) throw new Conflict(gameId, base);
 
   for (const seat of writes.seats ?? []) {
     const { error } = await db.from("seats").update(seat.patch).eq("id", seat.id);
-    if (error) throw new Error(`commit(seats): ${error.message}`);
+    if (error) throw new Failure(`commit(seats): ${error.message}`);
   }
 
   if (writes.holdings?.delete?.length) {
     const { error } = await db.from("holdings").delete().in("id", writes.holdings.delete);
-    if (error) throw new Error(`commit(holdings.delete): ${error.message}`);
+    if (error) throw new Failure(`commit(holdings.delete): ${error.message}`);
   }
   for (const held of writes.holdings?.patch ?? []) {
     const { error } = await db.from("holdings").update(held.patch).eq("id", held.id);
-    if (error) throw new Error(`commit(holdings.patch): ${error.message}`);
+    if (error) throw new Failure(`commit(holdings.patch): ${error.message}`);
   }
   if (writes.holdings?.insert?.length) {
     const { error } = await db
       .from("holdings")
       .insert(writes.holdings.insert.map((one) => ({ game_id: gameId, ...one })));
-    if (error) throw new Error(`commit(holdings.insert): ${error.message}`);
+    if (error) throw new Failure(`commit(holdings.insert): ${error.message}`);
   }
 
   if (writes.fieldCards?.delete?.length) {
     const { error } = await db.from("field_cards").delete().in("id", writes.fieldCards.delete);
-    if (error) throw new Error(`commit(fieldCards.delete): ${error.message}`);
+    if (error) throw new Failure(`commit(fieldCards.delete): ${error.message}`);
   }
   if (writes.fieldCards?.insert?.length) {
     const { error } = await db
       .from("field_cards")
       .insert(writes.fieldCards.insert.map((one) => ({ game_id: gameId, ...one })));
-    if (error) throw new Error(`commit(fieldCards.insert): ${error.message}`);
+    if (error) throw new Failure(`commit(fieldCards.insert): ${error.message}`);
   }
 
   if (writes.effects?.delete?.length) {
     const { error } = await db.from("seat_effects").delete().in("id", writes.effects.delete);
-    if (error) throw new Error(`commit(effects.delete): ${error.message}`);
+    if (error) throw new Failure(`commit(effects.delete): ${error.message}`);
   }
   for (const effect of writes.effects?.patch ?? []) {
     const { error } = await db.from("seat_effects").update(effect.patch).eq("id", effect.id);
-    if (error) throw new Error(`commit(effects.patch): ${error.message}`);
+    if (error) throw new Failure(`commit(effects.patch): ${error.message}`);
   }
   if (writes.effects?.insert?.length) {
     const { error } = await db
       .from("seat_effects")
       .insert(writes.effects.insert.map((one) => ({ game_id: gameId, ...one })));
-    if (error) throw new Error(`commit(effects.insert): ${error.message}`);
+    if (error) throw new Failure(`commit(effects.insert): ${error.message}`);
   }
 
   // Numbered from the high-water mark the snapshot read, written in one insert,
@@ -516,7 +517,7 @@ async function appendJournal(
   // Looked at, unlike every journal write before this one: a line that could
   // not be written was dropped in silence, which is the single failure the
   // journal must not have.
-  if (error) throw new Error(`commit(moves): ${error.message}`);
+  if (error) throw new Failure(`commit(moves): ${error.message}`);
 }
 
 /** How many times a losing commit is worth re-deciding before giving up. */

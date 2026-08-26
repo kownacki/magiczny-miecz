@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { refused } from "@/app/api/refused";
 import { bumpRevision, findGame, leaveGame, removeSeat, verifySeat } from "@/lib/game/store";
 
 /**
@@ -29,6 +30,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     await bumpRevision(game.id);
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    return refused(error);
   }
 }

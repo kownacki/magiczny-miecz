@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { refused } from "@/app/api/refused";
 import {
   AWAY_AFTER_MS,
   deleteGame,
@@ -267,6 +268,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
     await deleteGame(game.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    return refused(error);
   }
 }

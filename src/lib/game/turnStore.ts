@@ -205,6 +205,7 @@ export type { Decks };
 /** Reads the stored decks, tolerating a game started before spells existed. */
 import type { Slot } from "@/lib/engine/slots";
 import { bumpRevision, holdingsFor, seatsFor, type GameRow } from "./store";
+import { Failure } from "./failure";
 
 /**
  * A stored row as the engine wants it — including where it is worn, which every
@@ -241,7 +242,7 @@ async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPha
     .select(GAME_COLUMNS)
     .eq("id", gameId)
     .single();
-  if (error) throw new Error(`loadGame: ${error.message}`);
+  if (error) throw new Failure(`loadGame: ${error.message}`);
   return data as GameRow & { turn_state: TurnPhase };
 }
 

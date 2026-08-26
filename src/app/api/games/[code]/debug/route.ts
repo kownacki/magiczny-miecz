@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { refused } from "@/app/api/refused";
 import { findGame, verifySeat } from "@/lib/game/store";
 import { abandonFight, grantCard, placeSeat, runCommand, stageFight } from "@/lib/game/turnStore";
 import { parseCommand } from "@/lib/engine/console";
@@ -73,6 +74,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    return refused(error);
   }
 }

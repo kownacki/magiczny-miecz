@@ -15,6 +15,7 @@ import {
   type SeatCharacter,
 } from "@/lib/engine/characters";
 import { asFieldId, fieldByName, type FieldId } from "@/lib/engine/board";
+import { Failure } from "./failure";
 
 export const CHARACTERS = characters as Character[];
 
@@ -124,7 +125,7 @@ export async function createGame(
 
     if (error) {
       if (error.code === "23505") continue; // taken, try another
-      throw new Error(`createGame: ${error.message}`);
+      throw new Failure(`createGame: ${error.message}`);
     }
 
     const hostToken = makeClaimToken();
@@ -169,7 +170,7 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
     .select("id,join_code,status,mode,turn,last_played_at,created_at")
     .order("last_played_at", { ascending: false })
     .limit(limit);
-  if (error) throw new Error(`listGames: ${error.message}`);
+  if (error) throw new Failure(`listGames: ${error.message}`);
 
   // A poczekalnia everybody closed their tab on has nobody polling it, so it
   // never hears that it is empty. This is the other place anybody looks, and
@@ -228,7 +229,7 @@ export async function findGame(joinCode: string): Promise<GameRow | null> {
     .select(GAME_COLUMNS)
     .eq("join_code", joinCode)
     .maybeSingle();
-  if (error) throw new Error(`findGame: ${error.message}`);
+  if (error) throw new Failure(`findGame: ${error.message}`);
   return (data as GameRow) ?? null;
 }
 
@@ -238,7 +239,7 @@ export async function seatsFor(gameId: string): Promise<SeatRow[]> {
     .select(SEAT_COLUMNS)
     .eq("game_id", gameId)
     .order("seat_index");
-  if (error) throw new Error(`seatsFor: ${error.message}`);
+  if (error) throw new Failure(`seatsFor: ${error.message}`);
   // The one place a stored `field_id` becomes a `FieldId`, so that nothing
   // downstream has to wonder. A column is a string and the board is a closed
   // set; narrowing here means every rule that asks where a character is
@@ -317,7 +318,7 @@ export async function joinGame(
       .single();
 
     if (!error) return { seat: data as SeatRow, token };
-    if (error.code !== "23505") throw new Error(`joinGame: ${error.message}`);
+    if (error.code !== "23505") throw new Failure(`joinGame: ${error.message}`);
     // Somebody took that place between the read and the write. Look again.
   }
   throw new Error("Nie udało się usiąść — spróbujcie jeszcze raz.");
@@ -366,7 +367,7 @@ export async function chooseCharacter(
         nature: null,
       })
       .eq("id", seatId);
-    if (error) throw new Error(`chooseCharacter: ${error.message}`);
+    if (error) throw new Failure(`chooseCharacter: ${error.message}`);
     return;
   }
 
@@ -402,7 +403,7 @@ export async function chooseCharacter(
       nature: character.nature === "any" ? null : character.nature,
     })
     .eq("id", seatId);
-  if (error) throw new Error(`chooseCharacter: ${error.message}`);
+  if (error) throw new Failure(`chooseCharacter: ${error.message}`);
 }
 
 /**
@@ -519,13 +520,13 @@ function startingFieldId(name: string): string {
  */
 export async function setReady(seatId: string, ready: boolean): Promise<void> {
   const { error } = await db.from("seats").update({ ready }).eq("id", seatId);
-  if (error) throw new Error(`setReady: ${error.message}`);
+  if (error) throw new Failure(`setReady: ${error.message}`);
 }
 
 /** Changes the name shown for a seat. Only ever your own. */
 export async function renameSeat(seatId: string, name: string | null): Promise<void> {
   const { error } = await db.from("seats").update({ player_name: name }).eq("id", seatId);
-  if (error) throw new Error(`renameSeat: ${error.message}`);
+  if (error) throw new Failure(`renameSeat: ${error.message}`);
 }
 
 export async function verifySeat(gameId: string, token: string): Promise<SeatRow | null> {
@@ -535,7 +536,7 @@ export async function verifySeat(gameId: string, token: string): Promise<SeatRow
     .eq("game_id", gameId)
     .eq("claim_token", token)
     .maybeSingle();
-  if (error) throw new Error(`verifySeat: ${error.message}`);
+  if (error) throw new Failure(`verifySeat: ${error.message}`);
   return (data as SeatRow) ?? null;
 }
 
@@ -569,7 +570,7 @@ export async function holdingsFor(gameId: string): Promise<HoldingRow[]> {
     // before anybody could arrange anything.
     .order("ordinal", { nullsFirst: false })
     .order("created_at");
-  if (error) throw new Error(`holdingsFor: ${error.message}`);
+  if (error) throw new Failure(`holdingsFor: ${error.message}`);
   return (data ?? []) as HoldingRow[];
 }
 
@@ -627,7 +628,7 @@ export async function leaveGame(
   // Before the game starts a seat is just an intention, so leaving deletes it.
   if (status === "lobby") {
     const { error } = await db.from("seats").delete().eq("id", seat.id);
-    if (error) throw new Error(`leaveGame: ${error.message}`);
+    if (error) throw new Failure(`leaveGame: ${error.message}`);
     await promoteHostIfNeeded(gameId, seat);
     return { removed: true, passedTo: null, gameFinished: false };
   }
@@ -644,7 +645,7 @@ export async function leaveGame(
     .from("seats")
     .update({ abandoned_at: new Date().toISOString(), claim_token: makeClaimToken() })
     .eq("id", seat.id);
-  if (error) throw new Error(`leaveGame: ${error.message}`);
+  if (error) throw new Failure(`leaveGame: ${error.message}`);
   await promoteHostIfNeeded(gameId, seat);
 
   // Play does not stop for an empty chair, but it must not wait on one either:
@@ -707,7 +708,7 @@ export async function claimSeat(
       ...(playerName ? { player_name: playerName } : {}),
     })
     .eq("id", seatId);
-  if (error) throw new Error(`claimSeat: ${error.message}`);
+  if (error) throw new Failure(`claimSeat: ${error.message}`);
   return token;
 }
 
@@ -773,7 +774,7 @@ export async function removeSeat(
   }
 
   const { error } = await db.from("seats").delete().eq("id", seatId);
-  if (error) throw new Error(`removeSeat: ${error.message}`);
+  if (error) throw new Failure(`removeSeat: ${error.message}`);
   await promoteHostIfNeeded(gameId, seat);
 }
 
@@ -791,7 +792,7 @@ export async function removeSeat(
  */
 export async function deleteGame(gameId: string): Promise<void> {
   const { error } = await db.from("games").delete().eq("id", gameId);
-  if (error) throw new Error(`deleteGame: ${error.message}`);
+  if (error) throw new Failure(`deleteGame: ${error.message}`);
 }
 
 /**
@@ -825,7 +826,7 @@ export async function claimTableScreen(
     }
   }
   const { error } = await db.from("seats").update({ is_host: true }).eq("id", seatId);
-  if (error) throw new Error(`claimTableScreen: ${error.message}`);
+  if (error) throw new Failure(`claimTableScreen: ${error.message}`);
 }
 
 /**
@@ -923,7 +924,7 @@ export async function sweepLobby(gameId: string, status: string): Promise<boolea
     .from("seats")
     .delete()
     .in("id", gone.map((seat) => seat.id));
-  if (error) throw new Error(`sweepLobby: ${error.message}`);
+  if (error) throw new Failure(`sweepLobby: ${error.message}`);
 
   // Nobody left who could do anything. Seats the host filled in by hand have no
   // device of their own, so a table holding only those is a table with nobody
@@ -1015,7 +1016,7 @@ export async function bumpRevision(gameId: string): Promise<number> {
     .select("revision")
     .eq("id", gameId)
     .single();
-  if (error) throw new Error(`bumpRevision: ${error.message}`);
+  if (error) throw new Failure(`bumpRevision: ${error.message}`);
   const next = (data.revision as number) + 1;
   // Every change is a moment the table was being played, which is what a list
   // of games needs to sort by — not when it was opened.
