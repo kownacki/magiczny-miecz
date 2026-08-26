@@ -143,15 +143,36 @@ export async function createGame(
       throw new Failure(`createGame: ${error.message}`);
     }
 
+    /**
+     * The first chair, and the person who opened the table standing in it.
+     *
+     * Two rows, and they were one: the seat carried the name, the claim and the
+     * host flag, and every one of those is a fact about a *person*. The seat is
+     * a place with a Postać in it and nothing else, so the only thing it needs
+     * here is its number.
+     *
+     * The host's own device id is not known yet — `createGame` is called from a
+     * route that has only a name — so coming back to a table you opened is the
+     * one case `resumeAs` cannot answer. It is written on the first poll:
+     * whoever holds this token is asked for their device the next time they
+     * join anything. Worth knowing rather than worth fixing here, where there
+     * is nothing to fix it with.
+     */
     const hostToken = makeClaimToken();
-    const { error: seatError } = await db.from("seats").insert({
+    const { error: seatError } = await db
+      .from("seats")
+      .insert({ game_id: data.id, seat_index: 0 });
+    if (seatError) throw new Error(`createGame seat: ${seatError.message}`);
+
+    const { error: userError } = await db.from("users").insert({
+      id: makeUserId(),
       game_id: data.id,
-      seat_index: 0,
+      name: hostName ?? "Gospodarz",
       claim_token: hostToken,
       is_host: true,
-      player_name: hostName,
+      seat_index: 0,
     });
-    if (seatError) throw new Error(`createGame seat: ${seatError.message}`);
+    if (userError) throw new Error(`createGame user: ${userError.message}`);
 
     return { game: data as GameRow, hostToken };
   }
@@ -382,11 +403,27 @@ export async function joinGame(
         .filter((at): at is number => at !== null),
     );
 
-    // The lowest place nobody is in, and none at all when the table is full —
-    // which seats them as a spectator rather than turning them away.
+    /**
+     * The lowest place nobody is in, and none at all when the table is full —
+     * which seats them as a spectator rather than turning them away.
+     *
+     * "Nobody is in" is about the *pair*: no driver, and no Postać standing
+     * there. A chair whose person was kicked or swept is free again and is sat
+     * back down in; a chair with a Postać on it is not, because picking that
+     * figure up is a deliberate act with its own door (`takeSeat`, off the
+     * takeover gate) rather than something that happens to whoever arrives
+     * next.
+     *
+     * It used to skip every seat row that *existed*, which meant a freed chair
+     * was never reused: each arrival cut a new one until the sixth, and then a
+     * table with one player at it could seat nobody at all.
+     */
     const taken = new Set(existing.map((seat) => seat.seat_index));
+    const standing = new Set(
+      existing.filter((seat) => seat.character_id).map((seat) => seat.seat_index),
+    );
     let seatIndex: number | null = 0;
-    while (seatIndex < MAX_SEATS && (taken.has(seatIndex) || driven.has(seatIndex))) seatIndex++;
+    while (seatIndex < MAX_SEATS && (standing.has(seatIndex) || driven.has(seatIndex))) seatIndex++;
     if (seatIndex >= MAX_SEATS) seatIndex = null;
 
     let seat: SeatRow | null = null;

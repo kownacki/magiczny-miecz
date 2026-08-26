@@ -103,8 +103,14 @@ export interface PublicSeat {
   gold: number;
   nature: string | null;
   eliminated: boolean;
-  /** Nobody is behind this seat; the character plays on (see leaveGame). */
-  abandoned: boolean;
+  /**
+   * Somebody is driving this chair.
+   *
+   * False is a Postać standing on the board with nobody speaking for it, which
+   * is an ordinary mid-game state: the player closed their laptop, or gave the
+   * seat up and stayed to watch. The figure keeps everything it owns.
+   */
+  driven: boolean;
   /** Device has gone quiet — a closed tab rather than a decision. */
   away: boolean;
   isHost: boolean;

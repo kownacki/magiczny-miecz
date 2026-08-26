@@ -153,6 +153,58 @@ describe("what is public even when its source is not", () => {
   });
 });
 
+describe("who this device is", () => {
+  /**
+   * The distinction the browser could not draw, and kept getting wrong.
+   *
+   * A device driving no seat and a device the table has never heard of both
+   * arrived as `mySeatIndex: null`, so watching a table was rendered as having
+   * been thrown off one — the page forgot its token and redirected home with a
+   * notice saying somebody had removed them.
+   */
+  const watchingTable = () =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      users: [
+        aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+        aUser({ id: "usrb", name: "Kasia", seat_index: null, is_host: false }),
+      ],
+    });
+
+  it("says who somebody driving a Postać is", () => {
+    const { me, mySeatIndex } = envelopeFor(watchingTable(), "usra", NOW);
+    expect(me).toMatchObject({ id: "usra", name: "Michał", seatIndex: 0, isHost: true });
+    expect(mySeatIndex).toBe(0);
+  });
+
+  it("says a spectator is here, and driving nothing", () => {
+    const { me, mySeatIndex } = envelopeFor(watchingTable(), "usrb", NOW);
+    expect(me).toMatchObject({ id: "usrb", name: "Kasia", seatIndex: null });
+    expect(mySeatIndex).toBeNull();
+  });
+
+  it("says nothing at all about a device the table has never heard of", () => {
+    // Which is what being kicked looks like from inside: the token opens
+    // nothing. `me` is the whole of the difference from the case above.
+    expect(envelopeFor(watchingTable(), "zzzz", NOW).me).toBeNull();
+    expect(envelopeFor(watchingTable(), null, NOW).me).toBeNull();
+  });
+
+  it("sends the whole room, watchers included, and no device ids", () => {
+    const { users } = envelopeFor(watchingTable(), "usra", NOW);
+    expect(users.map((one) => one.name)).toEqual(["Michał", "Kasia"]);
+    expect(users.map((one) => one.seatIndex)).toEqual([0, null]);
+    // What browser somebody is on is theirs, and is no part of the game.
+    expect(JSON.stringify(users)).not.toContain("device");
+  });
+
+  it("marks the chair with whoever is driving it", () => {
+    const { seats } = envelopeFor(watchingTable(), "usra", NOW);
+    expect(seats[0].driver_id).toBe("usra");
+    expect(seats[0].player_name).toBe("Michał");
+  });
+});
+
 describe("presence, judged here so every device agrees", () => {
   const seenAt = (ms: number) => new Date(NOW - ms).toISOString();
   /** One chair, and whoever is or is not behind it. */

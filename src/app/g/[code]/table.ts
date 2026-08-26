@@ -98,13 +98,24 @@ export interface Seat {
   /** Turn the Kamień wears off on (20.1). Null when not petrified. */
   stone_until_turn: number | null;
   eliminated: boolean;
-  /** Set when the player behind this seat walked away; the character stays. */
-  abandoned_at: string | null;
-  /** Device has not checked in recently — a closed tab, not a decision. */
+  /**
+   * Whoever is driving this chair, and null when nobody is.
+   *
+   * The only thing about a *person* on a seat row, and it is a pointer rather
+   * than a copy: their name, whether they run the table, whether they are ready
+   * and whether they have gone quiet are all on the person, in `users`, because
+   * that is where they belong and a chair outlives everybody who sits in it.
+   *
+   * It replaces four columns that used to be here — `abandoned_at`, `ready`,
+   * `no_device` and `is_host` — and the fourth is the reason the replacement
+   * matters: they stopped arriving when the schema split, while staying
+   * declared here, so every one of them read `undefined` and every test against
+   * them silently answered the wrong way. `abandoned_at !== null` was true of
+   * every seat at the table.
+   */
+  driver_id: string | null;
+  /** The driver has not checked in recently — a closed tab, not a decision. */
   away: boolean;
-  ready: boolean;
-  no_device: boolean;
-  is_host: boolean;
   holdings: Held[];
   /** Cards this viewer is not allowed to see the faces of (9.3). */
   hidden_count: number;

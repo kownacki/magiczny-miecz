@@ -122,7 +122,15 @@ export function SeatSlot({
               <span className="text-ochre/70">to ty</span>
             ) : null}
           </p>
-          {canAdminister && !seat.isHost && !seat.abandoned && (
+          {/* `canAdminister` and not `isHost`, deliberately: this is one of the
+              two things the wide door is for. A table whose host closed their
+              laptop is recovered by somebody else pressing exactly this, and
+              `takeHostRole` opens on the same terms — see `mayAdminister`.
+
+              `seat.driven`, because the role is a person's: handing it to an
+              empty chair is how a table ends up unstartable, and the server
+              refuses it. */}
+          {canAdminister && !seat.isHost && seat.driven && (
             <button
               onClick={onMakeHost}
               disabled={busy}

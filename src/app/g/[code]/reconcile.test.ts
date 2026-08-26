@@ -43,11 +43,11 @@ function seat(over: Partial<Seat> = {}): Seat {
     holdings: [],
     hidden_count: 0,
     away: false,
-    abandoned_at: null,
-    ready: true,
-    no_device: false,
+    // The person driving it, and everything about them, is a different row —
+    // see `Seat`. The `as Seat` below is why the four columns that used to be
+    // here survived the split in this file without a word from the compiler.
+    driver_id: "usra",
     eliminated: false,
-    is_host: true,
     effects: [],
     ...over,
   } as Seat;

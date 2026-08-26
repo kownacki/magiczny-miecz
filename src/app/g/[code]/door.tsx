@@ -32,11 +32,14 @@ export function JoinGate({
   seats,
   busy,
   onJoin,
+  notice,
 }: {
   code: string;
   seats: LobbySeat[];
   busy: boolean;
   onJoin: (name: string) => void;
+  /** Said above the list of who is here — see `SecondTabNotice`. */
+  notice?: React.ReactNode;
 }) {
   const [name, setName] = useState("");
   const here = namedSeats(seats);
@@ -81,6 +84,8 @@ export function JoinGate({
         </button>
       </form>
 
+      {notice}
+
       {here.length > 0 && (
         <p className="max-w-sm text-center text-[12px] leading-relaxed text-muted">
           Przy stole:{" "}
@@ -88,6 +93,97 @@ export function JoinGate({
         </p>
       )}
     </main>
+  );
+}
+
+/**
+ * "Wróć jako Michał" — the door for somebody who has been here before.
+ *
+ * A tab closing takes the claim with it deliberately (`seatToken.ts`), so a
+ * browser coming back to a table it was at holds nothing and used to be a
+ * stranger: the only way in was to join again as a second person, leaving the
+ * first sitting there driving a Postać nobody could reach. The `device_id` in
+ * localStorage is what recognises them — see `deviceId.ts` for why that is a
+ * different secret from the claim and not a contradiction of it.
+ *
+ * Offered, never done. Two people share a laptop, and a tester drives four
+ * seats from four tabs on purpose; a browser that silently became whoever it
+ * was last time would make both of those impossible to do deliberately.
+ */
+export function ReturnGate({
+  code,
+  name,
+  seatIndex,
+  busy,
+  onResume,
+  onSomebodyElse,
+}: {
+  code: string;
+  name: string;
+  /** The chair they were driving, or null if they were watching. */
+  seatIndex: number | null;
+  busy: boolean;
+  onResume: () => void;
+  onSomebodyElse: () => void;
+}) {
+  return (
+    <main className="flex h-[100dvh] flex-col items-center justify-center gap-6 px-6">
+      <header className="text-center">
+        <h1 className="font-[family-name:var(--font-display)] text-3xl text-ochre">
+          Magiczny Miecz
+        </h1>
+        <p className="mt-2 text-xs text-muted">
+          stół <span className="tnum tracking-[0.25em] text-ink">{code}</span>
+        </p>
+      </header>
+
+      <p className="max-w-xs text-center text-sm leading-relaxed text-muted">
+        Ta przeglądarka była już przy tym stole
+        {seatIndex === null ? " — jako widz" : ` — na miejscu ${seatIndex + 1}`}.
+      </p>
+
+      <div className="flex w-full max-w-xs flex-col gap-2">
+        <button
+          onClick={onResume}
+          disabled={busy}
+          className="rounded-lg border border-ochre bg-ochre/10 px-6 py-3 font-[family-name:var(--font-display)] text-lg tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
+        >
+          Wróć jako {name}
+        </button>
+        <button
+          onClick={onSomebodyElse}
+          disabled={busy}
+          className="rounded-lg border border-edge px-3 py-2 text-sm text-muted transition hover:text-ink disabled:opacity-40"
+        >
+          Dołącz jako ktoś inny
+        </button>
+      </div>
+    </main>
+  );
+}
+
+/**
+ * The same door, for a browser that is already somebody here in another window.
+ *
+ * Not a refusal: two tabs is a thing people do on purpose at this table — it is
+ * how one person drives four seats to try something out — and coming back as
+ * somebody *live* would take the table out from under the window using it. So
+ * this says what is true and hands over the one way forward.
+ */
+export function SecondTabNotice({ busy, onSomebodyElse }: { busy: boolean; onSomebodyElse: () => void }) {
+  return (
+    <div className="flex w-full max-w-xs flex-col gap-2">
+      <p className="text-center text-[12px] leading-relaxed text-muted">
+        Ta przeglądarka gra już przy tym stole w innym oknie.
+      </p>
+      <button
+        onClick={onSomebodyElse}
+        disabled={busy}
+        className="rounded-lg border border-edge px-3 py-2 text-sm text-muted transition hover:text-ink disabled:opacity-40"
+      >
+        Dołącz jako ktoś inny
+      </button>
+    </div>
   );
 }
 

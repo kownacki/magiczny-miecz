@@ -8,6 +8,7 @@ import {
   readSeatToken,
   writeSeatToken,
 } from "@/lib/game/seatToken";
+import { deviceId, forgetDevice } from "@/lib/game/deviceId";
 import { watchRevision } from "@/lib/game/liveRevision";
 import type { CardId } from "@/data/ids";
 import type { FieldId } from "@/lib/engine/board";
@@ -80,11 +81,31 @@ export interface Game {
   used?: { events: string | null; spells: string | null } | null;
 }
 
+/** Somebody at the table, as the wire carries them. See `EnvelopeUser`. */
+export interface Person {
+  id: string;
+  name: string;
+  isHost: boolean;
+  ready: boolean;
+  seatIndex: number | null;
+  away: boolean;
+}
+
 export interface Table {
   game: Game | null;
   seats: Seat[];
   fieldCards: FieldCard[];
   stock: Record<string, number>;
+  /**
+   * Everybody in the room, seated or watching, in join order.
+   *
+   * Not the same list as `seats` and no longer derivable from it: six chairs,
+   * any number of people, and the interesting states are the ones where the
+   * two do not line up.
+   */
+  users: Person[];
+  /** Who this device is, and null when the table has never heard of it. */
+  me: Person | null;
   mySeatIndex: number | null;
   /** Slot moves this device has made and the server has not confirmed yet. */
   moved: Record<string, Slot | null>;
@@ -109,6 +130,12 @@ export interface Table {
   leave: () => Promise<void>;
   join: (name: string) => Promise<void>;
   claimSeat: (seatId: string, name?: string | null) => Promise<void>;
+  /** Who this browser was at this table, offered rather than assumed. */
+  wasHere: { name: string; seatIndex: number | null } | null;
+  /** This browser is somebody here already, in another window. */
+  elsewhere: boolean;
+  resumeHere: () => Promise<void>;
+  joinAsSomebodyElse: () => void;
   addLocalPlayer: (name: string) => Promise<void>;
   chooseCharacter: (seatId: string, characterId: string) => Promise<void>;
   equip: (holdingId: string, slot: Slot | null) => Promise<void>;
@@ -156,6 +183,14 @@ export function useTable(code: string): Table {
   const [taking, setTaking] = useState<Record<string, SeatCharacter>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [users, setUsers] = useState<Person[]>([]);
+  /** Who this browser was at this table, if it can be them again. */
+  const [wasHere, setWasHere] = useState<{ name: string; seatIndex: number | null } | null>(null);
+  /** This browser is already somebody here, in another window. */
+  const [elsewhere, setElsewhere] = useState(false);
+  /** The token minted for a resume offer, held until the offer is accepted. */
+  const pendingToken = useRef<string | null>(null);
+  const [me, setMe] = useState<Person | null>(null);
   const [mySeatIndex, setMySeatIndex] = useState<number | null>(null);
   /** The newest revision this device has rendered — see `refresh`. */
   const seenRevision = useRef(-1);
@@ -177,19 +212,24 @@ export function useTable(code: string): Table {
     seenRevision.current = data.game.revision;
 
     /**
-     * We held a seat and the table says we do not.
+     * We held a token and the table has never heard of us.
      *
-     * Which is what being put out of one looks like from in here: the token
-     * still in this window no longer opens anything, because `leaveSeat` issued
-     * a new one for that seat when it emptied it. Nothing else can produce this
-     * — a spectator sends no token, and a player who gave the seat up forgot
-     * theirs on the way out, so both arrive with `stored` already null.
+     * Which is what being put off a table looks like from in here: the row is
+     * gone, so the token opens nothing. Nothing else produces it — somebody who
+     * left forgot their token on the way out and arrives with `stored` already
+     * null.
+     *
+     * Asked of `me` and *not* of `mySeatIndex`, which is the whole of what the
+     * split changed here. Driving no seat is an ordinary thing to be now — you
+     * are watching, or your Postać died and you have not taken another (4.4) —
+     * and testing the seat threw every one of those people off the table with a
+     * notice saying somebody had removed them.
      *
      * Said and then left, rather than left to be worked out. Staying would show
      * the join gate over a table this person was just removed from, which reads
      * as the app having lost them rather than as somebody having done it.
      */
-    if (stored && data.mySeatIndex === null) {
+    if (stored && data.me === null) {
       forgetSeatToken(code);
       noteRemoved(code);
       router.push("/");
@@ -203,6 +243,8 @@ export function useTable(code: string): Table {
     setMoved((current) => standingMoves(current, data.seats as Seat[], movedAt.current, now));
     setFieldCards(data.fieldCards ?? []);
     setStock(data.stock ?? {});
+    setUsers(data.users ?? []);
+    setMe(data.me ?? null);
     setMySeatIndex(data.mySeatIndex);
 
     // Done here rather than in an effect because this is where the new reading
@@ -223,6 +265,63 @@ export function useTable(code: string): Table {
       if (said) setAnnouncement(said);
     }
   }, [code, router]);
+
+  /**
+   * Was this browser somebody here?
+   *
+   * Asked by a device that has arrived holding nothing — a tab that was closed
+   * and reopened, which the claim token deliberately does not survive (see
+   * `seatToken.ts`). Three answers, and the middle one is why this is offered
+   * rather than done: nobody, somebody live in another window, or somebody
+   * quiet, who this window can be again.
+   *
+   * Nothing is gated on it. A browser that refuses storage has no `deviceId`,
+   * hears `resumed: false`, and joins the way everybody did before this
+   * existed.
+   */
+  const askWhoIWas = useCallback(async () => {
+    const device = deviceId();
+    if (!device) return;
+    const response = await fetch(`/api/games/${code}/join`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ resume: true, deviceId: device }),
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.resumed) {
+      // The token is minted for this window and is not written until the person
+      // says yes: holding it here would turn the offer into a decision.
+      pendingToken.current = data.token;
+      setWasHere({ name: data.name, seatIndex: data.seatIndex });
+      return;
+    }
+    setElsewhere(Boolean(data.live));
+  }, [code]);
+
+  /** Yes: be that person again. */
+  async function resumeHere() {
+    const token = pendingToken.current;
+    if (!token) return;
+    writeSeatToken(code, token);
+    pendingToken.current = null;
+    setWasHere(null);
+    await refresh();
+  }
+
+  /**
+   * No: somebody else is sitting at this browser.
+   *
+   * The device id goes with the answer, or the next tab is offered the same
+   * person again — and this browser is now somebody new, which is exactly what
+   * a second player on one laptop is.
+   */
+  function joinAsSomebodyElse() {
+    forgetDevice();
+    pendingToken.current = null;
+    setWasHere(null);
+    setElsewhere(false);
+  }
 
   useEffect(() => {
     // Polling stands in for the Realtime revision ping. Two seconds is
@@ -282,6 +381,23 @@ export function useTable(code: string): Table {
    * closed tab — so the server treats it as a countdown, not a departure, and
    * the reload's first poll cancels it.
    */
+  /**
+   * Asked once, on arrival, and only by a window holding nothing.
+   *
+   * A window that already has a claim is somebody — reloading is the case this
+   * whole design is built around — and asking again would offer to be a person
+   * it already is. So this fires exactly for the case it is for: a tab that was
+   * closed, or a link opened fresh on a browser that has been here before.
+   */
+  useEffect(() => {
+    if (readSeatToken(code)) return;
+    // The lint rule cannot see that this is async: every setState inside it
+    // runs after `await fetch`, so nothing is set during the effect itself.
+    // Same shape, and the same exemption, as the poll below.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void askWhoIWas();
+  }, [code, askWhoIWas]);
+
   useEffect(() => {
     const bye = (event: PageTransitionEvent) => {
       if (event.persisted) return; // going into the bfcache, not going away
@@ -405,7 +521,9 @@ export function useTable(code: string): Table {
       const response = await fetch(`/api/games/${code}/join`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || null }),
+        // What browser this is, so that closing the tab is something to come
+        // back from rather than the end of being this person. See `deviceId`.
+        body: JSON.stringify({ name: name.trim() || null, deviceId: deviceId() }),
       });
       const data = await response.json();
       if (!response.ok) return setError(data.error);
@@ -603,6 +721,8 @@ export function useTable(code: string): Table {
     seats,
     fieldCards,
     stock,
+    users,
+    me,
     mySeatIndex,
     moved,
     taking,
@@ -622,6 +742,10 @@ export function useTable(code: string): Table {
     leave,
     join,
     claimSeat,
+    wasHere,
+    elsewhere,
+    resumeHere,
+    joinAsSomebodyElse,
     addLocalPlayer,
     chooseCharacter,
     equip,

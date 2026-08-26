@@ -314,12 +314,25 @@ export function unseat(snapshot: Snapshot, command: { userId: string }): Outcome
  * going by their own choice, or the tab closing, which is the same act without
  * the click. `kick` is somebody else deciding — and being thrown off a table is
  * worth being able to tell apart from having walked away from it.
+ *
+ * Which is also why a kick is the host's and nothing else. Leaving needs no
+ * permission because it takes nothing from anybody; throwing somebody off does,
+ * and the rule was lost in the split — `removeSeat` enforced it and `leaveTable`
+ * replaced that function without replacing its refusal, so for a while any
+ * seated player could post another player's id and clear them off the table.
+ * Here rather than in the route, because it is a rule and because the browser
+ * has its own copy of it: a rule the client keeps and the server does not is
+ * not a rule.
  */
 export function leaveTable(
   snapshot: Snapshot,
-  command: { userId: string; kicked?: boolean },
+  command: { userId: string; kicked?: boolean; byId?: string },
 ): Outcome<LeaveResult> {
   const user = userOf(snapshot, command.userId);
+  if (command.kicked && command.byId !== undefined) {
+    const by = userOf(snapshot, command.byId);
+    if (!by.is_host) throw new Error("Tylko gospodarz może usunąć kogoś ze stołu.");
+  }
   const stood = unseat(snapshot, { userId: user.id });
   const after = apply(snapshot, stood.writes);
 
@@ -408,6 +421,64 @@ export function takeHostRole(
       ],
     },
     result: undefined,
+  };
+}
+
+/* --------------------------------------------------------------------------
+ * Coming back.
+ * ----------------------------------------------------------------------- */
+
+export interface Resumption {
+  /** Whoever this browser was here, once it holds the fresh token. */
+  user: UserRow | null;
+  /**
+   * True when this browser is already somebody here, in another window.
+   *
+   * Not a refusal — there is nothing wrong with two tabs — but the person has
+   * to be asked which they meant, because coming back as somebody who is
+   * *live* would take the table out from under a window that is using it.
+   */
+  live: boolean;
+}
+
+/**
+ * The person a returning browser was, if they can be come back as.
+ *
+ * A tab closing takes the claim with it, deliberately (`seatToken.ts`), so
+ * reopening a table is a stranger holding nothing — and before this the only
+ * way back in was to join again as a second person, leaving the first sitting
+ * there driving a Postać nobody could reach.
+ *
+ * The quiet ones first, most recently heard from. A browser can be several
+ * people at one table — that is what a second tab is — so "who was I?" has a
+ * list for an answer, and the useful one is whichever of them nothing is
+ * currently using. Only when every one of them is live is there nobody to come
+ * back as, and then the answer is to join as somebody new.
+ *
+ * The token is minted by the edge and handed in: a fresh one, so the window
+ * that had it stops holding it, and because reading a stored token back out is
+ * the one thing this app never does with them.
+ */
+export function resumeAs(
+  snapshot: Snapshot,
+  command: { deviceId: string; token: string },
+  ports: CommandPorts,
+): Outcome<Resumption> {
+  const was = snapshot.users.filter((one) => one.device_id === command.deviceId);
+  if (was.length === 0) return { writes: {}, result: { user: null, live: false } };
+
+  const now = ports.now();
+  const asleep = was
+    .filter((one) => one.left_at !== null || isQuiet(one, now))
+    .sort((a, b) => Date.parse(b.seen_at ?? a.created_at) - Date.parse(a.seen_at ?? b.created_at));
+  const back = asleep[0];
+  if (!back) return { writes: {}, result: { user: null, live: true } };
+
+  return {
+    writes: {
+      users: [{ id: back.id, patch: { claim_token: command.token, left_at: null } }],
+    },
+    result: { user: back, live: false },
   };
 }
 

@@ -54,8 +54,45 @@ export interface EnvelopeSeat {
   [column: string]: unknown;
 }
 
+/**
+ * Somebody at the table, as every device may see them.
+ *
+ * Public, all of it: who is here, what they are called, which chair they are
+ * in, who runs the table and who has said they are ready are the things people
+ * read off each other across a table, and none of them is a secret under 9.3.
+ *
+ * `device_id` is not here and never travels. It says which *browser* somebody
+ * is, which is a fact about a person's machine rather than about the game, and
+ * the only thing that ever needs it is the browser it belongs to.
+ */
+export interface EnvelopeUser {
+  /** Four characters, and the only handle somebody driving no seat has. */
+  id: string;
+  name: string;
+  isHost: boolean;
+  ready: boolean;
+  /** The chair they are driving; null is watching, which is a thing to be. */
+  seatIndex: number | null;
+  /** True only of somebody heard from once and then silent. See `away`. */
+  away: boolean;
+}
+
 export interface Envelope {
   game: Record<string, unknown>;
+  /**
+   * Who this device is, as far as the table is concerned — and null when the
+   * table has never heard of it.
+   *
+   * The difference this draws is the one the browser could not draw before and
+   * kept getting wrong. A device holding a token and driving no seat used to be
+   * indistinguishable from a device whose token had gone stale, because
+   * `mySeatIndex` was null for both — so watching a table was rendered as
+   * having been thrown off one. Null here means exactly one thing: whoever you
+   * were, you are not at this table any more.
+   */
+  me: EnvelopeUser | null;
+  /** Everybody here, seated or watching, in join order. */
+  users: EnvelopeUser[];
   mySeatIndex: number | null;
   fieldCards: { id: string; fieldId: string | null; cardId: string }[];
   stock: Record<string, number>;
@@ -152,8 +189,25 @@ export function envelopeFor(
       ? null
       : (seats.find((seat) => seat.seat_index === me.seat_index) ?? null);
 
+  /**
+   * Away is judged here, once, for everybody.
+   *
+   * Every device compared its own clock against a timestamp before this, so a
+   * laptop half a minute out disagreed with the room about who was present.
+   */
+  const seenOf = (one: (typeof users)[number]) => ({
+    id: one.id,
+    name: one.name,
+    isHost: one.is_host,
+    ready: one.ready,
+    seatIndex: one.seat_index,
+    away: one.seen_at !== null && now - Date.parse(one.seen_at) > AWAY_AFTER_MS,
+  });
+
   return {
     game: withoutDeck(game),
+    me: me ? seenOf(me) : null,
+    users: users.map(seenOf),
     mySeatIndex: mine?.seat_index ?? null,
     // The row id travels too: picking a card up names *which* card, and a
     // field can hold two of the same Przedmiot.
@@ -210,7 +264,6 @@ export function envelopeFor(
       // Presence is the driver's, not the chair's: a seat with nobody in it is
       // not "away", it is empty, and those are different things to look at.
       const driver = users.find((one) => one.seat_index === seat.seat_index) ?? null;
-      const lastSeen = driver?.seen_at ? Date.parse(driver.seen_at) : 0;
       return {
         ...seat,
         // Worked out here rather than in the browser so every device agrees on
@@ -220,7 +273,9 @@ export function envelopeFor(
         // host added it in companion mode — and calling that "nieobecny" made
         // a fresh lobby look like a room everybody had walked out of.
         player_name: driver?.name ?? null,
-        away: driver !== null && lastSeen > 0 && now - lastSeen > AWAY_AFTER_MS,
+        /** The driver's id, so a chair and a person can be matched up. */
+        driver_id: driver?.id ?? null,
+        away: driver !== null && seenOf(driver).away,
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
         sword_total: view.parametr.miecz + spell.miecz,

@@ -405,16 +405,18 @@ See **Wariant: ekwipunek slotowy** in [COVERAGE.md](COVERAGE.md).
 
 # IN FLIGHT — separating people from Postacie
 
-**The server is across; the browser is not.** The database was wiped and
-re-shaped, and everything behind a route handler now follows it — the engine,
-the commands, the three stores, the eleven routes, the console and 1,702 tests.
-What is left is the client, which still reads a player's name off a seat, and
-4.4's list of Postacie out of the game, which nothing writes yet.
+**The table is up.** The database was wiped and re-shaped and the app has
+followed it all the way out to the screen: the engine, the commands, the three
+stores, the routes, the console, the browser, and 1,720 tests. A game can be
+opened, joined, left, come back to and played.
+
+What is left is 4.4's list of Postacie out of the game, which nothing writes
+yet. That is the last item, and it is a rules gap rather than a migration one.
 
 `npx tsc --noEmit` was the work list and is now clean, which means it has
-stopped being one: what remains does not fail to compile. Two of the six things
-the last pass turned up typechecked all the way to the database — see **Done**
-— so the next reader should trust the prose here over the compiler.
+stopped being one: nothing that remains fails to compile. **Nine** things these
+two passes turned up were invisible to it and four reached the database — see
+**Done** — so trust the prose here over the compiler.
 
 ## The model, in one paragraph
 
@@ -488,15 +490,51 @@ on the list and two of them typechecked all the way through:
 - `pickPlayer` learnt the four-character id and a null seat, which is the only
   handle a **spectator** has — nothing printed on the board names them.
 
-## Left, in order
+Three more from the client pass, all on the critical path and none of them
+visible to `tsc`:
 
-1. **Client** — `deviceId` in localStorage (see below), resume-or-join-as-
-   somebody-else, the four seat states in the roster, the kicked/removed
-   screens. `page.tsx`, `players.tsx`, `lobby-view.ts`, `seat-card.tsx` and
-   `turn-queue.tsx` all still read `seat.player_name`; the envelope sends it,
-   worked out from the driver, so they are not broken — but the name is on the
-   wrong noun and the four states cannot be drawn from it.
-2. **4.4** — nothing writes `games.characters_out` yet. Death adds; soft
+- **`createGame` still wrote `seats.claim_token`, `is_host` and `player_name`.**
+  Opening a table failed outright against the new schema — the first thing
+  anybody does with this app. It inserts a bare chair and a host *user* now.
+- **A kick had lost its permission check.** `removeSeat` enforced "Tylko
+  gospodarz" and `leaveTable` replaced that function without replacing the
+  refusal, so any seated player could post another player's id and clear them
+  off the table. The rule is back in `leaveTable`, where the client's copy of it
+  can be checked against something.
+- **A freed chair was never reused.** `joinGame` skipped every seat row that
+  *existed*, so each arrival cut a new one: six kicks and a table with one
+  player at it could seat nobody. It now skips chairs that are driven or have a
+  Postać standing on them, which is what "free" means.
+
+## The client, and the three things that had to arrive with it
+
+The envelope carries **`me`** and **`users`** now, and `me` is the whole of what
+the browser could not ask before: a device driving no seat and a device the
+table has never heard of both arrived as `mySeatIndex: null`, so *watching* a
+table was drawn as having been thrown off one — the page forgot its token and
+redirected home with a notice saying somebody had removed them. A seat carries
+`driver_id` and nothing else about a person; `Seat` lost four columns that had
+stopped arriving months of edits ago and were still declared, every one of them
+reading `undefined` (`abandoned_at !== null` was true of every seat at the
+table).
+
+**`deviceId.ts`** is the localStorage half of the two-secret split argued for
+below, and `resumeAs` is the rule it feeds: reopening a table offers *Wróć jako
+Michał*, a second tab is told it is already somebody here and offered *Dołącz
+jako ktoś inny*. Verified end to end against the live database, including the
+token rotation that stops the old window acting as them.
+
+**The four states** are `seatState` in `lobby-view.ts` — free, waiting, empty,
+taken, on the two axes of the table above. The poczekalnia draws a `free` chair
+as a free chair again: a seat row outlives its person now, so the chair of
+somebody kicked or swept was being advertised as "Miejsce 2 · bez gracza", an
+absence where the honest answer is an invitation. And people driving no chair
+are listed under the seats, which is the first time a spectator has been drawn
+anywhere at all.
+
+## Left
+
+1. **4.4** — nothing writes `games.characters_out` yet. Death adds; soft
    `remove` and `revive` take off; `pick` chooses from neither-seated-nor-listed.
    Until this lands, a dead Postać silently returns to the pool. `remove` and
    `revive` are the two console words still refused out loud.
@@ -512,6 +550,8 @@ on the list and two of them typechecked all the way through:
    `remove` against.
 
 ## Two decisions a fresh session would otherwise re-derive
+
+Both are now built, and both are still worth reading before touching either.
 
 - **`deviceId` goes in `localStorage`, and it does not contradict
   `seatToken.ts`.** That file argues for `sessionStorage` and is right — about a

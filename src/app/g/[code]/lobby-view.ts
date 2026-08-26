@@ -26,11 +26,16 @@ import {
 import { MAX_SEATS } from "@/lib/game/modes";
 
 /**
- * A seat as the poczekalnia sees it.
+ * A chair and whoever is in it, as the poczekalnia sees the pair.
  *
  * Everything here is the server's answer rather than this device's: `away` is
- * decided in `envelopeFor` against `AWAY_AFTER_MS`, and `abandoned` is the
- * `abandoned_at` column. The browser is told, and does not work either out.
+ * decided in `envelopeFor` against `AWAY_AFTER_MS` so that every device at the
+ * table agrees about who is present.
+ *
+ * Four of these used to be seat columns and are a *person's*: what they are
+ * called, whether they run the table, whether they have said they are ready,
+ * and whether anybody is there at all. `driven` is the last of those and is the
+ * axis the four states are read on — see `seatState`.
  */
 export interface LobbySeat {
   id: string;
@@ -38,14 +43,34 @@ export interface LobbySeat {
   playerName: string | null;
   characterId: SeatCharacter | null;
   isHost: boolean;
-  /** Nobody is behind this seat — see `leaveGame`. */
-  abandoned: boolean;
-  /** Device has gone quiet, which is not the same as having left. */
+  /** Somebody is driving this chair. It used to be `abandoned`, inverted. */
+  driven: boolean;
+  /** The driver has gone quiet, which is not the same as having left. */
   away: boolean;
-  /** Said they are ready to start. */
+  /** The driver has said they are ready to start. */
   ready: boolean;
-  /** Seated by the host in companion mode; has no device of their own. */
-  noDevice: boolean;
+}
+
+/**
+ * The four states a chair can be in, on two independent axes.
+ *
+ * |                  | no driver | driver            |
+ * | ---------------- | --------- | ----------------- |
+ * | **no character** | `free`    | `waiting`         |
+ * | **character**    | `empty`   | `taken`           |
+ *
+ * They were one axis before the split and could not be otherwise: a seat was a
+ * person, so an unclaimed chair and a Postać whose player had walked off were
+ * the same row in different moods. They are different things to look at — one
+ * is somewhere to sit, the other is a figure on the board with nobody speaking
+ * for it — and the difference is what somebody scanning the table is asking
+ * about.
+ */
+export type SeatState = "free" | "waiting" | "empty" | "taken";
+
+export function seatState(seat: LobbySeat): SeatState {
+  if (seat.characterId) return seat.driven ? "taken" : "empty";
+  return seat.driven ? "waiting" : "free";
 }
 
 /* --------------------------------------------------------------------------
@@ -124,7 +149,10 @@ export interface Aiming {
 export function mayChooseFor(seat: LobbySeat, aiming: Aiming): boolean {
   return (
     seat.seatIndex === aiming.mySeatIndex ||
-    (aiming.canAdminister && aiming.mode === "companion" && seat.noDevice)
+    // A chair nobody is driving, which is what `noDevice` used to say and what
+    // the server now decides the same way — see `mayChooseFor` in
+    // `commands/character.ts`.
+    (aiming.canAdminister && aiming.mode === "companion" && !seat.driven)
   );
 }
 
@@ -172,7 +200,7 @@ export type StartRefusal = { because: "nobody" } | { because: "waiting"; on: Lob
 export function startRefusal(seats: readonly LobbySeat[]): StartRefusal | null {
   const chosen = chosenSeats(seats);
   if (chosen.length < 1) return { because: "nobody" };
-  const waiting = chosen.filter((seat) => !seat.ready && !seat.abandoned);
+  const waiting = chosen.filter((seat) => seat.driven && !seat.ready);
   return waiting.length > 0 ? { because: "waiting", on: waiting } : null;
 }
 
@@ -212,15 +240,15 @@ export function withDraftName(
 /**
  * Who a seat is, in one word, or nothing worth saying.
  *
- * The three that displace each other: nobody is behind it, the device has gone
- * quiet, or it is yours. Abandoned wins over away because the server never
- * reports both — `envelopeFor` only calls a seat away while `abandoned_at` is
- * null — and because "bez gracza" is the more useful of the two anyway.
+ * The three that displace each other: nobody is behind it, the driver has gone
+ * quiet, or it is yours. Having nobody wins over being away because the server
+ * never reports both — a chair is only away while somebody is driving it — and
+ * because "bez gracza" is the more useful of the two anyway.
  */
 export type SeatStanding = "gone" | "away" | "you" | null;
 
 export function seatStanding(seat: LobbySeat, isMine: boolean): SeatStanding {
-  if (seat.abandoned) return "gone";
+  if (!seat.driven) return "gone";
   if (seat.away) return "away";
   return isMine ? "you" : null;
 }
@@ -235,7 +263,7 @@ export function seatStanding(seat: LobbySeat, isMine: boolean): SeatStanding {
 export type Readiness = "ready" | "waiting" | "silent";
 
 export function seatReadiness(seat: LobbySeat): Readiness {
-  if (seat.abandoned || !seat.characterId) return "silent";
+  if (!seat.driven || !seat.characterId) return "silent";
   return seat.ready ? "ready" : "waiting";
 }
 

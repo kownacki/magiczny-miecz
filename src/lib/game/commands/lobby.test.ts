@@ -13,6 +13,7 @@ import {
   nextHost,
   promoteHost,
   renameUser,
+  resumeAs,
   seatUnder,
   setReady,
   sweepLobby,
@@ -418,6 +419,30 @@ describe("off the table altogether", () => {
   it("refuses somebody who is not at this table", () => {
     expect(() => leaveTable(lobby({}), { userId: "usr-9" })).toThrow("Nie ma takiego gracza");
   });
+
+  /**
+   * A kick is the host's, and the refusal was lost in the split: `removeSeat`
+   * enforced it and `leaveTable` replaced that function without replacing it,
+   * so for a while any seated player could post another player's id and clear
+   * them off the table. Leaving needs no permission because it takes nothing
+   * from anybody; this does.
+   */
+  it("lets only the host throw somebody else off", () => {
+    expect(() =>
+      leaveTable(lobby({}, {}, {}), { userId: "usr-2", kicked: true, byId: "usr-1" }),
+    ).toThrow("Tylko gospodarz");
+    expect(
+      leaveTable(lobby({}, {}, {}), { userId: "usr-2", kicked: true, byId: "usr-0" }).writes
+        .usersRemoved,
+    ).toEqual(["usr-2"]);
+  });
+
+  it("asks nobody's permission to leave of your own accord", () => {
+    // Including the host's own exit, which hands the table on rather than
+    // needing anybody to allow it.
+    expect(leaveTable(lobby({}, {}), { userId: "usr-1" }).result.removed).toBe(true);
+    expect(leaveTable(lobby({}, {}), { userId: "usr-0" }).result.removed).toBe(true);
+  });
 });
 
 describe("sitting down", () => {
@@ -536,6 +561,96 @@ describe("taking the host role", () => {
     expect(
       takeHostRole(lobby({}, {}), { userId: "usr-0", byId: "usr-0" }, clock()).writes,
     ).toEqual({});
+  });
+});
+
+describe("coming back to a table this browser was at", () => {
+  const room = (...over: Partial<UserRow>[]) =>
+    aTable({
+      game: { status: "playing" },
+      seats: seated(...over.map(() => ({}))),
+      users: here(...over),
+    });
+
+  it("says nobody when this browser has never been here", () => {
+    const { writes, result } = resumeAs(
+      room({ device_id: "chrome" }),
+      { deviceId: "firefox", token: "fresh" },
+      clock(),
+    );
+    expect(result).toEqual({ user: null, live: false });
+    expect(writes).toEqual({});
+  });
+
+  it("hands the fresh token to whoever this browser was", () => {
+    /**
+     * A tab closing takes the claim with it on purpose, so a browser coming
+     * back holds nothing. Without this the only way in is to join again as a
+     * second person, leaving the first sitting there driving a Postać nobody
+     * can reach.
+     */
+    const { writes, result } = resumeAs(
+      room({ device_id: "chrome", seen_at: at(LOBBY_GONE_AFTER_MS) }),
+      { deviceId: "chrome", token: "fresh" },
+      clock(),
+    );
+    expect(result.user?.id).toBe("usr-0");
+    expect(writes.users).toEqual([
+      { id: "usr-0", patch: { claim_token: "fresh", left_at: null } },
+    ]);
+  });
+
+  it("takes somebody whose page said goodbye, however recently", () => {
+    // The countdown a reload cancels has not run out, but the page said it was
+    // going and this is the reload. Nothing is being taken from anybody.
+    const { result } = resumeAs(
+      room({ device_id: "chrome", seen_at: at(0), left_at: at(0) }),
+      { deviceId: "chrome", token: "fresh" },
+      clock(),
+    );
+    expect(result.user?.id).toBe("usr-0");
+  });
+
+  it("does not take a window that is using the table", () => {
+    /**
+     * Two tabs of one browser is a thing people do on purpose here — it is how
+     * one person drives four seats to test something — so this is a question
+     * for them rather than a refusal. Coming back as somebody live would take
+     * the table out from under the window that is using it.
+     */
+    const { writes, result } = resumeAs(
+      room({ device_id: "chrome", seen_at: at(1_000) }),
+      { deviceId: "chrome", token: "fresh" },
+      clock(),
+    );
+    expect(result).toEqual({ user: null, live: true });
+    expect(writes).toEqual({});
+  });
+
+  it("picks the quiet one when this browser is two people", () => {
+    // Michał is live in the first tab; the second was closed. Coming back is
+    // coming back as the one nothing is using.
+    const { result } = resumeAs(
+      room(
+        { device_id: "chrome", seen_at: at(1_000) },
+        { device_id: "chrome", seen_at: at(LOBBY_GONE_AFTER_MS) },
+      ),
+      { deviceId: "chrome", token: "fresh" },
+      clock(),
+    );
+    expect(result.user?.id).toBe("usr-1");
+  });
+
+  it("picks the most recently heard from of several quiet ones", () => {
+    const { result } = resumeAs(
+      room(
+        { device_id: "chrome", seen_at: at(LOBBY_GONE_AFTER_MS * 4) },
+        { device_id: "chrome", seen_at: at(LOBBY_GONE_AFTER_MS) },
+      ),
+      { deviceId: "chrome", token: "fresh" },
+      clock(),
+    );
+    expect(result.user?.id).toBe("usr-1");
   });
 });
 

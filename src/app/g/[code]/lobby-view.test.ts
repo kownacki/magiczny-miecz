@@ -17,6 +17,7 @@ import {
   seatPortrait,
   seatReadiness,
   seatStanding,
+  seatState,
   startRefusal,
   stripColumns,
   surpriseTakers,
@@ -52,10 +53,9 @@ function aSeat(over: Partial<LobbySeat> = {}): LobbySeat {
     playerName: "Michał",
     characterId: null,
     isHost: false,
-    abandoned: false,
+    driven: true,
     away: false,
     ready: false,
-    noDevice: false,
     ...over,
   };
 }
@@ -125,24 +125,56 @@ describe("whose character you may choose", () => {
     expect(mayChooseFor(aSeat({ seatIndex: 1 }), aiming({ mySeatIndex: 0 }))).toBe(false);
   });
 
-  it("is a device-less player's, when you are running a companion table", () => {
-    const seat = aSeat({ seatIndex: 1, noDevice: true });
+  it("is a chair nobody is driving, when you are running a companion table", () => {
+    const seat = aSeat({ seatIndex: 1, driven: false });
     expect(mayChooseFor(seat, aiming({ canAdminister: true, mode: "companion" }))).toBe(true);
   });
 
-  it("is not a device-less player's when you are not running the table", () => {
-    const seat = aSeat({ seatIndex: 1, noDevice: true });
+  it("is not that chair when you are not running the table", () => {
+    const seat = aSeat({ seatIndex: 1, driven: false });
     expect(mayChooseFor(seat, aiming({ canAdminister: false, mode: "companion" }))).toBe(false);
   });
 
   it("is nobody else's in a simulation, where everybody has their own device", () => {
-    const seat = aSeat({ seatIndex: 1, noDevice: true });
+    const seat = aSeat({ seatIndex: 1, driven: false });
     expect(mayChooseFor(seat, aiming({ canAdminister: true, mode: "simulation" }))).toBe(false);
   });
 
-  it("is not the seat of somebody who has a device of their own", () => {
-    const seat = aSeat({ seatIndex: 1, noDevice: false });
+  it("is not the seat of somebody who is driving it themselves", () => {
+    const seat = aSeat({ seatIndex: 1, driven: true });
     expect(mayChooseFor(seat, aiming({ canAdminister: true, mode: "companion" }))).toBe(false);
+  });
+});
+
+/**
+ * The four states, which were one axis before people and chairs came apart.
+ *
+ * A seat was a person then, so an unclaimed chair and a Postać whose player had
+ * walked off were the same row in different moods — and the app drew them the
+ * same way, which is why a table mid-game showed "wolne miejsce" over a figure
+ * standing on Kamienny Most with four Przedmioty.
+ */
+describe("the four states a chair is in", () => {
+  it("is free when nobody is in it and nothing is standing there", () => {
+    expect(seatState(aSeat({ driven: false, characterId: null }))).toBe("free");
+  });
+
+  it("is waiting while somebody in it is still choosing", () => {
+    expect(seatState(aSeat({ driven: true, characterId: null }))).toBe("waiting");
+  });
+
+  it("is empty when a Postać is standing there with nobody behind it", () => {
+    expect(seatState(aSeat({ driven: false, characterId: goblin }))).toBe("empty");
+  });
+
+  it("is taken when both are true", () => {
+    expect(seatState(aSeat({ driven: true, characterId: goblin }))).toBe("taken");
+  });
+
+  it("counts the surprise as a Postać, because choosing it is choosing", () => {
+    expect(seatState(aSeat({ driven: true, characterId: asSeatCharacter(RANDOM_CHARACTER_ID) }))).toBe(
+      "taken",
+    );
   });
 });
 
@@ -168,7 +200,7 @@ describe("where the character strip is aimed", () => {
   });
 
   it("is the seat you deliberately picked, when you are allowed to pick it", () => {
-    const seat = aSeat({ id: "theirs", seatIndex: 1, noDevice: true });
+    const seat = aSeat({ id: "theirs", seatIndex: 1, driven: false });
     const at = aimedAt([mine, seat], seat, aiming({ canAdminister: true, mode: "companion" }));
     expect(at?.id).toBe("theirs");
   });
@@ -203,7 +235,7 @@ describe("whether the table can start", () => {
   it("does not wait on a seat nobody is behind", () => {
     // An abandoned seat cannot say it is ready, so it is not asked — otherwise
     // one closed tab would hold the table for the rest of the evening.
-    const seats = [aSeat({ characterId: goblin, ready: false, abandoned: true })];
+    const seats = [aSeat({ characterId: goblin, ready: false, driven: false })];
     expect(startRefusal(seats)).toBeNull();
   });
 
@@ -270,7 +302,7 @@ describe("who a seat is, in one word", () => {
   it("says nobody is behind it, whatever else is true of it", () => {
     // The server never reports both, and "bez gracza" is the more useful of the
     // two anyway: it is the one somebody can act on.
-    expect(seatStanding(aSeat({ abandoned: true, away: true }), true)).toBe("gone");
+    expect(seatStanding(aSeat({ driven: false, away: true }), true)).toBe("gone");
   });
 });
 
@@ -281,7 +313,7 @@ describe("the three states a player is in before the start", () => {
   });
 
   it("says nothing about a seat nobody is behind", () => {
-    expect(seatReadiness(aSeat({ characterId: goblin, abandoned: true }))).toBe("silent");
+    expect(seatReadiness(aSeat({ characterId: goblin, driven: false }))).toBe("silent");
   });
 
   it("is waiting once a Postać is chosen and nothing has been said", () => {

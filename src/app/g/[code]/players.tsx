@@ -131,7 +131,7 @@ export function PlayersDrawer({
                   {/* The character is still in the game; only its player is
                       gone. Worth saying plainly — whoever is left has to decide
                       whether to play it or leave it standing. */}
-                  {seat.abandoned ? (
+                  {!seat.driven ? (
                     <span className="ml-2 text-[11px] text-vermilion/80">bez gracza</span>
                   ) : seat.away ? (
                     <span className="ml-2 text-[11px] text-muted">nieobecny</span>
@@ -222,7 +222,7 @@ export function PlayersDrawer({
                   )}
 
                   <div className="flex flex-wrap gap-2">
-                    {seat.abandoned && onClaim && (
+                    {!seat.driven && onClaim && (
                       <button
                         onClick={() => onClaim(seat.id)}
                         disabled={busy}
@@ -235,7 +235,7 @@ export function PlayersDrawer({
                         to leave takes the table's only administrator with them
                         otherwise, and `claimTableScreen` will only let somebody
                         else take it once they have actually gone quiet. */}
-                    {amHost && onPassHost && !mine && !seat.abandoned && (
+                    {amHost && onPassHost && !mine && seat.driven && (
                       <button
                         onClick={() => onPassHost(seat)}
                         disabled={busy}

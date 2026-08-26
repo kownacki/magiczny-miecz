@@ -27,6 +27,7 @@ import {
   readingCharacter,
   seatName,
   seatNameInline,
+  seatState,
   startRefusal,
   withDraftName,
   type Aiming,
@@ -51,6 +52,7 @@ export function Lobby({
   code,
   mode,
   seats: seatsFromServer,
+  users,
   mySeatIndex,
   characters,
   pickingFor,
@@ -73,6 +75,8 @@ export function Lobby({
   code: string;
   mode: string;
   seats: LobbySeat[];
+  /** Everybody here, seated or not — see `watching` below. */
+  users: { id: string; name: string; seatIndex: number | null; away: boolean }[];
   mySeatIndex: number | null;
   characters: Character[];
   pickingFor: LobbySeat | null;
@@ -99,6 +103,9 @@ export function Lobby({
    */
   const [draftName, setDraftName] = useState<string | null>(null);
   const seats = withDraftName(seatsFromServer, mySeatIndex, draftName);
+
+  /** Everybody at the table who is driving no chair. */
+  const watching = users.filter((one) => one.seatIndex === null);
 
   const aiming: Aiming = { mySeatIndex, canAdminister: mayAdminister(isHost, hostAway), mode };
   const me = mySeat(seats, mySeatIndex);
@@ -222,10 +229,19 @@ export function Lobby({
           <section className="flex min-h-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-4 py-3">
             {Array.from({ length: MAX_SEATS }, (_, index) => {
               const seat = seats[index];
-              if (!seat) {
+              /**
+               * A chair with nobody in it and nothing standing on it is a free
+               * place, whether or not a row for it happens to exist.
+               *
+               * Rows outlive people now: a chair whose player was kicked or
+               * swept stays until somebody sits back down in it. Drawing that
+               * as a seat — "Miejsce 2 · bez gracza" — advertised an absence
+               * where the honest answer is an invitation. See `seatState`.
+               */
+              if (!seat || seatState(seat) === "free") {
                 return (
                   <EmptySlot
-                    key={`empty-${index}`}
+                    key={seat ? seat.id : `empty-${index}`}
                     canAdd={aiming.canAdminister && mode === "companion"}
                     busy={busy}
                     onAdd={onAddLocal}
@@ -281,6 +297,22 @@ export function Lobby({
               );
             })}
           </section>
+
+          {/**
+           * The people who are here and not in a chair.
+           *
+           * Invisible until now, and not by an oversight: before people and
+           * seats came apart there was no way to *be* one. Six chairs is a
+           * limit on Postacie and not on people, so a seventh arrival is a
+           * spectator — as is anybody who stood up and stayed — and a table
+           * that draws only its chairs shows them nowhere at all.
+           */}
+          {watching.length > 0 && (
+            <p className="shrink-0 border-t border-edge px-4 py-1 text-[12px] text-muted">
+              Ogląda{watching.length === 1 ? "" : "ją"}:{" "}
+              {watching.map((one) => (one.away ? `${one.name} (nieobecny)` : one.name)).join(", ")}
+            </p>
+          )}
 
           <section className="shrink-0 border-t border-edge px-4 py-2">
             <div className="mb-1 flex items-baseline justify-between">

@@ -26,7 +26,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // lines.
     const target = typeof body.userId === "string" ? body.userId : actor.user.id;
     if (target !== actor.user.id) {
-      return NextResponse.json(await leaveTable(game.id, target, true));
+      // The host's, and refused by the rule rather than by this route — see
+      // `leaveTable`.
+      return NextResponse.json(await leaveTable(game.id, target, true, actor.user.id));
     }
     return NextResponse.json(
       body.standing === true

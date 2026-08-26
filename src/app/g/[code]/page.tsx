@@ -19,11 +19,11 @@ import {
   type Seat,
 } from "./table";
 import { CardLibrary } from "./card-library";
-import { useTable } from "./use-table";
+import { useTable, type Person } from "./use-table";
 import { TestConsole } from "./console";
 import { TurnFab, owedLabel } from "./turn-fab";
 import { Lobby } from "./lobby";
-import { JoinGate, LeaveButton, TakeOverGate } from "./door";
+import { JoinGate, LeaveButton, ReturnGate, SecondTabNotice, TakeOverGate } from "./door";
 import { type LobbySeat } from "./lobby-view";
 import { TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
@@ -104,6 +104,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     seats,
     fieldCards,
     stock,
+    users,
+    me,
     mySeatIndex,
     moved,
     taking,
@@ -121,6 +123,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     leave,
     join,
     claimSeat,
+    wasHere,
+    elsewhere,
+    resumeHere,
+    joinAsSomebodyElse,
     addLocalPlayer,
     chooseCharacter,
     equip,
@@ -420,12 +426,60 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }
   if (!game) return <Centered>Wczytuję stół…</Centered>;
 
+  /**
+   * Before either door: this browser has been here before.
+   *
+   * In front of both gates rather than inside one of them, because it is the
+   * same question whether the game has started or not — and the answer changes
+   * which gate you are even looking at. Watching is unaffected: `wasHere` is
+   * only ever set for a window holding no claim at all.
+   */
+  if (wasHere) {
+    return (
+      <ReturnGate
+        code={game.join_code}
+        name={wasHere.name}
+        seatIndex={wasHere.seatIndex}
+        busy={busy}
+        onResume={resumeHere}
+        onSomebodyElse={joinAsSomebodyElse}
+      />
+    );
+  }
+
   const mySeat = seats.find((seat) => seat.seat_index === mySeatIndex);
+  /**
+   * Whoever is driving a given chair, or nobody.
+   *
+   * The one thing the browser has to do for itself now that a chair and a
+   * person are two rows: the seat carries a `driver_id` and everything about
+   * the person is in `users`. Running the table, being ready and having gone
+   * quiet are all facts about somebody, and a chair has none of them.
+   */
+  const driverOf = (seat: Seat | null | undefined) =>
+    users.find((one) => one.id === seat?.driver_id) ?? null;
+  const amHost = me?.isHost === true;
+
+  /**
+   * A chair as the poczekalnia draws it, with this device's own pick laid over.
+   *
+   * The Karta taken client-first is still the seat's (`taking`), and the flag
+   * that used to be reset beside it is not: changing your mind un-readies the
+   * *person*, which the server writes and the next poll brings back. Laying a
+   * `ready: false` over somebody else's row here would have been this device
+   * guessing at a fact about another player.
+   */
+  const lobbySeat = (seat: Seat) =>
+    asLobbySeat(
+      taking[seat.id] ? { ...seat, character_id: taking[seat.id] } : seat,
+      driverOf(seat),
+    );
+
   // The shared screen in the middle of the table. Whoever's turn it is reaches
   // over and taps it, so it drives the active player rather than sitting idle
   // saying "waiting".
-  const isTableScreen = mySeat?.is_host === true && game.mode === "companion";
-  const tableScreenHolder = seats.find((seat) => seat.is_host)?.player_name ?? null;
+  const isTableScreen = amHost && game.mode === "companion";
+  const tableScreenHolder = users.find((one) => one.isHost)?.name ?? null;
 
   // Whose character is being chosen. Left to the app until somebody says
   // otherwise: this device's own seat first, then — only where the host is
@@ -436,8 +490,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     picking === "auto"
       ? mySeat && !mySeat.character_id
         ? mySeat
-        : mySeat?.is_host && game.mode === "companion"
-          ? (seats.find((seat) => seat.no_device && !seat.character_id) ?? null)
+        : amHost && game.mode === "companion"
+          ? // A chair with nobody driving it and nothing in it: somebody in the
+            // room the host is setting up, which is what `no_device` used to
+            // mark and is now simply the absence of a driver.
+            (seats.find((seat) => seat.driver_id === null && !seat.character_id) ?? null)
           : null
       : (seats.find((seat) => seat.id === picking) ?? null);
 
@@ -820,13 +877,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           )}
           <JoinGate
             code={game.join_code}
-            seats={seats.map((seat) =>
-            asLobbySeat(
-              taking[seat.id] ? { ...seat, character_id: taking[seat.id], ready: false } : seat,
-            ),
-          )}
+            seats={seats.map((seat) => lobbySeat(seat))}
             busy={busy}
             onJoin={join}
+            notice={
+              elsewhere ? (
+                <SecondTabNotice busy={busy} onSomebodyElse={joinAsSomebodyElse} />
+              ) : null
+            }
           />
         </>
       );
@@ -843,14 +901,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         <Lobby
           code={game.join_code}
           mode={game.mode}
-          seats={seats.map((seat) =>
-            asLobbySeat(
-              taking[seat.id] ? { ...seat, character_id: taking[seat.id], ready: false } : seat,
-            ),
-          )}
+          seats={seats.map((seat) => lobbySeat(seat))}
+          users={users}
           mySeatIndex={mySeatIndex}
           characters={CHARACTERS}
-          pickingFor={pickingFor ? asLobbySeat(pickingFor) : null}
+          pickingFor={pickingFor ? lobbySeat(pickingFor) : null}
           busy={busy}
           onAddLocal={addLocalPlayer}
           onPickFor={(seat) => setPicking(seat ? seat.id : null)}
@@ -865,8 +920,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           onRename={(name) => post("seat", { name })}
           onLeave={leave}
           onDeal={() => post("character", { deal: true })}
-          isHost={mySeat?.is_host === true}
-          hostAway={seats.find((seat) => seat.is_host)?.abandoned_at !== null}
+          isHost={amHost}
+          // The host is somebody, so "gone" is something they are rather than
+          // something their chair is: no host at all, or one who has gone quiet.
+          hostAway={!users.some((one) => one.isHost && !one.away)}
           onStart={() => post("start", {})}
           onLibrary={() => setLeftDrawer("ksiega")}
         />
@@ -879,15 +936,19 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // which is exactly what the app does with a player who leaves or closes their
   // tab. Offered up front rather than buried in a card somebody has to expand.
   if (mySeatIndex === null && !watching) {
+    // A Postać standing there with nobody behind it, or with somebody who has
+    // gone quiet. Both are pickable — the people in the room settle which —
+    // and the difference between them is worth saying out loud, because one is
+    // a decision somebody made and the other is a phone that went to sleep.
     const free = seats
-      .filter((seat) => seat.character_id && !seat.eliminated && !seat.no_device)
-      .filter((seat) => seat.abandoned_at !== null || seat.away)
+      .filter((seat) => seat.character_id && !seat.eliminated)
+      .filter((seat) => seat.driver_id === null || seat.away)
       .map((seat) => ({
         seatId: seat.id,
         playerName: seat.player_name,
         characterName:
           CHARACTERS.find((character) => character.id === seat.character_id)?.name ?? "?",
-        why: seat.abandoned_at !== null ? "gracz odszedł od stołu" : "gracz się rozłączył",
+        why: seat.driver_id === null ? "nikt nią nie gra" : "gracz się rozłączył",
       }));
     return (
       <>
@@ -957,7 +1018,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             <PlayersDrawer
               // Every seat, in seat order, this one included — see the note on the
               // component about why the roster it replaces left you out.
-              seats={[...seats].sort((a, b) => a.seat_index - b.seat_index).map(asPublicSeat)}
+              seats={[...seats]
+                .sort((a, b) => a.seat_index - b.seat_index)
+                .map((seat) => asPublicSeat(seat, driverOf(seat)))}
               openSeatId={askedAbout}
               // Remounted per seat, so a drawer opened about somebody opens on
               // them even if it was already open about somebody else.
@@ -965,17 +1028,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               characters={CHARACTERS}
               activeSeatIndex={game.active_seat}
               mySeatId={mySeat?.id ?? null}
-              amHost={mySeat?.is_host === true}
+              amHost={amHost}
               room={seats.length < MAX_SEATS}
               busy={busy}
               onClose={() => setRightDrawer(null)}
               onInspect={setInspectingCard}
               onClaim={mySeatIndex === null ? claimSeat : undefined}
               onKick={
-                mySeat?.is_host ? (seat) => post("leave", { seatId: seat.id }) : undefined
+                amHost ? (seat) => post("leave", { seatId: seat.id }) : undefined
               }
               onPassHost={
-                mySeat?.is_host ? (seat) => post("host", { seatId: seat.id }) : undefined
+                amHost ? (seat) => post("host", { seatId: seat.id }) : undefined
               }
               onJoin={
                 mySeatIndex === null
@@ -1405,17 +1468,24 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   );
 }
 
-function asLobbySeat(seat: Seat): LobbySeat {
+/**
+ * A chair and whoever is in it, folded into the one thing the poczekalnia draws.
+ *
+ * The driver is passed in rather than looked up, because this is a pure
+ * function of two rows and the lookup is the caller's — which is also the whole
+ * of what changed: four of these fields used to be columns on the seat, and
+ * every one of them is a fact about a person.
+ */
+function asLobbySeat(seat: Seat, driver: Person | null): LobbySeat {
   return {
     id: seat.id,
     seatIndex: seat.seat_index,
-    playerName: seat.player_name,
+    playerName: driver?.name ?? seat.player_name,
     characterId: seat.character_id,
-    isHost: seat.is_host,
-    abandoned: seat.abandoned_at !== null,
+    isHost: driver?.isHost ?? false,
+    driven: driver !== null,
     away: seat.away,
-    ready: seat.ready,
-    noDevice: seat.no_device,
+    ready: driver?.ready ?? false,
   };
 }
 
@@ -1427,7 +1497,7 @@ function asLobbySeat(seat: Seat): LobbySeat {
  * browser at all — the server already replaced them with a count (9.3) — so
  * there is nothing here that could leak by being careless.
  */
-function asPublicSeat(seat: Seat): PublicSeat {
+function asPublicSeat(seat: Seat, driver: Person | null): PublicSeat {
   return {
     id: seat.id,
     seatIndex: seat.seat_index,
@@ -1443,9 +1513,9 @@ function asPublicSeat(seat: Seat): PublicSeat {
     gold: seat.gold,
     nature: seat.nature,
     eliminated: seat.eliminated,
-    abandoned: seat.abandoned_at !== null,
+    driven: driver !== null,
     away: seat.away,
-    isHost: seat.is_host,
+    isHost: driver?.isHost ?? false,
     turnsLost: seat.turns_lost,
     cards: seat.holdings
       .filter((held) => held.kind !== "spell")

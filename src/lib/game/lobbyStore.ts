@@ -1,6 +1,7 @@
 /** The poczekalnia's edge: the reads, the tokens, and one Command each. */
 
 import { change } from "./change";
+import { makeClaimToken } from "./codes";
 import {
   takeSeat as takeSeatOn,
   unseat as unseatOn,
@@ -10,6 +11,7 @@ import {
   setReady as setReadyOn,
   sweepLobby as sweepLobbyOn,
   takeHostRole as takeHostRoleOn,
+  resumeAs as resumeAsOn,
   isQuiet,
   HOST_MISSING_AFTER_MS,
   type LeaveResult,
@@ -21,14 +23,16 @@ export type { LeaveResult };
 /**
  * What the rules in `commands/lobby.ts` cannot do for themselves.
  *
- * Two things: reading, and the one write a changeset cannot describe. Deleting
- * the game is here because a changeset can write every table this app has
- * except the one it is a change *to*.
+ * Three things, and they are the same three every edge in this app does:
+ * reading, minting, and the one write a changeset cannot describe. Deleting the
+ * game is here because a changeset can write every table this app has except
+ * the one it is a change *to*.
  *
- * Minting used to be a third. Leaving a seat issued a fresh claim token, so the
- * device that held it stopped holding it — and there is nothing to reissue any
- * more, because the token is the *person's*. `unseat` leaves them at the table
- * holding it, and `leaveTable` takes the row and the token together.
+ * Minting moved rather than went. Leaving no longer reissues anything — the
+ * token is the *person's* now, so `unseat` leaves them holding it and
+ * `leaveTable` takes the row and the token together — and `resumeAs` mints
+ * instead: a browser coming back gets a fresh claim, which is `node:crypto` and
+ * so cannot be inside a command a retried commit would replay.
  */
 
 /* --------------------------------------------------------------------------
@@ -172,8 +176,10 @@ export async function leaveTable(
   gameId: string,
   userId: string,
   kicked = false,
+  /** Who is doing the kicking. Only the host may, and only somebody else. */
+  byId?: string,
 ): Promise<LeaveResult> {
-  return change(gameId, leaveTableOn, { userId, kicked });
+  return change(gameId, leaveTableOn, { userId, kicked, byId });
 }
 
 /** Sits somebody down in a seat. Refused only if somebody is actively driving it. */
@@ -183,6 +189,22 @@ export async function takeSeat(
   seatIndex: number,
 ): Promise<void> {
   await change(gameId, takeSeatOn, { userId, seatIndex });
+}
+
+/**
+ * Who this browser was here, handed a fresh claim so it can be them again.
+ *
+ * `{ user: null, live: true }` says this browser is already somebody at this
+ * table in another window, which is a question for the person rather than a
+ * refusal: come back as nobody, or join as somebody new.
+ */
+export async function resumeDevice(
+  gameId: string,
+  deviceId: string,
+): Promise<{ user: Awaited<ReturnType<typeof usersFor>>[number] | null; live: boolean; token: string }> {
+  const token = makeClaimToken();
+  const { user, live } = await change(gameId, resumeAsOn, { deviceId, token });
+  return { user, live, token };
 }
 
 /** Hands the host role to somebody, or takes it from a host who has gone. */

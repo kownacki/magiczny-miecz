@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { bumpRevision, findGame, joinGame, seatsFor, verifyActor } from "@/lib/game/store";
-import { takeSeat } from "@/lib/game/lobbyStore";
+import { resumeDevice, takeSeat } from "@/lib/game/lobbyStore";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -9,8 +9,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
   const body = await request.json().catch(() => ({}));
   const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
+  const deviceId = typeof body.deviceId === "string" ? body.deviceId : null;
 
   try {
+    /**
+     * "Was I here?" — asked by a browser that has come back holding nothing.
+     *
+     * A tab closing takes the claim with it on purpose (`seatToken.ts`), so
+     * without this the only way back into a table is to join again as a second
+     * person, leaving the first one sitting there driving a Postać nobody can
+     * reach. The `device_id` in localStorage is what recognises them.
+     *
+     * Three answers, and the middle one is the reason this is a question rather
+     * than something done silently: nobody (join as new), somebody who is
+     * *live* in another window (the person chooses), or somebody quiet, who is
+     * handed a fresh token and is themselves again.
+     */
+    if (body.resume) {
+      if (!deviceId) return NextResponse.json({ resumed: false, live: false });
+      const { user, live, token } = await resumeDevice(game.id, deviceId);
+      if (!user) return NextResponse.json({ resumed: false, live });
+      return NextResponse.json({
+        resumed: true,
+        live: false,
+        userId: user.id,
+        name: user.name,
+        seatIndex: user.seat_index,
+        token,
+      });
+    }
+
     // Sitting down in a seat, which somebody already at the table does without
     // joining it again — a spectator taking a free chair, or a player moving to
     // one that was left empty.
@@ -36,7 +64,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const { user, seat, token } = await joinGame(
       game.id,
       name,
-      typeof body.deviceId === "string" ? body.deviceId : null,
+      deviceId,
       game.status === "playing",
     );
     await bumpRevision(game.id);
