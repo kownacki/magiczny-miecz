@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
 import { COMMANDS, complete } from "@/lib/engine/console";
 import { LAYER } from "./layers";
-import { useDismissable } from "./drawer";
+import { useDismissable } from "./overlay";
 
 /**
  * A line to type at, instead of a button for every test.
@@ -40,15 +40,43 @@ export function TestConsole({
   onRun: (line: string) => Promise<string>;
 }) {
   /**
+   * Pinned: on screen, and not going anywhere by accident.
+   *
+   * The console is the one surface you work *from* rather than look at, and a
+   * session of testing is a long run of clicking at the game with the console
+   * meant to stay put. Everything else here is a thing you opened to read and
+   * are finished with the moment you look elsewhere; this is not, so it is the
+   * one that can opt out. Pinned it answers neither Escape nor a click away —
+   * only `odepnij` or `zamknij`, both of which are deliberate.
+   */
+  const [pinned, setPinned] = useState(false);
+
+  /**
+   * How much of it there is: shut, a strip, the usual, or most of the window.
+   *
+   * `mini` is the state this grew for. The transcript is worth keeping — it is
+   * a record of what a test did — and there was no way to keep it without also
+   * keeping it in front of the board. Minimised, the console is one line of
+   * chrome at the foot of the screen and nothing else, and one click has it
+   * back exactly as it was, log and all.
+   */
+  const [size, setSize] = useState<"mini" | "normal" | "big">("normal");
+
+  /**
    * The bottom edge of the same system the drawers are in.
    *
    * It is not shaped like them — docked across the foot, its own chrome, above
    * the modals rather than under them — but it is dismissed like them: Escape
    * and a click on the game both take the newest surface and only that one.
-   * `open` gates it, because this component stays mounted and draws nothing
-   * while shut, and a shut console must not be holding anybody's Escape.
+   * `shown` is what a shut console passes, because this component stays mounted
+   * and draws nothing while closed, and a shut console must not be holding
+   * anybody's Escape; `onClose: null` is what a pinned one passes, which keeps
+   * it counted as somewhere a click lands inside while it answers nothing.
    */
-  const panel = useDismissable<HTMLElement>(open ? onClose : null);
+  const panel = useDismissable<HTMLElement>({
+    shown: open,
+    onClose: pinned ? null : onClose,
+  });
 
   const [line, setLine] = useState("");
   /**
@@ -60,7 +88,8 @@ export function TestConsole({
    * itself out of sight on a short window. Nothing here needs the game visible
    * while it is being read: `zwiń` is one click and the game has not moved.
    */
-  const [big, setBig] = useState(false);
+  const big = size === "big";
+  const mini = size === "mini";
   /**
    * Read once, lazily, rather than in an effect.
    *
@@ -153,22 +182,51 @@ export function TestConsole({
             tryb testowy — konsola
           </p>
           <div className="flex items-baseline gap-3">
+            {/* Pinning first, because it is the one that changes what the
+                other two mean: pinned, Escape is no longer a way out and the
+                label stops claiming it is. */}
             <button
-              onClick={() => setBig((was) => !was)}
-              aria-expanded={big}
+              onClick={() => setPinned((was) => !was)}
+              aria-pressed={pinned}
+              title={
+                pinned
+                  ? "Przypięta — nie zamknie jej ani Esc, ani kliknięcie w grę"
+                  : "Przypnij, żeby została otwarta mimo klikania w grę"
+              }
+              className={`text-[11px] transition ${
+                pinned ? "text-vermilion" : "text-muted/70 hover:text-ink"
+              }`}
+            >
+              {pinned ? "odepnij" : "przypnij"}
+            </button>
+            <button
+              onClick={() => setSize(mini ? "normal" : "mini")}
+              aria-expanded={!mini}
+              title={mini ? "Pokaż konsolę" : "Zwiń do paska — log zostaje"}
               className="text-[11px] text-ochre/80 transition hover:text-ochre"
             >
-              {big ? "zwiń" : "rozwiń"}
+              {mini ? "pokaż" : "schowaj"}
             </button>
+            {!mini && (
+              <button
+                onClick={() => setSize(big ? "normal" : "big")}
+                aria-expanded={big}
+                className="text-[11px] text-ochre/80 transition hover:text-ochre"
+              >
+                {big ? "zwiń" : "rozwiń"}
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-[11px] text-muted underline transition hover:text-ink"
             >
-              zamknij (Esc)
+              {pinned ? "zamknij" : "zamknij (Esc)"}
             </button>
           </div>
         </div>
 
+        {!mini && (
+        <>
         <div
           ref={tail}
           className={`tnum overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed ${
@@ -250,6 +308,8 @@ export function TestConsole({
           autoComplete="off"
           className="w-full rounded border border-edge bg-panel px-2 py-1 font-mono text-xs text-ink outline-none focus:border-vermilion disabled:opacity-50"
         />
+        </>
+        )}
       </div>
     </section>
   );

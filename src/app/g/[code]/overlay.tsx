@@ -20,7 +20,7 @@
  * why, so the next person to wonder does not "fix" it.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { LAYER } from "./layers";
 
 /**
@@ -85,6 +85,174 @@ export function useEscape(onDismiss: (() => void) | null) {
 }
 
 /**
+ * Before paint, and never on the server.
+ *
+ * Registration has to be a layout effect: it must be done by the time the
+ * click that caused it reaches the window, or the surface it just opened is
+ * not there to be counted and the thing underneath closes instead. A passive
+ * effect runs after the event is long over. React warns about `useLayoutEffect`
+ * while rendering on the server, where there is nothing to lay out, so the
+ * choice is made once here rather than argued with at each call.
+ */
+const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/**
+ * Every surface currently on screen, in the order they were opened.
+ *
+ * A click has to be tested against all of them at once: with the shelf out on
+ * the left and the roster on the right, a click in one is outside the other,
+ * and each would have dismissed the one it was not in.
+ *
+ * Ordered, and not a Set, for the other half of the same problem. Every drawer
+ * listens, so a click on the board reached both and closed the pair of them —
+ * one gesture undoing two decisions, the second of which you never asked about.
+ * Last in is the one that leaves, the way `overlay.tsx` already does Escape.
+ * Only mounting and unmounting may reorder this: it is the order they were
+ * opened in, and a re-render is not an opening.
+ *
+ * Modals are in here too, which is what makes opening one stop dismissing
+ * everything else. A click on an Obszar used to close the console on its way to
+ * opening the field: the console was the newest thing on screen at the moment
+ * the click was seen. Now the field's own sheet registers first — before the
+ * click has finished travelling — and the console is no longer newest, so it
+ * stays. Opening a surface is not clicking away from one.
+ */
+const open: HTMLElement[] = [];
+
+/**
+ * Shown, but not to be dismissed by a click or an Escape.
+ *
+ * Two quite different things ask for this. A pinned console, which is a
+ * deliberate "leave this alone while I work"; and a sheet that is the game
+ * asking rather than something you opened to look at — a fight, a dead
+ * character choosing again. Both are on screen, so both still count as
+ * somewhere a click can land *inside*; neither answers a dismissal.
+ *
+ * Kept beside the order rather than in it, because pinning must not reorder
+ * anything: a console pinned and unpinned is not a console reopened.
+ */
+const pinned = new Set<HTMLElement>();
+
+/** The newest thing that would answer a dismissal, skipping what is pinned. */
+function newestDismissable(): HTMLElement | null {
+  for (let at = open.length - 1; at >= 0; at--) {
+    if (!pinned.has(open[at])) return open[at];
+  }
+  return null;
+}
+
+/**
+ * The two ways out, for anything laid over the table.
+ *
+ * Extracted because the console is one of these and was not built as one. It
+ * is docked along the bottom rather than down a side and keeps its own chrome,
+ * but "Escape closes the newest thing" and "a click on the game closes the
+ * newest thing" are not properties of a shape — they are the rules of the
+ * surface, and a surface outside them is the one that breaks them for
+ * everybody. The console had an Escape of its own on its input, so one press
+ * ran that *and* the stack: the console closed and a drawer went with it.
+ *
+ * Pass null to switch it off. The console stays mounted and renders nothing
+ * while shut, so without that it would sit in both registries invisibly and
+ * swallow the first Escape meant for something else.
+ */
+export function useDismissable<T extends HTMLElement>({
+  shown = true,
+  onClose,
+}: {
+  /** On screen at all. A console that is shut is not somewhere a click lands. */
+  shown?: boolean;
+  /** How to dismiss it, or null for pinned and for the sheets that must be answered. */
+  onClose: (() => void) | null;
+}) {
+  useEscape(shown ? onClose : null);
+
+  const panel = useRef<T>(null);
+
+  useBeforePaint(() => {
+    const element = panel.current;
+    if (!shown || !element) return;
+    open.push(element);
+    return () => {
+      const at = open.lastIndexOf(element);
+      if (at !== -1) open.splice(at, 1);
+      pinned.delete(element);
+    };
+    // Only opening and closing may reorder this — see the note on `open`. The
+    // callback is deliberately not a dependency: a parent re-rendering with a
+    // fresh closure would otherwise move this surface back to the top and hand
+    // it a dismissal meant for whatever is really newest.
+  }, [shown]);
+
+  const canClose = onClose !== null;
+  useBeforePaint(() => {
+    const element = panel.current;
+    if (!shown || !element) return;
+    if (canClose) pinned.delete(element);
+    else pinned.add(element);
+  }, [shown, canClose]);
+
+  useEffect(() => {
+    if (!shown || !onClose) return;
+    const away = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      // Inside *any* of them, not just this one. With the shelf out on the
+      // left and the roster on the right, a click in one is outside the other,
+      // and each would have dismissed the one it was not in.
+      for (const element of open) if (element.contains(target)) return;
+      // Nor is the bar elsewhere. It is what opens these, so a click on it is
+      // most often "and the other one too" — closing this one on the way would
+      // make them mutually exclusive by accident.
+      if (target instanceof Element && target.closest("[data-table-bar]")) return;
+      // And only the newest leaves, skipping anything pinned. Whichever edge it
+      // is on, one click away closes one surface and the next closes the one
+      // under it.
+      if (newestDismissable() !== panel.current) return;
+
+      /**
+       * Settled first, because a click that opens something is not a click
+       * away from something.
+       *
+       * Clicking an Obszar closes the console under the old rule: at the
+       * moment the click is seen the field sheet does not exist, so the
+       * console is still the newest thing on screen and answers for it. The
+       * sheet arrives a fraction later and the console is already gone.
+       *
+       * Waiting a turn of the loop is the only honest way to tell the two
+       * apart. React has committed by then and anything the click opened has
+       * registered, so a surface on screen that was not there when the click
+       * landed means the click was an opening. Nothing about it is visible: a
+       * dismissal one task late still lands in the same frame.
+       */
+      const wasOpen = new Set(open);
+      const settled = () => {
+        for (const surface of open) if (!wasOpen.has(surface)) return;
+        // Re-asked, because the wait is long enough for the answer to have
+        // changed — a sheet may have closed in it, leaving somebody else newest.
+        if (newestDismissable() !== panel.current) return;
+        onClose();
+      };
+      // A frame, and then a turn of the loop. Not a bare timeout: React does
+      // not promise to have rendered the click by the next task, and at zero
+      // delay it had not — the sheet was still on its way and the console
+      // closed in front of it. What React does promise is to have committed
+      // before the frame is painted, so asking after that frame is asking a
+      // question that has an answer. Sixteen milliseconds, on a dismissal.
+      requestAnimationFrame(() => setTimeout(settled, 0));
+    };
+    // `click` rather than `pointerdown`: the question is what the click did,
+    // and at pointerdown it has not done it yet. The cost is that a drag which
+    // starts outside and ends inside no longer counts as having left, which is
+    // the rarer of the two by a wide margin.
+    window.addEventListener("click", away);
+    return () => window.removeEventListener("click", away);
+  }, [shown, onClose]);
+
+  return panel;
+}
+
+/**
  * A sheet in the middle of the screen, over a darkened table.
  *
  * `onDismiss` is null for the undismissable ones: no Escape, no click-away, and
@@ -108,10 +276,22 @@ export function Overlay({
   alert?: boolean;
   children: React.ReactNode;
 }) {
-  useEscape(onDismiss);
+  /**
+   * In the queue with the drawers and the console, not beside it.
+   *
+   * A modal is covered by them — it owns the game and they are the table (see
+   * `layers.ts`) — but being underneath is not the same as being outside. Two
+   * things follow from being in. Opening one no longer dismisses whatever was
+   * already up, because it registers as the newest surface before the click
+   * that opened it has finished. And an undismissable sheet passes null, which
+   * keeps it counted as somewhere a click lands inside while leaving Escape to
+   * whatever below it can actually answer.
+   */
+  const panel = useDismissable<HTMLDivElement>({ onClose: onDismiss });
 
   return (
     <div
+      ref={panel}
       role={alert ? "alertdialog" : "dialog"}
       aria-modal="true"
       aria-label={label}

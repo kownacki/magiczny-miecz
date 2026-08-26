@@ -30,7 +30,19 @@ export function Journal({
   eqMode?: EqMode;
 }) {
   const [lines, setLines] = useState<JournalLine[]>([]);
-  const [expanded, setExpanded] = useState(false);
+  /**
+   * How much of the column it takes: a strip, its share, or the whole board.
+   *
+   * `mini` is new and is the one the board asked for. The Dziennik sits on the
+   * bottom fifth of the map column whether or not anybody is reading it, and on
+   * a short window that fifth is the difference between the Górny Krąg fitting
+   * and not. Minimised it is its own heading and nothing else, so the board
+   * gets the room back without the feed being closed — and it is still there,
+   * still following the revision counter, one click from being read.
+   */
+  const [size, setSize] = useState<"mini" | "normal" | "big">("normal");
+  const expanded = size === "big";
+  const mini = size === "mini";
   const tail = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -55,7 +67,7 @@ export function Journal({
   // Newest at the bottom, so the newest is what you are looking at.
   useEffect(() => {
     tail.current?.scrollTo({ top: tail.current.scrollHeight });
-  }, [lines, expanded]);
+  }, [lines, size]);
 
   return (
     <section
@@ -64,29 +76,46 @@ export function Journal({
           ? // Over the board, not instead of it: the map stays mounted and
             // collapsing costs nothing.
             "absolute inset-0 z-10 flex flex-col rounded border border-edge bg-night"
-          : // A share of the column rather than a number of lines: the board
-            // above it is the thing that has to fit, and it scales with the
-            // window. Four lines was too few to read a turn back — a fight is
-            // three of them on its own — so this is half again as tall, less a
-            // tenth given back to the map.
-            // `mt-auto` pins it to the bottom whatever the board above does.
-            // The board's wrapper is flex-1 and absorbs the slack today, but
-            // that is the board's business and not something this should
-            // depend on to stay where it belongs.
-            "mt-auto flex h-[20.25%] shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
+          : mini
+            ? // Its heading, and nothing under it. `shrink-0` with no height of
+              // its own, so what it gives up goes to the board above.
+              "mt-auto flex shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
+            : // A share of the column rather than a number of lines: the board
+              // above it is the thing that has to fit, and it scales with the
+              // window. Four lines was too few to read a turn back — a fight is
+              // three of them on its own — so this is half again as tall, less a
+              // tenth given back to the map.
+              // `mt-auto` pins it to the bottom whatever the board above does.
+              // The board wrapper is flex-1 and absorbs the slack today, but
+              // that is the board business and not something this should depend
+              // on to stay where it belongs.
+              "mt-auto flex h-[20.25%] shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
       }
     >
       <header className="flex shrink-0 items-center justify-between border-b border-edge/60 px-3 py-1">
         <h2 className="text-[11px] uppercase tracking-wide text-muted">Dziennik</h2>
-        <button
-          onClick={() => setExpanded((was) => !was)}
-          aria-expanded={expanded}
-          className="text-[11px] text-ochre/80 transition hover:text-ochre"
-        >
-          {expanded ? "zwiń — pokaż planszę" : "rozwiń"}
-        </button>
+        <div className="flex items-baseline gap-3">
+          <button
+            onClick={() => setSize(mini ? "normal" : "mini")}
+            aria-expanded={!mini}
+            title={mini ? "Pokaż Dziennik" : "Zwiń do paska — Dziennik nadal spisuje"}
+            className="text-[11px] text-ochre/80 transition hover:text-ochre"
+          >
+            {mini ? "pokaż" : "schowaj"}
+          </button>
+          {!mini && (
+            <button
+              onClick={() => setSize(expanded ? "normal" : "big")}
+              aria-expanded={expanded}
+              className="text-[11px] text-ochre/80 transition hover:text-ochre"
+            >
+              {expanded ? "zwiń — pokaż planszę" : "rozwiń"}
+            </button>
+          )}
+        </div>
       </header>
 
+      {!mini && (
       <div ref={tail} className="min-h-0 flex-1 overflow-y-auto px-3 py-1.5">
         {lines.length === 0 ? (
           <p className="text-xs text-muted/60">Jeszcze nic się nie wydarzyło.</p>
@@ -113,6 +142,7 @@ export function Journal({
           </ol>
         )}
       </div>
+      )}
     </section>
   );
 }
