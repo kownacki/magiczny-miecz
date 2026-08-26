@@ -3317,6 +3317,11 @@ function RailStat({
   // the whole value — so those rails have no `total` and the number under them
   // is simply what they are.
   const shown = total ?? value;
+  // One token says its own value on its face. Gold is never one token in the
+  // sense that matters — its stack is all ones — and a total the żetony do not
+  // add up to has to be written down whatever the pile looks like.
+  const saysItself =
+    stat !== "zloto" && shown === value && tokensFor(value).length === 1;
 
   return (
     // No width of its own. It was a fixed nine while a pile was always one
@@ -3338,14 +3343,22 @@ function RailStat({
           never had tokens for would be the interface inventing a rule. The
           figure under the pile is the one the cards make. */}
       {/*
-        The number, under every pile and not just the ones with a second
-        figure to report.
+        The number, wherever the pile is not already the number.
 
-        A pile is a picture and a picture of nine tokens is not a reading of
-        nine — that is the whole reason the gold has carried a numeral from the
-        start, and the other three want it for the same reason. In the
-        parameter's colour, because the pile it belongs to is that colour and
-        nothing else on the rail says which one it is.
+        A pile of nine tokens is not a reading of nine, which is why the gold
+        has carried a numeral from the start and the other three want one too.
+        But a rail showing ONE token has nothing to add: the żeton has its value
+        printed on its face, so "1" under a tile reading 1 is the same fact
+        twice and makes a small character's card look like a stat block.
+
+        Gold keeps it always — that stack is all ones and capped at three
+        columns, so the picture never states the amount — and so does any rail
+        where the total differs from what the żetony show, since 1.2 keeps a
+        Przedmiot's points off them and the numeral is then carrying what the
+        tokens cannot.
+
+        The space is held either way, so four rails with different answers still
+        end level.
       */}
       <span
         title={
@@ -3355,9 +3368,9 @@ function RailStat({
               ? `${label}: ${shown} (własne ${value})`
               : `${label}: ${shown}`
         }
-        className={`tnum mt-1 text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
+        className={`tnum mt-1 min-h-[13px] text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
       >
-        {shown}
+        {saysItself ? "" : shown}
         {/* Own points behind it, but only where something has added to them:
             "12 (12)" is the same number twice. Dimmed rather than recoloured,
             so the total stays the thing being read.
