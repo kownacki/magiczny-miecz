@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
 import { findGame, verifySeat } from "@/lib/game/store";
+import { mayAct } from "@/lib/game/permission";
 import {
   attackSeat,
   beginFight,
@@ -29,18 +30,6 @@ import type { Decisions } from "@/lib/game/turnStore";
 import { asFieldId } from "@/lib/engine/board";
 
 /**
- * Every turn action funnels through here.
- *
- * Two devices may act for the current player: the one holding that seat, and —
- * in companion mode — the host's, which is the shared screen sitting in the
- * middle of the table. That is not a hole in the secrecy model: in companion
- * mode every hidden thing is a physical card in somebody's hand, and the app
- * holds nothing worth protecting from the people already sitting there.
- *
- * Simulation mode is excluded, because there the app *does* hold each player's
- * concealed spells (9.3) and one device acting for everyone would expose them.
- */
-/**
  * What the player decided, taken off the request.
  *
  * Only numbers and a field id — never an effect. The server re-walks the card
@@ -66,29 +55,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const body = await request.json().catch(() => ({}));
   const seat = await verifySeat(game.id, String(body.token ?? ""));
   if (!seat) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
-  const isActiveSeat = seat.seat_index === game.active_seat;
-  const isTableScreen = game.mode === "companion" && seat.is_host;
-  // 17.7 is the one thing here a seat does on somebody else's turn: "przed
-  // wykonaniem rzutu kostką obie Postacie mają możliwość użycia Zaklęć". A
-  // window only the active player could close would not be a window.
-  const isSpellWindow = body.action === "spell-claim" || body.action === "spell-release";
-  // 17.6 is the other one: "Postać, która została zaatakowana, może próbować
-  // wymknąć się przeciwnikowi". In a duel that is never the seat whose turn it
-  // is, so refusing every other seat here would refuse the only player entitled
-  // to press it. Which seat may actually flee is decided by `escape` itself,
-  // against the fight in progress, rather than guessed at from the action name.
-  const isFlight = body.action === "escape";
-  /**
-   * Nobody is playing, so anybody may move the game on.
-   *
-   * A table can arrive here with no active seat — every remaining character
-   * owing a lost turn is the way, and Burza Siedmiu Słońc causes it outright.
-   * `finishTurn` works through that now, but a game already sitting in the
-   * state cannot reach `finishTurn` at all: every action here is gated on being
-   * the active seat, and there is no active seat to be.
-   */
-  const isStuck = game.active_seat === null && body.action === "end";
-  if (!isActiveSeat && !isTableScreen && !isSpellWindow && !isFlight && !isStuck) {
+  // Every rule about who may press what, and the four exceptions to "not your
+  // turn", live in `mayAct`.
+  const { allowed, tableScreen } = mayAct(game, seat, body.action);
+  if (!allowed) {
     return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
   }
 
@@ -180,7 +150,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             typeof body.succeeded === "boolean" ? body.succeeded : null,
             // The shared screen in companion mode acts for whoever is fleeing;
             // a player's own device may only flee with its own character.
-            isTableScreen ? null : seat.id,
+            tableScreen ? null : seat.id,
           ),
         );
       case "most-pole":
