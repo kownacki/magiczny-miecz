@@ -225,6 +225,25 @@ export function mergeAll(...sets: readonly Changeset[]): Changeset {
   return sets.reduce<Changeset>((all, one) => merge(all, one), {});
 }
 
+/**
+ * Patches for the same row, folded in the order they were written.
+ *
+ * `commit` applies them one after another, so two patches for one seat both
+ * land. A `Map` keyed by id keeps only the last, which made `apply` disagree
+ * with the database about what a changeset means — and a cascade reading its
+ * own work would have seen the earlier patch quietly undone. A loss on a bridge
+ * wrote exactly that shape: the point of Życie, then the bar on trying again.
+ */
+function byId<T extends object>(
+  patches: readonly { id: string; patch: T }[] | undefined,
+): Map<string, T> {
+  const folded = new Map<string, T>();
+  for (const one of patches ?? []) {
+    folded.set(one.id, { ...(folded.get(one.id) ?? {}), ...one.patch } as T);
+  }
+  return folded;
+}
+
 let pending = 0;
 /**
  * An id for a row that does not have one yet.
@@ -251,16 +270,14 @@ function pendingId(): string {
 export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
   const patched = { ...snapshot.game, ...(writes.game ?? {}) } as Snapshot["game"];
 
-  const seatPatches = new Map((writes.seats ?? []).map((one) => [one.id, one.patch]));
+  const seatPatches = byId(writes.seats);
   const seats = snapshot.seats.map((seat) => {
     const patch = seatPatches.get(seat.id);
     return patch ? ({ ...seat, ...patch } as SeatRow) : seat;
   });
 
   const goneHoldings = new Set(writes.holdings?.delete ?? []);
-  const holdingPatches = new Map(
-    (writes.holdings?.patch ?? []).map((one) => [one.id, one.patch]),
-  );
+  const holdingPatches = byId(writes.holdings?.patch);
   const holdings = snapshot.holdings
     .filter((held) => !goneHoldings.has(held.id))
     .map((held) => {
@@ -293,7 +310,7 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
     );
 
   const goneEffects = new Set(writes.effects?.delete ?? []);
-  const effectPatches = new Map((writes.effects?.patch ?? []).map((one) => [one.id, one.patch]));
+  const effectPatches = byId(writes.effects?.patch);
   const effects = snapshot.effects
     .filter((effect) => !goneEffects.has(effect.id))
     .map((effect) => {

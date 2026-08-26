@@ -8,55 +8,20 @@ import {
   type HoldingRow,
 } from "./store";
 import {
-  FERRY_TOLL,
   FIELDS,
   type FieldId,
-  KAMIENNY_MOST,
-  type BridgeEntrance,
-  isFerry,
-  ringOf,
 } from "@/lib/engine/board";
-import { crossingFrom, trzesawiskaOutcome } from "@/lib/engine/rings";
 import {
-  bestShield,
-  canEscapeAt,
-  crossingDice,
-  heldAbilities,
-  tollIsWaived,
-  type EscapeTarget,
 } from "@/lib/engine/abilities";
-import { castableNow, momentsIn, spellScript, type SpellScript } from "@/lib/engine/spells";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, describeLoss, goldLost } from "@/lib/engine/losses";
 import {
-  BRIDGE_GUARDIAN,
-  BRIDGE_ORDEAL,
-  BRIDGE_SIDE,
-  cerberLoss,
-  deathGameOutcome,
-  guardianStrength,
-  keptAfterFall,
-  rollDice,
-  trapOutcome,
 } from "@/lib/engine/bridge";
 import {
-  abilitiesOfCharacter,
-  asCharacterId,
-  startingKit,
 } from "@/lib/engine/characters";
-import type { SpellId } from "@/data/ids";
 import {
-  afterDraw,
-  afterMove,
-  bridgeBlockUntil,
   endFight,
-  recordGuardianStrength,
-  startGuardianFight,
-  strengthPending,
   endTurn,
-  recordFightRoll,
-  setFightTotal,
-  startFight,
   type TurnPhase,
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
@@ -65,8 +30,6 @@ import type { CardClass, EventCard, Item, Nature } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { helpLines, type Command } from "@/lib/engine/console";
 import { findByName } from "@/lib/engine/search";
-import { attackAsOne } from "@/lib/engine/combat";
-import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
 import { usageOf } from "@/lib/engine/uses";
 import {
@@ -79,14 +42,10 @@ import { describeEffect } from "@/lib/engine/effectText";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { isSettled } from "@/lib/engine/resolve";
 import {
-  drawFrom,
 } from "@/lib/engine/deck";
 import {
-  BY_REF,
   EVENTS,
   SPELL_BY_ID,
-  SPELL_BY_REF,
-  decksOf,
   freshDecks,
   shuffle,
   type Decks,
@@ -98,7 +57,6 @@ import {
 } from "./change";
 import { appRandom, supplied } from "./random";
 import {
-  asReturnable,
   putOnPile,
   type Returnable,
 } from "./commands/piles";
@@ -109,9 +67,30 @@ import {
   statusesOf as statusesIn,
   tickEffects as tickEffectsOf,
 } from "./commands/turn";
-import { healSeat as healCommand, spendLife as spendLifeOn } from "./commands/life";
+import { healSeat as healCommand } from "./commands/life";
 import { fightBeast as fightBeastCommand } from "./commands/beast";
-import { claimFloor, floorOf as floorIn, releaseFloor } from "./commands/spellFloor";
+import {
+  attackSeat as attackSeatOn,
+  beginFight as beginFightOn,
+  beginNamedFight as beginNamedFightOn,
+  castSpell as castSpellOn,
+  escape as escapeOn,
+  fightRoll as fightRollOn,
+  resolveFight as resolveFightOn,
+  setFightPlayerTotal as setFightPlayerTotalOn,
+} from "./commands/fight";
+import {
+  crossRing as crossRingOn,
+  enterBridge as enterBridgeOn,
+  fightGuardian as fightGuardianOn,
+  payFerry as payFerryOn,
+  resolveBridgeOrdeal as resolveBridgeOrdealOn,
+  rollGuardianStrength as rollGuardianStrengthOn,
+  type BridgeOrdealResult,
+  type BridgeOutcome,
+  type CrossOutcome,
+} from "./commands/bridge";
+import { claimFloor, releaseFloor } from "./commands/spellFloor";
 import { ADJUSTABLE, adjustSeat, type Adjustable } from "./commands/adjust";
 import {
   dropCard as dropCardOn,
@@ -122,6 +101,12 @@ import {
   takeCard as takeCardOn,
   takeFromField as takeFromFieldOn,
 } from "./commands/holdings";
+import {
+  drawCard as drawCardOn,
+  drawSpell as drawSpellOn,
+  drawSpellWithWand as drawSpellWithWandOn,
+  shopStock as countStock,
+} from "./commands/draw";
 import {
   moveTo as moveToOn,
   rollForMove as rollForMoveOn,
@@ -146,6 +131,7 @@ import {
 export { freshDecks };
 export type { Adjustable };
 export { STONE_TURNS, TROPHY_RATE };
+export type { BridgeOrdealResult, BridgeOutcome, CrossOutcome };
 export type { Decks };
 
 
@@ -157,7 +143,6 @@ export type { Decks };
  * So it is looked up here rather than left to the generic casting path, which
  * has nowhere to put a mechanical effect.
  */
-const KRAG_PLOMIENI: SpellId = "krag-plomieni";
 
 /**
  * How many Zaklęcia a character was dealt at setup (9.5).
@@ -167,7 +152,6 @@ const KRAG_PLOMIENI: SpellId = "krag-plomieni";
  * A stored `character_id` is narrowed on the way in, and an unseated seat has
  * no starting hand.
  */
-const ROZDZKA_ZAKLEC = "rozdzka-zaklec";
 
 
 /**
@@ -210,9 +194,6 @@ async function returnToPile(
  */
 
 
-function spellsAtSetup(characterId: string | null): number {
-  return startingKit(asCharacterId(characterId)).spells ?? 0;
-}
 
 /**
  * Both piles a simulated game deals from.
@@ -225,12 +206,8 @@ function spellsAtSetup(characterId: string | null): number {
 
 
 /** Reads the stored decks, tolerating a game started before spells existed. */
-import { type EqMode, type Slot } from "@/lib/engine/slots";
-import type { Holding } from "@/lib/engine/state";
+import type { Slot } from "@/lib/engine/slots";
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
-import { bonusFromHoldings, inEffect } from "@/lib/engine/holdings";
-import type { CombatKind } from "@/lib/engine/combat";
-import { spellAllowance, wandRefills } from "@/lib/engine/derive";
 
 /**
  * A stored row as the engine wants it — including where it is worn, which every
@@ -244,9 +221,6 @@ import { spellAllowance, wandRefills } from "@/lib/engine/derive";
  * something the rules can switch on — and where an unrecognised value falls
  * back to the game as printed rather than to a house rule.
  */
-function eq(game: { eq_mode: string }): EqMode {
-  return game.eq_mode === "slotowy" ? "slotowy" : "klasyczny";
-}
 
 /** A card's printed name, for messages a player reads. */
 function cardName(cardId: string): string {
@@ -260,14 +234,6 @@ function cardName(cardId: string): string {
   );
 }
 
-function asHolding(row: HoldingRow): Holding {
-  return {
-    cardId: row.card_id,
-    kind: row.kind,
-    face: row.face,
-    slot: (row.slot ?? null) as Slot | null,
-  };
-}
 
 async function loadGame(gameId: string): Promise<GameRow & { turn_state: TurnPhase }> {
   const { data, error } = await db
@@ -389,45 +355,7 @@ export async function drawCard(
   gameId: string,
   named: { cardId: string; cardClass: CardClass } | null,
 ): Promise<{ card: EventCard | null; recycled: boolean }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "pole") throw new Error("Nie czas na ciągnięcie kart.");
-
-  if (game.mode === "companion") {
-    if (!named) throw new Error("Podaj nazwę wyciągniętej karty.");
-    const next = afterDraw(game.turn_state, named);
-    await db.from("games").update({ turn_state: next }).eq("id", gameId);
-    await journal(gameId, seat.id, game.turn, "karta", { ...named, source: "fizyczna" });
-    await bumpRevision(gameId);
-    return { card: EVENTS.find((c) => c.id === named.cardId) ?? null, recycled: false };
-  }
-
-  const decks = decksOf(game);
-  const { deck: after, drawn, recycled } = drawFrom(decks.events, 1, shuffle);
-  if (drawn.length === 0) throw new Error("Talia Kart Zdarzeń jest pusta.");
-
-  const card = BY_REF.get(drawn[0]);
-  if (!card) throw new Error(`Nieznana karta w talii: ${drawn[0]}`);
-
-  const next = afterDraw(game.turn_state, {
-    cardId: card.id,
-    cardClass: card.cardClass,
-    ref: drawn[0],
-  });
-  await db
-    .from("games")
-    .update({ turn_state: next, deck: { ...decks, events: after } })
-    .eq("id", gameId);
-  if (recycled) await journal(gameId, null, game.turn, "przetasowanie", { pile: "zdarzenia" });
-  await journal(gameId, seat.id, game.turn, "karta", {
-    cardId: card.id,
-    ref: drawn[0],
-    source: "talia",
-    recycled,
-  });
-  await bumpRevision(gameId);
-  return { card, recycled };
+  return change(gameId, drawCardOn, { named, shuffle });
 }
 
 /**
@@ -455,97 +383,11 @@ export async function drawCard(
  * that is as often as the wand can be asked.
  */
 export async function drawSpellWithWand(gameId: string, seatId: string): Promise<string> {
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-
-  const mine = (await holdingsFor(gameId))
-    .filter((h) => h.seat_id === seatId)
-    .map(asHolding);
-  const hasWand = mine.some((h) => h.kind !== "trophy" && h.cardId === ROZDZKA_ZAKLEC);
-  if (!hasWand) throw new Error("Ta Postać nie ma Różdżki Zaklęć.");
-
-  const setup = spellsAtSetup(seat.character_id);
-  const held = mine.filter((h) => h.kind === "spell").length;
-  if (!wandRefills(held, setup)) {
-    throw new Error(
-      setup === 0
-        ? "Różdżka daje nowe Zaklęcie dopiero, gdy nie masz żadnego."
-        : `Różdżka daje nowe Zaklęcie dopiero, gdy masz najwyżej ${setup} (tyle, co na początku gry).`,
-    );
-  }
-
-  // Everything else — the deck, the empty-stack case, the face-down hand of
-  // 9.3, the journal line — is the same draw as any other, so it is the same
-  // code. `spellAllowance` has already made room for this one by definition:
-  // being at or below the setup hand is being below the floor the wand sets.
-  return drawSpell(gameId, seatId);
+  return change(gameId, drawSpellWithWandOn, { seatId, shuffle });
 }
 
 export async function drawSpell(gameId: string, seatId: string): Promise<string> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-
-  const held = await db
-    .from("holdings")
-    .select("id")
-    .eq("seat_id", seatId)
-    .eq("kind", "spell");
-  const holdings = await holdingsFor(gameId);
-  const mine = holdings
-    .filter((h) => h.seat_id === seatId)
-    .map(asHolding);
-  const bonus = bonusFromHoldings(mine, eq(game), "parametr");
-  const capacity = spellAllowance(
-    seat.magia_own + bonus.magia,
-    spellsAtSetup(seat.character_id),
-    // "Właściciel Różdżki" — owning it is the whole condition, so the pack
-    // counts as much as the body does, in either eq variant.
-    heldAbilities(mine.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
-  );
-
-  if ((held.data?.length ?? 0) >= capacity) {
-    // Polish numerals agree with the noun: 2-4 take "Zaklęcia", 5 and up take
-    // "Zaklęć". The capacity table tops out at 3, so both forms occur.
-    const noun = capacity >= 2 && capacity <= 4 ? "Zaklęcia" : "Zaklęć";
-    throw new Error(
-      capacity === 0
-        ? "Magia tej Postaci nie pozwala na żadne Zaklęcia (2.6)."
-        : `Ta Postać może mieć najwyżej ${capacity} ${noun} (2.6).`,
-    );
-  }
-
-  if (game.mode === "companion") {
-    throw new Error("Przy planszy Zaklęcia ciągnie się z fizycznego stosu.");
-  }
-
-  const decks = decksOf(game);
-  const { deck: after, drawn, recycled } = drawFrom(decks.spells, 1, shuffle);
-  if (drawn.length === 0) throw new Error("Stos Kart Zaklęć jest pusty.");
-  const spell = SPELL_BY_REF.get(drawn[0]);
-  if (!spell) throw new Error(`Nieznane Zaklęcie: ${drawn[0]}`);
-
-  await db.from("holdings").insert({
-    game_id: gameId,
-    seat_id: seatId,
-    card_id: spell.id,
-    kind: "spell",
-    // Concealed from the other players (9.3).
-    face: "hidden",
-  });
-  await db
-    .from("games")
-    .update({ deck: { ...decks, spells: after } })
-    .eq("id", gameId);
-  // 9.5 in as many words: "Jeśli stos zostanie wyczerpany, tasuje się Karty
-  // Zaklęć już użyte i korzysta z nich ponownie." At a table that is the
-  // loudest thing that happens all evening, and it was happening in silence.
-  if (recycled) await journal(gameId, null, game.turn, "przetasowanie", { pile: "zaklecia" });
-  await journal(gameId, seatId, game.turn, "zaklecie", { spellId: spell.id });
-  await bumpRevision(gameId);
-  return spell.id;
+  return change(gameId, drawSpellOn, { seatId, shuffle });
 }
 
 /**
@@ -577,16 +419,12 @@ export async function shopStock(
   // trips on a request every device makes every couple of seconds.
   known?: { holdings: HoldingRow[]; fieldCards: { card_id: string }[] },
 ): Promise<Record<string, number>> {
-  const held = known?.holdings ?? (await holdingsFor(gameId));
-  const onFields = known?.fieldCards ?? (await fieldCardsFor(gameId));
-  const stock: Record<string, number> = {};
-  for (const cardId of Object.keys(PRINTED_STOCK)) {
-    const inPlay =
-      held.filter((h) => h.card_id === cardId).length +
-      onFields.filter((c) => c.card_id === cardId).length;
-    stock[cardId] = stockLeft(cardId, inPlay);
-  }
-  return stock;
+  return countStock(
+    known ?? {
+      holdings: await holdingsFor(gameId),
+      fieldCards: await fieldCardsFor(gameId),
+    },
+  );
 }
 
 /**
@@ -636,77 +474,7 @@ export async function releaseSpellFloor(gameId: string, seatId: string): Promise
 }
 
 export async function beginFight(gameId: string, cardIds: string[]): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "pole") throw new Error("Nie czas na walkę.");
-  if (cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
-
-  // 17.4 ends the fight when the dice are compared, whatever the result. A card
-  // already rolled against this turn is settled — beaten and waiting to be
-  // taken, or standing and to be walked away from — and rolling again would let
-  // a character grind the same Smok until it got a six.
-  const settled = game.turn_state.fought ?? [];
-  const again = cardIds.find((cardId) => settled.includes(cardId));
-  if (again) {
-    const card = EVENTS.find((c) => c.id === again);
-    throw new Error(`Walka z ${card?.name ?? again} już się w tej turze odbyła (17.4).`);
-  }
-
-  const foes = cardIds.map((cardId) => {
-    const card = EVENTS.find((c) => c.id === cardId);
-    if (!card) throw new Error(`Nieznana karta: ${cardId}`);
-    // Only a Wróg fights. The Miecz on Excalibur and the Magia on Pierścień
-    // Mocy are bonuses to their holder (1.5, 2.5), not creatures to be rolled
-    // against.
-    const foe = combatValueOf(card);
-    if (!foe) throw new Error(`${card.name} nie jest Wrogiem.`);
-    return { card, foe };
-  });
-
-  // 17.5: several creatures attacking at once are one opponent — "Miecze tych
-  // istot są sumowane, a do uzyskanego rezultatu dodawany jest wynik rzutu
-  // kostką". One roll for the lot of them, not one each, which is the
-  // difference between hard and hopeless.
-  const asOne = attackAsOne(foes.map((f) => f.foe));
-  if (!asOne) {
-    throw new Error("Zwykli i magiczni Wrogowie nie atakują razem — rozpatrzcie osobno.");
-  }
-  const { kind, total } = asOne;
-
-  // The character brings everything it has (1.5, 17.4), not just its own
-  // tokens: a Miecz card adds its point in the fight it was found for. This
-  // used to start from `miecz_own` alone, so every item a character was
-  // carrying quietly failed to show up at the moment it mattered.
-  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "walka");
-
-  const next = startFight(
-    game.turn_state,
-    {
-      cardId: foes.map((f) => f.card.id).join("+"),
-      cardName: foes.map((f) => f.card.name).join(" + "),
-      settles: foes.map((f) => f.card.id),
-      // Carried through from the stack: a fight staged by a test is one the
-      // deck never dealt, and the sheet says so over the card's own picture.
-      ...(game.turn_state.drawn.some(
-        (entry) => cardIds.includes(entry.cardId) && entry.granted,
-      )
-        ? { granted: true }
-        : {}),
-      ...(kind === "magiczna" ? { magia: total } : { miecz: total }),
-    },
-    { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
-  );
-  // Nobody is polled and nobody is named: the floor starts empty and is
-  // claimed by whoever wants it (see `claimSpellFloor`).
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "walka-start", {
-    cardIds,
-    enemyTotal: total,
-    together: cardIds.length > 1,
-  });
-  await bumpRevision(gameId);
+  await change(gameId, beginFightOn, { cardIds });
 }
 
 /**
@@ -828,42 +596,6 @@ export async function abandonFight(gameId: string): Promise<void> {
  * Returns what it took, for the journal — a spell that says "wszystkie" needs
  * to say how many that turned out to be, or the table cannot check it.
  */
-async function applySpell(
-  gameId: string,
-  applies: NonNullable<SpellScript["applies"]>,
-  target: { seatIndex?: number; fieldCardId?: string },
-): Promise<string[]> {
-  if (applies === "gasi-zaklecia") {
-    if (target.seatIndex === undefined) throw new Error("Wskaż Postać (9.6).");
-    const seats = await seatsFor(gameId);
-    const victim = seats.find((s) => s.seat_index === target.seatIndex);
-    if (!victim) throw new Error("Nie ma takiej Postaci.");
-
-    // The whole hand, "unicestwienie wszystkich posiadanych przez ofiarę
-    // Zaklęć" — and then, in the card's own next breath, "należy odłożyć ich
-    // Karty", which is why this is applied at all.
-    const hand = (await holdingsFor(gameId)).filter(
-      (h) => h.seat_id === victim.id && h.kind === "spell",
-    );
-    if (hand.length === 0) return [];
-    await db
-      .from("holdings")
-      .delete()
-      .in("id", hand.map((h) => h.id));
-    await returnToPile(gameId, "spells", hand.map(asReturnable));
-    return hand.map((h) => h.card_id);
-  }
-
-  // "zdjąć z planszy jedną odkrytą Kartę Zdarzeń." Off the board is not out of
-  // the game: 16.8 put it there face up and the used pile is the only other
-  // place a Karta Zdarzeń has to be.
-  if (target.fieldCardId === undefined) throw new Error("Wskaż Kartę na planszy.");
-  const lying = (await fieldCardsFor(gameId)).find((row) => row.id === target.fieldCardId);
-  if (!lying) throw new Error("Tej Karty już tam nie ma.");
-  await db.from("field_cards").delete().eq("id", lying.id);
-  await returnToPile(gameId, "events", [asReturnable(lying)]);
-  return [lying.card_id];
-}
 
 export async function castSpell(
   gameId: string,
@@ -871,132 +603,11 @@ export async function castSpell(
   holdingId: string,
   target: { seatIndex?: number; note?: string; fieldCardId?: string } = {},
 ): Promise<{ spell: string; effect: string }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const caster = seats.find((s) => s.id === seatId);
-  if (!caster) throw new Error("Nie ma takiego gracza.");
-
-  const held = (await holdingsFor(gameId)).find(
-    (h) => h.id === holdingId && h.seat_id === seatId && h.kind === "spell",
-  );
-  if (!held) throw new Error("Ta Postać nie ma tego Zaklęcia.");
-
-  const script = spellScript(held.card_id);
-  const spell = SPELL_BY_ID.get(held.card_id);
-
-  // 9.7: "Żadne Zaklęcie nie działa na istoty napotkane na Kamiennym Moście ani
-  // na samą Bestię." Where the caster stands is what decides it.
-  const onTheBridge = caster.field_id ? ringOf(caster.field_id) === KAMIENNY_MOST : false;
-  const aimedAtSomethingThere =
-    script?.target === "wrog" || script?.target === "postac-lub-wrog";
-  if (onTheBridge && aimedAtSomethingThere) {
-    throw new Error("Na Kamiennym Moście Zaklęcia nie działają na tutejsze istoty (9.7).");
-  }
-
-  /**
-   * In a fight, the floor is asked for first and then spoken into.
-   *
-   * Two things fall out of that. Nobody speaks over anybody — the claim is
-   * exclusive, so a spell cannot land while somebody else is choosing one — and
-   * there is no need to guess who might want to answer, because answering is
-   * itself a claim. WŁADCA ZAKLĘĆ negates "każdego innego (bez wyjątku)
-   * Zaklęcia, rzuconego bezpośrednio przed nim" and ZWIERCIADŁO reflects one
-   * back at whoever spoke it, so an answer to an answer has to be possible, and
-   * a single window before the dice could never hold that.
-   */
-  const state = game.turn_state;
-  const inAFight = state.phase === "walka";
-
-  // 9.1: a Zaklęcie has a moment it may be spoken in, and until now nothing on
-  // this side looked. The interface greys the card out, which stops an honest
-  // player and nobody else — a request that simply arrives was carried out
-  // whatever the turn was doing.
-  //
-  // An untranscribed Zaklęcie has no script and is not refused: card data is a
-  // progressive enhancement, so a card the app cannot read is one the table
-  // rules on, not one the app forbids.
-  if (script && !castableNow(script, momentsIn(state))) {
-    throw new Error("Nie ta chwila na to Zaklęcie (9.1).");
-  }
-
-  if (state.phase === "walka") {
-    const floor = floorIn(state.fight, Date.now());
-    if (!floor || floor.seat !== caster.seat_index) {
-      throw new Error(
-        floor
-          ? "Teraz rzuca kto inny — poczekaj na swoją kolej."
-          : "Najpierw zgłoś, że chcesz rzucić Zaklęcie (17.3).",
-      );
-    }
-  }
-
-  await db.from("holdings").delete().eq("id", holdingId);
-
-  // Back to the used pile, so the spell deck can be reshuffled honestly (9.5).
-  // 9.6: "reprezentująca je Karta jest odkładana na stos Kart już zużytych."
-  await returnToPile(gameId, "spells", [asReturnable(held)]);
-
-  const applied = script?.applies ? await applySpell(gameId, script.applies, target) : null;
-
-  const victim =
-    target.seatIndex !== undefined
-      ? (seats.find((s) => s.seat_index === target.seatIndex)?.player_name ?? null)
-      : null;
-
-  await journal(gameId, caster.id, game.turn, "zaklecie", {
-    cardId: held.card_id,
-    name: spell?.name ?? held.card_id,
-    ...(victim ? { target: victim } : {}),
-    ...(target.note ? { note: target.note } : {}),
-    ...(applied ? { took: applied } : {}),
-  });
-
-  /**
-   * A spell spoken puts the fight back where it started, and hands the floor
-   * back to the table.
-   *
-   * 17.3 has the spells before the roll, so a fight that has been spoken into
-   * has not been rolled yet — and if it had been, the spell would be arriving
-   * after the thing it was meant to change. Clearing the dice is what makes the
-   * next claim mean something: whoever wants to answer this can, and the
-   * fighting player rolls into the fight as it now stands rather than as it
-   * stood before anybody spoke.
-   */
-  if (inAFight) {
-    const now = await loadGame(gameId);
-    if (now.turn_state.phase === "walka") {
-      await db
-        .from("games")
-        .update({
-          turn_state: {
-            ...now.turn_state,
-            fight: {
-              ...now.turn_state.fight,
-              caster: null,
-              playerRoll: null,
-              enemyRoll: null,
-              result: null,
-            },
-          },
-        })
-        .eq("id", gameId);
-    }
-  }
-  await bumpRevision(gameId);
-
-  return {
-    spell: spell?.name ?? held.card_id,
-    effect: script?.effect ?? spell?.text ?? "",
-  };
+  return change(gameId, castSpellOn, { seatId, holdingId, target });
 }
 
 export async function setFightPlayerTotal(gameId: string, total: number): Promise<void> {
-  const game = await loadGame(gameId);
-  await db
-    .from("games")
-    .update({ turn_state: setFightTotal(game.turn_state, total) })
-    .eq("id", gameId);
-  await bumpRevision(gameId);
+  await change(gameId, setFightPlayerTotalOn, { total });
 }
 
 export async function fightRoll(
@@ -1004,31 +615,9 @@ export async function fightRoll(
   side: "player" | "enemy",
   value: number | null,
 ): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
-
-  // 17.3 puts the spells before the dice, so the dice wait — but only while
-  // somebody actually holds the floor, and only until it lapses. Checked here
-  // and not only in the interface, because a claim one device can roll straight
-  // through is not a claim.
-  const floor = floorIn(game.turn_state.fight, Date.now());
-  if (floor) {
-    const who = seats.find((s) => s.seat_index === floor.seat);
-    throw new Error(
-      `${who?.player_name ?? "Ktoś"} rzuca Zaklęcie (17.3) — kostki czekają.`,
-    );
-  }
-
-  const roll = value ?? 1 + Math.floor(Math.random() * 6);
-  if (!Number.isInteger(roll) || roll < 1 || roll > 6) {
-    throw new Error("Kostka daje wynik od 1 do 6.");
-  }
-  const next = recordFightRoll(game.turn_state, side, roll);
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "walka-rzut", { side, roll }, value !== null);
-  await bumpRevision(gameId);
+  await change(gameId, fightRollOn, { side, manual: value !== null }, {
+    random: supplied([value], appRandom()),
+  });
 }
 
 /**
@@ -1040,71 +629,7 @@ export async function fightRoll(
  * is left to the player rather than assumed.
  */
 export async function resolveFight(gameId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
-
-  const { fight } = game.turn_state;
-  if (!fight.result) throw new Error("Walka nie jest rozstrzygnięta.");
-
-  // 17.4 ends a fight the moment the dice are compared — win, lose or draw —
-  // so anything that lasts "one fight" is spent whichever way it went.
-  if (seat) await clearFightEffects(gameId, seat.id);
-
-  // A guardian is not a card: it charges what its doorway charges rather than
-  // the usual point of Życie, and winning carries the character through instead
-  // of returning it to the field the fight interrupted.
-  if (fight.guardian) {
-    const outcome = fight.result.outcome;
-    if (fight.guardian.kind === "most") {
-      await settleBridge(gameId, fight.guardian.entrance, outcome);
-    } else if (fight.guardian.kind !== "most-pole") {
-      await settleCrossing(gameId, fight.guardian.crossing, outcome);
-    }
-    await journal(gameId, seat.id, game.turn, "straznik-koniec", {
-      guardian: fight.cardName,
-      outcome,
-      enemyTotal: fight.enemyTotal,
-    });
-    // 14.6: the Demon and the Monstrum stand in the way rather than at a door.
-    // Beating one lets the character walk on next turn; losing costs a point of
-    // Życie and it is still there. Either way the character does not move — the
-    // bridge is one field a turn and this turn was the fight. Spent after the
-    // line above, so the journal reads in the order it happened: beaten by the
-    // creature, then dead of it.
-    if (fight.guardian.kind === "most-pole" && outcome === "przegrana") {
-      await spendLife(gameId, seat, 1);
-    }
-    await bumpRevision(gameId);
-    return;
-  }
-
-  // In a duel the loser may be either side; against a card only the character
-  // can lose. Rule 17.9 gives the winner a choice of spoils, so only the life
-  // is applied automatically and the rest is left to the players.
-  const loserSeat =
-    fight.result.outcome === "przegrana"
-      ? seat
-      : fight.result.outcome === "wygrana" && fight.opponentSeat !== undefined
-        ? seats.find((s) => s.seat_index === fight.opponentSeat)
-        : undefined;
-
-  if (loserSeat) {
-    // 17.4: an item may prevent the point of Życie — a Hełm on a 1, a Tarcza on
-    // 1-2, a Zbroja on 1-3, and wearing all three is one roll against the
-    // widest of them rather than three chances. 18.2b takes the possibility
-    // away entirely in a magical fight, which `spoilsFor` already knows.
-    const saved = await shieldSaves(gameId, loserSeat, fight.kind, game.turn);
-    if (!saved) await spendLife(gameId, loserSeat, 1);
-  }
-
-  await db.from("games").update({ turn_state: endFight(game.turn_state) }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "walka-koniec", {
-    cardId: fight.cardId,
-    outcome: fight.result.outcome,
-  });
-  await bumpRevision(gameId);
+  await change(gameId, resolveFightOn, undefined);
 }
 
 /**
@@ -1387,13 +912,6 @@ export async function adjust(
  *
  * Returns what is left, because most callers want to say it.
  */
-async function spendLife(
-  gameId: string,
-  seat: SeatRow,
-  points: number,
-): Promise<number> {
-  return change(gameId, (snapshot) => spendLifeOn(snapshot, seat.id, points), undefined);
-}
 
 /**
  * Rule 4.4: a character that has lost all its Życie is dead.
@@ -1481,58 +999,7 @@ export async function turnToStone(gameId: string, seatId: string): Promise<void>
  * choice and so is left to the player.
  */
 export async function attackSeat(gameId: string, targetSeatId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const attacker = activeSeatOf(seats, game);
-  const target = seats.find((s) => s.id === targetSeatId);
-  if (!target) throw new Error("Nieznane miejsce.");
-  if (target.id === attacker.id) throw new Error("Postać nie walczy sama ze sobą.");
-  if (target.eliminated) throw new Error("Ta Postać nie żyje.");
-  if (target.field_id !== attacker.field_id) {
-    throw new Error("Spotkanie jest możliwe tylko na tym samym Obszarze (13.1).");
-  }
-  if (game.turn_state.phase !== "pole") throw new Error("Nie czas na spotkanie.");
-  // 14.1: on the Kamienny Most characters meet at the two Wejścia and nowhere
-  // else. The bridge is a single-file line above a valley — there is no room to
-  // turn and fight beside a Demon, which is what the rule is about.
-  if (attacker.field_id && attacker.field_id in BRIDGE_SIDE && BRIDGE_ORDEAL.has(attacker.field_id)) {
-    throw new Error("Na Moście Postacie spotykają się tylko na Wejściu na Most (14.1).");
-  }
-
-  const holdings = await holdingsFor(gameId);
-  const totalsOf = (seatId: string, own: { miecz: number; magia: number }) => {
-    const mine = holdings
-      .filter((h) => h.seat_id === seatId)
-      .map(asHolding);
-    const bonus = bonusFromHoldings(mine, eq(game), "walka");
-    return { miecz: own.miecz + bonus.miecz, magia: own.magia + bonus.magia };
-  };
-
-  const mine = totalsOf(attacker.id, { miecz: attacker.miecz_own, magia: attacker.magia_own });
-  const theirs = totalsOf(target.id, { miecz: target.miecz_own, magia: target.magia_own });
-
-  const next = startFight(
-    game.turn_state,
-    {
-      cardId: `seat:${target.seat_index}`,
-      cardName: target.player_name ?? `Miejsce ${target.seat_index + 1}`,
-      miecz: theirs.miecz,
-      opponentSeat: target.seat_index,
-    },
-    mine,
-  );
-  // 17.7 word for word: "przed wykonaniem rzutu kostką obie Postacie mają
-  // możliwość użycia Zaklęć". A duel is the one fight where "obie Postacie" is
-  // literally two players, and it was the one fight that never opened the
-  // window — the attacker rolled the moment they pressed attack.
-  // Nobody is polled and nobody is named: the floor starts empty and is
-  // claimed by whoever wants it (see `claimSpellFloor`).
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, attacker.id, game.turn, "pojedynek", {
-    target: target.seat_index,
-    field: attacker.field_id,
-  });
-  await bumpRevision(gameId);
+  await change(gameId, attackSeatOn, { targetSeatId });
 }
 
 
@@ -1545,42 +1012,7 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
  * is standing and what it is trying to do.
  */
 export async function fightGuardian(gameId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
-
-  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(holdings.map(asHolding), eq(game), "walka");
-  const totals = {
-    miecz: seat.miecz_own + bonus.miecz,
-    magia: seat.magia_own + bonus.magia,
-  };
-
-  if (game.turn_state.phase === "most") {
-    const next = startGuardianFight(
-      { kind: "most", entrance: game.turn_state.bridge },
-      totals,
-      seat.field_id,
-    );
-    await db.from("games").update({ turn_state: next }).eq("id", gameId);
-    await journal(gameId, seat.id, game.turn, "straznik-start", {
-      guardian: game.turn_state.bridge.guardian,
-    });
-    await bumpRevision(gameId);
-    return;
-  }
-
-  const crossing = crossingFrom(seat.field_id);
-  if (!crossing || crossing.test?.kind !== "walka") {
-    throw new Error("Nie ma tu nikogo, z kim trzeba walczyć.");
-  }
-  const next = startGuardianFight({ kind: "przeprawa", crossing }, totals, seat.field_id);
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "straznik-start", {
-    guardian: crossing.test.guardian,
-  });
-  await bumpRevision(gameId);
+  await change(gameId, fightGuardianOn, undefined);
 }
 
 /** Throws the die that gives a bridge guardian its Miecz or Magia (5 to 10). */
@@ -1588,25 +1020,9 @@ export async function rollGuardianStrength(
   gameId: string,
   value: number | null,
 ): Promise<{ strength: number }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "walka") throw new Error("Nie ma walki.");
-  if (!strengthPending(game.turn_state.fight)) {
-    throw new Error("Siła przeciwnika jest już znana.");
-  }
-
-  const roll = value ?? 1 + Math.floor(Math.random() * 6);
-  if (!Number.isInteger(roll) || roll < 1 || roll > 6) {
-    throw new Error("Kostka daje wynik od 1 do 6.");
-  }
-  const next = recordGuardianStrength(game.turn_state, roll);
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "straznik-sila", { roll }, value !== null);
-  await bumpRevision(gameId);
-  return {
-    strength: next.phase === "walka" ? next.fight.enemyTotal : 0,
-  };
+  return change(gameId, rollGuardianStrengthOn, { manual: value !== null }, {
+    random: supplied([value], appRandom()),
+  });
 }
 
 /**
@@ -1621,49 +1037,7 @@ export async function rollGuardianStrength(
  * available and paying is not.
  */
 export async function payFerry(gameId: string, pay: boolean): Promise<{ at: string }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "pole" || !isFerry(game.turn_state.fieldId)) {
-    throw new Error("Nie stoisz na Przeprawie.");
-  }
-  const here = game.turn_state.fieldId;
-
-  if (pay) {
-    // The Przewoźnik among your Przyjaciele is the ferryman's colleague: "nie
-    // będziesz musiał płacić 1 Sztuki Złota za Przeprawę".
-    const abilities = [
-      ...heldAbilities(
-        inEffect(
-          (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id).map(asHolding),
-          eq(game),
-        ).map((h) => h.cardId),
-      ),
-      // 8.2: a character's own powers sit alongside what it is carrying, and
-      // override the general rules where they disagree.
-      ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
-    ];
-    const toll = tollIsWaived(abilities, here) ? 0 : FERRY_TOLL;
-    if (seat.zloto < toll) {
-      throw new Error("Nie masz czym zapłacić przewoźnikowi.");
-    }
-    if (toll > 0) {
-      await db.from("seats").update({ zloto: seat.zloto - toll }).eq("id", seat.id);
-    }
-    await journal(gameId, seat.id, game.turn, "przewoznik", { field: here, paid: toll });
-    await bumpRevision(gameId);
-    return { at: here };
-  }
-
-  // Sent back to where the move started. The turn ends there rather than
-  // resolving that field again — the character never left it in the first place.
-  const back = game.turn_state.from;
-  if (!back) throw new Error("Nie wiadomo, skąd zaczął się ten ruch.");
-  await db.from("seats").update({ field_id: back }).eq("id", seat.id);
-  await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "przewoznik-odmowa", { field: here, back });
-  await bumpRevision(gameId);
-  return { at: back };
+  return change(gameId, payFerryOn, { pay });
 }
 
 /**
@@ -1687,56 +1061,6 @@ export type FightOutcome = "wygrana" | "remis" | "przegrana";
  * Whichever way it goes the turn ends here: on a win at the bridge entrance
  * (11.10), otherwise back on the ring at the field the attempt was made from.
  */
-async function settleBridge(
-  gameId: string,
-  entrance: BridgeEntrance,
-  outcome: FightOutcome,
-): Promise<{ at: string | null }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-
-  if (outcome === "wygrana") {
-    const field = FIELDS.get(entrance.entersAt);
-    if (!field) throw new Error(`Nieznane pole: ${entrance.entersAt}`);
-    await db.from("seats").update({ field_id: entrance.entersAt }).eq("id", seat.id);
-    // 11.10: "Jeżeli próba wkroczenia na Most jest udana, tura Postaci kończy
-    // się na Wejściu na Most" — the square is reached but not resolved.
-    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
-    await journal(gameId, seat.id, game.turn, "wejscie-na-most", {
-      from: entrance.from,
-      guardian: entrance.guardian,
-    });
-    return { at: entrance.entersAt };
-  }
-
-  if (outcome === "przegrana") {
-    const column = entrance.stat === "magia" ? "magia_own" : "miecz_own";
-    const floor = entrance.stat === "magia" ? seat.magia_floor : seat.miecz_floor;
-    const current = entrance.stat === "magia" ? seat.magia_own : seat.miecz_own;
-    await db
-      .from("seats")
-      .update({ [column]: Math.max(floor, current - 1) })
-      .eq("id", seat.id);
-  }
-
-  // Both a loss and a draw bar the next turn's attempt (11.11). The character
-  // stays on the ring at the entrance and carries on from there.
-  //
-  // `turn` counts rounds, not seat-turns, so a seat gets exactly one go per
-  // number — see bridgeBlockUntil for why that is turn + 2 and not turn + 1.
-  await db
-    .from("seats")
-    .update({ bridge_blocked_until_turn: bridgeBlockUntil(game.turn) })
-    .eq("id", seat.id);
-  await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "most-nieudane", {
-    from: entrance.from,
-    guardian: entrance.guardian,
-    outcome,
-  });
-  return { at: null };
-}
 
 /**
  * Applies the result of a crossing between rings (11.4, 11.8).
@@ -1745,66 +1069,17 @@ async function settleBridge(
  * but still stops it. Either way the character stays put and may try again next
  * turn, which 11.4 says is exactly what the next turn is for.
  */
-async function settleCrossing(
-  gameId: string,
-  crossing: NonNullable<ReturnType<typeof crossingFrom>>,
-  outcome: FightOutcome,
-  extra: Record<string, unknown> = {},
-): Promise<{ to: string | null }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-
-  if (outcome !== "wygrana") {
-    if (outcome === "przegrana") await spendLife(gameId, seat, 1);
-    // The turn state is left where it was: still standing on the crossing field,
-    // free to try again next turn.
-    await journal(gameId, seat.id, game.turn, "przeprawa-nieudana", {
-      from: crossing.from,
-      obstacle: crossing.obstacle,
-      outcome,
-      ...extra,
-    });
-    return { to: null };
-  }
-
-  const field = FIELDS.get(crossing.to);
-  if (!field) throw new Error(`Nieznane pole: ${crossing.to}`);
-  await db.from("seats").update({ field_id: crossing.to }).eq("id", seat.id);
-  await db
-    .from("games")
-    .update({ turn_state: afterMove(field, crossing.from) })
-    .eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "przeprawa", {
-    from: crossing.from,
-    to: crossing.to,
-    obstacle: crossing.obstacle,
-    ...extra,
-  });
-  return { to: crossing.to };
-}
 
 /**
  * The table reporting how a bridge guardian went, where it is not being fought
  * through the app — companion mode with the creature resolved on the table.
  */
-export type BridgeOutcome = "wygrana" | "remis" | "porazka";
 
 export async function enterBridge(
   gameId: string,
   outcome: BridgeOutcome,
 ): Promise<{ at: string | null }> {
-  const game = await loadGame(gameId);
-  if (game.turn_state.phase !== "most") {
-    throw new Error("Nie ma teraz próby wejścia na Most.");
-  }
-  const at = await settleBridge(
-    gameId,
-    game.turn_state.bridge,
-    outcome === "porazka" ? "przegrana" : outcome,
-  );
-  await bumpRevision(gameId);
-  return at;
+  return change(gameId, enterBridgeOn, { outcome });
 }
 
 /**
@@ -1817,64 +1092,14 @@ export async function enterBridge(
  * normally goes through `fightGuardian` and the combat engine; this route is
  * what remains for a table resolving that fight themselves.
  */
-export type CrossOutcome = "udana" | "remis" | "nieudana";
 
 export async function crossRing(
   gameId: string,
   input: { outcome?: CrossOutcome; dice?: number[] | null } = {},
 ): Promise<{ to: string | null; outcome: CrossOutcome; dice?: number[]; magia?: number }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
-
-  const crossing = crossingFrom(seat.field_id);
-  if (!crossing) {
-    throw new Error("Z tego Obszaru nie można przejść do innego Kręgu (11.1, 11.5).");
-  }
-
-  let outcome: CrossOutcome = "udana";
-  let dice: number[] | undefined;
-  let magia: number | undefined;
-
-  if (crossing.test?.kind === "magia") {
-    // The app owns this one: it is a threshold against a number it already
-    // knows, so there is nothing for a player to adjudicate. A physical die
-    // still overrides, which is what die_source is for.
-    const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-    const abilities = [
-      ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
-      ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
-    ];
-    // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
-    // of two, which is the difference between a hard crossing and a likely one.
-    const count = crossingDice(abilities, crossing.obstacle, crossing.test.dice);
-    const rolled =
-      input.dice && input.dice.length === count
-        ? input.dice
-        : Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6));
-    for (const die of rolled) {
-      if (!Number.isInteger(die) || die < 1 || die > 6) {
-        throw new Error("Kostka daje wynik od 1 do 6.");
-      }
-    }
-    const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "parametr");
-    magia = seat.magia_own + bonus.magia;
-    dice = rolled;
-    outcome = trzesawiskaOutcome(rolled, magia);
-  } else if (crossing.test) {
-    outcome = input.outcome ?? "udana";
-  }
-
-  const extra = dice ? { dice, magia } : {};
-  const { to } = await settleCrossing(
-    gameId,
-    crossing,
-    outcome === "udana" ? "wygrana" : outcome === "remis" ? "remis" : "przegrana",
-    extra,
-  );
-  await bumpRevision(gameId);
-  return { to, outcome, ...extra };
+  return change(gameId, crossRingOn, { outcome: input.outcome }, {
+    random: supplied(input.dice ?? [], appRandom()),
+  });
 }
 
 /**
@@ -1897,167 +1122,10 @@ export async function crossRing(
  */
 export async function escape(
   gameId: string,
-  /**
-   * Whether the attempt worked, or null to let the app decide.
-   *
-   * Null is what a simulation sends. 19.1 does not roll for this — an escape
-   * works because a character's ability or the Krąg Płomieni says it does — so
-   * "decide" means reading the abilities rather than throwing a die, and the
-   * answer is the same one `canEscapeAt` gives the interface. A companion table
-   * still says yes or no itself, because there the abilities in play include
-   * whatever the players have agreed about a card nobody has transcribed.
-   */
   reported: boolean | null,
-  /**
-   * The seat that pressed it, or null for the shared screen in companion mode.
-   *
-   * Checked rather than trusted, because 17.6 hands the escape to the other
-   * player: this is the one action in a fight that the seat whose turn it is
-   * must not be able to take for themselves.
-   */
   actorSeatId: string | null = null,
 ): Promise<{ succeeded: boolean; onBridge: boolean }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-
-  if (game.turn_state.phase !== "walka" && game.turn_state.phase !== "pole") {
-    throw new Error("Nie ma przed czym uciekać.");
-  }
-
-  const duelWith =
-    game.turn_state.phase === "walka" ? game.turn_state.fight.opponentSeat : undefined;
-
-  /**
-   * 17.6: "Postać, która została zaatakowana, może próbować wymknąć się
-   * przeciwnikowi." The attacker has already made their choice by attacking —
-   * there is no rule anywhere letting them take it back — so in a duel the
-   * escape belongs to the other seat, and only to them.
-   */
-  const fleeing =
-    duelWith === undefined
-      ? activeSeatOf(seats, game)
-      : seats.find((s) => s.seat_index === duelWith);
-  if (!fleeing) throw new Error("Nie ma kto uciekać.");
-  if (actorSeatId !== null && actorSeatId !== fleeing.id) {
-    throw new Error(
-      duelWith === undefined
-        ? "To nie twoja tura."
-        : "Wymyka się Postać zaatakowana, nie atakująca (17.6).",
-    );
-  }
-
-  // A duel is the only thing in the game that is fled *as a Postać*; everything
-  // else on a field or in a hand of drawn cards is a Wróg.
-  const przed: EscapeTarget = duelWith === undefined ? "wrog" : "postac";
-
-  const onBridge = fleeing.field_id !== null && ringOf(fleeing.field_id) === KAMIENNY_MOST;
-  if (onBridge && przed === "wrog") {
-    throw new Error("Na Kamiennym Moście można wymknąć się tylko innym Postaciom (19.3).");
-  }
-
-  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === fleeing.id);
-  const abilities = [
-    ...abilitiesOfCharacter(asCharacterId(fleeing.character_id)),
-    ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
-  ];
-  const byAbility =
-    fleeing.field_id !== null && canEscapeAt(abilities, fleeing.field_id, przed);
-
-  /**
-   * The other half of 19.1, and the only half that reaches another Postać.
-   *
-   * Looked for only once an ability has already said no, so nothing burns a
-   * Karta for something a Charakterystyka does for free. Spent when it is used,
-   * because 9.6 puts a spoken Zaklęcie on the used pile — and unlike the
-   * abilities it gets you away from one thing, not from everything standing on
-   * the Obszar.
-   *
-   * Only in a fight, because a Zaklęcie is spoken at something: 19.1 pins it to
-   * "jednej (unieruchomionej w Kręgu Płomieni) istocie", and standing on a
-   * field with three drawn Wrogowie names none of them. Refusing a card before
-   * any fight begins stays what 19.2 makes it — an ability, or nothing.
-   */
-  const circle =
-    byAbility || reported !== null || game.turn_state.phase !== "walka"
-      ? undefined
-      : held.find((h) => h.kind === "spell" && h.card_id === KRAG_PLOMIENI);
-
-  const succeeded = reported ?? (byAbility || circle !== undefined);
-
-  if (circle && succeeded) {
-    await db.from("holdings").delete().eq("id", circle.id);
-    await returnToPile(gameId, "spells", [asReturnable(circle)]);
-    await journal(gameId, fleeing.id, game.turn, "zaklecie", {
-      cardId: KRAG_PLOMIENI,
-      name: SPELL_BY_ID.get(KRAG_PLOMIENI)?.name ?? KRAG_PLOMIENI,
-    });
-  }
-
-  /**
-   * What an escape leaves behind.
-   *
-   * 19.1 twice over: the character "nie może w żaden sposób oddziaływać" on
-   * what it fled, and an escape by ability takes it away from "wszystkim
-   * znajdującym się na danym Obszarze istotom" at once — not just from the one
-   * it happened to be rolling against. So every Wróg on the field is settled,
-   * which is `fought` rather than `resolved`: that list is the one 17.4 checks,
-   * so a fled creature can be neither offered again nor fought again.
-   *
-   * The Krąg Płomieni is the exception the same rule names — one creature,
-   * "jednej (unieruchomionej w Kręgu Płomieni) istocie" — so it ends the fight
-   * in hand and nothing more.
-   */
-  if (succeeded && game.turn_state.phase === "walka") {
-    const next = endFight(game.turn_state);
-    const sweep =
-      byAbility && przed === "wrog"
-        ? game.turn_state.fight.drawn
-            .filter((entry) => entry.cardClass === "wrog")
-            .map((entry) => entry.cardId)
-        : [];
-    await db
-      .from("games")
-      .update({
-        turn_state:
-          next.phase === "pole" && sweep.length > 0
-            ? { ...next, fought: [...new Set([...(next.fought ?? []), ...sweep])] }
-            : next,
-      })
-      .eq("id", gameId);
-  } else if (succeeded && game.turn_state.phase === "pole") {
-    /**
-     * Slipping past what is lying here, before any fight began.
-     *
-     * Without this the escape was invisible: it ended no fight, because there
-     * was no fight yet, and left every Wróg sitting in the modal still asking
-     * to be fought. Succeeding looked exactly like failing.
-     */
-    const fled = byAbility
-      ? game.turn_state.drawn
-          .filter((entry) => entry.cardClass === "wrog")
-          .map((entry) => entry.cardId)
-      : [];
-    if (fled.length > 0) {
-      await db
-        .from("games")
-        .update({
-          turn_state: {
-            ...game.turn_state,
-            fought: [...new Set([...(game.turn_state.fought ?? []), ...fled])],
-          },
-        })
-        .eq("id", gameId);
-    }
-  }
-  await journal(gameId, fleeing.id, game.turn, succeeded ? "ucieczka" : "ucieczka-nieudana", {
-    onBridge,
-    ...(circle && succeeded ? { spell: KRAG_PLOMIENI } : {}),
-  });
-  await bumpRevision(gameId);
-  // Said out loud. A failed attempt changes nothing on the board — 19.1 is not
-  // a die roll, so there is no state for the interface to notice — which meant
-  // the answer "no" was indistinguishable from the button doing nothing at all.
-  return { succeeded, onBridge };
+  return change(gameId, escapeOn, { reported, actorSeatId });
 }
 
 /**
@@ -2164,150 +1232,14 @@ export async function equipCard(
  * Dice may be supplied, as everywhere else, because a table with real dice on
  * it beats a table being told what it rolled.
  */
-export interface BridgeOrdealResult {
-  field: string;
-  kind: string;
-  dice?: number[];
-  /** Where a fall put the character down, when it fell. */
-  to?: string;
-  /** Cards lost off the bridge, by name (14.5). */
-  lost?: string[];
-  kept?: string[];
-  lifeLost?: number;
-  outcome?: string;
-  enemyTotal?: number;
-}
 
 export async function resolveBridgeOrdeal(
   gameId: string,
   input: { dice?: number[]; itemRolls?: number[] } = {},
 ): Promise<BridgeOrdealResult> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  const here = seat.field_id;
-  if (!here || !BRIDGE_ORDEAL.has(here)) {
-    throw new Error("Na tym Obszarze nie ma czego rozpatrywać.");
-  }
-
-  const roll = async (count: number, reason: string) =>
-    input.dice && input.dice.length === count
-      ? input.dice
-      : await rollDice({ rollD6: async () => 1 + Math.floor(Math.random() * 6) }, count, reason);
-
-  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "parametr");
-  const totals = {
-    miecz: seat.miecz_own + bonus.miecz,
-    magia: seat.magia_own + bonus.magia,
-  };
-
-  // --- Pułapka / Magiczna Pułapka (14.5)
-  if (here === "pulapka" || here === "magiczna-pulapka") {
-    // Only the eight bridge fields have a side, and this is one of the two
-    // traps, so it has one — but the table says so rather than the code
-    // assuming it.
-    const side = BRIDGE_SIDE[here] ?? "miecz";
-    const dice = await roll(3, "pulapka");
-    const outcome = trapOutcome(dice, side === "magia" ? totals.magia : totals.miecz, side);
-    if (!outcome.fell) {
-      await journal(gameId, seat.id, game.turn, "most-pulapka", { dice, result: 0 });
-      await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
-    await bumpRevision(gameId);
-      return { field: here, kind: "pulapka", dice, outcome: "uniknieta" };
-    }
-
-    // Everything carried is rolled for, Przedmioty and Przyjaciele alike; a 1
-    // or a 2 keeps it and anything else is put on the discard pile, which is
-    // what "odłożyć ich Karty" means here rather than leaving it on a field.
-    const carried = held.filter((h) => h.kind === "item" || h.kind === "friend");
-    const rolls =
-      input.itemRolls && input.itemRolls.length === carried.length
-        ? input.itemRolls
-        : carried.map(() => 1 + Math.floor(Math.random() * 6));
-    const { kept, lost } = keptAfterFall(carried, rolls);
-    if (lost.length > 0) {
-      await db
-        .from("holdings")
-        .delete()
-        .in("id", lost.map((h) => h.id));
-    }
-    await db.from("seats").update({ field_id: outcome.fieldId }).eq("id", seat.id);
-    await journal(gameId, seat.id, game.turn, "most-pulapka", {
-      dice,
-      result: outcome.result,
-      to: outcome.fieldId,
-      lost: lost.map((h) => h.card_id),
-    });
-    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
-    await bumpRevision(gameId);
-    return {
-      field: here,
-      kind: "pulapka",
-      dice,
-      to: outcome.fieldId,
-      lost: lost.map((h) => cardName(h.card_id)),
-      kept: kept.map((h) => cardName(h.card_id)),
-    };
-  }
-
-  // --- Gra ze Śmiercią
-  if (here === "gra-ze-smiercia") {
-    const mine = await roll(2, "gra-ze-smiercia");
-    const deaths = Array.from({ length: 2 }, () => 1 + Math.floor(Math.random() * 6));
-    const outcome = deathGameOutcome(mine, deaths);
-    await journal(gameId, seat.id, game.turn, "most-gra-ze-smiercia", { mine, deaths, outcome });
-    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
-    // After the turn state is closed: a death hands play on, and doing that
-    // first only for this write to land on top of it puts the table back in a
-    // turn belonging to somebody who is no longer in the game.
-    if (outcome === "strata") await spendLife(gameId, seat, 1);
-    await bumpRevision(gameId);
-    return {
-      field: here,
-      kind: "gra-ze-smiercia",
-      dice: [...mine, ...deaths],
-      outcome,
-      lifeLost: outcome === "strata" ? 1 : 0,
-    };
-  }
-
-  // --- Cerber
-  if (here === "cerber") {
-    const [die] = await roll(1, "cerber");
-    const loss = cerberLoss(die);
-    await journal(gameId, seat.id, game.turn, "most-cerber", { die, loss });
-    await db.from("games").update({ turn_state: endTurn() }).eq("id", gameId);
-    await spendLife(gameId, seat, loss);
-    await bumpRevision(gameId);
-    return { field: here, kind: "cerber", dice: [die], lifeLost: loss };
-  }
-
-  // --- Demon Zagłady / Monstrum (14.6): a fight, not a table.
-  // Everything else on the bridge was handled above, so what is left is one of
-  // the two creatures. Checked rather than assumed: this used to index a
-  // Record<string, …> and would have read `undefined.name` off any field that
-  // slipped through, which is a crash in the middle of somebody's turn.
-  const creature = BRIDGE_GUARDIAN[here];
-  if (!creature) throw new Error(`Na tym polu Mostu nie ma nic do rozpatrzenia: ${here}`);
-  const dice = await roll(2, "straznik-mostu");
-  const strength = guardianStrength(dice);
-  const phase = recordGuardianStrength(
-    startGuardianFight(
-      { kind: "most-pole", fieldId: here, name: creature.name, combat: creature.kind },
-      totals,
-      here,
-    ),
-    strength,
-  );
-  await db.from("games").update({ turn_state: phase }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "straznik-mostu", {
-    guardian: creature.name,
-    dice,
-    strength,
+  return change(gameId, resolveBridgeOrdealOn, undefined, {
+    random: supplied([...(input.dice ?? []), ...(input.itemRolls ?? [])], appRandom()),
   });
-  await bumpRevision(gameId);
-  return { field: here, kind: "straznik", dice, enemyTotal: strength, outcome: creature.name };
 }
 
 /**
@@ -2319,29 +1251,6 @@ export async function resolveBridgeOrdeal(
  * way, since a save is the difference between a death and a scratch and the
  * table will want to see the die.
  */
-async function shieldSaves(
-  gameId: string,
-  seat: SeatRow,
-  kind: CombatKind,
-  turn: number,
-): Promise<boolean> {
-  // 18.2b: nothing prevents the loss in a magical fight.
-  if (kind === "magiczna") return false;
-
-  const game = await loadGame(gameId);
-  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const abilities = [
-    ...heldAbilities(inEffect(held.map(asHolding), eq(game)).map((h) => h.cardId)),
-    ...abilitiesOfCharacter(asCharacterId(seat.character_id)),
-  ];
-  const upTo = bestShield(abilities);
-  if (upTo === 0) return false;
-
-  const die = 1 + Math.floor(Math.random() * 6);
-  const saved = die <= upTo;
-  await journal(gameId, seat.id, turn, "oslona", { die, upTo, saved });
-  return saved;
-}
 
 /**
  * Rule 4.4's second half: the player takes a new character and begins again.
@@ -2730,28 +1639,6 @@ export async function placeSeat(
  * id, so it cannot be used, but everything after that — the totals, the two
  * dice, 17.4's point of Życie — is the same fight.
  */
-async function beginNamedFight(
-  gameId: string,
-  name: string,
-  miecz?: number,
-  magia?: number,
-): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "pole") throw new Error("Nie czas na walkę.");
-
-  const held = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const bonus = bonusFromHoldings(held.map(asHolding), eq(game), "walka");
-  const next = startFight(
-    game.turn_state,
-    { cardId: `pole:${name}`, cardName: name, ...(magia !== undefined ? { magia } : { miecz }), settles: [] },
-    { miecz: seat.miecz_own + bonus.miecz, magia: seat.magia_own + bonus.magia },
-  );
-  await db.from("games").update({ turn_state: next }).eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "walka-start", { nazwa: name, enemyTotal: miecz ?? magia });
-  await bumpRevision(gameId);
-}
 
 /* ---------------------------------------------------------------------------
  * Carrying an effect out.
@@ -3126,7 +2013,13 @@ export async function applyEffect(
     case "walka": {
       // A creature the card conjures rather than a card on the field, so the
       // fight is opened directly with its printed strength.
-      await beginNamedFight(gameId, effect.nazwa, effect.miecz, effect.magia);
+      await change(gameId, (snapshot) =>
+        beginNamedFightOn(snapshot, {
+          name: effect.nazwa,
+          miecz: effect.miecz,
+          magia: effect.magia,
+        }),
+      undefined);
       return { did: [`walka: ${effect.nazwa}`], pending: null };
     }
 

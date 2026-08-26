@@ -71,6 +71,50 @@ describe("apply", () => {
     expect(after.journalSeq).toBe(14);
   });
 
+  /**
+   * Two patches for one row are both applied, as `commit` applies them.
+   *
+   * A `Map` keyed by id kept only the last, so `apply` and the database
+   * disagreed about what a changeset meant — and a cascade reading its own work
+   * saw the first patch quietly undone. A loss on a bridge writes exactly this
+   * shape: the point of Życie, and then the bar on trying again next turn.
+   */
+  it("folds two patches for the same seat instead of keeping the last", () => {
+    const table = aTable({ seats: [aSeat({ id: "a", zycie: 4, bridge_blocked_until_turn: null })] });
+    const after = apply(table, {
+      seats: [
+        { id: "a", patch: { zycie: 3 } },
+        { id: "a", patch: { bridge_blocked_until_turn: 9 } },
+      ],
+    });
+    expect(after.seats[0].zycie).toBe(3);
+    expect(after.seats[0].bridge_blocked_until_turn).toBe(9);
+  });
+
+  it("lets a later patch win on the same column", () => {
+    const table = aTable({ seats: [aSeat({ id: "a", zloto: 1 })] });
+    const after = apply(table, {
+      seats: [
+        { id: "a", patch: { zloto: 2 } },
+        { id: "a", patch: { zloto: 5 } },
+      ],
+    });
+    expect(after.seats[0].zloto).toBe(5);
+  });
+
+  it("does the same for holdings and effects", () => {
+    const table = aTable({ holdings: [aHolding({ id: "h1", slot: null, ordinal: null })] });
+    const after = apply(table, {
+      holdings: {
+        patch: [
+          { id: "h1", patch: { slot: "glowa" } },
+          { id: "h1", patch: { ordinal: 3 } },
+        ],
+      },
+    });
+    expect(after.holdings[0]).toMatchObject({ slot: "glowa", ordinal: 3 });
+  });
+
   /** The property the cascades rely on: a command can read its own work. */
   it("lets a second step see what the first decided", () => {
     const table = aTable({ seats: [aSeat({ id: "a", eliminated: false })] });
