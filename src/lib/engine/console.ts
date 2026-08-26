@@ -55,7 +55,7 @@ export type Nature = "dobra" | "zla" | "chaotyczna";
 export type EffectName = "fog" | "frozen" | "barred";
 
 export type Command =
-  | { kind: "help" }
+  | { kind: "help"; about: string | null }
   | { kind: "kill"; who: string | null }
   | { kind: "stat"; stat: StatName; delta: number; who: string | null; force: boolean }
   | { kind: "give"; cardId: string }
@@ -91,7 +91,12 @@ const STATS: Record<string, StatName> = {
 };
 
 export const COMMANDS: CommandSpec[] = [
-  { name: "help", aliases: ["?"], usage: "help", summary: "list these commands" },
+  {
+    name: "help",
+    aliases: ["?"],
+    usage: "help [command]",
+    summary: "list these commands, or explain one of them",
+  },
   {
     name: "gold",
     aliases: ["sword", "magic", "life"],
@@ -243,7 +248,15 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
 
   if (!VERBS.has(word)) return { error: `No command \`${word}\`. Type \`help\` for the list.` };
 
-  if (word === "help" || word === "?") return { ok: { kind: "help" } };
+  if (word === "help" || word === "?") {
+    // Refused here rather than reported as an empty list, because `help go`
+    // typed at a console that has no `go` is a question, and "there is no such
+    // command" is the answer to it.
+    if (tail !== "" && !VERBS.has(tail.toLowerCase().split(/\s+/)[0])) {
+      return { error: `No command \`${tail}\`. Type \`help\` for the list.` };
+    }
+    return { ok: { kind: "help", about: tail.toLowerCase().split(/\s+/)[0] || null } };
+  }
 
   if (word in STATS) {
     const [amount, ...rest2] = tail.split(/\s+/).filter(Boolean);
@@ -531,6 +544,8 @@ export function complete(
     if (typingVerb) {
       return { pool: [...VERBS], at: 0 };
     }
+    // `help` takes a command where everything else takes a card or a person.
+    if (verb === "help" || verb === "?") return { pool: [...VERBS], at: 1 };
     // A stat takes its amount first and a player after it; everything else
     // takes its one argument straight away.
     if (stat) return { pool: [...players, "force"], at: 2 };
@@ -603,10 +618,31 @@ export function complete(
  * wrap — which on a narrow window is what made a list of twelve look like a
  * list of seven.
  */
-export function helpLines(): string[] {
+export function helpLines(about: string | null = null): string[] {
   const words = (spec: CommandSpec) => [spec.name, ...spec.aliases].join("|");
   /** The usage line without its verb, which the words have just replaced. */
   const args = (spec: CommandSpec) => spec.usage.split(/\s+/).slice(1).join(" ");
+
+  /**
+   * One command, asked about by name or by any of its other names.
+   *
+   * Two lines instead of a padded row, because there is no column to line up
+   * with any more and the summaries are the length they are: the shape first,
+   * then what it does, then the other words for it where there are any. The
+   * list is for finding a command; this is for reading one.
+   */
+  if (about !== null) {
+    const spec = COMMANDS.find(
+      (one) => one.name === about || one.aliases.includes(about),
+    );
+    if (!spec) return [`No command \`${about}\`. Type \`help\` for the list.`];
+    return [
+      spec.usage,
+      spec.summary,
+      ...(spec.aliases.length > 0 ? [`also: ${spec.aliases.join(", ")}`] : []),
+    ];
+  }
+
   const rows = COMMANDS.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
   const widest = Math.max(...rows.map((row) => row.length));
   return COMMANDS.map((spec, index) => `${rows[index].padEnd(widest)}  ${spec.summary}`);

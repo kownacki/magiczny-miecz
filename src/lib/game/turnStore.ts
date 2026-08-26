@@ -1418,7 +1418,7 @@ export async function runCommand(
 
   switch (command.kind) {
     case "help":
-      return helpLines().join("\n");
+      return helpLines(command.about).join("\n");
 
     case "stat": {
       const seat = seatOf(command.who);

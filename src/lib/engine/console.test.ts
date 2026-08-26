@@ -22,8 +22,8 @@ suite("reading a line", () => {
   });
 
   it("takes the slash a person types out of habit, and without it", () => {
-    expect(ok("/help")).toEqual({ kind: "help" });
-    expect(ok("help")).toEqual({ kind: "help" });
+    expect(ok("/help")).toEqual({ kind: "help", about: null });
+    expect(ok("help")).toEqual({ kind: "help", about: null });
   });
 
   it("does not care about case or spacing", () => {
@@ -234,6 +234,39 @@ suite("the rest of the vocabulary", () => {
 });
 
 suite("help", () => {
+  it("explains one command when asked about one", () => {
+    expect(ok("help place")).toEqual({ kind: "help", about: "place" });
+    // By any of its names, since the one you would ask about is the one you
+    // just typed and got wrong.
+    expect(ok("help drop")).toEqual({ kind: "help", about: "drop" });
+    expect(helpLines("drop")).toEqual([
+      "place MIECZ at Karczma",
+      "leave a card on an Obszar, the one you stand on unless named",
+      "also: put, drop",
+    ]);
+  });
+
+  it("leaves out the `also` line for a command with no other names", () => {
+    expect(helpLines("endfight")).toEqual([
+      "endfight",
+      "drop the fight without settling it",
+    ]);
+  });
+
+  it("says there is no such command rather than explaining nothing", () => {
+    expect(err("help teleport")).toMatch(/No command `teleport`/);
+  });
+
+  it("explains every command it lists", () => {
+    for (const spec of COMMANDS) {
+      for (const word of [spec.name, ...spec.aliases]) {
+        const lines = helpLines(word);
+        expect(lines[0], word).toBe(spec.usage);
+        expect(lines[1], word).toBe(spec.summary);
+      }
+    }
+  });
+
   it("lists every command it knows", () => {
     expect(helpLines()).toHaveLength(COMMANDS.length);
   });
@@ -362,6 +395,11 @@ suite("finishing a half-typed line", () => {
     expect(tab("go Narnia")).toEqual({ line: "go Narnia", options: [] });
   });
 
+  it("finishes a command name after `help`", () => {
+    expect(tab("help pl").line).toBe("help place ");
+    expect(tab("help end")).toEqual({ line: "help end", options: ["endfight", "endturn"] });
+  });
+
   it("takes nothing where nothing goes", () => {
     expect(tab("endturn ").options).toEqual([]);
   });
@@ -383,7 +421,7 @@ suite("finishing a half-typed line", () => {
  * suite, which is the only way a list like this stays true.
  */
 const USAGE: Record<string, { line: string; becomes: unknown }> = {
-  help: { line: "help", becomes: { kind: "help" } },
+  help: { line: "help", becomes: { kind: "help", about: null } },
   gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "zloto", delta: 5, who: "Ola", force: false } },
   kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
   revive: {
