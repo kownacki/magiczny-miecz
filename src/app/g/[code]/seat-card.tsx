@@ -827,14 +827,23 @@ function NatureLine({
   /** What the Karta Postaci has printed on it — "any" for a Kat. */
   printed: string;
 }) {
-  const quiet = "mt-1 text-center text-[10px] text-muted";
-  if (nature === null) return <p className={quiet}>natura nieustalona</p>;
+  // A line rather than a whisper. It is the only place a Natura is written down
+  // when there is no card beside the Karta to say it, and at ten pixels it was
+  // being read as a caption on the card above it.
+  const quiet = "mt-1 text-center text-[12px] text-muted";
+  if (nature === null) return <p className={quiet}>Natura nieustalona</p>;
 
   const changed = printed !== "any" && nature !== printed;
   const art = changed ? natureCardUrl(nature) : null;
   if (!art) {
+    // "Niezmieniona" and not just the Natura, because the absence of a Karta
+    // Zmiany Natury is itself the statement 7.2 makes — and an absence is not
+    // something a screen can show by leaving a gap where a card would be. This
+    // line is that card not being there, said out loud.
     return (
-      <p className={quiet}>natura: {NATURE_LABEL[nature] ?? nature}</p>
+      <p className={quiet}>
+        Natura niezmieniona: {NATURE_LABEL[nature] ?? nature}
+      </p>
     );
   }
 
