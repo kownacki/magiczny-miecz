@@ -11,6 +11,7 @@ import {
 } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
 import { CardMark } from "./card-mark";
+import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -206,7 +207,7 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-night/85 p-4"
+      className={`fixed inset-0 ${LAYER.card} flex items-center justify-center bg-night/85 p-4`}
       onClick={onClose}
     >
       <div

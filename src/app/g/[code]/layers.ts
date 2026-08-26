@@ -43,6 +43,16 @@ export const LAYER = {
    * once is to open both, and then neither is in the other's way.
    */
   drawer: "z-[70]",
+  /**
+   * One card, opened to be read.
+   *
+   * Above the drawers because it is usually opened *from* one — a shelf in the
+   * library, somebody's pack in the roster — and a drawer that covers the card
+   * it just handed you is a drawer that ate the answer. It was `modal` until
+   * the library became a drawer, which on a narrower window put half the
+   * picture behind the shelf it was picked from.
+   */
+  card: "z-[90]",
   /** The test console, which exists to escape everything above. */
   console: "z-[110]",
   /**

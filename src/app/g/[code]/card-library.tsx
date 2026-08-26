@@ -298,9 +298,9 @@ export function CardLibrary({
       {open && <CardDetail card={open} onClose={() => setOpen(null)} />}
       <Drawer
         side="left"
-        // Half again as wide as the players, because a shelf of cards is a grid
-        // and a list of people is a list.
-        width="max-w-2xl"
+        // Half again as wide as the players — 36rem against their 24 — because a
+        // shelf of cards is a grid and a list of people is a list.
+        width="max-w-xl"
         title="Karty do wglądu"
         onClose={onClose}
         head={
