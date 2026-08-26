@@ -14,11 +14,13 @@
  */
 
 import type { TurnStep, TurnWindow, WindowId } from "@/lib/engine/turnWindows";
+import { Lookable } from "./lookable";
 
 export function NowBox({
   playerName,
   isMine,
   fieldName,
+  fieldId,
   windows,
   steps,
   canEnd,
@@ -35,6 +37,8 @@ export function NowBox({
   /** Whether the viewer is the one who has to do something about it. */
   isMine: boolean;
   fieldName: string;
+  /** The id behind it, so the Obszar you are standing on can be looked at. */
+  fieldId: string | null;
   /** What this turn is offering — see `windowsFor`. */
   windows: readonly TurnWindow[];
   /** How far through the turn it is — see `turnSteps`. */
@@ -71,7 +75,11 @@ export function NowBox({
             is on the other side of the screen and this is the line you read
             without looking away from what you are about to press. */}
         <p className="truncate text-[11px] text-muted" title={fieldName}>
-          {fieldName}
+          {fieldId ? (
+            <Lookable kind="field" id={fieldId} name={fieldName} />
+          ) : (
+            fieldName
+          )}
         </p>
       </header>
 

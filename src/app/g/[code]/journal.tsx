@@ -16,20 +16,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { readSeatToken } from "@/lib/game/seatToken";
-import { fieldWithText } from "@/lib/view/fieldText";
-import { asFieldId } from "@/lib/engine/board";
-import { useCardPreview } from "./card-preview";
+import { Lookable } from "./lookable";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
 import type { EqMode } from "@/lib/engine/slots";
-import charactersData from "@/data/characters.json";
-import type { Character } from "@/data/types";
-
-/** The 27 Karty Postaci, for the names the journal now puts in its sentences. */
-const CHARACTERS = new Map<string, Character>(
-  // Keyed by a plain string on purpose: this is asked about ids that came off
-  // the wire, and its answer for one it does not know is "no character".
-  (charactersData as Character[]).map((character) => [character.id, character]),
-);
 
 export function Journal({
   code,
@@ -222,43 +211,15 @@ function Looked({
   );
 }
 
-/** One name in a sentence, with whatever there is to see about it on hover. */
+/** One name in a sentence — see `Lookable`, which every view shares. */
 function Lookup({ reference, eqMode }: { reference: JournalRef; eqMode: EqMode }) {
-  // A stored id becomes a FieldId only through the guard, and a name the board
-  // no longer knows simply has nothing to show rather than throwing.
-  const fieldId = reference.kind === "field" ? asFieldId(reference.id) : null;
-  const field = fieldId ? fieldWithText(fieldId) : null;
-  // A Postać is looked up in its own manifest and drawn at its own size: the
-  // flag is the only thing that knows, because `demon` and `czarodziej` each
-  // name a character AND an event card.
-  const character = reference.kind === "character" ? CHARACTERS.get(reference.id) : null;
-  const { handlers, preview } = useCardPreview(
-    {
-      cardId: reference.id,
-      name: reference.name,
-      text: character ? character.abilities.join("\n\n") : (field?.text ?? undefined),
-      kindLabel: character
-        ? `Postać · Miecz ${character.miecz} · Magia ${character.magia} · ${character.nature}`
-        : reference.kind === "field"
-          ? "Obszar"
-          : undefined,
-      ...(character ? { character: true } : {}),
-    },
-    // A field has no card to show; its printed instruction is what there is.
-    reference.kind === "field",
-    eqMode,
-  );
-
   return (
-    <>
-      <span
-        {...handlers}
-        className="cursor-help underline decoration-dotted decoration-muted/50 underline-offset-2 hover:text-ink"
-      >
-        {reference.name}
-      </span>
-      {preview}
-    </>
+    <Lookable
+      kind={reference.kind}
+      id={reference.id}
+      name={reference.name}
+      eqMode={eqMode}
+    />
   );
 }
 

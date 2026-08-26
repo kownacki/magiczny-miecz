@@ -84,6 +84,8 @@ export interface PublicSeat {
   playerName: string | null;
   characterId: SeatCharacter | null;
   fieldName: string;
+  /** The id behind that name, so the Obszar can be looked at rather than read. */
+  fieldId: string | null;
   miecz: number;
   mieczOwn: number;
   magia: number;

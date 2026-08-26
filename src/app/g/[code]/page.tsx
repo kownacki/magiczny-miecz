@@ -1587,6 +1587,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   fieldName={
                     active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
                   }
+                  fieldId={active.field_id}
                   windows={turnWindows}
                   steps={turnSteps(turnState.phase)}
                   // 17.4 ends a fight when the dice are compared, not when
@@ -1832,6 +1833,7 @@ function asPublicSeat(seat: Seat): PublicSeat {
     playerName: seat.player_name,
     characterId: seat.character_id,
     fieldName: seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—",
+    fieldId: seat.field_id,
     miecz: seat.miecz_total,
     mieczOwn: seat.miecz_own,
     magia: seat.magia_total,

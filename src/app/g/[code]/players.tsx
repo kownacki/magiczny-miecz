@@ -19,6 +19,7 @@
  */
 
 import { useState } from "react";
+import { Lookable } from "./lookable";
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterStandeeUrl } from "@/lib/view/cardImages";
@@ -108,7 +109,11 @@ export function PlayersDrawer({
                       your way through. */}
                   {mine && <span className="ml-1 text-[11px] text-ochre">(ty)</span>}
                   <span className="ml-2 text-[11px] text-muted">
-                    {character?.name ?? "wybiera Postać"}
+                    {character ? (
+                      <Lookable kind="character" id={character.id} name={character.name} />
+                    ) : (
+                      "wybiera Postać"
+                    )}
                   </span>
                   {seat.isHost && (
                     <span className="ml-2 text-[11px] text-ochre/80">gospodarz</span>
@@ -160,7 +165,16 @@ export function PlayersDrawer({
                       </button>
                     )}
                     <dl className="grid flex-1 grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
-                      <Row label="Obszar" value={seat.fieldName} />
+                      <Row
+                        label="Obszar"
+                        value={
+                          seat.fieldId ? (
+                            <Lookable kind="field" id={seat.fieldId} name={seat.fieldName} />
+                          ) : (
+                            seat.fieldName
+                          )
+                        }
+                      />
                       <Row label="Natura" value={seat.nature ?? "—"} />
                       <Row
                         label="Miecz"
@@ -237,7 +251,7 @@ export function PlayersDrawer({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <>
       <dt className="text-muted">{label}</dt>
