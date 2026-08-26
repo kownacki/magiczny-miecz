@@ -13,6 +13,7 @@ import { useCardPreview } from "./card-preview";
 import { CardMark } from "./card-mark";
 import { LAYER } from "./layers";
 import { Overlay } from "./overlay";
+import { CloseButton } from "./chrome";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -239,9 +240,7 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
             <h3 className="font-[family-name:var(--font-display)] text-lg text-ochre">
               {card.name}
             </h3>
-            <button onClick={onClose} className="text-xs text-muted hover:text-ink">
-              zamknij
-            </button>
+            <CloseButton onClose={onClose} />
           </div>
           {card.kindLabel && (
             <p className="mb-2 text-[10px] uppercase tracking-widest text-muted">

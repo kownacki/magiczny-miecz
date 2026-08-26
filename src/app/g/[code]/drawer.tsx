@@ -20,8 +20,8 @@
  */
 
 import { LAYER } from "./layers";
-import { useDismissable } from "./overlay";
-import { SurfaceHead } from "./chrome";
+import { AnswersEscape, useDismissable } from "./overlay";
+import { CloseButton, SurfaceHead } from "./chrome";
 
 export function Drawer({
   side,
@@ -60,6 +60,9 @@ export function Drawer({
   const panel = useDismissable<HTMLElement>({ onClose });
 
   return (
+    // A drawer is always escapable — it is something you opened to look at, and
+    // 16.8 hangs on nothing here. See `AnswersEscape`.
+    <AnswersEscape.Provider value>
     <aside
       ref={panel}
       role="dialog"
@@ -72,11 +75,7 @@ export function Drawer({
     >
       <SurfaceHead
         title={title}
-        controls={
-          <button onClick={onClose} className="text-xs text-muted hover:text-ink">
-            zamknij
-          </button>
-        }
+        controls={<CloseButton onClose={onClose} />}
       >
         {head}
       </SurfaceHead>
@@ -88,5 +87,6 @@ export function Drawer({
         {children}
       </div>
     </aside>
+    </AnswersEscape.Provider>
   );
 }

@@ -19,6 +19,7 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
 import { Overlay } from "./overlay";
+import { CloseButton } from "./chrome";
 
 const EVENTS = events as EventCard[];
 
@@ -135,12 +136,7 @@ export function FieldModal({
           <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
             {field.name}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-xs text-muted transition hover:text-ink"
-          >
-            zamknij
-          </button>
+          <CloseButton onClose={onClose} />
         </header>
 
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 py-3">

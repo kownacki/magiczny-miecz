@@ -1,5 +1,8 @@
 "use client";
 
+import { useContext } from "react";
+import { AnswersEscape } from "./overlay";
+
 /**
  * The buttons that act on a surface rather than on the game.
  *
@@ -63,6 +66,37 @@ export function SurfaceHead({
       </div>
       {children}
     </header>
+  );
+}
+
+/**
+ * The way out, and whether Escape is one of them.
+ *
+ * The hint is read from the surface rather than written on the button, so it
+ * cannot go stale: pin the console and it stops offering an Escape that would
+ * no longer work, and the Karta, the Obszar and both drawers start offering one
+ * they have always honoured and never mentioned.
+ *
+ * Dimmer than the word it follows. It is a reminder of a shortcut, not a second
+ * thing you can press.
+ */
+export function CloseButton({
+  onClose,
+  /** For a surface where "close" is not the word — a Karta you are done reading. */
+  label = "zamknij",
+}: {
+  onClose: () => void;
+  label?: string;
+}) {
+  const byEscape = useContext(AnswersEscape);
+  return (
+    <button
+      onClick={onClose}
+      className="shrink-0 text-xs text-muted transition hover:text-ink"
+    >
+      {label}
+      {byEscape && <span className="text-muted/50"> (Esc)</span>}
+    </button>
   );
 }
 

@@ -20,7 +20,7 @@
  * why, so the next person to wonder does not "fix" it.
  */
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { createContext, useEffect, useLayoutEffect, useRef } from "react";
 import { LAYER } from "./layers";
 
 /**
@@ -33,6 +33,23 @@ import { LAYER } from "./layers";
  * with it. One press, two things, one of them irreversible.
  */
 const stack: Array<() => void> = [];
+
+/**
+ * Whether the surface you are inside answers Escape.
+ *
+ * So that `zamknij (Esc)` can be a fact rather than a caption. The console
+ * wrote that hint into its own label, which was right until it could be pinned
+ * and the hint went on claiming an Escape that no longer worked — and the
+ * drawers, the Karta and the Obszar answered Escape all along without ever
+ * saying so. A promise typed by hand in one place out of four is not a promise.
+ *
+ * Provided by whatever puts a surface on screen, because that is what decides:
+ * an `Overlay` with `onDismiss` null is the game asking and cannot be escaped,
+ * a pinned console has opted out, and a drawer always can be. `CloseButton`
+ * reads it and says so. False by default, so a button somewhere that is not
+ * inside any of them promises nothing.
+ */
+export const AnswersEscape = createContext(false);
 
 /** Whether anything on screen would answer an Escape of its own. */
 export function dismissableOpen(): boolean {
@@ -301,7 +318,7 @@ export function Overlay({
       {/* The sheet itself is not "elsewhere": clicking inside one must not
           close it, which is the half of this that is easy to leave out. */}
       <div className="contents" onClick={(event) => event.stopPropagation()}>
-        {children}
+        <AnswersEscape.Provider value={onDismiss !== null}>{children}</AnswersEscape.Provider>
       </div>
     </div>
   );
