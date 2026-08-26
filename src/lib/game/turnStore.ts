@@ -27,16 +27,13 @@ import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { helpLines, type Command } from "@/lib/engine/console";
 import { findByName } from "@/lib/engine/search";
-import { scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { usageOf } from "@/lib/engine/uses";
+import { type Effect } from "@/lib/engine/cardScript";
 import {
   afterFight,
   type Ends,
   type Modifier,
   type Status,
 } from "@/lib/engine/status";
-import { describeEffect } from "@/lib/engine/effectText";
-import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import {
 } from "@/lib/engine/deck";
 import {
@@ -53,8 +50,6 @@ import {
 } from "./change";
 import { appRandom, supplied } from "./random";
 import {
-  putOnPile,
-  type Returnable,
 } from "./commands/piles";
 import {
   addEffect as addEffectTo,
@@ -67,8 +62,12 @@ import { healSeat as healCommand } from "./commands/life";
 import { fightBeast as fightBeastCommand } from "./commands/beast";
 import {
   applyEffect as applyEffectOn,
+  resolveDrawnCard as resolveDrawnCardOn,
+  resolveFieldOffer as resolveFieldOfferOn,
+  spendHolding as spendHoldingOn,
   type Decisions,
   type Resolution,
+  type UseResult,
 } from "./commands/effects";
 import {
   attackSeat as attackSeatOn,
@@ -132,7 +131,7 @@ export { freshDecks };
 export type { Adjustable };
 export { STONE_TURNS, TROPHY_RATE };
 export type { BridgeOrdealResult, BridgeOutcome, CrossOutcome };
-export type { Decisions, Resolution };
+export type { Decisions, Resolution, UseResult };
 export type { Decks };
 
 
@@ -170,18 +169,6 @@ export type { Decks };
  * deck (21.2), so a Hełm handed back has nowhere here to go and is counted by
  * `shopStock` instead.
  */
-async function returnToPile(
-  gameId: string,
-  pile: "events" | "spells",
-  cards: readonly Returnable[],
-): Promise<void> {
-  // Most calls have nothing to put away; reading the row to discover that
-  // would add a query per discard for no reason.
-  if (cards.length === 0) return;
-  const game = await loadGame(gameId);
-  const writes = putOnPile({ game }, pile, cards);
-  if (writes.game) await db.from("games").update(writes.game).eq("id", gameId);
-}
 
 /**
  * The drawn copy, once its Wyposażenie card has taken its place (16.6, 21.1).
@@ -208,7 +195,7 @@ async function returnToPile(
 
 /** Reads the stored decks, tolerating a game started before spells existed. */
 import type { Slot } from "@/lib/engine/slots";
-import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
+import { bumpRevision, holdingsFor, seatsFor, type GameRow } from "./store";
 
 /**
  * A stored row as the engine wants it — including where it is worn, which every
@@ -290,11 +277,6 @@ export async function startGame(gameId: string): Promise<void> {
 }
 
 
-function activeSeatOf(seats: SeatRow[], game: GameRow): SeatRow {
-  const seat = seats.find((s) => s.seat_index === game.active_seat);
-  if (!seat) throw new Error("Brak aktywnego gracza.");
-  return seat;
-}
 
 /**
  * Records the movement roll.
@@ -769,101 +751,9 @@ export async function reorderPack(
   await change(gameId, reorderPackOn, { seatId, holdingIds });
 }
 
-/**
- * Spends a card by using it.
- *
- * Nine Przedmioty in the box are one act rather than a possession — "Po użyciu
- * Kartę należy odłożyć" — and until now there was no way to perform that act.
- * The card sat in a pack doing nothing, and the only button under it was
- * "wyrzuć", which is a different thing entirely: 5.5 leaves a discarded
- * Przedmiot lying on the Obszar for whoever comes next, and a drunk Eliksir is
- * gone.
- *
- * Not gated on whose turn it is. Four of the nine are used inside somebody
- * else's turn — the Kryształ Losu in a fight you did not start, the
- * Zwierciadło against whoever needs it — so a turn check would refuse the card
- * at the only moment it is worth anything. `dropCard` is ungated for the same
- * reason and this is its sibling.
- *
- * The Karta goes before the effect is applied, because that is the order the
- * cards print it in and because it matters: the Szkatuła's first face hands
- * over a Tarcza Tolimana, and 5.4 must not count the box it came out of.
- */
-export interface UseResult {
-  card: string;
-  face?: number;
-  did: string[];
-  /** The table has to work this one out — see `Use.rozpatruje`. */
-  stol: boolean;
-}
 
 export async function spendHolding(gameId: string, holdingId: string): Promise<UseResult> {
-  const game = await loadGame(gameId);
-  const { data } = await db
-    .from("holdings")
-    .select("seat_id,card_id,kind,granted")
-    .eq("id", holdingId)
-    .maybeSingle();
-  if (!data) throw new Error("Nie ma takiej Karty.");
-
-  // Zaklęcia are spoken, not used: 9.6 has its own path, with its own window
-  // and its own announcement to the table.
-  if (data.kind === "spell") {
-    throw new Error("Zaklęcie się rzuca, nie używa (9.6).");
-  }
-
-  const cardId = String(data.card_id);
-  const use = usageOf(cardId);
-  if (!use) throw new Error(`${cardName(cardId)} — tej Karty się nie zużywa.`);
-
-  const seatId = String(data.seat_id);
-  const script = use.rozpatruje === "aplikacja" ? scriptFor(cardId) : null;
-  const face =
-    script?.effect.op === "rzut" ? 1 + Math.floor(Math.random() * 6) : undefined;
-
-  // Spent first, whatever comes of it. Every one of these cards says the Karta
-  // goes — the Łódź says so even if you never got in it.
-  await db.from("holdings").delete().eq("id", holdingId);
-  await returnToPile(gameId, "events", [{ cardId, granted: data.granted === true }]);
-  await journal(gameId, seatId, game.turn, "uzycie", {
-    cardId,
-    ...(face !== undefined ? { face } : {}),
-  });
-
-  // An effect the buff system can hold is applied here and now — the card is
-  // gone, and what it bought is a thing the character is under until it runs
-  // out. This is the whole of what "aplikacja" means for a card with no die.
-  if (use.efekt) {
-    await addEffect(gameId, seatId, { source: cardId, ...use.efekt });
-    await bumpRevision(gameId);
-    return { card: cardName(cardId), did: [use.efekt.label], stol: false };
-  }
-
-  if (!script) {
-    await bumpRevision(gameId);
-    return { card: cardName(cardId), did: [use.co], stol: true };
-  }
-
-  const effect = face !== undefined && script.effect.op === "rzut"
-    ? script.effect.faces[face]
-    : script.effect;
-  const done = await applyEffect(
-    gameId,
-    seatId,
-    effect,
-    face !== undefined ? `${cardName(cardId)} (${face})` : cardName(cardId),
-    {},
-  );
-  await bumpRevision(gameId);
-  return {
-    card: cardName(cardId),
-    ...(face !== undefined ? { face } : {}),
-    // A face the app cannot finish — the Szkatuła's Tarcza Tolimana, which is a
-    // Karta somebody has to hand over — is reported as the table's rather than
-    // silently dropped.
-    did: done.pending ? [...done.did, describeEffect(done.pending)] : done.did,
-    stol: done.pending !== null,
-  };
+  return change(gameId, spendHoldingOn, { holdingId, shuffle });
 }
 
 /**
@@ -1711,40 +1601,12 @@ export async function resolveFieldOffer(
   value: number | null,
   decided: Decisions = {},
 ): Promise<{ offer: string; face?: number; did: string[]; pending: Effect | null }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (!seat.field_id) throw new Error("Postać nie stoi na Obszarze.");
-  // Rolling a field's table is something you do having arrived on it (15.1), so
-  // it belongs to the field phase. Said here rather than left to whatever the
-  // face happens to do — a face that opens a fight would otherwise report
-  // "nie czas na walkę", which is true and explains nothing.
-  if (game.turn_state.phase !== "pole") {
-    throw new Error("To rozpatruje się po wejściu na Obszar.");
-  }
-
-  const script = fieldScriptFor(seat.field_id);
-  const offer = script?.offers.find((o) => o.name === offerName);
-  if (!offer) throw new Error(`Na tym Obszarze nie ma: ${offerName}`);
-
-  // A table is rolled; anything else is simply carried out.
-  if (offer.effect.op !== "rzut") {
-    const done = await applyEffect(gameId, seat.id, offer.effect, offer.name, decided);
-    if (!done.pending) await markResolved(gameId, offerKey(offer.name));
-    await bumpRevision(gameId);
-    return { offer: offer.name, ...done };
-  }
-
-  const face = value ?? 1 + Math.floor(Math.random() * 6);
-  if (!Number.isInteger(face) || face < 1 || face > 6) {
-    throw new Error("Kostka daje wynik od 1 do 6.");
-  }
-  const outcome = offer.effect.faces[face];
-  await journal(gameId, seat.id, game.turn, "pole-tabela", { offer: offer.name, face }, value !== null);
-  const done = await applyEffect(gameId, seat.id, outcome, `${offer.name} (${face})`, decided);
-  if (!done.pending) await markResolved(gameId, offerKey(offer.name));
-  await bumpRevision(gameId);
-  return { offer: offer.name, face, ...done };
+  return change(gameId, resolveFieldOfferOn, {
+    offerName,
+    decided,
+    manual: value !== null,
+    shuffle,
+  }, { random: supplied([value], appRandom()) });
 }
 
 /**
@@ -1765,39 +1627,12 @@ export async function resolveDrawnCard(
   value: number | null,
   decided: Decisions = {},
 ): Promise<{ card: string; face?: number; did: string[]; pending: Effect | null }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "pole") throw new Error("Nie ma czego rozpatrywać.");
-  if (!game.turn_state.drawn.some((entry) => entry.cardId === cardId)) {
-    throw new Error("Tej Karty tu nie ma.");
-  }
-
-  const script = scriptFor(cardId);
-  if (!script) throw new Error(`${cardName(cardId)} — tę Kartę rozpatrzcie sami.`);
-
-  if (script.effect.op !== "rzut") {
-    const done = await applyEffect(gameId, seat.id, script.effect, cardName(cardId), decided);
-    if (!done.pending) await markResolved(gameId, cardId);
-    await bumpRevision(gameId);
-    return { card: cardName(cardId), ...done };
-  }
-
-  const face = value ?? 1 + Math.floor(Math.random() * 6);
-  if (!Number.isInteger(face) || face < 1 || face > 6) {
-    throw new Error("Kostka daje wynik od 1 do 6.");
-  }
-  await journal(gameId, seat.id, game.turn, "karta-tabela", { cardId, face }, value !== null);
-  const done = await applyEffect(
-    gameId,
-    seat.id,
-    script.effect.faces[face],
-    `${cardName(cardId)} (${face})`,
+  return change(gameId, resolveDrawnCardOn, {
+    cardId,
     decided,
-  );
-  if (!done.pending) await markResolved(gameId, cardId);
-  await bumpRevision(gameId);
-  return { card: cardName(cardId), face, ...done };
+    manual: value !== null,
+    shuffle,
+  }, { random: supplied([value], appRandom()) });
 }
 
 /**
@@ -1831,13 +1666,3 @@ export async function takeFromField(
  * lying there face up until the turn ends, so "still on the field" cannot mean
  * "still to be resolved". The same distinction `fought` makes for a Wróg.
  */
-async function markResolved(gameId: string, cardId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  if (game.turn_state.phase !== "pole") return;
-  const already = game.turn_state.resolved ?? [];
-  if (already.includes(cardId)) return;
-  await db
-    .from("games")
-    .update({ turn_state: { ...game.turn_state, resolved: [...already, cardId] } })
-    .eq("id", gameId);
-}

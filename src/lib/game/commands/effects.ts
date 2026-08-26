@@ -3,6 +3,10 @@
 import { FIELDS } from "@/lib/engine/board";
 import type { Shuffle } from "@/lib/engine/deck";
 import { isSettled } from "@/lib/engine/resolve";
+import { scriptFor } from "@/lib/engine/cardScript";
+import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
+import { describeEffect } from "@/lib/engine/effectText";
+import { usageOf } from "@/lib/engine/uses";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, describeLoss, goldLost, reachableBy } from "@/lib/engine/losses";
 import { endTurn } from "@/lib/engine/turn";
@@ -28,6 +32,8 @@ import { cardName } from "./holdings";
 import { healSeat } from "./life";
 import { putOnPile } from "./piles";
 import { turnToStone } from "./stone";
+import { activeSeat } from "./seat";
+import { addEffect } from "./turn";
 
 /**
  * What the player has already decided, in the order the effect asks.
@@ -493,4 +499,247 @@ function targeted(
     actor ? asTargetSeat(actor) : undefined,
     oprocz,
   );
+}
+
+/* --------------------------------------------------------------------------
+ * The three doors an effect comes through.
+ * ----------------------------------------------------------------------- */
+
+/** Notes a card or an offer as dealt with, so the turn stops asking about it. */
+function markResolved(snapshot: Snapshot, key: string): Changeset {
+  const state = snapshot.game.turn_state;
+  if (state.phase !== "pole") return {};
+  const already = state.resolved ?? [];
+  if (already.includes(key)) return {};
+  return { game: { turn_state: { ...state, resolved: [...already, key] } } };
+}
+
+export interface UseResult {
+  card: string;
+  face?: number;
+  did: string[];
+  /** The part the table has to settle itself. */
+  stol: boolean;
+}
+
+/**
+ * Spends a Karta that is used up by being used.
+ *
+ * Nine Przedmioty are an act rather than a possession, and every one of them
+ * says the Karta goes whatever comes of it — the Łódź says so even if you never
+ * got in it. So it is spent first and the effect is worked out afterwards.
+ *
+ * One die, and only for a card whose script is a table.
+ */
+export async function spendHolding(
+  snapshot: Snapshot,
+  command: { holdingId: string; shuffle: Shuffle },
+  ports: CommandPorts,
+): Promise<Outcome<UseResult>> {
+  const held = snapshot.holdings.find((h) => h.id === command.holdingId);
+  if (!held) throw new Error("Nie ma takiej Karty.");
+
+  // Zaklęcia are spoken, not used: 9.6 has its own path, with its own window
+  // and its own announcement to the table.
+  if (held.kind === "spell") throw new Error("Zaklęcie się rzuca, nie używa (9.6).");
+
+  const cardId = held.card_id;
+  const use = usageOf(cardId);
+  if (!use) throw new Error(`${cardName(cardId)} — tej Karty się nie zużywa.`);
+
+  const seatId = held.seat_id;
+  const script = use.rozpatruje === "aplikacja" ? scriptFor(cardId) : null;
+  const face =
+    script?.effect.op === "rzut" ? await ports.random.rollD6(`${cardName(cardId)}: tabela`) : undefined;
+
+  const gone: Changeset = { holdings: { delete: [held.id] } };
+  const spent = mergeAll(
+    gone,
+    putOnPile(apply(snapshot, gone), "events", [{ cardId, granted: held.granted }]),
+    {
+      journal: [
+        {
+          seatId,
+          turn: snapshot.game.turn,
+          kind: "uzycie",
+          payload: { cardId, ...(face !== undefined ? { face } : {}) },
+        },
+      ],
+    },
+  );
+
+  // An effect the buff system can hold is applied here and now — the card is
+  // gone, and what it bought is a thing the character is under until it runs
+  // out. This is the whole of what "aplikacja" means for a card with no die.
+  if (use.efekt) {
+    const under = addEffect(apply(snapshot, spent), {
+      seatId,
+      effect: { source: cardId, ...use.efekt },
+    });
+    return {
+      writes: merge(spent, under),
+      result: { card: cardName(cardId), did: [use.efekt.label], stol: false },
+    };
+  }
+
+  if (!script) {
+    return { writes: spent, result: { card: cardName(cardId), did: [use.co], stol: true } };
+  }
+
+  const effect =
+    face !== undefined && script.effect.op === "rzut" ? script.effect.faces[face] : script.effect;
+  const done = await applyEffect(
+    apply(snapshot, spent),
+    {
+      seatId,
+      effect,
+      reason: face !== undefined ? `${cardName(cardId)} (${face})` : cardName(cardId),
+      shuffle: command.shuffle,
+    },
+    ports,
+  );
+
+  return {
+    writes: merge(spent, done.writes),
+    result: {
+      card: cardName(cardId),
+      ...(face !== undefined ? { face } : {}),
+      // A face the app cannot finish — the Szkatuła's Tarcza Tolimana, which is
+      // a Karta somebody has to hand over — is reported as the table's rather
+      // than silently dropped.
+      did: done.result.pending
+        ? [...done.result.did, describeEffect(done.result.pending)]
+        : done.result.did,
+      stol: done.result.pending !== null,
+    },
+  };
+}
+
+/**
+ * Rolls an Obszar's own table, or simply carries out what it offers (15.1).
+ *
+ * One die, and only when the offer is a table. Said here rather than left to
+ * whatever the face happens to do — a face that opens a fight would otherwise
+ * report "nie czas na walkę", which is true and explains nothing.
+ */
+export async function resolveFieldOffer(
+  snapshot: Snapshot,
+  command: { offerName: string; decided?: Decisions; manual?: boolean; shuffle: Shuffle },
+  ports: CommandPorts,
+): Promise<Outcome<{ offer: string; face?: number; did: string[]; pending: Effect | null }>> {
+  const seat = activeSeat(snapshot);
+  if (!seat.field_id) throw new Error("Postać nie stoi na Obszarze.");
+  if (snapshot.game.turn_state.phase !== "pole") {
+    throw new Error("To rozpatruje się po wejściu na Obszar.");
+  }
+
+  const script = fieldScriptFor(seat.field_id);
+  const offer = script?.offers.find((o) => o.name === command.offerName);
+  if (!offer) throw new Error(`Na tym Obszarze nie ma: ${command.offerName}`);
+
+  const table = offer.effect.op === "rzut";
+  const face = table ? await ports.random.rollD6(`${offer.name}: tabela`) : undefined;
+  const rolled: Changeset =
+    face !== undefined
+      ? {
+          journal: [
+            {
+              seatId: seat.id,
+              turn: snapshot.game.turn,
+              kind: "pole-tabela",
+              payload: { offer: offer.name, face },
+              manual: command.manual ?? false,
+            },
+          ],
+        }
+      : {};
+
+  const effect =
+    face !== undefined && offer.effect.op === "rzut" ? offer.effect.faces[face] : offer.effect;
+  const done = await applyEffect(
+    apply(snapshot, rolled),
+    {
+      seatId: seat.id,
+      effect,
+      reason: face !== undefined ? `${offer.name} (${face})` : offer.name,
+      decided: command.decided,
+      shuffle: command.shuffle,
+    },
+    ports,
+  );
+
+  const soFar = merge(rolled, done.writes);
+  const noted = done.result.pending
+    ? {}
+    : markResolved(apply(snapshot, soFar), offerKey(offer.name));
+
+  return {
+    writes: merge(soFar, noted),
+    result: { offer: offer.name, ...(face !== undefined ? { face } : {}), ...done.result },
+  };
+}
+
+/**
+ * Carries out a Karta that was drawn onto this Obszar (16.1).
+ *
+ * One die, and only when the card's script is a table.
+ */
+export async function resolveDrawnCard(
+  snapshot: Snapshot,
+  command: { cardId: string; decided?: Decisions; manual?: boolean; shuffle: Shuffle },
+  ports: CommandPorts,
+): Promise<Outcome<{ card: string; face?: number; did: string[]; pending: Effect | null }>> {
+  const seat = activeSeat(snapshot);
+  const state = snapshot.game.turn_state;
+  if (state.phase !== "pole") throw new Error("Nie ma czego rozpatrywać.");
+  if (!state.drawn.some((entry) => entry.cardId === command.cardId)) {
+    throw new Error("Tej Karty tu nie ma.");
+  }
+
+  const script = scriptFor(command.cardId);
+  if (!script) throw new Error(`${cardName(command.cardId)} — tę Kartę rozpatrzcie sami.`);
+
+  const table = script.effect.op === "rzut";
+  const face = table ? await ports.random.rollD6(`${cardName(command.cardId)}: tabela`) : undefined;
+  const rolled: Changeset =
+    face !== undefined
+      ? {
+          journal: [
+            {
+              seatId: seat.id,
+              turn: snapshot.game.turn,
+              kind: "karta-tabela",
+              payload: { cardId: command.cardId, face },
+              manual: command.manual ?? false,
+            },
+          ],
+        }
+      : {};
+
+  const effect =
+    face !== undefined && script.effect.op === "rzut" ? script.effect.faces[face] : script.effect;
+  const done = await applyEffect(
+    apply(snapshot, rolled),
+    {
+      seatId: seat.id,
+      effect,
+      reason:
+        face !== undefined ? `${cardName(command.cardId)} (${face})` : cardName(command.cardId),
+      decided: command.decided,
+      shuffle: command.shuffle,
+    },
+    ports,
+  );
+
+  const soFar = merge(rolled, done.writes);
+  const noted = done.result.pending ? {} : markResolved(apply(snapshot, soFar), command.cardId);
+
+  return {
+    writes: merge(soFar, noted),
+    result: {
+      card: cardName(command.cardId),
+      ...(face !== undefined ? { face } : {}),
+      ...done.result,
+    },
+  };
 }

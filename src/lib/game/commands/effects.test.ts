@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Effect } from "@/lib/engine/cardScript";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
-import { applyEffect } from "./effects";
+import { applyEffect, resolveDrawnCard, resolveFieldOffer, spendHolding } from "./effects";
+import { EVENT_COPIES } from "../decks";
+import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
 
 /** Piles are not shuffled in these; the order in is the order out. */
@@ -307,5 +309,190 @@ describe("the rest of the vocabulary", () => {
     const { writes, result } = await run({ op: "ruch-dodatkowy" });
     expect(writes).toEqual({});
     expect(result.did).toEqual(["dodatkowy ruch — rzuć jeszcze raz"]);
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * The three doors.
+ * ----------------------------------------------------------------------- */
+
+
+const holding = (cardId: string) =>
+  aTable({
+    game: { active_seat: 0 },
+    seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
+    holdings: [aHolding({ id: "h1", card_id: cardId, kind: "item" })],
+  });
+
+describe("spending a Karta that is used up by using it", () => {
+  it("refuses a Zaklęcie, which is spoken rather than used (9.6)", async () => {
+    const hand = aTable({
+      seats: [aSeat({ id: "seat-a" })],
+      holdings: [aHolding({ id: "s1", card_id: "krag-plomieni", kind: "spell" })],
+    });
+    await expect(
+      spendHolding(hand, { holdingId: "s1", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/rzuca, nie używa/);
+  });
+
+  it("refuses a Karta that is not spent by being used", async () => {
+    await expect(
+      spendHolding(holding("helm"), { holdingId: "h1", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/się nie zużywa/);
+  });
+
+  /** "Po wypiciu Eliksiru, Postać zyskuje na 1 turę dodatkowe 2 punkty Miecza." */
+  it("puts a character under what the card bought, and spends the card", async () => {
+    const { writes, result } = await spendHolding(
+      holding("eliksir-sily"),
+      { holdingId: "h1", shuffle: asIs },
+      ports(),
+    );
+    expect(writes.holdings?.delete).toEqual(["h1"]);
+    expect(writes.effects?.insert?.[0]).toMatchObject({
+      source: "eliksir-sily",
+      modifier: { kind: "punkty", miecz: 2 },
+      ends: { kind: "tur", turns: 1 },
+    });
+    expect(result).toEqual({ card: "ELIKSIR SIŁY", did: ["+2 Miecza"], stol: false });
+  });
+
+  it("puts the spent Karta on the used pile, not out of the game", async () => {
+    const { writes } = await spendHolding(
+      holding("eliksir-sily"),
+      { holdingId: "h1", shuffle: asIs },
+      ports(),
+    );
+    const decks = writes.game?.deck as { events: { discard: string[] } };
+    expect(decks.events.discard).toEqual([(EVENT_COPIES.get("eliksir-sily") ?? [])[0]]);
+  });
+
+  /** The Szkatuła's own table: one die, then whichever face it landed on. */
+  it("rolls a card whose script is a table, and reports the face", async () => {
+    const { result } = await spendHolding(
+      holding("tajemnicza-szkatula"),
+      { holdingId: "h1", shuffle: asIs },
+      ports({ random: scriptedRandom([3]) }),
+    );
+    expect(result.face).toBe(3);
+    expect(result.did).toEqual(["+2 Sztuki Złota"]);
+    expect(result.stol).toBe(false);
+  });
+
+  /**
+   * A face the app cannot finish is handed back rather than dropped.
+   *
+   * Face 1 is the Tarcza Tolimana — a Karta somebody has to pass across the
+   * table — so the card is still spent and the rest is the table's.
+   */
+  it("hands back what it cannot finish", async () => {
+    const { result } = await spendHolding(
+      holding("tajemnicza-szkatula"),
+      { holdingId: "h1", shuffle: asIs },
+      ports({ random: scriptedRandom([1]) }),
+    );
+    expect(result.stol).toBe(true);
+    expect(result.did.length).toBeGreaterThan(0);
+  });
+});
+
+describe("an Obszar's own table (15.1)", () => {
+  const standing = (name: string) => {
+    const fieldId = asFieldId(name)!;
+    return aTable({
+      game: {
+        active_seat: 0,
+        turn_state: { phase: "pole", fieldId, from: null, draw: 0, drawn: [] },
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: fieldId })],
+    });
+  };
+
+  it("refuses an offer this Obszar does not make", async () => {
+    await expect(
+      resolveFieldOffer(standing("karczma"), { offerName: "Lichwiarz", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/nie ma: Lichwiarz/);
+  });
+
+  it("refuses before the character has arrived", async () => {
+    const rolling = aTable({
+      game: { active_seat: 0, turn_state: { phase: "rzut" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
+    });
+    await expect(
+      resolveFieldOffer(rolling, { offerName: "Karczma", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/po wejściu na Obszar/);
+  });
+
+  it("rolls the table, says the face, and notes the offer as settled", async () => {
+    const { writes, result } = await resolveFieldOffer(
+      standing("karczma"),
+      { offerName: "Karczma", shuffle: asIs },
+      ports({ random: scriptedRandom([1]) }),
+    );
+    expect(result.offer).toBe("Karczma");
+    expect(result.face).toBe(1);
+    expect(writes.journal?.[0]).toMatchObject({ kind: "pole-tabela", payload: { face: 1 } });
+    const state = writes.game?.turn_state as { resolved?: string[] };
+    expect(state.resolved).toContain("pole:Karczma");
+  });
+
+  /** A table the app rolled itself is not a human overruling the referee. */
+  it("marks a typed-in face as manual and an app roll as not", async () => {
+    const app = await resolveFieldOffer(
+      standing("karczma"),
+      { offerName: "Karczma", shuffle: asIs },
+      ports({ random: scriptedRandom([2]) }),
+    );
+    expect(app.writes.journal?.[0]).toMatchObject({ manual: false });
+
+    const typed = await resolveFieldOffer(
+      standing("karczma"),
+      { offerName: "Karczma", manual: true, shuffle: asIs },
+      ports({ random: scriptedRandom([2]) }),
+    );
+    expect(typed.writes.journal?.[0]).toMatchObject({ manual: true });
+  });
+});
+
+describe("a Karta drawn onto the Obszar (16.1)", () => {
+  const drawn = (cardId: string) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          phase: "pole",
+          fieldId: "karczma",
+          from: null,
+          draw: 1,
+          drawn: [{ cardId, cardClass: "spotkanie" }],
+        },
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
+    });
+
+  it("refuses a Karta that is not lying here", async () => {
+    await expect(
+      resolveDrawnCard(drawn("zaraza"), { cardId: "smok", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/Tej Karty tu nie ma/);
+  });
+
+  it("hands an untranscribed Karta to the table rather than guessing", async () => {
+    const unknown = drawn("nie-ma-takiej-karty");
+    await expect(
+      resolveDrawnCard(unknown, { cardId: "nie-ma-takiej-karty", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/rozpatrzcie sami/);
+  });
+
+  it("carries the card out and notes it settled", async () => {
+    const { writes, result } = await resolveDrawnCard(
+      drawn("zaraza"),
+      { cardId: "zaraza", shuffle: asIs },
+      ports(),
+    );
+    expect(result.card).toBe("ZARAZA");
+    expect(result.pending).toBeNull();
+    const state = writes.game?.turn_state as { resolved?: string[] };
+    expect(state.resolved).toContain("zaraza");
   });
 });
