@@ -20,7 +20,7 @@ import {
   characterImageUrl,
   natureCardUrl,
 } from "@/lib/view/cardImages";
-import { tokensFor } from "@/lib/view/tokens";
+import { pileColumns, tokensFor } from "@/lib/view/tokens";
 import { useCardPreview } from "./card-preview";
 import { type TileCard } from "./card-tile";
 import { CarriedCard, type Carried } from "./carry";
@@ -504,13 +504,11 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
      */
     const PER_STACK = 10;
     const REVEAL = Math.floor((STACK_HEIGHT - SIZE) / (PER_STACK - 1));
-    const stacks = Math.min(COLUMNS_MAX, Math.ceil(points / PER_STACK));
     // Past thirty the top coin stands down and says so — see `MoreThanFits`.
     // A coin of picture is nothing to give up on a stack this deep, and what
     // is bought with it is the difference between a full pile and a full pile
     // that has stopped counting.
-    const cut = points > COLUMNS_MAX * PER_STACK;
-    const coins = cut ? COLUMNS_MAX * PER_STACK - 1 : points;
+    const { columns: stacks, drawn: coins, cut } = pileColumns(points, PER_STACK);
 
     return (
       <span className="flex items-start gap-0.5" title={`${label}: ${points}`}>
@@ -563,16 +561,12 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
    * they are is half the reading.
    */
   const PER_COLUMN = 5;
-  // And three columns at the outside, the same ceiling the gold has. What gets
-  // dropped is the tail, and `tokensFor` puts the big denominations first — so
-  // a pile too large to draw still shows the part of itself worth looking at.
-  const columns = Math.min(COLUMNS_MAX, Math.ceil(tokens.length / PER_COLUMN));
-  // The last square goes to the mark when there is a tail to drop — see
-  // `MoreThanFits`. Fifteen fours is sixty and also nine hundred, and a rail
-  // that looks the same either way is the pile telling a lie the numeral
-  // underneath then quietly corrects.
-  const cut = tokens.length > COLUMNS_MAX * PER_COLUMN;
-  const drawn = cut ? tokens.slice(0, COLUMNS_MAX * PER_COLUMN - 1) : tokens;
+  // And three columns at the outside, the same ceiling the gold has — the same
+  // sum, too, which is why both ask `pileColumns` rather than each doing it.
+  // What gets dropped is the tail, and `tokensFor` puts the big denominations
+  // first, so a pile too large to draw still shows the part worth looking at.
+  const { columns, drawn: room, cut } = pileColumns(tokens.length, PER_COLUMN);
+  const drawn = tokens.slice(0, room);
 
   return (
     <span className="flex items-start gap-0.5" title={`${label}: ${points}`}>
@@ -1018,16 +1012,6 @@ const STACK_HEIGHT = Math.round(CARD_HEIGHT / 2) - 28;
  * names the parameter — the word is on the card, printed up the edge the pile
  * stands against.
  */
-/**
- * How wide any one pile is allowed to get.
- *
- * A ceiling rather than a considered number: three columns is enough for
- * anything this game actually hands out, and past it the picture stops growing
- * while the numeral underneath carries the truth. A hundred Sztuk Złota draws
- * as thirty and reads as a hundred, which is the right way round — the count
- * was always the exact half of this and the stacks were always the impression.
- */
-const COLUMNS_MAX = 3;
 
 const STAT_COLOUR: Record<string, string> = {
   sword: "text-miecz",

@@ -64,3 +64,46 @@ export function tokensFor(points: number): number[] {
   }
   return out;
 }
+
+/**
+ * How many columns a rail is, at the outside.
+ *
+ * Past this the pile stops growing and the numeral under it goes on being
+ * exact, which costs nothing: the picture was only ever an impression of how
+ * much somebody has, and the count was always the reading.
+ */
+export const COLUMNS_MAX = 3;
+
+/**
+ * A pile too big for its rail, divided into columns.
+ *
+ * Written once because it was written twice. The gold stacks and the żetony are
+ * drawn quite differently — coins overlap and are all the same picture, żetony
+ * sit apart and come in four denominations whose faces are half the reading —
+ * but the arithmetic underneath is the same question with two sets of numbers,
+ * and it was spelled out separately in each branch with the variables renamed.
+ * Two copies of one sum is one chance for the second to be corrected and the
+ * first forgotten.
+ *
+ * Each column is filled before the next is started, which is the point of
+ * counting this way: a glance at four full stacks and a short one is
+ * forty-something without reading anything, where four stacks of eleven and a
+ * straggler is a heap that happens to be in columns.
+ *
+ * `cut` says the last square goes to the mark that admits there is more, rather
+ * than to another token — so a rail filled to the ceiling stops looking exactly
+ * like a rail that merely happens to be full. Fifteen żetony of four read as
+ * sixty whether the seat has sixty or nine hundred, and the only thing that
+ * knew the difference was the numeral underneath.
+ */
+export function pileColumns(
+  count: number,
+  perColumn: number,
+  maxColumns: number = COLUMNS_MAX,
+): { columns: number; drawn: number; cut: boolean } {
+  const items = Math.max(0, Math.floor(count));
+  const room = maxColumns * perColumn;
+  const cut = items > room;
+  const drawn = cut ? room - 1 : items;
+  return { columns: Math.min(maxColumns, Math.ceil(items / perColumn)), drawn, cut };
+}

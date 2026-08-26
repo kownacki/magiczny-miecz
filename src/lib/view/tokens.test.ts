@@ -1,5 +1,5 @@
 import { describe as suite, expect, it } from "vitest";
-import { DENOMINATIONS, tokensFor } from "./tokens";
+import { COLUMNS_MAX, DENOMINATIONS, pileColumns, tokensFor } from "./tokens";
 
 suite("making change in żetony", () => {
   it("is all ones while ones fit a column", () => {
@@ -63,5 +63,79 @@ suite("making change in żetony", () => {
   it("refuses to be confused by a number that is not one", () => {
     expect(tokensFor(-3)).toEqual([]);
     expect(tokensFor(2.7)).toEqual([1, 1]);
+  });
+});
+
+/**
+ * A pile that has outgrown its rail.
+ *
+ * The same sum for two quite different pictures — a stack of coins that overlap
+ * and are all alike, and a column of żetony that sit apart and whose four
+ * denominations are half the reading — which is exactly why it was written
+ * twice before it was written once. What it protects against is a rail filled
+ * to the ceiling looking identical to a rail that merely happens to be full:
+ * fifteen żetony of four read as sixty whether the seat has sixty or nine
+ * hundred, and only the numeral underneath knew the difference.
+ */
+suite("dividing a pile into columns", () => {
+  /** The gold's numbers: ten coins to a stack, three stacks. */
+  const gold = (points: number) => pileColumns(points, 10);
+  /** The żetony's: five to a column, the same three columns. */
+  const zetony = (count: number) => pileColumns(count, 5);
+
+  it("draws nothing for nothing", () => {
+    // A character at zero Życie has had its last token taken off the table
+    // (4.4), and the empty space where its żetony were is what the table shows.
+    expect(zetony(0)).toEqual({ columns: 0, drawn: 0, cut: false });
+  });
+
+  it("opens a second column only once the first is full", () => {
+    /**
+     * Each column finished before the next is started, which is the whole point
+     * of counting this way: four full stacks and a short one is forty-something
+     * at a glance, where four stacks of eleven and a straggler is a heap that
+     * happens to be in columns.
+     */
+    expect(zetony(5)).toMatchObject({ columns: 1 });
+    expect(zetony(6)).toMatchObject({ columns: 2 });
+    expect(gold(10)).toMatchObject({ columns: 1 });
+    expect(gold(11)).toMatchObject({ columns: 2 });
+  });
+
+  it("draws every item while they fit", () => {
+    expect(gold(30)).toEqual({ columns: 3, drawn: 30, cut: false });
+    expect(zetony(15)).toEqual({ columns: 3, drawn: 15, cut: false });
+  });
+
+  it("gives up the last square the moment one item too many arrives", () => {
+    // Thirty-one coins, and the thirty-first is what says the picture has
+    // stopped counting.
+    expect(gold(31)).toEqual({ columns: 3, drawn: 29, cut: true });
+    expect(zetony(16)).toEqual({ columns: 3, drawn: 14, cut: true });
+  });
+
+  it("never draws more than the ceiling, however rich the seat", () => {
+    expect(gold(900)).toEqual({ columns: 3, drawn: 29, cut: true });
+  });
+
+  it("leaves exactly one square for the mark", () => {
+    // The rail renders `drawn` tokens plus the mark, and that has to come to
+    // the same full rail either way — a cut pile visibly shorter than a full
+    // one would read as poorer rather than as richer.
+    for (const points of [31, 40, 100, 900]) {
+      expect(gold(points).drawn + 1).toBe(COLUMNS_MAX * 10);
+    }
+  });
+
+  it("counts a fraction of a point as nothing extra", () => {
+    // Nothing in this game deals in halves, but the value arrives off a column
+    // and a pile drawn from a fraction would be a pile nobody could explain.
+    expect(gold(10.9)).toEqual(gold(10));
+  });
+
+  it("draws nothing for a number below zero", () => {
+    // 1.3 and 2.3 forbid it and the server enforces it, so this is only about
+    // never asking `Array.from` for a negative length.
+    expect(zetony(-4)).toEqual({ columns: 0, drawn: 0, cut: false });
   });
 });
