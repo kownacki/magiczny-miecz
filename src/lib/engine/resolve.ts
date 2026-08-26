@@ -85,3 +85,64 @@ export function isSettled(effect: Effect): boolean {
       return false;
   }
 }
+
+/**
+ * The first thing an effect still needs a person for, given what has already
+ * been decided.
+ *
+ * `isSettled` asks a yes/no about a whole card. This asks *which node* is still
+ * owed, after walking down the branch the player has already stepped into —
+ * the difference between "this card will want you at some point" and "this card
+ * is waiting on you for exactly this".
+ *
+ * It is a prediction of `applyEffect`'s own walk, which is where the answer
+ * really comes from: the server re-walks the card it owns and reports what is
+ * left `pending`. The two cannot be one function, because that walk is async
+ * and reads a Snapshot the browser is never sent (9.3). So this is a second
+ * walk of the same tree, and it diverges from the first at exactly two ops,
+ * both marked below. Anywhere else the two disagree is a bug in this one.
+ *
+ * `choices` is a queue read in the order the effect asks, the same order
+ * `Decisions` travels in. The copy is taken here so that asking a question does
+ * not consume the caller's answers.
+ */
+export function pendingIn(effect: Effect, choices: readonly number[]): Effect | null {
+  return owedIn(effect, [...choices]);
+}
+
+function owedIn(effect: Effect, queue: number[]): Effect | null {
+  if (effect.op === "wybor") {
+    const pick = queue.shift();
+    const option = pick === undefined ? undefined : effect.options[pick];
+    // Nothing picked yet, or a pick that names no option: the choice itself is
+    // what is owed. Otherwise the branch already taken is where to look.
+    return option ? owedIn(option.effect, queue) : effect;
+  }
+
+  // A destination the card names needs nobody. "dowolny Obszar w tym Kręgu" is
+  // the player pointing at the board, and is a question even when everything
+  // around it is settled.
+  if (effect.op === "przenies") return effect.to.kind === "pole" ? null : effect;
+
+  // The first owed step stops the sequence, as it does on the server: what
+  // follows may depend on it, and doing the rest first would resolve the card
+  // out of its own order.
+  if (effect.op === "po-kolei") {
+    for (const step of effect.steps) {
+      const owed = owedIn(step, queue);
+      if (owed) return owed;
+    }
+    return null;
+  }
+
+  // Divergence one: the condition is the seat's, and the browser has no
+  // Snapshot to test it against. If either branch needs asking, the server says
+  // so when it gets there.
+  if (effect.op === "gdy") return null;
+
+  // Divergence two: a die table is not a question — the app rolls it — so what
+  // it lands on is asked about after the roll, from the server's answer.
+  if (effect.op === "rzut") return null;
+
+  return isSettled(effect) ? null : effect;
+}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { FIELDS } from "./board";
 import {
+  cardName,
+  characterName,
   fieldName,
   LOST_LABEL,
   plural,
@@ -99,5 +101,52 @@ describe("the shared label tables", () => {
   it("distinguishes losing one thing from losing all of them", () => {
     expect(LOST_LABEL.zaklecie).toBe("Zaklęcie");
     expect(LOST_LABEL["wszystkie-zaklecia"]).toBe("wszystkie Zaklęcia");
+  });
+});
+
+/**
+ * Three lookups, one job: turn a stored id into the thing printed on the card
+ * or the board. They are separate functions and not one because the piles
+ * overlap — `czarodziej` and `demon` are each both a Karta Postaci and a Karta
+ * Zdarzeń, and a single lookup would answer the wrong one half the time.
+ */
+describe("naming what is printed on a card", () => {
+  it("gives a character the name off its Karta Postaci", () => {
+    expect(characterName("barbarzynca")).toBe("BARBARZYŃCA");
+  });
+
+  it("falls back to the id for a character out of another box", () => {
+    // The Zaklinacz Czasu's card names two expansion characters (see `oprocz`
+    // in `cardScript.ts`), so a miss here is the card being transcribed
+    // faithfully rather than anything being wrong.
+    expect(characterName("szczesciarz")).toBe("szczesciarz");
+  });
+
+  it("names a Karta Zdarzeń", () => {
+    expect(cardName("zaraza")).toBe("ZARAZA");
+  });
+
+  it("names a Wyposażenie card that is in no other pile", () => {
+    // The one Przedmiot that exists only as Wyposażenie. A lookup that read
+    // the Karty Zdarzeń alone — which is what the turn panel's copy did — put
+    // "tarcza-tolimana" on the Lichwiarz's sell button, and every other item
+    // in the shop hid it, because they all happen to be printed as event cards
+    // too.
+    expect(cardName("tarcza-tolimana")).toBe("TARCZA TOLIMANA");
+  });
+
+  it("names a Zaklęcie, which 12.5 has spoken out loud", () => {
+    expect(cardName("golem")).toBe("GOLEM");
+  });
+
+  it("falls back to the id for a card nothing knows", () => {
+    // Legible enough to debug with: a card the deck does not know is a bug to
+    // see, not one to hide behind "?".
+    expect(cardName("nie-ma-takiej-karty")).toBe("nie-ma-takiej-karty");
+  });
+
+  it("tells a character and a card of the same id apart", () => {
+    expect(characterName("czarodziej")).toBe("CZARODZIEJ");
+    expect(cardName("demon")).toBe("DEMON");
   });
 });

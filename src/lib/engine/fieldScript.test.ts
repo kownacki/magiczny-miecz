@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_SCRIPTS, compulsoryOffer, fieldScriptFor, offerKey } from "./fieldScript";
+import { FIELD_SCRIPTS, compulsoryOffer, fieldScriptFor, offerKey, trades } from "./fieldScript";
 import { goodsId } from "./goods";
 import { FIELDS, type FieldId } from "./board";
 import type { Effect } from "./cardScript";
@@ -179,5 +179,72 @@ describe("the offer an Obszar makes whether or not it is asked", () => {
 
   it("says nothing about a character who is not on the board yet", () => {
     expect(compulsoryOffer(null, [])).toBeNull();
+  });
+});
+
+describe("the cards that are shops", () => {
+  it("recognises each of the three trading operations", () => {
+    expect(trades({ op: "kup", towar: [{ co: "Miecz", cena: 2 }] })).toBe(true);
+    expect(trades({ op: "sprzedaj", cena: 1 })).toBe(true);
+    expect(trades({ op: "uzdrow", upTo: 4, cena: 1 })).toBe(true);
+  });
+
+  it("counts free healing, which is still somebody you visit", () => {
+    // The Pustelnik charges and the Nieznajomy on the road does not, and both
+    // are a person standing on the Obszar with something to give.
+    expect(trades({ op: "uzdrow", upTo: 2 })).toBe(true);
+  });
+
+  it("finds a shop inside a sequence or a choice", () => {
+    const buy: Effect = { op: "kup", towar: [{ co: "Zaklęcie", cena: 1 }] };
+    expect(trades({ op: "po-kolei", steps: [{ op: "nic" }, buy] })).toBe(true);
+    expect(
+      trades({
+        op: "wybor",
+        options: [
+          { label: "Nie", effect: { op: "nic" } },
+          { label: "Tak", effect: buy },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it("does not go looking inside a die table", () => {
+    // The Wezwanie Duchów rolls "3, 4 — leczysz do 1 Życia". That is an
+    // outcome you might get, not a healer you can visit, and hoisting it into
+    // "Możesz tu odwiedzić" would offer a service nobody at this Obszar can
+    // buy. Deliberately shallower than `fieldsNamedBy`, which walks everything.
+    expect(
+      trades({
+        op: "rzut",
+        faces: {
+          1: { op: "nic" },
+          2: { op: "nic" },
+          3: { op: "uzdrow", upTo: 1 },
+          4: { op: "uzdrow", upTo: 1 },
+          5: { op: "nic" },
+          6: { op: "nic" },
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it("does not go looking inside a condition either", () => {
+    expect(
+      trades({ op: "gdy", warunek: { is: "ma-zloto" }, to: { op: "sprzedaj", cena: 1 } }),
+    ).toBe(false);
+  });
+
+  it("says no to everything that merely happens to you", () => {
+    expect(trades({ op: "nic" })).toBe(false);
+    expect(trades({ op: "punkty", stat: "gold", delta: -1 })).toBe(false);
+    expect(trades({ op: "walka", nazwa: "CYKLOP", miecz: 6 })).toBe(false);
+  });
+
+  it("agrees with the board about which fields keep a shop", () => {
+    // The Osada trades and the Karczma's die table does not, which is the whole
+    // distinction this predicate draws.
+    expect(fieldScriptFor("osada")!.offers.some((offer) => trades(offer.effect))).toBe(true);
+    expect(fieldScriptFor("karczma")!.offers.some((offer) => trades(offer.effect))).toBe(false);
   });
 });

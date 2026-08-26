@@ -1,7 +1,7 @@
 /** Every card effect, said in words, so the picture of the card is never the only place a rule lives. */
 
 import type { Condition, Destination, Effect, Target } from "./cardScript";
-import { fieldName, LOST_LABEL, plural, STAT_LABEL, TARGET_SHORT } from "./polish";
+import { characterName, fieldName, LOST_LABEL, plural, STAT_LABEL, TARGET_SHORT } from "./polish";
 
 /** Anyone but you is worth naming; "ty" is the default and saying it is noise. */
 function forWhom(target: Target | undefined): string {
@@ -21,7 +21,14 @@ function where(destination: Destination): string {
   }
 }
 
-function ifWhen(condition: Condition): string {
+/**
+ * The clause a conditional effect opens with.
+ *
+ * Exported because the buttons under a card have to say it too, and a second
+ * copy of it had been living in the turn panel: three arms, the same words, and
+ * nothing at all to notice if one of them changed.
+ */
+export function describeCondition(condition: Condition): string {
   switch (condition.is) {
     case "natura":
       return `jeśli ${condition.jedna_z.map((n) => (n === "evil" ? "zła" : n)).join(" lub ")}`;
@@ -69,6 +76,20 @@ function runs(faces: number[]): string {
 }
 
 /**
+ * What a `strata` takes off you, without saying who from.
+ *
+ * Split out because the same phrase is read in two registers: hanging off the
+ * end of a card's summary, where `describeEffect` adds the target after it, and
+ * alone under the buttons for one card, where the target has already been named
+ * by the panel around it.
+ */
+export function describeLoss(effect: Extract<Effect, { op: "strata" }>): string {
+  const how = effect.wybor === "losowo" ? " (losowo)" : "";
+  const many = effect.count && effect.count > 1 ? `${effect.count} ` : "";
+  return `tracisz ${many}${LOST_LABEL[effect.co]}${how}`;
+}
+
+/**
  * One effect, in words.
  *
  * The point of it is that the scan stops being load-bearing. A card's picture is
@@ -97,7 +118,7 @@ export function describeEffect(effect: Effect): string {
 
     case "gdy":
       return (
-        `${ifWhen(effect.warunek)}: ${describeEffect(effect.to)}` +
+        `${describeCondition(effect.warunek)}: ${describeEffect(effect.to)}` +
         (effect.inaczej ? `; w przeciwnym razie: ${describeEffect(effect.inaczej)}` : "")
       );
 
@@ -117,7 +138,9 @@ export function describeEffect(effect: Effect): string {
 
     case "tura-stracona": {
       const turns = `${effect.turns} ${plural(effect.turns, "turę", "tury", "tur")}`;
-      const spared = effect.oprocz?.length ? ` (oprócz: ${effect.oprocz.join(", ")})` : "";
+      const spared = effect.oprocz?.length
+        ? ` (oprócz: ${effect.oprocz.map(characterName).join(", ")})`
+        : "";
       return `tracisz ${turns}${forWhom(effect.target)}${spared}`;
     }
 
@@ -146,11 +169,8 @@ export function describeEffect(effect: Effect): string {
       return `walka: ${effect.nazwa}${strength ? ` (${strength})` : ""}`;
     }
 
-    case "strata": {
-      const how = effect.wybor === "losowo" ? " (losowo)" : "";
-      const many = effect.count && effect.count > 1 ? `${effect.count} ` : "";
-      return `tracisz ${many}${LOST_LABEL[effect.co]}${how}${forWhom(effect.target)}`;
-    }
+    case "strata":
+      return `${describeLoss(effect)}${forWhom(effect.target)}`;
 
     case "kamien":
       return "zamiana w Kamień na 3 tury (20.1)";
@@ -177,5 +197,78 @@ export function describeEffect(effect: Effect): string {
 
     case "otrzymaj":
       return `otrzymujesz: ${effect.co}`;
+  }
+}
+
+/**
+ * The same effect, in as few words as a table row can hold.
+ *
+ * The second voice in this file, and deliberately a second wording rather than
+ * a second copy — the arrangement `TARGET_SHORT` and `TARGET_FULL` are already
+ * in, for the reason `polish.ts` sets out: two exhaustive tables of one union
+ * written in two files are two lists the compiler keeps complete and nothing
+ * keeps equal. So they live together.
+ *
+ * What earns the second voice is the shape it is read in: a field's own table,
+ * six faces down the side of a sheet, where the die's number is already the
+ * left-hand column. `describeEffect` writes the card out; this writes the row.
+ * The `wybor` case is where the difference is plainest — an option labelled
+ * "+1 Miecza" whose effect reads "+1 Miecza" is one thing said twice, so the
+ * summary trusts the labels and prints "A albo B".
+ *
+ * Not exhaustive, and that is the known hole: every op without a terse form
+ * falls through to "rozpatrzcie sami", which is honest but is the app giving
+ * up. Nothing a compulsory field offers reaches it today (16.5 makes that the
+ * Karczma and the Strażnik, and both are covered). `effectText.test.ts` walks
+ * every op in the union so that the day one more lands here it lands visibly.
+ */
+export function summariseEffect(effect: Effect): string {
+  switch (effect.op) {
+    case "nic":
+      return "nic się nie dzieje";
+
+    case "punkty":
+      return `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${STAT_LABEL[effect.stat]}`;
+
+    case "tura-stracona":
+      return `tracisz ${effect.turns} ${plural(effect.turns, "turę", "tury", "tur")}`;
+
+    case "walka":
+      return `walka: ${effect.nazwa} (${
+        effect.magia !== undefined ? `Magia ${effect.magia}` : `Miecz ${effect.miecz}`
+      })`;
+
+    case "przenies":
+      return effect.to.kind === "pole"
+        ? `przenieś się na: ${fieldName(effect.to.fieldId)}`
+        : "przenieś się na dowolny Obszar w tym Kręgu";
+
+    case "zaklecie":
+      return `+${effect.count} Zaklęcie`;
+
+    case "kamien":
+      return "Zamiana w Kamień (20.1)";
+
+    case "uzdrow":
+      return effect.cena ? `leczenie za ${effect.cena} Sz. Z. za punkt` : "uzdrowienie";
+
+    case "wybor":
+      return effect.options.map((option) => option.label).join(" albo ");
+
+    case "po-kolei":
+      return effect.steps.map(summariseEffect).join(", potem ");
+
+    case "gdy":
+      // The condition said out loud. It used to be dropped, which left a row
+      // reading "+1 Zaklęcie, inaczej nic się nie dzieje" with no way to tell
+      // which half applied — a rule the table is told wrong, not a rule said
+      // briefly.
+      return (
+        `${describeCondition(effect.warunek)}: ${summariseEffect(effect.to)}` +
+        (effect.inaczej ? `, inaczej ${summariseEffect(effect.inaczej)}` : "")
+      );
+
+    default:
+      return "rozpatrzcie sami";
   }
 }

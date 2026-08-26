@@ -314,3 +314,18 @@ export function ringOf(fieldId: FieldId): readonly BoardField[] | null {
   if (KAMIENNY_MOST.some((f) => f.id === fieldId)) return KAMIENNY_MOST;
   return null;
 }
+
+/**
+ * The same ring as a list of ids, for the cards that let a character pick.
+ *
+ * "przenieś się na dowolny Obszar w tym Kręgu" is a `dowolne-w-kregu`
+ * destination and the choice among them is the player's, so what the card
+ * needs is not the ring's fields but the set of ids that count as an answer.
+ * Takes a nullable id because a seat's `field_id` is nullable — a character
+ * still in the poczekalnia stands on no ring, and the honest answer there is
+ * that nothing is reachable rather than a throw.
+ */
+export function ringFields(fieldId: FieldId | null): FieldId[] {
+  if (!fieldId) return [];
+  return (ringOf(fieldId) ?? []).map((field) => field.id);
+}

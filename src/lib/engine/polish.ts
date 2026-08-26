@@ -19,6 +19,11 @@
  * *equal*.
  */
 
+import characters from "@/data/characters.json";
+import events from "@/data/events.json";
+import items from "@/data/items.json";
+import spells from "@/data/spells.json";
+import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import type { Effect, Target } from "./cardScript";
 
@@ -39,6 +44,44 @@ export function plural(n: number, one: string, few: string, many: string): strin
  */
 export function fieldName(fieldId: FieldId): string {
   return FIELDS.get(fieldId)?.name ?? fieldId;
+}
+
+/**
+ * What a Karta Postaci calls a character.
+ *
+ * The cards that name exceptions name characters — the Zaklinacz Czasu's flute
+ * stills everyone "z wyjątkiem Elfa, Hummita, Spryciarza" — and an id is not a
+ * name. `describeEffect` was printing the slug, so the same exemption read
+ * "oprócz: elf" in a summary and "oprócz: ELF" under the button beside it.
+ *
+ * Two of the five that card names are expansion characters and are in no box
+ * here (see `oprocz` in `cardScript.ts`), so a miss is expected rather than a
+ * fault and falls back to the id like the other two lookups.
+ */
+export function characterName(characterId: string): string {
+  return (characters as Character[]).find((one) => one.id === characterId)?.name ?? characterId;
+}
+
+/**
+ * What is printed at the top of a card, whichever pile it came from.
+ *
+ * All three, because a holding is a card and the pile it came from is not
+ * something the sentence saying its name should have to know: the Lichwiarz
+ * buys Przedmioty, 12.5 has a Zaklęcie spoken out loud, and both arrive as a
+ * bare id.
+ *
+ * `src/lib/game/turnStore.ts` and `src/lib/game/commands/holdings.ts` each
+ * carry a byte-identical copy of this, written before there was anywhere in the
+ * engine to put it. They should import this one; nothing else in this file's
+ * warning about two copies of one label is any less true of a lookup.
+ */
+export function cardName(cardId: string): string {
+  return (
+    (events as EventCard[]).find((card) => card.id === cardId)?.name ??
+    (items as Item[]).find((item) => item.id === cardId)?.name ??
+    (spells as Spell[]).find((spell) => spell.id === cardId)?.name ??
+    cardId
+  );
 }
 
 /** The four tracked numbers, in the case they are read in ("+2 Miecza"). */

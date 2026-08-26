@@ -264,3 +264,25 @@ export function compulsoryOffer(
   const owed = script.offers.find((offer) => !resolved.includes(offerKey(offer.name)));
   return owed ? { name: owed.name, effect: owed.effect } : null;
 }
+
+/**
+ * Whether a card is an establishment, and so belongs in the field's offers
+ * beside the ones the board prints.
+ *
+ * The Targowisko settles on an Obszar and sells eight Przedmioty from it; it is
+ * not a different kind of shop from the Osada's Płatnerz and should not be a
+ * different kind of box on screen. So a card whose script trades is folded into
+ * the same list.
+ *
+ * Deliberately shallower than `fieldsNamedBy`, which walks the whole tree. A
+ * `uzdrow` buried in a die table inside a condition — the Wezwanie Duchów's
+ * "3, 4 — leczysz do 1 Życia" — is an outcome you might roll, not a healer you
+ * can visit, and hoisting it into "Możesz tu odwiedzić" would offer a service
+ * nobody at this Obszar can actually buy.
+ */
+export function trades(effect: Effect): boolean {
+  if (effect.op === "kup" || effect.op === "sprzedaj" || effect.op === "uzdrow") return true;
+  if (effect.op === "po-kolei") return effect.steps.some(trades);
+  if (effect.op === "wybor") return effect.options.some((option) => trades(option.effect));
+  return false;
+}
