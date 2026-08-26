@@ -149,8 +149,11 @@ is drawn — Bodoni set to match the printed `DOBRY` — and it is the only card
 image in `public/cards/` that was never on a sheet. The two faces are not
 printed alike (`Zły` is die-cut on blue, `DOBRY` is bare lettering on the
 reverse), so the card is cut once from the `Zły` face, its word painted out,
-and all three words set back into the same rectangle on that one plate. Cut to
-`ART_RATIO` like every other illustration. The script is macOS-only (`sips`,
+and all three words set back into the same rectangle on that one plate. The
+card is portrait and `ART_RATIO` is not, so it is **squashed** rather than
+cropped — all four die-cut corners kept, every proportion wrong by the same
+amount — and its blue border is built afterwards at an even margin instead of
+being squashed along with it. The script is macOS-only (`sips`,
 and the system's own Bodoni) like the rest of the pipeline.
 `node scripts/generate-ids.mjs` regenerates `src/data/ids.ts` — the literal
 id types — and must be re-run after anything that renames a card or a

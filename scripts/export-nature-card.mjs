@@ -59,10 +59,12 @@ const SOURCE = {
 const FACES = [
   {
     id: "zly",
-    // The word is cut from the same cell the plate is, so it goes back exactly
-    // where it came from.
+    // Looked for on the card itself rather than in a region of the sheet: the
+    // card is already cut by then, the word is the only ink on it, and a word
+    // that came off this card goes back onto it without a second measurement
+    // to get wrong.
     from: "front",
-    look: { left: 0.79, top: 0.28, right: 0.99, bottom: 0.33 },
+    onCard: true,
   },
   {
     id: "dobry",
@@ -91,67 +93,69 @@ const FACES = [
  * A region rather than the card's own edges, because `detectCells` cannot help
  * here — it looks for printed rules crossing the whole page, and this sheet is
  * cards floating on a blue field with no grid to find. So the constant is the
- * second row's last column, generously bounded, and the blue field inside it is
- * measured: cards elsewhere on this sheet sit against black artwork or against
- * each other, and this is the one with nothing but paper around it.
+ * second row's last column, bounded tightly enough to hold nothing else, and
+ * the white card inside it is measured.
  *
- * Found rather than written down because the difference shows. A right margin
- * two pixels out is a card that looks trimmed on one side, and every attempt to
- * write the four edges as fractions of a 2480-wide render produced exactly
- * that.
+ * White and not blue, which took a detour to arrive at. The blue reads as the
+ * obvious thing to find — it is the card's own field — but on this sheet it is
+ * not the card's alone: the row beneath is a blue block running the full width,
+ * joined to this one, so a search that reaches even one line into it comes back
+ * with a field the size of the page and the Zamieniony w Kamień card inside it.
+ * The white body has edges of its own, and the border is built here anyway.
  *
- * The region stops well above the row below, which is a blue block running the
- * whole width of the sheet: reach into it by a single line and the field this
- * finds is the whole page, with the neighbouring Zamieniony w Kamień card
- * inside it. Only the top of the card is cut anyway, so nothing is lost by not
- * looking that far down.
+ * Bounded above the row of Zdarzenia as well: their white is white too, and a
+ * region that starts one line into them begins the card several hundred pixels
+ * too high.
  */
-const LOOK = { left: 0.78, top: 0.22, right: 1.0, bottom: 0.42 };
+const LOOK = { left: 0.79, top: 0.243, right: 0.975, bottom: 0.465 };
 
 /**
- * Blue against white and black: more blue than red, and neither paper nor ink.
+ * Two rectangles of the card's white body, as fractions of it.
  *
- * The field comes off the scan at about #2d6e8f, which is a luminance of
- * ninety-four — near enough to the middle that a plain brightness test puts it
- * on whichever side the threshold happens to fall.
+ * `erase` has to clear the printed word and nothing else. It stops short of the
+ * notches — the die-cut quarter-circles at the four corners, which reach about
+ * a ninth of the way down — because painting white into one fills it in and the
+ * card loses the corner that makes it a card.
+ *
+ * It also has to clear all of `Zły`, which is more than it sounds: the word
+ * measures 0.216 to 0.822 across and 0.149 to **0.414** down, and that last
+ * figure is the swash on the `y`. Sized for lettering rather than for
+ * calligraphy, the first attempt left the tail showing as a ghost under
+ * `DOBRY`.
+ *
+ * `word` is where the three are then set, and it is *not* where the printed one
+ * was. On the card as printed the word sits in the upper third, which is what a
+ * tall card does with a short word — but squashed into a landscape frame that
+ * upper third becomes a word pinned near the top with half the card empty under
+ * it. Faithful placement stops meaning anything once the proportions are gone,
+ * so it is centred.
  */
-const isField = (r, g, b) => b > r + 25 && (r * 299 + g * 587 + b * 114) / 1000 > 45;
-
-/**
- * Two rectangles of the card's own white body, as fractions of the cut card.
- *
- * Both well inside it on every side, so that painting one out cannot touch the
- * frame and setting a word into the other cannot overrun onto the blue.
- *
- * They are not the same rectangle, and the difference is `Zły`'s tail. The
- * printed word measures 0.266 to 0.772 across and 0.344 to **0.794** down —
- * that last figure is the swash on the `y`, which drops most of the way to the
- * bottom of the crop and is a third of the word's height on its own. `erase`
- * has to clear all of it, and did not the first time: the word came back as a
- * ghost under `DOBRY`, because a band sized for lettering is not sized for
- * calligraphy.
- *
- * `word` is where the three words are then set, and it is smaller because it is
- * about placement rather than coverage. Its height is `Zły`'s own, so the one
- * word that came off this card goes back onto it the size it left.
- */
-const ERASE = { left: 0.03, right: 0.97, top: 0.28, bottom: 0.88 };
-const WORD = { left: 0.06, right: 0.94, top: 0.33, bottom: 0.78 };
+const ERASE = { left: 0.04, right: 0.96, top: 0.13, bottom: 0.50 };
+const WORD = { left: 0.10, right: 0.90, top: 0.26, bottom: 0.64 };
 
 /**
  * The shape every other illustration in the app is drawn in.
  *
- * `export-card-art.mjs` cuts 240x209 out of each card and every slot in the
- * pack, on the body and beside a name is built to it — so a Karta Zmiany
- * Natury cut to the same rectangle is one more card-shaped thing among the
- * card-shaped things, instead of the one object with proportions of its own.
+ * `export-card-art.mjs` cuts 240x209 out of each card, and every slot in the
+ * pack, on the body and beside a name is built to it — so a Karta Zmiany Natury
+ * cut to the same rectangle is one more card-shaped thing among the card-shaped
+ * things, instead of the one object with proportions of its own.
  *
- * Which means the top of the card rather than all of it: this one is portrait
- * like everything in the box, and the part worth keeping is the shoulders and
- * the word. The rest is blank white card.
+ * The card is portrait, like everything in this box, so something has to give.
+ * Cropping it to the top was the first answer and it was the wrong one: it
+ * keeps the shoulders and throws the other two corners away, which is a card
+ * with its bottom out of frame rather than a card. It is squashed instead —
+ * every proportion in it wrong by the same amount, which is the kind of wrong
+ * the eye forgives, and all four corners still there.
+ *
+ * The border is then built rather than cut, which is the only way it comes out
+ * even. Squashing a card that already has its printed margin squashes the
+ * margin too, and the top and bottom of the frame end up half the width of the
+ * sides.
  */
 const ART_RATIO = 240 / 209;
 const OUT_WIDTH = 480;
+const BORDER = 0.075;
 
 /**
  * The drawn face, set to look like the printed one.
@@ -224,8 +228,8 @@ async function inkIn(source, region) {
   };
 }
 
-/** The tightest box round the blue the card is printed on, inside `region`. */
-async function fieldIn(source, region) {
+/** The tightest box round the card's white paper, inside `region`. */
+async function paperIn(source, region) {
   const { data, info } = await sharp(source)
     .extract(region)
     .removeAlpha()
@@ -239,7 +243,8 @@ async function fieldIn(source, region) {
   for (let y = 0; y < info.height; y++) {
     for (let x = 0; x < info.width; x++) {
       const at = (y * info.width + x) * info.channels;
-      if (!isField(data[at], data[at + 1], data[at + 2])) continue;
+      const lum = (data[at] * 299 + data[at + 1] * 587 + data[at + 2] * 114) / 1000;
+      if (lum <= 200) continue;
       if (x < x0) x0 = x;
       if (x > x1) x1 = x;
       if (y < y0) y0 = y;
@@ -255,27 +260,19 @@ async function fieldIn(source, region) {
   };
 }
 
-/** The tightest box round the card's white paper, in an image that is only the card. */
-async function bodyIn(image) {
-  const { data, info } = await sharp(image)
+/** The blue the card is printed on, taken from just outside its own edge. */
+async function fieldColour(source, paper) {
+  const { data } = await sharp(source)
+    .extract({
+      left: Math.max(0, paper.left - 12),
+      top: paper.top + Math.round(paper.height / 2),
+      width: 4,
+      height: 4,
+    })
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-
-  let x0 = info.width;
-  let x1 = -1;
-  // The middle row, which crosses the body between its notches: taking the
-  // whole image would have the notched corners narrow the answer for no
-  // reason, and the bands are set on a part of the card that is full width.
-  const y = Math.round(info.height / 2);
-  for (let x = 0; x < info.width; x++) {
-    const at = (y * info.width + x) * info.channels;
-    const lum = (data[at] * 299 + data[at + 1] * 587 + data[at + 2] * 114) / 1000;
-    if (lum <= 200) continue;
-    if (x < x0) x0 = x;
-    if (x > x1) x1 = x;
-  }
-  return x1 < 0 ? null : { left: x0, width: x1 - x0 + 1 };
+  return { r: data[0], g: data[1], b: data[2] };
 }
 
 /** A page with a word somewhere on it, whether it was printed there or set here. */
@@ -310,43 +307,33 @@ const sheets = {
   back: render(SOURCE.back, "back"),
 };
 
-// The card, cut to the app's own rectangle: the whole width of its blue field,
-// and as much of the height as that rectangle holds, from the top of the blue
-// down. The card is portrait, like everything else in this box, so what is kept
-// is the shoulders and the word and what is dropped is blank white paper.
+/**
+ * The card itself: the white paper and the four notches cut into its corners,
+ * and not one pixel of margin.
+ *
+ * The margin is made further down instead, which is what lets it come out even
+ * — see BORDER. Everything between here and there happens at the card's own
+ * resolution, so the words are set on it before it is squashed and get squashed
+ * with it. Composited afterwards they would stand upright on a card that does
+ * not, which is the one thing that reads as a mistake rather than as a choice.
+ */
 const page = await sharp(sheets.front).metadata();
-const field = await fieldIn(sheets.front, {
+const paper = await paperIn(sheets.front, {
   left: Math.round(page.width * LOOK.left),
   top: Math.round(page.height * LOOK.top),
   width: Math.round(page.width * (LOOK.right - LOOK.left)),
   height: Math.round(page.height * (LOOK.bottom - LOOK.top)),
 });
-if (!field) throw new Error("no blue field where the Karta Zmiany Natury should be");
-const cell = {
-  ...field,
-  height: Math.min(field.height, Math.round(field.width / ART_RATIO)),
-};
+if (!paper) throw new Error("no white card where the Karta Zmiany Natury should be");
 
-const out = { width: OUT_WIDTH, height: Math.round(OUT_WIDTH / ART_RATIO) };
-const card = await sharp(sheets.front).extract(cell).resize(out.width, out.height).png().toBuffer();
-
-/**
- * The white body, found rather than assumed.
- *
- * Both bands are horizontally bounded by this and not by the cut, and the
- * difference between the two is the blue margin — which is what the first
- * attempt painted over. `ERASE.right` of 0.96 sounded safely inside a card that
- * fills the frame; the card fills 0.92 of it, and the other 0.04 is the frame
- * itself. It came out as a step in the blue strip a third of the way up.
- */
-const body = await bodyIn(card);
-if (!body) throw new Error("no white card inside the blue field");
+const blue = await fieldColour(sheets.front, paper);
+const card = await sharp(sheets.front).extract(paper).png().toBuffer();
 
 const rect = (box) => ({
-  left: body.left + Math.round(body.width * box.left),
-  top: Math.round(out.height * box.top),
-  width: Math.round(body.width * (box.right - box.left)),
-  height: Math.round(out.height * (box.bottom - box.top)),
+  left: Math.round(paper.width * box.left),
+  top: Math.round(paper.height * box.top),
+  width: Math.round(paper.width * (box.right - box.left)),
+  height: Math.round(paper.height * (box.bottom - box.top)),
 });
 const erase = rect(ERASE);
 const band = rect(WORD);
@@ -369,6 +356,14 @@ const plate = await sharp(card)
   .png()
   .toBuffer();
 
+/** Squashed to the app's rectangle, then framed in an even margin of its own blue. */
+const out = { width: OUT_WIDTH, height: Math.round(OUT_WIDTH / ART_RATIO) };
+const margin = Math.round(OUT_WIDTH * BORDER);
+const framed = (written) =>
+  sharp(written)
+    .resize(out.width - margin * 2, out.height - margin * 2, { fit: "fill" })
+    .extend({ top: margin, bottom: margin, left: margin, right: margin, background: blue });
+
 fs.mkdirSync("public/cards", { recursive: true });
 
 for (const face of FACES) {
@@ -376,14 +371,16 @@ for (const face of FACES) {
   const { width, height } = await sharp(source).metadata();
   // The drawn page holds nothing but the word, so the whole of it is where to
   // look; the sheets need telling which card.
-  const region = face.look
-    ? {
-        left: Math.round(width * face.look.left),
-        top: Math.round(height * face.look.top),
-        width: Math.round(width * (face.look.right - face.look.left)),
-        height: Math.round(height * (face.look.bottom - face.look.top)),
-      }
-    : { left: 0, top: 0, width, height };
+  const region = face.onCard
+    ? paper
+    : face.look
+      ? {
+          left: Math.round(width * face.look.left),
+          top: Math.round(height * face.look.top),
+          width: Math.round(width * (face.look.right - face.look.left)),
+          height: Math.round(height * (face.look.bottom - face.look.top)),
+        }
+      : { left: 0, top: 0, width, height };
 
   const ink = await inkIn(source, region);
   if (!ink) {
@@ -398,8 +395,7 @@ for (const face of FACES) {
     .resize({ ...band, fit: "inside" })
     .toBuffer({ resolveWithObject: true });
 
-  const file = `public/cards/natura-${face.id}.jpg`;
-  await sharp(plate)
+  const written = await sharp(plate)
     .composite([
       {
         input: word.data,
@@ -407,8 +403,11 @@ for (const face of FACES) {
         top: band.top + Math.round((band.height - word.info.height) / 2),
       },
     ])
-    .jpeg({ quality: 92 })
-    .toFile(file);
+    .png()
+    .toBuffer();
+
+  const file = `public/cards/natura-${face.id}.jpg`;
+  await framed(written).jpeg({ quality: 92 }).toFile(file);
 
   console.log(`${file} — ${out.width}x${out.height}, word ${ink.width}x${ink.height}`);
 }
