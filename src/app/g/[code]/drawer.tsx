@@ -21,6 +21,7 @@
 
 import { LAYER } from "./layers";
 import { useDismissable } from "./overlay";
+import { SurfaceHead } from "./chrome";
 
 export function Drawer({
   side,
@@ -69,15 +70,16 @@ export function Drawer({
           : "left-0 border-r border-ochre/40 shadow-[8px_0_30px_rgba(0,0,0,0.6)]"
       }`}
     >
-      <header className="shrink-0 border-b border-edge px-3 py-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-[11px] uppercase tracking-widest text-ochre">{title}</h2>
-          <button onClick={onClose} className="text-[11px] text-muted hover:text-ink">
+      <SurfaceHead
+        title={title}
+        controls={
+          <button onClick={onClose} className="text-xs text-muted hover:text-ink">
             zamknij
           </button>
-        </div>
+        }
+      >
         {head}
-      </header>
+      </SurfaceHead>
 
       {/* A gutter that is always there, so a drawer sized to fit its contents
           fits them whether the list is long enough to scroll or not — and so

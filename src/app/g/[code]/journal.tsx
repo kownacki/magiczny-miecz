@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
-import { ChromeButton } from "./chrome";
+import { ChromeButton, SurfaceHead } from "./chrome";
 import { readSeatToken } from "@/lib/game/seatToken";
 import { Lookable } from "./lookable";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
@@ -93,23 +93,26 @@ export function Journal({
               "mt-auto flex h-[20.25%] shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
       }
     >
-      <header className="flex shrink-0 items-center justify-between border-b border-edge/60 px-3 py-1">
-        <h2 className="text-[11px] uppercase tracking-wide text-muted">Dziennik</h2>
-        <div className="flex items-center gap-3">
-          <ChromeButton
-            glyph={mini ? "restore" : "minimise"}
-            title={mini ? "Pokaż Dziennik" : "Zwiń do paska — Dziennik nadal spisuje"}
-            onClick={() => setSize(mini ? "normal" : "mini")}
-          />
-          {!mini && (
+      <SurfaceHead
+        title="Dziennik"
+        tone="text-muted"
+        controls={
+          <>
             <ChromeButton
-              glyph={expanded ? "collapse" : "expand"}
-              title={expanded ? "Zwiń — pokaż planszę" : "Rozwiń na całą planszę"}
-              onClick={() => setSize(expanded ? "normal" : "big")}
+              glyph={mini ? "restore" : "minimise"}
+              title={mini ? "Pokaż Dziennik" : "Zwiń do paska — Dziennik nadal spisuje"}
+              onClick={() => setSize(mini ? "normal" : "mini")}
             />
-          )}
-        </div>
-      </header>
+            {!mini && (
+              <ChromeButton
+                glyph={expanded ? "collapse" : "expand"}
+                title={expanded ? "Zwiń — pokaż planszę" : "Rozwiń na całą planszę"}
+                onClick={() => setSize(expanded ? "normal" : "big")}
+              />
+            )}
+          </>
+        }
+      />
 
       {!mini && (
       <div ref={tail} className="min-h-0 flex-1 overflow-y-auto px-3 py-1.5">

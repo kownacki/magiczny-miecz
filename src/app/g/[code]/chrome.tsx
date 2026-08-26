@@ -20,6 +20,52 @@
  * survives being 14 pixels wide, which the hand-drawn wrench famously did not.
  */
 
+/**
+ * The bar along the top of a surface: what it is, and what you can do to it.
+ *
+ * There were three of these, hand-built three times, and they had drifted the
+ * way hand-built things do — one aligned its row by the baseline and two by the
+ * middle, two ruled a line under themselves and the console did not, the titles
+ * were 10px in one place and 11px in the others. None of that was a decision.
+ * A drawer and the console are the same kind of object seen from different
+ * edges of the screen, and the heading is the part that should say so.
+ *
+ * The line under it is the point of having one at all: it is what separates the
+ * chrome from the thing the surface is *for*, so the title stops reading as the
+ * first line of the transcript.
+ */
+export function SurfaceHead({
+  title,
+  /** The title's colour. The console is the test console and says so in red. */
+  tone = "text-ochre",
+  /** Between the title and the controls, and free to take the slack. */
+  aside,
+  controls,
+  children,
+}: {
+  title: React.ReactNode;
+  tone?: string;
+  aside?: React.ReactNode;
+  controls: React.ReactNode;
+  /** A row under the title — a search box, a rank of shelves. */
+  children?: React.ReactNode;
+}) {
+  return (
+    <header className="shrink-0 border-b border-edge px-3 py-1.5">
+      {/* Centred, not baselined. A baseline is a property of text and an SVG
+          has none, so the browser falls back to the bottom edge of the button
+          box — which sat the glyphs a few pixels above the words they share the
+          row with. The middle is the one thing a glyph and a word both have. */}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className={`shrink-0 text-[11px] uppercase tracking-widest ${tone}`}>{title}</h2>
+        {aside}
+        <div className="flex shrink-0 items-center gap-3">{controls}</div>
+      </div>
+      {children}
+    </header>
+  );
+}
+
 type Glyph = "minimise" | "restore" | "expand" | "collapse" | "pin" | "unpin";
 
 const PATHS: Record<Glyph, React.ReactNode> = {
