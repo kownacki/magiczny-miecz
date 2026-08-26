@@ -80,17 +80,23 @@ export function seatNameInline(seat: LobbySeat): string {
  * ----------------------------------------------------------------------- */
 
 /**
- * Whether this device may work the table's controls.
+ * Whether this device may reach for the table's controls at all.
  *
- * The host, and — when the host's own seat has been abandoned — anybody,
- * because a table whose host closed their laptop can otherwise never be
- * configured or started again (docs/LOBBY.md, "When the host is absent").
+ * The host, and — when the host's own seat has been abandoned or has fallen
+ * silent — anybody, because a table whose host closed their laptop could
+ * otherwise never be configured or started again.
  *
- * The server is narrower than this: `removeSeat` wants `is_host` outright, and
- * so does the deal route, while `takeHostRole` is the only one that opens the
- * second door. So an absent host puts two buttons on screen that the server
- * will refuse. Recorded rather than corrected — the disagreement is real and
- * predates the split.
+ * This is the *wide* door, and only two things go through it: taking the host
+ * role, which `takeHostRole` opens on exactly these terms, and aiming the
+ * character strip at a seat with no device of its own. Everything else that
+ * changes the table for somebody else — removing a player, dealing the Karty
+ * Postaci, starting the game — is `isHost` and nothing else, because that is
+ * what the server enforces.
+ *
+ * The two used to be one, and an absent host put two buttons on screen that
+ * the server was about to refuse. A player at a stalled table pressed "usuń"
+ * and got a 403 in Polish for their trouble, when the thing that would actually
+ * have helped was the button beside it.
  */
 export function mayAdminister(isHost: boolean, hostAway: boolean): boolean {
   return isHost || hostAway;

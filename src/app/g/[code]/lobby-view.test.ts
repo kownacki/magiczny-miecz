@@ -99,8 +99,13 @@ describe("who may work the table's controls", () => {
   });
 
   it("is anybody once the host has gone", () => {
-    // Without this second door a table whose host closed their laptop can never
-    // be configured or started again.
+    /**
+     * The wide door, and what it opens is exactly one thing: taking the role.
+     * Removing a player, dealing the Karty Postaci and starting the game all
+     * want `is_host` outright at the server, so they ask `isHost` and not this.
+     * Without the door, a table whose host closed their laptop would have
+     * nothing at all it could do next.
+     */
     expect(mayAdminister(false, true)).toBe(true);
   });
 

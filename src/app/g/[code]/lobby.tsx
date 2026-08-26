@@ -241,6 +241,7 @@ export function Lobby({
                   isTarget={target?.id === seat.id}
                   selectable={mayChooseFor(seat, aiming)}
                   canAdminister={aiming.canAdminister}
+                  isHost={isHost}
                   busy={busy}
                   onSelect={() => onPickFor(target?.id === seat.id ? null : seat)}
                   // Both of these happen to somebody else and cannot be undone by
@@ -292,7 +293,10 @@ export function Lobby({
                 {/* The book deals these at random and treats free choice as the
                     variant everybody has to agree to. Offered rather than imposed,
                     because the variant is the one every table I know plays. */}
-                {aiming.canAdminister && seats.some((seat) => !seat.characterId) && (
+                {/* `isHost`, like the start button: the deal route wants the
+                    role outright, so a quiet host would otherwise put this on
+                    five screens that cannot use it. */}
+                {isHost && seats.some((seat) => !seat.characterId) && (
                   <button
                     onClick={onDeal}
                     disabled={busy}

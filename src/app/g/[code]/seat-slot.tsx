@@ -34,6 +34,7 @@ export function SeatSlot({
   isTarget,
   selectable,
   canAdminister,
+  isHost,
   busy,
   onSelect,
   onRemove,
@@ -46,7 +47,10 @@ export function SeatSlot({
   isMine: boolean;
   isTarget: boolean;
   selectable: boolean;
+  /** May take the host role — the wide door, open once the host has gone. */
   canAdminister: boolean;
+  /** Actually holds the role. Removing somebody is the host's and only the host's. */
+  isHost: boolean;
   busy: boolean;
   onSelect: () => void;
   onRemove: () => void;
@@ -130,8 +134,13 @@ export function SeatSlot({
           )}
           {/* Never your own seat: leaving is "Opuść stół", and a host who
               removes themselves has done something they meant to spell
-              differently. */}
-          {canAdminister && !isMine && (
+              differently.
+
+              `isHost` and not `canAdminister`: `removeSeat` wants the role
+              outright, so offering this to everybody at a table whose host has
+              gone quiet is offering a 403. The button that helps there is the
+              one above. */}
+          {isHost && !isMine && (
             <button
               onClick={onRemove}
               disabled={busy}
