@@ -3,6 +3,14 @@
 /** The pack: what a character is carrying, in the order its owner put it in. */
 
 import { useState } from "react";
+import {
+  arrangedBy,
+  insertIndexIn,
+  landsBefore,
+  orderWith,
+  sameOrder,
+  stepFor,
+} from "./pack-order";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import { carriedCount, carryLimit, wandRefills } from "@/lib/engine/derive";
 import { SLOTS, fitsIn, type Slot } from "@/lib/engine/slots";
@@ -120,12 +128,7 @@ export function Hand({
    */
   const inPack = shown.filter((held) => !slotted || held.slot == null);
   const packOrder = inPack.map((held) => held.id);
-  const arranged =
-    wanted !== null &&
-    wanted.length === packOrder.length &&
-    packOrder.every((id) => wanted.includes(id))
-      ? [...inPack].sort((a, b) => wanted.indexOf(a.id) - wanted.indexOf(b.id))
-      : inPack;
+  const arranged = arrangedBy(inPack, wanted);
 
   /**
    * The one square that is not a place to put a card: the square it came from.
@@ -182,16 +185,8 @@ export function Hand({
    * Read from what is actually in the air rather than from what was last
    * hovered, and the row cannot be left open by anything at all.
    */
-  const insertIndex =
-    insertAt === null || liftedHoldingId === null
-      ? -1
-      : arranged.findIndex((held) => held.id === insertAt);
-  const stepFor = (index: number): -1 | 0 | 1 => {
-    if (insertIndex < 0) return 0;
-    if (liftedIndex < 0) return index >= insertIndex ? 1 : 0;
-    if (insertIndex < liftedIndex) return index >= insertIndex && index < liftedIndex ? 1 : 0;
-    return index > liftedIndex && index <= insertIndex ? -1 : 0;
-  };
+  const insertIndex = insertIndexIn(arranged, insertAt, liftedHoldingId);
+  const stepAt = (index: number) => stepFor(index, { liftedIndex, insertIndex });
 
   /**
    * The card a landing card goes in front of, given the square you aimed at.
@@ -206,19 +201,7 @@ export function Hand({
    * Coming from the right, and for a card off the body with no place in the row
    * yet, the square you aim at is the one you go in front of.
    */
-  const landsBefore = (targetId: string): string | null => {
-    const target = arranged.findIndex((held) => held.id === targetId);
-    if (target < 0 || liftedIndex < 0 || target < liftedIndex) return targetId;
-    return arranged[target + 1]?.id ?? null;
-  };
-
-  /** The pack's order with one card put before another, or on the end. */
-  const orderWith = (holdingId: string, beforeId: string | null) => {
-    const without = arranged.map((held) => held.id).filter((id) => id !== holdingId);
-    const at = beforeId === null ? -1 : without.indexOf(beforeId);
-    without.splice(at < 0 ? without.length : at, 0, holdingId);
-    return without;
-  };
+  const lands = (targetId: string) => landsBefore(arranged, targetId, liftedIndex);
 
   /**
    * Moves a card already in the pack to sit before another, or on the end.
@@ -232,8 +215,8 @@ export function Hand({
   const moveWithin = (holdingId: string, beforeId: string | null) => {
     if (!onReorder) return;
     if (!arranged.some((held) => held.id === holdingId)) return;
-    const order = orderWith(holdingId, beforeId);
-    if (order.every((id, index) => arranged[index]?.id === id)) return;
+    const order = orderWith(arranged, holdingId, beforeId);
+    if (sameOrder(order, arranged)) return;
     setWanted(order);
     onReorder(order);
   };
@@ -254,7 +237,7 @@ export function Hand({
   const dropIntoPack = (holdingId: string, beforeId: string | null) => {
     onEquip(holdingId, null);
     if (!onReorder) return;
-    const order = orderWith(holdingId, beforeId);
+    const order = orderWith(arranged, holdingId, beforeId);
     setWanted(order);
     onReorder(order);
   };
@@ -357,7 +340,7 @@ export function Hand({
           // the row has made is the same gesture as dropping on the card that
           // made it. With none open this is the end of the queue, which is
           // where a card the pack has not seen before goes anyway.
-          const before = insertAt === null ? null : landsBefore(insertAt);
+          const before = insertAt === null ? null : lands(insertAt);
           setDragOver(false);
           setInsertAt(null);
           if (!canAct) return;
@@ -374,7 +357,7 @@ export function Hand({
           if (!carried) return;
           event.stopPropagation();
           // Wherever the gap happens to be, this is the pack itself: the end.
-          const before = insertAt === null ? null : landsBefore(insertAt);
+          const before = insertAt === null ? null : lands(insertAt);
           setInsertAt(null);
           if (carried.from === "plecak") {
             moveWithin(carried.holdingId, before);
@@ -427,7 +410,7 @@ export function Hand({
             // after it steps aside to show the space it is going into. Said
             // with a gap rather than by tinting the card under the pointer,
             // which reads as "this one is about to be replaced".
-            step={stepFor(index)}
+            step={stepAt(index)}
             // Reading and moving are different modes: no Karta opens over the
             // place you are aiming at while a card is in the air.
             quiet={moving}
@@ -499,13 +482,13 @@ export function Hand({
                   // Its own square is putting it back, which is the pack left
                   // exactly as it was.
                   if (!itsOwnSquare(held.id)) {
-                    moveWithin(carried.holdingId, landsBefore(held.id));
+                    moveWithin(carried.holdingId, lands(held.id));
                   }
                   return onCarry(null);
                 }
                 // Off the body, and in front of this card rather than on the
                 // end of the row.
-                dropIntoPack(carried.holdingId, landsBefore(held.id));
+                dropIntoPack(carried.holdingId, lands(held.id));
                 return onCarry(null);
               }
               // Picked up from inside the pack, so the pointer is inside it —
@@ -572,7 +555,7 @@ export function Hand({
               event.preventDefault();
               // A card off the body is being taken off; one already in the pack
               // is being moved within it.
-              const before = landsBefore(held.id);
+              const before = lands(held.id);
               if (packOrder.includes(holdingId)) moveWithin(holdingId, before);
               else dropIntoPack(holdingId, before);
             }}
