@@ -376,7 +376,16 @@ suite("every event has a sentence", () => {
   // read them.
   const written = new Set([
     ...[...source.matchAll(/await journal\(\s*[\s\S]{0,120}?"([a-z-]+)"/g)].map((m) => m[1]),
-    ...[...source.matchAll(/turn: [^\n]+,\n\s*kind: "([a-z-]+)"/g)].map((m) => m[1]),
+    // `turn:` immediately followed by `kind:` is `JournalWrite` and nothing
+    // else — a payload with a `kind` of its own, as `zabranie`'s has, is not
+    // preceded by a turn. The value is taken as an expression rather than as a
+    // literal, because a line whose kind is chosen by a ternary is still a line:
+    // `nowa-postac`, `proba-mostu` and `dosiadka` all vanished from this scan
+    // the moment they moved into a command that writes them that way — and a
+    // comment is allowed to sit between the two, because one does.
+    ...[...source.matchAll(/turn: [^\n]+,(?:\s|\/\/[^\n]*)*kind: ([^,\n]+)/g)].flatMap((m) =>
+      [...m[1].matchAll(/"([a-z-]+)"/g)].map((k) => k[1]),
+    ),
     "korekta",
     "punkty",
     "ruch",

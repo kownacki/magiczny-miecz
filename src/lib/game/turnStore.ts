@@ -1,10 +1,8 @@
 /** Applies turn actions against the database, journalling each one so a wrong call at the table can be seen and undone. */
 
-import { randomInt } from "node:crypto";
 import { db } from "@/lib/supabase";
 import {
   GAME_COLUMNS,
-  chooseCharacter,
   fieldCardsFor,
   resolveRandomPicks,
   type HoldingRow,
@@ -12,7 +10,6 @@ import {
 import {
   FERRY_TOLL,
   FIELDS,
-  requireFieldId,
   type FieldId,
   KAMIENNY_MOST,
   type BridgeEntrance,
@@ -45,17 +42,13 @@ import {
 import {
   abilitiesOfCharacter,
   asCharacterId,
-  isRandomPick,
   startingKit,
 } from "@/lib/engine/characters";
 import type { SpellId } from "@/data/ids";
 import {
   afterDraw,
   afterMove,
-  afterRoll,
-  atBridge,
   bridgeBlockUntil,
-  bridgeBlocked,
   endFight,
   recordGuardianStrength,
   startGuardianFight,
@@ -64,21 +57,18 @@ import {
   recordFightRoll,
   setFightTotal,
   startFight,
-  startTurn,
   type TurnPhase,
 } from "@/lib/engine/turn";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
-import charactersData from "@/data/characters.json";
-import type { CardClass, Character, EventCard, Item, Nature } from "@/data/types";
+import type { CardClass, EventCard, Item, Nature } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { helpLines, type Command } from "@/lib/engine/console";
 import { findByName } from "@/lib/engine/search";
 import { attackAsOne } from "@/lib/engine/combat";
-import { PRINTED_STOCK, fromTheShop, stockLeft } from "@/lib/engine/stock";
-import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
+import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
+import { scriptFor, type Effect } from "@/lib/engine/cardScript";
 import { usageOf } from "@/lib/engine/uses";
-import { forbiddenNatures } from "@/lib/engine/abilityText";
 import {
   afterFight,
   type Ends,
@@ -89,15 +79,12 @@ import { describeEffect } from "@/lib/engine/effectText";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { isSettled } from "@/lib/engine/resolve";
 import { goodsId } from "@/lib/engine/goods";
-import type { TurnCard } from "@/lib/engine/state";
-import { kindForCard } from "@/lib/engine/holdings";
 import {
   drawFrom,
 } from "@/lib/engine/deck";
 import {
   BY_REF,
   EVENTS,
-  SPELLS,
   SPELL_BY_ID,
   SPELL_BY_REF,
   decksOf,
@@ -114,7 +101,6 @@ import {
 import { appRandom, supplied } from "./random";
 import {
   asReturnable,
-  pushOntoPile,
   putOnPile,
   type Returnable,
 } from "./commands/piles";
@@ -129,6 +115,25 @@ import { healSeat as healCommand, spendLife as spendLifeOn } from "./commands/li
 import { fightBeast as fightBeastCommand } from "./commands/beast";
 import { claimFloor, floorOf as floorIn, releaseFloor } from "./commands/spellFloor";
 import { ADJUSTABLE, adjustSeat, type Adjustable } from "./commands/adjust";
+import {
+  dropCard as dropCardOn,
+  equipCard as equipCardOn,
+  grantCard as grantCardOn,
+  placeCard as placeCardOn,
+  reorderPack as reorderPackOn,
+  takeCard as takeCardOn,
+  takeFromField as takeFromFieldOn,
+} from "./commands/holdings";
+import {
+  moveTo as moveToOn,
+  rollForMove as rollForMoveOn,
+  startGame as startGameOn,
+} from "./commands/movement";
+import {
+  changeNature as changeNatureOn,
+  placeSeat as placeSeatOn,
+  takeNewCharacter as takeNewCharacterOn,
+} from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
 import {
   TROPHY_RATE,
@@ -146,7 +151,6 @@ export type { Adjustable };
 export { STONE_TURNS, TROPHY_RATE };
 export type { Decks };
 
-const CHARACTERS = charactersData as Character[];
 
 /**
  * The one Zaklęcie the rules name inside another rule.
@@ -207,20 +211,7 @@ async function returnToPile(
  * which is what makes `stockLeft` count copies in play rather than keeping a
  * tally.
  */
-async function discardDrawnCopy(gameId: string, cardId: string): Promise<void> {
-  await pushToPile(gameId, "events", [cardId]);
-}
 
-async function pushToPile(
-  gameId: string,
-  pile: "events" | "spells",
-  cardIds: readonly string[],
-): Promise<void> {
-  if (cardIds.length === 0) return;
-  const game = await loadGame(gameId);
-  const writes = pushOntoPile({ game }, pile, cardIds);
-  if (writes.game) await db.from("games").update(writes.game).eq("id", gameId);
-}
 
 function spellsAtSetup(characterId: string | null): number {
   return startingKit(asCharacterId(characterId)).spells ?? 0;
@@ -237,13 +228,12 @@ function spellsAtSetup(characterId: string | null): number {
 
 
 /** Reads the stored decks, tolerating a game started before spells existed. */
-import { SLOT_LABEL, fitsIn, isWearable, type EqMode, type Slot } from "@/lib/engine/slots";
+import { type EqMode, type Slot } from "@/lib/engine/slots";
 import type { Holding } from "@/lib/engine/state";
 import { bumpRevision, holdingsFor, seatsFor, type GameRow, type SeatRow } from "./store";
 import { bonusFromHoldings, inEffect } from "@/lib/engine/holdings";
 import type { CombatKind } from "@/lib/engine/combat";
-import { BASE_CARRY_LIMIT, carriedCount, carryLimit } from "@/lib/engine/derive";
-import { mayHold, spellAllowance, wandRefills } from "@/lib/engine/derive";
+import { spellAllowance, wandRefills } from "@/lib/engine/derive";
 
 /**
  * A stored row as the engine wants it — including where it is worn, which every
@@ -323,96 +313,18 @@ async function journal(
 export async function startGame(gameId: string): Promise<void> {
   // Everybody who asked to be surprised finds out now, and not a moment
   // earlier — the sentinel sits in the seat for the whole poczekalnia so that
-  // no device, the player's included, can see what is coming.
+  // no device, the player's included, can see what is coming. Done before the
+  // snapshot is read: a seat still holding the sentinel would be dealt no kit.
   await resolveRandomPicks(gameId);
 
-  const seats = await seatsFor(gameId);
-  // `chosen`, not `ready`: having picked a character and having said you are
-  // ready are two different things, and conflating them is what let a game
-  // start while somebody was still deciding.
-  const chosen = seats.filter((seat) => seat.character_id);
-  // One is enough. The box says 2-6 and the rulebook never states a count at
-  // all: the only rule that assumes company is 17.4, where "jeden z pozostałych
-  // graczy" throws the enemy's die — and in a simulation the app throws it. The
-  // victory condition is beating the Bestia, which one character can do alone.
-  // The race against other players is what makes it tense, not what makes it
-  // possible, and it is also what a table is left with when everybody else has
-  // died.
-  if (chosen.length < 1) throw new Error("Do gry potrzeba przynajmniej jednej postaci.");
-
-  // Everybody with a character has to have said so (docs/LOBBY.md). A seat
-  // nobody is behind cannot say anything, so it is not asked.
-  const dithering = chosen.filter((seat) => !seat.ready && !seat.abandoned_at);
-  if (dithering.length > 0) {
-    throw new Error(
-      `Nie wszyscy są gotowi: ${dithering
-        .map((seat) => seat.player_name ?? `miejsce ${seat.seat_index + 1}`)
-        .join(", ")}.`,
-    );
-  }
-
-  const game = await loadGame(gameId);
-  await db
-    .from("games")
-    .update({
-      status: "playing",
-      turn: 1,
-      active_seat: chosen[0].seat_index,
-      turn_state: startTurn(),
-      started_at: new Date().toISOString(),
-      // Only a simulation needs a deck. In companion mode the deck is the
-      // physical one on the table and the app must not pretend to own it.
-      deck: game.mode === "simulation" ? freshDecks() : null,
-    })
-    .eq("id", gameId);
-  // Ten of the twenty-seven characters own something before anyone rolls: the
-  // Książę his purse of five and a Hełm, the Mag two Zaklęcia, the Zdobywca a
-  // Miecz and a Tarcza. Dealing everyone one Sztuka Złota and nothing else is
-  // wrong from the first turn, and wrong in the direction that flattens the
-  // characters into each other.
-  for (const seat of chosen) {
-    await dealStartingKit(gameId, seat);
-  }
-
-  await journal(gameId, null, 1, "start", { seats: chosen.length });
-  await bumpRevision(gameId);
-}
-
-async function dealStartingKit(gameId: string, seat: SeatRow): Promise<void> {
-  if (!seat.character_id) return;
-  const kit = startingKit(asCharacterId(seat.character_id));
-
-  if (kit.items?.length) {
-    await db.from("holdings").insert(
-      kit.items.map((cardId) => ({
-        game_id: gameId,
-        seat_id: seat.id,
-        card_id: cardId,
-        kind: "item",
-        face: "open",
-      })),
-    );
-  }
-
-  // 3.2: everyone starts on one "chyba, że jej Karta daje w tym względzie inne
-  // instrukcje" — so the column default stands unless the character overrides.
-  if (kit.zloto !== undefined) {
-    await db.from("seats").update({ zloto: kit.zloto }).eq("id", seat.id);
-  }
-
-  // Spells go through the ordinary draw so the deck stays honest about what has
-  // left it, and so 2.6's capacity is checked the same way as at any other time.
-  for (let i = 0; i < (kit.spells ?? 0); i++) {
-    await drawSpell(gameId, seat.id);
-  }
-
-  if (kit.items?.length || kit.zloto !== undefined || kit.spells) {
-    await journal(gameId, seat.id, 1, "wyposazenie-poczatkowe", {
-      character: seat.character_id,
-      ...kit,
-    });
+  const owed = await change(gameId, startGameOn, { decks: freshDecks() });
+  // 9.5's deal, run through the same draw as every other Zaklęcie so that the
+  // pile, the reshuffle and the journal line are the one implementation.
+  for (const seat of owed) {
+    for (let n = 0; n < seat.spells; n++) await drawSpell(gameId, seat.seatId);
   }
 }
+
 
 function activeSeatOf(seats: SeatRow[], game: GameRow): SeatRow {
   const seat = seats.find((s) => s.seat_index === game.active_seat);
@@ -428,34 +340,9 @@ function activeSeatOf(seats: SeatRow[], game: GameRow): SeatRow {
  * would otherwise walk a character off the ring.
  */
 export async function rollForMove(gameId: string, value: number | null): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "rzut") throw new Error("Nie czas na rzut.");
-
-  const roll = value ?? 1 + Math.floor(Math.random() * 6);
-  if (!Number.isInteger(roll) || roll < 1 || roll > 6) {
-    throw new Error("Kostka daje wynik od 1 do 6.");
-  }
-  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
-
-  // 11.10 offers the bridge as part of the move, so whether it is on the table
-  // has to be settled before the destinations are drawn: a Magiczny Miecz is
-  // required, and 11.11 bars anyone who failed there on their last turn.
-  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id);
-  const { hasSword } = bridgeRequirements(holdings.map((h) => ({ cardId: h.card_id })));
-  const blocked = bridgeBlocked(seat.bridge_blocked_until_turn, game.turn);
-
-  await db
-    .from("games")
-    .update({
-      turn_state: afterRoll(seat.field_id, roll, {
-        bridgeOffered: hasSword && !blocked,
-      }),
-    })
-    .eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, "rzut", { roll, manual: value !== null }, value !== null);
-  await bumpRevision(gameId);
+  await change(gameId, rollForMoveOn, { manual: value !== null }, {
+    random: supplied([value], appRandom()),
+  });
 }
 
 export async function moveTo(
@@ -463,44 +350,7 @@ export async function moveTo(
   destination: string,
   viaBridge = false,
 ): Promise<void> {
-  // Straight off the request body, so it is checked before it is a field.
-  const fieldId = requireFieldId(destination, "Ruch");
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = activeSeatOf(seats, game);
-  if (game.turn_state.phase !== "ruch") throw new Error("Nie czas na ruch.");
-
-  // Only the squares the roll actually reaches are accepted, so a stale page
-  // cannot post a destination from a previous roll. A bridge attempt shares its
-  // fieldId with the entrance it stops at, so the two are told apart by intent
-  // rather than by destination.
-  const chosen = game.turn_state.options.find(
-    (option) => option.fieldId === fieldId && !!option.bridge === viaBridge,
-  );
-  if (!chosen) throw new Error("To pole nie jest w zasięgu tego rzutu.");
-
-  const field = FIELDS.get(fieldId);
-  if (!field) throw new Error(`Nieznane pole: ${fieldId}`);
-
-  await db.from("seats").update({ field_id: fieldId }).eq("id", seat.id);
-  await db
-    .from("games")
-    .update({
-      // Turning off the ring onto the bridge stops the walk at the entrance with
-      // the guardian still to be faced (11.10); the field itself is not resolved,
-      // and its card is not drawn ("nie ciągnij Karty ... gdy wchodzisz na Most").
-      turn_state: chosen.bridge
-        ? atBridge(chosen.bridge)
-        : afterMove(field, seat.field_id, await liftFieldCards(gameId, field.id)),
-    })
-    .eq("id", gameId);
-  await journal(gameId, seat.id, game.turn, chosen.bridge ? "proba-mostu" : "ruch", {
-    from: seat.field_id,
-    to: fieldId,
-    direction: chosen.direction,
-    ...(chosen.bridge ? { guardian: chosen.bridge.guardian } : {}),
-  });
-  await bumpRevision(gameId);
+  await change(gameId, moveToOn, { destination, viaBridge });
 }
 
 /**
@@ -512,18 +362,6 @@ export async function moveTo(
  * and a Przedmiot nobody could carry are both waiting for the next character
  * to stop there.
  */
-async function liftFieldCards(gameId: string, fieldId: string): Promise<TurnCard[]> {
-  const waiting = (await fieldCardsFor(gameId)).filter((row) => row.field_id === fieldId);
-  if (waiting.length === 0) return [];
-  await db
-    .from("field_cards")
-    .delete()
-    .in("id", waiting.map((row) => row.id));
-  return waiting.flatMap((row) => {
-    const card = EVENTS.find((c) => c.id === row.card_id);
-    return card ? [{ cardId: card.id, cardClass: card.cardClass }] : [];
-  });
-}
 
 /**
  * Leaves behind whatever the character did not take (16.8).
@@ -728,11 +566,6 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string>
  * This is the denominator for 21.2: every copy in play is one that is not on
  * the pile to be bought.
  */
-async function copiesInPlay(gameId: string, cardId: string): Promise<number> {
-  const held = (await holdingsFor(gameId)).filter((h) => h.card_id === cardId).length;
-  const onFields = (await fieldCardsFor(gameId)).filter((c) => c.card_id === cardId).length;
-  return held + onFields;
-}
 
 /**
  * What the Wyposażenie pile still has, for every card on it.
@@ -1290,17 +1123,6 @@ export async function resolveFight(gameId: string): Promise<void> {
  * What is still listed when the turn ends is exactly what nobody took, which is
  * what 16.8 leaves lying there for the next character.
  */
-async function liftOffField(gameId: string, cardId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  if (game.turn_state.phase !== "pole") return;
-  const at = game.turn_state.drawn.findIndex((entry) => entry.cardId === cardId);
-  if (at === -1) return;
-  const drawn = game.turn_state.drawn.filter((_, index) => index !== at);
-  await db
-    .from("games")
-    .update({ turn_state: { ...game.turn_state, drawn } })
-    .eq("id", gameId);
-}
 
 export async function takeCard(
   gameId: string,
@@ -1309,129 +1131,13 @@ export async function takeCard(
   /** Set when this card came off a field that was holding a granted one. */
   granted = false,
 ): Promise<void> {
-  const game = await loadGame(gameId);
-  // Both decks. 21.1 has a character take the Wyposażenie card for a Magiczny
-  // Miecz or a Tarcza Tolimana, and 21.3 lets either be left on the board like
-  // anything else — but the Tarcza Tolimana exists *only* on the equipment
-  // sheet, so looking in the event deck alone made the one card the Zamek
-  // Bestii requires impossible to pick up.
-  const card = EVENTS.find((c) => c.id === cardId);
-  const equipment = card ? null : (items as Item[]).find((i) => i.id === cardId);
-  if (!card && !equipment) throw new Error(`Nieznana karta: ${cardId}`);
-
-  // Everything on the Wyposażenie sheet is a Przedmiot; only the event deck
-  // needs its class read to tell an item from a friend from a trophy.
-  const kind = card ? kindForCard(card) : "item";
-  if (!kind) throw new Error("Tej karty nie można zabrać ze sobą.");
-
-  /**
-   * Money is not luggage.
-   *
-   * A Sztuka Złota prints V, so `kindForCard` calls it an item and it went
-   * into the pack with a discard button under it — where it also ate one of the
-   * four places 5.4 allows. But the card *is* the gold: its script turns it
-   * into a coin and puts it on the used pile, and nothing survives to carry.
-   *
-   * So taking one resolves it. The card still leaves the field's stack the same
-   * way anything taken does, which is what 16.8 counts at the end of the turn.
-   */
-  if (isConsumedOnResolve(cardId)) {
-    const script = scriptFor(cardId);
-    if (script) await applyEffect(gameId, seatId, script.effect, cardName(cardId));
-    await liftOffField(gameId, cardId);
-    await journal(gameId, seatId, game.turn, "zabranie", { cardId, kind: "gold" });
-    await bumpRevision(gameId);
-    return;
+  const taken = await change(gameId, takeCardOn, { seatId, cardId, granted });
+  // A Sztuka Złota is not luggage — taking it resolves it. The command does the
+  // writes it owns and hands back the script rather than guessing at a rule
+  // `applyEffect` owns.
+  if (taken.resolve) {
+    await applyEffect(gameId, seatId, taken.resolve.effect, taken.resolve.reason);
   }
-
-  const seats = await seatsFor(gameId);
-  const taker = seats.find((s) => s.id === seatId);
-
-  // 5.3: "Żadna Postać nie może posiadać Przedmiotów, którymi na mocy zasad nie
-  // wolno się jej posługiwać. Kartę takiego Przedmiotu należy położyć odkrytą
-  // na Obszarze, na którym Przedmiot ten został znaleziony." So it is not that
-  // you take it and then discover you may not — you never take it, and it stays
-  // where it lies. Checked here rather than only when a Natura changes, which
-  // was the half of it that existed.
-  if (card && !mayHold({ forbiddenTo: forbiddenFor(card) }, (taker?.nature ?? null) as Nature | null)) {
-    throw new Error(`${card.name} — twoja Natura nie pozwala ci tego nieść (5.3).`);
-  }
-
-  // 12.1a: nothing is picked up while a Wróg is still standing on the field.
-  // "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec" —
-  // the loot waits until the fight is settled.
-  if (game.turn_state.phase === "pole") {
-    const settled = game.turn_state.fought ?? [];
-    const standing = game.turn_state.drawn.find((entry) => {
-      const foe = EVENTS.find((c) => c.id === entry.cardId);
-      return foe && combatValueOf(foe) && !settled.includes(entry.cardId);
-    });
-    if (standing && standing.cardId !== cardId) {
-      const foe = EVENTS.find((c) => c.id === standing.cardId);
-      throw new Error(`Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1).`);
-    }
-  }
-
-  // Rule 5.4: four Przedmioty at a time unless the character has transport.
-  // Friends and trophies are not Przedmioty and do not count (6.3 puts no limit
-  // on Friends at all), and Sztuki Złota never count (3.5).
-  if (kind === "item") {
-    const holdings = await holdingsFor(gameId);
-    const mine = holdings
-      .filter((h) => h.seat_id === seatId)
-      .map(asHolding);
-    // In slotowy the limit is on the pack alone — what a character is wearing
-    // hangs on the character. Picking a card up always puts it in the pack, so
-    // this is the pack's question either way.
-    // 21.2: the Wyposażenie pile is finite. A Magiczny Miecz that four other
-    // characters are already carrying is "w danej chwili nieosiągalny", and
-    // 16.6 makes a drawn one the same card rather than a fifth — which is why
-    // counting what is in play is the same answer as keeping a tally.
-    if (fromTheShop(cardId)) {
-      const left = stockLeft(cardId, await copiesInPlay(gameId, cardId));
-      if (left <= 0) {
-        throw new Error(
-          `${cardName(cardId)} — nie ma już ani jednej w Wyposażeniu (21.2).`,
-        );
-      }
-    }
-
-    const variant = eq(game);
-    if (carriedCount(mine, variant) >= carryLimit(mine, variant)) {
-      throw new Error(
-        `Postać może nieść najwyżej ${BASE_CARRY_LIMIT} Przedmioty (5.4). Odrzuć coś najpierw.`,
-      );
-    }
-  }
-
-  /**
-   * 16.6 and 21.1: what you take is the Wyposażenie card, not the one you drew.
-   *
-   * "Jeżeli Postać wyciągnie Magiczny Miecz lub Tarczę Tolimana musi je zamienić
-   * na identyczne z Wyposażenia, a wyciągnięte odłożyć na stos zużytych." The
-   * exchange happens here, at the moment of taking, which is what makes the
-   * rest of the app consistent: from now on this is a stock card, it occupies
-   * one of `PRINTED_STOCK`'s slots, and when it leaves a hand it returns to the
-   * shop rather than to the deck.
-   *
-   * `card` is set only when the id was found in the event deck — a Tarcza
-   * Tolimana picked up off a field has no drawn copy to give back, and a
-   * granted one has none either — the deck never gave that copy up.
-   */
-  if (card && fromTheShop(cardId) && !granted) await discardDrawnCopy(gameId, cardId);
-
-  await db.from("holdings").insert({
-    game_id: gameId,
-    seat_id: seatId,
-    card_id: cardId,
-    kind,
-    face: "open",
-    granted,
-  });
-
-  await liftOffField(gameId, cardId);
-  await journal(gameId, seatId, game.turn, "zabranie", { cardId, kind });
-  await bumpRevision(gameId);
 }
 
 /**
@@ -1442,83 +1148,7 @@ export async function takeCard(
  * physically goes is the players' business at a table and not tracked yet.
  */
 export async function dropCard(gameId: string, holdingId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  const { data } = await db
-    .from("holdings")
-    .select("seat_id,card_id,kind,granted")
-    .eq("id", holdingId)
-    .maybeSingle();
-
-  // 9.4: Zaklęcia are not discarded at will — "Postać nie może odrzucać
-  // Zaklęć, chyba, że posiada ich więcej, niż wynika to z jej parametru Magii".
-  // A hand you can throw away is a hand you can tidy into whatever you wanted,
-  // and the limit of 2.6 is meant to bite.
-  if (data?.kind === "spell") {
-    const seats = await seatsFor(gameId);
-    const seat = seats.find((s) => s.id === data.seat_id);
-    const held = (await holdingsFor(gameId)).filter(
-      (h) => h.seat_id === data.seat_id && h.kind === "spell",
-    );
-    if (seat) {
-      const bonus = bonusFromHoldings(
-        (await holdingsFor(gameId)).filter((h) => h.seat_id === seat.id).map(asHolding),
-        eq(game),
-        "parametr",
-      );
-      const mineNow = (await holdingsFor(gameId))
-        .filter((h) => h.seat_id === seat.id)
-        .map(asHolding);
-      const allowed = spellAllowance(
-        seat.magia_own + bonus.magia,
-        spellsAtSetup(seat.character_id),
-        heldAbilities(mineNow.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
-      );
-      if (held.length <= allowed) {
-        throw new Error(
-          `Zaklęć nie odrzuca się, dopóki nie masz ich więcej niż ${allowed} (9.4, 2.6).`,
-        );
-      }
-    }
-  }
-
-  await db.from("holdings").delete().eq("id", holdingId);
-
-  // 5.5, 6.4 and 21.3: a discarded Przedmiot or a dismissed Przyjaciel is left
-  // "na Obszarze, na którym aktualnie się znajduje" — face up, for whoever
-  // stops there next. This used to delete the card outright, which quietly
-  // removed it from the game; 12.1's own worked example is built on gear
-  // waiting on a field for the next character to find.
-  //
-  // Zaklęcia are the exception and go to the used pile instead: 9.6 says a
-  // spell's card goes there when it is spent, and nothing in the box has a
-  // Zaklęcie lying on the board — the Klątwa in 13.5's example is left by a
-  // card that puts it there, not by a player dropping it.
-  const seat = (await seatsFor(gameId)).find((s) => s.id === data?.seat_id);
-  const onField = data && data.kind !== "spell" && data.kind !== "trophy" && seat?.field_id;
-  if (onField && data) {
-    await db.from("field_cards").insert({
-      game_id: gameId,
-      field_id: seat.field_id,
-      card_id: data.card_id,
-      // Travels with it. Picked up by somebody else, a granted card would
-      // otherwise be a real one from then on, and reach a pile the next time
-      // it was put down.
-      granted: data.granted,
-    });
-  } else if (data) {
-    // The two that do not lie on a board. A shed Zaklęcie goes where 9.6 sends
-    // a spoken one, and a trophy nobody wants goes where 1.4 sends a traded
-    // one — both to the used pile, which until now they reached by being
-    // deleted, which is not the same place at all.
-    await returnToPile(gameId, data.kind === "spell" ? "spells" : "events", [data.card_id]);
-  }
-
-  await journal(gameId, (data?.seat_id as string) ?? null, game.turn, "odrzucenie", {
-    cardId: data?.card_id,
-    kind: data?.kind,
-    onField: data?.kind !== "spell" && data?.kind !== "trophy" ? seat?.field_id : null,
-  });
-  await bumpRevision(gameId);
+  await change(gameId, dropCardOn, { holdingId });
 }
 
 /**
@@ -1613,20 +1243,7 @@ export async function reorderPack(
   seatId: string,
   holdingIds: readonly string[],
 ): Promise<void> {
-  const mine = new Set(
-    (await holdingsFor(gameId))
-      .filter((holding) => holding.seat_id === seatId)
-      .map((holding) => holding.id),
-  );
-  const order = holdingIds.filter((id) => mine.has(id));
-  if (order.length === 0) return;
-
-  // One-based, so a card that has never been arranged — which is null, and
-  // sorts last — cannot collide with the first arranged one.
-  for (const [index, id] of order.entries()) {
-    await db.from("holdings").update({ ordinal: index + 1 }).eq("id", id);
-  }
-  await bumpRevision(gameId);
+  await change(gameId, reorderPackOn, { seatId, holdingIds });
 }
 
 /**
@@ -1824,42 +1441,7 @@ export async function changeNature(
   seatId: string,
   nature: "dobra" | "zla" | "chaotyczna",
 ): Promise<{ nowForbidden: string[] }> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-  if (seat.nature === nature) return { nowForbidden: [] };
-
-  // 7.3: "Żadna Postać nie może zmienić swojej Natury częściej niż raz w
-  // trakcie tury gry." Magog is the exception — its own card says the Natura
-  // may be changed freely, and 8.2 puts a Charakterystyka above the general
-  // rule.
-  const freely = seat.character_id === "magog";
-  if (!freely && seat.nature_changed_turn === game.turn) {
-    throw new Error("Naturę można zmienić najwyżej raz na turę (7.3).");
-  }
-
-  await db
-    .from("seats")
-    .update({ nature, nature_changed_turn: game.turn })
-    .eq("id", seatId);
-
-  const holdings = (await holdingsFor(gameId)).filter((h) => h.seat_id === seatId);
-  const nowForbidden = holdings
-    .filter((h) => h.kind === "item" || h.kind === "friend")
-    .filter((h) => {
-      const card = EVENTS.find((c) => c.id === h.card_id);
-      return card ? !mayHold({ ...card, forbiddenTo: forbiddenFor(card) }, nature) : false;
-    })
-    .map((h) => h.card_id);
-
-  await journal(gameId, seatId, game.turn, "zmiana-natury", {
-    from: seat.nature,
-    to: nature,
-    nowForbidden,
-  });
-  await bumpRevision(gameId);
-  return { nowForbidden };
+  return change(gameId, changeNatureOn, { seatId, nature });
 }
 
 /**
@@ -1874,10 +1456,6 @@ export async function changeNature(
  * It is data now, in the same registry as everything else a card does, so the
  * rule and the hover cannot disagree about it.
  */
-function forbiddenFor(card: EventCard): ("dobra" | "zla" | "chaotyczna")[] | undefined {
-  const forbidden = forbiddenNatures(card.id);
-  return forbidden ? [...forbidden] : undefined;
-}
 
 /**
  * Turns a character to stone for three turns (20.1).
@@ -2562,77 +2140,7 @@ export async function equipCard(
   holdingId: string,
   slot: Slot | null,
 ): Promise<void> {
-  const game = await loadGame(gameId);
-  if (game.eq_mode !== "slotowy") {
-    throw new Error("Ten stół gra klasycznym ekwipunkiem — nie ma miejsc na przedmioty.");
-  }
-
-  const holdings = await holdingsFor(gameId);
-  const held = holdings.find((h) => h.id === holdingId);
-  if (!held) throw new Error("Nie ma takiej karty.");
-  if (held.kind !== "item") throw new Error("Zakładać można tylko Przedmioty.");
-
-  if (slot === null) {
-    // Taking something off puts it in the pack, and the pack is still the four
-    // of 5.4. A character with four things already carried has nowhere to put
-    // its helmet, and the rulebook's answer to being over the limit is to drop
-    // something (5.6) — so it says so rather than quietly making a fifth place.
-    const mine = holdings.filter((h) => h.seat_id === held.seat_id).map(asHolding);
-    if (carriedCount(mine, "slotowy") >= carryLimit(mine, "slotowy")) {
-      throw new Error("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
-    }
-    // Nothing to write when the card is already there: the client sends this
-    // whenever a card is dropped, including onto the pack it was picked up
-    // from.
-    if (held.slot !== null) await putInSlot(holdingId, null);
-    await bumpRevision(gameId);
-    return;
-  }
-
-  if (!fitsIn(held.card_id, slot)) {
-    // Two different refusals wearing one sentence. "It does not go there" is
-    // useful when there is somewhere it does go; when there is nowhere at all,
-    // it reads as a puzzle about which place to try next.
-    const name = cardName(held.card_id);
-    throw new Error(
-      isWearable(held.card_id)
-        ? `${name} nie pasuje w to miejsce (${SLOT_LABEL[slot]}).`
-        : `${name} to nie jest rzecz do noszenia — zostaje w plecaku.`,
-    );
-  }
-
-  /**
-   * One thing per place, and the thing already there goes back in the pack
-   * rather than vanishing. Only this seat's — everybody else's Miecz stays on.
-   *
-   * It goes back into the square the new one is leaving, so the two change
-   * places. Landing on the end of the row instead was the tidy answer and the
-   * wrong one: a player swapping a Miecz for an Excalibur has not decided
-   * anything about where the Miecz should sit, and finding it at the back of a
-   * pack of sixteen is a small punishment for an ordinary move.
-   */
-  const occupant = holdings.find(
-    (h) => h.seat_id === held.seat_id && h.slot === slot && h.id !== holdingId,
-  );
-  if (occupant) {
-    await putInSlot(occupant.id, null);
-    const { error } = await db
-      .from("holdings")
-      .update({ ordinal: held.ordinal })
-      .eq("id", occupant.id);
-    if (error) throw new Error(`Nie udało się przenieść Przedmiotu: ${error.message}`);
-  }
-  if (held.slot !== slot) await putInSlot(holdingId, slot);
-  /**
-   * Nothing is journalled here, deliberately.
-   *
-   * Gear moves around constantly — a card is picked up, tried in a place, put
-   * back, swapped for a better one — and a line for each would bury the turn it
-   * happened in. What the table needs to see is a character *gaining* something
-   * ("zabranie"), which is the event with consequences; where it then hangs on
-   * the body is arrangement, and the seat card shows it at a glance.
-   */
-  await bumpRevision(gameId);
+  await change(gameId, equipCardOn, { holdingId, slot });
 }
 
 /**
@@ -2646,10 +2154,6 @@ export async function equipCard(
  * silent write is worse than a failing one; the player is told their shield is
  * on and it is not.
  */
-async function putInSlot(holdingId: string, slot: Slot | null): Promise<void> {
-  const { error } = await db.from("holdings").update({ slot }).eq("id", holdingId);
-  if (error) throw new Error(`Nie udało się przenieść Przedmiotu: ${error.message}`);
-}
 
 /**
  * What the Kamienny Most does to a character standing on one of its fields.
@@ -2861,82 +2365,8 @@ export async function takeNewCharacter(
   seatId: string,
   characterId: string,
 ): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-  /**
-   * Two ways to be sitting here without a character in play.
-   *
-   * 4.4's, which is what this was written for: the character died and its
-   * player is taking another. And the latecomer's — somebody who sat down at a
-   * table already running, whose seat has never held a character at all.
-   *
-   * They want exactly the same thing done to them, which is why this is one
-   * function: a free character, the values it starts with, its MGR, its kit,
-   * and a line in the journal saying who has arrived. What is refused is
-   * swapping a living character for a better one.
-   */
-  if (!seat.eliminated && seat.character_id) {
-    throw new Error("Ta Postać wciąż żyje.");
-  }
-  // The dead character's own card is out of the game — "jej Kartę odłożyć do
-  // pozostałych nie biorących udziału w grze" — and so is everybody else's, so
-  // the choice is from what nobody has held.
-  const spent = new Set(
-    seats.filter((s) => s.character_id).map((s) => s.character_id as string),
-  );
-
-  /**
-   * The surprise, settled here and now.
-   *
-   * In the poczekalnia the sentinel sits on the seat until `startGame` deals a
-   * real card, so nobody can see what anybody drew before the game begins.
-   * There is no such moment left after a death — the game is already running —
-   * so the draw happens as the button is pressed, from the same pool 4.4
-   * describes: whatever nobody has held.
-   *
-   * A CSPRNG rather than `Math.random` for no reason except that the deal in
-   * `store.ts` already uses one and two ways of drawing a character would be
-   * one too many.
-   */
-  const wanted = isRandomPick(characterId)
-    ? (() => {
-        const left = CHARACTERS.filter((character) => !spent.has(character.id));
-        if (left.length === 0) throw new Error("Nie została żadna wolna Postać.");
-        return left[randomInt(left.length)].id;
-      })()
-    : characterId;
-
-  if (spent.has(wanted)) {
-    throw new Error("Ta Postać jest już w grze.");
-  }
-
-  await chooseCharacter(gameId, seatId, wanted);
-  await db
-    .from("seats")
-    .update({
-      eliminated: false,
-      zycie: 4,
-      zloto: 1,
-      turns_lost: 0,
-      stone_until_turn: null,
-      bridge_blocked_until_turn: null,
-      nature_changed_turn: null,
-      ready: true,
-    })
-    .eq("id", seatId);
-
-  const fresh = (await seatsFor(gameId)).find((s) => s.id === seatId);
-  if (fresh) await dealStartingKit(gameId, fresh);
-
-  await journal(gameId, seatId, game.turn, seat.eliminated ? "nowa-postac" : "dosiadka", {
-    characterId: wanted,
-    // Which card it is, is public either way; that it was drawn rather than
-    // chosen is worth a word, because the two are different decisions.
-    ...(isRandomPick(characterId) ? { losowa: true } : {}),
-  });
-  await bumpRevision(gameId);
+  const owed = await change(gameId, takeNewCharacterOn, { seatId, characterId });
+  for (let n = 0; n < owed.spells; n++) await drawSpell(gameId, owed.seatId);
 }
 
 /* ---------------------------------------------------------------------------
@@ -3100,29 +2530,7 @@ export async function placeCard(
   cardId: string,
   target: FieldId | null,
 ): Promise<FieldId> {
-  const game = await loadGame(gameId);
-  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-
-  const fieldId = target ?? seat.field_id;
-  if (!fieldId) throw new Error("Nobody is standing anywhere — name an Obszar.");
-
-  if (SPELLS.some((card) => card.id === cardId)) {
-    throw new Error("Zaklęcia nie leżą na Obszarze (9.6).");
-  }
-  const known =
-    EVENTS.some((card) => card.id === cardId) || (items as Item[]).some((i) => i.id === cardId);
-  if (!known) throw new Error(`Nie wiem, czym jest: ${cardId}`);
-
-  await db.from("field_cards").insert({
-    game_id: gameId,
-    field_id: fieldId,
-    card_id: cardId,
-    granted: true,
-  });
-  await journal(gameId, seatId, game.turn, "test-karta-obszar", { cardId, fieldId }, true);
-  await bumpRevision(gameId);
-  return fieldId;
+  return change(gameId, placeCardOn, { seatId, cardId, target });
 }
 
 /**
@@ -3326,28 +2734,7 @@ export async function runCommand(
 }
 
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {
-  const game = await loadGame(gameId);
-  const spell = SPELLS.find((card) => card.id === cardId);
-  const equipment = (items as Item[]).find((item) => item.id === cardId);
-  const event = EVENTS.find((card) => card.id === cardId);
-
-  const kind = spell ? "spell" : equipment ? "item" : event ? kindForCard(event) : null;
-  if (kind === null) throw new Error(`Nie wiem, czym jest: ${cardId}`);
-  if (kind === "trophy") throw new Error("Wroga trzeba pokonać, nie wziąć.");
-
-  await db.from("holdings").insert({
-    game_id: gameId,
-    seat_id: seatId,
-    card_id: cardId,
-    kind,
-    // 9.3 keeps a Zaklęcie face down even when it arrived by fiat.
-    face: kind === "spell" ? "hidden" : "open",
-    // Not a card from the box. The deck keeps its own copy and can still deal
-    // it; this one belongs to no pile and joins none when it goes.
-    granted: true,
-  });
-  await journal(gameId, seatId, game.turn, "test-karta", { cardId, kind }, true);
-  await bumpRevision(gameId);
+  await change(gameId, grantCardOn, { seatId, cardId });
 }
 
 export async function placeSeat(
@@ -3356,52 +2743,7 @@ export async function placeSeat(
   target: string,
   reason: string | null,
 ): Promise<void> {
-  const game = await loadGame(gameId);
-  const seat = (await seatsFor(gameId)).find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-  // The other request-body field id. `requireFieldId` is the check that used to
-  // be spelled out here by hand, and now every caller gets the narrow type.
-  const fieldId = requireFieldId(target, "Przestawienie");
-
-  await db.from("seats").update({ field_id: fieldId }).eq("id", seatId);
-
-  // The turn state carries its own copy of where the character is standing —
-  // it is what the panel reads to decide which field's options to offer — so
-  // moving the figure without it left the header naming one field and the
-  // buttons belonging to another.
-  //
-  // Every phase past the roll, not just `pole`. The commonest reason to reach
-  // for this override is a table that is *stuck*: mid-fight with something on
-  // a field the figure is not on any more, or holding a bridge guardian that
-  // should never have been met. Leaving that fight running while the figure
-  // stands somewhere else is the desync, not a lesser version of it. `rzut` is
-  // left alone because the character has not moved yet this turn.
-  if (
-    seat.seat_index === game.active_seat &&
-    game.turn_state.phase !== "rzut" &&
-    game.turn_state.phase !== "koniec"
-  ) {
-    await db
-      .from("games")
-      .update({
-        // Freshly arrived: whatever was drawn belonged to the old field, and
-        // the new one has not been resolved at all. `draw: 0` rather than the
-        // field's printed count, because a figure put here by hand did not
-        // walk here, and 15.1 makes drawing a consequence of arriving.
-        turn_state: { phase: "pole", fieldId, from: null, draw: 0, drawn: [], fought: [] },
-      })
-      .eq("id", gameId);
-  }
-
-  await journal(
-    gameId,
-    seatId,
-    game.turn,
-    "przestawienie",
-    { from: seat.field_id, to: fieldId, reason },
-    true,
-  );
-  await bumpRevision(gameId);
+  await change(gameId, placeSeatOn, { seatId, target, reason });
 }
 
 /**
@@ -3953,66 +3295,9 @@ export async function takeFromField(
   seatId: string,
   fieldCardId: string,
 ): Promise<void> {
-  const game = await loadGame(gameId);
-  const seats = await seatsFor(gameId);
-  const seat = seats.find((s) => s.id === seatId);
-  if (!seat) throw new Error("Nieznane miejsce.");
-  if (seat.seat_index !== game.active_seat) throw new Error("To nie twoja tura.");
-
-  const lying = (await fieldCardsFor(gameId)).find((row) => row.id === fieldCardId);
-  if (!lying) throw new Error("Tej Karty już tam nie ma.");
-  if (lying.field_id !== seat.field_id) {
-    throw new Error("Można zabierać tylko z Obszaru, na którym się stoi (12.1).");
-  }
-
-  /**
-   * 12.1 grants this to "Postać, której ruch KOŃCZY SIĘ na danym Obszarze", and
-   * only "aż do końca swojej tury". The Obszar you begin a turn standing on is
-   * the one you finished the last turn on, and that window has closed — 13.1
-   * puts it as a prohibition from the other side, "ani wogóle podejmować
-   * żadnych czynności na Obszarze, z którego rozpoczynają ruch".
-   *
-   * 12.1's own worked example is exactly this: the Książę leaves the Sztylet,
-   * the Rękawice and the Srebrna Strzała on the Ruchome Skały, standing on
-   * them, and they wait "na Postać, która zakończy tutaj ruch".
-   */
-  if (game.turn_state.phase !== "pole") {
-    throw new Error("Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).");
-  }
-
-  // 12.1 a) and b): what is lying here is not reachable while a Wróg is on it
-  // or while the Obszar still owes Karty. "W wymienionych przypadkach należy
-  // najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych
-  // Kart."
-  const fought = game.turn_state.fought ?? [];
-  const guarded = (await fieldCardsFor(gameId)).some(
-    (row) =>
-      row.field_id === seat.field_id &&
-      EVENTS.find((card) => card.id === row.card_id)?.cardClass === "wrog" &&
-      !fought.includes(row.card_id),
-  );
-  if (guarded) {
-    throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");
-  }
-  if (game.turn_state.draw > game.turn_state.drawn.length) {
-    throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
-  }
-
-  // Off the field first, so the carrying limit and 21.2's stock — both of which
-  // count copies in play — do not see the same card twice.
-  await db.from("field_cards").delete().eq("id", fieldCardId);
-  try {
-    await takeCard(gameId, seatId, lying.card_id, lying.granted);
-  } catch (error) {
-    // Refused for a reason of its own: put it back where it was lying, because
-    // a card that cannot be picked up is a card still on the field (5.3).
-    await db.from("field_cards").insert({
-      game_id: gameId,
-      field_id: lying.field_id,
-      card_id: lying.card_id,
-      granted: lying.granted,
-    });
-    throw error;
+  const taken = await change(gameId, takeFromFieldOn, { seatId, fieldCardId });
+  if (taken.resolve) {
+    await applyEffect(gameId, seatId, taken.resolve.effect, taken.resolve.reason);
   }
 }
 

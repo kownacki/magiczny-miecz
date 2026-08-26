@@ -635,7 +635,7 @@ describe("placing a card by fiat", () => {
   it("asks for an Obszar when nobody is standing anywhere", () => {
     const nowhere = aTable({ seats: [aSeat({ id: "seat-a", field_id: null })] });
     expect(() => placeCard(nowhere, { seatId: "seat-a", cardId: "helm", target: null })).toThrow(
-      "Nobody is standing anywhere — name an Obszar.",
+      "Ta Postać nigdzie nie stoi — podaj Obszar.",
     );
   });
 });

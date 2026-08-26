@@ -606,7 +606,7 @@ export function placeCard(
   if (!seat) throw new Error("Nieznane miejsce.");
 
   const fieldId = command.target ?? seat.field_id;
-  if (!fieldId) throw new Error("Nobody is standing anywhere — name an Obszar.");
+  if (!fieldId) throw new Error("Ta Postać nigdzie nie stoi — podaj Obszar.");
 
   if (SPELLS.some((card) => card.id === command.cardId)) {
     throw new Error("Zaklęcia nie leżą na Obszarze (9.6).");
