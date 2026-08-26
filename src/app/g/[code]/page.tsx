@@ -1034,11 +1034,34 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               onClose={() => setRightDrawer(null)}
               onInspect={setInspectingCard}
               onClaim={mySeatIndex === null ? claimSeat : undefined}
+              /**
+               * Both of these name a *person*, not a chair.
+               *
+               * They used to send `seatId`, which the routes stopped reading
+               * when the split landed — and neither failed. `leave` and `host`
+               * both fall back to the caller when nobody is named, so pressing
+               * "usuń gracza" on somebody else kicked *you*, and passing the
+               * host role handed it to yourself. Nothing in the type system
+               * covers the shape of a JSON body, so both compiled and both ran.
+               *
+               * A chair with nobody in it has no `driver_id`, and there is
+               * nobody to do either of these to — see `PlayerControls`, which
+               * hides them rather than sending null.
+               */
               onKick={
-                amHost ? (seat) => post("leave", { seatId: seat.id }) : undefined
+                amHost
+                  ? (seat) =>
+                      seat.driverId && post("leave", { userId: seat.driverId })
+                  : undefined
               }
               onPassHost={
-                amHost ? (seat) => post("host", { seatId: seat.id }) : undefined
+                amHost
+                  ? (seat) =>
+                      seat.driverId && post("host", { userId: seat.driverId })
+                  : undefined
+              }
+              onWithdraw={
+                amHost ? (seat, hard) => post("withdraw", { seatId: seat.id, hard }) : undefined
               }
               onJoin={
                 mySeatIndex === null
@@ -1501,7 +1524,8 @@ function asPublicSeat(seat: Seat, driver: Person | null): PublicSeat {
   return {
     id: seat.id,
     seatIndex: seat.seat_index,
-    playerName: seat.player_name,
+    playerName: driver?.name ?? seat.player_name,
+    driverId: driver?.id ?? null,
     characterId: seat.character_id,
     fieldName: seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—",
     fieldId: seat.field_id,

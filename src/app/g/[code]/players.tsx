@@ -43,6 +43,7 @@ export function PlayersDrawer({
   onInspect,
   onClaim,
   onKick,
+  onWithdraw,
   onPassHost,
   onJoin,
 }: {
@@ -69,6 +70,8 @@ export function PlayersDrawer({
   onClaim?: (seatId: string) => void;
   /** Host only: takes the character out and leaves what it carried on its Obszar. */
   onKick?: (seat: PublicSeat) => void;
+  /** The host taking a Postać out of the game. `hard` bars it from being picked again. */
+  onWithdraw?: (seat: PublicSeat, hard: boolean) => void;
   /** Host only: hands the role to somebody who is staying. */
   onPassHost?: (seat: PublicSeat) => void;
   /** Sit down as somebody new. Offered only to a device with no seat. */
@@ -244,7 +247,12 @@ export function PlayersDrawer({
                         Przekaż gospodarza
                       </button>
                     )}
-                    {onKick && !mine && <KickButton seat={seat} busy={busy} onKick={onKick} />}
+                    {onKick && !mine && seat.driverId && (
+                      <KickButton seat={seat} busy={busy} onKick={onKick} />
+                    )}
+                    {onWithdraw && seat.characterId && !seat.eliminated && (
+                      <WithdrawButton seat={seat} busy={busy} onWithdraw={onWithdraw} />
+                    )}
                   </div>
                 </div>
               )}
@@ -277,12 +285,17 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 /**
- * The host removing a player mid-game.
+ * The host putting a player out of the table.
  *
- * Unlike leaving, this really does take the character out — but not what it was
- * carrying: the Przedmioty, Przyjaciele and gold are left on its Obszar for
- * whoever stops there next (12.1), because a character vanishing with four
- * items in its hands quietly makes the whole table poorer.
+ * The Postać is not theirs to take away: it stays exactly where it is standing
+ * with everything it owns, and the chair is left for somebody to take over.
+ * Taking the *Postać* out is a different act and a different button — see
+ * `WithdrawButton` below, which is the one the rulebook has nothing to say
+ * about either way.
+ *
+ * Hidden when nobody is driving, because there is then nobody to put out. It
+ * used to promise "Postać znika, rzeczy zostają na Obszarze", which was true of
+ * a command that no longer exists.
  *
  * Two clicks, and the second one says what it does.
  */
@@ -315,7 +328,78 @@ function KickButton({
       disabled={busy}
       className="rounded border border-vermilion/60 bg-vermilion/10 px-2 py-1 text-[11px] text-vermilion disabled:opacity-40"
     >
-      Na pewno? Postać znika, rzeczy zostają na Obszarze
+      Na pewno? {seat.playerName ?? "Gracz"} wyjdzie od stołu, Postać zostaje
     </button>
+  );
+}
+
+/**
+ * The host taking a Postać out of the game.
+ *
+ * The rulebook says nothing about withdrawing a living Postać — it is a 1993
+ * game where everybody is in one room and a person who walks away is the
+ * table's problem — so the host overrules nothing here. It is the only tool
+ * that addresses abandonment at all.
+ *
+ * It is not a small thing, though: the Postać leaves with everything it was
+ * carrying, and no command puts that hand back. So both clicks name what goes,
+ * and the second one is the grave red every irreversible thing in this app
+ * wears.
+ *
+ * Soft puts the Karta back in the pool for somebody to pick; `hard` bars it for
+ * good, which is what death does. Neither reaches a Postać that is already dead
+ * — 4.4 is explicit about where that Karta goes, and putting it back is a break
+ * rather than a gap, so it belongs to the test console where it is journalled
+ * as something somebody typed.
+ */
+function WithdrawButton({
+  seat,
+  busy,
+  onWithdraw,
+}: {
+  seat: PublicSeat;
+  busy: boolean;
+  onWithdraw: (seat: PublicSeat, hard: boolean) => void;
+}) {
+  const [armed, setArmed] = useState(false);
+  if (!armed) {
+    return (
+      <button
+        onClick={() => setArmed(true)}
+        className="rounded border border-edge px-2 py-1 text-[11px] text-muted transition hover:border-vermilion hover:text-vermilion"
+      >
+        Wycofaj Postać
+      </button>
+    );
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      <button
+        onClick={() => {
+          setArmed(false);
+          onWithdraw(seat, false);
+        }}
+        disabled={busy}
+        className="rounded border border-vermilion/60 bg-vermilion/10 px-2 py-1 text-[11px] text-vermilion disabled:opacity-40"
+      >
+        Wycofaj — Karta wraca do wyboru
+      </button>
+      <button
+        onClick={() => {
+          setArmed(false);
+          onWithdraw(seat, true);
+        }}
+        disabled={busy}
+        className="rounded border border-vermilion bg-vermilion/20 px-2 py-1 text-[11px] text-vermilion disabled:opacity-40"
+      >
+        Na dobre — nikt jej już nie wybierze
+      </button>
+      <button
+        onClick={() => setArmed(false)}
+        className="px-1 text-[11px] text-muted underline hover:text-ink"
+      >
+        anuluj
+      </button>
+    </span>
   );
 }

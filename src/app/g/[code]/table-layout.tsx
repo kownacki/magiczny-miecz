@@ -91,6 +91,14 @@ export interface PublicSeat {
   id: string;
   seatIndex: number;
   playerName: string | null;
+  /**
+   * Whoever is driving it, and null when nobody is.
+   *
+   * Carried because the host's controls act on a *person* — kicking somebody
+   * and handing them the host role are both about them and not about the chair
+   * — and a chair is what this object otherwise describes.
+   */
+  driverId: string | null;
   characterId: SeatCharacter | null;
   fieldName: string;
   /** The id behind that name, so the Obszar can be looked at rather than read. */
