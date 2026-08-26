@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Image from "next/image";
-import { fieldWithText } from "@/lib/engine/fieldText";
+import { fieldWithText } from "@/lib/view/fieldText";
 import { cardArtUrl, cardImageUrl } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";

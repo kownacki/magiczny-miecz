@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { readSeatToken } from "@/lib/game/seatToken";
-import { fieldWithText } from "@/lib/engine/fieldText";
+import { fieldWithText } from "@/lib/view/fieldText";
 import { asFieldId } from "@/lib/engine/board";
 import { useCardPreview } from "./card-preview";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";

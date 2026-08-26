@@ -12,7 +12,7 @@ import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardDetail, CardTile, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
-import { fieldWithText } from "@/lib/engine/fieldText";
+import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
 import { LAYER } from "./layers";
 

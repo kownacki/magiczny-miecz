@@ -22,7 +22,7 @@ import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom } from "@/lib/engine/rings";
 import { FIELDS, asFieldId, isFerry, type FieldId } from "@/lib/engine/board";
-import { fieldWithText } from "@/lib/engine/fieldText";
+import { fieldWithText } from "@/lib/view/fieldText";
 import { LOST_LABEL, STAT_LABEL, TARGET_FULL } from "@/lib/engine/polish";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";

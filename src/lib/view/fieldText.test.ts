@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DOLNY_KRAG, KAMIENNY_MOST, FIELDS } from "./board";
-import { GORNY_KRAG, SRODKOWY_KRAG } from "./rings";
+import { DOLNY_KRAG, KAMIENNY_MOST, FIELDS } from "@/lib/engine/board";
+import { GORNY_KRAG, SRODKOWY_KRAG } from "@/lib/engine/rings";
 import { fieldWithText } from "./fieldText";
 
 describe("what the app can read out on each field", () => {

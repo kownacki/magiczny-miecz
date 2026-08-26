@@ -9,7 +9,7 @@ import characters from "@/data/characters.json";
 import type { Character, Nature } from "@/data/types";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
-import { fieldWithText } from "@/lib/engine/fieldText";
+import { fieldWithText } from "@/lib/view/fieldText";
 import { type Ability } from "@/lib/engine/abilities";
 import { describeAbility } from "@/lib/engine/abilityText";
 import {
