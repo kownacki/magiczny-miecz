@@ -48,8 +48,23 @@ const BACKS = [
   },
 ];
 
-/** Wide enough for the largest place a back is drawn — a pile in the Talie view. */
-const WIDTH = 460;
+/**
+ * One size for every back, and the reason it has to be one.
+ *
+ * A back is drawn at a fixed width with its height left to the picture, so a
+ * source that is a different shape comes out a different height — the Zaklęcie
+ * back was 460x802 against the Zdarzenie's 460x701, which at 92 across rendered
+ * 160 tall instead of 131 and pushed the top of the stack up through the
+ * heading above it. The stacks are stacks of the same card; they have to be cut
+ * to the same rectangle.
+ *
+ * The shape is the Zdarzenie's, which is the one measured off a card whose
+ * outline is actually visible — the other two are black on black, where only
+ * the pale frame can be found and the cut line cannot. So those two are fitted
+ * inside rather than filled to the edge: `contain` keeps the whole frame and
+ * pads with black, which on a black card is the card.
+ */
+const SIZE = { width: 460, height: 701 };
 
 for (const { id, sheet, card } of BACKS) {
   if (!fs.existsSync(sheet)) {
@@ -80,7 +95,11 @@ for (const { id, sheet, card } of BACKS) {
 
   const out = `public/cards/back-${id}.jpg`;
   fs.mkdirSync("public/cards", { recursive: true });
-  await sharp(source).extract(box).resize({ width: WIDTH }).jpeg({ quality: 88 }).toFile(out);
+  await sharp(source)
+    .extract(box)
+    .resize({ ...SIZE, fit: "contain", background: "#000000" })
+    .jpeg({ quality: 88 })
+    .toFile(out);
   if (rendered) fs.rmSync(source, { force: true });
 
   const made = await sharp(out).metadata();
