@@ -179,7 +179,20 @@ export function useDismissable<T extends HTMLElement>({
 }: {
   /** On screen at all. A console that is shut is not somewhere a click lands. */
   shown?: boolean;
-  /** How to dismiss it, or null for pinned and for the sheets that must be answered. */
+  /**
+   * How to dismiss it, or null for the three kinds that will not be.
+   *
+   * A sheet the game is asking through — a fight, a dead character choosing
+   * again — because those are answered rather than closed. A pinned one,
+   * because that is a deliberate "leave this where it is". And a *minimised*
+   * one, for the same reason: shrinking something to its own bar is putting it
+   * aside on purpose, and Escape landing on the thing you just tidied away
+   * would throw away what it holds. Both of those are asking to be kept, and
+   * the difference between them is only how much room they are taking.
+   *
+   * All three still count as somewhere a click can land inside; none of them
+   * answers a dismissal.
+   */
   onClose: (() => void) | null;
 }) {
   useEscape(shown ? onClose : null);
