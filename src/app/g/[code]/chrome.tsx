@@ -101,13 +101,18 @@ export function SurfaceHead({
  * Dimmer than the word it follows. It is a reminder of a shortcut, not a second
  * thing you can press.
  *
- * Hidden rather than removed, and that is a bug fix rather than a preference.
- * The controls sit at the right-hand end of the bar, so a label that changes
- * width shoves every glyph beside it sideways — pinning the console took the
- * hint away, the row slid across, and the next click at the same spot was no
- * longer on the pin. A few toggles and one of them landed on `zamknij`, which
- * is what "clicking the pin enough times closes the console" was. The slot is
- * kept whether or not it says anything, so nothing moves.
+ * Struck through rather than hidden when the surface will not answer it. A
+ * hint that vanishes leaves you wondering whether it was ever there; one with
+ * a line through it says the shortcut exists and this window has opted out,
+ * which is the actual state of affairs and is what the pin just did.
+ *
+ * Either way it keeps its slot, and that part is a bug fix rather than a
+ * preference. The controls sit at the right-hand end of the bar, so a label
+ * that changes width shoves every glyph beside it sideways — pinning the
+ * console took the hint away, the row slid across, and the next click at the
+ * same spot was no longer on the pin. A few toggles and one landed on
+ * `zamknij`, which is what "clicking the pin enough times closes the console"
+ * was.
  */
 export function CloseButton({
   onClose,
@@ -124,7 +129,7 @@ export function CloseButton({
       className="shrink-0 text-xs text-muted transition hover:text-ink"
     >
       {label}
-      <span className={byEscape ? "text-muted/50" : "invisible"}> (Esc)</span>
+      <span className={byEscape ? "text-muted/50" : "text-muted/30 line-through"}> (Esc)</span>
     </button>
   );
 }

@@ -103,8 +103,13 @@ export function PilesDrawer({
   onInspect: (card: TileCard) => void;
   onClose: () => void;
 }) {
+  // The roster width, which is the drawer default. Two piles at 110 and a gap
+  // of 24 come to 244, and `max-w-sm` holds 384 less the padding and the
+  // scrollbar gutter — so being wider bought nothing but a strip of empty
+  // panel, and the two drawers now measure the same whichever edge they open
+  // from.
   return (
-    <Drawer side="left" width="max-w-md" title="Stosy" onClose={onClose}>
+    <Drawer side="left" title="Stosy" onClose={onClose}>
       <div className="flex flex-col gap-5 p-3">
         <Deck
           name="Karty Zdarzeń"
