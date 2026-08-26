@@ -1562,6 +1562,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 <NowBox
                   playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
                   seatIndex={active.seat_index}
+                  characterId={active.character_id}
+                  characterName={
+                    CHARACTERS.find((one) => one.id === active.character_id)?.name ?? null
+                  }
                   isMine={
                     (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
                   }

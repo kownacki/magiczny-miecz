@@ -19,6 +19,8 @@ import { Lookable } from "./lookable";
 
 export function NowBox({
   playerName,
+  characterId,
+  characterName,
   seatIndex,
   isMine,
   fieldName,
@@ -38,6 +40,16 @@ export function NowBox({
   onEnd,
 }: {
   playerName: string;
+  /**
+   * The character being played, named the way the journal names it.
+   *
+   * A player's name says who is at the table; a character's says what is on the
+   * board. The feed has carried both from the start — "Michał (BŁĘDNY RYCERZ)"
+   * — and this box, which is the other place a turn is read off, carried only
+   * the first. Which of six figures is his was a thing you looked up elsewhere.
+   */
+  characterId: string | null;
+  characterName: string | null;
   /** Whose colour to wear: the same one their figure has on the board. */
   seatIndex: number;
   /** Whether the viewer is the one who has to do something about it. */
@@ -121,17 +133,31 @@ export function NowBox({
           />
           <span className="truncate">{isMine ? "Twoja tura" : playerName}</span>
         </p>
+        {/* Under the name rather than beside it: a character's name is as long
+            as ŚWIĘTY WOJOWNIK and the box is 270 pixels wide, so on one line
+            one of the two would always be losing its end to an ellipsis. And
+            it is `Lookable`, like the Obszar below it — the Karta Postaci is a
+            hover away, which is where half of what a character can do is
+            written. */}
+        {characterId && characterName && (
+          <p className="truncate text-[11px] text-muted">
+            <Lookable kind="character" id={characterId} name={characterName} />
+          </p>
+        )}
         {/* Where the figure is standing. The board says it too, but the board
             is on the other side of the screen and this is the line you read
             without looking away from what you are about to press. */}
         {/* A seat that has stopped checking in is not thinking, and saying so
             is worth more than any amount of animation: the table needs to know
             whether to wait or to take over. It replaces the pulse rather than
-            joining it — two signals for one silence. */}
-        {away && (
-          <p className="mb-0.5 truncate text-[11px] text-vermilion">
-            {isMine ? "Twoje urządzenie milczy." : `${playerName} nie odpowiada.`}
-          </p>
+            joining it — two signals for one silence.
+
+            Never on your own screen. "Twoje urządzenie milczy" is a sentence
+            disproved by anybody who can read it, and a tab that has been
+            sitting still while somebody else drove the table said exactly
+            that. */}
+        {away && !isMine && (
+          <p className="mb-0.5 truncate text-[11px] text-vermilion">{playerName} nie odpowiada.</p>
         )}
         <p className="truncate text-[11px] text-muted" title={fieldName}>
           {fieldId ? (
