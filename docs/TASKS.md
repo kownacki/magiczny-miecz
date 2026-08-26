@@ -400,3 +400,89 @@ the engine gets wrong or does not have, not a missing feature.
 - [ ] Two weapons at once, for a character with the ability — none has one yet
 
 See **Wariant: ekwipunek slotowy** in [COVERAGE.md](COVERAGE.md).
+
+---
+
+# IN FLIGHT — separating people from Postacie
+
+**The table is down.** The database was wiped and re-shaped; the code is
+part-way through following it. `npx tsc --noEmit` is the work list, and it is
+accurate: nothing here needs deciding, only doing.
+
+## The model, in one paragraph
+
+A **seat** is a place at the table and the Postać standing in it — six per
+game, fixed, and seat order is turn order. A **user** is a person, unbounded,
+with a four-character globally-unique id and a name that is unique per table.
+A user drives at most one seat; a user with no seat is a **spectator**, which
+is a thing to be rather than the absence of one. The rulebook already made this
+split and the schema had flattened it: 2.1's "Każdy z grających *kieruje* jedną
+Postacią" and 4.4's "Gracz, który *kierował* niefortunną Postacią".
+
+Four states, on two independent axes:
+
+|                    | no driver | driver                  |
+| ------------------ | --------- | ----------------------- |
+| **no character**   | free      | waiting (picking)       |
+| **character**      | empty     | taken                   |
+
+## Vocabulary — settled, do not relitigate
+
+| command                    | acts on   | effect                                                    |
+| -------------------------- | --------- | --------------------------------------------------------- |
+| `who`                      | —         | the table: seats, Postacie, drivers, ids                   |
+| `seat <player> 3`          | user      | sit down; refuses a seat somebody is actively driving      |
+| `unseat [player]`          | user      | out of the chair, still watching; Postać untouched         |
+| `kick <player>`            | user      | out of the table                                           |
+| `leave` / `exit`           | me        | out by choice — same exit, different journal line           |
+| `pick [MAGOG] [3]`         | seat      | a Postać in: drawn unless named, yours unless numbered      |
+| `remove` / `erase 3\|MAGOG [hard]` | Postać | out of the game, Karty to the used piles            |
+| `revive 3\|MAGOG`          | Postać    | back where it fell, own points, starting Życie, no items    |
+| `rename <player> as Ola`   | user      | —                                                          |
+| `host <player>`            | user      | —                                                          |
+
+- **Confirm what no other command can undo**: `remove`, `kill`, and `kick` (the
+  only one that is rude to somebody *else*). `unseat` and `leave` take nothing
+  away. `needsConfirming` in `engine/console.ts` holds the rule.
+- **soft `remove`** puts the Karta back in the pool; **`hard`** bars it for good.
+  A **host** may remove a *living* Postać (the rulebook says nothing about
+  withdrawing one, so nothing is being overruled). Only the **console** may
+  remove a *dead* one — that is putting a Karta back that 4.4 explicitly set
+  aside, and it is journalled `manual` like every other break.
+- `kill` and `revive` are console-only. Both contradict 4.4 in words.
+
+## Done
+
+`c5189cc` schema · `aac3c70` console grammar (116 tests green) · `27aa4f7`
+migration applied + wipe · `89e4310` row types split · `eaf796d` `lobby.ts` ·
+`01578f4` all eleven API routes.
+
+## Left, in order
+
+1. **`consoleStore.ts`** (~24) — `who`, `kick`, `seat`, `leave`, `rename` and
+   `host` currently throw "czeka na tabelę users". The functions they need now
+   exist in `lobbyStore`. `remove` and `revive` still need `characters_out`.
+2. **`lobby.test.ts`** (~85) and **`permission.test.ts`** (~27) — they speak the
+   old API. Then `envelope`, `fight`, `character`, `change`, `movement`,
+   `effects`, `commit` tests and `fixture.ts` (a `users: []` on the snapshot
+   fixes most of them).
+3. **Client** — `deviceId` in localStorage (see below), resume-or-join-as-
+   somebody-else, the four seat states in the roster, the kicked/removed
+   screens.
+4. **4.4** — nothing writes `games.characters_out` yet. Death adds; soft
+   `remove` and `revive` take off; `pick` chooses from neither-seated-nor-listed.
+   Until this lands, a dead Postać silently returns to the pool.
+
+## Two decisions a fresh session would otherwise re-derive
+
+- **`deviceId` goes in `localStorage`, and it does not contradict
+  `seatToken.ts`.** That file argues for `sessionStorage` and is right — about a
+  different question. `claim_token` is per *window* ("may this window drive that
+  seat"); `device_id` is per *browser* ("who is this person") and has to survive
+  the tab closing, which is the whole reconnect case. Reopening finds the quiet
+  user with that `device_id` and offers *"Wróć jako Michał"*; a second tab finds
+  that user *live* and offers *"Dołącz jako ktoś inny"*, so multi-tab testing
+  becomes a deliberate choice rather than an accident.
+- **Mid-game nothing is auto-unseated.** The sweep is the poczekalnia's only.
+  A Postać is not free for the taking because somebody's phone slept; `AWAY_AFTER_MS`
+  shows them away and the host has `unseat` for when it is really over.
