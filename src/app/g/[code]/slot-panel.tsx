@@ -4,7 +4,6 @@ import { useState } from "react";
 import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
-import type { TileCard } from "./card-tile";
 
 /**
  * What a character is wearing, laid out like a body.

@@ -9,8 +9,6 @@ import characters from "@/data/characters.json";
 import type { Character, Nature } from "@/data/types";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
-import { fieldWithText } from "@/lib/view/fieldText";
-import { type Ability } from "@/lib/engine/abilities";
 import { describeAbility } from "@/lib/engine/abilityText";
 import {
   RANDOM_CHARACTER_ID,
@@ -21,7 +19,7 @@ import {
   startingKit,
   type SeatCharacter,
 } from "@/lib/engine/characters";
-import { cardArtUrl, characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
+import { cardArtUrl, characterImageUrl } from "@/lib/view/cardImages";
 import Image from "next/image";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { SeatActions } from "./seat-actions";
@@ -1823,7 +1821,6 @@ function Hand({
   onUse,
   onWand,
   onReorder,
-  onInspect,
 }: {
   seat: Seat;
   isMine: boolean;

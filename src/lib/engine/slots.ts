@@ -1,5 +1,5 @@
 /** The slotted equipment variant: which Przedmiot goes where on a character. */
-import type { CardId, SpellId } from "@/data/ids";
+import type { CardId } from "@/data/ids";
 
 /**
  * Two ways to hold your things.

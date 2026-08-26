@@ -3,29 +3,19 @@
 import { useState } from "react";
 import events from "@/data/events.json";
 import characters from "@/data/characters.json";
-import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
-import { DIRECTION_LABEL, type Fight, type TurnPhase } from "@/lib/engine/turn";
-import { suggestActions } from "@/lib/engine/cardEffects";
+import type { EventCard } from "@/data/types";
+import { type Fight, type TurnPhase } from "@/lib/engine/turn";
 import { fieldScriptFor } from "@/lib/engine/fieldScript";
-import { isSettled } from "@/lib/engine/resolve";
 import { goodsId } from "@/lib/engine/goods";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import {
-  describeDisposition,
   scriptFor,
-  type CardScript,
   type Effect,
 } from "@/lib/engine/cardScript";
-import { NOT_HANDLED, coverageOf, manualNote } from "@/lib/engine/coverage";
-import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
-import { bonusOf, combatValueOf } from "@/lib/engine/cards";
-import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom } from "@/lib/engine/rings";
-import { FIELDS, asFieldId, isFerry, type FieldId } from "@/lib/engine/board";
+import { FIELDS, asFieldId, type FieldId } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { LOST_LABEL, STAT_LABEL, TARGET_FULL } from "@/lib/engine/polish";
-import { RollTable } from "./roll-table";
-import { parseRollTable } from "@/lib/engine/rollTable";
 
 const EVENTS = events as EventCard[];
 
@@ -40,15 +30,6 @@ const CHARACTER_NAMES = new Map(
  * the player finds the card they drew by name instead. Diacritics are folded on
  * both sides so "zaraza" finds "ZARAZA" without a Polish keyboard.
  */
-/** True when a die table accounts for nearly all of a field's printed text. */
-function isTableOnly(text: string): boolean {
-  const table = parseRollTable(text);
-  if (!table) return false;
-  const covered = new Set(Object.values(table.outcomes)).size
-    ? Object.values(table.outcomes).join(" ").length
-    : 0;
-  return covered >= text.length * 0.6;
-}
 
 function fold(text: string): string {
   return text
@@ -75,25 +56,6 @@ function matchRank(name: string, needle: string): number {
   return folded.includes(needle) ? 2 : 3;
 }
 
-function searchCards(query: string): EventCard[] {
-  const needle = fold(query.trim());
-  if (needle.length < 2) return [];
-  const seen = new Set<string>();
-  return EVENTS.filter((card) => {
-    if (matchRank(card.name, needle) === 3) return false;
-    // The deck holds real duplicates; the player only needs to find the card
-    // once, so identical names collapse to one row.
-    if (seen.has(card.id)) return false;
-    seen.add(card.id);
-    return true;
-  })
-    .sort(
-      (a, b) =>
-        matchRank(a.name, needle) - matchRank(b.name, needle) ||
-        a.name.localeCompare(b.name, "pl"),
-    )
-    .slice(0, 8);
-}
 
 export { matchRank };
 
@@ -135,55 +97,6 @@ interface Props {
   onTake: (cardId: string) => void;
 }
 
-export function TurnPanel({
-  phase,
-  isMine,
-  playerName,
-  actingForOther = false,
-  dieSource,
-  mode,
-  busy,
-  onAction,
-  onSuggestion,
-  onTake,
-}: Props) {
-  /**
-   * Nothing here for somebody who is not playing, and nothing for a phase whose
-   * controls live somewhere else.
-   *
-   * "Czekamy na ruch gracza Karol" was a bordered box saying what the box
-   * beside the queue already says, and it sat on screen for most of every
-   * round. A fight is fought in the action window and `Zakończ turę` is in the
-   * box, so those two phases have nothing left to draw here either — and an
-   * empty bordered box is worse than no box.
-   */
-  const controls = phase.phase === "most" || phase.phase === "pole";
-  if (!isMine || (!controls && !actingForOther)) return null;
-
-  return (
-    <section className="rounded-lg border border-ochre/40 bg-panel p-5">
-      {/* No header: whose turn it is and where they are stand in the box beside
-          the queue now, and saying it twice on one screen is how this panel came
-          to read as the turn itself rather than as the controls for it. */}
-
-      {actingForOther && (
-        <p className="mb-3 text-xs text-ochre/80">
-          To urządzenie prowadzi turę gracza {playerName}.
-        </p>
-      )}
-
-      <PhaseControls
-        phase={phase}
-        dieSource={dieSource}
-        mode={mode}
-        busy={busy}
-        onAction={onAction}
-        onSuggestion={onSuggestion}
-        onTake={onTake}
-      />
-    </section>
-  );
-}
 
 /**
  * Facing the guardian at a bridge entrance (11.9-11.11).
@@ -473,225 +386,9 @@ export function Crossing({
   );
 }
 
-/**
- * A field's die roll, waived.
- *
- * Says which card is doing the waiving, because that is the part a player wants
- * to check — the whole value of the Przewodnik is knowing, at the Krypta
- * Upiorów, that you have him.
- */
-function RollSkipped({
-  by,
-  text,
-  busy,
-  typedRolls,
-  onSuggestion,
-}: {
-  by: string;
-  text: string;
-  busy: boolean;
-  typedRolls: boolean;
-  onSuggestion: Props["onSuggestion"];
-}) {
-  const [anyway, setAnyway] = useState(false);
-  return (
-    <div className="mt-2 rounded border border-verdigris/40 bg-night/60 p-3">
-      <p className="text-xs text-verdigris">
-        Przechodzisz bezpiecznie — <span className="text-ink">{by}</span> zwalnia cię
-        z rzutu na tym Obszarze.
-      </p>
-      <button
-        onClick={() => setAnyway((on) => !on)}
-        className="mt-1 text-[10px] text-muted underline hover:text-ink"
-      >
-        {anyway ? "ukryj tabelę" : "rzuć mimo to"}
-      </button>
-      {anyway && (
-        <RollTable text={text} busy={busy} typedRolls={typedRolls} onSuggestion={onSuggestion} />
-      )}
-    </div>
-  );
-}
 
-function PhaseControls({
-  phase,
-  dieSource,
-  mode,
-  busy,
-  onAction,
-  onSuggestion,
-  onTake,
-}: Pick<Props, "phase" | "dieSource" | "mode" | "busy" | "onAction" | "onSuggestion" | "onTake">) {
-  switch (phase.phase) {
-    // "Rzuć kostką" is in the box beside the queue, where the two controls
-    // pressed every single turn keep their place. Nothing to decide about a
-    // roll, so it is a button and not a window.
-    case "rzut":
-      return null;
-    // The direction the die bought is a decision, and it is made in the action
-    // window with the table watching — see `DrawModal`. Where somebody is
-    // headed is public, and it used to be drawn only on their own device.
-    case "ruch":
-      return null;
-    case "most":
-      return (
-        <BridgeControls
-          bridge={phase.bridge}
-          simulated={mode === "simulation"}
-          busy={busy}
-          onAction={onAction}
-        />
-      );
-    case "pole":
-      return (
-        <FieldControls
-          phase={phase}
-          mode={mode}
-          busy={busy}
-          onAction={onAction}
-          onSuggestion={onSuggestion}
-          onTake={onTake}
-        />
-      );
-    // A fight is fought in the action window, which opens itself and which the
-    // whole table watches — see `DrawModal`, which imports `FightControls`.
-    case "walka":
-      return null;
-    // The box beside the queue carries this one, where it keeps its place
-    // whatever the turn is doing. It is the control pressed every single turn.
-    case "koniec":
-      return null;
-  }
-}
 
-function RollControls({
-  dieSource,
-  simulated,
-  busy,
-  onAction,
-}: Pick<Props, "dieSource" | "busy" | "onAction"> & { simulated: boolean }) {
-  // At a physical table both ways of getting a number are offered whatever the
-  // table's configured preference: people reach for the die mid-game, and a
-  // referee that refuses to accept it would be worse than no referee. In a
-  // simulation there is no die to reach for and the app throws its own.
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <button
-        disabled={busy}
-        onClick={() => onAction({ action: "roll" })}
-        className="rounded border border-edge bg-raised px-5 py-3 font-[family-name:var(--font-display)] text-ink transition hover:border-ochre disabled:opacity-50"
-      >
-        Rzuć kostką
-      </button>
-      {!simulated && (
-        <>
-          <span className="text-xs text-muted">
-            albo wpisz wynik {dieSource === "physical" ? "(stół gra własną kostką)" : ""}
-          </span>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5, 6].map((value) => (
-              <button
-                key={value}
-                disabled={busy}
-                onClick={() => onAction({ action: "roll", value })}
-                className="tnum h-10 w-10 rounded border border-edge bg-night text-ink transition hover:border-ochre disabled:opacity-50"
-              >
-                {value}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
-function FieldControls({
-  phase,
-  mode,
-  busy,
-  onAction,
-  onSuggestion,
-  onTake,
-}: {
-  phase: Extract<TurnPhase, { phase: "pole" }>;
-  mode: string;
-  busy: boolean;
-  onAction: Props["onAction"];
-  onSuggestion: Props["onSuggestion"];
-  onTake: Props["onTake"];
-}) {
-  const [query, setQuery] = useState("");
-  const results = searchCards(query);
-  const outstanding = phase.draw - phase.drawn.length;
-
-  return (
-    <div className="flex flex-col gap-4">
-
-      {phase.draw > 0 && (
-        <p className="text-sm text-muted">
-          To pole każe wyciągnąć{" "}
-          <span className="text-ink">
-            {phase.draw} {phase.draw === 1 ? "kartę" : "karty"}
-          </span>
-          {outstanding > 0 ? ` — zostało ${outstanding}.` : " — komplet."}
-        </p>
-      )}
-
-      {outstanding > 0 && mode === "simulation" && (
-        // The app owns the deck here, so there is nothing to identify — the
-        // only question is whether to deal the next card.
-        <button
-          disabled={busy}
-          onClick={() => onAction({ action: "draw" })}
-          className="self-start rounded border border-ochre/50 bg-raised px-4 py-2 text-sm text-ink transition hover:bg-edge disabled:opacity-50"
-        >
-          Wyciągnij kartę
-        </button>
-      )}
-
-      {outstanding > 0 && mode !== "simulation" && (
-        <div>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Wpisz nazwę wyciągniętej karty…"
-            className="w-full rounded border border-edge bg-night px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:border-ochre focus:outline-none"
-          />
-          {results.length > 0 && (
-            <ul className="mt-2 flex flex-col gap-1">
-              {results.map((card) => (
-                <li key={card.id}>
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      onAction({ action: "draw", cardId: card.id, cardClass: card.cardClass });
-                      setQuery("");
-                    }}
-                    className="w-full rounded border border-edge bg-raised px-3 py-2 text-left text-sm transition hover:border-ochre disabled:opacity-50"
-                  >
-                    <span className="text-ink">{card.name}</span>
-                    <span className="ml-2 text-[11px] uppercase text-muted">
-                      {CARD_CLASS_LABEL[card.cardClass]}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {phase.drawn.length > 0 && (
-        <DrawnCards drawn={phase.drawn} />
-      )}
-
-      {/* No "Zakończ turę" here: it is in the box beside the queue, where it
-          keeps its place whatever the turn is doing. Two of them on one screen
-          made the box's look like a different button. */}
-    </div>
-  );
-}
 
 /**
  * A fight, one die at a time.
@@ -1056,151 +753,8 @@ function FightSide({
   );
 }
 
-/**
- * The drawn stack, already in the order rule 15.2 requires — lowest class
- * numeral first. Showing them pre-sorted is most of the point of the referee:
- * getting this order wrong by hand is the commonest mistake at the table.
- */
-function DrawnCards({ drawn }: { drawn: { cardId: string; cardClass: string }[] }) {
-  // Nothing here is pressable. Everything a player *does* about a drawn card
-  // happens in the modal, where the whole table can see it and where nobody can
-  // quietly re-equip mid-encounter — this is the same stack written down so
-  // that the field can be read at a glance while the modal is folded away.
-  return (
-    <ol className="flex flex-col gap-2 border-l-2 border-ochre/30 pl-3">
-      {drawn.map((entry, index) => {
-        const card = EVENTS.find((c) => c.id === entry.cardId);
-        return (
-          <li key={`${entry.cardId}-${index}`}>
-            <p className="text-sm font-medium text-ink">
-              {index + 1}. {card?.name ?? entry.cardId}
-              <span className="ml-2 text-[11px] uppercase text-muted">
-                {CARD_CLASS_LABEL[entry.cardClass as CardClass] ?? entry.cardClass}
-              </span>
-            </p>
-            {card && (
-              <p className="mt-1 text-xs leading-relaxed text-muted">{card.text}</p>
-            )}
-            {card && combatValueOf(card) && (
-              <p
-                className={`tnum mt-1 text-xs ${
-                  combatValueOf(card)!.kind === "magiczna" ? "text-magia" : "text-miecz"
-                }`}
-              >
-                {combatValueOf(card)!.kind === "magiczna" ? "Magia" : "Miecz"} przeciwnika:{" "}
-                {combatValueOf(card)!.total}
-              </p>
-            )}
-            {card && bonusOf(card) && (
-              <p className="tnum mt-1 text-xs text-verdigris">
-                Dodaje:{" "}
-                {[
-                  bonusOf(card)!.miecz ? `+${bonusOf(card)!.miecz} Miecza` : null,
-                  bonusOf(card)!.magia ? `+${bonusOf(card)!.magia} Magii` : null,
-                ]
-                  .filter(Boolean)
-                  .join(", ")}
-              </p>
-            )}
-            {card && <Coverage cardId={card.id} />}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
-/**
- * How much of this card the app is actually handling.
- *
- * Silence is the dangerous answer. Once a table has watched the referee resolve
- * twenty cards it will assume it is resolving the twenty-first, and a card the
- * app cannot read looks exactly like one it has already dealt with. So the ones
- * it is not carrying say so, and the ones it is carrying only halfway name the
- * half it is not.
- */
-function Coverage({ cardId }: { cardId: string }) {
-  const coverage = coverageOf(cardId);
-  if (coverage === "pelne") return null;
-  const note = manualNote(cardId);
-  return (
-    <p
-      className={`mt-1 rounded border-l-2 px-2 py-1 text-[11px] leading-snug ${
-        coverage === "brak"
-          ? "border-vermilion/50 bg-vermilion/5 text-vermilion/90"
-          : "border-ochre/50 bg-ochre/5 text-ochre/90"
-      }`}
-    >
-      <span className="uppercase tracking-wide">
-        {coverage === "brak" ? "Ręcznie" : "Częściowo ręcznie"}
-      </span>{" "}
-      — {note ?? NOT_HANDLED}
-    </p>
-  );
-}
 
-/**
- * A card whose rules have been read and typed, rather than guessed at.
- *
- * Two jobs. It offers the outcomes the card actually has — including the ones
- * a regular expression could never find, like the six-way wish or a face of a
- * die table — and it says where the card goes afterwards, which is the part a
- * table skips and the part the app is best placed to remember.
- *
- * Nothing here applies itself. Every button goes through the same journalled
- * correction path as the manual plus and minus, so a wrong reading of a card is
- * visible in the log afterwards rather than silently baked into the game.
- */
-function ScriptedCard({
-  script,
-  cardName,
-  busy,
-  simulated,
-  onResolve,
-  onSuggestion,
-}: {
-  script: CardScript;
-  cardName: string;
-  busy: boolean;
-  /** The app carries the card out rather than listing what you should do. */
-  simulated: boolean;
-  onResolve: () => void;
-  onSuggestion: Props["onSuggestion"];
-}) {
-  // Everything the app can do without asking. What is left — a `wybor`, which
-  // Przedmiot to give up — comes back from the server as `pending` and is asked
-  // then, so the card is read here and decided there.
-  const settled = isSettled(script.effect);
-  return (
-    <div className="mt-2 rounded border border-edge/60 bg-night/40 p-2">
-      {script.optional && (
-        <p className="mb-1 text-[10px] uppercase tracking-wide text-muted">
-          Możesz z tego nie skorzystać
-        </p>
-      )}
-      <EffectControls
-        effect={script.effect}
-        cardName={cardName}
-        busy={busy}
-        onSuggestion={onSuggestion}
-        // Read, not pressed: the button below is what applies it.
-        applied={simulated}
-      />
-      {simulated && settled && (
-        <button
-          disabled={busy}
-          onClick={onResolve}
-          className="mt-2 rounded border border-ochre/60 px-3 py-1 text-xs text-ochre transition hover:bg-edge disabled:opacity-50"
-        >
-          {script.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
-        </button>
-      )}
-      <p className="mt-2 border-t border-edge/60 pt-1 text-[11px] text-ochre/80">
-        {describeDisposition(script.disposition)}
-      </p>
-    </div>
-  );
-}
 
 /**
  * The buttons for one effect.

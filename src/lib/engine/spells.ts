@@ -1,5 +1,5 @@
 /** When a Zaklęcie may be cast, at what, and what casting it does (9.1, 9.6). */
-import type { CardId, SpellId } from "@/data/ids";
+import type { SpellId } from "@/data/ids";
 import type { TurnPhase } from "./turn";
 
 /**
