@@ -51,6 +51,22 @@ export const STAT_LABEL: Record<Stat, string> = {
   gold: "Złota",
 };
 
+/**
+ * A Natura, as the character card prints it.
+ *
+ * Stored in English like every other key and shown in Polish like every other
+ * word on the screen. Three copies of this map appeared within an hour of the
+ * rename — the journal's, an ability's condition, and the panel under the card,
+ * which did not get one and printed "natura: good" at a table.
+ */
+export const NATURE_LABEL: Record<string, string> = {
+  good: "dobra",
+  evil: "zła",
+  chaotic: "chaotyczna",
+  // A Kat's card, which prints no Natura and lets its player pick one (8.2).
+  any: "dowolna",
+};
+
 /** What a `strata` takes off you. */
 export type Loss = Extract<Effect, { op: "strata" }>["co"];
 

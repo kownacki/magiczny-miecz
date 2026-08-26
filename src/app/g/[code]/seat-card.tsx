@@ -25,6 +25,7 @@ import { dismissableOpen } from "./overlay";
 import { SlotPanel } from "./slot-panel";
 import { CARD_NAMES, CARD_TEXTS, CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import Image from "next/image";
+import { NATURE_LABEL } from "@/lib/engine/polish";
 export function SeatCard({
   seat,
   active,
@@ -329,7 +330,7 @@ export function SeatCard({
                   then what is printed is out of date and this is the only place
                   saying so. */}
               <p className="mt-1 text-center text-[10px] text-muted">
-                {seat.nature ? `natura: ${seat.nature}` : "natura nieustalona"}
+                {seat.nature ? `natura: ${NATURE_LABEL[seat.nature] ?? seat.nature}` : "natura nieustalona"}
               </p>
             </div>
 

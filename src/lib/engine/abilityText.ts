@@ -6,7 +6,7 @@ import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
 import { describeDisposition, scriptFor } from "./cardScript";
 import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
-import { fieldName, plural } from "./polish";
+import { NATURE_LABEL, fieldName, plural } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
 function fieldNames(fieldIds: readonly FieldId[]): string {
@@ -99,10 +99,6 @@ export interface ItemProfile {
 }
 
 /** Kinds that state a condition on holding the card at all, rather than a benefit. */
-/** A Natura is stored in English and printed as the card prints it. */
-const natureWord = (n: string) =>
-  ({ good: "dobra", evil: "zła", chaotic: "chaotyczna" })[n] ?? n;
-
 const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
 
 /**
@@ -227,7 +223,7 @@ export function describeAbility(ability: Ability): string {
       // the Czarci Młyn and a Zła one at the Studnia Wieczności, and dropping
       // that read as sparing everyone at both.
       const onlyFor = ability.natura?.length
-        ? ` — jeśli ${ability.natura.map(natureWord).join(" lub ")}`
+        ? ` — jeśli ${ability.natura.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ")}`
         : "";
       if (ability.from === "rzut") return `bez rzutu: ${where}${onlyFor}`;
       if (ability.from === "life") return `bez straty Życia: ${where}${onlyFor}`;
@@ -300,7 +296,7 @@ export function describeAbility(ability: Ability): string {
       return `${sign} do rzutu ${where}${ability.jednorazowy ? " (raz)" : ""}`;
     }
     case "tylko-natura": {
-      const natury = ability.natury.map(natureWord).join(" lub ");
+      const natury = ability.natury.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ");
       return `tylko Postać: ${natury} (5.3)`;
     }
     case "przeciw": {

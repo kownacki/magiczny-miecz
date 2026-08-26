@@ -7,7 +7,7 @@ import characters from "@/data/characters.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { asFieldId } from "./board";
 import { asCharacterId } from "./characters";
-import { fieldName as nameOfField, plural } from "./polish";
+import { NATURE_LABEL, fieldName as nameOfField, plural } from "./polish";
 import { USE_VERB_PAST } from "./uses";
 import { describeEnd, type Ends } from "./status";
 import type { JournalKind } from "./journal";
@@ -212,8 +212,7 @@ function nameOf(seat: JournalSeat | undefined): string {
 /** The cards print "zła", not "evil". Null when there is no Natura to name. */
 function natura(value: unknown): string | null {
   if (typeof value !== "string" || value === "") return null;
-  // Stored in English, printed as the character card prints it.
-  return { good: "dobra", evil: "zła", chaotic: "chaotyczna" }[value] ?? value;
+  return NATURE_LABEL[value] ?? value;
 }
 
 const life = (n: number) => `${n} ${plural(n, "Życie", "Życia", "Żyć")}`;
