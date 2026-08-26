@@ -269,8 +269,28 @@ export function SeatCard({
                 numbers underneath said the same thing and looked like a
                 spreadsheet; this looks like the table.
               */}
-              <div className="flex items-stretch gap-1">
-                <div className="flex flex-col justify-between gap-2 py-1">
+              {/* Two equal side tracks, so the Karta is centred in the row.
+                  It was a plain flex row, which put the Karta wherever the two
+                  rails happened to leave it — and the rails are as wide as the
+                  piles in them, so a character with three columns of Miecz and
+                  one coin had it sitting well right of the middle. Nothing on
+                  the row itself gave that away; what gave it away was the line
+                  underneath, centred on the row and therefore not on the card
+                  it is about.
+
+                  `1fr` and not a fixed width: a pile is at most three columns
+                  but a rail also carries its numeral and, in companion mode,
+                  its ± — and a track sized for the pile alone would clip them.
+                  Under intrinsic sizing both fr tracks resolve to the wider of
+                  the two, which is the same answer without the guess.
+
+                  Each rail is then pinned to the edge of the Karta rather than
+                  left to fill its track. The piles are captions for the words
+                  printed up the card's own edges, and a caption floating in the
+                  middle of a wide track is a caption for nothing. The tracks
+                  stay equal either way, so the Karta stays centred. */}
+              <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-1">
+                <div className="flex flex-col justify-between justify-self-end gap-2 py-1">
                   <RailStat
                     label="Miecz"
                     value={seat.sword_own}
@@ -323,7 +343,7 @@ export function SeatCard({
                   </button>
                 )}
 
-                <div className="flex flex-col justify-between gap-2 py-1">
+                <div className="flex flex-col justify-between justify-self-start gap-2 py-1">
                   <RailStat
                     label="Złoto"
                     value={seat.gold}
