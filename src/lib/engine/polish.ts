@@ -122,3 +122,43 @@ export const TARGET_FULL: Record<Target, string> = {
   "w-gornym-kregu": "wędrujący po Górnym Kręgu",
   "inna-postac": "wybrana inna Postać",
 };
+
+/**
+ * The four facts that identify a character, written once.
+ *
+ * Who this is, what it fights and casts with, and what Natura it is of — the
+ * line over a Karta Postaci when it is opened, and the hover on the same card
+ * when it is being chosen. It had been written out five times between the
+ * roster, the lookup, the seat card, the lobby's picker and the rebirth
+ * picker, and all five of them printed the Natura as `good`, `evil` or
+ * `chaotic`: the stored key, in English, at a Polish table.
+ *
+ * Which is the hazard `NATURE_LABEL` was put here to end, arriving by the one
+ * route a map cannot close — five places each formatting the same sentence,
+ * none of them wrong about the Natura so much as never asking.
+ */
+export function characterFacts(character: {
+  miecz: number;
+  magia: number;
+  nature: string;
+}): string {
+  return `Miecz ${character.miecz} · Magia ${character.magia} · ${
+    NATURE_LABEL[character.nature] ?? character.nature
+  }`;
+}
+
+/** The same four, as the kind-line a Karta Postaci is opened under. */
+export function characterKind(character: { miecz: number; magia: number; nature: string }): string {
+  return `Postać · ${characterFacts(character)}`;
+}
+
+/** And as a hover on a card being picked, where the starting Obszar matters too. */
+export function characterTitle(character: {
+  name: string;
+  miecz: number;
+  magia: number;
+  nature: string;
+  start: string;
+}): string {
+  return `${character.name} — ${characterFacts(character)} · start: ${character.start}`;
+}

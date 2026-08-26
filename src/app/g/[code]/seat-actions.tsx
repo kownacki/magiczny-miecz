@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NATURE_LABEL } from "@/lib/engine/polish";
 
 /**
  * The things a character can do that are not part of the move-draw-fight loop.
@@ -76,6 +77,14 @@ export function SeatActions({
 
           {showNature && (
           <Row label="Natura (7.2)">
+            {/* Good, chaotic, evil — in that order, because 7.1 describes them
+                as two departures from a middle rather than as a list, and the
+                middle belongs between them.
+
+                Every one of these was printed in Polish by hand, which is to
+                say one of them was: the map that has held these words since the
+                rename was two directories away, and `option` went to the screen
+                for the other two. */}
             {(["good", "chaotic", "evil"] as const).map((option) => (
               <Action
                 key={option}
@@ -83,7 +92,7 @@ export function SeatActions({
                 active={nature === option}
                 onClick={() => onNature(option)}
               >
-                {option === "evil" ? "zła" : option}
+                {NATURE_LABEL[option] ?? option}
               </Action>
             ))}
             <Note>Najwyżej raz na turę (7.3).</Note>

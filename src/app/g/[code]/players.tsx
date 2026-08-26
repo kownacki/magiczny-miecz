@@ -28,6 +28,7 @@ import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import type { PublicSeat } from "./table-layout";
 import { Drawer } from "./drawer";
+import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 
 export function PlayersDrawer({
   seats,
@@ -150,7 +151,7 @@ export function PlayersDrawer({
                             name: character.name,
                             character: true,
                             text: character.abilities.join("\n\n"),
-                            kindLabel: `Postać · Miecz ${character.miecz} · Magia ${character.magia} · ${character.nature}`,
+                            kindLabel: characterKind(character),
                           })
                         }
                         className="shrink-0 rounded border border-edge transition hover:border-ochre"
@@ -175,7 +176,13 @@ export function PlayersDrawer({
                           )
                         }
                       />
-                      <Row label="Natura" value={seat.nature ?? "—"} />
+                      {/* The stored key is English like every other key; the table is not.
+                          This one printed `evil` at a Polish table for as long as
+                          the roster has had a Natura row in it. */}
+                      <Row
+                        label="Natura"
+                        value={seat.nature ? (NATURE_LABEL[seat.nature] ?? seat.nature) : "—"}
+                      />
                       <Row
                         label="Miecz"
                         value={`${seat.miecz}${seat.miecz !== seat.swordOwn ? ` (${seat.swordOwn} własne)` : ""}`}

@@ -151,3 +151,33 @@ export function characterArtUrl(characterId: string): string | null {
   if (slice && ART_AVAILABLE.has(slice)) return `/cards/art/${fileNameFor(slice)}.jpg`;
   return characterImageUrl(characterId);
 }
+
+/**
+ * The two faces the box prints for 7.2, and the third it does not.
+ *
+ * "Gdy Postać zmienia swoją Naturę, obok jej Karty musi zostać umieszczona
+ * Karta Zmiany Natury... by ukazywała nową Naturę Postaci (właściwym napisem ku
+ * górze)" — one piece of card printed `Zły` on one side and `DOBRY` on the
+ * other, turned to whichever is true and taken away when a character returns to
+ * what its own Karta prints.
+ *
+ * Chaotyczny is drawn rather than scanned, and it is drawn because the app is
+ * not a table. At a table the third Natura is *the card being absent*, which
+ * works because the Karta Postaci is right there saying what the character
+ * started as. A referee that owns the record has to be able to say which Natura
+ * is true without asking anybody to do that subtraction — so it gets a face
+ * too, set to match the printed one. See `scripts/export-nature-card.mjs`.
+ */
+const NATURE_FACE: Record<string, string> = {
+  good: "dobry",
+  evil: "zly",
+  chaotic: "chaotyczny",
+};
+
+export function natureCardUrl(nature: string | null): string | null {
+  const face = nature === null ? undefined : NATURE_FACE[nature];
+  return face ? `/cards/natura-${face}.jpg` : null;
+}
+
+/** What `export-nature-card.mjs` cuts every plaque to. */
+export const NATURE_CARD_RATIO = 260 / 90;

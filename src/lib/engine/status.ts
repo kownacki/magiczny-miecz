@@ -233,12 +233,15 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
     });
   }
 
-  // 7.2: worth showing, changes nothing on its own.
+  // 7.2 changed it; 7.3 is why the fact is worth keeping on screen for the rest
+  // of the turn. What the Natura now *is* the seat card says with the Karta
+  // Zmiany Natury, which is where the rule puts it — this is only the part a
+  // player deciding what to do next has to know.
   if (seat.natureChangedTurn !== null && seat.natureChangedTurn === turn) {
     out.push({
       id: "natura-zmieniona",
       source: "natura",
-      label: "Natura zmieniona w tej turze",
+      label: "Natura zmieniona; drugiej zmiany nie będzie (7.3)",
       modifier: { kind: "note" },
       ends: { kind: "turns", turns: 1 },
     });
@@ -296,6 +299,22 @@ export function markOf(status: Status): Mark {
     case "barred":
       return { glyph: "\u2298", tone: "zly", title };
     case "note":
-      return { glyph: "\u25CB", tone: "obojetny", title };
+      return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };
   }
 }
+
+/**
+ * The symbol a note carries, where what it is a note about has one.
+ *
+ * `note` is the bucket for effects with nothing mechanical to apply, and every
+ * one of them drew the same hollow circle \u2014 which beside a player's name says
+ * that something is true and not one word about what. It looked less like a
+ * mark than like a picture that had failed to load.
+ *
+ * A Natura has a symbol of its own, so the bucket does not have to stay a
+ * bucket. Anything else added here should be the same kind of thing: a shape
+ * that names the subject, not one that grades it.
+ */
+const NOTE_GLYPH: Record<string, string> = {
+  natura: "\u262F",
+};

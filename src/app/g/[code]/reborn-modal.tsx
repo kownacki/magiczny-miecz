@@ -6,6 +6,7 @@ import type { Character } from "@/data/types";
 import { RANDOM_CHARACTER_ID, type SeatCharacter } from "@/lib/engine/characters";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
 import { Overlay } from "./overlay";
+import { characterTitle } from "@/lib/engine/polish";
 
 /**
  * Choosing again, after dying.
@@ -135,7 +136,7 @@ export function RebornModal({
                     }
                     onFocus={() => setHovered(character.id)}
                     onBlur={() => setHovered(null)}
-                    title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
+                    title={characterTitle(character)}
                     className={`overflow-hidden rounded border transition disabled:opacity-40 ${
                       chosen ? "border-ochre" : "border-edge hover:border-ochre/60"
                     }`}

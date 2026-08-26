@@ -8,6 +8,7 @@ import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter, asCharacterId } from "@/lib/engine/characters";
 import { MAX_SEATS } from "@/lib/game/modes";
+import { characterTitle } from "@/lib/engine/polish";
 
 /**
  * The border on the surprise when more than one player has taken it.
@@ -497,7 +498,7 @@ export function Lobby({
                 onClick={() => target && onChooseCharacter(target, character.id)}
                 onFocus={() => setPreview(character.id)}
                 onBlur={() => setPreview(null)}
-                title={`${character.name} — Miecz ${character.miecz}, Magia ${character.magia}, ${character.nature}, start: ${character.start}`}
+                title={characterTitle(character)}
                 // Whoever holds it, holds it — including while somebody else's
                 // pick is in flight. Dropping the colour during `waiting` left
                 // the border with no colour class at all, so it fell back to

@@ -17,6 +17,7 @@ import { useCardPreview } from "./card-preview";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import type { EqMode } from "@/lib/engine/slots";
+import { characterKind } from "@/lib/engine/polish";
 
 /** Keyed by a plain string: asked about ids off the wire, and "no" is an answer. */
 const CHARACTERS = new Map<string, Character>(
@@ -55,7 +56,7 @@ export function Lookable({
       name,
       text: character ? character.abilities.join("\n\n") : (field?.text ?? undefined),
       kindLabel: character
-        ? `Postać · Miecz ${character.miecz} · Magia ${character.magia} · ${character.nature}`
+        ? characterKind(character)
         : kind === "field"
           ? "Obszar"
           : undefined,

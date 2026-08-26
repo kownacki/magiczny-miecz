@@ -14,7 +14,12 @@ import { type Nature } from "@/data/types";
 import { describeAbility } from "@/lib/engine/abilityText";
 import { abilitiesOfCharacter, asCharacterId, notesForCharacter } from "@/lib/engine/characters";
 import { type Slot } from "@/lib/engine/slots";
-import { cardArtUrl, characterImageUrl } from "@/lib/view/cardImages";
+import {
+  NATURE_CARD_RATIO,
+  cardArtUrl,
+  characterImageUrl,
+  natureCardUrl,
+} from "@/lib/view/cardImages";
 import { tokensFor } from "@/lib/view/tokens";
 import { useCardPreview } from "./card-preview";
 import { type TileCard } from "./card-tile";
@@ -25,7 +30,7 @@ import { dismissableOpen } from "./overlay";
 import { SlotPanel } from "./slot-panel";
 import { CARD_NAMES, CARD_TEXTS, CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import Image from "next/image";
-import { NATURE_LABEL } from "@/lib/engine/polish";
+import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 export function SeatCard({
   seat,
   active,
@@ -289,7 +294,7 @@ export function SeatCard({
                         cardId: character.id,
                         name: character.name,
                         text: character.abilities.join("\n\n"),
-                        kindLabel: `Postać · Miecz ${character.miecz} · Magia ${character.magia} · ${character.nature}`,
+                        kindLabel: characterKind(character),
                         character: true,
                       })
                     }
@@ -325,13 +330,7 @@ export function SeatCard({
                 </div>
               </div>
 
-              {/* The card prints its own name and its own Natura, so neither is
-                  repeated — except that 7.2 can change a Natura mid-game, and
-                  then what is printed is out of date and this is the only place
-                  saying so. */}
-              <p className="mt-1 text-center text-[10px] text-muted">
-                {seat.nature ? `natura: ${NATURE_LABEL[seat.nature] ?? seat.nature}` : "natura nieustalona"}
-              </p>
+              <NatureLine nature={seat.nature} printed={character.nature} />
             </div>
 
             {/* The body, beside the character card, in the slotted variant
@@ -789,6 +788,73 @@ function RailStat({
  * that part belongs to this instance rather than to the card, and it is the
  * half a player is deciding around.
  */
+/**
+ * What Natura this character is of, said the way 7.2 says it.
+ *
+ * The Karta Postaci prints one, and while that is still true the app has no
+ * business printing it a second time — so this is a quiet line under the card,
+ * repeating what the card already says only because the card is drawn small
+ * enough that reading it means opening it.
+ *
+ * A change is a different thing entirely, and the box has an object for it:
+ * "Gdy Postać zmienia swoją Naturę, obok jej Karty musi zostać umieszczona
+ * Karta Zmiany Natury... Jeżeli Postać powróci później do swojej pierwotnej
+ * Natury, Kartę Zmiany należy odłożyć." So the plaque is laid beside the card
+ * exactly while the two disagree, and taken away the moment they stop — which
+ * is the rule, drawn, rather than a badge somebody had to invent.
+ *
+ * A Kat prints no Natura at all and picks one at setup (8.2), which is not a
+ * change and gets no card: there is nothing for the Karta Zmiany to disagree
+ * with, and the line under the card is the only place that Natura is written
+ * down at all.
+ */
+function NatureLine({
+  nature,
+  printed,
+}: {
+  nature: string | null;
+  /** What the Karta Postaci has printed on it — "any" for a Kat. */
+  printed: string;
+}) {
+  const quiet = "mt-1 text-center text-[10px] text-muted";
+  if (nature === null) return <p className={quiet}>natura nieustalona</p>;
+
+  const changed = printed !== "any" && nature !== printed;
+  const art = changed ? natureCardUrl(nature) : null;
+  if (!art) {
+    return (
+      <p className={quiet}>natura: {NATURE_LABEL[nature] ?? nature}</p>
+    );
+  }
+
+  return (
+    <span className="mt-1 flex justify-center">
+      <Image
+        src={art}
+        alt={`Karta Zmiany Natury: ${NATURE_LABEL[nature] ?? nature}`}
+        title={
+          `Karta Zmiany Natury (7.2) — z ${NATURE_LABEL[printed] ?? printed}` +
+          ` na ${NATURE_LABEL[nature] ?? nature}`
+        }
+        width={NATURE_CARD_WIDTH}
+        height={Math.round(NATURE_CARD_WIDTH / NATURE_CARD_RATIO)}
+        className="rounded-[2px] border border-edge"
+        unoptimized
+      />
+    </span>
+  );
+}
+
+/**
+ * Narrower than half the Karta Postaci it lies beside.
+ *
+ * The card is 192 across and this is the smaller object of the two — a marker
+ * laid next to a card, not a second card. Wide enough that CHAOTYCZNY, the
+ * longest of the three words and the one fitted by its width, is still read at
+ * a glance.
+ */
+const NATURE_CARD_WIDTH = 112;
+
 function EffectMark({
   mark,
   nature,

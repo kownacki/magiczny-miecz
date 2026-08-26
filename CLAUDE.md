@@ -136,6 +136,18 @@ got and the Zaklęcia and Wyposażenie never did. Checked against the Drive
 folder itself, not just the mirror. Draw a spell pile with the Magia-tinted
 blank `CardBack` already uses for a concealed hand (9.3) rather than borrowing
 the ZDARZENIE back for it.
+`node scripts/export-nature-card.mjs` cuts 7.2's Karta Zmiany Natury off the
+two faces of that same sheet 9 — `Zły` from the front, `DOBRY` from the
+reverse, one card with a face each way — into `public/cards/natura-*.jpg`,
+committed. **There is no third face and no scan of one**: not in the box and
+not in any of the five expansions, checked on the Gród, Labirynt Magów and
+Krypta Upiorów piony sheets and their reverses. Chaotyczna is the Natura the
+card is *absent* for, which works at a table because the Karta Postaci is
+lying there saying what the character started as, and does not work for a
+referee that has to name the current Natura outright. So `natura-chaotyczny`
+is drawn — Bodoni set to match the printed `DOBRY` — and it is the only card
+image in `public/cards/` that was never on a sheet. The script is macOS-only
+(`sips`, and the system's own Bodoni) like the rest of the pipeline.
 `node scripts/generate-ids.mjs` regenerates `src/data/ids.ts` — the literal
 id types — and must be re-run after anything that renames a card or a
 character. Then `node scripts/export-card-images.mjs` writes the
