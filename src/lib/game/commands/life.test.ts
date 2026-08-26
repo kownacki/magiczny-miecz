@@ -4,36 +4,36 @@ import { healSeat, killSeat, spendLife } from "./life";
 
 describe("uzdrowienie (4.7)", () => {
   it("restores a point", () => {
-    const table = aTable({ seats: [aSeat({ zycie: 2 })] });
+    const table = aTable({ seats: [aSeat({ life: 2 })] });
     const { writes, result } = healSeat(table, { seatId: "seat-a" });
     expect(result).toBe(3);
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zycie: 3 } }]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 3 } }]);
     expect(writes.journal?.[0]).toMatchObject({ kind: "healed", payload: { from: 2, to: 3 } });
   });
 
   it("refuses rather than charging for nothing at the ceiling", () => {
-    const table = aTable({ seats: [aSeat({ zycie: 4 })] });
+    const table = aTable({ seats: [aSeat({ life: 4 })] });
     expect(() => healSeat(table, { seatId: "seat-a" })).toThrow(/tylko do 4/);
   });
 
   /** 4.6 lets Życie sit above four; healing must never take it back down. */
   it("does not drain a character who is over the ceiling", () => {
-    const table = aTable({ seats: [aSeat({ zycie: 6 })] });
+    const table = aTable({ seats: [aSeat({ life: 6 })] });
     expect(() => healSeat(table, { seatId: "seat-a" })).toThrow();
   });
 });
 
 describe("spending Życie", () => {
   it("takes the points and leaves the seat alive", () => {
-    const table = aTable({ seats: [aSeat({ zycie: 4 })] });
+    const table = aTable({ seats: [aSeat({ life: 4 })] });
     const { writes, result } = spendLife(table, "seat-a", 2);
     expect(result).toBe(2);
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zycie: 2 } }]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 2 } }]);
     expect(writes.journal ?? []).toHaveLength(0);
   });
 
   it("never goes below zero", () => {
-    const table = aTable({ seats: [aSeat({ zycie: 1 })] });
+    const table = aTable({ seats: [aSeat({ life: 1 })] });
     expect(spendLife(table, "seat-a", 3).result).toBe(0);
   });
 

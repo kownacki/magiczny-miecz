@@ -6,10 +6,10 @@ import { killSeat } from "./life";
 import { seatById } from "./seat";
 
 export const ADJUSTABLE = {
-  miecz: "miecz_own",
-  magia: "magia_own",
-  zycie: "zycie",
-  zloto: "zloto",
+  sword: "sword_own",
+  magic: "magic_own",
+  life: "life",
+  gold: "gold",
   // Turns owed. Spent one per pass in `passTurn`, so "tracisz 1 turę" costs
   // exactly one trip round the table.
   tury: "turns_lost",
@@ -89,10 +89,10 @@ export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adj
   // Rules 1.3 and 2.3: own Miecz and Magia can never be pushed below the value
   // the character started with. Życie and Złoto simply floor at zero.
   const floor =
-    command.stat === "miecz"
-      ? seat.miecz_floor
-      : command.stat === "magia"
-        ? seat.magia_floor
+    command.stat === "sword"
+      ? seat.sword_floor
+      : command.stat === "magic"
+        ? seat.magic_floor
         : 0;
 
   /**
@@ -147,7 +147,7 @@ export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adj
     ],
   };
 
-  if (command.stat !== "zycie" || next !== 0 || seat.eliminated) {
+  if (command.stat !== "life" || next !== 0 || seat.eliminated) {
     return { writes, result: { moved, to: next, floor } };
   }
   // Correcting somebody down to nothing kills them, exactly as losing the last

@@ -84,7 +84,7 @@ describe("taking a card", () => {
     const { writes, result } = takeCard(table(), { seatId: "seat-a", cardId: "1-sztuka-zlota" });
     expect(result.kind).toBeNull();
     expect(result.resolve).toEqual({
-      effect: { op: "punkty", stat: "zloto", delta: 1 },
+      effect: { op: "punkty", stat: "gold", delta: 1 },
       reason: "1 SZTUKA ZŁOTA",
     });
     expect(writes.holdings?.insert ?? []).toEqual([]);
@@ -99,14 +99,14 @@ describe("taking a card", () => {
    * never take it, rather than taking it and discovering you may not.
    */
   it("refuses a Przedmiot the Natura forbids (5.3)", () => {
-    const zla = table({ seats: [aSeat({ id: "seat-a", field_id: HERE, nature: "zla" })] });
+    const zla = table({ seats: [aSeat({ id: "seat-a", field_id: HERE, nature: "evil" })] });
     expect(() => takeCard(zla, { seatId: "seat-a", cardId: "swieta-wlocznia" })).toThrow(
       "ŚWIĘTA WŁÓCZNIA — twoja Natura nie pozwala ci tego nieść (5.3).",
     );
   });
 
   it("lets the same card go to a Natura that may carry it", () => {
-    const dobra = table({ seats: [aSeat({ id: "seat-a", field_id: HERE, nature: "dobra" })] });
+    const dobra = table({ seats: [aSeat({ id: "seat-a", field_id: HERE, nature: "good" })] });
     expect(takeCard(dobra, { seatId: "seat-a", cardId: "swieta-wlocznia" }).result.kind).toBe(
       "item",
     );
@@ -269,7 +269,7 @@ describe("dropping a card", () => {
    */
   it("refuses a Zaklęcie inside the allowance (9.4, 2.6)", () => {
     const one = table([aHolding({ id: "s1", card_id: "krag-plomieni", kind: "spell" })], {
-      magia_own: 2,
+      magic_own: 2,
     });
     expect(() => dropCard(one, { holdingId: "s1" })).toThrow(
       "Zaklęć nie odrzuca się, dopóki nie masz ich więcej niż 1 (9.4, 2.6).",
@@ -283,7 +283,7 @@ describe("dropping a card", () => {
         aHolding({ id: "s1", card_id: "krag-plomieni", kind: "spell" }),
         aHolding({ id: "s2", card_id: "ocalony", kind: "spell" }),
       ],
-      { magia_own: 2 },
+      { magic_own: 2 },
     );
     const { writes } = dropCard(two, { holdingId: "s1" });
     expect(writes.fieldCards?.insert ?? []).toEqual([]);
@@ -365,27 +365,27 @@ describe("arranging the pack", () => {
 describe("wearing a Przedmiot (slotowy)", () => {
   const slotted = (holdings: ReturnType<typeof aHolding>[]) =>
     aTable({
-      game: { eq_mode: "slotowy" },
+      game: { eq_mode: "slots" },
       seats: [aSeat({ id: "seat-a" })],
       holdings,
     });
 
   it("refuses at a table playing classic equipment", () => {
     const classic = aTable({ holdings: [aHolding({ id: "h1" })] });
-    expect(() => equipCard(classic, { holdingId: "h1", slot: "glowa" })).toThrow(
+    expect(() => equipCard(classic, { holdingId: "h1", slot: "head" })).toThrow(
       "Ten stół gra klasycznym ekwipunkiem — nie ma miejsc na przedmioty.",
     );
   });
 
   it("refuses a card nobody holds", () => {
-    expect(() => equipCard(slotted([]), { holdingId: "nope", slot: "glowa" })).toThrow(
+    expect(() => equipCard(slotted([]), { holdingId: "nope", slot: "head" })).toThrow(
       "Nie ma takiej karty.",
     );
   });
 
   it("refuses anything that is not a Przedmiot", () => {
     const friend = slotted([aHolding({ id: "f1", card_id: "gnom", kind: "friend" })]);
-    expect(() => equipCard(friend, { holdingId: "f1", slot: "glowa" })).toThrow(
+    expect(() => equipCard(friend, { holdingId: "f1", slot: "head" })).toThrow(
       "Zakładać można tylko Przedmioty.",
     );
   });
@@ -393,9 +393,9 @@ describe("wearing a Przedmiot (slotowy)", () => {
   it("puts a Hełm on the head", () => {
     const { writes } = equipCard(slotted([aHolding({ id: "h1", card_id: "helm" })]), {
       holdingId: "h1",
-      slot: "glowa",
+      slot: "head",
     });
-    expect(writes.holdings?.patch).toEqual([{ id: "h1", patch: { slot: "glowa" } }]);
+    expect(writes.holdings?.patch).toEqual([{ id: "h1", patch: { slot: "head" } }]);
   });
 
   /** Somewhere it does go, so the refusal names the place it does not. */
@@ -404,7 +404,7 @@ describe("wearing a Przedmiot (slotowy)", () => {
       holdingId: "h1",
       table: slotted([aHolding({ id: "h1", card_id: "helm" })]),
     };
-    expect(() => equipCard(table, { holdingId, slot: "tulow" })).toThrow(
+    expect(() => equipCard(table, { holdingId, slot: "body" })).toThrow(
       "HEŁM nie pasuje w to miejsce (Tułów).",
     );
   });
@@ -412,7 +412,7 @@ describe("wearing a Przedmiot (slotowy)", () => {
   /** Nowhere at all, so the refusal says that instead of posing a puzzle. */
   it("refuses a card that is not a thing to wear", () => {
     const carried = slotted([aHolding({ id: "h1", card_id: "latarnia" })]);
-    expect(() => equipCard(carried, { holdingId: "h1", slot: "glowa" })).toThrow(
+    expect(() => equipCard(carried, { holdingId: "h1", slot: "head" })).toThrow(
       "LATARNIA to nie jest rzecz do noszenia — zostaje w plecaku.",
     );
   });
@@ -420,18 +420,18 @@ describe("wearing a Przedmiot (slotowy)", () => {
   /** The two change places, rather than the old one landing at the back. */
   it("swaps the occupant into the square the new one is leaving", () => {
     const table = slotted([
-      aHolding({ id: "worn", card_id: "miecz", slot: "reka-glowna", ordinal: null }),
+      aHolding({ id: "worn", card_id: "miecz", slot: "main-hand", ordinal: null }),
       aHolding({ id: "new", card_id: "excalibur", slot: null, ordinal: 3 }),
     ]);
-    const { writes } = equipCard(table, { holdingId: "new", slot: "reka-glowna" });
+    const { writes } = equipCard(table, { holdingId: "new", slot: "main-hand" });
     expect(writes.holdings?.patch).toEqual([
       { id: "worn", patch: { slot: null, ordinal: 3 } },
-      { id: "new", patch: { slot: "reka-glowna" } },
+      { id: "new", patch: { slot: "main-hand" } },
     ]);
   });
 
   it("takes a card off into the pack", () => {
-    const table = slotted([aHolding({ id: "h1", card_id: "helm", slot: "glowa" })]);
+    const table = slotted([aHolding({ id: "h1", card_id: "helm", slot: "head" })]);
     expect(equipCard(table, { holdingId: "h1", slot: null }).writes.holdings?.patch).toEqual([
       { id: "h1", patch: { slot: null } },
     ]);
@@ -448,7 +448,7 @@ describe("wearing a Przedmiot (slotowy)", () => {
     const pack = Array.from({ length: 16 }, (_, i) =>
       aHolding({ id: `p${i}`, card_id: "sztylet", slot: null }),
     );
-    const table = slotted([...pack, aHolding({ id: "h1", card_id: "helm", slot: "glowa" })]);
+    const table = slotted([...pack, aHolding({ id: "h1", card_id: "helm", slot: "head" })]);
     expect(() => equipCard(table, { holdingId: "h1", slot: null })).toThrow(
       "Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).",
     );
@@ -559,7 +559,7 @@ describe("picking something up off the Obszar (12.1)", () => {
    */
   it("writes nothing at all when the card may not be held", () => {
     const forbidden = table({
-      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: HERE, nature: "zla" })],
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: HERE, nature: "evil" })],
       fieldCards: [{ ...lying, card_id: "swieta-wlocznia" }],
     });
     expect(() => takeFromField(forbidden, { seatId: "seat-a", fieldCardId: "fc1" })).toThrow(

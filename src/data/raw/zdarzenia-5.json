@@ -133,7 +133,7 @@
     "text": "Muł będzie do końca gry niósł twoje 4 Przedmioty. Jeżeli go utracisz, będziesz musiał pozostawić Przedmioty na Obszarze, na którym utraciłeś Muła."
   },
   {
-    "id": "rekawice",
+    "id": "gloves",
     "name": "RĘKAWICE",
     "cardClass": "przedmiot",
     "source": { "sheet": "zdarzenia-5", "index": 20 },

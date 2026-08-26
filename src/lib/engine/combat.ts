@@ -1,6 +1,6 @@
 /** Resolves ordinary and magical combat: the pure comparison in rules 17.4-17.10 and 18.2. */
 
-export type CombatKind = "zwykla" | "magiczna";
+export type CombatKind = "ordinary" | "magical";
 
 export interface CombatSide {
   label: string;
@@ -77,16 +77,16 @@ export function attackAsOne(
  * which is why `preventable` is reported alongside.
  */
 export interface Spoils {
-  options: readonly ["zycie", "item", "zloto"];
+  options: readonly ["life", "item", "gold"];
   preventable: boolean;
 }
 
 export function spoilsFor(kind: CombatKind): Spoils {
   return {
-    options: ["zycie", "item", "zloto"] as const,
+    options: ["life", "item", "gold"] as const,
     // 17.9 lets an item or spell prevent the point of Życie in ordinary combat;
     // 18.2b removes that possibility entirely in magical combat.
-    preventable: kind === "zwykla",
+    preventable: kind === "ordinary",
   };
 }
 
@@ -100,5 +100,5 @@ export function beastStrength(roll: number): number {
 }
 
 export function beastCombatKind(roll: number): CombatKind {
-  return roll <= 3 ? "zwykla" : "magiczna";
+  return roll <= 3 ? "ordinary" : "magical";
 }

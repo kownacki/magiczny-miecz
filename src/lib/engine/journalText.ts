@@ -144,7 +144,7 @@ function held(data: Record<string, unknown>): string {
   const moved = data.to - data.from;
   if (moved === asked || asked === 0) return "";
 
-  const stat = data.stat === "miecz" ? "Miecz" : data.stat === "magia" ? "Magia" : null;
+  const stat = data.stat === "sword" ? "Miecz" : data.stat === "magic" ? "Magia" : null;
   // A forced change has no floor but zero, so it is that one it stopped at —
   // saying "poniżej swojego minimum" of a number somebody deliberately pushed
   // under it names the wrong limit.
@@ -209,13 +209,14 @@ function nameOf(seat: JournalSeat | undefined): string {
   return `Miejsce ${seat.seatIndex + 1}`;
 }
 
-/** The cards print "zła", not "zla". Null when there is no Natura to name. */
+/** The cards print "zła", not "evil". Null when there is no Natura to name. */
 function natura(value: unknown): string | null {
   if (typeof value !== "string" || value === "") return null;
-  return value === "zla" ? "zła" : value;
+  // Stored in English, printed as the character card prints it.
+  return { good: "dobra", evil: "zła", chaotic: "chaotyczna" }[value] ?? value;
 }
 
-const zycie = (n: number) => `${n} ${plural(n, "Życie", "Życia", "Żyć")}`;
+const life = (n: number) => `${n} ${plural(n, "Życie", "Życia", "Żyć")}`;
 const sztuki = (n: number) => `${n} ${plural(n, "Sztukę", "Sztuki", "Sztuk")} Złota`;
 const tury = (n: number) => `${n} ${plural(n, "turę", "tury", "tur")}`;
 
@@ -325,7 +326,7 @@ export function describe(
     // way for the same reason — the seat acts, and what acted on it is named
     // after the dash.
     case "bridge-cerberus":
-      return line(`${who} traci ${zycie(num(data.loss))} — Cerber.`);
+      return line(`${who} traci ${life(num(data.loss))} — Cerber.`);
     case "bridge-trap":
       return line(`${who} wpada w Pułapkę.`);
     case "bridge-death-game":
@@ -416,7 +417,7 @@ export function describe(
     // holder choosing to put a card down (5.5).
     case "lost-card": {
       const lost = Array.isArray(data.cardIds) ? data.cardIds : [];
-      const gold = num(data.zloto);
+      const gold = num(data.gold);
       const parts = [
         lost.length > 0 ? lost.map((id) => card(id)).join(", ") : "",
         gold > 0 ? sztuki(gold) : "",
@@ -469,12 +470,12 @@ export function describe(
       if (delta === 0) return null;
       const many = Math.abs(delta);
       const what =
-        data.stat === "zloto"
+        data.stat === "gold"
           ? sztuki(many)
-          : data.stat === "zycie"
-            ? zycie(many)
+          : data.stat === "life"
+            ? life(many)
             : `${many} ${plural(many, "punkt", "punkty", "punktów")} ` +
-              `${data.stat === "miecz" ? "Miecza" : "Magii"}`;
+              `${data.stat === "sword" ? "Miecza" : "Magii"}`;
       return line(
         `${who} ${delta > 0 ? "zyskuje" : "traci"} ${what}` +
           `${held(data)}` +
@@ -483,9 +484,9 @@ export function describe(
     }
 
     case "healed":
-      return line(`${who} wraca do ${zycie(num(data.to))}.`);
+      return line(`${who} wraca do ${life(num(data.to))}.`);
     case "healing":
-      return line(`${who} leczy ${zycie(num(data.points))} za ${sztuki(num(data.paid))}.`);
+      return line(`${who} leczy ${life(num(data.points))} za ${sztuki(num(data.paid))}.`);
     // 7.2 puts a Karta Zmiany Natury next to the character showing the new one,
     // and the old one is what everybody has been playing against all game —
     // whether the Święta Włócznia still works, whether the Czarci Młyn heals or

@@ -111,7 +111,7 @@ export function ItemSlot({
   onPointerLeave,
   corner,
   children,
-  eqMode = "klasyczny",
+  eqMode = "classic",
   nature = null,
   quiet = false,
   step = 0,

@@ -87,11 +87,11 @@ export interface PublicSeat {
   /** The id behind that name, so the Obszar can be looked at rather than read. */
   fieldId: string | null;
   miecz: number;
-  mieczOwn: number;
+  swordOwn: number;
   magia: number;
-  magiaOwn: number;
-  zycie: number;
-  zloto: number;
+  magicOwn: number;
+  life: number;
+  gold: number;
   nature: string | null;
   eliminated: boolean;
   /** Nobody is behind this seat; the character plays on (see leaveGame). */

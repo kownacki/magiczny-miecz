@@ -172,9 +172,9 @@ function startingGear(seat: SeatRow): Changeset {
   // 3.2: everyone starts on one "chyba, że jej Karta daje w tym względzie inne
   // instrukcje" — so the column default stands unless the character overrides.
   const purse: Changeset =
-    kit.zloto !== undefined ? { seats: [{ id: seat.id, patch: { zloto: kit.zloto } }] } : {};
+    kit.gold !== undefined ? { seats: [{ id: seat.id, patch: { gold: kit.gold } }] } : {};
 
-  if (!kit.items?.length && kit.zloto === undefined && !kit.spells) return {};
+  if (!kit.items?.length && kit.gold === undefined && !kit.spells) return {};
 
   return mergeAll(items, purse, {
     journal: [

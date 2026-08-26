@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { STONE_TURNS, turnToStone } from "./stone";
 
-const table = (holdings = [] as ReturnType<typeof aHolding>[], zloto = 0) =>
+const table = (holdings = [] as ReturnType<typeof aHolding>[], gold = 0) =>
   aTable({
     game: { turn: 5 },
-    seats: [aSeat({ id: "seat-a", zloto })],
+    seats: [aSeat({ id: "seat-a", gold })],
     holdings,
   });
 
@@ -34,7 +34,7 @@ describe("Zamieniony w Kamień (20.1-20.5)", () => {
       { field_id: "mroczna-polana", card_id: "1-sztuka-zlota" },
       { field_id: "mroczna-polana", card_id: "1-sztuka-zlota" },
     ]);
-    expect(writes.seats?.[0].patch).toMatchObject({ zloto: 0 });
+    expect(writes.seats?.[0].patch).toMatchObject({ gold: 0 });
   });
 
   /** The Przyjaciele leave and are not recoverable — they are not left lying. */
@@ -71,7 +71,7 @@ describe("Zamieniony w Kamień (20.1-20.5)", () => {
     );
     expect(writes.journal?.[0]).toMatchObject({
       kind: "stone",
-      payload: { until: 8, left: 1, zloto: 2, friendsLost: 1 },
+      payload: { until: 8, left: 1, gold: 2, friendsLost: 1 },
     });
   });
 });

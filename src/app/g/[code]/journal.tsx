@@ -23,7 +23,7 @@ import type { EqMode } from "@/lib/engine/slots";
 export function Journal({
   code,
   revision,
-  eqMode = "klasyczny",
+  eqMode = "classic",
 }: {
   code: string;
   revision: number;

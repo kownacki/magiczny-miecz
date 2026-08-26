@@ -885,7 +885,7 @@ export async function healSeat(
 export async function changeNature(
   gameId: string,
   seatId: string,
-  nature: "dobra" | "zla" | "chaotyczna",
+  nature: "good" | "evil" | "chaotic",
   force = false,
 ): Promise<{ nowForbidden: string[] }> {
   return change(gameId, changeNatureOn, { seatId, nature, force });
@@ -1471,7 +1471,7 @@ export async function runCommand(
       // Through the same door a lost fight goes through, so what a death does
       // to a character — its cards on the field, its Zaklęcia spent, the turn
       // handed on — happens here too (4.4).
-      await adjust(gameId, seat.id, "zycie", -seat.zycie, null);
+      await adjust(gameId, seat.id, "life", -seat.life, null);
       return `${named(seat)} ginie.`;
     }
 
@@ -1669,7 +1669,7 @@ export async function runCommand(
                   seatId: seat.id,
                   turn: snapshot.game.turn,
                   kind: "victory" as const,
-                  payload: { kind: "zwykla", beastTotal: 0 },
+                  payload: { kind: "ordinary", beastTotal: 0 },
                 },
               ],
             },
@@ -1688,7 +1688,7 @@ export async function runCommand(
                 seatId: seat.id,
                 turn: snapshot.game.turn,
                 kind: "beast-loss" as const,
-                payload: { kind: "zwykla", beastTotal: 0 },
+                payload: { kind: "ordinary", beastTotal: 0 },
               },
             ],
           },
@@ -1696,7 +1696,7 @@ export async function runCommand(
         }),
         undefined,
       );
-      await adjust(gameId, seat.id, "zycie", -2, null);
+      await adjust(gameId, seat.id, "life", -2, null);
       const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
       return after?.eliminated
         ? `${named(seat)} loses to the Bestia and dies (14.7, 4.4).`

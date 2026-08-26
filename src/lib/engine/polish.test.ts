@@ -92,8 +92,8 @@ describe("the shared label tables", () => {
   });
 
   it("reads the stats in the case they are counted in", () => {
-    expect(`+2 ${STAT_LABEL.miecz}`).toBe("+2 Miecza");
-    expect(`−1 ${STAT_LABEL.zycie}`).toBe("−1 Życia");
+    expect(`+2 ${STAT_LABEL.sword}`).toBe("+2 Miecza");
+    expect(`−1 ${STAT_LABEL.life}`).toBe("−1 Życia");
   });
 
   it("distinguishes losing one thing from losing all of them", () => {

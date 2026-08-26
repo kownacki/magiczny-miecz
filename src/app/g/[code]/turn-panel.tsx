@@ -149,13 +149,13 @@ export function BridgeControls({
   busy,
   onAction,
 }: {
-  bridge: { from: string; guardian: string; entersAt: string; stat: "miecz" | "magia" };
+  bridge: { from: string; guardian: string; entersAt: string; stat: "sword" | "magic" };
   /** No manual outcomes when the app is the one fighting — see `Props["mode"]`. */
   simulated: boolean;
   busy: boolean;
   onAction: Props["onAction"];
 }) {
-  const stat = bridge.stat === "magia" ? "Magii" : "Miecza";
+  const stat = bridge.stat === "magic" ? "Magii" : "Miecza";
   return (
     <div>
       <p className="mb-1 text-sm text-ink">
@@ -429,7 +429,7 @@ export function FightControls({
   busy: boolean;
   onAction: Props["onAction"];
 }) {
-  const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
+  const label = fight.kind === "magical" ? "Magia" : "Miecz";
   /**
    * The dice are held until 17.3's window closes, and they have to look held.
    *
@@ -491,7 +491,7 @@ export function FightControls({
           card names are stored as printed. Declining them reliably is not
           possible, and getting it wrong is more jarring than not trying. */}
       <p className="text-sm text-muted">
-        {fight.kind === "magiczna" ? "Walka magiczna" : "Walka zwykła"}
+        {fight.kind === "magical" ? "Walka magiczna" : "Walka zwykła"}
         {typeof fight.strengthRoll === "number" && (
           <span className="ml-2 text-xs text-muted/80">
             kostka {fight.strengthRoll} → {label} {fight.enemyTotal}
@@ -637,7 +637,7 @@ function FightVerdict({
   }
 
   if (guardian?.kind === "most") {
-    const stat = guardian.entrance.stat === "magia" ? "Magii" : "Miecza";
+    const stat = guardian.entrance.stat === "magic" ? "Magii" : "Miecza";
     return (
       <span className="text-vermilion">
         Przegrywasz — tracisz 1 punkt {stat} i nie spróbujesz ponownie w następnej
@@ -662,7 +662,7 @@ function FightVerdict({
   return (
     <span className="text-vermilion">
       Przegrywasz — tracisz 1 punkt Życia
-      {fight.kind === "magiczna" ? " (nie można temu zapobiec, 18.2)" : ""}.
+      {fight.kind === "magical" ? " (nie można temu zapobiec, 18.2)" : ""}.
     </span>
   );
 }
@@ -931,7 +931,7 @@ function EffectControls({
         </div>
       );
     case "natura":
-      return stated(`zmiana Natury na: ${effect.na === "zla" ? "zła" : effect.na}`);
+      return stated(`zmiana Natury na: ${effect.na === "evil" ? "zła" : effect.na}`);
     case "kup":
       return (
         <div>
@@ -1000,9 +1000,9 @@ function LOSS_LABEL(effect: Extract<Effect, { op: "strata" }>): string {
 function conditionLabel(condition: Extract<Effect, { op: "gdy" }>["warunek"]): string {
   switch (condition.is) {
     case "natura":
-      return `jeśli ${condition.jedna_z.map((n) => (n === "zla" ? "zła" : n)).join(" lub ")}`;
+      return `jeśli ${condition.jedna_z.map((n) => (n === "evil" ? "zła" : n)).join(" lub ")}`;
     case "prog":
-      return `jeśli ${condition.stat === "miecz" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
+      return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
     case "ma-zloto":
       return "jeśli masz złoto";
   }
@@ -1038,7 +1038,7 @@ export function FieldServices({
   busy: boolean;
   typedRolls: boolean;
   onRollOffer: (offer: string) => void;
-  purse?: { zloto: number; zycie: number };
+  purse?: { gold: number; life: number };
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
   onSuggestion: Props["onSuggestion"];
@@ -1061,7 +1061,7 @@ export function FieldServices({
   // answer and nobody else needs to watch you decline.
   const offers = [...(script?.obowiazkowe ? [] : (script?.offers ?? [])), ...fromCards];
   if (offers.length === 0) return null;
-  const gold = purse?.zloto ?? 0;
+  const gold = purse?.gold ?? 0;
 
   return (
     <div className="mb-4 flex flex-col gap-2">
@@ -1069,7 +1069,7 @@ export function FieldServices({
         {script?.obowiazkowe ? "To pole trzeba rozpatrzeć" : "Możesz tu odwiedzić"}
         {purse && (
           <span className="ml-2 normal-case tracking-normal text-muted">
-            masz <span className="tnum text-zloto">{purse.zloto} Sz. Z.</span>
+            masz <span className="tnum text-zloto">{purse.gold} Sz. Z.</span>
           </span>
         )}
       </p>
@@ -1083,7 +1083,7 @@ export function FieldServices({
             typedRolls={typedRolls}
             onRollOffer={() => onRollOffer(offer.name)}
             gold={gold}
-            zycie={purse?.zycie ?? 0}
+            life={purse?.life ?? 0}
             stock={stock}
             sellable={sellable}
             onSuggestion={onSuggestion}
@@ -1103,7 +1103,7 @@ function ServiceEffect({
   typedRolls,
   onRollOffer,
   gold,
-  zycie,
+  life,
   stock,
   sellable,
   onSuggestion,
@@ -1115,7 +1115,7 @@ function ServiceEffect({
   typedRolls: boolean;
   onRollOffer?: () => void;
   gold: number;
-  zycie: number;
+  life: number;
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
   onSuggestion: Props["onSuggestion"];
@@ -1133,7 +1133,7 @@ function ServiceEffect({
             typedRolls={typedRolls}
             onRollOffer={onRollOffer}
             gold={gold}
-            zycie={zycie}
+            life={life}
             stock={stock}
             sellable={sellable}
             onSuggestion={onSuggestion}
@@ -1157,7 +1157,7 @@ function ServiceEffect({
         typedRolls={typedRolls}
         onRollOffer={onRollOffer}
         gold={gold}
-        zycie={zycie}
+        life={life}
         stock={stock}
         sellable={sellable}
         onSuggestion={onSuggestion}
@@ -1223,7 +1223,7 @@ function ServiceEffect({
 
   if (effect.op === "uzdrow" && onService) {
     const price = effect.cena ?? 0;
-    const missing = Math.max(0, HEAL_CEILING - zycie);
+    const missing = Math.max(0, HEAL_CEILING - life);
     const affordable = price > 0 ? Math.floor(gold / price) : missing;
     const most = Math.min(missing, affordable);
     if (missing === 0) {
@@ -1291,7 +1291,7 @@ function ScriptedRoll({
   typedRolls,
   onRollOffer,
   gold,
-  zycie,
+  life,
   stock,
   sellable,
   onSuggestion,
@@ -1304,7 +1304,7 @@ function ScriptedRoll({
   /** Asks the server to throw this offer's die and apply the row. */
   onRollOffer?: () => void;
   gold: number;
-  zycie: number;
+  life: number;
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
   onSuggestion: Props["onSuggestion"];
@@ -1365,7 +1365,7 @@ function ScriptedRoll({
               typedRolls={typedRolls}
               onRollOffer={onRollOffer}
               gold={gold}
-              zycie={zycie}
+              life={life}
               stock={stock}
               sellable={sellable}
               onSuggestion={onSuggestion}

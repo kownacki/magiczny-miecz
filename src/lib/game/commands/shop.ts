@@ -87,7 +87,7 @@ export function tradeTrophies(
 
   return {
     writes: merge(merge(handed, returned), {
-      seats: [{ id: seat.id, patch: { miecz_own: seat.miecz_own + gained } }],
+      seats: [{ id: seat.id, patch: { sword_own: seat.sword_own + gained } }],
       journal: [
         {
           seatId: seat.id,
@@ -133,7 +133,7 @@ export function sellHolding(
 
   return {
     writes: merge(merge(gone, returned), {
-      seats: [{ id: seat.id, patch: { zloto: seat.zloto + price } }],
+      seats: [{ id: seat.id, patch: { gold: seat.gold + price } }],
       journal: [
         {
           seatId: seat.id,
@@ -158,11 +158,11 @@ export function payHealer(
   if (!Number.isInteger(command.points) || command.points < 1) throw new Error("Ile punktów?");
 
   const price = cure.cena ?? 0;
-  const affordable = price > 0 ? Math.floor(seat.zloto / price) : command.points;
-  const wanted = Math.min(command.points, affordable, Math.max(0, HEAL_CEILING - seat.zycie));
+  const affordable = price > 0 ? Math.floor(seat.gold / price) : command.points;
+  const wanted = Math.min(command.points, affordable, Math.max(0, HEAL_CEILING - seat.life));
   if (wanted <= 0) {
     throw new Error(
-      seat.zycie >= HEAL_CEILING
+      seat.life >= HEAL_CEILING
         ? `Życie jest już na poziomie początkowym (${HEAL_CEILING}) — 4.7 nie pozwala wyżej.`
         : "Za mało złota.",
     );
@@ -171,7 +171,7 @@ export function payHealer(
   const paid = wanted * price;
   return {
     writes: {
-      seats: [{ id: seat.id, patch: { zycie: seat.zycie + wanted, zloto: seat.zloto - paid } }],
+      seats: [{ id: seat.id, patch: { life: seat.life + wanted, gold: seat.gold - paid } }],
       journal: [
         {
           seatId: seat.id,
@@ -192,7 +192,7 @@ export function payHealer(
  * one write and then paid for it in another, against a purse it had read
  * before the take — so a coin spent in between was overwritten and the buyer
  * got the card for free. Every gold mutation in that file was an absolute
- * `zloto: <computed>` for the same reason; this one is not.
+ * `gold: <computed>` for the same reason; this one is not.
  */
 export function buyGoods(
   snapshot: Snapshot,
@@ -204,7 +204,7 @@ export function buyGoods(
 
   const entry = shop.towar.find((t) => goodsId(t.co) === command.cardId);
   if (!entry) throw new Error(`${cardName(command.cardId)} nie jest tu na sprzedaż.`);
-  if (seat.zloto < entry.cena) {
+  if (seat.gold < entry.cena) {
     throw new Error(`Za mało złota: ${entry.co} kosztuje ${entry.cena} Sz. Z.`);
   }
 
@@ -214,7 +214,7 @@ export function buyGoods(
   const taken = takeCard(snapshot, { seatId: seat.id, cardId: command.cardId });
   return {
     writes: merge(taken.writes, {
-      seats: [{ id: seat.id, patch: { zloto: seat.zloto - entry.cena } }],
+      seats: [{ id: seat.id, patch: { gold: seat.gold - entry.cena } }],
       journal: [
         {
           seatId: seat.id,

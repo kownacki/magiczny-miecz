@@ -38,7 +38,7 @@ export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Ch
     // Gold is left there too, and the deck already has a card that *is* one
     // Sztuka Złota — so a purse of three becomes three of them lying on the
     // Obszar, which is exactly what 12.1 lets the next character pick up.
-    const gold = Array.from({ length: seat.zloto }, () => "1-sztuka-zlota");
+    const gold = Array.from({ length: seat.gold }, () => "1-sztuka-zlota");
     const onField = [...dropped.map((h) => h.card_id), ...gold];
     if (onField.length > 0) {
       left = {
@@ -54,7 +54,7 @@ export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Ch
 
   const until = snapshot.game.turn + STONE_TURNS;
   return mergeAll(taken, gone, left, {
-    seats: [{ id: seat.id, patch: { stone_until_turn: until, zloto: 0 } }],
+    seats: [{ id: seat.id, patch: { stone_until_turn: until, gold: 0 } }],
     journal: [
       {
         seatId: seat.id,
@@ -63,7 +63,7 @@ export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Ch
         payload: {
           until,
           left: dropped.length,
-          zloto: seat.zloto,
+          gold: seat.gold,
           friendsLost: friends.length,
         },
       },

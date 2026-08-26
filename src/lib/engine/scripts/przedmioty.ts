@@ -14,12 +14,12 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
   // nothing against the four-item limit of 5.4 and there is nothing to lose on
   // the Bagna later. The card is the gold, and then it is gone.
   "1-sztuka-zlota": {
-    effect: { op: "punkty", stat: "zloto", delta: 1 },
+    effect: { op: "punkty", stat: "gold", delta: 1 },
     disposition: { kind: "odloz" },
     consumed: true,
   },
   "2-sztuki-zlota": {
-    effect: { op: "punkty", stat: "zloto", delta: 2 },
+    effect: { op: "punkty", stat: "gold", delta: 2 },
     disposition: { kind: "odloz" },
     consumed: true,
   },
@@ -38,10 +38,10 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
       faces: {
         1: { op: "otrzymaj", co: "Tarcza Tolimana" },
         2: { op: "zaklecie", count: 1 },
-        3: { op: "punkty", stat: "zloto", delta: 2 },
+        3: { op: "punkty", stat: "gold", delta: 2 },
         4: { op: "tura-stracona", turns: 1 },
-        5: { op: "punkty", stat: "zycie", delta: -1 },
-        6: { op: "punkty", stat: "zycie", delta: -2 },
+        5: { op: "punkty", stat: "life", delta: -1 },
+        6: { op: "punkty", stat: "life", delta: -2 },
       },
     },
     optional: true,

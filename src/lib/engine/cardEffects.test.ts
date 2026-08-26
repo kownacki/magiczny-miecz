@@ -9,13 +9,13 @@ describe("suggested actions", () => {
   it("reads the gold pickup, the deck's commonest card", () => {
     expect(
       suggestActions({ text: "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż." }),
-    ).toEqual([{ label: "+1 Złota", stat: "zloto", delta: 1 }]);
+    ).toEqual([{ label: "+1 Złota", stat: "gold", delta: 1 }]);
   });
 
   it("handles the plural form", () => {
     expect(
       suggestActions({ text: "Zamień tę Kartę na 2 Sztuki Złota, a następnie ją odłóż." }),
-    ).toEqual([{ label: "+2 Złota", stat: "zloto", delta: 2 }]);
+    ).toEqual([{ label: "+2 Złota", stat: "gold", delta: 2 }]);
   });
 
   it("suggests nothing when the outcome depends on Nature", () => {
@@ -48,7 +48,7 @@ describe("suggested actions", () => {
 
   it("reads an unconditional loss", () => {
     expect(suggestActions({ text: "Zasadzka. Tracisz 2 Życia." })).toEqual([
-      { label: "−2 Życia", stat: "zycie", delta: -2 },
+      { label: "−2 Życia", stat: "life", delta: -2 },
     ]);
   });
 
@@ -85,13 +85,13 @@ describe("suggested actions", () => {
 describe("board die-table outcomes", () => {
   it("reads the Karczma abbreviation for winning gold", () => {
     expect(suggestActions({ text: "wygrałeś 1 Sz. Z." })).toEqual([
-      { label: "+1 Złota", stat: "zloto", delta: 1 },
+      { label: "+1 Złota", stat: "gold", delta: 1 },
     ]);
   });
 
   it("reads losing at dice", () => {
     expect(suggestActions({ text: "przegrałeś w kości 1 Sz. Z." })).toEqual([
-      { label: "−1 Złota", stat: "zloto", delta: -1 },
+      { label: "−1 Złota", stat: "gold", delta: -1 },
     ]);
   });
 

@@ -89,13 +89,13 @@ describe("walking past what a field does to you", () => {
     // Rękawice spare the Życie; that field has no roll to skip in the first
     // place, and conflating the two would silently skip rolls elsewhere.
     const rekawice = abilitiesOf("rekawice");
-    expect(isSpared(rekawice, "ruchome-skaly-1", "zycie")).toBe(true);
+    expect(isSpared(rekawice, "ruchome-skaly-1", "life")).toBe(true);
     expect(skipsRollAt(rekawice, "ruchome-skaly-1")).toBe(false);
   });
 
   it("keeps what the Bagna would take", () => {
     expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "utrata")).toBe(true);
-    expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "zycie")).toBe(false);
+    expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "life")).toBe(false);
   });
 
   it("lets Elflin and Rusałka slip away where their cards say", () => {
@@ -173,14 +173,14 @@ describe("the two places a bonus can come from", () => {
     // the two sources instead of preferring one would silently make it worth
     // two, and nothing on screen would say so.
     const held = [{ cardId: "excalibur", kind: "item" as const, face: "open" as const }];
-    expect(bonusFromHoldings(held, "klasyczny", "parametr")).toEqual({ miecz: 1, magia: 0 });
+    expect(bonusFromHoldings(held, "classic", "parametr")).toEqual({ miecz: 1, magia: 0 });
   });
 
   it("counts a card whose bonus is only in its text", () => {
     // Srebrna Strzała prints no numbers at all; before it was encoded it added
     // nothing, which was an undercount rather than a safe default.
     const held = [{ cardId: "srebrna-strzala", kind: "item" as const, face: "open" as const }];
-    expect(bonusFromHoldings(held, "klasyczny", "parametr")).toEqual({ miecz: 1, magia: 1 });
+    expect(bonusFromHoldings(held, "classic", "parametr")).toEqual({ miecz: 1, magia: 1 });
   });
 
   it("keeps the encoded value and the printed value in step", () => {
@@ -219,10 +219,10 @@ describe("who dies in your place", () => {
 describe("shifting a die roll", () => {
   it("applies the Talizmany to the kind of fight each names", () => {
     const ognia = abilitiesOf("talizman-ognia");
-    expect(rollModifier(ognia, { walka: "zwykla" }).delta).toBe(1);
+    expect(rollModifier(ognia, { walka: "ordinary" }).delta).toBe(1);
     // "podczas walki (lecz nie magicznej)" — the parenthesis is the whole point.
-    expect(rollModifier(ognia, { walka: "magiczna" }).delta).toBe(0);
-    expect(rollModifier(abilitiesOf("talizman-powietrza"), { walka: "magiczna" }).delta).toBe(1);
+    expect(rollModifier(ognia, { walka: "magical" }).delta).toBe(0);
+    expect(rollModifier(abilitiesOf("talizman-powietrza"), { walka: "magical" }).delta).toBe(1);
   });
 
   it("takes two off the Pułapka it names and nothing off the other", () => {
@@ -249,23 +249,23 @@ describe("shifting a die roll", () => {
 
   it("adds two modifiers that both apply", () => {
     const both = heldAbilities(["talizman-ognia", "czarodziejska-kosc"]);
-    expect(rollModifier(both, { walka: "zwykla", fieldId: "cerber" }).delta).toBe(2);
+    expect(rollModifier(both, { walka: "ordinary", fieldId: "cerber" }).delta).toBe(2);
   });
 });
 
 describe("protections that depend on who holds them", () => {
   it("spares the Relikwiarz's holder only where their Natura says", () => {
     const r = abilitiesOf("relikwiarz");
-    expect(isSpared(r, "czarci-mlyn", "zycie", "dobra")).toBe(true);
-    expect(isSpared(r, "czarci-mlyn", "zycie", "zla")).toBe(false);
-    expect(isSpared(r, "studnia-wiecznosci", "zycie", "zla")).toBe(true);
-    expect(isSpared(r, "studnia-wiecznosci", "zycie", "dobra")).toBe(false);
+    expect(isSpared(r, "czarci-mlyn", "life", "good")).toBe(true);
+    expect(isSpared(r, "czarci-mlyn", "life", "evil")).toBe(false);
+    expect(isSpared(r, "studnia-wiecznosci", "life", "evil")).toBe(true);
+    expect(isSpared(r, "studnia-wiecznosci", "life", "good")).toBe(false);
     // A Chaotyczna Postać gets nothing from it at either field.
-    expect(isSpared(r, "czarci-mlyn", "zycie", "chaotyczna")).toBe(false);
+    expect(isSpared(r, "czarci-mlyn", "life", "chaotic")).toBe(false);
   });
 
   it("still spares unconditionally where a card sets no condition", () => {
-    expect(isSpared(abilitiesOf("rekawice"), "ruchome-skaly-1", "zycie")).toBe(true);
+    expect(isSpared(abilitiesOf("rekawice"), "ruchome-skaly-1", "life")).toBe(true);
   });
 });
 

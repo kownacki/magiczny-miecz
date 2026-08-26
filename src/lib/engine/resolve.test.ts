@@ -7,7 +7,7 @@ import type { Effect } from "./cardScript";
 describe("what the app may carry out on its own", () => {
   it("settles what has one outcome", () => {
     expect(isSettled({ op: "nic" })).toBe(true);
-    expect(isSettled({ op: "punkty", stat: "zloto", delta: -1 })).toBe(true);
+    expect(isSettled({ op: "punkty", stat: "gold", delta: -1 })).toBe(true);
     expect(isSettled({ op: "tura-stracona", turns: 1 })).toBe(true);
     expect(isSettled({ op: "zaklecie", count: 1 })).toBe(true);
     expect(isSettled({ op: "kamien" })).toBe(true);
@@ -22,8 +22,8 @@ describe("what the app may carry out on its own", () => {
       isSettled({
         op: "wybor",
         options: [
-          { label: "a", effect: { op: "punkty", stat: "miecz", delta: 1 } },
-          { label: "b", effect: { op: "punkty", stat: "magia", delta: 1 } },
+          { label: "a", effect: { op: "punkty", stat: "sword", delta: 1 } },
+          { label: "b", effect: { op: "punkty", stat: "magic", delta: 1 } },
         ],
       }),
     ).toBe(false);
@@ -40,7 +40,7 @@ describe("what the app may carry out on its own", () => {
     const withChoice: Effect = {
       op: "po-kolei",
       steps: [
-        { op: "punkty", stat: "zloto", delta: 1 },
+        { op: "punkty", stat: "gold", delta: 1 },
         { op: "wybor", options: [{ label: "a", effect: { op: "nic" } }] },
       ],
     };

@@ -139,7 +139,7 @@ describe("momentsIn", () => {
     fight: {
       cardId: "goblin",
       cardName: "GOBLIN",
-      kind: "zwykla",
+      kind: "ordinary",
       enemyTotal: 3,
       playerTotal: 4,
       playerRoll: null,

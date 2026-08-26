@@ -26,7 +26,7 @@ export async function fightBeast(
   const kind = beastCombatKind(kindDie);
   const beastTotal = beastStrength(strengthDie);
   const totals = pointsOf(snapshot, seat.id, "walka");
-  const mine = kind === "magiczna" ? totals.magia : totals.miecz;
+  const mine = kind === "magical" ? totals.magia : totals.miecz;
 
   const myDie = await ports.random.rollD6("bestia: rzut Postaci");
   const itsDie = await ports.random.rollD6("bestia: rzut Bestii");

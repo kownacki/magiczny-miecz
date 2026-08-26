@@ -771,7 +771,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     }
     if (slot === null && held.slot != null) {
       const mineCards = asHoldings(mineNow.holdings);
-      if (carriedCount(mineCards, "slotowy") >= carryLimit(mineCards, "slotowy")) {
+      if (carriedCount(mineCards, "slots") >= carryLimit(mineCards, "slots")) {
         return setError("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
       }
     }
@@ -1101,7 +1101,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           side where nobody looked. */}
       {inspecting && (
         <FieldModal
-          eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+          eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
           nature={asNature(mySeat?.nature)}
           fieldId={inspecting}
           cards={fieldCards
@@ -1134,7 +1134,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   post("adjust", { seatId: active.id, stat, delta, reason }),
                 onService: (body: Record<string, unknown>) =>
                   post("holdings", { ...body, seatId: active.id }),
-                purse: { zloto: active.zloto, zycie: active.zycie },
+                purse: { gold: active.gold, life: active.life },
                 stock,
                 sellable: active.holdings
                   .filter((holding) => holding.kind === "item")
@@ -1272,7 +1272,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           <>
           {leftDrawer === "karty" && (
             <CardLibrary
-              eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+              eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
               nature={asNature(mySeat?.nature)}
               // "walcz" and the Obszary chips became `fight` and `go` in the
               // console; taking a card stayed, because this shelf is where somebody
@@ -1455,7 +1455,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             <Journal
               code={code}
               revision={game.revision}
-              eqMode={game.eq_mode === "slotowy" ? "slotowy" : "klasyczny"}
+              eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
             />
           </div>
         }
@@ -1595,7 +1595,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 // finding a ± under every parameter for the rest of time.
                 canCorrect={game.mode !== "simulation"}
                 isMine
-                slotted={game.eq_mode === "slotowy"}
+                slotted={game.eq_mode === "slots"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
                 onDrop={askToDrop}
                 onEquip={equip}
@@ -1723,11 +1723,11 @@ function asPublicSeat(seat: Seat): PublicSeat {
     fieldName: seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—",
     fieldId: seat.field_id,
     miecz: seat.miecz_total,
-    mieczOwn: seat.miecz_own,
+    swordOwn: seat.sword_own,
     magia: seat.magia_total,
-    magiaOwn: seat.magia_own,
-    zycie: seat.zycie,
-    zloto: seat.zloto,
+    magicOwn: seat.magic_own,
+    life: seat.life,
+    gold: seat.gold,
     nature: seat.nature,
     eliminated: seat.eliminated,
     abandoned: seat.abandoned_at !== null,

@@ -33,7 +33,7 @@ function seed(): Tables {
         id: "g1",
         join_code: "ABCD",
         mode: "simulation",
-        eq_mode: "klasyczny",
+        eq_mode: "classic",
         die_source: "app",
         status: "playing",
         active_seat: 0,
@@ -44,7 +44,7 @@ function seed(): Tables {
       },
     ],
     seats: [
-      { id: "s1", game_id: "g1", seat_index: 0, zycie: 4, zloto: 1, turns_lost: 0 },
+      { id: "s1", game_id: "g1", seat_index: 0, life: 4, gold: 1, turns_lost: 0 },
     ],
     holdings: [],
     seat_effects: [],
@@ -64,11 +64,11 @@ const game = () => tables.games[0] as unknown as { revision: number; turn: numbe
 describe("committing a change", () => {
   it("advances the revision by exactly one", async () => {
     await change("g1", () => ({
-      writes: { seats: [{ id: "s1", patch: { zloto: 5 } }] },
+      writes: { seats: [{ id: "s1", patch: { gold: 5 } }] },
       result: undefined,
     }), undefined);
     expect(game().revision).toBe(8);
-    expect(tables.seats[0].zloto).toBe(5);
+    expect(tables.seats[0].gold).toBe(5);
   });
 
   /**
@@ -98,7 +98,7 @@ describe("committing a change", () => {
   it("refuses a snapshot somebody has already written past", async () => {
     const snapshot = await loadSnapshot("g1");
     game().revision = 9; // somebody else got there first
-    await expect(commit(snapshot, { seats: [{ id: "s1", patch: { zloto: 3 } }] })).rejects.toThrow(
+    await expect(commit(snapshot, { seats: [{ id: "s1", patch: { gold: 3 } }] })).rejects.toThrow(
       Conflict,
     );
   });
@@ -109,11 +109,11 @@ describe("committing a change", () => {
     game().revision = 9;
     await expect(
       commit(snapshot, {
-        seats: [{ id: "s1", patch: { zloto: 99 } }],
+        seats: [{ id: "s1", patch: { gold: 99 } }],
         journal: [{ seatId: "s1", turn: 3, kind: "roll" }],
       }),
     ).rejects.toThrow(Conflict);
-    expect(tables.seats[0].zloto).toBe(1);
+    expect(tables.seats[0].gold).toBe(1);
     expect(tables.moves).toHaveLength(1);
   });
 });
@@ -131,14 +131,14 @@ describe("losing the race", () => {
 
     await change("g1", (snap) => {
       seen.push(snap.game.turn);
-      return { writes: { seats: [{ id: "s1", patch: { zloto: 2 } }] }, result: undefined };
+      return { writes: { seats: [{ id: "s1", patch: { gold: 2 } }] }, result: undefined };
     }, undefined);
 
     // First attempt read turn 3 and lost; the retry read the turn the other
     // writer left behind.
     expect(seen).toEqual([3, 4]);
     expect(game().revision).toBe(9);
-    expect(tables.seats[0].zloto).toBe(2);
+    expect(tables.seats[0].gold).toBe(2);
   });
 
   /**
@@ -160,14 +160,14 @@ describe("losing the race", () => {
       async (snap, _cmd, ports) => {
         const die = await ports.random.rollD6("walka");
         rolled.push(die);
-        return { writes: { seats: [{ id: "s1", patch: { zycie: die } }] }, result: undefined };
+        return { writes: { seats: [{ id: "s1", patch: { life: die } }] }, result: undefined };
       },
       undefined,
       { random: scriptedRandom([6, 1]) },
     );
 
     expect(rolled).toEqual([6, 6]);
-    expect(tables.seats[0].zycie).toBe(6);
+    expect(tables.seats[0].life).toBe(6);
   });
 
   it("gives up rather than spinning forever", async () => {

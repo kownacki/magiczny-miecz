@@ -6,7 +6,7 @@ function seat(seatIndex: number, over: Partial<TargetSeat> = {}): TargetSeat {
     seatIndex,
     characterId: `postac-${seatIndex}`,
     fieldId: "karczma",
-    nature: "dobra",
+    nature: "good",
     eliminated: false,
     ...over,
   };
@@ -78,9 +78,9 @@ describe("who an effect hits", () => {
   it("picks a Natura", () => {
     // Zaćmienie Słońc: Dobre and Chaotyczne lose a turn, Złe do not.
     const seats = [
-      seat(0, { nature: "dobra" }),
-      seat(1, { nature: "zla" }),
-      seat(2, { nature: "chaotyczna" }),
+      seat(0, { nature: "good" }),
+      seat(1, { nature: "evil" }),
+      seat(2, { nature: "chaotic" }),
     ];
     expect(indices(seatsTargeted("dobrzy", seats, seats[0]))).toEqual([0]);
     expect(indices(seatsTargeted("zli", seats, seats[0]))).toEqual([1]);

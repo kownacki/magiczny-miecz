@@ -15,28 +15,28 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
   it("misses when the dice do not beat the stat", () => {
     // 3+3+3 = 9, less a Miecz of 9, is nothing: the trap is avoided and the
     // character has not moved.
-    expect(trapOutcome([3, 3, 3], 9, "miecz")).toEqual({ fell: false, result: 0 });
+    expect(trapOutcome([3, 3, 3], 9, "sword")).toEqual({ fell: false, result: 0 });
   });
 
   it("counts a stat bigger than the dice as a clean miss, not a negative", () => {
     // The printed table has no row below 0, and a character with a huge Miecz
     // has simply walked through.
-    expect(trapOutcome([1, 1, 1], 20, "miecz")).toEqual({ fell: false, result: 0 });
+    expect(trapOutcome([1, 1, 1], 20, "sword")).toEqual({ fell: false, result: 0 });
   });
 
   it("drops you down the Miecz side by the printed table", () => {
-    const at = (total: number) => trapOutcome([total, 0, 0], 0, "miecz");
+    const at = (total: number) => trapOutcome([total, 0, 0], 0, "sword");
     expect(at(1)).toMatchObject({ fell: true, fieldId: "wejscie-na-most-a" });
     expect(at(2)).toMatchObject({ fieldId: "ruiny-twierdzy" });
     expect(at(3)).toMatchObject({ fieldId: "ruiny-twierdzy" });
     expect(at(4)).toMatchObject({ fieldId: "twierdza-strzegaca-drog" });
     expect(at(5)).toMatchObject({ fieldId: "twierdza-strzegaca-drog" });
     expect(at(6)).toMatchObject({ fieldId: "osada" });
-    expect(trapOutcome([6, 6, 6], 0, "miecz")).toMatchObject({ fieldId: "osada", result: 18 });
+    expect(trapOutcome([6, 6, 6], 0, "sword")).toMatchObject({ fieldId: "osada", result: 18 });
   });
 
   it("drops you down the Magia side by the printed table", () => {
-    const at = (total: number) => trapOutcome([total, 0, 0], 0, "magia");
+    const at = (total: number) => trapOutcome([total, 0, 0], 0, "magic");
     expect(at(2)).toMatchObject({ fieldId: "wymarle-miasto" });
     expect(at(3)).toMatchObject({ fieldId: "wymarle-miasto" });
     expect(at(4)).toMatchObject({ fieldId: "swiatynia-bogini-nemed" });
@@ -47,14 +47,14 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
   it("puts a 1 on the Magia side at the entrance, mirroring the other trap", () => {
     // The printed Magiczna Pułapka table skips 1 entirely. This is the one
     // invented number on the bridge, and it is invented to match its mirror.
-    expect(trapOutcome([1, 0, 0], 0, "magia")).toMatchObject({
+    expect(trapOutcome([1, 0, 0], 0, "magic")).toMatchObject({
       fell: true,
       fieldId: "wejscie-na-most-b",
     });
   });
 
   it("lands on fields the board actually has", () => {
-    for (const side of ["miecz", "magia"] as const) {
+    for (const side of ["sword", "magic"] as const) {
       for (let total = 1; total <= 19; total++) {
         const outcome = trapOutcome([total, 0, 0], 0, side);
         if (outcome.fell) expect(FIELDS.has(outcome.fieldId)).toBe(true);
@@ -63,17 +63,17 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
   });
 
   it("keeps only what rolls a 1 or a 2", () => {
-    const carried = ["miecz", "tarcza", "kon", "latarnia"];
+    const carried = ["sword", "tarcza", "kon", "latarnia"];
     expect(keptAfterFall(carried, [1, 2, 3, 6])).toEqual({
-      kept: ["miecz", "tarcza"],
+      kept: ["sword", "tarcza"],
       lost: ["kon", "latarnia"],
     });
   });
 
   it("loses anything it has no die for", () => {
     // A missing roll is not a free pass: the caller must supply one per card.
-    expect(keptAfterFall(["miecz", "tarcza"], [1])).toEqual({
-      kept: ["miecz"],
+    expect(keptAfterFall(["sword", "tarcza"], [1])).toEqual({
+      kept: ["sword"],
       lost: ["tarcza"],
     });
   });
@@ -107,8 +107,8 @@ describe("Demon Zagłady i Monstrum (14.6)", () => {
   });
 
   it("fights the Demon with Magia and the Monstrum with Miecz", () => {
-    expect(BRIDGE_GUARDIAN["demon-zaglady"]?.kind).toBe("magiczna");
-    expect(BRIDGE_GUARDIAN["monstrum"]?.kind).toBe("zwykla");
+    expect(BRIDGE_GUARDIAN["demon-zaglady"]?.kind).toBe("magical");
+    expect(BRIDGE_GUARDIAN["monstrum"]?.kind).toBe("ordinary");
   });
 });
 
@@ -116,7 +116,7 @@ describe("the bridge itself", () => {
   it("puts every field on a side, and only fields the board has", () => {
     for (const [fieldId, side] of Object.entries(BRIDGE_SIDE) as [FieldId, string][]) {
       expect(FIELDS.get(fieldId)?.region).toBe("most");
-      expect(["miecz", "magia"]).toContain(side);
+      expect(["sword", "magic"]).toContain(side);
     }
   });
 

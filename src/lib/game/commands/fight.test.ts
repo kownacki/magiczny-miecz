@@ -30,7 +30,7 @@ const walka = (over: Partial<Fight> = {}): TurnPhase => ({
   fight: {
     cardId: "cyklop",
     cardName: "CYKLOP",
-    kind: "zwykla",
+    kind: "ordinary",
     enemyTotal: 6,
     playerTotal: 3,
     playerRoll: null,
@@ -61,7 +61,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
   const table = (over: Partial<TurnPhase> = {}, holdings = [aHolding()]) =>
     aTable({
       game: { active_seat: 0, turn_state: { ...pole(), ...over } as TurnPhase },
-      seats: [aSeat({ miecz_own: 2, magia_own: 1 })],
+      seats: [aSeat({ sword_own: 2, magic_own: 1 })],
       holdings,
     });
 
@@ -69,7 +69,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
     const armed = table({}, [aHolding({ id: "h-1", card_id: "miecz-chaosu" })]);
     const { writes } = beginFight(armed, { cardIds: ["cyklop"] });
     // Miecz 2 of its own plus the 2 the Miecz Chaosu lends, against the Cyklop's 6.
-    expect(fightIn(writes)).toMatchObject({ playerTotal: 4, enemyTotal: 6, kind: "zwykla" });
+    expect(fightIn(writes)).toMatchObject({ playerTotal: 4, enemyTotal: 6, kind: "ordinary" });
   });
 
   it("tells the table what it is fighting", () => {
@@ -107,7 +107,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
   it("reads Magia against a magiczny Wróg (18.2)", () => {
     const magical = table({ drawn: [{ cardId: "demon", cardClass: "foe" }] });
     const { writes } = beginFight(magical, { cardIds: ["demon"] });
-    expect(fightIn(writes)).toMatchObject({ kind: "magiczna", enemyTotal: 6, playerTotal: 1 });
+    expect(fightIn(writes)).toMatchObject({ kind: "magical", enemyTotal: 6, playerTotal: 1 });
   });
 
   it("will not fight the same creature twice in one turn (17.4)", () => {
@@ -244,7 +244,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         caster: { seat: 0, until: NOW + 1000 },
         playerRoll: 5,
         enemyRoll: 2,
-        result: { outcome: "wygrana", winner: "Postać", loser: "CYKLOP", kind: "zwykla" },
+        result: { outcome: "wygrana", winner: "Postać", loser: "CYKLOP", kind: "ordinary" },
       }),
     });
     const { writes } = castSpell(mine, { seatId: "seat-a", holdingId: "s-1" }, ports());
@@ -435,14 +435,14 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
         aSeat({
           id: "seat-a",
           seat_index: 0,
-          miecz_own: 3,
+          sword_own: 3,
           ...(over.field ? { field_id: over.field as never } : {}),
         }),
         aSeat({
           id: "seat-b",
           seat_index: 1,
           player_name: "Ala",
-          miecz_own: 2,
+          sword_own: 2,
           ...(over.field ? { field_id: over.field as never } : {}),
         }),
       ],
@@ -686,7 +686,7 @@ describe("osłona (17.4, 18.2b)", () => {
   it("saves the point on a 1 with a Hełm, and says so", async () => {
     const { writes, result } = await shieldSaves(
       table(),
-      { seatId: "seat-a", kind: "zwykla" },
+      { seatId: "seat-a", kind: "ordinary" },
       ports({ random: scriptedRandom([1]) }),
     );
     expect(result).toBe(true);
@@ -699,7 +699,7 @@ describe("osłona (17.4, 18.2b)", () => {
   it("does not save on a 2", async () => {
     const { result } = await shieldSaves(
       table(),
-      { seatId: "seat-a", kind: "zwykla" },
+      { seatId: "seat-a", kind: "ordinary" },
       ports({ random: scriptedRandom([2]) }),
     );
     expect(result).toBe(false);
@@ -710,7 +710,7 @@ describe("osłona (17.4, 18.2b)", () => {
     const random = scriptedRandom([]);
     const { writes, result } = await shieldSaves(
       table(),
-      { seatId: "seat-a", kind: "magiczna" },
+      { seatId: "seat-a", kind: "magical" },
       ports({ random }),
     );
     expect(result).toBe(false);
@@ -720,7 +720,7 @@ describe("osłona (17.4, 18.2b)", () => {
   it("rolls nothing for a character wearing nothing", async () => {
     const { result } = await shieldSaves(
       table([]),
-      { seatId: "seat-a", kind: "zwykla" },
+      { seatId: "seat-a", kind: "ordinary" },
       ports({ random: scriptedRandom([]) }),
     );
     expect(result).toBe(false);

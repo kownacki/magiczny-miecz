@@ -63,12 +63,12 @@ describe("what a loss reaches for", () => {
 describe("gold", () => {
   it("takes all of it when no amount is named", () => {
     // "Tracisz całe złoto" is the common phrasing and carries no count.
-    expect(goldLost({ co: "zloto" }, 7)).toBe(7);
+    expect(goldLost({ co: "gold" }, 7)).toBe(7);
   });
 
   it("takes the named amount, never more than is there", () => {
-    expect(goldLost({ co: "zloto", count: 2 }, 7)).toBe(2);
-    expect(goldLost({ co: "zloto", count: 9 }, 3)).toBe(3);
+    expect(goldLost({ co: "gold", count: 2 }, 7)).toBe(2);
+    expect(goldLost({ co: "gold", count: 9 }, 3)).toBe(3);
   });
 
   it("takes no gold for a loss that is not about gold", () => {
@@ -76,7 +76,7 @@ describe("gold", () => {
   });
 
   it("is not a holding, so it takes no cards", () => {
-    expect(chooseLosses(pack, { co: "zloto" })).toEqual([]);
+    expect(chooseLosses(pack, { co: "gold" })).toEqual([]);
   });
 });
 

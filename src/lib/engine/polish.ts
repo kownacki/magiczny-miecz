@@ -45,10 +45,10 @@ export function fieldName(fieldId: FieldId): string {
 export type Stat = Extract<Effect, { op: "punkty" }>["stat"];
 
 export const STAT_LABEL: Record<Stat, string> = {
-  miecz: "Miecza",
-  magia: "Magii",
-  zycie: "Życia",
-  zloto: "Złota",
+  sword: "Miecza",
+  magic: "Magii",
+  life: "Życia",
+  gold: "Złota",
 };
 
 /** What a `strata` takes off you. */
@@ -58,7 +58,7 @@ export const LOST_LABEL: Record<Loss, string> = {
   przedmiot: "Przedmiot",
   przyjaciel: "Przyjaciela",
   zaklecie: "Zaklęcie",
-  zloto: "całe złoto",
+  gold: "całe złoto",
   "wszystkie-przedmioty": "wszystkie Przedmioty",
   "wszystkie-zaklecia": "wszystkie Zaklęcia",
 };

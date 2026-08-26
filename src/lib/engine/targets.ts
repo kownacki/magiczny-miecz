@@ -68,11 +68,11 @@ export function seatsTargeted(
       return only(playing.filter((seat) => regionOf(seat.fieldId) === "gorny"));
 
     case "dobrzy":
-      return only(playing.filter((seat) => seat.nature === "dobra"));
+      return only(playing.filter((seat) => seat.nature === "good"));
     case "chaotyczni":
-      return only(playing.filter((seat) => seat.nature === "chaotyczna"));
+      return only(playing.filter((seat) => seat.nature === "chaotic"));
     case "zli":
-      return only(playing.filter((seat) => seat.nature === "zla"));
+      return only(playing.filter((seat) => seat.nature === "evil"));
 
     // Not answerable now: one waits for somebody to arrive, the other for
     // somebody to choose.

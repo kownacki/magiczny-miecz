@@ -24,9 +24,9 @@ function where(destination: Destination): string {
 function ifWhen(condition: Condition): string {
   switch (condition.is) {
     case "natura":
-      return `jeśli ${condition.jedna_z.map((n) => (n === "zla" ? "zła" : n)).join(" lub ")}`;
+      return `jeśli ${condition.jedna_z.map((n) => (n === "evil" ? "zła" : n)).join(" lub ")}`;
     case "prog":
-      return `jeśli ${condition.stat === "miecz" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
+      return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
     case "ma-zloto":
       return "jeśli masz złoto";
   }
@@ -162,7 +162,7 @@ export function describeEffect(effect: Effect): string {
       return `zgadujesz — jeśli trafisz: ${describeEffect(effect.nagroda)}`;
 
     case "natura":
-      return `Natura: ${effect.na === "zla" ? "zła" : effect.na}`;
+      return `Natura: ${effect.na === "evil" ? "zła" : effect.na}`;
 
     case "kup":
       return `kupujesz — ${effect.towar

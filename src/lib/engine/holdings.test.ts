@@ -31,31 +31,31 @@ describe("which pile a card joins (16.6, 1.4)", () => {
 
 describe("bonuses from a hand (1.5, 2.5)", () => {
   it("adds an item's printed bonus", () => {
-    expect(bonusFromHoldings([held("excalibur", "item")], "klasyczny", "parametr")).toEqual({ miecz: 1, magia: 0 });
+    expect(bonusFromHoldings([held("excalibur", "item")], "classic", "parametr")).toEqual({ miecz: 1, magia: 0 });
   });
 
   it("adds a friend's", () => {
-    expect(bonusFromHoldings([held("rycerz", "friend")], "klasyczny", "parametr")).toEqual({ miecz: 3, magia: 3 });
+    expect(bonusFromHoldings([held("rycerz", "friend")], "classic", "parametr")).toEqual({ miecz: 3, magia: 3 });
   });
 
   it("gives a trophy nothing, even though its card prints a Miecz", () => {
-    expect(bonusFromHoldings([held("cyklop", "trophy")], "klasyczny", "parametr")).toEqual({ miecz: 0, magia: 0 });
+    expect(bonusFromHoldings([held("cyklop", "trophy")], "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
   });
 
   it("gives a spell nothing", () => {
-    expect(bonusFromHoldings([held("cokolwiek", "spell", "hidden")], "klasyczny", "parametr")).toEqual({
+    expect(bonusFromHoldings([held("cokolwiek", "spell", "hidden")], "classic", "parametr")).toEqual({
       miecz: 0,
       magia: 0,
     });
   });
 
   it("treats an untranscribed card as inert rather than failing", () => {
-    expect(bonusFromHoldings([held("nie-ma-takiej", "item")], "klasyczny", "parametr")).toEqual({ miecz: 0, magia: 0 });
+    expect(bonusFromHoldings([held("nie-ma-takiej", "item")], "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
   });
 
   it("sums a whole hand", () => {
     expect(
-      bonusFromHoldings([held("excalibur", "item"), held("rycerz", "friend")], "klasyczny", "parametr"),
+      bonusFromHoldings([held("excalibur", "item"), held("rycerz", "friend")], "classic", "parametr"),
     ).toEqual({ miecz: 4, magia: 3 });
   });
 });
@@ -89,19 +89,19 @@ describe("what counts, in each equipment variant", () => {
 
   it("counts everything in klasyczny play, worn or not", () => {
     // The rulebook has one kind of possession: a Miecz in the pack is a Miecz.
-    expect(bonusFromHoldings([{ ...blade, slot: null }], "klasyczny", "parametr").miecz).toBe(1);
-    expect(bonusFromHoldings([{ ...blade, slot: "reka-glowna" }], "klasyczny", "parametr").miecz).toBe(1);
+    expect(bonusFromHoldings([{ ...blade, slot: null }], "classic", "parametr").miecz).toBe(1);
+    expect(bonusFromHoldings([{ ...blade, slot: "main-hand" }], "classic", "parametr").miecz).toBe(1);
   });
 
   it("counts a wearable card in slotowy only where it is worn", () => {
-    expect(bonusFromHoldings([{ ...blade, slot: null }], "slotowy", "parametr").miecz).toBe(0);
-    expect(bonusFromHoldings([{ ...blade, slot: "reka-glowna" }], "slotowy", "parametr").miecz).toBe(1);
+    expect(bonusFromHoldings([{ ...blade, slot: null }], "slots", "parametr").miecz).toBe(0);
+    expect(bonusFromHoldings([{ ...blade, slot: "main-hand" }], "slots", "parametr").miecz).toBe(1);
   });
 
   it("still counts a card with nowhere to be worn", () => {
     // The Graal has no place on the body and works from the pack; otherwise a
     // quarter of the deck would fall silent the moment the variant went on.
-    expect(bonusFromHoldings([{ ...graal, slot: null }], "slotowy", "parametr").magia).toBe(1);
+    expect(bonusFromHoldings([{ ...graal, slot: null }], "slots", "parametr").magia).toBe(1);
   });
 });
 
@@ -110,11 +110,11 @@ describe("a card you spend is not a card you carry", () => {
     // The 2 printed on it is what drinking it is worth, for one turn. Read as a
     // standing bonus it made carrying the bottle a permanent +2 that vanished
     // the moment it was finally drunk — the opposite of the card.
-    expect(bonusFromHoldings([held("eliksir-sily", "item")], "klasyczny", "parametr")).toEqual({ miecz: 0, magia: 0 });
+    expect(bonusFromHoldings([held("eliksir-sily", "item")], "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
   });
 
   it("still reads the corner on a card you keep", () => {
-    expect(bonusFromHoldings([held("srebrna-strzala", "item")], "klasyczny", "parametr").miecz).toBe(1);
+    expect(bonusFromHoldings([held("srebrna-strzala", "item")], "classic", "parametr").miecz).toBe(1);
   });
 });
 
@@ -125,17 +125,17 @@ describe("the two figures a character has (1.5)", () => {
     // 1.5's worked example: the Troll's "parametr Miecza" counts the Strzała
     // and not the Miecz card or the Krzyżowiec, both of which say "podczas
     // walki" and neither of which is lending anything while he stands still.
-    expect(bonusFromHoldings(hand, "klasyczny", "parametr").miecz).toBe(1);
+    expect(bonusFromHoldings(hand, "classic", "parametr").miecz).toBe(1);
   });
 
   it("counts it in a fight", () => {
-    expect(bonusFromHoldings(hand, "klasyczny", "walka").miecz).toBe(4);
+    expect(bonusFromHoldings(hand, "classic", "walka").miecz).toBe(4);
   });
 
   it("makes no difference to Magia, which has no fight-only card in the box", () => {
     const magic = [held("pierscien-mocy", "item"), held("chochlik", "friend")];
-    expect(bonusFromHoldings(magic, "klasyczny", "parametr").magia).toBe(
-      bonusFromHoldings(magic, "klasyczny", "walka").magia,
+    expect(bonusFromHoldings(magic, "classic", "parametr").magia).toBe(
+      bonusFromHoldings(magic, "classic", "walka").magia,
     );
   });
 
@@ -143,8 +143,8 @@ describe("the two figures a character has (1.5)", () => {
     // A printed corner number says how much and never when, so the two figures
     // agree until somebody writes the ability down.
     const printed = [held("excalibur", "item")];
-    expect(bonusFromHoldings(printed, "klasyczny", "parametr")).toEqual(
-      bonusFromHoldings(printed, "klasyczny", "walka"),
+    expect(bonusFromHoldings(printed, "classic", "parametr")).toEqual(
+      bonusFromHoldings(printed, "classic", "walka"),
     );
   });
 });

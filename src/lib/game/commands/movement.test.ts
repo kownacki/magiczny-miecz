@@ -105,12 +105,12 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
       { seat_id: "seat-a", card_id: "helm", kind: "item", face: "open" },
       { seat_id: "seat-a", card_id: "miecz", kind: "item", face: "open" },
     ]);
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zloto: 5 } }]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 5 } }]);
     expect(writes.journal?.[0]).toMatchObject({
       seatId: "seat-a",
       turn: 1,
       kind: "starting-kit",
-      payload: { character: "ksiaze", items: ["helm", "miecz"], zloto: 5 },
+      payload: { character: "ksiaze", items: ["helm", "miecz"], gold: 5 },
     });
   });
 
@@ -354,7 +354,7 @@ describe("ruch (10.2, 13.4)", () => {
           from: "ruiny-twierdzy",
           guardian: "Kamienny Potwór",
           entersAt: "wejscie-na-most-a",
-          stat: "miecz",
+          stat: "sword",
         },
       });
       expect(writes.journal?.[0]).toMatchObject({

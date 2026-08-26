@@ -21,7 +21,7 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
   "godzina-duchow": {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["zla"] },
+      warunek: { is: "natura", jedna_z: ["evil"] },
       to: {
         op: "wybor",
         options: [
@@ -66,7 +66,7 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
     disposition: { kind: "odloz" },
   },
   zaraza: {
-    effect: { op: "punkty", stat: "zycie", delta: -1, target: "wszyscy-w-kregu" },
+    effect: { op: "punkty", stat: "life", delta: -1, target: "wszyscy-w-kregu" },
     disposition: { kind: "odloz" },
   },
   "burza-siedmiu-slonc": {
@@ -76,7 +76,7 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
   "zacmienie-slonc": {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra", "chaotyczna"] },
+      warunek: { is: "natura", jedna_z: ["good", "chaotic"] },
       to: { op: "tura-stracona", turns: 1, target: "wszyscy" },
     },
     disposition: { kind: "odloz" },
@@ -88,12 +88,12 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
   "zatrute-ziola": {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["zla"] },
-      to: { op: "punkty", stat: "zycie", delta: 1 },
+      warunek: { is: "natura", jedna_z: ["evil"] },
+      to: { op: "punkty", stat: "life", delta: 1 },
       inaczej: {
         op: "gdy",
-        warunek: { is: "natura", jedna_z: ["dobra"] },
-        to: { op: "punkty", stat: "zycie", delta: -1 },
+        warunek: { is: "natura", jedna_z: ["good"] },
+        to: { op: "punkty", stat: "life", delta: -1 },
       },
     },
     disposition: { kind: "odloz" },
@@ -101,12 +101,12 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
   "poslancy-bogow": {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
-      to: { op: "punkty", stat: "zycie", delta: 1 },
+      warunek: { is: "natura", jedna_z: ["good"] },
+      to: { op: "punkty", stat: "life", delta: 1 },
       inaczej: {
         op: "gdy",
-        warunek: { is: "natura", jedna_z: ["zla"] },
-        to: { op: "punkty", stat: "zycie", delta: -1 },
+        warunek: { is: "natura", jedna_z: ["evil"] },
+        to: { op: "punkty", stat: "life", delta: -1 },
       },
     },
     disposition: { kind: "odloz" },
@@ -114,18 +114,18 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
   "sabat-czarownic": {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["zla"] },
-      to: { op: "punkty", stat: "magia", delta: 1 },
-      inaczej: { op: "natura", na: "zla" },
+      warunek: { is: "natura", jedna_z: ["evil"] },
+      to: { op: "punkty", stat: "magic", delta: 1 },
+      inaczej: { op: "natura", na: "evil" },
     },
     disposition: { kind: "odloz" },
   },
   "slup-ognia": {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
-      to: { op: "punkty", stat: "magia", delta: 1 },
-      inaczej: { op: "natura", na: "dobra" },
+      warunek: { is: "natura", jedna_z: ["good"] },
+      to: { op: "punkty", stat: "magic", delta: 1 },
+      inaczej: { op: "natura", na: "good" },
     },
     disposition: { kind: "odloz" },
   },
@@ -133,7 +133,7 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "po-kolei",
       steps: [
-        { op: "strata", co: "zloto" },
+        { op: "strata", co: "gold" },
         { op: "strata", co: "wszystkie-przedmioty" },
       ],
     },
@@ -175,8 +175,8 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
           {
             op: "gdy",
             warunek: { is: "ma-zloto" },
-            to: { op: "punkty", stat: "zloto", delta: -1, target },
-            inaczej: { op: "punkty", stat: "zycie", delta: -1, target },
+            to: { op: "punkty", stat: "gold", delta: -1, target },
+            inaczej: { op: "punkty", stat: "life", delta: -1, target },
           },
         ]),
       ),

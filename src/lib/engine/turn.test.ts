@@ -97,11 +97,11 @@ describe("turn phases (10.1)", () => {
 
   it("keeps drawn cards in resolution order however they arrive (15.2)", () => {
     let phase: TurnPhase = afterMove(DOLNY_KRAG.find((f) => f.id === "bezdroza")!);
-    phase = afterDraw(phase, { cardId: "zloto", cardClass: "item" });
+    phase = afterDraw(phase, { cardId: "gold", cardClass: "item" });
     phase = afterDraw(phase, { cardId: "wilk", cardClass: "foe" });
     phase = afterDraw(phase, { cardId: "mgla", cardClass: "encounter" });
     if (phase.phase !== "field") throw new Error("expected pole");
-    expect(phase.drawn.map((c) => c.cardId)).toEqual(["mgla", "wilk", "zloto"]);
+    expect(phase.drawn.map((c) => c.cardId)).toEqual(["mgla", "wilk", "gold"]);
   });
 });
 
@@ -115,7 +115,7 @@ describe("fights", () => {
       { miecz: 3, magia: 5 },
     );
     if (phase.phase !== "fight") throw new Error("expected walka");
-    expect(phase.fight.kind).toBe("zwykla");
+    expect(phase.fight.kind).toBe("ordinary");
     expect(phase.fight.enemyTotal).toBe(6);
     expect(phase.fight.playerTotal).toBe(3);
   });
@@ -127,7 +127,7 @@ describe("fights", () => {
       { miecz: 3, magia: 5 },
     );
     if (phase.phase !== "fight") throw new Error("expected walka");
-    expect(phase.fight.kind).toBe("magiczna");
+    expect(phase.fight.kind).toBe("magical");
     expect(phase.fight.enemyTotal).toBe(7);
     expect(phase.fight.playerTotal).toBe(5);
   });
@@ -243,14 +243,14 @@ describe("turn order", () => {
 describe("resolution numerals (15.2, 16.6)", () => {
   it("puts Nieznajomy (IV) after Wróg (II) and before Przedmiot (V)", () => {
     const drawn = [
-      { cardId: "zloto", cardClass: "item" as const },
+      { cardId: "gold", cardClass: "item" as const },
       { cardId: "cudotworca", cardClass: "stranger" as const },
       { cardId: "cyklop", cardClass: "foe" as const },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual([
       "cyklop",
       "cudotworca",
-      "zloto",
+      "gold",
     ]);
   });
 
@@ -259,11 +259,11 @@ describe("resolution numerals (15.2, 16.6)", () => {
     // decides between them rather than an invented precedence.
     const drawn = [
       { cardId: "alchemik", cardClass: "friend" as const },
-      { cardId: "zloto", cardClass: "item" as const },
+      { cardId: "gold", cardClass: "item" as const },
     ];
-    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["alchemik", "zloto"]);
+    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["alchemik", "gold"]);
     const reversed = [drawn[1], drawn[0]];
-    expect(resolutionOrder(reversed).map((c) => c.cardId)).toEqual(["zloto", "alchemik"]);
+    expect(resolutionOrder(reversed).map((c) => c.cardId)).toEqual(["gold", "alchemik"]);
   });
 
   it("still puts Miejsce (VI) last", () => {
@@ -399,7 +399,7 @@ describe("fighting a guardian", () => {
     expect(strengthPending(phase.fight)).toBe(true);
     expect(phase.fight.enemyTotal).toBe(0);
     // Kamienny Potwór is fought on Miecz, so the character brings its Miecz.
-    expect(phase.fight.kind).toBe("zwykla");
+    expect(phase.fight.kind).toBe("ordinary");
     expect(phase.fight.playerTotal).toBe(5);
   });
 
@@ -431,7 +431,7 @@ describe("fighting a guardian", () => {
     const city = BRIDGE_ENTRANCES.find((e) => e.from === "wymarle-miasto")!;
     const phase = startGuardianFight({ kind: "most", entrance: city }, totals, "wymarle-miasto");
     if (phase.phase !== "fight") throw new Error("expected walka");
-    expect(phase.fight.kind).toBe("magiczna");
+    expect(phase.fight.kind).toBe("magical");
     expect(phase.fight.playerTotal).toBe(2);
   });
 

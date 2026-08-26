@@ -31,7 +31,7 @@ const ids = (list: Status[]) => list.map((s) => s.id);
 describe("what a character is under", () => {
   it("adds points up without touching own points", () => {
     // 1.2-1.5: only own Miecz and Magia are stored, and totals are worked out
-    // at read time. A buff that wrote itself into miecz_own would outlive its
+    // at read time. A buff that wrote itself into sword_own would outlive its
     // own expiry, because 1.3 forbids pushing own points back down.
     const under = [
       status({ modifier: { kind: "points", miecz: 2 } }),
@@ -64,7 +64,7 @@ describe("what a character is under", () => {
   });
 
   it("reports a Natura being forced", () => {
-    expect(forcedNature([status({ modifier: { kind: "nature", na: "zla" } })])).toBe("zla");
+    expect(forcedNature([status({ modifier: { kind: "nature", na: "evil" } })])).toBe("evil");
     expect(forcedNature([status()])).toBeNull();
   });
 });
@@ -200,7 +200,7 @@ describe("what a player sees on a name", () => {
       { kind: "points", miecz: 1 },
       { kind: "move-max", pola: 1 },
       { kind: "frozen" },
-      { kind: "nature", na: "zla" },
+      { kind: "nature", na: "evil" },
       { kind: "barred", place: "most" },
       { kind: "note" },
     ];

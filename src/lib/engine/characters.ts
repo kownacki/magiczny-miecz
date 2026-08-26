@@ -94,7 +94,7 @@ export const CHARACTER_ABILITIES: Readonly<Partial<Record<CharacterId, readonly 
  * is wrong from the first turn of every game, and wrong in the direction that
  * quietly flattens the characters into each other.
  *
- * `zloto` overrides rule 3.2's single coin ("chyba, że jej Karta daje w tym
+ * `gold` overrides rule 3.2's single coin ("chyba, że jej Karta daje w tym
  * względzie inne instrukcje"); leaving it out means the default stands.
  */
 export interface StartingKit {
@@ -102,7 +102,7 @@ export interface StartingKit {
   items?: readonly string[];
   /** Zaklęcia dealt at setup (9.5). */
   spells?: number;
-  zloto?: number;
+  gold?: number;
 }
 
 export const STARTING_KIT: Readonly<Partial<Record<CharacterId, StartingKit>>> = {
@@ -115,7 +115,7 @@ export const STARTING_KIT: Readonly<Partial<Record<CharacterId, StartingKit>>> =
   karzel: { spells: 2 },
   kat: { spells: 1, items: ["miecz"] },
   krasnolud: { items: ["tarcza", "sztylet"] },
-  ksiaze: { items: ["helm", "miecz"], zloto: 5 },
+  ksiaze: { items: ["helm", "miecz"], gold: 5 },
   lotr: { items: ["sztylet"] },
   mag: { spells: 2 },
   magog: { spells: 1 },

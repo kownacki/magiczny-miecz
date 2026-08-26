@@ -50,26 +50,26 @@ export interface FieldOffer {
 const CZAROWNICA: Effect = {
   op: "rzut",
   faces: {
-    1: { op: "punkty", stat: "miecz", delta: -1 },
+    1: { op: "punkty", stat: "sword", delta: -1 },
     2: {
       op: "wybor",
       options: [
-        { label: "+1 Miecza", effect: { op: "punkty", stat: "miecz", delta: 1 } },
-        { label: "+1 Magii", effect: { op: "punkty", stat: "magia", delta: 1 } },
+        { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
+        { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
       ],
     },
     3: {
       op: "wybor",
       options: [
-        { label: "+1 Magii", effect: { op: "punkty", stat: "magia", delta: 1 } },
-        { label: "+1 Miecza", effect: { op: "punkty", stat: "miecz", delta: 1 } },
+        { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
+        { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
       ],
     },
     4: {
       op: "wybor",
       options: [
-        { label: "+1 Magii", effect: { op: "punkty", stat: "magia", delta: 1 } },
-        { label: "+1 Miecza", effect: { op: "punkty", stat: "miecz", delta: 1 } },
+        { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
+        { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
       ],
     },
     5: { op: "zaklecie", count: 1 },
@@ -113,12 +113,12 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
             // is untouched.
             3: {
               op: "gdy",
-              warunek: { is: "natura", jedna_z: ["zla"] },
-              to: { op: "natura", na: "dobra" },
+              warunek: { is: "natura", jedna_z: ["evil"] },
+              to: { op: "natura", na: "good" },
               inaczej: {
                 op: "gdy",
-                warunek: { is: "natura", jedna_z: ["chaotyczna"] },
-                to: { op: "natura", na: "zla" },
+                warunek: { is: "natura", jedna_z: ["chaotic"] },
+                to: { op: "natura", na: "evil" },
                 inaczej: { op: "nic" },
               },
             },
@@ -141,8 +141,8 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
         effect: {
           op: "rzut",
           faces: {
-            1: { op: "punkty", stat: "zloto", delta: -1 },
-            2: { op: "punkty", stat: "zloto", delta: 1 },
+            1: { op: "punkty", stat: "gold", delta: -1 },
+            2: { op: "punkty", stat: "gold", delta: 1 },
             3: { op: "tura-stracona", turns: 1 },
             4: { op: "walka", nazwa: "Miejscowy osiłek", miecz: 4 },
             5: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
@@ -171,7 +171,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
                 3: { op: "nic" },
                 4: { op: "nic" },
                 5: { op: "nic" },
-                6: { op: "punkty", stat: "zycie", delta: -1 },
+                6: { op: "punkty", stat: "life", delta: -1 },
               },
             },
           ],
@@ -196,10 +196,10 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
         effect: {
           op: "wybor",
           options: [
-            { label: "+1 Miecza", effect: { op: "punkty", stat: "miecz", delta: 1 } },
-            { label: "+1 Magii", effect: { op: "punkty", stat: "magia", delta: 1 } },
+            { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
+            { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
             { label: "+1 Zaklęcie", effect: { op: "zaklecie", count: 1 } },
-            { label: "+1 Sztuka Złota", effect: { op: "punkty", stat: "zloto", delta: 1 } },
+            { label: "+1 Sztuka Złota", effect: { op: "punkty", stat: "gold", delta: 1 } },
           ],
         },
       },
@@ -214,8 +214,8 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
         effect: {
           op: "wybor",
           options: [
-            { label: "Zapłać 1 Sz. Z.", effect: { op: "punkty", stat: "zloto", delta: -1 } },
-            { label: "Tracisz 1 Życia", effect: { op: "punkty", stat: "zycie", delta: -1 } },
+            { label: "Zapłać 1 Sz. Z.", effect: { op: "punkty", stat: "gold", delta: -1 } },
+            { label: "Tracisz 1 Życia", effect: { op: "punkty", stat: "life", delta: -1 } },
           ],
         },
       },

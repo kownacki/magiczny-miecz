@@ -7,10 +7,10 @@ import type { FieldId } from "./board";
 /**
  * One player's live state.
  *
- * `mieczOwn`/`magiaOwn` are the token-tracked points only. Rules 1.5 and 2.5
+ * `swordOwn`/`magicOwn` are the token-tracked points only. Rules 1.5 and 2.5
  * define the *total* as own points plus whatever items and friends contribute,
  * and that total is derived on read — never stored — so it cannot drift out of
- * step with the cards actually held. `mieczFloor`/`magiaFloor` capture 1.3 and
+ * step with the cards actually held. `swordFloor`/`magicFloor` capture 1.3 and
  * 2.3: own points may never drop below where the character started.
  */
 export interface Seat {
@@ -20,13 +20,13 @@ export interface Seat {
   characterId: string | null;
   fieldId: FieldId | null;
 
-  mieczOwn: number;
-  magiaOwn: number;
-  mieczFloor: number;
-  magiaFloor: number;
+  swordOwn: number;
+  magicOwn: number;
+  swordFloor: number;
+  magicFloor: number;
 
-  zycie: number;
-  zloto: number;
+  life: number;
+  gold: number;
 
   /** Nature can change mid-game (7.2), so it lives here rather than on the character. */
   nature: Nature | null;

@@ -31,13 +31,13 @@ const seat = (over: Partial<Seat> = {}): Seat => ({
   name: "Zaurak",
   characterId: "krasnolud",
   fieldId: "karczma",
-  mieczOwn: 3,
-  magiaOwn: 2,
-  mieczFloor: 3,
-  magiaFloor: 2,
-  zycie: 4,
-  zloto: 1,
-  nature: "dobra",
+  swordOwn: 3,
+  magicOwn: 2,
+  swordFloor: 3,
+  magicFloor: 2,
+  life: 4,
+  gold: 1,
+  nature: "good",
   turnsLost: 0,
   stoneUntilTurn: null,
   eliminated: false,
@@ -93,7 +93,7 @@ describe("totals (1.5, 2.5)", () => {
     const totals = totalsFor(s, items);
     expect(totals.miecz).toBe(5); // 3 own + 1 + 1
     expect(totals.magia).toBe(3); // 2 own + 1
-    expect(s.mieczOwn).toBe(3); // untouched
+    expect(s.swordOwn).toBe(3); // untouched
   });
 
   it("ignores trophies, which are kept to trade for Miecz later (1.4)", () => {
@@ -110,7 +110,7 @@ describe("totals (1.5, 2.5)", () => {
 
   it("recomputes spell capacity from the total, not from own Magia", () => {
     const ring = new Map([["pierscien-mocy", item("pierscien-mocy", { magia: 3 })]]);
-    const s = seat({ magiaOwn: 2, holdings: [held("pierscien-mocy")] });
+    const s = seat({ magicOwn: 2, holdings: [held("pierscien-mocy")] });
     expect(totalsFor(s, ring).spellCapacity).toBe(spellCapacity(5));
   });
 });
@@ -148,7 +148,7 @@ describe("the Różdżka Zaklęć (2.6)", () => {
   });
 
   it("reaches the same answer through a seat's holdings", () => {
-    const s = seat({ magiaOwn: 4, holdings: [held("rozdzka-zaklec")] });
+    const s = seat({ magicOwn: 4, holdings: [held("rozdzka-zaklec")] });
     expect(totalsFor(s, new Map()).spellCapacity).toBe(2); // no setup hand given
     expect(totalsFor(s, new Map(), { startingSpells: 2 }).spellCapacity).toBe(3);
   });
@@ -156,26 +156,26 @@ describe("the Różdżka Zaklęć (2.6)", () => {
 
 describe("own points floor (1.3, 2.3)", () => {
   it("cannot be pushed below the starting value", () => {
-    const s = seat({ mieczOwn: 4, mieczFloor: 3 });
-    expect(adjustOwn(s, "miecz", -5).mieczOwn).toBe(3);
+    const s = seat({ swordOwn: 4, swordFloor: 3 });
+    expect(adjustOwn(s, "sword", -5).swordOwn).toBe(3);
   });
 
   it("still allows gains", () => {
-    expect(adjustOwn(seat(), "miecz", 2).mieczOwn).toBe(5);
+    expect(adjustOwn(seat(), "sword", 2).swordOwn).toBe(5);
   });
 });
 
 describe("life (4.2, 4.6, 4.7)", () => {
   it("heals only back to the starting four", () => {
-    expect(heal(seat({ zycie: 1 }), 10).zycie).toBe(4);
+    expect(heal(seat({ life: 1 }), 10).life).toBe(4);
   });
 
   it("lets gains from encounters exceed four", () => {
-    expect(gainLife(seat({ zycie: 4 }), 2).zycie).toBe(6);
+    expect(gainLife(seat({ life: 4 }), 2).life).toBe(6);
   });
 
   it("does not claw back a total already above the ceiling", () => {
-    expect(heal(seat({ zycie: 6 }), 1).zycie).toBe(6);
+    expect(heal(seat({ life: 6 }), 1).life).toBe(6);
   });
 });
 
@@ -212,25 +212,25 @@ describe("carrying limit (5.4)", () => {
 });
 
 describe("nature gating (5.3)", () => {
-  const grail = item("swiety-graal", { forbiddenTo: ["zla", "chaotyczna"] });
+  const grail = item("swiety-graal", { forbiddenTo: ["evil", "chaotic"] });
 
   it("keeps a forbidden item away from the wrong nature", () => {
-    expect(mayHold(grail, "zla")).toBe(false);
+    expect(mayHold(grail, "evil")).toBe(false);
   });
 
   it("allows the permitted nature", () => {
-    expect(mayHold(grail, "dobra")).toBe(true);
+    expect(mayHold(grail, "good")).toBe(true);
   });
 
   it("allows anything unrestricted", () => {
-    expect(mayHold(item("miecz"), "zla")).toBe(true);
+    expect(mayHold(item("miecz"), "evil")).toBe(true);
   });
 });
 
 describe("excess spells (9.4)", () => {
   it("reports how many must be discarded", () => {
     const s = seat({
-      magiaOwn: 2,
+      magicOwn: 2,
       holdings: [held("a", "spell"), held("b", "spell"), held("c", "spell")],
     });
     // Magia 2 allows one spell; three are held.
@@ -238,7 +238,7 @@ describe("excess spells (9.4)", () => {
   });
 
   it("is zero when within the limit", () => {
-    const s = seat({ magiaOwn: 5, holdings: [held("a", "spell")] });
+    const s = seat({ magicOwn: 5, holdings: [held("a", "spell")] });
     expect(excessSpells(s, totalsFor(s, new Map()))).toBe(0);
   });
 });
@@ -247,17 +247,17 @@ describe("combat (17.4, 17.10, 18.2)", () => {
   const side = (label: string, total: number, roll: number) => ({ label, total, roll });
 
   it("gives it to the higher sum", () => {
-    const r = compareCombat(side("A", 5, 3), side("B", 4, 2), "zwykla");
+    const r = compareCombat(side("A", 5, 3), side("B", 4, 2), "ordinary");
     expect(r).toMatchObject({ outcome: "wygrana", winner: "A", loser: "B" });
   });
 
   it("treats an equal sum as a draw where nobody loses anything", () => {
-    const r = compareCombat(side("A", 5, 2), side("B", 4, 3), "zwykla");
-    expect(r).toEqual({ outcome: "remis", kind: "zwykla" });
+    const r = compareCombat(side("A", 5, 2), side("B", 4, 3), "ordinary");
+    expect(r).toEqual({ outcome: "remis", kind: "ordinary" });
   });
 
   it("compares sums, not raw totals — a big roll beats a bigger sword", () => {
-    const r = compareCombat(side("A", 3, 6), side("B", 6, 2), "zwykla"); // 9 vs 8
+    const r = compareCombat(side("A", 3, 6), side("B", 6, 2), "ordinary"); // 9 vs 8
     expect(r).toMatchObject({ outcome: "wygrana", winner: "A" });
   });
 
@@ -266,8 +266,8 @@ describe("combat (17.4, 17.10, 18.2)", () => {
   });
 
   it("makes the lost life unpreventable in magical combat only", () => {
-    expect(spoilsFor("zwykla").preventable).toBe(true);
-    expect(spoilsFor("magiczna").preventable).toBe(false);
+    expect(spoilsFor("ordinary").preventable).toBe(true);
+    expect(spoilsFor("magical").preventable).toBe(false);
   });
 });
 
@@ -277,22 +277,22 @@ describe("the Beast (14.7)", () => {
   });
 
   it("fights ordinarily on 1-3 and magically on 4-6", () => {
-    expect([1, 2, 3].map(beastCombatKind)).toEqual(["zwykla", "zwykla", "zwykla"]);
-    expect([4, 5, 6].map(beastCombatKind)).toEqual(["magiczna", "magiczna", "magiczna"]);
+    expect([1, 2, 3].map(beastCombatKind)).toEqual(["ordinary", "ordinary", "ordinary"]);
+    expect([4, 5, 6].map(beastCombatKind)).toEqual(["magical", "magical", "magical"]);
   });
 });
 
 describe("card resolution order (15.2, 16.4)", () => {
   it("resolves by ascending class numeral", () => {
     const drawn = [
-      { cardId: "zloto", cardClass: "item" as const },
+      { cardId: "gold", cardClass: "item" as const },
       { cardId: "niedzwiedz", cardClass: "foe" as const },
       { cardId: "sciezka", cardClass: "encounter" as const },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual([
       "sciezka",
       "niedzwiedz",
-      "zloto",
+      "gold",
     ]);
   });
 
@@ -323,7 +323,7 @@ describe("the Beast in full (14.7, 22)", () => {
     const r = compareCombat(
       { label: "Postać", total: 12, roll: 6 },
       { label: "Bestia", total: beastStrength(1), roll: 1 },
-      "zwykla",
+      "ordinary",
     );
     expect(r).toMatchObject({ outcome: "wygrana" });
   });
@@ -336,13 +336,13 @@ describe("the Beast in full (14.7, 22)", () => {
     const best = compareCombat(
       { label: "Postać", total: 5, roll: 6 },
       { label: "Bestia", total: beastStrength(1), roll: 1 },
-      "zwykla",
+      "ordinary",
     );
     expect(best.outcome).toBe("remis");
     const typical = compareCombat(
       { label: "Postać", total: 5, roll: 3 },
       { label: "Bestia", total: beastStrength(3), roll: 3 },
-      "zwykla",
+      "ordinary",
     );
     expect(typical.outcome).toBe("przegrana");
   });

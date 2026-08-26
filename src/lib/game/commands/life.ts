@@ -19,20 +19,20 @@ export function healSeat(
   const seat = snapshot.seats.find((s) => s.id === command.seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
 
-  const healed = heal({ zycie: seat.zycie }, command.amount ?? 1).zycie;
-  if (healed === seat.zycie) {
+  const healed = heal({ life: seat.life }, command.amount ?? 1).life;
+  if (healed === seat.life) {
     throw new Error(`Uzdrowienie przywraca punkty tylko do ${HEAL_CEILING} (4.7).`);
   }
 
   return {
     writes: {
-      seats: [{ id: seat.id, patch: { zycie: healed } }],
+      seats: [{ id: seat.id, patch: { life: healed } }],
       journal: [
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
           kind: "healed",
-          payload: { from: seat.zycie, to: healed },
+          payload: { from: seat.life, to: healed },
         },
       ],
     },
@@ -54,8 +54,8 @@ export function spendLife(
   const seat = snapshot.seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
 
-  const left = Math.max(0, seat.zycie - points);
-  const spent: Changeset = { seats: [{ id: seat.id, patch: { zycie: left } }] };
+  const left = Math.max(0, seat.life - points);
+  const spent: Changeset = { seats: [{ id: seat.id, patch: { life: left } }] };
 
   if (left > 0 || seat.eliminated) return { writes: spent, result: left };
 

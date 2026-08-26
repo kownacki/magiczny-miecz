@@ -87,9 +87,9 @@ describe("the card that prompted the vocabulary", () => {
 describe("fixtures that hold a pool", () => {
   it("gives each of the three its own stat and four points", () => {
     for (const [cardId, stat] of [
-      ["drzewo-zycia", "zycie"],
-      ["jezioro-magiczne", "miecz"],
-      ["zaklete-zrodlo", "magia"],
+      ["drzewo-zycia", "life"],
+      ["jezioro-magiczne", "sword"],
+      ["zaklete-zrodlo", "magic"],
     ] as const) {
       expect(scriptFor(cardId)!.disposition, cardId).toEqual({
         kind: "zostaje-z-pula",
@@ -108,8 +108,8 @@ describe("cards that turn on Nature", () => {
   it("rewards the Evil and converts everyone else at the Sabat", () => {
     const effect = scriptFor("sabat-czarownic")!.effect;
     if (effect.op !== "gdy") throw new Error("expected a condition");
-    expect(effect.warunek).toEqual({ is: "natura", jedna_z: ["zla"] });
-    expect(effect.inaczej).toEqual({ op: "natura", na: "zla" });
+    expect(effect.warunek).toEqual({ is: "natura", jedna_z: ["evil"] });
+    expect(effect.inaczej).toEqual({ op: "natura", na: "evil" });
   });
 
   it("leaves Chaotic characters alone where the card says it does", () => {
@@ -119,7 +119,7 @@ describe("cards that turn on Nature", () => {
     if (effect.op !== "gdy" || !effect.inaczej) throw new Error("expected a fallthrough");
     const otherwise = effect.inaczej;
     if (otherwise.op !== "gdy") throw new Error("expected a second condition");
-    expect(otherwise.warunek).toEqual({ is: "natura", jedna_z: ["dobra"] });
+    expect(otherwise.warunek).toEqual({ is: "natura", jedna_z: ["good"] });
     expect(otherwise.inaczej).toBeUndefined();
   });
 });

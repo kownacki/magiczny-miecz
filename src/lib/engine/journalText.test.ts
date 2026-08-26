@@ -121,22 +121,22 @@ suite("journal vocabulary", () => {
   });
 
   it("says what a card gave or took, and is not a correction", () => {
-    expect(text("points", { stat: "zloto", delta: 1, reason: "1 SZTUKA ZŁOTA" })).toBe(
+    expect(text("points", { stat: "gold", delta: 1, reason: "1 SZTUKA ZŁOTA" })).toBe(
       "Michał (GOBLIN) zyskuje 1 Sztukę Złota — 1 SZTUKA ZŁOTA.",
     );
-    expect(text("points", { stat: "zycie", delta: -2 })).toBe("Michał (GOBLIN) traci 2 Życia.");
-    expect(text("points", { stat: "miecz", delta: 1 })).toBe("Michał (GOBLIN) zyskuje 1 punkt Miecza.");
-    expect(text("points", { stat: "magia", delta: 3 })).toBe("Michał (GOBLIN) zyskuje 3 punkty Magii.");
+    expect(text("points", { stat: "life", delta: -2 })).toBe("Michał (GOBLIN) traci 2 Życia.");
+    expect(text("points", { stat: "sword", delta: 1 })).toBe("Michał (GOBLIN) zyskuje 1 punkt Miecza.");
+    expect(text("points", { stat: "magic", delta: 3 })).toBe("Michał (GOBLIN) zyskuje 3 punkty Magii.");
   });
 
   it("says which Natura was left behind, not only the new one", () => {
     // What everybody has been playing against all game — whether the Święta
     // Włócznia still works, whether the Czarci Młyn heals or hurts.
-    expect(text("nature-change", { from: "dobra", to: "zla" })).toBe(
+    expect(text("nature-change", { from: "good", to: "evil" })).toBe(
       "Michał (GOBLIN) zmienia naturę z dobra na zła.",
     );
     // Nothing known to have been left: say only where it went.
-    expect(text("nature-change", { to: "chaotyczna" })).toBe(
+    expect(text("nature-change", { to: "chaotic" })).toBe(
       "Michał (GOBLIN) zmienia naturę na: chaotyczna.",
     );
   });
@@ -145,7 +145,7 @@ suite("journal vocabulary", () => {
     expect(text("lost-card", { co: "item", cardIds: ["magiczny-miecz"] })).toBe(
       "Michał (GOBLIN) traci: MAGICZNY MIECZ.",
     );
-    expect(text("lost-card", { co: "zloto", zloto: 3 })).toBe("Michał (GOBLIN) traci: 3 Sztuki Złota.");
+    expect(text("lost-card", { co: "gold", gold: 3 })).toBe("Michał (GOBLIN) traci: 3 Sztuki Złota.");
   });
 
   it("says nothing when a loss took nothing", () => {
@@ -154,12 +154,12 @@ suite("journal vocabulary", () => {
 
   it("marks a manual correction as one", () => {
     const line = describe(
-      entry("override", { stat: "zycie", delta: -1, from: 4, to: 3 }, { manual: true }),
+      entry("override", { stat: "life", delta: -1, from: 4, to: 3 }, { manual: true }),
       SEATS,
       null,
     );
     expect(line?.manual).toBe(true);
-    expect(line?.text).toContain("zycie -1");
+    expect(line?.text).toContain("life -1");
   });
 
   it("carries the seat so the line can be coloured", () => {
@@ -424,7 +424,7 @@ const PAYLOADS: Record<string, Record<string, unknown>> = {
   "lost-card": { cardIds: ["miecz"] },
   "left-behind": { cardIds: ["miecz"], fieldId: "kurhan" },
   "test-card-field": { cardId: "miecz", fieldId: "kurhan" },
-  points: { stat: "zycie", delta: -1 },
+  points: { stat: "life", delta: -1 },
 };
 
 /* ---------------------------------------------------------------------------
@@ -441,25 +441,25 @@ suite("points a rule would not let through", () => {
    * asks why, and the record of the game is what they ask.
    */
   it("says a card's point was taken and that nothing came of it", () => {
-    expect(text("points", { stat: "magia", delta: -1, from: 3, to: 3, floor: 3 })).toBe(
+    expect(text("points", { stat: "magic", delta: -1, from: 3, to: 3, floor: 3 })).toBe(
       "Michał (GOBLIN) traci 1 punkt Magii — bez zmiany: Magia nie spada poniżej 3 (1.3, 2.3).",
     );
   });
 
   it("says how much of it landed when only part did", () => {
-    expect(text("points", { stat: "miecz", delta: -3, from: 4, to: 2, floor: 2 })).toBe(
+    expect(text("points", { stat: "sword", delta: -3, from: 4, to: 2, floor: 2 })).toBe(
       "Michał (GOBLIN) traci 3 punkty Miecza — z tego 2: Miecz nie spada poniżej 2 (1.3, 2.3).",
     );
   });
 
   it("does not quote a rule about own points at Złoto", () => {
-    expect(text("points", { stat: "zloto", delta: -2, from: 0, to: 0, floor: 0 })).toContain(
+    expect(text("points", { stat: "gold", delta: -2, from: 0, to: 0, floor: 0 })).toContain(
       "bez zmiany: nie ma poniżej czego zejść",
     );
   });
 
   it("says the ceiling in its own words", () => {
-    expect(text("points", { stat: "zloto", delta: 5, from: 999, to: 999, floor: 0 })).toContain(
+    expect(text("points", { stat: "gold", delta: 5, from: 999, to: 999, floor: 0 })).toContain(
       "bez zmiany: wyżej niż 999 nie idzie",
     );
   });
@@ -468,19 +468,19 @@ suite("points a rule would not let through", () => {
     // `floor` arrived with this sentence, so a row without one is older than
     // the question. The numbers are there and what cut them is not, and a
     // guess about that is worse than the plain line.
-    expect(text("points", { stat: "magia", delta: 1, from: 1, to: 3 })).toBe(
+    expect(text("points", { stat: "magic", delta: 1, from: 1, to: 3 })).toBe(
       "Michał (GOBLIN) zyskuje 1 punkt Magii.",
     );
   });
 
   it("says nothing extra when the whole of it landed", () => {
-    expect(text("points", { stat: "magia", delta: -1, from: 4, to: 3 })).toBe(
+    expect(text("points", { stat: "magic", delta: -1, from: 4, to: 3 })).toBe(
       "Michał (GOBLIN) traci 1 punkt Magii.",
     );
   });
 
   it("says the same about a number under its floor as one sitting on it", () => {
-    expect(text("points", { stat: "magia", delta: -1, from: 1, to: 1, floor: 3 })).toBe(
+    expect(text("points", { stat: "magic", delta: -1, from: 1, to: 1, floor: 3 })).toBe(
       "Michał (GOBLIN) traci 1 punkt Magii — bez zmiany: Magia nie spada poniżej 3 (1.3, 2.3).",
     );
   });
@@ -488,18 +488,18 @@ suite("points a rule would not let through", () => {
   it("says where a forced change stopped, which is nothing and not the floor", () => {
     // Both halves: that it was forced, and that it still did not all land.
     expect(
-      text("override", { stat: "magia", delta: -9, from: 6, to: 0, floor: 3, forced: true }),
-    ).toBe("Michał (GOBLIN): magia -9 (6 → 0) — wymuszone — z tego 6: nie ma poniżej czego zejść.");
+      text("override", { stat: "magic", delta: -9, from: 6, to: 0, floor: 3, forced: true }),
+    ).toBe("Michał (GOBLIN): magic -9 (6 → 0) — wymuszone — z tego 6: nie ma poniżej czego zejść.");
   });
 
   it("marks a correction that was forced past the floor", () => {
-    expect(text("override", { stat: "magia", delta: -2, from: 3, to: 1, floor: 3, forced: true })).toBe(
-      "Michał (GOBLIN): magia -2 (3 → 1) — wymuszone.",
+    expect(text("override", { stat: "magic", delta: -2, from: 3, to: 1, floor: 3, forced: true })).toBe(
+      "Michał (GOBLIN): magic -2 (3 → 1) — wymuszone.",
     );
   });
 
   it("says as much on a correction the floor refused", () => {
-    expect(text("override", { stat: "magia", delta: -1, from: 3, to: 3, floor: 3 })).toContain(
+    expect(text("override", { stat: "magic", delta: -1, from: 3, to: 3, floor: 3 })).toContain(
       "bez zmiany: Magia nie spada poniżej 3",
     );
   });

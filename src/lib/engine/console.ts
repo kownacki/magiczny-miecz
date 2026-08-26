@@ -37,10 +37,10 @@ export interface CommandSpec {
 }
 
 /** Which parameter a stat command moves. The column names, as the store knows them. */
-export type StatName = "miecz" | "magia" | "zycie" | "zloto";
+export type StatName = "sword" | "magic" | "life" | "gold";
 
-/** The three a character can have. 3.2's fourth, "dowolna", is a card's word, not a state. */
-export type Nature = "dobra" | "zla" | "chaotyczna";
+/** The three a character can have. 3.2's fourth, "any", is a card's word, not a state. */
+export type Nature = "good" | "evil" | "chaotic";
 
 /**
  * The states worth reaching that no other command reaches.
@@ -99,10 +99,10 @@ export type Command =
  * exceptions to remember, and `help` is the whole vocabulary again.
  */
 const STATS: Record<string, StatName> = {
-  sword: "miecz",
-  magic: "magia",
-  life: "zycie",
-  gold: "zloto",
+  sword: "sword",
+  magic: "magic",
+  life: "life",
+  gold: "gold",
 };
 
 export const COMMANDS: CommandSpec[] = [
@@ -219,9 +219,9 @@ const EFFECTS: Record<string, EffectName> = {
 
 /** The three Natury, under the words typed at them. English, like every verb here. */
 const NATURES: Record<string, Nature> = {
-  good: "dobra",
-  evil: "zla",
-  chaotic: "chaotyczna",
+  good: "good",
+  evil: "evil",
+  chaotic: "chaotic",
 };
 const PLACES = [...FIELDS.values()];
 

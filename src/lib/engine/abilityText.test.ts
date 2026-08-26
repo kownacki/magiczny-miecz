@@ -3,7 +3,7 @@ import { forbiddenNatures, itemProfile, whenApplies } from "./abilityText";
 
 describe("what an item gives, and when", () => {
   it("reads a flat bonus and where it is worn", () => {
-    const miecz = itemProfile("miecz", "slotowy");
+    const miecz = itemProfile("miecz", "slots");
     expect(miecz.slotLabel).toBe("Ręka główna");
     expect(miecz.facts).toEqual([
       { kind: "punkty", what: "+1 Miecza", when: "gdy założony" },
@@ -14,11 +14,11 @@ describe("what an item gives, and when", () => {
     // 5.4 has one kind of possession: a Miecz in the pack is a Miecz. Only the
     // slotted variant makes wearing it a condition, and a label that is true of
     // almost every card tells a player nothing.
-    expect(itemProfile("miecz", "klasyczny").facts[0].when).toBeNull();
+    expect(itemProfile("miecz", "classic").facts[0].when).toBeNull();
   });
 
   it("knows the Bojowy Rumak's two rules and that both are combat-only", () => {
-    const rumak = itemProfile("bojowy-rumak", "slotowy");
+    const rumak = itemProfile("bojowy-rumak", "slots");
     expect(rumak.slotLabel).toBe("Wierzchowiec");
     expect(rumak.facts.map((fact) => fact.kind)).toEqual([
       "magia-do-miecza",
@@ -36,7 +36,7 @@ describe("what an item gives, and when", () => {
     // carryLimit adds: base four plus the Koń's eight is twelve. "Do 8" said
     // the opposite, and the card agrees with the engine — lose the horse and
     // you leave whatever you cannot carry yourself.
-    const kon = itemProfile("kon", "slotowy");
+    const kon = itemProfile("kon", "slots");
     expect(kon.facts[0].what).toBe("+8 Przedmiotów ponad limit (5.4)");
     expect(kon.facts[0].when).toBe("gdy założony");
     // The Muł takes the few-form, which Polish spells differently.
@@ -46,33 +46,33 @@ describe("what an item gives, and when", () => {
   it("has nothing to say about a card with no formalised rules", () => {
     // Absence is normal: a card the app carries no rule for still works, its
     // text is shown, and the players apply it.
-    const profile = itemProfile("nie-ma-takiej", "slotowy");
+    const profile = itemProfile("nie-ma-takiej", "slots");
     expect(profile.facts).toEqual([]);
     expect(profile.slotLabel).toBeNull();
   });
 
   it("gives a carried-only item no slot", () => {
-    expect(itemProfile("1-sztuka-zlota", "slotowy").slotLabel).toBeNull();
+    expect(itemProfile("1-sztuka-zlota", "slots").slotLabel).toBeNull();
   });
 
   it("labels only where a card must be, never when it fires", () => {
     // A Sztylet's +1 Miecza matters only in a fight too, and never carried a
     // combat label — so annotating the Tarcza and not the Sztylet was telling
     // the player something untrue about the difference between them.
-    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "klasyczny")).toBeNull();
-    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "slotowy")).toBe("gdy założony");
-    expect(whenApplies({ kind: "punkty", miecz: 1 }, "sztylet", "slotowy")).toBe("gdy założony");
+    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "classic")).toBeNull();
+    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "slots")).toBe("gdy założony");
+    expect(whenApplies({ kind: "punkty", miecz: 1 }, "sztylet", "slots")).toBe("gdy założony");
   });
 
   it("says a carried-only item works from the pack even in slotowy", () => {
     // Nothing wearable about it, so there is no slot to require.
-    expect(itemProfile("tajemnicza-szkatula", "slotowy").facts.every((f) => f.when !== "gdy założony")).toBe(true);
+    expect(itemProfile("tajemnicza-szkatula", "slots").facts.every((f) => f.when !== "gdy założony")).toBe(true);
   });
 });
 
 describe("what an item asks of you (5.3)", () => {
   it("keeps a requirement apart from the bonuses", () => {
-    const spear = itemProfile("swieta-wlocznia", "klasyczny");
+    const spear = itemProfile("swieta-wlocznia", "classic");
     expect(spear.requirements.map((need) => need.what)).toEqual([
       "tylko Postać: dobra lub chaotyczna (5.3)",
     ]);
@@ -86,9 +86,9 @@ describe("what an item asks of you (5.3)", () => {
 
   it("names the Natures each restricted card shuts out", () => {
     // The three the deck actually restricts, stated as who may NOT hold it.
-    expect(forbiddenNatures("swieta-wlocznia")).toEqual(["zla"]);
-    expect(forbiddenNatures("swiety-graal")).toEqual(["zla"]);
-    expect(forbiddenNatures("miecz-chaosu")).toEqual(["dobra"]);
+    expect(forbiddenNatures("swieta-wlocznia")).toEqual(["evil"]);
+    expect(forbiddenNatures("swiety-graal")).toEqual(["evil"]);
+    expect(forbiddenNatures("miecz-chaosu")).toEqual(["good"]);
   });
 
   it("restricts nothing else", () => {

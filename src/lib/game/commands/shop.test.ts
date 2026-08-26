@@ -69,12 +69,12 @@ describe("trading trophies (1.4)", () => {
 
   it("pays one Miecz per seven points and loses the remainder", () => {
     const table = aTable({
-      seats: [aSeat({ id: "seat-a", miecz_own: 2 })],
+      seats: [aSeat({ id: "seat-a", sword_own: 2 })],
       holdings: [aHolding({ id: "t0", card_id: wrog.id, kind: "trophy" })],
     });
     const { writes, result } = tradeTrophies(table, { seatId: "seat-a" });
     expect(result).toBe(Math.floor(worth / TROPHY_RATE));
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { miecz_own: 2 + result } }]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { sword_own: 2 + result } }]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "trophies-traded",
       payload: { points: worth, gained: result, lost: worth - result * TROPHY_RATE },
@@ -112,10 +112,10 @@ describe("trading trophies (1.4)", () => {
 
 describe("selling to the Lichwiarz (21.2)", () => {
   it("pays the printed price and takes the card away", () => {
-    const table = standing(GROD, { zloto: 1 }, [aHolding({ id: "h1", card_id: "helm" })]);
+    const table = standing(GROD, { gold: 1 }, [aHolding({ id: "h1", card_id: "helm" })]);
     const { writes } = sellHolding(table, { seatId: "seat-a", holdingId: "h1" });
     expect(writes.holdings?.delete).toEqual(["h1"]);
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zloto: 2 } }]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 2 } }]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "sold",
       payload: { cardId: "helm", price: 1 },
@@ -148,14 +148,14 @@ describe("selling to the Lichwiarz (21.2)", () => {
 
 describe("paying the Znachor (4.7)", () => {
   it("buys back a point and charges for it", () => {
-    const table = standing(OSADA, { zycie: 2, zloto: 3 });
+    const table = standing(OSADA, { life: 2, gold: 3 });
     const { writes, result } = payHealer(table, { seatId: "seat-a", points: 1 });
     expect(result).toEqual({ healed: 1, paid: 1 });
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zycie: 3, zloto: 2 } }]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 3, gold: 2 } }]);
   });
 
   it("buys no more than 4.7 allows, however much is asked for", () => {
-    const table = standing(OSADA, { zycie: 3, zloto: 9 });
+    const table = standing(OSADA, { life: 3, gold: 9 });
     expect(payHealer(table, { seatId: "seat-a", points: 5 }).result).toEqual({
       healed: 1,
       paid: 1,
@@ -163,7 +163,7 @@ describe("paying the Znachor (4.7)", () => {
   });
 
   it("buys no more than the purse holds", () => {
-    const table = standing(OSADA, { zycie: 1, zloto: 2 });
+    const table = standing(OSADA, { life: 1, gold: 2 });
     expect(payHealer(table, { seatId: "seat-a", points: 3 }).result).toEqual({
       healed: 2,
       paid: 2,
@@ -171,24 +171,24 @@ describe("paying the Znachor (4.7)", () => {
   });
 
   it("refuses a character already at the starting level", () => {
-    const table = standing(OSADA, { zycie: 4, zloto: 9 });
+    const table = standing(OSADA, { life: 4, gold: 9 });
     expect(() => payHealer(table, { seatId: "seat-a", points: 1 })).toThrow(/4\.7 nie pozwala/);
   });
 
   it("refuses an empty purse", () => {
-    const table = standing(OSADA, { zycie: 1, zloto: 0 });
+    const table = standing(OSADA, { life: 1, gold: 0 });
     expect(() => payHealer(table, { seatId: "seat-a", points: 1 })).toThrow(/Za mało złota/);
   });
 
   it("asks for a real number of points", () => {
-    const table = standing(OSADA, { zycie: 1, zloto: 5 });
+    const table = standing(OSADA, { life: 1, gold: 5 });
     for (const points of [0, -1, 1.5]) {
       expect(() => payHealer(table, { seatId: "seat-a", points })).toThrow(/Ile punktów/);
     }
   });
 
   it("refuses where nobody heals", () => {
-    expect(() => payHealer(standing(STEP, { zycie: 1 }), { seatId: "seat-a", points: 1 })).toThrow(
+    expect(() => payHealer(standing(STEP, { life: 1 }), { seatId: "seat-a", points: 1 })).toThrow(
       /nikt nie leczy/,
     );
   });
@@ -206,8 +206,8 @@ describe("a seat that is not standing anywhere", () => {
 
 describe("buying from a shelf (21.1)", () => {
   /** Osada's shop, whose prices are printed in `fieldScript.ts`. */
-  const shopping = (zloto: number) =>
-    aTable({ seats: [aSeat({ id: "seat-a", field_id: OSADA, zloto })] });
+  const shopping = (gold: number) =>
+    aTable({ seats: [aSeat({ id: "seat-a", field_id: OSADA, gold })] });
 
   const forSale = () => {
     const shop = offerOn(shopping(9), OSADA, "kup");
@@ -216,7 +216,7 @@ describe("buying from a shelf (21.1)", () => {
   };
 
   it("refuses where there is no shelf", () => {
-    const nowhere = aTable({ seats: [aSeat({ id: "seat-a", field_id: STEP, zloto: 9 })] });
+    const nowhere = aTable({ seats: [aSeat({ id: "seat-a", field_id: STEP, gold: 9 })] });
     expect(() => buyGoods(nowhere, { seatId: "seat-a", cardId: "helm" })).toThrow(
       /nie ma czego kupić/,
     );
@@ -239,7 +239,7 @@ describe("buying from a shelf (21.1)", () => {
    * Taking it and paying for it are one change.
    *
    * The store read the purse, took the card across four to six round trips, and
-   * then wrote an absolute `zloto` computed from the reading it took first — so
+   * then wrote an absolute `gold` computed from the reading it took first — so
    * a coin spent in that window was refunded by the purchase that followed it.
    */
   it("takes the card and pays for it in one changeset", () => {
@@ -248,7 +248,7 @@ describe("buying from a shelf (21.1)", () => {
     const { writes } = buyGoods(shopping(9), { seatId: "seat-a", cardId });
 
     expect(writes.holdings?.insert?.[0]).toMatchObject({ seat_id: "seat-a", card_id: cardId });
-    expect(writes.seats).toContainEqual({ id: "seat-a", patch: { zloto: 9 - first.cena } });
+    expect(writes.seats).toContainEqual({ id: "seat-a", patch: { gold: 9 - first.cena } });
     expect(writes.journal?.map((line) => line.kind)).toContain("bought");
   });
 });

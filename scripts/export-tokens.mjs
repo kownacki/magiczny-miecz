@@ -20,12 +20,12 @@ import { encodePng, cropImage } from "./lib/png.mjs";
  * noise, and the interface needs a picture of a "3", not thirty of them.
  */
 const BLOCKS = [
-  { stat: "magia", values: [1, 2, 3, 4] },
-  { stat: "zycie", values: [1, 2, 3, 4] },
-  { stat: "miecz", values: [1, 2, 3, 4] },
+  { stat: "magic", values: [1, 2, 3, 4] },
+  { stat: "life", values: [1, 2, 3, 4] },
+  { stat: "sword", values: [1, 2, 3, 4] },
   // One coin, printed forty times. The denomination is in the name rather than
   // on the token: 3.2 starts a character with one and counts them singly.
-  { stat: "zloto", values: [1] },
+  { stat: "gold", values: [1] },
 ];
 
 const SOURCE = "assets/raw/MM - Żetony.pdf";

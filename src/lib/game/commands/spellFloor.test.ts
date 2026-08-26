@@ -8,7 +8,7 @@ const fighting = (over: Partial<Fight> = {}): TurnPhase => ({
   fight: {
     cardId: "goblin",
     cardName: "GOBLIN",
-    kind: "zwykla",
+    kind: "ordinary",
     enemyTotal: 3,
     playerTotal: 4,
     playerRoll: null,
@@ -61,7 +61,7 @@ describe("claiming the floor (17.3)", () => {
 
   /** 17.4 ends the fight at the dice, so there is nothing left to react to. */
   it("refuses once the fight is settled", () => {
-    const done = table({ result: { outcome: "wygrana", winner: "Postać", loser: "Wróg", kind: "zwykla" } });
+    const done = table({ result: { outcome: "wygrana", winner: "Postać", loser: "Wróg", kind: "ordinary" } });
     expect(() => claimFloor(done, { seatId: "seat-a" }, ports())).toThrow(/rozstrzygnięta/);
   });
 

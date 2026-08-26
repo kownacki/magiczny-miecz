@@ -76,7 +76,7 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "wybor",
       options: [
-        { label: "Oddaj 1 Sztukę Złota", effect: { op: "punkty", stat: "zloto", delta: -1 } },
+        { label: "Oddaj 1 Sztukę Złota", effect: { op: "punkty", stat: "gold", delta: -1 } },
         {
           label: "Oddaj jeden Przedmiot",
           effect: { op: "strata", co: "przedmiot", count: 1, wybor: "ty" },

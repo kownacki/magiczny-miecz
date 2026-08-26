@@ -14,7 +14,7 @@ import type { CardId } from "@/data/ids";
  * is a setting on the table, chosen when the table is opened, and never a
  * silent change to how the printed rules behave.
  */
-export type EqMode = "klasyczny" | "slotowy";
+export type EqMode = "classic" | "slots";
 
 /**
  * The places on a character, in the order they are drawn.
@@ -26,15 +26,15 @@ export type EqMode = "klasyczny" | "slotowy";
  * it, and four of the places have exactly one card in the whole box.
  */
 export const SLOTS = [
-  "glowa",
+  "head",
   "amulet",
-  "tulow",
-  "reka-glowna",
-  "reka-pomocnicza",
-  "rekawice",
-  "pierscien",
-  "wierzchowiec",
-  "sakwa",
+  "body",
+  "main-hand",
+  "off-hand",
+  "gloves",
+  "ring",
+  "mount",
+  "pouch",
   // The two that only have to be found. See RELICS.
   "magiczny-miecz",
   "tarcza-tolimana",
@@ -43,17 +43,17 @@ export const SLOTS = [
 export type Slot = (typeof SLOTS)[number];
 
 export const SLOT_LABEL: Record<Slot, string> = {
-  glowa: "Głowa",
+  head: "Głowa",
   amulet: "Amulet",
-  tulow: "Tułów",
-  "reka-glowna": "Ręka główna",
+  body: "Tułów",
+  "main-hand": "Ręka główna",
   "magiczny-miecz": "Magiczny Miecz",
   "tarcza-tolimana": "Tarcza Tolimana",
-  "reka-pomocnicza": "Ręka pomocnicza",
-  rekawice: "Rękawice",
-  pierscien: "Pierścień",
-  wierzchowiec: "Wierzchowiec",
-  sakwa: "Sakwa",
+  "off-hand": "Ręka pomocnicza",
+  gloves: "Rękawice",
+  ring: "Pierścień",
+  mount: "Wierzchowiec",
+  pouch: "Sakwa",
 };
 
 /**
@@ -80,40 +80,40 @@ export const SLOT_LABEL: Record<Slot, string> = {
  */
 export const SLOT_OF: Partial<Record<CardId, readonly Slot[]>> = {
   // Głowa, tułów, ręce, palec — the four the box has exactly one card for.
-  helm: ["glowa"],
-  zbroja: ["tulow"],
-  rekawice: ["rekawice"],
-  "pierscien-mocy": ["pierscien"],
+  helm: ["head"],
+  zbroja: ["body"],
+  rekawice: ["gloves"],
+  "pierscien-mocy": ["ring"],
 
   // Amulet: the two talizmany, the only things in the box worn round a neck.
   "talizman-ognia": ["amulet"],
   "talizman-powietrza": ["amulet"],
 
   // Broń i różdżki — ręka główna.
-  miecz: ["reka-glowna"],
-  sztylet: ["reka-glowna"],
+  miecz: ["main-hand"],
+  sztylet: ["main-hand"],
   "magiczny-miecz": ["magiczny-miecz"],
-  arondight: ["reka-glowna"],
-  excalibur: ["reka-glowna"],
-  "miecz-chaosu": ["reka-glowna"],
-  "swieta-wlocznia": ["reka-glowna"],
-  "topor-swiatla-i-ciemnosci": ["reka-glowna"],
-  "rozdzka-przeznaczenia": ["reka-glowna"],
-  "rozdzka-zaklec": ["reka-glowna"],
+  arondight: ["main-hand"],
+  excalibur: ["main-hand"],
+  "miecz-chaosu": ["main-hand"],
+  "swieta-wlocznia": ["main-hand"],
+  "topor-swiatla-i-ciemnosci": ["main-hand"],
+  "rozdzka-przeznaczenia": ["main-hand"],
+  "rozdzka-zaklec": ["main-hand"],
 
   // Tarcze — ręka pomocnicza.
-  tarcza: ["reka-pomocnicza"],
+  tarcza: ["off-hand"],
   "tarcza-tolimana": ["tarcza-tolimana"],
   "tarcza-boga-tolimana": ["tarcza-tolimana"],
 
   // Wierzchowce i sakwy.
-  kon: ["wierzchowiec"],
-  mul: ["wierzchowiec"],
-  zaprzeg: ["wierzchowiec"],
-  wierzchowiec: ["wierzchowiec"],
-  "bojowy-rumak": ["wierzchowiec"],
-  "magiczna-sakwa": ["sakwa"],
-  "tajemna-sakwa": ["sakwa"],
+  kon: ["mount"],
+  mul: ["mount"],
+  zaprzeg: ["mount"],
+  wierzchowiec: ["mount"],
+  "bojowy-rumak": ["mount"],
+  "magiczna-sakwa": ["pouch"],
+  "tajemna-sakwa": ["pouch"],
 };
 
 /**

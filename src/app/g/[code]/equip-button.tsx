@@ -36,10 +36,10 @@ export function EquipButton({
         <button
           key={slot}
           onClick={() => onEquip(slot)}
-          title={slot === "reka-glowna" ? "Ręka główna" : "Ręka pomocnicza"}
+          title={slot === "main-hand" ? "Ręka główna" : "Ręka pomocnicza"}
           className="text-ochre/80 underline hover:text-ochre"
         >
-          {slot === "reka-glowna" ? "gł." : "pom."}
+          {slot === "main-hand" ? "gł." : "pom."}
         </button>
       ))}
     </span>

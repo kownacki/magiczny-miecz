@@ -12,18 +12,18 @@ import type { FieldId } from "./board";
  * through and never changes mid-bridge, because the Zamek is in the middle and
  * you turn back the way you came.
  */
-export type BridgeSide = "miecz" | "magia";
+export type BridgeSide = "sword" | "magic";
 
 /** Which side of the bridge a field belongs to. */
 export const BRIDGE_SIDE: Partial<Record<FieldId, BridgeSide>> = {
-  "wejscie-na-most-a": "miecz",
-  pulapka: "miecz",
-  "gra-ze-smiercia": "miecz",
-  "demon-zaglady": "miecz",
-  monstrum: "magia",
-  cerber: "magia",
-  "magiczna-pulapka": "magia",
-  "wejscie-na-most-b": "magia",
+  "wejscie-na-most-a": "sword",
+  pulapka: "sword",
+  "gra-ze-smiercia": "sword",
+  "demon-zaglady": "sword",
+  monstrum: "magic",
+  cerber: "magic",
+  "magiczna-pulapka": "magic",
+  "wejscie-na-most-b": "magic",
 };
 
 /**
@@ -43,13 +43,13 @@ export const BRIDGE_SIDE: Partial<Record<FieldId, BridgeSide>> = {
  * it is the only invented number in this file.
  */
 const TRAP_TABLE: Record<BridgeSide, { upTo: number; fieldId: FieldId }[]> = {
-  miecz: [
+  sword: [
     { upTo: 1, fieldId: "wejscie-na-most-a" },
     { upTo: 3, fieldId: "ruiny-twierdzy" },
     { upTo: 5, fieldId: "twierdza-strzegaca-drog" },
     { upTo: Infinity, fieldId: "osada" },
   ],
-  magia: [
+  magic: [
     { upTo: 1, fieldId: "wejscie-na-most-b" },
     { upTo: 3, fieldId: "wymarle-miasto" },
     { upTo: 5, fieldId: "swiatynia-bogini-nemed" },
@@ -145,10 +145,10 @@ export function guardianStrength(dice: readonly number[]): number {
 
 /** Which of the two the field is, and so which stat the fight is fought with. */
 export const BRIDGE_GUARDIAN: Partial<
-  Record<FieldId, { kind: "magiczna" | "zwykla"; name: string }>
+  Record<FieldId, { kind: "magical" | "ordinary"; name: string }>
 > = {
-  "demon-zaglady": { kind: "magiczna", name: "Demon Zagłady" },
-  monstrum: { kind: "zwykla", name: "Monstrum" },
+  "demon-zaglady": { kind: "magical", name: "Demon Zagłady" },
+  monstrum: { kind: "ordinary", name: "Monstrum" },
 };
 
 /** The bridge fields that stop a character until something is settled. */

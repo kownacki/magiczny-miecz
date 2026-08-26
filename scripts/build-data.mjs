@@ -127,7 +127,7 @@ for (const sheet of ["postacie-1", "postacie-2", "postacie-3"]) {
       }
     }
     if (!card.start) note(`${card.name}: missing MGR starting field`);
-    if (!["dobra", "zla", "chaotyczna", "dowolna"].includes(card.nature)) {
+    if (!["good", "evil", "chaotic", "any"].includes(card.nature)) {
       note(`${card.name}: unexpected nature "${card.nature}"`);
     }
   }

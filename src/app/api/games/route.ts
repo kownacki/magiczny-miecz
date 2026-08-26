@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   // Klasyczny unless the table asked otherwise: the variant is a house rule and
   // the default has to be the game as printed.
   // Slotowy unless the caller asks for the printed rules.
-  const eqMode: EqMode = body.eqMode === "klasyczny" ? "klasyczny" : "slotowy";
+  const eqMode: EqMode = body.eqMode === "classic" ? "classic" : "slots";
   const { game, hostToken } = await createGame(name, mode, eqMode);
   return NextResponse.json({ joinCode: game.join_code, token: hostToken });
 }

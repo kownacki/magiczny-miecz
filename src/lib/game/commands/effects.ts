@@ -74,9 +74,9 @@ export interface ApplyEffect {
 }
 
 /** How many of a thing, in Polish. */
-function amountOf(stat: "miecz" | "magia" | "zycie" | "zloto", count: number): string {
-  if (stat !== "zloto") {
-    return { miecz: "Miecza", magia: "Magii", zycie: "Życia" }[stat];
+function amountOf(stat: "sword" | "magic" | "life" | "gold", count: number): string {
+  if (stat !== "gold") {
+    return { sword: "Miecza", magic: "Magii", life: "Życia" }[stat];
   }
   return plural(count, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota");
 }
@@ -180,8 +180,8 @@ async function walk(
         effect.warunek.is === "natura"
           ? nature !== null && effect.warunek.jedna_z.includes(nature)
           : effect.warunek.is === "ma-zloto"
-            ? seat.zloto > 0
-            : (effect.warunek.stat === "miecz" ? seat.miecz_own : seat.magia_own) <
+            ? seat.gold > 0
+            : (effect.warunek.stat === "sword" ? seat.sword_own : seat.magic_own) <
               effect.warunek.ponizej;
       const branch = holds ? effect.to : effect.inaczej;
       return branch
@@ -348,7 +348,7 @@ async function walk(
         const gone = chooseLosses(mine, effect, () => rolls[next++] ?? 0);
         if (gone === null) return { writes, result: { did: [], pending: effect } };
 
-        const gold = goldLost(effect, row.zloto);
+        const gold = goldLost(effect, row.gold);
         if (gone.length === 0 && gold === 0) continue;
 
         const lost = mine.filter((held) => gone.includes(held.id));
@@ -371,7 +371,7 @@ async function walk(
           step = mergeAll(step, spells, events);
         }
         if (gold > 0) {
-          step = merge(step, { seats: [{ id: row.id, patch: { zloto: row.zloto - gold } }] });
+          step = merge(step, { seats: [{ id: row.id, patch: { gold: row.gold - gold } }] });
         }
 
         const names = lost.map((held) => cardName(held.cardId));
@@ -381,7 +381,7 @@ async function walk(
               seatId: row.id,
               turn: snapshot.game.turn,
               kind: "lost-card",
-              payload: { co: effect.co, cardIds: lost.map((h) => h.cardId), zloto: gold },
+              payload: { co: effect.co, cardIds: lost.map((h) => h.cardId), gold: gold },
             },
           ],
         });
@@ -439,7 +439,7 @@ async function walk(
       const done = changeNature(snapshot, { seatId, nature: effect.na });
       return {
         writes: done.writes,
-        result: { did: [`Natura: ${effect.na === "zla" ? "zła" : effect.na}`], pending: null },
+        result: { did: [`Natura: ${effect.na === "evil" ? "zła" : effect.na}`], pending: null },
       };
     }
 

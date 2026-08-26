@@ -96,7 +96,7 @@ export function Hand({
   // drag has just asked for, and a number from the last poll would lag the
   // gesture it is describing.
   const cards = asHoldings(seat.holdings);
-  const variant = slotted ? "slotowy" : "klasyczny";
+  const variant = slotted ? "slots" : "classic";
   const packed = carriedCount(cards, variant);
   const limit = carryLimit(cards, variant);
 
@@ -393,7 +393,7 @@ export function Hand({
               granted: held.granted,
             }}
             label={tileFor(held).name}
-            eqMode={slotted ? "slotowy" : "klasyczny"}
+            eqMode={slotted ? "slots" : "classic"}
             nature={asNature(seat.nature)}
             tone="filled"
             // A card would land in front of this one, so this and everything

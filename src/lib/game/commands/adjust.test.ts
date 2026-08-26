@@ -13,19 +13,19 @@ const correct = (over: Parameters<typeof aSeat>[0], stat: Parameters<typeof adju
 
 describe("the manual override", () => {
   it("moves the number and files it as a korekta", () => {
-    const { writes } = correct({ zloto: 3 }, "zloto", 2);
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zloto: 5 } }]);
+    const { writes } = correct({ gold: 3 }, "gold", 2);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 5 } }]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "override",
       manual: true,
-      payload: { stat: "zloto", delta: 2, from: 3, to: 5, reason: "test" },
+      payload: { stat: "gold", delta: 2, from: 3, to: 5, reason: "test" },
     });
   });
 
   it("lets a card file it as the card's own doing instead", () => {
-    const { writes } = adjustSeat(table({ zloto: 1 }), {
+    const { writes } = adjustSeat(table({ gold: 1 }), {
       seatId: "seat-a",
-      stat: "zloto",
+      stat: "gold",
       delta: 1,
       reason: null,
       record: { kind: "points", manual: false },
@@ -35,18 +35,18 @@ describe("the manual override", () => {
 
   /** 1.3 and 2.3: own points never fall below what the character started with. */
   it("will not push Miecz below its floor", () => {
-    const { writes } = correct({ miecz_own: 3, miecz_floor: 2 }, "miecz", -5);
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { miecz_own: 2 } }]);
+    const { writes } = correct({ sword_own: 3, sword_floor: 2 }, "sword", -5);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { sword_own: 2 } }]);
   });
 
   it("will not push Magia below its floor", () => {
-    const { writes } = correct({ magia_own: 4, magia_floor: 1 }, "magia", -10);
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { magia_own: 1 } }]);
+    const { writes } = correct({ magic_own: 4, magic_floor: 1 }, "magic", -10);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { magic_own: 1 } }]);
   });
 
   it("floors Życie and Złoto at zero, which have no starting value to keep", () => {
-    expect(correct({ zloto: 2 }, "zloto", -9).writes.seats).toEqual([
-      { id: "seat-a", patch: { zloto: 0 } },
+    expect(correct({ gold: 2 }, "gold", -9).writes.seats).toEqual([
+      { id: "seat-a", patch: { gold: 0 } },
     ]);
     expect(correct({ turns_lost: 1 }, "tury", -4).writes.seats).toEqual([
       { id: "seat-a", patch: { turns_lost: 0 } },
@@ -70,14 +70,14 @@ describe("the manual override", () => {
 
   it("refuses a seat it does not know", () => {
     expect(() =>
-      adjustSeat(table(), { seatId: "nobody", stat: "zloto", delta: 1, reason: null }),
+      adjustSeat(table(), { seatId: "nobody", stat: "gold", delta: 1, reason: null }),
     ).toThrow(/Nieznane miejsce/);
   });
 });
 
 describe("correcting somebody down to nothing", () => {
   it("kills them, exactly as losing the last point in a fight does (4.4)", () => {
-    const { writes } = correct({ zycie: 2 }, "zycie", -2);
+    const { writes } = correct({ life: 2 }, "life", -2);
     expect(writes.journal?.map((line) => line.kind)).toEqual([
       "override",
       "death",
@@ -87,12 +87,12 @@ describe("correcting somebody down to nothing", () => {
   });
 
   it("does not kill somebody already out", () => {
-    const { writes } = correct({ zycie: 0, eliminated: true }, "zycie", -1);
+    const { writes } = correct({ life: 0, eliminated: true }, "life", -1);
     expect(writes.journal?.map((line) => line.kind)).toEqual(["override"]);
   });
 
   it("does not kill anybody on the way down to a number above zero", () => {
-    const { writes } = correct({ zycie: 4 }, "zycie", -1);
+    const { writes } = correct({ life: 4 }, "life", -1);
     expect(writes.journal?.map((line) => line.kind)).toEqual(["override"]);
   });
 });
@@ -102,12 +102,12 @@ describe("correcting somebody down to nothing", () => {
  * ------------------------------------------------------------------------ */
 
 describe("what a change is allowed to reach", () => {
-  const floored = () => table({ magia_own: 3, magia_floor: 3, miecz_own: 5, miecz_floor: 2 });
+  const floored = () => table({ magic_own: 3, magic_floor: 3, sword_own: 5, sword_floor: 2 });
 
   it("reports what moved, which is not always what was asked for", () => {
     const { result } = adjustSeat(floored(), {
       seatId: "seat-a",
-      stat: "magia",
+      stat: "magic",
       delta: -1,
       reason: null,
     });
@@ -120,7 +120,7 @@ describe("what a change is allowed to reach", () => {
   it("takes only as much as there is above the floor", () => {
     const { result } = adjustSeat(floored(), {
       seatId: "seat-a",
-      stat: "miecz",
+      stat: "sword",
       delta: -9,
       reason: null,
     });
@@ -135,7 +135,7 @@ describe("what a change is allowed to reach", () => {
   it("goes below the floor when forced, and says so in the journal", () => {
     const { writes, result } = adjustSeat(floored(), {
       seatId: "seat-a",
-      stat: "magia",
+      stat: "magic",
       delta: -2,
       reason: "tryb testowy",
       force: true,
@@ -147,7 +147,7 @@ describe("what a change is allowed to reach", () => {
   it("stops at nothing even when forced, because below zero is not weaker", () => {
     const { result } = adjustSeat(floored(), {
       seatId: "seat-a",
-      stat: "magia",
+      stat: "magic",
       delta: -50,
       reason: null,
       force: true,
@@ -158,7 +158,7 @@ describe("what a change is allowed to reach", () => {
   it("leaves an ordinary change unmarked, so `forced` means something", () => {
     const { writes } = adjustSeat(floored(), {
       seatId: "seat-a",
-      stat: "zloto",
+      stat: "gold",
       delta: 1,
       reason: null,
     });
@@ -172,9 +172,9 @@ describe("what a change is allowed to reach", () => {
    */
   it("holds every number under the ceiling, forced or not", () => {
     for (const force of [false, true]) {
-      const { result } = adjustSeat(table({ zloto: 5 }), {
+      const { result } = adjustSeat(table({ gold: 5 }), {
         seatId: "seat-a",
-        stat: "zloto",
+        stat: "gold",
         delta: 50_000,
         reason: null,
         force,
@@ -198,9 +198,9 @@ describe("what a change is allowed to reach", () => {
  * two points nobody asked for.
  */
 describe("a parameter already below its floor", () => {
-  const under = () => table({ magia_own: 1, magia_floor: 3 });
+  const under = () => table({ magic_own: 1, magic_floor: 3 });
   const move = (delta: number, force = false) =>
-    adjustSeat(under(), { seatId: "seat-a", stat: "magia", delta, reason: null, force }).result;
+    adjustSeat(under(), { seatId: "seat-a", stat: "magic", delta, reason: null, force }).result;
 
   it("climbs by exactly what was asked, without being hauled up to the floor", () => {
     expect(move(1)).toEqual({ moved: 1, to: 2, floor: 3 });
@@ -208,9 +208,9 @@ describe("a parameter already below its floor", () => {
 
   it("latches again the moment it arrives, and behaves as it always did", () => {
     expect(move(2)).toEqual({ moved: 2, to: 3, floor: 3 });
-    const back = adjustSeat(table({ magia_own: 3, magia_floor: 3 }), {
+    const back = adjustSeat(table({ magic_own: 3, magic_floor: 3 }), {
       seatId: "seat-a",
-      stat: "magia",
+      stat: "magic",
       delta: -1,
       reason: null,
     });

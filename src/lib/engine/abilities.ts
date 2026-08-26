@@ -64,14 +64,14 @@ export type Ability =
   | { kind: "bez-zaklec"; odpornyNa: readonly string[]; przeciwnikBez: readonly string[] }
   /**
    * Passes a named field without what it normally does to you. `rzut` skips a
-   * field's die roll entirely (Opiekun, Przewodnik); `zycie` keeps the point it
+   * field's die roll entirely (Opiekun, Przewodnik); `life` keeps the point it
    * would cost (Rękawice on Ruchome Skały); `utrata` keeps the Przedmiot or
    * Przyjaciel it would take (Kij i Sznur on Bagna).
    */
   | {
       kind: "bezpieczny";
       fields: readonly FieldId[];
-      from: "rzut" | "zycie" | "utrata";
+      from: "rzut" | "life" | "utrata";
       /**
        * Some protections are conditional on who is holding them: the Relikwiarz
        * spares a Dobra Postać at the Czarci Młyn and a Zła one at the Studnia
@@ -136,7 +136,7 @@ export type Ability =
       kind: "modyfikator-rzutu";
       gdzie:
         | { na: "pola"; fields: readonly FieldId[] }
-        | { na: "walke"; rodzaj: "zwykla" | "magiczna" };
+        | { na: "walke"; rodzaj: "ordinary" | "magical" };
       delta: number;
       /** "odjąć lub dodać 1 ... jeśli taka jest wola gracza" — the holder picks. */
       dowolnyZnak?: boolean;
@@ -274,7 +274,7 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   tarcza: [{ kind: "oslona", upTo: 2 }],
   zbroja: [{ kind: "oslona", upTo: 3 }],
   rekawice: [
-    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "zycie" },
+    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "life" },
   ],
   "kij-i-sznur": [
     { kind: "bezpieczny", fields: ["bagna-1", "bagna-2"], from: "utrata" },
@@ -333,7 +333,7 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // "nie może być w posiadaniu Chaotycznych Postaci" — a 5.3 restriction the
   // prose-reading version never found, because it is phrased differently again.
   "topor-swiatla-i-ciemnosci": [
-    { kind: "tylko-natura", natury: ["dobra", "zla"] },
+    { kind: "tylko-natura", natury: ["good", "evil"] },
     { kind: "punkty", miecz: 1 },
     { kind: "przeciw", komu: ["wilkolak"], miecz: 2 },
   ],
@@ -341,12 +341,12 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   excalibur: [{ kind: "punkty", miecz: 1 }],
   // "Włóczni nie mogą posiadać Złe Postacie."
   "swieta-wlocznia": [
-    { kind: "tylko-natura", natury: ["dobra", "chaotyczna"] },
+    { kind: "tylko-natura", natury: ["good", "chaotic"] },
     { kind: "punkty", miecz: 1 },
   ],
   // "Miecza Chaosu nie może posiadać Dobra Postać."
   "miecz-chaosu": [
-    { kind: "tylko-natura", natury: ["zla", "chaotyczna"] },
+    { kind: "tylko-natura", natury: ["evil", "chaotic"] },
     { kind: "punkty", miecz: 2 },
   ],
   "pierscien-mocy": [{ kind: "punkty", magia: 2 }],
@@ -354,9 +354,9 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   /** "zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały" — the second half is the Rękawice's rule. */
   // "Graala nie może posiadać Zła Postać."
   "swiety-graal": [
-    { kind: "tylko-natura", natury: ["dobra", "chaotyczna"] },
+    { kind: "tylko-natura", natury: ["good", "chaotic"] },
     { kind: "punkty", magia: 1 },
-    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "zycie" },
+    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "life" },
   ],
   /** The same key as the Tarcza Tolimana, printed again on the Zdarzenia sheets. */
   "tarcza-boga-tolimana": [{ kind: "wymagany", place: "zamek-bestii" }],
@@ -393,11 +393,11 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   ],
   /** The immunity to Krąg Płomieni is a spell rule, and stays on the card. */
   "talizman-ognia": [
-    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "zwykla" }, delta: 1 },
+    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "ordinary" }, delta: 1 },
   ],
   /** Likewise its immunity to Siedem Wichrów and Władca Gromu. */
   "talizman-powietrza": [
-    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "magiczna" }, delta: 1 },
+    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "magical" }, delta: 1 },
   ],
   "jablko-natchnienia": [
     {
@@ -415,8 +415,8 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // clause — beating every Demon without a fight — has no variant and stays on
   // the card.
   relikwiarz: [
-    { kind: "bezpieczny", fields: ["czarci-mlyn"], from: "zycie", natura: ["dobra"] },
-    { kind: "bezpieczny", fields: ["studnia-wiecznosci"], from: "zycie", natura: ["zla"] },
+    { kind: "bezpieczny", fields: ["czarci-mlyn"], from: "life", natura: ["good"] },
+    { kind: "bezpieczny", fields: ["studnia-wiecznosci"], from: "life", natura: ["evil"] },
     // "pokonuje wszystkie Demony, bez konieczności walki z nimi" — the third of
     // its three rules, and the only one the card was not carrying.
     { kind: "pokonuje-bez-walki", kogo: "demony" },
@@ -516,7 +516,7 @@ export function skipsRollAt(abilities: readonly Ability[], fieldId: FieldId): bo
 export function isSpared(
   abilities: readonly Ability[],
   fieldId: FieldId,
-  from: "zycie" | "utrata",
+  from: "life" | "utrata",
   /** The holder's Natura, for the protections that depend on it. */
   natura?: Nature | null,
 ): boolean {
@@ -538,7 +538,7 @@ export function isSpared(
  */
 export function rollModifier(
   abilities: readonly Ability[],
-  at: { fieldId?: FieldId; walka?: "zwykla" | "magiczna" },
+  at: { fieldId?: FieldId; walka?: "ordinary" | "magical" },
 ): { delta: number; dowolnyZnak: boolean } {
   let delta = 0;
   let dowolnyZnak = false;

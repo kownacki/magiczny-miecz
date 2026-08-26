@@ -14,16 +14,16 @@ const CHARACTERS = charactersData as Character[];
 
 describe("zmiana Natury (7.2-7.4)", () => {
   const table = (over: Parameters<typeof aSeat>[0] = {}, holdings = [] as ReturnType<typeof aHolding>[]) =>
-    aTable({ game: { turn: 5 }, seats: [aSeat({ nature: "dobra", ...over })], holdings });
+    aTable({ game: { turn: 5 }, seats: [aSeat({ nature: "good", ...over })], holdings });
 
   it("writes the new Natura and the turn it happened on", () => {
-    const { writes } = changeNature(table(), { seatId: "seat-a", nature: "zla" });
+    const { writes } = changeNature(table(), { seatId: "seat-a", nature: "evil" });
     expect(writes.seats).toEqual([
-      { id: "seat-a", patch: { nature: "zla", nature_changed_turn: 5 } },
+      { id: "seat-a", patch: { nature: "evil", nature_changed_turn: 5 } },
     ]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "nature-change",
-      payload: { from: "dobra", to: "zla", nowForbidden: [] },
+      payload: { from: "good", to: "evil", nowForbidden: [] },
     });
   });
 
@@ -33,14 +33,14 @@ describe("zmiana Natury (7.2-7.4)", () => {
    */
   it("refuses a second change in the same turn", () => {
     expect(() =>
-      changeNature(table({ nature_changed_turn: 5 }), { seatId: "seat-a", nature: "zla" }),
+      changeNature(table({ nature_changed_turn: 5 }), { seatId: "seat-a", nature: "evil" }),
     ).toThrow(/najwyżej raz na turę/);
   });
 
   it("allows it again once the turn has moved on", () => {
     const { writes } = changeNature(table({ nature_changed_turn: 4 }), {
       seatId: "seat-a",
-      nature: "zla",
+      nature: "evil",
     });
     expect(writes.seats?.[0].patch).toMatchObject({ nature_changed_turn: 5 });
   });
@@ -53,28 +53,28 @@ describe("zmiana Natury (7.2-7.4)", () => {
   it("lets the console past 7.3, and says in the journal that somebody typed it", () => {
     const { writes } = changeNature(table({ nature_changed_turn: 5 }), {
       seatId: "seat-a",
-      nature: "zla",
+      nature: "evil",
       force: true,
     });
-    expect(writes.seats?.[0].patch).toMatchObject({ nature: "zla" });
+    expect(writes.seats?.[0].patch).toMatchObject({ nature: "evil" });
     expect(writes.journal?.[0]).toMatchObject({ kind: "nature-change", manual: true });
   });
 
   it("marks an ordinary change as what it is: not manual", () => {
-    const { writes } = changeNature(table(), { seatId: "seat-a", nature: "zla" });
+    const { writes } = changeNature(table(), { seatId: "seat-a", nature: "evil" });
     expect(writes.journal?.[0].manual ?? false).toBe(false);
   });
 
   /** Magog's own card lets it change freely, and 8.2 puts that above 7.3. */
   it("lets Magog change as often as it likes", () => {
     const magog = table({ character_id: asSeatCharacter("magog"), nature_changed_turn: 5 });
-    expect(changeNature(magog, { seatId: "seat-a", nature: "zla" }).result).toEqual({
+    expect(changeNature(magog, { seatId: "seat-a", nature: "evil" }).result).toEqual({
       nowForbidden: [],
     });
   });
 
   it("does nothing at all when the Natura is already that one", () => {
-    const { writes, result } = changeNature(table(), { seatId: "seat-a", nature: "dobra" });
+    const { writes, result } = changeNature(table(), { seatId: "seat-a", nature: "good" });
     expect(writes).toEqual({});
     expect(result).toEqual({ nowForbidden: [] });
   });
@@ -90,7 +90,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
       aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" }),
       aHolding({ id: "h-helm", card_id: "helm", kind: "item" }),
     ];
-    const { writes, result } = changeNature(table({}, held), { seatId: "seat-a", nature: "zla" });
+    const { writes, result } = changeNature(table({}, held), { seatId: "seat-a", nature: "evil" });
     expect(result.nowForbidden).toEqual(["swieta-wlocznia"]);
     expect(writes.journal?.[0]).toMatchObject({
       payload: { nowForbidden: ["swieta-wlocznia"] },
@@ -100,15 +100,15 @@ describe("zmiana Natury (7.2-7.4)", () => {
 
   it("says nothing about a card the new Natura may keep", () => {
     const held = [aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" })];
-    const { result } = changeNature(table({ nature: "zla" }, held), {
+    const { result } = changeNature(table({ nature: "evil" }, held), {
       seatId: "seat-a",
-      nature: "dobra",
+      nature: "good",
     });
     expect(result.nowForbidden).toEqual([]);
   });
 
   it("refuses a seat it does not know", () => {
-    expect(() => changeNature(table(), { seatId: "nobody", nature: "zla" })).toThrow(
+    expect(() => changeNature(table(), { seatId: "nobody", nature: "evil" })).toThrow(
       /Nieznane miejsce/,
     );
   });
@@ -207,7 +207,7 @@ describe("przestawienie figury", () => {
 
 /** A seat whose character has just died, which is what 4.4 is written for. */
 const dead = (over: Parameters<typeof aSeat>[0] = {}) =>
-  aSeat({ seat_index: 0, eliminated: true, zycie: 0, zloto: 0, turns_lost: 2, ...over });
+  aSeat({ seat_index: 0, eliminated: true, life: 0, gold: 0, turns_lost: 2, ...over });
 
 describe("nowa Postać po śmierci (4.4)", () => {
   it("seats the new character on its own MGR with its printed points", async () => {
@@ -220,14 +220,14 @@ describe("nowa Postać po śmierci (4.4)", () => {
     expect(writes.seats?.[0].patch).toEqual({
       character_id: "zdobywca",
       field_id: "osada",
-      miecz_own: 4,
-      magia_own: 3,
-      miecz_floor: 4,
-      magia_floor: 3,
-      nature: "chaotyczna",
+      sword_own: 4,
+      magic_own: 3,
+      sword_floor: 4,
+      magic_floor: 3,
+      nature: "chaotic",
       eliminated: false,
-      zycie: 4,
-      zloto: 1,
+      life: 4,
+      gold: 1,
       turns_lost: 0,
       stone_until_turn: null,
       bridge_blocked_until_turn: null,
@@ -265,7 +265,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
       { seat_id: "seat-a", card_id: "helm", kind: "item", face: "open" },
       { seat_id: "seat-a", card_id: "miecz", kind: "item", face: "open" },
     ]);
-    expect(writes.seats?.[0].patch).toMatchObject({ zloto: 5 });
+    expect(writes.seats?.[0].patch).toMatchObject({ gold: 5 });
     expect(writes.journal?.map((line) => line.kind)).toEqual([
       "starting-kit",
       "new-character",
@@ -273,7 +273,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     expect(writes.journal?.[0].payload).toEqual({
       character: "ksiaze",
       items: ["helm", "miecz"],
-      zloto: 5,
+      gold: 5,
     });
   });
 

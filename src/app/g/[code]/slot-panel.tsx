@@ -47,15 +47,15 @@ export type SlotItem = SlotOccupant;
 const LAYOUT: Record<Slot, string> = {
   // Head between the two things worn on it, hands either side of the torso, the
   // load along the bottom.
-  pierscien: "1 / 1 / 2 / 2",
-  glowa: "1 / 2 / 2 / 3",
+  ring: "1 / 1 / 2 / 2",
+  head: "1 / 2 / 2 / 3",
   amulet: "1 / 3 / 2 / 4",
-  "reka-glowna": "2 / 1 / 3 / 2",
-  tulow: "2 / 2 / 3 / 3",
-  "reka-pomocnicza": "2 / 3 / 3 / 4",
-  rekawice: "3 / 1 / 4 / 2",
-  sakwa: "3 / 2 / 4 / 3",
-  wierzchowiec: "3 / 3 / 4 / 4",
+  "main-hand": "2 / 1 / 3 / 2",
+  body: "2 / 2 / 3 / 3",
+  "off-hand": "2 / 3 / 3 / 4",
+  gloves: "3 / 1 / 4 / 2",
+  pouch: "3 / 2 / 4 / 3",
+  mount: "3 / 3 / 4 / 4",
 
   // Off to the side, past a gap, in a column of their own. They are not gear —
   // neither does anything in a fight — so they do not belong among the places
@@ -79,15 +79,15 @@ const LAYOUT: Record<Slot, string> = {
  * the place itself.
  */
 const ICON: Record<Slot, string> = {
-  glowa: "/slots/glowa.svg",
+  head: "/slots/glowa.svg",
   amulet: "/slots/amulet.svg",
-  tulow: "/slots/tulow.svg",
-  "reka-glowna": "/slots/reka-glowna.svg",
-  "reka-pomocnicza": "/slots/reka-pomocnicza.svg",
-  rekawice: "/slots/rekawice.svg",
-  pierscien: "/slots/pierscien.svg",
-  wierzchowiec: "/slots/wierzchowiec.svg",
-  sakwa: "/slots/sakwa.svg",
+  body: "/slots/tulow.svg",
+  "main-hand": "/slots/reka-glowna.svg",
+  "off-hand": "/slots/reka-pomocnicza.svg",
+  gloves: "/slots/rekawice.svg",
+  ring: "/slots/pierscien.svg",
+  mount: "/slots/wierzchowiec.svg",
+  pouch: "/slots/sakwa.svg",
   "magiczny-miecz": "/slots/magiczny-miecz.svg",
   "tarcza-tolimana": "/slots/tarcza-tolimana.svg",
 };
@@ -198,7 +198,7 @@ export function SlotPanel({
             <ItemSlot
               // The paper doll only exists in slotowy, so anything on it is
               // worn by definition.
-              eqMode="slotowy"
+              eqMode="slots"
               // Nothing offers to be read while a card is in the air: the Karta
               // used to open over the very place the pointer had to be.
               quiet={movingCardId !== null}

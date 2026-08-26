@@ -122,7 +122,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         });
       case "nature": {
         const nature = body.nature;
-        if (nature !== "dobra" && nature !== "zla" && nature !== "chaotyczna") {
+        if (nature !== "good" && nature !== "evil" && nature !== "chaotic") {
           return NextResponse.json({ error: "Nieznana Natura." }, { status: 400 });
         }
         return NextResponse.json(
@@ -131,7 +131,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
       case "heal":
         return NextResponse.json({
-          zycie: await healSeat(game.id, String(body.seatId ?? actor.id)),
+          life: await healSeat(game.id, String(body.seatId ?? actor.id)),
         });
       case "stone":
         await turnToStone(game.id, String(body.seatId ?? actor.id));

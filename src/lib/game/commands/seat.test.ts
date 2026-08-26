@@ -7,7 +7,7 @@ import { seatView } from "./seat";
 const view = (
   seat: Parameters<typeof aSeat>[0] = {},
   holdings: ReturnType<typeof aHolding>[] = [],
-  eq: "klasyczny" | "slotowy" = "klasyczny",
+  eq: "classic" | "slots" = "classic",
 ) =>
   seatView(
     aTable({ game: { eq_mode: eq }, seats: [aSeat({ id: "seat-a", ...seat })], holdings }),
@@ -17,10 +17,10 @@ const view = (
 describe("what a seat is worth (1.5, 2.5)", () => {
   /** Only own points are stored; the rest is added at read time, never written. */
   it("adds what the cards lend to what the character owns", () => {
-    const bare = view({ miecz_own: 2, magia_own: 1 });
+    const bare = view({ sword_own: 2, magic_own: 1 });
     expect(bare.parametr).toEqual({ miecz: 2, magia: 1 });
 
-    const armed = view({ miecz_own: 2, magia_own: 1 }, [
+    const armed = view({ sword_own: 2, magic_own: 1 }, [
       aHolding({ id: "h1", card_id: "excalibur", kind: "item" }),
     ]);
     expect(armed.parametr.miecz).toBeGreaterThan(2);
@@ -31,12 +31,12 @@ describe("what a seat is worth (1.5, 2.5)", () => {
    * podczas walki. Two numbers, and the card carries the first.
    */
   it("keeps the parameter and the fight strength apart", () => {
-    const v = view({ miecz_own: 3 }, [aHolding({ id: "h1", card_id: "excalibur", kind: "item" })]);
+    const v = view({ sword_own: 3 }, [aHolding({ id: "h1", card_id: "excalibur", kind: "item" })]);
     expect(v.walka.miecz).toBeGreaterThanOrEqual(v.parametr.miecz);
   });
 
   it("counts nothing from a trofeum, which is a card kept to trade (1.4)", () => {
-    const v = view({ miecz_own: 2 }, [
+    const v = view({ sword_own: 2 }, [
       aHolding({ id: "t1", card_id: "excalibur", kind: "trophy" }),
     ]);
     expect(v.parametr).toEqual({ miecz: 2, magia: 1 });
@@ -50,17 +50,17 @@ describe("what a card lends, and where", () => {
    * the pack too. The two are different questions with different answers.
    */
   it("reads worn cards for what happens to the character", () => {
-    const packed = view({}, [aHolding({ id: "h1", card_id: "kon", kind: "friend", slot: null })], "slotowy");
+    const packed = view({}, [aHolding({ id: "h1", card_id: "kon", kind: "friend", slot: null })], "slots");
     const worn = view(
       {},
-      [aHolding({ id: "h1", card_id: "kon", kind: "friend", slot: "wierzchowiec" })],
-      "slotowy",
+      [aHolding({ id: "h1", card_id: "kon", kind: "friend", slot: "mount" })],
+      "slots",
     );
     expect(worn.abilities.length).toBeGreaterThan(packed.abilities.length);
   });
 
   it("reads owned cards for what the character has, worn or not", () => {
-    const packed = view({}, [aHolding({ id: "h1", card_id: "rozdzka-zaklec", kind: "item" })], "slotowy");
+    const packed = view({}, [aHolding({ id: "h1", card_id: "rozdzka-zaklec", kind: "item" })], "slots");
     expect(packed.fromCards.length).toBeGreaterThan(0);
   });
 
@@ -88,8 +88,8 @@ describe("the limits on a hand", () => {
 
   /** 2.6's table, floored by the Różdżka rather than added to (`spellAllowance`). */
   it("works the spell limit off the parameter, not off the total", () => {
-    expect(view({ magia_own: 1 }).spellCapacity).toBe(0);
-    expect(view({ magia_own: 4 }).spellCapacity).toBeGreaterThan(0);
+    expect(view({ magic_own: 1 }).spellCapacity).toBe(0);
+    expect(view({ magic_own: 4 }).spellCapacity).toBeGreaterThan(0);
   });
 });
 
@@ -97,7 +97,7 @@ describe("what a seat is to everybody else", () => {
   it("is the shape the targeting rules read", () => {
     const v = view({
       seat_index: 2,
-      nature: "zla",
+      nature: "evil",
       field_id: asFieldId("karczma"),
       character_id: asSeatCharacter("kat"),
     });
@@ -105,7 +105,7 @@ describe("what a seat is to everybody else", () => {
       seatIndex: 2,
       characterId: "kat",
       fieldId: "karczma",
-      nature: "zla",
+      nature: "evil",
       eliminated: false,
     });
   });
@@ -156,7 +156,7 @@ describe("Zaczarowane Wzgórza", () => {
    * ones as well as, not instead of.
    */
   const withSword = (fieldId: string) =>
-    view({ miecz_own: 2, field_id: asFieldId(fieldId) }, [
+    view({ sword_own: 2, field_id: asFieldId(fieldId) }, [
       aHolding({ id: "h1", card_id: "excalibur", kind: "item" }),
     ]);
 
@@ -171,7 +171,7 @@ describe("Zaczarowane Wzgórza", () => {
   /** Przyjaciele are not Przedmioty, and the sentence names Przedmioty. */
   it("leaves the Przyjaciele lending what they lend", () => {
     const friend = (fieldId: string) =>
-      view({ miecz_own: 2, field_id: asFieldId(fieldId) }, [
+      view({ sword_own: 2, field_id: asFieldId(fieldId) }, [
         aHolding({ id: "f1", card_id: "rusalka", kind: "friend" }),
       ]);
     expect(friend("zaczarowane-wzgorza").parametr).toEqual(

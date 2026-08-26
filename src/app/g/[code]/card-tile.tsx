@@ -70,7 +70,7 @@ export function CardTile({
   onDragStart,
   onDragEnd,
   children,
-  eqMode = "klasyczny",
+  eqMode = "classic",
   nature = null,
 }: {
   card: TileCard;

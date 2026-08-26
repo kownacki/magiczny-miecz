@@ -131,10 +131,10 @@ export function settleBridge(
   if (outcome === "przegrana") {
     // 1.2-1.5 and 2.2-2.6: a character's own points can never fall below the
     // value printed on its Karta Postaci, which is what the floor columns are.
-    if (entrance.stat === "magia") {
-      patch.magia_own = Math.max(seat.magia_floor, seat.magia_own - 1);
+    if (entrance.stat === "magic") {
+      patch.magic_own = Math.max(seat.magic_floor, seat.magic_own - 1);
     } else {
-      patch.miecz_own = Math.max(seat.miecz_floor, seat.miecz_own - 1);
+      patch.sword_own = Math.max(seat.sword_floor, seat.sword_own - 1);
     }
   }
 
@@ -374,7 +374,7 @@ export function payFerry(
     const toll = tollIsWaived(seatView(snapshot, seat.id).abilities, here)
       ? 0
       : FERRY_TOLL;
-    if (seat.zloto < toll) {
+    if (seat.gold < toll) {
       throw new Error("Nie masz czym zapłacić przewoźnikowi.");
     }
     return {
@@ -382,7 +382,7 @@ export function payFerry(
         // A waived toll writes no seat row at all: there is nothing to charge,
         // and a patch setting a column to what it already holds is a lie in the
         // changeset a test would have to read past.
-        ...(toll > 0 ? { seats: [{ id: seat.id, patch: { zloto: seat.zloto - toll } }] } : {}),
+        ...(toll > 0 ? { seats: [{ id: seat.id, patch: { gold: seat.gold - toll } }] } : {}),
         journal: [
           {
             seatId: seat.id,
@@ -552,9 +552,9 @@ export async function resolveBridgeOrdeal(
     // Only the eight bridge fields have a side, and this is one of the two
     // traps, so it has one — but the table says so rather than the code
     // assuming it.
-    const side = BRIDGE_SIDE[here] ?? "miecz";
+    const side = BRIDGE_SIDE[here] ?? "sword";
     const dice = await rollDice(ports.random, 3, "pulapka");
-    const fall = trapOutcome(dice, side === "magia" ? totals.magia : totals.miecz, side);
+    const fall = trapOutcome(dice, side === "magic" ? totals.magia : totals.miecz, side);
 
     if (!fall.fell) {
       return {

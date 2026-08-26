@@ -35,7 +35,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   wrozka: {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
+      warunek: { is: "natura", jedna_z: ["good"] },
       to: WISH(),
     },
     disposition: { kind: "do-pierwszej" },
@@ -43,7 +43,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   koszmar: {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["zla"] },
+      warunek: { is: "natura", jedna_z: ["evil"] },
       to: WISH(),
     },
     disposition: { kind: "do-pierwszej" },
@@ -52,8 +52,8 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "gdy",
       warunek: { is: "ma-zloto" },
-      to: { op: "punkty", stat: "zloto", delta: -1 },
-      inaczej: { op: "punkty", stat: "zloto", delta: 1 },
+      to: { op: "punkty", stat: "gold", delta: -1 },
+      inaczej: { op: "punkty", stat: "gold", delta: 1 },
     },
     disposition: { kind: "odloz" },
   },
@@ -76,10 +76,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       op: "rzut",
       faces: {
         1: { op: "zaklecie", count: 1 },
-        2: { op: "punkty", stat: "magia", delta: 1 },
-        3: { op: "punkty", stat: "miecz", delta: 1 },
+        2: { op: "punkty", stat: "magic", delta: 1 },
+        3: { op: "punkty", stat: "sword", delta: 1 },
         4: { op: "strata", co: "przedmiot", count: 1 },
-        5: { op: "punkty", stat: "zycie", delta: -1 },
+        5: { op: "punkty", stat: "life", delta: -1 },
         6: { op: "kamien" },
       },
     },
@@ -92,7 +92,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   czarodziej: {
     effect: {
       op: "gdy",
-      warunek: { is: "natura", jedna_z: ["dobra"] },
+      warunek: { is: "natura", jedna_z: ["good"] },
       to: { op: "zaklecie", count: 1 },
     },
     disposition: { kind: "zostaje" },

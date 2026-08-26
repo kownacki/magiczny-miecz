@@ -35,9 +35,9 @@ create table if not exists magiczny_miecz.games (
   --
   -- The column default is the printed rules, but nothing ever reaches it:
   -- `createGame` always writes the value, and what it writes when nobody says
-  -- is slotowy, because that is how this table plays. Left as 'klasyczny' so
+  -- is 'slots', because that is how this table plays. Left as 'classic' so
   -- that a row inserted by hand gets the game as published.
-  eq_mode text not null default 'klasyczny' check (eq_mode in ('klasyczny', 'slotowy')),
+  eq_mode text not null default 'classic' check (eq_mode in ('classic', 'slots')),
   -- Where randomness comes from. 'physical' means a human types in what they
   -- rolled; this is the RandomPort's binding, stored so it survives a reload.
   die_source text not null default 'app' check (die_source in ('app', 'physical')),
@@ -45,6 +45,13 @@ create table if not exists magiczny_miecz.games (
   -- Whose turn it is, as a seat index. Null in the lobby.
   active_seat integer,
   turn integer not null default 0,
+  -- Where the active seat is in its turn: the phase and whatever that phase is
+  -- carrying — the roll, the options, the cards drawn, the fight. Written as
+  -- one value so a turn cannot be half-changed.
+  turn_state jsonb not null default '{"phase": "roll"}'::jsonb,
+  -- The three piles, in simulation: what is left to deal and what has been
+  -- used. Null in companion mode, where the cards are on the table.
+  deck jsonb,
   -- Bumped on every state change. Clients hold the last value they rendered and
   -- refetch when a Realtime ping carries a higher one.
   revision bigint not null default 0,
@@ -78,16 +85,16 @@ create table if not exists magiczny_miecz.seats (
   -- never fall below what it started with (1.3, 2.3). Points from items and
   -- friends are derived at read time and deliberately not stored, so they cannot
   -- drift out of sync with the cards actually held.
-  miecz_own integer not null default 0,
-  magia_own integer not null default 0,
-  miecz_floor integer not null default 0,
-  magia_floor integer not null default 0,
+  sword_own integer not null default 0,
+  magic_own integer not null default 0,
+  sword_floor integer not null default 0,
+  magic_floor integer not null default 0,
 
-  zycie integer not null default 4,
-  zloto integer not null default 1,
+  life integer not null default 4,
+  gold integer not null default 1,
 
   -- Nature can change mid-game (7.2), so it is seat state, not character data.
-  nature text check (nature in ('dobra', 'zla', 'chaotyczna')),
+  nature text check (nature in ('good', 'evil', 'chaotic')),
 
   -- Turn bookkeeping for effects that suspend a character.
   turns_lost integer not null default 0,
@@ -105,6 +112,14 @@ create table if not exists magiczny_miecz.seats (
   -- released, so somebody else — or the same person on a new device — can pick
   -- it up. Null means somebody is behind it.
   abandoned_at timestamptz,
+  -- Last heard from. The browser checks in every couple of seconds; a seat that
+  -- stops is shown as away rather than gone (see AWAY_AFTER_MS).
+  seen_at timestamptz,
+  -- Said they are ready to start. Not a host power: 3.1 has everybody choose.
+  ready boolean not null default false,
+  -- A seat the host is playing on somebody else's behalf, who has no device of
+  -- their own at the table. See docs/LOBBY.md.
+  no_device boolean not null default false,
   eliminated boolean not null default false,
 
   -- Join order. `seat_index` used to stand in for it, but places freed in the
@@ -133,11 +148,11 @@ create table if not exists magiczny_miecz.holdings (
   kind text not null check (kind in ('spell', 'item', 'friend', 'trophy')),
   face text not null default 'open' check (face in ('open', 'hidden')),
   -- Where it is worn, in the slotted variant only; null means the pack, which
-  -- is the only place anything is in klasyczny play.
+  -- is the only place anything is in classic play.
   -- The last two are not gear: they are the Magiczny Miecz and the Tarcza
   -- Tolimana, which only have to be found (p3). See RELICS in slots.ts.
-  slot text check (slot in ('glowa', 'amulet', 'tulow', 'reka-glowna',
-    'reka-pomocnicza', 'rekawice', 'pierscien', 'wierzchowiec', 'sakwa',
+  slot text check (slot in ('head', 'amulet', 'body', 'main-hand',
+    'off-hand', 'gloves', 'ring', 'mount', 'pouch',
     'magiczny-miecz', 'tarcza-tolimana')),
   -- Where the card sits in its owner's pack, when they have said.
   --
@@ -235,3 +250,22 @@ alter table magiczny_miecz.holdings enable row level security;
 alter table magiczny_miecz.seat_effects enable row level security;
 alter table magiczny_miecz.field_cards enable row level security;
 alter table magiczny_miecz.moves enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- Who may reach the tables at all.
+--
+-- PostgREST connects as `anon` or `authenticated` and the service key as
+-- `service_role`, and a table with no grant is a table those roles cannot see —
+-- which is a 401 that looks exactly like a missing table. Supabase grants these
+-- automatically to anything created through its dashboard; a schema applied
+-- from a file has to say so itself, and this one did not, so the tables it made
+-- were invisible until somebody clicked something.
+--
+-- It is not the security boundary. RLS above is, and it has no policies: `anon`
+-- may hold every privilege here and still read nothing. Every read and write
+-- goes through a route handler with the service key, which decides what a
+-- particular seat is allowed to see (9.3).
+grant usage on schema magiczny_miecz to anon, authenticated, service_role;
+grant select, insert, update, delete on all tables in schema magiczny_miecz
+  to anon, authenticated;
+grant all on all tables in schema magiczny_miecz to service_role;

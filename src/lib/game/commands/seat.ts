@@ -13,7 +13,7 @@ import type { HoldingRow, SeatRow } from "../store";
 import type { Snapshot } from "../change";
 
 export function eqModeOf(game: { eq_mode: string }): EqMode {
-  return game.eq_mode === "slotowy" ? "slotowy" : "klasyczny";
+  return game.eq_mode === "slots" ? "slots" : "classic";
 }
 
 export function asHolding(row: HoldingRow): Holding {
@@ -104,7 +104,7 @@ export interface SeatView {
 }
 
 function natureOf(row: SeatRow): Nature | null {
-  return row.nature === "dobra" || row.nature === "zla" || row.nature === "chaotyczna"
+  return row.nature === "good" || row.nature === "evil" || row.nature === "chaotic"
     ? row.nature
     : null;
 }
@@ -134,12 +134,12 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     holdings,
     abilities: [...heldAbilities(inEffect(holdings, mode).map((h) => h.cardId)), ...mine],
     fromCards,
-    parametr: { miecz: row.miecz_own + parametr.miecz, magia: row.magia_own + parametr.magia },
-    walka: { miecz: row.miecz_own + walka.miecz, magia: row.magia_own + walka.magia },
+    parametr: { miecz: row.sword_own + parametr.miecz, magia: row.magic_own + parametr.magia },
+    walka: { miecz: row.sword_own + walka.miecz, magia: row.magic_own + walka.magia },
     carried: carriedCount(holdings, mode),
     carryLimit: carryLimit(holdings, mode),
     spellCapacity: spellAllowance(
-      row.magia_own + parametr.magia,
+      row.magic_own + parametr.magia,
       startingKit(asCharacterId(row.character_id)).spells ?? 0,
       fromCards,
     ),

@@ -128,7 +128,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
             )
               ? { granted: true }
               : {}),
-            ...(kind === "magiczna" ? { magia: total } : { miecz: total }),
+            ...(kind === "magical" ? { magia: total } : { miecz: total }),
           },
           mine,
         ),
@@ -541,7 +541,7 @@ export async function shieldSaves(
   ports: CommandPorts,
 ): Promise<Outcome<boolean>> {
   // 18.2b: nothing prevents the loss in a magical fight.
-  if (command.kind === "magiczna") return { writes: {}, result: false };
+  if (command.kind === "magical") return { writes: {}, result: false };
 
   const seat = seatById(snapshot, command.seatId);
   const abilities = seatView(snapshot, seat.id).abilities;

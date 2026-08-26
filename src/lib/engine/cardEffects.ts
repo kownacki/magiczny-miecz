@@ -5,7 +5,7 @@ import type { EventCard } from "@/data/types";
 export interface SuggestedAction {
   /** What the button says, in Polish. */
   label: string;
-  stat: "miecz" | "magia" | "zycie" | "zloto" | "tury";
+  stat: "sword" | "magic" | "life" | "gold" | "tury";
   delta: number;
 }
 
@@ -60,16 +60,16 @@ const RULES: { pattern: RegExp; build: (n: number) => SuggestedAction }[] = [
   {
     // "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż."
     pattern: new RegExp(`Zamień\\s+tę\\s+Kartę\\s+na\\s+(\\d+)\\s+Sztuk${LETTERS}*\\s+Złota`, "iu"),
-    build: (n) => ({ label: `+${n} Złota`, stat: "zloto", delta: n }),
+    build: (n) => ({ label: `+${n} Złota`, stat: "gold", delta: n }),
   },
   {
     // The board's own tables abbreviate: "wygrałeś 1 Sz. Z." at Karczma.
     pattern: /wygrałeś\s+(\d+)\s*Sz\.?\s*Z\.?/iu,
-    build: (n) => ({ label: `+${n} Złota`, stat: "zloto", delta: n }),
+    build: (n) => ({ label: `+${n} Złota`, stat: "gold", delta: n }),
   },
   {
     pattern: /przegrałeś\s+(?:w\s+kości\s+)?(\d+)\s*Sz\.?\s*Z\.?/iu,
-    build: (n) => ({ label: `−${n} Złota`, stat: "zloto", delta: -n }),
+    build: (n) => ({ label: `−${n} Złota`, stat: "gold", delta: -n }),
   },
   {
     // Losing turns is a tracked value like any other, and several fields and
@@ -80,27 +80,27 @@ const RULES: { pattern: RegExp; build: (n: number) => SuggestedAction }[] = [
   },
   {
     pattern: new RegExp(`tracisz\\s+(\\d+)\\s+(?:punkt${LETTERS}*\\s+)?Życi${LETTERS}*`, "iu"),
-    build: (n) => ({ label: `−${n} Życia`, stat: "zycie", delta: -n }),
+    build: (n) => ({ label: `−${n} Życia`, stat: "life", delta: -n }),
   },
   {
     pattern: new RegExp(`(?:zyskujesz|otrzymujesz)\\s+(\\d+)\\s+(?:punkt${LETTERS}*\\s+)?Życi${LETTERS}*`, "iu"),
-    build: (n) => ({ label: `+${n} Życia`, stat: "zycie", delta: n }),
+    build: (n) => ({ label: `+${n} Życia`, stat: "life", delta: n }),
   },
   {
     pattern: new RegExp(`tracisz\\s+(\\d+)\\s+punkt${LETTERS}*\\s+Miecza`, "iu"),
-    build: (n) => ({ label: `−${n} Miecza`, stat: "miecz", delta: -n }),
+    build: (n) => ({ label: `−${n} Miecza`, stat: "sword", delta: -n }),
   },
   {
     pattern: new RegExp(`(?:zyskujesz|otrzymujesz)\\s+(\\d+)\\s+punkt${LETTERS}*\\s+Miecza`, "iu"),
-    build: (n) => ({ label: `+${n} Miecza`, stat: "miecz", delta: n }),
+    build: (n) => ({ label: `+${n} Miecza`, stat: "sword", delta: n }),
   },
   {
     pattern: new RegExp(`tracisz\\s+(\\d+)\\s+punkt${LETTERS}*\\s+Magii`, "iu"),
-    build: (n) => ({ label: `−${n} Magii`, stat: "magia", delta: -n }),
+    build: (n) => ({ label: `−${n} Magii`, stat: "magic", delta: -n }),
   },
   {
     pattern: new RegExp(`(?:zyskujesz|otrzymujesz)\\s+(\\d+)\\s+punkt${LETTERS}*\\s+Magii`, "iu"),
-    build: (n) => ({ label: `+${n} Magii`, stat: "magia", delta: n }),
+    build: (n) => ({ label: `+${n} Magii`, stat: "magic", delta: n }),
   },
 ];
 

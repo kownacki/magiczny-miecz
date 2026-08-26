@@ -326,7 +326,7 @@ export async function takeNewCharacter(
    * `chooseCharacter` seated the card and un-readied the seat, the reset put
    * the counters back and re-readied it, and `dealStartingKit` overwrote the
    * Złoto for the ten characters whose card names a different purse. Merged,
-   * that is this — and `kit.zloto ?? 1` is 3.2's single coin "chyba, że jej
+   * that is this — and `kit.gold ?? 1` is 3.2's single coin "chyba, że jej
    * Karta daje w tym względzie inne instrukcje", settled once instead of
    * written and then corrected.
    */
@@ -340,16 +340,16 @@ export async function takeNewCharacter(
           // The starting Miecz and Magia become both the current value and the
           // floor, because 1.3 and 2.3 forbid a character ever dropping below
           // what it began with.
-          miecz_own: character.miecz,
-          magia_own: character.magia,
-          miecz_floor: character.miecz,
-          magia_floor: character.magia,
-          // Kat prints "dowolna" and picks at setup, so it is left unset here
+          sword_own: character.miecz,
+          magic_own: character.magia,
+          sword_floor: character.miecz,
+          magic_floor: character.magia,
+          // Kat prints "any" and picks at setup, so it is left unset here
           // for the player to choose rather than being silently defaulted.
-          nature: character.nature === "dowolna" ? null : character.nature,
+          nature: character.nature === "any" ? null : character.nature,
           eliminated: false,
-          zycie: 4,
-          zloto: kit.zloto ?? 1,
+          life: 4,
+          gold: kit.gold ?? 1,
           turns_lost: 0,
           stone_until_turn: null,
           bridge_blocked_until_turn: null,
@@ -373,7 +373,7 @@ export async function takeNewCharacter(
   };
 
   const dealt: Changeset =
-    kit.items?.length || kit.zloto !== undefined || kit.spells
+    kit.items?.length || kit.gold !== undefined || kit.spells
       ? {
           journal: [
             {

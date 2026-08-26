@@ -30,8 +30,8 @@ export interface CombatValue {
  */
 export function combatValueOf(card: Pick<EventCard, "cardClass" | "miecz" | "magia">): CombatValue | null {
   if (card.cardClass !== "foe") return null;
-  if (typeof card.magia === "number") return { kind: "magiczna", total: card.magia };
-  if (typeof card.miecz === "number") return { kind: "zwykla", total: card.miecz };
+  if (typeof card.magia === "number") return { kind: "magical", total: card.magia };
+  if (typeof card.miecz === "number") return { kind: "ordinary", total: card.miecz };
   return null;
 }
 

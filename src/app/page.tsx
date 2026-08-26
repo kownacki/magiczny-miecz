@@ -91,7 +91,7 @@ export default function Home() {
   async function createTable(
     name: string,
     mode: "simulation" | "companion",
-    eqMode: "klasyczny" | "slotowy",
+    eqMode: "classic" | "slots",
   ) {
     setBusy(true);
     setError(null);
@@ -437,12 +437,12 @@ function CreateDialog({
   onCreate: (
     name: string,
     mode: "simulation" | "companion",
-    eqMode: "klasyczny" | "slotowy",
+    eqMode: "classic" | "slots",
   ) => void;
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"simulation" | "companion">("simulation");
-  const [eqMode, setEqMode] = useState<"klasyczny" | "slotowy">("slotowy");
+  const [eqMode, setEqMode] = useState<"classic" | "slots">("slots");
 
   return (
     <Dialog title="Nowy stół" onCancel={onCancel}>
@@ -496,14 +496,14 @@ function CreateDialog({
             Ekwipunek
           </legend>
           <ModeChoice
-            active={eqMode === "slotowy"}
-            onPick={() => setEqMode("slotowy")}
+            active={eqMode === "slots"}
+            onPick={() => setEqMode("slots")}
             label="Slotowy"
             hint="Co nosisz, zakładasz na miejsce; reszta w plecaku."
           />
           <ModeChoice
-            active={eqMode === "klasyczny"}
-            onPick={() => setEqMode("klasyczny")}
+            active={eqMode === "classic"}
+            onPick={() => setEqMode("classic")}
             label="Klasyczny"
             hint="Jak w Instrukcji: 4 Przedmioty, bez podziału na noszone i niesione."
           />

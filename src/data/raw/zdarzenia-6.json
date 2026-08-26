@@ -29,7 +29,7 @@
     "text": "Posiadacz Tarczy, który utracił podczas walki 1 punkt Życia ma prawo wykonać rzut kostką: wynik równy 1 lub 2 oznacza, że zdołał zasłonić się Tarczą. Nie traci punktu Życia, aczkolwiek przegrał walkę."
   },
   {
-    "id": "wierzchowiec",
+    "id": "mount",
     "name": "WIERZCHOWIEC",
     "cardClass": "przedmiot",
     "source": { "sheet": "zdarzenia-6", "index": 5 },

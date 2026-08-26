@@ -101,7 +101,7 @@ describe("what the characters can actually do", () => {
 
 describe("what a character owns before the first roll", () => {
   it("gives the Książę his purse and his gear", () => {
-    expect(startingKit("ksiaze")).toEqual({ items: ["helm", "miecz"], zloto: 5 });
+    expect(startingKit("ksiaze")).toEqual({ items: ["helm", "miecz"], gold: 5 });
   });
 
   it("gives the spellcasters their spells", () => {

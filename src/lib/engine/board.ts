@@ -263,7 +263,7 @@ export interface BridgeEntrance {
   guardian: string;
   entersAt: FieldId;
   /** The stat the guardian is fought with, and the one a loss costs (11.11). */
-  stat: "miecz" | "magia";
+  stat: "sword" | "magic";
 }
 
 /** What a die roll makes the guardian worth: the board prints 1→5 through 6→10. */
@@ -274,13 +274,13 @@ export const BRIDGE_ENTRANCES: readonly BridgeEntrance[] = [
     from: "ruiny-twierdzy",
     guardian: "Kamienny Potwór",
     entersAt: "wejscie-na-most-a",
-    stat: "miecz",
+    stat: "sword",
   },
   {
     from: "wymarle-miasto",
     guardian: "Duch Skał",
     entersAt: "wejscie-na-most-b",
-    stat: "magia",
+    stat: "magic",
   },
 ];
 

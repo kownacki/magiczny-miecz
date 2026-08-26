@@ -60,8 +60,8 @@ export interface Seat {
    * naming the type the API already promises.
    */
   field_id: FieldId | null;
-  miecz_own: number;
-  magia_own: number;
+  sword_own: number;
+  magic_own: number;
   /** Own points plus everything carried (1.5, 2.5), computed server-side. */
   miecz_total: number;
   magia_total: number;
@@ -91,8 +91,8 @@ export interface Seat {
     tone: "dobry" | "zly" | "obojetny";
     title: string;
   }[];
-  zycie: number;
-  zloto: number;
+  life: number;
+  gold: number;
   nature: string | null;
   turns_lost: number;
   /** Turn the Kamień wears off on (20.1). Null when not petrified. */
@@ -135,7 +135,7 @@ export function asHoldings(holdings: readonly Held[]): Holding[] {
  * is the boundary the guard belongs at, exactly like `asFieldId` elsewhere.
  */
 export function asNature(value: string | null | undefined): Nature | null {
-  return value === "dobra" || value === "zla" || value === "chaotyczna" ? value : null;
+  return value === "good" || value === "evil" || value === "chaotic" ? value : null;
 }
 
 export const KIND_LABEL: Record<Held["kind"], string> = {

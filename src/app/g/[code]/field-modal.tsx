@@ -61,7 +61,7 @@ export interface FieldCardHere {
  * decision, not a surprise for whoever lands there.
  */
 export function FieldModal({
-  eqMode = "klasyczny",
+  eqMode = "classic",
   nature = null,
   fieldId,
   cards,
@@ -112,7 +112,7 @@ export function FieldModal({
   onAction?: (body: Record<string, unknown>) => void;
   onSuggestion?: (stat: string, delta: number, reason: string) => void;
   onService?: (body: Record<string, unknown>) => void;
-  purse?: { zloto: number; zycie: number };
+  purse?: { gold: number; life: number };
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
   busy: boolean;

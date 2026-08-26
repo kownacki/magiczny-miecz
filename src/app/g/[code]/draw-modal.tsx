@@ -154,7 +154,7 @@ export function DrawModal({
     from: string;
     guardian: string;
     entersAt: string;
-    stat: "miecz" | "magia";
+    stat: "sword" | "magic";
   } | null;
   /**
    * A field's compulsory table, when the character is standing on one.
@@ -619,7 +619,7 @@ export function DrawModal({
               onClick={() => onFight([known.id])}
               className="rounded border border-vermilion/60 bg-vermilion/10 px-4 py-2 text-sm text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
             >
-              Walcz ({foe.kind === "magiczna" ? "Magia" : "Miecz"} {foe.total})
+              Walcz ({foe.kind === "magical" ? "Magia" : "Miecz"} {foe.total})
             </button>
             {together && (
               <button
@@ -1027,7 +1027,7 @@ export function ringFields(fieldId: FieldId | null): FieldId[] {
  * afterwards, which is not the same as watching the second die land.
  */
 function WatchFight({ fight }: { fight: Fight }) {
-  const label = fight.kind === "magiczna" ? "Magia" : "Miecz";
+  const label = fight.kind === "magical" ? "Magia" : "Miecz";
   const side = (title: string, total: number, roll: number | null) => (
     <div className="rounded border border-edge bg-night p-3">
       <p className="mb-2 truncate text-xs uppercase tracking-wide text-muted">
@@ -1055,7 +1055,7 @@ function WatchFight({ fight }: { fight: Fight }) {
       {/* The name is in the sheet's header; this says what kind of fight it
           is, which is the part the header cannot carry. */}
       <p className="text-sm text-muted">
-        {fight.kind === "magiczna" ? "Walka magiczna" : "Walka zwykła"}
+        {fight.kind === "magical" ? "Walka magiczna" : "Walka zwykła"}
       </p>
       <div className="grid grid-cols-2 gap-4">
         {side("Postać", fight.playerTotal, fight.playerRoll)}
@@ -1098,10 +1098,10 @@ function say(effect: Effect): string {
       return "nic się nie dzieje";
     case "punkty": {
       const name = {
-        miecz: "Miecza",
-        magia: "Magii",
-        zycie: "Życia",
-        zloto: "Złota",
+        sword: "Miecza",
+        magic: "Magii",
+        life: "Życia",
+        gold: "Złota",
       }[effect.stat];
       return `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${name}`;
     }

@@ -356,8 +356,8 @@ export function startFight(
   playerTotals: { miecz: number; magia: number },
 ): TurnPhase {
   if (phase.phase !== "field") return phase;
-  const kind: CombatKind = card.magia !== undefined ? "magiczna" : "zwykla";
-  const enemyTotal = (kind === "magiczna" ? card.magia : card.miecz) ?? 0;
+  const kind: CombatKind = card.magia !== undefined ? "magical" : "ordinary";
+  const enemyTotal = (kind === "magical" ? card.magia : card.miecz) ?? 0;
   return {
     phase: "fight",
     fight: {
@@ -367,7 +367,7 @@ export function startFight(
       ...(card.opponentSeat !== undefined ? { opponentSeat: card.opponentSeat } : {}),
       kind,
       enemyTotal,
-      playerTotal: kind === "magiczna" ? playerTotals.magia : playerTotals.miecz,
+      playerTotal: kind === "magical" ? playerTotals.magia : playerTotals.miecz,
       playerRoll: null,
       enemyRoll: null,
       result: null,
@@ -401,11 +401,11 @@ export function startGuardianFight(
     guardian.kind === "most"
       ? guardian.entrance.stat
       : guardian.kind === "most-pole"
-        ? guardian.combat === "magiczna"
-          ? "magia"
-          : "miecz"
-        : "miecz";
-  const kind: CombatKind = stat === "magia" ? "magiczna" : "zwykla";
+        ? guardian.combat === "magical"
+          ? "magic"
+          : "sword"
+        : "sword";
+  const kind: CombatKind = stat === "magic" ? "magical" : "ordinary";
   const name =
     guardian.kind === "most"
       ? guardian.entrance.guardian
@@ -426,7 +426,7 @@ export function startGuardianFight(
       cardName: name,
       kind,
       enemyTotal: rolled ? 0 : printed,
-      playerTotal: kind === "magiczna" ? playerTotals.magia : playerTotals.miecz,
+      playerTotal: kind === "magical" ? playerTotals.magia : playerTotals.miecz,
       playerRoll: null,
       enemyRoll: null,
       result: null,

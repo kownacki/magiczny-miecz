@@ -63,7 +63,7 @@ export type Disposition =
    * they run out: Drzewo Życia with four Życie, Jezioro Magiczne with four
    * Miecza, Zaklęte Źródło with four Magii.
    */
-  | { kind: "zostaje-z-pula"; stat: "zycie" | "miecz" | "magia"; points: number }
+  | { kind: "zostaje-z-pula"; stat: "life" | "sword" | "magic"; points: number }
   /**
    * Waits for one character and then leaves — "Pierwszej Postaci ... Następnie
    * odłóż jego Kartę". Distinct from `odloz` because the card sits on the board
@@ -134,7 +134,7 @@ export type Effect =
   | { op: "wybor"; options: { label: string; effect: Effect }[] }
   /** One die, six outcomes (Grota, Sidh, Urocza Diablica, Nieznana Świątynia). */
   | { op: "rzut"; faces: Record<number, Effect> }
-  | { op: "punkty"; stat: "miecz" | "magia" | "zycie" | "zloto"; delta: number; target?: Target }
+  | { op: "punkty"; stat: "sword" | "magic" | "life" | "gold"; delta: number; target?: Target }
   /**
    * Restores Życie but no higher than the four a character starts with (4.7) —
    * Cudotwórca, Księżniczka, the Zamek's Medyk.
@@ -185,7 +185,7 @@ export type Effect =
         | "przedmiot"
         | "przyjaciel"
         | "zaklecie"
-        | "zloto"
+        | "gold"
         | "wszystkie-przedmioty"
         | "wszystkie-zaklecia";
       count?: number;
@@ -245,7 +245,7 @@ export type Effect =
 /** A test a card applies before doing anything. */
 export type Condition =
   | { is: "natura"; jedna_z: Nature[] }
-  | { is: "prog"; stat: "miecz" | "magia"; ponizej: number }
+  | { is: "prog"; stat: "sword" | "magic"; ponizej: number }
   | { is: "ma-zloto" };
 
 /**
@@ -329,7 +329,7 @@ export function describeDisposition(disposition: Disposition): string {
       return "Karta zostaje na tym Obszarze do końca gry.";
     case "zostaje-z-pula": {
       const stat =
-        disposition.stat === "zycie" ? "Życia" : disposition.stat === "miecz" ? "Miecza" : "Magii";
+        disposition.stat === "life" ? "Życia" : disposition.stat === "sword" ? "Miecza" : "Magii";
       return `Karta zostaje z ${disposition.points} punktami ${stat}; odłóż ją, gdy się wyczerpią.`;
     }
     case "do-pierwszej":

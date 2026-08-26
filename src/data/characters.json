@@ -6,7 +6,7 @@
       "sheet": "postacie-1",
       "index": 1
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 3,
     "magia": 3,
     "start": "Karczma",
@@ -22,7 +22,7 @@
       "sheet": "postacie-1",
       "index": 2
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 5,
     "magia": 1,
     "start": "Kurhan",
@@ -39,7 +39,7 @@
       "sheet": "postacie-1",
       "index": 3
     },
-    "nature": "dobra",
+    "nature": "good",
     "miecz": 3,
     "magia": 3,
     "start": "Bezdroża",
@@ -57,7 +57,7 @@
       "sheet": "postacie-1",
       "index": 4
     },
-    "nature": "dobra",
+    "nature": "good",
     "miecz": 2,
     "magia": 4,
     "start": "Studnia Wieczności",
@@ -75,7 +75,7 @@
       "sheet": "postacie-1",
       "index": 5
     },
-    "nature": "zla",
+    "nature": "evil",
     "miecz": 2,
     "magia": 4,
     "start": "Czarci Młyn",
@@ -93,7 +93,7 @@
       "sheet": "postacie-1",
       "index": 6
     },
-    "nature": "dobra",
+    "nature": "good",
     "miecz": 3,
     "magia": 4,
     "start": "Uroczysko",
@@ -110,7 +110,7 @@
       "sheet": "postacie-1",
       "index": 7
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 3,
     "magia": 3,
     "start": "Mokradła",
@@ -127,7 +127,7 @@
       "sheet": "postacie-1",
       "index": 8
     },
-    "nature": "zla",
+    "nature": "evil",
     "miecz": 3,
     "magia": 3,
     "start": "Step",
@@ -145,7 +145,7 @@
       "sheet": "postacie-1",
       "index": 9
     },
-    "nature": "dobra",
+    "nature": "good",
     "miecz": 2,
     "magia": 3,
     "start": "Bezdroża",
@@ -164,7 +164,7 @@
       "sheet": "postacie-2",
       "index": 1
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 2,
     "magia": 4,
     "start": "Krąg Mocy",
@@ -181,7 +181,7 @@
       "sheet": "postacie-2",
       "index": 2
     },
-    "nature": "dobra",
+    "nature": "good",
     "miecz": 1,
     "magia": 5,
     "start": "Uroczysko",
@@ -198,7 +198,7 @@
       "sheet": "postacie-2",
       "index": 3
     },
-    "nature": "zla",
+    "nature": "evil",
     "miecz": 2,
     "magia": 5,
     "start": "Mokradła",
@@ -215,7 +215,7 @@
       "sheet": "postacie-2",
       "index": 4
     },
-    "nature": "dowolna",
+    "nature": "any",
     "miecz": 2,
     "magia": 4,
     "start": "Gród",
@@ -233,7 +233,7 @@
       "sheet": "postacie-2",
       "index": 5
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 3,
     "magia": 3,
     "start": "Osada",
@@ -250,7 +250,7 @@
       "sheet": "postacie-2",
       "index": 6
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 4,
     "magia": 3,
     "start": "Gród",
@@ -267,7 +267,7 @@
       "sheet": "postacie-2",
       "index": 7
     },
-    "nature": "zla",
+    "nature": "evil",
     "miecz": 5,
     "magia": 1,
     "start": "Karczma",
@@ -285,7 +285,7 @@
       "sheet": "postacie-2",
       "index": 8
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 2,
     "magia": 5,
     "start": "Krąg Mocy",
@@ -303,7 +303,7 @@
       "sheet": "postacie-2",
       "index": 9
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 3,
     "magia": 4,
     "start": "Step",
@@ -321,7 +321,7 @@
       "sheet": "postacie-3",
       "index": 1
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 2,
     "magia": 3,
     "start": "Mokradła",
@@ -338,7 +338,7 @@
       "sheet": "postacie-3",
       "index": 2
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 4,
     "magia": 2,
     "start": "Step",
@@ -355,7 +355,7 @@
       "sheet": "postacie-3",
       "index": 3
     },
-    "nature": "dobra",
+    "nature": "good",
     "miecz": 2,
     "magia": 3,
     "start": "Uroczysko",
@@ -372,7 +372,7 @@
       "sheet": "postacie-3",
       "index": 4
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 3,
     "magia": 3,
     "start": "Mroźne Pustkowie",
@@ -389,7 +389,7 @@
       "sheet": "postacie-3",
       "index": 5
     },
-    "nature": "zla",
+    "nature": "evil",
     "miecz": 3,
     "magia": 3,
     "start": "Czarci Młyn",
@@ -407,7 +407,7 @@
       "sheet": "postacie-3",
       "index": 6
     },
-    "nature": "dobra",
+    "nature": "good",
     "miecz": 4,
     "magia": 3,
     "start": "Gród",
@@ -424,7 +424,7 @@
       "sheet": "postacie-3",
       "index": 7
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 6,
     "magia": 1,
     "start": "Mroźne Pustkowie",
@@ -440,7 +440,7 @@
       "sheet": "postacie-3",
       "index": 8
     },
-    "nature": "zla",
+    "nature": "evil",
     "miecz": 2,
     "magia": 4,
     "start": "Gród",
@@ -456,7 +456,7 @@
       "sheet": "postacie-3",
       "index": 9
     },
-    "nature": "chaotyczna",
+    "nature": "chaotic",
     "miecz": 4,
     "magia": 3,
     "start": "Osada",

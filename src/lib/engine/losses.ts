@@ -6,7 +6,7 @@ export interface Loss {
     | "przedmiot"
     | "przyjaciel"
     | "zaklecie"
-    | "zloto"
+    | "gold"
     | "wszystkie-przedmioty"
     | "wszystkie-zaklecia";
   count?: number;
@@ -45,7 +45,7 @@ export function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
     case "zaklecie":
     case "wszystkie-zaklecia":
       return "spell";
-    case "zloto":
+    case "gold":
       // Gold is a number on the seat, not a card in the pack (3.5).
       return null;
   }
@@ -103,7 +103,7 @@ export function chooseLosses(
 
 /** How much gold a loss takes, given what the seat has. */
 export function goldLost(loss: Loss, held: number): number {
-  if (loss.co !== "zloto") return 0;
+  if (loss.co !== "gold") return 0;
   // "Tracisz całe złoto" is the common case and carries no count.
   return loss.count === undefined ? held : Math.min(loss.count, held);
 }
@@ -114,7 +114,7 @@ export function describeLoss(loss: Loss): string {
     przedmiot: "Przedmiot",
     przyjaciel: "Przyjaciela",
     zaklecie: "Zaklęcie",
-    zloto: "złoto",
+    gold: "złoto",
     "wszystkie-przedmioty": "wszystkie Przedmioty",
     "wszystkie-zaklecia": "wszystkie Zaklęcia",
   }[loss.co];

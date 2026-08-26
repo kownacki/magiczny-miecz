@@ -28,21 +28,21 @@ describe("slotted equipment", () => {
   });
 
   it("wears the four things the box has exactly one card for", () => {
-    expect(slotsFor("helm")).toEqual(["glowa"]);
-    expect(slotsFor("zbroja")).toEqual(["tulow"]);
-    expect(slotsFor("rekawice")).toEqual(["rekawice"]);
-    expect(slotsFor("pierscien-mocy")).toEqual(["pierscien"]);
+    expect(slotsFor("helm")).toEqual(["head"]);
+    expect(slotsFor("zbroja")).toEqual(["body"]);
+    expect(slotsFor("rekawice")).toEqual(["gloves"]);
+    expect(slotsFor("pierscien-mocy")).toEqual(["ring"]);
   });
 
   it("takes a weapon in the main hand and a shield in the off one, and neither in the other", () => {
     // A weapon in each hand is a character ability nobody in this box has, so
     // until somebody does, a sword goes where a sword goes.
     for (const weapon of ["miecz", "excalibur", "swieta-wlocznia", "rozdzka-zaklec"]) {
-      expect(fitsIn(weapon, "reka-glowna")).toBe(true);
-      expect(fitsIn(weapon, "reka-pomocnicza")).toBe(false);
+      expect(fitsIn(weapon, "main-hand")).toBe(true);
+      expect(fitsIn(weapon, "off-hand")).toBe(false);
     }
-    expect(fitsIn("tarcza", "reka-glowna")).toBe(false);
-    expect(fitsIn("tarcza", "reka-pomocnicza")).toBe(true);
+    expect(fitsIn("tarcza", "main-hand")).toBe(false);
+    expect(fitsIn("tarcza", "off-hand")).toBe(true);
   });
 
   it("gives the two you only have to find places of their own", () => {
@@ -50,10 +50,10 @@ describe("slotted equipment", () => {
     // other into the Zamek (p3). Leaving them in the hands meant the price of
     // going for the win was fighting the rest of the game unarmed.
     expect(fitsIn("magiczny-miecz", "magiczny-miecz")).toBe(true);
-    expect(fitsIn("magiczny-miecz", "reka-glowna")).toBe(false);
+    expect(fitsIn("magiczny-miecz", "main-hand")).toBe(false);
     for (const shield of ["tarcza-tolimana", "tarcza-boga-tolimana"]) {
       expect(fitsIn(shield, "tarcza-tolimana")).toBe(true);
-      expect(fitsIn(shield, "reka-pomocnicza")).toBe(false);
+      expect(fitsIn(shield, "off-hand")).toBe(false);
     }
     // And an ordinary Tarcza cannot squat in the relic's place.
     expect(fitsIn("tarcza", "tarcza-tolimana")).toBe(false);
@@ -107,10 +107,10 @@ describe("slotted equipment", () => {
   it("puts everything that carries things in the mount or bag place", () => {
     // The cards rule 5.4 names as transport, plus the two sakwy.
     for (const id of ["kon", "mul", "zaprzeg", "wierzchowiec", "bojowy-rumak"]) {
-      expect(slotsFor(id)).toEqual(["wierzchowiec"]);
+      expect(slotsFor(id)).toEqual(["mount"]);
     }
     for (const id of ["magiczna-sakwa", "tajemna-sakwa"]) {
-      expect(slotsFor(id)).toEqual(["sakwa"]);
+      expect(slotsFor(id)).toEqual(["pouch"]);
     }
   });
 

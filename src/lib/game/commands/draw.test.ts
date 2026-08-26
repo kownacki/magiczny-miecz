@@ -233,7 +233,7 @@ describe("rozdanie Zaklęcia", () => {
 
   /** The Goblin's Magia of 1 buys no Zaklęcia at all — 2.6's table starts at 2. */
   const magical = (over: Parameters<typeof aSeat>[0] = {}) =>
-    aSeat({ id: "seat-a", magia_own: 3, ...over });
+    aSeat({ id: "seat-a", magic_own: 3, ...over });
 
   it("refuses a seat that is not at this table", () => {
     expect(() => drawSpell(table(), { seatId: "seat-z", shuffle: never })).toThrow(
@@ -243,7 +243,7 @@ describe("rozdanie Zaklęcia", () => {
 
   it("refuses a character whose Magia allows none (2.6)", () => {
     expect(() =>
-      drawSpell(table({ seats: [aSeat({ magia_own: 1 })] }), {
+      drawSpell(table({ seats: [aSeat({ magic_own: 1 })] }), {
         seatId: "seat-a",
         shuffle: never,
       }),
@@ -328,7 +328,7 @@ describe("rozdanie Zaklęcia", () => {
    */
   it("lets the Różdżka raise a ceiling of none to one", () => {
     const wanded = table({
-      seats: [aSeat({ magia_own: 1 })],
+      seats: [aSeat({ magic_own: 1 })],
       holdings: [aHolding({ id: "h-wand", card_id: "rozdzka-zaklec", kind: "item" })],
     });
     expect(drawSpell(wanded, { seatId: "seat-a", shuffle: never }).result).toBe(
@@ -356,7 +356,7 @@ describe("Różdżka Zaklęć", () => {
 
   it("refuses a character who does not have one", () => {
     expect(() =>
-      drawSpellWithWand(table({ seats: [aSeat({ magia_own: 3 })] }), {
+      drawSpellWithWand(table({ seats: [aSeat({ magic_own: 3 })] }), {
         seatId: "seat-a",
         shuffle: never,
       }),
@@ -366,7 +366,7 @@ describe("Różdżka Zaklęć", () => {
   /** A beaten Wróg's card is a memory, not equipment: a trophy Różdżka casts nothing. */
   it("does not count one held as a trophy", () => {
     const trophied = table({
-      seats: [aSeat({ magia_own: 3 })],
+      seats: [aSeat({ magic_own: 3 })],
       holdings: [wand({ kind: "trophy" })],
     });
     expect(() => drawSpellWithWand(trophied, { seatId: "seat-a", shuffle: never })).toThrow(
@@ -375,7 +375,7 @@ describe("Różdżka Zaklęć", () => {
   });
 
   it("refills a Goblin who has cast its last Zaklęcie", () => {
-    const empty = table({ seats: [aSeat({ magia_own: 1 })], holdings: [wand()] });
+    const empty = table({ seats: [aSeat({ magic_own: 1 })], holdings: [wand()] });
     const { writes, result } = drawSpellWithWand(empty, { seatId: "seat-a", shuffle: never });
     expect(result).toBe("krag-plomieni");
     expect(writes.holdings?.insert?.[0]).toMatchObject({ face: "hidden" });
@@ -384,7 +384,7 @@ describe("Różdżka Zaklęć", () => {
   /** "gdy ma tyle Zaklęć, ile na początku gry lub mniej" — a Goblin began with none. */
   it("waits until the hand is back down to the setup hand", () => {
     const holding = table({
-      seats: [aSeat({ magia_own: 3 })],
+      seats: [aSeat({ magic_own: 3 })],
       holdings: [wand(), aHolding({ id: "s-1", card_id: "krag-plomieni", kind: "spell" })],
     });
     expect(() => drawSpellWithWand(holding, { seatId: "seat-a", shuffle: never })).toThrow(
@@ -395,7 +395,7 @@ describe("Różdżka Zaklęć", () => {
   /** The Czarodziej was dealt two at setup, so two is where the wand starts refilling. */
   it("measures a character against its own setup hand, not against 2.6", () => {
     const wizard = table({
-      seats: [aSeat({ character_id: asSeatCharacter("czarodziej"), magia_own: 5 })],
+      seats: [aSeat({ character_id: asSeatCharacter("czarodziej"), magic_own: 5 })],
       holdings: [
         wand(),
         aHolding({ id: "s-1", card_id: "krag-plomieni", kind: "spell" }),

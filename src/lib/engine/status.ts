@@ -78,7 +78,7 @@ export interface Status {
  * What the holder gets, summed.
  *
  * Computed, never stored — the same rule 1.2-1.5 puts on Przedmioty and
- * Przyjaciele. A buff that wrote itself into `miecz_own` would survive its own
+ * Przyjaciele. A buff that wrote itself into `sword_own` would survive its own
  * expiry, and rule 1.3 would then refuse to take it back off, because own
  * points may never fall below where the character started.
  */

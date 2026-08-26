@@ -60,8 +60,8 @@ describe("what the box holds (CO NALEŻY ZABRAĆ NA WYPRAWĘ)", () => {
     // exported files, so a token that stops being cut fails here rather than
     // going missing from a seat card.
     const printed = [
-      ...["miecz", "magia", "zycie"].flatMap((stat) => [1, 2, 3, 4].map((n) => `${stat}-${n}`)),
-      "zloto",
+      ...["sword", "magic", "life"].flatMap((stat) => [1, 2, 3, 4].map((n) => `${stat}-${n}`)),
+      "gold",
     ];
     const cut = readdirSync("public/tokens")
       .filter((file) => file.endsWith(".png"))

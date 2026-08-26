@@ -44,7 +44,7 @@ export const CARD_CLASS_LABEL: Record<CardClass, string> = {
   place: "Miejsce",
 };
 
-export type Nature = "dobra" | "zla" | "chaotyczna";
+export type Nature = "good" | "evil" | "chaotic";
 
 /**
  * What a character card prints in its `natura:` slot. Kat is the exception the
@@ -53,7 +53,7 @@ export type Nature = "dobra" | "zla" | "chaotyczna";
  * this wider type and the *seat* carries the narrow `Nature`, resolved once the
  * choice is made.
  */
-export type StartingNature = Nature | "dowolna";
+export type StartingNature = Nature | "any";
 
 /** Which of the three rings a board field belongs to, or the bridge across them. */
 export type Region = "dolny" | "srodkowy" | "gorny" | "most";
@@ -103,7 +103,7 @@ export interface Character {
   id: CharacterId;
   name: string;
   source: { sheet: string; index: number };
-  /** Kat prints "dowolna" — the player chooses at setup. See StartingNature. */
+  /** Kat prints "any" — the player chooses at setup. See StartingNature. */
   nature: StartingNature;
   /** Starting Miecz and Magia, printed down the card's left edge. */
   miecz: number;

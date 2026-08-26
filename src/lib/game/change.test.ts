@@ -40,8 +40,8 @@ describe("apply", () => {
     const table = aTable({
       seats: [aSeat({ id: "a", seat_index: 0 }), aSeat({ id: "b", seat_index: 1 })],
     });
-    const after = apply(table, { seats: [{ id: "b", patch: { zycie: 1 } }] });
-    expect(after.seats.map((s) => s.zycie)).toEqual([4, 1]);
+    const after = apply(table, { seats: [{ id: "b", patch: { life: 1 } }] });
+    expect(after.seats.map((s) => s.life)).toEqual([4, 1]);
   });
 
   it("removes deleted holdings and keeps the rest", () => {
@@ -80,26 +80,26 @@ describe("apply", () => {
    * shape: the point of Życie, and then the bar on trying again next turn.
    */
   it("folds two patches for the same seat instead of keeping the last", () => {
-    const table = aTable({ seats: [aSeat({ id: "a", zycie: 4, bridge_blocked_until_turn: null })] });
+    const table = aTable({ seats: [aSeat({ id: "a", life: 4, bridge_blocked_until_turn: null })] });
     const after = apply(table, {
       seats: [
-        { id: "a", patch: { zycie: 3 } },
+        { id: "a", patch: { life: 3 } },
         { id: "a", patch: { bridge_blocked_until_turn: 9 } },
       ],
     });
-    expect(after.seats[0].zycie).toBe(3);
+    expect(after.seats[0].life).toBe(3);
     expect(after.seats[0].bridge_blocked_until_turn).toBe(9);
   });
 
   it("lets a later patch win on the same column", () => {
-    const table = aTable({ seats: [aSeat({ id: "a", zloto: 1 })] });
+    const table = aTable({ seats: [aSeat({ id: "a", gold: 1 })] });
     const after = apply(table, {
       seats: [
-        { id: "a", patch: { zloto: 2 } },
-        { id: "a", patch: { zloto: 5 } },
+        { id: "a", patch: { gold: 2 } },
+        { id: "a", patch: { gold: 5 } },
       ],
     });
-    expect(after.seats[0].zloto).toBe(5);
+    expect(after.seats[0].gold).toBe(5);
   });
 
   it("does the same for holdings and effects", () => {
@@ -107,12 +107,12 @@ describe("apply", () => {
     const after = apply(table, {
       holdings: {
         patch: [
-          { id: "h1", patch: { slot: "glowa" } },
+          { id: "h1", patch: { slot: "head" } },
           { id: "h1", patch: { ordinal: 3 } },
         ],
       },
     });
-    expect(after.holdings[0]).toMatchObject({ slot: "glowa", ordinal: 3 });
+    expect(after.holdings[0]).toMatchObject({ slot: "head", ordinal: 3 });
   });
 
   /** The property the cascades rely on: a command can read its own work. */

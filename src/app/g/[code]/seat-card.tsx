@@ -256,7 +256,7 @@ export function SeatCard({
                 <div className="flex flex-col justify-between gap-2 py-1">
                   <RailStat
                     label="Miecz"
-                    value={seat.miecz_own}
+                    value={seat.sword_own}
                     total={seat.miecz_total}
                     inFight={seat.miecz_walka}
                     stat="miecz"
@@ -265,7 +265,7 @@ export function SeatCard({
                   />
                   <RailStat
                     label="Magia"
-                    value={seat.magia_own}
+                    value={seat.magic_own}
                     total={seat.magia_total}
                     inFight={seat.magia_walka}
                     stat="magia"
@@ -309,15 +309,15 @@ export function SeatCard({
                 <div className="flex flex-col justify-between gap-2 py-1">
                   <RailStat
                     label="Złoto"
-                    value={seat.zloto}
-                    stat="zloto"
+                    value={seat.gold}
+                    stat="gold"
                     canAdjust={canCorrect}
                     onAdjust={onAdjust}
                   />
                   <RailStat
                     label="Życie"
-                    value={seat.zycie}
-                    stat="zycie"
+                    value={seat.life}
+                    stat="life"
                     canAdjust={canCorrect}
                     onAdjust={onAdjust}
                   />
@@ -436,7 +436,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
    * parameter it belongs to.
    */
   const SIZE = 16;
-  if (stat === "zloto") {
+  if (stat === "gold") {
     /**
      * Money is a stack, not a row.
      *
@@ -474,7 +474,7 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
               (_, index) => (
                 <Image
                   key={index}
-                  src="/tokens/zloto.png"
+                  src="/tokens/gold.png"
                   alt=""
                   width={SIZE}
                   height={SIZE}
@@ -580,7 +580,7 @@ function RailStat({
   // sense that matters — its stack is all ones — and a total the żetony do not
   // add up to has to be written down whatever the pile looks like.
   const saysItself =
-    stat !== "zloto" && shown === value && tokensFor(value).length === 1;
+    stat !== "gold" && shown === value && tokensFor(value).length === 1;
 
   return (
     // No width of its own. It was a fixed nine while a pile was always one
@@ -696,7 +696,7 @@ function EffectMark({
         kindLabel: mark.title,
       }
     : null;
-  const { handlers, preview } = useCardPreview(card, false, "klasyczny", nature);
+  const { handlers, preview } = useCardPreview(card, false, "classic", nature);
   const art = cardArtUrl(mark.source);
   // The shape a card is drawn in everywhere else: the illustration export is
   // 240x155 and every slot in the pack and on the body takes that ratio, so a
@@ -799,8 +799,8 @@ const COLUMNS_MAX = 3;
 const STAT_COLOUR: Record<string, string> = {
   miecz: "text-miecz",
   magia: "text-magia",
-  zycie: "text-zycie",
-  zloto: "text-zloto",
+  life: "text-zycie",
+  gold: "text-zloto",
 };
 
 /**

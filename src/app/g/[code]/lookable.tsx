@@ -29,7 +29,7 @@ export function Lookable({
   kind,
   id,
   name,
-  eqMode = "klasyczny",
+  eqMode = "classic",
   className = "",
 }: {
   kind: LookKind;

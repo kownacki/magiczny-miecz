@@ -211,7 +211,7 @@ function fold(text: string): string {
 export function CardLibrary({
   onClose,
   onGrant,
-  eqMode = "klasyczny",
+  eqMode = "classic",
   nature = null,
 }: {
   onClose: () => void;

@@ -117,9 +117,9 @@ export function totalsFor(
   },
 ): Totals {
   const bonus = bonusesFrom(seat.holdings, items, options);
-  const magia = seat.magiaOwn + bonus.magia;
+  const magia = seat.magicOwn + bonus.magia;
   return {
-    miecz: seat.mieczOwn + bonus.miecz,
+    miecz: seat.swordOwn + bonus.miecz,
     magia,
     spellCapacity: spellAllowance(
       magia,
@@ -134,9 +134,9 @@ export function totalsFor(
  * rules 1.3 and 2.3: own points can be lost, but never below the value the
  * character started the game with.
  */
-export function adjustOwn(seat: Seat, stat: "miecz" | "magia", delta: number): Seat {
-  const ownKey = stat === "miecz" ? "mieczOwn" : "magiaOwn";
-  const floorKey = stat === "miecz" ? "mieczFloor" : "magiaFloor";
+export function adjustOwn(seat: Seat, stat: "sword" | "magic", delta: number): Seat {
+  const ownKey = stat === "sword" ? "swordOwn" : "magicOwn";
+  const floorKey = stat === "sword" ? "swordFloor" : "magicFloor";
   return { ...seat, [ownKey]: Math.max(seat[floorKey], seat[ownKey] + delta) };
 }
 
@@ -159,19 +159,19 @@ export const HEAL_CEILING = 4;
  *
  * Healing is arithmetic on one number, and asking for a whole `Seat` to do it
  * meant the one caller had to invent one — `heal({ ...(row as unknown as Seat),
- * zycie: row.zycie })`, a cast that produced an object whose every other
+ * life: row.life })`, a cast that produced an object whose every other
  * engine-named field was `undefined` and worked only because nothing looked at
  * them. Asking for what it uses is honest and costs the caller nothing.
  */
-export function heal<T extends Pick<Seat, "zycie">>(seat: T, amount: number): T {
+export function heal<T extends Pick<Seat, "life">>(seat: T, amount: number): T {
   return {
     ...seat,
-    zycie: Math.max(seat.zycie, Math.min(HEAL_CEILING, seat.zycie + amount)),
+    life: Math.max(seat.life, Math.min(HEAL_CEILING, seat.life + amount)),
   };
 }
 
 export function gainLife(seat: Seat, amount: number): Seat {
-  return { ...seat, zycie: seat.zycie + amount };
+  return { ...seat, life: seat.life + amount };
 }
 
 /**
@@ -225,15 +225,15 @@ export const SLOTTED_PACK_LIMIT = 16;
  */
 export function carryLimit(
   holdings: readonly Holding[],
-  eqMode: EqMode = "klasyczny",
+  eqMode: EqMode = "classic",
 ): number {
   // In the slotted variant a Koń pulls nothing while it is in the pack: the
   // whole point of the variant is that a thing works where it is worn, and the
   // mount place is where a mount is worn.
   const counts = (held: Holding) =>
-    held.kind !== "trophy" && (eqMode === "klasyczny" || held.slot != null);
+    held.kind !== "trophy" && (eqMode === "classic" || held.slot != null);
   const carried = holdings.filter(counts).map((h) => h.cardId);
-  const base = eqMode === "slotowy" ? SLOTTED_PACK_LIMIT : BASE_CARRY_LIMIT;
+  const base = eqMode === "slots" ? SLOTTED_PACK_LIMIT : BASE_CARRY_LIMIT;
   return abilityCarryLimit(heldAbilities(carried), base);
 }
 
@@ -246,7 +246,7 @@ export function carryLimit(
  */
 export function carriedCount(
   holdings: readonly Holding[],
-  eqMode: EqMode = "klasyczny",
+  eqMode: EqMode = "classic",
 ): number {
   return holdings.filter(
     (held) =>
@@ -255,7 +255,7 @@ export function carriedCount(
       // Tarcza Tolimana never count against the four of 5.4, in either variant,
       // because neither is a thing anybody chooses to carry.
       !RELICS.has(held.cardId) &&
-      (eqMode === "klasyczny" || held.slot == null),
+      (eqMode === "classic" || held.slot == null),
   ).length;
 }
 

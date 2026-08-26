@@ -56,7 +56,7 @@ export function whenApplies(
   // Nothing to say when the card just has to be on you. "Gdy w plecaku" was
   // true of almost everything and therefore told a player nothing; the label is
   // worth a line only where there is a condition to meet.
-  return eqMode === "slotowy" && isWearable(cardId) ? "gdy założony" : null;
+  return eqMode === "slots" && isWearable(cardId) ? "gdy założony" : null;
 }
 
 /** One formalised line: what it gives, and when it gives it. */
@@ -99,6 +99,10 @@ export interface ItemProfile {
 }
 
 /** Kinds that state a condition on holding the card at all, rather than a benefit. */
+/** A Natura is stored in English and printed as the card prints it. */
+const natureWord = (n: string) =>
+  ({ good: "dobra", evil: "zła", chaotic: "chaotyczna" })[n] ?? n;
+
 const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
 
 /**
@@ -113,7 +117,7 @@ const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
  */
 const IS_SPECIAL = new Set<Ability["kind"]>(["niedostepny"]);
 
-export function itemProfile(cardId: string, eqMode: EqMode = "klasyczny"): ItemProfile {
+export function itemProfile(cardId: string, eqMode: EqMode = "classic"): ItemProfile {
   const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
   const slots = slotsFor(cardId);
   const lines = abilities.map((ability) => ({
@@ -167,7 +171,7 @@ export function forbiddenNatures(cardId: string): readonly Nature[] | undefined 
   const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
   const only = abilities.find((ability) => ability.kind === "tylko-natura");
   if (!only || only.kind !== "tylko-natura") return undefined;
-  return (["dobra", "zla", "chaotyczna"] as const).filter(
+  return (["good", "evil", "chaotic"] as const).filter(
     (nature) => !only.natury.includes(nature),
   );
 }
@@ -195,7 +199,7 @@ export function characterProfile(characterId: string): ItemProfile {
       what: describeAbility(ability),
       // A character wears nothing and carries nothing: klasyczny keeps this to
       // the plain answer, and only the combat-only rules narrow it.
-      when: whenApplies(ability, characterId, "klasyczny"),
+      when: whenApplies(ability, characterId, "classic"),
     })),
   };
 }
@@ -223,10 +227,10 @@ export function describeAbility(ability: Ability): string {
       // the Czarci Młyn and a Zła one at the Studnia Wieczności, and dropping
       // that read as sparing everyone at both.
       const onlyFor = ability.natura?.length
-        ? ` — jeśli ${ability.natura.map((n) => (n === "zla" ? "zła" : n)).join(" lub ")}`
+        ? ` — jeśli ${ability.natura.map(natureWord).join(" lub ")}`
         : "";
       if (ability.from === "rzut") return `bez rzutu: ${where}${onlyFor}`;
-      if (ability.from === "zycie") return `bez straty Życia: ${where}${onlyFor}`;
+      if (ability.from === "life") return `bez straty Życia: ${where}${onlyFor}`;
       return `bez straty Przedmiotu: ${where}${onlyFor}`;
     }
     case "ucieczka": {
@@ -289,14 +293,14 @@ export function describeAbility(ability: Ability): string {
         : `${ability.delta > 0 ? "+" : "−"}${Math.abs(ability.delta)}`;
       const where =
         ability.gdzie.na === "walke"
-          ? ability.gdzie.rodzaj === "magiczna"
+          ? ability.gdzie.rodzaj === "magical"
             ? "w walce magicznej"
             : "w walce zwykłej"
           : `na: ${ability.gdzie.fields.map(fieldName).join(", ")}`;
       return `${sign} do rzutu ${where}${ability.jednorazowy ? " (raz)" : ""}`;
     }
     case "tylko-natura": {
-      const natury = ability.natury.map((n) => (n === "zla" ? "zła" : n)).join(" lub ");
+      const natury = ability.natury.map(natureWord).join(" lub ");
       return `tylko Postać: ${natury} (5.3)`;
     }
     case "przeciw": {

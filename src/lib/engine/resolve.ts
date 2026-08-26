@@ -65,7 +65,7 @@ export function isSettled(effect: Effect): boolean {
      * supposed to be free of.
      */
     case "strata":
-      if (effect.co === "wszystkie-przedmioty" || effect.co === "zloto") return true;
+      if (effect.co === "wszystkie-przedmioty" || effect.co === "gold") return true;
       return effect.wybor === "losowo";
 
     // A die table is settled only if every face it can land on is. Rolled

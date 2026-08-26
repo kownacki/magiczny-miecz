@@ -8,7 +8,7 @@ const byName = (name: string) => EVENTS.find((c) => c.name === name)!;
 
 describe("combat values (16.2, 16.3)", () => {
   it("reads an ordinary enemy's Miecz", () => {
-    expect(combatValueOf(byName("CYKLOP"))).toEqual({ kind: "zwykla", total: 6 });
+    expect(combatValueOf(byName("CYKLOP"))).toEqual({ kind: "ordinary", total: 6 });
   });
 
   it("refuses to fight an item that merely grants a bonus", () => {

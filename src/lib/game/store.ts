@@ -25,12 +25,12 @@ export interface SeatRow {
   /** One of the 27 cards, the surprise sentinel, or nothing chosen yet. */
   character_id: SeatCharacter | null;
   field_id: FieldId | null;
-  miecz_own: number;
-  magia_own: number;
-  miecz_floor: number;
-  magia_floor: number;
-  zycie: number;
-  zloto: number;
+  sword_own: number;
+  magic_own: number;
+  sword_floor: number;
+  magic_floor: number;
+  life: number;
+  gold: number;
   nature: string | null;
   turns_lost: number;
   stone_until_turn: number | null;
@@ -80,7 +80,7 @@ export const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,player_name,character_id,field_id,miecz_own,magia_own,miecz_floor,magia_floor,zycie,zloto,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,no_device,eliminated,is_host,created_at,left_at";
+  "id,seat_index,player_name,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,abandoned_at,seen_at,ready,no_device,eliminated,is_host,created_at,left_at";
 
 /**
  * Creates a table and returns the host's seat token.
@@ -104,7 +104,7 @@ export type { GameMode } from "./modes";
 export async function createGame(
   hostName: string | null = null,
   mode: GameMode = "simulation",
-  eqMode: EqMode = "slotowy",
+  eqMode: EqMode = "slots",
 ): Promise<{ game: GameRow; hostToken: string }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const joinCode = makeJoinCode();
@@ -351,10 +351,10 @@ export async function chooseCharacter(
         // character. Leaving a Książę's five gold on a seat that is now taking
         // a surprise would hand it to whoever the surprise turns out to be.
         field_id: null,
-        miecz_own: 0,
-        magia_own: 0,
-        miecz_floor: 0,
-        magia_floor: 0,
+        sword_own: 0,
+        magic_own: 0,
+        sword_floor: 0,
+        magic_floor: 0,
         nature: null,
       })
       .eq("id", seatId);
@@ -385,13 +385,13 @@ export async function chooseCharacter(
     .update({
       character_id: character.id,
       field_id: field,
-      miecz_own: character.miecz,
-      magia_own: character.magia,
-      miecz_floor: character.miecz,
-      magia_floor: character.magia,
-      // Kat prints "dowolna" and picks at setup, so it is left unset here for
+      sword_own: character.miecz,
+      magic_own: character.magia,
+      sword_floor: character.miecz,
+      magic_floor: character.magia,
+      // Kat prints "any" and picks at setup, so it is left unset here for
       // the player to choose rather than being silently defaulted.
-      nature: character.nature === "dowolna" ? null : character.nature,
+      nature: character.nature === "any" ? null : character.nature,
     })
     .eq("id", seatId);
   if (error) throw new Error(`chooseCharacter: ${error.message}`);
@@ -751,7 +751,7 @@ export async function removeSeat(
     const mine = held.filter((holding) => holding.seat_id === seatId);
     const dropped = [
       ...mine.filter((holding) => holding.kind !== "spell").map((holding) => holding.card_id),
-      ...Array.from({ length: seat.zloto }, () => "1-sztuka-zlota"),
+      ...Array.from({ length: seat.gold }, () => "1-sztuka-zlota"),
     ];
     if (dropped.length > 0) {
       await db.from("field_cards").insert(

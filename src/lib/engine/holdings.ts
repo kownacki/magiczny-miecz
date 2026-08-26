@@ -120,7 +120,7 @@ export function inEffect<T extends { cardId: string; slot?: string | null }>(
   holdings: readonly T[],
   eqMode: EqMode,
 ): T[] {
-  if (eqMode === "klasyczny") return [...holdings];
+  if (eqMode === "classic") return [...holdings];
   return holdings.filter((held) => held.slot != null || !isWearable(held.cardId));
 }
 

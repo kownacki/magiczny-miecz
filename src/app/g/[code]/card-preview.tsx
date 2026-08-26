@@ -51,7 +51,7 @@ const GAP = 12;
 export function useCardPreview(
   card: TileCard | null,
   imageless = false,
-  eqMode: EqMode = "klasyczny",
+  eqMode: EqMode = "classic",
   /** Who is looking, so a requirement can say whether THEY meet it. */
   nature: Nature | null = null,
 ) {
@@ -83,7 +83,7 @@ export function CardPreview({
   card,
   anchor,
   imageless = false,
-  eqMode = "klasyczny",
+  eqMode = "classic",
   nature = null,
 }: {
   card: TileCard;

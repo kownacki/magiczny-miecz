@@ -132,9 +132,9 @@ export function PlayersDrawer({
                   <span className="text-muted"> / </span>
                   <span className="text-magia">{seat.magia}</span>
                   <span className="text-muted"> / </span>
-                  <span className="text-zycie">{seat.zycie}</span>
+                  <span className="text-zycie">{seat.life}</span>
                   <span className="text-muted"> / </span>
-                  <span className="text-zloto">{seat.zloto}</span>
+                  <span className="text-zloto">{seat.gold}</span>
                 </span>
                 <span className="shrink-0 text-[10px] text-muted">{expanded ? "−" : "+"}</span>
               </button>
@@ -178,11 +178,11 @@ export function PlayersDrawer({
                       <Row label="Natura" value={seat.nature ?? "—"} />
                       <Row
                         label="Miecz"
-                        value={`${seat.miecz}${seat.miecz !== seat.mieczOwn ? ` (${seat.mieczOwn} własne)` : ""}`}
+                        value={`${seat.miecz}${seat.miecz !== seat.swordOwn ? ` (${seat.swordOwn} własne)` : ""}`}
                       />
                       <Row
                         label="Magia"
-                        value={`${seat.magia}${seat.magia !== seat.magiaOwn ? ` (${seat.magiaOwn} własne)` : ""}`}
+                        value={`${seat.magia}${seat.magia !== seat.magicOwn ? ` (${seat.magicOwn} własne)` : ""}`}
                       />
                       {seat.turnsLost > 0 && (
                         <Row label="Traci tur" value={String(seat.turnsLost)} />

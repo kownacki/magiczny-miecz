@@ -76,14 +76,14 @@ export function SeatActions({
 
           {showNature && (
           <Row label="Natura (7.2)">
-            {(["dobra", "chaotyczna", "zla"] as const).map((option) => (
+            {(["good", "chaotic", "evil"] as const).map((option) => (
               <Action
                 key={option}
                 busy={busy}
                 active={nature === option}
                 onClick={() => onNature(option)}
               >
-                {option === "zla" ? "zła" : option}
+                {option === "evil" ? "zła" : option}
               </Action>
             ))}
             <Note>Najwyżej raz na turę (7.3).</Note>

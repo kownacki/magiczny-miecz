@@ -52,7 +52,7 @@ export function cardName(cardId: string): string {
  * nie mogą posiadać Złe Postacie" — so it is data in the ability registry
  * rather than a field on the card, and the rule and the hover cannot disagree.
  */
-function forbiddenFor(card: EventCard): ("dobra" | "zla" | "chaotyczna")[] | undefined {
+function forbiddenFor(card: EventCard): ("good" | "evil" | "chaotic")[] | undefined {
   const forbidden = forbiddenNatures(card.id);
   return forbidden ? [...forbidden] : undefined;
 }
@@ -426,7 +426,7 @@ export function equipCard(
   snapshot: Snapshot,
   command: { holdingId: string; slot: Slot | null },
 ): Outcome<void> {
-  if (snapshot.game.eq_mode !== "slotowy") {
+  if (snapshot.game.eq_mode !== "slots") {
     throw new Error("Ten stół gra klasycznym ekwipunkiem — nie ma miejsc na przedmioty.");
   }
 
@@ -440,7 +440,7 @@ export function equipCard(
     // its helmet, and the rulebook's answer to being over the limit is to drop
     // something (5.6) — so it says so rather than quietly making a fifth place.
     const mine = holdingsOf(snapshot, held.seat_id);
-    if (carriedCount(mine, "slotowy") >= carryLimit(mine, "slotowy")) {
+    if (carriedCount(mine, "slots") >= carryLimit(mine, "slots")) {
       throw new Error("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
     }
     // Nothing to write when the card is already there: the client sends this

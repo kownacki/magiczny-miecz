@@ -16,7 +16,7 @@ suite("reading a line", () => {
   it("splits a verb from a number somebody glued to it", () => {
     // `sword+1` is what a hand types in a hurry. Split only where the sign or
     // the digit begins, so a name with a number in it is never broken.
-    expect(ok("sword+1")).toEqual({ kind: "stat", stat: "miecz", delta: 1, set: null, who: null, force: false });
+    expect(ok("sword+1")).toEqual({ kind: "stat", stat: "sword", delta: 1, set: null, who: null, force: false });
     expect(ok("gold+5 Ola")).toMatchObject({ delta: 5, who: "Ola" });
     expect(ok("gold-2")).toMatchObject({ delta: -2 });
   });
@@ -42,16 +42,16 @@ suite("reading a line", () => {
 
 suite("moving a parameter", () => {
   it("reads a sign, and reads a bare number as a gain", () => {
-    expect(ok("gold +5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, set: null, who: null, force: false });
-    expect(ok("gold 5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, set: null, who: null, force: false });
-    expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, set: null, who: null, force: false });
+    expect(ok("gold +5")).toEqual({ kind: "stat", stat: "gold", delta: 5, set: null, who: null, force: false });
+    expect(ok("gold 5")).toEqual({ kind: "stat", stat: "gold", delta: 5, set: null, who: null, force: false });
+    expect(ok("gold -3")).toEqual({ kind: "stat", stat: "gold", delta: -3, set: null, who: null, force: false });
   });
 
   it("knows the four parameters, and only by their English names", () => {
-    expect(ok("sword +1")).toMatchObject({ stat: "miecz" });
-    expect(ok("magic +1")).toMatchObject({ stat: "magia" });
-    expect(ok("life -1")).toMatchObject({ stat: "zycie" });
-    expect(ok("gold +1")).toMatchObject({ stat: "zloto" });
+    expect(ok("sword +1")).toMatchObject({ stat: "sword" });
+    expect(ok("magic +1")).toMatchObject({ stat: "magic" });
+    expect(ok("life -1")).toMatchObject({ stat: "life" });
+    expect(ok("gold +1")).toMatchObject({ stat: "gold" });
     // The line between the two languages: what you type is English, what you
     // name keeps the name printed on it. A stat is typed.
     expect(err("miecz +1")).toMatch(/No command/);
@@ -110,7 +110,7 @@ suite("naming a card, a field or a creature", () => {
    * because those are the names on the cards and the board in front of you.
    */
   it("types English and names Polish", () => {
-    expect(ok("magic +1")).toMatchObject({ stat: "magia" });
+    expect(ok("magic +1")).toMatchObject({ stat: "magic" });
     expect(err("magia +1")).toMatch(/No command/);
     expect(ok("give MAGICZNY MIECZ")).toMatchObject({ cardId: "magiczny-miecz" });
     expect(ok("go Świątynia Tolimana")).toMatchObject({ fieldId: "swiatynia-tolimana" });
@@ -165,9 +165,9 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("takes a Natura by its English name, and says which three there are", () => {
-    expect(ok("nature evil")).toEqual({ kind: "nature", nature: "zla", who: null });
-    expect(ok("nature good Ola")).toEqual({ kind: "nature", nature: "dobra", who: "Ola" });
-    expect(ok("nature chaotic")).toMatchObject({ nature: "chaotyczna" });
+    expect(ok("nature evil")).toEqual({ kind: "nature", nature: "evil", who: null });
+    expect(ok("nature good Ola")).toEqual({ kind: "nature", nature: "good", who: "Ola" });
+    expect(ok("nature chaotic")).toMatchObject({ nature: "chaotic" });
     expect(err("nature")).toMatch(/good, evil, chaotic/);
     expect(err("nature zla")).toMatch(/Which Natura/);
   });
@@ -440,7 +440,7 @@ suite("finishing a half-typed line", () => {
  */
 const USAGE: Record<string, { line: string; becomes: unknown }> = {
   help: { line: "help", becomes: { kind: "help", about: null } },
-  gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "zloto", delta: 5, set: null, who: "Ola", force: false } },
+  gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "gold", delta: 5, set: null, who: "Ola", force: false } },
   kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
   revive: {
     line: "revive Ola as MAGOG",
@@ -448,7 +448,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   },
   nature: {
     line: "nature evil Ola",
-    becomes: { kind: "nature", nature: "zla", who: "Ola" },
+    becomes: { kind: "nature", nature: "evil", who: "Ola" },
   },
   turn: { line: "turn Ola", becomes: { kind: "turn", who: "Ola" } },
   stone: { line: "stone Ola", becomes: { kind: "stone", who: "Ola" } },
@@ -527,33 +527,33 @@ suite("every command, once each", () => {
 
 suite("what the console says a parameter did", () => {
   const said = (over: Partial<Parameters<typeof statReply>[0]>) =>
-    statReply({ who: "Michał", stat: "magia", asked: -1, moved: -1, now: 2, floor: 3, ...over });
+    statReply({ who: "Michał", stat: "magic", asked: -1, moved: -1, now: 2, floor: 3, ...over });
 
   it("says the change when the whole of it landed", () => {
-    expect(said({})).toBe("Michał: magia -1 → 2");
-    expect(said({ asked: 2, moved: 2, now: 5 })).toBe("Michał: magia +2 → 5");
+    expect(said({})).toBe("Michał: magic -1 → 2");
+    expect(said({ asked: 2, moved: 2, now: 5 })).toBe("Michał: magic +2 → 5");
   });
 
   /**
-   * The bug this exists for. A Magia at its floor answered "magia -1 → 3",
+   * The bug this exists for. A Magia at its floor answered "magic -1 → 3",
    * which is the value it ended on and reads exactly like it worked — twice in
    * a row, identically, which is how it was found.
    */
   it("says nothing happened, rather than printing the value it did not change", () => {
     expect(said({ moved: 0, now: 3 })).toBe(
-      "Michał: magia stays at 3 — magia cannot go below the 3 this character started with (1.3, 2.3) — say `force` to.",
+      "Michał: magic stays at 3 — magic cannot go below the 3 this character started with (1.3, 2.3) — say `force` to.",
     );
   });
 
   it("says how much of it landed when the floor took the rest", () => {
-    expect(said({ asked: -5, moved: -2, now: 3 })).toContain("magia -2 → 3, not -5");
+    expect(said({ asked: -5, moved: -2, now: 3 })).toContain("magic -2 → 3, not -5");
   });
 
   it("does not offer `force` to somebody who already said it", () => {
     expect(said({ moved: 0, now: 0, forced: true })).toBe(
-      "Michał: magia stays at 0 — magia cannot go below 0.",
+      "Michał: magic stays at 0 — magic cannot go below 0.",
     );
-    expect(said({ forced: true })).toBe("Michał: magia -1 → 2 (forced)");
+    expect(said({ forced: true })).toBe("Michał: magic -1 → 2 (forced)");
   });
 
   it("says the same thing about a number under its floor as one sitting on it", () => {
@@ -561,19 +561,19 @@ suite("what the console says a parameter did", () => {
     // what somebody typing needs is the same either way: it did not move, here
     // is the rule, here is the word that gets past it.
     expect(said({ moved: 0, now: 1 })).toBe(
-      "Michał: magia stays at 1 — magia cannot go below the 3 this character started with (1.3, 2.3) — say `force` to.",
+      "Michał: magic stays at 1 — magic cannot go below the 3 this character started with (1.3, 2.3) — say `force` to.",
     );
   });
 
   it("says the ceiling in its own words, not the floor's", () => {
     expect(said({ asked: 500, moved: 0, now: 999 })).toBe(
-      "Michał: magia stays at 999 — magia stops at 999.",
+      "Michał: magic stays at 999 — magic stops at 999.",
     );
   });
 
   it("says it for Złoto without quoting a rule about own points", () => {
-    expect(said({ stat: "zloto", moved: 0, now: 0, floor: 0 })).toBe(
-      "Michał: zloto stays at 0 — zloto cannot go below 0.",
+    expect(said({ stat: "gold", moved: 0, now: 0, floor: 0 })).toBe(
+      "Michał: gold stays at 0 — gold cannot go below 0.",
     );
   });
 });

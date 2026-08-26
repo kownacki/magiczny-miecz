@@ -29,20 +29,20 @@ describe("carrying out what a Karta says", () => {
   });
 
   it("moves points and declines the noun", async () => {
-    const { writes, result } = await run({ op: "punkty", stat: "miecz", delta: 2, target: "ty" });
+    const { writes, result } = await run({ op: "punkty", stat: "sword", delta: 2, target: "ty" });
     expect(result.did).toEqual(["+2 Miecza"]);
-    expect(writes.seats?.[0]).toMatchObject({ id: "seat-a", patch: { miecz_own: 4 } });
+    expect(writes.seats?.[0]).toMatchObject({ id: "seat-a", patch: { sword_own: 4 } });
     expect(writes.journal?.[0]).toMatchObject({ kind: "points", manual: false });
   });
 
   it("declines Złoto, which is the one that declines", async () => {
-    expect((await run({ op: "punkty", stat: "zloto", delta: 1, target: "ty" })).result.did).toEqual([
+    expect((await run({ op: "punkty", stat: "gold", delta: 1, target: "ty" })).result.did).toEqual([
       "+1 Sztukę Złota",
     ]);
-    expect((await run({ op: "punkty", stat: "zloto", delta: 3, target: "ty" })).result.did).toEqual([
+    expect((await run({ op: "punkty", stat: "gold", delta: 3, target: "ty" })).result.did).toEqual([
       "+3 Sztuki Złota",
     ]);
-    expect((await run({ op: "punkty", stat: "zloto", delta: 7, target: "ty" })).result.did).toEqual([
+    expect((await run({ op: "punkty", stat: "gold", delta: 7, target: "ty" })).result.did).toEqual([
       "+7 Sztuk Złota",
     ]);
   });
@@ -58,13 +58,13 @@ describe("carrying out what a Karta says", () => {
     const { writes } = await run({
       op: "po-kolei",
       steps: [
-        { op: "punkty", stat: "miecz", delta: 1, target: "ty" },
-        { op: "punkty", stat: "miecz", delta: 1, target: "ty" },
+        { op: "punkty", stat: "sword", delta: 1, target: "ty" },
+        { op: "punkty", stat: "sword", delta: 1, target: "ty" },
       ],
     });
     // Two patches for one row, folded in order by `apply` exactly as `commit`
     // applies them: 2 → 3 → 4.
-    expect(writes.seats?.map((s) => s.patch)).toEqual([{ miecz_own: 3 }, { miecz_own: 4 }]);
+    expect(writes.seats?.map((s) => s.patch)).toEqual([{ sword_own: 3 }, { sword_own: 4 }]);
   });
 
   /**
@@ -77,7 +77,7 @@ describe("carrying out what a Karta says", () => {
     const undecided: Effect = {
       op: "po-kolei",
       steps: [
-        { op: "punkty", stat: "miecz", delta: 1, target: "ty" },
+        { op: "punkty", stat: "sword", delta: 1, target: "ty" },
         { op: "wybor", options: [{ label: "A", effect: { op: "nic" } }] },
       ],
     };
@@ -91,7 +91,7 @@ describe("a choice the player makes", () => {
   const choice: Effect = {
     op: "wybor",
     options: [
-      { label: "+1 Miecza", effect: { op: "punkty", stat: "miecz", delta: 1, target: "ty" } },
+      { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1, target: "ty" } },
       { label: "nic", effect: { op: "nic" } },
     ],
   };
@@ -115,26 +115,26 @@ describe("a choice the player makes", () => {
 });
 
 describe("a condition on the character (gdy)", () => {
-  const onNature = (na: "dobra" | "zla"): Effect => ({
+  const onNature = (na: "good" | "evil"): Effect => ({
     op: "gdy",
     warunek: { is: "natura", jedna_z: [na] },
-    to: { op: "punkty", stat: "magia", delta: 1, target: "ty" },
+    to: { op: "punkty", stat: "magic", delta: 1, target: "ty" },
   });
 
   it("takes the branch when it holds", async () => {
-    const good = aTable({ seats: [aSeat({ id: "seat-a", nature: "dobra" })] });
-    expect((await run(onNature("dobra"), good)).result.did).toEqual(["+1 Magii"]);
+    const good = aTable({ seats: [aSeat({ id: "seat-a", nature: "good" })] });
+    expect((await run(onNature("good"), good)).result.did).toEqual(["+1 Magii"]);
   });
 
   it("says so when it does not, rather than doing nothing quietly", async () => {
-    const good = aTable({ seats: [aSeat({ id: "seat-a", nature: "dobra" })] });
-    const { writes, result } = await run(onNature("zla"), good);
+    const good = aTable({ seats: [aSeat({ id: "seat-a", nature: "good" })] });
+    const { writes, result } = await run(onNature("evil"), good);
     expect(writes).toEqual({});
     expect(result.did).toEqual(["warunek niespełniony — nic się nie dzieje"]);
   });
 
   it("reads the purse for ma-zloto", async () => {
-    const broke = aTable({ seats: [aSeat({ id: "seat-a", zloto: 0 })] });
+    const broke = aTable({ seats: [aSeat({ id: "seat-a", gold: 0 })] });
     const { result } = await run(
       { op: "gdy", warunek: { is: "ma-zloto" }, to: { op: "nic" } },
       broke,
@@ -199,7 +199,7 @@ describe("losing a turn (16.1)", () => {
 describe("losing what you carry (strata)", () => {
   const carrying = () =>
     aTable({
-      seats: [aSeat({ id: "seat-a", zloto: 3 })],
+      seats: [aSeat({ id: "seat-a", gold: 3 })],
       holdings: [
         aHolding({ id: "h1", card_id: "helm", kind: "item" }),
         aHolding({ id: "h2", card_id: "miecz", kind: "item" }),
@@ -235,13 +235,13 @@ describe("losing what you carry (strata)", () => {
   });
 
   it("takes gold off the seat rather than out of the pack (3.5)", async () => {
-    const { writes } = await run({ op: "strata", co: "zloto", count: 2, target: "ty" }, carrying());
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { zloto: 1 } }]);
+    const { writes } = await run({ op: "strata", co: "gold", count: 2, target: "ty" }, carrying());
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 1 } }]);
     expect(writes.holdings).toBeUndefined();
   });
 
   it("says there was nothing to lose rather than pretending something happened", async () => {
-    const empty = aTable({ seats: [aSeat({ id: "seat-a", zloto: 0 })] });
+    const empty = aTable({ seats: [aSeat({ id: "seat-a", gold: 0 })] });
     const { writes, result } = await run(
       { op: "strata", co: "wszystkie-przedmioty", target: "ty" },
       empty,
@@ -253,10 +253,10 @@ describe("losing what you carry (strata)", () => {
 
 describe("the rest of the vocabulary", () => {
   it("heals up to the starting level, and says so when there is nothing to heal", async () => {
-    const hurt = aTable({ seats: [aSeat({ id: "seat-a", zycie: 2 })] });
+    const hurt = aTable({ seats: [aSeat({ id: "seat-a", life: 2 })] });
     expect((await run({ op: "uzdrow", upTo: 1 }, hurt)).result.did).toEqual(["+3 Życia (4.7)"]);
 
-    const whole = aTable({ seats: [aSeat({ id: "seat-a", zycie: 4 })] });
+    const whole = aTable({ seats: [aSeat({ id: "seat-a", life: 4 })] });
     const { writes, result } = await run({ op: "uzdrow", upTo: 1 }, whole);
     expect(writes).toEqual({});
     expect(result.did).toEqual(["Życie już na poziomie początkowym"]);
@@ -269,7 +269,7 @@ describe("the rest of the vocabulary", () => {
   });
 
   it("changes a Natura and names it the way Polish does", async () => {
-    const { result } = await run({ op: "natura", na: "zla" });
+    const { result } = await run({ op: "natura", na: "evil" });
     expect(result.did).toEqual(["Natura: zła"]);
   });
 
