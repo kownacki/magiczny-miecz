@@ -31,6 +31,7 @@ import { SlotPanel } from "./slot-panel";
 import { CARD_NAMES, CARD_TEXTS, CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import Image from "next/image";
 import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
+import { SEAT_COLOURS } from "@/lib/view/boardMap";
 export function SeatCard({
   seat,
   active,
@@ -222,6 +223,15 @@ export function SeatCard({
           the name sits depends on the name alone. Effects appearing and wearing
           off cannot move it. */}
       <header className="mb-3 flex h-9 items-center gap-2">
+        {/* Your colour, beside your name, on the card you look at most.
+            Everything else in the app already speaks in these — the figure on
+            the board, the dots down the journal, the tinted card in the queue —
+            and nothing anywhere said which one was yours. */}
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: SEAT_COLOURS[seat.seat_index % SEAT_COLOURS.length] }}
+          aria-hidden
+        />
         <h3 className="font-[family-name:var(--font-display)] text-ink">
           {/* A seat with a character but no name is somebody who joined without
               typing one, not an empty chair — calling it "wolne" made a player

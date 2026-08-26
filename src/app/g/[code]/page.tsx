@@ -1348,7 +1348,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     <>
       {overlays}
       <TableLayout
-        footed={consoleOpen}
         drawer={
           <>
           {leftDrawer === "ksiega" && (
@@ -1562,6 +1561,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               {active && (
                 <NowBox
                   playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
+                  seatIndex={active.seat_index}
                   isMine={
                     (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
                   }

@@ -13,11 +13,13 @@
  * this answers "now", and they are the same question asked twice.
  */
 
+import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import type { TurnStep, TurnWindow, WindowId } from "@/lib/engine/turnWindows";
 import { Lookable } from "./lookable";
 
 export function NowBox({
   playerName,
+  seatIndex,
   isMine,
   fieldName,
   fieldId,
@@ -36,6 +38,8 @@ export function NowBox({
   onEnd,
 }: {
   playerName: string;
+  /** Whose colour to wear: the same one their figure has on the board. */
+  seatIndex: number;
   /** Whether the viewer is the one who has to do something about it. */
   isMine: boolean;
   fieldName: string;
@@ -80,7 +84,18 @@ export function NowBox({
       // for them and not the width. Nothing below moves when a window appears or the Obszar turns
       // out to have more to say than the last one did — and a hard height
       // clipped the buttons the moment a field offered two.
-      className="flex min-h-[180px] w-[270px] shrink-0 flex-col rounded-lg border border-ochre/40 bg-panel p-3"
+      /**
+       * Bordered in the colour of whoever is playing.
+       *
+       * The board already draws each character's figure in it, the journal dots
+       * every line with it, and the queue tints the cards — so the colour is
+       * the app's word for "whose", and this box is the one place that was
+       * saying whose without using it. Which meant reading the name to answer a
+       * question the colour answers at a glance, and from across a table you
+       * cannot read the name.
+       */
+      className="flex min-h-[180px] w-[270px] shrink-0 flex-col rounded-lg border bg-panel p-3"
+      style={{ borderColor: SEAT_COLOURS[seatIndex % SEAT_COLOURS.length] }}
     >
       <header className="mb-2 min-w-0">
         {/* What the box is, in the same hand as Dziennik and the other
@@ -94,8 +109,17 @@ export function NowBox({
         >
           Teraz
         </h2>
-        <p className="truncate font-[family-name:var(--font-display)] text-sm text-ochre">
-          {isMine ? "Twoja tura" : playerName}
+        <p className="flex min-w-0 items-center gap-1.5 font-[family-name:var(--font-display)] text-sm text-ochre">
+          {/* The same dot the journal puts beside every line, so the colour is
+              learned in the one place a player looks up most — including on
+              their own turn, which is where somebody finds out what colour they
+              are without being told. */}
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ background: SEAT_COLOURS[seatIndex % SEAT_COLOURS.length] }}
+            aria-hidden
+          />
+          <span className="truncate">{isMine ? "Twoja tura" : playerName}</span>
         </p>
         {/* Where the figure is standing. The board says it too, but the board
             is on the other side of the screen and this is the line you read
