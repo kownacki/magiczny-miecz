@@ -10,7 +10,7 @@ import { FIELDS, type FieldId } from "@/lib/engine/board";
 import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
-import { CardDetail, CardTile, type TileCard } from "./card-tile";
+import { CardTile, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
@@ -202,11 +202,22 @@ function shelfTally(shelf: Shelf): string {
 
 export function CardLibrary({
   onClose,
+  onInspect,
   onGrant,
   eqMode = "classic",
   nature = null,
 }: {
   onClose: () => void;
+  /**
+   * Opens the Karta, which this used to do itself.
+   *
+   * There were two Kartas: this one and the table's, each with its own state,
+   * each mounted somewhere different in the tree — so a card opened off a shelf
+   * and the same card opened off a seat were two different windows that only
+   * looked alike, and they drifted. One of them stacked over the bar and the
+   * other did not. The Karta belongs to the page, like every other sheet.
+   */
+  onInspect: (card: TileCard) => void;
   /**
    * Testing only, and absent in a deployed build.
    *
@@ -238,7 +249,6 @@ export function CardLibrary({
 }) {
   const [shelf, setShelf] = useState<Shelf>("zaklecia");
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState<TileCard | null>(null);
 
   const searching = query.trim().length > 0;
 
@@ -287,7 +297,6 @@ export function CardLibrary({
 
   return (
     <>
-      {open && <CardDetail card={open} onClose={() => setOpen(null)} />}
       <Drawer
         side="left"
         /**
@@ -393,7 +402,7 @@ export function CardLibrary({
                     card={card}
                     eqMode={eqMode}
                     nature={nature}
-                    onClick={() => setOpen(card)}
+                    onClick={() => onInspect(card)}
                   >
                     {onGrant && card.holdable && (
                       <button

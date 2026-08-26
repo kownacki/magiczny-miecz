@@ -34,8 +34,22 @@ export const LAYER = {
   banner: "z-30",
   /** The game happening: a fight, a drawn card, a field, a question. */
   modal: "z-50",
-  /** The table's own bar: code, decks, Karty, Gracze, the way out. */
-  bar: "z-[60]",
+  /**
+   * The table's own bar: code, decks, the Księga, Gracze, the way out.
+   *
+   * Above every sheet, which is the rule this file opens with — what a modal
+   * may cover is the game, and the bar is the table. It sat at 60, under the
+   * Karta at 90, so opening a card buried the one strip that is never about the
+   * card: the way out, the counts, the drawer you were about to open next. The
+   * Obszar never had the problem because it sits at 50, and the two behaved
+   * differently for no reason anybody chose.
+   *
+   * It was low because drawers used to run the full height and fight it for the
+   * same pixels — the bar on top sliced the search box off the Księga. They are
+   * laid inside the layout's content row now, which begins *below* the bar, so
+   * the two cannot overlap and the ordering between them costs nothing.
+   */
+  bar: "z-[100]",
   /**
    * The table's own surfaces, laid over a column: who is playing, and every
    * card in the box. One layer because they are one component (`drawer.tsx`)

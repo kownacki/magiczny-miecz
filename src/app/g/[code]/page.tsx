@@ -921,6 +921,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             <CardLibrary
               eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
               nature={asNature(mySeat?.nature)}
+              onInspect={setInspectingCard}
               // "walcz" and the Obszary chips became `fight` and `go` in the
               // console; taking a card stayed, because this shelf is where somebody
               // already is when they want one, with the picture in front of them.

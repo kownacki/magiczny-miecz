@@ -239,6 +239,20 @@ export function useDismissable<T extends HTMLElement>({
       if (event.timeStamp <= since.current) return;
       const target = event.target as Node | null;
       if (!target) return;
+      /**
+       * Gone from the page, so it was somebody else, and they have dealt with
+       * it.
+       *
+       * A sheet dismissed by its own backdrop unmounts while the click is still
+       * travelling — React does that synchronously — so what arrives here is a
+       * target detached from the document, belonging to nothing. Everything
+       * below then reads it as "outside me": the Karta closed on its backdrop
+       * and took the drawer underneath it along, one click for two surfaces.
+       *
+       * A detached target cannot be outside anything, because it is not in the
+       * page to be outside of. `isConnected` says so exactly.
+       */
+      if (!target.isConnected) return;
       // Inside *any* of them, not just this one. With the shelf out on the
       // left and the roster on the right, a click in one is outside the other,
       // and each would have dismissed the one it was not in.
