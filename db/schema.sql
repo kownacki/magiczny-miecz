@@ -362,6 +362,7 @@ create index if not exists moves_game_idx on magiczny_miecz.moves(game_id, seq d
 
 alter table magiczny_miecz.games enable row level security;
 alter table magiczny_miecz.seats enable row level security;
+alter table magiczny_miecz.users enable row level security;
 alter table magiczny_miecz.holdings enable row level security;
 alter table magiczny_miecz.seat_effects enable row level security;
 alter table magiczny_miecz.field_cards enable row level security;
