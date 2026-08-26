@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
 import { findGame, verifySeat } from "@/lib/game/store";
-import { abandonFight, grantCard, placeSeat, runCommand, stageFight } from "@/lib/game/turnStore";
+import { abandonFight, grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
+import { runCommand } from "@/lib/game/consoleStore";
 import { parseCommand } from "@/lib/engine/console";
 
 /**
