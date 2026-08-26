@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { bodyOf } from "@/lib/game/requests";
 import { bumpRevision, findGame, joinGame, seatsFor, verifyActor } from "@/lib/game/store";
 import { resumeDevice, takeSeat } from "@/lib/game/lobbyStore";
 
@@ -7,7 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const game = await findGame(code.toUpperCase());
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
-  const body = await request.json().catch(() => ({}));
+  const body = await bodyOf(request, "join");
   const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
   const deviceId = typeof body.deviceId === "string" ? body.deviceId : null;
 

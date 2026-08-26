@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { bodyOf } from "@/lib/game/requests";
 import { refused } from "@/app/api/refused";
 import { findGame, verifyActor } from "@/lib/game/store";
 import { change } from "@/lib/game/change";
@@ -10,7 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const game = await findGame(code.toUpperCase());
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
-  const body = await request.json().catch(() => ({}));
+  const body = await bodyOf(request, "character");
   // The token is what proves this device owns the seat it is editing; without
   // it any player could assign characters to anyone.
   const actor = await verifyActor(game.id, String(body.token ?? ""));

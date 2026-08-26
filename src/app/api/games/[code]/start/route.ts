@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { bodyOf } from "@/lib/game/requests";
 import { refused } from "@/app/api/refused";
 import { findGame, verifyActor } from "@/lib/game/store";
 import { startGame } from "@/lib/game/turnStore";
@@ -23,7 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const game = await findGame(code.toUpperCase());
   if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
 
-  const body = await request.json().catch(() => ({}));
+  const body = await bodyOf(request, "start");
   const actor = await verifyActor(game.id, String(body.token ?? ""));
   if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
   if (!actor.user.is_host) {

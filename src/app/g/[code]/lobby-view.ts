@@ -45,6 +45,15 @@ export interface LobbySeat {
   isHost: boolean;
   /** Somebody is driving this chair. It used to be `abandoned`, inverted. */
   driven: boolean;
+  /**
+   * Who is driving it, and null when nobody is.
+   *
+   * `driven` answers whether, which is enough to draw the chair; this answers
+   * *who*, which is what the host's controls act on. They are both here because
+   * they are different questions and the buttons kept reaching for the first
+   * one and sending it where the second belonged.
+   */
+  driverId: string | null;
   /** The driver has gone quiet, which is not the same as having left. */
   away: boolean;
   /** The driver has said they are ready to start. */

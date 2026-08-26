@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Requests, Route } from "@/lib/game/requests";
 import {
   forgetSeatToken,
   noteRemoved,
@@ -134,7 +135,8 @@ export interface Table {
   setError: (error: string | null) => void;
   busy: boolean;
   refresh: () => Promise<void>;
-  post: (path: string, body: Record<string, unknown>) => Promise<void>;
+  /** One request, with its body checked against what that route reads. */
+  post: <R extends Route>(path: R, body?: Partial<Requests[R]>) => Promise<void>;
   runConsole: (line: string) => Promise<string>;
   leave: () => Promise<void>;
   join: (name: string) => Promise<void>;
@@ -436,8 +438,17 @@ export function useTable(code: string): Table {
     [code, refresh],
   );
 
+  /**
+   * One request, with the field names checked against what the route reads.
+   *
+   * The route name picks the shape out of `Requests`, so a body naming a field
+   * that route does not read is an error here rather than a request that
+   * arrives, parses, matches nothing and falls through to whatever the route
+   * does when nobody said. That is not a hypothetical failure mode: it is how
+   * the host came to kick themselves.
+   */
   const post = useCallback(
-    async (path: string, body: Record<string, unknown>) => {
+    async <R extends Route>(path: R, body: Partial<Requests[R]> = {}) => {
       setBusy(true);
       setError(null);
       try {

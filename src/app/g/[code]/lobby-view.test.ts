@@ -51,6 +51,7 @@ function aSeat(over: Partial<LobbySeat> = {}): LobbySeat {
     id: "seat-a",
     seatIndex: 0,
     playerName: "Michał",
+    driverId: "usra",
     characterId: null,
     isHost: false,
     driven: true,

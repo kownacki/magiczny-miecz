@@ -110,6 +110,15 @@ anything.
   old ones, and three of those broke opening a table. `tables.ts` is the same
   discipline as "an id is never a `string`", carried the last few feet. Reads
   still go through `db` directly — they are narrowed by their own column lists.
+- **Every request body goes through `src/lib/game/requests.ts`.** The same rule
+  as `tables.ts`, one layer out: a route reads `body.userId` off parsed JSON and
+  a browser writes `{ seatId }` into one, and nothing compared the two. That
+  cost the same bug four times — twice in the roster, twice in the lobby — and
+  every one of them *ran*, because `leave` and `host` fall back to the caller
+  when nobody is named, so the host pressing "usuń gracza" on somebody else
+  kicked themselves. Field names live in `Requests`; the client sends through
+  `post` and the route reads through `bodyOf`. It is a shared vocabulary, not
+  validation — every route still checks what it got.
 - **The database is biggerfish's, shared four ways.** This is a `magiczny_miecz`
   schema in project `aqqdamoqwxiquhkzzcix`, alongside finalbid and wheatbid, and
   the service-role key grants all of them. Two of those take real payments.

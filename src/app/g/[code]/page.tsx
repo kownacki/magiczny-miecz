@@ -938,8 +938,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             await chooseCharacter(seat.id, characterId);
             setPicking("auto");
           }}
-          onRemove={(seat) => post("leave", { seatId: seat.id })}
-          onMakeHost={(seat) => post("host", { seatId: seat.id })}
+          // Both of these act on a person. They sent `seatId`, which neither
+          // route reads — and neither failed, because both fall back to the
+          // caller when nobody is named. The same bug as the roster's pair, in
+          // a second place, found by the contract rather than by looking.
+          onRemove={(seat) => seat.driverId && post("leave", { userId: seat.driverId })}
+          onMakeHost={(seat) => seat.driverId && post("host", { userId: seat.driverId })}
           onReady={(ready) => post("seat", { ready })}
           onRename={(name) => post("seat", { name })}
           onLeave={leave}
@@ -1531,6 +1535,7 @@ function asLobbySeat(seat: Seat, driver: Person | null): LobbySeat {
     characterId: seat.character_id,
     isHost: driver?.isHost ?? false,
     driven: driver !== null,
+    driverId: driver?.id ?? null,
     away: seat.away,
     ready: driver?.ready ?? false,
   };
