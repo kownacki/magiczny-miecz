@@ -42,12 +42,17 @@ function seed(): Tables {
         // The high-water mark lives on this row now, and the one line already
         // in `moves` is where it stands.
         journal_seq: 12,
+        // When the table was last actually played, which is what a list of
+        // tables sorts by — so a test can tell a change that touched the row
+        // from one that left it alone.
+        last_played_at: "2026-01-01T00:00:00Z",
         turn_state: { phase: "roll" },
         deck: null,
       },
     ],
     seats: [
-      { id: "s1", game_id: "g1", seat_index: 0, life: 4, gold: 1, turns_lost: 0 },
+      { id: "s1", game_id: "g1", seat_index: 0, life: 4, gold: 1, turns_lost: 0, is_host: true },
+      { id: "s2", game_id: "g1", seat_index: 1, life: 4, gold: 1, turns_lost: 0, is_host: false },
     ],
     holdings: [],
     seat_effects: [],
@@ -63,7 +68,12 @@ beforeEach(() => {
 });
 
 const game = () =>
-  tables.games[0] as unknown as { revision: number; turn: number; journal_seq: number };
+  tables.games[0] as unknown as {
+    revision: number;
+    turn: number;
+    journal_seq: number;
+    last_played_at: string;
+  };
 
 describe("committing a change", () => {
   it("advances the revision by exactly one", async () => {
@@ -288,5 +298,139 @@ describe("two changes reaching the journal at once", () => {
     // counter the other writer left behind and took the line after it.
     expect(tables.moves.map((m) => m.seq)).toEqual([12, 13, 14]);
     expect(tables.moves.find((m) => m.seq === 14)?.kind).toBe("roll");
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * A seat leaving the poczekalnia.
+ * ------------------------------------------------------------------------ */
+
+/**
+ * The one row in the schema a change is allowed to delete.
+ *
+ * Nothing else about a seat is ever removed — 4.4 retires a dead character and
+ * the journal keeps `seat_id` references to everything that seat ever did — so
+ * the only departure is from the lobby: the wrong table joined, or a tab closed
+ * before the game started. What has to hold is that `apply` and `commit` mean
+ * the same thing by it, because the lobby cascades through `apply` and then
+ * hands the whole changeset here.
+ */
+describe("removing a seat", () => {
+  it("deletes the row and leaves the others sitting there", async () => {
+    const snapshot = await loadSnapshot("g1");
+    await commit(snapshot, { seatsRemoved: ["s2"] });
+    expect(tables.seats.map((seat) => seat.id)).toEqual(["s1"]);
+  });
+
+  /**
+   * The lobby's own shape: the player who left was the host, so the seat goes
+   * and the role is handed to whoever has been at the table longest. Both in
+   * one change, because two would leave a table with no host in between.
+   */
+  it("patches the seats that stayed", async () => {
+    const snapshot = await loadSnapshot("g1");
+    await commit(snapshot, {
+      seatsRemoved: ["s1"],
+      seats: [{ id: "s2", patch: { is_host: true } }],
+    });
+    expect(tables.seats.map((seat) => seat.id)).toEqual(["s2"]);
+    expect(tables.seats[0].is_host).toBe(true);
+  });
+
+  /**
+   * A changeset that patches the same seat it removes leaves the same table
+   * behind either way round, so the order is only visible from inside the
+   * commit — and it is the order that has to match `apply`, which folds the
+   * removals first. Patch first and a cascade would be reading a snapshot the
+   * database disagrees with.
+   *
+   * `beforeWrite` fires just before each statement, so this is the seats table
+   * as every write in turn found it.
+   */
+  it("issues the delete before any patch, as `apply` folds them", async () => {
+    const asFound: string[][] = [];
+    beforeWrite = () => asFound.push(tables.seats.map((seat) => String(seat.id)));
+
+    const snapshot = await loadSnapshot("g1");
+    await commit(snapshot, {
+      seatsRemoved: ["s1"],
+      seats: [{ id: "s1", patch: { gold: 99 } }],
+    });
+
+    // Three statements — the games row, the delete, the patch — and by the
+    // time the patch went out there was nothing left for it to hit.
+    expect(asFound).toEqual([["s1", "s2"], ["s1", "s2"], ["s2"]]);
+    expect(tables.seats.map((seat) => seat.id)).toEqual(["s2"]);
+  });
+
+  /** The removal is a write like any other, so it takes the row and the revision. */
+  it("counts as a change the other devices are told about", async () => {
+    const snapshot = await loadSnapshot("g1");
+    await commit(snapshot, { seatsRemoved: ["s2"] });
+    expect(game().revision).toBe(8);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * A change that decided to do nothing.
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Where the empty changeset comes from, and why it must cost nothing.
+ *
+ * The poczekalnia sweep runs on every poll from every device and finds nobody
+ * gone almost every time. `revision` exists to wake the other browsers and
+ * `last_played_at` to say when the table was last played; a change that did
+ * nothing did neither, and bumping anyway would have six devices refetching a
+ * table nothing had happened to, several times a second, and re-sorting the
+ * list of games while they were at it.
+ */
+describe("committing nothing", () => {
+  it("leaves the revision where it was", async () => {
+    const snapshot = await loadSnapshot("g1");
+    await commit(snapshot, {});
+    expect(game().revision).toBe(7);
+  });
+
+  it("hands back the revision the caller already had", async () => {
+    const snapshot = await loadSnapshot("g1");
+    // Not `base + 1`: whoever is about to send this number to a browser would
+    // be telling it to refetch a table that has not moved.
+    await expect(commit(snapshot, {})).resolves.toBe(7);
+  });
+
+  it("does not say the table was played", async () => {
+    const snapshot = await loadSnapshot("g1");
+    await commit(snapshot, {});
+    expect(game().last_played_at).toBe("2026-01-01T00:00:00Z");
+  });
+
+  it("owes the journal nothing", async () => {
+    const snapshot = await loadSnapshot("g1");
+    // Every key present and every one of them empty, which is what a command
+    // that builds its lists before it knows whether it will fill them hands
+    // back — the sweep's own shape, and still not a change.
+    await commit(snapshot, { seatsRemoved: [], seats: [], journal: [] });
+    expect(tables.moves).toHaveLength(1);
+    expect(game().journal_seq).toBe(12);
+    expect(game().revision).toBe(7);
+  });
+
+  /**
+   * A sweep that ran while somebody else was playing must not raise a
+   * `Conflict` — it would be reported as a failure to the device that polled,
+   * and `change` would spend its four attempts re-deciding to do nothing.
+   * Nothing is written, so there is no row to lose and no race to be in.
+   */
+  it("cannot lose a race it never entered", async () => {
+    const snapshot = await loadSnapshot("g1");
+    // Somebody else, writing in the gap between the read and the write — which
+    // never comes, so this never fires.
+    beforeWrite = () => {
+      game().revision = 8;
+    };
+
+    await expect(commit(snapshot, {})).resolves.toBe(7);
+    expect(game().revision).toBe(7);
   });
 });

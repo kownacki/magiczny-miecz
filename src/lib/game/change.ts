@@ -62,7 +62,16 @@ export interface Snapshot {
 
 export interface SeatPatch {
   id: string;
-  patch: Partial<Omit<SeatRow, "id">>;
+  /**
+   * `claim_token` is writable here and readable nowhere.
+   *
+   * It is the one seat column `SEAT_COLUMNS` deliberately leaves out, because a
+   * `SeatRow` is a thing that gets sent to devices and the token is what proves
+   * a device is that seat. Rotating it is how a seat is released — see
+   * `leaveSeat` — so a changeset has to be able to set it without a snapshot
+   * ever having held it.
+   */
+  patch: Partial<Omit<SeatRow, "id">> & { claim_token?: string };
 }
 
 export interface NewHolding {
@@ -427,7 +436,10 @@ export class Conflict extends Error {
  */
 export function isEmpty(writes: Changeset): boolean {
   return (
-    !writes.game &&
+    // Counted by its keys and not by its presence: `{ game: {} }` set no
+    // column and would still have taken the row, bumped the revision and woken
+    // every browser at the table for it.
+    !Object.keys(writes.game ?? {}).length &&
     !writes.seats?.length &&
     !writes.seatsRemoved?.length &&
     !writes.holdings?.insert?.length &&
@@ -498,8 +510,14 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
 
   // Removed before patched, in the order `apply` folds them, so that a change
   // doing both to one seat lands the way it said it would.
+  //
+  // Scoped to this game, like every other delete below it. The ids come out of
+  // a snapshot of this table and cannot be anything else today — but this
+  // schema shares a Postgres instance with three other projects and the
+  // service-role key reaches all of them, so a delete whose only filter is a
+  // list of ids is one bad id away from being somebody else's problem.
   if (writes.seatsRemoved?.length) {
-    const { error } = await db.from("seats").delete().in("id", writes.seatsRemoved);
+    const { error } = await db.from("seats").delete().eq("game_id", gameId).in("id", writes.seatsRemoved);
     if (error) throw new Failure(`commit(seatsRemoved): ${error.message}`);
   }
   for (const seat of writes.seats ?? []) {
@@ -508,7 +526,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   }
 
   if (writes.holdings?.delete?.length) {
-    const { error } = await db.from("holdings").delete().in("id", writes.holdings.delete);
+    const { error } = await db.from("holdings").delete().eq("game_id", gameId).in("id", writes.holdings.delete);
     if (error) throw new Failure(`commit(holdings.delete): ${error.message}`);
   }
   for (const held of writes.holdings?.patch ?? []) {
@@ -523,7 +541,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   }
 
   if (writes.fieldCards?.delete?.length) {
-    const { error } = await db.from("field_cards").delete().in("id", writes.fieldCards.delete);
+    const { error } = await db.from("field_cards").delete().eq("game_id", gameId).in("id", writes.fieldCards.delete);
     if (error) throw new Failure(`commit(fieldCards.delete): ${error.message}`);
   }
   if (writes.fieldCards?.insert?.length) {
@@ -534,7 +552,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   }
 
   if (writes.effects?.delete?.length) {
-    const { error } = await db.from("seat_effects").delete().in("id", writes.effects.delete);
+    const { error } = await db.from("seat_effects").delete().eq("game_id", gameId).in("id", writes.effects.delete);
     if (error) throw new Failure(`commit(effects.delete): ${error.message}`);
   }
   for (const effect of writes.effects?.patch ?? []) {
