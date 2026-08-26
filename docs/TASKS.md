@@ -569,13 +569,27 @@ rulebook that removes a Postać exactly once and never puts one back.
 
 ## Still open
 
-1. **Nothing calls `removeCharacter` with a `byId`.** The host's half of the
-   rule is written and tested; no button reaches it. The console passes null and
-   is the only caller, so a host who wants a Postać out has to type it.
-2. **Companion mode is still parked** (`COMPANION_PARKED`), and this work
-   touched it: `no_device` is gone, so the host seating somebody by hand is now
-   a chair nobody is driving. `mayChooseFor` and `dealCharacters` agree about
-   that. Nothing else has been checked against it, because nothing runs it.
+**Companion mode** (`COMPANION_PARKED`) is the only thing left, and this work
+went through it. `no_device` is gone: a chair the host filled in by hand is now
+simply one nobody is driving, which `mayChooseFor`, `dealCharacters` and the
+`away` reading in `envelope.ts` all agree about.
+
+One thing does *not* agree, and it is written down rather than fixed, because
+building for a mode nobody runs is how you get two guesses instead of one:
+
+- **The shared screen cannot act.** `mayAct` still grants `tableScreen` to a
+  host in companion mode, and that is right — in companion every hidden thing
+  is a physical card and the app holds nothing worth keeping from the room. But
+  the host is a *user* now and may hold no seat at all, and the turn route
+  refuses a seatless actor ("Nie prowadzisz żadnej Postaci") **before** `mayAct`
+  is ever consulted. So a table screen that runs the game without playing —
+  which the split made possible and which is the whole point of a companion
+  table — is blocked one layer above the rule that allows it.
+
+  When the boolean flips: the turn route's seatless guard has to ask `mayAct`
+  first and let `tableScreen` through, and every command it then reaches needs a
+  seat named in the body rather than taken from the actor. That is the shape of
+  the work, and it is not small.
 
 ## Two decisions a fresh session would otherwise re-derive
 

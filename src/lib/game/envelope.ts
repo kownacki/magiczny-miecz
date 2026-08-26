@@ -266,12 +266,17 @@ export function envelopeFor(
       const driver = users.find((one) => one.seat_index === seat.seat_index) ?? null;
       return {
         ...seat,
-        // Worked out here rather than in the browser so every device agrees on
-        // who is present, whatever its own clock says.
-        // Only a seat that has been heard from and then went quiet is away. A
-        // seat that never checked in has no device behind it by design — the
-        // host added it in companion mode — and calling that "nieobecny" made
-        // a fresh lobby look like a room everybody had walked out of.
+        // Worked out here rather than in the browser, so every device agrees
+        // on who is present whatever its own clock says.
+        //
+        // Only somebody heard from and then gone quiet is away. A chair with
+        // nobody in it is not away — it is empty, and the two look nothing
+        // alike to a player deciding whether to wait. This used to be a test on
+        // the seat, which needed `no_device` to keep a chair the host had
+        // filled in by hand from making a fresh lobby look like a room
+        // everybody had walked out of. There is no flag to keep now: the
+        // question is asked of a person, and where there is no person there is
+        // no question.
         player_name: driver?.name ?? null,
         /** The driver's id, so a chair and a person can be matched up. */
         driver_id: driver?.id ?? null,
