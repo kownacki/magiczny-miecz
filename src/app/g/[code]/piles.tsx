@@ -53,6 +53,7 @@ export function PilesView({
             printed={printed.events}
             draw={counts.events.draw}
             discard={counts.events.discard}
+            back="/cards/back.jpg"
             note="Ciągnięte z wierzchu na każdym Obszarze, który tego wymaga (13.4)."
           />
           <Deck
@@ -60,6 +61,8 @@ export function PilesView({
             printed={printed.spells}
             draw={counts.spells.draw}
             discard={counts.spells.discard}
+            // No scan of this one exists — see `Pile`.
+            back={null}
             note="9.5: gdy stos się wyczerpie, zużyte Zaklęcia tasuje się i bierze ponownie."
           />
 
@@ -82,12 +85,15 @@ function Deck({
   printed,
   draw,
   discard,
+  back,
   note,
 }: {
   name: string;
   printed: number;
   draw: number;
   discard: number;
+  /** The scan of this deck's back, or null where the box never printed one. */
+  back: string | null;
   note: string;
 }) {
   const inPlay = printed - draw - discard;
@@ -101,8 +107,14 @@ function Deck({
       </h3>
 
       <div className="flex flex-wrap items-start gap-8">
-        <Pile label="w talii" count={draw} of={printed} tone="text-ink" />
-        <Pile label="stos zużytych" count={discard} of={printed} tone="text-ochre/80" />
+        <Pile label="w talii" count={draw} of={printed} back={back} tone="text-ink" />
+        <Pile
+          label="stos zużytych"
+          count={discard}
+          of={printed}
+          back={back}
+          tone="text-ochre/80"
+        />
         {/* Not a pile, because it is not one: it is a hand, a field, a trophy. */}
         <div className="flex flex-col gap-1 pt-1">
           <p className="tnum text-sm text-magia/80">{inPlay}</p>
@@ -115,15 +127,31 @@ function Deck({
   );
 }
 
+/**
+ * One stack, drawn with the back it has — or without one.
+ *
+ * Only the Karty Zdarzeń have a back to draw. The archive is a print-and-play
+ * set and the "(tyły)" sheets are reverse sides *to print onto the back*: the
+ * Zdarzenia got one, the Zaklęcia and the Wyposażenie never did, on Drive or
+ * anywhere else. The physical cards must have some back, but nothing here knows
+ * what it looks like.
+ *
+ * So the spells are drawn the way a concealed hand already is elsewhere in the
+ * app (9.3, `CardBack`): a blank in the Magia colour. Putting the ZDARZENIE
+ * back on that pile would have been the easy thing and a false one — every
+ * other card picture in this app is a scan of the card it claims to be.
+ */
 function Pile({
   label,
   count,
   of,
+  back,
   tone,
 }: {
   label: string;
   count: number;
   of: number;
+  back: string | null;
   tone: string;
 }) {
   // The depth follows the count without pretending to be it: full at the whole
@@ -140,19 +168,28 @@ function Pile({
         {leaves === 0 ? (
           <div className="absolute inset-x-0 top-0 h-[131px] rounded border border-dashed border-edge" />
         ) : (
-          Array.from({ length: leaves }, (_, index) => (
-            <Image
-              key={index}
-              src="/cards/back.jpg"
-              alt=""
-              width={92}
-              height={131}
-              // Bottom leaf first, so the stack is drawn from underneath and the
-              // top card is the one that looks like a card rather than an edge.
-              style={{ bottom: index * STEP }}
-              className="absolute left-0 rounded border border-night/60 shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
-            />
-          ))
+          Array.from({ length: leaves }, (_, index) =>
+            back ? (
+              <Image
+                key={index}
+                src={back}
+                alt=""
+                width={92}
+                height={131}
+                // Bottom leaf first, so the stack is drawn from underneath and
+                // the top card is the one that looks like a card rather than an
+                // edge.
+                style={{ bottom: index * STEP }}
+                className="absolute left-0 rounded border border-night/60 shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+              />
+            ) : (
+              <div
+                key={index}
+                style={{ bottom: index * STEP, width: 92, height: 131 }}
+                className="absolute left-0 rounded border border-magia/40 bg-gradient-to-br from-panel to-night shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+              />
+            ),
+          )
         )}
       </div>
       <p className={`tnum text-sm ${tone}`}>{count}</p>
