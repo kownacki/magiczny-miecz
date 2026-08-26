@@ -186,10 +186,10 @@ export function bonusFromHoldings(
  * at all: the cards are physically in people's hands and the app is not the one
  * keeping the secret.
  */
-export function visibleTo(
-  holdings: readonly Holding[],
+export function visibleTo<T extends Holding>(
+  holdings: readonly T[],
   options: { own: boolean; mode: string },
-): { cards: Holding[]; hiddenCount: number } {
+): { cards: T[]; hiddenCount: number } {
   if (options.own || options.mode === "companion") {
     return { cards: [...holdings], hiddenCount: 0 };
   }
