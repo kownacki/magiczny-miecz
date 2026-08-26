@@ -1302,6 +1302,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     <>
       {overlays}
       <TableLayout
+        footed={consoleOpen}
         drawer={
           <>
           {leftDrawer === "ksiega" && (

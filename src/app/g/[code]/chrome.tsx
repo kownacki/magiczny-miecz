@@ -81,14 +81,25 @@ export function ChromeButton({
       title={title}
       aria-label={title}
       aria-pressed={active || undefined}
-      className={`-m-1 rounded p-1 transition ${
+      /**
+       * A shade larger than the text beside it, and the negative margin is what
+       * pays for that. The glyph is the whole of the button now that the word is
+       * gone, and at thirteen pixels it was smaller than the word it replaced —
+       * a control you had to look for. Nineteen was the other way: three of them
+       * in a row read as the loudest thing in a panel that is not about them.
+       *
+       * Its own box would set the height of every heading it sits in, so the
+       * padding that gives it somewhere to be pressed is taken back off the
+       * outside: it lands on the title's line rather than making room for itself.
+       */
+      className={`-my-1 -mx-0.5 rounded p-1 transition ${
         active ? "text-vermilion" : "text-ochre/70 hover:text-ochre"
       }`}
     >
       <svg
         viewBox="0 0 24 24"
-        width="13"
-        height="13"
+        width="16"
+        height="16"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
