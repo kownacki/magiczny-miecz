@@ -223,20 +223,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           seat.abandoned_at === null && lastSeen > 0 && Date.now() - lastSeen > AWAY_AFTER_MS,
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
-        miecz_total: view.parametr.miecz + spell.miecz,
-        magia_total: view.parametr.magia + spell.magia,
+        sword_total: view.parametr.miecz + spell.miecz,
+        magic_total: view.parametr.magia + spell.magia,
         // 2.6, worked out here for the same reason the totals are: this is the
         // number the server refuses a draw against, so it is the number to
-        // show. Deliberately *not* off `magia_total` — a spell's own bonus is
+        // show. Deliberately *not* off `magic_total` — a spell's own bonus is
         // not in the basis the enforcement uses, and a cap that moved when a
         // Zaklęcie landed would be a cap nothing honoured.
-        // Deliberately *not* off `magia_total` — a spell's own bonus is not in
+        // Deliberately *not* off `magic_total` — a spell's own bonus is not in
         // the basis the enforcement uses, and a cap that moved when a Zaklęcie
         // landed would be a cap nothing honoured. See `fromCards` for why a
         // wand in the pack counts as much as one on the body.
         spell_capacity: view.spellCapacity,
-        miecz_walka: view.walka.miecz + spell.miecz,
-        magia_walka: view.walka.magia + spell.magia,
+        sword_in_fight: view.walka.miecz + spell.miecz,
+        magic_in_fight: view.walka.magia + spell.magia,
         // What a player is shown beside their name, already worked out: the
         // browser gets marks, not a modelling problem.
         effects: view.statuses.map((status) => ({

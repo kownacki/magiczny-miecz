@@ -258,18 +258,18 @@ export function SeatCard({
                   <RailStat
                     label="Miecz"
                     value={seat.sword_own}
-                    total={seat.miecz_total}
-                    inFight={seat.miecz_walka}
-                    stat="miecz"
+                    total={seat.sword_total}
+                    inFight={seat.sword_in_fight}
+                    stat="sword"
                     canAdjust={canCorrect}
                     onAdjust={onAdjust}
                   />
                   <RailStat
                     label="Magia"
                     value={seat.magic_own}
-                    total={seat.magia_total}
-                    inFight={seat.magia_walka}
-                    stat="magia"
+                    total={seat.magic_total}
+                    inFight={seat.magic_in_fight}
+                    stat="magic"
                     canAdjust={canCorrect}
                     onAdjust={onAdjust}
                   />
@@ -798,8 +798,8 @@ const STACK_HEIGHT = Math.round(CARD_HEIGHT / 2) - 28;
 const COLUMNS_MAX = 3;
 
 const STAT_COLOUR: Record<string, string> = {
-  miecz: "text-miecz",
-  magia: "text-magia",
+  sword: "text-miecz",
+  magic: "text-magia",
   life: "text-zycie",
   gold: "text-zloto",
 };

@@ -63,8 +63,8 @@ export interface Seat {
   sword_own: number;
   magic_own: number;
   /** Own points plus everything carried (1.5, 2.5), computed server-side. */
-  miecz_total: number;
-  magia_total: number;
+  sword_total: number;
+  magic_total: number;
   /**
    * How many Zaklęcia this hand may hold (2.6), computed server-side.
    *
@@ -74,8 +74,8 @@ export interface Seat {
    */
   spell_capacity: number;
   /** The same, reckoned for a fight — 1.5's other figure. */
-  miecz_walka: number;
-  magia_walka: number;
+  sword_in_fight: number;
+  magic_in_fight: number;
   /**
    * What the character is under, already worked out into marks.
    *
