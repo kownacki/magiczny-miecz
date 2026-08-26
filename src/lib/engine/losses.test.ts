@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseLosses, describeLoss, goldLost, type Losable } from "./losses";
+import { chooseLosses, goldLost, lossTaken, type Losable } from "./losses";
 
 const pack: Losable[] = [
   { id: "i1", cardId: "miecz", kind: "item" },
@@ -82,11 +82,11 @@ describe("gold", () => {
 
 describe("saying what went", () => {
   it("names the kind, the count and whether it was chance", () => {
-    expect(describeLoss({ co: "przedmiot" })).toBe("Przedmiot");
-    expect(describeLoss({ co: "przedmiot", count: 2, wybor: "losowo" })).toBe(
+    expect(lossTaken({ co: "przedmiot" })).toBe("Przedmiot");
+    expect(lossTaken({ co: "przedmiot", count: 2, wybor: "losowo" })).toBe(
       "2 Przedmiot (losowo)",
     );
-    expect(describeLoss({ co: "wszystkie-przedmioty" })).toBe("wszystkie Przedmioty");
+    expect(lossTaken({ co: "wszystkie-przedmioty" })).toBe("wszystkie Przedmioty");
   });
 });
 

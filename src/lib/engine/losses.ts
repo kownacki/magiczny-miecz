@@ -108,8 +108,18 @@ export function goldLost(loss: Loss, held: number): number {
   return loss.count === undefined ? held : Math.min(loss.count, held);
 }
 
-/** What the journal says was taken. */
-export function describeLoss(loss: Loss): string {
+/**
+ * What the journal says was taken — a noun phrase, not a sentence.
+ *
+ * Named apart from `effectText.ts`'s `describeLoss`, which the two of them
+ * were not. That one answers "tracisz wszystkie Zaklęcia" for a panel telling
+ * you what a card is about to do; this one answers "wszystkie Zaklęcia" for a
+ * line already reading "Michał traci …". Different types, different voices,
+ * different halves of the app — and one name, in one directory, so a session
+ * grepping for it got two functions with two contracts and no way to tell from
+ * the call which had been meant.
+ */
+export function lossTaken(loss: Loss): string {
   const what = {
     przedmiot: "Przedmiot",
     przyjaciel: "Przyjaciela",

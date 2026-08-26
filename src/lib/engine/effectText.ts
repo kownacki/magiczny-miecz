@@ -1,11 +1,37 @@
 /** Every card effect, said in words, so the picture of the card is never the only place a rule lives. */
 
 import type { Condition, Destination, Effect, Target } from "./cardScript";
-import { characterName, fieldName, LOST_LABEL, plural, STAT_LABEL, TARGET_SHORT } from "./polish";
+import {
+  characterName,
+  fieldName,
+  LOST_LABEL,
+  plural,
+  STAT_LABEL,
+  TARGET_FULL,
+  TARGET_SHORT,
+} from "./polish";
 
 /** Anyone but you is worth naming; "ty" is the default and saying it is noise. */
 function forWhom(target: Target | undefined): string {
   return !target || target === "ty" ? "" : ` — ${TARGET_SHORT[target]}`;
+}
+
+/**
+ * The same clause in the turn panel's voice.
+ *
+ * `polish.ts` keeps two wordings of the eleven targets on purpose: the short
+ * one hangs off a summary that has already named itself, and the long one is
+ * for a panel telling somebody to go and do a thing with no card in front of
+ * them to read it against. Both of them then need the same rule about *when* to
+ * say anything at all — never for "ty", never for a target that is absent — and
+ * that rule was written out three times inside one component, once per case
+ * that remembered it.
+ *
+ * The case that did not remember it was `strata`, which is the one that takes
+ * cards away.
+ */
+export function andWhom(target: Target | undefined): string {
+  return !target || target === "ty" ? "" : ` — ${TARGET_FULL[target]}`;
 }
 
 function where(destination: Destination): string {

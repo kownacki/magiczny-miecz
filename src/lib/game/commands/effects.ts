@@ -8,7 +8,7 @@ import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { describeEffect } from "@/lib/engine/effectText";
 import { usageOf } from "@/lib/engine/uses";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
-import { chooseLosses, describeLoss, goldLost, reachableBy } from "@/lib/engine/losses";
+import { chooseLosses, goldLost, lossTaken, reachableBy } from "@/lib/engine/losses";
 import { endTurn } from "@/lib/engine/turn";
 import { NATURE_LABEL, plural } from "@/lib/engine/polish";
 import type { Effect } from "@/lib/engine/cardScript";
@@ -397,7 +397,7 @@ async function walk(
         result: {
           did:
             said.length > 0
-              ? [`tracą ${describeLoss(effect)} — ${said.join("; ")}`]
+              ? [`tracą ${lossTaken(effect)} — ${said.join("; ")}`]
               : ["nie ma czego stracić"],
           pending: null,
         },

@@ -4,8 +4,8 @@
 
 import { type Effect } from "@/lib/engine/cardScript";
 import { FIELDS } from "@/lib/engine/board";
-import { describeCondition, describeLoss } from "@/lib/engine/effectText";
-import { characterName, STAT_LABEL, TARGET_FULL } from "@/lib/engine/polish";
+import { andWhom, describeCondition, describeLoss } from "@/lib/engine/effectText";
+import { characterName, STAT_LABEL } from "@/lib/engine/polish";
 import type { OnSuggestion } from "./turn-controls";
 
 /**
@@ -105,7 +105,7 @@ export function EffectControls({
     case "punkty": {
       const label = `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${STAT_LABEL[effect.stat]}`;
       if (effect.target && effect.target !== "ty") {
-        return stated(`${label} — ${TARGET_FULL[effect.target]}`);
+        return stated(`${label}${andWhom(effect.target)}`);
       }
       if (applied) return stated(label);
       return (
@@ -124,7 +124,7 @@ export function EffectControls({
       if (applied) return stated(`−${effect.turns} tura`);
       return effect.target && effect.target !== "ty" ? (
         stated(
-          `−${effect.turns} tura — ${TARGET_FULL[effect.target]}` +
+          `−${effect.turns} tura${andWhom(effect.target)}` +
             (effect.oprocz?.length
               ? `, oprócz: ${effect.oprocz.map(characterName).join(", ")}`
               : ""),
@@ -159,7 +159,17 @@ export function EffectControls({
         `walka: ${effect.nazwa} (${effect.miecz !== undefined ? `Miecz ${effect.miecz}` : `Magia ${effect.magia}`})`,
       );
     case "strata":
-      return stated(describeLoss(effect));
+      /**
+       * Whose loss it is, said out loud — like the two cases above it.
+       *
+       * `punkty` and `tura-stracona` both name a target that is not you, and
+       * `strata` did not: it was the one effect in this switch that takes cards
+       * away and the one that never said whose. Burza Siedmiu Słońc is
+       * `{ co: "wszystkie-zaklecia", target: "wszyscy" }`, and the panel read
+       * "tracisz wszystkie Zaklęcia" — a storm that ends the magic in the world
+       * looking like a bad afternoon for whoever drew it.
+       */
+      return stated(`${describeLoss(effect)}${andWhom(effect.target)}`);
     case "kamien":
       return stated("Zamiana w Kamień (20.1)");
     case "zamien-punkty":

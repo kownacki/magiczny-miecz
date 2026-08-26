@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { describeCondition, describeEffect, describeLoss, summariseEffect } from "./effectText";
+import {
+  andWhom,
+  describeCondition,
+  describeEffect,
+  describeLoss,
+  summariseEffect,
+} from "./effectText";
+import { TARGET_FULL } from "./polish";
 import { FIELD_SCRIPTS } from "./fieldScript";
 import type { Effect } from "./cardScript";
 
@@ -318,6 +325,57 @@ describe("the ops the terse register has no short form for", () => {
           expect(summariseEffect(row), `${fieldId}/${offer.name}`).not.toBe("rozpatrzcie sami");
         }
       }
+    }
+  });
+});
+
+/**
+ * Saying whose it is, in the panel's voice.
+ *
+ * The rule is trivial and was still got wrong, because it was written out once
+ * per case that happened to remember it. `punkty` and `tura-stracona` named a
+ * target that was not you; `strata` did not — so Burza Siedmiu Słońc, which
+ * takes every Zaklęcie from every character in the Krąg, appeared in the panel
+ * as "tracisz wszystkie Zaklęcia": a storm that ends the magic in the world
+ * looking like a bad afternoon for whoever drew the card.
+ */
+describe("naming the target a panel is talking about", () => {
+  it("says nothing when it is you", () => {
+    // "tracisz Przedmiot — ty" is the app explaining who "tracisz" means.
+    expect(andWhom("ty")).toBe("");
+  });
+
+  it("says nothing when the card names nobody", () => {
+    // Most effects carry no target at all, and second person is already the
+    // default voice of every sentence in here.
+    expect(andWhom(undefined)).toBe("");
+  });
+
+  it("names everybody else in the long form", () => {
+    expect(andWhom("wszyscy")).toBe(" — wszystkie Postacie");
+    expect(andWhom("dobrzy")).toBe(" — Postacie o Naturze dobrej");
+  });
+
+  it("is the panel's wording and not the summary's", () => {
+    /**
+     * `polish.ts` keeps two wordings of the eleven on purpose — the short one
+     * hangs off a line that has already named itself, the long one is for
+     * somebody being told to go and do a thing with no card in front of them.
+     * This is the long one, and a test that did not say so would pass just as
+     * well if it quietly became the other.
+     */
+    expect(andWhom("w-dolnym-kregu")).toBe(" — wędrujący po Dolnym Kręgu");
+    expect(andWhom("w-dolnym-kregu")).not.toBe(" — wędrujący Dolnym Kręgiem");
+  });
+
+  it("covers every target the union has", () => {
+    // The compiler keeps `TARGET_FULL` complete; this keeps the clause it
+    // builds from being empty or undefined for one of them.
+    for (const target of Object.keys(TARGET_FULL) as (keyof typeof TARGET_FULL)[]) {
+      const said = andWhom(target);
+      if (target === "ty") continue;
+      expect(said.startsWith(" — ")).toBe(true);
+      expect(said.length).toBeGreaterThan(4);
     }
   });
 });
