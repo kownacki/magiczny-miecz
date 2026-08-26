@@ -1,5 +1,5 @@
 import { describe as suite, expect, it } from "vitest";
-import { COMMANDS, complete, helpLines, parseCommand } from "./console";
+import { COMMANDS, complete, helpLines, parseCommand, pickPlayer } from "./console";
 
 const ok = (line: string) => {
   const parsed = parseCommand(line);
@@ -341,5 +341,176 @@ suite("finishing a half-typed line", () => {
 
   it("takes nothing where nothing goes", () => {
     expect(tab("endturn ").options).toEqual([]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Every command, once each.
+ * ------------------------------------------------------------------------ */
+
+/**
+ * One worked line per command, checked against `COMMANDS` so it cannot fall
+ * behind.
+ *
+ * The tests above cover each command where it is interesting — what `place`
+ * does without an `at`, which Natury there are, what an ambiguous card name
+ * answers. This is the flat sweep underneath them: every word `help` prints,
+ * typed the way it is printed, read once and compared to exactly what it should
+ * become. A command added without a line here fails the first test in the
+ * suite, which is the only way a list like this stays true.
+ */
+const USAGE: Record<string, { line: string; becomes: unknown }> = {
+  help: { line: "help", becomes: { kind: "help" } },
+  gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "zloto", delta: 5, who: "Ola" } },
+  kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
+  revive: {
+    line: "revive Ola as MAGOG",
+    becomes: { kind: "revive", who: "Ola", characterId: "magog" },
+  },
+  nature: {
+    line: "nature evil Ola",
+    becomes: { kind: "nature", nature: "zla", who: "Ola" },
+  },
+  turn: { line: "turn Ola", becomes: { kind: "turn", who: "Ola" } },
+  stone: { line: "stone Ola", becomes: { kind: "stone", who: "Ola" } },
+  effect: {
+    line: "effect fog Ola",
+    becomes: { kind: "effect", effect: "fog", who: "Ola" },
+  },
+  give: { line: "give MAGICZNY MIECZ", becomes: { kind: "give", cardId: "magiczny-miecz" } },
+  place: {
+    line: "place MIECZ at Karczma",
+    becomes: { kind: "place", cardId: "miecz", fieldId: "karczma" },
+  },
+  go: { line: "go Karczma", becomes: { kind: "go", fieldId: "karczma" } },
+  fight: { line: "fight WILKOŁAK", becomes: { kind: "fight", cardId: "wilkolak" } },
+  winfight: { line: "winfight", becomes: { kind: "settle", outcome: "wygrana" } },
+  wingame: { line: "wingame", becomes: { kind: "endgame", won: true } },
+  endfight: { line: "endfight", becomes: { kind: "endfight" } },
+  endturn: { line: "endturn", becomes: { kind: "endturn" } },
+  spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola" } },
+};
+
+suite("every command, once each", () => {
+  it("has a worked line for every command, and no line for a command that went", () => {
+    expect(Object.keys(USAGE).sort()).toEqual(COMMANDS.map((spec) => spec.name).sort());
+  });
+
+  for (const { line, becomes } of Object.values(USAGE)) {
+    it(`reads \`${line}\``, () => {
+      expect(ok(line)).toEqual(becomes);
+    });
+  }
+
+  /**
+   * The usage line is not decoration: what `help` shows has to be typeable.
+   *
+   * `[player]` comes off, an `a|b|c` becomes its first word, and what is left
+   * is a line somebody read off the screen and typed back.
+   */
+  it("reads back every usage line it prints", () => {
+    for (const spec of COMMANDS) {
+      const typed = spec.usage
+        .replace(/\[[^\]]+\]/g, "")
+        .replace(/(\S*\|\S*)/g, (word) => word.split("|")[0])
+        .trim();
+      const parsed = parseCommand(typed);
+      expect("ok" in parsed, `${spec.name}: ${typed}`).toBe(true);
+    }
+  });
+
+  it("reads every alias as the same command as the name it stands for", () => {
+    const alias: Record<string, string> = {
+      "?": "help",
+      sword: "gold",
+      card: "give",
+      put: "place",
+      drop: "place",
+      move: "go",
+      pass: "endturn",
+    };
+    // Not every alias is a synonym — losefight and losegame mean the other
+    // outcome, and sword names another parameter — so only the ones that are
+    // are compared, and the rest are covered above.
+    expect(ok("? ")).toEqual(ok("help"));
+    expect(ok("card MIECZ")).toEqual(ok("give MIECZ"));
+    expect(ok("put MIECZ")).toEqual(ok("place MIECZ"));
+    expect(ok("drop MIECZ")).toEqual(ok("place MIECZ"));
+    expect(ok("move Karczma")).toEqual(ok("go Karczma"));
+    expect(ok("pass")).toEqual(ok("endturn"));
+    expect(Object.keys(alias).length).toBe(7);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Naming somebody at the table.
+ * ------------------------------------------------------------------------ */
+
+suite("which player a `[player]` names", () => {
+  const table = [
+    { seat: 0, name: "Michał", character: "bledny-rycerz" },
+    { seat: 1, name: "Ola", character: "magog" },
+    { seat: 2, name: null, character: "goblin" },
+    { seat: 3, name: "Kasia", character: null },
+  ];
+  const at = (who: string) => {
+    const hit = pickPlayer(table, who);
+    if ("error" in hit) throw new Error(hit.error);
+    return hit.at;
+  };
+  const no = (who: string) => {
+    const hit = pickPlayer(table, who);
+    if ("at" in hit) throw new Error(`found seat ${hit.at}`);
+    return hit.error;
+  };
+
+  it("takes the number printed beside the seat, which is one-based", () => {
+    expect(at("1")).toBe(0);
+    expect(at("4")).toBe(3);
+    expect(no("9")).toMatch(/Nobody/);
+  });
+
+  it("takes the player's name, in any case and without the Polish letters", () => {
+    expect(at("Michał")).toBe(0);
+    expect(at("michal")).toBe(0);
+    expect(at("ola")).toBe(1);
+  });
+
+  it("takes the character's printed name, not the id nobody types", () => {
+    // The row holds `bledny-rycerz`; what is on the card, and on the screen, is
+    // BŁĘDNY RYCERZ.
+    expect(at("BŁĘDNY RYCERZ")).toBe(0);
+    expect(at("bledny rycerz")).toBe(0);
+    expect(at("MAGOG")).toBe(1);
+  });
+
+  it("names a seat that has only one of the two", () => {
+    // A seat playing with no player name is found by its character…
+    expect(at("goblin")).toBe(2);
+    // …and a latecomer with no character yet by their name, which is the seat
+    // `revive` exists for.
+    expect(at("Kasia")).toBe(3);
+  });
+
+  it("asks which, rather than guessing, when a name fits two people", () => {
+    const two = [
+      { seat: 0, name: "Ola", character: null },
+      { seat: 1, name: "Olek", character: null },
+    ];
+    const hit = pickPlayer(two, "ol");
+    expect("error" in hit && hit.error).toMatch(/Which one/);
+  });
+
+  it("prefers an exact name over a longer one containing it", () => {
+    const two = [
+      { seat: 0, name: "Ola", character: null },
+      { seat: 1, name: "Olaf", character: null },
+    ];
+    expect(pickPlayer(two, "Ola")).toEqual({ at: 0 });
+  });
+
+  it("says so when nobody is called that", () => {
+    expect(no("Gandalf")).toContain("Gandalf");
+    expect(no("   ")).toBe("Who?");
   });
 });

@@ -399,6 +399,57 @@ function usageOf(command: string): string {
 }
 
 /**
+ * Which of the people at the table a `[player]` names.
+ *
+ * By player, by character, or by seat number — whichever is on the screen when
+ * somebody types, because a tester driving four seats reads them off four
+ * different parts of it. The character is matched on its *printed* name and not
+ * on its id: `bledny-rycerz` is what the row holds, and nobody types the hyphen
+ * or knows it is there.
+ *
+ * Everybody seated is searchable, including a seat with no character on it. It
+ * used to be only those with one, which quietly made `revive` unable to name
+ * the seat it exists for — a latecomer's, whose character has not been dealt.
+ *
+ * Pure, and it answers with an index rather than a row, so the caller keeps
+ * whatever kind of row it started with.
+ */
+export function pickPlayer(
+  people: readonly { seat: number; name: string | null; character: string | null }[],
+  who: string,
+): { at: number } | { error: string } {
+  const asked = who.trim();
+  if (asked === "") return { error: "Who?" };
+
+  // The number printed beside a seat is one-based; `seat` is the stored index.
+  if (/^\d+$/.test(asked)) {
+    const at = people.findIndex((one) => one.seat === Number(asked) - 1);
+    if (at !== -1) return { at };
+  }
+
+  const named = people.map((one, index) => ({
+    index,
+    name: one.name ?? nameOfCharacter(one.character) ?? `${one.seat + 1}`,
+    also: one.name ? nameOfCharacter(one.character) : null,
+  }));
+  // A character's name is as good a handle as its player's, so both are in the
+  // pool and either one finds the seat.
+  const pool = named.flatMap((one) =>
+    one.also ? [one, { ...one, name: one.also }] : [one],
+  );
+
+  const hit = findByName(pool, (one) => one.name, asked);
+  if ("found" in hit) return { at: hit.found.index };
+  if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
+  return { error: `Nobody called \`${asked}\` is at this table.` };
+}
+
+function nameOfCharacter(id: string | null): string | null {
+  if (!id) return null;
+  return PEOPLE.find((one) => one.id === id)?.name ?? null;
+}
+
+/**
  * What a Tab should finish, given a half-typed line.
  *
  * Names in this box are long, printed in capitals and full of Polish letters —

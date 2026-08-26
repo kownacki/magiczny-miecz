@@ -28,8 +28,7 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
-import { helpLines, type Command, type EffectName } from "@/lib/engine/console";
-import { findByName } from "@/lib/engine/search";
+import { helpLines, pickPlayer, type Command, type EffectName } from "@/lib/engine/console";
 import { type Effect } from "@/lib/engine/cardScript";
 import {
   afterFight,
@@ -1363,19 +1362,18 @@ export async function runCommand(
       if (!mine) throw new Error("Nieznane miejsce.");
       return mine;
     }
-    const digits = who.trim();
-    if (/^\d+$/.test(digits)) {
-      const at = seats.find((seat) => seat.seat_index === Number(digits) - 1);
-      if (at) return at;
-    }
-    const hit = findByName(
-      seats.filter((seat) => seat.character_id),
-      (seat) => seat.player_name ?? seat.character_id ?? `${seat.seat_index + 1}`,
+    // The matching itself is `pickPlayer`'s, in the pure half, where a table of
+    // four can be written down and asked about without a database behind it.
+    const hit = pickPlayer(
+      seats.map((seat) => ({
+        seat: seat.seat_index,
+        name: seat.player_name,
+        character: seat.character_id,
+      })),
       who,
     );
-    if ("found" in hit) return hit.found;
-    if ("ambiguous" in hit) throw new Error(`Which one — ${hit.ambiguous.join(", ")}?`);
-    throw new Error(`Nobody called \`${who}\` is at this table.`);
+    if ("error" in hit) throw new Error(hit.error);
+    return seats[hit.at];
   };
 
   const named = (seat: { player_name: string | null; seat_index: number }) =>
