@@ -243,3 +243,24 @@ export function fieldScriptFor(fieldId: FieldId): FieldScript | null {
 export function offerKey(offerName: string): string {
   return `pole:${offerName}`;
 }
+
+/**
+ * The offer this Obszar makes whether or not it is asked (16.5).
+ *
+ * A Karczma happens to whoever arrives; it is not a button. So the window that
+ * shows it opens by itself, and `windowsFor` needs to know that this Obszar is
+ * one of the ones that demands rather than offers.
+ *
+ * Lived in the page component, which meant the one thing that decides whether a
+ * turn can be walked away from was written where nothing could test it.
+ */
+export function compulsoryOffer(
+  fieldId: FieldId | null,
+  resolved: readonly string[],
+): { name: string; effect: Effect } | null {
+  if (!fieldId) return null;
+  const script = fieldScriptFor(fieldId);
+  if (!script?.obowiazkowe) return null;
+  const owed = script.offers.find((offer) => !resolved.includes(offerKey(offer.name)));
+  return owed ? { name: owed.name, effect: owed.effect } : null;
+}

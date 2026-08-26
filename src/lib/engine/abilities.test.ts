@@ -19,7 +19,6 @@ import {
   rollModifier,
   spellsOverLimit,
   skipsRollAt,
-  wardThreshold,
   bestShield,
 } from "./abilities";
 import { abilitiesOfCharacter } from "./characters";
@@ -75,24 +74,6 @@ describe("the ability registry against the real deck", () => {
         }
       }
     }
-  });
-});
-
-describe("what the armour does (Hełm, Tarcza, Zbroja)", () => {
-  it("saves on the roll each card prints", () => {
-    expect(wardThreshold(abilitiesOf("helm"))).toBe(1);
-    expect(wardThreshold(abilitiesOf("tarcza"))).toBe(2);
-    expect(wardThreshold(abilitiesOf("zbroja"))).toBe(3);
-  });
-
-  it("gives nothing to a character wearing none of it", () => {
-    expect(wardThreshold(heldAbilities(["miecz", "sztylet"]))).toBe(0);
-  });
-
-  it("takes the kindest threshold rather than stacking rolls", () => {
-    // Each text describes one roll, not a sequence, so wearing all three does
-    // not mean three chances.
-    expect(wardThreshold(heldAbilities(["helm", "tarcza", "zbroja"]))).toBe(3);
   });
 });
 

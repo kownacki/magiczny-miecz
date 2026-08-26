@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_SCRIPTS, fieldScriptFor } from "./fieldScript";
+import { FIELD_SCRIPTS, compulsoryOffer, fieldScriptFor, offerKey } from "./fieldScript";
 import { goodsId } from "./goods";
 import { FIELDS, type FieldId } from "./board";
 import type { Effect } from "./cardScript";
@@ -118,5 +118,66 @@ describe("a price list names real cards", () => {
   it("answers null for something that is not equipment", () => {
     expect(goodsId("Zaklęcie")).toBeNull();
     expect(goodsId("")).toBeNull();
+  });
+});
+
+/**
+ * The Obszar that happens to you (16.5).
+ *
+ * This decides whether a turn can be walked away from, and it lived in the page
+ * component until now, which is why it had no tests. The two fields it answers
+ * for are the only two carrying `obowiazkowe: true`: the Karczma's "MUSISZ
+ * RZUCIĆ KOSTKĄ" and the Strażnik's toll.
+ */
+describe("the offer an Obszar makes whether or not it is asked", () => {
+  it("hands back the Karczma's die table before anything is settled", () => {
+    const owed = compulsoryOffer("karczma", []);
+    expect(owed?.name).toBe("Karczma");
+    expect(owed?.effect.op).toBe("rzut");
+  });
+
+  it("hands back the Strażnik's toll, which is a choice but not an optional one", () => {
+    // Paying or bleeding is a choice; skipping is not. Both are compulsory
+    // fields, and only these two are.
+    const owed = compulsoryOffer("straznik-magicznych-wrot", []);
+    expect(owed?.name).toBe("Strażnik");
+    expect(owed?.effect.op).toBe("wybor");
+  });
+
+  /**
+   * `resolved` holds `offerKey` values, not field ids.
+   *
+   * A field's offer is written into the same "resolved" list the drawn cards
+   * use, prefixed `pole:` so a card named after a field cannot silently settle
+   * it. Passing the bare field id settles nothing — this is worth an assertion
+   * of its own because both are strings and neither the compiler nor the shape
+   * of the call says which one is meant.
+   */
+  it("is settled by the offer's key, and not by the field id", () => {
+    expect(offerKey("Karczma")).toBe("pole:Karczma");
+    expect(compulsoryOffer("karczma", ["pole:Karczma"])).toBeNull();
+    expect(compulsoryOffer("karczma", ["karczma"])?.name).toBe("Karczma");
+  });
+
+  it("is not settled by another field's offer", () => {
+    expect(compulsoryOffer("karczma", [offerKey("Strażnik")])?.name).toBe("Karczma");
+  });
+
+  it("says nothing about a field that only offers", () => {
+    // The Osada has three services and a character may visit none of them, so
+    // its window is an offer and closing it is allowed.
+    expect(fieldScriptFor("osada")!.offers.length).toBeGreaterThan(0);
+    expect(compulsoryOffer("osada", [])).toBeNull();
+  });
+
+  it("says nothing about a field with no script at all", () => {
+    // The Twierdza Strzegąca Dróg's mission is deliberately not encoded;
+    // nothing may be inferred from its absence.
+    expect(fieldScriptFor("twierdza-strzegaca-drog")).toBeNull();
+    expect(compulsoryOffer("twierdza-strzegaca-drog", [])).toBeNull();
+  });
+
+  it("says nothing about a character who is not on the board yet", () => {
+    expect(compulsoryOffer(null, [])).toBeNull();
   });
 });

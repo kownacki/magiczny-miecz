@@ -15,14 +15,15 @@ import {
   scriptFor,
   type CardScript,
   type Effect,
-  type Target,
 } from "@/lib/engine/cardScript";
 import { NOT_HANDLED, coverageOf, manualNote } from "@/lib/engine/coverage";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { bonusOf, combatValueOf } from "@/lib/engine/cards";
 import { kindForCard } from "@/lib/engine/holdings";
 import { crossingFrom } from "@/lib/engine/rings";
-import { FIELDS, isFerry, type FieldId } from "@/lib/engine/board";
+import { FIELDS, asFieldId, isFerry, type FieldId } from "@/lib/engine/board";
+import { fieldWithText } from "@/lib/engine/fieldText";
+import { LOST_LABEL, STAT_LABEL, TARGET_FULL } from "@/lib/engine/polish";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 
@@ -310,10 +311,16 @@ export function BridgeControls({
 /**
  * One of the six things on the bridge that has to be got past (14.5-14.6).
  *
- * Every one of them is printed on the board where the player is standing, so
- * the text is quoted rather than paraphrased and the button only does the
- * arithmetic. The app owns the dice here because there is nothing to
- * adjudicate: three dice less a number you already know, or a table.
+ * Every one of them is printed where the player is standing, so the text is
+ * quoted rather than paraphrased and the button only does the arithmetic. The
+ * app owns the dice here because there is nothing to adjudicate: three dice
+ * less a number you already know, or a table.
+ *
+ * Quoted from the transcription, which is what "quoted" has to mean. These six
+ * were hand-shortened here instead — a third copy of tables that already exist
+ * as `TRAP_TABLE`'s arithmetic in `bridge.ts` and as the rulebook's own words in
+ * `most-fields.json`, and the only one of the three that could drift without
+ * anything failing.
  */
 export function BridgeOrdeal({
   fieldId,
@@ -324,53 +331,33 @@ export function BridgeOrdeal({
   busy: boolean;
   onAction: (body: Record<string, unknown>) => void;
 }) {
-  const what: Record<string, { title: string; text: string; button: string }> = {
-    pulapka: {
-      title: "Pułapka",
-      text: "Rzuć 3 kostkami i odejmij swoje punkty Miecza: 0 — zostajesz; 1 — wejście na Most; 2-3 — Ruiny Twierdzy; 4-5 — Twierdza Strzegąca Dróg; 6 i więcej — Osada. Strącony rzucasz kostką za każdy Przedmiot i każdego Przyjaciela: 1 lub 2 zostaje przy tobie.",
-      button: "Rzuć trzema kostkami",
-    },
-    "magiczna-pulapka": {
-      title: "Magiczna Pułapka",
-      text: "Rzuć 3 kostkami i odejmij swoje punkty Magii: 0 — zostajesz; 2-3 — Wymarłe Miasto; 4-5 — Świątynia Nemed; 6 i więcej — Karczma. Strącony rzucasz kostką za każdy Przedmiot i każdego Przyjaciela: 1 lub 2 zostaje przy tobie.",
-      button: "Rzuć trzema kostkami",
-    },
-    "gra-ze-smiercia": {
-      title: "Gra ze Śmiercią",
-      text: "Dwie kostki za siebie i dwie za Śmierć. Wyżej — idziesz dalej. Równo — grasz dalej w następnej turze. Niżej — tracisz 1 Życie i grasz ponownie.",
-      button: "Zagraj ze Śmiercią",
-    },
-    cerber: {
-      title: "Cerber",
-      text: "Rzuć kostką: 1-2 — tracisz 1 Życie; 3-4 — 2 Życia; 5-6 — 3 Życia.",
-      button: "Rzuć kostką",
-    },
-    "demon-zaglady": {
-      title: "Demon Zagłady",
-      text: "Rzuć 2 kostkami — suma to Magia Demona. Walczysz magicznie i nie przejdziesz dalej, dopóki go nie zabijesz. Przegrana kosztuje 1 Życie i walczysz znowu w następnej turze.",
-      button: "Rzuć za Demona",
-    },
-    monstrum: {
-      title: "Monstrum",
-      text: "Rzuć 2 kostkami — suma to Miecz Monstrum. Nie przejdziesz dalej, dopóki go nie zabijesz. Przegrana kosztuje 1 Życie i walczysz znowu w następnej turze.",
-      button: "Rzuć za Monstrum",
-    },
+  // Only the label on the button is this component's to write; the title and
+  // the text belong to the board.
+  const button: Record<string, string> = {
+    pulapka: "Rzuć trzema kostkami",
+    "magiczna-pulapka": "Rzuć trzema kostkami",
+    "gra-ze-smiercia": "Zagraj ze Śmiercią",
+    cerber: "Rzuć kostką",
+    "demon-zaglady": "Rzuć za Demona",
+    monstrum: "Rzuć za Monstrum",
   };
-  const it = what[fieldId];
-  if (!it) return null;
+  const here = asFieldId(fieldId);
+  const field = here ? fieldWithText(here) : null;
+  const label = button[fieldId];
+  if (!field || !label) return null;
 
   return (
     <section className="mb-3 rounded border border-vermilion/40 bg-vermilion/5 p-3">
       <h3 className="mb-1 font-[family-name:var(--font-display)] text-sm text-vermilion">
-        {it.title}
+        {field.name}
       </h3>
-      <p className="mb-2 text-[11px] leading-relaxed text-muted">{it.text}</p>
+      <p className="mb-2 text-[11px] leading-relaxed text-muted">{field.text}</p>
       <button
         disabled={busy}
         onClick={() => onAction({ action: "most-pole" })}
         className="rounded border border-vermilion/60 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
       >
-        {it.button}
+        {label}
       </button>
     </section>
   );
@@ -1312,7 +1299,7 @@ function EffectControls({
     case "punkty": {
       const label = `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${STAT_LABEL[effect.stat]}`;
       if (effect.target && effect.target !== "ty") {
-        return stated(`${label} — ${TARGET_LABEL[effect.target]}`);
+        return stated(`${label} — ${TARGET_FULL[effect.target]}`);
       }
       if (applied) return stated(label);
       return (
@@ -1331,7 +1318,7 @@ function EffectControls({
       if (applied) return stated(`−${effect.turns} tura`);
       return effect.target && effect.target !== "ty" ? (
         stated(
-          `−${effect.turns} tura — ${TARGET_LABEL[effect.target]}` +
+          `−${effect.turns} tura — ${TARGET_FULL[effect.target]}` +
             (effect.oprocz?.length
               ? `, oprócz: ${effect.oprocz.map((id) => CHARACTER_NAMES.get(id) ?? id).join(", ")}`
               : ""),
@@ -1450,39 +1437,10 @@ function EffectControls({
   }
 }
 
-const STAT_LABEL = {
-  miecz: "Miecza",
-  magia: "Magii",
-  zycie: "Życia",
-  zloto: "Złota",
-} as const;
-
-const TARGET_LABEL: Record<Target, string> = {
-  ty: "ty",
-  wszyscy: "wszystkie Postacie",
-  "wszyscy-w-kregu": "wszystkie Postacie w tym Kręgu",
-  "kazdy-kto-tu-trafi": "każdy, kto tu trafi",
-  dobrzy: "Postacie o Naturze dobrej",
-  chaotyczni: "Postacie o Naturze chaotycznej",
-  zli: "Postacie o Naturze złej",
-  "w-dolnym-kregu": "wędrujący po Dolnym Kręgu",
-  "w-srodkowym-kregu": "wędrujący po Środkowym Kręgu",
-  "w-gornym-kregu": "wędrujący po Górnym Kręgu",
-  "inna-postac": "wybrana inna Postać",
-} as const;
-
 function LOSS_LABEL(effect: Extract<Effect, { op: "strata" }>): string {
-  const what = {
-    przedmiot: "Przedmiot",
-    przyjaciel: "Przyjaciela",
-    zaklecie: "Zaklęcie",
-    zloto: "całe złoto",
-    "wszystkie-zaklecia": "wszystkie Zaklęcia",
-    "wszystkie-przedmioty": "wszystkie Przedmioty",
-  }[effect.co];
   const how = effect.wybor === "losowo" ? " (losowo)" : "";
   const count = effect.count && effect.count > 1 ? `${effect.count} ` : "";
-  return `tracisz ${count}${what}${how}`;
+  return `tracisz ${count}${LOST_LABEL[effect.co]}${how}`;
 }
 
 function conditionLabel(condition: Extract<Effect, { op: "gdy" }>["warunek"]): string {

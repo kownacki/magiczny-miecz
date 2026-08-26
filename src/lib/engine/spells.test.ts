@@ -6,10 +6,12 @@ import {
   TIMING_LABEL,
   castableNow,
   momentOf,
+  momentsIn,
   momentsOf,
   spellScript,
   type SpellTiming,
 } from "./spells";
+import type { Fight, TurnPhase } from "./turn";
 
 const IDS = new Set<string>((spells as Spell[]).map((s) => s.id));
 
@@ -120,5 +122,84 @@ describe("the two spells the app carries out (9.6)", () => {
     // taking it away — so it stays announced and gets no picker.
     expect(spellScript("wladca-zdarzen")?.target).toBe("karta-na-planszy");
     expect(spellScript("wladca-zdarzen")?.applies).toBeUndefined();
+  });
+});
+
+/**
+ * Reading the windows straight off a turn state.
+ *
+ * This is the function both sides now ask, so it is the one place 9.1 is
+ * decided. Before it existed the browser took the turn state apart itself and
+ * the server did not take it apart at all, which is how a spell could be spoken
+ * at any moment by anything that was not the button.
+ */
+describe("momentsIn", () => {
+  const fight = (over: Partial<Fight> = {}): TurnPhase => ({
+    phase: "walka",
+    fight: {
+      cardId: "goblin",
+      cardName: "GOBLIN",
+      kind: "zwykla",
+      enemyTotal: 3,
+      playerTotal: 4,
+      playerRoll: null,
+      enemyRoll: null,
+      result: null,
+      fieldId: "step-1",
+      draw: 0,
+      drawn: [],
+      ...over,
+    } as Fight,
+  });
+
+  it("opens the pre-move windows before the die is thrown", () => {
+    expect(momentsIn({ phase: "rzut" })).toEqual(
+      expect.arrayContaining(["poczatek-tury", "przed-ruchem", "zamiast-ruchu"]),
+    );
+  });
+
+  /** 17.3 has passed once a die is on the table, and only 17.7 is left. */
+  it("closes przed-walka the moment either die is thrown", () => {
+    expect(momentsIn(fight())).toContain("przed-walka");
+    expect(momentsIn(fight())).not.toContain("w-walce");
+
+    const rolled = momentsIn(fight({ playerRoll: 4 }));
+    expect(rolled).toContain("w-walce");
+    expect(rolled).not.toContain("przed-walka");
+
+    expect(momentsIn(fight({ enemyRoll: 2 }))).toContain("w-walce");
+  });
+
+  it("notices a Wróg standing on the Obszar", () => {
+    const onField = (drawn: { cardId: string; cardClass: string }[]): TurnPhase =>
+      ({ phase: "pole", fieldId: "step-1", from: null, draw: 1, drawn } as unknown as TurnPhase);
+
+    expect(momentsIn(onField([{ cardId: "helm", cardClass: "przedmiot" }]))).toEqual(
+      expect.arrayContaining(["po-ruchu", "po-karcie"]),
+    );
+    expect(momentsIn(onField([{ cardId: "helm", cardClass: "przedmiot" }]))).not.toContain(
+      "spotkanie",
+    );
+    expect(momentsIn(onField([{ cardId: "goblin", cardClass: "wrog" }]))).toEqual(
+      expect.arrayContaining(["spotkanie", "przed-walka"]),
+    );
+  });
+
+  it("always leaves dowolna-chwila open", () => {
+    for (const state of [{ phase: "rzut" } as TurnPhase, { phase: "koniec" } as TurnPhase]) {
+      expect(momentsIn(state)).toContain("dowolna-chwila");
+    }
+  });
+
+  /** The claim the server used to make by hand, now made by the same reading. */
+  it("agrees with what a fight actually allows", () => {
+    const before = momentsIn(fight());
+    const after = momentsIn(fight({ playerRoll: 6 }));
+    const wladca = spellScript("wladca-zaklec");
+    // A reactive Zaklęcie answers whenever it is answering, dice or no dice.
+    if (wladca?.reactive) {
+      expect(castableNow(wladca, before)).toBe(true);
+      expect(castableNow(wladca, after)).toBe(true);
+    }
   });
 });

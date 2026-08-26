@@ -4,8 +4,6 @@ import { CARD_CLASS, type CardClass, type Nature } from "@/data/types";
 import type { Slot } from "./slots";
 import type { FieldId } from "./board";
 
-export type SeatId = string;
-
 /**
  * One player's live state.
  *
@@ -16,7 +14,7 @@ export type SeatId = string;
  * 2.3: own points may never drop below where the character started.
  */
 export interface Seat {
-  id: SeatId;
+  id: string;
   index: number;
   name: string | null;
   characterId: string | null;
@@ -54,34 +52,6 @@ export interface Holding {
   /** Conjured by the test shortcut: it belongs to no pile (see `db/schema.sql`). */
   granted?: boolean;
 }
-
-export interface GameState {
-  id: string;
-  mode: "companion" | "simulation";
-  status: "lobby" | "playing" | "finished";
-  turn: number;
-  activeSeat: number | null;
-  seats: Seat[];
-  /** Cards left lying on fields (16.8), keyed by field id. */
-  fieldCards: Record<string, string[]>;
-}
-
-/**
- * What the engine is waiting for. Returned after every applied move so the UI
- * never has to infer whose input is next.
- *
- * `reaction` is the one case where the waiting set is not just the active seat:
- * before a combat roll, *both* combatants may cast (17.7), and spells reach
- * their target wherever they stand on the board (9.6). The engine computes
- * which seats actually hold a castable spell and lists only those — most of the
- * time that set is empty and the window is skipped entirely, which is what
- * keeps the reaction rule from taxing every single turn.
- */
-export type Waiting =
-  | { kind: "move"; seat: number }
-  | { kind: "choice"; seat: number; prompt: string; options: string[] }
-  | { kind: "reaction"; seats: number[]; reason: string }
-  | { kind: "finished"; winner: number };
 
 export interface TurnCard {
   cardId: string;

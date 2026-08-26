@@ -1,6 +1,10 @@
 /** Which action windows a turn is offering, and which of them are not offers at all. */
 
 import type { FieldId } from "./board";
+import type { TurnPhase } from "./turn";
+import { BRIDGE_ORDEAL } from "./bridge";
+import { crossingFrom } from "./rings";
+import { compulsoryOffer } from "./fieldScript";
 
 /**
  * Why this is a list and not a panel.
@@ -57,6 +61,30 @@ export interface TurnFacts {
   ordeal: boolean;
   /** This Obszar does something to whoever arrives, asked for or not. */
   demands: boolean;
+}
+
+/**
+ * The facts, read straight off a turn state.
+ *
+ * `TurnFacts` stays a set of plain named facts so the reading above can be
+ * tested against the rules rather than against a store — but *arriving* at
+ * those facts is a reading of the rules too, and it was being done in the page
+ * component where nothing tested it. A bug lived there: `crossingFrom` answers
+ * `undefined` rather than null, and comparing against null was true for every
+ * Obszar on the board, so the Karczma offered a Przeprawa.
+ */
+export function factsIn(state: TurnPhase, standingOn: FieldId | null): TurnFacts {
+  const onField = state.phase === "pole" ? state : null;
+  const settled = onField?.resolved ?? [];
+  return {
+    phase: state.phase,
+    standingOn,
+    cardsWaiting: onField?.drawn.filter((card) => !settled.includes(card.cardId)).length ?? 0,
+    fighting: state.phase === "walka",
+    crossing: standingOn !== null && crossingFrom(standingOn) !== undefined,
+    ordeal: standingOn !== null && BRIDGE_ORDEAL.has(standingOn),
+    demands: onField !== null && compulsoryOffer(standingOn, settled) !== null,
+  };
 }
 
 /**

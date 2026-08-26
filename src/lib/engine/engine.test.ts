@@ -17,7 +17,6 @@ import {
   beastStrength,
   combinedEnemyTotal,
   compareCombat,
-  resolveCombat,
   spoilsFor,
 } from "./combat";
 import { resolutionOrder } from "./state";
@@ -269,16 +268,6 @@ describe("combat (17.4, 17.10, 18.2)", () => {
   it("makes the lost life unpreventable in magical combat only", () => {
     expect(spoilsFor("zwykla").preventable).toBe(true);
     expect(spoilsFor("magiczna").preventable).toBe(false);
-  });
-
-  it("takes the attacker's roll first (17.8)", async () => {
-    const { result, attackerRoll, defenderRoll } = await resolveCombat(
-      { attacker: { label: "A", total: 3 }, defender: { label: "B", total: 3 }, kind: "zwykla" },
-      scriptedRandom([6, 1]),
-    );
-    expect(attackerRoll).toBe(6);
-    expect(defenderRoll).toBe(1);
-    expect(result).toMatchObject({ outcome: "wygrana", winner: "A" });
   });
 });
 

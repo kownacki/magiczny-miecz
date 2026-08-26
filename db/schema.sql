@@ -51,6 +51,11 @@ create table if not exists magiczny_miecz.games (
   -- Touched on every change, so a list of tables can be ordered by what was
   -- actually being played rather than by when it was opened.
   last_played_at timestamptz not null default now(),
+  -- When the lobby became a game. Null while it is still a lobby. Written by
+  -- `startGame` and read by nobody yet — it is here so that "how long did that
+  -- take" is answerable later, and because the column already existed in the
+  -- database while this file did not admit it.
+  started_at timestamptz,
   created_at timestamptz not null default now()
 );
 

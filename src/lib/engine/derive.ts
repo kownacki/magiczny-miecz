@@ -154,7 +154,16 @@ export const HEAL_CEILING = 4;
  * would let a heal on a character at six quietly drain them to four — healing
  * must never be able to take life away.
  */
-export function heal(seat: Seat, amount: number): Seat {
+/**
+ * Takes only the field it reads.
+ *
+ * Healing is arithmetic on one number, and asking for a whole `Seat` to do it
+ * meant the one caller had to invent one — `heal({ ...(row as unknown as Seat),
+ * zycie: row.zycie })`, a cast that produced an object whose every other
+ * engine-named field was `undefined` and worked only because nothing looked at
+ * them. Asking for what it uses is honest and costs the caller nothing.
+ */
+export function heal<T extends Pick<Seat, "zycie">>(seat: T, amount: number): T {
   return {
     ...seat,
     zycie: Math.max(seat.zycie, Math.min(HEAL_CEILING, seat.zycie + amount)),
@@ -163,6 +172,22 @@ export function heal(seat: Seat, amount: number): Seat {
 
 export function gainLife(seat: Seat, amount: number): Seat {
   return { ...seat, zycie: seat.zycie + amount };
+}
+
+/**
+ * Whether the Różdżka Zaklęć will give another Zaklęcie.
+ *
+ * Its own words: "może wziąć nowe Zaklęcie, gdy ma tyle Zaklęć, ile na początku
+ * gry lub mniej". The baseline is the hand dealt at setup, not 2.6's table —
+ * see `spellAllowance`, which floors the limit for the same reason.
+ *
+ * Named because it was written twice: once where the button is drawn and once
+ * where the draw is refused, with a comment on the first conceding that the
+ * second is the authority. Two readings of one sentence agree until they do
+ * not.
+ */
+export function wandRefills(spellsHeld: number, spellsAtSetup: number): boolean {
+  return spellsHeld <= spellsAtSetup;
 }
 
 /**

@@ -1,45 +1,11 @@
 /** Every card effect, said in words, so the picture of the card is never the only place a rule lives. */
 
-import { FIELDS, type FieldId } from "./board";
 import type { Condition, Destination, Effect, Target } from "./cardScript";
-
-const STAT = {
-  miecz: "Miecza",
-  magia: "Magii",
-  zycie: "Życia",
-  zloto: "Złota",
-} as const;
-
-const WHO: Record<Target, string> = {
-  ty: "ty",
-  wszyscy: "wszyscy",
-  "wszyscy-w-kregu": "wszyscy w tym Kręgu",
-  "kazdy-kto-tu-trafi": "każdy, kto tu trafi",
-  dobrzy: "Dobre Postacie",
-  chaotyczni: "Chaotyczne Postacie",
-  zli: "Złe Postacie",
-  "w-dolnym-kregu": "wędrujący Dolnym Kręgiem",
-  "w-srodkowym-kregu": "wędrujący Środkowym Kręgiem",
-  "w-gornym-kregu": "wędrujący Górnym Kręgiem",
-  "inna-postac": "wybrana Postać",
-};
-
-const LOST = {
-  przedmiot: "Przedmiot",
-  przyjaciel: "Przyjaciela",
-  zaklecie: "Zaklęcie",
-  zloto: "całe złoto",
-  "wszystkie-przedmioty": "wszystkie Przedmioty",
-  "wszystkie-zaklecia": "wszystkie Zaklęcia",
-} as const;
-
-function fieldName(fieldId: FieldId): string {
-  return FIELDS.get(fieldId)?.name ?? fieldId;
-}
+import { fieldName, LOST_LABEL, plural, STAT_LABEL, TARGET_SHORT } from "./polish";
 
 /** Anyone but you is worth naming; "ty" is the default and saying it is noise. */
 function forWhom(target: Target | undefined): string {
-  return !target || target === "ty" ? "" : ` — ${WHO[target]}`;
+  return !target || target === "ty" ? "" : ` — ${TARGET_SHORT[target]}`;
 }
 
 function where(destination: Destination): string {
@@ -64,14 +30,6 @@ function ifWhen(condition: Condition): string {
     case "ma-zloto":
       return "jeśli masz złoto";
   }
-}
-
-/** Polish counts three ways, and cards deal in small numbers. */
-function count(n: number, one: string, few: string, many: string): string {
-  if (n === 1) return one;
-  const last = n % 10;
-  const tens = n % 100;
-  return last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14) ? few : many;
 }
 
 /**
@@ -145,12 +103,12 @@ export function describeEffect(effect: Effect): string {
 
     case "punkty": {
       const many = Math.abs(effect.delta);
-      return `${effect.delta > 0 ? "+" : "−"}${many} ${STAT[effect.stat]}${forWhom(effect.target)}`;
+      return `${effect.delta > 0 ? "+" : "−"}${many} ${STAT_LABEL[effect.stat]}${forWhom(effect.target)}`;
     }
 
     case "uzdrow":
       return (
-        `leczysz do ${effect.upTo} ${count(effect.upTo, "Życia", "Życia", "Żyć")} (4.7)` +
+        `leczysz do ${effect.upTo} ${plural(effect.upTo, "Życia", "Życia", "Żyć")} (4.7)` +
         (effect.cena ? ` za ${effect.cena} Sz. Z.` : "")
       );
 
@@ -158,7 +116,7 @@ export function describeEffect(effect: Effect): string {
       return `sprzedajesz Przedmiot za ${effect.cena} Sz. Z.`;
 
     case "tura-stracona": {
-      const turns = `${effect.turns} ${count(effect.turns, "turę", "tury", "tur")}`;
+      const turns = `${effect.turns} ${plural(effect.turns, "turę", "tury", "tur")}`;
       const spared = effect.oprocz?.length ? ` (oprócz: ${effect.oprocz.join(", ")})` : "";
       return `tracisz ${turns}${forWhom(effect.target)}${spared}`;
     }
@@ -167,7 +125,7 @@ export function describeEffect(effect: Effect): string {
       return "dodatkowy ruch";
 
     case "zaklecie":
-      return `bierzesz ${effect.count} ${count(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
+      return `bierzesz ${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
 
     case "zaklecia-do-limitu":
       return "dobierasz Zaklęcia do swojego limitu (2.6)";
@@ -176,7 +134,7 @@ export function describeEffect(effect: Effect): string {
       return `przenosisz się: ${where(effect.to)}`;
 
     case "wyciagnij":
-      return `ciągniesz ${effect.count} ${count(effect.count, "Kartę", "Karty", "Kart")}`;
+      return `ciągniesz ${effect.count} ${plural(effect.count, "Kartę", "Karty", "Kart")}`;
 
     case "walka": {
       const strength =
@@ -191,7 +149,7 @@ export function describeEffect(effect: Effect): string {
     case "strata": {
       const how = effect.wybor === "losowo" ? " (losowo)" : "";
       const many = effect.count && effect.count > 1 ? `${effect.count} ` : "";
-      return `tracisz ${many}${LOST[effect.co]}${how}${forWhom(effect.target)}`;
+      return `tracisz ${many}${LOST_LABEL[effect.co]}${how}${forWhom(effect.target)}`;
     }
 
     case "kamien":

@@ -8,9 +8,9 @@ import { watchRevision } from "@/lib/game/liveRevision";
 import characters from "@/data/characters.json";
 import type { Character, Nature } from "@/data/types";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
-import { FIELDS, type FieldId, isFieldId } from "@/lib/engine/board";
+import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/engine/fieldText";
-import { abilitiesOf, skipsRollAt, type Ability } from "@/lib/engine/abilities";
+import { type Ability } from "@/lib/engine/abilities";
 import { describeAbility } from "@/lib/engine/abilityText";
 import {
   RANDOM_CHARACTER_ID,
@@ -35,17 +35,16 @@ import { DRAG_TYPE, SlotPanel, startHoldingDrag, type SlotItem } from "./slot-pa
 import { ItemSlot, SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
 import { CarriedCard, type Carried } from "./carry";
 import { SLOTS, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
-import { carryLimit } from "@/lib/engine/derive";
+import { carriedCount, carryLimit, wandRefills } from "@/lib/engine/derive";
+import type { Holding } from "@/lib/engine/state";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
-import { turnSteps, windowsFor } from "@/lib/engine/turnWindows";
+import { factsIn, turnSteps, windowsFor } from "@/lib/engine/turnWindows";
 import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "@/lib/engine/duties";
-import { crossingFrom } from "@/lib/engine/rings";
-import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
 import { Journal } from "./journal";
-import { momentsOf, spellScript } from "@/lib/engine/spells";
+import { momentsIn, spellScript } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
@@ -58,8 +57,8 @@ import { AnnouncementModal } from "./announcement";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { USE_VERB, askAbout, isUsable, usageOf } from "@/lib/engine/uses";
-import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
-import type { Effect } from "@/lib/engine/cardScript";
+import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { describeResult } from "@/lib/engine/noticeText";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { PlayersDrawer } from "./players";
 
@@ -97,6 +96,24 @@ interface Held {
   face: "open" | "hidden";
   /** Conjured by the test shortcut — marked on the card, not just in the journal. */
   granted?: boolean;
+}
+
+/**
+ * A seat's cards in the shape the engine's rules read them.
+ *
+ * The rules that count a pack live in `derive.ts` and are the same ones the
+ * server enforces with, so this is the whole of what the browser has to do to
+ * ask them. Counting the pack by hand instead is what put a Magiczny Miecz on
+ * the wrong side of 5.4 — `carriedCount` leaves the two relics out (see
+ * `RELICS`) and a filter written next to it did not.
+ */
+function asHoldings(holdings: readonly Held[]): Holding[] {
+  return holdings.map((h) => ({
+    cardId: h.cardId,
+    kind: h.kind,
+    face: h.face,
+    slot: h.slot ?? null,
+  }));
 }
 
 interface Seat {
@@ -824,12 +841,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       );
     }
     if (slot === null && held.slot != null) {
-      const packed = mineNow.holdings.filter((h) => h.kind === "item" && h.slot == null).length;
-      const limit = carryLimit(
-        mineNow.holdings.map((h) => ({ cardId: h.cardId, kind: h.kind, face: h.face, slot: h.slot ?? null })),
-        "slotowy",
-      );
-      if (packed >= limit) return setError("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
+      const mineCards = asHoldings(mineNow.holdings);
+      if (carriedCount(mineCards, "slotowy") >= carryLimit(mineCards, "slotowy")) {
+        return setError("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
+      }
     }
 
     setError(null);
@@ -932,20 +947,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * the dice and a fight after the first one are the same phase and are not
    * the same moment, and neither is a field with a card just turned over.
    */
-  const now = game
-    ? momentsOf({
-        phase: game.turn_state.phase,
-        diceRolled:
-          game.turn_state.phase === "walka" &&
-          (game.turn_state.fight.playerRoll !== null ||
-            game.turn_state.fight.enemyRoll !== null),
-        cardJustDrawn:
-          game.turn_state.phase === "pole" && game.turn_state.drawn.length > 0,
-        meeting:
-          game.turn_state.phase === "pole" &&
-          game.turn_state.drawn.some((entry) => entry.cardClass === "wrog"),
-      })
-    : ["dowolna-chwila" as const];
+  // The same reading the server refuses a cast against (9.1), not a second one
+  // that agrees with it most of the time.
+  const now = game ? momentsIn(game.turn_state) : ["dowolna-chwila" as const];
 
   const mine = mySeat
     ? {
@@ -965,27 +969,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * into the plain facts it asks about.
    */
   const turnState = game.turn_state;
-  // Only the "pole" phase has a stack of drawn cards, so the narrowing is done
-  // once here rather than repeated inside the literal — where it does not carry
-  // into the closure anyway.
+  const turnWindows = active ? windowsFor(factsIn(turnState, active.field_id)) : [];
+  // Only the "pole" phase has a stack of drawn cards. Narrowed once here for
+  // the controls further down that ask how much of the draw is left; what the
+  // turn is *offering* is `factsIn`'s reading, not this one.
   const onField = turnState.phase === "pole" ? turnState : null;
-  const settled = onField?.resolved ?? [];
-  const turnWindows = active
-    ? windowsFor({
-        phase: turnState.phase,
-        standingOn: active.field_id,
-        cardsWaiting:
-          onField?.drawn.filter((card) => !settled.includes(card.cardId)).length ?? 0,
-        fighting: turnState.phase === "walka",
-        // `crossingFrom` answers `undefined`, not null — comparing against null
-        // is true for every field on the board, which offered a Przeprawa from
-        // the Karczma.
-        crossing: active.field_id !== null && crossingFrom(active.field_id) !== undefined,
-        ordeal: active.field_id !== null && BRIDGE_ORDEAL.has(active.field_id),
-        demands:
-          onField !== null && compulsoryOffer(active.field_id, settled) !== null,
-      })
-    : [];
 
   const overlays = (
     <>
@@ -1878,24 +1866,25 @@ function Hand({
   const [wanted, setWanted] = useState<string[] | null>(null);
 
   /**
-   * The Różdżka Zaklęć's condition, worked out where its button is drawn.
-   *
-   * "gdy ma tyle Zaklęć, ile na początku gry lub mniej" — so it is the setup
-   * hand this is measured against, not 2.6's table. The server checks it again
-   * and is the authority; this only decides whether the offer looks available.
+   * The Różdżka Zaklęć's condition, asked of the engine where its button is
+   * drawn — the same question `drawSpellWithWand` refuses against.
    */
   const setupSpells = startingKit(asCharacterId(seat.character_id)).spells ?? 0;
-  const wandReady =
-    seat.holdings.filter((held) => held.kind === "spell").length <= setupSpells;
+  const wandReady = wandRefills(
+    seat.holdings.filter((held) => held.kind === "spell").length,
+    setupSpells,
+  );
 
   const shown = seat.holdings.filter((held) => held.kind !== "spell");
-  const packed = seat.holdings.filter(
-    (held) => held.kind === "item" && (!slotted || held.slot == null),
-  ).length;
-  const limit = carryLimit(
-    seat.holdings.map((h) => ({ cardId: h.cardId, kind: h.kind, face: h.face, slot: h.slot ?? null })),
-    slotted ? "slotowy" : "klasyczny",
-  );
+  // Counted through the engine rather than beside it, so what the pack says is
+  // what `takeCard` and `equipCard` will actually allow. Still counted here and
+  // not sent down ready-made: `mine.holdings` carries the optimistic slot a
+  // drag has just asked for, and a number from the last poll would lag the
+  // gesture it is describing.
+  const cards = asHoldings(seat.holdings);
+  const variant = slotted ? "slotowy" : "klasyczny";
+  const packed = carriedCount(cards, variant);
+  const limit = carryLimit(cards, variant);
 
   /**
    * The pack, in the order it should be drawn.
@@ -3353,161 +3342,4 @@ function asNature(value: string | null | undefined): Nature | null {
   return value === "dobra" || value === "zla" || value === "chaotyczna" ? value : null;
 }
 
-function describeResult(result: unknown): string | null {
-  if (!result || typeof result !== "object") return null;
-  const data = result as {
-    dice?: number[];
-    magia?: number;
-    outcome?: string;
-    spell?: string;
-    effect?: string;
-    /** The Kamienny Most's own fields (14.5-14.6). */
-    kind?: string;
-    /** 19.1, which is answered rather than rolled. */
-    succeeded?: boolean;
-    onBridge?: boolean;
-    to?: string;
-    lost?: string[];
-    kept?: string[];
-    lifeLost?: number;
-    enemyTotal?: number;
-    healed?: number;
-    paid?: number;
-    /** A field's die table or a card's script, thrown and applied by the server. */
-    offer?: string;
-    card?: string;
-    face?: number;
-    did?: string[];
-    /** A used card the app could not finish working out — see `uses.ts`. */
-    stol?: boolean;
-  };
-  // 19.1 is answered, not rolled — an escape works because an ability says so.
-  // "No" is therefore a real result, and it changes nothing on the board, so
-  // saying it is the only way to tell it apart from the button doing nothing.
-  if (typeof data.succeeded === "boolean" && typeof data.onBridge === "boolean") {
-    return data.succeeded
-      ? "Wymknąłeś się (19.1) — nie możesz już nic zrobić temu, przed czym uciekłeś."
-      : "Nie udało się wymknąć: twoja Postać nie potrafi tego na tym Obszarze (19.1).";
-  }
 
-  // A spell has to be announced loudly: 9.6 reaches its victim anywhere on the
-  // board, so the person it lands on may not be looking at this turn at all.
-  if (data.spell) return `Rzucono Zaklęcie: ${data.spell}. ${data.effect ?? ""}`.trim();
-
-  // The bridge. These are the most expensive things that happen in the game —
-  // a fall from the Pułapka takes two thirds of everything a character owns —
-  // and they used to happen in silence, the figure simply appearing somewhere
-  // else with a lighter pack. The dice are quoted because at a table somebody
-  // always asks to see them.
-  const roll = (dice?: number[]) => (dice ?? []).join(" + ");
-  switch (data.kind) {
-    case "pulapka": {
-      const sum = (data.dice ?? []).reduce((total, die) => total + die, 0);
-      if (data.outcome === "uniknieta") {
-        return `Pułapka: ${roll(data.dice)} = ${sum} — mniej niż twoje punkty, zostajesz na miejscu.`;
-      }
-      // Straight off the wire, so it is looked up rather than trusted.
-      const where = (isFieldId(data.to) ? FIELD_NAMES.get(data.to) : null) ?? data.to ?? "?";
-      const lost = data.lost?.length ? `Tracisz: ${data.lost.join(", ")}.` : "Nic nie tracisz.";
-      const kept = data.kept?.length ? ` Zostaje przy tobie: ${data.kept.join(", ")}.` : "";
-      return `Pułapka: ${roll(data.dice)} = ${sum} — spadasz na ${where}. ${lost}${kept}`;
-    }
-    case "gra-ze-smiercia": {
-      const mine = (data.dice ?? []).slice(0, 2);
-      const deaths = (data.dice ?? []).slice(2);
-      const verdict =
-        data.outcome === "dalej"
-          ? "wygrywasz — idziesz dalej"
-          : data.outcome === "znowu"
-            ? "remis — grasz jeszcze raz w następnej turze"
-            : "przegrywasz — tracisz 1 Życia i grasz dalej";
-      return `Gra ze Śmiercią: ty ${roll(mine)} przeciw ${roll(deaths)} — ${verdict}.`;
-    }
-    case "cerber":
-      return `Cerber: ${roll(data.dice)} — tracisz ${data.lifeLost} Życia.`;
-    case "straznik":
-      return `${data.outcome}: ${roll(data.dice)} — jego siła to ${data.enemyTotal}. Nie przejdziesz, póki nie zginie.`;
-  }
-
-  // A die table the app rolled and acted on. The player pressed one button and
-  // did not see either half, so both are said: the face, and what it did.
-  const source = data.offer ?? data.card;
-  if (source && (typeof data.face === "number" || data.did)) {
-    const did = data.did?.length ? data.did.join(", ") : "nic się nie dzieje";
-    const rolled = typeof data.face === "number" ? `wypadło ${data.face} — ` : "";
-    // A spent card whose effect the app cannot carry out says so, rather than
-    // reading like something that has already been applied. The Karta is gone
-    // either way; what is left is the table's to do.
-    const owed = data.stol ? " — rozpatrzcie sami." : ".";
-    return `${source}: ${rolled}${did}${owed}`;
-  }
-
-  // Paying a healer: what the money and 4.7 between them actually bought.
-  if (typeof data.healed === "number") {
-    return `Wyleczone: ${data.healed} ${data.healed === 1 ? "punkt" : "punkty"} Życia za ${data.paid} Sz. Z.`;
-  }
-
-  if (!Array.isArray(data.dice) || typeof data.magia !== "number") return null;
-  const total = data.dice.reduce((sum, die) => sum + die, 0);
-  const verdict =
-    data.outcome === "udana" ? "przeprawa udana" : "porażka — tracisz 1 Życie";
-  return `Trzęsawiska: ${data.dice.join(" + ")} = ${total} przeciw Magii ${data.magia} — ${verdict}.`;
-}
-
-function fieldName(fieldId: FieldId): string {
-  return FIELDS.get(fieldId)?.name ?? fieldId;
-}
-
-/**
- * Field names for a list.
- *
- * Eight places on the board are printed twice, and a card that names one almost
- * always names both — which used to render as "Urwisko, Urwisko", since both
- * carried the printed name. They are numbered now, so the pair reads as
- * "Urwisko I, Urwisko II" and the dedup is left only for genuine repeats.
- */
-function fieldNames(fieldIds: readonly FieldId[]): string {
-  // Board order, so a pair of numbered fields reads the way you walk them.
-  // The ability data lists ids in whatever order the card's prose does, which
-  // put the Hobgoblin's escape at "Step II, Step I".
-  const order = [...FIELDS.keys()];
-  const sorted = [...new Set(fieldIds)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
-  return [...new Set(sorted.map(fieldName))].join(", ");
-}
-
-/**
- * Which held card, if any, lets this character walk past the field's die roll.
- *
- * Returns the card's name rather than a boolean, because "you may skip this"
- * is much less useful to a player than "your Przewodnik lets you skip this" —
- * the second can be checked against the card lying on the table.
- */
-function rollSkippedBy(seat: Seat): string | null {
-  if (!seat.field_id) return null;
-  for (const held of seat.holdings) {
-    if (skipsRollAt(abilitiesOf(held.cardId), seat.field_id)) {
-      return CARD_NAMES.get(held.cardId) ?? held.cardId;
-    }
-  }
-  return null;
-}
-
-/**
- * A field's table that the character has no choice about, if it is still owed.
- *
- * `obowiazkowe` is the whole test: the Karczma's "MUSISZ RZUCIĆ KOSTKĄ" and the
- * Strażnik's toll happen to you, which puts them in the same class as a drawn
- * card and therefore in the modal, where the table can watch. Everything else a
- * field offers is a visit — "MOŻESZ TU ODWIEDZIĆ" — and a visit stays in the
- * panel, because choosing not to go is a real answer.
- */
-function compulsoryOffer(
-  fieldId: FieldId | null,
-  resolved: readonly string[],
-): { name: string; effect: Effect } | null {
-  if (!fieldId) return null;
-  const script = fieldScriptFor(fieldId);
-  if (!script?.obowiazkowe) return null;
-  const owed = script.offers.find((offer) => !resolved.includes(offerKey(offer.name)));
-  return owed ? { name: owed.name, effect: owed.effect } : null;
-}

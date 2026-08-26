@@ -696,17 +696,3 @@ export function opensTheWayTo(
 ): boolean {
   return abilities.some((ability) => ability.kind === "wymagany" && ability.place === place);
 }
-
-/**
- * The best save a character has against losing a point of Życie in a fight.
- *
- * Zero when there is none. Only the best applies — the texts each describe one
- * roll, not a sequence of them, so a character wearing both Zbroja and Hełm
- * rolls once against the kinder threshold.
- */
-export function wardThreshold(abilities: readonly Ability[]): number {
-  return abilities.reduce(
-    (best, ability) => (ability.kind === "oslona" ? Math.max(best, ability.upTo) : best),
-    0,
-  );
-}

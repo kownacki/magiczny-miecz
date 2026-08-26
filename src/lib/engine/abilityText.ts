@@ -6,19 +6,8 @@ import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
 import { describeDisposition, scriptFor } from "./cardScript";
 import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
+import { fieldName, plural } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
-
-/** Polish counts three ways, and cards deal in small numbers. */
-function plural(n: number, one: string, few: string, many: string): string {
-  if (n === 1) return one;
-  const last = n % 10;
-  const tens = n % 100;
-  return last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14) ? few : many;
-}
-
-function fieldName(fieldId: FieldId): string {
-  return FIELDS.get(fieldId)?.name ?? fieldId;
-}
 
 function fieldNames(fieldIds: readonly FieldId[]): string {
   // Board order, so a pair of numbered fields reads the way you walk them. The

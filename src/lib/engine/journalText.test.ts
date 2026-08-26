@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe as suite, expect, it } from "vitest";
 import {
   describe,
@@ -355,15 +355,28 @@ suite("journalLines", () => {
  * that goes stale exactly the way the journal did.
  */
 suite("every event has a sentence", () => {
-  const source = readFileSync(
-    new URL("../game/turnStore.ts", import.meta.url),
-    "utf8",
-  );
-  // `journal(gameId, seatId, turn, "kind"` — the literal ones. The two written
-  // through a variable (`record.kind`, and the move that is either a step or an
-  // attempt at the Most) are listed after, because a regex cannot read them.
+  // Both halves of the store: what has not moved to a command yet, and what
+  // has. A converted command does not call `journal` at all — it puts a
+  // `JournalWrite` in its changeset — so the scan has to know both shapes or it
+  // would quietly stop seeing the kinds as each one crosses over.
+  const commands = new URL("../game/commands/", import.meta.url);
+  const source = [
+    readFileSync(new URL("../game/turnStore.ts", import.meta.url), "utf8"),
+    ...readdirSync(commands)
+      .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
+      .map((name) => readFileSync(new URL(name, commands), "utf8")),
+  ].join("\n");
+
+  // `journal(gameId, seatId, turn, "kind"` for the calls, and `turn:` followed
+  // by `kind:` for the changeset writes — that adjacency is `JournalWrite` and
+  // nothing else, which is what keeps this off a payload that happens to carry
+  // a `kind` of its own, as `zabranie`'s does. The
+  // two written through a variable (`record.kind`, and the move that is either
+  // a step or an attempt at the Most) are listed after, because a regex cannot
+  // read them.
   const written = new Set([
     ...[...source.matchAll(/await journal\(\s*[\s\S]{0,120}?"([a-z-]+)"/g)].map((m) => m[1]),
+    ...[...source.matchAll(/turn: [^\n]+,\n\s*kind: "([a-z-]+)"/g)].map((m) => m[1]),
     "korekta",
     "punkty",
     "ruch",

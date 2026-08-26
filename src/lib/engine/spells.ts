@@ -1,5 +1,6 @@
 /** When a Zaklęcie may be cast, at what, and what casting it does (9.1, 9.6). */
 import type { CardId, SpellId } from "@/data/ids";
+import type { TurnPhase } from "./turn";
 
 /**
  * The third card shape, and the one the app had nothing at all for.
@@ -314,6 +315,27 @@ export interface TurnMoment {
   cardJustDrawn?: boolean;
   /** Another character on this field, or a Wróg standing on it. */
   meeting?: boolean;
+}
+
+/**
+ * Every window a turn is in, read straight off its state.
+ *
+ * Taking a `TurnPhase` apart into the four facts `momentsOf` asks about used to
+ * happen in the page component and nowhere else — so the server, which holds
+ * the same turn state and is the only thing that can actually refuse a spell,
+ * had no way to ask the question and did not ask it. 9.1 was enforced by a
+ * disabled button, which is not enforcement.
+ */
+export function momentsIn(state: TurnPhase): SpellTiming[] {
+  return momentsOf({
+    phase: state.phase,
+    diceRolled:
+      state.phase === "walka" &&
+      (state.fight.playerRoll !== null || state.fight.enemyRoll !== null),
+    cardJustDrawn: state.phase === "pole" && state.drawn.length > 0,
+    meeting:
+      state.phase === "pole" && state.drawn.some((entry) => entry.cardClass === "wrog"),
+  });
 }
 
 /** Every window the turn is in at once — a moment can be more than one. */

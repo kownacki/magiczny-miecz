@@ -13,6 +13,7 @@
 import Image from "next/image";
 import { SEAT_COLOURS } from "@/lib/engine/boardMap";
 import { characterStandeeUrl } from "@/lib/engine/cardImages";
+import { plural } from "@/lib/engine/polish";
 import { DEFAULT_DEPTH, projectQueue, type QueueEntry } from "@/lib/engine/turnQueue";
 
 export interface QueueSeat {
@@ -98,7 +99,7 @@ function QueueChip({
   // cannot separate the seat colours still reads the same information.
   const reason = skipped
     ? entry.reason === "stone"
-      ? `Kamień — jeszcze ${entry.remaining} ${plural(entry.remaining ?? 0)}`
+      ? `Kamień — jeszcze ${entry.remaining} ${plural(entry.remaining ?? 0, "tura", "tury", "tur")}`
       : `Traci turę${(entry.remaining ?? 0) > 1 ? ` — jeszcze ${entry.remaining}` : ""}`
     : null;
 
@@ -171,9 +172,3 @@ function QueueChip({
   );
 }
 
-/** Polish counts turns as 1 tura / 2-4 tury / 5+ tur, and the bar shows small numbers. */
-function plural(turns: number): string {
-  if (turns === 1) return "tura";
-  if (turns >= 2 && turns <= 4) return "tury";
-  return "tur";
-}

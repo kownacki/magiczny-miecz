@@ -13,6 +13,7 @@ import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardDetail, CardTile, type TileCard } from "./card-tile";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/engine/fieldText";
+import { plural } from "@/lib/engine/polish";
 import { LAYER } from "./layers";
 
 /**
@@ -164,14 +165,6 @@ function FieldChip({
       {preview}
     </>
   );
-}
-
-/** Polish counts things three ways, and these are small numbers. */
-function plural(count: number, one: string, few: string, many: string): string {
-  if (count === 1) return one;
-  const last = count % 10;
-  const tens = count % 100;
-  return last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14) ? few : many;
 }
 
 /**

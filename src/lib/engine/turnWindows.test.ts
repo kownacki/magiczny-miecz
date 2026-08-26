@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { opensItself, turnSteps, windowsFor, type TurnFacts } from "./turnWindows";
+import { factsIn, opensItself, turnSteps, windowsFor, type TurnFacts } from "./turnWindows";
+import { asFieldId } from "./board";
+import { offerKey } from "./fieldScript";
+import type { TurnPhase } from "./turn";
 
 const quiet: TurnFacts = {
   phase: "pole",
@@ -142,5 +145,88 @@ describe("how far through the turn you are", () => {
 
   it("says only that a fight is happening", () => {
     expect(shape("walka")).toEqual(["Walka:teraz"]);
+  });
+});
+
+/**
+ * Reading the facts off a turn state.
+ *
+ * This assembly used to live in the page component, which is where its one
+ * known bug lived too. Moving it here is what lets the bug be written down as a
+ * test instead of as a comment.
+ */
+describe("factsIn", () => {
+  const at = (fieldId: string, state: TurnPhase = { phase: "rzut" }) =>
+    factsIn(state, asFieldId(fieldId));
+
+  const onField = (fieldId: string, drawn: { cardId: string; cardClass: string }[] = [], resolved: string[] = []) =>
+    factsIn(
+      {
+        phase: "pole",
+        fieldId: asFieldId(fieldId)!,
+        from: null,
+        draw: 1,
+        drawn,
+        resolved,
+      } as unknown as TurnPhase,
+      asFieldId(fieldId),
+    );
+
+  /**
+   * `crossingFrom` answers `undefined`, not null.
+   *
+   * Comparing it against null was true for every Obszar on the board, so the
+   * Karczma — which is not a crossing and has no other side — offered a
+   * Przeprawa.
+   */
+  it("does not offer a Przeprawa from an Obszar that has none", () => {
+    expect(at("karczma").crossing).toBe(false);
+    expect(at("uroczysko").crossing).toBe(true);
+    expect(at("przelecz-wichrow").crossing).toBe(true);
+  });
+
+  it("knows the Kamienny Most's own Obszary", () => {
+    expect(at("pulapka").ordeal).toBe(true);
+    expect(at("cerber").ordeal).toBe(true);
+    expect(at("karczma").ordeal).toBe(false);
+  });
+
+  /** 16.5: a Karczma happens to you, so its window is not an offer. */
+  it("marks an Obszar that demands rather than offers", () => {
+    expect(onField("karczma").demands).toBe(true);
+    expect(onField("uroczysko").demands).toBe(false);
+  });
+
+  it("stops demanding once its offer has been settled", () => {
+    expect(onField("karczma", [], [offerKey("Karczma")]).demands).toBe(false);
+  });
+
+  it("counts only the cards still waiting (16.4)", () => {
+    const drawn = [
+      { cardId: "goblin", cardClass: "wrog" },
+      { cardId: "helm", cardClass: "przedmiot" },
+    ];
+    expect(onField("uroczysko", drawn).cardsWaiting).toBe(2);
+    expect(onField("uroczysko", drawn, ["goblin"]).cardsWaiting).toBe(1);
+  });
+
+  it("says nothing is waiting anywhere but on the Obszar", () => {
+    expect(at("uroczysko").cardsWaiting).toBe(0);
+    expect(at("uroczysko").fighting).toBe(false);
+  });
+
+  it("survives a character who is not on the board yet", () => {
+    const facts = factsIn({ phase: "rzut" }, null);
+    expect(facts.standingOn).toBeNull();
+    expect(facts.crossing).toBe(false);
+    expect(facts.ordeal).toBe(false);
+    expect(facts.demands).toBe(false);
+  });
+
+  /** The whole point: the facts feed the reading, and the reading is unchanged. */
+  it("feeds windowsFor", () => {
+    const windows = windowsFor(onField("karczma"));
+    expect(windows.map((w) => w.id)).toContain("obszar");
+    expect(opensItself(windows)).toBe("obszar");
   });
 });

@@ -1,6 +1,4 @@
-/** Resolves ordinary and magical combat: the pure comparison in rules 17.4-17.10 and 18.2, plus the roll-gathering around it. */
-
-import type { RandomPort } from "./ports";
+/** Resolves ordinary and magical combat: the pure comparison in rules 17.4-17.10 and 18.2. */
 
 export type CombatKind = "zwykla" | "magiczna";
 
@@ -48,6 +46,29 @@ export function combinedEnemyTotal(enemies: readonly { total: number }[]): numbe
 }
 
 /**
+ * Several creatures as one opponent, or not at all (17.5).
+ *
+ * "Miecze tych istot są sumowane, a do uzyskanego rezultatu dodawany jest wynik
+ * rzutu kostką" — one roll for the lot of them, which is the difference between
+ * hard and hopeless. Only when they fight the same way: an ordinary Wróg and a
+ * magical one are two fights, because 17.4 and 18.2 read different numbers off
+ * the character.
+ *
+ * Null is "these do not attack together", which is the same answer the server
+ * refuses a mixed fight with and the interface hides the button on. It was two
+ * readings agreeing by luck — the interface also added the Miecze up with its
+ * own `reduce` beside this function rather than through it.
+ */
+export function attackAsOne(
+  enemies: readonly { kind: CombatKind; total: number }[],
+): { kind: CombatKind; total: number } | null {
+  if (enemies.length === 0) return null;
+  const kinds = new Set(enemies.map((enemy) => enemy.kind));
+  if (kinds.size > 1) return null;
+  return { kind: enemies[0].kind, total: combinedEnemyTotal(enemies) };
+}
+
+/**
  * What the winner may take, per rule 17.9: one point of Życie, or one item
  * (a magical one included), or one Sztuka Złota. The choice belongs to the
  * winner, so this only enumerates it.
@@ -67,35 +88,6 @@ export function spoilsFor(kind: CombatKind): Spoils {
     // 18.2b removes that possibility entirely in magical combat.
     preventable: kind === "zwykla",
   };
-}
-
-export interface CombatRequest {
-  attacker: Omit<CombatSide, "roll">;
-  defender: Omit<CombatSide, "roll">;
-  kind: CombatKind;
-}
-
-/**
- * Gathers both rolls through the port and compares them.
- *
- * The attacker's roll is taken first because rule 17.8 fixes that order, and at
- * a physical table the order is what people actually follow. Spells must
- * already have been declared before this is called (17.3, 17.7) — this function
- * deliberately has no way to cast one, so a caller that skips the reaction
- * window cannot silently smuggle one in afterwards.
- */
-export async function resolveCombat(
-  request: CombatRequest,
-  random: RandomPort,
-): Promise<{ result: CombatResult; attackerRoll: number; defenderRoll: number }> {
-  const attackerRoll = await random.rollD6(`walka: ${request.attacker.label}`);
-  const defenderRoll = await random.rollD6(`walka: ${request.defender.label}`);
-  const result = compareCombat(
-    { ...request.attacker, roll: attackerRoll },
-    { ...request.defender, roll: defenderRoll },
-    request.kind,
-  );
-  return { result, attackerRoll, defenderRoll };
 }
 
 /**

@@ -5,8 +5,9 @@ import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import characters from "@/data/characters.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
-import { asFieldId, FIELDS } from "./board";
+import { asFieldId } from "./board";
 import { asCharacterId } from "./characters";
+import { fieldName as nameOfField, plural } from "./polish";
 import { USE_VERB_PAST } from "./uses";
 import { describeEnd, type Ends } from "./status";
 
@@ -111,10 +112,18 @@ function cardName(id: unknown): string {
   return typeof id === "string" ? (CARD_NAMES.get(id) ?? id) : "kartę";
 }
 
+/**
+ * A field, from a payload rather than from the board.
+ *
+ * The engine's `fieldName` takes a `FieldId`; a journal row holds whatever was
+ * written into it, so this is the guarded door in front of it — "?" when the
+ * payload has no field at all, and the raw value when it names one the board
+ * has never heard of.
+ */
 function fieldName(id: unknown): string {
   if (typeof id !== "string") return "?";
   const known = asFieldId(id);
-  return known ? (FIELDS.get(known)?.name ?? id) : id;
+  return known ? nameOfField(known) : id;
 }
 
 /** " (10)", or nothing at all when no die was thrown for it. */
@@ -133,15 +142,6 @@ function nameOf(seat: JournalSeat | undefined): string {
   if (seat.playerName) return seat.playerName;
   if (seat.characterId) return characterName(seat.characterId);
   return `Miejsce ${seat.seatIndex + 1}`;
-}
-
-/** Polish counts things three ways, and the journal shows small numbers. */
-function plural(count: number, one: string, few: string, many: string): string {
-  if (count === 1) return one;
-  const last = count % 10;
-  const tens = count % 100;
-  if (last >= 2 && last <= 4 && !(tens >= 12 && tens <= 14)) return few;
-  return many;
 }
 
 /** The cards print "zła", not "zla". Null when there is no Natura to name. */

@@ -7,6 +7,7 @@ import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/engine/cardImages";
 import { combatValueOf } from "@/lib/engine/cards";
+import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import {
   scriptFor,
@@ -522,11 +523,11 @@ export function DrawModal({
         !fought.includes(c.id) &&
         !resolved.includes(c.id),
     );
-  const together =
-    standing.length > 1 &&
-    new Set(standing.map((c) => combatValueOf(c)!.kind)).size === 1
-      ? standing
-      : null;
+  // 17.5 asked once, of the engine, rather than restated here — the server
+  // refuses a mixed fight against this same answer.
+  const asOne =
+    standing.length > 1 ? attackAsOne(standing.map((c) => combatValueOf(c)!)) : null;
+  const together = asOne ? standing : null;
   const keep = kindForCard(known);
   const label = CARD_CLASS_LABEL[card.cardClass as CardClass] ?? card.cardClass;
 
@@ -607,8 +608,7 @@ export function DrawModal({
                 title={together.map((c) => c.name).join(" + ")}
                 className="rounded border border-vermilion/60 px-4 py-2 text-sm text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
               >
-                Walcz ze wszystkimi naraz ({together.length}) —{" "}
-                {together.reduce((sum, c) => sum + combatValueOf(c)!.total, 0)}
+                Walcz ze wszystkimi naraz ({together.length}) — {asOne?.total}
               </button>
             )}
             <button
