@@ -58,7 +58,10 @@ export function NowBox({
 }) {
   return (
     <section
-      aria-label="Teraz"
+      // Named by the heading inside it rather than by a label nobody can see:
+      // the box needed a title anyway, and a landmark named twice is a landmark
+      // whose two names drift.
+      aria-labelledby="teraz"
       // A fixed width and a floor, stretching to whatever the queue beside it
       // is tall. Half again as wide as it was: three steps and a row of window
       // buttons were wrapping onto second lines in a box that had the height
@@ -68,6 +71,17 @@ export function NowBox({
       className="flex min-h-[180px] w-[270px] shrink-0 flex-col rounded-lg border border-ochre/40 bg-panel p-3"
     >
       <header className="mb-2 min-w-0">
+        {/* What the box is, in the same hand as Dziennik and the other
+            surfaces' titles. Without it the first line was a player's name in
+            the display face, which reads as a heading and is not one — so the
+            box announced *who* before it announced *what it was*, and a player
+            who had not been told had to work it out from the buttons. */}
+        <h2
+          id="teraz"
+          className="mb-1 text-[11px] uppercase tracking-widest text-muted"
+        >
+          Teraz
+        </h2>
         <p className="truncate font-[family-name:var(--font-display)] text-sm text-ochre">
           {isMine ? "Twoja tura" : playerName}
         </p>
