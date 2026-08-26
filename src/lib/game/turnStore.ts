@@ -1423,6 +1423,19 @@ export async function runCommand(
     case "stat": {
       const seat = seatOf(command.who);
       /**
+       * `=12` is worked into a change here, where the current value is.
+       *
+       * The store has one verb for a tracked number and it is "move it by": the
+       * floor, the ceiling and the journal line are all written in terms of
+       * what moved, and a second verb that assigns would need its own copy of
+       * every one of them. So the difference lives exactly as long as it takes
+       * to subtract — and everything downstream, the clamp included, goes on
+       * working the way it does for a `+1`.
+       */
+      const standing = (seat as unknown as Record<string, number>)[ADJUSTABLE[command.stat]];
+      const delta = command.set === null ? command.delta : command.set - standing;
+      if (delta === 0) return `${named(seat)}: ${command.stat} is already ${standing}.`;
+      /**
        * No reason string. The journal draws every manual row with "tryb
        * testowy" beside it already, so passing the same words as the reason
        * printed them twice — three times on a forced line, which also carries
@@ -1433,7 +1446,7 @@ export async function runCommand(
         gameId,
         seat.id,
         command.stat as Adjustable,
-        command.delta,
+        delta,
         null,
         undefined,
         command.force,
@@ -1444,7 +1457,7 @@ export async function runCommand(
       return statReply({
         who: named(seat),
         stat: command.stat,
-        asked: command.delta,
+        asked: delta,
         moved: done.moved,
         now: done.to,
         floor: done.floor,

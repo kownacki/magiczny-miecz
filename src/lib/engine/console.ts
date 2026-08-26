@@ -57,7 +57,22 @@ export type EffectName = "fog" | "frozen" | "barred";
 export type Command =
   | { kind: "help"; about: string | null }
   | { kind: "kill"; who: string | null }
-  | { kind: "stat"; stat: StatName; delta: number; who: string | null; force: boolean }
+  /**
+   * A parameter moved, or put where you want it.
+   *
+   * `delta` for `+5` and `-1`, `set` for `=12`. Not one field carrying both:
+   * what you meant is decided when you type it and should not have to be worked
+   * out again from a sign, and only one of the two can be turned into the other
+   * — which needs the current value, and the grammar does not have one.
+   */
+  | {
+      kind: "stat";
+      stat: StatName;
+      delta: number;
+      set: number | null;
+      who: string | null;
+      force: boolean;
+    }
   | { kind: "give"; cardId: string }
   | { kind: "place"; cardId: string; fieldId: FieldId | null }
   | { kind: "go"; fieldId: FieldId }
@@ -100,8 +115,8 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "gold",
     aliases: ["sword", "magic", "life"],
-    usage: "gold +5 [player] [force]",
-    summary: "move a parameter — `force` pushes past 1.3's floor, down to 0",
+    usage: "gold +5|=12 [player] [force]",
+    summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor",
   },
   { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
   {
@@ -259,13 +274,33 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
 
   if (word in STATS) {
-    const [amount, ...rest2] = tail.split(/\s+/).filter(Boolean);
+    let [amount, ...rest2] = tail.split(/\s+/).filter(Boolean);
     if (!amount) return { error: `How much? ${usageOf("gold")}` };
-    // A bare number is a gain, because "gold 5" plainly means five more of it.
-    const delta = Number(amount.startsWith("+") ? amount.slice(1) : amount);
-    if (!Number.isInteger(delta) || delta === 0) {
+    // `= 12` as readily as `=12`, since one is what a person types and the
+    // other is what they type when they are being careful.
+    if (amount === "=" && rest2.length > 0) {
+      amount = `=${rest2[0]}`;
+      rest2 = rest2.slice(1);
+    }
+
+    /**
+     * `=12` puts the number where you want it; `+5` and `-1` move it.
+     *
+     * A bare number stays a gain — "gold 5" plainly means five more of it, and
+     * has meant that for as long as there has been a console. What it is not is
+     * a way to *set* one, which is what somebody wants about as often: reaching
+     * a Miecz of 8 from 3 should not be arithmetic done by the person typing.
+     */
+    const assigning = amount.startsWith("=");
+    const number = Number(assigning ? amount.slice(1) : amount.startsWith("+") ? amount.slice(1) : amount);
+    if (!Number.isInteger(number) || (!assigning && number === 0)) {
       return { error: `\`${amount}\` is not a whole number of points.` };
     }
+    if (assigning && number < 0) {
+      return { error: `\`${amount}\`: nothing goes below zero.` };
+    }
+    const delta = assigning ? 0 : number;
+    const set = assigning ? number : null;
     /**
      * `force` last, after the player, because it is about the change and not
      * about who it lands on: `magic -1 Ola force`. A word rather than a flag,
@@ -274,7 +309,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
      */
     const force = rest2.length > 0 && rest2[rest2.length - 1].toLowerCase() === "force";
     const who = (force ? rest2.slice(0, -1) : rest2).join(" ");
-    return { ok: { kind: "stat", stat: STATS[word], delta, who: who || null, force } };
+    return { ok: { kind: "stat", stat: STATS[word], delta, set, who: who || null, force } };
   }
 
   if (word === "kill") return { ok: { kind: "kill", who: tail || null } };

@@ -16,7 +16,7 @@ suite("reading a line", () => {
   it("splits a verb from a number somebody glued to it", () => {
     // `sword+1` is what a hand types in a hurry. Split only where the sign or
     // the digit begins, so a name with a number in it is never broken.
-    expect(ok("sword+1")).toEqual({ kind: "stat", stat: "miecz", delta: 1, who: null, force: false });
+    expect(ok("sword+1")).toEqual({ kind: "stat", stat: "miecz", delta: 1, set: null, who: null, force: false });
     expect(ok("gold+5 Ola")).toMatchObject({ delta: 5, who: "Ola" });
     expect(ok("gold-2")).toMatchObject({ delta: -2 });
   });
@@ -42,9 +42,9 @@ suite("reading a line", () => {
 
 suite("moving a parameter", () => {
   it("reads a sign, and reads a bare number as a gain", () => {
-    expect(ok("gold +5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, who: null, force: false });
-    expect(ok("gold 5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, who: null, force: false });
-    expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, who: null, force: false });
+    expect(ok("gold +5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, set: null, who: null, force: false });
+    expect(ok("gold 5")).toEqual({ kind: "stat", stat: "zloto", delta: 5, set: null, who: null, force: false });
+    expect(ok("gold -3")).toEqual({ kind: "stat", stat: "zloto", delta: -3, set: null, who: null, force: false });
   });
 
   it("knows the four parameters, and only by their English names", () => {
@@ -63,6 +63,24 @@ suite("moving a parameter", () => {
   it("takes a player after the amount, and nobody as yourself", () => {
     expect(ok("life -1 Ola")).toMatchObject({ who: "Ola" });
     expect(ok("life -1")).toMatchObject({ who: null });
+  });
+
+  it("puts a number where you want it with `=`, and moves it without", () => {
+    expect(ok("gold =12")).toMatchObject({ delta: 0, set: 12 });
+    // The space somebody types when being careful.
+    expect(ok("gold = 12")).toMatchObject({ set: 12 });
+    expect(ok("magic =3 Ola force")).toMatchObject({ set: 3, who: "Ola", force: true });
+    // A bare number stays a gain, which is what it has always meant.
+    expect(ok("gold 5")).toMatchObject({ delta: 5, set: null });
+  });
+
+  it("takes a nought to set, where a nought to move is a no-op with a journal line", () => {
+    expect(ok("gold =0")).toMatchObject({ set: 0 });
+    expect(err("gold 0")).toContain("0");
+  });
+
+  it("refuses to set a number below nothing, which no parameter can be", () => {
+    expect(err("gold =-1")).toMatch(/below zero/);
   });
 
   it("takes `force` after the player, because it is about the change", () => {
@@ -422,7 +440,7 @@ suite("finishing a half-typed line", () => {
  */
 const USAGE: Record<string, { line: string; becomes: unknown }> = {
   help: { line: "help", becomes: { kind: "help", about: null } },
-  gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "zloto", delta: 5, who: "Ola", force: false } },
+  gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "zloto", delta: 5, set: null, who: "Ola", force: false } },
   kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
   revive: {
     line: "revive Ola as MAGOG",
