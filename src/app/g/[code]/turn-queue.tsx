@@ -30,12 +30,15 @@ export function TurnQueue({
   activeSeat,
   turn,
   mySeatIndex,
+  onPick,
   depth = DEFAULT_DEPTH,
 }: {
   seats: readonly QueueSeat[];
   activeSeat: number | null;
   turn: number;
   mySeatIndex: number | null;
+  /** Open that seat's Karta Postaci. Absent where there is nothing to open. */
+  onPick?: (seatIndex: number) => void;
   depth?: number;
 }) {
   // Same filter finishTurn applies: a seat with no character is not in the
@@ -72,6 +75,7 @@ export function TurnQueue({
           // player to count seats.
           startsTurn={at > 0 && entry.turn !== queue[at - 1].turn}
           mine={entry.seatIndex === mySeatIndex}
+          onPick={onPick}
         />
       ))}
     </nav>
@@ -83,11 +87,13 @@ function QueueChip({
   seat,
   startsTurn,
   mine,
+  onPick,
 }: {
   entry: QueueEntry;
   seat: QueueSeat | undefined;
   startsTurn: boolean;
   mine: boolean;
+  onPick?: (seatIndex: number) => void;
 }) {
   const colour = SEAT_COLOURS[entry.seatIndex % SEAT_COLOURS.length];
   const standee = seat?.characterId ? characterStandeeUrl(seat.characterId) : null;
@@ -110,9 +116,23 @@ function QueueChip({
           Tura {entry.turn}
         </span>
       )}
-      <div
-        title={reason ? `${name} — ${reason}` : name}
+      {/* A button, because it draws a Postać and every other picture of a
+          Postać in this app opens the Karta. The queue was the exception, and
+          it is the one on screen the whole time — so "click your character to
+          read it" was true everywhere except where you were looking. */}
+      <button
+        type="button"
+        onClick={onPick ? () => onPick(entry.seatIndex) : undefined}
+        title={
+          onPick
+            ? `${name}${reason ? ` — ${reason}` : ""} — otwórz Kartę Postaci`
+            : reason
+              ? `${name} — ${reason}`
+              : name
+        }
         className={`flex shrink-0 flex-col items-center gap-1 rounded px-2 py-1.5 ${
+          onPick ? "cursor-zoom-in transition hover:bg-raised/70" : ""
+        } ${
           active ? "bg-raised" : ""
         } ${
           // Everything past the active seat is a forecast, not a promise: one
@@ -167,7 +187,7 @@ function QueueChip({
             {entry.reason === "stone" ? `kamień ${entry.remaining}` : "traci turę"}
           </span>
         )}
-      </div>
+      </button>
     </>
   );
 }

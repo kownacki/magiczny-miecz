@@ -1,37 +1,26 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
-import { forgetSeatToken, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
+import { use, useEffect, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
-import { watchRevision } from "@/lib/game/liveRevision";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
-import {
-  RANDOM_CHARACTER_ID,
-  abilitiesOfCharacter,
-  asCharacterId,
-  isRandomPick,
-  type SeatCharacter,
-} from "@/lib/engine/characters";
-import type { TurnPhase } from "@/lib/engine/turn";
+import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardDetail, type TileCard } from "./card-tile";
+import { characterKind } from "@/lib/engine/polish";
 import { SeatCard } from "./seat-card";
 import {
   CARD_NAMES,
   CARD_TEXTS,
   CHARACTERS,
   KIND_LABEL,
-  asHoldings,
   asNature,
   type Seat,
 } from "./table";
 import { CardLibrary } from "./card-library";
+import { useTable } from "./use-table";
 import { TestConsole } from "./console";
-import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
-import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { JoinGate, LeaveButton, Lobby, TakeOverGate, type LobbySeat } from "./lobby";
 import { TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
@@ -48,11 +37,9 @@ import { FieldModal } from "./field-modal";
 import { DrawModal, ringFields } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
 import { AnnouncementModal } from "./announcement";
-import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
-import { describeResult } from "@/lib/engine/noticeText";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { PlayersDrawer } from "./players";
 import { PilesDrawer } from "./piles";
@@ -89,46 +76,6 @@ const FIELD_NAMES = new Map(
   [...FIELDS.values()].map((field) => [field.id, field.name]),
 );
 
-interface FieldCard {
-  /** The row, because a field can hold two of the same Przedmiot. */
-  id: string;
-  fieldId: FieldId;
-  cardId: CardId;
-}
-
-interface Game {
-  id: string;
-  /** Which equipment variant this table plays (`EqMode`). */
-  eq_mode: string;
-  join_code: string;
-  mode: string;
-  status: string;
-  active_seat: number | null;
-  turn: number;
-  revision: number;
-  die_source: string;
-  turn_state: TurnPhase;
-  /**
-   * What is left in each pile, and what has come back to it.
-   *
-   * Counts only — the orders themselves never leave the server, because the
-   * next Karta Zdarzeń is the one thing at this table nobody is allowed to
-   * know. Absent in companion mode, where both piles are physical.
-   */
-  deckCounts?: {
-    events: { draw: number; discard: number };
-    spells: { draw: number; discard: number };
-  } | null;
-  /**
-   * The card on top of each stos zużytych, by slice ref.
-   *
-   * Only the top one, and only ever this pile: what is next off the stos Kart
-   * Zdarzeń is the one thing at this table nobody may know, so the draw order
-   * never leaves the server. See the note in the route.
-   */
-  used?: { events: string | null; spells: string | null } | null;
-}
-
 /** The shared table screen: the whole game state everyone is allowed to see. */
 /**
  * Whether companion's own status line is drawn at all.
@@ -142,16 +89,41 @@ const COMPANION_LINE = false;
 
 export default function Table({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
-  const [game, setGame] = useState<Game | null>(null);
-  const [seats, setSeats] = useState<Seat[]>([]);
-  /** Cards lying face up on the board (16.8) — public to every seat. */
-  const [fieldCards, setFieldCards] = useState<FieldCard[]>([]);
-  /** What the Wyposażenie pile still holds (21.2), so a shop offers only what it has. */
-  const [stock, setStock] = useState<Record<string, number>>({});
+  /**
+   * Everything the server has said, and everything this device may say back.
+   *
+   * The screen's own state stays below — which drawer is out, which card
+   * somebody tapped, whether a watcher has folded the turn away. See
+   * `use-table.ts` for where the line is and why it is there.
+   */
+  const {
+    game,
+    seats,
+    fieldCards,
+    stock,
+    mySeatIndex,
+    moved,
+    taking,
+    pendingCharacter,
+    announcement,
+    setAnnouncement,
+    notice,
+    setNotice,
+    failure,
+    setFailure,
+    error,
+    busy,
+    post,
+    runConsole,
+    leave,
+    join,
+    claimSeat,
+    addLocalPlayer,
+    chooseCharacter,
+    equip,
+  } = useTable(code);
   /** A field the player tapped on the map, to read what it says. */
   const [inspecting, setInspecting] = useState<FieldId | null>(null);
-  /** What the app just decided by itself, shown until the next action. */
-  const [notice, setNotice] = useState<string | null>(null);
   /** A card somebody tapped, shown large with its full text. */
   const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
   /** The reference drawer of every card in the box. */
@@ -181,8 +153,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * it never lands in a Polish word being typed anywhere else.
    */
   const [consoleOpen, setConsoleOpen] = useState(false);
-  /** The last thing that broke, as opposed to the last thing that was refused. */
-  const [failure, setFailure] = useState<string | null>(null);
 
   /**
    * Two keys, on the same physical one.
@@ -225,8 +195,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const testing = TESTING_POSSIBLE && testMode;
   /** A seatless visitor who chose to watch rather than take a character over. */
   const [watching, setWatching] = useState(false);
-  /** The character asked for and not yet heard back about (see `chooseCharacter`). */
-  const [pendingCharacter, setPendingCharacter] = useState<string | null>(null);
   /**
    * Cards the player has waved past for now.
    *
@@ -289,23 +257,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }, []);
 
   /**
-   * Something that happened to this character and has to be said out loud.
-   *
-   * Half of these arrive on somebody else's turn — Burza Siedmiu Słońc costs
-   * every character in the Krąg a turn, drawn by one player — so they cannot
-   * wait for the next thing this device does. See `announcements.ts` for what
-   * is worth interrupting somebody for and what is not.
-   */
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-  /**
-   * The last reading of this seat, to compare the next one against.
-   *
-   * A ref and not state: nothing renders from it, and re-rendering on every
-   * poll to store a value nobody looks at would be a re-render per two
-   * seconds, per device, for the whole game.
-   */
-  const watched = useRef<Watched | null>(null);
-  /**
    * The irreversible thing waiting to be confirmed.
    *
    * Spending a card and speaking a Zaklęcie are the two acts here that cannot
@@ -324,98 +275,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * until it is yours again.
    */
   const [folded, setFolded] = useState(false);
-  /** Moves this device has made and the server has not confirmed (see `equip`). */
-  const [moved, setMoved] = useState<Record<string, Slot | null>>({});
-  /**
-   * Characters taken client-first, by seat id.
-   *
-   * Only ever the surprise — see `chooseCharacter`. Cleared the moment the
-   * server reports the same thing, so a pick that never landed reverts on the
-   * next poll rather than lingering as a lie.
-   */
-  const [taking, setTaking] = useState<Record<string, SeatCharacter>>({});
   /** Which seat is choosing a character; "auto" lets the app decide. */
   const [picking, setPicking] = useState<string | "auto" | null>("auto");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const [mySeatIndex, setMySeatIndex] = useState<number | null>(null);
-  /** The newest revision this device has rendered — see `refresh`. */
-  const seenRevision = useRef(-1);
-  /** When each optimistic move was made, so a lost one cannot pin a card forever. */
-  const movedAt = useRef<Record<string, number>>({});
-  const router = useRouter();
 
-  const refresh = useCallback(async () => {
-    const stored = readSeatToken(code);
-    const query = stored ? `?token=${encodeURIComponent(stored)}` : "";
-    const response = await fetch(`/api/games/${code}${query}`);
-    if (!response.ok) return setError((await response.json()).error ?? "Błąd");
-    const data = await response.json();
-
-    // Never go backwards. The poll and a move's own refetch are in flight at
-    // the same time, and a poll that started *before* the write can land after
-    // it — putting the old state back and snapping the card the player just
-    // moved into its old place, until the next tick moved it again. The
-    // revision counter already numbers every change the table makes, so an
-    // answer older than what is on screen is simply dropped.
-    if (data.game.revision < seenRevision.current) return;
-    seenRevision.current = data.game.revision;
-
-    setGame(data.game);
-    setSeats(data.seats);
-    setTaking((current) => {
-      const still = Object.fromEntries(
-        Object.entries(current).filter(([seatId, characterId]) => {
-          const seat = data.seats.find((row: Seat) => row.id === seatId);
-          // Gone once the server says the same thing — and gone anyway once the
-          // game is running, where a seat holds whatever it was dealt.
-          return seat ? seat.character_id !== characterId : false;
-        }),
-      );
-      return Object.keys(still).length === Object.keys(current).length ? current : still;
-    });
-    // An optimistic move stands until the server reports the same place. Timing
-    // it to the request instead meant the card fell back the moment a stale
-    // answer arrived, which is the same race in a different coat.
-    setMoved((current) => {
-      const still = Object.fromEntries(
-        Object.entries(current).filter(([holdingId, slot]) => {
-          const held = (data.seats as Seat[])
-            .flatMap((seat) => seat.holdings)
-            .find((candidate) => candidate.id === holdingId);
-          if (!held) return false;
-          // Waiting on agreement, but not forever: a request that never arrived
-          // would otherwise hold the card in a place the table does not know
-          // about for the rest of the game. Four seconds is two polls.
-          if (Date.now() - (movedAt.current[holdingId] ?? 0) > 4000) return false;
-          return (held.slot ?? null) !== slot;
-        }),
-      );
-      return Object.keys(still).length === Object.keys(current).length ? current : still;
-    });
-    setFieldCards(data.fieldCards ?? []);
-    setStock(data.stock ?? {});
-    setMySeatIndex(data.mySeatIndex);
-
-    // Done here rather than in an effect because this is where the new reading
-    // arrives, and because the comparison has to happen exactly once per
-    // answer: an effect keyed on the seat would fire again on any unrelated
-    // re-render and announce a death twice.
-    const mineNow = (data.seats as Seat[]).find(
-      (seat) => seat.seat_index === data.mySeatIndex,
-    );
-    if (mineNow) {
-      const reading = watch({
-        turnsLost: mineNow.turns_lost,
-        stoneUntilTurn: mineNow.stone_until_turn,
-        eliminated: mineNow.eliminated,
-      });
-      const said = announce(watched.current, reading);
-      watched.current = reading;
-      if (said) setAnnouncement(said);
-    }
-  }, [code]);
 
   const turnKey = game ? `${game.turn}:${game.active_seat}` : null;
   useEffect(() => {
@@ -430,297 +293,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     if (myTurn) setFolded(false);
   }, [myTurn]);
 
-  useEffect(() => {
-    // Polling stands in for the Realtime revision ping. Two seconds is
-    // imperceptible at a table where a turn takes a minute, and every refetch
-    // still goes through the route handler, so the secrecy model is unchanged.
-    //
-    // The lint rule cannot see that `refresh` is async: its every setState runs
-    // after `await fetch`, so nothing is set synchronously during the effect.
-    // This is exactly the "subscribe to an external system" shape the rule's
-    // own message endorses — the external system here being the table's state
-    // on the server.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    refresh();
-    // Realtime says when something happened; the poll is what catches it if
-    // Realtime is down, blocked, or the tab was asleep when the message went
-    // out. Fifteen seconds rather than two, because it is now a backstop
-    // instead of the mechanism — and because a hidden tab is throttled to about
-    // a minute anyway, which the sweep thresholds already assume.
-    //
-    // The poll stays at two seconds until Realtime has actually delivered
-    // something. It subscribes either way, but on this project the broadcasts
-    // are accepted and never arrive (see `liveRevision.ts`), and slowing the
-    // poll down on the strength of a subscription that might be inert would
-    // make the table *less* responsive than it is today. So the first message
-    // that really lands is what earns the slower poll.
-    let live = false;
-    let timer = setInterval(refresh, 2000);
-    const stop = watchRevision(code, () => {
-      if (!live) {
-        live = true;
-        clearInterval(timer);
-        timer = setInterval(refresh, 15_000);
-      }
-      void refresh();
-    });
-    return () => {
-      stop();
-      clearInterval(timer);
-    };
-  }, [code, refresh]);
 
-  /**
-   * Tells the table this page is going away, so the seat is freed in seconds
-   * rather than in minutes.
-   *
-   * `pagehide` and not `beforeunload`: the latter is unreliable — mobile
-   * browsers frequently never fire it — and having a handler for it disqualifies
-   * the page from the back/forward cache. `pagehide` fires in both cases and is
-   * bfcache-compatible; `event.persisted` says which happened, and a page going
-   * into the cache has not gone anywhere.
-   *
-   * `sendBeacon` and not `fetch`: a request started from an unloading page is
-   * dropped. The browser guarantees to queue a beacon and run it to completion
-   * after the page is discarded, which is the whole point of it existing.
-   *
-   * A reload fires this too, and out here that is indistinguishable from a
-   * closed tab — so the server treats it as a countdown, not a departure, and
-   * the reload's first poll cancels it.
-   */
-  useEffect(() => {
-    const bye = (event: PageTransitionEvent) => {
-      if (event.persisted) return; // going into the bfcache, not going away
-      const token = readSeatToken(code);
-      if (!token) return;
-      navigator.sendBeacon?.(
-        `/api/games/${code}/bye`,
-        new Blob([JSON.stringify({ token })], { type: "text/plain" }),
-      );
-    };
-    window.addEventListener("pagehide", bye);
-    return () => window.removeEventListener("pagehide", bye);
-  }, [code]);
 
-  /** One line, run on the server, answered with what to print. */
-  const runConsole = useCallback(
-    async (line: string) => {
-      const response = await fetch(`/api/games/${code}/debug`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "console", line, token: readSeatToken(code) }),
-      });
-      const body = await response.json().catch(() => ({}));
-      await refresh();
-      return response.ok ? String(body.said ?? "ok") : String(body.error ?? "?");
-    },
-    [code, refresh],
-  );
 
-  const post = useCallback(
-    async (path: string, body: Record<string, unknown>) => {
-      setBusy(true);
-      setError(null);
-      try {
-        // Read the token at call time rather than holding it in state: it
-        // only exists in this tab's sessionStorage, which is unavailable while
-        // this renders on the server, and mirroring it into state meant setting
-        // state inside an effect for no gain.
-        const response = await fetch(`/api/games/${code}/${path}`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...body, token: readSeatToken(code) }),
-        });
-        if (!response.ok) {
-          /**
-           * A refusal is the rules; a failure is not.
-           *
-           * "To nie twoja tura" is the game working, and goes where the rest of
-           * what the game says goes. `commit(moves): duplicate key value…` is
-           * the machine, in English, and is nobody at the table's fault — so it
-           * goes to the console, which opens itself for it, folded to a line.
-           * That is a developer's surface and it appears outside test mode only
-           * for this: something broke, and the person who can fix it should not
-           * have to be told twice.
-           */
-          const said = await response.json().catch(() => ({}));
-          if (said.failure) setFailure(String(said.error ?? "Coś poszło nie tak."));
-          else setError(said.error);
-        } else {
-          // Anything the app decided on the player's behalf has to be visible,
-          // or the table is being asked to take the referee's word for it. The
-          // Trzęsawiska roll is the first of these; the roll is journalled too,
-          // but the journal is not what someone is looking at mid-turn.
-          setNotice(describeResult(await response.json().catch(() => null)));
-        }
-        await refresh();
-      } finally {
-        setBusy(false);
-      }
-    },
-    [code, refresh],
-  );
-
-  /**
-   * Gives up this device's seat.
-   *
-   * Mid-game this does not remove anybody: the character stays on its Obszar
-   * with everything it owns and is marked as having no player, so it can be
-   * taken over later — by somebody else, or by this player on a new device.
-   * Only in the lobby does leaving actually delete the seat.
-   */
-  async function leave() {
-    const seated = mySeatIndex !== null;
-    if (!seated) return;
-    setBusy(true);
-    try {
-      const response = await fetch(`/api/games/${code}/leave`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: readSeatToken(code) }),
-      });
-      if (!response.ok) {
-        setError((await response.json()).error);
-        return;
-      }
-      // Forget the seat locally too, or this browser keeps showing the
-      // controls for a seat it no longer holds.
-      forgetSeatToken(code);
-      // Leaving before the start means leaving, not standing in the doorway:
-      // the seat is gone, and staying here would only show the join form again
-      // as though the click had failed.
-      if (!playing) return router.push("/");
-      setMySeatIndex(null);
-      await refresh();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * Claims a seat for THIS device, from the join gate. Only reachable when the
-   * device holds none — joining twice from one browser used to overwrite its
-   * identity.
-   */
-  async function join(name: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/games/${code}/join`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || null }),
-      });
-      const data = await response.json();
-      if (!response.ok) return setError(data.error);
-      writeSeatToken(code, data.token);
-      await refresh();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * Adds a player who is sitting at this table but has no device of their own.
-   *
-   * This is the ordinary case, not an edge case: one laptop in the middle and
-   * everyone playing on it. The seat's token is deliberately discarded rather
-   * than stored — this device already has an identity, and taking on a second
-   * one is the bug that stranded a player earlier. The table screen acts for
-   * them the same way it acts for anyone whose turn it is.
-   */
-  /**
-   * Sits down at a seat nobody is behind — including your own, after you closed
-   * the tab. The character, its points and everything it carries are exactly as
-   * the last player left them.
-   */
-  async function claimSeat(seatId: string, name: string | null = null) {
-    const response = await fetch(`/api/games/${code}/join`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seatId, name }),
-    });
-    const data = await response.json();
-    if (!response.ok) return setError(data.error);
-    writeSeatToken(code, data.token);
-    refresh();
-  }
-
-  /**
-   * Asks for a character, and waits.
-   *
-   * Two people can want Kapłanka at the same instant and only the server knows
-   * who asked first, so nothing is taken here optimistically: the card appears
-   * on the seat when the server says it is yours and not before.
-   *
-   * Losing that race is not an error. Somebody else was quicker, the roster
-   * updates to show the character as taken, and the choice you already had
-   * stands — there is nothing for the player to do about it and nothing to
-   * apologise for, so it happens quietly.
-   *
-   * This deliberately does not go through `post`: that raises the table-wide
-   * busy flag, which would grey out the whole strip when the point is to grey
-   * out everything *except* the card being asked for.
-   */
-  async function chooseCharacter(seatId: string, characterId: string) {
-    if (pendingCharacter) return; // one at a time; a double-click is not two choices
-    // Choosing what is already chosen is not a choice. The strip disables the
-    // card too, but the rule belongs here as well: `chooseCharacter` resets the
-    // seat, ready flag included, so a no-op request is not harmless.
-    if (seats.find((seat) => seat.id === seatId)?.character_id === characterId) return;
-
-    // The surprise is the one pick that cannot be refused: any number of seats
-    // may hold it, so there is no race to lose and nothing the server can say
-    // that this does not already know. It lands on the seat immediately and the
-    // request goes out behind it — the same client-first rule the item moves
-    // follow, for the same reason. Everything else still waits, because two
-    // people can want Kapłanka and only the server knows who asked first.
-    if (isRandomPick(characterId)) {
-      setTaking((current) => ({ ...current, [seatId]: RANDOM_CHARACTER_ID }));
-      void fetch(`/api/games/${code}/character`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ characterId, seatId, token: readSeatToken(code) }),
-      })
-        .then(refresh)
-        .catch(() => {
-          // A dropped request leaves the seat as it was; the next poll will
-          // put the optimistic pick right.
-        });
-      return;
-    }
-
-    setPendingCharacter(characterId);
-    try {
-      await fetch(`/api/games/${code}/character`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ characterId, seatId, token: readSeatToken(code) }),
-      });
-      // Taken or refused, the next question is the same one: what is true now?
-      await refresh();
-    } catch {
-      // A dropped request leaves the table exactly as it was, which is the
-      // same outcome as being refused.
-    } finally {
-      setPendingCharacter(null);
-    }
-  }
-
-  /**
-   * Moves a card between the pack and a place on the body — on screen first.
-   *
-   * Unlike choosing a character, this has nobody to race. Two players can want
-   * the same Kapłanka and only the server knows who asked first; nobody else is
-   * moving *your* Hełm from your pack to your head. So the card moves when you
-   * move it, and the server is told afterwards.
-   *
-   * What the server can still refuse — a card that does not fit, a pack with no
-   * room — the browser can work out for itself, so it is checked here first and
-   * the move never happens rather than happening and being taken back. If the
-   * server refuses anyway, the next refresh has the truth in it and the
-   * optimistic move is dropped on top of it, which puts the card back.
-   */
   /**
    * Asks before a card is spent, and spends it on a yes.
    *
@@ -830,86 +405,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     });
   }
 
-  async function equip(holdingId: string, slot: Slot | null) {
-    const mineNow = seats.find((seat) => seat.seat_index === mySeatIndex);
-    const held = mineNow?.holdings.find((h) => h.id === holdingId);
-    if (!held || !mineNow) return;
-
-    if (slot !== null && !fitsIn(held.cardId, slot)) {
-      return setError(
-        isWearable(held.cardId)
-          ? `${CARD_NAMES.get(held.cardId) ?? held.cardId} nie pasuje w ten slot.`
-          : `${CARD_NAMES.get(held.cardId) ?? held.cardId} to nie jest rzecz do noszenia.`,
-      );
-    }
-    if (slot === null && held.slot != null) {
-      const mineCards = asHoldings(mineNow.holdings);
-      if (carriedCount(mineCards, "slots") >= carryLimit(mineCards, "slots")) {
-        return setError("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
-      }
-    }
-
-    setError(null);
-    /**
-     * Both halves of a swap at once.
-     *
-     * Putting a card on a place that is taken moves two cards, and only the one
-     * being put on was moved here — so the card it replaced sat on the body
-     * until the server answered and the next poll came round, a second or so
-     * later. You saw your Excalibur go on and your Miecz stay where it was,
-     * which is not a swap, it is a glitch that fixes itself.
-     */
-    const displaced =
-      slot === null
-        ? undefined
-        : mineNow.holdings.find((h) => h.slot === slot && h.id !== holdingId);
-    movedAt.current[holdingId] = Date.now();
-    if (displaced) movedAt.current[displaced.id] = Date.now();
-    setMoved((current) => ({
-      ...current,
-      [holdingId]: slot,
-      ...(displaced ? { [displaced.id]: null } : {}),
-    }));
-    try {
-      const response = await fetch(`/api/games/${code}/holdings`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          action: "equip",
-          holdingId,
-          slot,
-          token: readSeatToken(code),
-        }),
-      });
-      if (!response.ok) {
-        // Refused, so put both of them back where they were — and say why.
-        setError((await response.json().catch(() => ({}))).error ?? null);
-        setMoved((current) => {
-          const next = { ...current };
-          delete next[holdingId];
-          if (displaced) delete next[displaced.id];
-          return next;
-        });
-      }
-      await refresh();
-    } catch {
-      // A dropped request leaves the card where the player put it; the next
-      // poll will move it back if the server never heard.
-    }
-  }
-
-  async function addLocalPlayer(name: string) {
-    const response = await fetch(`/api/games/${code}/join`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      // `local` marks a seat the host is filling for somebody at the table with
-      // no device — the only seat anybody may choose a character for but their
-      // own.
-      body: JSON.stringify({ name: name.trim() || null, local: true }),
-    });
-    if (!response.ok) return setError((await response.json()).error);
-    refresh();
-  }
 
   if (error && !game) {
     return <Centered>{<span className="text-vermilion">{error}</span>}</Centered>;
@@ -1637,6 +1132,22 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 activeSeat={game.active_seat}
                 turn={game.turn}
                 mySeatIndex={mySeatIndex}
+                // Every other picture of a Postać opens its Karta; this one is
+                // the one you are looking at for most of the game, and it was
+                // the only one that did nothing.
+                onPick={(seatIndex) => {
+                  const row = seats.find((one) => one.seat_index === seatIndex);
+                  const who = asCharacterId(row?.character_id);
+                  const character = who ? CHARACTERS.find((one) => one.id === who) : null;
+                  if (!character) return;
+                  setInspectingCard({
+                    cardId: character.id,
+                    name: character.name,
+                    text: character.abilities.join("\n\n"),
+                    kindLabel: characterKind(character),
+                    character: true,
+                  });
+                }}
               />
             </div>
             {error && <p className="text-sm text-vermilion">{error}</p>}
