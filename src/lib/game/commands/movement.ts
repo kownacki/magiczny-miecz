@@ -1,0 +1,357 @@
+/** Getting a character onto the board and around it: the setup deal, the movement die, and the walk (3.2, 9.5, 10.2, 11.10, 13.4, 16.8). */
+
+import { FIELDS, requireFieldId } from "@/lib/engine/board";
+import type { FieldId } from "@/lib/engine/board";
+import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
+import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import {
+  afterMove,
+  afterRoll,
+  atBridge,
+  bridgeBlocked,
+  startTurn,
+} from "@/lib/engine/turn";
+import type { TurnCard } from "@/lib/engine/state";
+import { EVENTS, type Decks } from "../decks";
+import {
+  mergeAll,
+  type Changeset,
+  type CommandPorts,
+  type Outcome,
+  type Snapshot,
+} from "../change";
+import type { GameRow, SeatRow } from "../store";
+import { activeSeat } from "./seat";
+
+/* --------------------------------------------------------------------------
+ * Starting the game.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * How many Zaklęcia a seat is still owed from setup, once the game is open.
+ *
+ * See `startGame`: the spell deal is the one part of setup this cannot do.
+ */
+export interface OwedSpells {
+  seatId: string;
+  spells: number;
+}
+
+export interface StartGame {
+  /**
+   * The two piles, already shuffled.
+   *
+   * A shuffle is randomness, and the only randomness a command may reach for is
+   * `RandomPort`, which deals in single dice and nothing else. Rather than
+   * inventing a second port for one call, the caller shuffles — `freshDecks()`
+   * — and hands the result in, which is the same bargain the dice make: the
+   * rule decides *whether* there is a deck, the edge decides what order it is
+   * in. A companion table's piles are thrown away here, which costs one shuffle
+   * nobody sees and keeps "only a simulation owns a deck" a rule rather than a
+   * caller's habit.
+   */
+  decks: Decks;
+}
+
+/**
+ * Opens the table (3.2, 9.5).
+ *
+ * Two things happen before this and cannot happen inside it. `resolveRandomPicks`
+ * turns every "surprise me" into a real Karta Postaci, which is a shuffle of the
+ * character cards and a write per seat, so it stays at the edge and the snapshot
+ * is read *after* it — a seat still holding the sentinel here would be dealt no
+ * kit at all. And the Zaklęcia of 9.5 are drawn afterwards: a spell draw checks
+ * 2.6's capacity, takes a card off the pile and can reshuffle it, all of which
+ * lives in the store's `drawSpell` and would have to be copied to be done here.
+ * So this reports who is owed how many and lets the caller draw them, which is
+ * also what puts them in the same journal they have always been in.
+ *
+ * No dice: setup rolls nothing.
+ */
+export function startGame(
+  snapshot: Snapshot,
+  command: StartGame,
+  ports: CommandPorts,
+): Outcome<OwedSpells[]> {
+  // `chosen`, not `ready`: having picked a character and having said you are
+  // ready are two different things, and conflating them is what let a game
+  // start while somebody was still deciding.
+  const chosen = snapshot.seats.filter((seat) => seat.character_id);
+  // One is enough. The box says 2-6 and the rulebook never states a count at
+  // all: the only rule that assumes company is 17.4, where "jeden z pozostałych
+  // graczy" throws the enemy's die — and in a simulation the app throws it. The
+  // victory condition is beating the Bestia, which one character can do alone.
+  if (chosen.length < 1) throw new Error("Do gry potrzeba przynajmniej jednej postaci.");
+
+  // Everybody with a character has to have said so (docs/LOBBY.md). A seat
+  // nobody is behind cannot say anything, so it is not asked.
+  const dithering = chosen.filter((seat) => !seat.ready && !seat.abandoned_at);
+  if (dithering.length > 0) {
+    throw new Error(
+      `Nie wszyscy są gotowi: ${dithering
+        .map((seat) => seat.player_name ?? `miejsce ${seat.seat_index + 1}`)
+        .join(", ")}.`,
+    );
+  }
+
+  const opened: Changeset = {
+    game: {
+      status: "playing",
+      turn: 1,
+      active_seat: chosen[0].seat_index,
+      turn_state: startTurn(),
+      // Only a simulation needs a deck. In companion mode the deck is the
+      // physical one on the table and the app must not pretend to own it.
+      deck: snapshot.game.mode === "simulation" ? command.decks : null,
+      ...startedAt(ports.now()),
+    },
+  };
+
+  // Ten of the twenty-seven characters own something before anyone rolls: the
+  // Książę his purse of five and a Hełm, the Mag two Zaklęcia, the Zdobywca a
+  // Miecz and a Tarcza. Dealing everyone one Sztuka Złota and nothing else is
+  // wrong from the first turn, and wrong in the direction that flattens the
+  // characters into each other.
+  const kits = chosen.map(startingGear);
+
+  const started: Changeset = {
+    journal: [{ seatId: null, turn: FIRST_TURN, kind: "start", payload: { seats: chosen.length } }],
+  };
+
+  return {
+    writes: mergeAll(opened, ...kits, started),
+    result: chosen
+      .map((seat) => ({
+        seatId: seat.id,
+        spells: startingKit(asCharacterId(seat.character_id)).spells ?? 0,
+      }))
+      .filter((owed) => owed.spells > 0),
+  };
+}
+
+/**
+ * The turn setup is journalled under.
+ *
+ * A lobby's `turn` is 0 and the game's first is 1, so the lines written here
+ * belong to the turn this change creates rather than to the one it read.
+ */
+const FIRST_TURN = 1;
+
+/**
+ * When the table actually began.
+ *
+ * `started_at` is a real column that nothing reads, so it is not in
+ * `GAME_COLUMNS` and therefore not in `GameRow` — which is the shape a
+ * changeset's `game` patch is typed by. Said out loud here rather than widening
+ * a read list for a column no read wants.
+ */
+function startedAt(now: number): Partial<GameRow> {
+  return { started_at: new Date(now).toISOString() } as Partial<GameRow>;
+}
+
+/** What one character owns before anybody rolls, minus the Zaklęcia. */
+function startingGear(seat: SeatRow): Changeset {
+  // `asCharacterId` answers null for both "nothing chosen" and "the surprise",
+  // and `startingKit` gives an empty kit for either — so an unresolved seat
+  // that reached here is dealt nothing rather than crashing the start.
+  const kit = startingKit(asCharacterId(seat.character_id));
+
+  const items: Changeset = kit.items?.length
+    ? {
+        holdings: {
+          insert: kit.items.map((cardId) => ({
+            seat_id: seat.id,
+            card_id: cardId,
+            kind: "item" as const,
+            face: "open" as const,
+          })),
+        },
+      }
+    : {};
+
+  // 3.2: everyone starts on one "chyba, że jej Karta daje w tym względzie inne
+  // instrukcje" — so the column default stands unless the character overrides.
+  const purse: Changeset =
+    kit.zloto !== undefined ? { seats: [{ id: seat.id, patch: { zloto: kit.zloto } }] } : {};
+
+  if (!kit.items?.length && kit.zloto === undefined && !kit.spells) return {};
+
+  return mergeAll(items, purse, {
+    journal: [
+      {
+        seatId: seat.id,
+        turn: FIRST_TURN,
+        kind: "wyposazenie-poczatkowe",
+        payload: { character: seat.character_id, ...kit },
+      },
+    ],
+  });
+}
+
+/* --------------------------------------------------------------------------
+ * The movement roll.
+ * ----------------------------------------------------------------------- */
+
+export interface RollForMove {
+  /**
+   * True when a human read the number off a real die and typed it in.
+   *
+   * Provenance, not a value: the die itself comes from the port, and which
+   * binding is behind it is not something a rule may ask. But the journal has
+   * always recorded whether the app or the table produced the number — that is
+   * what its `manual` column is for — and only the edge that chose the binding
+   * knows. Same shape as `Adjustment.record`.
+   */
+  manual?: boolean;
+}
+
+/**
+ * Rolls for the move (10.2).
+ *
+ * One die, and it is the only one: "ruch: rzut kostką".
+ *
+ * The die is thrown after the phase check and before the "is the figure
+ * anywhere" check, which is where the store threw it, so a table that types a 7
+ * still hears about the 7 first. Nothing here validates the number — `supplied`
+ * refuses anything outside 1-6 as it takes it, which is the same refusal in the
+ * one place that can tell a typed number from a thrown one.
+ */
+export async function rollForMove(
+  snapshot: Snapshot,
+  command: RollForMove,
+  ports: CommandPorts,
+): Promise<Outcome<number>> {
+  const seat = activeSeat(snapshot);
+  if (snapshot.game.turn_state.phase !== "rzut") throw new Error("Nie czas na rzut.");
+
+  const roll = await ports.random.rollD6("ruch: rzut kostką");
+  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+
+  // 11.10 offers the bridge as part of the move, so whether it is on the table
+  // has to be settled before the destinations are drawn: a Magiczny Miecz is
+  // required, and 11.11 bars anyone who failed there on their last turn.
+  const mine = snapshot.holdings.filter((h) => h.seat_id === seat.id);
+  // The card says so itself — `{ kind: "wymagany", place: "most" }` is printed
+  // on the Magiczny Miecz in the ability registry — rather than the id being
+  // named a second time here.
+  const hasSword = opensTheWayTo(heldAbilities(mine.map((h) => h.card_id)), "most");
+  const blocked = bridgeBlocked(seat.bridge_blocked_until_turn, snapshot.game.turn);
+
+  const manual = command.manual ?? false;
+  return {
+    writes: {
+      game: {
+        turn_state: afterRoll(seat.field_id, roll, { bridgeOffered: hasSword && !blocked }),
+      },
+      journal: [
+        {
+          seatId: seat.id,
+          turn: snapshot.game.turn,
+          kind: "rzut",
+          payload: { roll, manual },
+          manual,
+        },
+      ],
+    },
+    result: roll,
+  };
+}
+
+/* --------------------------------------------------------------------------
+ * The walk.
+ * ----------------------------------------------------------------------- */
+
+export interface MoveTo {
+  /** Straight off the request body, so it is checked before it is a field. */
+  destination: string;
+  /**
+   * True when this is an attempt to turn off the ring onto the Kamienny Most.
+   *
+   * A bridge attempt shares its `fieldId` with the entrance it stops at, so the
+   * two are told apart by intent rather than by destination (11.10).
+   */
+  viaBridge?: boolean;
+}
+
+/**
+ * Walks the roll out and lands on a field (10.2, 13.4).
+ *
+ * No dice: the number was thrown in `rollForMove` and is already in the turn
+ * state.
+ */
+export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
+  const fieldId = requireFieldId(command.destination, "Ruch");
+  const viaBridge = command.viaBridge ?? false;
+  const seat = activeSeat(snapshot);
+  const phase = snapshot.game.turn_state;
+  if (phase.phase !== "ruch") throw new Error("Nie czas na ruch.");
+
+  // Only the squares the roll actually reaches are accepted, so a stale page
+  // cannot post a destination from a previous roll.
+  const chosen = phase.options.find(
+    (option) => option.fieldId === fieldId && !!option.bridge === viaBridge,
+  );
+  if (!chosen) throw new Error("To pole nie jest w zasięgu tego rzutu.");
+
+  const field = FIELDS.get(fieldId);
+  if (!field) throw new Error(`Nieznane pole: ${fieldId}`);
+
+  // Turning off the ring onto the bridge stops the walk at the entrance with
+  // the guardian still to be faced (11.10); the field itself is not resolved,
+  // and its card is not drawn ("nie ciągnij Karty ... gdy wchodzisz na Most").
+  const lifted = chosen.bridge ? null : liftFieldCards(snapshot, field.id);
+
+  return {
+    writes: mergeAll(lifted?.writes ?? {}, {
+      seats: [{ id: seat.id, patch: { field_id: fieldId } }],
+      game: {
+        turn_state: chosen.bridge
+          ? atBridge(chosen.bridge)
+          : afterMove(field, seat.field_id, lifted?.cards ?? []),
+      },
+      journal: [
+        {
+          seatId: seat.id,
+          turn: snapshot.game.turn,
+          kind: chosen.bridge ? "proba-mostu" : "ruch",
+          payload: {
+            from: seat.field_id,
+            to: fieldId,
+            direction: chosen.direction,
+            ...(chosen.bridge ? { guardian: chosen.bridge.guardian } : {}),
+          },
+        },
+      ],
+    }),
+    result: undefined,
+  };
+}
+
+/**
+ * Picks up whatever is lying face up on a field, into the arriving character's
+ * turn (12.1, 13.4, 16.8).
+ *
+ * They leave the board here and come back in `passTurn` if they are still
+ * unclaimed then, which is what makes a field accumulate: a Wróg nobody beat
+ * and a Przedmiot nobody could carry are both waiting for the next character
+ * to stop there.
+ *
+ * A row naming a card the app does not know is still lifted off the board — it
+ * would otherwise be picked up again by everyone who ever stopped here — but it
+ * has no class to be resolved in 15.2 order, so it cannot join the turn.
+ */
+function liftFieldCards(
+  snapshot: Snapshot,
+  fieldId: FieldId,
+): { writes: Changeset; cards: TurnCard[] } {
+  const waiting = snapshot.fieldCards.filter((row) => row.field_id === fieldId);
+  if (waiting.length === 0) return { writes: {}, cards: [] };
+
+  return {
+    writes: { fieldCards: { delete: waiting.map((row) => row.id) } },
+    cards: waiting.flatMap((row) => {
+      const card = EVENTS.find((c) => c.id === row.card_id);
+      return card ? [{ cardId: card.id, cardClass: card.cardClass }] : [];
+    }),
+  };
+}
