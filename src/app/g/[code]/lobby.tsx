@@ -227,8 +227,12 @@ export function Lobby({
         <JoinCode code={code} />
 
         <div className="flex items-center gap-3 text-[12px]">
-          <button onClick={onLibrary} className="text-ochre/80 hover:text-ochre">
-            Karty
+          <button
+            onClick={onLibrary}
+            title="Każda Karta i każdy Obszar w grze — zdradzi ci tajemnicę"
+            className="text-ochre/80 hover:text-ochre"
+          >
+            Księga Tolimana
           </button>
           {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
           {/* The host starts the table, and only the host. Everybody else has

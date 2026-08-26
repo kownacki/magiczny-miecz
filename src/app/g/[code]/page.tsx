@@ -154,7 +154,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * be written swaps with whatever is already there instead of being drawn on
    * top of it, and nobody has to remember to close the other first.
    */
-  const [leftDrawer, setLeftDrawer] = useState<"karty" | null>(null);
+  const [leftDrawer, setLeftDrawer] = useState<"ksiega" | "stosy" | null>(null);
   /** The stacks, drawn as stacks (`piles.tsx`). */
   /**
    * Testing rather than playing — see `testMode.ts`.
@@ -227,7 +227,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /** Whether the "choose again" modal is open (4.4). */
   const [reborn, setReborn] = useState(false);
   /** The roster, open over the right-hand column. */
-  const [rightDrawer, setRightDrawer] = useState<"gracze" | "stosy" | null>(null);
+  const [rightDrawer, setRightDrawer] = useState<"gracze" | null>(null);
   /**
    * Something that happened to this character and has to be said out loud.
    *
@@ -1213,7 +1213,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           isHost={mySeat?.is_host === true}
           hostAway={seats.find((seat) => seat.is_host)?.abandoned_at !== null}
           onStart={() => post("start", {})}
-          onLibrary={() => setLeftDrawer("karty")}
+          onLibrary={() => setLeftDrawer("ksiega")}
         />
       </>
     );
@@ -1270,7 +1270,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       <TableLayout
         drawer={
           <>
-          {leftDrawer === "karty" && (
+          {leftDrawer === "ksiega" && (
             <CardLibrary
               eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
               nature={asNature(mySeat?.nature)}
@@ -1283,7 +1283,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               onClose={() => setLeftDrawer(null)}
             />
           )}
-            {rightDrawer === "stosy" && game.deckCounts && game.used ? (
+            {leftDrawer === "stosy" && game.deckCounts && game.used ? (
               <PilesDrawer
                 counts={game.deckCounts}
                 used={game.used}
@@ -1294,9 +1294,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 }}
                 nameOf={cardOfRef}
                 onInspect={setInspectingCard}
-                onClose={() => setRightDrawer(null)}
+                onClose={() => setLeftDrawer(null)}
               />
-            ) : rightDrawer === "gracze" ? (
+            ) : null}
+            {rightDrawer === "gracze" ? (
             <PlayersDrawer
               // Every seat, in seat order, this one included — see the note on the
               // component about why the roster it replaces left you out.
@@ -1334,9 +1335,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
                 Magiczny Miecz
               </h1>
-              <span className="text-xs text-muted">
-                Tura {game.turn} · {active ? (active.player_name ?? "—") : "—"}
-              </span>
+              {/* Both openers for this side, together: the Księga and the
+                  piles are the two things you consult rather than play, and
+                  they take turns over the board because only one drawer opens
+                  down a side at a time. */}
+              <button
+                onClick={() => setLeftDrawer((out) => (out === "ksiega" ? null : "ksiega"))}
+                title="Każda Karta i każdy Obszar w grze — zdradzi ci tajemnicę"
+                className="text-[11px] text-ochre/80 transition hover:text-ochre"
+              >
+                Księga Tolimana
+              </button>
               {/* Both piles, beside the turn they are being drawn into. At a
                   physical table the stacks sit on the table and everybody
                   watches them thin; in simulation they were invisible, so a
@@ -1345,7 +1354,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   a reshuffle will bring back. */}
               {game.deckCounts && (
                 <button
-                  onClick={() => setRightDrawer((out) => (out === "stosy" ? null : "stosy"))}
+                  onClick={() => setLeftDrawer((out) => (out === "stosy" ? null : "stosy"))}
                   title="Zobacz stosy"
                   className="flex items-baseline gap-3 text-[11px] text-muted/70 transition hover:text-ink"
                 >
@@ -1367,6 +1376,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               )}
             </div>
             <div className="flex items-center gap-4 text-[11px]">
+              {/* Whose turn it is, beside who is here and where "here" is. It
+                  used to sit under the title on the far side of the bar, a
+                  screen-width away from the roster that answers the next
+                  question you have after reading it. */}
+              <span className="text-muted">
+                Tura <span className="tnum text-ink/70">{game.turn}</span> ·{" "}
+                {active ? (active.player_name ?? "—") : "—"}
+              </span>
               {/* Who is at the table, which is a question about the table and
                   not about the turn — so it lives up here with the rest of
                   them, and stays reachable while a fight is open. */}
@@ -1377,12 +1394,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 Gracze <span className="tnum text-muted">{seats.length}</span>
               </button>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
-              <button
-                onClick={() => setLeftDrawer((out) => (out === "karty" ? null : "karty"))}
-                className="text-ochre/80 hover:text-ochre"
-              >
-                Karty
-              </button>
               {/* Loud on purpose while it is on. Everything it unlocks writes a
                   manual override into the journal, and a switch you can forget
                   you flipped is how a tested game gets mistaken for a played

@@ -311,7 +311,7 @@ export function CardLibrary({
          * misaligned.
          */
         width="max-w-[556px]"
-        title="Karty do wglądu"
+        title="Księga Tolimana"
         onClose={onClose}
         head={
           <>

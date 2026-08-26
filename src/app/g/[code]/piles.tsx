@@ -104,7 +104,7 @@ export function PilesDrawer({
   onClose: () => void;
 }) {
   return (
-    <Drawer side="right" width="max-w-md" title="Stosy" onClose={onClose}>
+    <Drawer side="left" width="max-w-md" title="Stosy" onClose={onClose}>
       <div className="flex flex-col gap-5 p-3">
         <Deck
           name="Karty Zdarzeń"
