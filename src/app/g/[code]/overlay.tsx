@@ -186,9 +186,32 @@ export function useDismissable<T extends HTMLElement>({
 
   const panel = useRef<T>(null);
 
+  /**
+   * When this surface arrived, so it can ignore the click that brought it.
+   *
+   * A click takes time to travel. React handles it, the state changes, this
+   * surface mounts and starts listening — and the very same click is still on
+   * its way to the window, where this now sees it, finds it landed outside
+   * itself, finds itself the newest thing on screen, and closes. It opened and
+   * vanished a frame later, which is what "it shows for 0.1 sec and exits" was.
+   * The Karta opened from the seat card, the roster opened from the line that
+   * names it, the lobby asking whether to start: one cause wearing three faces.
+   *
+   * It never showed up on a card opened from inside the Księga, because there
+   * the click lands *in* a drawer and every listener bails at the first test.
+   * Only a surface opened from somewhere that is not itself a surface could see
+   * its own arrival as a reason to leave.
+   *
+   * A timestamp rather than a flag, because `event.timeStamp` and
+   * `performance.now()` share an origin: an event that began before this
+   * existed cannot be a click away from it, however the frames happen to fall.
+   */
+  const since = useRef(0);
+
   useBeforePaint(() => {
     const element = panel.current;
     if (!shown || !element) return;
+    since.current = performance.now();
     open.push(element);
     return () => {
       const at = open.lastIndexOf(element);
@@ -212,6 +235,8 @@ export function useDismissable<T extends HTMLElement>({
   useEffect(() => {
     if (!shown || !onClose) return;
     const away = (event: MouseEvent) => {
+      // Not the click that opened me — see the note on `since`.
+      if (event.timeStamp <= since.current) return;
       const target = event.target as Node | null;
       if (!target) return;
       // Inside *any* of them, not just this one. With the shelf out on the
