@@ -42,6 +42,18 @@ export type StatName = "miecz" | "magia" | "zycie" | "zloto";
 /** The three a character can have. 3.2's fourth, "dowolna", is a card's word, not a state. */
 export type Nature = "dobra" | "zla" | "chaotyczna";
 
+/**
+ * The states worth reaching that no other command reaches.
+ *
+ * A closed list, like the `Ends` and `Modifier` unions it stands in front of.
+ * The console could take a modifier as JSON and be able to say anything the
+ * engine can hold — and would then be a second, worse way of writing cards,
+ * with no rule behind any of it. These three are the ones a card makes and
+ * nothing else does: the Mgła's cap on a move, the Zaklinacz Czasu's stolen
+ * turn, and 11.11's year off the Kamienny Most.
+ */
+export type EffectName = "fog" | "frozen" | "barred";
+
 export type Command =
   | { kind: "help" }
   | { kind: "kill"; who: string | null }
@@ -57,7 +69,9 @@ export type Command =
   | { kind: "spell"; who: string | null }
   | { kind: "nature"; nature: Nature; who: string | null }
   | { kind: "revive"; who: string | null; characterId: string | null }
-  | { kind: "turn"; who: string | null };
+  | { kind: "turn"; who: string | null }
+  | { kind: "stone"; who: string | null }
+  | { kind: "effect"; effect: EffectName; who: string | null };
 
 /**
  * The four parameters, under the words you type at them.
@@ -101,6 +115,13 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "turn [player]",
     summary: "pass until it is their turn (10.1)",
+  },
+  { name: "stone", aliases: [], usage: "stone [player]", summary: "turn to stone for three turns (20.1)" },
+  {
+    name: "effect",
+    aliases: [],
+    usage: "effect fog|frozen|barred [player]",
+    summary: "a Mgła's cap, a stolen turn, or 11.11's year off the Most",
   },
   { name: "give", aliases: ["card"], usage: "give MAGICZNY MIECZ", summary: "put a card in a hand" },
   {
@@ -167,6 +188,13 @@ const CARDS: { id: string; name: string }[] = [
 const HOLDABLE: { id: string; name: string }[] = [...CARDS, ...(spells as Spell[])];
 
 const PEOPLE = characters as Character[];
+
+/** What each effect word means, for the answer and for Tab. */
+const EFFECTS: Record<string, EffectName> = {
+  fog: "fog",
+  frozen: "frozen",
+  barred: "barred",
+};
 
 /** The three Natury, under the words typed at them. English, like every verb here. */
 const NATURES: Record<string, Nature> = {
@@ -296,6 +324,14 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
 
   if (word === "turn") return { ok: { kind: "turn", who: tail || null } };
+  if (word === "stone") return { ok: { kind: "stone", who: tail || null } };
+
+  if (word === "effect") {
+    const [said, ...who] = tail.split(/\s+/).filter(Boolean);
+    const effect = EFFECTS[(said ?? "").toLowerCase()];
+    if (!effect) return { error: `Which effect — ${Object.keys(EFFECTS).join(", ")}?` };
+    return { ok: { kind: "effect", effect, who: who.join(" ") || null } };
+  }
 
   if (word === "fight") {
     return name(FOES, (card) => card.name, tail, "Wróg", (card) => ({
@@ -385,8 +421,13 @@ export function complete(
     }
     if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "go" || verb === "move") return { pool: PLACES.map((f) => f.name), at: 1 };
-    if (verb === "kill" || verb === "spell" || verb === "turn") {
+    if (verb === "kill" || verb === "spell" || verb === "turn" || verb === "stone") {
       return { pool: [...players], at: 1 };
+    }
+    if (verb === "effect") {
+      return parts.length === 2
+        ? { pool: Object.keys(EFFECTS), at: 1 }
+        : { pool: [...players], at: 2 };
     }
     if (verb === "nature") {
       // The Natura first, then who it belongs to.

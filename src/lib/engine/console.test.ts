@@ -132,6 +132,15 @@ suite("naming a card, a field or a creature", () => {
     expect(err("revive Ola as Gandalf")).toContain("Gandalf");
   });
 
+  it("turns somebody to stone, and knows the three effects by name", () => {
+    expect(ok("stone Ola")).toEqual({ kind: "stone", who: "Ola" });
+    expect(ok("effect fog")).toEqual({ kind: "effect", effect: "fog", who: null });
+    expect(ok("effect barred Ola")).toEqual({ kind: "effect", effect: "barred", who: "Ola" });
+    // Closed on purpose: the alternative is a modifier typed as JSON, which is
+    // writing cards with no rule behind any of it.
+    expect(err("effect haste")).toMatch(/fog, frozen, barred/);
+  });
+
   it("hands the turn to whoever is named", () => {
     expect(ok("turn Ola")).toEqual({ kind: "turn", who: "Ola" });
     expect(ok("turn")).toEqual({ kind: "turn", who: null });
@@ -285,6 +294,12 @@ suite("finishing a half-typed line", () => {
   it("finishes a Natura, then who it belongs to", () => {
     expect(tab("nature ev").line).toBe("nature evil ");
     expect(tab("nature evil o").line).toBe("nature evil Ola ");
+  });
+
+  it("finishes an effect, then who it is on", () => {
+    expect(tab("effect fr").line).toBe("effect frozen ");
+    expect(tab("effect fog o").line).toBe("effect fog Ola ");
+    expect(tab("stone o").line).toBe("stone Ola ");
   });
 
   it("offers players before the `as` and Postacie after it", () => {

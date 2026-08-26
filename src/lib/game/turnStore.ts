@@ -28,7 +28,7 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { CardClass, EventCard, Item } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
-import { helpLines, type Command } from "@/lib/engine/console";
+import { helpLines, type Command, type EffectName } from "@/lib/engine/console";
 import { findByName } from "@/lib/engine/search";
 import { type Effect } from "@/lib/engine/cardScript";
 import {
@@ -1315,6 +1315,23 @@ export async function placeCard(
 }
 
 /**
+ * What each of the console's three effect words writes.
+ *
+ * The label is what a player is shown, so it names the card the state comes
+ * from rather than the word that was typed — a chip reading "frozen" would be
+ * the only English on anybody's screen, and the point of the state is to look
+ * exactly like the card's.
+ */
+const EFFECTS: Record<EffectName, { label: string; modifier: Modifier }> = {
+  fog: { label: "Mgła (tryb testowy)", modifier: { kind: "ruch-max", pola: 1 } },
+  frozen: { label: "Bez ruchu (tryb testowy)", modifier: { kind: "bez-ruchu" } },
+  barred: {
+    label: "Most zamknięty (tryb testowy)",
+    modifier: { kind: "wzbroniony", place: "most" },
+  },
+};
+
+/**
  * Carries out one line from the test console.
  *
  * The grammar is in `console.ts` and is pure; this is the half with the
@@ -1456,6 +1473,33 @@ export async function runCommand(
         await finishTurn(gameId);
       }
       throw new Error(`Could not reach ${named(seat)} — stone, or turns owed all round.`);
+    }
+
+    case "stone": {
+      const seat = seatOf(command.who);
+      await turnToStone(gameId, seat.id);
+      return `${named(seat)} is stone for ${STONE_TURNS} turns (20.1).`;
+    }
+
+    /**
+     * The three states a card makes and nothing else does.
+     *
+     * Written through `addEffect`, so each one is the same row the card would
+     * have written and is read by the same code — the cap consulted when a die
+     * is rolled for a move, the freeze the turn order skips, 11.11's refusal at
+     * the bridge. Ending after one of the holder's own turns, because a test
+     * that has to be undone by hand is one somebody forgets to undo.
+     */
+    case "effect": {
+      const seat = seatOf(command.who);
+      const { label, modifier } = EFFECTS[command.effect];
+      await addEffect(gameId, seat.id, {
+        source: "tryb testowy",
+        label,
+        modifier,
+        ends: { kind: "tur", turns: 1 },
+      });
+      return `${named(seat)}: ${label}.`;
     }
 
     case "go": {

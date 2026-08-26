@@ -134,7 +134,10 @@ export function TestConsole({
           className={`tnum overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed ${
             // A share of the window rather than a number of lines, because what
             // has to fit is an answer whose length nobody knows in advance.
-            big ? "h-[70vh]" : "max-h-72"
+            // Collapsed, it holds a whole `help` — seventeen rows and the line
+            // that asked for them — but never more of the window than the game
+            // it is being typed at. Whichever of the two is smaller.
+            big ? "h-[70vh]" : "max-h-[min(24rem,45vh)]"
           }`}
         >
           {log.length === 0 ? (
