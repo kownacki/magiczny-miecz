@@ -28,7 +28,6 @@ export function describeResult(result: unknown): string | null {
     kind?: string;
     /** 19.1, which is answered rather than rolled. */
     succeeded?: boolean;
-    onBridge?: boolean;
     to?: string;
     lost?: string[];
     kept?: string[];
@@ -47,7 +46,14 @@ export function describeResult(result: unknown): string | null {
   // 19.1 is answered, not rolled — an escape works because an ability says so.
   // "No" is therefore a real result, and it changes nothing on the board, so
   // saying it is the only way to tell it apart from the button doing nothing.
-  if (typeof data.succeeded === "boolean" && typeof data.onBridge === "boolean") {
+  // `succeeded` alone, because it is the only field that says this was an
+  // escape. `onBridge` used to gate it too, which made a discriminator out of a
+  // flag that does its work before the result exists — 19.3 refuses fleeing a
+  // Wróg on the Kamienny Most by throwing, so a result carrying it is a duel
+  // and reads no differently. Requiring both meant a result without it would
+  // have fallen through to silence, which is the one thing this branch exists
+  // to prevent.
+  if (typeof data.succeeded === "boolean") {
     return data.succeeded
       ? "Wymknąłeś się (19.1) — nie możesz już nic zrobić temu, przed czym uciekłeś."
       : "Nie udało się wymknąć: twoja Postać nie potrafi tego na tym Obszarze (19.1).";
@@ -73,7 +79,13 @@ export function describeResult(result: unknown): string | null {
       const where = (isFieldId(data.to) ? FIELDS.get(data.to)?.name : null) ?? data.to ?? "?";
       const lost = data.lost?.length ? `Tracisz: ${data.lost.join(", ")}.` : "Nic nie tracisz.";
       const kept = data.kept?.length ? ` Zostaje przy tobie: ${data.kept.join(", ")}.` : "";
-      return `Pułapka: ${roll(data.dice)} = ${sum} — spadasz na ${where}. ${lost}${kept}`;
+      // A colon rather than a bare "na", which is how the rest of this app names a
+      // destination — "przenosisz się na: Osada". Polish `na` here wants the
+      // accusative and a field's name is stored in the nominative, so "spadasz na
+      // Osada" was wrong on every Obszar the Pułapka can reach. Declining
+      // fifty-eight printed names to fix one sentence is the wrong trade; the
+      // idiom that needs no case is already the house one.
+      return `Pułapka: ${roll(data.dice)} = ${sum} — spadasz na: ${where}. ${lost}${kept}`;
     }
     case "gra-ze-smiercia": {
       const mine = (data.dice ?? []).slice(0, 2);

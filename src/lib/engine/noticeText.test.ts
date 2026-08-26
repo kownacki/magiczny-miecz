@@ -27,11 +27,23 @@ describe("wymknięcie się (19.1)", () => {
     );
   });
 
-  it("needs both booleans before it claims this is an escape at all", () => {
-    // `onBridge` alone is not an escape result — falling through to the later
-    // branches is what lets some other shape carrying `succeeded` be read as
-    // whatever it actually is.
-    expect(describeResult({ succeeded: true })).toBeNull();
+  /**
+   * `succeeded` is what says this was an escape, and it is enough.
+   *
+   * The branch used to want `onBridge` as well, which made a discriminator out
+   * of a flag that does its work before the result exists: 19.3 refuses fleeing
+   * a Wróg on the Kamienny Most by throwing, so a result carrying it is a duel
+   * and reads no differently. Requiring both meant a result without it fell
+   * through to silence — the one outcome this branch is here to prevent, since
+   * a "no" that says nothing is indistinguishable from a button that did
+   * nothing.
+   */
+  it("reads an escape off `succeeded` alone", () => {
+    expect(describeResult({ succeeded: true })).toContain("Wymknąłeś się");
+    expect(describeResult({ succeeded: false })).toContain("Nie udało się");
+  });
+
+  it("is not an escape without it", () => {
     expect(describeResult({ onBridge: true })).toBeNull();
   });
 });
@@ -60,7 +72,7 @@ describe("Pułapka (14.5)", () => {
 
   it("looks the destination up on the board rather than printing the id", () => {
     // `to` arrives straight off the wire as a bare string. Printing it would
-    // show the player "spadasz na osada", which is a field id, not a place.
+    // show the player "spadasz na: osada", which is a field id, not a place.
     expect(
       describeResult({
         kind: "pulapka",
@@ -69,18 +81,18 @@ describe("Pułapka (14.5)", () => {
         lost: ["Miecz", "Hełm"],
         kept: ["Zaklęcie"],
       }),
-    ).toBe("Pułapka: 5 + 6 = 11 — spadasz na Osada. Tracisz: Miecz, Hełm. Zostaje przy tobie: Zaklęcie.");
+    ).toBe("Pułapka: 5 + 6 = 11 — spadasz na: Osada. Tracisz: Miecz, Hełm. Zostaje przy tobie: Zaklęcie.");
   });
 
   it("falls back to the raw value for a field the board does not have", () => {
     expect(describeResult({ kind: "pulapka", dice: [5, 6], to: "nie-ma-takiego-pola" })).toBe(
-      "Pułapka: 5 + 6 = 11 — spadasz na nie-ma-takiego-pola. Nic nie tracisz.",
+      "Pułapka: 5 + 6 = 11 — spadasz na: nie-ma-takiego-pola. Nic nie tracisz.",
     );
   });
 
   it("says where you landed even with no destination at all", () => {
     expect(describeResult({ kind: "pulapka", dice: [5, 6] })).toBe(
-      "Pułapka: 5 + 6 = 11 — spadasz na ?. Nic nie tracisz.",
+      "Pułapka: 5 + 6 = 11 — spadasz na: ?. Nic nie tracisz.",
     );
   });
 
@@ -89,16 +101,16 @@ describe("Pułapka (14.5)", () => {
     // cost nothing is news. Empty and absent read the same.
     const empty = describeResult({ kind: "pulapka", dice: [5, 6], to: "osada", lost: [], kept: [] });
     const absent = describeResult({ kind: "pulapka", dice: [5, 6], to: "osada" });
-    expect(empty).toBe("Pułapka: 5 + 6 = 11 — spadasz na Osada. Nic nie tracisz.");
+    expect(empty).toBe("Pułapka: 5 + 6 = 11 — spadasz na: Osada. Nic nie tracisz.");
     expect(absent).toBe(empty);
   });
 
   it("omits the kept list when nothing was kept, and keeps it when something was", () => {
     expect(describeResult({ kind: "pulapka", dice: [4, 4], to: "osada", lost: ["Miecz"] })).toBe(
-      "Pułapka: 4 + 4 = 8 — spadasz na Osada. Tracisz: Miecz.",
+      "Pułapka: 4 + 4 = 8 — spadasz na: Osada. Tracisz: Miecz.",
     );
     expect(describeResult({ kind: "pulapka", dice: [4, 4], to: "osada", kept: ["Miecz"] })).toBe(
-      "Pułapka: 4 + 4 = 8 — spadasz na Osada. Nic nie tracisz. Zostaje przy tobie: Miecz.",
+      "Pułapka: 4 + 4 = 8 — spadasz na: Osada. Nic nie tracisz. Zostaje przy tobie: Miecz.",
     );
   });
 });

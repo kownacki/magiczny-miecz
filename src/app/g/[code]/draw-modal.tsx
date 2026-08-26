@@ -237,10 +237,20 @@ export function DrawModal({
       !resolved.includes(entry.cardId) && !fought.includes(entry.cardId),
   );
 
-  useEffect(() => {
+  /**
+   * A new Karta starts with nothing decided about it.
+   *
+   * Adjusted during the render rather than in an effect. React documents this
+   * as the way to reset state when a prop changes, and the effect version cost
+   * a second render of the whole modal every time the stack moved on — the one
+   * the lint rule is warning about.
+   */
+  const [decidingAbout, setDecidingAbout] = useState(card?.cardId);
+  if (card?.cardId !== decidingAbout) {
+    setDecidingAbout(card?.cardId);
     setChoices([]);
     setGoing("");
-  }, [card?.cardId]);
+  }
 
   useEffect(() => {
     if (!card || !canAct) return;
@@ -249,7 +259,11 @@ export function DrawModal({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [card, onLeave]);
+    // `canAct` belongs here: a watcher who takes the seat over mid-Karta
+    // changes it without changing the Karta, and the listener was staying as it
+    // was — bound for somebody who could no longer act, or missing for somebody
+    // who now could.
+  }, [card, canAct, onLeave]);
 
   // A fight owns the modal for as long as it lasts. You cannot change your
   // equipment mid-fight (17.3 puts the spells before the dice and 17.4 gives
