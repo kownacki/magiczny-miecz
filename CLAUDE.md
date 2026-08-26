@@ -30,6 +30,8 @@ anything.
 - **[docs/COVERAGE.md](docs/COVERAGE.md)** — every numbered rule, and whether the app carries it
 - **[docs/LOBBY.md](docs/LOBBY.md)** — host, players, presence: the part that is not Magiczny Miecz
 - **[docs/RULES.md](docs/RULES.md)** — the rulebook transcribed
+- **[docs/EXPANSIONS.md](docs/EXPANSIONS.md)** — what is in the five boxes that
+  are out of scope, and which parts of the model they would break
 - **[db/schema.sql](db/schema.sql)** — the data model and why RLS has no policies
 
 ## Non-negotiables
@@ -82,7 +84,10 @@ anything.
 ## Settled — don't reopen
 
 - **Base game only.** The five expansions are out of scope; their scans are
-  deliberately untouched.
+  deliberately untouched. Surveyed once, in docs/EXPANSIONS.md, so that a
+  decision taken now is taken knowing what is coming — four of them add a board
+  that is not three rings, two of them are standalone games rather than modules,
+  and one prints two different cards with the same name on one sheet.
 - ~~**Companion mode before simulation.**~~ Reversed. It was chosen because it
   attacks the actual complaint about this game (downtime and bookkeeping) and
   needs almost no card art. What settled it the other way is that keeping both

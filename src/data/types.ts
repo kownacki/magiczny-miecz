@@ -51,7 +51,8 @@ export type Nature = "good" | "evil" | "chaotic";
  * three-value enum cannot express: its card reads `natura: dowolna` and its
  * first ability lets the player pick a Nature at setup. So the *card* carries
  * this wider type and the *seat* carries the narrow `Nature`, resolved once the
- * choice is made.
+ * choice is made. Not a one-off, as it turns out — Labirynt Magów's HEGEMON
+ * prints the same thing.
  */
 export type StartingNature = Nature | "any";
 
@@ -68,12 +69,14 @@ export type Region = "dolny" | "srodkowy" | "gorny" | "most";
  * both of which are implicit while there is one box and wrong the moment there
  * are two.
  *
- * The id is deliberately NOT namespaced yet. Every trading-card game that has
+ * The id is deliberately NOT namespaced. Every trading-card game that has
  * solved this keeps two identifiers with different jobs — the card as a rules
- * object, and the printing it came from — and reaches for `set:slug` only when
- * a name can collide. One namespace containing everything is noise, and the id
- * union is generated, so the compiler will name every site that needs changing
- * on the day a second set is transcribed.
+ * object, and the printing it came from — and `set:slug` is only the first half
+ * of that. It would not be enough here anyway: the Magia set prints PRZEWODNIK
+ * KRYPTY three times on one sheet, twice as a Nieznajomy and once as a
+ * Przyjaciel, with different text — two cards, one name, one set. What tells
+ * those apart is `source`, which is a collector number and the only handle in
+ * this data guaranteed to be unique. See docs/EXPANSIONS.md.
  */
 export type SetId = "base";
 
