@@ -29,12 +29,16 @@ export interface SheetChrome {
    */
   canAct: boolean;
   /**
-   * Whether a watcher has folded this away.
+   * Whether this has been folded away.
    *
-   * Only ever a watcher's: the player whose turn it is cannot put their own
-   * fight in a corner, because it is the thing they are being asked to do and
-   * the game does not go on without it. Which is why the sheet applies it
-   * against `canAct` rather than trusting the flag.
+   * It used to be a watcher's only — the player being asked could not put their
+   * own fight in a corner, because it is the thing the game is waiting on. That
+   * was right about the danger and wrong about the cure: a player mid-turn has
+   * things to do that are all behind this sheet, and being unable to move it is
+   * not the same as being able to act.
+   *
+   * What makes it safe is `TurnFab`, which cannot be dismissed while it is your
+   * turn and says what is owed. See the note there.
    */
   minimized: boolean;
   onMinimize: () => void;
@@ -72,10 +76,15 @@ export function DrawSheet({
   wide?: boolean;
   children: React.ReactNode;
 }) {
-  // Folded away, a watcher gets a line at the foot of the screen instead of a
+  // Folded away, this becomes a line at the foot of the screen instead of a
   // sheet over it. It still says what is going on — which is most of what the
   // modal was for — and the board is visible behind it again.
-  if (minimized && !canAct) {
+  //
+  // The player whose turn it is gets `TurnFab` instead of this, said in terms
+  // of what they owe rather than what they are doing, so nothing is drawn here
+  // for them.
+  if (minimized && canAct) return null;
+  if (minimized) {
     return (
       <button
         onClick={onRestore}
@@ -125,13 +134,19 @@ export function DrawSheet({
             )}
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            {!canAct && (
-              <ChromeButton
-                glyph="minimise"
-                title="Zwiń do paska — plansza znowu widoczna"
-                onClick={onMinimize}
-              />
-            )}
+            {/* Foldable by whoever is looking at it, including the player
+                being asked. What makes that safe on your own turn is the
+                `TurnFab` it folds down to, which cannot be dismissed and says
+                what you still owe. */}
+            <ChromeButton
+              glyph="minimise"
+              title={
+                canAct
+                  ? "Zwiń — wróć przyciskiem na dole"
+                  : "Zwiń do paska — plansza znowu widoczna"
+              }
+              onClick={onMinimize}
+            />
           </div>
         </header>
 

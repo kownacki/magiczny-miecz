@@ -443,7 +443,6 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   gold: { line: "gold +5 Ola", becomes: { kind: "stat", stat: "gold", delta: 5, set: null, who: "Ola", force: false } },
   kill: { line: "kill Ola", becomes: { kind: "kill", who: "Ola" } },
   kick: { line: "kick Ola", becomes: { kind: "kick", who: "Ola" } },
-  kick: { line: "kick Ola", becomes: { kind: "kick", who: "Ola" } },
   revive: {
     line: "revive Ola as MAGOG",
     becomes: { kind: "revive", who: "Ola", characterId: "magog" },

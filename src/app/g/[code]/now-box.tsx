@@ -301,18 +301,16 @@ export function NowBox({
           Rzuć kostką
         </button>
       )}
-      {isMine && (
-        <button
-          onClick={onEnd}
-          disabled={busy || !canEnd}
-          // A disabled control that does not say why is a control that looks
-          // broken. The reason is the rule, quoted.
-          title={canEnd ? undefined : (whyNotEnd ?? undefined)}
-          className="mt-2 shrink-0 rounded border border-edge px-2 py-1 text-[11px] text-muted transition hover:border-ochre hover:text-ink disabled:opacity-40"
-        >
-          Zakończ turę
-        </button>
-      )}
+      {/* Ending the turn is not here any more.
+
+          It was a small button in the corner of the box that reports where the
+          turn is, across the screen from the window in which the turn actually
+          happens — so a turn was read in one place and finished in another. It
+          is the last thing in the Obszar's window now, which is the last thing
+          a turn does, and the FAB is the way back to that window.
+
+          Which leaves this box saying only what is true — whose turn, which
+          Obszar, how far through — and nothing to press. */}
     </section>
   );
 }

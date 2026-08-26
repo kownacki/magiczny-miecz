@@ -69,6 +69,10 @@ export function FieldModal({
   cards,
   standingHere,
   canAct,
+  /** Ending the turn: offered here, on the Obszar the turn finishes on. */
+  canEnd = false,
+  whyNotEnd,
+  onEnd,
   busy,
   onTake,
   onInspect,
@@ -93,6 +97,11 @@ export function FieldModal({
   standingHere: boolean;
   /** Whether it is their turn to be doing anything about it. */
   canAct: boolean;
+  /** Whether the rules allow the turn to end yet — see `mayEndTurn`. */
+  canEnd?: boolean;
+  /** The rule that refuses, quoted, when they do not. */
+  whyNotEnd?: string | null;
+  onEnd?: () => void;
   /**
    * Everything the Obszar can be *done* about, which used to live in a panel
    * that grew down the page: its die table, its shops, the crossing it offers
@@ -300,6 +309,31 @@ export function FieldModal({
               )}
               {BRIDGE_ORDEAL.has(fieldId) && (
                 <BridgeOrdeal fieldId={fieldId} busy={busy} onAction={onAction} />
+              )}
+
+              {/* Ending the turn, which lives here and nowhere else.
+                  
+                  It was a small button in the box in the corner, across the
+                  screen from everything it comes after — so a turn was read in
+                  one place and finished in another. The Obszar's window is the
+                  last thing a turn does, and this is the last thing in it.
+
+                  Disabled says why. `dutiesBeforeEnding` quotes the rule that
+                  refuses — 10.1's move, 14.7's Bestia — and a greyed control
+                  that does not say why is a control that looks broken. */}
+              {onEnd && (
+                <div className="flex flex-col gap-1 border-t border-edge/60 pt-3">
+                  <button
+                    onClick={onEnd}
+                    disabled={busy || !canEnd}
+                    className="rounded border border-ochre bg-ochre/10 px-3 py-2 font-[family-name:var(--font-display)] text-sm tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
+                  >
+                    Zakończ turę
+                  </button>
+                  {!canEnd && whyNotEnd && (
+                    <p className="text-[11px] text-muted">{whyNotEnd}</p>
+                  )}
+                </div>
               )}
             </section>
           )}

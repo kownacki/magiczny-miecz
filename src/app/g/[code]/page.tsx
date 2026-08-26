@@ -21,6 +21,7 @@ import {
 import { CardLibrary } from "./card-library";
 import { useTable } from "./use-table";
 import { TestConsole } from "./console";
+import { TurnFab, owedLabel } from "./turn-fab";
 import { Lobby } from "./lobby";
 import { JoinGate, LeaveButton, TakeOverGate } from "./door";
 import { type LobbySeat } from "./lobby-view";
@@ -268,13 +269,18 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   const [ask, setAsk] = useState<Confirmation | null>(null);
   /**
-   * Whether a watcher has folded somebody else's turn away.
+   * Whether the turn's sheet has been folded away — anybody's, including your
+   * own.
    *
-   * Kept until their own turn comes round, and cleared then: staying folded
-   * across your own turn would hide the thing you are being asked to do, and
-   * unfolding it on every card would make the control useless — you fold it
-   * once because you want to look at the board, and it stays out of the way
-   * until it is yours again.
+   * It was a watcher's only, on the reasoning that hiding what the game is
+   * waiting on is how a table stops. What makes it safe on your own turn is
+   * `TurnFab`: it cannot be dismissed while the turn is yours, it says what is
+   * owed, and ending the turn is behind it — so the way back is on the path of
+   * every turn that ends.
+   *
+   * Cleared when the turn changes hands rather than when it becomes yours: you
+   * fold it once because you want the board, and it should stay out of the way
+   * until the game moves on.
    */
   const [folded, setFolded] = useState(false);
   /** Which seat is choosing a character; "auto" lets the app decide. */
@@ -288,12 +294,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setWaved([]);
   }, [turnKey]);
 
-  // Back in front of you the moment the turn is yours again.
   const myTurn = game !== null && mySeatIndex !== null && game.active_seat === mySeatIndex;
+  // Unfolded whenever the turn changes hands: a new turn is a new thing to
+  // look at, whoever it belongs to.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (myTurn) setFolded(false);
-  }, [myTurn]);
+    setFolded(false);
+  }, [turnKey]);
 
 
 
@@ -469,6 +476,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   const turnState = game.turn_state;
   const turnWindows = active ? windowsFor(factsIn(turnState, active.field_id)) : [];
+
+  /**
+   * Whether the turn's own sheet has anything to show.
+   *
+   * A fight, a direction to choose, the Most, or an Obszar with cards on it —
+   * and a field nobody may walk past, which opens it with nothing drawn because
+   * the Karczma happens to you the moment you arrive.
+   */
+  const sheetApplies =
+    active !== undefined &&
+    active !== null &&
+    (turnState.phase === "fight" ||
+      turnState.phase === "move" ||
+      turnState.phase === "bridge" ||
+      (turnState.phase === "field" &&
+        (turnState.drawn.length > 0 ||
+          compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null)));
+
+  /**
+   * Whether anything of the turn is on screen at all.
+   *
+   * What the FAB is the absence of: while a window is open there is no need for
+   * a way back into one, and while none is, there has to be — on a quiet Obszar
+   * nothing opens by itself and ending the turn is inside the Obszar's window.
+   */
+  const turnWindowOpen = (sheetApplies && !folded) || inspecting !== null;
   // Only the "pole" phase has a stack of drawn cards. Narrowed once here for
   // the controls further down that ask how much of the draw is left; what the
   // turn is *offering* is `factsIn`'s reading, not this one.
@@ -547,17 +580,30 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         />
       )}
 
+      {/* Your own turn, put aside — and the way back to it.
+
+          Only ever your own: a watcher who folds a turn away gets the sheet's
+          own line at the foot of the screen, which says what somebody else is
+          doing. This says what *you* still owe, because that is the difference
+          between a notification and a thing to press. */}
+      {active && myTurn && !turnWindowOpen && (
+        <TurnFab
+          owed={owedLabel(
+            turnWindows,
+            game.turn_state.phase === "fight" ? game.turn_state.fight.cardName : null,
+          )}
+          onOpen={() => {
+            // Back to whatever is owed: the sheet if it is a fight or a card,
+            // and the Obszar otherwise — which is where the turn is ended.
+            setFolded(false);
+            if (!turnWindows.some((window) => window.compulsory)) setInspecting(active.field_id);
+          }}
+        />
+      )}
+
       {/* The card you just turned over, at a size you can read, with exactly
           the things this card lets you do under it. */}
-      {active &&
-        (game.turn_state.phase === "fight" ||
-          game.turn_state.phase === "move" ||
-          game.turn_state.phase === "bridge" ||
-          (game.turn_state.phase === "field" &&
-            (game.turn_state.drawn.length > 0 ||
-              // A field nobody may walk past opens it too, even with nothing
-              // drawn: the Karczma happens to you the moment you arrive.
-              compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) !== null))) && (
+      {active && sheetApplies && (
           <DrawModal
             // Everybody at the table watches. A fight is the moment the game
             // is most worth looking at, and it used to happen entirely inside
@@ -688,6 +734,28 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             .map((card) => ({ id: card.id, cardId: card.cardId }))}
           standingHere={mySeat?.field_id === inspecting}
           canAct={mySeat?.seat_index === game?.active_seat}
+          // Ending the turn lives in this window now, not in the box in the
+          // corner: a turn is read in one place and should be finished there.
+          canEnd={
+            !!active &&
+            game.turn_state.phase !== "fight" &&
+            mayEndTurn({ fieldId: active.field_id, done: [], phase: game.turn_state.phase })
+          }
+          whyNotEnd={
+            active
+              ? whyCannotEnd(
+                  dutiesBeforeEnding({
+                    fieldId: active.field_id,
+                    done: [],
+                    phase: game.turn_state.phase,
+                  }),
+                )
+              : null
+          }
+          onEnd={() => {
+            setInspecting(null);
+            void post("turn", { action: "end" });
+          }}
           busy={busy}
           onTake={(fieldCardId) =>
             post("holdings", { action: "take-field", fieldCardId })
