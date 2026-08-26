@@ -28,8 +28,17 @@ export function TurnFab({
   owed,
   onOpen,
 }: {
-  /** What is still to be done, in the words the turn uses for it. */
-  owed: string;
+  /**
+   * What is still to be done, in the words the turn uses for it — or null when
+   * nothing is owed and all that is left is to end the turn.
+   *
+   * Null rather than "zakończ turę", because this button must not become a way
+   * to end a turn. Ending one is a decision and it lives in the window, next to
+   * the Obszar it is being made about; a pill in the corner reading "zakończ
+   * turę" is the same control in a second place, and the second place is the
+   * one you press by accident on the way past.
+   */
+  owed: string | null;
   onOpen: () => void;
 }) {
   return (
@@ -48,8 +57,12 @@ export function TurnFab({
       {/* The same slow dot the folded sheet uses for "something is waiting". */}
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ochre motion-safe:animate-pulse" aria-hidden />
       <span className="font-[family-name:var(--font-display)] tracking-wide">Twoja tura</span>
-      <span className="text-muted">·</span>
-      <span className="text-ochre">{owed}</span>
+      {owed && (
+        <>
+          <span className="text-muted">·</span>
+          <span className="text-ochre">{owed}</span>
+        </>
+      )}
     </button>
   );
 }
@@ -59,15 +72,19 @@ export function TurnFab({
  *
  * Taken from `windowsFor`'s own ranking rather than worked out again here: the
  * first compulsory window is by definition the thing that cannot be walked past
- * (16.4 puts the cards before the Obszar, a fight before either), and where
- * nothing is compulsory the only thing left to do is end the turn.
+ * — 16.4 puts the cards before the Obszar, and a fight before either.
+ *
+ * Null where nothing is compulsory. What is left then is ending the turn, and
+ * that is deliberately not said here: it is a decision, it belongs in the
+ * window beside the Obszar it is about, and naming it on the button would make
+ * the button look like the place to take it.
  */
 export function owedLabel(
   windows: readonly { id: string; label: string; count?: number; compulsory?: boolean }[],
   fightName: string | null,
-): string {
+): string | null {
   const first = windows.find((window) => window.compulsory);
-  if (!first) return "zakończ turę";
+  if (!first) return null;
   if (first.id === "walka") return fightName ? `walka: ${fightName}` : "walka";
   if (first.id === "karty") return first.count === 1 ? "1 karta" : `${first.count} karty`;
   return first.label.toLowerCase();
