@@ -10,23 +10,33 @@ where this one differs, the reason is that everybody is in the same room.
 
 ---
 
-## The two roles
+## The two roles, and the state that is not one
 
-**Gospodarz (host)** — exactly one per table, always a seated player. Owns the
-setup and the administration of the table.
+**Gospodarz (host)** — exactly one per table. Owns the setup and the
+administration of it. Not necessarily a seated player: the role is a *person's*,
+so a table can be run by somebody driving no Postać at all — a shared screen in
+the middle, or a player whose character died and who would rather referee than
+take another.
 
 **Gracz (player)** — everyone else. Plays their own character and nothing else.
 
-There is no third role, and — in the lobby — no unseated state either. Opening
-the link *is* joining: the door asks for a name and puts you at the table, with
-a character still to choose. There was once a two-step way in (arrive, then
-press "Usiądź" to claim a seat), which existed for nobody: everyone plays on
-their own device and opens the link for exactly one reason.
+**Widz (spectator)** — somebody at the table driving no chair. A thing to be
+rather than the absence of one, which is what the people/Postacie split made
+possible: six seats is a limit on Postacie and not on people, so a seventh
+arrival joins and watches rather than being turned away, and 4.4's player may
+decline a new Postać and stay. They see everything public, act on nothing, and
+may sit down in any chair nobody is driving.
 
-During play the seatless state does still exist — somebody who opens a table
-already in progress is a spectator by consequence rather than by design. They
-see everything public, can act on nothing, and can take over any seat nobody is
-behind.
+Opening the link *is* joining: the door asks for a name and puts you at the
+table, with a character still to choose. There was once a two-step way in
+(arrive, then press "Usiądź" to claim a seat), which existed for nobody:
+everyone plays on their own device and opens the link for exactly one reason.
+What replaced it is not that step coming back — it is that arriving at a table
+with no room left, or standing up from a chair, now has somewhere to land.
+
+A browser that has been at this table before is offered its own place back
+rather than having to join as a second person: see `deviceId.ts` for why that is
+a different secret from the claim token and why it lives in `localStorage`.
 
 ### What only the host may do
 
@@ -57,8 +67,8 @@ whole of what the role is for: setup has one owner and the start has one
 trigger. The code had always done it this way; only the description had not.
 
 A host who has gone quiet is the case that makes this matter, and the answer is
-the door that already exists. `takeHostRole` opens to anybody once the host's
-seat has been abandoned or has fallen silent for `HOST_MISSING_AFTER_MS`, and
+the door that already exists. `takeHostRole` opens to anybody once the host has
+left the table or fallen silent for `HOST_MISSING_AFTER_MS`, and
 the sweep hands the role on by itself before it removes anybody. So a table
 whose host closed their laptop is one click from being startable — but it is a
 click somebody has to make, and afterwards the table knows who made it.
@@ -88,11 +98,13 @@ been at the table longest of those remaining — the lowest seat index, since
 seats are appended in join order. A table is never left without a host while a
 single player remains.
 
-**By hand.** The host may pass the role to any seated player at any time. The
-old host becomes an ordinary player; there is no co-host.
+**By hand.** The host may pass the role to anybody at the table at any time —
+including somebody driving no chair, which is how a table ends up refereed
+rather than played by the person running it. The old host becomes an ordinary
+player; there is no co-host.
 
-**When the host is absent.** If the host's seat is abandoned (see below), any
-seated player may take the role without being given it. Without this a table
+**When the host is absent.** If the host has gone (see below), anybody at the
+table may take the role without being given it. Without this a table
 whose host closed their laptop can never be started or configured again, which
 is the failure mode host migration exists to prevent.
 
@@ -132,18 +144,24 @@ the other players may already have acted on all of them, and because 4.4's death
 is a different event with different consequences. Only the claim on the seat is
 released.
 
-An abandoned seat can be **taken over** — by somebody else, or by the same
-person on a new tab, which is the commonest case since the usual way a seat
-empties is a closed tab. The character continues exactly as it was left, with
-its points, its cards and its position. The person taking over may give their
-own name or leave the seat under the one the table already knows it by.
+An empty chair can be **taken over** — by somebody else, or by the same person
+on a new tab, which is the commonest case since the usual way a chair empties is
+a closed tab. The character continues exactly as it was left, with its points,
+its cards and its position.
 
-A seat that has gone *quiet* — heard from once and then not for `AWAY_AFTER_MS`
-— can be taken over on the same terms. A player who closed their tab never said
-they were leaving, so the seat is never marked abandoned, and refusing it would
-strand the character for the rest of the evening. The people in the room settle
-who picks it up; the server only refuses a seat somebody is actively using, and
-a seat the host is driving on somebody else's behalf (`no_device`).
+A chair whose driver has gone *quiet* — heard from once and then not for
+`AWAY_AFTER_MS` — can be taken over on the same terms. Somebody who closed their
+tab never said they were leaving, so nothing marks the chair as free, and
+refusing it would strand the character for the rest of the evening. The people
+in the room settle who picks it up; the server only refuses a chair somebody is
+actively driving.
+
+"Empty" is a fact about the pair now rather than a column: a seat with a Postać
+standing in it and no `driver_id`. `no_device` used to be the third case here —
+a seat the host played on somebody else's behalf, which had to be protected from
+the sweep and from takeover — and it is gone, because a chair nobody is driving
+is exactly what it always meant. There is no user to sweep, so there is nothing
+to protect it from.
 
 Taking over is offered only to a tab holding no seat of its own. **One tab, one
 seat** — not one device. A seat's claim lives in `sessionStorage`, which is
@@ -227,7 +245,7 @@ other thing about a table that is settled before anybody plays, because the
 lobby and the server were each keeping their own copy of the number.
 
 **Gracze.** One drawer, from the bar, listing every seat including your own:
-name, character, host, away or abandoned, the four numbers, and on expanding —
+name, character, host, away or driverless, the four numbers, and on expanding —
 the Karta Postaci, the Obszar, own-versus-total Miecz and Magia, and everything
 the seat is holding (5.2, 6.2 face up; 9.3 as a back). The host's two powers
 live there too: removing a player, and handing the role on.
