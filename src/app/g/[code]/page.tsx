@@ -3156,9 +3156,15 @@ function Tokens({ stat, points, label }: { stat: string; points: number; label: 
 
   const tokens = tokensFor(points);
   // Nothing is the honest picture of nothing: a character at zero Życie has had
-  // its last token taken off the table (4.4). A bare 0 says so; an empty gap
-  // would read as a stat the app had failed to work out.
-  if (tokens.length === 0) return <span className="text-lg font-medium text-muted">0</span>;
+  // its last token taken off the table (4.4), and the empty space where its
+  // żetony were is what the table itself shows.
+  //
+  // There was a "0" drawn here instead, on the reasoning that a gap would read
+  // as a stat the app had failed to work out. What actually reads that way is
+  // two zeros in a column — one standing where the tokens go and one under it
+  // as the reading — because the rail below always prints the figure when the
+  // pile is not already it. The gold has done it this way from the start: an
+  // empty stack, and the numeral saying nought.
 
   /**
    * Five to a column, each one finished before the next is started.
