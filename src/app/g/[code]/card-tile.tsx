@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { PICKABLE } from "./pickable";
+import { WithRules } from "./rule-ref";
 import {
   ART_RATIO,
   CHARACTER_ART_RATIO,
@@ -249,7 +250,12 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
             </p>
           )}
           {card.text && (
-            <p className="whitespace-pre-line text-xs leading-relaxed text-muted">{card.text}</p>
+            <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
+              {/* The cards cite the book at each other — "(5.4.)", "(3.5.)" —
+                  and those citations are the reason this app can be read
+                  without the box open beside it. */}
+              <WithRules text={card.text} />
+            </p>
           )}
           {coverage !== "pelne" && (
             <p
@@ -259,7 +265,7 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
                   : "border-ochre/50 bg-ochre/5 text-ochre/90"
               }`}
             >
-              {note ?? NOT_HANDLED}
+              <WithRules text={note ?? NOT_HANDLED} />
             </p>
           )}
         </div>

@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { WithRules } from "./rule-ref";
 
 export interface Notice {
   id: number;
@@ -75,7 +76,9 @@ function Toast({ notice, onDismiss }: { notice: Notice; onDismiss: (id: number) 
         leaving ? "translate-y-1 opacity-0" : "opacity-100"
       }`}
     >
-      {notice.text}
+      {/* The rule number in a refusal is the whole reason it names one: "(5.3)"
+          is an assertion until you can read 5.3. */}
+      <WithRules text={notice.text} />
     </button>
   );
 }

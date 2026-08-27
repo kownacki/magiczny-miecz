@@ -17,6 +17,49 @@ import type { CardId } from "@/data/ids";
 export type EqMode = "classic" | "slots";
 
 /**
+ * Every place slotowy departs from the printed rules, in one list.
+ *
+ * Written here rather than in a page, because the point is that a deviation
+ * cannot be added without appearing where players read it: the Księga renders
+ * this, so a fifth entry is a line of code away from being visible instead of a
+ * paragraph somebody has to remember to write. Until now these lived only in
+ * `docs/COVERAGE.md`, which is for whoever is building the thing.
+ *
+ * `rule` is the rule as the box has it, and every one of them is quoted rather
+ * than paraphrased, so the difference is a difference between two sentences.
+ */
+export interface VariantChange {
+  /** The rule numbers this bears on, for the Księga to link. */
+  rules: readonly string[];
+  title: string;
+  /** What the printed game does. */
+  book: string;
+  /** What this table does instead. */
+  here: string;
+}
+
+export const VARIANT_CHANGES: readonly VariantChange[] = [
+  {
+    rules: ["5.4"],
+    title: "Noszone i niesione to dwie różne rzeczy",
+    book: "Postać ma do czterech Przedmiotów i wszystkie działają, gdziekolwiek leżą — Instrukcja nigdzie nie odróżnia Hełmu założonego od niesionego.",
+    here: "Działa tylko to, co Postać ma na sobie, a każdy Przedmiot ma swoje miejsce: głowa, tułów, ręce, palec. Reszta czeka w Plecaku i nie daje nic.",
+  },
+  {
+    rules: ["5.3", "7.4", "5.5"],
+    title: "Przedmiot zakazany przez Naturę zostaje w Plecaku",
+    book: "„Przedmiot ten musi zostać natychmiast odrzucony” — Karta ląduje na Obszarze, na którym Postać stoi.",
+    here: "Zostaje tam, gdzie jest — na czerwono, bez żadnego działania, i nie da się go założyć. 5.3 zakazuje posiadania dlatego, że zakazuje używania, a tu niesienie używaniem nie jest.",
+  },
+  {
+    rules: ["5.6"],
+    title: "Nadmiar Przedmiotów nie jest wyrzucany za ciebie",
+    book: "Postać, która przekroczy limit, „musi natychmiast odrzucić Przedmioty, których nie jest w stanie unieść”, wybierając które.",
+    here: "Wzięcie ponad limit jest odmawiane od razu, więc nadmiar zwykle nie powstaje. Jeśli powstanie — po stracie Konia — aplikacja nie wybiera za gracza.",
+  },
+] as const;
+
+/**
  * The places on a character, in the order they are drawn.
  *
  * The two hands are separate places rather than one place holding two, because

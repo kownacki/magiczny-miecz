@@ -12,6 +12,7 @@ import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardTile, type TileCard } from "./card-tile";
 import { Fold } from "./fold";
+import { RULES_SHELVES, RulesShelfView, type RulesShelf } from "./rules-shelf";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
@@ -207,6 +208,8 @@ export function CardLibrary({
   onGrant,
   eqMode = "classic",
   nature = null,
+  openRule = null,
+  openShelf = null,
 }: {
   onClose: () => void;
   /**
@@ -247,8 +250,33 @@ export function CardLibrary({
    * true in klasyczny. A Sztylet in a slotowy game has to be in your hand.
    */
   eqMode?: EqMode;
+  /**
+   * A rule somebody followed a `(5.3)` to, or null for an ordinary open.
+   *
+   * Carried in rather than held here, because the click that starts it happens
+   * anywhere in the app — a refusal in the corner, a note under a Karta — and
+   * the Księga may not even be mounted when it does.
+   */
+  openRule?: string | null;
+  /** Which shelf that reference wants — `wariant` for the mode chip in the bar. */
+  openShelf?: RulesShelf | null;
 }) {
+  /**
+   * Which half of the Księga is open.
+   *
+   * Cards and rules are the same act — look something up without leaving the
+   * turn — so they share the drawer, the search box and the shortcut. They are
+   * not the same *list*, though, and ten tabs could not become fifteen: this is
+   * the switch above the tabs, and each side keeps its own row.
+   */
+  // Opened *at* a rule, this starts on Zasady. The page remounts the Księga on
+  // every reference followed, so this is read fresh each time rather than
+  // synced by an effect — a `(5.3)` has to reach past whatever was open,
+  // including another rule, or following one would depend on where you were.
+  const [side, setSide] = useState<"karty" | "zasady">(openShelf ? "zasady" : "karty");
+  const [rulesShelf, setRulesShelf] = useState<RulesShelf>(openShelf ?? "instrukcja");
   const [shelf, setShelf] = useState<Shelf>("zaklecia");
+
   /**
    * Which shelves are folded away, by exception.
    *
@@ -331,25 +359,61 @@ export function CardLibrary({
               placeholder="szukaj po nazwie lub treści…"
               className="mt-2 w-full rounded border border-edge bg-panel px-2 py-1 text-sm text-ink outline-none focus:border-ochre"
             />
-            <nav className="mt-2 flex flex-wrap gap-1">
-              {[...SHELVES, FIELD_SHELF].map((entry) => (
+            {/* Two words, loud, above the row they change. The tabs below are
+                one row or the other and never both — nine shelves of cards and
+                five of rules in one wrapped heap is a heap. */}
+            <nav className="mt-2 flex gap-1">
+              {(["karty", "zasady"] as const).map((one) => (
                 <button
-                  key={entry.key}
-                  onClick={() => setShelf(entry.key)}
-                  className={`rounded border px-2 py-1 text-[11px] transition ${
-                    shelf === entry.key
-                      ? "border-ochre text-ochre"
+                  key={one}
+                  onClick={() => setSide(one)}
+                  className={`flex-1 rounded border px-2 py-1 text-[11px] uppercase tracking-widest transition ${
+                    side === one
+                      ? "border-ochre bg-ochre/10 text-ochre"
                       : "border-edge text-muted hover:border-ochre hover:text-ink"
                   }`}
                 >
-                  {entry.label}
+                  {one === "karty" ? "Karty" : "Zasady"}
                 </button>
               ))}
+            </nav>
+            <nav className="mt-2 flex flex-wrap gap-1">
+              {side === "karty"
+                ? [...SHELVES, FIELD_SHELF].map((entry) => (
+                    <button
+                      key={entry.key}
+                      onClick={() => setShelf(entry.key)}
+                      className={`rounded border px-2 py-1 text-[11px] transition ${
+                        shelf === entry.key
+                          ? "border-ochre text-ochre"
+                          : "border-edge text-muted hover:border-ochre hover:text-ink"
+                      }`}
+                    >
+                      {entry.label}
+                    </button>
+                  ))
+                : RULES_SHELVES.map((entry) => (
+                    <button
+                      key={entry.key}
+                      onClick={() => setRulesShelf(entry.key)}
+                      className={`rounded border px-2 py-1 text-[11px] transition ${
+                        rulesShelf === entry.key
+                          ? "border-ochre text-ochre"
+                          : "border-edge text-muted hover:border-ochre hover:text-ink"
+                      }`}
+                    >
+                      {entry.label}
+                    </button>
+                  ))}
             </nav>
           </>
         }
       >
       <div className="p-4">
+        {side === "zasady" ? (
+          <RulesShelfView shelf={rulesShelf} focus={openRule} eqMode={eqMode} query={query} />
+        ) : (
+        <>
         {/* Said only where there is something to say.
             
             The headings carry the tally and the pictures are plainly pictures,
@@ -455,6 +519,8 @@ export function CardLibrary({
             </Fold>
           ))}
         </div>
+        )}
+        </>
         )}
       </div>
       </Drawer>

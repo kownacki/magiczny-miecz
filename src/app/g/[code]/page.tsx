@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, useSyncExternalStore } from "react";
+import { use, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import { FIELDS, ringFields, type FieldId } from "@/lib/engine/board";
@@ -46,6 +46,8 @@ import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { Toasts } from "./toast";
+import { OpenRule } from "./rule-ref";
+import type { RulesShelf } from "./rules-shelf";
 import { PlayersDrawer } from "./players";
 import { PilesDrawer } from "./piles";
 
@@ -150,6 +152,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * top of it, and nobody has to remember to close the other first.
    */
   const [leftDrawer, setLeftDrawer] = useState<"ksiega" | "stosy" | null>(null);
+  /**
+   * The rule somebody last followed a reference to.
+   *
+   * Kept here rather than inside the Księga because the click happens outside
+   * it — in a refusal in the corner, under a Karta, in a tooltip — and the
+   * drawer is usually shut when it does. Bumped rather than only set: clicking
+   * the same `(5.3)` twice should take you back to it, and a value that did not
+   * change is a value nothing downstream notices.
+   */
+  const [rule, setRule] = useState<{ shelf: RulesShelf; id: string | null; nth: number } | null>(
+    null,
+  );
+  const openAt = useCallback((shelf: RulesShelf, id: string | null) => {
+    setLeftDrawer("ksiega");
+    setRule((was) => ({ shelf, id, nth: (was?.nth ?? 0) + 1 }));
+  }, []);
+  const openRule = useCallback((id: string) => openAt("instrukcja", id), [openAt]);
   /** The stacks, drawn as stacks (`piles.tsx`). */
   /**
    * Testing rather than playing — see `testMode.ts`.
@@ -440,6 +459,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }
 
 
+  /**
+   * Everything below, under one provider.
+   *
+   * `Table` answers with one of five screens and they all quote rule numbers,
+   * so `WithRules` has to be able to find the opener from any of them. An IIFE
+   * rather than five providers, because five is five chances for the next
+   * screen to be the one that forgot.
+   */
+  return <OpenRule.Provider value={openRule}>{body()}</OpenRule.Provider>;
+
+  function body() {
   if (error && !game) {
     return <Centered>{<span className="text-vermilion">{error}</span>}</Centered>;
   }
@@ -935,6 +965,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const library =
     leftDrawer === "ksiega" ? (
       <CardLibrary
+        key={rule ? `rule-${rule.nth}` : "cards"}
+        openRule={rule?.id ?? null}
+        openShelf={rule?.shelf ?? null}
         eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
         nature={asNature(mySeat?.nature)}
         onInspect={setInspectingCard}
@@ -1207,6 +1240,18 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 <span className="tnum text-muted">
                   {seats.length}/{MAX_SEATS}
                 </span>
+              </button>
+              {/* Which house rule this table plays, said on the table rather
+                  than only in the poczekalnia where it was chosen. Half the
+                  people at a slotowy table did not open it, and nothing on
+                  screen told them the Przedmiot in their Plecak has stopped
+                  working. The word is the door to what it changes. */}
+              <button
+                onClick={() => openAt("wariant", null)}
+                title="Czym ten stół różni się od Instrukcji"
+                className="text-muted transition hover:text-ochre"
+              >
+                {game.eq_mode === "slots" ? "slotowy" : "klasycznie"}
               </button>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
               {/* Loud on purpose while it is on. Everything it unlocks writes a
@@ -1547,6 +1592,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       />
     </>
   );
+  }
 }
 
 /**
