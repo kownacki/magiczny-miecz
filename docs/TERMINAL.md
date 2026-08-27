@@ -323,6 +323,19 @@ Four steps, each independently testable, in this order:
    line reaches `parseCommand`, because it acts on the program rather than the
    game and the browser could never carry it out.
 
+**The record is written; rewind is not.** `record.ts` holds the shape and the
+reasoning, `mm` writes an entry per line that changed the game, and the save
+carries it. What is left is the replay: run the log into a fresh store with
+`scriptedRandom(rolls)` bound, and compare.
+
+Two things settled while building it. The dice are *recorded* rather than
+seeded — seeding them the way shuffles are seeded makes a smaller record and
+buys less than it looks, because a rule that throws one more die shifts every
+later draw off the same stream and breaks a seeded record exactly as it breaks a
+recorded one. And only lines that changed the game are kept: `commit` writes
+nothing for an empty changeset, "not even the revision", so the counter standing
+still is the game itself saying nothing happened.
+
 Rewind is a fifth step and deliberately last: it wants the grammar settled first,
 because the record is a log of commands and the commands are what step 3 defines.
 The *record itself* is written from step 2 — only replaying it waits.

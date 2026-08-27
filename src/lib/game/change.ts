@@ -21,6 +21,7 @@ import type { Ends, Modifier } from "@/lib/engine/status";
 import type { RandomPort } from "@/lib/engine/ports";
 import type { JournalKind } from "@/lib/engine/journal";
 import { appRandom, replayable } from "./random";
+import { noteRolls } from "./record";
 import { serially } from "./queue";
 import { Failure } from "./failure";
 
@@ -805,6 +806,10 @@ async function attempt<C, T>(
     });
     try {
       await store.commit(snapshot, writes);
+      // After the commit, so a change that lost its race and re-decided does
+      // not leave the dice of an attempt nobody played. `rolls` outlives the
+      // attempts, so what is handed over is the throw that actually happened.
+      noteRolls(rolls);
       return result;
     } catch (error) {
       if (!(error instanceof Conflict) || attempt === ATTEMPTS) throw error;

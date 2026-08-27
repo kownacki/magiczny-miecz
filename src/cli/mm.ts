@@ -11,7 +11,8 @@ import type { CommandSpec } from "@/lib/engine/console";
 import { stageOf, type Stage } from "@/lib/engine/console";
 import { cardLines, runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
-import { deleteSave, homeDir, listSaves, newSave, openSave } from "@/lib/game/saves";
+import { deleteSave, homeDir, listSaves, newSave, openSave, writeSave } from "@/lib/game/saves";
+import { startRecording, stopRecording, type Recorded } from "@/lib/game/record";
 import { journalRows, seatsFor, usersFor } from "@/lib/game/store";
 import { memoryHandle } from "@/lib/game/gameStore";
 import { journalLines, type JournalEntry } from "@/lib/engine/journalText";
@@ -113,6 +114,8 @@ interface Table {
   code: string;
   gameId: string;
   tables: Tables;
+  /** Every line typed at it and the dice that fell — see `record.ts`. */
+  log: Recorded[];
 }
 
 let table: Table | null = null;
@@ -192,6 +195,38 @@ function offTable(line: string): boolean {
   return "ok" in parsed && worksOffTable(parsed.ok);
 }
 
+/**
+ * One line, written down with whatever the dice said while it ran.
+ *
+ * Saved on the spot rather than left for the next commit to carry: a line is
+ * the unit somebody would replay, and a record that is one line behind the game
+ * is a record of a game nobody played.
+ */
+async function remember(line: string, actor: string, was: number): Promise<void> {
+  const at = table;
+  if (!at) return;
+  /**
+   * Only what changed the game.
+   *
+   * `look`, `me` and `who` are reads, and `commit` says so itself: a changeset
+   * that asks for nothing writes nothing, "not even the revision". So the
+   * counter standing still is the game saying nothing happened, and a record of
+   * nothing happening is a longer replay of the same game.
+   */
+  const now = (await activeStore().load(at.gameId)).game.revision;
+  if (now === was) {
+    stopRecording();
+    return;
+  }
+  at.log.push({ seq: at.log.length + 1, actor, line, rolls: stopRecording() });
+  await writeSave(at.code, {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    tables: at.tables,
+    log: at.log,
+  });
+}
+
 async function knowTable(): Promise<void> {
   if (!table) {
     players = [];
@@ -208,9 +243,9 @@ async function knowTable(): Promise<void> {
 }
 
 async function openTable(code: string): Promise<void> {
-  const { gameId, tables, store } = await openSave(code);
+  const { gameId, tables, log, store } = await openSave(code);
   setStore(store);
-  table = { code, gameId, tables };
+  table = { code, gameId, tables, log };
   announced = null;
   await knowTable();
   say(`Table ${code}.`);
@@ -219,9 +254,9 @@ async function openTable(code: string): Promise<void> {
 
 async function makeTable(names: string[]): Promise<void> {
   if (names.length === 0) return say("Who is playing? `table new Michał, Ola`");
-  const { code, gameId, tables, store } = await newSave(names);
+  const { code, gameId, tables, log, store } = await newSave(names);
   setStore(store);
-  table = { code, gameId, tables };
+  table = { code, gameId, tables, log };
   announced = null;
   await knowTable();
   say(`Table ${code} — ${names.join(", ")}.`);
@@ -349,16 +384,29 @@ async function run(line: string): Promise<void> {
   if (!allowed.ok) return say(allowed.why);
 
   const who = await actorNow();
+  /**
+   * Recorded around the whole line, not around each change.
+   *
+   * One line can cause four of them — `fight` begins a fight, throws twice and
+   * settles it — and the record wants what somebody *typed*, with the dice that
+   * fell while it ran. See `record.ts`.
+   */
+  startRecording();
+  const was = (await activeStore().load(table!.gameId)).game.revision;
   try {
     say(await runCommand(table!.gameId, { userId: who.userId, seatId: who.seatId }, parsed.ok));
 
     // `rename`, `kick` and `seat` all change who Tab should offer.
     await knowTable();
+    await remember(line, who.label, was);
   } catch (error) {
     // The message is the game refusing something and belongs on screen; the
     // stack is a bug and belongs in a file.
     say((error as Error).message ?? "Something went wrong.");
     if (!(error as Error).message) say(`(written to ${trace(error)})`);
+    // A refused line changed nothing, so there is nothing to replay — but the
+    // dice have to be dropped or they would land on the next line's entry.
+    stopRecording();
   }
 }
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, rm, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { deleteSave, listSaves, newSave, openSave, readSave, savesDir } from "./saves";
+import { deleteSave, listSaves, newSave, openSave, readSave, savesDir, writeSave } from "./saves";
 import { resetStore, setStore } from "./gameStore";
 import { joinGame } from "./store";
 import { memoryHandle } from "./gameStore";
@@ -125,6 +125,28 @@ describe("a game kept in a file", () => {
    * already written the file — so a table opened for two held one player until
    * some later commit rewrote it, and quitting before that lost the rest.
    */
+  /**
+   * The record travels with the game, from the first save.
+   *
+   * A save written without somewhere to put it could never be wound back, which
+   * is the one thing about a format that cannot be fixed later.
+   */
+  it("carries a log, and hands it back to whoever reopens it", async () => {
+    const { code, log } = await newSave(["Kowi"]);
+    expect((await readSave(code)).log).toEqual([]);
+
+    log.push({ seq: 1, actor: "Kowi", line: "roll", rolls: [4] });
+    await writeSave(code, {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      tables: (await readSave(code)).tables,
+      log,
+    });
+
+    const again = await openSave(code);
+    expect(again.log).toEqual([{ seq: 1, actor: "Kowi", line: "roll", rolls: [4] }]);
+  });
+
   it("writes everybody at the table, not just whoever opened it", async () => {
     const { code } = await newSave(["Kowi", "Cinek", "Ola"]);
     const file = await readSave(code);

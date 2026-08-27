@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { Changeset, Snapshot } from "./change";
 import { emptyTables, memoryHandle, memoryStore, type GameStore } from "./gameStore";
 import type { Tables } from "./fakeDb";
+import type { Recorded } from "./record";
 import { createGame, joinGame } from "./store";
 import type { EqMode } from "@/lib/engine/slots";
 
@@ -53,13 +54,12 @@ export interface SaveFile {
   /**
    * Every input that produced the state, for winding it back.
    *
-   * Empty for now, and the slot exists anyway: a save written without somewhere
-   * to put this could never be rewound, and the format is cheaper to widen
-   * before anything real is stored in it than after. See docs/TERMINAL.md — it
-   * waits on the command vocabulary, and on the seed that makes a replay
-   * reproduce the same shuffles.
+   * What somebody typed and what the dice said while it ran — see `record.ts`
+   * for why those two and nothing else. Written from the first save rather than
+   * added when rewind arrives, because a game saved without it can never be
+   * wound back.
    */
-  log: unknown[];
+  log: Recorded[];
 }
 
 /** What the picker shows: enough to recognise a game without loading it. */
@@ -141,7 +141,7 @@ export async function deleteSave(code: string): Promise<void> {
  * never reaches the write, so a refused change cannot leave a save behind that
  * no game ever had.
  */
-export function fileStore(code: string, tables: Tables, log: unknown[] = []): GameStore {
+export function fileStore(code: string, tables: Tables, log: Recorded[] = []): GameStore {
   const inner = memoryStore(tables);
   return {
     handle: inner.handle,
@@ -171,7 +171,14 @@ export function fileStore(code: string, tables: Tables, log: unknown[] = []): Ga
 export async function newSave(
   players: readonly string[],
   eqMode: EqMode = "slots",
-): Promise<{ code: string; gameId: string; hostToken: string; tables: Tables; store: GameStore }> {
+): Promise<{
+  code: string;
+  gameId: string;
+  hostToken: string;
+  tables: Tables;
+  log: Recorded[];
+  store: GameStore;
+}> {
   const [host, ...others] = players;
   const tables = emptyTables();
   const handle = memoryHandle(tables);
@@ -181,22 +188,24 @@ export async function newSave(
   // any other is.
   for (const name of others) await joinGame(game.id, name, null, false, null, handle);
 
-  const store = fileStore(game.join_code, tables);
+  const log: Recorded[] = [];
+  const store = fileStore(game.join_code, tables, log);
   await writeSave(game.join_code, {
     version: 1,
     savedAt: new Date().toISOString(),
     tables,
-    log: [],
+    log,
   });
-  return { code: game.join_code, gameId: game.id, hostToken, tables, store };
+  return { code: game.join_code, gameId: game.id, hostToken, tables, log, store };
 }
 
 /** A table opened before, picked off the list. */
 export async function openSave(
   code: string,
-): Promise<{ gameId: string; tables: Tables; store: GameStore }> {
+): Promise<{ gameId: string; tables: Tables; log: Recorded[]; store: GameStore }> {
   const file = await readSave(code);
   const gameId = (file.tables.games[0] as Record<string, unknown> | undefined)?.id;
   if (typeof gameId !== "string") throw new Error(`Zapis ${code} nie zawiera gry.`);
-  return { gameId, tables: file.tables, store: fileStore(code, file.tables, file.log) };
+  const log = file.log ?? [];
+  return { gameId, tables: file.tables, log, store: fileStore(code, file.tables, log) };
 }
