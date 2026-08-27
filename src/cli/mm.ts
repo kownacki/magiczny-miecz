@@ -5,6 +5,7 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { helpLines, parseCommand, permits } from "@/lib/engine/console";
+import { tabFor } from "./tab";
 import { runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
 import { deleteSave, homeDir, listSaves, newSave, openSave } from "@/lib/game/saves";
@@ -58,6 +59,13 @@ let testmode = false;
 let announced: number | null = null;
 /** Set by `quit`, read by the loop — `rl.close()` mid-question hangs. */
 let leaving = false;
+/**
+ * Who is at the table, for Tab.
+ *
+ * Cached rather than read on each keypress: readline's completer is
+ * synchronous, and the answer only changes when a command changes it.
+ */
+let players: string[] = [];
 
 /**
  * Opened after the startup reads, not before.
@@ -78,17 +86,24 @@ function say(text: string): void {
  * The table: opening one, and finding the one to open.
  * ----------------------------------------------------------------------- */
 
+async function knowPlayers(): Promise<void> {
+  players = table
+    ? (await usersFor(table.gameId)).map((one) => one.name).filter((one): one is string => !!one)
+    : [];
+}
+
 async function openTable(code: string): Promise<void> {
   const { gameId, tables, store } = await openSave(code);
   setStore(store);
   table = { code, gameId, tables };
   announced = null;
+  await knowPlayers();
   say(`Stół ${code}.`);
   await show();
 }
 
 async function makeTable(names: string[]): Promise<void> {
-  if (names.length === 0) return say("Kto gra? `new Michał, Ola`");
+  if (names.length === 0) return say("Kto gra? Wypisz graczy: `new Michał, Ola`.");
   const [host, ...rest] = names;
   const { code, gameId, tables, store } = await newSave(host);
   setStore(store);
@@ -96,6 +111,7 @@ async function makeTable(names: string[]): Promise<void> {
   for (const name of rest) await joinGame(gameId, name, null, false, null, memoryHandle(tables));
   table = { code, gameId, tables };
   announced = null;
+  await knowPlayers();
   say(`Stół ${code} — ${names.join(", ")}.`);
   say("Każdy wybiera Postać (`pick MAGOG`), potem `ready`, potem `start`.");
   await show();
@@ -214,6 +230,8 @@ async function run(line: string): Promise<void> {
   const who = await actorNow();
   try {
     say(await runCommand(table!.gameId, { userId: who.userId, seatId: who.seatId }, parsed.ok));
+    // `rename`, `kick` and `seat` all change who Tab should offer.
+    await knowPlayers();
   } catch (error) {
     // The message is the game refusing something and belongs on screen; the
     // stack is a bug and belongs in a file.
@@ -261,13 +279,21 @@ async function local(line: string): Promise<boolean> {
 
 async function main(): Promise<void> {
   const found = await listSaves();
-  rl = createInterface({ input: stdin, output: stdout });
+  rl = createInterface({
+    input: stdin,
+    output: stdout,
+    completer: (line: string) => tabFor(line, players, LOCAL),
+  });
 
   say("Magiczny Miecz — konsola.");
   if (found.length > 0) {
     say(`Zapisy: ${found.map((one) => one.code).join(", ")}  (\`load KOD\`)`);
   }
-  say("`new Michał, Ola` zaczyna stół. `help` wypisuje komendy. `quit` wychodzi.");
+  // The names are the *players*, and saying so is the whole point of this
+  // line: `new Michał, Ola` reads like naming the table, and the first person
+  // to run it read it that way.
+  say("`new <gracze>` otwiera stół — np. `new Michał, Ola`. Kod stołu nadaje się sam.");
+  say("`help` wypisuje komendy, `saves` zapisy, `quit` wychodzi.");
 
   /**
    * The line iterator rather than a loop of `question`.
