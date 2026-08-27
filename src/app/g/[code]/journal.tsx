@@ -97,6 +97,50 @@ export function Journal({
         title="Dziennik"
         tone="text-muted"
         onExpand={mini ? () => setSize("normal") : undefined}
+        /**
+         * The newest line, on the bar that replaced the list it was in.
+         *
+         * A journal shrunk to its heading says only that a journal exists,
+         * which is the one thing anybody already knows — and the reason it gets
+         * shrunk is that the board needs the room, not that nothing is
+         * happening in it. Half of what it is read for is the last thing that
+         * happened, and that fits on a bar.
+         *
+         * Plain text, truncated, and no lookups: the whole bar is the way back
+         * to the list (see `onExpand`), so a name that opens a card preview
+         * under the cursor would be fighting the click that is about to land on
+         * it. The dot stays, because whose line it is survives being cut short
+         * and is most of what a glance at it asks.
+         */
+        aside={
+          mini && lines.length > 0 ? (
+            <p className="flex min-w-0 flex-1 items-center gap-2 text-[11px] normal-case tracking-normal">
+              <span
+                aria-hidden
+                style={
+                  lines[lines.length - 1].seatIndex === null
+                    ? undefined
+                    : {
+                        backgroundColor:
+                          SEAT_COLOURS[
+                            lines[lines.length - 1].seatIndex! % SEAT_COLOURS.length
+                          ],
+                      }
+                }
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                  lines[lines.length - 1].seatIndex === null ? "bg-edge" : ""
+                }`}
+              />
+              <span
+                className={`truncate ${
+                  lines[lines.length - 1].manual ? "text-ochre/90" : "text-muted/80"
+                }`}
+              >
+                {lines[lines.length - 1].text}
+              </span>
+            </p>
+          ) : undefined
+        }
         controls={
           <>
             <ChromeButton
