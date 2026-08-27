@@ -567,6 +567,39 @@ rulebook has no word for:
 Both are journalled `override` with `manual: true`, because both contradict a
 rulebook that removes a Postać exactly once and never puts one back.
 
+## Tested end to end, and the six things it found
+
+The restructure was driven through the real HTTP routes rather than reasoned
+about — a table opened, joined, seated, started, played, killed, revived,
+removed, kicked, left, reconnected and filled to seven people, 81 assertions
+against what came back. Everything the model promises holds. Six things did not,
+and every one of them lived in a gap between two layers that were each right on
+their own:
+
+- **A newcomer could not take an abandoned Postać.** The join route wanted a
+  token from somebody who by definition has none, and `joinGame` refused any
+  seat a user row still pointed at where `takeSeat` had always drawn the line at
+  `isQuiet`. The gate offered "gracz się rozłączył" and the server answered "to
+  miejsce ma już swojego gracza".
+- **Nothing wrote the host's `device_id`.** `createGame` said it would be
+  "written on the first poll"; no poll wrote it, and `joinGame` was the only
+  writer in the app. The landing page sent no device on create *or* join. So the
+  person likeliest to reload was the one the table could not recognise.
+- **The console never asked.** `needsConfirming` was exported, tested, and
+  called by nothing — `kill`, `remove` and `kick` all ran on Enter.
+- **Every latecomer was filed as a 4.4 replacement.** A mid-game seat is created
+  `eliminated`, so that flag cannot tell a death from an arrival; only a death
+  leaves a Postać on the seat to be replaced.
+- **The journal renamed its own history.** `describeTurnChange` built its
+  sentence from the seat as it stands now, so a rename rewrote lines about turns
+  taken hours earlier.
+- **Two sentences counted to zero out loud** — "Wszystkie 0 postaci mają swoich
+  graczy", "You drops to 0 Życia".
+
+The harness is `sweep.py` in the session scratchpad. It is worth rewriting
+rather than restoring: what it is *for* is asserting against the real routes,
+and that is the part worth keeping.
+
 ## Still open
 
 **Companion mode** (`COMPANION_PARKED`) is the only thing left, and this work
