@@ -219,7 +219,15 @@ export type Command =
      waiting is over (docs/LOBBY.md). */
   | { kind: "ready"; who: string | null; ready: boolean }
   | { kind: "start" }
-  | { kind: "spell"; who: string | null }
+  /**
+   * A Zaklęcie into a hand (9.5).
+   *
+   * `wand` is the Różdżka Zaklęć's second clause — a hand that refills itself
+   * up to its setup size — which is a different condition from 2.6's ceiling
+   * and so a different draw. A flag rather than a verb of its own: it is the
+   * same act, reached because a card says you may.
+   */
+  | { kind: "spell"; who: string | null; wand: boolean }
   /**
    * 7.2's change, and 7.3's "once a turn" either obeyed or not.
    *
@@ -667,8 +675,8 @@ export const COMMANDS: CommandSpec[] = [
     name: "spell",
     when: PLAYING,
     aliases: [],
-    usage: "spell [player]",
-    summary: "draw a Zaklęcie (9.5)",
+    usage: "spell [player] [wand]",
+    summary: "draw a Zaklęcie (9.5) — `wand` is the Różdżka refilling a hand",
     needs: "play",
   },
 ];
@@ -847,7 +855,13 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "kick") {
     return tail ? { ok: { kind: "kick", who: tail } } : needs("kick", "Kick whom?");
   }
-  if (word === "spell") return { ok: { kind: "spell", who: tail || null } };
+  if (word === "spell") {
+    // `wand` last and bare, the way `force` and `hard` are.
+    const parts = tail.split(/\s+/).filter(Boolean);
+    const wand = parts.length > 0 && parts[parts.length - 1].toLowerCase() === "wand";
+    const who = (wand ? parts.slice(0, -1) : parts).join(" ");
+    return { ok: { kind: "spell", who: who || null, wand } };
+  }
   // Spelled out, because `win` alone is two different things: the fight in
   // front of you, and the game.
   if (word === "settle") {

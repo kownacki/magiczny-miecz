@@ -7,6 +7,7 @@ import { stdin, stdout } from "node:process";
 import { helpLines, parseCommand, permits, worksOffTable } from "@/lib/engine/console";
 import { tabFor } from "./tab";
 import { paintFor } from "./paint";
+import type { EqMode } from "@/lib/engine/slots";
 import type { CommandSpec } from "@/lib/engine/console";
 import { stageOf, type Stage } from "@/lib/engine/console";
 import { cardLines, runCommand } from "@/lib/game/consoleStore";
@@ -76,7 +77,7 @@ const LOCAL: CommandSpec[] = [
     name: "table",
     aliases: [],
     usage: "table [new|open|delete]",
-    summary: "list tables, open one, or start one — `table new Kowi, Ola`",
+    summary: "list, open or start one — `table new Kowi, Ola`, `…, classic` for 5.4's rules",
     needs: "play",
     offTable: true,
   },
@@ -252,9 +253,9 @@ async function openTable(code: string): Promise<void> {
   await show();
 }
 
-async function makeTable(names: string[]): Promise<void> {
+async function makeTable(names: string[], eqMode: EqMode): Promise<void> {
   if (names.length === 0) return say("Who is playing? `table new Michał, Ola`");
-  const { code, gameId, tables, log, store } = await newSave(names);
+  const { code, gameId, tables, log, store } = await newSave(names, eqMode);
   setStore(store);
   table = { code, gameId, tables, log };
   announced = null;
@@ -470,14 +471,21 @@ async function local(line: string): Promise<boolean> {
 
   const named = [second, ...rest].join(" ").trim();
   switch (verb) {
-    case "new":
-      await makeTable(
-        tail
-          .split(",")
-          .map((one) => one.trim())
-          .filter(Boolean),
-      );
+    case "new": {
+      /**
+       * `classic` last and bare, the way every other flag is.
+       *
+       * The browser asks which ekwipunek at the table-opening dialog and this
+       * had no way to say — so every game `mm` opened was slotowy, and the
+       * printed rules were unreachable from the one surface that can play a
+       * whole game by itself.
+       */
+      const words = tail.split(",").map((one) => one.trim()).filter(Boolean);
+      const last = words[words.length - 1]?.toLowerCase();
+      const classic = last === "classic" || last === "klasyczny";
+      await makeTable(classic ? words.slice(0, -1) : words, classic ? "classic" : "slots");
       return true;
+    }
     case "open":
       if (!tail) return say("Which table? `table` lists them."), true;
       await openTable(tail.toUpperCase());

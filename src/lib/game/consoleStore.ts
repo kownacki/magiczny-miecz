@@ -52,6 +52,7 @@ import {
   changeNature,
   drawCard,
   drawSpell,
+  drawSpellWithWand,
   finishTurn,
   moveTo,
   resolveDrawnCard,
@@ -1377,7 +1378,9 @@ export async function runCommand(
 
     case "spell": {
       const seat = seatOf(command.who);
-      const spellId = await drawSpell(gameId, seat.id);
+      const spellId = command.wand
+        ? await drawSpellWithWand(gameId, seat.id)
+        : await drawSpell(gameId, seat.id);
       return `${named(seat)} draws ${cardName(spellId)}.`;
     }
   }

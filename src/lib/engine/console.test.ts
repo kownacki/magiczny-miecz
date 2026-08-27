@@ -264,7 +264,7 @@ suite("the rest of the vocabulary", () => {
   it("kills, draws and ends things", () => {
     expect(ok("kill")).toEqual({ kind: "kill", who: null });
     expect(ok("kill Ola")).toEqual({ kind: "kill", who: "Ola" });
-    expect(ok("spell")).toEqual({ kind: "spell", who: null });
+    expect(ok("spell")).toEqual({ kind: "spell", who: null, wand: false });
     expect(ok("endfight")).toEqual({ kind: "endfight" });
     expect(ok("pass")).toEqual({ kind: "endturn" });
   });
@@ -318,6 +318,15 @@ suite("playing the game, and overruling it", () => {
     });
     expect(ok("cast BŁYSKAWICA")).toEqual({ kind: "cast", name: "BŁYSKAWICA", who: null });
     expect(err("cast")).toContain("cast BŁYSKAWICA");
+  });
+
+  it("takes the Różdżka's refill as a flag on the same draw", () => {
+    // The wand's second clause is a different condition from 2.6's ceiling and
+    // so a different draw — but it is the same act, reached because a card says
+    // you may, which is what a flag is for.
+    expect(ok("spell wand")).toEqual({ kind: "spell", who: null, wand: true });
+    expect(ok("spell Ola wand")).toEqual({ kind: "spell", who: "Ola", wand: true });
+    expect(ok("spell Ola")).toEqual({ kind: "spell", who: "Ola", wand: false });
   });
 
   it("takes a number of points to heal, and only a number", () => {
@@ -804,7 +813,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   endgame: { line: "endgame won", becomes: { kind: "endgame", won: true } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
   endturn: { line: "endturn", becomes: { kind: "endturn" } },
-  spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola" } },
+  spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola", wand: false } },
 };
 
 suite("people and Postacie are addressed differently", () => {
