@@ -34,6 +34,7 @@ import Image from "next/image";
 import { characterKind } from "@/lib/engine/polish";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { RailStat, StatFigure } from "./token-rail";
+import { Fold } from "./fold";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
 import { EffectMark } from "./effect-mark";
@@ -104,6 +105,8 @@ export function SeatCard({
    */
   /** Whether the sheet is open, the way the Plecak and the Zaklęcia inside it fold. */
   const [showing, setShowing] = useState(true);
+  /** The powers, which were the one fold here the browser held for itself. */
+  const [abilities, setAbilities] = useState(false);
   const [carried, setCarried] = useState<Carried | null>(null);
   /**
    * The card being dragged, by id.
@@ -230,7 +233,78 @@ export function SeatCard({
           it are hands of cards, which fold on their own and are wanted at
           different moments. Folding all three from one place would mean
           reaching for the Plecak and getting the Karta with it. */}
-      <details open={showing}>
+      <Fold
+        first
+        title="Postać"
+        open={showing}
+        onToggle={() => setShowing(!showing)}
+        /**
+         * What the card still has to answer while it is shut: who, what, the
+         * four numbers in the order the Karta prints them up its own edges, and
+         * the Natura — 7.2's, the one thing about a character that is neither
+         * printed on the picture nor derivable from the cards in hand.
+         */
+        aside={
+          !showing ? (
+            <span className="flex min-w-0 flex-1 items-center gap-2 normal-case tracking-normal">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: SEAT_COLOURS[seat.seat_index % SEAT_COLOURS.length] }}
+                aria-hidden
+              />
+              <span className="truncate text-ink">
+                {seat.player_name ?? `Miejsce ${seat.seat_index + 1}`}
+              </span>
+              {/* A Lookable only here: open, the whole Karta is six lines below
+                  and a hover would cover the card with a copy of the card. */}
+              {character && (
+                <Lookable
+                  kind="character"
+                  id={character.id}
+                  name={character.name}
+                  eqMode={slotted ? "slots" : "classic"}
+                  className="shrink-0 text-muted"
+                />
+              )}
+              {/* The same figures the rails show, said the same way: a total
+                  with own points behind it where the cards have added something
+                  (1.2, 2.2). Ahead of the Natura, which changes about twice a
+                  game and reads as a caption after them. */}
+              <span className="tnum shrink-0">
+                <span className="text-miecz">
+                  <StatFigure value={seat.sword_own} total={seat.sword_total} />
+                </span>
+                <span className="text-muted"> / </span>
+                <span className="text-magia">
+                  <StatFigure value={seat.magic_own} total={seat.magic_total} />
+                </span>
+                <span className="text-muted"> / </span>
+                <span className="text-zycie">{seat.life}</span>
+                <span className="text-muted"> / </span>
+                <span className="text-zloto">{seat.gold}</span>
+              </span>
+              {character &&
+                (() => {
+                  const said = natureSaid(seat.nature, character.nature);
+                  return said ? (
+                    <span className="shrink-0 truncate text-muted/70">{said.label}</span>
+                  ) : null;
+                })()}
+              {/* What the body is carrying, where the body itself sits when the
+                  sheet is open — the right-hand end. Only in the variant that
+                  has places at all. */}
+              {slotted && (
+                <span className="ml-auto shrink-0 text-muted/70">
+                  na sobie{" "}
+                  <span className="tnum text-ink/80">
+                    {Object.keys(wornBySlot(seat)).length} / {PLACES_ON_THE_BODY}
+                  </span>
+                </span>
+              )}
+            </span>
+          ) : undefined
+        }
+      >
       {/* A fixed height, so a seat card does not jump when an effect appears or
           wears off — the row is as tall as a mark can be whether or not any are
           there.
@@ -247,107 +321,6 @@ export function SeatCard({
           Because the height is fixed and both children are centred in it, where
           the name sits depends on the name alone. Effects appearing and wearing
           off cannot move it. */}
-      {/* The heading every other foldable thing in this card has, and for the
-          same reason: PLECAK, ZAKLĘCIA and NA SOBIE all say what they are in
-          small capitals with the browser's own triangle beside them, and the
-          one section whose control was the player's name did not read as a
-          control at all. So the name row stops being the handle and this is it
-          — above the name, in the idiom the card already speaks.
-
-          Folded, it carries what the card still has to answer: who, what, the
-          Natura (7.2 — the one thing neither printed on the picture nor
-          derivable from the cards in hand) and the four numbers in the order
-          the Karta prints them up its own edges. */}
-      <summary
-        onClick={(event) => {
-          event.preventDefault();
-          setShowing(!showing);
-        }}
-        /* Not `flex`: a summary laid out as a flex box stops being a
-           `list-item` and loses the browser's own triangle with it — which is
-           the whole of what makes these headings read alike. The folded row
-           does its own laying out, one level in. */
-        className="mb-3 cursor-pointer text-[11px] uppercase tracking-widest text-muted"
-      >
-        {/* The word and what it carries in one flex line, so they are centred
-            on each other rather than each sitting on the summary's own
-            baseline: the heading is 11px capitals and the row beside it is
-            mixed case with a dot and four numerals in it, and text with no
-            shared baseline is text that lines up by accident. The marker stays
-            outside, because a `flex` summary is not a `list-item` and loses
-            it. */}
-        <span className="inline-flex w-[calc(100%-1.25rem)] items-center gap-3 align-middle">
-        <span className="shrink-0">Postać</span>
-        {!showing && (
-          <span className="flex min-w-0 flex-1 items-center gap-2 normal-case tracking-normal">
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ background: SEAT_COLOURS[seat.seat_index % SEAT_COLOURS.length] }}
-              aria-hidden
-            />
-            <span className="truncate text-ink">
-              {seat.player_name ?? `Miejsce ${seat.seat_index + 1}`}
-            </span>
-            {character && (
-              <Lookable
-                kind="character"
-                id={character.id}
-                name={character.name}
-                eqMode={slotted ? "slots" : "classic"}
-                className="shrink-0 text-muted"
-              />
-            )}
-            {/* The four numbers next to the name they belong to, ahead of the
-                Natura: they are what the rails say, in the order the Karta
-                prints them up its own edges, and they change every turn. The
-                Natura changes about twice a game and reads as a caption after
-                them rather than as a column between them and the name. */}
-            {/* The same figures the rails show, said the same way: a total
-                with own points behind it where the cards have added something
-                (1.2, 2.2). A folded card reading "3" against a rail reading
-                "5 (3)" would be one character with two strengths. */}
-            <span className="tnum shrink-0">
-              <span className="text-miecz">
-                <StatFigure value={seat.sword_own} total={seat.sword_total} />
-              </span>
-              <span className="text-muted"> / </span>
-              <span className="text-magia">
-                <StatFigure value={seat.magic_own} total={seat.magic_total} />
-              </span>
-              <span className="text-muted"> / </span>
-              <span className="text-zycie">{seat.life}</span>
-              <span className="text-muted"> / </span>
-              <span className="text-zloto">{seat.gold}</span>
-            </span>
-            {/* The same words the line under the Karta uses, minus the label
-                it does not need: with the Karta out of sight there is nothing
-                for "Natura:" to disambiguate. A changed one says only what it
-                is now — the Karta Zmiany that says what it *was* is a picture,
-                and this row has no room for a picture. */}
-            {character &&
-              (() => {
-                const said = natureSaid(seat.nature, character.nature);
-                return said ? (
-                  <span className="shrink-0 truncate text-muted/70">{said.label}</span>
-                ) : null;
-              })()}
-            {/* What the body is carrying, where the body itself sits when the
-                sheet is open — the right-hand end of the row. A count and not
-                a list: which places are filled is what the paper doll is for,
-                and this is the one thing about it worth knowing without
-                opening it. Only in the variant that has places at all. */}
-            {slotted && (
-              <span className="ml-auto shrink-0 text-muted/70">
-                na sobie{" "}
-                <span className="tnum text-ink/80">
-                  {Object.keys(wornBySlot(seat)).length} / {PLACES_ON_THE_BODY}
-                </span>
-              </span>
-            )}
-          </span>
-        )}
-        </span>
-      </summary>
 
       {/* A fixed height, so a seat card does not jump when an effect appears or
           wears off — the row is as tall as a mark can be whether or not any are
@@ -567,7 +540,7 @@ export function SeatCard({
           </div>
         </>
       )}
-      </details>
+      </Fold>
 
       {character ? (
         <>
@@ -597,15 +570,25 @@ export function SeatCard({
               says it for everybody else — a fourth copy under your own pack was
               the one nobody was reading. */}
           {character.abilities.length > 0 && (
-            <details className="mt-3">
-              <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted">
-                Zdolności ({character.abilities.length})
-                {abilitiesOfCharacter(asCharacterId(seat.character_id)).length > 0 && (
-                  <span className="ml-2 normal-case tracking-normal text-verdigris/80">
-                    {abilitiesOfCharacter(asCharacterId(seat.character_id)).map(describeAbility).join(" · ")}
+            <Fold
+              title="Zdolności"
+              tally={character.abilities.length}
+              /* Which of the powers the app applies for you, on the bar: a
+                 Charakterystyka overrides the general rules (8.2), so knowing
+                 which ones are being watched for is the difference between a
+                 rule you can forget and one you have to. */
+              aside={
+                abilitiesOfCharacter(asCharacterId(seat.character_id)).length > 0 ? (
+                  <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-verdigris/80">
+                    {abilitiesOfCharacter(asCharacterId(seat.character_id))
+                      .map(describeAbility)
+                      .join(" · ")}
                   </span>
-                )}
-              </summary>
+                ) : undefined
+              }
+              open={abilities}
+              onToggle={() => setAbilities(!abilities)}
+            >
               {/* Which of them the app is watching for, and which the player has
                   to remember. A Charakterystyka overrides the general rules
                   (8.2), so a power nobody applies is a rule quietly dropped. */}
@@ -621,7 +604,7 @@ export function SeatCard({
                   <li key={index}>{ability}</li>
                 ))}
               </ol>
-            </details>
+            </Fold>
           )}
         </>
       ) : (

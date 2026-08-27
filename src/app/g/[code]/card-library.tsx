@@ -11,6 +11,7 @@ import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardTile, type TileCard } from "./card-tile";
+import { Fold } from "./fold";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
@@ -248,6 +249,14 @@ export function CardLibrary({
   eqMode?: EqMode;
 }) {
   const [shelf, setShelf] = useState<Shelf>("zaklecia");
+  /**
+   * Which shelves are folded away, by exception.
+   *
+   * A set of the shut ones rather than of the open: a search turns up whatever
+   * it turns up, and a new shelf appearing in the answer should be showing its
+   * cards, not hidden because nobody had opened it yet.
+   */
+  const [shut, setShut] = useState<ReadonlySet<string>>(new Set());
   const [query, setQuery] = useState("");
 
   const searching = query.trim().length > 0;
@@ -385,16 +394,33 @@ export function CardLibrary({
           </div>
         ) : (
         <div className="flex flex-col gap-5">
-          {sections.map((section) => (
-            <section key={section.key}>
-              <h3 className="mb-2 flex items-baseline gap-2 border-b border-edge/60 pb-1 text-[11px] uppercase tracking-wide text-ochre/80">
-                {section.label}
-                <span className="tnum normal-case tracking-normal text-muted/70">
-                  {/* Searching, the number is how many were found; browsing, it
-                      is what the box holds. */}
-                  {searching ? section.cards.length : shelfTally(section.key)}
-                </span>
-              </h3>
+          {sections.map((section, at) => (
+            /**
+             * Foldable, and by the same component the seat card's sections use.
+             *
+             * A search across the whole deck answers in seven shelves at once —
+             * "79 kart" is four screens of pictures — and the shelf somebody
+             * wants is usually one of them. Folding the others is how a long
+             * answer becomes a short one without throwing any of it away, and
+             * the count on each bar is what says whether it is worth opening.
+             */
+            <Fold
+              key={section.key}
+              first={at === 0}
+              title={section.label}
+              tone="text-ochre/80"
+              /* Searching, the number is how many were found; browsing, it is
+                 what the box holds. */
+              tally={searching ? section.cards.length : shelfTally(section.key)}
+              open={!shut.has(section.key)}
+              onToggle={() =>
+                setShut((was) => {
+                  const next = new Set(was);
+                  if (!next.delete(section.key)) next.add(section.key);
+                  return next;
+                })
+              }
+            >
               <div className="flex flex-wrap gap-3">
                 {section.cards.map((card) => (
                   <CardTile
@@ -415,7 +441,7 @@ export function CardLibrary({
                   </CardTile>
                 ))}
               </div>
-            </section>
+            </Fold>
           ))}
         </div>
         )}

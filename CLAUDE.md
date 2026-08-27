@@ -138,6 +138,14 @@ anything.
   the service-role key grants all of them. Two of those take real payments.
   Schema-qualify every hand-written query.
 
+- **Do not open a browser to confirm a foregone conclusion.** A number in a
+  Tailwind class does what the number says, and driving Chrome to watch it costs
+  minutes to learn nothing. Reach for the browser when the outcome is genuinely
+  in doubt — new layout, drag and drop, hover and focus — and prefer Playwright
+  against a real table over clicking by hand: a measured
+  `getBoundingClientRect` read back out of the DOM is better evidence than a
+  picture, and it can be pasted into a commit message.
+
 ## Settled — don't reopen
 
 - **Base game only.** The five expansions are out of scope; their scans are

@@ -18,6 +18,7 @@ import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { CardBack, type TileCard } from "./card-tile";
 import { type Carried } from "./carry";
 import { EquipButton } from "./equip-button";
+import { Fold } from "./fold";
 import { ItemSlot } from "./item-slot";
 import { DRAG_TYPE, startHoldingDrag } from "./slot-panel";
 import { asHoldings, asNature, tileFor, type Seat, wornBySlot } from "./table";
@@ -283,23 +284,20 @@ export function Hand({
      * until they don't, and then the pack is shut with a card in the air and no
      * click will open it.
      */
-    <details open={showing || landing} className="mt-3 border-t border-edge pt-3">
-      {/* What is in the pack, against what will fit. In the variant a place on
-          the body is not the pack, so the number here is the one 5.4 is about —
-          and seeing it beats finding out by being refused. Left visible when
-          the pack is folded away: the count is the part worth keeping. */}
-      <summary
-        onClick={(event) => {
-          event.preventDefault();
-          setShowing(!showing);
-        }}
-        className="mb-2 cursor-pointer text-[11px] uppercase tracking-widest text-muted"
-      >
-        Plecak{" "}
-        <span className={packed >= limit ? "text-vermilion" : "text-muted/70"}>
+    <Fold
+      title="Plecak"
+      /* What is in the pack, against what will fit. In the variant a place on
+         the body is not the pack, so the number here is the one 5.4 is about —
+         and seeing it beats finding out by being refused. Left visible when the
+         pack is folded away: the count is the part worth keeping. */
+      tally={
+        <span className={packed >= limit ? "text-vermilion" : undefined}>
           {packed} / {Number.isFinite(limit) ? limit : "∞"}
         </span>
-      </summary>
+      }
+      open={showing || landing}
+      onToggle={() => setShowing(!showing)}
+    >
       {/* Cards, as cards. A player at a table recognises their Miecz by its
           picture long before they read the word, and the ability text that used
           to sit under every line now lives one tap away in the detail view. */}
@@ -685,7 +683,7 @@ export function Hand({
           Wymień trofea na punkty Miecza (1.4)
         </button>
       )}
-    </details>
+    </Fold>
   );
 }
 

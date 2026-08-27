@@ -4,6 +4,7 @@ import { useState } from "react";
 import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
 import type { TileCard } from "./card-tile";
+import { Fold } from "./fold";
 import { ItemSlot, SLOT_WIDTH } from "./item-slot";
 import type { SpellId } from "@/data/ids";
 import {
@@ -120,25 +121,17 @@ export function SpellHand({
     //
     // Controlled outright rather than left to the browser, which is the pack's
     // arrangement kept for the sake of one behaviour rather than two.
-    <details
+    <div className={section ? "" : "mt-4 rounded-lg border border-magia/30 bg-panel/60 p-3"}>
+    <Fold
+      // A section in the seat card, or a panel of its own on a table screen:
+      // the same fold either way, and only the box round it differs.
+      first={!section}
+      title={title ?? (section ? "Zaklęcia" : "Twoje Zaklęcia")}
+      tally={tally}
+      tone={section ? "text-muted" : "text-magia"}
       open={showing}
-      className={
-        section
-          ? "mt-3 border-t border-edge pt-3"
-          : "mt-4 rounded-lg border border-magia/30 bg-panel/60 p-3"
-      }
+      onToggle={() => setShowing(!showing)}
     >
-      <summary
-        onClick={(event) => {
-          event.preventDefault();
-          setShowing(!showing);
-        }}
-        className={`mb-2 cursor-pointer text-[11px] uppercase tracking-widest ${
-          section ? "text-muted" : "text-magia"
-        }`}
-      >
-        {title ?? (section ? "Zaklęcia" : "Twoje Zaklęcia")} {tally}
-      </summary>
       {blocked && <p className="mb-2 text-[11px] text-muted">{blocked}</p>}
       {/* Face up, because they are yours — 9.3 hides them from everyone else,
           not from you, and a hand you cannot see is a hand you cannot plan
@@ -279,6 +272,7 @@ export function SpellHand({
         Rzucone Zaklęcie znika z ręki i trafia do dziennika — skutek rozpatrzcie sami.
         Podwójne kliknięcie Karty rzuca ją tak samo jak przycisk.
       </p>
-    </details>
+    </Fold>
+    </div>
   );
 }
