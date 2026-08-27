@@ -29,6 +29,7 @@ import { CardBack, CardTile, type TileCard } from "./card-tile";
 import type { PublicSeat } from "./table-layout";
 import { Drawer } from "./drawer";
 import { StatFigure } from "./token-rail";
+import { natureSaid } from "./nature-line";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 
@@ -193,12 +194,19 @@ export function PlayersDrawer({
                           )
                         }
                       />
-                      {/* The stored key is English like every other key; the table is not.
-                          This one printed `evil` at a Polish table for as long as
-                          the roster has had a Natura row in it. */}
+                      {/* Through `natureSaid`, so this says what the sheet says:
+                          "chaotyczna (niezmieniona)" while no Karta Zmiany Natury
+                          is lying beside the Karta Postaci, and the bare word once
+                          one is (7.2). Two places naming one thing two ways is the
+                          drift that function exists to end — and the stored key is
+                          English like every other key, which this row printed raw
+                          at a Polish table for as long as it has existed. */}
                       <Row
                         label="Natura"
-                        value={seat.nature ? (NATURE_LABEL[seat.nature] ?? seat.nature) : "—"}
+                        value={
+                          (character ? natureSaid(seat.nature, character.nature) : null)?.label ??
+                          (seat.nature ? (NATURE_LABEL[seat.nature] ?? seat.nature) : "—")
+                        }
                       />
                       {/* All four, in the order the Karta prints them up its
                           own edges and in the colours they wear everywhere
