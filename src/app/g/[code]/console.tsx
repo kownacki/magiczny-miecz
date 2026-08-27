@@ -295,12 +295,21 @@ export function TestConsole({
              dismissed: a failure that scrolls away unread is a failure that did
              not happen, as far as anyone is concerned. */
           failure ? (
-            <p
-              className="min-w-0 flex-1 truncate font-mono text-[11px] text-vermilion"
-              title={failure}
+            /* Pressing it is how it goes. `onClose` cleared the failure too and
+               was the only thing that did — so the one way to be rid of the
+               banner was to shut the console, which is no answer for somebody
+               who had it open on purpose. The handler was passed in from the
+               first version and never called by anything. */
+            <button
+              type="button"
+              onClick={onDismissFailure}
+              className="min-w-0 flex-1 truncate text-left font-mono text-[11px] text-vermilion transition hover:text-ink"
+              title={`${failure}
+
+(kliknij, aby ukryć)`}
             >
               {failure}
-            </p>
+            </button>
           ) : null
         }
         controls={

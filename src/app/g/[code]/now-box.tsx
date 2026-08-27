@@ -28,8 +28,6 @@ export function NowBox({
   fieldId,
   windows,
   steps,
-  canEnd,
-  whyNotEnd,
   canRoll,
   canDraw,
   away,
@@ -38,7 +36,6 @@ export function NowBox({
   onOpen,
   onRoll,
   onDraw,
-  onEnd,
 }: {
   playerName: string;
   /** Opens the players drawer on this player, since the name is the question. */
@@ -64,9 +61,7 @@ export function NowBox({
   windows: readonly TurnWindow[];
   /** How far through the turn it is — see `turnSteps`. */
   steps: readonly TurnStep[];
-  canEnd: boolean;
   /** Said on the disabled control, so a refusal explains itself (see `duties.ts`). */
-  whyNotEnd?: string | null;
   /** The turn has not been rolled yet — 10.2 makes this the first thing it does. */
   canRoll: boolean;
   /** The Obszar still owes cards (13.4 counts what is already lying there). */
@@ -85,7 +80,6 @@ export function NowBox({
   onOpen: (id: WindowId) => void;
   onRoll: () => void;
   onDraw: () => void;
-  onEnd: () => void;
 }) {
   /** The whole of it, for the hover, since the line may not have room. */
   const who = isMine

@@ -1303,24 +1303,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   fieldId={active.field_id}
                   windows={turnWindows}
                   steps={turnSteps(turnState.phase)}
-                  // 17.4 ends a fight when the dice are compared, not when
-                  // somebody walks away from it; and 10.1-10.2 make the move
-                  // the first of the two things a turn is made of.
-                  canEnd={
-                    game.turn_state.phase !== "fight" &&
-                    mayEndTurn({
-                      fieldId: active.field_id,
-                      done: [],
-                      phase: game.turn_state.phase,
-                    })
-                  }
-                  whyNotEnd={whyCannotEnd(
-                    dutiesBeforeEnding({
-                      fieldId: active.field_id,
-                      done: [],
-                      phase: game.turn_state.phase,
-                    }),
-                  )}
                   // Who we are waiting for, and since when. The revision is
                   // "since when" already: everything that happens bumps it.
                   away={active.away}
@@ -1340,7 +1322,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     if (id === "walka" || id === "karty") return setFolded(false);
                     setInspecting(active.field_id);
                   }}
-                  onEnd={() => post("turn", { action: "end" })}
                 />
               )}
               <TurnQueue
