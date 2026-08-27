@@ -301,6 +301,20 @@ suite("playing the game, and overruling it", () => {
    * a second testmode word for them would have been inventing a difference
    * that is not there. What overrules a rule is `force`, and only on `nature`.
    */
+  it("reads an answer as a path, not a single pick", () => {
+    // An effect can ask twice, and the server re-walks the card against the
+    // whole list — so the numbers are in the order they were decided.
+    expect(ok("answer 2 1")).toEqual({ kind: "answer", card: null, choices: [2, 1] });
+    // Named when more than one card is waiting.
+    expect(ok("answer 1 WILKOŁAK")).toEqual({
+      kind: "answer",
+      card: "WILKOŁAK",
+      choices: [1],
+    });
+    // Nothing to choose is a real answer: the Karczma rolls and does not ask.
+    expect(ok("answer")).toEqual({ kind: "answer", card: null, choices: [] });
+  });
+
   it("does not lock a verb that is the game working", () => {
     for (const line of ["stone", "spell", "nature evil"]) {
       expect(permits(ok(line), { testmode: false }).ok, line).toBe(true);
@@ -550,6 +564,7 @@ suite("finishing a half-typed line", () => {
 const USAGE: Record<string, { line: string; becomes: unknown }> = {
   help: { line: "help", becomes: { kind: "help", about: null } },
   roll: { line: "roll", becomes: { kind: "roll" } },
+  answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2] } },
   move: { line: "move Karczma", becomes: { kind: "move", fieldId: "karczma" } },
   draw: { line: "draw", becomes: { kind: "draw" } },
   look: { line: "look", becomes: { kind: "look" } },

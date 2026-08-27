@@ -119,6 +119,19 @@ export type Command =
   | { kind: "draw" }
   | { kind: "look" }
   | { kind: "me"; who: string | null }
+  /**
+   * What a card asked, answered.
+   *
+   * The choices are a path, not a single pick: an effect can ask twice, and the
+   * server re-walks the card from the start against the whole list — which is
+   * what stops a card being talked into doing something it does not say. So
+   * `answer 2 1` is "the second branch, then the first", and the browser sends
+   * exactly the same array from a modal that remembered it.
+   *
+   * `card` names which one when more than one is waiting; null takes the only
+   * one there is.
+   */
+  | { kind: "answer"; card: string | null; choices: number[] }
   | { kind: "spell"; who: string | null }
   /**
    * 7.2's change, and 7.3's "once a turn" either obeyed or not.
@@ -186,6 +199,13 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "draw",
     summary: "take what the Obszar you are standing on owes you (13.4)",
+    needs: "play",
+  },
+  {
+    name: "answer",
+    aliases: ["a"],
+    usage: "answer [2] [KARTA]",
+    summary: "settle what a Karta or an Obszar asked — `look` shows the question",
     needs: "play",
   },
   {
@@ -705,6 +725,17 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     }));
   }
 
+  if (word === "answer" || word === "a") {
+    const parts = tail.split(/\s+/).filter(Boolean);
+    const numbers = parts.filter((one) => /^\d+$/.test(one)).map(Number);
+    const named = parts.filter((one) => !/^\d+$/.test(one)).join(" ");
+    // No number is a real answer. A compulsory Obszar comes in two shapes —
+    // one that asks (`wybor`) and one that only rolls (`rzut`, the Karczma) —
+    // and the second has nothing to choose. `answer` alone means "get on with
+    // it"; `answer 2` means "and I pick the second".
+    return { ok: { kind: "answer", card: named || null, choices: numbers } };
+  }
+
   if (word === "roll") return { ok: { kind: "roll" } };
   if (word === "draw") return { ok: { kind: "draw" } };
   if (word === "look" || word === "l") return { ok: { kind: "look" } };
@@ -1036,6 +1067,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   move: "play",
   draw: "play",
   look: "play",
+  answer: "play",
   me: "play",
   stat: "testmode",
   remove: "testmode",

@@ -34,6 +34,8 @@ import {
   drawSpell,
   finishTurn,
   moveTo,
+  resolveDrawnCard,
+  resolveFieldOffer,
   rollForMove,
   grantCard,
   placeCard,
@@ -46,6 +48,7 @@ import {
   turnToStone,
 } from "./turnStore";
 import { activeStore } from "./gameStore";
+import { compulsoryOffer } from "@/lib/engine/fieldScript";
 
 /**
  * The third edge, beside `turnStore.ts` and `lobbyStore.ts`.
@@ -113,6 +116,33 @@ function fieldName(fieldId: FieldId | null): string {
  * the board, `kick` and `leave` are about somebody in the room. `seatId` is
  * null for a spectator, and the commands that need one say so themselves.
  */
+/** What a resolution did, and whether the card is still asking. */
+function said(did: readonly string[], pending: boolean): string {
+  const lines = did.length > 0 ? did.join("\n") : "Nic się nie stało.";
+  return pending ? `${lines}\nWciąż czeka — odpowiedz jeszcze raz (\`look\`).` : lines;
+}
+
+/** The question the turn is stuck on, for `look`. */
+function waitingOn(turnState: unknown): string[] {
+  const state = turnState as {
+    phase?: string;
+    fieldId?: FieldId;
+    drawn?: { cardId: string }[];
+    resolved?: string[];
+  };
+  if (state.phase !== "field") return [];
+  const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);
+  const waiting = (state.drawn ?? []).filter(
+    (one) => !(state.resolved ?? []).includes(one.cardId),
+  );
+  return [
+    ...(offer ? [`Obszar pyta: ${offer.name} — \`answer\` lub \`answer <n>\``] : []),
+    ...(waiting.length
+      ? [`Czeka: ${waiting.map((one) => cardName(one.cardId)).join(", ")}`]
+      : []),
+  ];
+}
+
 export interface Actor {
   userId: string;
   seatId: string | null;
@@ -750,6 +780,55 @@ export async function runCommand(
       return card ? `Drawn: ${card.name}.${turned}` : `Nothing to draw.${turned}`;
     }
 
+    /**
+     * The reply to a question a Karta or an Obszar asked.
+     *
+     * Nothing about a pending question is stored: `resolveDrawnCard` hands one
+     * back as a return value and writes nothing for it, and the browser keeps
+     * the answers in a modal's state and re-sends the whole path each time. So
+     * this does the same — the choices are the path, not the last pick, and the
+     * server re-walks the card against them from the start.
+     */
+    case "answer": {
+      const snapshot = await activeStore().load(gameId);
+      const state = snapshot.game.turn_state as {
+        phase?: string;
+        fieldId?: FieldId;
+        drawn?: { cardId: string }[];
+        resolved?: string[];
+      };
+      if (state.phase !== "field") throw new Error("Nic nie czeka na odpowiedź.");
+
+      const decided = { choices: command.choices };
+      // The Obszar's own table first: 13.4 makes it compulsory, so it is what
+      // the turn is actually stuck on.
+      const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);
+      if (offer && !command.card) {
+        const done = await resolveFieldOffer(gameId, offer.name, null, decided);
+        return said(done.did, done.pending !== null);
+      }
+
+      const waiting = (state.drawn ?? []).filter(
+        (one) => !(state.resolved ?? []).includes(one.cardId),
+      );
+      if (waiting.length === 0) throw new Error("Nic nie czeka na odpowiedź.");
+
+      let card = waiting[0];
+      if (command.card) {
+        const hit = waiting.find(
+          (one) => cardName(one.cardId).toLowerCase() === command.card!.toLowerCase(),
+        );
+        if (!hit) throw new Error(`Nie czeka: ${command.card}.`);
+        card = hit;
+      } else if (waiting.length > 1) {
+        throw new Error(
+          `Which one — ${waiting.map((one) => cardName(one.cardId)).join(", ")}?`,
+        );
+      }
+      const done = await resolveDrawnCard(gameId, card.cardId, null, decided);
+      return said(done.did, done.pending !== null);
+    }
+
     case "look": {
       const snapshot = await activeStore().load(gameId);
       const state = snapshot.game.turn_state as {
@@ -770,6 +849,7 @@ export async function runCommand(
           ? [`Dokąd: ${state.options.map((one) => one.fieldName).join(", ")}`]
           : []),
         ...(here.length ? [`Na Obszarze: ${here.map((one) => cardName(one.card_id)).join(", ")}`] : []),
+        ...waitingOn(snapshot.game.turn_state),
         ...(standing.length > 1
           ? [`Stoją tu: ${standing.map((one) => named(one)).join(", ")}`]
           : []),
