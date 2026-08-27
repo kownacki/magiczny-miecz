@@ -65,6 +65,17 @@ const LAYOUT: Record<Slot, string> = {
 };
 
 /**
+ * How many places the body draws, for whoever has to count them elsewhere.
+ *
+ * Off `LAYOUT` rather than off `SLOTS`, so the number in a tally is the number
+ * of squares on screen. The two relics are in it because the panel draws them:
+ * they are not gear and they cannot be chosen, only found, but a "3 / 11" over
+ * eleven boxes is a sum somebody can check, and a "3 / 9" over eleven is one
+ * they cannot.
+ */
+export const PLACES_ON_THE_BODY = Object.keys(LAYOUT).length;
+
+/**
  * Drawn in the empty places, so a gap says which gap it is.
  *
  * Silhouettes from game-icons.net (CC BY 3.0 — see README), used as masks so

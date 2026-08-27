@@ -28,7 +28,7 @@ import { type TileCard } from "./card-tile";
 import { CarriedCard, type Carried } from "./carry";
 import { Hand } from "./hand";
 import { dismissableOpen } from "./overlay";
-import { SlotPanel } from "./slot-panel";
+import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import Image from "next/image";
 import { characterKind } from "@/lib/engine/polish";
@@ -322,7 +322,10 @@ export function SeatCard({
                 opening it. Only in the variant that has places at all. */}
             {slotted && (
               <span className="ml-auto shrink-0 text-muted/70">
-                na sobie <span className="tnum text-ink/80">{Object.keys(wornBySlot(seat)).length}</span>
+                na sobie{" "}
+                <span className="tnum text-ink/80">
+                  {Object.keys(wornBySlot(seat)).length} / {PLACES_ON_THE_BODY}
+                </span>
               </span>
             )}
           </span>
@@ -516,7 +519,9 @@ export function SeatCard({
               <div className="shrink-0">
                 <p className="mb-2 text-[11px] uppercase tracking-widest text-muted">
                   Na sobie{" "}
-                  <span className="text-muted/70">{Object.keys(wornBySlot(seat)).length}</span>
+                  <span className="text-muted/70">
+                    {Object.keys(wornBySlot(seat)).length} / {PLACES_ON_THE_BODY}
+                  </span>
                 </p>
               <SlotPanel
                 worn={wornBySlot(seat)}
