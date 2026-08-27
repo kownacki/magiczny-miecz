@@ -34,7 +34,24 @@ export interface CommandSpec {
   /** How to type it, for `help`. */
   usage: string;
   summary: string;
+  /**
+   * Whether this is playing the game or overruling it.
+   *
+   * Required rather than defaulted, so a verb cannot be added without somebody
+   * deciding which it is — the mistake this exists to stop is a rule-break
+   * quietly reachable from a table that never turned testmode on.
+   *
+   * The line is "does this break a rule the game has?", not "is this
+   * dangerous". `kick` puts a person out of a table and is `play`, because a
+   * host can already do it from the roster and no rule of Magiczny Miecz says
+   * otherwise. `kill` is `testmode`, because 4.4 says how a Postać dies and
+   * this is not it.
+   */
+  needs: Capability;
 }
+
+/** What a line needs before it may run. */
+export type Capability = "play" | "testmode";
 
 /** Which parameter a stat command moves. The column names, as the store knows them. */
 export type StatName = "sword" | "magic" | "life" | "gold";
@@ -89,7 +106,7 @@ export type Command =
     }
   | { kind: "give"; cardId: string }
   | { kind: "place"; cardId: string; fieldId: FieldId | null }
-  | { kind: "go"; fieldId: FieldId }
+  | { kind: "teleport"; fieldId: FieldId }
   | { kind: "fight"; cardId: string }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
@@ -124,92 +141,177 @@ export const COMMANDS: CommandSpec[] = [
     aliases: ["?"],
     usage: "help [command]",
     summary: "list these commands, or explain one of them",
+    needs: "play",
   },
   {
     name: "gold",
     aliases: ["sword", "magic", "life"],
     usage: "gold +5|=12 [player] [force]",
     summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor",
+    needs: "testmode",
   },
-  { name: "who", aliases: [], usage: "who", summary: "everyone at the table, and which seat they drive" },
+  {
+    name: "who",
+    aliases: [],
+    usage: "who",
+    summary: "everyone at the table, and which seat they drive",
+    needs: "play",
+  },
   {
     name: "seat",
     aliases: [],
     usage: "seat <player> 3",
     summary: "put somebody in a seat; refuses one that is taken",
+    needs: "play",
   },
   {
     name: "unseat",
     aliases: [],
     usage: "unseat [player]",
     summary: "out of the seat, still at the table — the Postać stays put",
+    needs: "play",
   },
-  { name: "kick", aliases: [], usage: "kick <player>", summary: "put somebody out of the table" },
-  { name: "leave", aliases: ["exit"], usage: "leave", summary: "go, by your own choice" },
-  { name: "rename", aliases: [], usage: "rename <player> as Ola", summary: "give somebody a name" },
-  { name: "host", aliases: [], usage: "host <player>", summary: "hand over the host role" },
+  {
+    name: "kick",
+    aliases: [],
+    usage: "kick <player>",
+    summary: "put somebody out of the table",
+    needs: "play",
+  },
+  { name: "leave", aliases: ["exit"], usage: "leave", summary: "go, by your own choice", needs: "play" },
+  {
+    name: "rename",
+    aliases: [],
+    usage: "rename <player> as Ola",
+    summary: "give somebody a name",
+    needs: "play",
+  },
+  {
+    name: "host",
+    aliases: [],
+    usage: "host <player>",
+    summary: "hand over the host role",
+    needs: "play",
+  },
   {
     name: "pick",
     aliases: [],
     usage: "pick [MAGOG] [3]",
     summary: "a Postać into a seat — drawn unless named, yours unless numbered (4.4)",
+    needs: "play",
   },
   {
     name: "remove",
     aliases: ["erase"],
     usage: "remove 3|MAGOG [hard]",
     summary: "a Postać out of the game, its Karty to the used piles — `hard` bars it for good",
+    needs: "testmode",
   },
   {
     name: "revive",
     aliases: [],
     usage: "revive 3|MAGOG",
     summary: "back to life where it fell, with its own points and no Przedmioty",
+    needs: "testmode",
   },
-  { name: "kill", aliases: [], usage: "kill [player]", summary: "take a character to 0 Życia (4.4)" },
+  {
+    name: "kill",
+    aliases: [],
+    usage: "kill [player]",
+    summary: "take a character to 0 Życia (4.4)",
+    needs: "testmode",
+  },
   {
     name: "nature",
     aliases: [],
     usage: "nature good|evil|chaotic [player]",
     summary: "set a Natura, ignoring 7.3's once a turn",
+    needs: "testmode",
   },
   {
     name: "turn",
     aliases: [],
     usage: "turn [player]",
     summary: "pass until it is their turn (10.1)",
+    needs: "testmode",
   },
-  { name: "stone", aliases: [], usage: "stone [player]", summary: "turn to stone for three turns (20.1)" },
+  {
+    name: "stone",
+    aliases: [],
+    usage: "stone [player]",
+    summary: "turn to stone for three turns (20.1)",
+    needs: "testmode",
+  },
   {
     name: "effect",
     aliases: [],
     usage: "effect fog|frozen|barred [player]",
     summary: "a Mgła's cap, a stolen turn, or 11.11's year off the Most",
+    needs: "testmode",
   },
-  { name: "give", aliases: ["card"], usage: "give MAGICZNY MIECZ", summary: "put a card in a hand" },
+  {
+    name: "give",
+    aliases: ["card"],
+    usage: "give MAGICZNY MIECZ",
+    summary: "put a card in a hand",
+    needs: "testmode",
+  },
   {
     name: "place",
-    aliases: ["put", "drop"],
+    // `drop` was an alias here and is not any more: it is the lawful "put a
+    // Przedmiot down", and a word cannot mean both that and a card conjured
+    // onto a field.
+    aliases: ["put"],
     usage: "place MIECZ at Karczma",
     summary: "leave a card on an Obszar, the one you stand on unless named",
+    needs: "testmode",
   },
-  { name: "go", aliases: ["move"], usage: "go Karczma", summary: "stand on an Obszar" },
-  { name: "fight", aliases: [], usage: "fight WILKOŁAK", summary: "pick a fight with a Wróg" },
+  {
+    // Was `go`, with `move` as an alias. Both words belong to the lawful walk
+    // — you roll, then you move — and this is the one that puts a figure
+    // anywhere at all, which is a different act and now says so.
+    name: "teleport",
+    aliases: [],
+    usage: "teleport Karczma",
+    summary: "stand on any Obszar, without a roll and without walking there",
+    needs: "testmode",
+  },
+  {
+    name: "fight",
+    aliases: [],
+    usage: "fight WILKOŁAK",
+    summary: "pick a fight with a Wróg",
+    needs: "testmode",
+  },
   {
     name: "winfight",
     aliases: ["losefight", "drawfight"],
     usage: "winfight",
     summary: "settle the fight you are in — won, lost or drawn",
+    needs: "testmode",
   },
   {
     name: "wingame",
     aliases: ["losegame"],
     usage: "wingame",
     summary: "end the game on the Bestia — losing to it costs 2 Życia (14.7)",
+    needs: "testmode",
   },
-  { name: "endfight", aliases: [], usage: "endfight", summary: "drop the fight without settling it" },
-  { name: "endturn", aliases: ["pass"], usage: "endturn", summary: "hand the turn on" },
-  { name: "spell", aliases: [], usage: "spell [player]", summary: "draw a Zaklęcie" },
+  {
+    name: "endfight",
+    aliases: [],
+    usage: "endfight",
+    summary: "drop the fight without settling it",
+    needs: "testmode",
+  },
+  { name: "endturn", aliases: ["pass"], usage: "endturn", summary: "hand the turn on", needs: "play" },
+  {
+    name: "spell",
+    aliases: [],
+    usage: "spell [player]",
+    summary: "draw a Zaklęcie",
+    needs: "testmode",
+  },
 ];
 
 /**
@@ -545,9 +647,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     }));
   }
 
-  if (word === "go" || word === "move") {
+  if (word === "teleport") {
     return name(PLACES, (field) => field.name, tail, "Obszar", (field) => ({
-      kind: "go",
+      kind: "teleport",
       fieldId: field.id,
     }));
   }
@@ -763,7 +865,7 @@ export function complete(
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
     if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
-    if (verb === "go" || verb === "move") return { pool: PLACES.map((f) => f.name), at: 1 };
+    if (verb === "teleport") return { pool: PLACES.map((f) => f.name), at: 1 };
     if (
       verb === "kill" ||
       verb === "kick" ||
@@ -838,7 +940,76 @@ export function complete(
  * wrap — which on a narrow window is what made a list of twelve look like a
  * list of seven.
  */
-export function helpLines(about: string | null = null): string[] {
+/**
+ * What each kind of command needs before it may run.
+ *
+ * A second list beside `COMMANDS`, and deliberately: the spec table is keyed on
+ * the word you type and this is keyed on what the word parsed *to*, and the two
+ * are not one-to-one — `gold`, `sword`, `magic` and `life` are four words and
+ * one `stat`. A test types every usage line `help` prints and checks the answer
+ * here matches the spec it came from, which is what keeps them from drifting.
+ */
+const NEEDS: Record<Command["kind"], Capability> = {
+  help: "play",
+  who: "play",
+  seat: "play",
+  unseat: "play",
+  kick: "play",
+  leave: "play",
+  rename: "play",
+  host: "play",
+  pick: "play",
+  endturn: "play",
+  stat: "testmode",
+  remove: "testmode",
+  revive: "testmode",
+  kill: "testmode",
+  nature: "testmode",
+  turn: "testmode",
+  stone: "testmode",
+  effect: "testmode",
+  give: "testmode",
+  place: "testmode",
+  teleport: "testmode",
+  fight: "testmode",
+  settle: "testmode",
+  endgame: "testmode",
+  endfight: "testmode",
+  spell: "testmode",
+};
+
+export function needsOf(command: Command): Capability {
+  return NEEDS[command.kind];
+}
+
+/**
+ * Whether this line may run here.
+ *
+ * The one function both surfaces ask, which is the whole point of it. The
+ * browser console opens only in test mode and so has always been allowed
+ * everything; a terminal is not always in test mode, and the two must not end
+ * up with different ideas about which words break a rule. So the engine owns
+ * the answer and neither caller gets a vote.
+ *
+ * Parsing is unaffected: a locked command still parses, and still reaches this,
+ * so the refusal can say what it was rather than "no such command". A verb you
+ * cannot discover is a verb that does not exist.
+ */
+export function permits(
+  command: Command,
+  at: { testmode: boolean },
+): { ok: true } | { ok: false; why: string } {
+  if (needsOf(command) === "play" || at.testmode) return { ok: true };
+  return {
+    ok: false,
+    why: `\`${command.kind}\` overrules the rules — turn testmode on first.`,
+  };
+}
+
+export function helpLines(
+  about: string | null = null,
+  at: { testmode: boolean } = { testmode: true },
+): string[] {
   const words = (spec: CommandSpec) => [spec.name, ...spec.aliases].join("|");
   /** The usage line without its verb, which the words have just replaced. */
   const args = (spec: CommandSpec) => spec.usage.split(/\s+/).slice(1).join(" ");
@@ -860,12 +1031,26 @@ export function helpLines(about: string | null = null): string[] {
       spec.usage,
       spec.summary,
       ...(spec.aliases.length > 0 ? [`also: ${spec.aliases.join(", ")}`] : []),
+      ...(spec.needs === "testmode" && !at.testmode
+        ? ["locked — this one overrules the rules; turn testmode on first"]
+        : []),
     ];
   }
 
+  /**
+   * Locked commands are listed, and marked.
+   *
+   * Not hidden. A player who cannot find `kill` does not conclude that the
+   * console is safe, they conclude the console is broken — and the day they do
+   * need it they have no way to learn the word. Showing it with a reason is
+   * both the honest answer and the discoverable one.
+   */
   const rows = COMMANDS.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
   const widest = Math.max(...rows.map((row) => row.length));
-  return COMMANDS.map((spec, index) => `${rows[index].padEnd(widest)}  ${spec.summary}`);
+  return COMMANDS.map((spec, index) => {
+    const locked = spec.needs === "testmode" && !at.testmode;
+    return `${locked ? "·" : " "}${rows[index].padEnd(widest)}  ${spec.summary}`;
+  });
 }
 
 /**

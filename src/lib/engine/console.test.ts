@@ -1,6 +1,8 @@
 import { describe as suite, expect, it } from "vitest";
 import {
   COMMANDS,
+  needsOf,
+  permits,
   complete,
   helpLines,
   confirmationFor,
@@ -122,7 +124,7 @@ suite("naming a card, a field or a creature", () => {
     expect(ok("magic +1")).toMatchObject({ stat: "magic" });
     expect(err("magia +1")).toMatch(/No command/);
     expect(ok("give MAGICZNY MIECZ")).toMatchObject({ cardId: "magiczny-miecz" });
-    expect(ok("go Świątynia Tolimana")).toMatchObject({ fieldId: "swiatynia-tolimana" });
+    expect(ok("teleport Świątynia Tolimana")).toMatchObject({ fieldId: "swiatynia-tolimana" });
     expect(ok("pick BŁĘDNY RYCERZ")).toMatchObject({ characterId: "bledny-rycerz" });
   });
 
@@ -156,7 +158,7 @@ suite("naming a card, a field or a creature", () => {
     });
     // `put` and `drop` are the two words somebody reaches for first; `place` is
     // the one the store already uses for putting a character on a field.
-    expect(ok("drop MIECZ at Karczma")).toMatchObject({ kind: "place", fieldId: "karczma" });
+    expect(ok("put MIECZ at Karczma")).toMatchObject({ kind: "place", fieldId: "karczma" });
     expect(ok("put MIECZ")).toMatchObject({ kind: "place", cardId: "miecz" });
   });
 
@@ -214,7 +216,7 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("finds an Obszar", () => {
-    expect(ok("go Karczma")).toEqual({ kind: "go", fieldId: "karczma" });
+    expect(ok("teleport Karczma")).toEqual({ kind: "teleport", fieldId: "karczma" });
   });
 
   it("fights only a Wróg", () => {
@@ -225,11 +227,11 @@ suite("naming a card, a field or a creature", () => {
 
   it("asks for the name when none was given", () => {
     expect(err("give")).toMatch(/Which card/);
-    expect(err("go")).toMatch(/Which Obszar/);
+    expect(err("teleport")).toMatch(/Which Obszar/);
   });
 
   it("says when nothing is called that", () => {
-    expect(err("go Narnia")).toContain("Narnia");
+    expect(err("teleport Narnia")).toContain("Narnia");
   });
 });
 
@@ -259,16 +261,98 @@ suite("the rest of the vocabulary", () => {
   });
 });
 
+suite("playing the game, and overruling it", () => {
+  /**
+   * The two lists have to agree, and they are keyed differently — `COMMANDS` on
+   * the word you type, `NEEDS` on what it parsed to, and `gold|sword|magic|life`
+   * are four words with one kind between them. So every usage line `help` prints
+   * is typed here and the capability it lands on is checked against the spec it
+   * came from. Nothing else keeps them together.
+   */
+  it("classifies every command exactly once, and the same way twice", () => {
+    for (const spec of COMMANDS) {
+      const line = spec.usage
+        .split(/\s+/)
+        .map((word) => EXAMPLE[word] ?? word)
+        .filter((word) => !word.startsWith("["))
+        .join(" ");
+      const parsed = parseCommand(line);
+      if ("error" in parsed) throw new Error(`${spec.name}: ${parsed.error}`);
+      expect(needsOf(parsed.ok), spec.name).toBe(spec.needs);
+    }
+  });
+
+  it("lets a plain player play, and stops them overruling", () => {
+    // Playing: nothing here breaks a rule the game has.
+    for (const line of ["who", "endturn", "pick MAGOG", "help"]) {
+      expect(permits(ok(line), { testmode: false }).ok, line).toBe(true);
+    }
+    // Overruling: every one of these is a rule the game states otherwise.
+    for (const line of ["kill", "revive 3", "give MAGICZNY MIECZ", "teleport Karczma", "gold +5"]) {
+      expect(permits(ok(line), { testmode: false }).ok, line).toBe(false);
+    }
+  });
+
+  it("allows everything once testmode is on", () => {
+    for (const line of ["kill", "teleport Karczma", "wingame", "effect fog"]) {
+      expect(permits(ok(line), { testmode: true }).ok, line).toBe(true);
+    }
+  });
+
+  it("says what was refused, rather than pretending not to know the word", () => {
+    const refused = permits(ok("kill"), { testmode: false });
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.why).toMatch(/testmode/);
+    // And it still parses, so the console can say that rather than "no command".
+    expect(ok("kill")).toEqual({ kind: "kill", who: null });
+  });
+
+  it("lists the locked ones rather than hiding them", () => {
+    const locked = helpLines(null, { testmode: false });
+    const open = helpLines(null, { testmode: true });
+    expect(locked).toHaveLength(open.length);
+    // Marked, and still there: a command you cannot find is one you cannot
+    // learn the day you need it.
+    expect(locked.filter((line) => line.startsWith("·")).length).toBeGreaterThan(10);
+    expect(open.every((line) => !line.startsWith("·"))).toBe(true);
+    expect(locked.join("\n")).toContain("kill");
+  });
+
+  it("explains why one is locked when asked about it", () => {
+    expect(helpLines("kill", { testmode: false }).join(" ")).toMatch(/locked/);
+    expect(helpLines("kill", { testmode: true }).join(" ")).not.toMatch(/locked/);
+  });
+});
+
+/** A stand-in for each placeholder a usage line uses, so every line can be typed. */
+const EXAMPLE: Record<string, string> = {
+  "<player>": "Ola",
+  "<command>": "help",
+  "+5|=12": "+5",
+  "3": "3",
+  "3|MAGOG": "MAGOG",
+  "good|evil|chaotic": "good",
+  "fog|frozen|barred": "fog",
+  "MAGICZNY": "MAGICZNY",
+  "MIECZ": "MIECZ",
+  Karczma: "Karczma",
+  at: "at",
+  as: "as",
+  Ola: "Ola",
+  WILKOŁAK: "WILKOŁAK",
+  MAGOG: "MAGOG",
+};
+
 suite("help", () => {
   it("explains one command when asked about one", () => {
     expect(ok("help place")).toEqual({ kind: "help", about: "place" });
     // By any of its names, since the one you would ask about is the one you
     // just typed and got wrong.
-    expect(ok("help drop")).toEqual({ kind: "help", about: "drop" });
-    expect(helpLines("drop")).toEqual([
+    expect(ok("help put")).toEqual({ kind: "help", about: "put" });
+    expect(helpLines("put")).toEqual([
       "place MIECZ at Karczma",
       "leave a card on an Obszar, the one you stand on unless named",
-      "also: put, drop",
+      "also: put",
     ]);
   });
 
@@ -280,7 +364,7 @@ suite("help", () => {
   });
 
   it("says there is no such command rather than explaining nothing", () => {
-    expect(err("help teleport")).toMatch(/No command `teleport`/);
+    expect(err("help przenies")).toMatch(/No command `przenies`/);
   });
 
   it("explains every command it lists", () => {
@@ -319,7 +403,9 @@ suite("help", () => {
     // Not a sample: the parser refuses anything outside the printed list before
     // it looks at it, so `help` is the whole vocabulary by construction.
     const printed = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
-    for (const word of ["miecz", "magia", "win", "lose", "grant", "walcz", "teleport"]) {
+    // `teleport` was on this list until it became a command, which is the
+    // hazard of naming the words nobody types.
+    for (const word of ["miecz", "magia", "win", "lose", "grant", "walcz", "przenies"]) {
       expect(printed.has(word), word).toBe(false);
       expect(err(word)).toMatch(/No command/);
     }
@@ -360,7 +446,7 @@ suite("finishing a half-typed line", () => {
 
   it("goes as far as the candidates agree, and lists them", () => {
     // give, go and gold all start here, so there is nothing to add.
-    expect(tab("g")).toEqual({ line: "g", options: ["give", "go", "gold"] });
+    expect(tab("g")).toEqual({ line: "g", options: ["give", "gold"] });
     expect(tab("give krysz")).toEqual({
       line: "give KRYSZTAŁ ",
       options: ["KRYSZTAŁ LOSU", "KRYSZTAŁ MAGÓW"],
@@ -368,7 +454,7 @@ suite("finishing a half-typed line", () => {
   });
 
   it("finishes a name without a Polish keyboard, in the case it is printed in", () => {
-    expect(tab("go kar")).toEqual({ line: "go Karczma ", options: [] });
+    expect(tab("teleport kar")).toEqual({ line: "teleport Karczma ", options: [] });
     expect(tab("give swiety g")).toEqual({ line: "give ŚWIĘTY GRAAL ", options: [] });
   });
 
@@ -381,7 +467,7 @@ suite("finishing a half-typed line", () => {
     expect(tab("place MIECZ at kar").line).toBe("place MIECZ at Karczma ");
     // The half being typed decides the list, so a field name never turns up
     // where a card goes.
-    expect(tab("drop kar").options).toEqual([]);
+    expect(tab("put kar").options).toEqual([]);
   });
 
   it("finishes a Natura, then who it belongs to", () => {
@@ -416,7 +502,7 @@ suite("finishing a half-typed line", () => {
 
   it("leaves a line it cannot finish exactly as it was", () => {
     expect(tab("xyz")).toEqual({ line: "xyz", options: [] });
-    expect(tab("go Narnia")).toEqual({ line: "go Narnia", options: [] });
+    expect(tab("teleport Narnia")).toEqual({ line: "teleport Narnia", options: [] });
   });
 
   it("finishes a command name after `help`", () => {
@@ -476,7 +562,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     line: "place MIECZ at Karczma",
     becomes: { kind: "place", cardId: "miecz", fieldId: "karczma" },
   },
-  go: { line: "go Karczma", becomes: { kind: "go", fieldId: "karczma" } },
+  teleport: { line: "teleport Karczma", becomes: { kind: "teleport", fieldId: "karczma" } },
   fight: { line: "fight WILKOŁAK", becomes: { kind: "fight", cardId: "wilkolak" } },
   winfight: { line: "winfight", becomes: { kind: "settle", outcome: "wygrana" } },
   wingame: { line: "wingame", becomes: { kind: "endgame", won: true } },
@@ -641,8 +727,6 @@ suite("every command, once each", () => {
       sword: "gold",
       card: "give",
       put: "place",
-      drop: "place",
-      move: "go",
       pass: "endturn",
     };
     // Not every alias is a synonym — losefight and losegame mean the other
@@ -651,10 +735,11 @@ suite("every command, once each", () => {
     expect(ok("? ")).toEqual(ok("help"));
     expect(ok("card MIECZ")).toEqual(ok("give MIECZ"));
     expect(ok("put MIECZ")).toEqual(ok("place MIECZ"));
-    expect(ok("drop MIECZ")).toEqual(ok("place MIECZ"));
-    expect(ok("move Karczma")).toEqual(ok("go Karczma"));
     expect(ok("pass")).toEqual(ok("endturn"));
-    expect(Object.keys(alias).length).toBe(7);
+    // `drop` and `move` were aliases here and are gone on purpose: both words
+    // belong to the lawful vocabulary — putting a Przedmiot down, and walking
+    // the roll out — and neither can also mean its testmode namesake.
+    expect(Object.keys(alias).length).toBe(5);
   });
 });
 

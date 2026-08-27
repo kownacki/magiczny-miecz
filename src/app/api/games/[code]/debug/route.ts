@@ -4,7 +4,7 @@ import { refused } from "@/app/api/refused";
 import { findGame, verifyActor } from "@/lib/game/store";
 import { abandonFight, grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
 import { runCommand } from "@/lib/game/consoleStore";
-import { parseCommand } from "@/lib/engine/console";
+import { parseCommand, permits } from "@/lib/engine/console";
 
 /**
  * Shortcuts for reaching a game state without playing to it.
@@ -61,6 +61,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         if ("error" in parsed) {
           return NextResponse.json({ error: parsed.error }, { status: 400 });
         }
+        /**
+         * Asked even though the answer here is always yes.
+         *
+         * This whole route refuses in production and the console only opens in
+         * test mode, so nothing that reaches this line is short of the
+         * capability. It is asked anyway because the *terminal* asks it, and
+         * the one thing that must not happen is the two surfaces growing
+         * separate ideas about which words break a rule. One function, both
+         * callers, no vote.
+         */
+        const allowed = permits(parsed.ok, { testmode: true });
+        if (!allowed.ok) return NextResponse.json({ error: allowed.why }, { status: 403 });
         const said = await runCommand(game.id, { userId: actor.user.id, seatId }, parsed.ok);
         return NextResponse.json({ said });
       }

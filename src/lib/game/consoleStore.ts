@@ -581,7 +581,7 @@ export async function runCommand(
       return `${named(seat)}: ${label}.`;
     }
 
-    case "go": {
+    case "teleport": {
       const seat = seatOf(null);
       await placeSeat(gameId, seat.id, command.fieldId, null);
       return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
