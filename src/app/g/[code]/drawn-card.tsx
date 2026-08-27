@@ -1,4 +1,5 @@
 "use client";
+import { WithRules } from "./rule-ref";
 
 import { useEffect, useState } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
@@ -170,7 +171,7 @@ export function DrawnCard({
             {known.name}
           </h2>
           <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-muted">
-            {known.text}
+            <WithRules text={known.text} />
           </p>
         </header>
       )}

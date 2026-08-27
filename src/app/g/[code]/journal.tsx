@@ -18,6 +18,7 @@ import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { ChromeButton, SurfaceHead } from "./chrome";
 import { readSeatToken } from "@/lib/game/seatToken";
 import { Lookable } from "./lookable";
+import { WithRules } from "./rule-ref";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
 import type { EqMode } from "@/lib/engine/slots";
 
@@ -264,7 +265,7 @@ function Looked({
   refs?: JournalRef[];
   eqMode: EqMode;
 }) {
-  if (!refs?.length) return <>{text}</>;
+  if (!refs?.length) return <WithRules text={text} />;
 
   // Longest first: a short name that happens to sit inside a longer one must
   // not win the split and leave the rest of the longer name as loose text.
@@ -278,7 +279,9 @@ function Looked({
         return ref ? (
           <Lookup key={at} reference={ref} eqMode={eqMode} />
         ) : (
-          <span key={at}>{piece}</span>
+          // The pieces between the names, which is where the rule numbers are:
+          // "(17.4)" never falls inside a Karta's name.
+          <WithRules key={at} text={piece} />
         );
       })}
     </>

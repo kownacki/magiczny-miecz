@@ -38,6 +38,7 @@ import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
+import { RaidOffer } from "./raid-offer";
 import { DrawModal } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
 import { AnnouncementModal } from "./announcement";
@@ -48,6 +49,8 @@ import { MAX_SEATS } from "@/lib/game/modes";
 import { Toasts } from "./toast";
 import { OpenRule } from "./rule-ref";
 import type { RulesShelf } from "./rules-shelf";
+import { Settings } from "./settings";
+import { usePreferences } from "./preferences";
 import { PlayersDrawer } from "./players";
 import { PilesDrawer } from "./piles";
 
@@ -169,6 +172,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setRule((was) => ({ shelf, id, nth: (was?.nth ?? 0) + 1 }));
   }, []);
   const openRule = useCallback((id: string) => openAt("instrukcja", id), [openAt]);
+  const prefs = usePreferences();
   /** The stacks, drawn as stacks (`piles.tsx`). */
   /**
    * Testing rather than playing — see `testMode.ts`.
@@ -254,7 +258,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   const [pickerWavedOff, setPickerWavedOff] = useState(false);
   /** The roster, open over the right-hand column. */
-  const [rightDrawer, setRightDrawer] = useState<"gracze" | null>(null);
+  const [rightDrawer, setRightDrawer] = useState<"gracze" | "ustawienia" | null>(null);
   /** Which seat the players drawer should open on, when it was opened about one. */
   const [askedAbout, setAskedAbout] = useState<string | null>(null);
 
@@ -467,7 +471,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * rather than five providers, because five is five chances for the next
    * screen to be the one that forgot.
    */
-  return <OpenRule.Provider value={openRule}>{body()}</OpenRule.Provider>;
+  // `WithRules` draws plain text when there is nobody to open a rule, so the
+  // setting is enforced by withholding the opener rather than by every caller
+  // remembering to ask.
+  return (
+    <OpenRule.Provider value={prefs.ruleLinks ? openRule : null}>{body()}</OpenRule.Provider>
+  );
 
   function body() {
   if (error && !game) {
@@ -931,6 +940,27 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 simulated: game.mode === "simulation",
                 typedRolls: game.mode !== "simulation",
                 onAction: (body: Record<string, unknown>) => post("turn", body),
+                // The wyprawa, built out here where the other seats and
+                // everything lying on the board are. One of `targetSeatId` and
+                // `raidFieldCardId` and never both — the route reads whichever
+                // is set, and a body carrying two would silently be a raid on
+                // the Postać.
+                raid: (
+                  <RaidOffer
+                    seat={active}
+                    seats={seats}
+                    fieldCards={fieldCards}
+                    busy={busy}
+                    onRaid={(target) =>
+                      post("turn", {
+                        action: "raid",
+                        ...(target.kind === "seat"
+                          ? { targetSeatId: target.id }
+                          : { raidFieldCardId: target.id }),
+                      })
+                    }
+                  />
+                ),
                 onSuggestion: (stat: string, delta: number, reason: string) =>
                   post("adjust", { seatId: active.id, stat, delta, reason }),
                 onService: (body: Record<string, unknown>) =>
@@ -1112,6 +1142,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onClose={() => setLeftDrawer(null)}
               />
             ) : null}
+            {rightDrawer === "ustawienia" ? (
+              <Settings onClose={() => setRightDrawer(null)} />
+            ) : null}
             {rightDrawer === "gracze" ? (
             <PlayersDrawer
               // Every seat, in seat order, this one included — see the note on the
@@ -1246,6 +1279,28 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   people at a slotowy table did not open it, and nothing on
                   screen told them the Przedmiot in their Plecak has stopped
                   working. The word is the door to what it changes. */}
+              <button
+                onClick={() => setRightDrawer((out) => (out === "ustawienia" ? null : "ustawienia"))}
+                title="Ustawienia tego okna"
+                aria-label="Ustawienia"
+                className="text-ochre/80 transition hover:text-ochre"
+              >
+                {/* A gear, drawn small enough to sit on the bar's line. */}
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.61.77 1 1.42 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                </svg>
+              </button>
               <button
                 onClick={() => openAt("wariant", null)}
                 title="Czym ten stół różni się od Instrukcji"

@@ -1,4 +1,5 @@
 "use client";
+import { WithRules } from "./rule-ref";
 
 import Image from "next/image";
 import { fieldWithText } from "@/lib/view/fieldText";
@@ -87,6 +88,7 @@ export function FieldModal({
   purse,
   stock,
   sellable,
+  raid,
 }: {
   /** Which variant the table plays, so a hover can say where a card must be. */
   eqMode?: EqMode;
@@ -126,6 +128,17 @@ export function FieldModal({
   purse?: { gold: number; life: number };
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
+  /**
+   * The Poszukiwacz Przygód's wyprawa, passed in rather than built here.
+   *
+   * It is the one action offered on this Obszar that is not *about* this
+   * Obszar: the range is measured from here but every target is somewhere
+   * else, so it needs the other seats and everything lying on the board —
+   * neither of which this window has, and neither of which it should grow a
+   * prop for. What it owns is the placement: after the move, under the field's
+   * own business, above the button that ends the turn.
+   */
+  raid?: React.ReactNode;
   busy: boolean;
   onTake: (fieldCardId: string) => void;
   onInspect: (cardId: CardId) => void;
@@ -166,7 +179,7 @@ export function FieldModal({
               </p>
             ) : null}
             <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
-              {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
+              <WithRules text={field.text ?? "Brak przepisanego tekstu dla tego Obszaru."} />
             </p>
           </section>
 
@@ -310,6 +323,12 @@ export function FieldModal({
               {BRIDGE_ORDEAL.has(fieldId) && (
                 <BridgeOrdeal fieldId={fieldId} busy={busy} onAction={onAction} />
               )}
+
+              {/* "Po zakończeniu ruchu" — so it sits with the things done after
+                  arriving, and only in the `field` phase: `roll` shares this
+                  gate for the two crossings 11.4 and the Most put in the next
+                  turn, and a raid is not one of them. */}
+              {phase === "field" && raid}
 
               {/* Ending the turn, which lives here and nowhere else.
                   
