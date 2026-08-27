@@ -634,8 +634,8 @@ suite("finishing a half-typed line", () => {
   });
 
   it("goes as far as the candidates agree, and lists them", () => {
-    // get, give and gold all start here, so there is nothing to add.
-    expect(tab("g")).toEqual({ line: "g", options: ["get", "give", "gold"] });
+    // get, give, gold and guardian all start here, so there is nothing to add.
+    expect(tab("g")).toEqual({ line: "g", options: ["get", "give", "gold", "guardian"] });
     expect(tab("give krysz")).toEqual({
       line: "give KRYSZTAŁ ",
       options: ["KRYSZTAŁ LOSU", "KRYSZTAŁ MAGÓW"],
@@ -731,6 +731,11 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   card: { line: "card MAGOG", becomes: { kind: "card", name: "MAGOG" } },
   fight: { line: "fight", becomes: { kind: "fight", cardId: null } },
   take: { line: "take MAGICZNY MIECZ", becomes: { kind: "take", name: "MAGICZNY MIECZ" } },
+  beast: { line: "beast", becomes: { kind: "beast" } },
+  bridge: { line: "bridge", becomes: { kind: "bridge" } },
+  cross: { line: "cross", becomes: { kind: "cross" } },
+  guardian: { line: "guardian", becomes: { kind: "guardian" } },
+  ferry: { line: "ferry", becomes: { kind: "ferry", pay: false } },
   drop: { line: "drop MAGICZNY MIECZ", becomes: { kind: "putdown", name: "MAGICZNY MIECZ" } },
   equip: { line: "equip HEŁM", becomes: { kind: "equip", name: "HEŁM", slot: null } },
   use: { line: "use KRYSZTAŁ LOSU", becomes: { kind: "use", name: "KRYSZTAŁ LOSU" } },

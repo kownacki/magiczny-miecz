@@ -190,6 +190,12 @@ export type Command =
   | { kind: "putdown"; name: string }
   | { kind: "equip"; name: string; slot: string | null }
   | { kind: "use"; name: string }
+  /* The Bestia, the Most, and the two thresholds between the rings. */
+  | { kind: "beast" }
+  | { kind: "bridge" }
+  | { kind: "cross" }
+  | { kind: "guardian" }
+  | { kind: "ferry"; pay: boolean }
   /**
    * What a card asked, answered.
    *
@@ -305,6 +311,46 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
+    needs: "play",
+  },
+  {
+    name: "beast",
+    aliases: [],
+    when: PLAYING,
+    usage: "beast",
+    summary: "fight the Bestia at the Zamek — winning ends the game (14.7, 22)",
+    needs: "play",
+  },
+  {
+    name: "bridge",
+    aliases: ["most"],
+    when: ["move", "field"],
+    usage: "bridge",
+    summary: "try to step onto the Kamienny Most from an entrance (11.10)",
+    needs: "play",
+  },
+  {
+    name: "cross",
+    aliases: [],
+    when: PLAYING,
+    usage: "cross",
+    summary: "cross between the Kręgi — the Trzęsawiska or the Lodowy Las (11.1-11.8)",
+    needs: "play",
+  },
+  {
+    name: "guardian",
+    aliases: [],
+    when: PLAYING,
+    usage: "guardian",
+    summary: "square up to whatever is standing in the way (11.9-11.11)",
+    needs: "play",
+  },
+  {
+    name: "ferry",
+    aliases: [],
+    when: PLAYING,
+    usage: "ferry [pay]",
+    summary: "the Przeprawa — `pay` a Sztuka Złota, or be sent back",
     needs: "play",
   },
   {
@@ -988,6 +1034,15 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "equip", name: named, slot } };
   }
 
+  if (word === "beast") return { ok: { kind: "beast" } };
+  if (word === "bridge" || word === "most") return { ok: { kind: "bridge" } };
+  if (word === "cross") return { ok: { kind: "cross" } };
+  if (word === "guardian") return { ok: { kind: "guardian" } };
+  if (word === "ferry") {
+    // `pay` last and bare, the way `force` and `hard` are.
+    return { ok: { kind: "ferry", pay: tail.toLowerCase() === "pay" } };
+  }
+
   if (word === "escape" || word === "flee") return { ok: { kind: "escape" } };
   if (word === "attack") {
     return tail ? { ok: { kind: "attack", who: tail } } : needs("attack", "Attack whom?");
@@ -1371,6 +1426,11 @@ const NEEDS: Record<Command["kind"], Capability> = {
   putdown: "play",
   equip: "play",
   use: "play",
+  beast: "play",
+  bridge: "play",
+  cross: "play",
+  guardian: "play",
+  ferry: "play",
   ready: "play",
   start: "play",
   me: "play",

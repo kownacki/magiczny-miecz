@@ -4,7 +4,7 @@ import characters from "@/data/characters.json";
 import { describeCard } from "@/lib/engine/lookup";
 
 import type { Character } from "@/data/types";
-import { FIELDS, type FieldId } from "@/lib/engine/board";
+import { asFieldId, FIELDS, type FieldId } from "@/lib/engine/board";
 import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 import {
   helpLines,
@@ -36,8 +36,13 @@ import {
   beginFight,
   dropCard,
   equipCard,
+  crossRing,
   escape,
+  fightBeast,
+  fightGuardian,
   fightRoll,
+  payFerry,
+  rollGuardianStrength,
   changeNature,
   drawCard,
   drawSpell,
@@ -701,6 +706,71 @@ export async function runCommand(
       return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
     }
 
+    /**
+     * The Bestia, which is how the game is won (14.7, 22).
+     *
+     * Four dice — the kind of fight, its strength, and one each — and all four
+     * are the app's, so this is one line where the browser walks four presses.
+     * 10.5 makes it compulsory once announced; there is no backing out, which
+     * is why nothing here offers one.
+     */
+    case "beast": {
+      const seat = seatOf(null);
+      await fightBeast(gameId, null, null, null, null);
+      const after = (await activeStore().load(gameId)).game;
+      if (after.status === "finished") return `${named(seat)} beats the Bestia. That is the game.`;
+      const now = (await seatsFor(gameId)).find((one) => one.id === seat.id);
+      return now?.eliminated
+        ? `${named(seat)} loses to the Bestia and dies (14.7, 4.4).`
+        : `${named(seat)} loses to the Bestia — 2 Życia, and off the Most (14.7).`;
+    }
+
+    /**
+     * Turning off the ring onto the Kamienny Most (11.10).
+     *
+     * A move rather than a thing of its own: the bridge is taken *in passing*,
+     * so it arrives as one of the destinations a roll reaches and is told apart
+     * from the plain walk by intent rather than by where it lands. That is why
+     * `moveTo` has a `viaBridge` at all, and why this verb is really "take the
+     * one option that is the bridge".
+     *
+     * `enterBridge` is the other door and is companion mode's: it takes an
+     * outcome a table already fought for.
+     */
+    case "bridge": {
+      const seat = seatOf(null);
+      const state = (await activeStore().load(gameId)).game.turn_state as {
+        options?: { fieldId: string; fieldName: string; bridge?: unknown }[];
+      };
+      const offered = (state.options ?? []).find((one) => one.bridge !== undefined);
+      if (!offered) throw new Error("Nie ma stąd wejścia na Most.");
+      await moveTo(gameId, offered.fieldId, true);
+      return `${named(seat)} turns onto the Most at ${offered.fieldName}.`;
+    }
+
+    case "cross": {
+      const seat = seatOf(null);
+      const done = await crossRing(gameId);
+      const rolled = done.dice ? ` (${done.dice.join("+")} against Magia ${done.magia})` : "";
+      return done.to
+        ? `${named(seat)} crosses to ${fieldName(asFieldId(done.to))}.${rolled}`
+        : `${named(seat)} does not get across.${rolled}`;
+    }
+
+    case "guardian": {
+      const seat = seatOf(null);
+      await fightGuardian(gameId);
+      return `${named(seat)} squares up to what is in the way.`;
+    }
+
+    case "ferry": {
+      const seat = seatOf(null);
+      const { at } = await payFerry(gameId, command.pay);
+      return command.pay
+        ? `${named(seat)} pays the Przeprawa and lands on ${fieldName(asFieldId(at))}.`
+        : `${named(seat)} does not pay, and goes back to ${fieldName(asFieldId(at))}.`;
+    }
+
     /* ----------------------------------------------------------------------
      * What you carry. A holding's id is a uuid, so everything here is named by
      * the card and resolved against what this seat is actually holding.
@@ -814,6 +884,21 @@ export async function runCommand(
         }
         await beginFight(gameId, [wanted[0].cardId]);
       }
+
+      /**
+       * A guardian's strength first, where the board makes it a roll.
+       *
+       * Both bridge entrances print a die table rather than a number, and
+       * `afterFightRoll` refuses to compare until that die has landed — so
+       * rolling the two combat dice before it silently did nothing and the
+       * fight could not be settled. It is owed only sometimes, which is why it
+       * is asked for here rather than by the verb that starts the fight: every
+       * fight comes through this line, and only some of them owe it.
+       */
+      const owed = (await activeStore().load(gameId)).game.turn_state as {
+        fight?: { strengthRoll?: number | null };
+      };
+      if (owed.fight?.strengthRoll === null) await rollGuardianStrength(gameId, null);
 
       // Null on both, because the app throws its own dice in simulation.
       await fightRoll(gameId, "player", null);
@@ -1098,6 +1183,21 @@ export async function runCommand(
        * facts about a game that has not started. What somebody wants here is
        * who is at the table and what is still owed before `start` will work.
        */
+      /**
+       * A finished game is not a poczekalnia.
+       *
+       * `look` split on "playing or not", so winning the game reported "Lobby —
+       * 1 at the table" — which is the one state it certainly was not. Nothing
+       * stores a winner (the row keeps only `finished`), so the journal is
+       * where the answer is, and this says so rather than inventing one.
+       */
+      if (game.status === "finished") {
+        return [
+          `Turn ${game.turn} — the game is over.`,
+          "`journal` says how it ended.",
+        ].join("\n");
+      }
+
       if (game.status !== "playing") {
         const seatOfUser = (who: { seat_index: number | null }) =>
           snapshot.seats.find((one) => one.seat_index === who.seat_index);
