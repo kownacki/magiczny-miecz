@@ -13,11 +13,11 @@
  * words mean.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import rulesData from "@/data/rules.json";
 import { VARIANT_CHANGES, type EqMode } from "@/lib/engine/slots";
 import { Fold } from "./fold";
-import { WithRules } from "./rule-ref";
+import { OpenRule, WithRules } from "./rule-ref";
 
 interface Rule {
   id: string | null;
@@ -227,6 +227,7 @@ function Prose({ text }: { text: string }) {
  * ----------------------------------------------------------------------- */
 
 function Variant({ eqMode }: { eqMode: EqMode }) {
+  const refs = useContext(OpenRule) !== null;
   return (
     <div className="flex flex-col gap-4 text-[13px] leading-relaxed">
       <p className="text-muted">
@@ -255,9 +256,14 @@ function Variant({ eqMode }: { eqMode: EqMode }) {
               <WithRules text={change.here} />
             </dd>
           </dl>
-          <p className="mt-2 text-[11px] text-muted/70">
-            <WithRules text={`Zasady: ${change.rules.join(", ")}.`} />
-          </p>
+          {/* Nothing but citations, so with them hidden there is nothing left
+              but the word "Zasady:" and a full stop. The rest of the entry says
+              what changed in prose and stands without this. */}
+          {refs && (
+            <p className="mt-2 text-[11px] text-muted/70">
+              <WithRules text={`Zasady: ${change.rules.join(", ")}.`} />
+            </p>
+          )}
         </section>
       ))}
     </div>

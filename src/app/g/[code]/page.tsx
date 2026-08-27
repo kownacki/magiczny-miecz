@@ -475,7 +475,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // setting is enforced by withholding the opener rather than by every caller
   // remembering to ask.
   return (
-    <OpenRule.Provider value={prefs.ruleLinks ? openRule : null}>{body()}</OpenRule.Provider>
+    <OpenRule.Provider value={prefs.ruleRefs ? openRule : null}>{body()}</OpenRule.Provider>
   );
 
   function body() {

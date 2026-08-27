@@ -20,16 +20,20 @@ import { useSyncExternalStore } from "react";
 
 export interface Preferences {
   /**
-   * Whether `(5.3)` and its like are ways into the Instrukcja or just text.
+   * Whether the sentences carry their rule numbers at all.
    *
-   * On, because a rule number nobody can look up is decoration. Off for anybody
-   * who knows the book and finds a page of dotted underlines busier than the
-   * sentence underneath it is worth.
+   * Not "linked or plain": a number nobody can follow is decoration, so the
+   * choice is between a citation that works and no citation. Off, they are
+   * taken out of the sentence and the punctuation mended — see `withoutRefs`.
+   *
+   * On, because they are the whole reason the Instrukcja is reachable. Off for
+   * anybody who knows the book and finds a page of dotted underlines busier
+   * than the sentences under them are worth.
    */
-  ruleLinks: boolean;
+  ruleRefs: boolean;
 }
 
-const DEFAULTS: Preferences = { ruleLinks: true };
+const DEFAULTS: Preferences = { ruleRefs: true };
 
 const KEY = "mm:preferences";
 

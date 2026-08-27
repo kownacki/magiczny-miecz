@@ -42,11 +42,41 @@ function resolve(said: string): string | null {
 }
 
 /**
- * Opens the Księga at a rule. Absent where there is no Księga to open — the
- * lobby, the gates — and the numbers are then plain text again rather than
- * buttons that do nothing.
+ * Opens the Księga at a rule, or null for a reader who does not want them.
+ *
+ * Null does not mean "print them but do not link them". A number nobody can
+ * look up is decoration — it was decoration for thirty years in the printed
+ * book too, where it at least pointed at a page you were holding — so the
+ * choice is between a citation that works and no citation at all. Null strips
+ * them out of the sentence, which is why `withoutRefs` exists.
  */
 export const OpenRule = createContext<((id: string) => void) | null>(null);
+
+/**
+ * The same sentence with its citations taken out, and the punctuation mended.
+ *
+ * "Naturę można zmienić najwyżej raz na turę (7.3)." has to come back as
+ * "Naturę można zmienić najwyżej raz na turę." — not with a hole where the
+ * bracket was, and not with a space before the full stop. A bracket that holds
+ * something else as well keeps that: "(nie ponad start, 4.7)" is still worth
+ * reading without the 4.7 in it.
+ */
+export function withoutRefs(text: string): string {
+  const stripped = text.replace(/\s*\(([^()]*)\)/g, (whole, inside: string) => {
+    const left = inside
+      .replace(CITATION, "")
+      // What the numbers were separated by, now separating nothing.
+      .replace(/^[\s,;–—-]+|[\s,;–—-]+$/g, "")
+      .replace(/[\s]*,[\s]*,/g, ",")
+      .trim();
+    if (left === "") return "";
+    return whole.startsWith(" ") ? ` (${left})` : `(${left})`;
+  });
+  return stripped
+    .replace(/\s+([.,;:!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
 
 /**
  * Two digits either side of a dot, and a letter if the app added one.
@@ -65,7 +95,7 @@ const CITATION = /\b(\d{1,2}\.\d{1,2}[a-z]?)\.?(?=[)\s,;:.]|$)/g;
  */
 export function WithRules({ text, className }: { text: string; className?: string }) {
   const open = useContext(OpenRule);
-  if (!open) return <span className={className}>{text}</span>;
+  if (!open) return <span className={className}>{withoutRefs(text)}</span>;
 
   const pieces: React.ReactNode[] = [];
   let at = 0;

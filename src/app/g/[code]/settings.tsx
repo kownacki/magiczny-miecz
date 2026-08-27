@@ -24,10 +24,10 @@ export function Settings({ onClose }: { onClose: () => void }) {
     <Drawer side="right" width="max-w-sm" title="Ustawienia" onClose={onClose}>
       <div className="flex flex-col gap-4 p-4">
         <Switch
-          name="ruleLinks"
-          on={prefs.ruleLinks}
-          label="Odnośniki do zasad"
-          said="Numery w rodzaju (5.3) otwierają Instrukcję w Księdze. Wyłącz, jeśli znasz zasady i wolisz czysty tekst."
+          name="ruleRefs"
+          on={prefs.ruleRefs}
+          label="Numery zasad"
+          said="Zdania kończą się numerem w rodzaju (5.3), który otwiera Instrukcję w Księdze. Wyłącz, a numery znikną ze zdań — nie zostaną nieklikalne, tylko ich nie będzie."
         />
         <p className="border-t border-edge pt-3 text-[11px] leading-relaxed text-muted/70">
           Ustawienia są tego okna, nie stołu — nikt inny ich nie widzi i nie
