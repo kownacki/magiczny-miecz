@@ -1533,29 +1533,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               </section>
             )}
 
-            {/* The roster moved into the drawer: every seat rather than everybody
-                else, reachable from the bar rather than by scrolling past your
-                own pack, and open while a fight is — see `players.tsx`. What
-                stays here is the one line that says it is there. */}
-            <button
-              onClick={() => setRightDrawer("gracze")}
-              className="mt-3 flex w-full items-center gap-2 rounded border border-edge/60 px-2 py-1.5 text-left text-[11px] text-muted transition hover:border-ochre hover:text-ink"
-            >
-              <span className="min-w-0 flex-1 truncate">
-                Gracze przy stole:{" "}
-                <span className="text-ink">
-                  {others.map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`).join(", ") || "nikt jeszcze"}
-                </span>
-              </span>
-              {/* The one thing saying this opens something.
-                  It reads as a caption otherwise, and for a seatless watcher
-                  that matters more than it looks: the drawer behind it holds
-                  "Dosiądź się nową Postacią", which is their only way into the
-                  game. A label they do not press is a table they cannot join. */}
-              <span aria-hidden className="shrink-0 text-ochre/70">
-                ›
-              </span>
-            </button>
+            {/* The roster is in the drawer, and the bar is the way to it —
+                "Gracze 4" up there opens the same panel, counts the same seats
+                and stays reachable while a fight is open. A second door at the
+                bottom of the column said the same thing twice and was the one
+                the "Twoja tura" button kept landing on. */}
           </div>
         }
       />

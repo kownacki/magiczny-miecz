@@ -269,9 +269,17 @@ export function SeatCard({
            does its own laying out, one level in. */
         className="mb-3 cursor-pointer text-[11px] uppercase tracking-widest text-muted"
       >
-        Postać
+        {/* The word and what it carries in one flex line, so they are centred
+            on each other rather than each sitting on the summary's own
+            baseline: the heading is 11px capitals and the row beside it is
+            mixed case with a dot and four numerals in it, and text with no
+            shared baseline is text that lines up by accident. The marker stays
+            outside, because a `flex` summary is not a `list-item` and loses
+            it. */}
+        <span className="inline-flex w-[calc(100%-1.25rem)] items-center gap-3 align-middle">
+        <span className="shrink-0">Postać</span>
         {!showing && (
-          <span className="ml-3 inline-flex w-[calc(100%-5rem)] items-center gap-2 align-middle normal-case tracking-normal">
+          <span className="flex min-w-0 flex-1 items-center gap-2 normal-case tracking-normal">
             <span
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ background: SEAT_COLOURS[seat.seat_index % SEAT_COLOURS.length] }}
@@ -338,6 +346,7 @@ export function SeatCard({
             )}
           </span>
         )}
+        </span>
       </summary>
 
       {/* A fixed height, so a seat card does not jump when an effect appears or

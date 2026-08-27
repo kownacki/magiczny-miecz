@@ -75,7 +75,20 @@ export function TurnFab({
        * waiting on somebody else. The same button either way; the difference is
        * whether it is a summons or a place to look.
        */
-      className={`fixed bottom-4 left-1/2 z-40 flex max-w-[min(90vw,28rem)] -translate-x-1/2 items-center gap-2 rounded-full border bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition ${
+      /**
+       * Above whatever the console is taking, and by exactly that much.
+       *
+       * The console is docked to the bottom of the right column and this is
+       * centred on the *window*, so on a wide screen the two land on each
+       * other — and they did, with the button sitting over "TRYB TESTOWY —
+       * KONSOLA" while the console was folded to its bar. `--console-h` is the
+       * measured height the console publishes for exactly this kind of
+       * reservation (see `table-layout.tsx`, which pads the column with it), so
+       * the lift is right for all three of its states and zero when it is
+       * closed.
+       */
+      style={{ bottom: "calc(1rem + var(--console-h, 0px))" }}
+      className={`fixed left-1/2 z-40 flex max-w-[min(90vw,28rem)] -translate-x-1/2 items-center gap-2 rounded-full border bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition ${
         mine ? "border-ochre hover:bg-ochre/10" : "border-ochre/40 hover:border-ochre/70"
       }`}
     >
