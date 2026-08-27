@@ -21,7 +21,7 @@ import type { Ends, Modifier } from "@/lib/engine/status";
 import type { RandomPort } from "@/lib/engine/ports";
 import type { JournalKind } from "@/lib/engine/journal";
 import { appRandom, replayable } from "./random";
-import { noteRolls } from "./record";
+import { nextScripted, noteRolls } from "./record";
 import { serially } from "./queue";
 import { Failure } from "./failure";
 
@@ -741,6 +741,19 @@ async function appendJournal(
   if (error) throw new Failure(`commit(moves): ${error.message}`);
 }
 
+/**
+ * The port a replay speaks through: recorded dice while they last, then the
+ * real one. A line that runs out has diverged, and the comparison says so far
+ * more usefully than an exception about dice would.
+ */
+function replayed(base: RandomPort): RandomPort {
+  return {
+    async rollD6(reason) {
+      return nextScripted() ?? (await base.rollD6(reason));
+    },
+  };
+}
+
 /** How many times a losing commit is worth re-deciding before giving up. */
 const ATTEMPTS = 4;
 
@@ -792,7 +805,14 @@ async function attempt<C, T>(
   // for its whole life — so it is read here rather than passed down sixty call
   // sites. The override is for a test that wants to be explicit.
   const store = options.store ?? activeStore();
-  const base = options.random ?? appRandom();
+  /**
+   * A replay's dice come first, then whatever the caller asked for.
+   *
+   * `supplied([value], appRandom())` is built at the call site before any
+   * snapshot exists, so a replay cannot hand its dice in that way — it puts
+   * them where the port will look instead. See `record.ts`.
+   */
+  const base = replayed(options.random ?? appRandom());
   // Outlives the attempts, so a retry throws the same dice: see `replayable`.
   const rolls: number[] = [];
 

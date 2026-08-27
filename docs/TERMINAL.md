@@ -321,7 +321,19 @@ Four steps, each independently testable, in this order:
    line reaches `parseCommand`, because it acts on the program rather than the
    game and the browser could never carry it out.
 
-**The record is written; rewind is not.** `record.ts` holds the shape and the
+**Done.** A recorded game replays to the same table — `replay.ts`, and
+`replay.test.ts` plays one, replays it and compares.
+
+The comparison is deliberately not a deep equality: ids are uuids minted per run
+and a replay that reproduced them would be testing `gen_random_uuid` rather than
+the rules. What has to match is the game — whose turn, standing where, with what,
+and the journal that says how it got there.
+
+`replay(save, { upTo })` stops where it is told, which is the whole of rewind: to
+reach move forty, run one to forty into a fresh game. Nothing is inverted, so
+nothing can be inverted wrongly.
+
+*Superseded, kept for the reasoning:* **The record is written; rewind is not.** `record.ts` holds the shape and the
 reasoning, `mm` writes an entry per line that changed the game, and the save
 carries it. What is left is the replay: run the log into a fresh store with
 `scriptedRandom(rolls)` bound, and compare.
@@ -334,9 +346,9 @@ recorded one. And only lines that changed the game are kept: `commit` writes
 nothing for an empty changeset, "not even the revision", so the counter standing
 still is the game itself saying nothing happened.
 
-Rewind is a fifth step and deliberately last: it wants the grammar settled first,
-because the record is a log of commands and the commands are what step 3 defines.
-The *record itself* is written from step 2 — only replaying it waits.
+5. ~~**Rewind.**~~ **Done.** `replay.ts`. A game recorded at the prompt replays to
+   the same table, which is the proof the other four steps were true: the engine
+   is deterministic, the seed carries the shuffles, and the log is every input.
 
 The seed comes forward into step 2 with it, for the same reason: a log of
 commands means nothing without deterministic randomness behind it.

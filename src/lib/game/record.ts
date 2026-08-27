@@ -68,3 +68,39 @@ export function stopRecording(): number[] {
 export function noteRolls(rolls: readonly number[]): void {
   if (collecting !== null) collecting.push(...rolls);
 }
+
+/* --------------------------------------------------------------------------
+ * The other direction: giving the dice back.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * The dice a replay is feeding, in the order they fell the first time.
+ *
+ * Beside the collector rather than somewhere else, because they are the same
+ * fact read in the two directions and keeping them apart would be two places to
+ * get the ordering wrong.
+ */
+let scripted: number[] | null = null;
+
+/** Play the next line with these dice. Empty is not the same as none: a line may throw nothing. */
+export function scriptRolls(rolls: readonly number[]): void {
+  scripted = [...rolls];
+}
+
+/** Stop feeding, so anything after a replay throws real dice again. */
+export function stopScripting(): void {
+  scripted = null;
+}
+
+/**
+ * The next recorded die, or null when nothing is being replayed.
+ *
+ * Null rather than a thrown error when the queue runs dry, because running out
+ * means the replay has diverged — a rule asked for a die the original never
+ * threw — and the honest thing is to let it roll and let the comparison say so,
+ * rather than to fail here with a stack trace about dice.
+ */
+export function nextScripted(): number | null {
+  if (scripted === null || scripted.length === 0) return null;
+  return scripted.shift() ?? null;
+}
