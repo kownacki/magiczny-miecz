@@ -35,6 +35,8 @@ import { characterKind } from "@/lib/engine/polish";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { RailStat } from "./token-rail";
 import { NatureLine } from "./nature-line";
+import { Lookable } from "./lookable";
+import { NATURE_LABEL } from "@/lib/engine/polish";
 import { EffectMark } from "./effect-mark";
 export function SeatCard({
   seat,
@@ -101,6 +103,10 @@ export function SeatCard({
    * something up is to put it down somewhere else — and "somewhere else" is
    * usually the other half.
    */
+  /** Whether the sheet is open, the way the Plecak and the Zaklęcia inside it fold. */
+  const [showing, setShowing] = useState(true);
+  /** And the body separately, because it is the half that is read least often. */
+  const [wearing, setWearing] = useState(true);
   const [carried, setCarried] = useState<Carried | null>(null);
   /**
    * The card being dragged, by id.
@@ -205,7 +211,19 @@ export function SeatCard({
   }, [carried]);
 
   return (
-    <article
+    /**
+     * The whole sheet folds away, the way the Plecak and the Zaklęcia inside it
+     * already do.
+     *
+     * It is the tallest thing on the screen and the one you need least often
+     * once you know what you are holding: mid-game the questions are about the
+     * board and about whose turn it is, and your own Karta answers neither. So
+     * the header carries what a folded card still has to say — what you are,
+     * what you are worth, and what Natura you are of — and the rest is one
+     * click away.
+     */
+    <details
+      open={showing}
       className={`rounded-lg border bg-panel p-4 transition ${
         active ? "border-ochre shadow-[0_0_0_1px_var(--color-ochre)]" : "border-edge"
       }`}
@@ -226,7 +244,13 @@ export function SeatCard({
           Because the height is fixed and both children are centred in it, where
           the name sits depends on the name alone. Effects appearing and wearing
           off cannot move it. */}
-      <header className="mb-3 flex h-9 items-center gap-2">
+      <summary
+        onClick={(event) => {
+          event.preventDefault();
+          setShowing(!showing);
+        }}
+        className="mb-3 flex h-9 cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden"
+      >
         {/* Your colour, beside your name, on the card you look at most.
             Everything else in the app already speaks in these — the figure on
             the board, the dots down the journal, the tinted card in the queue —
@@ -246,6 +270,21 @@ export function SeatCard({
             </span>
           )}
         </h3>
+        {/* What you are, beside who you are — and always, not only when the
+            card is folded. The roster has said it next to every other player's
+            name from the beginning; your own was the one place you had to read
+            the picture to find out, which is the one place you already know
+            and the one place it is written smallest. Lookable, so it is the
+            same name here as everywhere else and opens the same Karta. */}
+        {character && (
+          <Lookable
+            kind="character"
+            id={character.id}
+            name={character.name}
+            eqMode={slotted ? "slots" : "classic"}
+            className="shrink-0 text-[11px] text-muted"
+          />
+        )}
         {/* What is true of this character right now, beside the name it is
             true of. A mark is a reminder that something holds, not an
             explanation — the hover carries the whole of it, including how long
@@ -261,7 +300,38 @@ export function SeatCard({
             ))}
           </span>
         )}
-      </header>
+
+        {/* Everything a folded card still has to answer, and nothing it does
+            not. The four numbers are the whole of what the rails say — read
+            in the order the Karta prints them up its own edges — and the
+            Natura is the one thing about a character that is neither printed
+            on the picture nor derivable from the cards it is holding (7.2).
+
+            Open, they are all on screen twice over, so they are not repeated:
+            the rails are the rails, and the line under the card is the Karta
+            Zmiany Natury or its absence. */}
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {!showing && (
+            <>
+              {seat.nature && (
+                <span className="text-[11px] text-muted">
+                  {NATURE_LABEL[seat.nature] ?? seat.nature}
+                </span>
+              )}
+              <span className="tnum text-[11px]">
+                <span className="text-miecz">{seat.sword_total}</span>
+                <span className="text-muted"> / </span>
+                <span className="text-magia">{seat.magic_total}</span>
+                <span className="text-muted"> / </span>
+                <span className="text-zycie">{seat.life}</span>
+                <span className="text-muted"> / </span>
+                <span className="text-zloto">{seat.gold}</span>
+              </span>
+            </>
+          )}
+          <span className="text-[10px] text-muted">{showing ? "\u2212" : "+"}</span>
+        </span>
+      </summary>
 
       {character ? (
         <>
@@ -380,7 +450,33 @@ export function SeatCard({
 
             {/* The body, beside the character card, in the slotted variant
                 only — klasyczny play has nowhere to put anything. */}
+            {/* The body, folded on its own.
+                
+                It is the largest thing in the card after the Karta itself and
+                the one that changes least: what you are wearing is settled for
+                whole turns at a time, and the eleven places are eleven whether
+                or not anything is in them. The tally is what a folded body has
+                to keep — "three things on" is the question it answers. */}
             {slotted && (
+              <details
+                open={wearing}
+                className="min-w-0 flex-1"
+              >
+                <summary
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setWearing(!wearing);
+                  }}
+                  className="mb-2 cursor-pointer list-none text-[11px] uppercase tracking-widest text-muted [&::-webkit-details-marker]:hidden"
+                >
+                  Na sobie{" "}
+                  <span className="text-muted/70">
+                    {Object.keys(wornBySlot(seat)).length}
+                  </span>
+                  <span className="ml-2 text-[10px] normal-case tracking-normal text-muted/60">
+                    {wearing ? "\u2212" : "+"}
+                  </span>
+                </summary>
               <SlotPanel
                 worn={wornBySlot(seat)}
                 canAct={canAdjust}
@@ -403,6 +499,7 @@ export function SeatCard({
                   holdingId ? onEquip(holdingId, slot) : place(slot)
                 }
               />
+              </details>
             )}
           </div>
 
@@ -462,6 +559,6 @@ export function SeatCard({
       ) : (
         <p className="text-sm text-muted">bez postaci</p>
       )}
-    </article>
+    </details>
   );
 }
