@@ -107,7 +107,7 @@ export type Command =
   | { kind: "give"; cardId: string }
   | { kind: "place"; cardId: string; fieldId: FieldId | null }
   | { kind: "teleport"; fieldId: FieldId }
-  | { kind: "fight"; cardId: string }
+  | { kind: "summon"; cardId: string }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
@@ -120,7 +120,14 @@ export type Command =
   | { kind: "look" }
   | { kind: "me"; who: string | null }
   | { kind: "spell"; who: string | null }
-  | { kind: "nature"; nature: Nature; who: string | null }
+  /**
+   * 7.2's change, and 7.3's "once a turn" either obeyed or not.
+   *
+   * `force` is what makes this one line two commands: without it the rule
+   * decides, with it the console does — so the capability comes off the flag
+   * rather than off a second word. `gold +5 force` set the pattern.
+   */
+  | { kind: "nature"; nature: Nature; who: string | null; force: boolean }
   | { kind: "turn"; who: string | null }
   | { kind: "stone"; who: string | null }
   | { kind: "effect"; effect: EffectName; who: string | null };
@@ -269,9 +276,9 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "nature",
     aliases: [],
-    usage: "nature good|evil|chaotic [player]",
-    summary: "set a Natura, ignoring 7.3's once a turn",
-    needs: "testmode",
+    usage: "nature good|evil|chaotic [player] [force]",
+    summary: "change a Natura (7.2) — `force` ignores 7.3's once a turn",
+    needs: "play",
   },
   {
     name: "turn",
@@ -285,7 +292,7 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "stone [player]",
     summary: "turn to stone for three turns (20.1)",
-    needs: "testmode",
+    needs: "play",
   },
   {
     name: "effect",
@@ -322,10 +329,13 @@ export const COMMANDS: CommandSpec[] = [
     needs: "testmode",
   },
   {
-    name: "fight",
+    // Was `fight`. The lawful word is what a player types all game — you fight
+    // what is standing in front of you — and this conjures a Wróg out of
+    // nothing, which is a different act and now says so.
+    name: "summon",
     aliases: [],
-    usage: "fight WILKOŁAK",
-    summary: "pick a fight with a Wróg",
+    usage: "summon WILKOŁAK",
+    summary: "conjure a Wróg onto your Obszar and square up to it",
     needs: "testmode",
   },
   {
@@ -354,8 +364,8 @@ export const COMMANDS: CommandSpec[] = [
     name: "spell",
     aliases: [],
     usage: "spell [player]",
-    summary: "draw a Zaklęcie",
-    needs: "testmode",
+    summary: "draw a Zaklęcie (9.5)",
+    needs: "play",
   },
 ];
 
@@ -560,12 +570,15 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
 
   if (word === "nature") {
-    const [said, ...who] = tail.split(/\s+/).filter(Boolean);
+    const [said, ...rest3] = tail.split(/\s+/).filter(Boolean);
     const nature = NATURES[(said ?? "").toLowerCase()];
     if (!nature) {
       return { error: `Which Natura — ${Object.keys(NATURES).join(", ")}?` };
     }
-    return { ok: { kind: "nature", nature, who: who.join(" ") || null } };
+    // `force` last, after the player, the way `gold` takes it.
+    const forced = rest3.length > 0 && rest3[rest3.length - 1].toLowerCase() === "force";
+    const who = (forced ? rest3.slice(0, -1) : rest3).join(" ");
+    return { ok: { kind: "nature", nature, who: who || null, force: forced } };
   }
 
   if (word === "who") return { ok: { kind: "who" } };
@@ -685,9 +698,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "effect", effect, who: who.join(" ") || null } };
   }
 
-  if (word === "fight") {
+  if (word === "summon") {
     return name(FOES, (card) => card.name, tail, "Wróg", (card) => ({
-      kind: "fight",
+      kind: "summon",
       cardId: card.id,
     }));
   }
@@ -921,7 +934,7 @@ export function complete(
         ? { pool: CARDS.map((c) => c.name), at: 1 }
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
-    if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
+    if (verb === "summon") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "teleport" || verb === "move" || verb === "walk") {
       return { pool: PLACES.map((f) => f.name), at: 1 };
     }
@@ -1028,21 +1041,30 @@ const NEEDS: Record<Command["kind"], Capability> = {
   remove: "testmode",
   revive: "testmode",
   kill: "testmode",
-  nature: "testmode",
+  // Not "testmode": `changeNature` is the same function the browser's own
+  // control calls, and 7.2 is a rule of the game. What overrules anything is
+  // `force`, which is why this is decided in `needsOf` rather than here.
+  nature: "play",
   turn: "testmode",
-  stone: "testmode",
+  // Both sides call `turnToStone`. There was never a second act here to
+  // separate — 20.1 is a rule, and this is how it is reached.
+  stone: "play",
   effect: "testmode",
   give: "testmode",
   place: "testmode",
   teleport: "testmode",
-  fight: "testmode",
+  summon: "testmode",
   settle: "testmode",
   endgame: "testmode",
   endfight: "testmode",
-  spell: "testmode",
+  // Both sides call `drawSpell`. 9.5 deals them; this is that.
+  spell: "play",
 };
 
 export function needsOf(command: Command): Capability {
+  // One verb whose capability is on the line rather than in the table: 7.2's
+  // change is playing the game, and skipping 7.3's "once a turn" is not.
+  if (command.kind === "nature") return command.force ? "testmode" : "play";
   return NEEDS[command.kind];
 }
 

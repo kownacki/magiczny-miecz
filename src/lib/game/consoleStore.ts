@@ -493,7 +493,7 @@ export async function runCommand(
 
     case "nature": {
       const seat = seatOf(command.who);
-      const { nowForbidden } = await changeNature(gameId, seat.id, command.nature, true);
+      const { nowForbidden } = await changeNature(gameId, seat.id, command.nature, command.force);
       // 7.4 by way of 5.5: the cards the new Natura may not hold have to go,
       // and a tester who was not told which they are would find out two turns
       // later. `changeNature` works this out already; nothing was reading it.
@@ -591,7 +591,7 @@ export async function runCommand(
       return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
     }
 
-    case "fight": {
+    case "summon": {
       const seat = seatOf(null);
       await stageFight(gameId, seat.id, command.cardId);
       return `${named(seat)} fights ${cardName(command.cardId)}.`;

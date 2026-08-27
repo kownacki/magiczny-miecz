@@ -176,8 +176,8 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("takes a Natura by its English name, and says which three there are", () => {
-    expect(ok("nature evil")).toEqual({ kind: "nature", nature: "evil", who: null });
-    expect(ok("nature good Ola")).toEqual({ kind: "nature", nature: "good", who: "Ola" });
+    expect(ok("nature evil")).toEqual({ kind: "nature", nature: "evil", who: null, force: false });
+    expect(ok("nature good Ola")).toEqual({ kind: "nature", nature: "good", who: "Ola", force: false });
     expect(ok("nature chaotic")).toMatchObject({ nature: "chaotic" });
     expect(err("nature")).toMatch(/good, evil, chaotic/);
     expect(err("nature zla")).toMatch(/Which Natura/);
@@ -220,9 +220,9 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("fights only a Wróg", () => {
-    expect(ok("fight WILKOŁAK")).toEqual({ kind: "fight", cardId: "wilkolak" });
+    expect(ok("summon WILKOŁAK")).toEqual({ kind: "summon", cardId: "wilkolak" });
     // A Przedmiot is not a creature, so it is not there to be found.
-    expect(err("fight magiczny miecz")).toMatch(/No Wróg/);
+    expect(err("summon magiczny miecz")).toMatch(/No Wróg/);
   });
 
   it("asks for the name when none was given", () => {
@@ -291,6 +291,23 @@ suite("playing the game, and overruling it", () => {
     for (const line of ["kill", "revive 3", "give MAGICZNY MIECZ", "teleport Karczma", "gold +5"]) {
       expect(permits(ok(line), { testmode: false }).ok, line).toBe(false);
     }
+  });
+
+  /**
+   * Three verbs that looked like two acts and were one.
+   *
+   * `stone`, `spell` and `nature` each call exactly the function the browser's
+   * own control calls — `turnToStone`, `drawSpell`, `changeNature` — so naming
+   * a second testmode word for them would have been inventing a difference
+   * that is not there. What overrules a rule is `force`, and only on `nature`.
+   */
+  it("does not lock a verb that is the game working", () => {
+    for (const line of ["stone", "spell", "nature evil"]) {
+      expect(permits(ok(line), { testmode: false }).ok, line).toBe(true);
+    }
+    // The same word, with the flag that skips 7.3's once a turn.
+    expect(permits(ok("nature evil force"), { testmode: false }).ok).toBe(false);
+    expect(permits(ok("nature evil force"), { testmode: true }).ok).toBe(true);
   });
 
   it("allows everything once testmode is on", () => {
@@ -491,8 +508,8 @@ suite("finishing a half-typed line", () => {
   });
 
   it("offers only Wrogowie to a fight", () => {
-    expect(tab("fight magiczny")).toEqual({ line: "fight magiczny", options: [] });
-    expect(tab("fight wilko").line).toBe("fight WILKOŁAK ");
+    expect(tab("summon magiczny")).toEqual({ line: "summon magiczny", options: [] });
+    expect(tab("summon wilko").line).toBe("summon WILKOŁAK ");
   });
 
   it("completes a player where a player goes, and after the amount", () => {
@@ -554,7 +571,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   revive: { line: "revive MAGOG", becomes: { kind: "revive", seat: null, characterId: "magog" } },
   nature: {
     line: "nature evil Ola",
-    becomes: { kind: "nature", nature: "evil", who: "Ola" },
+    becomes: { kind: "nature", nature: "evil", who: "Ola", force: false },
   },
   turn: { line: "turn Ola", becomes: { kind: "turn", who: "Ola" } },
   stone: { line: "stone Ola", becomes: { kind: "stone", who: "Ola" } },
@@ -568,7 +585,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     becomes: { kind: "place", cardId: "miecz", fieldId: "karczma" },
   },
   teleport: { line: "teleport Karczma", becomes: { kind: "teleport", fieldId: "karczma" } },
-  fight: { line: "fight WILKOŁAK", becomes: { kind: "fight", cardId: "wilkolak" } },
+  summon: { line: "summon WILKOŁAK", becomes: { kind: "summon", cardId: "wilkolak" } },
   winfight: { line: "winfight", becomes: { kind: "settle", outcome: "wygrana" } },
   wingame: { line: "wingame", becomes: { kind: "endgame", won: true } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
