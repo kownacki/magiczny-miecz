@@ -22,11 +22,18 @@ const LOCAL_SPECS: CommandSpec[] = [
     needs: "play",
     offTable: true,
   },
-  { name: "test", aliases: [], usage: "test [on|off]", summary: "testmode", needs: "play", offTable: true },
+    {
+    name: "testmode",
+    aliases: [],
+    usage: "testmode [on|off]",
+    summary: "overrides",
+    needs: "play",
+    offTable: true,
+  },
   { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", offTable: true },
 ];
 const LOCAL = LOCAL_SPECS.flatMap((spec) => [spec.name, ...spec.aliases]);
-const FAMILIES = { table: ["new", "open", "delete"], test: ["on", "off"] };
+const FAMILIES = { table: ["new", "open", "delete"], testmode: ["on", "off"] };
 /** Mid-turn and unlocked, unless a test says otherwise. */
 const tab = (
   line: string,
@@ -53,7 +60,7 @@ describe("finishing a line at a prompt", () => {
   it("finishes inside a family", () => {
     expect(tab("table o")[0]).toEqual(["table open "]);
     expect(tab("table ")[0]).toEqual(["table new ", "table open ", "table delete "]);
-    expect(tab("test o")[0]).toEqual(["test on ", "test off "]);
+    expect(tab("testmode o")[0]).toEqual(["testmode on ", "testmode off "]);
   });
 
   it("stops at the family's own arguments, which it does not know", () => {

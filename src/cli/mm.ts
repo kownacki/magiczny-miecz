@@ -79,10 +79,10 @@ const LOCAL: CommandSpec[] = [
     offTable: true,
   },
   {
-    name: "test",
+    name: "testmode",
     aliases: [],
-    usage: "test [on|off]",
-    summary: "the commands that overrule the rules; bare `test` says which way it is",
+    usage: "testmode [on|off]",
+    summary: "unlock the commands that overrule the rules; bare `testmode` says which way it is",
     needs: "play",
     offTable: true,
   },
@@ -92,7 +92,7 @@ const LOCAL: CommandSpec[] = [
 /** What each family takes after its noun, for Tab and for the "I know:" answer. */
 const FAMILIES: Record<string, string[]> = {
   table: ["new", "open", "delete"],
-  test: ["on", "off"],
+  testmode: ["on", "off"],
 };
 
 /** Every word this prompt answers to that the game does not, for Tab. */
@@ -333,15 +333,29 @@ async function local(line: string): Promise<boolean> {
     return true;
   }
 
-  if (family === "test") {
+  if (family === "testmode") {
     // Bare `test` says which way it is, because a switch you cannot read is
     // one you have to try.
+    /**
+     * Bare `testmode` reports, and says how to change it — it does not toggle.
+     *
+     * A switch with no argument that flips does opposite things depending on
+     * state you cannot see: you type it to find out where you are, and thereby
+     * turn the rule-breaking commands on. `git config x` reads and
+     * `git config x y` writes for the same reason. What was actually wrong is
+     * that reporting alone left you no better off, so the report carries the
+     * way to act on it.
+     */
     if (verb === "") {
-      say(testmode ? "Testmode: on." : "Testmode: off.");
+      say(
+        testmode
+          ? "Testmode: on. `testmode off` locks the commands that overrule the rules."
+          : "Testmode: off. `testmode on` unlocks the commands that overrule the rules.",
+      );
       return true;
     }
     if (verb !== "on" && verb !== "off") {
-      say("`test on` or `test off`.");
+      say("`testmode on` or `testmode off`.");
       return true;
     }
     testmode = verb === "on";
