@@ -520,6 +520,9 @@ const EXAMPLE: Record<string, string> = {
   "good|evil|chaotic": "good",
   "fog|frozen|barred": "fog",
   "MAGICZNY": "MAGICZNY",
+  "HEŁM": "HEŁM",
+  "KRYSZTAŁ": "KRYSZTAŁ",
+  LOSU: "LOSU",
   "MIECZ": "MIECZ",
   Karczma: "Karczma",
   at: "at",
@@ -631,8 +634,8 @@ suite("finishing a half-typed line", () => {
   });
 
   it("goes as far as the candidates agree, and lists them", () => {
-    // give, go and gold all start here, so there is nothing to add.
-    expect(tab("g")).toEqual({ line: "g", options: ["give", "gold"] });
+    // get, give and gold all start here, so there is nothing to add.
+    expect(tab("g")).toEqual({ line: "g", options: ["get", "give", "gold"] });
     expect(tab("give krysz")).toEqual({
       line: "give KRYSZTAŁ ",
       options: ["KRYSZTAŁ LOSU", "KRYSZTAŁ MAGÓW"],
@@ -727,6 +730,10 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2] } },
   card: { line: "card MAGOG", becomes: { kind: "card", name: "MAGOG" } },
   fight: { line: "fight", becomes: { kind: "fight", cardId: null } },
+  take: { line: "take MAGICZNY MIECZ", becomes: { kind: "take", name: "MAGICZNY MIECZ" } },
+  drop: { line: "drop MAGICZNY MIECZ", becomes: { kind: "putdown", name: "MAGICZNY MIECZ" } },
+  equip: { line: "equip HEŁM", becomes: { kind: "equip", name: "HEŁM", slot: null } },
+  use: { line: "use KRYSZTAŁ LOSU", becomes: { kind: "use", name: "KRYSZTAŁ LOSU" } },
   escape: { line: "escape", becomes: { kind: "escape" } },
   attack: { line: "attack Ola", becomes: { kind: "attack", who: "Ola" } },
   move: { line: "move Karczma", becomes: { kind: "move", fieldId: "karczma" } },

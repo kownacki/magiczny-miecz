@@ -6,6 +6,7 @@ import itemCards from "@/data/items.json";
 import spells from "@/data/spells.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
+import { SLOTS } from "./slots";
 import { findByName, fold } from "./search";
 
 /**
@@ -184,6 +185,11 @@ export type Command =
   | { kind: "fight"; cardId: string | null }
   | { kind: "escape" }
   | { kind: "attack"; who: string }
+  /* What you carry. A name, because a holding's id is a uuid nobody can type. */
+  | { kind: "take"; name: string }
+  | { kind: "putdown"; name: string }
+  | { kind: "equip"; name: string; slot: string | null }
+  | { kind: "use"; name: string }
   /**
    * What a card asked, answered.
    *
@@ -299,6 +305,35 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
+    needs: "play",
+  },
+  {
+    name: "take",
+    aliases: ["get"],
+    when: ["field", "fight"],
+    usage: "take MAGICZNY MIECZ",
+    summary: "pick up a Karta you drew or one lying on your Obszar (12.1, 13.4)",
+    needs: "play",
+  },
+  {
+    name: "drop",
+    aliases: [],
+    usage: "drop MAGICZNY MIECZ",
+    summary: "put one down on the Obszar you are standing on (12.1)",
+    needs: "play",
+  },
+  {
+    name: "equip",
+    aliases: ["wear"],
+    usage: "equip HEŁM [slot]",
+    summary: "put a Przedmiot on — the place is worked out unless it fits two",
+    needs: "play",
+  },
+  {
+    name: "use",
+    aliases: [],
+    usage: "use KRYSZTAŁ LOSU",
+    summary: "spend a Karta that is spent by using it",
     needs: "play",
   },
   {
@@ -592,6 +627,14 @@ const EFFECTS: Record<string, EffectName> = {
 
 /** The three Natury, under the words typed at them. English, like every verb here. */
 /** How a fight ended, as you would say it. The store's words are the rulebook's. */
+/**
+ * The places a Przedmiot can be worn, as words you might type.
+ *
+ * Read off `SLOTS` rather than listed again, so a slot added there is typeable
+ * here without anybody remembering to come back.
+ */
+const SLOT_WORDS = new Set<string>(SLOTS);
+
 const OUTCOMES: Record<string, "wygrana" | "przegrana" | "remis"> = {
   won: "wygrana",
   lost: "przegrana",
@@ -744,7 +787,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    * standing on — which is what a tester wants most of the time, and the only
    * reason the field is optional.
    */
-  if (word === "place" || word === "put" || word === "drop") {
+  if (word === "place" || word === "put") {
     const cut = tail.search(AT);
     const cardPart = cut === -1 ? tail : tail.slice(0, cut);
     const fieldPart = cut === -1 ? "" : tail.slice(cut).replace(AT, "");
@@ -916,6 +959,30 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "card" || word === "read" || word === "x") {
     if (!tail) return needs("card", "Which card?");
     return { ok: { kind: "card", name: tail } };
+  }
+
+  if (word === "take" || word === "get") {
+    return tail ? { ok: { kind: "take", name: tail } } : needs("take", "Take what?");
+  }
+  // `drop` is the lawful one: `place` conjures a card onto a field and this puts
+  // down one you are holding. The kind is `putdown` because `place` had the
+  // obvious name first.
+  if (word === "drop") {
+    return tail ? { ok: { kind: "putdown", name: tail } } : needs("drop", "Drop what?");
+  }
+  if (word === "use") {
+    return tail ? { ok: { kind: "use", name: tail } } : needs("use", "Use what?");
+  }
+  if (word === "equip" || word === "wear") {
+    if (!tail) return needs("equip", "Wear what?");
+    // The slot last, the way `force` and `hard` are: it is about where the
+    // card goes rather than which card it is, and most cards fit one place.
+    const parts = tail.split(/\s+/);
+    const last = parts[parts.length - 1].toLowerCase();
+    const slot = parts.length > 1 && SLOT_WORDS.has(last) ? last : null;
+    const named = (slot === null ? parts : parts.slice(0, -1)).join(" ");
+    if (!named) return needs("equip", "Wear what?");
+    return { ok: { kind: "equip", name: named, slot } };
   }
 
   if (word === "escape" || word === "flee") return { ok: { kind: "escape" } };
@@ -1297,6 +1364,10 @@ const NEEDS: Record<Command["kind"], Capability> = {
   fight: "play",
   escape: "play",
   attack: "play",
+  take: "play",
+  putdown: "play",
+  equip: "play",
+  use: "play",
   ready: "play",
   start: "play",
   me: "play",

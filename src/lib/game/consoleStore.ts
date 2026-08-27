@@ -34,6 +34,8 @@ import {
   adjust,
   attackSeat,
   beginFight,
+  dropCard,
+  equipCard,
   escape,
   fightRoll,
   changeNature,
@@ -51,12 +53,17 @@ import {
   removeCharacter,
   resolveFight,
   reviveCharacter,
+  spendHolding,
+  takeCard,
+  takeFromField,
   stageFight,
   takeNewCharacter,
   turnToStone,
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { fitsIn, slotsFor, type Slot } from "@/lib/engine/slots";
+import { fold } from "@/lib/engine/search";
 
 /**
  * The third edge, beside `turnStore.ts` and `lobbyStore.ts`.
@@ -179,6 +186,30 @@ export function cardLines(name: string): string[] {
   if ("lines" in found) return found.lines;
   if ("candidates" in found) throw new Error(`Which one — ${found.candidates.join(", ")}?`);
   throw new Error(`No card called \`${found.missing}\`.`);
+}
+
+/** Whether a card id is the card somebody just named. */
+function sameName(cardId: string, said: string): boolean {
+  return fold(cardName(cardId)) === fold(said.trim());
+}
+
+/**
+ * One of this seat's holdings, by the name printed on it.
+ *
+ * A holding's id is a uuid and a person types a name, so every verb that acts
+ * on something carried goes through here. Two copies of the same card are the
+ * same card as far as this is concerned — the first is as good as the second.
+ */
+async function holdingNamed(gameId: string, seatId: string, said: string) {
+  const snapshot = await activeStore().load(gameId);
+  const mine = snapshot.holdings.filter((one) => one.seat_id === seatId);
+  const hit = mine.find((one) => sameName(one.card_id, said));
+  if (hit) return hit;
+  const near = mine.filter((one) => fold(cardName(one.card_id)).startsWith(fold(said.trim())));
+  if (near.length > 0) {
+    throw new Error(`Which one — ${near.map((one) => cardName(one.card_id)).join(", ")}?`);
+  }
+  throw new Error(`You are not holding \`${said}\`.`);
 }
 
 export interface Actor {
@@ -671,6 +702,79 @@ export async function runCommand(
     }
 
     /* ----------------------------------------------------------------------
+     * What you carry. A holding's id is a uuid, so everything here is named by
+     * the card and resolved against what this seat is actually holding.
+     * ------------------------------------------------------------------- */
+
+    /**
+     * Off the turn's draw, or off the Obszar you are standing on.
+     *
+     * One verb for both because from where somebody is sitting there is one
+     * act — that card, into my hands — and which pile the app is holding it in
+     * is the app's business. The browser has two buttons because it draws the
+     * two places differently.
+     */
+    case "take": {
+      const seat = seatOf(null);
+      const snapshot = await activeStore().load(gameId);
+      const state = snapshot.game.turn_state as {
+        drawn?: { cardId: string }[];
+        resolved?: string[];
+      };
+
+      const drawn = (state.drawn ?? []).filter(
+        (one) => !(state.resolved ?? []).includes(one.cardId),
+      );
+      const hitDrawn = drawn.find((one) => sameName(one.cardId, command.name));
+      if (hitDrawn) {
+        await takeCard(gameId, seat.id, hitDrawn.cardId);
+        return `${named(seat)} takes ${cardName(hitDrawn.cardId)}.`;
+      }
+
+      const here = snapshot.fieldCards.filter((one) => one.field_id === seat.field_id);
+      const hitField = here.find((one) => sameName(one.card_id, command.name));
+      if (!hitField) throw new Error(`Nothing here called \`${command.name}\`.`);
+      await takeFromField(gameId, seat.id, hitField.id);
+      return `${named(seat)} takes ${cardName(hitField.card_id)} off the Obszar.`;
+    }
+
+    case "putdown": {
+      const seat = seatOf(null);
+      const held = await holdingNamed(gameId, seat.id, command.name);
+      await dropCard(gameId, held.id);
+      return `${named(seat)} puts ${cardName(held.card_id)} down.`;
+    }
+
+    case "use": {
+      const seat = seatOf(null);
+      const held = await holdingNamed(gameId, seat.id, command.name);
+      const done = await spendHolding(gameId, held.id);
+      return [`${named(seat)} uses ${cardName(held.card_id)}.`, ...(done.did ?? [])].join("\n");
+    }
+
+    case "equip": {
+      const seat = seatOf(null);
+      const held = await holdingNamed(gameId, seat.id, command.name);
+      /**
+       * The place is worked out from the card, and only asked for when it
+       * genuinely fits two — `slotsFor` already knows, so making somebody name
+       * a slot for a Hełm would be asking a question with one answer.
+       */
+      const fits = slotsFor(held.card_id);
+      if (command.slot === null && fits.length > 1) {
+        throw new Error(`Where — ${fits.join(", ")}?`);
+      }
+      const slot = (command.slot ?? fits[0] ?? null) as Slot | null;
+      if (slot !== null && !fitsIn(held.card_id, slot)) {
+        throw new Error(`${cardName(held.card_id)} does not go in ${slot}.`);
+      }
+      await equipCard(gameId, held.id, slot);
+      return slot === null
+        ? `${named(seat)} carries ${cardName(held.card_id)}.`
+        : `${named(seat)} wears ${cardName(held.card_id)} — ${slot}.`;
+    }
+
+    /* ----------------------------------------------------------------------
      * Encounters, played rather than decided. `summon` and `settle` below are
      * the testmode pair: one conjures a Wróg, the other writes an outcome. The
      * three here do neither — they throw the dice the rules throw.
@@ -1058,11 +1162,19 @@ export async function runCommand(
       const own = seat.id === actor.seatId;
       const spells = mine.filter((one) => one.kind === "spell");
       const items = mine.filter((one) => one.kind !== "spell");
+      const worn = items.filter((one) => one.slot !== null);
+      const carried = items.filter((one) => one.slot === null);
       return [
         `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
         `Sword ${seat.sword_own}  Magic ${seat.magic_own}  Life ${seat.life}  Gold ${seat.gold}`,
         `Nature: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
-        `Pack: ${items.length ? items.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,
+        // Worn and carried are different places — 5.1 and the slot variant both
+        // turn on which — and listing a Hełm you are wearing under "Pack" said
+        // equipping it had not worked.
+        ...(worn.length
+          ? [`Worn: ${worn.map((one) => `${cardName(one.card_id)} (${one.slot})`).join(", ")}`]
+          : []),
+        `Pack: ${carried.length ? carried.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,
         own
           ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`
           : `Zaklęcia: ${spells.length} (face down — 9.3)`,
