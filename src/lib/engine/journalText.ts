@@ -239,6 +239,18 @@ const tury = (n: number) => `${n} ${plural(n, "turę", "tury", "tur")}`;
  * this is where it has to be masked. Casting is not that case — 12.5 has the
  * spell spoken aloud, so a cast names its card.
  */
+/**
+ * The name a line carried with it, rather than the row it came from.
+ *
+ * Every line about a *person* copies it, because the row is deleted when they
+ * are swept or kicked and a journal that goes blank when somebody leaves is
+ * blank in the one case it was written for. One reader for all of them, so a
+ * new one cannot forget the fallback and render "undefined robi coś".
+ */
+function nameIn(data: Record<string, unknown>): string {
+  return typeof data.name === "string" && data.name ? data.name : "Ktoś";
+}
+
 export function describe(
   entry: JournalEntry,
   seats: readonly JournalSeat[],
@@ -301,7 +313,7 @@ export function describe(
     refs: refs.length > 0 ? refs : undefined,
     // Every line at once, because it hangs off the kind. A sentence given its
     // number by hand is a sentence that gets one when somebody remembers.
-    rule: ruleForKind(entry.kind) ?? undefined,
+    rule: ruleForKind(entry.kind, data) ?? undefined,
   });
 
   switch (entry.kind) {
@@ -625,6 +637,28 @@ export function describe(
      * Spectators get a line too. Six seats is a limit on Postacie, not on
      * people (LOBBY.md), and somebody watching is somebody at the table.
      */
+    /**
+     * The four things that happen to a *room* rather than to a game.
+     *
+     * They were silent, and the poczekalnia is where they all happen — so the
+     * Dziennik now hangs there too. A record of setting up that can only be
+     * read once setting up is over is a record of the wrong thing.
+     *
+     * Each carries its own copy of the name, like `left-table` and
+     * `joined-table` before them: the user row is deleted when somebody is
+     * swept or kicked, and a line that pointed at it would go blank exactly
+     * when somebody wanted to read it.
+     */
+    case "took-seat":
+      return line(`${nameIn(data)} siada na miejscu ${Number(data.seatIndex) + 1}.`);
+    case "left-seat":
+      return line(`${nameIn(data)} wstaje od stołu, ale zostaje w pokoju.`);
+    case "new-host":
+      return line(
+        data.taken === true
+          ? `${nameIn(data)} przejmuje rolę gospodarza.`
+          : `${nameIn(data)} zostaje gospodarzem.`,
+      );
     case "joined-table": {
       const who = typeof data.name === "string" && data.name ? data.name : "Ktoś";
       return line(
@@ -647,7 +681,12 @@ export function describe(
      * gone by the time anybody reads this.
      */
     case "left-table": {
-      const name = typeof data.name === "string" && data.name ? data.name : "Ktoś";
+      const name = nameIn(data);
+      // Three ways off a table and the third used to be silent: swept for going
+      // quiet, which deletes the row without anybody deciding anything. Saying
+      // "odchodzi od stołu" about that would credit them with a choice they did
+      // not make, in the log somebody reads to find out where they went.
+      if (data.swept === true) return line(`${name} znika ze stołu — cisza zbyt długa.`);
       return line(
         data.kicked === true ? `${name} zostaje usunięty od stołu.` : `${name} odchodzi od stołu.`,
       );

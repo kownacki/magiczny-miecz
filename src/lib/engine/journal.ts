@@ -61,6 +61,12 @@ export const JOURNAL_KINDS = [
    * Postać entering play — and the gap between the two is usually minutes.
    */
   "joined-table",
+  /** Somebody sat down in a chair. Not `joined` — no Postać is chosen yet. */
+  "took-seat",
+  /** Out of the chair, still in the room. Not `left-table`, which is the person going. */
+  "left-seat",
+  /** The host role moved, whether handed over or taken from somebody who had gone. */
+  "new-host",
   /** Somebody left the table, or was put out of it. Not the same as `left-behind`. */
   "left-table",
   "left-behind",

@@ -161,7 +161,7 @@ describe("who takes over the table", () => {
 describe("handing the role over", () => {
   it("does nothing when the person leaving was never running the table", () => {
     const people = here({}, {});
-    expect(promoteHost(people, people[1])).toEqual({});
+    expect(promoteHost(people, people[1], 3)).toEqual({});
   });
 
   it("hands it over rather than copying it", () => {
@@ -172,10 +172,21 @@ describe("handing the role over", () => {
      * nothing, which is why removals are applied first.
      */
     const people = here({}, {});
-    expect(promoteHost(people, people[0])).toEqual({
+    expect(promoteHost(people, people[0], 3)).toEqual({
       users: [
         { id: "usr-1", patch: { is_host: true } },
         { id: "usr-0", patch: { is_host: false } },
+      ],
+      // Nobody chose this: the host left or went quiet, and the role went to
+      // whoever had been here longest. `taken` is `takeHostRole`'s, for the
+      // other door — somebody picking it up deliberately.
+      journal: [
+        {
+          seatId: null,
+          turn: 3,
+          kind: "new-host",
+          payload: { name: "Gracz 2", from: "Gracz 1" },
+        },
       ],
     });
   });
@@ -184,7 +195,7 @@ describe("handing the role over", () => {
     // Better a table hosted by an absent person than a table hosted by nobody:
     // the second cannot be recovered, and `takeHostRole` can rescue the first.
     const people = here({}, { left_at: at(0) });
-    expect(promoteHost(people, people[0])).toEqual({});
+    expect(promoteHost(people, people[0], 3)).toEqual({});
   });
 });
 
@@ -275,18 +286,43 @@ describe("out of the chair, still at the table", () => {
       users: here(...people),
     });
 
-  it("releases the seat and touches nothing else", () => {
+  it("releases the seat, writes it down, and touches no other row", () => {
     /**
      * A player walking away is not a Postać dying. The figure stays on its
      * Obszar with its points, its Przedmioty and its Przyjaciele, because other
      * players may already have acted on all of them — 4.4's death is a
      * different event with different consequences.
+     *
+     * The line is the whole of what else it does. Standing up is one of the
+     * four things that happen in a room rather than in a game, and all four
+     * were silent until the Dziennik was hung in the poczekalnia where they
+     * happen.
      */
     const { writes, result } = unseat(playing([{}, {}], 2, 1), { userId: "usr-0" });
-    expect(writes).toEqual({ users: [{ id: "usr-0", patch: { seat_index: null } }] });
+    expect(writes.users).toEqual([{ id: "usr-0", patch: { seat_index: null } }]);
+    expect(writes.journal).toEqual([
+      {
+        seatId: "seat-0",
+        turn: 3,
+        kind: "left-seat",
+        payload: { name: "Gracz 1", seatIndex: 0 },
+      },
+    ]);
     expect(writes.seats).toBeUndefined();
     expect(writes.seatsRemoved).toBeUndefined();
     expect(result).toEqual({ removed: false, passedTo: null, gameFinished: false });
+  });
+
+  it("writes no line of its own when it is the first half of leaving", () => {
+    // Otherwise walking away from a table says two things about one act:
+    // "wstaje od stołu" and then "odchodzi od stołu". `leaveTable` writes the
+    // second and this stays quiet for it.
+    const { writes } = unseat(playing([{}, {}], 2, 1), {
+      userId: "usr-0",
+      partOfLeaving: true,
+    });
+    expect(writes.journal).toBeUndefined();
+    expect(writes.users).toEqual([{ id: "usr-0", patch: { seat_index: null } }]);
   });
 
   it("does nothing to somebody who was already driving nothing", () => {
@@ -460,7 +496,17 @@ describe("sitting down", () => {
       { userId: "usr-1", seatIndex: 1 },
       clock(),
     );
-    expect(writes).toEqual({ users: [{ id: "usr-1", patch: { seat_index: 1 } }] });
+    expect(writes.users).toEqual([{ id: "usr-1", patch: { seat_index: 1 } }]);
+    // The chair, and only the chair. `joined` is the line for choosing a
+    // Postać, and that is usually minutes later.
+    expect(writes.journal).toEqual([
+      {
+        seatId: "seat-1",
+        turn: 3,
+        kind: "took-seat",
+        payload: { name: "Gracz 2", seatIndex: 1 },
+      },
+    ]);
   });
 
   it("writes nothing when they are already in it", () => {
@@ -814,6 +860,40 @@ describe("sweeping the poczekalnia", () => {
     );
     expect(result.gameGone).toBe(false);
   });
+
+    it("writes a line for each person it removes", () => {
+      const { writes } = sweepLobby(
+        lobby(watching, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }),
+        undefined,
+        clock(),
+      );
+
+      expect(writes.usersRemoved).toEqual(["usr-1"]);
+      expect(writes.journal).toEqual([
+        {
+          seatId: null,
+          turn: 3,
+          kind: "left-table",
+          payload: { user: "usr-1", name: "Gracz 2", kicked: false, swept: true },
+        },
+      ]);
+    });
+
+    it("says it was the silence and not a decision", () => {
+      // `kicked: false` alone renders "odchodzi od stołu", which credits somebody
+      // with a choice they did not make. `swept` is what tells the reader that
+      // nobody decided anything.
+      const line = sweepLobby(
+        lobby(watching, { seen_at: at(LOBBY_GONE_AFTER_MS + 1) }),
+        undefined,
+        clock(),
+      ).writes.journal?.[0];
+      expect(line?.payload).toMatchObject({ swept: true, kicked: false });
+    });
+
+    it("writes nothing when nobody has gone quiet enough to remove", () => {
+      expect(sweepLobby(lobby(watching, watching), undefined, clock()).writes.journal).toBeUndefined();
+    });
 });
 
 describe("the cheap question asked on every poll", () => {
@@ -904,3 +984,12 @@ describe("somebody arriving at the table", () => {
     expect(line?.payload).not.toHaveProperty("user");
   });
 });
+
+/**
+ * The sweep, which used to take people off the table without a word.
+ *
+ * It is the third way somebody leaves — walking away writes `left-table`, being
+ * kicked writes it with `kicked`, and going quiet long enough deleted the row
+ * and said nothing at all. A name disappearing off the roster with no account
+ * of why is exactly what the journal is opened to settle.
+ */

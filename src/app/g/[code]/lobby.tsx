@@ -54,6 +54,7 @@ export function Lobby({
   seats: seatsFromServer,
   users,
   mySeatIndex,
+  journal,
   characters,
   pickingFor,
   pendingCharacterId,
@@ -79,6 +80,15 @@ export function Lobby({
   /** Everybody here, seated or not — see `watching` below. */
   users: { id: string; name: string; seatIndex: number | null; away: boolean }[];
   mySeatIndex: number | null;
+  /**
+   * The Dziennik, passed in rather than built here.
+   *
+   * It fetches for itself off the revision counter and needs nothing this
+   * component knows, but it needs the table's code and this one is handed a
+   * join code for display — so the owner of the fetch is `page.tsx`, the same
+   * as at the table.
+   */
+  journal?: React.ReactNode;
   characters: Character[];
   pickingFor: LobbySeat | null;
   /** Asked for, not yet granted. Everything else in the strip waits with it. */
@@ -406,6 +416,22 @@ export function Lobby({
               />
             </label>
           )}
+
+          {/**
+           * The Dziennik, in the space this column was already holding open.
+           *
+           * The poczekalnia had no journal at all, which made every line
+           * written before the first turn a line nobody could read until the
+           * board appeared — and the ones written here are exactly the ones
+           * about *this* room: who arrived, who sat down, who stood up again,
+           * who is running the table. A record of setting up that you can only
+           * read once setting up is over is a record of the wrong thing.
+           *
+           * `relative`, because expanding it is `absolute inset-0` and wants an
+           * ancestor to be inset-zero *of*. Without one it would lay itself over
+           * the whole page rather than over this column.
+           */}
+          {journal && <div className="relative flex min-h-0 flex-1 flex-col">{journal}</div>}
 
           <div className="mt-auto flex min-h-0 flex-col items-center justify-end">
             <ReadingCard reading={reading} character={cardFor(reading)} />

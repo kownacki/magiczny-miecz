@@ -139,7 +139,18 @@ export function nextHost(users: readonly UserRow[], leaving: UserRow): UserRow |
  * outgoing seat is being removed in the same change the demotion patch lands on
  * nothing, which is exactly why removals are applied first (see `seatsRemoved`).
  */
-export function promoteHost(users: readonly UserRow[], leaving: UserRow): Changeset {
+export function promoteHost(
+  users: readonly UserRow[],
+  leaving: UserRow,
+  /**
+   * Which turn to file the line under.
+   *
+   * Required rather than optional, so that adding the journal line here could
+   * not silently miss a caller: both of them — somebody leaving, and the sweep
+   * — have a snapshot to hand and the compiler named them.
+   */
+  turn: number,
+): Changeset {
   if (!leaving.is_host) return {};
   const candidate = nextHost(users, leaving);
   if (!candidate) return {};
@@ -147,6 +158,17 @@ export function promoteHost(users: readonly UserRow[], leaving: UserRow): Change
     users: [
       { id: candidate.id, patch: { is_host: true } },
       { id: leaving.id, patch: { is_host: false } },
+    ],
+    journal: [
+      {
+        seatId: null,
+        turn,
+        kind: "new-host",
+        // Nobody chose this one: the host walked away or went quiet, and the
+        // role goes to whoever has been here longest. `taken` is the other
+        // door — see `takeHostRole`.
+        payload: { name: candidate.name, from: leaving.name },
+      },
     ],
   };
 }
@@ -280,13 +302,40 @@ function playsNext(snapshot: Snapshot, seatIndex: number): number | null {
  * Play does not stop for an empty chair but must not wait on one either: if it
  * was that seat's turn, it moves on.
  */
-export function unseat(snapshot: Snapshot, command: { userId: string }): Outcome<LeaveResult> {
+export function unseat(
+  snapshot: Snapshot,
+  command: {
+    userId: string;
+    /**
+     * True when this is the first half of `leaveTable`, which writes its own
+     * line. Without it, walking away from a table produces two: "wstaje od
+     * stołu" and then "odchodzi od stołu", about one act. Standing up and
+     * staying is the case that wants a line of its own.
+     */
+    partOfLeaving?: boolean;
+  },
+): Outcome<LeaveResult> {
   const user = userOf(snapshot, command.userId);
   if (user.seat_index === null) {
     return { writes: {}, result: { removed: false, passedTo: null, gameFinished: false } };
   }
 
-  const released: Changeset = { users: [{ id: user.id, patch: { seat_index: null } }] };
+  const noted: Changeset = command.partOfLeaving
+    ? {}
+    : {
+        journal: [
+          {
+            seatId: snapshot.seats.find((seat) => seat.seat_index === user.seat_index)?.id ?? null,
+            turn: snapshot.game.turn,
+            kind: "left-seat",
+            payload: { name: user.name, seatIndex: user.seat_index },
+          },
+        ],
+      };
+
+  const released: Changeset = merge(noted, {
+    users: [{ id: user.id, patch: { seat_index: null } }],
+  });
   if (snapshot.game.active_seat !== user.seat_index) {
     return { writes: released, result: { removed: false, passedTo: null, gameFinished: false } };
   }
@@ -371,7 +420,7 @@ export function leaveTable(
     const by = userOf(snapshot, command.byUser);
     if (!by.is_host) throw new Error("Tylko gospodarz może usunąć kogoś ze stołu.");
   }
-  const stood = unseat(snapshot, { userId: user.id });
+  const stood = unseat(snapshot, { userId: user.id, partOfLeaving: true });
   const after = apply(snapshot, stood.writes);
 
   const gone: Changeset = {
@@ -387,7 +436,7 @@ export function leaveTable(
   };
 
   return {
-    writes: mergeAll(stood.writes, promoteHost(after.users, user), gone),
+    writes: mergeAll(stood.writes, promoteHost(after.users, user, snapshot.game.turn), gone),
     result: { ...stood.result, removed: true },
   };
 }
@@ -421,8 +470,19 @@ export function takeSeat(
     ? { users: [{ id: driver.id, patch: { seat_index: null } }] }
     : {};
   return {
-    writes: merge(displaced, {
+    writes: mergeAll(displaced, {
       users: [{ id: user.id, patch: { seat_index: command.seatIndex } }],
+    }, {
+      journal: [
+        {
+          seatId: snapshot.seats.find((seat) => seat.seat_index === command.seatIndex)?.id ?? null,
+          turn: snapshot.game.turn,
+          kind: "took-seat",
+          // The chair, not the Postać: nothing has been chosen yet, and
+          // `joined` is the line for that — usually minutes later.
+          payload: { name: user.name, seatIndex: command.seatIndex },
+        },
+      ],
     }),
     result: undefined,
   };
@@ -456,6 +516,21 @@ export function takeHostRole(
       users: [
         { id: target.id, patch: { is_host: true } },
         ...(host ? [{ id: host.id, patch: { is_host: false } }] : []),
+      ],
+      journal: [
+        {
+          seatId: null,
+          turn: snapshot.game.turn,
+          kind: "new-host",
+          // `taken` separates the two doors this command is: the host handing
+          // it over, and somebody picking it up because the host has gone. A
+          // table reading the log later wants to know which happened.
+          payload: {
+            name: target.name,
+            ...(host ? { from: host.name } : {}),
+            taken: host ? host.id !== by.id : false,
+          },
+        },
       ],
     },
     result: undefined,
@@ -614,7 +689,7 @@ export function sweepLobby(
   const host = snapshot.users.find((one) => one.is_host);
   const handover =
     host && (goneIds.has(host.id) || isQuiet(host, now, HOST_MISSING_AFTER_MS))
-      ? promoteHost(staying, host)
+      ? promoteHost(staying, host, snapshot.game.turn)
       : {};
 
   if (gone.length === 0) return { writes: handover, result: { gameGone: false } };
@@ -640,6 +715,29 @@ export function sweepLobby(
   return {
     writes: mergeAll(
       { usersRemoved: [...goneIds] },
+      /**
+       * A line each, because otherwise people simply stopped existing.
+       *
+       * The sweep is the third way somebody leaves a table and it was the only
+       * silent one: walking away writes `left-table` and being kicked writes it
+       * with `kicked`, while going quiet long enough deleted the row and said
+       * nothing. To everybody still in the room a name disappeared off the
+       * roster with no account of why — which is exactly the kind of thing the
+       * journal is opened to settle.
+       *
+       * The same kind rather than a fourth: they have left the table, and how
+       * is the payload's business. The name is copied for the usual reason,
+       * and here it is not even a precaution — the row is being deleted in this
+       * very changeset.
+       */
+      {
+        journal: gone.map((one) => ({
+          seatId: null,
+          turn: snapshot.game.turn,
+          kind: "left-table" as const,
+          payload: { user: one.id, name: one.name, kicked: false, swept: true },
+        })),
+      },
       chairs.length > 0 ? { seatsRemoved: chairs } : {},
       gameGone ? {} : handover,
     ),

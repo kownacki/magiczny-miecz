@@ -29,6 +29,9 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   /** People arriving, leaving and correcting: the poczekalnia's, not the box's. */
   joined: null,
   "joined-table": null,
+  "took-seat": null,
+  "left-seat": null,
+  "new-host": null,
   "left-table": null,
   override: null,
   "moved-by-hand": null,
