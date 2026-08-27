@@ -59,7 +59,7 @@ const facing = (foe: string, cards: string[] = []) =>
 
 const rolled = async (table: ReturnType<typeof inFight>, side: "player" | "enemy" = "player") => {
   const out = await fightRoll(table, { side }, ports({ random: scriptedRandom([3]) }));
-  return (out.writes.journal?.[0] as { payload: { roll: number } }).payload.roll;
+  return (out.writes.journal?.[0] as unknown as { payload: { roll: number } }).payload.roll;
 };
 
 const totalIn = (writes: { game?: { turn_state?: unknown } }) =>

@@ -174,7 +174,18 @@ async function walk(
     };
   }
 
-  if (!isSettled(effect)) return owed();
+  /**
+   * A loss the holder must choose from is unsettled until they have chosen —
+   * and an answer waiting in the queue is them having chosen. 5.6 makes which
+   * card goes their decision, so it arrives the same way every other decision
+   * does, and the branch below takes it out of the queue.
+   *
+   * Written here rather than inside `isSettled` because that function is the
+   * browser's too and answers about an effect alone, with no decisions in hand.
+   */
+  const holderPicks =
+    effect.op === "strata" && !isSettled(effect) && (decided.choices?.length ?? 0) > 0;
+  if (!isSettled(effect) && !holderPicks) return owed();
 
   switch (effect.op) {
     case "nic":
@@ -399,10 +410,20 @@ async function walk(
           rolls.push(await pickBelow(ports.random, candidates - i, "strata: co przepada"));
         }
         let next = 0;
-        // Null means the holder has to pick, which 5.6 makes their right. It
-        // should not reach here — `isSettled` asks first — but a card that
-        // starts saying "wybierz" tomorrow should stop, not choose for somebody.
-        const gone = chooseLosses(mine, effect, () => rolls[next++] ?? 0);
+        /**
+         * Chance answers from the dice; the holder answers from the queue.
+         *
+         * 5.6 makes which card goes the holder's own decision, and the two are
+         * answered the same way — an index into the candidates, clamped by
+         * `chooseLosses` — so the only difference is where the number comes
+         * from. A `ty` loss with nothing left in the queue gets null back and
+         * stays pending, which is the question being asked rather than a card
+         * being taken on the player's behalf.
+         */
+        const gone =
+          effect.wybor === "losowo"
+            ? chooseLosses(mine, effect, () => rolls[next++] ?? 0)
+            : chooseLosses(mine, effect, () => decided.choices?.shift() ?? null);
         if (gone === null) return { writes, result: { did: [], pending: effect } };
 
         const gold = goldLost(effect, row.gold);

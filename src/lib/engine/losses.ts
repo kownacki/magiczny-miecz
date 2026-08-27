@@ -65,7 +65,14 @@ export function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
 export function chooseLosses(
   holdings: readonly Losable[],
   loss: Loss,
-  pick: (upTo: number) => number = () => 0,
+  /**
+   * Which of the candidates goes. Null means it has not been answered yet.
+   *
+   * Defaulting to null rather than to the first card is the point: an
+   * unanswered choice must stay a question. A caller that means chance hands in
+   * a die, and a caller that means the holder hands in what they picked.
+   */
+  pick: (upTo: number) => number | null = () => null,
 ): string[] | null {
   const kind = reachableBy(loss.co);
   if (kind === null) return [];
@@ -82,8 +89,19 @@ export function chooseLosses(
   }
 
   const wanted = Math.min(loss.count ?? 1, candidates.length);
-  if (loss.wybor !== "losowo") return null;
 
+  /**
+   * 5.6 gives the choice of what to give up to the holder, so a loss the card
+   * does not assign to chance is asked rather than taken — and `pick` is how it
+   * is answered, exactly as it answers a roll. Null back means nobody has
+   * answered yet, which is what keeps the effect pending instead of quietly
+   * costing the first card in the pack.
+   *
+   * Before this, a holder's choice returned null unconditionally and nothing
+   * could ever answer it. No card in the box used the shape, so it went
+   * unnoticed until the Bagna needed it — and a field that can never be settled
+   * is a turn that cannot end.
+   */
   const left = [...candidates];
   const taken: string[] = [];
   for (let i = 0; i < wanted; i++) {
@@ -91,7 +109,16 @@ export function chooseLosses(
     // a predictable card, not throw in the middle of resolving one. NaN needs
     // saying out loud — it survives Math.max and Math.min untouched, and then
     // indexes the array to undefined.
-    const asked = pick(left.length);
+    /**
+     * The two kinds of unanswered are not the same.
+     *
+     * A loss the card gives to chance always has an answer — a caller with no
+     * die falls back to the first candidate, as it always did. A loss the
+     * holder chooses stays a question until they answer it, which is what keeps
+     * the effect pending rather than costing them a card they never picked.
+     */
+    const asked = pick(left.length) ?? (loss.wybor === "losowo" ? 0 : null);
+    if (asked === null) return null;
     const at = Number.isFinite(asked)
       ? Math.min(Math.max(0, Math.trunc(asked)), left.length - 1)
       : 0;

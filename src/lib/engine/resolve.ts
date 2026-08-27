@@ -144,5 +144,18 @@ function owedIn(effect: Effect, queue: number[]): Effect | null {
   // it lands on is asked about after the roll, from the server's answer.
   if (effect.op === "rzut") return null;
 
+  /**
+   * A loss the holder chooses from takes one answer per card it will cost, the
+   * same as any other decision — so the queue is drawn down here too, or a
+   * `po-kolei` after one would read the wrong answers for itself.
+   */
+  if (effect.op === "strata" && !isSettled(effect)) {
+    const wanted = effect.count ?? 1;
+    for (let i = 0; i < wanted; i++) {
+      if (queue.shift() === undefined) return effect;
+    }
+    return null;
+  }
+
   return isSettled(effect) ? null : effect;
 }

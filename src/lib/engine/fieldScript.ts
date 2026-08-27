@@ -77,6 +77,28 @@ const CZAROWNICA: Effect = {
   },
 };
 
+/**
+ * The Bagna, which both Obszary print identically.
+ *
+ * "wedle własnego wyboru" is the holder's choice of *kind* first, and then of
+ * card — 5.6 makes which one goes theirs to decide, so neither `strata` rolls
+ * for it. A character with nothing of the kind they picked loses nothing, which
+ * is what the rule says and not a bug to be worked around.
+ */
+const BAGNA: Effect = {
+  op: "wybor",
+  options: [
+    {
+      label: "Tracisz Przedmiot",
+      effect: { op: "strata", co: "przedmiot", count: 1, wybor: "ty" },
+    },
+    {
+      label: "Tracisz Przyjaciela",
+      effect: { op: "strata", co: "przyjaciel", count: 1, wybor: "ty" },
+    },
+  ],
+};
+
 export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   osada: {
     offers: [
@@ -220,6 +242,44 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
         },
       },
     ],
+  },
+
+  /* ------------------------------------------------------------------------
+   * Obszary that simply do something to whoever stops there.
+   *
+   * `obowiazkowe` on all of them: the board states these flat, with no "MOŻESZ"
+   * anywhere, so they are not a service anybody chooses to visit. Until these
+   * existed the Ruchome Skały cost nothing and the Bagna took nothing — the
+   * printed text was shown and the players applied it themselves — which also
+   * left the cards that guard against them (Rękawice, Kij i Sznur, Relikwiarz)
+   * with nothing to guard against.
+   * --------------------------------------------------------------------- */
+
+  // "Tracisz 1 Życie." The Rękawice and the Święty Graal both keep it.
+  "ruchome-skaly-1": {
+    obowiazkowe: true,
+    offers: [{ name: "Ruchome Skały", effect: { op: "punkty", stat: "life", delta: -1 } }],
+  },
+  "ruchome-skaly-2": {
+    obowiazkowe: true,
+    offers: [{ name: "Ruchome Skały", effect: { op: "punkty", stat: "life", delta: -1 } }],
+  },
+
+  /**
+   * "Tracisz 1 z Przedmiotów (również Magicznych) lub 1 z Przyjaciół, wedle
+   * własnego wyboru."
+   *
+   * The choice is the holder's twice over — which kind, and then which card —
+   * so it is a `wybor` between two `strata`, each picked `ty`. The Kij i Sznur
+   * takes the whole thing away.
+   */
+  "bagna-1": {
+    obowiazkowe: true,
+    offers: [{ name: "Bagna", effect: BAGNA }],
+  },
+  "bagna-2": {
+    obowiazkowe: true,
+    offers: [{ name: "Bagna", effect: BAGNA }],
   },
 
 };
