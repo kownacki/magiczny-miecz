@@ -425,6 +425,32 @@ depending on state you cannot see.
 - **Names are matched as printed**, case- and accent-insensitively, and the
   rest of the line is one name: `give swiety graal` finds ŚWIĘTY GRAAL.
 
+### What the audit found
+
+Written down because these are the shapes that drift back in. Every one was
+already there when the conventions were settled:
+
+- **`exit` meant two things.** `leave|exit` left the table and `quit|exit` left
+  the program, and `mm` checks its own commands first — so the alias was dead
+  in the terminal and live in the browser, and which you got depended on where
+  you typed it. `leave` lost the alias; quitting keeps it.
+- **`winfight` / `losefight` / `drawfight` and `wingame` / `losegame` were
+  compound verbs**, five words flattening an argument the engine already models
+  as one: the kinds have always been `settle` + outcome and `endgame` + won. Now
+  `settle won|lost|draw` and `endgame won|lost`.
+- **`a` for `answer`** was a fourth single-letter alias. The three are IF's.
+
+### Known, and left
+
+- **`gold|sword|magic|life`** prints as though those were four names for one
+  command, and they are four different parameters. The alias mechanism is doing
+  something it is not shaped for. The summary says "move a parameter", which
+  carries it; splitting them into four specs would repeat one usage line four
+  times to fix a comma.
+- **`turn <player>`** means "pass until it is their turn", which reads oddly
+  next to `endturn`. It is a testmode verb and rare; renaming it would cost more
+  than the confusion does.
+
 ### What we deliberately do not do
 
 - **No `\q` or `.exit` sigils.** psql and node need them to separate meta from a

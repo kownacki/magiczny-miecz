@@ -289,7 +289,10 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "answer",
     when: ["field"],
-    aliases: ["a"],
+    // No `a`: the single-letter aliases are interactive fiction's own three —
+    // l, i, x — and a letter that saves nothing costs a word somebody else
+    // wanted.
+    aliases: [],
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
     needs: "play",
@@ -350,7 +353,17 @@ export const COMMANDS: CommandSpec[] = [
     summary: "put somebody out of the table",
     needs: "play",
   },
-  { name: "leave", aliases: ["exit"], usage: "leave", summary: "go, by your own choice", needs: "play" },
+  {
+    // No `exit` alias. `mm` claims that word for leaving the *program*, and its
+    // local commands run first — so this advertised a word that did nothing
+    // here and something else in the browser. Two meanings for one word, and
+    // which you got depended on where you typed it.
+    name: "leave",
+    aliases: [],
+    usage: "leave",
+    summary: "go, by your own choice",
+    needs: "play",
+  },
   {
     name: "rename",
     aliases: [],
@@ -463,16 +476,16 @@ export const COMMANDS: CommandSpec[] = [
     needs: "testmode",
   },
   {
-    name: "winfight",
-    aliases: ["losefight", "drawfight"],
-    usage: "winfight",
+    name: "settle",
+    aliases: [],
+    usage: "settle won|lost|draw",
     summary: "settle the fight you are in — won, lost or drawn",
     needs: "testmode",
   },
   {
-    name: "wingame",
-    aliases: ["losegame"],
-    usage: "wingame",
+    name: "endgame",
+    aliases: [],
+    usage: "endgame won|lost",
     summary: "end the game on the Bestia — losing to it costs 2 Życia (14.7)",
     needs: "testmode",
   },
@@ -550,6 +563,14 @@ const EFFECTS: Record<string, EffectName> = {
 };
 
 /** The three Natury, under the words typed at them. English, like every verb here. */
+/** How a fight ended, as you would say it. The store's words are the rulebook's. */
+const OUTCOMES: Record<string, "wygrana" | "przegrana" | "remis"> = {
+  won: "wygrana",
+  lost: "przegrana",
+  draw: "remis",
+  drawn: "remis",
+};
+
 const NATURES: Record<string, Nature> = {
   good: "good",
   evil: "evil",
@@ -663,11 +684,19 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "spell") return { ok: { kind: "spell", who: tail || null } };
   // Spelled out, because `win` alone is two different things: the fight in
   // front of you, and the game.
-  if (word === "winfight") return { ok: { kind: "settle", outcome: "wygrana" } };
-  if (word === "losefight") return { ok: { kind: "settle", outcome: "przegrana" } };
-  if (word === "drawfight") return { ok: { kind: "settle", outcome: "remis" } };
-  if (word === "wingame") return { ok: { kind: "endgame", won: true } };
-  if (word === "losegame") return { ok: { kind: "endgame", won: false } };
+  if (word === "settle") {
+    const said = tail.toLowerCase();
+    const outcome = OUTCOMES[said];
+    if (!outcome) return needs("settle", `Won, lost or drawn — \`${said || "?"}\`?`);
+    return { ok: { kind: "settle", outcome } };
+  }
+  if (word === "endgame") {
+    const said = tail.toLowerCase();
+    if (said !== "won" && said !== "lost") {
+      return needs("endgame", `Won or lost — \`${said || "?"}\`?`);
+    }
+    return { ok: { kind: "endgame", won: said === "won" } };
+  }
   if (word === "endfight") return { ok: { kind: "endfight" } };
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
 
@@ -718,7 +747,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
 
   if (word === "who") return { ok: { kind: "who" } };
-  if (word === "leave" || word === "exit") return { ok: { kind: "leave" } };
+  if (word === "leave") return { ok: { kind: "leave" } };
   if (word === "unseat") return { ok: { kind: "unseat", who: tail || null } };
 
   /**
@@ -841,7 +870,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     }), "summon");
   }
 
-  if (word === "answer" || word === "a") {
+  if (word === "answer") {
     const parts = tail.split(/\s+/).filter(Boolean);
     const numbers = parts.filter((one) => /^\d+$/.test(one)).map(Number);
     const named = parts.filter((one) => !/^\d+$/.test(one)).join(" ");

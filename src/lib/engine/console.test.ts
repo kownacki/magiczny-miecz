@@ -241,14 +241,19 @@ suite("naming a card, a field or a creature", () => {
 
 suite("the rest of the vocabulary", () => {
   it("settles a fight three ways", () => {
-    expect(ok("winfight")).toEqual({ kind: "settle", outcome: "wygrana" });
-    expect(ok("losefight")).toEqual({ kind: "settle", outcome: "przegrana" });
-    expect(ok("drawfight")).toEqual({ kind: "settle", outcome: "remis" });
+    // The outcome is an argument, which is how the engine has always modelled
+    // it — `winfight` flattened it into the verb and nothing else here does.
+    expect(ok("settle won")).toEqual({ kind: "settle", outcome: "wygrana" });
+    expect(ok("settle lost")).toEqual({ kind: "settle", outcome: "przegrana" });
+    expect(ok("settle draw")).toEqual({ kind: "settle", outcome: "remis" });
+    expect(ok("settle drawn")).toEqual({ kind: "settle", outcome: "remis" });
+    expect(err("settle")).toContain("settle won|lost|draw");
   });
 
   it("ends the game, which is a different thing from ending a fight", () => {
-    expect(ok("wingame")).toEqual({ kind: "endgame", won: true });
-    expect(ok("losegame")).toEqual({ kind: "endgame", won: false });
+    expect(ok("endgame won")).toEqual({ kind: "endgame", won: true });
+    expect(ok("endgame lost")).toEqual({ kind: "endgame", won: false });
+    expect(err("endgame")).toContain("endgame won|lost");
   });
 
   it("has no bare win or lose to be ambiguous with", () => {
@@ -404,7 +409,7 @@ suite("playing the game, and overruling it", () => {
   });
 
   it("allows everything once testmode is on", () => {
-    for (const line of ["kill", "teleport Karczma", "wingame", "effect fog"]) {
+    for (const line of ["kill", "teleport Karczma", "endgame won", "effect fog"]) {
       expect(permits(ok(line), { testmode: true }).ok, line).toBe(true);
     }
   });
@@ -438,7 +443,7 @@ suite("playing the game, and overruling it", () => {
   it("lists what applies and says how much it left out", () => {
     const lobby = helpLines(null, { testmode: false, stage: "lobby" });
     expect(lobby.join("\n")).toContain("pick");
-    expect(lobby.join("\n")).not.toContain("winfight");
+    expect(lobby.join("\n")).not.toContain("teleport");
     // Nothing becomes unfindable: the tail says how many and how to see them.
     expect(lobby.at(-1)).toMatch(/more/);
     expect(lobby.at(-1)).toContain("help all");
@@ -447,7 +452,7 @@ suite("playing the game, and overruling it", () => {
   it("shows everything when asked, marking what does not apply", () => {
     const all = helpLines(null, { testmode: false, stage: "lobby", all: true });
     expect(all).toHaveLength(COMMANDS.length);
-    expect(all.join("\n")).toContain("winfight");
+    expect(all.join("\n")).toContain("teleport");
     // Marked, so the list still says which of them you could type now.
     expect(all.filter((line) => line.startsWith("·")).length).toBeGreaterThan(10);
     expect(all.some((line) => line.startsWith(" ") && line.includes("pick"))).toBe(true);
@@ -492,7 +497,7 @@ suite("playing the game, and overruling it", () => {
 
   it("explains a command it did not list", () => {
     // The whole point of counting rather than hiding: the word still works.
-    const said = helpLines("winfight", { testmode: false, stage: "lobby" }).join(" ");
+    const said = helpLines("settle", { testmode: false, stage: "lobby" }).join(" ");
     expect(said).toContain("settle the fight");
     expect(said).toMatch(/locked/);
   });
@@ -506,6 +511,8 @@ suite("playing the game, and overruling it", () => {
 /** A stand-in for each placeholder a usage line uses, so every line can be typed. */
 const EXAMPLE: Record<string, string> = {
   "<player>": "Ola",
+  "won|lost|draw": "won",
+  "won|lost": "won",
   "<command>": "help",
   "+5|=12": "+5",
   "3": "3",
@@ -686,7 +693,10 @@ suite("finishing a half-typed line", () => {
 
   it("finishes a command name after `help`", () => {
     expect(tab("help pl").line).toBe("help place ");
-    expect(tab("help end")).toEqual({ line: "help end", options: ["endfight", "endturn"] });
+    expect(tab("help end")).toEqual({
+      line: "help end",
+      options: ["endfight", "endgame", "endturn"],
+    });
   });
 
   it("takes nothing where nothing goes", () => {
@@ -752,8 +762,8 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   },
   teleport: { line: "teleport Karczma", becomes: { kind: "teleport", fieldId: "karczma" } },
   summon: { line: "summon WILKOŁAK", becomes: { kind: "summon", cardId: "wilkolak" } },
-  winfight: { line: "winfight", becomes: { kind: "settle", outcome: "wygrana" } },
-  wingame: { line: "wingame", becomes: { kind: "endgame", won: true } },
+  settle: { line: "settle won", becomes: { kind: "settle", outcome: "wygrana" } },
+  endgame: { line: "endgame won", becomes: { kind: "endgame", won: true } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
   endturn: { line: "endturn", becomes: { kind: "endturn" } },
   spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola" } },
@@ -918,9 +928,8 @@ suite("every command, once each", () => {
       put: "place",
       pass: "endturn",
     };
-    // Not every alias is a synonym — losefight and losegame mean the other
-    // outcome, and sword names another parameter — so only the ones that are
-    // are compared, and the rest are covered above.
+    // Not every alias is a synonym — `sword` names another parameter — so only
+    // the ones that are get compared, and the rest are covered above.
     expect(ok("? ")).toEqual(ok("help"));
     expect(ok("put MIECZ")).toEqual(ok("place MIECZ"));
     expect(ok("pass")).toEqual(ok("endturn"));
