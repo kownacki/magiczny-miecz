@@ -30,6 +30,25 @@ import type { Tables } from "@/lib/game/fakeDb";
  * *play*, and a widget layer would be a second way of drawing a board that has
  * to be kept honest against the first.
  *
+ * # Which language a line is in
+ *
+ * The audience decides, not the word — the rule that stopped this drifting.
+ * Anything a *player* reads is Polish: the browser, the journal, and the
+ * refusals the rules throw. Anything a *developer* reads is English: this
+ * prompt, `help`, and everything the console answers with. And a name printed
+ * on a component is Polish everywhere and always, because that is what the
+ * thing is called.
+ *
+ * Which settles the borderline words rather than arguing them one at a time.
+ * `BARBARZYŃCA`, `Karczma` and `Mgła` are names. `Sword 3 · Magic 3` is not —
+ * you type `sword +1`, and a label you cannot type is a label in the wrong
+ * language. `Postać` and `Zaklęcie` stay because they name a kind of thing.
+ *
+ * The one place this shows a seam: the hundred-odd refusals thrown below the
+ * console — "Nie czas na rzut." — are the *browser's*, borrowed. Translating
+ * them would fix this prompt by breaking the surface real players use, so they
+ * stay Polish and are read here as what they are: somebody else's messages.
+ *
  * Save management lives outside the shared vocabulary on purpose — `new`,
  * `load`, `saves` and `delete` act on the program rather than on the game, and
  * the browser could never carry them out. They are handled here, before a line
@@ -277,7 +296,7 @@ async function run(line: string): Promise<void> {
     // The message is the game refusing something and belongs on screen; the
     // stack is a bug and belongs in a file.
     say((error as Error).message ?? "Something went wrong.");
-    if (!(error as Error).message) say(`(zapisane w ${trace(error)})`);
+    if (!(error as Error).message) say(`(written to ${trace(error)})`);
   }
 }
 
@@ -320,7 +339,7 @@ async function local(line: string): Promise<boolean> {
     const found = await listSaves();
     if (found.length === 0) say("No tables. `table new Kowi, Ola` opens one.");
     for (const one of found) {
-      say(`  ${one.code}  ${one.status}  tura ${one.turn}  ${one.players.join(", ")}`);
+      say(`  ${one.code}  ${one.status}  turn ${one.turn}  ${one.players.join(", ")}`);
     }
     return true;
   }
@@ -358,9 +377,9 @@ async function main(): Promise<void> {
     completer: (line: string) => tabFor(line, players, LOCAL, { stage, testmode }, FAMILIES),
   });
 
-  say("Magiczny Miecz — konsola.");
+  say("Magiczny Miecz — console.");
   if (found.length > 0) {
-    say(`Zapisy: ${found.map((one) => one.code).join(", ")}  (\`load KOD\`)`);
+    say(`Tables: ${found.map((one) => one.code).join(", ")}  (\`table open CODE\`)`);
   }
   // The names are the *players*, and saying so is the whole point of this
   // line: `new Michał, Ola` reads like naming the table, and the first person

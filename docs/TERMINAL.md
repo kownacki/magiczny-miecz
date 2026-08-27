@@ -380,6 +380,36 @@ covered writes and not everything else:
 which is the mid-game arrival line — the browser's lobby pick does not journal at
 all. Harmless, wrong, and worth a look when the setup verbs are finished.
 
+## Which language a line is in
+
+The audience decides, not the word. Splitting it by word type — "is *Miecz*
+lore?" — has no stable answer and the line moved three times before this was
+written down.
+
+| Who reads it | Language |
+| --- | --- |
+| A **player**, in the game | Polish |
+| A **developer**, driving the engine | English |
+| A **name printed on a component** | Polish, everywhere, always |
+
+So the browser is Polish, the journal is Polish — it is the record a player
+reads back — and `mm` is English, because the terminal is a developer surface.
+Card, field and character names are Polish in both, because that is what those
+things are called.
+
+The borderline words settle themselves under it. `BARBARZYŃCA`, `Karczma` and
+`Mgła` are names. `Sword 3 · Magic 3` is not: you type `sword +1`, and a label
+you cannot type is a label in the wrong language. `Postać`, `Zaklęcie`,
+`Przedmiot` and `Obszar` stay, because each names a kind of thing.
+
+**The one seam.** About 120 refusals thrown below the console — "Nie czas na
+rzut.", "Naturę można zmienić najwyżej raz na turę (7.3)." — are the browser's,
+and `mm` borrows them. Translating them would fix this prompt by breaking the
+surface real players use, so they stay Polish. If the terminal ever becomes
+something people play in rather than something that drives the engine, the
+answer is not to translate those: it is to flip the terminal to Polish, which
+is the same rule read the other way.
+
 ## Stack
 
 No new language. `mm` is a Node process importing the same TypeScript modules the

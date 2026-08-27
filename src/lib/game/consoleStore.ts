@@ -255,7 +255,7 @@ export async function runCommand(
   const userOf = (who: string | null): UserRow => {
     if (!who) {
       const me = people.find((one) => one.id === actor.userId);
-      if (!me) throw new Error("Nie ma takiego gracza.");
+      if (!me) throw new Error("No such player.");
       return me;
     }
     const hit = pickPlayer(
@@ -688,7 +688,7 @@ export async function runCommand(
         gameId,
         (snapshot) => {
           const state = snapshot.game.turn_state;
-          if (state.phase !== "fight") throw new Error("Nie ma walki.");
+          if (state.phase !== "fight") throw new Error("No fight is happening.");
           const fight = state.fight;
           const settled =
             command.outcome === "remis"
@@ -866,7 +866,7 @@ export async function runCommand(
       const waiting = (state.drawn ?? []).filter(
         (one) => !(state.resolved ?? []).includes(one.cardId),
       );
-      if (waiting.length === 0) throw new Error("Nic nie czeka na odpowiedź.");
+      if (waiting.length === 0) throw new Error("Nothing is waiting for an answer.");
 
       let card = waiting[0];
       if (command.card) {
