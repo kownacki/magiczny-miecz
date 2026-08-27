@@ -5,6 +5,7 @@ import { db } from "@/lib/supabase";
 import * as tables from "./tables";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import { MAX_SEATS, type GameMode } from "./modes";
+import { isQuiet } from "./commands/lobby";
 import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
 import { Failure } from "./failure";
@@ -391,6 +392,14 @@ export async function joinGame(
    * coming back from a death — see the note there.
    */
   midGame = false,
+  /**
+   * A chair they came back for, rather than whichever one is free.
+   *
+   * This is the join gate's "wolne Postacie": somebody arriving to take over a
+   * particular abandoned Postać, which is the commonest way anybody rejoins a
+   * table after closing the tab on a device that does not remember them.
+   */
+  wanted: number | null = null,
 ): Promise<{ user: UserRow; seat: SeatRow | null; token: string }> {
   const token = makeClaimToken();
   const name = (playerName ?? "").trim() || null;
@@ -406,10 +415,9 @@ export async function joinGame(
 
   for (let attempt = 0; attempt < MAX_SEATS + 4; attempt++) {
     const existing = await seatsFor(gameId);
+    const here = await usersFor(gameId);
     const driven = new Set(
-      (await usersFor(gameId))
-        .map((one) => one.seat_index)
-        .filter((at): at is number => at !== null),
+      here.map((one) => one.seat_index).filter((at): at is number => at !== null),
     );
 
     /**
@@ -432,8 +440,33 @@ export async function joinGame(
       existing.filter((seat) => seat.character_id).map((seat) => seat.seat_index),
     );
     let seatIndex: number | null = 0;
-    while (seatIndex < MAX_SEATS && (standing.has(seatIndex) || driven.has(seatIndex))) seatIndex++;
-    if (seatIndex >= MAX_SEATS) seatIndex = null;
+    if (wanted !== null) {
+      /**
+       * A chair they came back for, rather than whichever one is free.
+       *
+       * Refused only when somebody is *actively* driving it. A user row still
+       * pointing at the seat is not enough — that is exactly what an abandoned
+       * Postać looks like, and taking one over is the whole reason for asking
+       * for a seat by name. `takeSeat` has drawn the line at `isQuiet` since it
+       * was written; this used to refuse anybody at all, so the join gate
+       * offered "gracz się rozłączył" and the server said the seat was taken.
+       *
+       * The quiet one is stood up first, or two people hold one seat and the
+       * unique index refuses the write with a message nobody can act on.
+       */
+      const holder = here.find((one) => one.seat_index === wanted);
+      if (holder && !isQuiet(holder, Date.now())) {
+        throw new Error("To miejsce ma już swojego gracza.");
+      }
+      if (holder) {
+        const { error } = await tables.users.update({ seat_index: null }).eq("id", holder.id);
+        if (error) throw new Failure(`joinGame(displace): ${error.message}`);
+      }
+      seatIndex = wanted;
+    } else {
+      while (seatIndex < MAX_SEATS && (standing.has(seatIndex) || driven.has(seatIndex))) seatIndex++;
+      if (seatIndex >= MAX_SEATS) seatIndex = null;
+    }
 
     let seat: SeatRow | null = null;
     if (seatIndex !== null && !taken.has(seatIndex)) {

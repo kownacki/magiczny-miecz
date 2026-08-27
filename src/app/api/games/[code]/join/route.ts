@@ -40,15 +40,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       });
     }
 
-    // Sitting down in a seat, which somebody already at the table does without
-    // joining it again — a spectator taking a free chair, or a player moving to
-    // one that was left empty.
+    /**
+     * Sitting down in a named seat, and two quite different people do it.
+     *
+     * Somebody already at the table — a spectator taking a free chair, or a
+     * player moving to one that was left empty — has a token, and only moves.
+     * Somebody who has *just arrived* and is picking up an abandoned Postać has
+     * none, and has to be let in first.
+     *
+     * The second is the commoner of the two by a long way: it is what the join
+     * gate offers under "wolne Postacie", and the way anybody gets back to a
+     * table after closing the tab on a device that does not remember them.
+     * Requiring a token here turned that into "Nieznane miejsce" — a stranger
+     * being told they are not who they never claimed to be.
+     */
     if (body.seatId) {
-      const actor = await verifyActor(game.id, String(body.token ?? ""));
-      if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
       const seats = await seatsFor(game.id);
       const wanted = seats.find((one) => one.id === body.seatId);
       if (!wanted) return NextResponse.json({ error: "Nie ma takiego miejsca." }, { status: 404 });
+
+      const actor = body.token ? await verifyActor(game.id, String(body.token)) : null;
+      if (!actor) {
+        const { user, token } = await joinGame(
+          game.id,
+          name,
+          deviceId,
+          game.status === "playing",
+          wanted.seat_index,
+        );
+        await bumpRevision(game.id);
+        return NextResponse.json({ userId: user.id, seatIndex: wanted.seat_index, token });
+      }
       await takeSeat(game.id, actor.user.id, wanted.seat_index);
       return NextResponse.json({
         userId: actor.user.id,
