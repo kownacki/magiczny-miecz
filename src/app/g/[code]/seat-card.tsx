@@ -244,13 +244,63 @@ export function SeatCard({
           Because the height is fixed and both children are centred in it, where
           the name sits depends on the name alone. Effects appearing and wearing
           off cannot move it. */}
+      {/* The heading every other foldable thing in this card has, and for the
+          same reason: PLECAK, ZAKLĘCIA and NA SOBIE all say what they are in
+          small capitals with the browser's own triangle beside them, and the
+          one section whose control was the player's name did not read as a
+          control at all. So the name row stops being the handle and this is it
+          — above the name, in the idiom the card already speaks.
+
+          Folded, it carries what the card still has to answer: who, what, the
+          Natura (7.2 — the one thing neither printed on the picture nor
+          derivable from the cards in hand) and the four numbers in the order
+          the Karta prints them up its own edges. */}
       <summary
         onClick={(event) => {
           event.preventDefault();
           setShowing(!showing);
         }}
-        className="mb-3 flex h-9 cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden"
+        /* Not `flex`: a summary laid out as a flex box stops being a
+           `list-item` and loses the browser's own triangle with it — which is
+           the whole of what makes these headings read alike. The folded row
+           does its own laying out, one level in. */
+        className="mb-3 cursor-pointer text-[11px] uppercase tracking-widest text-muted"
       >
+        Postać
+        {!showing && (
+          <span className="ml-3 inline-flex w-[calc(100%-5rem)] items-center gap-2 align-middle normal-case tracking-normal">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ background: SEAT_COLOURS[seat.seat_index % SEAT_COLOURS.length] }}
+              aria-hidden
+            />
+            <span className="truncate text-ink">
+              {seat.player_name ?? `Miejsce ${seat.seat_index + 1}`}
+            </span>
+            {character && <span className="shrink-0 text-muted">{character.name}</span>}
+            {seat.nature && (
+              <span className="shrink-0 text-muted/70">
+                {NATURE_LABEL[seat.nature] ?? seat.nature}
+              </span>
+            )}
+            <span className="tnum ml-auto shrink-0">
+              <span className="text-miecz">{seat.sword_total}</span>
+              <span className="text-muted"> / </span>
+              <span className="text-magia">{seat.magic_total}</span>
+              <span className="text-muted"> / </span>
+              <span className="text-zycie">{seat.life}</span>
+              <span className="text-muted"> / </span>
+              <span className="text-zloto">{seat.gold}</span>
+            </span>
+          </span>
+        )}
+      </summary>
+
+      {/* A fixed height, so a seat card does not jump when an effect appears or
+          wears off — the row is as tall as a mark can be whether or not any are
+          there. Centred in it rather than aligned to the top, which is what
+          puts the name level with the marks. */}
+      <header className="mb-3 flex h-9 items-center gap-2">
         {/* Your colour, beside your name, on the card you look at most.
             Everything else in the app already speaks in these — the figure on
             the board, the dots down the journal, the tinted card in the queue —
@@ -301,37 +351,7 @@ export function SeatCard({
           </span>
         )}
 
-        {/* Everything a folded card still has to answer, and nothing it does
-            not. The four numbers are the whole of what the rails say — read
-            in the order the Karta prints them up its own edges — and the
-            Natura is the one thing about a character that is neither printed
-            on the picture nor derivable from the cards it is holding (7.2).
-
-            Open, they are all on screen twice over, so they are not repeated:
-            the rails are the rails, and the line under the card is the Karta
-            Zmiany Natury or its absence. */}
-        <span className="ml-auto flex shrink-0 items-center gap-2">
-          {!showing && (
-            <>
-              {seat.nature && (
-                <span className="text-[11px] text-muted">
-                  {NATURE_LABEL[seat.nature] ?? seat.nature}
-                </span>
-              )}
-              <span className="tnum text-[11px]">
-                <span className="text-miecz">{seat.sword_total}</span>
-                <span className="text-muted"> / </span>
-                <span className="text-magia">{seat.magic_total}</span>
-                <span className="text-muted"> / </span>
-                <span className="text-zycie">{seat.life}</span>
-                <span className="text-muted"> / </span>
-                <span className="text-zloto">{seat.gold}</span>
-              </span>
-            </>
-          )}
-          <span className="text-[10px] text-muted">{showing ? "\u2212" : "+"}</span>
-        </span>
-      </summary>
+      </header>
 
       {character ? (
         <>
@@ -467,15 +487,10 @@ export function SeatCard({
                     event.preventDefault();
                     setWearing(!wearing);
                   }}
-                  className="mb-2 cursor-pointer list-none text-[11px] uppercase tracking-widest text-muted [&::-webkit-details-marker]:hidden"
+                  className="mb-2 cursor-pointer text-[11px] uppercase tracking-widest text-muted"
                 >
                   Na sobie{" "}
-                  <span className="text-muted/70">
-                    {Object.keys(wornBySlot(seat)).length}
-                  </span>
-                  <span className="ml-2 text-[10px] normal-case tracking-normal text-muted/60">
-                    {wearing ? "\u2212" : "+"}
-                  </span>
+                  <span className="text-muted/70">{Object.keys(wornBySlot(seat)).length}</span>
                 </summary>
               <SlotPanel
                 worn={wornBySlot(seat)}
