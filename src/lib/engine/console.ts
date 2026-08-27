@@ -317,6 +317,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "drop",
+    when: PLAYING,
     aliases: [],
     usage: "drop MAGICZNY MIECZ",
     summary: "put one down on the Obszar you are standing on (12.1)",
@@ -324,6 +325,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "equip",
+    when: PLAYING,
     aliases: ["wear"],
     usage: "equip HEŁM [slot]",
     summary: "put a Przedmiot on — the place is worked out unless it fits two",
@@ -331,6 +333,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "use",
+    when: PLAYING,
     aliases: [],
     usage: "use KRYSZTAŁ LOSU",
     summary: "spend a Karta that is spent by using it",

@@ -80,6 +80,17 @@ export function startGame(
   // `chosen`, not `ready`: having picked a character and having said you are
   // ready are two different things, and conflating them is what let a game
   // start while somebody was still deciding.
+  /**
+   * Once, and only once.
+   *
+   * Nothing refused a second `start`, so it dealt the opening Zaklęcia again on
+   * top of the ones already held — and the second deal ran until 2.6's cap
+   * refused it, leaving a hand made of two deals and an error nobody could act
+   * on. A MAG shows it fastest: Magia 5 allows three, it starts with three, and
+   * the very first extra card is one too many.
+   */
+  if (snapshot.game.status === "playing") throw new Error("Gra już się zaczęła.");
+
   const chosen = snapshot.seats.filter((seat) => seat.character_id);
   // One is enough. The box says 2-6 and the rulebook never states a count at
   // all: the only rule that assumes company is 17.4, where "jeden z pozostałych

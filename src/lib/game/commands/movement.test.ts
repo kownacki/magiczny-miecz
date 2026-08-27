@@ -171,6 +171,22 @@ const rolling = (
     holdings,
   });
 
+describe("starting the game", () => {
+  /**
+   * A second `start` dealt the opening Zaklęcia again on top of the ones
+   * already held, and ran until 2.6's cap refused it — leaving a hand made of
+   * two deals and an error nobody could act on. A MAG shows it fastest: Magia
+   * 5 allows three, it starts with three, and the first extra is one too many.
+   */
+  it("refuses a game that has already begun", () => {
+    const table = aTable({
+      game: { status: "playing", turn: 3 },
+      seats: [aSeat({ character_id: asSeatCharacter("mag") })],
+    });
+    expect(() => startGame(table, { decks: noDeck() }, ports())).toThrow(/już się zaczęła/);
+  });
+});
+
 describe("rzut na ruch (10.2)", () => {
   it("throws one die and offers both ways round the ring", async () => {
     const { writes, result } = await rollForMove(rolling(), {}, die(2));
