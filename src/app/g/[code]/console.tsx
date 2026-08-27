@@ -22,6 +22,9 @@ import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
  * same routes as everything else, and journalled as a manual override — a
  * tested game must not be mistakable for a played one.
  */
+/** The words that only ever mean "no", so answering with one is not a command. */
+const NO = new Set(["no", "n", "nie", "cancel", "anuluj", "stop", "abort"]);
+
 export function TestConsole({
   open,
   folded,
@@ -227,7 +230,16 @@ export function TestConsole({
     if (pending) {
       if (typed.toLowerCase() === "yes") return say(await onRun(pending));
       say("Dropped.");
-      // Falls through: whatever was typed instead is a line of its own.
+      /**
+       * A plain refusal is the whole answer; anything else falls through and is
+       * read as a fresh line, which is what makes "type the thing you meant
+       * instead" work.
+       *
+       * Without the first half, saying `no` printed "Dropped." and then "No
+       * command `no`" underneath it — answering the question exactly as invited
+       * and being told off for it.
+       */
+      if (NO.has(typed.toLowerCase())) return;
     }
 
     /**

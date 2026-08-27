@@ -585,6 +585,9 @@ suite("what the console asks about first", () => {
     expect(confirmationFor(ok("remove 3"))).toContain("seat 3 leaves the game");
     expect(confirmationFor(ok("remove 3 hard"))).toContain("for good");
     expect(confirmationFor(ok("kill Ola"))).toContain("0 Życia");
+    // `kill` with nobody named is the commonest way to type it, and the subject
+    // still has to agree with the verb: it read "You drops to 0 Życia".
+    expect(confirmationFor(ok("kill"))).toContain("Your Postać drops");
     // And every one of them says how to agree, in the same words.
     expect(confirmationFor(ok("kick Ola"))).toContain("`yes`");
   });

@@ -911,7 +911,11 @@ export function confirmationFor(command: Command): string | null {
 
   if (command.kind === "kick") return said(`${command.who} goes from the table.`);
   if (command.kind === "kill") {
-    return said(`${command.who ?? "You"} drops to 0 Życia — the hand goes with it (4.4).`);
+    // "Your Postać" rather than "You" for the unnamed case: the subject has to
+    // agree with `drops`, and naming the figure rather than the person is what
+    // the other two questions do anyway.
+    const dying = command.who ?? "Your Postać";
+    return said(`${dying} drops to 0 Życia — the hand goes with it (4.4).`);
   }
   if (command.kind !== "remove") return null;
   const which =
