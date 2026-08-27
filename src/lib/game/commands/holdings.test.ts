@@ -112,6 +112,29 @@ describe("taking a card", () => {
     );
   });
 
+  /**
+   * The Topór restricts the *third* Natura, not the usual two, and the coverage
+   * note used to say the opposite outright — "Tylko dla Chaotycznych" against a
+   * card reading "nie może być w posiadaniu Chaotycznych Postaci". The ability
+   * was right the whole time and nothing caught the contradiction, because a
+   * note is prose and prose is not typechecked. So the direction is pinned here.
+   */
+  it("refuses the Topór to a Chaotyczna Postać and allows it to the other two (5.3)", () => {
+    const chaotyczna = table({
+      seats: [aSeat({ id: "seat-a", field_id: HERE, nature: "chaotic" })],
+    });
+    expect(() =>
+      takeCard(chaotyczna, { seatId: "seat-a", cardId: "topor-swiatla-i-ciemnosci" }),
+    ).toThrow("twoja Natura nie pozwala ci tego nieść (5.3).");
+
+    for (const nature of ["good", "evil"] as const) {
+      const other = table({ seats: [aSeat({ id: "seat-a", field_id: HERE, nature })] });
+      expect(
+        takeCard(other, { seatId: "seat-a", cardId: "topor-swiatla-i-ciemnosci" }).result.kind,
+      ).toBe("item");
+    }
+  });
+
   /** 12.1a: "należy najpierw pokonać Wrogów albo im uciec" — the loot waits. */
   it("refuses while an unfought Wróg is still on the stack", () => {
     const guarded = table({

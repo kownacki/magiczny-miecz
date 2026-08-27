@@ -44,12 +44,8 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
     "Trzy głowy po 2 punkty Miecza, po kolei. Przegrana odrasta wszystkie odcięte — walkę zaczyna się od nowa.",
   // --- equipment and magic items -------------------------------------------
   arondight: "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
-  "topor-swiatla-i-ciemnosci":
-    "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1. Tylko dla Chaotycznych.",
+  "topor-swiatla-i-ciemnosci": "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
   excalibur: "Po wygranej walce zyskujesz 1 Życie, odbierając je pokonanemu.",
-  "miecz-chaosu": "Nie dla Dobrych Postaci.",
-  "swiety-graal": "Nie dla Złych Postaci.",
-  "swieta-wlocznia": "Nie dla Złych Postaci.",
   "czarodziejska-kosc":
     "W Pułapce i Magicznej Pułapce daje zamiast tego 1 punkt Miecza lub Magii.",
   relikwiarz: "Pokonuje wszystkie Demony bez walki.",
