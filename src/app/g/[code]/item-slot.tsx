@@ -324,7 +324,16 @@ export function ItemSlot({
                 : disabled
                   ? "cursor-default"
                   : "cursor-pointer"
-            } ${lifted ? "opacity-25" : dimmed ? "opacity-45" : ""}`}
+            } ${lifted ? "opacity-25" : dimmed ? "opacity-45" : ""} ${
+              // Desaturated and dimmed *before* the red goes on. Tinting alone
+              // lit the picture up like a torch — a bright wash over white ink
+              // reads as an item that has caught fire, which is the opposite of
+              // "you cannot use this". Grayscale first is what the rest of the
+              // world does with an unusable icon, and it matters here for the
+              // card art that is not pen and ink; the dimming is what makes the
+              // wash land dark instead of hot.
+              shown === "rejects" ? "grayscale brightness-[0.55]" : ""
+            }`}
           >
             {item && art ? (
               <Image
@@ -372,14 +381,16 @@ export function ItemSlot({
               thing it is not — and on a wall of a dozen cards the eye finds the
               odd colour long before it finds the odd outline.
 
-              Multiplied rather than laid over: white goes to vermilion and
-              black stays black, so the picture is *coloured* and not veiled —
-              a flat translucent red would grey the whole square down and read
-              as merely disabled. `mix-blend-color` was the first thing tried
-              and does nothing at all here: it keeps the backdrop's own
-              luminosity, and these scans are pen and ink with almost nothing in
-              between. Above the picture and below the corner marks, which have
-              their own ground and are meant to be read off it. */}
+              Three things, in the order everything else does them: desaturate,
+              dim, then tint. The dimming is on the picture above; this is the
+              tint, multiplied rather than laid over, so the ink stays black and
+              only the paper takes the colour. `mix-blend-color` was the first
+              thing tried and does nothing at all here — it keeps the backdrop's
+              own luminosity, and these scans are pen and ink with almost
+              nothing in between.
+
+              Above the picture and below the corner marks, which have their own
+              ground and are meant to be read off it. */}
           {shown === "rejects" && (
             <span
               aria-hidden

@@ -632,21 +632,12 @@ export async function runCommand(
       // By hand always, forced only when asked: a Natura somebody typed does
       // not use up the character's one change of the turn, but a change the
       // *game* made this turn still refuses until `force` says otherwise.
-      const { nowForbidden } = await changeNature(
-        gameId,
-        seat.id,
-        command.nature,
-        command.force,
-        true,
-      );
-      // 7.4 by way of 5.5: the cards the new Natura may not hold have to go,
-      // and a tester who was not told which they are would find out two turns
-      // later. `changeNature` works this out already; nothing was reading it.
-      const dropped =
-        nowForbidden.length > 0
-          ? ` Now forbidden: ${nowForbidden.map((id) => cardName(id)).join(", ")}.`
-          : "";
-      return `${named(seat)} is ${command.nature}.${dropped}`;
+      await changeNature(gameId, seat.id, command.nature, command.force, true);
+      // 7.4 by way of 5.5 used to be spelled out here, card by card — the
+      // command hands back which holdings the new Natura may not keep. The
+      // slots say it themselves now, going red where the cards lie, so the line
+      // is back to reporting the one thing it did.
+      return `${named(seat)} is ${command.nature}.`;
     }
 
     /**
