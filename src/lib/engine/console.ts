@@ -156,6 +156,15 @@ export type Command =
   | { kind: "look" }
   | { kind: "me"; who: string | null }
   /**
+   * What a Karta says, read without holding it.
+   *
+   * A Postać, a Zdarzenie, a Przedmiot or a Zaklęcie — one verb, because from
+   * where somebody is sitting they are all "that card I want to read", and
+   * making them remember which pile it came from to look it up would be the
+   * app's filing system leaking into the game.
+   */
+  | { kind: "card"; name: string }
+  /**
    * What a card asked, answered.
    *
    * The choices are a path, not a single pick: an effect can ask twice, and the
@@ -266,6 +275,15 @@ export const COMMANDS: CommandSpec[] = [
     aliases: ["a"],
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
+    needs: "play",
+  },
+  {
+    // `card` is the alias `give` used to answer to. It is a better name for
+    // reading one than for conjuring one, and reading is the commoner want.
+    name: "card",
+    aliases: ["read"],
+    usage: "card MAGOG",
+    summary: "what a Karta says — Postać, Zdarzenie, Przedmiot or Zaklęcie",
     needs: "play",
   },
   {
@@ -383,7 +401,9 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "give",
-    aliases: ["card"],
+    // `card` was an alias here and has become a verb: reading one is what
+    // somebody usually wants from that word, and conjuring one is `give`.
+    aliases: [],
     usage: "give MAGICZNY MIECZ",
     summary: "put a card in a hand",
     needs: "testmode",
@@ -623,7 +643,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "endfight") return { ok: { kind: "endfight" } };
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
 
-  if (word === "give" || word === "card") {
+  if (word === "give") {
     return name(HOLDABLE, (card) => card.name, tail, "card", (card) => ({
       kind: "give",
       cardId: card.id,
@@ -808,6 +828,11 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "ready", who: tail || null, ready: word === "ready" } };
   }
   if (word === "start") return { ok: { kind: "start" } };
+  if (word === "card" || word === "read") {
+    if (!tail) return { error: `Which card? ${usageOf("card")}` };
+    return { ok: { kind: "card", name: tail } };
+  }
+
   if (word === "roll") return { ok: { kind: "roll" } };
   if (word === "draw") return { ok: { kind: "draw" } };
   if (word === "look" || word === "l") return { ok: { kind: "look" } };
@@ -1044,6 +1069,9 @@ export function complete(
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
     if (verb === "summon") return { pool: FOES.map((c) => c.name), at: 1 };
+    if (verb === "card" || verb === "read") {
+      return { pool: [...HOLDABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
+    }
     if (verb === "teleport" || verb === "move" || verb === "walk") {
       return { pool: PLACES.map((f) => f.name), at: 1 };
     }
@@ -1146,6 +1174,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   draw: "play",
   look: "play",
   answer: "play",
+  card: "play",
   ready: "play",
   start: "play",
   me: "play",

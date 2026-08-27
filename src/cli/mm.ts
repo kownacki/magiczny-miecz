@@ -11,6 +11,7 @@ import { runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
 import { deleteSave, homeDir, listSaves, newSave, openSave } from "@/lib/game/saves";
 import { joinGame, journalRows, seatsFor, usersFor } from "@/lib/game/store";
+import { setReady } from "@/lib/game/lobbyStore";
 import { memoryHandle } from "@/lib/game/gameStore";
 import { journalLines, type JournalEntry } from "@/lib/engine/journalText";
 import { asJournalKind } from "@/lib/engine/journal";
@@ -128,7 +129,8 @@ async function makeTable(names: string[]): Promise<void> {
   announced = null;
   await knowTable();
   say(`Stół ${code} — ${names.join(", ")}.`);
-  say("Każdy wybiera Postać (`pick MAGOG`), potem `ready`, potem `start`.");
+  say("Każdy wybiera Postać — `pick MAGOG`, albo `pick` losowo. `unseat` pomija.");
+  say("Kiedy wszyscy mają Postacie: `start`.");
   await show();
 }
 
@@ -243,8 +245,27 @@ async function run(line: string): Promise<void> {
   if (!allowed.ok) return say(allowed.why);
 
   const who = await actorNow();
+  const inLobby = stage === "lobby";
   try {
     say(await runCommand(table!.gameId, { userId: who.userId, seatId: who.seatId }, parsed.ok));
+
+    /**
+     * Picking is the whole of it, at one terminal.
+     *
+     * `ready` exists because players sit at different devices and somebody has
+     * to know they are all done (docs/LOBBY.md). Six people sharing one
+     * keyboard have nobody to tell: choosing a Postać *is* the commitment, and
+     * making them say so again is a word typed to satisfy a protocol that has
+     * no other end. So a lobby `pick` readies the picker and the prompt moves
+     * on, which is what somebody typing for the whole table expects.
+     *
+     * Said out loud rather than done quietly, and `unready` still takes it
+     * back for anybody who wants to think again.
+     */
+    if (inLobby && parsed.ok.kind === "pick") {
+      await setReady(table!.gameId, who.userId, true);
+      say("Gotów.");
+    }
     // `rename`, `kick` and `seat` all change who Tab should offer.
     await knowTable();
   } catch (error) {

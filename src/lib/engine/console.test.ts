@@ -607,6 +607,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   start: { line: "start", becomes: { kind: "start" } },
   roll: { line: "roll", becomes: { kind: "roll" } },
   answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2] } },
+  card: { line: "card MAGOG", becomes: { kind: "card", name: "MAGOG" } },
   move: { line: "move Karczma", becomes: { kind: "move", fieldId: "karczma" } },
   draw: { line: "draw", becomes: { kind: "draw" } },
   look: { line: "look", becomes: { kind: "look" } },
@@ -804,7 +805,6 @@ suite("every command, once each", () => {
     const alias: Record<string, string> = {
       "?": "help",
       sword: "gold",
-      card: "give",
       put: "place",
       pass: "endturn",
     };
@@ -812,13 +812,14 @@ suite("every command, once each", () => {
     // outcome, and sword names another parameter — so only the ones that are
     // are compared, and the rest are covered above.
     expect(ok("? ")).toEqual(ok("help"));
-    expect(ok("card MIECZ")).toEqual(ok("give MIECZ"));
     expect(ok("put MIECZ")).toEqual(ok("place MIECZ"));
     expect(ok("pass")).toEqual(ok("endturn"));
     // `drop` and `move` were aliases here and are gone on purpose: both words
     // belong to the lawful vocabulary — putting a Przedmiot down, and walking
     // the roll out — and neither can also mean its testmode namesake.
-    expect(Object.keys(alias).length).toBe(5);
+    // `card` was one of these and is a verb now: reading a Karta is the
+    // commoner want for that word, and conjuring one is `give`.
+    expect(Object.keys(alias).length).toBe(4);
   });
 });
 

@@ -1,6 +1,11 @@
 /** One typed line from the test console, carried out against a real table. */
 
 import characters from "@/data/characters.json";
+import events from "@/data/events.json";
+import itemCards from "@/data/items.json";
+import spellCards from "@/data/spells.json";
+import { fold } from "@/lib/engine/search";
+import { characterFacts } from "@/lib/engine/polish";
 import type { Character } from "@/data/types";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
@@ -160,6 +165,21 @@ function waitingOn(turnState: unknown): string[] {
       : []),
   ];
 }
+
+/**
+ * Everything with a name and something written on it.
+ *
+ * The Wyposażenie is filtered against the Zdarzenia because the box prints
+ * some of it in both — the same reason `console.ts` builds its own list that
+ * way, and one this cannot borrow without importing a private one.
+ */
+const ALL_CARDS: { id: string; name: string; text?: string }[] = [
+  ...(events as { id: string; name: string; text?: string }[]),
+  ...(itemCards as { id: string; name: string; text?: string }[]).filter(
+    (item) => !events.some((card) => card.id === item.id),
+  ),
+  ...(spellCards as { id: string; name: string; text?: string }[]),
+];
 
 export interface Actor {
   userId: string;
@@ -440,9 +460,9 @@ export async function runCommand(
      */
     case "unseat": {
       const user = userOf(command.who);
-      if (user.seat_index === null) return `${user.name} is not driving anything.`;
+      if (user.seat_index === null) return `${user.name} nie prowadzi żadnej Postaci.`;
       const { passedTo } = await unseat(gameId, user.id);
-      return `${user.name} is out of seat ${user.seat_index + 1}; the Postać stays.${turnMoved(
+      return `${user.name} wstaje z miejsca ${user.seat_index + 1}; Postać zostaje.${turnMoved(
         passedTo,
       )}`;
     }
@@ -459,7 +479,7 @@ export async function runCommand(
       const user = userOf(command.who);
       const seat = seatByNumber(command.seat);
       await takeSeat(gameId, user.id, seat.seat_index);
-      return `${user.name} drives ${named(seat)}${
+      return `${user.name} prowadzi ${named(seat)}${
         seat.character_id ? ` — ${characterName(seat.character_id)}` : ""
       }.`;
     }
@@ -475,21 +495,21 @@ export async function runCommand(
     case "kick": {
       const user = userOf(command.who);
       const { passedTo } = await leaveTable(gameId, user.id, true);
-      return `${user.name} is off the table.${turnMoved(passedTo)}`;
+      return `${user.name} odchodzi od stołu.${turnMoved(passedTo)}`;
     }
 
     /** The same exit, by your own choice. Only ever yourself — see the grammar. */
     case "leave": {
       const me = userOf(null);
       const { passedTo } = await leaveTable(gameId, me.id, false);
-      return `${me.name} leaves the table.${turnMoved(passedTo)}`;
+      return `${me.name} odchodzi od stołu.${turnMoved(passedTo)}`;
     }
 
     case "rename": {
       const user = userOf(command.who);
       const was = user.name;
       await renameUser(gameId, user.id, command.name);
-      return `${was} is now ${command.name.trim()}.`;
+      return `${was} nazywa się teraz ${command.name.trim()}.`;
     }
 
     /**
@@ -505,7 +525,7 @@ export async function runCommand(
       const user = userOf(command.who);
       const host = people.find((one) => one.is_host);
       await claimTableScreen(gameId, user.id, host?.id ?? actor.userId);
-      return `${user.name} runs the table.`;
+      return `${user.name} jest teraz gospodarzem.`;
     }
 
     /* ----------------------------------------------------------------------
@@ -869,6 +889,35 @@ export async function runCommand(
       return said(done.did, done.pending !== null);
     }
 
+    /**
+     * What a Karta says, read without holding it.
+     *
+     * The one thing you could not do in a poczekalnia was find out what you
+     * were about to pick — 27 Karty Postaci, each with two or three clauses of
+     * Charakterystyka, and no way to read one. Choosing blind is not choosing.
+     */
+    case "card": {
+      const wanted = fold(command.name);
+      const person = (characters as Character[]).find((one) => fold(one.name) === wanted);
+      if (person) {
+        return [
+          `${person.name} — ${characterFacts(person)}`,
+          `MGR: ${person.start}`,
+          ...person.abilities.map((one) => `  · ${one}`),
+        ].join("\n");
+      }
+      const card = ALL_CARDS.find((one) => fold(one.name) === wanted);
+      if (!card) {
+        // As far as it gets, so a half-typed name says which ones it could be.
+        const near = [...(characters as Character[]), ...ALL_CARDS]
+          .filter((one) => fold(one.name).startsWith(wanted))
+          .map((one) => one.name);
+        if (near.length === 0) throw new Error(`Nie ma takiej Karty: ${command.name}.`);
+        throw new Error(`Która — ${near.join(", ")}?`);
+      }
+      return [card.name, ...(card.text ? [card.text] : [])].join("\n");
+    }
+
     case "look": {
       const snapshot = await activeStore().load(gameId);
       const game = snapshot.game;
@@ -880,14 +929,19 @@ export async function runCommand(
        * who is at the table and what is still owed before `start` will work.
        */
       if (game.status !== "playing") {
+        const seatOfUser = (who: { seat_index: number | null }) =>
+          snapshot.seats.find((one) => one.seat_index === who.seat_index);
         const waiting = snapshot.users.map((who) => {
-          const seat = snapshot.seats.find((one) => one.seat_index === who.seat_index);
-          const has = seat?.character_id ? characterName(seat.character_id) : "bez Postaci";
+          const seat = seatOfUser(who);
+          // Somebody who stood up is watching, not undecided — `startGame`
+          // never waits for them, and neither should this.
+          if (!seat) return `  ${who.name ?? "?"} — ogląda`;
+          const has = seat.character_id ? characterName(seat.character_id) : "bez Postaci";
           return `  ${who.name ?? "?"} — ${has}${who.ready ? " · gotów" : ""}`;
         });
         const owed = snapshot.users.filter((who) => {
-          const seat = snapshot.seats.find((one) => one.seat_index === who.seat_index);
-          return !seat?.character_id || !who.ready;
+          const seat = seatOfUser(who);
+          return seat !== undefined && (!seat.character_id || !who.ready);
         });
         return [
           `Poczekalnia — ${snapshot.users.length} przy stole.`,
