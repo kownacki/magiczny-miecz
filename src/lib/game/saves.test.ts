@@ -131,6 +131,22 @@ describe("a game kept in a file", () => {
    * A save written without somewhere to put it could never be wound back, which
    * is the one thing about a format that cannot be fixed later.
    */
+  /**
+   * Which ekwipunek, before you open it.
+   *
+   * The two do not agree about what a pack is — 5.4 caps it at four, the
+   * slotted variant counts only what is worn towards a Koń's carrying, and
+   * `equip` works in one and refuses in the other — and nothing said which a
+   * table was playing. The only way to find out was to try something.
+   */
+  it("says which ekwipunek a table is playing", async () => {
+    const slotted = await newSave(["Kowi"], "slots");
+    const printed = await newSave(["Ola"], "classic");
+    const listed = await listSaves();
+    expect(listed.find((one) => one.code === slotted.code)?.eqMode).toBe("slots");
+    expect(listed.find((one) => one.code === printed.code)?.eqMode).toBe("classic");
+  });
+
   it("carries a log, and hands it back to whoever reopens it", async () => {
     const { code, log } = await newSave(["Kowi"]);
     expect((await readSave(code)).log).toEqual([]);

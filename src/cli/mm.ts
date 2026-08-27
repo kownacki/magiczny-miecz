@@ -464,7 +464,10 @@ async function local(line: string): Promise<boolean> {
     const found = await listSaves();
     if (found.length === 0) say("No tables. `table new Kowi, Ola` opens one.");
     for (const one of found) {
-      say(`  ${one.code}  ${one.status}  turn ${one.turn}  ${one.players.join(", ")}`);
+      say(
+        `  ${one.code}  ${one.status}  turn ${one.turn}  ${one.eqMode}  ` +
+          one.players.join(", "),
+      );
     }
     return true;
   }

@@ -68,6 +68,8 @@ export interface SaveSummary {
   savedAt: string;
   turn: number;
   status: string;
+  /** Which ekwipunek it is playing — the two count a pack differently (5.4). */
+  eqMode: string;
   players: string[];
 }
 
@@ -78,6 +80,7 @@ function summarise(code: string, file: SaveFile): SaveSummary {
     savedAt: file.savedAt,
     turn: typeof game.turn === "number" ? game.turn : 0,
     status: typeof game.status === "string" ? game.status : "?",
+    eqMode: typeof game.eq_mode === "string" ? game.eq_mode : "?",
     players: file.tables.users
       .map((row) => (row as Record<string, unknown>).name)
       .filter((name): name is string => typeof name === "string"),

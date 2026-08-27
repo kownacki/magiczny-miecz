@@ -74,6 +74,7 @@ import {
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { eqModeOf, seatView } from "./commands/seat";
 import { fitsIn, slotsFor, type Slot } from "@/lib/engine/slots";
 import { fold } from "@/lib/engine/search";
 
@@ -1357,6 +1358,7 @@ export async function runCommand(
       const own = seat.id === actor.seatId;
       const spells = mine.filter((one) => one.kind === "spell");
       const items = mine.filter((one) => one.kind !== "spell");
+      const view = seatView(snapshot, seat.id);
       const worn = items.filter((one) => one.slot !== null);
       const carried = items.filter((one) => one.slot === null);
       return [
@@ -1366,10 +1368,20 @@ export async function runCommand(
         // Worn and carried are different places — 5.1 and the slot variant both
         // turn on which — and listing a Hełm you are wearing under "Pack" said
         // equipping it had not worked.
+        /**
+         * How much of the pack is used, and which rules are counting.
+         *
+         * Nothing anywhere said which ekwipunek a table was playing, and the
+         * two do not agree about what a pack is: 5.4 caps it at four, the
+         * slotted variant counts only what is worn towards a Koń's carrying,
+         * and `equip` works in one and refuses in the other. The only way to
+         * find out was to try something and be told no.
+         */
         ...(worn.length
           ? [`Worn: ${worn.map((one) => `${cardName(one.card_id)} (${one.slot})`).join(", ")}`]
           : []),
-        `Pack: ${carried.length ? carried.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,
+        `Pack ${view.carried}/${view.carryLimit} (${eqModeOf(snapshot.game)}): ` +
+          `${carried.length ? carried.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,
         own
           ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`
           : `Zaklęcia: ${spells.length} (face down — 9.3)`,
