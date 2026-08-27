@@ -32,6 +32,9 @@ export async function POST(request: Request) {
   // the default has to be the game as printed.
   // Slotowy unless the caller asks for the printed rules.
   const eqMode: EqMode = body.eqMode === "classic" ? "classic" : "slots";
-  const { game, hostToken } = await createGame(name, mode, eqMode);
+  // Which browser opened the table, so that closing the tab is not the end of
+  // being its host. See `createGame`.
+  const deviceId = typeof body.deviceId === "string" ? body.deviceId : null;
+  const { game, hostToken } = await createGame(name, mode, eqMode, deviceId);
   return NextResponse.json({ joinCode: game.join_code, token: hostToken });
 }

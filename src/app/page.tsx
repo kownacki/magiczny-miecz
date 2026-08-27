@@ -8,6 +8,7 @@ import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { isCharacterId } from "@/data/ids";
 import { COMPANION_PARKED } from "@/lib/game/modes";
+import { deviceId } from "@/lib/game/deviceId";
 
 interface GameSummary {
   joinCode: string;
@@ -111,7 +112,7 @@ export default function Home() {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, mode, eqMode }),
+        body: JSON.stringify({ name, mode, eqMode, deviceId: deviceId() }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -132,7 +133,7 @@ export default function Home() {
       const response = await fetch(`/api/games/${joinCode}/join`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, deviceId: deviceId() }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "Nie udało się dołączyć.");

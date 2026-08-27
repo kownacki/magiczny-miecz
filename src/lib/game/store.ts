@@ -141,6 +141,8 @@ export async function createGame(
   hostName: string | null = null,
   mode: GameMode = "simulation",
   eqMode: EqMode = "slots",
+  /** Which browser this is, so the host can be recognised coming back. */
+  deviceId: string | null = null,
 ): Promise<{ game: GameRow; hostToken: string }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const joinCode = makeJoinCode();
@@ -163,12 +165,15 @@ export async function createGame(
      * a place with a Postać in it and nothing else, so the only thing it needs
      * here is its number.
      *
-     * The host's own device id is not known yet — `createGame` is called from a
-     * route that has only a name — so coming back to a table you opened is the
-     * one case `resumeAs` cannot answer. It is written on the first poll:
-     * whoever holds this token is asked for their device the next time they
-     * join anything. Worth knowing rather than worth fixing here, where there
-     * is nothing to fix it with.
+     * The device is written here, with the row, because this was the one case
+     * `resumeAs` could not answer. The comment that used to stand here said the
+     * id was unknown at this point and would be "written on the first poll" —
+     * it was not, by anything, and nothing ever wrote `device_id` outside
+     * `joinGame`. So whoever opened a table could never be recognised on the
+     * way back: the host, the person likeliest of anyone to reload the page.
+     *
+     * Null when the browser refuses storage, exactly as in `joinGame`. Nothing
+     * is gated on it — it buys a way back, and its absence costs only that.
      */
     const hostToken = makeClaimToken();
     const { error: seatError } = await tables.seats.insert({ game_id: data.id, seat_index: 0 });
@@ -179,6 +184,7 @@ export async function createGame(
       game_id: data.id,
       name: hostName ?? "Gospodarz",
       claim_token: hostToken,
+      device_id: deviceId,
       is_host: true,
       seat_index: 0,
     });
