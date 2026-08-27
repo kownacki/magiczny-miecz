@@ -26,26 +26,24 @@ export function Journal({
   code,
   revision,
   eqMode = "classic",
-  fills = false,
+  covers = "planszę",
 }: {
   code: string;
   revision: number;
   eqMode?: EqMode;
   /**
-   * Whether the column this is in belongs to it.
+   * What expanding this hides, in the accusative, for the two buttons that say
+   * so.
    *
-   * Under the board it does not: the map is the thing that has to fit and the
-   * Dziennik takes a fifth of what is left, which is what `h-[20.25%]` is. In
-   * the poczekalnia's side column it is one of three things stacked in a box,
-   * and a percentage of a wrapper with no height of its own resolves to nearly
-   * nothing — which is exactly what it did, leaving the feed floating in the
-   * middle of an empty column with the heading marooned above it.
+   * Under the board that is "planszę" and always was. In the poczekalnia there
+   * is no board — the Dziennik hangs beside the Karty Postaci — and the
+   * buttons went on offering to show one, which is the sort of label that is
+   * only ever read by somebody already unsure what a control does.
    *
-   * So the caller says which it is, rather than this guessing from a measured
-   * parent. Filling means the wrapper decides the height and this takes all of
-   * it.
+   * A word rather than a boolean, because there are two sentences to build and
+   * a flag would mean writing both twice.
    */
-  fills?: boolean;
+  covers?: string;
 }) {
   const [lines, setLines] = useState<JournalLine[]>([]);
   /**
@@ -107,12 +105,7 @@ export function Journal({
               // The board wrapper is flex-1 and absorbs the slack today, but
               // that is the board business and not something this should depend
               // on to stay where it belongs.
-              fills
-              ? // The wrapper is this thing's own, so it says how tall: no
-                // percentage, no `mt-auto` to push against, and all four sides
-                // bordered because nothing is butting up underneath it.
-                "flex min-h-0 flex-1 flex-col rounded border border-edge bg-panel/50"
-              : "mt-auto flex h-[20.25%] shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
+              "mt-auto flex h-[20.25%] shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
       }
     >
       <SurfaceHead
@@ -173,7 +166,7 @@ export function Journal({
             {!mini && (
               <ChromeButton
                 glyph={expanded ? "collapse" : "expand"}
-                title={expanded ? "Zwiń — pokaż planszę" : "Rozwiń na całą planszę"}
+                title={expanded ? `Zwiń — pokaż ${covers}` : `Rozwiń na całą ${covers}`}
                 onClick={() => setSize(expanded ? "normal" : "big")}
               />
             )}

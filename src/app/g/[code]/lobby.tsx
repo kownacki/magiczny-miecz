@@ -417,36 +417,37 @@ export function Lobby({
             </label>
           )}
 
-          {/* The Karta takes the slack, and gives it up to the Dziennik below.
-              `min-h-0` is what lets it: without it a flex child refuses to
-              shrink past its content, and the card's own `max-h-full` would be
-              measured against a box that had already won the argument. */}
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-end">
-            <ReadingCard reading={reading} character={cardFor(reading)} />
-          </div>
-
           {/**
-           * The Dziennik, at the foot of the column.
+           * The Karta and the Dziennik, in the shape the board column already
+           * uses for the map and the Dziennik.
            *
-           * The poczekalnia had no journal at all, which made every line written
-           * before the first turn a line nobody could read until the board
-           * appeared — and the ones written here are exactly the ones about
-           * *this* room: who arrived, who sat down, who stood up again, who is
-           * running the table.
+           * Deliberately the same shape, because it is the same arrangement:
+           * one thing that has to fit, with the feed along the bottom of it. So
+           * the two are siblings in a `relative` flex column — the Karta takes
+           * `flex-1` exactly as the map does, and the Dziennik keeps its own
+           * three heights rather than being given a fourth for this column.
            *
-           * At the bottom rather than between the settings and the card, which
-           * is where it went first and looked broken: it took a percentage of a
-           * wrapper with no height of its own, so it floated in the middle of an
-           * empty column. `fills` is the fix and this is the shape that fix
-           * assumes — a box of a stated height with the feed filling it.
+           * That is what went wrong first time round. Sitting it between the
+           * settings and the Karta made `h-[20.25%]` a share of a wrapper with
+           * no height of its own, so the feed floated mid-column; the fix was
+           * briefly a "fill your box" mode, which is a second set of heights to
+           * keep in step with the first for no reason anybody reading it would
+           * guess. Mini, normal and expanded now mean the same thing in both
+           * rooms.
            *
-           * `relative`, because expanding it is `absolute inset-0` and wants an
-           * ancestor to be inset-zero *of*. Without one it would lay itself over
-           * the whole page rather than over this column.
+           * `relative` is what expanding needs: it is `absolute inset-0`, and
+           * this is the box it opens over — the Karta and the feed, leaving the
+           * settings above it alone, just as the board's own keeps the table
+           * header.
            */}
-          {journal && (
-            <div className="relative flex h-[38%] min-h-0 shrink-0 flex-col">{journal}</div>
-          )}
+          <div className="relative flex min-h-0 flex-1 flex-col gap-2">
+            {/* `min-h-0`, or the Karta refuses to shrink past its own content
+                and takes the room the feed is owed. */}
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-end">
+              <ReadingCard reading={reading} character={cardFor(reading)} />
+            </div>
+            {journal}
+          </div>
         </aside>
 
         {/* Last, so it lies over both columns — the seats and the reading
