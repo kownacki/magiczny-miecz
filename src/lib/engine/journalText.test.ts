@@ -335,6 +335,25 @@ suite("Polish agreement", () => {
 });
 
 suite("the end of a turn", () => {
+  /**
+   * The same freeze `describe` does, and needed here too: these lines come off
+   * the same row as the ones above them, so a journal where "kończy turę"
+   * renames itself while "idzie z X na Y" does not is worse than one that
+   * renames both.
+   */
+  it("keeps the name the turn was ended under", () => {
+    const lines = describeTurnChange(
+      entry("turn-end", { next: 0 }, { actorName: "Michalina" }),
+      SEATS,
+    );
+    // Only the seat that acted. Whoever plays next is being talked *about*, and
+    // "zaczyna turę" is about who is sitting there now.
+    expect(lines.map((line) => line.text)).toEqual([
+      "Michalina (GOBLIN) kończy turę.",
+      "Michał (GOBLIN) zaczyna turę.",
+    ]);
+  });
+
   it("says who was passed over, then who has it now", () => {
     const lines = describeTurnChange(
       entry("turn-end", { next: 0, skipped: [1, 2] }),

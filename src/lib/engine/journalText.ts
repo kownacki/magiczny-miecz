@@ -652,7 +652,21 @@ export function describeTurnChange(
 ): JournalLine[] {
   if (entry.kind !== "turn-end") return [];
   const data = entry.payload;
-  const seat = seats.find((candidate) => candidate.id === entry.seatId);
+  /**
+   * The seat that ended the turn, under the name it had at the time.
+   *
+   * The same freeze `describe` does, and it has to be here too: these lines are
+   * written from the *same row*, so a journal where "kończy turę" renames
+   * itself and the line above it does not is worse than one that renames both.
+   *
+   * Only the seat whose turn ended, though. The others named here — whoever
+   * plays next, whoever was skipped — are being talked *about* rather than
+   * acting, and are read live on purpose: "czeka na Anię" is about who is
+   * sitting there now, and would be wrong frozen.
+   */
+  const found = seats.find((candidate) => candidate.id === entry.seatId);
+  const seat =
+    found && entry.actorName ? { ...found, playerName: entry.actorName } : found;
   const skipped = Array.isArray(data.skipped) ? data.skipped : [];
 
   // Fractions of a seq keep several lines from one row distinct and in the
