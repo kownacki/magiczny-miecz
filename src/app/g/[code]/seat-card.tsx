@@ -547,12 +547,16 @@ export function SeatCard({
                  object out of them. It was `flex-1` for a version, which is
                  what pulled it in against the card. */
               <div className="shrink-0">
-                <p className="mb-2 text-[11px] uppercase tracking-widest text-muted">
-                  Na sobie{" "}
-                  <span className="text-muted/70">
-                    {Object.keys(wornBySlot(seat)).length} / {PLACES_ON_THE_BODY}
-                  </span>
-                </p>
+                {/* The same heading as every other section, through the same
+                    component — it simply does not fold, which is what a `Fold`
+                    with no handler is. It was a hand-written `<p>` wearing the
+                    same classes, which is exactly how four of these drifted
+                    apart in the first place. */}
+                <Fold
+                  first
+                  title="Na sobie"
+                  tally={`${Object.keys(wornBySlot(seat)).length} / ${PLACES_ON_THE_BODY}`}
+                >
               <SlotPanel
                 worn={wornBySlot(seat)}
                 canAct={canAdjust}
@@ -575,6 +579,7 @@ export function SeatCard({
                   holdingId ? onEquip(holdingId, slot) : place(slot)
                 }
               />
+                </Fold>
               </div>
             )}
           </div>

@@ -44,25 +44,56 @@ export function Fold({
    * the slack, and truncated by the caller if it can be long.
    */
   aside?: React.ReactNode;
-  open: boolean;
-  onToggle: () => void;
+  open?: boolean;
+  /**
+   * Absent where a section does not fold.
+   *
+   * A heading is not only a handle: the rule above it, the small capitals, the
+   * tally beside the name and the space it leaves are what make a column of
+   * sections read as one thing, and a section that happens to be always open
+   * wants every part of that except the triangle. Browsing the Księga is the
+   * case — one shelf, already chosen by the tabs above it, and a control that
+   * folds away the only thing on screen is a control with nothing behind it.
+   *
+   * So no handler means no marker and no click, and everything else identical.
+   */
+  onToggle?: () => void;
   /** The heading's colour, for the one section that is not the others' grey. */
   tone?: string;
   /** The first in a stack has no rule above it — see the border below. */
   first?: boolean;
   children: React.ReactNode;
 }) {
+  /**
+   * A rule above every section but the first, which is what makes a column of
+   * them read as a stack rather than as a list of unrelated boxes. The spacing
+   * is the border's, so the gap between two sections is the same whether either
+   * of them is open — and the same in every place these are used, which is the
+   * whole reason there is one component.
+   */
+  const outside = first ? "" : "mt-3 border-t border-edge pt-3";
+  const heading = `text-[11px] uppercase tracking-widest ${tone}`;
+  const inside = (
+    <span className="inline-flex w-[calc(100%-1.25rem)] items-center gap-3 align-middle">
+      <span className="shrink-0">
+        {title}
+        {tally !== undefined && <span className="ml-2 text-muted/70">{tally}</span>}
+      </span>
+      {aside}
+    </span>
+  );
+
+  if (!onToggle) {
+    return (
+      <div className={outside}>
+        <p className={heading}>{inside}</p>
+        <div className="mt-2">{children}</div>
+      </div>
+    );
+  }
+
   return (
-    /**
-     * A rule above every section but the first, which is what makes a column of
-     * them read as a stack rather than as a list of unrelated boxes. The
-     * spacing is the border's, so the gap between two folded sections is the
-     * same whether either of them is open.
-     */
-    <details
-      open={open}
-      className={first ? "" : "mt-3 border-t border-edge pt-3"}
-    >
+    <details open={open} className={outside}>
       <summary
         onClick={(event) => {
           // Controlled outright: the browser's own toggling and a piece of
@@ -73,19 +104,13 @@ export function Fold({
           event.preventDefault();
           onToggle();
         }}
-        className={`cursor-pointer text-[11px] uppercase tracking-widest ${tone}`}
+        className={`cursor-pointer ${heading}`}
       >
         {/* One flex line, so the name, the tally and whatever rides on the bar
             are centred on each other rather than each sitting on the summary's
             own baseline. `align-middle` puts the line itself next to the
             marker, which stays outside it. */}
-        <span className="inline-flex w-[calc(100%-1.25rem)] items-center gap-3 align-middle">
-          <span className="shrink-0">
-            {title}
-            {tally !== undefined && <span className="ml-2 text-muted/70">{tally}</span>}
-          </span>
-          {aside}
-        </span>
+        {inside}
       </summary>
       {/* The gap belongs to what is inside, not to the heading: a margin under
           the summary is height a *shut* section is still paying for, and that

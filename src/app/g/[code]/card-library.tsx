@@ -350,21 +350,23 @@ export function CardLibrary({
         }
       >
       <div className="p-4">
-        <p className="mb-3 text-[11px] text-muted">
-          {/* The board is not the deck: counting it in "kart" said 0, because
-              no card in the box has a field on it. */}
-          {shelf === "obszary" ? (
-            "Najedź na Obszar, żeby przeczytać, co na nim napisano."
-          ) : (
-            <>
-              {/* The headings carry the tally now; this is left with the one
-                  thing they cannot say, which is where the search looked. */}
-              {searching
-                ? `${cards.length} ${plural(cards.length, "karta", "karty", "kart")} — szukam w całej talii, nie tylko na tej półce.`
-                : "Kliknij kartę, żeby ją obejrzeć."}
-            </>
-          )}
-        </p>
+        {/* Said only where there is something to say.
+            
+            The headings carry the tally and the pictures are plainly pictures,
+            so "click a card to look at it" was a caption explaining that cards
+            can be clicked, above a shelf of cards. What is left is the one
+            thing the headings cannot say — that a search leaves the shelf you
+            are on and reads the whole box — and the Obszary, which are the one
+            shelf you read by hovering rather than by opening. */}
+        {(searching || shelf === "obszary") && (
+          <p className="mb-3 text-[11px] text-muted">
+            {/* The board is not the deck: counting it in "kart" said 0, because
+                no card in the box has a field on it. */}
+            {shelf === "obszary"
+              ? "Najedź na Obszar, żeby przeczytać, co na nim napisano."
+              : `${cards.length} ${plural(cards.length, "karta", "karty", "kart")} — szukam w całej talii, nie tylko na tej półce.`}
+          </p>
+        )}
         {shelf === "obszary" ? (
           <div className="flex flex-col gap-5">
             {REGIONS.map(({ key, label }) => {
@@ -393,32 +395,41 @@ export function CardLibrary({
             })}
           </div>
         ) : (
-        <div className="flex flex-col gap-5">
+        // No `gap`: `Fold` brings its own rhythm — a rule above every section
+        // but the first, and the space is the rule's — and a gap on top of it
+        // made these sit further apart than the same component does in the seat
+        // card. One spacing, decided in one place.
+        <div className="flex flex-col">
           {sections.map((section, at) => (
             /**
-             * Foldable, and by the same component the seat card's sections use.
+             * Browsing, there is one shelf and the tabs above already chose it:
+             * a heading you can fold away over the only thing on screen is a
+             * control with nothing behind it. Searching, the same answer comes
+             * back in eight shelves at once — "79 kart" is four screens of
+             * pictures — and folding the ones you did not mean is how a long
+             * answer becomes a short one without throwing any of it away.
              *
-             * A search across the whole deck answers in seven shelves at once —
-             * "79 kart" is four screens of pictures — and the shelf somebody
-             * wants is usually one of them. Folding the others is how a long
-             * answer becomes a short one without throwing any of it away, and
-             * the count on each bar is what says whether it is worth opening.
+             * Same component as the seat card's sections, and now with none of
+             * its looks overridden: the heading is `text-muted` there, so it is
+             * `text-muted` here.
              */
             <Fold
               key={section.key}
               first={at === 0}
               title={section.label}
-              tone="text-ochre/80"
               /* Searching, the number is how many were found; browsing, it is
                  what the box holds. */
               tally={searching ? section.cards.length : shelfTally(section.key)}
-              open={!shut.has(section.key)}
-              onToggle={() =>
-                setShut((was) => {
-                  const next = new Set(was);
-                  if (!next.delete(section.key)) next.add(section.key);
-                  return next;
-                })
+              open={!searching || !shut.has(section.key)}
+              onToggle={
+                searching
+                  ? () =>
+                      setShut((was) => {
+                        const next = new Set(was);
+                        if (!next.delete(section.key)) next.add(section.key);
+                        return next;
+                      })
+                  : undefined
               }
             >
               <div className="flex flex-wrap gap-3">
