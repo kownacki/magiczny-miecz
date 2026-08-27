@@ -345,7 +345,12 @@ export function TakeOverGate({
         </div>
       ) : (
         <p className="max-w-sm text-center text-sm text-muted">
-          Wszystkie {taken} postaci mają swoich graczy.
+          {/* `taken` counts the Postacie still standing, and it reaches zero:
+              kill the only one and the sentence read "Wszystkie 0 postaci mają
+              swoich graczy". There is nobody left to have a player. */}
+          {taken === 0
+            ? "Żadna Postać nie czeka w tej chwili na gracza."
+            : `Wszystkie ${taken} postaci mają swoich graczy.`}
           {room
             ? " Możesz dosiąść się nową Postacią albo oglądać."
             : " Stół jest pełny (2-6 graczy) — możesz oglądać. Jeśli ktoś odejdzie, jego postać pojawi się tutaj do przejęcia."}
