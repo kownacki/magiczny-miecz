@@ -213,8 +213,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * moves on, since the next character meets the same cards fresh.
    */
   const [waved, setWaved] = useState<string[]>([]);
-  /** Whether the "choose again" modal is open (4.4). */
+  /** Whether the "choose again" modal was *asked* for (4.4). */
   const [reborn, setReborn] = useState(false);
+  /**
+   * Whether the picker was waved away by somebody who has a seat but no Postać.
+   *
+   * Its own state, and not `watching` above — that one is a *seatless* visitor
+   * who never sat down. This is the other half: "I asked for the picker" and "I
+   * dismissed the picker" are different questions, and `reborn` alone could not
+   * answer both. The picker opens unasked for somebody with no Postać at all,
+   * so `reborn` was already false while it was on screen and "oglądaj dalej"
+   * turning it off again closed nothing — the gate re-opened it on the same
+   * render. The button was there the whole time and did nothing.
+   *
+   * Cleared on picking, so waving it away once does not silence it for a death
+   * three turns later.
+   */
+  const [pickerWavedOff, setPickerWavedOff] = useState(false);
   /** The roster, open over the right-hand column. */
   const [rightDrawer, setRightDrawer] = useState<"gracze" | null>(null);
   /** Which seat the players drawer should open on, when it was opened about one. */
@@ -639,7 +654,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {game.status === "playing" &&
         mySeat &&
         (mySeat.eliminated || !mySeat.character_id) &&
-        (reborn || !mySeat.character_id) && (
+        // Asked for, or opened unasked and not yet waved away. Watching the
+        // rest of the game is a real answer for a latecomer too — they came to
+        // a table already running and may want to see it before choosing — and
+        // the panel on the right is the way back in whenever they do.
+        (reborn || (!mySeat.character_id && !pickerWavedOff)) && (
         <RebornModal
           characters={CHARACTERS}
           /**
@@ -662,9 +681,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           busy={busy}
           onConfirm={(characterId) => {
             setReborn(false);
+            setPickerWavedOff(false);
             post("character", { again: true, seatId: mySeat.id, characterId });
           }}
-          onClose={() => setReborn(false)}
+          onClose={() => {
+            setReborn(false);
+            setPickerWavedOff(true);
+          }}
         />
       )}
 
@@ -1482,7 +1505,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 rule says *może*, so choosing again is offered rather than
                 demanded. Dismissing the modal leaves this line, which is the
                 way back into it whenever they want. */}
-            {mine?.eliminated && (
+            {/* The same three ways of sitting with no Postać the picker gate
+                knows about, and for the same reason: `remove` clears
+                `eliminated` on purpose — a chair with nothing standing in it is
+                waiting rather than dead — so a withdrawn player was offered
+                nothing here at all. This is the way back into the picker for
+                every one of them, and now that it can be waved away it is the
+                only way back. */}
+            {mine && (mine.eliminated || !mine.character_id) && (
               <section className="mt-3 rounded-lg border border-vermilion/50 bg-vermilion/5 p-3">
                 <h3 className="mb-1 font-[family-name:var(--font-display)] text-sm text-vermilion">
                   {mine.character_id ? "Twoja Postać zginęła" : "Dosiadasz się do stołu"}
