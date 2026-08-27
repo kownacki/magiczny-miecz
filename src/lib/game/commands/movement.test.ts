@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { asSeatCharacter } from "@/lib/engine/characters";
-import { asFieldId } from "@/lib/engine/board";
+import { asFieldId, requireFieldId } from "@/lib/engine/board";
 import { afterRoll } from "@/lib/engine/turn";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { HoldingRow } from "../store";
@@ -191,6 +191,40 @@ describe("rzut na ruch (10.2)", () => {
     expect(writes.journal).toEqual([
       { seatId: "seat-a", turn: 3, kind: "roll", payload: { roll: 5, manual: false }, manual: false },
     ]);
+  });
+
+  /**
+   * Mgła (`move-max`), which nothing consulted until it was wired.
+   *
+   * The status could be put on a seat — the test console does exactly that —
+   * and the character still walked the whole roll. What is capped is the walk
+   * and not the die: a 5 stays a 5 on screen, because an app that reported a 1
+   * would be lying about the throw, and only the list of places it can reach
+   * shrinks.
+   */
+  it("walks no further than Mgła allows, and still shows the die", async () => {
+    const fogged = rolling();
+    fogged.effects = [
+      {
+        id: "e1",
+        seat_id: "seat-a",
+        source: "mgla",
+        label: "Mgła",
+        modifier: { kind: "move-max", pola: 1 },
+        ends: { kind: "turns", turns: 1 },
+      },
+    ];
+    const { writes, result } = await rollForMove(fogged, {}, die(5));
+    expect(result).toBe(5);
+    // The throw is untouched, on the record and on the screen.
+    expect(writes.game?.turn_state).toMatchObject({ roll: 5 });
+    const options = (writes.game?.turn_state as { options: { fieldId: string }[] }).options;
+    // One field either way, which is a 1 rather than the 5 that was thrown.
+    const atOne = afterRoll(requireFieldId("zaczarowane-wzgorza"), 1);
+    expect(options.map((o) => o.fieldId)).toEqual(
+      (atOne as { options: { fieldId: string }[] }).options.map((o) => o.fieldId),
+    );
+    expect(writes.journal?.[0]).toMatchObject({ payload: { roll: 5, cap: 1 } });
   });
 
   /** At a physical table a human reads the die aloud, and the journal says so. */

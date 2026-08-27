@@ -3,6 +3,8 @@
 import { FIELDS, requireFieldId } from "@/lib/engine/board";
 import type { FieldId } from "@/lib/engine/board";
 import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
+import { movementCap } from "@/lib/engine/status";
+import { statusesOf } from "./turn";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import {
   afterMove,
@@ -242,18 +244,30 @@ export async function rollForMove(
   const hasSword = opensTheWayTo(heldAbilities(mine.map((h) => h.card_id)), "most");
   const blocked = bridgeBlocked(seat.bridge_blocked_until_turn, snapshot.game.turn);
 
+  // Mgła caps the walk (`move-max`). Read here rather than in `afterRoll`,
+  // which is given facts about the seat already decided — the same shape as
+  // `bridgeOffered` beside it. Nothing consulted it before: the status could be
+  // put on a seat and the character walked the full roll anyway.
+  const cap = movementCap(statusesOf(snapshot, seat.id));
+
   const manual = command.manual ?? false;
   return {
     writes: {
       game: {
-        turn_state: afterRoll(seat.field_id, roll, { bridgeOffered: hasSword && !blocked }),
+        turn_state: afterRoll(seat.field_id, roll, {
+          bridgeOffered: hasSword && !blocked,
+          cap,
+        }),
       },
       journal: [
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
           kind: "roll",
-          payload: { roll, manual },
+          // The cap goes in the payload even though `roll` lines are UNSPOKEN,
+          // because the row is the record of what the app decided and "why was
+          // a 5 only worth one field" is exactly what it would be read for.
+          payload: { roll, manual, ...(cap === null ? {} : { cap }) },
           manual,
         },
       ],

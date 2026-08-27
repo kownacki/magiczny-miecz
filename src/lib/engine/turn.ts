@@ -228,7 +228,22 @@ export function afterRoll(
    * Both are facts about the seat rather than the board, so they arrive here
    * already decided.
    */
-  { bridgeOffered = false }: { bridgeOffered?: boolean } = {},
+  {
+    bridgeOffered = false,
+    cap = null,
+  }: {
+    bridgeOffered?: boolean;
+    /**
+     * The furthest this character may walk whatever the die says — Mgła, and
+     * nothing else in the base game (`move-max`).
+     *
+     * A cap on the *walk*, not on the die. The number thrown stays in the turn
+     * state and on screen, because the app must not tell a player they rolled
+     * something they did not; what shrinks is the list of places the roll can
+     * take them. Null when nothing is limiting the move, which is almost always.
+     */
+    cap?: number | null;
+  } = {},
 ): TurnPhase {
   // On the bridge the roll is ignored entirely (10.3) — one field per turn,
   // either onward or back the way you came.
@@ -236,7 +251,7 @@ export function afterRoll(
     return { phase: "move", roll, options: bridgeOptions(fieldId) };
   }
   const ring = ringOf(fieldId) ?? DOLNY_KRAG;
-  const walks = moveOptions(ring, fieldId, roll);
+  const walks = moveOptions(ring, fieldId, cap === null ? roll : Math.min(roll, cap));
   const options: TurnMoveOption[] = walks.map((option) => ({
     direction: option.direction,
     fieldId: option.field.id,
