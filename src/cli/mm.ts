@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { helpLines, parseCommand, permits, worksOffTable } from "@/lib/engine/console";
 import { tabFor } from "./tab";
+import type { CommandSpec } from "@/lib/engine/console";
 import { stageOf, type Stage } from "@/lib/engine/console";
 import { cardLines, runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
@@ -68,13 +69,34 @@ import type { Tables } from "@/lib/game/fakeDb";
  *
  * The cost is a prefix on commands typed once a session. Tab pays it back.
  */
-const LOCAL = ["table", "test", "quit", "exit"];
+const LOCAL: CommandSpec[] = [
+  {
+    name: "table",
+    aliases: [],
+    usage: "table [new|open|delete]",
+    summary: "list tables, open one, or start one — `table new Kowi, Ola`",
+    needs: "play",
+    offTable: true,
+  },
+  {
+    name: "test",
+    aliases: [],
+    usage: "test [on|off]",
+    summary: "the commands that overrule the rules; bare `test` says which way it is",
+    needs: "play",
+    offTable: true,
+  },
+  { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", offTable: true },
+];
 
-/** What each family answers to, for `help` and for Tab. */
+/** What each family takes after its noun, for Tab and for the "I know:" answer. */
 const FAMILIES: Record<string, string[]> = {
   table: ["new", "open", "delete"],
   test: ["on", "off"],
 };
+
+/** Every word this prompt answers to that the game does not, for Tab. */
+const LOCAL_WORDS = LOCAL.flatMap((spec) => [spec.name, ...spec.aliases]);
 
 /** Where a stack trace goes, so a session stays readable and a bug is a path. */
 const LOG = join(homeDir(), "mm.log");
@@ -374,7 +396,7 @@ async function main(): Promise<void> {
   rl = createInterface({
     input: stdin,
     output: stdout,
-    completer: (line: string) => tabFor(line, players, LOCAL, { stage, testmode }, FAMILIES),
+    completer: (line: string) => tabFor(line, players, LOCAL_WORDS, { stage, testmode }, FAMILIES),
   });
 
   say("Magiczny Miecz — console.");
@@ -414,12 +436,7 @@ async function main(): Promise<void> {
         // which half of the vocabulary is reachable.
         const asked = line.split(/\s+/)[1] ?? null;
         const all = asked === "all";
-        for (const one of helpLines(all ? null : asked, { testmode, stage, all })) say(one);
-        // The families, spelled out: `table` alone would not say what it takes.
-        say(
-          `  table [${FAMILIES.table.join("|")}] · test [on|off] · quit` +
-            "  — tables, testmode, exit",
-        );
+        for (const one of helpLines(all ? null : asked, { testmode, stage, all }, LOCAL)) say(one);
       } else if (offTable(line)) {
         // Reading a Karta touches no game, so it must not need one. Somebody
         // deciding whether to play wants to read what they would be playing.

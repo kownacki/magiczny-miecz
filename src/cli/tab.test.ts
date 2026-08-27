@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { tabFor } from "./tab";
-import type { Stage } from "@/lib/engine/console";
+import { helpLines, type CommandSpec, type Stage } from "@/lib/engine/console";
 
 /**
  * Tab, in the shape `readline` asks for it.
@@ -12,7 +12,20 @@ import type { Stage } from "@/lib/engine/console";
  */
 
 const PLAYERS = ["Michał", "Ola"];
-const LOCAL = ["table", "test", "quit", "exit"];
+/** The shape `mm` declares its own commands in — see `LOCAL` there. */
+const LOCAL_SPECS: CommandSpec[] = [
+  {
+    name: "table",
+    aliases: [],
+    usage: "table [new|open|delete]",
+    summary: "tables",
+    needs: "play",
+    offTable: true,
+  },
+  { name: "test", aliases: [], usage: "test [on|off]", summary: "testmode", needs: "play", offTable: true },
+  { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", offTable: true },
+];
+const LOCAL = LOCAL_SPECS.flatMap((spec) => [spec.name, ...spec.aliases]);
 const FAMILIES = { table: ["new", "open", "delete"], test: ["on", "off"] };
 /** Mid-turn and unlocked, unless a test says otherwise. */
 const tab = (
@@ -102,6 +115,25 @@ describe("finishing a line at a prompt", () => {
   it("still explains a command it would not offer", () => {
     // Asking about one you cannot run is a fair question.
     expect(tab("help kil", { stage: "lobby", testmode: false })[0]).toEqual(["help kill "]);
+  });
+
+  /**
+   * Tab and `help` have to cover the same words.
+   *
+   * They did not: `mm`'s own commands were a footer under `help`'s list, in a
+   * different shape, while Tab treated them as peers — so Tab offered `test`
+   * and `help` looked like it had never heard of it. Different presentation is
+   * fine; a different vocabulary is a bug, and this is the assertion that says
+   * which one is happening.
+   */
+  it("offers exactly the words `help` lists", () => {
+    const at = { stage: "none" as const, testmode: false };
+    const offered = new Set(tab("", at)[0].map((one) => one.trim()));
+    const listed = helpLines(null, { ...at, all: true }, LOCAL_SPECS)
+      .flatMap((line) => line.trim().split(/\s+/)[0].split("|"))
+      .filter((word) => /^[a-z?]+$/.test(word));
+
+    for (const word of offered) expect(listed, word).toContain(word);
   });
 
   /**

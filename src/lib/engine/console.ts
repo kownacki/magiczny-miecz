@@ -1298,6 +1298,16 @@ export function permits(
 export function helpLines(
   about: string | null = null,
   at: { testmode?: boolean; stage?: Stage; all?: boolean } = { testmode: true },
+  /**
+   * Commands a surface has of its own, listed among the rest.
+   *
+   * `mm` has four the browser could never carry out — `table`, `test`, `quit`
+   * — and they were a footer in a different shape underneath the real list.
+   * Tab treated them as peers, `help` did not, and the difference read as Tab
+   * offering something `help` had never heard of. They are the same kind of
+   * thing to somebody typing, so they are in the same list.
+   */
+  extra: readonly CommandSpec[] = [],
 ): string[] {
   const words = (spec: CommandSpec) => [spec.name, ...spec.aliases].join("|");
   /** The usage line without its verb, which the words have just replaced. */
@@ -1312,7 +1322,7 @@ export function helpLines(
    * list is for finding a command; this is for reading one.
    */
   if (about !== null) {
-    const spec = COMMANDS.find(
+    const spec = [...COMMANDS, ...extra].find(
       (one) => one.name === about || one.aliases.includes(about),
     );
     if (!spec) return [`No command \`${about}\`. Type \`help\` for the list.`];
@@ -1339,15 +1349,15 @@ export function helpLines(
    * named as a keystroke away, and still explained in full by `help <command>`.
    * Nothing becomes unfindable — it just stops being in the way.
    */
-  const shown = at.all === true ? COMMANDS : availableIn(at);
+  const shown = [...(at.all === true ? COMMANDS : availableIn(at)), ...extra];
   const rows = shown.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
   const widest = Math.max(...rows.map((row) => row.length), 0);
   const lines = shown.map((spec, index) => {
-    const idle = at.all === true && !availableIn(at).includes(spec);
+    const idle = at.all === true && !availableIn(at).includes(spec) && !extra.includes(spec);
     return `${idle ? "·" : " "}${rows[index].padEnd(widest)}  ${spec.summary}`;
   });
 
-  const hidden = COMMANDS.length - shown.length;
+  const hidden = COMMANDS.length + extra.length - shown.length;
   return hidden === 0
     ? lines
     : [...lines, ` ${`(${hidden} more)`.padEnd(widest)}  \`help all\` — every command, whenever it applies`];
