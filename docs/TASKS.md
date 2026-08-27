@@ -639,3 +639,57 @@ Both are now built, and both are still worth reading before touching either.
 - **Mid-game nothing is auto-unseated.** The sweep is the poczekalnia's only.
   A Postać is not free for the taking because somebody's phone slept; `AWAY_AFTER_MS`
   shows them away and the host has `unseat` for when it is really over.
+
+## Przyjaciele, and what the browser still has to draw
+
+The rulebook's chapter on friends (6.1–6.4) is about custody only — you gain
+them, they lie face up, you may keep any number, a dead one goes to the used
+pile. It says nothing about what a friend *does*, and that is why COVERAGE could
+mark the chapter done while a Rycerz stood there being decorative. Everything a
+friend does is printed on its own card.
+
+The engine now carries it. **A GUI needs no new rules work for any of this** —
+the browser reads derived figures off `seatView`, so the cards arrive through
+`envelope.ts` on their own.
+
+What the envelope already sends, per seat:
+
+- `sword_total` / `magic_total` — 1.5's "parametr", the number on the card
+- `sword_in_fight` / `magic_in_fight` — what it becomes when somebody swings;
+  the Rycerz replacing it outright and the Bojowy Rumak folding Magia into
+  Miecz both land here
+- `fights_for_you` — the cardId of the Przyjaciel doing the fighting, or null.
+  Worth drawing: the Rycerz's 3 and 3 *replace* the character's own, so for most
+  Postacie the fight figure goes **down** when he joins, and unexplained that
+  reads as a bug in the app rather than as the card doing what it says.
+- `holdings`, each with its `kind` — so friends can be grouped away from gear.
+  They are not gear: 6.3 makes them unlimited and they never count against 5.4's
+  four, which the console got wrong for a while by listing a Rycerz inside a
+  "Pack 2/4" he was not one of the two of.
+
+One new action on the turn route:
+
+- `raid` — the Poszukiwacz Przygód, sent at something up to three Obszary off.
+  Takes `targetSeatId` **or** `raidFieldCardId` (a Wróg left lying by 16.8), and
+  exactly one of them. Range is `fieldsApart`, which counts steps round one ring
+  and returns null across rings — a Przeprawa is a turn's work that can fail,
+  not a step. The friend fights with his own 3 points and dies instead of
+  costing a Życie, so a lost raid takes nothing from the character at all.
+
+### Two things that are still not done
+
+- **KRZYŻOWIEC carries a Zaklęcie** "którego użyje, gdy sobie tego zażyczysz" —
+  a spell held by a card rather than by a character, which nothing in the model
+  has a place for. Still a MANUAL note.
+- **GNOM and NAJEMNIK** have no abilities encoded at all, and are the only two
+  friends left at `brak`.
+
+### One migration owed
+
+`died-for-you` is a new journal kind. It is in `db/schema.sql` and in
+`journal.ts`, and the live database's CHECK constraint has **not** been altered
+— that database is biggerfish's and shared four ways, so it was left for a
+human. Terminal play writes save files and is unaffected. A browser game will
+refuse the write the first time a Giermek or a Rumak dies for somebody, and the
+fix is one `alter table ... drop constraint / add constraint` against the
+`magiczny_miecz` schema with the value added.
