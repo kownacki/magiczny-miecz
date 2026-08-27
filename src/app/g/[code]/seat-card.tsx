@@ -133,14 +133,18 @@ export function SeatCard({
    * usually the other half.
    */
   /**
-   * The two counts the folded bar carries: what is helping, and what is not.
+   * The three counts the folded bar carries.
    *
-   * "Obojętny" is in neither — a mark that neither helps nor hurts is still
-   * worth its glyph on the open card, and putting it in one of these numbers
-   * would be the app taking a view it has no basis for.
+   * "Obojętny" gets its own rather than being folded into one of the others —
+   * putting a mark that neither helps nor hurts into "helping" would be the app
+   * taking a view it has no basis for. It was left off the bar entirely for a
+   * version, which was the same mistake in the other direction: the hover said
+   * "1 inny efekt" over a bar that showed only "▲1", so the card was carrying a
+   * fact its own summary denied.
    */
   const helping = seat.effects.filter((mark) => mark.tone === "dobry").length;
   const hurting = seat.effects.filter((mark) => mark.tone === "zly").length;
+  const otherwise = seat.effects.filter((mark) => mark.tone === "obojetny").length;
 
   /** Whether the sheet is open, the way the Plecak and the Zaklęcia inside it fold. */
   const [showing, setShowing] = useState(true);
@@ -394,7 +398,7 @@ export function SeatCard({
                   question they raise, *which* ones, is answered by opening the
                   card, which is what clicking them does. The words are on the
                   hover for anybody who does not want to open it. */}
-              {(helping > 0 || hurting > 0) && (
+              {seat.effects.length > 0 && (
                 <span
                   className="tnum shrink-0 cursor-pointer"
                   title={effectsSaid(seat.effects)}
@@ -408,9 +412,23 @@ export function SeatCard({
                     setShowing(true);
                   }}
                 >
-                  {helping > 0 && <span className="text-verdigris">▲{helping}</span>}
-                  {helping > 0 && hurting > 0 && <span className="text-muted"> </span>}
-                  {hurting > 0 && <span className="text-vermilion">▼{hurting}</span>}
+                  {/* Up, down, and neither — the same three the marks
+                      themselves are coloured by, in the same three colours. A
+                      diamond because it is the shape with no direction in it,
+                      at the weight the two triangles are. */}
+                  {[
+                    { n: helping, glyph: "▲", tone: "text-verdigris" },
+                    { n: hurting, glyph: "▼", tone: "text-vermilion" },
+                    { n: otherwise, glyph: "◆", tone: "text-muted" },
+                  ]
+                    .filter((count) => count.n > 0)
+                    .map((count, at) => (
+                      <span key={count.glyph} className={count.tone}>
+                        {at > 0 && " "}
+                        {count.glyph}
+                        {count.n}
+                      </span>
+                    ))}
                 </span>
               )}
               {/* What the body is carrying, where the body itself sits when the
