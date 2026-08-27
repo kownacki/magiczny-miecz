@@ -12,6 +12,34 @@ import { SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
 const MARK_WIDTH = 40;
 
 
+/**
+ * The three tone marks, drawn rather than typed.
+ *
+ * `▲ ▼ ■` as characters are three glyphs from a font, and a font sizes them for
+ * reading rather than for standing beside each other: the square came out
+ * visibly smaller than the triangles and sat lower on the line. No amount of
+ * CSS fixes that reliably, because it is the typeface's own metrics.
+ *
+ * Drawn, they are one shape language: the same box, the same optical area — a
+ * triangle of base 8 and height 7 covers 28, so the square is 5.2 a side rather
+ * than the 6 that would make it the heavier of the two — and `currentColor`, so
+ * whatever colours the count colours the mark.
+ */
+export function ToneGlyph({ shape }: { shape: "up" | "down" | "square" }) {
+  return (
+    <svg
+      viewBox="0 0 10 10"
+      aria-hidden
+      className="mr-0.5 inline-block h-[0.7em] w-[0.7em] align-[-0.05em]"
+      fill="currentColor"
+    >
+      {shape === "up" && <path d="M5 1.5 L9 8.5 H1 Z" />}
+      {shape === "down" && <path d="M5 8.5 L1 1.5 H9 Z" />}
+      {shape === "square" && <rect x="2.4" y="2.4" width="5.2" height="5.2" />}
+    </svg>
+  );
+}
+
 export 
 function EffectMark({
   mark,

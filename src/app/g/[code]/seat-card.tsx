@@ -38,7 +38,7 @@ import { RailStat, StatFigure } from "./token-rail";
 import { Fold } from "./fold";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
-import { EffectMark } from "./effect-mark";
+import { EffectMark, ToneGlyph } from "./effect-mark";
 /**
  * How many marks the folded bar shows before it starts counting.
  *
@@ -48,7 +48,26 @@ import { EffectMark } from "./effect-mark";
  * was not already a hover away.
  */
 /**
+ * Neither, good, bad — the order effects are read in, wherever they are read.
+ *
+ * The folded bar counts them in this order and the open card draws them in it,
+ * because they are one set shown two ways and somebody folding the card to
+ * check should find the same thing in the same place.
+ *
+ * Within a tone they stay in the order they started: `effectsFor` reads them
+ * `.order("created_at")` and this sort is stable, so the secondary key is the
+ * one the server already sorted by and neither end has to carry a timestamp to
+ * get it. The four ad-hoc statuses — a lost turn, the Kamień, a barred Most —
+ * have no start of their own and keep the place `allStatuses` gives them.
+ */
+const TONE_ORDER = ["obojetny", "dobry", "zly"] as const;
+
+/**
  * What is helping and what is not, said in words.
+ *
+ * No "otwórz Kartę, żeby zobaczyć które" on the end any more: it was a sentence
+ * explaining a click, hanging off the thing that answers the click, under a
+ * cursor that already says it can be pressed.
  *
  * Polish counts in three — jeden efekt, dwa efekty, pięć efektów — so the
  * sentence is built rather than pluralised with an "s", the way every other
@@ -60,11 +79,16 @@ function effectsSaid(effects: readonly { tone: string; title: string }[]): strin
   const count = (tone: string) => effects.filter((mark) => mark.tone === tone).length;
   const said = (n: number, one: string, few: string, many: string) =>
     `${n} ${plural(n, one, few, many)}`;
-  const parts: string[] = [];
-  if (count("dobry") > 0) parts.push(said(count("dobry"), "wzmocnienie", "wzmocnienia", "wzmocnień"));
-  if (count("zly") > 0) parts.push(said(count("zly"), "osłabienie", "osłabienia", "osłabień"));
-  if (count("obojetny") > 0) parts.push(said(count("obojetny"), "inny efekt", "inne efekty", "innych efektów"));
-  return `${parts.join(", ")} — otwórz Kartę, żeby zobaczyć które`;
+  const words: Record<string, [string, string, string]> = {
+    obojetny: ["inny efekt", "inne efekty", "innych efektów"],
+    dobry: ["wzmocnienie", "wzmocnienia", "wzmocnień"],
+    zly: ["osłabienie", "osłabienia", "osłabień"],
+  };
+  // `TONE_ORDER`, like the marks and the counts: one set, three readings, one
+  // order between them.
+  return TONE_ORDER.filter((tone) => count(tone) > 0)
+    .map((tone) => said(count(tone), ...words[tone]))
+    .join(", ");
 }
 
 export function SeatCard({
@@ -145,6 +169,19 @@ export function SeatCard({
   const helping = seat.effects.filter((mark) => mark.tone === "dobry").length;
   const hurting = seat.effects.filter((mark) => mark.tone === "zly").length;
   const otherwise = seat.effects.filter((mark) => mark.tone === "obojetny").length;
+  /**
+   * The marks in the order the folded bar counts them.
+   *
+   * Folded, this card says "▲2 ▼1 ■1"; open, it draws the marks themselves.
+   * They are the same set read two ways, so they are read in the same order —
+   * otherwise the two disagree about which effect is which, and the one place
+   * that is worst is the one where somebody has just folded the card to check.
+   *
+   * A stable sort, so cards that share a tone keep the order they arrived in.
+   */
+  const marks = [...seat.effects].sort(
+    (a, b) => TONE_ORDER.indexOf(a.tone) - TONE_ORDER.indexOf(b.tone),
+  );
 
   /** Whether the sheet is open, the way the Plecak and the Zaklęcia inside it fold. */
   const [showing, setShowing] = useState(true);
@@ -414,18 +451,30 @@ export function SeatCard({
                 >
                   {/* Up, down, and neither — the same three the marks
                       themselves are coloured by, in the same three colours. A
-                      diamond because it is the shape with no direction in it,
-                      at the weight the two triangles are. */}
-                  {[
-                    { n: helping, glyph: "▲", tone: "text-verdigris" },
-                    { n: hurting, glyph: "▼", tone: "text-vermilion" },
-                    { n: otherwise, glyph: "◆", tone: "text-muted" },
-                  ]
+                      square because it is the shape with no direction in it, at
+                      the weight the two triangles have.
+                      
+                      `status.ts` draws a frozen character with the same square,
+                      in vermilion. They do not collide in practice: this one is
+                      grey and carries a number, and the two never appear on the
+                      same line — the bar is what a *folded* card shows and the
+                      marks are what an open one does. */}
+                  {/* Counted in `TONE_ORDER`, which is the order the open
+                      card draws the marks in. */}
+                  {(
+                    [
+                      { n: otherwise, shape: "square", tone: "text-muted" },
+                      { n: helping, shape: "up", tone: "text-verdigris" },
+                      { n: hurting, shape: "down", tone: "text-vermilion" },
+                    ] as const
+                  )
                     .filter((count) => count.n > 0)
                     .map((count, at) => (
-                      <span key={count.glyph} className={count.tone}>
-                        {at > 0 && " "}
-                        {count.glyph}
+                      <span
+                        key={count.shape}
+                        className={`${count.tone} ${at > 0 ? "ml-1.5" : ""}`}
+                      >
+                        <ToneGlyph shape={count.shape} />
                         {count.n}
                       </span>
                     ))}
@@ -508,7 +557,7 @@ export function SeatCard({
             card they read as belonging to whatever they happen to be next to. */}
         {seat.effects.length > 0 && (
           <span className="flex shrink-0 items-center gap-1">
-            {seat.effects.map((mark) => (
+            {marks.map((mark) => (
               <EffectMark key={mark.id} mark={mark} nature={asNature(seat.nature)} />
             ))}
           </span>
