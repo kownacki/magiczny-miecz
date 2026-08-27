@@ -134,22 +134,38 @@ describe("zmiana Natury (7.2-7.4)", () => {
   });
 
   /**
-   * 7.4 with 5.5: the Święta Włócznia is forbidden to Złe Postacie, and a
-   * character who turns Zła has to put it down at once. Naming it is the whole
-   * job — a referee that quietly binned somebody's relic would be worse than
-   * one that says nothing.
+   * 7.4 with 5.5, and 5.3 is about *having* the card: "nie może być w
+   * posiadaniu". The Święta Włócznia is forbidden to Złe Postacie, so a
+   * character who turns Zła does not merely stop counting it — it leaves their
+   * hands at once, and 12.1 says where it lands.
    */
-  it("names what the new Natura may not hold, and takes nothing", () => {
+  it("puts down what the new Natura may not possess", () => {
     const held = [
       aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" }),
       aHolding({ id: "h-helm", card_id: "helm", kind: "item" }),
     ];
     const { writes, result } = changeNature(table({}, held), { seatId: "seat-a", nature: "evil" });
     expect(result.nowForbidden).toEqual(["swieta-wlocznia"]);
-    expect(writes.journal?.[0]).toMatchObject({
-      payload: { nowForbidden: ["swieta-wlocznia"] },
+    // The Hełm nobody has an opinion about stays exactly where it is.
+    expect(writes.holdings?.delete).toEqual(["h-wlocznia"]);
+    expect(writes.fieldCards?.insert).toEqual([
+      { field_id: "mroczna-polana", card_id: "swieta-wlocznia", granted: false },
+    ]);
+  });
+
+  /**
+   * The Natura first and the cards after it, which is the order somebody
+   * reading the journal needs: the line that explains the drop is above it.
+   * The drop itself explains nothing — "wyrzuca: X" and no more.
+   */
+  it("journals the change, then the cards it cost", () => {
+    const held = [aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" })];
+    const { writes } = changeNature(table({}, held), { seatId: "seat-a", nature: "evil" });
+    expect(writes.journal?.map((row) => row.kind)).toEqual(["nature-change", "discarded"]);
+    expect(writes.journal?.[1]).toMatchObject({
+      seatId: "seat-a",
+      payload: { cardId: "swieta-wlocznia", onField: "mroczna-polana" },
     });
-    expect(writes.holdings).toBeUndefined();
   });
 
   /**

@@ -87,7 +87,12 @@ export function changeNature(
    * the same act with the rule out of sight, which is why neither of these is
    * a patch a caller writes.
    */
-  command: { seatId: string; nature: Nature; force?: boolean; byHand?: boolean },
+  command: {
+    seatId: string;
+    nature: Nature;
+    force?: boolean;
+    byHand?: boolean;
+  },
 ): Outcome<{ nowForbidden: string[] }> {
   const seat = seatById(snapshot, command.seatId);
   /**
@@ -115,7 +120,11 @@ export function changeNature(
             seatId: seat.id,
             turn: snapshot.game.turn,
             kind: "nature-change",
-            payload: { from: seat.nature, to: command.nature, nowForbidden: [] },
+            payload: {
+              from: seat.nature,
+              to: command.nature,
+              nowForbidden: [],
+            },
             manual: byHand,
           },
         ],
@@ -132,46 +141,104 @@ export function changeNature(
   const freely = abilitiesOfCharacter(asCharacterId(seat.character_id)).some(
     (ability) => ability.kind === "natura-dowolna",
   );
-  if (!freely && !command.force && seat.nature_changed_turn === snapshot.game.turn) {
+  if (
+    !freely &&
+    !command.force &&
+    seat.nature_changed_turn === snapshot.game.turn
+  ) {
     // Said with the way out in it. The mark can only have been the game's own
     // — nothing typed writes one — so a tester meeting this is meeting a real
     // change that really happened, and the next thing they need to know is
     // that there is a word for going ahead anyway.
-    throw new Error("Naturę można zmienić najwyżej raz na turę (7.3) — `force` to pomija.");
+    throw new Error(
+      "Naturę można zmienić najwyżej raz na turę (7.3) — `force` to pomija.",
+    );
   }
 
-  const nowForbidden = snapshot.holdings
+  /**
+   * 5.3 forbids *having* the card, not only wearing it.
+   *
+   * "Nie może być w posiadaniu" — so a Natura that moves under a Topór does
+   * not merely stop it counting: the card cannot stay in the pack either, and
+   * 5.5 says it goes at once. Trophies are not in this: 1.4 makes a beaten
+   * Wróg's card a token to trade, not a Przedmiot anybody possesses.
+   */
+  const losing = snapshot.holdings
     .filter((h) => h.seat_id === seat.id)
     .filter((h) => h.kind === "item" || h.kind === "friend")
     .filter((h) => {
       const card = EVENTS.find((c) => c.id === h.card_id);
-      return card ? !mayHold({ ...card, forbiddenTo: forbiddenFor(card) }, command.nature) : false;
-    })
-    .map((h) => h.card_id);
+      return card
+        ? !mayHold({ ...card, forbiddenTo: forbiddenFor(card) }, command.nature)
+        : false;
+    });
+  const nowForbidden = losing.map((h) => h.card_id);
 
+  /**
+   * And they land where anything put down lands — 12.1's Obszar, face up for
+   * whoever comes past next. One `discarded` row each, which is the line the
+   * journal already has for a card leaving a hand: "wyrzuca: TOPÓR". No reason
+   * given, because the journal reports what happened at the table and the
+   * Natura change is written on the line above it.
+   */
+  const spilled: Changeset =
+    losing.length > 0
+      ? {
+          holdings: { delete: losing.map((h) => h.id) },
+          ...(seat.field_id
+            ? {
+                fieldCards: {
+                  insert: losing.map((h) => ({
+                    field_id: seat.field_id as string,
+                    card_id: h.card_id,
+                    // Travels with it, or a granted card picked up by somebody
+                    // else would be a real one from then on. See `dropCard`.
+                    granted: h.granted,
+                  })),
+                },
+              }
+            : {}),
+          journal: losing.map((h) => ({
+            seatId: seat.id,
+            turn: snapshot.game.turn,
+            kind: "discarded" as const,
+            payload: {
+              cardId: h.card_id,
+              kind: h.kind,
+              onField: seat.field_id,
+            },
+          })),
+        }
+      : {};
+
+  // The Natura's own line first, then the cards it cost — `both` concatenates,
+  // so this order is the order the journal reads in.
   return {
-    writes: {
-      seats: [
-        {
-          id: seat.id,
-          patch: {
-            nature: command.nature,
-            // 7.3's memory, and only where the character is who changed it.
-            // See `byHand` above.
-            ...(byHand ? {} : { nature_changed_turn: snapshot.game.turn }),
+    writes: mergeAll(
+      {
+        seats: [
+          {
+            id: seat.id,
+            patch: {
+              nature: command.nature,
+              // 7.3's memory, and only where the character is who changed it.
+              // See `byHand` above.
+              ...(byHand ? {} : { nature_changed_turn: snapshot.game.turn }),
+            },
           },
-        },
-      ],
-      journal: [
-        {
-          seatId: seat.id,
-          turn: snapshot.game.turn,
-          kind: "nature-change",
-          payload: { from: seat.nature, to: command.nature, nowForbidden },
-          manual: byHand,
-        },
-      ],
-    },
+        ],
+        journal: [
+          {
+            seatId: seat.id,
+            turn: snapshot.game.turn,
+            kind: "nature-change",
+            payload: { from: seat.nature, to: command.nature, nowForbidden },
+            manual: byHand,
+          },
+        ],
+      },
+      spilled,
+    ),
     result: { nowForbidden },
   };
 }
@@ -209,7 +276,9 @@ export function placeSeat(
    */
   const phase = snapshot.game.turn_state.phase;
   const restage: Changeset =
-    seat.seat_index === snapshot.game.active_seat && phase !== "roll" && phase !== "end"
+    seat.seat_index === snapshot.game.active_seat &&
+    phase !== "roll" &&
+    phase !== "end"
       ? {
           game: {
             // Freshly arrived: whatever was drawn belonged to the old field,
@@ -217,7 +286,14 @@ export function placeSeat(
             // than the field's printed count, because a figure put here by hand
             // did not walk here, and 15.1 makes drawing a consequence of
             // arriving.
-            turn_state: { phase: "field", fieldId, from: null, draw: 0, drawn: [], fought: [] },
+            turn_state: {
+              phase: "field",
+              fieldId,
+              from: null,
+              draw: 0,
+              drawn: [],
+              fought: [],
+            },
           },
         }
       : {};
@@ -231,7 +307,11 @@ export function placeSeat(
             seatId: seat.id,
             turn: snapshot.game.turn,
             kind: "moved-by-hand",
-            payload: { from: seat.field_id, to: fieldId, reason: command.reason },
+            payload: {
+              from: seat.field_id,
+              to: fieldId,
+              reason: command.reason,
+            },
             manual: true,
           },
         ],
@@ -262,7 +342,11 @@ export function placeSeat(
  * make the first nine of them twice as likely as the other eighteen — a loaded
  * deal rather than a shuffle.
  */
-export async function pickBelow(random: RandomPort, n: number, reason: string): Promise<number> {
+export async function pickBelow(
+  random: RandomPort,
+  n: number,
+  reason: string,
+): Promise<number> {
   if (n <= 1) return 0;
   let range = 1;
   let digits = 0;
@@ -273,7 +357,8 @@ export async function pickBelow(random: RandomPort, n: number, reason: string): 
   const limit = range - (range % n);
   for (;;) {
     let value = 0;
-    for (let i = 0; i < digits; i++) value = value * 6 + ((await random.rollD6(reason)) - 1);
+    for (let i = 0; i < digits; i++)
+      value = value * 6 + ((await random.rollD6(reason)) - 1);
     if (value < limit) return value % n;
   }
 }
@@ -292,7 +377,10 @@ export async function pickBelow(random: RandomPort, n: number, reason: string): 
  */
 function startingFieldId(name: string): FieldId {
   const field = fieldByName(name);
-  if (!field) throw new Error(`Karta Postaci wskazuje Obszar, którego nie ma na planszy: ${name}`);
+  if (!field)
+    throw new Error(
+      `Karta Postaci wskazuje Obszar, którego nie ma na planszy: ${name}`,
+    );
   return field.id;
 }
 
@@ -388,7 +476,9 @@ export async function takeNewCharacter(
    * The surprise sentinel is in this set too and harmlessly matches no Karta.
    */
   const spent = new Set([
-    ...snapshot.seats.filter((s) => s.character_id).map((s) => s.character_id as string),
+    ...snapshot.seats
+      .filter((s) => s.character_id)
+      .map((s) => s.character_id as string),
     ...snapshot.game.characters_out,
   ]);
 
@@ -496,7 +586,8 @@ export async function takeNewCharacter(
            * dalej jako AWANTURNIK" about somebody who had not played yet. Only
            * a death leaves a Postać sitting there to be replaced.
            */
-          kind: seat.eliminated && seat.character_id ? "new-character" : "joined",
+          kind:
+            seat.eliminated && seat.character_id ? "new-character" : "joined",
           payload: {
             characterId: character.id,
             // Which card it is, is public either way; that it was drawn rather
@@ -544,13 +635,20 @@ export interface ChooseCharacter {
  * aim at anybody else's slot. A rule the client keeps and the server does not
  * is not a rule.
  */
-export function mayChooseFor(snapshot: Snapshot, seatId: string, bySeat: string): boolean {
+export function mayChooseFor(
+  snapshot: Snapshot,
+  seatId: string,
+  bySeat: string,
+): boolean {
   if (seatId === bySeat) return true;
   // A seat nobody is driving is one the host may act for: that is what
   // `no_device` used to mark, and it needs no flag now that people and seats
   // are different rows.
   const target = snapshot.seats.find((seat) => seat.id === seatId);
-  return target !== undefined && !snapshot.users.some((one) => one.seat_index === target.seat_index);
+  return (
+    target !== undefined &&
+    !snapshot.users.some((one) => one.seat_index === target.seat_index)
+  );
 }
 
 /**
@@ -565,13 +663,21 @@ export function mayChooseFor(snapshot: Snapshot, seatId: string, bySeat: string)
  */
 function unready(snapshot: Snapshot, seat: SeatRow): Changeset {
   const driver = driverOf(snapshot.users, seat.seat_index);
-  return driver && driver.ready ? { users: [{ id: driver.id, patch: { ready: false } }] } : {};
+  return driver && driver.ready
+    ? { users: [{ id: driver.id, patch: { ready: false } }] }
+    : {};
 }
 
 /** The refusal both choosing paths share, so they cannot drift apart. */
-function refuseUnlessMine(snapshot: Snapshot, seatId: string, bySeat: string): void {
+function refuseUnlessMine(
+  snapshot: Snapshot,
+  seatId: string,
+  bySeat: string,
+): void {
   if (!mayChooseFor(snapshot, seatId, bySeat)) {
-    throw new Error("Postać wybiera się sobie — albo komuś, kto nie ma swojego urządzenia.");
+    throw new Error(
+      "Postać wybiera się sobie — albo komuś, kto nie ma swojego urządzenia.",
+    );
   }
 }
 
@@ -587,7 +693,10 @@ function refuseUnlessMine(snapshot: Snapshot, seatId: string, bySeat: string): v
  * No dice: a choice is a choice. The surprise is drawn by `dealCharacters`
  * later, which is the only part of this that needs a die.
  */
-export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): Outcome<void> {
+export function chooseCharacter(
+  snapshot: Snapshot,
+  command: ChooseCharacter,
+): Outcome<void> {
   refuseUnlessMine(snapshot, command.seatId, command.bySeat);
   const seat = seatById(snapshot, command.seatId);
 
@@ -635,7 +744,8 @@ export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): O
   const rival = snapshot.seats.find(
     (other) => other.id !== seat.id && other.character_id === character.id,
   );
-  if (rival) throw new Error(`${character.name} jest już wybrana przez kogoś innego.`);
+  if (rival)
+    throw new Error(`${character.name} jest już wybrana przez kogoś innego.`);
   // Only reachable at a table that has been played on and reopened — the
   // poczekalnia has no dead characters — but the rule is the deal's, not the
   // moment's.
@@ -709,7 +819,9 @@ export async function dealCharacters(
    * used to be told apart by `no_device`, which the split retired.
    */
   const toFill = snapshot.seats.filter((seat) =>
-    command.to === "surprises" ? isRandomPick(seat.character_id) : !seat.character_id,
+    command.to === "surprises"
+      ? isRandomPick(seat.character_id)
+      : !seat.character_id,
   );
   if (toFill.length === 0) return { writes: {}, result: undefined };
 
@@ -718,7 +830,9 @@ export async function dealCharacters(
   // whole filter: it answers null both for "nothing chosen" and for "the
   // surprise", which are exactly the two that hold no card.
   const taken = new Set([
-    ...snapshot.seats.map((seat) => asCharacterId(seat.character_id)).filter((id) => id !== null),
+    ...snapshot.seats
+      .map((seat) => asCharacterId(seat.character_id))
+      .filter((id) => id !== null),
     // 4.4's, and dealt around for the same reason it is chosen around.
     ...snapshot.game.characters_out,
   ]);
@@ -738,7 +852,11 @@ export async function dealCharacters(
   for (const seat of toFill) {
     // 27 cards against at most 6 seats, so unreachable — but not assumed.
     if (pool.length === 0) break;
-    const drawn = await pickBelow(ports.random, pool.length, "rozdanie Postaci");
+    const drawn = await pickBelow(
+      ports.random,
+      pool.length,
+      "rozdanie Postaci",
+    );
     const [character] = pool.splice(drawn, 1);
     seats.push({ id: seat.id, patch: printedOn(character) });
   }

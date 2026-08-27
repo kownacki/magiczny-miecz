@@ -88,7 +88,7 @@ they are rules, and one of them was missing.
 | 5.1 | items are gained from encounters and fields | ✅ | `takeCard` |
 | 5.2 | held face up | ✅ | `face: "open"` |
 | 5.3 | a character may not hold an item its Natura forbids | ✅ | refused in `takeCard`, so it stays lying where it was found; refused again in `equipCard`, which the console and 7.2 can both reach |
-| 5.3 | …and one already held, after the Natura moved under it, lends nothing | ✅ | `inEffect` drops it from the totals and the powers; the slot is drawn red |
+| 5.3 | …and one already held, after the Natura moved under it, is put down | ✅ | `changeNature` spills it onto the character's Obszar (12.1) and journals a plain `wyrzuca`; until it goes, `inEffect` already lends nothing off it and the slot is drawn red |
 | 5.4 | four at a time unless carrying transport | ✅ | `carryLimit` |
 | 5.5 | may be dropped at any moment, **onto the current field** | ✅ | `dropCard` inserts it into `field_cards` where the character stands |
 | 5.6 | must drop down to the limit at once | ◐ | taking beyond the limit is refused; an existing excess is not forced out |
