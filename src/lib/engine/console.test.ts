@@ -374,8 +374,10 @@ suite("playing the game, and overruling it", () => {
   it("keeps the overrides out of an offer until testmode is on", () => {
     expect(availableIn({ testmode: false }).map((one) => one.name)).not.toContain("kill");
     expect(availableIn({ testmode: true }).map((one) => one.name)).toContain("kill");
-    // `help` still lists them: a command you cannot discover does not exist.
-    expect(helpLines(null, { testmode: false }).join("\n")).toContain("kill");
+    // `help all` still reaches them, and `help kill` still explains one — the
+    // plain list counts them instead of carrying them.
+    expect(helpLines(null, { testmode: false, all: true }).join("\n")).toContain("kill");
+    expect(helpLines("kill", { testmode: false }).join(" ")).toMatch(/locked/);
   });
 
   it("does not lock a verb that is the game working", () => {
@@ -401,15 +403,52 @@ suite("playing the game, and overruling it", () => {
     expect(ok("kill")).toEqual({ kind: "kill", who: null });
   });
 
-  it("lists the locked ones rather than hiding them", () => {
+  it("counts the locked ones rather than carrying them", () => {
     const locked = helpLines(null, { testmode: false });
     const open = helpLines(null, { testmode: true });
-    expect(locked).toHaveLength(open.length);
-    // Marked, and still there: a command you cannot find is one you cannot
-    // learn the day you need it.
-    expect(locked.filter((line) => line.startsWith("·")).length).toBeGreaterThan(10);
-    expect(open.every((line) => !line.startsWith("·"))).toBe(true);
-    expect(locked.join("\n")).toContain("kill");
+    expect(open.length).toBeGreaterThan(locked.length);
+    // Not hidden — the tail says how many and where they are.
+    expect(locked.at(-1)).toMatch(/more/);
+    expect(open.some((line) => line.includes("kill"))).toBe(true);
+  });
+
+  /**
+   * The list is what applies, and a count of what does not.
+   *
+   * It used to be all thirty-odd commands whatever was going on, on the
+   * argument that a command you cannot discover does not exist. That is right
+   * about discovery and wrong about a list: a poczekalnia offering `winfight`
+   * and `teleport` teaches nobody the vocabulary, it buries the six words that
+   * work. So the count and `help all` carry the discovery instead.
+   */
+  it("lists what applies and says how much it left out", () => {
+    const lobby = helpLines(null, { testmode: false, stage: "lobby" });
+    expect(lobby.join("\n")).toContain("pick");
+    expect(lobby.join("\n")).not.toContain("winfight");
+    // Nothing becomes unfindable: the tail says how many and how to see them.
+    expect(lobby.at(-1)).toMatch(/more/);
+    expect(lobby.at(-1)).toContain("help all");
+  });
+
+  it("shows everything when asked, marking what does not apply", () => {
+    const all = helpLines(null, { testmode: false, stage: "lobby", all: true });
+    expect(all).toHaveLength(COMMANDS.length);
+    expect(all.join("\n")).toContain("winfight");
+    // Marked, so the list still says which of them you could type now.
+    expect(all.filter((line) => line.startsWith("·")).length).toBeGreaterThan(10);
+    expect(all.some((line) => line.startsWith(" ") && line.includes("pick"))).toBe(true);
+  });
+
+  it("takes `all` as a word about the list rather than a command name", () => {
+    expect(parseCommand("help all")).toEqual({ ok: { kind: "help", about: "all" } });
+    expect(parseCommand("help nonsense")).toHaveProperty("error");
+  });
+
+  it("explains a command it did not list", () => {
+    // The whole point of counting rather than hiding: the word still works.
+    const said = helpLines("winfight", { testmode: false, stage: "lobby" }).join(" ");
+    expect(said).toContain("settle the fight");
+    expect(said).toMatch(/locked/);
   });
 
   it("explains why one is locked when asked about it", () => {

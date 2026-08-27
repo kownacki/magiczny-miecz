@@ -366,8 +366,9 @@ async function main(): Promise<void> {
       } else if (/^(help|\?)\b/.test(line)) {
         // Shared, so the local list must not shadow it — and it needs to know
         // which half of the vocabulary is reachable.
-        const about = line.split(/\s+/)[1] ?? null;
-        for (const one of helpLines(about, { testmode })) say(one);
+        const asked = line.split(/\s+/)[1] ?? null;
+        const all = asked === "all";
+        for (const one of helpLines(all ? null : asked, { testmode, stage, all })) say(one);
         say(`  ${LOCAL.join(" · ")}  — zapisy i wyjście`);
       } else if (offTable(line)) {
         // Reading a Karta touches no game, so it must not need one. Somebody

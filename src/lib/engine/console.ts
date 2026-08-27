@@ -584,7 +584,10 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     // Refused here rather than reported as an empty list, because `help go`
     // typed at a console that has no `go` is a question, and "there is no such
     // command" is the answer to it.
-    if (tail !== "" && !VERBS.has(tail.toLowerCase().split(/\s+/)[0])) {
+    const asked = tail.toLowerCase().split(/\s+/)[0];
+    // `all` is not a command and is the one word this takes that is not one:
+    // it asks for the whole list rather than about anything.
+    if (tail !== "" && asked !== "all" && !VERBS.has(asked)) {
       return { error: `No command \`${tail}\`. Type \`help\` for the list.` };
     }
     return { ok: { kind: "help", about: tail.toLowerCase().split(/\s+/)[0] || null } };
@@ -1275,7 +1278,7 @@ export function permits(
 
 export function helpLines(
   about: string | null = null,
-  at: { testmode: boolean } = { testmode: true },
+  at: { testmode?: boolean; stage?: Stage; all?: boolean } = { testmode: true },
 ): string[] {
   const words = (spec: CommandSpec) => [spec.name, ...spec.aliases].join("|");
   /** The usage line without its verb, which the words have just replaced. */
@@ -1305,19 +1308,30 @@ export function helpLines(
   }
 
   /**
-   * Locked commands are listed, and marked.
+   * What would work right now, and a count of what would not.
    *
-   * Not hidden. A player who cannot find `kill` does not conclude that the
-   * console is safe, they conclude the console is broken — and the day they do
-   * need it they have no way to learn the word. Showing it with a reason is
-   * both the honest answer and the discoverable one.
+   * The list used to be all thirty-odd commands whatever was going on, on the
+   * argument that a command you cannot discover is a command that does not
+   * exist. That argument is right about *discovery* and wrong about a list: a
+   * poczekalnia offering `winfight`, `escape` and `teleport` is not teaching
+   * anybody the vocabulary, it is burying the six words that work.
+   *
+   * So the answer keeps both. What applies is listed; what does not is counted,
+   * named as a keystroke away, and still explained in full by `help <command>`.
+   * Nothing becomes unfindable — it just stops being in the way.
    */
-  const rows = COMMANDS.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
-  const widest = Math.max(...rows.map((row) => row.length));
-  return COMMANDS.map((spec, index) => {
-    const locked = spec.needs === "testmode" && !at.testmode;
-    return `${locked ? "·" : " "}${rows[index].padEnd(widest)}  ${spec.summary}`;
+  const shown = at.all === true ? COMMANDS : availableIn(at);
+  const rows = shown.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
+  const widest = Math.max(...rows.map((row) => row.length), 0);
+  const lines = shown.map((spec, index) => {
+    const idle = at.all === true && !availableIn(at).includes(spec);
+    return `${idle ? "·" : " "}${rows[index].padEnd(widest)}  ${spec.summary}`;
   });
+
+  const hidden = COMMANDS.length - shown.length;
+  return hidden === 0
+    ? lines
+    : [...lines, ` ${`(${hidden} more)`.padEnd(widest)}  \`help all\` — every command, whenever it applies`];
 }
 
 /**
