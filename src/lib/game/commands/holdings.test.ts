@@ -390,6 +390,37 @@ describe("wearing a Przedmiot (slotowy)", () => {
     );
   });
 
+  /**
+   * 5.3, at the moment of putting it on.
+   *
+   * `takeCard` already refuses a card a Natura may not hold, so play alone
+   * cannot reach this — but the console hands cards out by fiat and 7.2 moves a
+   * Natura under cards already held, and a card that would do nothing must not
+   * go on silently: a click that appears to work and changes no number is worse
+   * than a refusal that says why.
+   */
+  it("refuses a card the wearer's Natura forbids (5.3)", () => {
+    const good = aTable({
+      game: { eq_mode: "slots" },
+      seats: [aSeat({ id: "seat-a", nature: "good" })],
+      holdings: [aHolding({ id: "h1", card_id: "miecz-chaosu" })],
+    });
+    expect(() => equipCard(good, { holdingId: "h1", slot: "main-hand" })).toThrow(
+      /Natura nie pozwala/,
+    );
+  });
+
+  it("lets the Natura that may hold it put it on", () => {
+    const evil = aTable({
+      game: { eq_mode: "slots" },
+      seats: [aSeat({ id: "seat-a", nature: "evil" })],
+      holdings: [aHolding({ id: "h1", card_id: "miecz-chaosu" })],
+    });
+    expect(
+      equipCard(evil, { holdingId: "h1", slot: "main-hand" }).writes.holdings?.patch,
+    ).toEqual([{ id: "h1", patch: { slot: "main-hand" } }]);
+  });
+
   it("puts a Hełm on the head", () => {
     const { writes } = equipCard(slotted([aHolding({ id: "h1", card_id: "helm" })]), {
       holdingId: "h1",

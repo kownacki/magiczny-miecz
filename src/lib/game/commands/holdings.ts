@@ -12,7 +12,7 @@ import {
   carryLimit,
   mayHold,
 } from "@/lib/engine/derive";
-import { kindForCard } from "@/lib/engine/holdings";
+import { forbiddenTo, kindForCard } from "@/lib/engine/holdings";
 import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS } from "../decks";
@@ -439,6 +439,21 @@ export function equipCard(
       writes: { holdings: { patch: [{ id: held.id, patch: { slot: null } }] } },
       result: undefined,
     };
+  }
+
+  /**
+   * 5.3, at the moment of putting it on.
+   *
+   * `takeCard` refuses a card a Natura may not hold, so this is unreachable by
+   * play alone — but the console hands cards out by fiat, a Natura can change
+   * under a card already held (7.2), and the browser is not what enforces
+   * anything here. Putting on a card that would do nothing is a click that
+   * looks like it worked and changes no number, which is worse than a refusal
+   * that says why.
+   */
+  const wearer = snapshot.seats.find((seat) => seat.id === held.seat_id);
+  if (forbiddenTo(held.card_id, (wearer?.nature ?? null) as Nature | null)) {
+    throw new Error(`${cardName(held.card_id)} — twoja Natura nie pozwala ci tego użyć (5.3).`);
   }
 
   if (!fitsIn(held.card_id, command.slot)) {

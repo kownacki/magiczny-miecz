@@ -117,8 +117,12 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
 
   // Where the character is standing can change what its cards are worth: the
   // Zaczarowane Wzgórza suspend every Przedmiot, by the board's own words.
-  const parametr = bonusFromHoldings(holdings, mode, "parametr", row.field_id);
-  const walka = bonusFromHoldings(holdings, mode, "walka", row.field_id);
+  //
+  // And so can who they are: 5.3 forbids a Natura certain cards, and a card a
+  // character may not hold lends nothing while they hold it (see `inEffect`).
+  const nature = natureOf(row);
+  const parametr = bonusFromHoldings(holdings, mode, "parametr", row.field_id, nature);
+  const walka = bonusFromHoldings(holdings, mode, "walka", row.field_id, nature);
   const fromCards = heldAbilities(
     holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId),
   );
@@ -129,10 +133,10 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     index: row.seat_index,
     characterId: row.character_id,
     fieldId: row.field_id,
-    nature: natureOf(row),
+    nature,
     eliminated: row.eliminated,
     holdings,
-    abilities: [...heldAbilities(inEffect(holdings, mode).map((h) => h.cardId)), ...mine],
+    abilities: [...heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)), ...mine],
     fromCards,
     parametr: { miecz: row.sword_own + parametr.miecz, magia: row.magic_own + parametr.magia },
     walka: { miecz: row.sword_own + walka.miecz, magia: row.magic_own + walka.magia },
@@ -165,7 +169,7 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
       seatIndex: row.seat_index,
       characterId: row.character_id,
       fieldId: row.field_id,
-      nature: natureOf(row),
+      nature,
       eliminated: row.eliminated,
     },
   };

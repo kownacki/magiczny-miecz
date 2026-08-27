@@ -9,6 +9,7 @@ import type { CardId } from "@/data/ids";
 import type { FieldId } from "@/lib/engine/board";
 import type { SeatCharacter } from "@/lib/engine/characters";
 import type { Slot } from "@/lib/engine/slots";
+import { forbiddenTo } from "@/lib/engine/holdings";
 import type { Holding } from "@/lib/engine/state";
 import type { TileCard } from "./card-tile";
 import type { SlotItem } from "./slot-panel";
@@ -171,6 +172,10 @@ export function tileFor(held: Held): TileCard {
 /** What this seat is wearing, keyed by place. */
 export function wornBySlot(seat: Seat): Partial<Record<Slot, SlotItem>> {
   const worn: Partial<Record<Slot, SlotItem>> = {};
+  // 5.3 read against the Natura the seat has *now*: a card that was legal when
+  // it went on stops counting the moment 7.2 moves the Natura under it, and the
+  // same function the totals are reckoned with is what says so.
+  const nature = asNature(seat.nature);
   for (const held of seat.holdings) {
     if (!held.slot) continue;
     worn[held.slot] = {
@@ -178,6 +183,7 @@ export function wornBySlot(seat: Seat): Partial<Record<Slot, SlotItem>> {
       cardId: held.cardId,
       card: tileFor(held),
       granted: held.granted,
+      inert: forbiddenTo(held.cardId, nature),
     };
   }
   return worn;

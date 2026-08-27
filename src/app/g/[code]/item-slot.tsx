@@ -63,6 +63,16 @@ export interface SlotOccupant {
    * in the hand, and none of those has to be told.
    */
   granted?: boolean;
+  /**
+   * Worn, and doing nothing — 5.3, after the Natura moved under it (7.2).
+   *
+   * On the card for the same reason `granted` is: it is true of the card and
+   * whoever is holding it, not of the place, and the place should not have to
+   * be told. It is *not* taken off on their behalf — see `inEffect` — so this
+   * is the whole of how a player learns that the Topór on their arm has
+   * stopped counting.
+   */
+  inert?: boolean;
 }
 
 /** How the place should look, which is mostly about what a moving card would do. */

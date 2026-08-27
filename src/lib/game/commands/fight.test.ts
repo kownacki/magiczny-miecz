@@ -70,15 +70,19 @@ const pileIn = (writes: { game?: { deck?: unknown } }, which: "events" | "spells
  * ----------------------------------------------------------------------- */
 
 describe("otwarcie walki (17.4, 17.5)", () => {
-  const table = (over: Partial<TurnPhase> = {}, holdings = [aHolding()]) =>
+  const table = (over: Partial<TurnPhase> = {}, holdings = [aHolding()], nature = "good") =>
     aTable({
       game: { active_seat: 0, turn_state: { ...pole(), ...over } as TurnPhase },
-      seats: [aSeat({ sword_own: 2, magic_own: 1 })],
+      seats: [aSeat({ sword_own: 2, magic_own: 1, nature })],
       holdings,
     });
 
   it("weighs the character with everything it is carrying (1.5)", () => {
-    const armed = table({}, [aHolding({ id: "h-1", card_id: "miecz-chaosu" })]);
+    // Zła, because the Miecz Chaosu is one of the three cards 5.3 keeps from a
+    // Natura — and a card its holder may not hold lends nothing (`inEffect`).
+    // The fixture was Dobra and counted the two points anyway, which is the
+    // bug that rule was written to catch.
+    const armed = table({}, [aHolding({ id: "h-1", card_id: "miecz-chaosu" })], "evil");
     const { writes } = beginFight(armed, { cardIds: ["cyklop"] });
     // Miecz 2 of its own plus the 2 the Miecz Chaosu lends, against the Cyklop's 6.
     expect(fightIn(writes)).toMatchObject({ playerTotal: 4, enemyTotal: 6, kind: "ordinary" });
@@ -457,6 +461,8 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
           id: "seat-b",
           seat_index: 1,
           sword_own: 2,
+          // Zła, so the Miecz Chaosu she is holding is one she may hold (5.3).
+          nature: "evil",
           ...(over.field ? { field_id: over.field as never } : {}),
         }),
       ],

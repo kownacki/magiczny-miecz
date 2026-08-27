@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bonusFromHoldings, kindForCard, visibleTo } from "./holdings";
+import { bonusFromHoldings, forbiddenTo, inEffect, kindForCard, visibleTo } from "./holdings";
 import type { Holding } from "./state";
 
 const held = (cardId: string, kind: Holding["kind"], face: Holding["face"] = "open"): Holding => ({
@@ -57,6 +57,55 @@ describe("bonuses from a hand (1.5, 2.5)", () => {
     expect(
       bonusFromHoldings([held("excalibur", "item"), held("rycerz", "friend")], "classic", "parametr"),
     ).toEqual({ miecz: 4, magia: 3 });
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * 5.3, after the Natura has moved under the card.
+ * ----------------------------------------------------------------------- */
+
+describe("a card its holder may not hold", () => {
+  const chaos = held("miecz-chaosu", "item");
+
+  /**
+   * The Miecz Chaosu is one of the three cards 5.3 keeps from a Natura: Zła and
+   * Chaotyczna may carry it, Dobra may not. 7.2 is what makes this a state
+   * rather than a one-time check — a character turns Dobra with the sword
+   * already on their arm — and the app's answer is that it stops working, not
+   * that it is taken away. See `inEffect`: 7.4 says such a card must be
+   * dropped, and dropping it is a move its owner makes.
+   */
+  it("lends nothing to a Natura that may not hold it", () => {
+    expect(bonusFromHoldings([chaos], "classic", "walka", null, "evil")).toEqual({
+      miecz: 2,
+      magia: 0,
+    });
+    expect(bonusFromHoldings([chaos], "classic", "walka", null, "good")).toEqual({
+      miecz: 0,
+      magia: 0,
+    });
+  });
+
+  it("is still held — it is inert, not gone", () => {
+    // Which is the difference that matters: a pack with no room in it would
+    // make dropping the card impossible if the app had already taken it off.
+    expect(forbiddenTo("miecz-chaosu", "good")).toBe(true);
+    expect(forbiddenTo("miecz-chaosu", "evil")).toBe(false);
+    expect(forbiddenTo("miecz", "good")).toBe(false);
+  });
+
+  it("counts for a caller that does not know the Natura", () => {
+    // Every caller before this one passed no Natura, and the honest answer to
+    // "may this character hold it" without knowing who they are is yes.
+    expect(inEffect([chaos], "classic")).toHaveLength(1);
+    expect(inEffect([chaos], "classic", null)).toHaveLength(1);
+    expect(inEffect([chaos], "classic", "good")).toHaveLength(0);
+  });
+
+  it("is inert in the slotted variant too, worn or not", () => {
+    const worn = { ...chaos, slot: "main-hand" };
+    expect(inEffect([worn], "slots", "evil")).toHaveLength(1);
+    expect(inEffect([worn], "slots", "good")).toHaveLength(0);
   });
 });
 

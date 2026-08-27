@@ -4,11 +4,13 @@ import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { bonusOf } from "./cards";
 import { ABILITIES } from "./abilities";
+import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
 import { isWearable } from "./slots";
 import type { Holding } from "./state";
 import type { FieldId } from "./board";
+import type { Nature } from "@/data/types";
 
 const EVENTS = events as EventCard[];
 
@@ -119,9 +121,50 @@ export interface HeldTotals {
 export function inEffect<T extends { cardId: string; slot?: string | null }>(
   holdings: readonly T[],
   eqMode: EqMode,
+  /**
+   * The holder's Natura, when it is known.
+   *
+   * 5.3 forbids a Natura certain cards, and 7.2 lets a character change Natura
+   * with the cards already on it — so a Święta Włócznia that was legal this
+   * morning is not, on a player who has since turned Zły. What it becomes is
+   * *inert*: it is still there, it is still theirs, and it does nothing at all.
+   *
+   * Inert rather than gone, which is this app's decision and not the
+   * rulebook's: 7.4 says such a card must be dropped, and the referee's answer
+   * to "you may no longer hold this" is to say so, not to reach across the
+   * table and take it. Dropping it is a move a player makes — and a pack with
+   * no room in it would make that move impossible if the app had already taken
+   * the card off them.
+   *
+   * Omitted, nothing is forbidden. That is the honest answer where the caller
+   * does not know the Natura, and it is what every caller did before this.
+   */
+  nature: Nature | null = null,
 ): T[] {
-  if (eqMode === "classic") return [...holdings];
-  return holdings.filter((held) => held.slot != null || !isWearable(held.cardId));
+  const allowed = (cardId: string) => {
+    if (nature === null) return true;
+    const forbidden = forbiddenNatures(cardId);
+    return !forbidden || !forbidden.includes(nature);
+  };
+  if (eqMode === "classic") return holdings.filter((held) => allowed(held.cardId));
+  return holdings.filter(
+    (held) => (held.slot != null || !isWearable(held.cardId)) && allowed(held.cardId),
+  );
+}
+
+/**
+ * Whether this card is doing nothing because of who is holding it (5.3).
+ *
+ * The same question `inEffect` filters on, asked about one card, because the
+ * places that *draw* a card have to say so: a Topór that has gone inert looks
+ * exactly like one that is working, and a character quietly worth three points
+ * less than their table thinks is the sort of thing that is discovered during
+ * a fight.
+ */
+export function forbiddenTo(cardId: string, nature: Nature | null): boolean {
+  if (nature === null) return false;
+  const forbidden = forbiddenNatures(cardId);
+  return Boolean(forbidden?.includes(nature));
 }
 
 /**
@@ -160,11 +203,13 @@ export function bonusFromHoldings(
   as: Reckoning,
   /** Where the character is standing, when that changes what its cards are worth. */
   standingOn: FieldId | null = null,
+  /** Whose they are, since 5.3 makes some of them inert on some Natury. */
+  nature: Nature | null = null,
 ): HeldTotals {
   const noItems = suppressesItems(standingOn);
   let miecz = 0;
   let magia = 0;
-  for (const holding of inEffect(holdings, eqMode)) {
+  for (const holding of inEffect(holdings, eqMode, nature)) {
     if (holding.kind !== "item" && holding.kind !== "friend") continue;
     if (noItems && holding.kind === "item") continue;
     const bonus = BONUS_BY_ID.get(holding.cardId);

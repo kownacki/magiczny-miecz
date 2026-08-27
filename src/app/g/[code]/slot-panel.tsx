@@ -200,9 +200,15 @@ export function SlotPanel({
               : "rejects"
             : movingCardId && fitsIn(movingCardId, slot)
               ? "candidate"
-              : item
-                ? "filled"
-                : "empty";
+              : // A card that is worn and forbidden is drawn the way a place
+                // that would refuse a card is: red where an offer is green.
+                // The same two colours the panel already speaks in, saying the
+                // same thing about a card rather than about a place.
+                item?.inert
+                ? "rejects"
+                : item
+                  ? "filled"
+                  : "empty";
 
         return (
           <div key={slot} style={{ gridArea: LAYOUT[slot] }}>
