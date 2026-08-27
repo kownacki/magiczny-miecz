@@ -12,7 +12,7 @@ import {
   carryLimit,
   mayHold,
 } from "@/lib/engine/derive";
-import { forbiddenTo, kindForCard } from "@/lib/engine/holdings";
+import { forbiddenSaid, forbiddenTo, kindForCard } from "@/lib/engine/holdings";
 import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS } from "../decks";
@@ -453,7 +453,7 @@ export function equipCard(
    */
   const wearer = snapshot.seats.find((seat) => seat.id === held.seat_id);
   if (forbiddenTo(held.card_id, (wearer?.nature ?? null) as Nature | null)) {
-    throw new Error(`${cardName(held.card_id)} — twoja Natura nie pozwala ci tego użyć (5.3).`);
+    throw new Error(forbiddenSaid(cardName(held.card_id)));
   }
 
   if (!fitsIn(held.card_id, command.slot)) {

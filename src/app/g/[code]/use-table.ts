@@ -20,7 +20,8 @@ import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
 import { describeResult } from "@/lib/engine/noticeText";
-import { CARD_NAMES, asHoldings, type Seat } from "./table";
+import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
+import { forbiddenSaid, forbiddenTo } from "@/lib/engine/holdings";
 import { isStale, standingMoves, standingPicks } from "./reconcile";
 
 /**
@@ -698,6 +699,19 @@ export function useTable(code: string): Table {
           ? `${CARD_NAMES.get(held.cardId) ?? held.cardId} nie pasuje w ten slot.`
           : `${CARD_NAMES.get(held.cardId) ?? held.cardId} to nie jest rzecz do noszenia.`,
       );
+    }
+    /**
+     * 5.3, before the card moves rather than after.
+     *
+     * This is the one refusal the browser could already have worked out and
+     * was leaving to the server: the card went on, sat there for as long as
+     * the round trip took, and was pulled off again. A card that visibly goes
+     * where it may not go and then leaves reads as the app changing its mind,
+     * and it is worse than useless on the one move it happens on — you saw it
+     * work.
+     */
+    if (slot !== null && forbiddenTo(held.cardId, asNature(mineNow.nature))) {
+      return setError(forbiddenSaid(CARD_NAMES.get(held.cardId) ?? held.cardId));
     }
     if (slot === null && held.slot != null) {
       const mineCards = asHoldings(mineNow.holdings);

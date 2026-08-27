@@ -184,6 +184,19 @@ export function inEffect<T extends { cardId: string; slot?: string | null }>(
  * less than their table thinks is the sort of thing that is discovered during
  * a fight.
  */
+/**
+ * 5.3's refusal, written once.
+ *
+ * Both sides say it: the command, which is what actually refuses, and the
+ * browser, which now works the same answer out for itself so the card never
+ * leaves the pack. Two copies of a sentence is two sentences the day one of
+ * them is reworded, and this one carries a rule number a player is meant to
+ * be able to look up.
+ */
+export function forbiddenSaid(name: string): string {
+  return `${name} — twoja Natura nie pozwala ci tego użyć (5.3).`;
+}
+
 export function forbiddenTo(cardId: string, nature: Nature | null): boolean {
   if (nature === null) return false;
   const forbidden = forbiddenNatures(cardId);
