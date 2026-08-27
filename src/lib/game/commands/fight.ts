@@ -6,6 +6,10 @@ import {
   canEscapeAt,
   diesForYou,
   heldAbilities,
+  rollModifier,
+  insteadAgainst,
+  beatsWithoutFighting,
+  cannotUseSpells,
   raidsForYou,
   type EscapeTarget,
 } from "@/lib/engine/abilities";
@@ -15,7 +19,7 @@ import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
 import { combatValueOf } from "@/lib/engine/cards";
 import { attackAsOne, type CombatKind } from "@/lib/engine/combat";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
-import { inEffect, suppressesItems } from "@/lib/engine/holdings";
+import { bonusFromHoldings, inEffect, suppressesItems } from "@/lib/engine/holdings";
 import {
   castableNow,
   momentsIn,
@@ -40,6 +44,7 @@ import {
   type Outcome,
   type Snapshot,
 } from "../change";
+import { liftOffField } from "./holdings";
 import { asReturnable, putOnPile } from "./piles";
 import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById, seatView } from "./seat";
 import { floorOf } from "./spellFloor";
@@ -74,6 +79,44 @@ export interface BeginFight {
  * the numbers up and leaves the floor empty for whoever wants to speak into it
  * — nobody is polled and nobody is named (see `claimFloor`).
  */
+/**
+ * The character's fight figure, with the cards that are worth more against
+ * *these* Wrogowie counted at their other value.
+ *
+ * Arondight and the Topór both "dodaje właścicielowi 1 punkt Miecza, a w walce
+ * z Wilkołakiem - 2 punkty Miecza", and the second figure replaces the first:
+ * two points against a Wilkołak, not three. So each swapped card has its
+ * ordinary contribution taken back out and the other one put in, which is why
+ * `bonusFromHoldings` is asked about that one card on its own.
+ *
+ * Everything else comes through `pointsOf` untouched — this is a correction to
+ * one card's worth, not a second way of adding up a character.
+ */
+function againstThese(
+  snapshot: Snapshot,
+  seatId: string,
+  foeIds: readonly string[],
+): { miecz: number; magia: number } {
+  const total = pointsOf(snapshot, seatId, "walka");
+  const view = seatView(snapshot, seatId);
+  const mode = eqModeOf(snapshot.game);
+  const inPlay = inEffect(view.holdings, mode, view.nature);
+  const swapped = insteadAgainst(
+    inPlay.map((held) => held.cardId),
+    foeIds,
+  );
+  if (swapped.length === 0) return total;
+
+  let { miecz, magia } = total;
+  for (const swap of swapped) {
+    const one = inPlay.filter((held) => held.cardId === swap.cardId).slice(0, 1);
+    const ordinarily = bonusFromHoldings(one, mode, "walka", view.fieldId, view.nature);
+    miecz += swap.miecz - ordinarily.miecz;
+    magia += swap.magia - ordinarily.magia;
+  }
+  return { miecz, magia };
+}
+
 export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<void> {
   const seat = activeSeat(snapshot);
   const state = snapshot.game.turn_state;
@@ -102,6 +145,49 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
     return { card, foe };
   });
 
+  /**
+   * "Postać mająca Relikwiarz pokonuje wszystkie Demony, bez konieczności walki
+   * z nimi."
+   *
+   * No fight opens at all, so there are no dice, no Zaklęcia spoken into it and
+   * no osłona to roll — none of which a fight that was never fought should have.
+   * The card is a trophy the same way a beaten one is (1.4), because it *was*
+   * beaten; it simply cost nothing.
+   *
+   * Only when every Wróg on the stack is one of them. 17.5 makes a mixed pack a
+   * single opponent with its Miecze summed, and there is no reading of that in
+   * which half of it is skipped and the other half fought.
+   */
+  const relic = beatsWithoutFighting(
+    inEffect(seatView(snapshot, seat.id).holdings, eqModeOf(snapshot.game), seatView(snapshot, seat.id).nature).map(
+      (held) => held.cardId,
+    ),
+    foes[0]?.card.id ?? "",
+  );
+  if (relic !== null && foes.every((f) => beatsWithoutFighting([relic], f.card.id) !== null)) {
+    const taken: Changeset = {
+      holdings: {
+        insert: foes.map((f) => ({
+          seat_id: seat.id,
+          card_id: f.card.id,
+          kind: "trophy" as const,
+          face: "open" as const,
+        })),
+      },
+      journal: foes.map((f) => ({
+        seatId: seat.id,
+        turn: snapshot.game.turn,
+        kind: "fight-end" as const,
+        payload: { cardId: f.card.id, outcome: "wygrana", bezWalki: relic },
+      })),
+    };
+    const lifted = foes.reduce<Changeset>(
+      (soFar, f) => mergeAll(soFar, liftOffField(apply(snapshot, mergeAll(taken, soFar)), f.card.id)),
+      {},
+    );
+    return { writes: mergeAll(taken, lifted), result: undefined };
+  }
+
   // 17.5: several creatures attacking at once are one opponent — "Miecze tych
   // istot są sumowane, a do uzyskanego rezultatu dodawany jest wynik rzutu
   // kostką". One roll for the lot of them, not one each, which is the
@@ -114,7 +200,11 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
 
   // The character brings everything it has (1.5, 17.4), not just its own
   // tokens: a Miecz card adds its point in the fight it was found for.
-  const mine = pointsOf(snapshot, seat.id, "walka");
+  const mine = againstThese(
+    snapshot,
+    seat.id,
+    foes.map((f) => f.card.id),
+  );
 
   return {
     writes: {
@@ -323,6 +413,19 @@ export function castSpell(
     throw new Error("Na Zaczarowanych Wzgórzach nie rzuca się Zaklęć.");
   }
 
+  /**
+   * "Właściciel Kryształu nie może rzucać ani używać Zaklęć."
+   *
+   * Half of one bargain — the other half is an immunity to six named Zaklęcia
+   * and to an opponent's Odrodzenie, which waits on the spell effects being
+   * applied at all (see `castSpell`'s note on why they are not). This half
+   * needs nothing but a refusal, and refusing is the half that can be got
+   * wrong in the player's favour.
+   */
+  if (cannotUseSpells(seatView(snapshot, caster.id).abilities)) {
+    throw new Error("Właściciel Kryształu Magów nie rzuca ani nie używa Zaklęć.");
+  }
+
   const onTheBridge = caster.field_id ? ringOf(caster.field_id) === KAMIENNY_MOST : false;
   const aimedAtSomethingThere =
     script?.target === "wrog" || script?.target === "postac-lub-wrog";
@@ -510,10 +613,29 @@ export async function fightRoll(
     throw new Error(`${nameOfSeat(snapshot.users, floor.seat)} rzuca Zaklęcie (17.3) — kostki czekają.`);
   }
 
-  const roll = await ports.random.rollD6(
+  const thrown = await ports.random.rollD6(
     command.side === "player" ? "walka: rzut Postaci" : "walka: rzut Wroga",
   );
   const manual = command.manual ?? false;
+
+  /**
+   * The two Talizmany, which shift the die rather than the total.
+   *
+   * "Talizman Ognia pozwala dodać 1 do wyniku rzutu kostką podczas walki (lecz
+   * nie magicznej)"; the Talizman Powietrza says the same of a magical one. So
+   * it is the roll that moves, not the Miecz — and only the character's own,
+   * because the Wróg is not carrying anybody's Talizman.
+   *
+   * Kept inside 1-6: a die that reads 7 is a die nothing else in the game knows
+   * how to draw, and the modifier is a bonus to a throw rather than a seventh
+   * face. The raw throw is journalled beside it so a table can see what the
+   * card did rather than only what it ended up as.
+   */
+  const shift =
+    command.side === "player"
+      ? rollModifier(seatView(snapshot, seat.id).abilities, { walka: state.fight.kind }).delta
+      : 0;
+  const roll = shift === 0 ? thrown : Math.max(1, Math.min(6, thrown + shift));
 
   return {
     writes: {
@@ -523,7 +645,7 @@ export async function fightRoll(
           seatId: seat.id,
           turn: snapshot.game.turn,
           kind: "fight-roll",
-          payload: { side: command.side, roll },
+          payload: { side: command.side, roll, ...(shift !== 0 ? { thrown, shift } : {}) },
           manual,
         },
       ],

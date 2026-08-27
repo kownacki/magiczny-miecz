@@ -3,8 +3,8 @@
 import items from "@/data/items.json";
 import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
-import { carriesSpell } from "@/lib/engine/abilities";
-import type { FieldId } from "@/lib/engine/board";
+import { carriesSpell, unavailableIn } from "@/lib/engine/abilities";
+import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
 import { drawFrom } from "@/lib/engine/deck";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
@@ -55,7 +55,7 @@ function forbiddenFor(card: EventCard): ("good" | "evil" | "chaotic")[] | undefi
  * the stack — gear lifted off the Obszar, a conjured one — simply is not found,
  * and nothing is written.
  */
-function liftOffField(snapshot: Snapshot, cardId: string): Changeset {
+export function liftOffField(snapshot: Snapshot, cardId: string): Changeset {
   const state = snapshot.game.turn_state;
   if (state.phase !== "field") return {};
   const at = state.drawn.findIndex((entry) => entry.cardId === cardId);
@@ -263,6 +263,22 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     if (standing && standing.cardId !== cardId) {
       const foe = EVENTS.find((c) => c.id === standing.cardId);
       throw new Error(`Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1).`);
+    }
+  }
+
+  /**
+   * "Miecza nie można otrzymać w Krainie Dolnego Kręgu."
+   *
+   * A refusal rather than a silent nothing, because the card is a key: 11.3
+   * bars the Kamienny Most without it, and a player who thinks they picked one
+   * up in the Dolny Krąg walks to the bridge and finds out there.
+   */
+  const barred = unavailableIn(cardId);
+  if (barred !== null) {
+    const seat = snapshot.seats.find((s) => s.id === seatId);
+    const where = seat?.field_id ? FIELDS.get(seat.field_id)?.region : undefined;
+    if (where === barred) {
+      throw new Error(`${cardName(cardId)} — tej Karty nie można otrzymać w Krainie Dolnego Kręgu.`);
     }
   }
 

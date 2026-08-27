@@ -591,6 +591,71 @@ export function isSpared(
  * nothing in the texts says two of them cannot apply at once, and the two
  * Talizmany are for different kinds of fight anyway.
  */
+/**
+ * The Krainy a card cannot be picked up in.
+ *
+ * "Miecza nie można otrzymać w Krainie Dolnego Kręgu" — a property of the card
+ * rather than of the character, so it is asked by id and not off a hand.
+ */
+/**
+ * Cards whose bonus changes against particular Wrogowie, and what it becomes.
+ *
+ * "Miecz Lancelota użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce
+ * z Wilkołakiem - 2 punkty Miecza." The second figure REPLACES the first rather
+ * than adding to it — two points against a Wilkołak, not three — so the caller
+ * gets what the card is worth here and subtracts what it is worth ordinarily.
+ * Returning a delta instead would need this to know the standing bonus, which
+ * lives with the deck and not with the abilities.
+ */
+/**
+ * The Wrogowie the Relikwiarz walks through: "pokonuje wszystkie Demony, bez
+ * konieczności walki z nimi."
+ *
+ * Written out rather than matched on the printed name. Two cards in the box are
+ * Demons, and a search for "DEMON" in a title would also have to decide about
+ * the Demon Zagłady on the Kamienny Most — which 14.6 makes a guardian standing
+ * in a doorway rather than a Wróg drawn onto an Obszar, and which the bridge
+ * settles by its own rules. It is not on this list because beating it without a
+ * fight would walk a character across the bridge for free.
+ */
+const DEMONY: ReadonlySet<string> = new Set(["demon", "ksiaze-demonow"]);
+
+/** Whether a held card beats this Wróg outright, without a fight being fought. */
+export function beatsWithoutFighting(
+  cardIds: readonly string[],
+  foeId: string,
+): string | null {
+  for (const cardId of cardIds) {
+    for (const ability of abilitiesOf(cardId)) {
+      if (ability.kind !== "pokonuje-bez-walki") continue;
+      if (ability.kogo === "demony" && DEMONY.has(foeId)) return cardId;
+    }
+  }
+  return null;
+}
+
+export function insteadAgainst(
+  cardIds: readonly string[],
+  foeIds: readonly string[],
+): { cardId: string; miecz: number; magia: number }[] {
+  const swapped: { cardId: string; miecz: number; magia: number }[] = [];
+  for (const cardId of cardIds) {
+    for (const ability of abilitiesOf(cardId)) {
+      if (ability.kind !== "przeciw") continue;
+      if (!foeIds.some((foe) => ability.komu.includes(foe))) continue;
+      swapped.push({ cardId, miecz: ability.miecz ?? 0, magia: ability.magia ?? 0 });
+    }
+  }
+  return swapped;
+}
+
+export function unavailableIn(cardId: string): "dolny" | null {
+  for (const ability of abilitiesOf(cardId)) {
+    if (ability.kind === "niedostepny") return ability.region;
+  }
+  return null;
+}
+
 export function rollModifier(
   abilities: readonly Ability[],
   at: { fieldId?: FieldId; walka?: "ordinary" | "magical" },

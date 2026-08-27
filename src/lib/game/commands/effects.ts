@@ -34,6 +34,7 @@ import { healSeat } from "./life";
 import { putOnPile } from "./piles";
 import { turnToStone } from "./stone";
 import { activeSeat, seatView } from "./seat";
+import { isSpared, skipsRollAt } from "@/lib/engine/abilities";
 import { addEffect } from "./turn";
 
 /**
@@ -100,6 +101,28 @@ function named(snapshot: Snapshot, row: SeatRow): string {
  * what the step before it wrote, which is what lets `po-kolei` spend gold it
  * just gained and a `gdy` read a Natura the branch above changed.
  */
+/**
+ * Whether a card the character is carrying waives what this Obszar costs.
+ *
+ * Nine cards do this and they are specific about both halves — which Obszar,
+ * and which of its costs. The Rękawice keep the point of Życie on the Ruchome
+ * Skały and nothing else; the Kij i Sznur keep the Przedmiot on the Bagna and
+ * would not save a point of Życie anywhere. So the field is read off the seat
+ * rather than passed in: this is asked in the middle of resolving an effect,
+ * and where the character is standing is what the card is about.
+ *
+ * The Relikwiarz is why Natura is asked for. It spares a Dobra Postać at the
+ * Czarci Młyn and a Zła one at the Studnia Wieczności, and nobody at the other.
+ */
+function sparedHere(
+  snapshot: Snapshot,
+  seatId: string,
+  from: "life" | "utrata",
+): boolean {
+  const view = seatView(snapshot, seatId);
+  return view.fieldId !== null && isSpared(view.abilities, view.fieldId, from, view.nature);
+}
+
 export async function applyEffect(
   snapshot: Snapshot,
   command: ApplyEffect,
@@ -199,9 +222,22 @@ async function walk(
       let writes: Changeset = {};
       /** What the seats actually moved by, which the floor under own points may cut. */
       const each: number[] = [];
+      /** Whoever a card carried them past it — said, or the table sees nothing happen. */
+      const spared: string[] = [];
       for (const target of hit) {
         const row = snapshot.seats.find((s) => s.seat_index === target.seatIndex);
         if (!row) continue;
+        /**
+         * "nie stracisz 1 punktu Życia na Ruchomych Skałach."
+         *
+         * Only a loss, and only Życie. These cards say what an Obszar will not
+         * do *to* you; none of them declines a gift, and the Rękawice are no
+         * help against a card that takes a point of Miecza.
+         */
+        if (effect.stat === "life" && effect.delta < 0 && sparedHere(snapshot, row.id, "life")) {
+          spared.push(named(snapshot, row));
+          continue;
+        }
         const done = adjustSeat(apply(snapshot, writes), {
           seatId: row.id,
           stat: effect.stat,
@@ -226,10 +262,16 @@ async function walk(
        * card that plainly did not work and a message saying it did.
        */
       const stopped = each.length > 0 && each.every((moved) => moved === 0);
+      const safely = spared.map((who) => `${who}: bez zmiany — Karta chroni na tym Obszarze`);
       return {
         writes,
         result: {
-          did: [stopped ? `${asked} — bez zmiany, nie ma poniżej czego zejść` : asked],
+          did: [
+            ...(each.length > 0
+              ? [stopped ? `${asked} — bez zmiany, nie ma poniżej czego zejść` : asked]
+              : []),
+            ...safely,
+          ],
           pending: null,
         },
       };
@@ -310,6 +352,19 @@ async function walk(
       for (const target of hit) {
         const row = snapshot.seats.find((s) => s.seat_index === target.seatIndex);
         if (!row) continue;
+
+        /**
+         * "Mając kij i mocny sznur możesz bezpiecznie przejść przez Bagna. Nie
+         * tracisz tam Przedmiotu ani Przyjaciela."
+         *
+         * Read off where the character is standing, so the Kij i Sznur answer
+         * for the Bagna and for nothing else. A Zaklęcie that strips a hand
+         * somewhere else is untouched by it.
+         */
+        if (sparedHere(snapshot, row.id, "utrata")) {
+          said.push(`${named(snapshot, row)}: nic nie traci — Karta chroni na tym Obszarze`);
+          continue;
+        }
 
         const at = apply(snapshot, writes);
         // A carried Zaklęcie is the Przyjaciel's, not the character's, so a
@@ -654,6 +709,41 @@ export async function resolveFieldOffer(
   if (!offer) throw new Error(`Na tym Obszarze nie ma: ${command.offerName}`);
 
   const table = offer.effect.op === "rzut";
+
+  /**
+   * "nie musisz wykonywać rzutów kostką w Wieży Przeznaczenia i na Urwisku.
+   * Zawsze możesz tamtędy bezpiecznie przejść."
+   *
+   * The roll does not happen, and neither does whatever it would have found.
+   * That is the whole of the promise and it has to be read that way round: some
+   * of these tables give as well as take, and a character who rolled and then
+   * ignored a bad face would be helping themselves to the good ones. The Opiekun
+   * walks you past the Obszar, he does not read the dice for you.
+   *
+   * Marked resolved on the way out, so the turn does not stand there waiting for
+   * an offer the character is entitled to ignore.
+   */
+  if (table && skipsRollAt(seatView(snapshot, seat.id).abilities, seat.field_id)) {
+    const passed: Changeset = {
+      journal: [
+        {
+          seatId: seat.id,
+          turn: snapshot.game.turn,
+          kind: "field-table",
+          payload: { offer: offer.name, skipped: true },
+        },
+      ],
+    };
+    return {
+      writes: merge(passed, markResolved(apply(snapshot, passed), offerKey(offer.name))),
+      result: {
+        offer: offer.name,
+        did: ["przechodzisz bezpiecznie — bez rzutu"],
+        pending: null,
+      },
+    };
+  }
+
   const face = table ? await ports.random.rollD6(`${offer.name}: tabela`) : undefined;
   const rolled: Changeset =
     face !== undefined
