@@ -19,9 +19,10 @@
  * Its z still counts globally, which is what keeps it over the modals.
  */
 
+import { useState } from "react";
 import { LAYER } from "./layers";
 import { AnswersEscape, useDismissable } from "./overlay";
-import { CloseButton, SurfaceHead } from "./chrome";
+import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
 
 export function Drawer({
   side,
@@ -57,12 +58,28 @@ export function Drawer({
    * from the page being live rather than being a separate decision: a drawer
    * you can scroll behind is a drawer you can click behind.
    */
-  const panel = useDismissable<HTMLElement>({ onClose });
+  /**
+   * Pinned: open, and not going anywhere by accident.
+   *
+   * A drawer is normally something you opened to read and are finished with the
+   * moment you look elsewhere, which is why a click on the game closes it. But
+   * half of what these are for is reading *while* doing something — the Księga
+   * open at a card you are deciding about, the roster open through a fight —
+   * and a panel that shuts the moment you touch the board cannot be used that
+   * way at all. So every drawer can opt out, the way the console already
+   * could: pinned, it answers neither Escape nor a click away, and the only
+   * ways out are `odepnij` and the close button, both deliberate.
+   *
+   * Per drawer and not remembered: it is a decision about what you are doing
+   * now, and a drawer that came back pinned days later would be one nobody
+   * could work out how to shut.
+   */
+  const [pinned, setPinned] = useState(false);
+  const panel = useDismissable<HTMLElement>({ onClose: pinned ? null : onClose });
 
   return (
-    // A drawer is always escapable — it is something you opened to look at, and
-    // 16.8 hangs on nothing here. See `AnswersEscape`.
-    <AnswersEscape.Provider value>
+    // Escapable unless it is pinned — which is the one thing pinning means.
+    <AnswersEscape.Provider value={!pinned}>
     <aside
       ref={panel}
       role="dialog"
@@ -75,7 +92,24 @@ export function Drawer({
     >
       <SurfaceHead
         title={title}
-        controls={<CloseButton onClose={onClose} />}
+        controls={
+          <>
+            {/* Pinning first, because it changes what the other one means:
+                pinned, Escape and a click on the game stop being ways out and
+                this button is the only one left that is. */}
+            <ChromeButton
+              glyph={pinned ? "unpin" : "pin"}
+              active={pinned}
+              title={
+                pinned
+                  ? "Przypięta — nie zamknie jej ani Esc, ani kliknięcie w grę"
+                  : "Przypnij, żeby została otwarta mimo klikania w grę"
+              }
+              onClick={() => setPinned(!pinned)}
+            />
+            <CloseButton onClose={onClose} />
+          </>
+        }
       >
         {head}
       </SurfaceHead>
