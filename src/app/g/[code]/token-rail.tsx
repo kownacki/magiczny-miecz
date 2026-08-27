@@ -304,6 +304,32 @@ function MoreThanFits({
  * owner. At a table people spot each other's miscounts, and an override that
  * only the owner can use is useless in the moment someone else notices.
  */
+/**
+ * What a parameter reads as: the total, with own points behind it where they
+ * differ.
+ *
+ * One place decides it, because two say it — the rail under the pile and the
+ * folded sheet's own heading — and a folded card reading "3" against a rail
+ * reading "5 (3)" is the same character with two strengths. 1.2 and 2.2 are
+ * what make the pair necessary at all: the żetony are own points and a
+ * Przedmiot's are never marked with one, so the second number is the only place
+ * the cards on the table are added up.
+ *
+ * Dimmed rather than recoloured, so the total stays the thing being read. Where
+ * nothing has been added — Życie and Złoto always, since 3.1 and 4.1 make the
+ * żetony the whole value — it is one number and no parenthesis: "12 (12)" is
+ * the same fact twice.
+ */
+export function StatFigure({ value, total }: { value: number; total?: number }) {
+  const shown = total ?? value;
+  return (
+    <>
+      {shown}
+      {shown !== value && <span className="opacity-60"> ({value})</span>}
+    </>
+  );
+}
+
 export function RailStat({
   label,
   value,
@@ -389,17 +415,12 @@ export function RailStat({
         }
         className={`tnum mt-1 min-h-[13px] text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
       >
-        {saysItself ? "" : shown}
-        {/* Own points behind it, but only where something has added to them:
-            "12 (12)" is the same number twice. Dimmed rather than recoloured,
-            so the total stays the thing being read.
-
-            Two numbers and no more. The fight figure is a third — 1.5 quotes it
-            and it is real, but a rail reading "53 (51) 54" is three numbers to
-            hold in your head at a glance, which is worse than knowing one of
-            them late. It is on the hover, which is where somebody weighing a
-            fight will be looking anyway. */}
-        {shown !== value && <span className="opacity-60"> ({value})</span>}
+        {/* Two numbers and no more. The fight figure is a third — 1.5 quotes
+            it and it is real, but a rail reading "53 (51) 54" is three numbers
+            to hold in your head at a glance, which is worse than knowing one of
+            them late. It is on the hover, where somebody weighing a fight will
+            be looking anyway. */}
+        {saysItself ? "" : <StatFigure value={value} total={total} />}
       </span>
       {canAdjust && (
         // Always visible rather than revealed on hover. Phones are the primary

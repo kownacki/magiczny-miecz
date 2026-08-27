@@ -33,7 +33,7 @@ import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import Image from "next/image";
 import { characterKind } from "@/lib/engine/polish";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
-import { RailStat } from "./token-rail";
+import { RailStat, StatFigure } from "./token-rail";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
 import { EffectMark } from "./effect-mark";
@@ -294,10 +294,18 @@ export function SeatCard({
                 prints them up its own edges, and they change every turn. The
                 Natura changes about twice a game and reads as a caption after
                 them rather than as a column between them and the name. */}
+            {/* The same figures the rails show, said the same way: a total
+                with own points behind it where the cards have added something
+                (1.2, 2.2). A folded card reading "3" against a rail reading
+                "5 (3)" would be one character with two strengths. */}
             <span className="tnum shrink-0">
-              <span className="text-miecz">{seat.sword_total}</span>
+              <span className="text-miecz">
+                <StatFigure value={seat.sword_own} total={seat.sword_total} />
+              </span>
               <span className="text-muted"> / </span>
-              <span className="text-magia">{seat.magic_total}</span>
+              <span className="text-magia">
+                <StatFigure value={seat.magic_own} total={seat.magic_total} />
+              </span>
               <span className="text-muted"> / </span>
               <span className="text-zycie">{seat.life}</span>
               <span className="text-muted"> / </span>
