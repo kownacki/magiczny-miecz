@@ -154,6 +154,11 @@ function say(text: string): void {
  * The table: opening one, and finding the one to open.
  * ----------------------------------------------------------------------- */
 
+/** Whether the console knows this word at all, table or no table. */
+function known(line: string): boolean {
+  return "ok" in parseCommand(line);
+}
+
 /** A line that reads the box rather than a game — see `worksOffTable`. */
 function offTable(line: string): boolean {
   const parsed = parseCommand(line);
@@ -459,8 +464,15 @@ async function main(): Promise<void> {
         } catch (error) {
           say((error as Error).message);
         }
+      } else if (!table && !known(line)) {
+        // A word nothing answers to is a word nothing answers to, whether or
+        // not a table is open. Saying "open a table first" to `asdasdas` told
+        // somebody to fix the wrong thing — and said the same to `sdf` as to
+        // `start`, which is a real command that simply needs a game.
+        const parsed = parseCommand(line);
+        say("error" in parsed ? parsed.error : `No command \`${line.split(/\s+/)[0]}\`.`);
       } else if (!table) {
-        say("Open a table first: `table new Michał, Ola` or `table open CODE`.");
+        say("`" + line.split(/\s+/)[0] + "` needs a table. `table new Michał, Ola` opens one.");
       } else if (/^journal\b/.test(line)) {
         await recent(Number(line.split(/\s+/)[1] ?? 10) || 10);
       } else {
