@@ -132,6 +132,10 @@ export type Command =
    * one there is.
    */
   | { kind: "answer"; card: string | null; choices: number[] }
+  /* The poczekalnia, which is playing the game too — somebody has to say the
+     waiting is over (docs/LOBBY.md). */
+  | { kind: "ready"; who: string | null; ready: boolean }
+  | { kind: "start" }
   | { kind: "spell"; who: string | null }
   /**
    * 7.2's change, and 7.3's "once a turn" either obeyed or not.
@@ -180,6 +184,20 @@ export const COMMANDS: CommandSpec[] = [
   /* --------------------------------------------------------------------------
    * Playing. The game as printed: roll, walk it out, meet what is there, pass.
    * ----------------------------------------------------------------------- */
+  {
+    name: "ready",
+    aliases: ["unready"],
+    usage: "ready [player]",
+    summary: "say you have chosen — `unready` takes it back",
+    needs: "play",
+  },
+  {
+    name: "start",
+    aliases: [],
+    usage: "start",
+    summary: "begin the game; everyone who has a Postać must be ready",
+    needs: "play",
+  },
   {
     name: "roll",
     aliases: [],
@@ -736,6 +754,10 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "answer", card: named || null, choices: numbers } };
   }
 
+  if (word === "ready" || word === "unready") {
+    return { ok: { kind: "ready", who: tail || null, ready: word === "ready" } };
+  }
+  if (word === "start") return { ok: { kind: "start" } };
   if (word === "roll") return { ok: { kind: "roll" } };
   if (word === "draw") return { ok: { kind: "draw" } };
   if (word === "look" || word === "l") return { ok: { kind: "look" } };
@@ -1068,6 +1090,8 @@ const NEEDS: Record<Command["kind"], Capability> = {
   draw: "play",
   look: "play",
   answer: "play",
+  ready: "play",
+  start: "play",
   me: "play",
   stat: "testmode",
   remove: "testmode",

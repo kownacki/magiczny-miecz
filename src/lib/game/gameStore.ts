@@ -3,6 +3,7 @@
 import { db, type DbHandle } from "@/lib/supabase";
 import { commit, loadSnapshot, type Changeset, type Snapshot } from "./change";
 import { fakeDb, type Tables } from "./fakeDb";
+import { setHandle } from "./handle";
 
 /**
  * Why this exists.
@@ -30,6 +31,15 @@ import { fakeDb, type Tables } from "./fakeDb";
  * One contract, proved once, in `gameStore.test.ts`.
  */
 export interface GameStore {
+  /**
+   * The database behind it.
+   *
+   * Here so that `setStore` can point the *reads* at the same place — they
+   * happen outside a change and so cannot go through `load`/`commit`. Without
+   * it `mm` wrote to a file and then asked Postgres who was sitting at the
+   * table.
+   */
+  handle: DbHandle;
   /** Everything one change may read, as of now. */
   load(gameId: string): Promise<Snapshot>;
   /**
@@ -54,6 +64,7 @@ export interface GameStore {
  */
 export function storeOver(on: DbHandle): GameStore {
   return {
+    handle: on,
     load: (gameId) => loadSnapshot(gameId, on),
     commit: (snapshot, writes) => commit(snapshot, writes, on),
   };
@@ -70,6 +81,7 @@ export function storeOver(on: DbHandle): GameStore {
  * nothing and cannot go stale.
  */
 export const supabaseStore: GameStore = {
+  handle: db,
   load: (gameId) => loadSnapshot(gameId, db),
   commit: (snapshot, writes) => commit(snapshot, writes, db),
 };
@@ -140,11 +152,14 @@ let current: GameStore | null = null;
  */
 export function setStore(store: GameStore): void {
   current = store;
+  // The reads follow the writes. Two calls would be two chances to forget one.
+  setHandle(store.handle);
 }
 
 /** Back to Postgres. For a test that changed it, and for nothing else. */
 export function resetStore(): void {
   current = null;
+  setHandle(null);
 }
 
 export function activeStore(): GameStore {

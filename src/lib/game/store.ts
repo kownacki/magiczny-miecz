@@ -2,6 +2,7 @@
 
 import type { EqMode } from "@/lib/engine/slots";
 import { db, type DbHandle } from "@/lib/supabase";
+import { handleNow } from "./handle";
 import * as tables from "./tables";
 import { tablesFor } from "./tables";
 import { makeClaimToken, makeJoinCode, makeSeed } from "./codes";
@@ -158,7 +159,7 @@ export async function createGame(
    * over. Opening a table is one of the two writes that is not a `Changeset`,
    * so it cannot go through the store and has to be handed the handle itself.
    */
-  on: DbHandle = db,
+  on: DbHandle = handleNow(),
 ): Promise<{ game: GameRow; hostToken: string }> {
   const t = tablesFor(on);
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -311,8 +312,9 @@ export async function gameById(
 export async function journalRows(
   gameId: string,
   options: { after: number; limit: number },
+  on: DbHandle = handleNow(),
 ): Promise<Record<string, unknown>[]> {
-  let query = db
+  let query = on
     .from("moves")
     .select("seq,seat_id,actor_name,turn,kind,payload,manual")
     .eq("game_id", gameId)
@@ -331,7 +333,7 @@ export async function journalRows(
  * about people — who is host, who is quiet, who arrived first — and half of
  * them are in no seat at all.
  */
-export async function usersFor(gameId: string, on: DbHandle = db): Promise<UserRow[]> {
+export async function usersFor(gameId: string, on: DbHandle = handleNow()): Promise<UserRow[]> {
   const { data, error } = await on
     .from("users")
     .select(USER_COLUMNS)
@@ -360,7 +362,7 @@ export function makeUserId(pick: () => number = Math.random): string {
   return out;
 }
 
-export async function seatsFor(gameId: string, on: DbHandle = db): Promise<SeatRow[]> {
+export async function seatsFor(gameId: string, on: DbHandle = handleNow()): Promise<SeatRow[]> {
   const { data, error } = await on
     .from("seats")
     .select(SEAT_COLUMNS)
@@ -426,7 +428,7 @@ export async function joinGame(
    */
   wanted: number | null = null,
   /** Where the table is. See `createGame`. */
-  on: DbHandle = db,
+  on: DbHandle = handleNow(),
 ): Promise<{ user: UserRow; seat: SeatRow | null; token: string }> {
   const t = tablesFor(on);
   const token = makeClaimToken();
@@ -583,7 +585,7 @@ export interface HoldingRow {
   granted: boolean;
 }
 
-export async function holdingsFor(gameId: string, on: DbHandle = db): Promise<HoldingRow[]> {
+export async function holdingsFor(gameId: string, on: DbHandle = handleNow()): Promise<HoldingRow[]> {
   const { data, error } = await on
     .from("holdings")
     .select("id,seat_id,card_id,kind,face,slot,ordinal,granted")
@@ -612,7 +614,7 @@ export interface FieldCardRow {
   granted: boolean;
 }
 
-export async function fieldCardsFor(gameId: string, on: DbHandle = db): Promise<FieldCardRow[]> {
+export async function fieldCardsFor(gameId: string, on: DbHandle = handleNow()): Promise<FieldCardRow[]> {
   const { data, error } = await on
     .from("field_cards")
     .select("id,field_id,card_id,granted")

@@ -21,6 +21,7 @@ import {
   claimTableScreen,
   leaveTable,
   renameUser,
+  setReady,
   takeSeat,
   unseat,
 } from "./lobbyStore";
@@ -35,6 +36,7 @@ import {
   finishTurn,
   moveTo,
   resolveDrawnCard,
+  startGame,
   resolveFieldOffer,
   rollForMove,
   grantCard,
@@ -756,6 +758,16 @@ export async function runCommand(
      * Playing. Everything below is the game as printed — the same functions
      * the browser's buttons call, reached by typing instead of clicking.
      * ------------------------------------------------------------------- */
+
+    case "ready": {
+      const person = userOf(command.who);
+      await setReady(gameId, person.id, command.ready);
+      return command.ready ? "Gotów." : "Jeszcze nie.";
+    }
+
+    case "start":
+      await startGame(gameId);
+      return "Gra się zaczyna.";
 
     case "roll": {
       // Null, not a number: the app throws it. A typed die is companion mode's,

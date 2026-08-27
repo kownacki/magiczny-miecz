@@ -563,6 +563,8 @@ suite("finishing a half-typed line", () => {
  */
 const USAGE: Record<string, { line: string; becomes: unknown }> = {
   help: { line: "help", becomes: { kind: "help", about: null } },
+  ready: { line: "ready", becomes: { kind: "ready", who: null, ready: true } },
+  start: { line: "start", becomes: { kind: "start" } },
   roll: { line: "roll", becomes: { kind: "roll" } },
   answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2] } },
   move: { line: "move Karczma", becomes: { kind: "move", fieldId: "karczma" } },

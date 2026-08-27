@@ -144,6 +144,7 @@ export async function deleteSave(code: string): Promise<void> {
 export function fileStore(code: string, tables: Tables, log: unknown[] = []): GameStore {
   const inner = memoryStore(tables);
   return {
+    handle: inner.handle,
     load: (gameId) => inner.load(gameId),
     async commit(snapshot: Snapshot, writes: Changeset): Promise<number> {
       const revision = await inner.commit(snapshot, writes);

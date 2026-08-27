@@ -1,8 +1,12 @@
 # The terminal-first engine
 
-**Status: steps 1 and 2 are built, and the seed with them.** `GameStore`,
-`MemoryStore`, `FileStore`, saves and deterministic shuffling exist and are
-tested; the grammar, `mm` and rewind are not.
+**Status: `mm` plays.** Steps 1, 2 and 4 are built, the seed with them, and step
+3 is half done. A whole game — open a table, pick, ready, start, roll, move,
+draw, answer, pass — runs at a prompt with no database and no server, saves after
+every change, and reloads in a fresh process. What is left is the rest of the
+vocabulary (encounters, holdings) and rewind.
+
+Run it with `npm run mm`, or `npm link` once and then `mm`.
 The decisions under "Settled" are taken; the rest is the shape of the work.
 
 ## Settled
@@ -314,7 +318,10 @@ Four steps, each independently testable, in this order:
    `ferry`) and what you carry (`take`, `drop`, `equip`, `use`, `cast`, `buy`,
    `sell`, `trade`, `heal`), plus setup (`new`, `load`, `saves`, `character`,
    `ready`, `start`).
-4. **`mm`.** Pick or start a save, hot-seat prompt, render board + seat + journal.
+4. ~~**`mm`.**~~ **Done.** `src/cli/mm.ts`, `bin/mm.mjs`. Save management
+   (`new`, `load`, `saves`, `delete`, `testmode`, `quit`) is handled before a
+   line reaches `parseCommand`, because it acts on the program rather than the
+   game and the browser could never carry it out.
 
 Rewind is a fifth step and deliberately last: it wants the grammar settled first,
 because the record is a log of commands and the commands are what step 3 defines.
@@ -349,6 +356,29 @@ Three things, all of them the sort that only appear when something real runs:
   *user*. Same name, same file family, no way to tell them apart at a call site
   — the shape `requests.ts` was written to stop, one layer further in. Worth
   settling when step 3 redesigns the vocabulary.
+
+## What `mm` turned up
+
+Running it found two things no test had, both of the same kind — the port
+covered writes and not everything else:
+
+- **The reads were still Supabase.** `GameStore` covers `load` and `commit`, and
+  that was enough to prove the rules could run without Postgres — not enough to
+  run them. `seatsFor`, `usersFor` and `journalRows` happen *outside* a change
+  and defaulted to the singleton, so `mm` opened a table in a file, wrote to it
+  happily, and then asked Supabase who was sitting at it. `handle.ts` is the
+  answer: one module holding which database this process is talking to, set by
+  `setStore`, and every reader defaults to it.
+- **`readline` closes on piped input while you are awaiting.** Every command
+  awaits the store, so with a loop of `rl.question` the first slow command let
+  stdin reach EOF and the next read rejected — one line ran and the session
+  ended. A human never sees it; a script sees nothing else, and a program you
+  cannot script is a program nobody can test. The line iterator buffers, and the
+  turn handover only waits for a keypress when there is a terminal to wait for.
+
+**Known and left:** picking in the poczekalnia journals "dosiada się do stołu",
+which is the mid-game arrival line — the browser's lobby pick does not journal at
+all. Harmless, wrong, and worth a look when the setup verbs are finished.
 
 ## Stack
 

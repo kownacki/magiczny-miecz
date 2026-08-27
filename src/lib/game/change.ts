@@ -1,6 +1,7 @@
 /** One change to one game: the snapshot it reads, the changeset it writes, and the commit that makes the whole of it true at once. */
 
-import { db, type DbHandle } from "@/lib/supabase";
+import { type DbHandle } from "@/lib/supabase";
+import { handleNow } from "./handle";
 import { activeStore, type GameStore } from "./gameStore";
 import { tablesFor } from "./tables";
 import {
@@ -436,7 +437,7 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
  * Reading and writing it.
  * ----------------------------------------------------------------------- */
 
-export async function effectRowsFor(gameId: string, on: DbHandle = db): Promise<EffectRow[]> {
+export async function effectRowsFor(gameId: string, on: DbHandle = handleNow()): Promise<EffectRow[]> {
   const { data, error } = await on
     .from("seat_effects")
     .select("id,seat_id,source,label,modifier,ends")
@@ -446,7 +447,7 @@ export async function effectRowsFor(gameId: string, on: DbHandle = db): Promise<
   return (data ?? []) as EffectRow[];
 }
 
-async function gameRow(gameId: string, on: DbHandle = db): Promise<Snapshot["game"]> {
+async function gameRow(gameId: string, on: DbHandle = handleNow()): Promise<Snapshot["game"]> {
   const { data, error } = await on
     .from("games")
     .select(GAME_COLUMNS)
@@ -456,7 +457,7 @@ async function gameRow(gameId: string, on: DbHandle = db): Promise<Snapshot["gam
   return data as Snapshot["game"];
 }
 
-export async function loadSnapshot(gameId: string, on: DbHandle = db): Promise<Snapshot> {
+export async function loadSnapshot(gameId: string, on: DbHandle = handleNow()): Promise<Snapshot> {
   const [game, seats, users, holdings, fieldCards, effects] = await Promise.all([
     gameRow(gameId, on),
     seatsFor(gameId, on),
@@ -528,7 +529,7 @@ export function isEmpty(writes: Changeset): boolean {
 export async function commit(
   snapshot: Snapshot,
   writes: Changeset,
-  on: DbHandle = db,
+  on: DbHandle = handleNow(),
 ): Promise<number> {
   const t = tablesFor(on);
   const gameId = snapshot.game.id;
