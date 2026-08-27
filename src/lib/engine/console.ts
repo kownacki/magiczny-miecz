@@ -180,6 +180,10 @@ export type Command =
    * app's filing system leaking into the game.
    */
   | { kind: "card"; name: string }
+  /* Encounters. What is standing in front of you, and the two ways past it. */
+  | { kind: "fight"; cardId: string | null }
+  | { kind: "escape" }
+  | { kind: "attack"; who: string }
   /**
    * What a card asked, answered.
    *
@@ -295,6 +299,30 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
+    needs: "play",
+  },
+  {
+    name: "fight",
+    aliases: [],
+    when: ["field", "fight"],
+    usage: "fight [WILKOŁAK]",
+    summary: "square up to a Wróg on your Obszar — named when more than one is there (16.2)",
+    needs: "play",
+  },
+  {
+    name: "escape",
+    aliases: ["flee"],
+    when: ["field", "fight"],
+    usage: "escape",
+    summary: "try to slip away instead of fighting (19.1)",
+    needs: "play",
+  },
+  {
+    name: "attack",
+    aliases: [],
+    when: ["field"],
+    usage: "attack <player>",
+    summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
     needs: "play",
   },
   {
@@ -890,6 +918,20 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "card", name: tail } };
   }
 
+  if (word === "escape" || word === "flee") return { ok: { kind: "escape" } };
+  if (word === "attack") {
+    return tail ? { ok: { kind: "attack", who: tail } } : needs("attack", "Attack whom?");
+  }
+  if (word === "fight") {
+    // Nothing named takes whatever is waiting, which is the usual case: a Wróg
+    // attacks the character who drew him (16.2), and there is only one of him.
+    if (!tail) return { ok: { kind: "fight", cardId: null } };
+    return name(FOES, (card) => card.name, tail, "Wróg", (card) => ({
+      kind: "fight",
+      cardId: card.id,
+    }), "fight");
+  }
+
   if (word === "roll") return { ok: { kind: "roll" } };
   if (word === "draw") return { ok: { kind: "draw" } };
   if (word === "look" || word === "l") return { ok: { kind: "look" } };
@@ -1145,7 +1187,7 @@ export function complete(
         ? { pool: CARDS.map((c) => c.name), at: 1 }
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
-    if (verb === "summon") return { pool: FOES.map((c) => c.name), at: 1 };
+    if (verb === "summon" || verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "card" || verb === "read" || verb === "x") {
       return { pool: [...HOLDABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
     }
@@ -1252,6 +1294,9 @@ const NEEDS: Record<Command["kind"], Capability> = {
   look: "play",
   answer: "play",
   card: "play",
+  fight: "play",
+  escape: "play",
+  attack: "play",
   ready: "play",
   start: "play",
   me: "play",

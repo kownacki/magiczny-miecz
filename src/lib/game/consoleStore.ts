@@ -32,6 +32,10 @@ import {
   abandonFight,
   addEffect,
   adjust,
+  attackSeat,
+  beginFight,
+  escape,
+  fightRoll,
   changeNature,
   drawCard,
   drawSpell,
@@ -664,6 +668,92 @@ export async function runCommand(
       const seat = seatOf(null);
       await placeSeat(gameId, seat.id, command.fieldId, null);
       return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
+    }
+
+    /* ----------------------------------------------------------------------
+     * Encounters, played rather than decided. `summon` and `settle` below are
+     * the testmode pair: one conjures a Wróg, the other writes an outcome. The
+     * three here do neither — they throw the dice the rules throw.
+     * ------------------------------------------------------------------- */
+
+    /**
+     * A fight, from squaring up to the result, in one line.
+     *
+     * The browser walks this in four presses — begin, the player's die, the
+     * enemy's, then settle — because each of them is a number the table wants
+     * to watch appear. At a prompt that would be four lines to learn and three
+     * of them with nothing to decide, so the die rolls and the answer comes
+     * back. Every step is still the function the browser calls, so a fight
+     * typed here and a fight clicked there are the same fight.
+     */
+    case "fight": {
+      const seat = seatOf(null);
+      const snapshot = await activeStore().load(gameId);
+      const state = snapshot.game.turn_state as {
+        phase?: string;
+        drawn?: { cardId: string; cardClass: string }[];
+        resolved?: string[];
+      };
+
+      // Already in one — the dice are what is owed, not another opponent.
+      if (state.phase !== "fight") {
+        const waiting = (state.drawn ?? []).filter(
+          (one) => one.cardClass === "foe" && !(state.resolved ?? []).includes(one.cardId),
+        );
+        if (waiting.length === 0) throw new Error("No Wróg here to fight.");
+        const wanted = command.cardId
+          ? waiting.filter((one) => one.cardId === command.cardId)
+          : waiting;
+        if (wanted.length === 0) throw new Error(`${cardName(command.cardId ?? "")} is not here.`);
+        if (wanted.length > 1 && !command.cardId) {
+          throw new Error(`Which one — ${wanted.map((one) => cardName(one.cardId)).join(", ")}?`);
+        }
+        await beginFight(gameId, [wanted[0].cardId]);
+      }
+
+      // Null on both, because the app throws its own dice in simulation.
+      await fightRoll(gameId, "player", null);
+      await fightRoll(gameId, "enemy", null);
+
+      const after = (await activeStore().load(gameId)).game.turn_state as {
+        fight?: {
+          cardName: string;
+          playerTotal: number;
+          enemyTotal: number;
+          playerRoll: number | null;
+          enemyRoll: number | null;
+          /** An object, not a string — `CombatResult` carries who won as well. */
+          result: { outcome: "wygrana" | "przegrana" | "remis" } | null;
+        };
+      };
+      const fight = after.fight;
+      if (!fight) return "The fight is over.";
+      const mine = fight.playerTotal + (fight.playerRoll ?? 0);
+      const theirs = fight.enemyTotal + (fight.enemyRoll ?? 0);
+      const said =
+        `${named(seat)} ${mine} (${fight.playerTotal}+${fight.playerRoll ?? 0})` +
+        ` vs ${fight.cardName} ${theirs} (${fight.enemyTotal}+${fight.enemyRoll ?? 0})`;
+
+      await resolveFight(gameId);
+      const ended = (await activeStore().load(gameId)).game.turn_state as { phase?: string };
+      const OUTCOME = { wygrana: "won", przegrana: "lost", remis: "drawn" } as const;
+      const outcome = fight.result ? OUTCOME[fight.result.outcome] : "unsettled";
+      return `${said} — ${outcome}.${ended.phase === "fight" ? " Still fighting." : ""}`;
+    }
+
+    case "escape": {
+      const seat = seatOf(null);
+      // Null: the app rolls. A reported number is companion mode's.
+      const fled = await escape(gameId, null);
+      return fled.succeeded
+        ? `${named(seat)} slips away.${fled.onBridge ? " Back off the Most." : ""}`
+        : `${named(seat)} does not get away.`;
+    }
+
+    case "attack": {
+      const seat = seatOf(command.who);
+      await attackSeat(gameId, seat.id);
+      return `${named(seatOf(null))} attacks ${named(seat)}.`;
     }
 
     case "summon": {
