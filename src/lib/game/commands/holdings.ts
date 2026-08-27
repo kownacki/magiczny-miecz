@@ -3,8 +3,10 @@
 import items from "@/data/items.json";
 import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
+import { carriesSpell } from "@/lib/engine/abilities";
 import type { FieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
+import { drawFrom } from "@/lib/engine/deck";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
 import {
   BASE_CARRY_LIMIT,
@@ -15,7 +17,7 @@ import {
 import { forbiddenSaid, forbiddenTo, kindForCard } from "@/lib/engine/holdings";
 import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
-import { EVENTS, SPELLS } from "../decks";
+import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import {
   apply,
   merge,
@@ -114,6 +116,78 @@ export interface Taken {
  * its killer. Spells are the only kind held concealed (9.3) — and none is ever
  * taken this way, because a Zaklęcie is dealt rather than found.
  */
+/**
+ * The Zaklęcie that arrives with the Przyjaciel who walks around with one.
+ *
+ * "weź Kartę Zaklęcia i połóż ją z Kartą Krzyżowca" — drawn the moment he
+ * joins, off the same pile as any other, so an exhausted one reshuffles under
+ * 9.5. It goes in as `carried` rather than `spell`: it lies with his card and
+ * not in the hand, so 2.6 never counts it and nothing that takes "your
+ * Zaklęcia" reaches it.
+ *
+ * Shared with `grantCard` on purpose. A conjured Krzyżowiec with empty hands is
+ * a Krzyżowiec who does not work, and the point of the test shortcut is to
+ * reach the state that playing would have reached.
+ *
+ * Silently nothing when the pile is empty and has nothing left to recycle,
+ * which is a table with every Zaklęcie already in play: refusing the friend
+ * over that would be stranger than his turning up empty-handed.
+ */
+function escortFor(
+  snapshot: Snapshot,
+  seatId: string,
+  cardId: string,
+  granted: boolean,
+): Changeset {
+  if (!carriesSpell([cardId])) return {};
+
+  const decks = decksOf(snapshot.game);
+  // The game's own shuffle, so a reshuffled pile comes out the same on a replay
+  // as it did the first time (`prng.ts`).
+  const { deck: after, drawn, recycled } = drawFrom(decks.spells, 1, shuffleFor(snapshot.game));
+  if (drawn.length === 0) return {};
+  // The pile holds refs, not ids — `zaklecia#4` is where a card sits on the
+  // sheet, and a holding stores what the card *is*.
+  const spell = SPELL_BY_REF.get(drawn[0]);
+  if (!spell) return {};
+
+  return {
+    game: { deck: { ...decks, spells: after } },
+    holdings: {
+      insert: [
+        {
+          seat_id: seatId,
+          card_id: spell.id,
+          kind: "carried",
+          // 9.3: concealed from the others either way. Whether its owner may
+          // look is the card's own business, and `carriesSpell` asks it.
+          face: "hidden",
+          carried_by: cardId,
+          granted,
+        },
+      ],
+    },
+    journal: [
+      ...(recycled
+        ? [
+            {
+              seatId: null,
+              turn: snapshot.game.turn,
+              kind: "reshuffle" as const,
+              payload: { pile: "zaklecia" },
+            },
+          ]
+        : []),
+      {
+        seatId,
+        turn: snapshot.game.turn,
+        kind: "carried-spell" as const,
+        payload: { cardId, spellId: spell.id },
+      },
+    ],
+  };
+}
+
 export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> {
   const { seatId, cardId } = command;
   const granted = command.granted ?? false;
@@ -239,11 +313,14 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
       ? pushOntoPile(snapshot, "events", [cardId])
       : {};
 
-  const kept: Changeset = {
-    holdings: {
-      insert: [{ seat_id: seatId, card_id: cardId, kind, face: "open", granted }],
+  const kept: Changeset = merge(
+    {
+      holdings: {
+        insert: [{ seat_id: seatId, card_id: cardId, kind, face: "open", granted }],
+      },
     },
-  };
+    escortFor(snapshot, seatId, cardId, granted),
+  );
 
   // Chained: the lift writes `game.turn_state` while the discard writes
   // `game.deck`, and reading the discard's snapshot keeps the two from being
@@ -302,8 +379,33 @@ export function dropCard(
   }
 
   const seat = snapshot.seats.find((s) => s.id === held?.seat_id);
-  const gone: Changeset = held ? { holdings: { delete: [held.id] } } : {};
-  const lies = held && held.kind !== "spell" && held.kind !== "trophy" && seat?.field_id;
+  /**
+   * What the card was carrying leaves with it (6.4).
+   *
+   * The Krzyżowiec put down on an Obszar is a Krzyżowiec with a Zaklęcie, and
+   * the Zaklęcie is not a thing the next character finds lying there — 5.5 and
+   * 6.4 leave the *Karta* behind, and 9.6 is where a Zaklęcie goes. So his card
+   * lies on the field and the spell he was holding goes to the used pile.
+   */
+  const escorted = held
+    ? snapshot.holdings.filter(
+        (h) => h.seat_id === held.seat_id && h.kind === "carried" && h.carried_by === held.card_id,
+      )
+    : [];
+
+  const gone: Changeset = held
+    ? { holdings: { delete: [held.id, ...escorted.map((h) => h.id)] } }
+    : {};
+  const escortBack =
+    escorted.length > 0
+      ? putOnPile(apply(snapshot, gone), "spells", escorted.map(asReturnable))
+      : {};
+  const lies =
+    held &&
+    held.kind !== "spell" &&
+    held.kind !== "trophy" &&
+    held.kind !== "carried" &&
+    seat?.field_id;
 
   let placed: Changeset = {};
   if (held && lies && seat?.field_id) {
@@ -328,13 +430,13 @@ export function dropCard(
     // deleted, which is not the same place at all.
     placed = putOnPile(
       apply(snapshot, gone),
-      held.kind === "spell" ? "spells" : "events",
+      held.kind === "spell" || held.kind === "carried" ? "spells" : "events",
       [asReturnable(held)],
     );
   }
 
   return {
-    writes: mergeAll(gone, placed, {
+    writes: mergeAll(gone, escortBack, placed, {
       journal: [
         {
           seatId: held?.seat_id ?? null,
@@ -641,7 +743,7 @@ export function grantCard(
   if (kind === "trophy") throw new Error("Wroga trzeba pokonać, nie wziąć.");
 
   return {
-    writes: {
+    writes: merge(escortFor(snapshot, seatId, cardId, true), {
       holdings: {
         insert: [
           {
@@ -666,7 +768,7 @@ export function grantCard(
           manual: true,
         },
       ],
-    },
+    }),
     result: undefined,
   };
 }

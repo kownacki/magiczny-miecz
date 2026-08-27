@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
-import { friendDiesInstead, sendRaider } from "./fight";
-import { payFriend } from "./friends";
+import { castSpell, friendDiesInstead, sendRaider } from "./fight";
+import { payFriend, speakCarriedSpell } from "./friends";
 import { apply } from "../change";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import { pointsOf, seatView } from "./seat";
+import { dropCard } from "./holdings";
 
 /**
  * Przyjaciele, which the rulebook barely describes.
@@ -373,5 +374,87 @@ describe("paying a Przyjaciel by the turn (Najemnik)", () => {
     });
     const after = apply(both, payFriend(both, {}).writes);
     expect(pointsOf(after, "seat-a", "walka")).toEqual({ miecz: 3, magia: 3 });
+  });
+});
+
+/**
+ * A Zaklęcie that belongs to a card rather than to a character.
+ *
+ * "weź Kartę Zaklęcia i połóż ją z Kartą Krzyżowca" — it lies with him, not in
+ * the hand, which is the whole reason it is a `carried` holding and not a
+ * `spell` one: 2.6 must not count it and nothing that takes "your Zaklęcia"
+ * may reach it.
+ */
+const carrying = (friend: string, gold = 2) =>
+  aTable({
+    seats: [aSeat({ id: "seat-a", gold })],
+    holdings: [
+      aHolding({ id: "h-friend", seat_id: "seat-a", card_id: friend, kind: "friend" }),
+      aHolding({
+        id: "h-spell",
+        seat_id: "seat-a",
+        card_id: "wladca-gromu",
+        kind: "carried",
+        face: "hidden",
+        carried_by: friend,
+      }),
+    ],
+  });
+
+describe("a Zaklęcie carried by a Przyjaciel", () => {
+  it("does not count against the hand (2.6)", () => {
+    const view = seatView(carrying("krzyzowiec"), "seat-a");
+    expect(view.holdings.filter((h) => h.kind === "spell")).toHaveLength(0);
+    expect(view.holdings.filter((h) => h.kind === "carried")).toHaveLength(1);
+  });
+
+  it("is spoken for nothing by the Krzyżowiec, who stays", async () => {
+    const table = carrying("krzyzowiec");
+    const out = await speakCarriedSpell(table, {}, ports());
+    const after = apply(table, out.writes);
+
+    expect(after.seats[0].gold).toBe(2);
+    expect(after.holdings.some((h) => h.card_id === "krzyzowiec")).toBe(true);
+    expect(after.holdings.some((h) => h.kind === "carried")).toBe(false);
+  });
+
+  /** "zniknie zabierając swoją zapłatę - należy odłożyć jego Kartę i złoto." */
+  it("costs the Gnom's fee, and the Gnom", async () => {
+    const table = carrying("gnom");
+    const out = await speakCarriedSpell(table, {}, ports());
+    const after = apply(table, out.writes);
+
+    expect(after.seats[0].gold).toBe(1);
+    expect(after.holdings.some((h) => h.card_id === "gnom")).toBe(false);
+    expect(after.holdings.some((h) => h.kind === "carried")).toBe(false);
+  });
+
+  it("refuses the Gnom when the purse is empty", async () => {
+    await expect(speakCarriedSpell(carrying("gnom", 0), {}, ports())).rejects.toThrow(
+      /Za mało złota/,
+    );
+  });
+
+  it("refuses when nobody is carrying one", async () => {
+    await expect(
+      speakCarriedSpell(withCards({ id: "pasterz" }), {}, ports()),
+    ).rejects.toThrow(/Żaden twój Przyjaciel/);
+  });
+
+  /**
+   * The Gnom's whole bargain is that the spell cannot be had for nothing, so
+   * the ordinary casting path must not reach a carried card at all.
+   */
+  it("cannot be spoken by the character through the ordinary cast", () => {
+    expect(() =>
+      castSpell(carrying("gnom"), { seatId: "seat-a", holdingId: "h-spell" }, ports()),
+    ).toThrow(/nie ma tego Zaklęcia/);
+  });
+
+  /** 6.4: the friend leaves, and what he was holding goes where 9.6 sends it. */
+  it("leaves with its Przyjaciel when he is put down", () => {
+    const table = carrying("krzyzowiec");
+    const after = apply(table, dropCard(table, { holdingId: "h-friend" }).writes);
+    expect(after.holdings).toHaveLength(0);
   });
 });

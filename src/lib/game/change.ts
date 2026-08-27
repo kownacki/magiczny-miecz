@@ -110,6 +110,8 @@ export interface NewHolding {
   slot?: string | null;
   ordinal?: number | null;
   granted?: boolean;
+  /** For `kind: "carried"`: the card_id of the Przyjaciel it lies with. */
+  carried_by?: string | null;
 }
 
 export interface HoldingPatch {
@@ -396,6 +398,7 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
         slot: one.slot ?? null,
         ordinal: one.ordinal ?? null,
         granted: one.granted ?? false,
+        carried_by: one.carried_by ?? null,
       })),
     );
 

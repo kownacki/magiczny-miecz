@@ -80,7 +80,11 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
   const mine = snapshot.holdings.filter((h) => h.seat_id === seatId);
 
   const left = mine.filter((h) => h.kind === "item" || h.kind === "friend");
-  const spellCards = mine.filter((h) => h.kind === "spell");
+  // A Zaklęcie carried by a Przyjaciel goes back where a spoken one goes (9.6),
+  // not onto the Obszar with his card: 4.4 leaves "Przedmioty oraz Przyjaciele"
+  // lying there and says nothing about what they were holding. Left out of both
+  // lists it was simply deleted, which quietly took a card out of the game.
+  const spellCards = mine.filter((h) => h.kind === "spell" || h.kind === "carried");
   const trophies = mine.filter((h) => h.kind === "trophy");
 
   const dropped: Changeset =

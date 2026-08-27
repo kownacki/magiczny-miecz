@@ -7,6 +7,7 @@ import {
   attackSeat,
   sendRaider,
   payFriend,
+  speakCarriedSpell,
   beginFight,
   crossRing,
   fightGuardian,
@@ -120,6 +121,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
        */
       // The Najemnik, bought for a turn. No body beyond the actor's own seat:
       // one card in the box sells anything, so there is nothing to name.
+      // The Krzyżowiec or the Gnom speaking what he carries. No holding named:
+      // a character has at most one of each and the command finds it.
+      case "ask":
+        await speakCarriedSpell(game.id);
+        break;
       case "pay":
         await payFriend(game.id);
         break;

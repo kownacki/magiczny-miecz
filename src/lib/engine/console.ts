@@ -187,6 +187,7 @@ export type Command =
   | { kind: "attack"; who: string }
   | { kind: "raid"; who: string }
   | { kind: "pay" }
+  | { kind: "ask" }
   /* What you carry. A name, because a holding's id is a uuid nobody can type. */
   | { kind: "take"; name: string }
   | { kind: "putdown"; name: string }
@@ -478,6 +479,16 @@ export const COMMANDS: CommandSpec[] = [
     when: ["field"],
     usage: "attack <player>",
     summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
+    needs: "play",
+  },
+  {
+    // "gdy sobie tego zażyczysz" — the card's own word for it is asking, and a
+    // player with a Krzyżowiec is asking a person rather than reading a scroll.
+    name: "ask",
+    aliases: [],
+    when: ["field", "move", "roll", "fight"],
+    usage: "ask",
+    summary: "have a Przyjaciel speak the Zaklęcie he carries (Krzyżowiec, Gnom)",
     needs: "play",
   },
   {
@@ -1166,6 +1177,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return tail ? { ok: { kind: "attack", who: tail } } : needs("attack", "Attack whom?");
   }
   if (word === "pay") return { ok: { kind: "pay" } };
+  if (word === "ask") return { ok: { kind: "ask" } };
   if (word === "raid") {
     return tail
       ? { ok: { kind: "raid", who: tail } }
@@ -1548,6 +1560,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   attack: "play",
   raid: "play",
   pay: "play",
+  ask: "play",
   take: "play",
   putdown: "play",
   equip: "play",

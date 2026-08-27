@@ -242,7 +242,15 @@ create table if not exists magiczny_miecz.holdings (
   game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
   seat_id uuid not null references magiczny_miecz.seats(id) on delete cascade,
   card_id text not null,
-  kind text not null check (kind in ('spell', 'item', 'friend', 'trophy')),
+  -- `carried` is a card held by another CARD rather than by the character: the
+  -- Zaklęcie the Krzyżowiec and the Gnom each walk around with, "weź Kartę
+  -- Zaklęcia i połóż ją z Kartą Krzyżowca". A fifth kind rather than a flag on
+  -- `spell`, because the whole point is that it is NOT in the character's hand:
+  -- it does not count against 2.6, it is not part of what a Pan Zaklęć takes,
+  -- and it leaves when its friend leaves. Every query that asks for 'spell'
+  -- therefore excludes it by default, which is the right answer in almost all
+  -- of them.
+  kind text not null check (kind in ('spell', 'item', 'friend', 'trophy', 'carried')),
   face text not null default 'open' check (face in ('open', 'hidden')),
   -- Where it is worn, in the slotted variant only; null means the pack, which
   -- is the only place anything is in classic play.
@@ -270,6 +278,14 @@ create table if not exists magiczny_miecz.holdings (
   -- Default false is the right answer for every row that already exists: they
   -- are all cards that arrived by playing.
   granted boolean not null default false,
+  -- Whose card this one lies with, for `kind = 'carried'` and null otherwise.
+  --
+  -- The Przyjaciel's card_id rather than his row id, and deliberately: a
+  -- Changeset mints both rows at once and an insert cannot reference the id of
+  -- another insert, which the database only assigns at commit. The card is
+  -- identification enough — there is one Krzyżowiec and one Gnom in the box,
+  -- and a character holding both is told apart by which of the two it is.
+  carried_by text,
   created_at timestamptz not null default now()
 );
 
@@ -353,7 +369,7 @@ create table if not exists magiczny_miecz.moves (
   kind text not null check (kind in (
     'beast-draw', 'beast-loss', 'bought', 'bridge-attempt',
     'bridge-cerberus', 'bridge-death-game', 'bridge-entry', 'bridge-failed',
-    'bridge-guardian', 'bridge-trap', 'card', 'card-table', 'crossing',
+    'bridge-guardian', 'bridge-trap', 'card', 'card-table', 'carried-spell', 'crossing',
     'crossing-failed', 'death', 'died-for-you', 'discarded', 'duel', 'effect', 'escape',
     'escape-failed', 'ferry', 'ferry-refused', 'field-table', 'fight-end',
     'fight-roll', 'fight-start', 'guardian-end', 'guardian-start',

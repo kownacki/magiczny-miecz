@@ -312,14 +312,15 @@ async function walk(
         if (!row) continue;
 
         const at = apply(snapshot, writes);
-        const mine = at.holdings
-          .filter((held) => held.seat_id === row.id)
-          .map((held) => ({
-            id: held.id,
-            cardId: held.card_id,
-            kind: held.kind,
-            granted: held.granted,
-          }));
+        // A carried Zaklęcie is the Przyjaciel's, not the character's, so a
+        // "strata" reaching for a Przedmiot or a Przyjaciel cannot pick it: it
+        // goes when its friend goes and never on its own account. Written as a
+        // flatMap so the narrowing is the compiler's too, not only the filter's.
+        const mine = at.holdings.flatMap((held) =>
+          held.seat_id === row.id && held.kind !== "carried"
+            ? [{ id: held.id, cardId: held.card_id, kind: held.kind, granted: held.granted }]
+            : [],
+        );
 
         // Rolled before the choosing, because `chooseLosses` picks synchronously
         // and the dice are a port. Exactly as many as it can ask for — the

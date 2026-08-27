@@ -32,6 +32,8 @@ export const JOURNAL_KINDS = [
   "bridge-trap",
   "card",
   "card-table",
+  /** A Przyjaciel joined carrying a Zaklęcie of his own (Krzyżowiec, Gnom). */
+  "carried-spell",
   "crossing",
   "crossing-failed",
   "death",

@@ -14,7 +14,7 @@ import {
   type EffectName,
 } from "@/lib/engine/console";
 import { cardName } from "@/lib/engine/polish";
-import { fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
+import { carriesSpell, fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
 import { change } from "./change";
 import { ADJUSTABLE, type Adjustable } from "./commands/adjust";
@@ -36,6 +36,7 @@ import {
   attackSeat,
   sendRaider,
   payFriend,
+  speakCarriedSpell,
   beginFight,
   dropCard,
   equipCard,
@@ -1039,6 +1040,12 @@ export async function runCommand(
       return `${named(seatOf(null))} attacks ${named(seat)}.`;
     }
 
+    case "ask": {
+      const seat = seatOf(null);
+      const said = await speakCarriedSpell(gameId);
+      return `${named(seat)}: ${said.spell}${said.effect ? ` — ${said.effect}` : ""}`;
+    }
+
     case "pay": {
       const seat = seatOf(null);
       const paid = await payFriend(gameId);
@@ -1424,6 +1431,7 @@ export async function runCommand(
       const items = mine.filter((one) => one.kind === "item");
       const friends = mine.filter((one) => one.kind === "friend").sort(byName);
       const trophies = mine.filter((one) => one.kind === "trophy").sort(byName);
+      const escorted = mine.filter((one) => one.kind === "carried").sort(byName);
       const view = seatView(snapshot, seat.id);
       /**
        * Sorted for reading, not kept in the order somebody arranged them.
@@ -1489,6 +1497,24 @@ export async function runCommand(
         // 1.4: held to be traded for Miecz, which is not the same as carried.
         ...(trophies.length
           ? [`Trophies: ${trophies.map((one) => cardName(one.card_id)).join(", ")}`]
+          : []),
+        /**
+         * What a Przyjaciel is carrying, which is not in the hand.
+         *
+         * Named only where the card says it may be: the Gnom's is "wolno ci ją
+         * obejrzeć" and the Krzyżowiec's says no such thing, so his is listed
+         * as a Zaklęcie he has and not as a Zaklęcie you know.
+         */
+        ...(own && escorted.length
+          ? [
+              `Carried: ${escorted
+                .map((one) => {
+                  const by = one.carried_by ?? "";
+                  const may = carriesSpell([by])?.mozeszObejrzec ?? false;
+                  return `${cardName(by)} — ${may ? cardName(one.card_id) : "1 Zaklęcie (face down)"}`;
+                })
+                .join(", ")}`,
+            ]
           : []),
         own
           ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`

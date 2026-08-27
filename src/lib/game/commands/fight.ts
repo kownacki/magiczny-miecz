@@ -9,7 +9,8 @@ import {
   raidsForYou,
   type EscapeTarget,
 } from "@/lib/engine/abilities";
-import { asFieldId, fieldsApart, KAMIENNY_MOST, ringOf, type FieldId } from "@/lib/engine/board";
+import { asFieldId, KAMIENNY_MOST, ringOf, type FieldId } from "@/lib/engine/board";
+import { RAID_RANGE, withinRaid } from "@/lib/engine/raid";
 import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
 import { combatValueOf } from "@/lib/engine/cards";
 import { attackAsOne, type CombatKind } from "@/lib/engine/combat";
@@ -208,6 +209,15 @@ export interface CastSpell {
   seatId: string;
   holdingId: string;
   target?: { seatIndex?: number; note?: string; fieldCardId?: string };
+  /**
+   * Set only by `speakCarriedSpell`, to reach a `carried` holding.
+   *
+   * A Zaklęcie lying with the Krzyżowiec is not in the hand and cannot be
+   * spoken by the character — "Krzyżowiec ... użyje, gdy sobie tego zażyczysz",
+   * and the Gnom wants paying first. Without the flag the ordinary cast would
+   * reach both and the Gnom's Sztuka Złota would be optional.
+   */
+  viaFriend?: boolean;
 }
 
 export interface Cast {
@@ -294,7 +304,10 @@ export function castSpell(
   if (!caster) throw new Error("Nie ma takiego gracza.");
 
   const held = snapshot.holdings.find(
-    (h) => h.id === command.holdingId && h.seat_id === command.seatId && h.kind === "spell",
+    (h) =>
+      h.id === command.holdingId &&
+      h.seat_id === command.seatId &&
+      (h.kind === "spell" || (command.viaFriend === true && h.kind === "carried")),
   );
   if (!held) throw new Error("Ta Postać nie ma tego Zaklęcia.");
 
@@ -634,8 +647,15 @@ export async function friendDiesInstead(
   return { writes: {}, result: false };
 }
 
-/** How far the Poszukiwacz Przygód will travel: "oddalonego najwyżej o 3 Obszary". */
-export const RAID_RANGE = 3;
+/**
+ * How far the Poszukiwacz Przygód will travel, and the reach test itself.
+ *
+ * Both moved to `engine/raid.ts` when the browser needed them: a client
+ * component cannot import the command layer, and a UI that works out which
+ * targets to offer from its own copy of the number offers buttons the server
+ * then refuses. Re-exported here so nothing that already had it has to move.
+ */
+export { RAID_RANGE } from "@/lib/engine/raid";
 
 export interface SendRaider {
   /** A Postać to attack, by seat. */
@@ -674,11 +694,8 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
   if (!raider) throw new Error("Nie masz Przyjaciela, którego można wysłać na wyprawę.");
   if (seat.field_id === null) throw new Error("Twoja Postać nie stoi na planszy.");
 
-  const within = (fieldId: FieldId | null): boolean => {
-    if (fieldId === null) return false;
-    const apart = fieldsApart(seat.field_id as FieldId, fieldId);
-    return apart !== null && apart <= RAID_RANGE;
-  };
+  const within = (fieldId: FieldId | null): boolean =>
+    withinRaid(seat.field_id as FieldId, fieldId);
 
   if (command.targetSeatId !== undefined) {
     const target = snapshot.seats.find((s) => s.id === command.targetSeatId);

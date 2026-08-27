@@ -75,6 +75,7 @@ export function aHolding(over: Partial<HoldingRow> = {}): HoldingRow {
     slot: null,
     ordinal: null,
     granted: false,
+    carried_by: null,
     ...over,
   };
 }

@@ -398,6 +398,8 @@ export function describe(
       );
 
     // — what people have ————————————————————————————————————————————
+    case "carried-spell":
+      return line(`${card(data.cardId)} przychodzi z Zaklęciem.`);
     case "paid-friend":
       return line(`${who} płaci ${card(data.cardId)} ${data.price} Sz. Z. za pomoc w tej turze.`);
     case "taken":

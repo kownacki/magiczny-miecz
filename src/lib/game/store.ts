@@ -569,12 +569,27 @@ export interface HoldingRow {
   id: string;
   seat_id: string;
   card_id: string;
-  kind: "spell" | "item" | "friend" | "trophy";
+  /**
+   * `carried` is a card belonging to another card rather than to the character
+   * — the Zaklęcie the Krzyżowiec and the Gnom each walk around with. It is
+   * deliberately not `spell`: it is not in the hand, so 2.6 does not count it
+   * and nothing that takes "your Zaklęcia" reaches it.
+   */
+  kind: "spell" | "item" | "friend" | "trophy" | "carried";
   face: "open" | "hidden";
   /** Where it is worn in the slotted variant; null when it is in the pack. */
   slot: string | null;
   /** Where the owner put it in their pack; null when they never said. */
   ordinal: number | null;
+  /**
+   * For `kind: "carried"`: the card_id of the Przyjaciel this lies with.
+   *
+   * His card rather than his row, because a Changeset mints both at once and an
+   * insert cannot name the id of another insert — the database assigns those at
+   * commit. There is one Krzyżowiec and one Gnom in the box, so the card
+   * identifies him well enough.
+   */
+  carried_by: string | null;
   /**
    * Conjured by the test shortcut rather than drawn, bought or found.
    *

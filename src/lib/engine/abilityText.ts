@@ -299,6 +299,15 @@ export function describeAbility(ability: Ability): string {
       const natury = ability.natury.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ");
       return `tylko Postać: ${natury} (5.3)`;
     }
+    case "nosi-zaklecie": {
+      const price =
+        ability.cena === undefined || ability.cena === 0
+          ? "wypowie je, gdy zechcesz"
+          : `wypowie je za ${plural(ability.cena, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}`;
+      const after = ability.znika ? ", po czym odchodzi z zapłatą" : "";
+      const look = ability.mozeszObejrzec ? " (wolno ci je obejrzeć)" : "";
+      return `nosi przy sobie 1 Zaklęcie${look} — ${price}${after}`;
+    }
     case "za-oplata": {
       const gives = [
         ability.miecz ? `+${ability.miecz} Miecza` : null,

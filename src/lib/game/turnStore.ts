@@ -49,7 +49,10 @@ import {
   type Resolution,
   type UseResult,
 } from "./commands/effects";
-import { payFriend as payFriendOn } from "./commands/friends";
+import {
+  payFriend as payFriendOn,
+  speakCarriedSpell as speakCarriedSpellOn,
+} from "./commands/friends";
 import {
   attackSeat as attackSeatOn,
   sendRaider as sendRaiderOn,
@@ -890,6 +893,11 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
 /** Buys a turn of the Najemnik's sword. Returns the card, so the console can name him. */
 export async function payFriend(gameId: string, seatId?: string): Promise<string> {
   return await change(gameId, payFriendOn, { seatId });
+}
+
+/** Has a Przyjaciel speak the Zaklęcie he carries. Returns what the table must now do. */
+export async function speakCarriedSpell(gameId: string, seatId?: string) {
+  return await change(gameId, speakCarriedSpellOn, { seatId });
 }
 
 export async function sendRaider(

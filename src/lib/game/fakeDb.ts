@@ -77,7 +77,7 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
   // holdings *route*, which takes them as request fields and turns them into
   // something else. A fake that adds a column Postgres has never heard of is
   // the exact failure this table exists to prevent, running the other way.
-  holdings: { face: "open", granted: false, slot: null, ordinal: null },
+  holdings: { face: "open", granted: false, slot: null, ordinal: null, carried_by: null },
   seat_effects: {},
   field_cards: { granted: false },
   moves: { turn: 0, payload: {}, manual: false, seat_id: null, user_id: null, actor_name: null },

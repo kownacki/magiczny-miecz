@@ -243,7 +243,21 @@ export type Ability =
    * `razNaTure` is the sentence that stops it being a money pump — without it
    * three Sztuki Złota buy nine points of Miecz in one fight.
    */
-  | { kind: "za-oplata"; cena: number; miecz?: number; magia?: number; razNaTure?: true };
+  | { kind: "za-oplata"; cena: number; miecz?: number; magia?: number; razNaTure?: true }
+  /**
+   * Walks around with a Zaklęcie of its own (Krzyżowiec, Gnom).
+   *
+   * "weź Kartę Zaklęcia i połóż ją z Kartą Krzyżowca" — the card is drawn when
+   * the Przyjaciel joins and lies with him, not in the hand. So 2.6 never
+   * counts it, nothing that takes "your Zaklęcia" reaches it, and it leaves
+   * when he does. That is what the `carried` holding kind is for.
+   *
+   * The two differ in the asking. The Krzyżowiec "użyje, gdy sobie tego
+   * zażyczysz" and stays; the Gnom wants "1 Sztukę Złota" and then "zniknie
+   * zabierając swoją zapłatę" — so `cena` buys the casting and `znika` says
+   * whether the friend survives having been asked.
+   */
+  | { kind: "nosi-zaklecie"; cena?: number; znika?: true; mozeszObejrzec?: true };
 
 /**
  * Rules the typed vocabulary cannot hold, written out instead.
@@ -465,10 +479,19 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   ],
   // "będzie dodawał ci 2 punkty Miecza podczas każdej walki" — and the 1.5
   // example counts him only in the fight figure.
-  krzyzowiec: [{ kind: "punkty", miecz: 2, tylkoWalka: true }],
+  // "Krzyżowiec posiada również 1 Zaklęcie, którego użyje, gdy sobie tego
+  // zażyczysz (weź Kartę Zaklęcia i połóż ją z Kartą Krzyżowca)."
+  krzyzowiec: [
+    { kind: "punkty", miecz: 2, tylkoWalka: true },
+    { kind: "nosi-zaklecie" },
+  ],
   // "dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1 Sztukę
   // Złota. Płacić Najemnikowi można tylko raz na turę."
   najemnik: [{ kind: "za-oplata", cena: 1, miecz: 3, razNaTure: true }],
+  // "Gnom posiada 1 Zaklęcie (weź Kartę Zaklęcia i połóż ją razem z Kartą
+  // Gnoma - wolno ci ją obejrzeć). Gnom wypowie Zaklęcie, gdy ofiarujesz mu 1
+  // Sztukę Złota, a następnie zniknie zabierając swoją zapłatę."
+  gnom: [{ kind: "nosi-zaklecie", cena: 1, znika: true, mozeszObejrzec: true }],
   tragarz: [{ kind: "udzwig", items: 4 }],
   przewoznika: [{ kind: "bez-oplaty", fields: ["przeprawa-1", "przeprawa-2"] }],
   rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
@@ -781,6 +804,27 @@ export function raidsForYou(
 }
 
 /** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */
+/**
+ * The friend who walks around with a Zaklęcie, and what it takes to have it
+ * spoken. Null when this character has nobody carrying one.
+ */
+export function carriesSpell(
+  cardIds: readonly string[],
+): { cardId: string; cena: number; znika: boolean; mozeszObejrzec: boolean } | null {
+  for (const cardId of cardIds) {
+    for (const ability of abilitiesOf(cardId)) {
+      if (ability.kind !== "nosi-zaklecie") continue;
+      return {
+        cardId,
+        cena: ability.cena ?? 0,
+        znika: ability.znika ?? false,
+        mozeszObejrzec: ability.mozeszObejrzec ?? false,
+      };
+    }
+  }
+  return null;
+}
+
 export function sellsPoints(
   cardIds: readonly string[],
 ): { cardId: string; cena: number; miecz: number; magia: number; razNaTure: boolean } | null {

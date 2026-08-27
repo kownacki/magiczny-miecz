@@ -41,7 +41,12 @@ export interface Seat {
 
 export interface Holding {
   cardId: string;
-  kind: "spell" | "item" | "friend" | "trophy";
+  /**
+   * `carried` belongs to another card rather than to the character — the
+   * Zaklęcie the Krzyżowiec and the Gnom walk around with. Not in the hand, so
+   * 2.6 never counts it and nothing that takes "your Zaklęcia" reaches it.
+   */
+  kind: "spell" | "item" | "friend" | "trophy" | "carried";
   /** Spells are held concealed (9.3); items and friends lie open (5.2, 6.2). */
   face: "open" | "hidden";
   /**
