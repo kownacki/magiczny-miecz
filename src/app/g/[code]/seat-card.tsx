@@ -34,9 +34,8 @@ import Image from "next/image";
 import { characterKind } from "@/lib/engine/polish";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { RailStat } from "./token-rail";
-import { NatureLine } from "./nature-line";
+import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
-import { NATURE_LABEL } from "@/lib/engine/polish";
 import { EffectMark } from "./effect-mark";
 export function SeatCard({
   seat,
@@ -290,11 +289,18 @@ export function SeatCard({
                 className="shrink-0 text-muted"
               />
             )}
-            {seat.nature && (
-              <span className="shrink-0 text-muted/70">
-                {NATURE_LABEL[seat.nature] ?? seat.nature}
-              </span>
-            )}
+            {/* The same words the line under the Karta uses, minus the label
+                it does not need: with the Karta out of sight there is nothing
+                for "Natura:" to disambiguate. A changed one says only what it
+                is now — the Karta Zmiany that says what it *was* is a picture,
+                and this row has no room for a picture. */}
+            {character &&
+              (() => {
+                const said = natureSaid(seat.nature, character.nature);
+                return said ? (
+                  <span className="shrink-0 truncate text-muted/70">{said.label}</span>
+                ) : null;
+              })()}
             <span className="tnum ml-auto shrink-0">
               <span className="text-miecz">{seat.sword_total}</span>
               <span className="text-muted"> / </span>

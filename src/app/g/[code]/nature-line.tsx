@@ -16,7 +16,6 @@ import { NATURE_LABEL } from "@/lib/engine/polish";
  */
 const NATURE_CARD_WIDTH = 88;
 
-export 
 /**
  * One thing that is true of a character, beside the name it is true of.
  *
@@ -31,6 +30,32 @@ export
  * that part belongs to this instance rather than to the card, and it is the
  * half a player is deciding around.
  */
+/**
+ * What to call a character's Natura, and whether the Karta agrees.
+ *
+ * Both places that say it read this: the line under the Karta, and the folded
+ * sheet's own heading. They said it two different ways for a while — "Natura
+ * niezmieniona: zła" in one and a bare "zła" in the other — which is two
+ * answers to one question, and the kind of drift `NATURE_LABEL` was made to
+ * end one level down.
+ *
+ * "(niezmieniona)" is 7.2's statement of absence: the Karta Zmiany Natury is
+ * *not* lying beside the Karta Postaci, and an absence is not something a
+ * screen shows by leaving a gap. A Kat gets no such parenthesis — it prints no
+ * Natura at all and picks one at setup (8.2), so there is nothing for a change
+ * to disagree with and nothing for it to be unchanged from.
+ */
+export function natureSaid(
+  nature: string | null,
+  printed: string,
+): { label: string; changed: boolean } | null {
+  if (nature === null) return null;
+  const label = NATURE_LABEL[nature] ?? nature;
+  if (printed === "any") return { label, changed: false };
+  const changed = nature !== printed;
+  return { label: changed ? label : `${label} (niezmieniona)`, changed };
+}
+
 /**
  * What Natura this character is of, said the way 7.2 says it.
  *
@@ -51,7 +76,7 @@ export
  * with, and the line under the card is the only place that Natura is written
  * down at all.
  */
-function NatureLine({
+export function NatureLine({
   nature,
   printed,
 }: {
@@ -63,20 +88,16 @@ function NatureLine({
   // when there is no card beside the Karta to say it, and at ten pixels it was
   // being read as a caption on the card above it.
   const quiet = "mt-1 text-center text-[12px] text-muted";
-  if (nature === null) return <p className={quiet}>Natura nieustalona</p>;
+  const said = natureSaid(nature, printed);
+  if (nature === null || !said) return <p className={quiet}>Natura nieustalona</p>;
 
-  const changed = printed !== "any" && nature !== printed;
-  const art = changed ? natureCardUrl(nature) : null;
+  const art = said.changed ? natureCardUrl(nature) : null;
   if (!art) {
-    // "Niezmieniona" and not just the Natura, because the absence of a Karta
-    // Zmiany Natury is itself the statement 7.2 makes — and an absence is not
-    // something a screen can show by leaving a gap where a card would be. This
-    // line is that card not being there, said out loud.
-    return (
-      <p className={quiet}>
-        Natura niezmieniona: {NATURE_LABEL[nature] ?? nature}
-      </p>
-    );
+    // The Natura named, with the absence of a Karta Zmiany in the parenthesis:
+    // 7.2's statement is that no card is lying beside the Karta Postaci, and
+    // an absence is not something a screen can show by leaving a gap where a
+    // card would be. This line is that card not being there, said out loud.
+    return <p className={quiet}>Natura: {said.label}</p>;
   }
 
   return (
