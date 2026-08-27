@@ -460,10 +460,19 @@ export async function takeNewCharacter(
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
-          // A death and a latecomer are not the same event, and the journal
-          // says which: one is a Postać starting over, the other somebody
-          // joining a table already running.
-          kind: seat.eliminated ? "new-character" : "joined",
+          /**
+           * A death and a latecomer are not the same event, and the journal
+           * says which: one is a Postać starting over under 4.4, the other
+           * somebody joining a table already running.
+           *
+           * Told apart by the Karta on the seat, not by `eliminated`. That flag
+           * means "out of play", which a newcomer's seat is too — it is created
+           * that way and joins the round when they pick — so on its own it
+           * called every arrival a replacement, and the journal said "Ola gra
+           * dalej jako AWANTURNIK" about somebody who had not played yet. Only
+           * a death leaves a Postać sitting there to be replaced.
+           */
+          kind: seat.eliminated && seat.character_id ? "new-character" : "joined",
           payload: {
             characterId: character.id,
             // Which card it is, is public either way; that it was drawn rather

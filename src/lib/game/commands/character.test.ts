@@ -405,6 +405,30 @@ describe("dosiadka: a latecomer to a table already running", () => {
     });
     expect(writes.seats?.[0].patch).toMatchObject({ character_id: "zdobywca" });
   });
+
+  /**
+   * The shape a real latecomer actually has, which is why this went wrong.
+   *
+   * `joinGame` opens a mid-game seat **out of play** — `eliminated: true` with
+   * no Karta — so it stands out of the round until its player picks. The test
+   * above pins `eliminated: false`, which is a poczekalnia seat rather than a
+   * latecomer's, so it never touched the branch that decides between the two
+   * events. Told apart by `eliminated` alone, every arrival was filed as a 4.4
+   * replacement and the journal said "gra dalej jako" about somebody who had
+   * not played yet. Only a death leaves a Postać on the seat to be replaced.
+   */
+  it("is still a latecomer when its seat came in out of play", async () => {
+    const table = aTable({
+      game: { turn: 4 },
+      seats: [aSeat({ character_id: null, field_id: null, eliminated: true })],
+    });
+    const { writes } = await takeNewCharacter(
+      table,
+      { seatId: "seat-a", characterId: "zdobywca", byId: "seat-a" },
+      ports(),
+    );
+    expect(writes.journal?.at(-1)).toMatchObject({ kind: "joined" });
+  });
 });
 
 /* --------------------------------------------------------------------------

@@ -643,8 +643,13 @@ suite("sitting down at a table already running", () => {
     // Both go through takeNewCharacter and they are not the same event: one
     // player has lost a character, the other never had one. A table reading
     // its own history back should be able to tell which happened.
+    // The person alone, not "Michał (GOBLIN)". Every other line names the seat
+    // as it stands *now*, which for these two is the character being announced
+    // — so the sentence said it twice: "Ola (AWANTURNIK) dosiada się do stołu
+    // jako AWANTURNIK". The fixture's GOBLIN is a seat state that cannot
+    // survive the change these lines are written by.
     expect(text("joined", { characterId: "troll" })).toBe(
-      "Michał (GOBLIN) dosiada się do stołu jako TROLL.",
+      "Michał dosiada się do stołu jako TROLL.",
     );
     expect(text("joined", { characterId: "troll" })).not.toContain("zgin");
   });
@@ -652,14 +657,14 @@ suite("sitting down at a table already running", () => {
 
 suite("choosing again after death", () => {
   it("names the new character", () => {
-    expect(text("new-character", { characterId: "troll" })).toBe("Michał (GOBLIN) gra dalej jako: TROLL.");
+    expect(text("new-character", { characterId: "troll" })).toBe("Michał gra dalej jako: TROLL.");
   });
 
   it("says when the pile chose rather than the player", () => {
     // Which card it is, is public either way; that it was drawn is a different
     // decision from picking it, and worth the word.
     expect(text("new-character", { characterId: "troll", losowa: true })).toBe(
-      "Michał (GOBLIN) gra dalej jako: TROLL (wylosowana).",
+      "Michał gra dalej jako: TROLL (wylosowana).",
     );
   });
 });

@@ -280,6 +280,9 @@ export function describe(
     ? person(seat ? { ...seat, playerName: entry.actorName } : undefined)
     : person(seat);
 
+  /** The person and nothing else, for the lines whose news is the Postać. */
+  const justPerson = entry.actorName ?? seat?.playerName ?? "Ktoś";
+
   const line = (text: string): JournalLine => ({
     seq: entry.seq,
     turn: entry.turn,
@@ -564,8 +567,16 @@ export function describe(
     // "nowa-postac", because arriving is not the same event as coming back
     // from the dead and a table reading its own history should be able to tell
     // which of the two happened.
+    /**
+     * The two lines where the Postać *is* the news, so the subject is the
+     * person alone.
+     *
+     * `who` renders "Ola (AWANTURNIK)" off the seat as it stands now — which
+     * for these two is the character being announced, so the sentence named it
+     * twice: "Ola (AWANTURNIK) dosiada się do stołu jako AWANTURNIK".
+     */
     case "joined":
-      return line(`${who} dosiada się do stołu jako ${characterName(data.characterId)}.`);
+      return line(`${justPerson} dosiada się do stołu jako ${characterName(data.characterId)}.`);
     /**
      * Somebody left, and whether they chose to.
      *
@@ -587,7 +598,7 @@ export function describe(
     }
     case "new-character":
       return line(
-        `${who} gra dalej jako: ${characterName(data.characterId)}` +
+        `${justPerson} gra dalej jako: ${characterName(data.characterId)}` +
           `${data.losowa === true ? " (wylosowana)" : ""}.`,
       );
     /**
