@@ -1,7 +1,7 @@
 /** One typed line from the test console, carried out against a real table. */
 
 import characters from "@/data/characters.json";
-import { describeCard } from "@/lib/engine/lookup";
+import { cardIdNamed, describeCard } from "@/lib/engine/lookup";
 
 import type { Character } from "@/data/types";
 import { asFieldId, FIELDS, type FieldId } from "@/lib/engine/board";
@@ -36,8 +36,14 @@ import {
   beginFight,
   dropCard,
   equipCard,
+  buyGoods,
+  castSpell,
   crossRing,
   escape,
+  healSeat,
+  payHealer,
+  sellHolding,
+  tradeTrophies,
   fightBeast,
   fightGuardian,
   fightRoll,
@@ -189,6 +195,19 @@ function waitingOn(turnState: unknown): string[] {
 export function cardLines(name: string): string[] {
   const found = describeCard(name);
   if ("lines" in found) return found.lines;
+  if ("candidates" in found) throw new Error(`Which one — ${found.candidates.join(", ")}?`);
+  throw new Error(`No card called \`${found.missing}\`.`);
+}
+
+/**
+ * A card id off a printed name, for the verbs that name one nobody holds yet.
+ *
+ * `buy` is the only one: what is on sale is the Obszar's list rather than
+ * anything in a hand, so there is no holding to look the id up from.
+ */
+function idNamed(said: string): string {
+  const found = cardIdNamed(said);
+  if ("id" in found) return found.id;
   if ("candidates" in found) throw new Error(`Which one — ${found.candidates.join(", ")}?`);
   throw new Error(`No card called \`${found.missing}\`.`);
 }
@@ -704,6 +723,62 @@ export async function runCommand(
       const seat = seatOf(null);
       await placeSeat(gameId, seat.id, command.fieldId, null);
       return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
+    }
+
+    /* ----------------------------------------------------------------------
+     * Shops, healers and Zaklęcia.
+     * ------------------------------------------------------------------- */
+
+    case "buy": {
+      const seat = seatOf(null);
+      const card = idNamed(command.name);
+      await buyGoods(gameId, seat.id, card);
+      return `${named(seat)} buys ${cardName(card)}.`;
+    }
+
+    case "sell": {
+      const seat = seatOf(null);
+      const held = await holdingNamed(gameId, seat.id, command.name);
+      await sellHolding(gameId, seat.id, held.id);
+      return `${named(seat)} sells ${cardName(held.card_id)}.`;
+    }
+
+    /**
+     * A point of Życie back, or several bought from a healer.
+     *
+     * Two different acts share the word because from where somebody is sitting
+     * there is one — "put a point back" — and whether it is free or paid for is
+     * the Obszar's business. A number means the healer, since that is the only
+     * one you can buy more than one of.
+     */
+    case "heal": {
+      const seat = seatOf(null);
+      const now =
+        command.points === null
+          ? await healSeat(gameId, seat.id)
+          : await payHealer(gameId, seat.id, command.points);
+      return `${named(seat)} — ${typeof now === "number" ? now : "?"} Życia.`;
+    }
+
+    case "cast": {
+      const seat = seatOf(null);
+      const held = await holdingNamed(gameId, seat.id, command.name);
+      const at = command.who ? seatOf(command.who) : null;
+      const done = await castSpell(gameId, seat.id, held.id, {
+        ...(at ? { seatIndex: at.seat_index } : {}),
+      });
+      return [
+        `${named(seat)} casts ${done.spell}${at ? ` at ${named(at)}` : ""}.`,
+        ...(done.effect ? [done.effect] : []),
+      ].join("\n");
+    }
+
+    case "trade": {
+      const seat = seatOf(null);
+      const gained = await tradeTrophies(gameId, seat.id);
+      return gained > 0
+        ? `${named(seat)} trades trophies for ${gained}.`
+        : `${named(seat)} has nothing to trade.`;
     }
 
     /**

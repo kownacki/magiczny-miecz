@@ -310,6 +310,22 @@ suite("playing the game, and overruling it", () => {
    * a second testmode word for them would have been inventing a difference
    * that is not there. What overrules a rule is `force`, and only on `nature`.
    */
+  it("joins a spell to its target with `at`, like everything else that takes two", () => {
+    expect(ok("cast BŁYSKAWICA at Ola")).toEqual({
+      kind: "cast",
+      name: "BŁYSKAWICA",
+      who: "Ola",
+    });
+    expect(ok("cast BŁYSKAWICA")).toEqual({ kind: "cast", name: "BŁYSKAWICA", who: null });
+    expect(err("cast")).toContain("cast BŁYSKAWICA");
+  });
+
+  it("takes a number of points to heal, and only a number", () => {
+    expect(ok("heal")).toEqual({ kind: "heal", points: null });
+    expect(ok("heal 2")).toEqual({ kind: "heal", points: 2 });
+    expect(err("heal lots")).toContain("heal [2]");
+  });
+
   it("reads an answer as a path, not a single pick", () => {
     // An effect can ask twice, and the server re-walks the card against the
     // whole list — so the numbers are in the order they were decided.
@@ -521,6 +537,8 @@ const EXAMPLE: Record<string, string> = {
   "fog|frozen|barred": "fog",
   "MAGICZNY": "MAGICZNY",
   "HEŁM": "HEŁM",
+  "BŁYSKAWICA": "BŁYSKAWICA",
+  "2": "2",
   "KRYSZTAŁ": "KRYSZTAŁ",
   LOSU: "LOSU",
   "MIECZ": "MIECZ",
@@ -732,6 +750,11 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   fight: { line: "fight", becomes: { kind: "fight", cardId: null } },
   take: { line: "take MAGICZNY MIECZ", becomes: { kind: "take", name: "MAGICZNY MIECZ" } },
   beast: { line: "beast", becomes: { kind: "beast" } },
+  buy: { line: "buy MIECZ", becomes: { kind: "buy", name: "MIECZ" } },
+  sell: { line: "sell MIECZ", becomes: { kind: "sell", name: "MIECZ" } },
+  heal: { line: "heal", becomes: { kind: "heal", points: null } },
+  trade: { line: "trade", becomes: { kind: "trade" } },
+  cast: { line: "cast BŁYSKAWICA", becomes: { kind: "cast", name: "BŁYSKAWICA", who: null } },
   bridge: { line: "bridge", becomes: { kind: "bridge" } },
   cross: { line: "cross", becomes: { kind: "cross" } },
   guardian: { line: "guardian", becomes: { kind: "guardian" } },

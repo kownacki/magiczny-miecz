@@ -196,6 +196,12 @@ export type Command =
   | { kind: "cross" }
   | { kind: "guardian" }
   | { kind: "ferry"; pay: boolean }
+  /* Shops, healers and Zaklęcia. */
+  | { kind: "buy"; name: string }
+  | { kind: "sell"; name: string }
+  | { kind: "heal"; points: number | null }
+  | { kind: "cast"; name: string; who: string | null }
+  | { kind: "trade" }
   /**
    * What a card asked, answered.
    *
@@ -311,6 +317,46 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
+    needs: "play",
+  },
+  {
+    name: "buy",
+    aliases: [],
+    when: PLAYING,
+    usage: "buy MIECZ",
+    summary: "buy from the Obszar you are standing on, at its printed price",
+    needs: "play",
+  },
+  {
+    name: "sell",
+    aliases: [],
+    when: PLAYING,
+    usage: "sell MIECZ",
+    summary: "sell one back to the Lichwiarz in the Gród",
+    needs: "play",
+  },
+  {
+    name: "heal",
+    aliases: [],
+    when: PLAYING,
+    usage: "heal [2]",
+    summary: "take back a point of Życie, or buy several where they are sold (4.2)",
+    needs: "play",
+  },
+  {
+    name: "cast",
+    aliases: [],
+    when: PLAYING,
+    usage: "cast BŁYSKAWICA [at Ola]",
+    summary: "cast a Zaklęcie you are holding (9.6)",
+    needs: "play",
+  },
+  {
+    name: "trade",
+    aliases: [],
+    when: PLAYING,
+    usage: "trade",
+    summary: "turn beaten Wrogowie into a point, where they are traded (18)",
     needs: "play",
   },
   {
@@ -1034,6 +1080,26 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "equip", name: named, slot } };
   }
 
+  if (word === "buy") {
+    return tail ? { ok: { kind: "buy", name: tail } } : needs("buy", "Buy what?");
+  }
+  if (word === "sell") {
+    return tail ? { ok: { kind: "sell", name: tail } } : needs("sell", "Sell what?");
+  }
+  if (word === "trade") return { ok: { kind: "trade" } };
+  if (word === "heal") {
+    if (!tail) return { ok: { kind: "heal", points: null } };
+    if (!/^\d+$/.test(tail)) return needs("heal", `How many — \`${tail}\`?`);
+    return { ok: { kind: "heal", points: Number(tail) } };
+  }
+  if (word === "cast") {
+    if (!tail) return needs("cast", "Cast what?");
+    // `at` joins the two names, the way `place MIECZ at Karczma` does.
+    const [named, at] = tail.split(AT);
+    if (!named?.trim()) return needs("cast", "Cast what?");
+    return { ok: { kind: "cast", name: named.trim(), who: at?.trim() || null } };
+  }
+
   if (word === "beast") return { ok: { kind: "beast" } };
   if (word === "bridge" || word === "most") return { ok: { kind: "bridge" } };
   if (word === "cross") return { ok: { kind: "cross" } };
@@ -1431,6 +1497,11 @@ const NEEDS: Record<Command["kind"], Capability> = {
   cross: "play",
   guardian: "play",
   ferry: "play",
+  buy: "play",
+  sell: "play",
+  heal: "play",
+  cast: "play",
+  trade: "play",
   ready: "play",
   start: "play",
   me: "play",

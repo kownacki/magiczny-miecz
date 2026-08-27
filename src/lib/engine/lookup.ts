@@ -55,6 +55,24 @@ export function everyCardName(): string[] {
 }
 
 /**
+ * The id behind a printed name.
+ *
+ * For the one verb that names a card nobody is holding: what is on sale at an
+ * Obszar is the board's list, so there is no holding to read an id off. Same
+ * three answers as `describeCard`, because it is the same question.
+ */
+export function cardIdNamed(
+  name: string,
+): { id: string } | { candidates: string[] } | { missing: string } {
+  const wanted = fold(name.trim());
+  if (wanted === "") return { missing: name };
+  const hit = CARDS.find((one) => fold(one.name) === wanted);
+  if (hit) return { id: hit.id };
+  const near = CARDS.filter((one) => fold(one.name).startsWith(wanted)).map((one) => one.name);
+  return near.length > 0 ? { candidates: [...new Set(near)] } : { missing: name };
+}
+
+/**
  * One Karta, read out.
  *
  * Returns the lines, or the names it could have meant — a half-typed name is a
