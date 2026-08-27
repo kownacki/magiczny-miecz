@@ -398,6 +398,8 @@ export function describe(
       );
 
     // — what people have ————————————————————————————————————————————
+    case "paid-friend":
+      return line(`${who} płaci ${card(data.cardId)} ${data.price} Sz. Z. za pomoc w tej turze.`);
     case "taken":
       return line(`${who} zdobywa: ${card(data.cardId)}.`);
     // A card handed over by the test shortcut rather than won. Said, and marked

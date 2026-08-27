@@ -2,7 +2,7 @@
 
 import { visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou, heldAbilities } from "@/lib/engine/abilities";
-import { bonusFrom, markOf } from "@/lib/engine/status";
+import { markOf } from "@/lib/engine/status";
 import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
 import { seatView } from "./commands/seat";
@@ -267,10 +267,10 @@ export function envelopeFor(
       // columns the turn engine reads, so the browser gets one list and never
       // has to know there were two halves.
       const view = seatView(table, seat.id);
-      // 1.2 and 2.2 keep these off the żetony, exactly as they keep a
-      // Przedmiot's points off them: an effect is added at read time and never
-      // written into own points, or it would outlive its own expiry.
-      const spell = bonusFrom(view.statuses);
+      // The effect bonuses used to be added here, and here only — so the
+      // browser showed a Miecz the rules never fought with. They are inside
+      // `seatView` now, which is what every rule reads, and this is a plain
+      // read of one number rather than two halves added up on the way out.
 
       // Presence is the driver's, not the chair's: a seat with nobody in it is
       // not "away", it is empty, and those are different things to look at.
@@ -294,8 +294,8 @@ export function envelopeFor(
         away: driver !== null && seenOf(driver).away,
         holdings: seen.cards,
         hidden_count: seen.hiddenCount,
-        sword_total: view.parametr.miecz + spell.miecz,
-        magic_total: view.parametr.magia + spell.magia,
+        sword_total: view.parametr.miecz,
+        magic_total: view.parametr.magia,
         // 2.6, worked out here for the same reason the totals are: this is the
         // number the server refuses a draw against, so it is the number to
         // show. Deliberately *not* off `magic_total` — a spell's own bonus is
@@ -303,8 +303,8 @@ export function envelopeFor(
         // Zaklęcie landed would be a cap nothing honoured. See `fromCards` for
         // why a wand in the pack counts as much as one on the body.
         spell_capacity: view.spellCapacity,
-        sword_in_fight: view.walka.miecz + spell.miecz,
-        magic_in_fight: view.walka.magia + spell.magia,
+        sword_in_fight: view.walka.miecz,
+        magic_in_fight: view.walka.magia,
         /**
          * The Przyjaciel doing the fighting, when it is not the character.
          *

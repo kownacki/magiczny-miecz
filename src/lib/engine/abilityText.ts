@@ -299,6 +299,16 @@ export function describeAbility(ability: Ability): string {
       const natury = ability.natury.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ");
       return `tylko Postać: ${natury} (5.3)`;
     }
+    case "za-oplata": {
+      const gives = [
+        ability.miecz ? `+${ability.miecz} Miecza` : null,
+        ability.magia ? `+${ability.magia} Magii` : null,
+      ]
+        .filter(Boolean)
+        .join(" i ");
+      const often = ability.razNaTure ? ", raz na turę" : "";
+      return `za ${plural(ability.cena, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}: ${gives} na jedną turę${often}`;
+    }
     case "przeciw": {
       const gives = [
         ability.miecz !== undefined && `+${ability.miecz} Miecza`,

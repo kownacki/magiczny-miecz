@@ -774,6 +774,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   escape: { line: "escape", becomes: { kind: "escape" } },
   attack: { line: "attack Ola", becomes: { kind: "attack", who: "Ola" } },
   raid: { line: "raid Ola", becomes: { kind: "raid", who: "Ola" } },
+  pay: { line: "pay", becomes: { kind: "pay" } },
   move: { line: "move Karczma", becomes: { kind: "move", fieldId: "karczma" } },
   draw: { line: "draw", becomes: { kind: "draw" } },
   look: { line: "look", becomes: { kind: "look" } },

@@ -49,6 +49,7 @@ import {
   type Resolution,
   type UseResult,
 } from "./commands/effects";
+import { payFriend as payFriendOn } from "./commands/friends";
 import {
   attackSeat as attackSeatOn,
   sendRaider as sendRaiderOn,
@@ -886,6 +887,11 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
  * stays where they are, the friend fights with his own three points, and losing
  * costs the friend rather than a point of Życie.
  */
+/** Buys a turn of the Najemnik's sword. Returns the card, so the console can name him. */
+export async function payFriend(gameId: string, seatId?: string): Promise<string> {
+  return await change(gameId, payFriendOn, { seatId });
+}
+
 export async function sendRaider(
   gameId: string,
   target: { targetSeatId?: string; fieldCardId?: string },

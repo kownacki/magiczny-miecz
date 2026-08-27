@@ -6,6 +6,7 @@ import { mayAct } from "@/lib/game/permission";
 import {
   attackSeat,
   sendRaider,
+  payFriend,
   beginFight,
   crossRing,
   fightGuardian,
@@ -117,6 +118,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
        * Either a Postać or a Wróg lying on the board, which is why there are two
        * fields and exactly one of them is expected to be set.
        */
+      // The Najemnik, bought for a turn. No body beyond the actor's own seat:
+      // one card in the box sells anything, so there is nothing to name.
+      case "pay":
+        await payFriend(game.id);
+        break;
       case "raid":
         await sendRaider(
           game.id,

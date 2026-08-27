@@ -35,6 +35,7 @@ import {
   adjust,
   attackSeat,
   sendRaider,
+  payFriend,
   beginFight,
   dropCard,
   equipCard,
@@ -1036,6 +1037,12 @@ export async function runCommand(
       const seat = seatOf(command.who);
       await attackSeat(gameId, seat.id);
       return `${named(seatOf(null))} attacks ${named(seat)}.`;
+    }
+
+    case "pay": {
+      const seat = seatOf(null);
+      const paid = await payFriend(gameId);
+      return `${named(seat)} pays ${cardName(paid)} for this turn.`;
     }
 
     case "raid": {

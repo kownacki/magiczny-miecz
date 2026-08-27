@@ -9,7 +9,7 @@ import {
 } from "@/lib/engine/abilities";
 import { bonusFromHoldings, inEffect, type Reckoning } from "@/lib/engine/holdings";
 import { carriedCount, carryLimit, spellAllowance } from "@/lib/engine/derive";
-import { allStatuses, type Status } from "@/lib/engine/status";
+import { allStatuses, bonusFrom, type Status } from "@/lib/engine/status";
 import type { TargetSeat } from "@/lib/engine/targets";
 import type { Holding } from "@/lib/engine/state";
 import type { EqMode, Slot } from "@/lib/engine/slots";
@@ -161,6 +161,39 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId),
   );
 
+  const statuses = allStatuses(
+    snapshot.effects
+      .filter((e) => e.seat_id === row.id)
+      .map((e) => ({
+        id: e.id,
+        source: e.source,
+        label: e.label,
+        modifier: e.modifier,
+        ends: e.ends,
+      })),
+    {
+      turnsLost: row.turns_lost,
+      stoneUntilTurn: row.stone_until_turn,
+      bridgeBlockedUntilTurn: row.bridge_blocked_until_turn,
+      natureChangedTurn: row.nature_changed_turn,
+    },
+    snapshot.game.turn,
+  );
+
+  /**
+   * Points a character is under rather than points its cards lend (1.2, 2.2).
+   *
+   * An Eliksir drunk this turn and a Najemnik paid this turn both land here,
+   * and until now both were *displayed* and never fought with: `bonusFrom` was
+   * called in `envelope.ts` alone, so the browser drew a Miecz of 7 while every
+   * rule — the fight, the Pułapka, the Trap on the bridge — went on reading 5.
+   *
+   * Added before `inFight` gets it, so the Rycerz still replaces the lot: he
+   * "nie może używać twoich Zaklęć ani Przedmiotów", and an Eliksir you drank
+   * is no more his to swing with than your Excalibur is.
+   */
+  const under = bonusFrom(statuses);
+
   return {
     row,
     id: row.id,
@@ -172,36 +205,28 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     holdings,
     abilities: [...heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)), ...mine],
     fromCards,
-    parametr: { miecz: row.sword_own + parametr.miecz, magia: row.magic_own + parametr.magia },
+    parametr: {
+      miecz: row.sword_own + parametr.miecz + under.miecz,
+      magia: row.magic_own + parametr.magia + under.magia,
+    },
     walka: inFight(
-      { miecz: row.sword_own + walka.miecz, magia: row.magic_own + walka.magia },
+      {
+        miecz: row.sword_own + walka.miecz + under.miecz,
+        magia: row.magic_own + walka.magia + under.magia,
+      },
       heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)),
     ),
     carried: carriedCount(holdings, mode),
     carryLimit: carryLimit(holdings, mode),
+    // Deliberately without `under`: a Zaklęcie's own bonus is not in the basis
+    // the draw is refused against, and a cap that moved when a spell landed
+    // would be a cap nothing honoured. Same reasoning the envelope had.
     spellCapacity: spellAllowance(
       row.magic_own + parametr.magia,
       startingKit(asCharacterId(row.character_id)).spells ?? 0,
       fromCards,
     ),
-    statuses: allStatuses(
-      snapshot.effects
-        .filter((e) => e.seat_id === row.id)
-        .map((e) => ({
-          id: e.id,
-          source: e.source,
-          label: e.label,
-          modifier: e.modifier,
-          ends: e.ends,
-        })),
-      {
-        turnsLost: row.turns_lost,
-        stoneUntilTurn: row.stone_until_turn,
-        bridgeBlockedUntilTurn: row.bridge_blocked_until_turn,
-        natureChangedTurn: row.nature_changed_turn,
-      },
-      snapshot.game.turn,
-    ),
+    statuses,
     asTarget: {
       seatIndex: row.seat_index,
       characterId: row.character_id,

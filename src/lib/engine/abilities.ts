@@ -228,7 +228,22 @@ export type Ability =
    * `modyfikator-rzutu` cannot say this: its `gdzie` knows fields and the kind
    * of fight, never who is being fought.
    */
-  | { kind: "przeciw"; komu: readonly string[]; miecz?: number; magia?: number };
+  | { kind: "przeciw"; komu: readonly string[]; miecz?: number; magia?: number }
+  /**
+   * Points bought by the turn rather than lent for nothing (Najemnik).
+   *
+   * "Najemnik dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1
+   * Sztukę Złota. Płacić Najemnikowi można tylko raz na turę."
+   *
+   * Not `punkty` with a price on it: a `punkty` bonus is simply true while the
+   * card is held, and this one is false until somebody pays and false again a
+   * turn later. It is an effect the friend sells you, which is why it lands in
+   * `seat_effects` beside an Eliksir rather than in the held-card totals.
+   *
+   * `razNaTure` is the sentence that stops it being a money pump — without it
+   * three Sztuki Złota buy nine points of Miecz in one fight.
+   */
+  | { kind: "za-oplata"; cena: number; miecz?: number; magia?: number; razNaTure?: true };
 
 /**
  * Rules the typed vocabulary cannot hold, written out instead.
@@ -451,6 +466,9 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // "będzie dodawał ci 2 punkty Miecza podczas każdej walki" — and the 1.5
   // example counts him only in the fight figure.
   krzyzowiec: [{ kind: "punkty", miecz: 2, tylkoWalka: true }],
+  // "dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1 Sztukę
+  // Złota. Płacić Najemnikowi można tylko raz na turę."
+  najemnik: [{ kind: "za-oplata", cena: 1, miecz: 3, razNaTure: true }],
   tragarz: [{ kind: "udzwig", items: 4 }],
   przewoznika: [{ kind: "bez-oplaty", fields: ["przeprawa-1", "przeprawa-2"] }],
   rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
@@ -763,6 +781,24 @@ export function raidsForYou(
 }
 
 /** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */
+export function sellsPoints(
+  cardIds: readonly string[],
+): { cardId: string; cena: number; miecz: number; magia: number; razNaTure: boolean } | null {
+  for (const cardId of cardIds) {
+    for (const ability of abilitiesOf(cardId)) {
+      if (ability.kind !== "za-oplata") continue;
+      return {
+        cardId,
+        cena: ability.cena,
+        miecz: ability.miecz ?? 0,
+        magia: ability.magia ?? 0,
+        razNaTure: ability.razNaTure ?? false,
+      };
+    }
+  }
+  return null;
+}
+
 export function addsMagiaToMiecz(abilities: readonly Ability[]): boolean {
   return abilities.some((ability) => ability.kind === "magia-do-miecza");
 }

@@ -186,6 +186,7 @@ export type Command =
   | { kind: "escape" }
   | { kind: "attack"; who: string }
   | { kind: "raid"; who: string }
+  | { kind: "pay" }
   /* What you carry. A name, because a holding's id is a uuid nobody can type. */
   | { kind: "take"; name: string }
   | { kind: "putdown"; name: string }
@@ -477,6 +478,16 @@ export const COMMANDS: CommandSpec[] = [
     when: ["field"],
     usage: "attack <player>",
     summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
+    needs: "play",
+  },
+  {
+    // No argument: only one card in the box sells anything, and naming him
+    // would be asking the player to tell the app what it already knows.
+    name: "pay",
+    aliases: [],
+    when: ["field", "move", "roll"],
+    usage: "pay",
+    summary: "buy a turn of a Przyjaciel's help with a Sztuka Złota (Najemnik)",
     needs: "play",
   },
   {
@@ -1154,6 +1165,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "attack") {
     return tail ? { ok: { kind: "attack", who: tail } } : needs("attack", "Attack whom?");
   }
+  if (word === "pay") return { ok: { kind: "pay" } };
   if (word === "raid") {
     return tail
       ? { ok: { kind: "raid", who: tail } }
@@ -1535,6 +1547,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   escape: "play",
   attack: "play",
   raid: "play",
+  pay: "play",
   take: "play",
   putdown: "play",
   equip: "play",

@@ -103,7 +103,9 @@ describe("finishing a line at a prompt", () => {
     // whose Postać died choose another without waiting for a lobby.
     // No trailing space where two candidates share the prefix: readline lists
     // them and advances as far as they agree, which is nowhere here.
-    expect(tab("p", { stage: "roll", testmode: false })[0]).toEqual(["pass", "pick"]);
+    // `pay` joins them: the Najemnik takes his Sztuka Złota whenever it is your
+    // turn, and the turn he sells lasts through the fight either way.
+    expect(tab("p", { stage: "roll", testmode: false })[0]).toEqual(["pass", "pay", "pick"]);
     expect(tab("p", { stage: "roll", testmode: true })[0]).toEqual(
       expect.arrayContaining(["place", "put"]),
     );

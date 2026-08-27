@@ -63,6 +63,8 @@ export const JOURNAL_KINDS = [
   "nature-change",
   "new-character",
   "override",
+  /** A Przyjaciel was paid for a turn of his help (Najemnik). */
+  "paid-friend",
   "points",
   "reshuffle",
   "roll",

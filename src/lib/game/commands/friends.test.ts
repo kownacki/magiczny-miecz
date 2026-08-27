@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { friendDiesInstead, sendRaider } from "./fight";
+import { payFriend } from "./friends";
+import { apply } from "../change";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import { pointsOf, seatView } from "./seat";
@@ -307,5 +309,69 @@ describe("sending a Przyjaciel out (Poszukiwacz Przygód)", () => {
       ],
     });
     expect(() => sendRaider(midMove, { targetSeatId: "seat-a" })).toThrow(/po ruchu/);
+  });
+});
+
+
+/**
+ * The Najemnik, who sells what the others lend.
+ *
+ * "Jako Przyjaciel, Najemnik dodaje ci na jedną turę 3 punkty Miecza, ilekroć
+ * zapłacisz mu 1 Sztukę Złota. Płacić Najemnikowi można tylko raz na turę."
+ */
+const hiring = (gold: number) =>
+  aTable({
+    seats: [aSeat({ id: "seat-a", sword_own: 5, gold })],
+    holdings: [aHolding({ id: "h", seat_id: "seat-a", card_id: "najemnik", kind: "friend" })],
+  });
+
+describe("paying a Przyjaciel by the turn (Najemnik)", () => {
+  it("lends nothing until somebody pays", () => {
+    expect(pointsOf(hiring(2), "seat-a", "walka")).toEqual({ miecz: 5, magia: 1 });
+  });
+
+  it("takes the Sztuka Złota and hands over the three points", () => {
+    const after = apply(hiring(2), payFriend(hiring(2), {}).writes);
+    expect(after.seats[0].gold).toBe(1);
+    expect(pointsOf(after, "seat-a", "parametr").miecz).toBe(8);
+  });
+
+  /**
+   * The half that was broken for every effect in the game, not just this card:
+   * `bonusFrom` was called in `envelope.ts` alone, so a bought or drunk bonus
+   * was drawn on the screen and never reached the fight.
+   */
+  it("is worth the points in a fight, not only on the screen", () => {
+    const after = apply(hiring(2), payFriend(hiring(2), {}).writes);
+    expect(pointsOf(after, "seat-a", "walka").miecz).toBe(8);
+  });
+
+  it("will not be paid twice in one turn", () => {
+    const after = apply(hiring(2), payFriend(hiring(2), {}).writes);
+    expect(() => payFriend(after, {})).toThrow(/już zapłatę w tej turze/);
+  });
+
+  it("refuses when the purse is empty", () => {
+    expect(() => payFriend(hiring(0), {})).toThrow(/Za mało złota/);
+  });
+
+  it("refuses when nobody is for hire", () => {
+    expect(() => payFriend(withCards({ id: "pasterz" }), {})).toThrow(/Nie masz Przyjaciela/);
+  });
+
+  /**
+   * The Rycerz swings with his own 3 and 3 and "nie może używać twoich Zaklęć
+   * ani Przedmiotów" — an Eliksir you drank is no more his than your Excalibur.
+   */
+  it("buys the character nothing the Rycerz can spend", () => {
+    const both = aTable({
+      seats: [aSeat({ id: "seat-a", sword_own: 5, gold: 2 })],
+      holdings: [
+        aHolding({ id: "h0", seat_id: "seat-a", card_id: "najemnik", kind: "friend" }),
+        aHolding({ id: "h1", seat_id: "seat-a", card_id: "rycerz", kind: "friend" }),
+      ],
+    });
+    const after = apply(both, payFriend(both, {}).writes);
+    expect(pointsOf(after, "seat-a", "walka")).toEqual({ miecz: 3, magia: 3 });
   });
 });
