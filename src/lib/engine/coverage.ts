@@ -2,6 +2,8 @@
 
 import { ABILITIES } from "./abilities";
 import { SCRIPTS } from "./cardScript";
+import { SPELLS } from "./spells";
+import { USES } from "./uses";
 import type { CardId } from "@/data/ids";
 
 /**
@@ -83,7 +85,24 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
 };
 
 export function coverageOf(cardId: string): Coverage {
-  const known = cardId in SCRIPTS || cardId in ABILITIES;
+  /**
+   * All four registries, because a card is encoded in whichever one fits its
+   * shape and the player does not care which.
+   *
+   * This asked only two of them for a long time, and the answer for the other
+   * two was "brak" — printed under the card as "rozpatrzcie sami, aplikacja jej
+   * nie prowadzi". It was not true of the five Przedmioty that live in `USES`,
+   * and it was not true of the twenty-seven Zaklęcia that live in `SPELLS`,
+   * which is the *first shelf of the Księga* — so the commonest thing to open
+   * in the whole app was a card the referee carries, disclaiming it.
+   *
+   * The same fault had already been patched once, downstream, where a Karta
+   * Postaci was given a special case in `card-tile.tsx` for printing the same
+   * false line. Two registries missing from one condition, found twice, in two
+   * places, is the argument for fixing it here rather than a third time.
+   */
+  const known =
+    cardId in SCRIPTS || cardId in ABILITIES || cardId in USES || cardId in SPELLS;
   if (!known) return "brak";
   return cardId in MANUAL ? "czesciowe" : "pelne";
 }
