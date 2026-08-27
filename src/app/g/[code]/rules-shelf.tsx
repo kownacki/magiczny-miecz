@@ -83,14 +83,19 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
   }, [needle]);
 
   /**
-   * Shut by default, and only while browsing.
+   * What the reader has said about a chapter, against what it would do anyway.
    *
-   * Twenty-nine chapters unrolled is four hundred paragraphs, and the thing
-   * you came for is one of them. A search has already narrowed it, so what it
-   * finds is open — closing the answer to a question somebody just asked is
-   * the one thing this must not do.
+   * A set of the open ones could not answer the case below: a chapter held open
+   * *because* it holds the rule you followed a link to could not then be shut,
+   * since adding it to the open set changed nothing and removing it changed
+   * nothing either. So this records the choice — open or shut — and silence
+   * means the default, which is shut while browsing and open while it is
+   * holding what you asked for.
+   *
+   * Twenty-nine chapters unrolled is four hundred paragraphs and the thing you
+   * came for is one of them, which is why the default is shut at all.
    */
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const [said, setSaid] = useState<Readonly<Record<string, boolean>>>({});
   const held = useRef<HTMLDivElement>(null);
 
   /**
@@ -121,7 +126,10 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
   return (
     <div ref={held} className="flex flex-col">
       {chapters.map((chapter, at) => {
-        const shown = needle ? true : open.has(chapter.key) || chapter.key === holding;
+        // A search has already narrowed it, so what it finds is open: shutting
+        // the answer to a question somebody just asked is the one thing this
+        // must not do.
+        const shown = needle ? true : (said[chapter.key] ?? chapter.key === holding);
         return (
           <Fold
             key={chapter.key}
@@ -132,13 +140,7 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
             onToggle={
               needle
                 ? undefined
-                : () =>
-                    setOpen((were) => {
-                      const next = new Set(were);
-                      if (next.has(chapter.key)) next.delete(chapter.key);
-                      else next.add(chapter.key);
-                      return next;
-                    })
+                : () => setSaid((was) => ({ ...was, [chapter.key]: !shown }))
             }
           >
             <div className="flex flex-col gap-3">
