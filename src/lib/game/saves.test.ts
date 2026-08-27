@@ -32,7 +32,7 @@ afterEach(async () => {
 
 describe("a game kept in a file", () => {
   it("opens a table, plays a turn, and is still there after reopening it", async () => {
-    const { code, gameId, tables, store } = await newSave("Michał");
+    const { code, gameId, tables, store } = await newSave(["Michał"]);
     setStore(store);
 
     // The same functions the routes call, all the way down.
@@ -56,7 +56,7 @@ describe("a game kept in a file", () => {
   });
 
   it("writes after every change, not when somebody remembers to", async () => {
-    const { code, gameId, tables, store } = await newSave("Michał");
+    const { code, gameId, tables, store } = await newSave(["Michał"]);
     setStore(store);
 
     const before = (await readSave(code)).savedAt;
@@ -74,15 +74,15 @@ describe("a game kept in a file", () => {
    * inside it. A reader sees the old file or the new one, never half of either.
    */
   it("leaves no half-written file behind", async () => {
-    const { code } = await newSave("Michał");
+    const { code } = await newSave(["Michał"]);
     const left = await readdir(savesDir());
     expect(left).toEqual([`${code}.json`]);
     expect(left.some((name) => name.endsWith(".tmp"))).toBe(false);
   });
 
   it("lists what is there, newest first, and forgets what is deleted", async () => {
-    const one = await newSave("Michał");
-    const two = await newSave("Ola");
+    const one = await newSave(["Michał"]);
+    const two = await newSave(["Ola"]);
 
     const listed = await listSaves();
     expect(listed.map((save) => save.code).sort()).toEqual([one.code, two.code].sort());
@@ -100,7 +100,7 @@ describe("a game kept in a file", () => {
   });
 
   it("does not let one unreadable file hide the others", async () => {
-    const good = await newSave("Michał");
+    const good = await newSave(["Michał"]);
     await writeFile(join(savesDir(), "BROKEN.json"), "{ not json", "utf8");
 
     const listed = await listSaves();
@@ -108,7 +108,7 @@ describe("a game kept in a file", () => {
   });
 
   it("refuses a save it does not understand rather than guessing", async () => {
-    const { code } = await newSave("Michał");
+    const { code } = await newSave(["Michał"]);
     const file = await readSave(code);
     await writeFile(
       join(savesDir(), `${code}.json`),
@@ -118,8 +118,28 @@ describe("a game kept in a file", () => {
     await expect(readSave(code)).rejects.toThrow(/wersja/i);
   });
 
+  /**
+   * The whole table is on disk before anything else happens.
+   *
+   * Seating the others used to be the caller's job, after `newSave` had
+   * already written the file — so a table opened for two held one player until
+   * some later commit rewrote it, and quitting before that lost the rest.
+   */
+  it("writes everybody at the table, not just whoever opened it", async () => {
+    const { code } = await newSave(["Kowi", "Cinek", "Ola"]);
+    const file = await readSave(code);
+    expect(file.tables.users.map((one) => one.name)).toEqual(["Kowi", "Cinek", "Ola"]);
+    expect(file.tables.seats).toHaveLength(3);
+    // And the list somebody picks from says so without opening it.
+    expect((await listSaves()).find((one) => one.code === code)?.players).toEqual([
+      "Kowi",
+      "Cinek",
+      "Ola",
+    ]);
+  });
+
   it("seats a second player at a local table", async () => {
-    const { gameId, tables, store } = await newSave("Michał");
+    const { gameId, tables, store } = await newSave(["Michał"]);
     setStore(store);
 
     const { user, seat } = await joinGame(gameId, "Ola", null, false, null, memoryHandle(tables));

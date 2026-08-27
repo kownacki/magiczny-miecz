@@ -25,7 +25,26 @@ export function tabFor(
   local: readonly string[],
   /** Where the game has got to, so Tab offers what would actually run. */
   offering: { stage?: Stage; testmode?: boolean } = {},
+  /** What each local family takes after its noun — `table new`, `test off`. */
+  families: Record<string, readonly string[]> = {},
 ): [string[], string] {
+  /**
+   * The second word of a family, which is the whole reason for grouping them.
+   *
+   * `table ⇥` showing new/open/delete is what a noun-space buys over four
+   * top-level verbs: the related commands are in one place instead of
+   * scattered across the alphabet.
+   */
+  const [first, ...typed] = line.split(/\s+/);
+  const family = families[first.toLowerCase()];
+  if (family && typed.length <= 1) {
+    const part = (typed[0] ?? "").toLowerCase();
+    const hits = family.filter((one) => one.startsWith(part));
+    if (hits.length > 0) return [hits.map((one) => `${first.toLowerCase()} ${one} `), line];
+    return [[], line];
+  }
+  if (family) return [[], line];
+
   /**
    * The local words are in the pool, and they are not part of the shared
    * grammar — the browser could never carry `load` out. But they are words you

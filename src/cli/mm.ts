@@ -10,7 +10,7 @@ import { stageOf, type Stage } from "@/lib/engine/console";
 import { cardLines, runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
 import { deleteSave, homeDir, listSaves, newSave, openSave } from "@/lib/game/saves";
-import { joinGame, journalRows, seatsFor, usersFor } from "@/lib/game/store";
+import { journalRows, seatsFor, usersFor } from "@/lib/game/store";
 import { setReady } from "@/lib/game/lobbyStore";
 import { memoryHandle } from "@/lib/game/gameStore";
 import { journalLines, type JournalEntry } from "@/lib/engine/journalText";
@@ -37,7 +37,26 @@ import type { Tables } from "@/lib/game/fakeDb";
  * ever reaches `parseCommand`.
  */
 
-const LOCAL = ["new", "load", "saves", "delete", "testmode", "quit", "exit"];
+/**
+ * The words this prompt answers to that the game does not.
+ *
+ * Two families and a way out, rather than seven top-level verbs. `table` and
+ * `test` group because that is what every CLI past a handful of commands does
+ * — `git remote add`, `docker image ls` — and because it buys three things a
+ * flat list does not: a fifth thing to do to a table is `table rename` rather
+ * than a new word, `table ⇥` shows the family instead of scattering it across
+ * n/o/d/s, and `new`, `load`, `save`, `delete` and `list` stay free for the
+ * game, which is where the words are actually wanted.
+ *
+ * The cost is a prefix on commands typed once a session. Tab pays it back.
+ */
+const LOCAL = ["table", "test", "quit", "exit"];
+
+/** What each family answers to, for `help` and for Tab. */
+const FAMILIES: Record<string, string[]> = {
+  table: ["new", "open", "delete"],
+  test: ["on", "off"],
+};
 
 /** Where a stack trace goes, so a session stays readable and a bug is a path. */
 const LOG = join(homeDir(), "mm.log");
@@ -127,12 +146,9 @@ async function openTable(code: string): Promise<void> {
 }
 
 async function makeTable(names: string[]): Promise<void> {
-  if (names.length === 0) return say("Kto gra? Wypisz graczy: `new Michał, Ola`.");
-  const [host, ...rest] = names;
-  const { code, gameId, tables, store } = await newSave(host);
+  if (names.length === 0) return say("Kto gra? Wypisz graczy: `table new Michał, Ola`.");
+  const { code, gameId, tables, store } = await newSave(names);
   setStore(store);
-  // Everybody else sits down through the same door a browser uses.
-  for (const name of rest) await joinGame(gameId, name, null, false, null, memoryHandle(tables));
   table = { code, gameId, tables };
   announced = null;
   await knowTable();
@@ -285,43 +301,71 @@ async function run(line: string): Promise<void> {
 }
 
 async function local(line: string): Promise<boolean> {
-  const [word, ...rest] = line.split(/\s+/);
+  const [word, second, ...rest] = line.split(/\s+/);
+  const family = word.toLowerCase();
+  const verb = (second ?? "").toLowerCase();
   const tail = rest.join(" ").trim();
-  switch (word.toLowerCase()) {
-    case "quit":
-    case "exit":
-      leaving = true;
-      return true;
-    case "saves": {
-      const found = await listSaves();
-      if (found.length === 0) say("Nie ma żadnych zapisów.");
-      for (const one of found) {
-        say(`  ${one.code}  ${one.status}  tura ${one.turn}  ${one.players.join(", ")}`);
-      }
+
+  if (family === "quit" || family === "exit") {
+    leaving = true;
+    return true;
+  }
+
+  if (family === "test") {
+    // Bare `test` says which way it is, because a switch you cannot read is
+    // one you have to try.
+    if (verb === "") {
+      say(testmode ? "Tryb testowy: włączony." : "Tryb testowy: wyłączony.");
       return true;
     }
-    case "new":
-      await makeTable(tail.split(",").map((one) => one.trim()).filter(Boolean));
+    if (verb !== "on" && verb !== "off") {
+      say("`test on` albo `test off`.");
       return true;
-    case "load":
-      if (!tail) return say("Który zapis? `saves` pokazuje listę."), true;
+    }
+    testmode = verb === "on";
+    say(
+      testmode
+        ? "Tryb testowy włączony — komendy łamiące zasady są dostępne."
+        : "Tryb testowy wyłączony.",
+    );
+    return true;
+  }
+
+  if (family !== "table") return false;
+
+  // Bare `table` lists them, the way a bare noun does in every CLI that has
+  // families: it is the question you ask before you know a code to name.
+  if (verb === "") {
+    const found = await listSaves();
+    if (found.length === 0) say("Nie ma żadnych stołów. `table new Kowi, Ola` otwiera jeden.");
+    for (const one of found) {
+      say(`  ${one.code}  ${one.status}  tura ${one.turn}  ${one.players.join(", ")}`);
+    }
+    return true;
+  }
+
+  const named = [second, ...rest].join(" ").trim();
+  switch (verb) {
+    case "new":
+      await makeTable(
+        tail
+          .split(",")
+          .map((one) => one.trim())
+          .filter(Boolean),
+      );
+      return true;
+    case "open":
+      if (!tail) return say("Który stół? `table` pokazuje listę."), true;
       await openTable(tail.toUpperCase());
       return true;
     case "delete":
-      if (!tail) return say("Który zapis?"), true;
+      if (!tail) return say("Który stół?"), true;
       await deleteSave(tail.toUpperCase());
       say(`Skasowany: ${tail.toUpperCase()}.`);
       return true;
-    case "testmode":
-      testmode = tail.toLowerCase() !== "off";
-      say(
-        testmode
-          ? "Tryb testowy włączony — komendy łamiące zasady są dostępne."
-          : "Tryb testowy wyłączony.",
-      );
-      return true;
     default:
-      return false;
+      say(`\`table ${named}\`? Znam: ${FAMILIES.table.join(", ")} — albo samo \`table\`.`);
+      return true;
   }
 }
 
@@ -330,7 +374,7 @@ async function main(): Promise<void> {
   rl = createInterface({
     input: stdin,
     output: stdout,
-    completer: (line: string) => tabFor(line, players, LOCAL, { stage, testmode }),
+    completer: (line: string) => tabFor(line, players, LOCAL, { stage, testmode }, FAMILIES),
   });
 
   say("Magiczny Miecz — konsola.");
@@ -340,8 +384,8 @@ async function main(): Promise<void> {
   // The names are the *players*, and saying so is the whole point of this
   // line: `new Michał, Ola` reads like naming the table, and the first person
   // to run it read it that way.
-  say("`new <gracze>` otwiera stół — np. `new Michał, Ola`. Kod stołu nadaje się sam.");
-  say("`help` wypisuje komendy, `saves` zapisy, `quit` wychodzi.");
+  say("`table new <gracze>` otwiera stół — np. `table new Michał, Ola`.");
+  say("`table` wypisuje stoły, `help` komendy, `quit` wychodzi.");
 
   /**
    * The line iterator rather than a loop of `question`.
@@ -371,7 +415,11 @@ async function main(): Promise<void> {
         const asked = line.split(/\s+/)[1] ?? null;
         const all = asked === "all";
         for (const one of helpLines(all ? null : asked, { testmode, stage, all })) say(one);
-        say(`  ${LOCAL.join(" · ")}  — zapisy i wyjście`);
+        // The families, spelled out: `table` alone would not say what it takes.
+        say(
+          `  table [${FAMILIES.table.join("|")}] · test [on|off] · quit` +
+            "  — stoły, tryb testowy, wyjście",
+        );
       } else if (offTable(line)) {
         // Reading a Karta touches no game, so it must not need one. Somebody
         // deciding whether to play wants to read what they would be playing.
@@ -381,7 +429,7 @@ async function main(): Promise<void> {
           say((error as Error).message);
         }
       } else if (!table) {
-        say("Najpierw otwórz stół: `new Michał, Ola` albo `load KOD`.");
+        say("Najpierw otwórz stół: `table new Michał, Ola` albo `table open KOD`.");
       } else if (/^journal\b/.test(line)) {
         await recent(Number(line.split(/\s+/)[1] ?? 10) || 10);
       } else {

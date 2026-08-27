@@ -12,10 +12,13 @@ import type { Stage } from "@/lib/engine/console";
  */
 
 const PLAYERS = ["Michał", "Ola"];
-const LOCAL = ["new", "load", "saves", "delete", "testmode", "quit", "exit"];
+const LOCAL = ["table", "test", "quit", "exit"];
+const FAMILIES = { table: ["new", "open", "delete"], test: ["on", "off"] };
 /** Mid-turn and unlocked, unless a test says otherwise. */
-const tab = (line: string, offering: { stage: Stage; testmode: boolean } = { stage: "roll", testmode: true }) =>
-  tabFor(line, PLAYERS, LOCAL, offering);
+const tab = (
+  line: string,
+  offering: { stage: Stage; testmode: boolean } = { stage: "roll", testmode: true },
+) => tabFor(line, PLAYERS, LOCAL, offering, FAMILIES);
 
 describe("finishing a line at a prompt", () => {
   it("finishes a verb", () => {
@@ -26,15 +29,23 @@ describe("finishing a line at a prompt", () => {
   });
 
   it("offers the local words, which are not part of the shared grammar", () => {
-    const [hits] = tab("sav");
-    expect(hits).toEqual(["saves "]);
-    // `load` and `leave` both start with l, and one is local and one is not.
-    expect(tab("l")[0]).toContain("load ");
+    expect(tab("tab")[0]).toEqual(["table "]);
   });
 
-  it("stops offering local words once the verb is typed", () => {
-    // `load AB` is finishing a save code, and nothing here knows those.
-    expect(tab("load AB")[0]).toEqual([]);
+  /**
+   * The second word of a family, which is the whole reason for grouping them:
+   * `table ⇥` shows what you can do to a table instead of scattering it across
+   * n/o/d. Four top-level verbs would have been findable only by knowing them.
+   */
+  it("finishes inside a family", () => {
+    expect(tab("table o")[0]).toEqual(["table open "]);
+    expect(tab("table ")[0]).toEqual(["table new ", "table open ", "table delete "]);
+    expect(tab("test o")[0]).toEqual(["test on ", "test off "]);
+  });
+
+  it("stops at the family's own arguments, which it does not know", () => {
+    // `table open AB` is finishing a stół code, and nothing here knows those.
+    expect(tab("table open AB")[0]).toEqual([]);
   });
 
   it("gives back whole lines, so nothing eats the verb", () => {

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import type { Changeset, Snapshot } from "./change";
 import { emptyTables, memoryHandle, memoryStore, type GameStore } from "./gameStore";
 import type { Tables } from "./fakeDb";
-import { createGame } from "./store";
+import { createGame, joinGame } from "./store";
 import type { EqMode } from "@/lib/engine/slots";
 
 /**
@@ -159,19 +159,28 @@ export function fileStore(code: string, tables: Tables, log: unknown[] = []): Ga
   };
 }
 
-/** A table opened on this machine, through the same `createGame` the browser calls. */
+/**
+ * A table opened on this machine, with everybody already at it.
+ *
+ * Takes the whole list rather than a host, because seating the others is part
+ * of opening the table and was being done afterwards by the caller — which
+ * meant the file on disk held one player until the next commit happened to
+ * rewrite it. Quit before that and the rest of the table was gone. Opening a
+ * table and who is at it are one act, so they are one call.
+ */
 export async function newSave(
-  hostName: string | null,
+  players: readonly string[],
   eqMode: EqMode = "slots",
 ): Promise<{ code: string; gameId: string; hostToken: string; tables: Tables; store: GameStore }> {
+  const [host, ...others] = players;
   const tables = emptyTables();
-  const { game, hostToken } = await createGame(
-    hostName,
-    "simulation",
-    eqMode,
-    null,
-    memoryHandle(tables),
-  );
+  const handle = memoryHandle(tables);
+  const { game, hostToken } = await createGame(host ?? null, "simulation", eqMode, null, handle);
+
+  // Through the same door a browser uses, so a local table is seated the way
+  // any other is.
+  for (const name of others) await joinGame(game.id, name, null, false, null, handle);
+
   const store = fileStore(game.join_code, tables);
   await writeSave(game.join_code, {
     version: 1,
