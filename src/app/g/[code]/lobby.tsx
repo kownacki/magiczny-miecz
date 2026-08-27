@@ -417,25 +417,36 @@ export function Lobby({
             </label>
           )}
 
+          {/* The Karta takes the slack, and gives it up to the Dziennik below.
+              `min-h-0` is what lets it: without it a flex child refuses to
+              shrink past its content, and the card's own `max-h-full` would be
+              measured against a box that had already won the argument. */}
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-end">
+            <ReadingCard reading={reading} character={cardFor(reading)} />
+          </div>
+
           {/**
-           * The Dziennik, in the space this column was already holding open.
+           * The Dziennik, at the foot of the column.
            *
-           * The poczekalnia had no journal at all, which made every line
-           * written before the first turn a line nobody could read until the
-           * board appeared — and the ones written here are exactly the ones
-           * about *this* room: who arrived, who sat down, who stood up again,
-           * who is running the table. A record of setting up that you can only
-           * read once setting up is over is a record of the wrong thing.
+           * The poczekalnia had no journal at all, which made every line written
+           * before the first turn a line nobody could read until the board
+           * appeared — and the ones written here are exactly the ones about
+           * *this* room: who arrived, who sat down, who stood up again, who is
+           * running the table.
+           *
+           * At the bottom rather than between the settings and the card, which
+           * is where it went first and looked broken: it took a percentage of a
+           * wrapper with no height of its own, so it floated in the middle of an
+           * empty column. `fills` is the fix and this is the shape that fix
+           * assumes — a box of a stated height with the feed filling it.
            *
            * `relative`, because expanding it is `absolute inset-0` and wants an
            * ancestor to be inset-zero *of*. Without one it would lay itself over
            * the whole page rather than over this column.
            */}
-          {journal && <div className="relative flex min-h-0 flex-1 flex-col">{journal}</div>}
-
-          <div className="mt-auto flex min-h-0 flex-col items-center justify-end">
-            <ReadingCard reading={reading} character={cardFor(reading)} />
-          </div>
+          {journal && (
+            <div className="relative flex h-[38%] min-h-0 shrink-0 flex-col">{journal}</div>
+          )}
         </aside>
 
         {/* Last, so it lies over both columns — the seats and the reading

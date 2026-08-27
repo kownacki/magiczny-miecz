@@ -1047,7 +1047,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           mySeatIndex={mySeatIndex}
           /* The same feed the table gets, in the room where the lines about
              arriving and sitting down are actually written. */
-          journal={<Journal code={code} revision={game.revision} />}
+          journal={<Journal code={code} revision={game.revision} fills />}
           characters={CHARACTERS}
           pickingFor={pickingFor ? lobbySeat(pickingFor) : null}
           busy={busy}
