@@ -304,7 +304,10 @@ export function ItemSlot({
       >
         <div
           style={{ width: SLOT_WIDTH, height: SLOT_ART_HEIGHT }}
-          className={`relative overflow-hidden rounded border transition ${TONE[shown]}`}
+          // `isolate` because of the wash below: a blend mode reaches down
+          // through everything under it in its stacking context, and this one
+          // has no business colouring the panel the slot is sitting on.
+          className={`relative isolate overflow-hidden rounded border transition ${TONE[shown]}`}
         >
           <button
             type="button"
@@ -361,6 +364,28 @@ export function ItemSlot({
               </span>
             )}
           </button>
+
+          {/* The picture itself goes red, not only the frame round it.
+              
+              A border says "this square is wrong" and the card inside it goes
+              on looking exactly as usable as its neighbours, which is the one
+              thing it is not — and on a wall of a dozen cards the eye finds the
+              odd colour long before it finds the odd outline.
+
+              Multiplied rather than laid over: white goes to vermilion and
+              black stays black, so the picture is *coloured* and not veiled —
+              a flat translucent red would grey the whole square down and read
+              as merely disabled. `mix-blend-color` was the first thing tried
+              and does nothing at all here: it keeps the backdrop's own
+              luminosity, and these scans are pen and ink with almost nothing in
+              between. Above the picture and below the corner marks, which have
+              their own ground and are meant to be read off it. */}
+          {shown === "rejects" && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-vermilion mix-blend-multiply"
+            />
+          )}
 
           {/* Bottom-right, together, because they answer the same question and
               a player scanning a pack should only have to look in one place.
