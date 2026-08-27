@@ -394,7 +394,7 @@ export const COMMANDS: CommandSpec[] = [
     when: PLAYING,
     aliases: [],
     usage: "nature good|evil|chaotic [player] [force]",
-    summary: "change a Natura (7.2) — `force` ignores 7.3's once a turn",
+    summary: "change a Natura (7.2) — `force` ignores 7.3, and leaves no mark of it",
     needs: "play",
   },
   {

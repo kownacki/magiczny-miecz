@@ -74,6 +74,14 @@ export function changeNature(
    * the command's back — which is the same act with the rule out of sight. It
    * marks the journal row manual as well, because a Natura that moved because
    * somebody typed it must not read like one that moved because a card said so.
+   *
+   * And it lifts the rule in *both* directions: a forced change neither reads
+   * the memory nor writes one. A hack that left 7.3's mark behind would be
+   * spending the character's one change of the turn on something that never
+   * happened in the game — the next card to turn them Zły would be refused,
+   * and the player would be looking at "drugiej zmiany nie będzie" over a
+   * Natura nobody at the table had changed. Without `force` this is the game
+   * doing it, and the mark is exactly right.
    */
   command: { seatId: string; nature: Nature; force?: boolean },
 ): Outcome<{ nowForbidden: string[] }> {
@@ -135,7 +143,12 @@ export function changeNature(
       seats: [
         {
           id: seat.id,
-          patch: { nature: command.nature, nature_changed_turn: snapshot.game.turn },
+          patch: {
+            nature: command.nature,
+            // 7.3's memory, and only when 7.3 is what allowed the change. See
+            // `force` above.
+            ...(command.force ? {} : { nature_changed_turn: snapshot.game.turn }),
+          },
         },
       ],
       journal: [

@@ -73,6 +73,28 @@ describe("zmiana Natury (7.2-7.4)", () => {
     expect(writes.journal?.[0].manual ?? false).toBe(false);
   });
 
+  /**
+   * Lifted in both directions, which is the half that was missing.
+   *
+   * A forced change that left 7.3's mark behind would spend the character's one
+   * change of the turn on something that never happened in the game: the next
+   * card to turn them Zły would be refused, and the player would be reading
+   * "drugiej zmiany nie będzie" over a Natura nobody at the table had changed.
+   */
+  it("leaves no 7.3 behind it when the console did it", () => {
+    const { writes } = changeNature(table(), {
+      seatId: "seat-a",
+      nature: "evil",
+      force: true,
+    });
+    expect(writes.seats?.[0].patch).toEqual({ nature: "evil" });
+  });
+
+  it("still records the turn when the game did it", () => {
+    const { writes } = changeNature(table(), { seatId: "seat-a", nature: "evil" });
+    expect(writes.seats?.[0].patch).toMatchObject({ nature_changed_turn: 5 });
+  });
+
   /** Magog's own card lets it change freely, and 8.2 puts that above 7.3. */
   it("lets Magog change as often as it likes", () => {
     const magog = table({ character_id: asSeatCharacter("magog"), nature_changed_turn: 5 });
