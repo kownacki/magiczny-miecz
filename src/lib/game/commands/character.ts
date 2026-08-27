@@ -327,13 +327,13 @@ function printedOn(character: Character): SeatPatch["patch"] {
  */
 export async function takeNewCharacter(
   snapshot: Snapshot,
-  command: { seatId: string; characterId: string; byId: string },
+  command: { seatId: string; characterId: string; bySeat: string },
   ports: CommandPorts,
 ): Promise<Outcome<OwedSpells>> {
   // 4.4 is a choice the dead character's own player makes. It had the same hole
   // `chooseCharacter` did, with a narrower blast radius only because the seat
   // has to be eliminated or empty for this to get any further at all.
-  refuseUnlessMine(snapshot, command.seatId, command.byId);
+  refuseUnlessMine(snapshot, command.seatId, command.bySeat);
   const seat = seatById(snapshot, command.seatId);
 
   /**
@@ -495,7 +495,7 @@ export interface ChooseCharacter {
   seatId: string;
   characterId: string;
   /** The seat whose device is asking. See `mayChooseFor`. */
-  byId: string;
+  bySeat: string;
 }
 
 /**
@@ -520,8 +520,8 @@ export interface ChooseCharacter {
  * aim at anybody else's slot. A rule the client keeps and the server does not
  * is not a rule.
  */
-export function mayChooseFor(snapshot: Snapshot, seatId: string, byId: string): boolean {
-  if (seatId === byId) return true;
+export function mayChooseFor(snapshot: Snapshot, seatId: string, bySeat: string): boolean {
+  if (seatId === bySeat) return true;
   // A seat nobody is driving is one the host may act for: that is what
   // `no_device` used to mark, and it needs no flag now that people and seats
   // are different rows.
@@ -545,8 +545,8 @@ function unready(snapshot: Snapshot, seat: SeatRow): Changeset {
 }
 
 /** The refusal both choosing paths share, so they cannot drift apart. */
-function refuseUnlessMine(snapshot: Snapshot, seatId: string, byId: string): void {
-  if (!mayChooseFor(snapshot, seatId, byId)) {
+function refuseUnlessMine(snapshot: Snapshot, seatId: string, bySeat: string): void {
+  if (!mayChooseFor(snapshot, seatId, bySeat)) {
     throw new Error("Postać wybiera się sobie — albo komuś, kto nie ma swojego urządzenia.");
   }
 }
@@ -564,7 +564,7 @@ function refuseUnlessMine(snapshot: Snapshot, seatId: string, byId: string): voi
  * later, which is the only part of this that needs a die.
  */
 export function chooseCharacter(snapshot: Snapshot, command: ChooseCharacter): Outcome<void> {
-  refuseUnlessMine(snapshot, command.seatId, command.byId);
+  refuseUnlessMine(snapshot, command.seatId, command.bySeat);
   const seat = seatById(snapshot, command.seatId);
 
   /**

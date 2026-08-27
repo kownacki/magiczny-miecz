@@ -17,7 +17,7 @@ import { removeCharacter } from "@/lib/game/turnStore";
  * odłożyć do pozostałych nie biorących udziału w grze" — so putting that Karta
  * back in the pool is a break rather than a gap, and breaks belong to the test
  * console, where they are journalled as what somebody typed. `removeCharacter`
- * enforces that itself, on the strength of `byId` being present; this route's
+ * enforces that itself, on the strength of `byUser` being present; this route's
  * whole job is to be the caller that supplies one.
  *
  * Which is why it exists. The rule was written with nothing calling it: the

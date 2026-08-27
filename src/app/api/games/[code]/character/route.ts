@@ -61,7 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     await change(game.id, chooseCharacter, {
       seatId: body.seatId ? String(body.seatId) : seat.id,
       characterId: String(body.characterId ?? ""),
-      byId: seat.id,
+      bySeat: seat.id,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

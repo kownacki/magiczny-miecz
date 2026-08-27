@@ -249,7 +249,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ game: { turn: 9 }, seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "zdobywca", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "zdobywca", bySeat: "seat-a" },
       ports(),
     );
     expect(writes.seats?.[0].patch).toEqual({
@@ -282,7 +282,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "kat", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "kat", bySeat: "seat-a" },
       ports(),
     );
     expect(writes.seats?.[0].patch).toMatchObject({ nature: null });
@@ -292,7 +292,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "ksiaze", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "ksiaze", bySeat: "seat-a" },
       ports(),
     );
     expect(writes.holdings?.insert).toEqual([
@@ -315,7 +315,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "awanturnik", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "awanturnik", bySeat: "seat-a" },
       ports(),
     );
     expect(writes.journal?.map((line) => line.kind)).toEqual(["new-character"]);
@@ -331,7 +331,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
     const table = aTable({ seats: [dead()] });
     const { writes, result } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "mag", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "mag", bySeat: "seat-a" },
       ports(),
     );
     expect(result).toEqual({ seatId: "seat-a", spells: 2 });
@@ -347,7 +347,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
   it("is owed none by a character who starts with no Zaklęcia", async () => {
     const { result } = await takeNewCharacter(
       aTable({ seats: [dead()] }),
-      { seatId: "seat-a", characterId: "ksiaze", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "ksiaze", bySeat: "seat-a" },
       ports(),
     );
     expect(result).toEqual({ seatId: "seat-a", spells: 0 });
@@ -356,7 +356,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
   it("refuses to swap a Postać that is still alive", async () => {
     const table = aTable({ seats: [aSeat({ eliminated: false })] });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag", byId: "seat-a" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag", bySeat: "seat-a" }, ports()),
     ).rejects.toThrow(/wciąż żyje/);
   });
 
@@ -366,23 +366,23 @@ describe("nowa Postać po śmierci (4.4)", () => {
       seats: [dead(), aSeat({ id: "seat-b", seat_index: 1, character_id: asSeatCharacter("mag") })],
     });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag", byId: "seat-a" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "mag", bySeat: "seat-a" }, ports()),
     ).rejects.toThrow(/już w grze/);
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "goblin", byId: "seat-a" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "goblin", bySeat: "seat-a" }, ports()),
     ).rejects.toThrow(/już w grze/);
   });
 
   it("refuses a character id that is not on any card", async () => {
     const table = aTable({ seats: [dead()] });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "smok", byId: "seat-a" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "smok", bySeat: "seat-a" }, ports()),
     ).rejects.toThrow(/Nieznana postać: smok/);
   });
 
   it("refuses a seat it does not know", async () => {
     await expect(
-      takeNewCharacter(aTable({ seats: [dead()] }), { seatId: "nobody", characterId: "mag", byId: "nobody" }, ports()),
+      takeNewCharacter(aTable({ seats: [dead()] }), { seatId: "nobody", characterId: "mag", bySeat: "nobody" }, ports()),
     ).rejects.toThrow(/Nieznane miejsce/);
   });
 });
@@ -395,7 +395,7 @@ describe("dosiadka: a latecomer to a table already running", () => {
     });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "zdobywca", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "zdobywca", bySeat: "seat-a" },
       ports(),
     );
     expect(writes.journal?.at(-1)).toMatchObject({
@@ -424,7 +424,7 @@ describe("dosiadka: a latecomer to a table already running", () => {
     });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "zdobywca", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "zdobywca", bySeat: "seat-a" },
       ports(),
     );
     expect(writes.journal?.at(-1)).toMatchObject({ kind: "joined" });
@@ -456,7 +456,7 @@ describe("losowa Postać", () => {
     });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "losowa", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "losowa", bySeat: "seat-a" },
       ports({ random: scriptedRandom([1, 1]) }),
     );
     const free = CHARACTERS.filter((c) => c.id !== "goblin" && c.id !== "mag");
@@ -476,7 +476,7 @@ describe("losowa Postać", () => {
     });
     const { writes } = await takeNewCharacter(
       table,
-      { seatId: "seat-a", characterId: "losowa", byId: "seat-a" },
+      { seatId: "seat-a", characterId: "losowa", bySeat: "seat-a" },
       // 6,6 is 35 — past 25 and discarded; 1,2 is 1.
       ports({ random: scriptedRandom([6, 6, 1, 2]) }),
     );
@@ -489,7 +489,7 @@ describe("losowa Postać", () => {
       seats: [dead({ character_id: null }), ...takenBy(CHARACTERS.map((c) => c.id))],
     });
     await expect(
-      takeNewCharacter(table, { seatId: "seat-a", characterId: "losowa", byId: "seat-a" }, ports()),
+      takeNewCharacter(table, { seatId: "seat-a", characterId: "losowa", bySeat: "seat-a" }, ports()),
     ).rejects.toThrow(/Nie została żadna wolna Postać/);
   });
 });
@@ -571,7 +571,7 @@ describe("whose Karta Postaci you may choose", () => {
     // wrong seat is a bug or an attempt, and answering it with a different
     // action would hide both.
     expect(() =>
-      chooseCharacter(table(), { seatId: "seat-b", characterId: "kaplanka", byId: "seat-a" }),
+      chooseCharacter(table(), { seatId: "seat-b", characterId: "kaplanka", bySeat: "seat-a" }),
     ).toThrow("Postać wybiera się sobie");
   });
 
@@ -579,7 +579,7 @@ describe("whose Karta Postaci you may choose", () => {
     const { writes } = chooseCharacter(table(), {
       seatId: "seat-a",
       characterId: "kaplanka",
-      byId: "seat-a",
+      bySeat: "seat-a",
     });
     expect(writes.seats?.[0].patch.character_id).toBe("kaplanka");
   });
@@ -598,10 +598,10 @@ describe("whose Karta Postaci you may choose", () => {
       ],
     });
     await expect(
-      takeNewCharacter(dead, { seatId: "seat-b", characterId: "kaplanka", byId: "seat-a" }, ports()),
+      takeNewCharacter(dead, { seatId: "seat-b", characterId: "kaplanka", bySeat: "seat-a" }, ports()),
     ).rejects.toThrow("Postać wybiera się sobie");
     await expect(
-      takeNewCharacter(dead, { seatId: "seat-b", characterId: "kaplanka", byId: "seat-b" }, ports()),
+      takeNewCharacter(dead, { seatId: "seat-b", characterId: "kaplanka", bySeat: "seat-b" }, ports()),
     ).resolves.toBeTruthy();
   });
 });
@@ -611,7 +611,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
     const { writes } = chooseCharacter(waiting(), {
       seatId: "seat-a",
       characterId: "kaplanka",
-      byId: "seat-a",
+      bySeat: "seat-a",
     });
     expect(writes.seats).toEqual([
       {
@@ -637,7 +637,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
    */
   it("refuses a Karta Postaci another seat is holding, and says which one", () => {
     const table = waiting([empty(0), empty(1, { character_id: asSeatCharacter("kaplanka") })]);
-    expect(() => chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka", byId: "seat-1" })).toThrow(
+    expect(() => chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka", bySeat: "seat-1" })).toThrow(
       /KAPŁANKA jest już wybrana przez kogoś innego/,
     );
   });
@@ -645,7 +645,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
   it("does not count a seat's own card against it", () => {
     const table = waiting([empty(0, { character_id: asSeatCharacter("kaplanka") })]);
     expect(() =>
-      chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka", byId: "seat-1" }),
+      chooseCharacter(table, { seatId: "seat-1", characterId: "kaplanka", bySeat: "seat-1" }),
     ).not.toThrow();
   });
 
@@ -662,7 +662,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
       [empty(0, { character_id: asSeatCharacter("mag") })],
       [aUser({ id: "usra", seat_index: 0, ready: true })],
     );
-    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll", byId: "seat-1" });
+    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll", bySeat: "seat-1" });
     expect(writes.seats?.[0].patch).toMatchObject({ character_id: "troll" });
     expect(writes.users).toEqual([{ id: "usra", patch: { ready: false } }]);
   });
@@ -671,12 +671,12 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
     // A seat with no driver is somebody in the room whose Postać the host is
     // setting up. There is no word to take back.
     const table = waiting([empty(0, { character_id: asSeatCharacter("mag") })], []);
-    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll", byId: "seat-1" });
+    const { writes } = chooseCharacter(table, { seatId: "seat-1", characterId: "troll", bySeat: "seat-1" });
     expect(writes.users).toBeUndefined();
   });
 
   it("puts the surprise on the seat and settles nothing else about it", () => {
-    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "losowa", byId: "seat-a" });
+    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "losowa", bySeat: "seat-a" });
     expect(writes.seats?.[0].patch).toMatchObject({ character_id: "losowa" });
   });
 
@@ -697,7 +697,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
         nature: "chaotic",
       }),
     ]);
-    const { writes } = chooseCharacter(ksiaze, { seatId: "seat-1", characterId: "losowa", byId: "seat-1" });
+    const { writes } = chooseCharacter(ksiaze, { seatId: "seat-1", characterId: "losowa", bySeat: "seat-1" });
     expect(writes.seats?.[0].patch).toEqual({
       character_id: "losowa",
       field_id: null,
@@ -710,13 +710,13 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
   });
 
   it("refuses a character id that is not on any card", () => {
-    expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "smok", byId: "seat-a" })).toThrow(
+    expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "smok", bySeat: "seat-a" })).toThrow(
       /Nieznana postać: smok/,
     );
   });
 
   it("refuses a seat it does not know", () => {
-    expect(() => chooseCharacter(waiting(), { seatId: "nobody", characterId: "mag", byId: "nobody" })).toThrow(
+    expect(() => chooseCharacter(waiting(), { seatId: "nobody", characterId: "mag", bySeat: "nobody" })).toThrow(
       /Nieznane miejsce/,
     );
   });
@@ -732,7 +732,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
    * Hobgoblin starts on the Step somebody would point at.
    */
   it("resolves an MGR two Obszary answer to onto the first of them in board order", () => {
-    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "hobgoblin", byId: "seat-a" });
+    const { writes } = chooseCharacter(waiting(), { seatId: "seat-a", characterId: "hobgoblin", bySeat: "seat-a" });
     expect(writes.seats?.[0].patch).toMatchObject({ field_id: "step-2" });
   });
 
@@ -741,7 +741,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
       const { writes } = chooseCharacter(waiting(), {
         seatId: "seat-a",
         characterId: character.id,
-        byId: "seat-a",
+        bySeat: "seat-a",
       });
       expect(FIELDS.has(writes.seats![0].patch.field_id!)).toBe(true);
     }
@@ -758,7 +758,7 @@ describe("wybór Karty Postaci (0.2-0.4)", () => {
     const printed = kat.start;
     kat.start = "Wyspa Skarbów";
     try {
-      expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "kat", byId: "seat-a" })).toThrow(
+      expect(() => chooseCharacter(waiting(), { seatId: "seat-a", characterId: "kat", bySeat: "seat-a" })).toThrow(
         /Obszar, którego nie ma na planszy: Wyspa Skarbów/,
       );
     } finally {

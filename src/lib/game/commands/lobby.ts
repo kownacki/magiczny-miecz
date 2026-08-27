@@ -326,11 +326,11 @@ export function unseat(snapshot: Snapshot, command: { userId: string }): Outcome
  */
 export function leaveTable(
   snapshot: Snapshot,
-  command: { userId: string; kicked?: boolean; byId?: string },
+  command: { userId: string; kicked?: boolean; byUser?: string },
 ): Outcome<LeaveResult> {
   const user = userOf(snapshot, command.userId);
-  if (command.kicked && command.byId !== undefined) {
-    const by = userOf(snapshot, command.byId);
+  if (command.kicked && command.byUser !== undefined) {
+    const by = userOf(snapshot, command.byUser);
     if (!by.is_host) throw new Error("Tylko gospodarz może usunąć kogoś ze stołu.");
   }
   const stood = unseat(snapshot, { userId: user.id });
@@ -402,10 +402,10 @@ export function takeSeat(
  */
 export function takeHostRole(
   snapshot: Snapshot,
-  command: { userId: string; byId: string },
+  command: { userId: string; byUser: string },
   ports: CommandPorts,
 ): Outcome<void> {
-  const by = userOf(snapshot, command.byId);
+  const by = userOf(snapshot, command.byUser);
   const host = snapshot.users.find((one) => one.is_host);
   if (host && host.id !== by.id && !isQuiet(host, ports.now(), HOST_MISSING_AFTER_MS)) {
     throw new Error("Rolę gospodarza może przekazać tylko obecny gospodarz.");

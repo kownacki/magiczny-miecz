@@ -37,7 +37,7 @@ const table = (
     holdings: over.holdings ?? [],
   });
 
-const console_ = { hard: false, byId: null };
+const console_ = { hard: false, byUser: null };
 
 describe("wycofanie Postaci z gry", () => {
   it("empties the chair without taking it away", () => {
@@ -135,7 +135,7 @@ describe("wycofanie Postaci z gry", () => {
   });
 
   it("bars it for good when the line said `hard`", () => {
-    const { writes } = removeCharacter(table(), { seatId: "seat-a", hard: true, byId: null });
+    const { writes } = removeCharacter(table(), { seatId: "seat-a", hard: true, byUser: null });
     expect(writes.game?.characters_out).toEqual(["goblin"]);
   });
 
@@ -143,7 +143,7 @@ describe("wycofanie Postaci z gry", () => {
     const { writes } = removeCharacter(table({ eliminated: true }, { charactersOut: ["goblin"] }), {
       seatId: "seat-a",
       hard: true,
-      byId: null,
+      byUser: null,
     });
     expect(writes.game).toBeUndefined();
   });
@@ -173,10 +173,10 @@ describe("wycofanie Postaci z gry", () => {
       // The rulebook says nothing about withdrawing a living Postać, so nothing
       // is being overruled — but it is somebody else's figure.
       expect(() =>
-        removeCharacter(table(), { seatId: "seat-a", hard: false, byId: "usrb" }),
+        removeCharacter(table(), { seatId: "seat-a", hard: false, byUser: "usrb" }),
       ).toThrow("Tylko gospodarz");
       expect(
-        removeCharacter(table(), { seatId: "seat-a", hard: false, byId: "usra" }).result
+        removeCharacter(table(), { seatId: "seat-a", hard: false, byUser: "usra" }).result
           .characterId,
       ).toBe("goblin");
     });
@@ -191,7 +191,7 @@ describe("wycofanie Postaci z gry", () => {
         removeCharacter(table({ eliminated: true }), {
           seatId: "seat-a",
           hard: false,
-          byId: "usra",
+          byUser: "usra",
         }),
       ).toThrow("już nie żyje");
       expect(

@@ -429,10 +429,10 @@ describe("off the table altogether", () => {
    */
   it("lets only the host throw somebody else off", () => {
     expect(() =>
-      leaveTable(lobby({}, {}, {}), { userId: "usr-2", kicked: true, byId: "usr-1" }),
+      leaveTable(lobby({}, {}, {}), { userId: "usr-2", kicked: true, byUser: "usr-1" }),
     ).toThrow("Tylko gospodarz");
     expect(
-      leaveTable(lobby({}, {}, {}), { userId: "usr-2", kicked: true, byId: "usr-0" }).writes
+      leaveTable(lobby({}, {}, {}), { userId: "usr-2", kicked: true, byUser: "usr-0" }).writes
         .usersRemoved,
     ).toEqual(["usr-2"]);
   });
@@ -513,7 +513,7 @@ describe("taking the host role", () => {
     });
 
   it("may be given away by the host who holds it", () => {
-    const { writes } = takeHostRole(lobby({}, {}), { userId: "usr-1", byId: "usr-0" }, clock());
+    const { writes } = takeHostRole(lobby({}, {}), { userId: "usr-1", byUser: "usr-0" }, clock());
     expect(writes.users).toEqual([
       { id: "usr-1", patch: { is_host: true } },
       { id: "usr-0", patch: { is_host: false } },
@@ -529,7 +529,7 @@ describe("taking the host role", () => {
      */
     const { writes } = takeHostRole(
       lobby({ seen_at: at(HOST_MISSING_AFTER_MS + 1) }, {}),
-      { userId: "usr-1", byId: "usr-1" },
+      { userId: "usr-1", byUser: "usr-1" },
       clock(),
     );
     expect(writes.users).toContainEqual({ id: "usr-1", patch: { is_host: true } });
@@ -538,13 +538,13 @@ describe("taking the host role", () => {
   it("may not be taken from a host who is present", () => {
     // There is no co-host.
     expect(() =>
-      takeHostRole(lobby({ seen_at: at(1_000) }, {}), { userId: "usr-1", byId: "usr-1" }, clock()),
+      takeHostRole(lobby({ seen_at: at(1_000) }, {}), { userId: "usr-1", byUser: "usr-1" }, clock()),
     ).toThrow("tylko obecny gospodarz");
   });
 
   it("may not be given to somebody who is not at the table", () => {
     expect(() =>
-      takeHostRole(lobby({}, {}), { userId: "usr-9", byId: "usr-0" }, clock()),
+      takeHostRole(lobby({}, {}), { userId: "usr-9", byUser: "usr-0" }, clock()),
     ).toThrow("Nie ma takiego gracza");
   });
 
@@ -552,14 +552,14 @@ describe("taking the host role", () => {
     const before = lobby({}, {}, {});
     const after = apply(
       before,
-      takeHostRole(before, { userId: "usr-2", byId: "usr-0" }, clock()).writes,
+      takeHostRole(before, { userId: "usr-2", byUser: "usr-0" }, clock()).writes,
     );
     expect(after.users.filter((one) => one.is_host).map((one) => one.id)).toEqual(["usr-2"]);
   });
 
   it("writes nothing when they already have it", () => {
     expect(
-      takeHostRole(lobby({}, {}), { userId: "usr-0", byId: "usr-0" }, clock()).writes,
+      takeHostRole(lobby({}, {}), { userId: "usr-0", byUser: "usr-0" }, clock()).writes,
     ).toEqual({});
   });
 });

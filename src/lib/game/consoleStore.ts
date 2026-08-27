@@ -455,7 +455,7 @@ export async function runCommand(
     /**
      * A Postać out of the game, named by its seat or by what is printed on it.
      *
-     * The console passes `byId: null`, which is what lets it take a *dead* one
+     * The console passes `byUser: null`, which is what lets it take a *dead* one
      * off 4.4's list — a host may only withdraw a Postać that is still playing.
      * Both are journalled `manual`, because both are breaks in a rulebook that
      * removes a Postać exactly once and never puts one back.

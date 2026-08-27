@@ -45,7 +45,7 @@ export interface RemoveCharacter {
    * explicitly set aside — and it is journalled `manual` for exactly that
    * reason.
    */
-  byId: string | null;
+  byUser: string | null;
 }
 
 export interface Removed {
@@ -79,8 +79,8 @@ export function removeCharacter(
   if (!seat) throw new Error("Nie ma takiego miejsca.");
   if (!seat.character_id) throw new Error("Na tym miejscu nie ma Postaci.");
 
-  if (command.byId !== null) {
-    const by = snapshot.users.find((one) => one.id === command.byId);
+  if (command.byUser !== null) {
+    const by = snapshot.users.find((one) => one.id === command.byUser);
     if (!by?.is_host) throw new Error("Tylko gospodarz może wycofać Postać z gry.");
     if (seat.eliminated) {
       throw new Error("Ta Postać już nie żyje — jej Kartę odkłada tylko konsola (4.4).");

@@ -845,16 +845,16 @@ export async function turnToStone(gameId: string, seatId: string): Promise<void>
 /**
  * A Postać out of the game, and everything it carried onto its Obszar (12.1).
  *
- * `byId` null is the console, which may also take a *dead* one off 4.4's list —
+ * `byUser` null is the console, which may also take a *dead* one off 4.4's list —
  * see `removeCharacter` for why that is a different permission from the rest.
  */
 export async function removeCharacter(
   gameId: string,
   seatId: string,
   hard: boolean,
-  byId: string | null,
+  byUser: string | null,
 ): Promise<Removed> {
-  return change(gameId, removeCharacterOn, { seatId, hard, byId });
+  return change(gameId, removeCharacterOn, { seatId, hard, byUser });
 }
 
 /** A dead Postać standing up again, where it fell. Console-only. */
@@ -1143,10 +1143,10 @@ export async function takeNewCharacter(
   gameId: string,
   seatId: string,
   characterId: string,
-  /** The seat whose device is asking — see `mayChooseFor`. */
-  byId: string,
+  /** The *seat* asking, not the person — `mayChooseFor` compares it to `seatId`. */
+  bySeat: string,
 ): Promise<void> {
-  const owed = await change(gameId, takeNewCharacterOn, { seatId, characterId, byId });
+  const owed = await change(gameId, takeNewCharacterOn, { seatId, characterId, bySeat });
   for (let n = 0; n < owed.spells; n++) await drawSpell(gameId, owed.seatId);
 }
 

@@ -36,7 +36,7 @@ describe("a game kept in a file", () => {
     setStore(store);
 
     // The same functions the routes call, all the way down.
-    // `byId` is the *seat* asking, not the person — see `mayChooseFor`.
+    // `byUser` is the *seat* asking, not the person — see `mayChooseFor`.
     const seat = tables.seats[0].id as string;
     await takeNewCharacter(gameId, seat, "goblin", seat);
     await setReady(gameId, (tables.users[0] as { id: string }).id, true);

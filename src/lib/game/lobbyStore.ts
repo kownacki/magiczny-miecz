@@ -177,9 +177,9 @@ export async function leaveTable(
   userId: string,
   kicked = false,
   /** Who is doing the kicking. Only the host may, and only somebody else. */
-  byId?: string,
+  byUser?: string,
 ): Promise<LeaveResult> {
-  return change(gameId, leaveTableOn, { userId, kicked, byId });
+  return change(gameId, leaveTableOn, { userId, kicked, byUser });
 }
 
 /** Sits somebody down in a seat. Refused only if somebody is actively driving it. */
@@ -211,9 +211,9 @@ export async function resumeDevice(
 export async function claimTableScreen(
   gameId: string,
   userId: string,
-  byId: string,
+  byUser: string,
 ): Promise<void> {
-  await change(gameId, takeHostRoleOn, { userId, byId });
+  await change(gameId, takeHostRoleOn, { userId, byUser });
 }
 
 /**
