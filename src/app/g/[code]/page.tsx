@@ -919,6 +919,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     </>
   );
 
+  /**
+   * Księga Tolimana, built once and opened from either surface.
+   *
+   * It used to be constructed inside the playing branch, which is why the
+   * lobby's own "Księga Tolimana" did nothing at all: the button set
+   * `leftDrawer` and nothing in the poczekalnia read it. Every card in the box
+   * is exactly as worth reading while you are choosing a Postać as it is
+   * mid-game — more so, since choosing is the one moment you are comparing
+   * twenty-seven of them — so it is the same drawer rather than a second one.
+   */
+  const library =
+    leftDrawer === "ksiega" ? (
+      <CardLibrary
+        eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+        nature={asNature(mySeat?.nature)}
+        onInspect={setInspectingCard}
+        // "walcz" and the Obszary chips became `fight` and `go` in the console;
+        // taking a card stayed, because this shelf is where somebody already is
+        // when they want one, with the picture in front of them.
+        {...(testing && mySeatIndex !== null
+          ? { onGrant: (cardId: string) => post("debug", { action: "grant", cardId }) }
+          : {})}
+        onClose={() => setLeftDrawer(null)}
+      />
+    ) : null;
+
   if (!playing) {
     // No name, no seat, no lobby. Everyone joins on their own device, so a
     // visitor standing in the lobby without a seat was never a state worth
@@ -986,6 +1012,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           hostAway={!users.some((one) => one.isHost && !one.away)}
           onStart={() => post("start", {})}
           onLibrary={() => setLeftDrawer("ksiega")}
+          library={library}
         />
       </>
     );
@@ -1046,20 +1073,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       <TableLayout
         drawer={
           <>
-          {leftDrawer === "ksiega" && (
-            <CardLibrary
-              eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
-              nature={asNature(mySeat?.nature)}
-              onInspect={setInspectingCard}
-              // "walcz" and the Obszary chips became `fight` and `go` in the
-              // console; taking a card stayed, because this shelf is where somebody
-              // already is when they want one, with the picture in front of them.
-              {...(testing && mySeatIndex !== null
-                ? { onGrant: (cardId: string) => post("debug", { action: "grant", cardId }) }
-                : {})}
-              onClose={() => setLeftDrawer(null)}
-            />
-          )}
+            {library}
             {leftDrawer === "stosy" && game.deckCounts && game.used ? (
               <PilesDrawer
                 counts={game.deckCounts}

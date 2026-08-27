@@ -4,10 +4,10 @@ import { createInterface } from "node:readline/promises";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
-import { helpLines, parseCommand, permits } from "@/lib/engine/console";
+import { helpLines, parseCommand, permits, worksOffTable } from "@/lib/engine/console";
 import { tabFor } from "./tab";
 import { stageOf, type Stage } from "@/lib/engine/console";
-import { runCommand } from "@/lib/game/consoleStore";
+import { cardLines, runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
 import { deleteSave, homeDir, listSaves, newSave, openSave } from "@/lib/game/saves";
 import { joinGame, journalRows, seatsFor, usersFor } from "@/lib/game/store";
@@ -94,6 +94,12 @@ function say(text: string): void {
 /* --------------------------------------------------------------------------
  * The table: opening one, and finding the one to open.
  * ----------------------------------------------------------------------- */
+
+/** A line that reads the box rather than a game — see `worksOffTable`. */
+function offTable(line: string): boolean {
+  const parsed = parseCommand(line);
+  return "ok" in parsed && worksOffTable(parsed.ok);
+}
 
 async function knowTable(): Promise<void> {
   if (!table) {
@@ -357,14 +363,22 @@ async function main(): Promise<void> {
     if (line !== "") {
       if (await local(line)) {
         if (leaving) break;
-      } else if (!table) {
-        say("Najpierw otwórz stół: `new Michał, Ola` albo `load KOD`.");
       } else if (/^(help|\?)\b/.test(line)) {
-        // The one shared verb the local list must not shadow, and it needs to
-        // know which half of the vocabulary is reachable.
+        // Shared, so the local list must not shadow it — and it needs to know
+        // which half of the vocabulary is reachable.
         const about = line.split(/\s+/)[1] ?? null;
         for (const one of helpLines(about, { testmode })) say(one);
         say(`  ${LOCAL.join(" · ")}  — zapisy i wyjście`);
+      } else if (offTable(line)) {
+        // Reading a Karta touches no game, so it must not need one. Somebody
+        // deciding whether to play wants to read what they would be playing.
+        try {
+          for (const one of cardLines(line.replace(/^\S+\s*/, ""))) say(one);
+        } catch (error) {
+          say((error as Error).message);
+        }
+      } else if (!table) {
+        say("Najpierw otwórz stół: `new Michał, Ola` albo `load KOD`.");
       } else if (/^journal\b/.test(line)) {
         await recent(Number(line.split(/\s+/)[1] ?? 10) || 10);
       } else {

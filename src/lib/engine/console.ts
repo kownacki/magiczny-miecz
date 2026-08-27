@@ -44,6 +44,14 @@ export interface CommandSpec {
    */
   when?: readonly Stage[];
   /**
+   * True when it can be answered without a game at all.
+   *
+   * `help` reads the vocabulary and `card` reads the box; neither touches a
+   * table, and both are things somebody wants *before* opening one. Declared
+   * here rather than listed at the prompt so a surface cannot forget one.
+   */
+  offTable?: boolean;
+  /**
    * Whether this is playing the game or overruling it.
    *
    * Required rather than defaulted, so a verb cannot be added without somebody
@@ -214,6 +222,7 @@ const STATS: Record<string, StatName> = {
 export const COMMANDS: CommandSpec[] = [
   {
     name: "help",
+    offTable: true,
     aliases: ["?"],
     usage: "help [command]",
     summary: "list these commands, or explain one of them",
@@ -281,6 +290,7 @@ export const COMMANDS: CommandSpec[] = [
     // `card` is the alias `give` used to answer to. It is a better name for
     // reading one than for conjuring one, and reading is the commoner want.
     name: "card",
+    offTable: true,
     aliases: ["read"],
     usage: "card MAGOG",
     summary: "what a Karta says — Postać, Zdarzenie, Przedmiot or Zaklęcie",
@@ -1236,6 +1246,20 @@ export function availableIn(at: { stage?: Stage; testmode?: boolean }): CommandS
     if (at.stage === undefined || spec.when === undefined) return true;
     return spec.when.includes(at.stage);
   });
+}
+
+/**
+ * The lines that can be answered with no game open.
+ *
+ * Keyed on the kind, like `NEEDS` above and for the same reason: the spec table
+ * is keyed on the word you type and these two questions are about what the word
+ * parsed to. `CommandSpec.offTable` is the same fact for `help` to print, and a
+ * test types every usage line to check the two agree.
+ */
+const OFF_TABLE = new Set<Command["kind"]>(["help", "card"]);
+
+export function worksOffTable(command: Command): boolean {
+  return OFF_TABLE.has(command.kind);
 }
 
 export function permits(

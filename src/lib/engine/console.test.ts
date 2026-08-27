@@ -5,6 +5,7 @@ import {
   needsOf,
   permits,
   stageOf,
+  worksOffTable,
   type Stage,
   complete,
   helpLines,
@@ -346,6 +347,28 @@ suite("playing the game, and overruling it", () => {
     // A phase nothing is keyed on is still a phase, and still not the lobby.
     expect(stageOf("playing", "bridge")).toBe("other");
     expect(stageOf("playing", undefined)).toBe("other");
+  });
+
+  /**
+   * `offTable` is on the spec for `help` to read and `OFF_TABLE` is keyed on
+   * the kind for `worksOffTable` to read, so the two can drift. Typing every
+   * usage line is the only thing that stops them.
+   */
+  it("agrees with itself about which lines need no game", () => {
+    for (const spec of COMMANDS) {
+      const line = spec.usage
+        .split(/\s+/)
+        .map((word) => EXAMPLE[word] ?? word)
+        .filter((word) => !word.startsWith("["))
+        .join(" ");
+      const parsed = parseCommand(line);
+      if ("error" in parsed) throw new Error(`${spec.name}: ${parsed.error}`);
+      expect(worksOffTable(parsed.ok), spec.name).toBe(spec.offTable === true);
+    }
+    // And the pair that are: reading the box, and reading the vocabulary.
+    expect(worksOffTable(ok("card MAGOG"))).toBe(true);
+    expect(worksOffTable(ok("help"))).toBe(true);
+    expect(worksOffTable(ok("roll"))).toBe(false);
   });
 
   it("keeps the overrides out of an offer until testmode is on", () => {

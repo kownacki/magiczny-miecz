@@ -71,6 +71,7 @@ export function Lobby({
   hostAway,
   onStart,
   onLibrary,
+  library,
 }: {
   code: string;
   mode: string;
@@ -96,6 +97,15 @@ export function Lobby({
   hostAway: boolean;
   onStart: () => void;
   onLibrary: () => void;
+  /**
+   * Księga Tolimana, laid over this screen when it is open.
+   *
+   * Passed in rather than opened here, and it is the same element the table
+   * hangs in its own drawer slot — one library, two places it can be read from.
+   * The poczekalnia's button used to set a state nothing here rendered, so it
+   * was a control wired to nothing.
+   */
+  library?: React.ReactNode;
 }) {
   /**
    * What you have typed into the name field but the server has not been told
@@ -221,7 +231,10 @@ export function Lobby({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      {/* `relative`, for the same reason `table-layout.tsx` says: a drawer is
+          laid over the columns and has to start *below* the bar rather than
+          beside it. */}
+      <div className="relative flex min-h-0 flex-1">
         {/* `min-w-0`: a flex child defaults to `min-width: auto`, so this column
             refused to shrink below the width of the character strip and pushed
             the reading column clean off the screen. */}
@@ -398,6 +411,10 @@ export function Lobby({
             <ReadingCard reading={reading} character={cardFor(reading)} />
           </div>
         </aside>
+
+        {/* Last, so it lies over both columns — the seats and the reading
+            card alike. Its own `absolute` does the rest. */}
+        {library}
       </div>
     </main>
   );

@@ -1,11 +1,8 @@
 /** One typed line from the test console, carried out against a real table. */
 
 import characters from "@/data/characters.json";
-import events from "@/data/events.json";
-import itemCards from "@/data/items.json";
-import spellCards from "@/data/spells.json";
-import { fold } from "@/lib/engine/search";
-import { characterFacts } from "@/lib/engine/polish";
+import { describeCard } from "@/lib/engine/lookup";
+
 import type { Character } from "@/data/types";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
@@ -167,19 +164,18 @@ function waitingOn(turnState: unknown): string[] {
 }
 
 /**
- * Everything with a name and something written on it.
+ * One Karta read out, or the reason it could not be.
  *
- * The Wyposażenie is filtered against the Zdarzenia because the box prints
- * some of it in both — the same reason `console.ts` builds its own list that
- * way, and one this cannot borrow without importing a private one.
+ * Shared with `mm`, which answers `card` before it has a game to answer it
+ * against — see `worksOffTable`. The refusal is a throw here because that is
+ * how every other refusal in this file reaches the surface.
  */
-const ALL_CARDS: { id: string; name: string; text?: string }[] = [
-  ...(events as { id: string; name: string; text?: string }[]),
-  ...(itemCards as { id: string; name: string; text?: string }[]).filter(
-    (item) => !events.some((card) => card.id === item.id),
-  ),
-  ...(spellCards as { id: string; name: string; text?: string }[]),
-];
+export function cardLines(name: string): string[] {
+  const found = describeCard(name);
+  if ("lines" in found) return found.lines;
+  if ("candidates" in found) throw new Error(`Która — ${found.candidates.join(", ")}?`);
+  throw new Error(`Nie ma takiej Karty: ${found.missing}.`);
+}
 
 export interface Actor {
   userId: string;
@@ -896,27 +892,8 @@ export async function runCommand(
      * were about to pick — 27 Karty Postaci, each with two or three clauses of
      * Charakterystyka, and no way to read one. Choosing blind is not choosing.
      */
-    case "card": {
-      const wanted = fold(command.name);
-      const person = (characters as Character[]).find((one) => fold(one.name) === wanted);
-      if (person) {
-        return [
-          `${person.name} — ${characterFacts(person)}`,
-          `MGR: ${person.start}`,
-          ...person.abilities.map((one) => `  · ${one}`),
-        ].join("\n");
-      }
-      const card = ALL_CARDS.find((one) => fold(one.name) === wanted);
-      if (!card) {
-        // As far as it gets, so a half-typed name says which ones it could be.
-        const near = [...(characters as Character[]), ...ALL_CARDS]
-          .filter((one) => fold(one.name).startsWith(wanted))
-          .map((one) => one.name);
-        if (near.length === 0) throw new Error(`Nie ma takiej Karty: ${command.name}.`);
-        throw new Error(`Która — ${near.join(", ")}?`);
-      }
-      return [card.name, ...(card.text ? [card.text] : [])].join("\n");
-    }
+    case "card":
+      return cardLines(command.name).join("\n");
 
     case "look": {
       const snapshot = await activeStore().load(gameId);
