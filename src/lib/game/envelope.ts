@@ -112,8 +112,18 @@ export interface Envelope {
  * pile in front of everybody is visibly thick or nearly gone, and 15.5's
  * reshuffle is something the whole table watches happen.
  */
-export function withoutDeck<T extends { deck: unknown }>(game: T) {
-  const { deck, ...rest } = game;
+export function withoutDeck<T extends { deck: unknown; seed?: string | null }>(game: T) {
+  /**
+   * The seed goes with the deck, and for exactly the same reason.
+   *
+   * Every shuffle in a game is a function of the seed and the revision it
+   * happens at (`prng.ts`), so a device holding the seed can work out the order
+   * of a pile it is not allowed to see — the same secret this function exists
+   * to keep, arriving by a different door. It was passed straight through with
+   * the rest of the row from the day the column was added.
+   */
+  const { deck, seed, ...rest } = game;
+  void seed;
   const decks = (deck ?? null) as {
     events?: { draw?: unknown[]; discard?: unknown[] };
     spells?: { draw?: unknown[]; discard?: unknown[] };

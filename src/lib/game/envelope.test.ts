@@ -246,6 +246,23 @@ describe("presence, judged here so every device agrees", () => {
 });
 
 describe("the deck, which never travels", () => {
+  /**
+   * The seed is the deck by another route.
+   *
+   * Every shuffle is a function of the seed and the revision it happens at, so
+   * a device holding it can work out the order of the pile it is not allowed to
+   * see. It rode along with the rest of the row from the day the column was
+   * added, which is the hazard of `...rest`: a new column travels unless
+   * somebody stops it.
+   */
+  it("does not send the seed either", () => {
+    const sent = withoutDeck({ deck: null, seed: "s3cr3t", join_code: "ABCD", turn: 3 });
+    expect(sent).not.toHaveProperty("seed");
+    expect(JSON.stringify(sent)).not.toContain("s3cr3t");
+    // And the rest of the row still travels.
+    expect(sent).toMatchObject({ join_code: "ABCD", turn: 3 });
+  });
+
   const deck = {
     events: { draw: ["zd-1", "zd-2", "zd-3"], discard: ["zd-9", "zd-8"] },
     spells: { draw: ["zk-1"], discard: [] },
