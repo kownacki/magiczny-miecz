@@ -175,26 +175,33 @@ function newestDismissable(): HTMLElement | null {
  */
 export function useDismissable<T extends HTMLElement>({
   shown = true,
-  onClose,
+  onDismiss,
 }: {
   /** On screen at all. A console that is shut is not somewhere a click lands. */
   shown?: boolean;
   /**
-   * How to dismiss it, or null for the three kinds that will not be.
+   * What Escape and a click on the game *do* to this surface — or null for the
+   * kinds that answer neither.
    *
-   * A sheet the game is asking through — a fight, a dead character choosing
-   * again — because those are answered rather than closed. A pinned one,
-   * because that is a deliberate "leave this where it is". And a *minimised*
-   * one, for the same reason: shrinking something to its own bar is putting it
-   * aside on purpose, and Escape landing on the thing you just tidied away
-   * would throw away what it holds. Both of those are asking to be kept, and
-   * the difference between them is only how much room they are taking.
+   * Not "how to close it". Dismissing is a gesture and closing is one thing a
+   * surface may choose to do about it: a drawer closes, and the console shrinks
+   * to its bar instead, because the transcript in it is a record of what a test
+   * did and Escape is the key people hit on the way past. Every surface says
+   * for itself, here, in one place — which is the whole point of the gesture
+   * living in a hook rather than in each of them.
    *
-   * All three still count as somewhere a click can land inside; none of them
-   * answers a dismissal.
+   * Null for the three kinds that will not be dismissed at all. A sheet the
+   * game is asking through — a fight, a dead character choosing again — because
+   * those are answered rather than dismissed. A pinned one, because that is a
+   * deliberate "leave this where it is". And one already shrunk to its bar,
+   * because it has nowhere left to go: there is no smaller state to dismiss it
+   * into, and closing it would throw away what it holds.
+   *
+   * All three still count as somewhere a click can land inside.
    */
-  onClose: (() => void) | null;
+  onDismiss: (() => void) | null;
 }) {
+  const onClose = onDismiss;
   useEscape(shown ? onClose : null);
 
   const panel = useRef<T>(null);
@@ -356,7 +363,7 @@ export function Overlay({
    * keeps it counted as somewhere a click lands inside while leaving Escape to
    * whatever below it can actually answer.
    */
-  const panel = useDismissable<HTMLDivElement>({ onClose: onDismiss });
+  const panel = useDismissable<HTMLDivElement>({ onDismiss });
 
   return (
     <div

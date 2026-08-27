@@ -91,6 +91,16 @@ export type SlotTone = "empty" | "filled" | "accepts" | "rejects" | "candidate";
  * Said while the card is still in the air, rather than as a refusal after the
  * fact.
  */
+/**
+ * A card that is here and unavailable is drawn like a place that would refuse
+ * one: red, solid, in the same two colours the panel already speaks in.
+ *
+ * The rule lives here rather than in each panel because it is the same rule
+ * wherever a card is drawn — worn, in the pack, and in whatever holds the
+ * Nieznajomi next. What *makes* a card unavailable is not this file's business:
+ * 5.3 and a Natura are the seat card's to work out, and they arrive as one
+ * boolean on the card.
+ */
 const TONE: Record<SlotTone, string> = {
   accepts: "border-solid border-verdigris bg-verdigris/25",
   rejects: "border-solid border-vermilion bg-vermilion/25",
@@ -207,7 +217,16 @@ export function ItemSlot({
   // when something is held over it — that question is about where the card in
   // the air would land, not about where it came from.
   const shown: SlotTone =
-    lifted && (tone === "filled" || tone === "candidate") ? "empty" : tone;
+    lifted && (tone === "filled" || tone === "candidate")
+      ? "empty"
+      : // A card that is here and unavailable is red, wherever it is drawn: on
+        // the body, in the pack, or in whatever holds the Nieznajomi next. Only
+        // where the place is otherwise just showing what is in it — a place
+        // answering a card in the air is answering about that card, not this
+        // one.
+        item?.inert && tone === "filled"
+        ? "rejects"
+        : tone;
 
   return (
     /**

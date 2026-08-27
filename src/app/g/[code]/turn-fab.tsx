@@ -88,8 +88,14 @@ export function TurnFab({
        * closed.
        */
       style={{ bottom: "calc(1rem + var(--console-h, 0px))" }}
-      className={`fixed left-1/2 z-40 flex max-w-[min(90vw,28rem)] -translate-x-1/2 items-center gap-2 rounded-full border bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition ${
-        mine ? "border-ochre hover:bg-ochre/10" : "border-ochre/40 hover:border-ochre/70"
+      /* `hover:bg-raised` and not a tint. A tinted background *replaces* the
+         one it is written next to rather than laying over it, so hovering this
+         turned an opaque pill ninety percent transparent and the board showed
+         through the words. Anything that sits over the game hovers to another
+         solid colour; tints are for buttons with no background of their own,
+         where there is nothing to see through to. */
+      className={`fixed left-1/2 z-40 flex max-w-[min(90vw,28rem)] -translate-x-1/2 items-center gap-2 rounded-full border bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition hover:bg-raised ${
+        mine ? "border-ochre" : "border-ochre/40 hover:border-ochre/70"
       }`}
     >
       {/* The slow pulse is "somebody is being waited on", and it is true on

@@ -16,6 +16,7 @@ import { useRack } from "./rack";
 import { ItemSlot } from "./item-slot";
 import { DRAG_TYPE, startHoldingDrag } from "./slot-panel";
 import { asHoldings, asNature, tileFor, type Seat, wornBySlot } from "./table";
+import { forbiddenTo } from "@/lib/engine/holdings";
 
 /**
  * What a seat is carrying.
@@ -300,6 +301,10 @@ export function Hand({
               cardId: held.cardId,
               card: tileFor(held),
               granted: held.granted,
+              // 5.3, in the pack as on the body: a card this Natura may not
+              // hold lends nothing anywhere, and the pack is where somebody
+              // would drop it from.
+              inert: forbiddenTo(held.cardId, asNature(seat.nature)),
             }}
             label={tileFor(held).name}
             eqMode={slotted ? "slots" : "classic"}

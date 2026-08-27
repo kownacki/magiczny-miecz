@@ -131,7 +131,10 @@ function QueueChip({
               : name
         }
         className={`flex shrink-0 flex-col items-center gap-1 rounded px-2 py-1.5 ${
-          onPick ? "cursor-zoom-in transition hover:bg-raised/70" : ""
+          // Solid, for the same reason the turn button is: a tint replaces the
+          // background rather than layering over it, so the active seat's tile
+          // went translucent exactly when you pointed at it.
+          onPick ? "cursor-zoom-in transition hover:bg-raised" : ""
         } ${
           active ? "bg-raised" : ""
         } ${

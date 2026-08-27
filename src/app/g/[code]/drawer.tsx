@@ -75,7 +75,9 @@ export function Drawer({
    * could work out how to shut.
    */
   const [pinned, setPinned] = useState(false);
-  const panel = useDismissable<HTMLElement>({ onClose: pinned ? null : onClose });
+  // A drawer's dismissal is closing: it is something you opened to read, and
+  // there is no smaller state for it to go to.
+  const panel = useDismissable<HTMLElement>({ onDismiss: pinned ? null : onClose });
 
   return (
     // Escapable unless it is pinned — which is the one thing pinning means.

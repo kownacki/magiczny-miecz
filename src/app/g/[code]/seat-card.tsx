@@ -30,14 +30,43 @@ import { Hand } from "./hand";
 import { dismissableOpen } from "./overlay";
 import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
+import { forbiddenTo } from "@/lib/engine/holdings";
 import Image from "next/image";
-import { characterKind } from "@/lib/engine/polish";
+import { characterKind, plural } from "@/lib/engine/polish";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { RailStat, StatFigure } from "./token-rail";
 import { Fold } from "./fold";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
 import { EffectMark } from "./effect-mark";
+/**
+ * How many marks the folded bar shows before it starts counting.
+ *
+ * Three is where the row stops being readable beside four numbers, a name and a
+ * Natura. The rest become "+2", which says there is more without pretending to
+ * say what — and carries their titles on its own hover, so nothing is lost that
+ * was not already a hover away.
+ */
+/**
+ * What is helping and what is not, said in words.
+ *
+ * Polish counts in three — jeden efekt, dwa efekty, pięć efektów — so the
+ * sentence is built rather than pluralised with an "s", the way every other
+ * count in this app is (`plural` in `polish.ts`). "Obojętne" are left out of
+ * both numbers and named on the end: they are true of the character and neither
+ * help nor hurt, and folding them into either count would be an opinion.
+ */
+function effectsSaid(effects: readonly { tone: string; title: string }[]): string {
+  const count = (tone: string) => effects.filter((mark) => mark.tone === tone).length;
+  const said = (n: number, one: string, few: string, many: string) =>
+    `${n} ${plural(n, one, few, many)}`;
+  const parts: string[] = [];
+  if (count("dobry") > 0) parts.push(said(count("dobry"), "wzmocnienie", "wzmocnienia", "wzmocnień"));
+  if (count("zly") > 0) parts.push(said(count("zly"), "osłabienie", "osłabienia", "osłabień"));
+  if (count("obojetny") > 0) parts.push(said(count("obojetny"), "inny efekt", "inne efekty", "innych efektów"));
+  return `${parts.join(", ")} — otwórz Kartę, żeby zobaczyć które`;
+}
+
 export function SeatCard({
   seat,
   active,
@@ -103,6 +132,16 @@ export function SeatCard({
    * something up is to put it down somewhere else — and "somewhere else" is
    * usually the other half.
    */
+  /**
+   * The two counts the folded bar carries: what is helping, and what is not.
+   *
+   * "Obojętny" is in neither — a mark that neither helps nor hurts is still
+   * worth its glyph on the open card, and putting it in one of these numbers
+   * would be the app taking a view it has no basis for.
+   */
+  const helping = seat.effects.filter((mark) => mark.tone === "dobry").length;
+  const hurting = seat.effects.filter((mark) => mark.tone === "zly").length;
+
   /** Whether the sheet is open, the way the Plecak and the Zaklęcia inside it fold. */
   const [showing, setShowing] = useState(true);
   /** The powers, which were the one fold here the browser held for itself. */
@@ -166,9 +205,24 @@ export function SeatCard({
     announceDrag(null);
   }, [announceDrag, setCarried]);
 
+  /**
+   * Whether this character may use that card at all (5.3).
+   *
+   * Asked here rather than only by the server, and the difference is a second
+   * of theatre: the browser moves a card the moment you drop it, so a Topór a
+   * Chaotyczna Postać may not hold went onto the arm, sat there looking worn,
+   * and jumped back when the refusal arrived. A card that cannot go somewhere
+   * should not appear to go there — the place says no while the card is still
+   * in the air, and the drop does nothing.
+   */
+  const mayWear = (cardId: string) => !forbiddenTo(cardId, asNature(seat.nature));
+
   const place = (slot: Slot | null) => {
     if (!carried) return;
     if (carried.from === (slot ?? "plecak")) return putDown();
+    // Off the body is always allowed — that is how a card this character may
+    // not hold gets taken off in the first place.
+    if (slot !== null && !mayWear(carried.cardId)) return putDown();
     onEquip(carried.holdingId, slot);
     putDown();
   };
@@ -295,6 +349,7 @@ export function SeatCard({
               <span className="truncate text-ink">
                 {seat.player_name ?? `Miejsce ${seat.seat_index + 1}`}
               </span>
+
               {/* A Lookable only here: open, the whole Karta is six lines below
                   and a hover would cover the card with a copy of the card. */}
               {character && (
@@ -330,6 +385,34 @@ export function SeatCard({
                     <span className="shrink-0 truncate text-muted/70">{said.label}</span>
                   ) : null;
                 })()}
+              {/* How much is helping and how much is not, counted.
+                  
+                  Not the marks themselves: a folded card is a line, and six
+                  glyphs on it compete with the four numbers that are the reason
+                  anybody folded it. Two numbers in the two colours the marks
+                  already use say the same shape of thing at a glance — and the
+                  question they raise, *which* ones, is answered by opening the
+                  card, which is what clicking them does. The words are on the
+                  hover for anybody who does not want to open it. */}
+              {(helping > 0 || hurting > 0) && (
+                <span
+                  className="tnum shrink-0 cursor-pointer"
+                  title={effectsSaid(seat.effects)}
+                  onClick={(event) => {
+                    // The bar is the fold's own handle, so this would open the
+                    // card by simply falling through — but going through the
+                    // toggle means it opens whichever way it is now, and reads
+                    // as the button it looks like.
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setShowing(true);
+                  }}
+                >
+                  {helping > 0 && <span className="text-verdigris">▲{helping}</span>}
+                  {helping > 0 && hurting > 0 && <span className="text-muted"> </span>}
+                  {hurting > 0 && <span className="text-vermilion">▼{hurting}</span>}
+                </span>
+              )}
               {/* What the body is carrying, where the body itself sits when the
                   sheet is open — the right-hand end. Only in the variant that
                   has places at all. */}
@@ -559,6 +642,7 @@ export function SeatCard({
                 >
               <SlotPanel
                 worn={wornBySlot(seat)}
+                mayWear={mayWear}
                 canAct={canAdjust}
                 busy={false}
                 carrying={carried !== null}

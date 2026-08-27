@@ -136,6 +136,7 @@ export function SlotPanel({
   movingCardId,
   liftedHoldingId,
   onDragging,
+  mayWear,
   onPickUp,
   onTakeOff,
   onUse,
@@ -155,6 +156,14 @@ export function SlotPanel({
   movingCardId: string | null;
   /** The card currently on the cursor, so the place it came from looks empty. */
   liftedHoldingId: string | null;
+  /**
+   * Whether the character may use a card at all (5.3), asked of the card id.
+   *
+   * The panel knows where a card *fits*; whose it is and what their Natura
+   * allows is the seat card's. Both answers are the same colour to a player —
+   * red means "not there" — so they are asked together and drawn once.
+   */
+  mayWear?: (cardId: string) => boolean;
   onPickUp: (item: SlotItem, from: Slot) => void;
   onTakeOff: (holdingId: string) => void;
   /**
@@ -193,22 +202,23 @@ export function SlotPanel({
         // button and the browser never called it a double-click at all. A ghost
         // says the same thing and stays put.
         const lifted = item !== undefined && item.holdingId === liftedHoldingId;
+        // Fits *and* may be used: two rules, one answer, because a place that
+        // lights up green and then refuses the drop is worse than one that
+        // never lit up.
+        const takes = (cardId: string) =>
+          fitsIn(cardId, slot) && (mayWear?.(cardId) ?? true);
         const tone: SlotTone =
           over === slot && movingCardId
-            ? fitsIn(movingCardId, slot)
+            ? takes(movingCardId)
               ? "accepts"
               : "rejects"
-            : movingCardId && fitsIn(movingCardId, slot)
+            : movingCardId && takes(movingCardId)
               ? "candidate"
-              : // A card that is worn and forbidden is drawn the way a place
-                // that would refuse a card is: red where an offer is green.
-                // The same two colours the panel already speaks in, saying the
-                // same thing about a card rather than about a place.
-                item?.inert
-                ? "rejects"
-                : item
-                  ? "filled"
-                  : "empty";
+              : // Unavailable is `ItemSlot`'s to draw — the card carries the
+                // fact and every place that holds one says it the same way.
+                item
+                ? "filled"
+                : "empty";
 
         return (
           <div key={slot} style={{ gridArea: LAYOUT[slot] }}>

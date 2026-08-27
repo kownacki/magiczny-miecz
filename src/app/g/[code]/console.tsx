@@ -103,14 +103,21 @@ export function TestConsole({
    * and a click on the game both take the newest surface and only that one.
    * `shown` is what a shut console passes, because this component stays mounted
    * and draws nothing while closed, and a shut console must not be holding
-   * anybody's Escape. `onClose: null` is what a pinned *or* a minimised one
-   * passes: both are deliberate ways of keeping it, and Escape landing on a
-   * console you shrank to a strip would throw away the session in it. Either
+   * anybody's Escape.
+   *
+   * What dismissal *does* here is shrink it, not close it. The transcript is a
+   * record of what a test did, Escape is the key people hit on the way past
+   * anything, and losing a session's log to a reflex is a bad trade for the
+   * room it frees — which minimising frees anyway. Closing is left to the two
+   * gestures that mean it: `zamknij`, and turning test mode off.
+   *
+   * Null for a pinned one, which is a deliberate "leave this where it is", and
+   * for one already shrunk to its bar, which has nowhere smaller to go. Either
    * way it stays counted as somewhere a click lands inside.
    */
   const panel = useDismissable<HTMLElement>({
     shown: open,
-    onClose: pinned || size === "mini" ? null : onClose,
+    onDismiss: pinned || size === "mini" ? null : () => setSize("mini"),
   });
 
   /**
@@ -367,7 +374,21 @@ export function TestConsole({
         <div className="flex flex-col gap-1 p-2 pt-1.5">
         <div
           ref={tail}
-          className={`tnum overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed ${
+          /**
+           * Clicking the transcript puts the cursor back in the prompt.
+           *
+           * The log is the biggest thing in the console and the only part of it
+           * you look at, so it is where a click lands when somebody comes back
+           * to typing — and it took the focus out of the input, which is the
+           * one place in this panel a keystroke means anything. Selecting text
+           * still works: a drag is not a click, and this only fires when the
+           * pointer went down and up without one.
+           */
+          onClick={() => {
+            if (window.getSelection()?.toString()) return;
+            input.current?.focus();
+          }}
+          className={`tnum cursor-text overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed ${
             // Collapsed, about ten lines: enough to read the answer to what was
             // just typed without the console becoming the thing on screen. It
             // used to hold a whole `help` — seventeen rows — which meant one
