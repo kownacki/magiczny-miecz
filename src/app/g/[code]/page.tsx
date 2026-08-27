@@ -1542,11 +1542,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 stays here is the one line that says it is there. */}
             <button
               onClick={() => setRightDrawer("gracze")}
-              className="mt-3 w-full rounded border border-edge/60 px-2 py-1.5 text-left text-[11px] text-muted transition hover:border-ochre hover:text-ink"
+              className="mt-3 flex w-full items-center gap-2 rounded border border-edge/60 px-2 py-1.5 text-left text-[11px] text-muted transition hover:border-ochre hover:text-ink"
             >
-              Gracze przy stole:{" "}
-              <span className="text-ink">
-                {others.map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`).join(", ") || "nikt jeszcze"}
+              <span className="min-w-0 flex-1 truncate">
+                Gracze przy stole:{" "}
+                <span className="text-ink">
+                  {others.map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`).join(", ") || "nikt jeszcze"}
+                </span>
+              </span>
+              {/* The one thing saying this opens something.
+                  It reads as a caption otherwise, and for a seatless watcher
+                  that matters more than it looks: the drawer behind it holds
+                  "Dosiądź się nową Postacią", which is their only way into the
+                  game. A label they do not press is a table they cannot join. */}
+              <span aria-hidden className="shrink-0 text-ochre/70">
+                ›
               </span>
             </button>
           </div>
