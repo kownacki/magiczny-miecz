@@ -127,19 +127,19 @@ function said(did: readonly string[], pending: boolean): string {
 }
 
 /**
- * The turn's phase in the language everything else here is read in.
+ * The turn's phase, spelled out.
  *
- * The rule this console draws is that what you *type* is English and what you
- * *read* keeps the name printed on it. A phase is read, and it was coming out
- * as `Faza: field` in the middle of a Polish sentence.
+ * The stored words are the engine's and read as such — `field` is a phase name
+ * rather than a thing you can point at — so this is only the difference between
+ * a state machine's label and a sentence.
  */
 const PHASE: Record<string, string> = {
-  roll: "rzut",
-  move: "ruch",
-  field: "obszar",
-  fight: "walka",
-  bridge: "most",
-  end: "koniec tury",
+  roll: "roll",
+  move: "move",
+  field: "the Obszar",
+  fight: "fight",
+  bridge: "the Most",
+  end: "end of turn",
 };
 
 /** The question the turn is stuck on, for `look`. */
@@ -156,9 +156,9 @@ function waitingOn(turnState: unknown): string[] {
     (one) => !(state.resolved ?? []).includes(one.cardId),
   );
   return [
-    ...(offer ? [`Obszar pyta: ${offer.name} — \`answer\` lub \`answer <n>\``] : []),
+    ...(offer ? [`The Obszar asks: ${offer.name} — \`answer\` or \`answer <n>\``] : []),
     ...(waiting.length
-      ? [`Czeka: ${waiting.map((one) => cardName(one.cardId)).join(", ")}`]
+      ? [`Waiting: ${waiting.map((one) => cardName(one.cardId)).join(", ")}`]
       : []),
   ];
 }
@@ -173,8 +173,8 @@ function waitingOn(turnState: unknown): string[] {
 export function cardLines(name: string): string[] {
   const found = describeCard(name);
   if ("lines" in found) return found.lines;
-  if ("candidates" in found) throw new Error(`Która — ${found.candidates.join(", ")}?`);
-  throw new Error(`Nie ma takiej Karty: ${found.missing}.`);
+  if ("candidates" in found) throw new Error(`Which one — ${found.candidates.join(", ")}?`);
+  throw new Error(`No card called \`${found.missing}\`.`);
 }
 
 export interface Actor {
@@ -196,15 +196,14 @@ export interface Actor {
  *
  * # Which language a reply is in
  *
- * The verbs that *play* answer in Polish, and the ones that overrule answer in
- * English. That is the capability split doing double duty rather than a second
- * rule to remember: a play reply is read by somebody playing a Polish game, and
- * sits beside a journal that has always been Polish — while `kill`, `give` and
- * `teleport` are developer controls and read like the function names they are.
+ * English, all of it — this is a terminal and the engine's own surface. What
+ * stays Polish is what the *box* says: the journal, which is the record a
+ * player reads back, and the name of anything printed on a component. So a
+ * sentence is English and the things it names are not, which is the rule
+ * `console.ts` already draws for what you type: `gold +5` and `pick MAGOG`.
  *
- * What is typed stays English throughout, and a thing that has a printed name
- * keeps it. That was always the rule; this only settles which side a *reply*
- * falls on, after `roll` spent a while answering "Rzut: 3. Reaches: Kurhan".
+ * That is why `Postać`, `Zaklęcie`, `Obszar` and `Miecz` are in English
+ * sentences here and are not translated. They are what the thing is called.
  */
 export async function runCommand(
   gameId: string,
@@ -226,7 +225,7 @@ export async function runCommand(
   const seatOf = (who: string | null): SeatRow => {
     if (!who) {
       const mine = seats.find((seat) => seat.id === actor.seatId);
-      if (!mine) throw new Error("Nie prowadzisz żadnej Postaci.");
+      if (!mine) throw new Error("You are not driving a Postać.");
       return mine;
     }
     // The matching itself is `pickPlayer`'s, in the pure half, where a table of
@@ -456,9 +455,9 @@ export async function runCommand(
      */
     case "unseat": {
       const user = userOf(command.who);
-      if (user.seat_index === null) return `${user.name} nie prowadzi żadnej Postaci.`;
+      if (user.seat_index === null) return `${user.name} is not driving anything.`;
       const { passedTo } = await unseat(gameId, user.id);
-      return `${user.name} wstaje z miejsca ${user.seat_index + 1}; Postać zostaje.${turnMoved(
+      return `${user.name} is out of seat ${user.seat_index + 1}; the Postać stays.${turnMoved(
         passedTo,
       )}`;
     }
@@ -475,7 +474,7 @@ export async function runCommand(
       const user = userOf(command.who);
       const seat = seatByNumber(command.seat);
       await takeSeat(gameId, user.id, seat.seat_index);
-      return `${user.name} prowadzi ${named(seat)}${
+      return `${user.name} drives ${named(seat)}${
         seat.character_id ? ` — ${characterName(seat.character_id)}` : ""
       }.`;
     }
@@ -491,21 +490,21 @@ export async function runCommand(
     case "kick": {
       const user = userOf(command.who);
       const { passedTo } = await leaveTable(gameId, user.id, true);
-      return `${user.name} odchodzi od stołu.${turnMoved(passedTo)}`;
+      return `${user.name} is off the table.${turnMoved(passedTo)}`;
     }
 
     /** The same exit, by your own choice. Only ever yourself — see the grammar. */
     case "leave": {
       const me = userOf(null);
       const { passedTo } = await leaveTable(gameId, me.id, false);
-      return `${me.name} odchodzi od stołu.${turnMoved(passedTo)}`;
+      return `${me.name} leaves the table.${turnMoved(passedTo)}`;
     }
 
     case "rename": {
       const user = userOf(command.who);
       const was = user.name;
       await renameUser(gameId, user.id, command.name);
-      return `${was} nazywa się teraz ${command.name.trim()}.`;
+      return `${was} is now ${command.name.trim()}.`;
     }
 
     /**
@@ -521,7 +520,7 @@ export async function runCommand(
       const user = userOf(command.who);
       const host = people.find((one) => one.is_host);
       await claimTableScreen(gameId, user.id, host?.id ?? actor.userId);
-      return `${user.name} jest teraz gospodarzem.`;
+      return `${user.name} runs the table.`;
     }
 
     /* ----------------------------------------------------------------------
@@ -601,7 +600,7 @@ export async function runCommand(
         seat.id,
       );
       const after = (await seatsFor(gameId)).find((one) => one.id === seat.id);
-      return `${named(seat)} gra jako ${characterName(after?.character_id ?? null)}.`;
+      return `${named(seat)} plays ${characterName(after?.character_id ?? null)}.`;
     }
 
     /**
@@ -620,7 +619,7 @@ export async function runCommand(
     case "turn": {
       const seat = seatOf(command.who);
       if (!seat.character_id) throw new Error(`${named(seat)} has no character.`);
-      if (seat.eliminated) throw new Error(`${named(seat)} nie żyje — try \`revive\`.`);
+      if (seat.eliminated) throw new Error(`${named(seat)} is dead — try \`revive\`.`);
       const players = seats.filter((s) => s.character_id && !s.eliminated).length;
       for (let pass = 0; pass <= players * 8; pass++) {
         const game = await gameById(gameId);
@@ -796,7 +795,7 @@ export async function runCommand(
 
     case "endturn":
       await finishTurn(gameId);
-      return "Tura przekazana.";
+      return "Turn passed.";
 
     /* ----------------------------------------------------------------------
      * Playing. Everything below is the game as printed — the same functions
@@ -806,12 +805,12 @@ export async function runCommand(
     case "ready": {
       const person = userOf(command.who);
       await setReady(gameId, person.id, command.ready);
-      return command.ready ? "Gotów." : "Jeszcze nie.";
+      return command.ready ? "Ready." : "Not yet.";
     }
 
     case "start":
       await startGame(gameId);
-      return "Gra się zaczyna.";
+      return "The game begins.";
 
     case "roll": {
       // Null, not a number: the app throws it. A typed die is companion mode's,
@@ -822,18 +821,18 @@ export async function runCommand(
         options?: { fieldId: string; fieldName: string }[];
       };
       const where = (state.options ?? []).map((one) => one.fieldName).join(", ");
-      return `Rzut: ${state.roll ?? "?"}.${where ? ` Dokąd: ${where}.` : " Nie ma dokąd pójść."}`;
+      return `Rolled ${state.roll ?? "?"}.${where ? ` Reaches: ${where}.` : " Nowhere to go."}`;
     }
 
     case "move": {
       await moveTo(gameId, command.fieldId);
-      return `${named(seatOf(null))} idzie na ${fieldName(command.fieldId)}.`;
+      return `${named(seatOf(null))} walks to ${fieldName(command.fieldId)}.`;
     }
 
     case "draw": {
       const { card, recycled } = await drawCard(gameId, null);
-      const turned = recycled ? " Stos przetasowany." : "";
-      return card ? `Dobrane: ${card.name}.${turned}` : `Nie ma czego dobierać.${turned}`;
+      const turned = recycled ? " The pile was turned over." : "";
+      return card ? `Drawn: ${card.name}.${turned}` : `Nothing to draw.${turned}`;
     }
 
     /**
@@ -853,7 +852,7 @@ export async function runCommand(
         drawn?: { cardId: string }[];
         resolved?: string[];
       };
-      if (state.phase !== "field") throw new Error("Nic nie czeka na odpowiedź.");
+      if (state.phase !== "field") throw new Error("Nothing is waiting for an answer.");
 
       const decided = { choices: command.choices };
       // The Obszar's own table first: 13.4 makes it compulsory, so it is what
@@ -874,7 +873,7 @@ export async function runCommand(
         const hit = waiting.find(
           (one) => cardName(one.cardId).toLowerCase() === command.card!.toLowerCase(),
         );
-        if (!hit) throw new Error(`Nie czeka: ${command.card}.`);
+        if (!hit) throw new Error(`Not waiting: ${command.card}.`);
         card = hit;
       } else if (waiting.length > 1) {
         throw new Error(
@@ -912,20 +911,20 @@ export async function runCommand(
           const seat = seatOfUser(who);
           // Somebody who stood up is watching, not undecided — `startGame`
           // never waits for them, and neither should this.
-          if (!seat) return `  ${who.name ?? "?"} — ogląda`;
-          const has = seat.character_id ? characterName(seat.character_id) : "bez Postaci";
-          return `  ${who.name ?? "?"} — ${has}${who.ready ? " · gotów" : ""}`;
+          if (!seat) return `  ${who.name ?? "?"} — watching`;
+          const has = seat.character_id ? characterName(seat.character_id) : "no Postać";
+          return `  ${who.name ?? "?"} — ${has}${who.ready ? " · ready" : ""}`;
         });
         const owed = snapshot.users.filter((who) => {
           const seat = seatOfUser(who);
           return seat !== undefined && (!seat.character_id || !who.ready);
         });
         return [
-          `Poczekalnia — ${snapshot.users.length} przy stole.`,
+          `Lobby — ${snapshot.users.length} at the table.`,
           ...waiting,
           owed.length === 0
-            ? "Wszyscy gotowi — `start` zaczyna grę."
-            : `Czekamy na: ${owed.map((who) => who.name ?? "?").join(", ")}.`,
+            ? "Everyone ready — `start` begins the game."
+            : `Waiting for: ${owed.map((who) => who.name ?? "?").join(", ")}.`,
         ].join("\n");
       }
 
@@ -941,18 +940,18 @@ export async function runCommand(
       );
       const phase = state.phase ?? "";
       return [
-        `Tura ${game.turn} — ${active ? named(active) : "nikt"}`,
+        `Turn ${game.turn} — ${active ? named(active) : "nobody"}`,
         `Obszar: ${fieldName(active?.field_id ?? null)}`,
-        `Faza: ${PHASE[phase] ?? phase}${state.roll ? ` (rzut ${state.roll})` : ""}`,
+        `Phase: ${PHASE[phase] ?? phase}${state.roll ? ` (rolled ${state.roll})` : ""}`,
         ...(state.options?.length
-          ? [`Dokąd: ${state.options.map((one) => one.fieldName).join(", ")}`]
+          ? [`Reaches: ${state.options.map((one) => one.fieldName).join(", ")}`]
           : []),
         ...(here.length
-          ? [`Na Obszarze: ${here.map((one) => cardName(one.card_id)).join(", ")}`]
+          ? [`On the Obszar: ${here.map((one) => cardName(one.card_id)).join(", ")}`]
           : []),
         ...waitingOn(game.turn_state),
         ...(standing.length > 1
-          ? [`Stoją tu: ${standing.map((one) => named(one)).join(", ")}`]
+          ? [`Also here: ${standing.map((one) => named(one)).join(", ")}`]
           : []),
       ].join("\n");
     }
@@ -970,13 +969,13 @@ export async function runCommand(
       const spells = mine.filter((one) => one.kind === "spell");
       const items = mine.filter((one) => one.kind !== "spell");
       return [
-        `${named(seat)}${seat.eliminated ? " — nie żyje" : ""}`,
-        `Miecz ${seat.sword_own}  Magia ${seat.magic_own}  Życie ${seat.life}  Złoto ${seat.gold}`,
-        `Natura: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
-        `Plecak: ${items.length ? items.map((one) => cardName(one.card_id)).join(", ") : "pusty"}`,
+        `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
+        `Sword ${seat.sword_own}  Magic ${seat.magic_own}  Life ${seat.life}  Gold ${seat.gold}`,
+        `Nature: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
+        `Pack: ${items.length ? items.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,
         own
-          ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "brak"}`
-          : `Zaklęcia: ${spells.length} (zakryte — 9.3)`,
+          ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`
+          : `Zaklęcia: ${spells.length} (face down — 9.3)`,
       ].join("\n");
     }
 

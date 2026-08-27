@@ -140,20 +140,20 @@ async function openTable(code: string): Promise<void> {
   table = { code, gameId, tables };
   announced = null;
   await knowTable();
-  say(`Stół ${code}.`);
+  say(`Table ${code}.`);
   await show();
 }
 
 async function makeTable(names: string[]): Promise<void> {
-  if (names.length === 0) return say("Kto gra? Wypisz graczy: `table new Michał, Ola`.");
+  if (names.length === 0) return say("Who is playing? `table new Michał, Ola`");
   const { code, gameId, tables, store } = await newSave(names);
   setStore(store);
   table = { code, gameId, tables };
   announced = null;
   await knowTable();
-  say(`Stół ${code} — ${names.join(", ")}.`);
-  say("Każdy wybiera Postać — `pick MAGOG`, albo `pick` losowo. `unseat` pomija.");
-  say("Kiedy wszyscy mają Postacie: `start`.");
+  say(`Table ${code} — ${names.join(", ")}.`);
+  say("Everyone picks a Postać — `pick MAGOG`, or `pick` for a random one. `unseat` sits out.");
+  say("Then `ready`, and `start` when everyone is.");
   await show();
 }
 
@@ -208,8 +208,8 @@ async function handover(): Promise<void> {
   if (announced !== null) {
     say("");
     // A script has nobody to press enter, and waiting for one would hang it.
-    if (stdin.isTTY) await rl.question(`— tura: ${who.label} — [enter] `);
-    else say(`— tura: ${who.label} —`);
+    if (stdin.isTTY) await rl.question(`— ${who.label}'s turn — [enter] `);
+    else say(`— ${who.label}'s turn —`);
   }
   announced = game.active_seat;
 }
@@ -276,7 +276,7 @@ async function run(line: string): Promise<void> {
   } catch (error) {
     // The message is the game refusing something and belongs on screen; the
     // stack is a bug and belongs in a file.
-    say((error as Error).message ?? "Coś poszło nie tak.");
+    say((error as Error).message ?? "Something went wrong.");
     if (!(error as Error).message) say(`(zapisane w ${trace(error)})`);
   }
 }
@@ -296,18 +296,18 @@ async function local(line: string): Promise<boolean> {
     // Bare `test` says which way it is, because a switch you cannot read is
     // one you have to try.
     if (verb === "") {
-      say(testmode ? "Tryb testowy: włączony." : "Tryb testowy: wyłączony.");
+      say(testmode ? "Testmode: on." : "Testmode: off.");
       return true;
     }
     if (verb !== "on" && verb !== "off") {
-      say("`test on` albo `test off`.");
+      say("`test on` or `test off`.");
       return true;
     }
     testmode = verb === "on";
     say(
       testmode
-        ? "Tryb testowy włączony — komendy łamiące zasady są dostępne."
-        : "Tryb testowy wyłączony.",
+        ? "Testmode on — the commands that overrule the rules are available."
+        : "Testmode off.",
     );
     return true;
   }
@@ -318,7 +318,7 @@ async function local(line: string): Promise<boolean> {
   // families: it is the question you ask before you know a code to name.
   if (verb === "") {
     const found = await listSaves();
-    if (found.length === 0) say("Nie ma żadnych stołów. `table new Kowi, Ola` otwiera jeden.");
+    if (found.length === 0) say("No tables. `table new Kowi, Ola` opens one.");
     for (const one of found) {
       say(`  ${one.code}  ${one.status}  tura ${one.turn}  ${one.players.join(", ")}`);
     }
@@ -336,16 +336,16 @@ async function local(line: string): Promise<boolean> {
       );
       return true;
     case "open":
-      if (!tail) return say("Który stół? `table` pokazuje listę."), true;
+      if (!tail) return say("Which table? `table` lists them."), true;
       await openTable(tail.toUpperCase());
       return true;
     case "delete":
-      if (!tail) return say("Który stół?"), true;
+      if (!tail) return say("Which table?"), true;
       await deleteSave(tail.toUpperCase());
-      say(`Skasowany: ${tail.toUpperCase()}.`);
+      say(`Deleted: ${tail.toUpperCase()}.`);
       return true;
     default:
-      say(`\`table ${named}\`? Znam: ${FAMILIES.table.join(", ")} — albo samo \`table\`.`);
+      say(`\`table ${named}\`? I know: ${FAMILIES.table.join(", ")} — or bare \`table\`.`);
       return true;
   }
 }
@@ -365,8 +365,8 @@ async function main(): Promise<void> {
   // The names are the *players*, and saying so is the whole point of this
   // line: `new Michał, Ola` reads like naming the table, and the first person
   // to run it read it that way.
-  say("`table new <gracze>` otwiera stół — np. `table new Michał, Ola`.");
-  say("`table` wypisuje stoły, `help` komendy, `quit` wychodzi.");
+  say("`table new <players>` opens a table — e.g. `table new Michał, Ola`.");
+  say("`table` lists tables, `help` lists commands, `quit` leaves.");
 
   /**
    * The line iterator rather than a loop of `question`.
@@ -399,7 +399,7 @@ async function main(): Promise<void> {
         // The families, spelled out: `table` alone would not say what it takes.
         say(
           `  table [${FAMILIES.table.join("|")}] · test [on|off] · quit` +
-            "  — stoły, tryb testowy, wyjście",
+            "  — tables, testmode, exit",
         );
       } else if (offTable(line)) {
         // Reading a Karta touches no game, so it must not need one. Somebody
@@ -410,7 +410,7 @@ async function main(): Promise<void> {
           say((error as Error).message);
         }
       } else if (!table) {
-        say("Najpierw otwórz stół: `table new Michał, Ola` albo `table open KOD`.");
+        say("Open a table first: `table new Michał, Ola` or `table open CODE`.");
       } else if (/^journal\b/.test(line)) {
         await recent(Number(line.split(/\s+/)[1] ?? 10) || 10);
       } else {
@@ -419,7 +419,7 @@ async function main(): Promise<void> {
     }
     await prompt();
   }
-  say("Do zobaczenia.");
+  say("Bye.");
 }
 
 void main();

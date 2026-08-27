@@ -5,7 +5,6 @@ import events from "@/data/events.json";
 import itemCards from "@/data/items.json";
 import spellCards from "@/data/spells.json";
 import type { Character } from "@/data/types";
-import { characterFacts } from "./polish";
 import { fold } from "./search";
 
 /**
@@ -72,7 +71,16 @@ export function describeCard(
   if (person) {
     return {
       lines: [
-        `${person.name} — ${characterFacts(person)}`,
+        /**
+         * The Natura as you would type it, not as the box prints it.
+         *
+         * `characterFacts` renders it Polish for the browser, which is a
+         * Polish interface. This is a terminal: the sentence is English, the
+         * *names* are the box's, and a Natura is neither — it is the word
+         * `nature chaotic` takes, so showing "chaotyczna" here would be
+         * showing something you cannot type.
+         */
+        `${person.name} — Sword ${person.miecz} · Magic ${person.magia} · ${person.nature}`,
         `MGR: ${person.start}`,
         ...person.abilities.map((one) => `  · ${one}`),
       ],

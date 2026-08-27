@@ -18,10 +18,10 @@ const lines = (name: string) => {
 describe("reading a Karta off the box", () => {
   it("reads a Postać with everything you would choose on", () => {
     const [head, mgr, ...rest] = lines("BARBARZYŃCA");
-    expect(head).toBe("BARBARZYŃCA — Miecz 5 · Magia 1 · chaotyczna");
-    // The Natura in Polish, not the stored key — the hazard `NATURE_LABEL`
-    // exists to end.
-    expect(head).not.toContain("chaotic");
+    // The Natura as you would *type* it. The browser renders it Polish because
+    // the browser is a Polish interface; a terminal sentence is English, and
+    // showing "chaotyczna" here would be showing a word you cannot type.
+    expect(head).toBe("BARBARZYŃCA — Sword 5 · Magic 1 · chaotic");
     expect(mgr).toBe("MGR: Kurhan");
     expect(rest.length).toBeGreaterThan(0);
   });
