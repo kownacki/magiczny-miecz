@@ -71,12 +71,26 @@ export function TableLayout({
         <section className="flex min-h-0 shrink-0 items-center justify-center border-edge px-3 pt-3 lg:h-full lg:w-[38.2%] lg:shrink lg:border-r">
           {map}
         </section>
-        {/* The console sets `--console-h` while it is open — see the note on it.
-            Padding rather than a shorter column, so nothing reflows when it is
-            resized: the panel keeps its height and its last row simply scrolls
-            clear of what is parked over it. */}
+        {/* Two things park over the foot of this column and both publish what
+            they take: the console sets `--console-h` while it is open, and the
+            turn's pill sets `--fab-h` while it is drawn (which is whenever every
+            window is shut, so most of the time). Each is zero when its owner is
+            not on screen, so this one line is right for all of the combinations
+            without asking which.
+
+            The console alone was not enough. It is docked to the bottom of this
+            column and the pill is centred on the *window*, so on a wide screen
+            the pill lands over this column too — a full pill's height above
+            what the padding had allowed for, sitting on the last row of the
+            seat card.
+
+            Padding rather than a shorter column, so nothing reflows when either
+            is resized: the panel keeps its height and its last row simply
+            scrolls clear of what is parked over it. */}
         <section
-          style={{ paddingBottom: "calc(0.75rem + var(--console-h, 0px))" }}
+          style={{
+            paddingBottom: "calc(0.75rem + var(--console-h, 0px) + var(--fab-h, 0px))",
+          }}
           className="min-h-0 flex-1 overflow-y-auto p-3 lg:w-[61.8%]"
         >
           {right}

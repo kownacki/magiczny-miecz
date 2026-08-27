@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 
 /**
@@ -27,6 +28,15 @@ import { SEAT_COLOURS } from "@/lib/view/boardMap";
  * drawn only while every window is shut. It is what the absence of the turn
  * looks like, and there is no turn it is absent from.
  */
+/**
+ * The gap the pill floats on, above whatever the console is taking.
+ *
+ * In pixels rather than `1rem`, because it is added to a measured
+ * `offsetHeight` and the two have to be the same unit. Sixteen is the browser
+ * default root size and what `1rem` resolves to everywhere else in this app.
+ */
+const RESERVED_ABOVE = 16;
+
 export function TurnFab({
   mine,
   playerName,
@@ -61,8 +71,53 @@ export function TurnFab({
   onOpen: () => void;
 }) {
   const colour = SEAT_COLOURS[seatIndex % SEAT_COLOURS.length];
+  const pill = useRef<HTMLButtonElement>(null);
+
+  /**
+   * What this reserves at the foot of the right column, published for it.
+   *
+   * The same bargain the console strikes with `--console-h`, and for the same
+   * reason: this is `fixed`, so it pushes nothing, and the column it floats
+   * over scrolls underneath it. Padding that column by the console's height
+   * alone left the pill sitting on the last row of the seat card — the
+   * Zdolności heading, which it covered exactly.
+   *
+   * The published number is the whole strip this takes, not the pill's own
+   * height: it floats `1rem` above whatever the console is taking, and a
+   * reservation that forgot the gap would leave the fold's triangle just under
+   * the pill's edge. `RESERVED_ABOVE` is that `1rem` written once, so the
+   * offset and the room made for it cannot drift — they are the same number in
+   * two places and this is the one place it is typed.
+   *
+   * Cleared on unmount rather than left behind. The pill is drawn only while
+   * every window is shut, so it comes and goes many times a turn, and a stale
+   * reservation is a column padded for something that is not on screen.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    const element = pill.current;
+    const clear = () => root.style.setProperty("--fab-h", "0px");
+    if (!element) {
+      clear();
+      return;
+    }
+    const measure = () =>
+      root.style.setProperty("--fab-h", `${element.offsetHeight + RESERVED_ABOVE}px`);
+    measure();
+    // The words change with the turn — "walka: DEMON" arrives and leaves — and
+    // a long enough `owed` wraps the pill to a second line. Watching it is what
+    // keeps the reservation right through that rather than only on mount.
+    const watching = new ResizeObserver(measure);
+    watching.observe(element);
+    return () => {
+      watching.disconnect();
+      clear();
+    };
+  }, []);
+
   return (
     <button
+      ref={pill}
       onClick={onOpen}
       /**
        * Bottom centre, over everything, on the pill the folded sheet used to
@@ -87,7 +142,7 @@ export function TurnFab({
        * the lift is right for all three of its states and zero when it is
        * closed.
        */
-      style={{ bottom: "calc(1rem + var(--console-h, 0px))" }}
+      style={{ bottom: `calc(${RESERVED_ABOVE}px + var(--console-h, 0px))` }}
       /* `hover:bg-raised` and not a tint. A tinted background *replaces* the
          one it is written next to rather than laying over it, so hovering this
          turned an opaque pill ninety percent transparent and the board showed
