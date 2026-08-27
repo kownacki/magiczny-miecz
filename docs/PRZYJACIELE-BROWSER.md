@@ -25,12 +25,26 @@ the browser reads derived figures, so the cards already arrive through the API.
    `raidFieldCardId`, exactly one. Range 3 Obszary, same ring only. Offer it in
    the `field` phase, after the move.
 
-## One thing that will bite you
+## The database — nothing owed
 
-`died-for-you` is a new journal kind and the live database's CHECK constraint is
-**not** yet altered, so the first time a Giermek or Bojowy Rumak dies for its
-owner in a browser game the write is refused. Ask before touching that database:
-it is shared with three other projects, two of which take real payments.
+A second round went in after the sweep below, for the Przyjaciele who carry a
+Zaklęcie: `carried` added to `holdings_kind_check`, a `carried_by text` column
+on `holdings`, and `carried-spell` in `moves_kind_check` (61 kinds now, again
+generated from `JOURNAL_KINDS` rather than retyped). Applied and read back;
+nothing outside `magiczny_miecz` was touched. **The schema is in step with the
+code — start drawing.**
+
+## The thing that would have bitten you — done
+
+`moves_kind_check` on the live database has been altered and is back in step
+with `JOURNAL_KINDS`. It was staler than one kind: it held 50 and the list holds
+60, so `died-for-you`, `paid-friend`, `card-table`, the two `beast-*` and all
+six `bridge-*` would each have been refused. It also carried `adjust` and
+`arrived`, which the list has dropped and no row used, so the constraint
+validated clean. Generated from `journal.ts` rather than retyped, and nothing
+outside `magiczny_miecz.moves` was touched — that database is shared with three
+other projects, two of which take real payments, so schema-qualify everything
+and ask first.
 
 Fuller notes: `docs/TASKS.md` → "Przyjaciele, and what the browser still has to
 draw". Card behaviour: `src/lib/engine/abilities.ts`.

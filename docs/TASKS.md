@@ -676,20 +676,52 @@ One new action on the turn route:
   not a step. The friend fights with his own 3 points and dies instead of
   costing a Życie, so a lost raid takes nothing from the character at all.
 
-### Two things that are still not done
+### Done since: every Przyjaciel now does something
 
-- **KRZYŻOWIEC carries a Zaklęcie** "którego użyje, gdy sobie tego zażyczysz" —
-  a spell held by a card rather than by a character, which nothing in the model
-  has a place for. Still a MANUAL note.
-- **GNOM and NAJEMNIK** have no abilities encoded at all, and are the only two
-  friends left at `brak`.
+**14 pelne, 6 czesciowe, none at `brak`.** The three that were open are closed.
 
-### One migration owed
+- **NAJEMNIK** sells `za-oplata`: 1 Sztuka Złota buys +3 Miecza for a turn, once
+  per turn. The once-a-turn rule stores nothing — the effect lasts exactly the
+  turn it was bought in, so one sitting on the seat *is* the record of paying.
+- **KRZYŻOWIEC and GNOM** carry a Zaklęcie apiece. A spell belonging to a *card*
+  had nowhere to live, so there is now a fifth holding kind, `carried`, and a
+  `carried_by` column naming the friend. A fifth kind rather than a flag on
+  `spell` is the whole design: every query asking for `'spell'` excludes it by
+  default, which is right in almost all of them — 2.6 must not count it and a
+  Pan Zaklęć must not take it. `ask` is the verb; `viaFriend` keeps the ordinary
+  cast from reaching one, without which the Gnom's Sztuka Złota is optional.
 
-`died-for-you` is a new journal kind. It is in `db/schema.sql` and in
-`journal.ts`, and the live database's CHECK constraint has **not** been altered
-— that database is biggerfish's and shared four ways, so it was left for a
-human. Terminal play writes save files and is unaffected. A browser game will
-refuse the write the first time a Giermek or a Rumak dies for somebody, and the
-fix is one `alter table ... drop constraint / add constraint` against the
-`magiczny_miecz` schema with the value added.
+Two bugs surfaced doing it. **Status point bonuses never reached a fight**:
+`bonusFrom` was called in `envelope.ts` and nowhere else, so the Eliksir Siły's
+"+2 Miecza na 1 turę" had been decorative since it was written — drawn on the
+browser's screen and invisible to every rule. And a **carried card would have
+been deleted outright on death**, appearing in neither the "goes to the spell
+pile" nor the "lies on the Obszar" list, quietly taking a Zaklęcie out of play.
+
+What is left on the six `czesciowe` clusters into two mechanisms and two
+one-offs: a **friend with a price** (NAJEMNIK's recruitment, TRAGARZ's upkeep)
+and a **friend sold at a named place** (KSIĘŻNICZKA at the Zamek, WŁADCA at the
+Twierdza, 3 Sztuki Złota each); then CHOCHLIK (1 Życie to look at two Zaklęcia
+and choose) and ALCHEMIK, whose note is a warning rather than a gap.
+
+### The migration, now paid — both rounds
+
+`moves_kind_check` has been altered on the live database and matches
+`JOURNAL_KINDS` again. It was owed more than `died-for-you`: the constraint held
+50 kinds against the list's 60, so `paid-friend`, `card-table`, both `beast-*`
+and all six `bridge-*` were equally unwritable — a browser game would have
+refused a Bestia draw and a bridge crossing as readily as a Giermek's death.
+Terminal play writes save files and never noticed.
+
+The two the constraint had and the list has not, `adjust` and `arrived`, are
+gone with it; no row used either, so the new constraint validated against the
+existing rows rather than being added `not valid`. It was generated out of
+`journal.ts` by a script instead of retyped, which is what the comment above the
+list in `db/schema.sql` asks for, and the statement named
+`magiczny_miecz.moves` and nothing else.
+
+A second round went in for the carried Zaklęcia: `carried` added to
+`holdings_kind_check`, a `carried_by text` column on `holdings`, and
+`carried-spell` in `moves_kind_check` — 61 kinds now, generated from
+`JOURNAL_KINDS` the same way. Applied and read back, `magiczny_miecz` only. The
+schema and the code are in step; nothing is owed.
