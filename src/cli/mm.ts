@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { helpLines, parseCommand, permits, worksOffTable } from "@/lib/engine/console";
 import { tabFor } from "./tab";
+import { paintFor } from "./paint";
 import type { CommandSpec } from "@/lib/engine/console";
 import { stageOf, type Stage } from "@/lib/engine/console";
 import { cardLines, runCommand } from "@/lib/game/consoleStore";
@@ -146,6 +147,9 @@ let stage: Stage = "none";
  */
 let rl: ReturnType<typeof createInterface>;
 
+/** Off unless there is a terminal on the other end — see `paintFor`. */
+const paint = paintFor(stdin.isTTY);
+
 function say(text: string): void {
   stdout.write(`${text}\n`);
 }
@@ -153,6 +157,29 @@ function say(text: string): void {
 /* --------------------------------------------------------------------------
  * The table: opening one, and finding the one to open.
  * ----------------------------------------------------------------------- */
+
+/**
+ * The one line above `help` that says which list you are looking at.
+ *
+ * `help` shows what applies where you are, so the list changes underneath you
+ * — and without a heading there is no way to tell a short list from a broken
+ * one. This is the difference between "these are your commands" and "these are
+ * your commands *here*".
+ */
+async function whereWeAre(all: boolean): Promise<string> {
+  const testing = testmode ? " · testmode on" : "";
+  if (all) return `Every command, wherever it applies${testing}.`;
+  if (!table) return `Landing — no table open${testing}.`;
+
+  const snapshot = await activeStore().load(table.gameId);
+  if (snapshot.game.status !== "playing") {
+    return `Lobby — ${snapshot.users.length} at the table${testing}.`;
+  }
+  const active = snapshot.seats.find((one) => one.seat_index === snapshot.game.active_seat);
+  const driver = snapshot.users.find((one) => one.seat_index === active?.seat_index);
+  const whose = active ? (driver?.name ?? `seat ${active.seat_index + 1}`) : "nobody";
+  return `Turn ${snapshot.game.turn} — ${whose}, ${stage}${testing}.`;
+}
 
 /** Whether the console knows this word at all, table or no table. */
 function known(line: string): boolean {
@@ -299,7 +326,15 @@ async function recent(count: number): Promise<void> {
     playerName: users.find((who) => who.seat_index === one.seat_index)?.name ?? null,
     characterId: one.character_id,
   }));
-  for (const line of journalLines(entries.reverse(), view, null)) say(`  ${line.text}`);
+  /**
+   * Italic, because the journal is the one thing here that is not the program
+   * talking. It is the game's own record, in the game's own language, quoted
+   * back — and a quotation that looks like everything around it reads as
+   * something `mm` said.
+   */
+  for (const line of journalLines(entries.reverse(), view, null)) {
+    say(`  ${paint.italic(line.text)}`);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -455,6 +490,9 @@ async function main(): Promise<void> {
         // which half of the vocabulary is reachable.
         const asked = line.split(/\s+/)[1] ?? null;
         const all = asked === "all";
+        // Where you are, before what you can do — the list is filtered by it,
+        // so a list with no heading is a list you cannot check.
+        if (asked === null || all) say(paint.dim(await whereWeAre(all)));
         for (const one of helpLines(all ? null : asked, { testmode, stage, all }, LOCAL)) say(one);
       } else if (offTable(line)) {
         // Reading a Karta touches no game, so it must not need one. Somebody
