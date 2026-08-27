@@ -13,7 +13,8 @@
     "cards": "node scripts/export-card-images.mjs",
     "music": "node scripts/export-music.mjs",
     "data": "node scripts/build-data.mjs && node scripts/build-fields.mjs",
-    "mm": "tsx src/cli/mm.ts"
+    "mm": "tsx src/cli/mm.ts",
+    "soak": "tsx scripts/soak.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

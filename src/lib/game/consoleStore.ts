@@ -1122,6 +1122,25 @@ export async function runCommand(
         ].join("\n");
       }
 
+      /**
+       * Nobody's turn, which is a state and not an error.
+       *
+       * 4.4 lets a player whose Postać died choose another, so a table where
+       * every one of them is dead is not over — it is waiting for somebody to
+       * pick. Nothing said so: `look` gave the turn's answer as usual and read
+       * "Turn 8 — nobody / Obszar: — / Phase: roll", which is three facts about
+       * a turn that is not happening, and every command after it refused with
+       * "Brak aktywnego gracza".
+       */
+      if (game.active_seat === null) {
+        const out = snapshot.seats.filter((one) => one.character_id);
+        return [
+          `Turn ${game.turn} — nobody is playing.`,
+          ...out.map((one) => `  ${named(one)} — ${one.eliminated ? "dead" : "out of play"}`),
+          "4.4: whoever lost a Postać may `pick` another and start from its MGR.",
+        ].join("\n");
+      }
+
       const state = game.turn_state as {
         phase?: string;
         roll?: number;
