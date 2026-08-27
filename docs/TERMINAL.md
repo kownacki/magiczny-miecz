@@ -1,6 +1,6 @@
 # The terminal-first engine
 
-**Status: `mm` plays.** Steps 1, 2 and 4 are built, the seed with them, and step
+**Status: `mm` plays a whole game, and writes down what produced it.** Steps 1, 2 and 4 are built, the seed with them, and step
 3 is half done. A whole game — open a table, pick, ready, start, roll, move,
 draw, answer, pass — runs at a prompt with no database and no server, saves after
 every change, and reloads in a fresh process. What is left is the rest of the
@@ -310,14 +310,12 @@ Four steps, each independently testable, in this order:
    `~/.magiczny-miecz/saves/<KOD>.json`, overridable with `MM_HOME`. Written
    temp-then-rename, because the file is rewritten after *every* change and the
    window is most of the program's life.
-3. **The grammar split.** *Half done.* `needs` is on every verb, `permits()` is
-   the one function both surfaces ask, and `help` lists locked commands rather
-   than hiding them. The turn loop is playable — `roll`, `move`, `draw`,
-   `endturn`, with `look` and `me` to see by. What is left is the rest of the
-   vocabulary: encounters (`fight`, `attack`, `escape`, `beast`, `guardian`,
-   `ferry`) and what you carry (`take`, `drop`, `equip`, `use`, `cast`, `buy`,
-   `sell`, `trade`, `heal`), plus setup (`new`, `load`, `saves`, `character`,
-   `ready`, `start`).
+3. ~~**The grammar split.**~~ **Done.** `needs` on every verb, `permits()` as the
+   one function both surfaces ask, `when` for the stage a verb belongs to, and
+   the whole vocabulary: the turn, encounters, holdings, shops, healers,
+   Zaklęcia, the Most and the Bestia. A game can be opened, played, fought
+   through, shopped at and won at a prompt.
+
 4. ~~**`mm`.**~~ **Done.** `src/cli/mm.ts`, `bin/mm.mjs`. Save management
    (`new`, `load`, `saves`, `delete`, `testmode`, `quit`) is handled before a
    line reaches `parseCommand`, because it acts on the program rather than the
