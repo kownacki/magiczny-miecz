@@ -42,7 +42,7 @@ export interface Tables {
  * drifts shows up as a game that behaves differently offline, which is the one
  * thing the store port exists to prevent.
  */
-const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
+export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
   games: {
     mode: "simulation",
     eq_mode: "classic",
@@ -73,14 +73,18 @@ const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
     bridge_blocked_until_turn: null,
   },
   users: { is_host: false, ready: false, seat_index: null, device_id: null, left_at: null },
-  holdings: { face: "open", granted: false, slot: null, note: null, points: null },
+  // `note` and `points` were in here and are not columns — invented from the
+  // holdings *route*, which takes them as request fields and turns them into
+  // something else. A fake that adds a column Postgres has never heard of is
+  // the exact failure this table exists to prevent, running the other way.
+  holdings: { face: "open", granted: false, slot: null, ordinal: null },
   seat_effects: {},
   field_cards: { granted: false },
   moves: { turn: 0, payload: {}, manual: false, seat_id: null, user_id: null, actor_name: null },
 };
 
 /** Now, as a timestamp column would be. */
-const STAMPED: Record<keyof Tables, readonly string[]> = {
+export const STAMPED: Record<keyof Tables, readonly string[]> = {
   games: ["created_at", "last_played_at"],
   seats: ["created_at"],
   users: ["created_at", "seen_at"],
