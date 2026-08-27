@@ -35,6 +35,8 @@ export const JOURNAL_KINDS = [
   "crossing",
   "crossing-failed",
   "death",
+  /** A Przyjaciel took the blow meant for its owner and went to the used pile (6.4). */
+  "died-for-you",
   "discarded",
   "duel",
   "effect",

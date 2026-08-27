@@ -4,10 +4,12 @@ import type { SpellId } from "@/data/ids";
 import {
   bestShield,
   canEscapeAt,
+  diesForYou,
   heldAbilities,
+  raidsForYou,
   type EscapeTarget,
 } from "@/lib/engine/abilities";
-import { KAMIENNY_MOST, ringOf } from "@/lib/engine/board";
+import { asFieldId, fieldsApart, KAMIENNY_MOST, ringOf, type FieldId } from "@/lib/engine/board";
 import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
 import { combatValueOf } from "@/lib/engine/cards";
 import { attackAsOne, type CombatKind } from "@/lib/engine/combat";
@@ -26,6 +28,7 @@ import {
   startFight,
 } from "@/lib/engine/turn";
 import { EVENTS, SPELL_BY_ID } from "../decks";
+import { cardName } from "@/lib/engine/polish";
 import { nameOfSeat } from "./lobby";
 import {
   apply,
@@ -563,6 +566,178 @@ export async function shieldSaves(
   };
 }
 
+/**
+ * The friend who dies rather than let you lose the point (6.4).
+ *
+ * Chapter 6 says only that a killed friend goes "na stos zużytych Kart
+ * Zdarzeń"; that any friend would step in front of you at all is printed on the
+ * two cards that do it, and they do not do it alike. The Bojowy Rumak is
+ * certain — "zginie tylko twój Rumak, ty zaś nie utracisz punktu Życia" — and
+ * the Giermek is a one-in-six that has to be rolled for. `diesForYou` puts the
+ * rolled offers first and says why.
+ *
+ * Asked only once the osłona has already failed, because 17.4's roll costs
+ * nothing and this costs a friend: offering the Giermek's neck against a point
+ * a Zbroja was about to save would be spending the better card first.
+ *
+ * Stops at the first friend who actually dies. Two friends never die for one
+ * point — each card buys the same single point, and the second is still there
+ * for the next fight.
+ */
+export async function friendDiesInstead(
+  snapshot: Snapshot,
+  command: { seatId: string; raiding?: boolean },
+  ports: CommandPorts,
+): Promise<Outcome<boolean>> {
+  const seat = seatById(snapshot, command.seatId);
+  const mode = eqModeOf(snapshot.game);
+  const view = seatView(snapshot, seat.id);
+  const held = inEffect(view.holdings, mode, view.nature);
+  const offers = diesForYou(
+    held.map((h) => h.cardId),
+    { raiding: command.raiding ?? false },
+  );
+
+  for (const offer of offers) {
+    // Back to the stored row: the engine's `Holding` is what the rules read and
+    // carries no id, and it is the row that has to be deleted.
+    const row = snapshot.holdings.find(
+      (h) => h.seat_id === seat.id && h.card_id === offer.cardId,
+    );
+    if (!row) continue;
+
+    let die: number | null = null;
+    if (offer.onRollUpTo !== undefined) {
+      die = await ports.random.rollD6(`${offer.cardId}: rzut za ciebie`);
+      if (die > offer.onRollUpTo) continue;
+    }
+
+    // 6.4: a killed friend goes to the used pile, not to the ground. Only the
+    // owner may leave one lying on an Obszar, and that is a choice they make.
+    const gone: Changeset = { holdings: { delete: [row.id] } };
+    const pile = putOnPile(apply(snapshot, gone), "events", [asReturnable(row)]);
+    return {
+      writes: mergeAll(gone, pile, {
+        journal: [
+          {
+            seatId: seat.id,
+            turn: snapshot.game.turn,
+            kind: "died-for-you",
+            payload: { cardId: row.card_id, die },
+          },
+        ],
+      }),
+      result: true,
+    };
+  }
+
+  return { writes: {}, result: false };
+}
+
+/** How far the Poszukiwacz Przygód will travel: "oddalonego najwyżej o 3 Obszary". */
+export const RAID_RANGE = 3;
+
+export interface SendRaider {
+  /** A Postać to attack, by seat. */
+  targetSeatId?: string;
+  /** Or a Wróg left lying on an Obszar, by the row that put it there. */
+  fieldCardId?: string;
+}
+
+/**
+ * Sends a Przyjaciel out to attack something you are not standing next to.
+ *
+ * The Poszukiwacz Przygód alone does this: "Po zakończeniu ruchu możesz zlecić
+ * temu Przyjacielowi, by zaatakował Postać lub Wroga, oddalonego najwyżej o 3
+ * Obszary. Poszukiwacz Przygód posiada 3 punkty Miecza."
+ *
+ * It is not a duel and not an encounter. 13.1 restricts the character to the
+ * field their move ended on, and this deliberately reaches past that — the
+ * character stays where they are and the friend goes. So none of `attackSeat`'s
+ * same-field checks apply, and none of the character's own points do either:
+ * the friend fights with his three and nothing of yours.
+ *
+ * Range is measured by `fieldsApart`, which counts steps round one ring and
+ * refuses to count across rings at all. A Przeprawa is a turn's work that can
+ * fail, not a step, and treating one as a step would put most of the board
+ * within three Obszary of everywhere.
+ */
+export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<void> {
+  const seat = activeSeat(snapshot);
+  const state = snapshot.game.turn_state;
+  // "Po zakończeniu ruchu" — the friend is sent from where the move ended.
+  if (state.phase !== "field") throw new Error("Wyprawę zleca się po ruchu (16.1).");
+
+  const mode = eqModeOf(snapshot.game);
+  const view = seatView(snapshot, seat.id);
+  const raider = raidsForYou(inEffect(view.holdings, mode, view.nature).map((h) => h.cardId));
+  if (!raider) throw new Error("Nie masz Przyjaciela, którego można wysłać na wyprawę.");
+  if (seat.field_id === null) throw new Error("Twoja Postać nie stoi na planszy.");
+
+  const within = (fieldId: FieldId | null): boolean => {
+    if (fieldId === null) return false;
+    const apart = fieldsApart(seat.field_id as FieldId, fieldId);
+    return apart !== null && apart <= RAID_RANGE;
+  };
+
+  if (command.targetSeatId !== undefined) {
+    const target = snapshot.seats.find((s) => s.id === command.targetSeatId);
+    if (!target) throw new Error("Nieznane miejsce.");
+    if (target.id === seat.id) throw new Error("Postać nie walczy sama ze sobą.");
+    if (target.eliminated) throw new Error("Ta Postać nie żyje.");
+    if (!within(asFieldId(target.field_id))) {
+      throw new Error(`Zbyt daleko — wyprawa sięga ${RAID_RANGE} Obszary.`);
+    }
+    const theirs = pointsOf(snapshot, target.id, "walka");
+    return {
+      writes: {
+        game: {
+          turn_state: startFight(
+            state,
+            {
+              cardId: `seat:${target.seat_index}`,
+              cardName: nameOfSeat(snapshot.users, target.seat_index),
+              miecz: theirs.miecz,
+              opponentSeat: target.seat_index,
+              raid: { cardId: raider.cardId },
+            },
+            { miecz: raider.miecz, magia: raider.magia },
+          ),
+        },
+      },
+      result: undefined,
+    };
+  }
+
+  const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
+  if (!lying) throw new Error("Wskaż Postać albo Kartę Wroga na planszy.");
+  if (!within(asFieldId(lying.field_id))) {
+    throw new Error(`Zbyt daleko — wyprawa sięga ${RAID_RANGE} Obszary.`);
+  }
+  const card = EVENTS.find((one) => one.id === lying.card_id);
+  const foe = card ? combatValueOf(card) : null;
+  if (!foe) throw new Error("Z tą Kartą się nie walczy.");
+
+  return {
+    writes: {
+      game: {
+        turn_state: startFight(
+          state,
+          {
+            cardId: lying.card_id,
+            cardName: cardName(lying.card_id),
+            ...(foe.kind === "magical" ? { magia: foe.total } : { miecz: foe.total }),
+            granted: lying.granted,
+            raid: { cardId: raider.cardId },
+          },
+          { miecz: raider.miecz, magia: raider.magia },
+        ),
+      },
+    },
+    result: undefined,
+  };
+}
+
 /* --------------------------------------------------------------------------
  * Two characters (13.3, 17.6, 17.7).
  * ----------------------------------------------------------------------- */
@@ -937,17 +1112,44 @@ export async function resolveFight(
 
   let paid: Changeset = {};
   if (loser) {
-    const save = await shieldSaves(
-      apply(snapshot, cleared),
-      { seatId: loser.id, kind: fight.kind },
-      ports,
-    );
-    paid = save.result
-      ? save.writes
-      : merge(
-          save.writes,
-          spendLife(apply(snapshot, mergeAll(cleared, save.writes)), loser.id, 1).writes,
-        );
+    // Nothing is rolled for a raid: the character never stood in the fight, so
+    // there is no blow for a Zbroja to turn (17.4).
+    const save = fight.raid
+      ? { writes: {} as Changeset, result: false }
+      : await shieldSaves(apply(snapshot, cleared), { seatId: loser.id, kind: fight.kind }, ports);
+    if (fight.raid) {
+      /**
+       * A raid the friend lost. "W przypadku porażki ty nie tracisz punktu
+       * Życia, ale twój Przyjaciel ginie" — so no osłona is rolled (17.4 is
+       * about a blow landing on the character, and none did) and no life is
+       * spent. The Poszukiwacz is the only one who can answer here, because
+       * `raiding` is what his `onlyWhenRaiding` was waiting for.
+       */
+      paid =
+        fight.result.outcome === "przegrana"
+          ? (await friendDiesInstead(apply(snapshot, cleared), { seatId: seat.id, raiding: true }, ports))
+              .writes
+          : {};
+    } else if (save.result) {
+      paid = save.writes;
+    } else {
+      // 17.4 failed, so the point is really about to be lost — which is the
+      // moment the Giermek rolls and the Rumak steps in. A friend that dies
+      // here saves the point outright, so nothing is spent after it.
+      const stoodIn = await friendDiesInstead(
+        apply(snapshot, mergeAll(cleared, save.writes)),
+        { seatId: loser.id },
+        ports,
+      );
+      const upToNow = mergeAll(cleared, save.writes, stoodIn.writes);
+      paid = stoodIn.result
+        ? merge(save.writes, stoodIn.writes)
+        : mergeAll(
+            save.writes,
+            stoodIn.writes,
+            spendLife(apply(snapshot, upToNow), loser.id, 1).writes,
+          );
+    }
   }
 
   return {

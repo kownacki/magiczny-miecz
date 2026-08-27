@@ -354,7 +354,7 @@ create table if not exists magiczny_miecz.moves (
     'beast-draw', 'beast-loss', 'bought', 'bridge-attempt',
     'bridge-cerberus', 'bridge-death-game', 'bridge-entry', 'bridge-failed',
     'bridge-guardian', 'bridge-trap', 'card', 'card-table', 'crossing',
-    'crossing-failed', 'death', 'discarded', 'duel', 'effect', 'escape',
+    'crossing-failed', 'death', 'died-for-you', 'discarded', 'duel', 'effect', 'escape',
     'escape-failed', 'ferry', 'ferry-refused', 'field-table', 'fight-end',
     'fight-roll', 'fight-start', 'guardian-end', 'guardian-start',
     'guardian-strength', 'healed', 'healing', 'joined', 'left-behind', 'left-table',

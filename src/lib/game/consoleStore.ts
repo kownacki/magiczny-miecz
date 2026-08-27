@@ -14,6 +14,7 @@ import {
   type EffectName,
 } from "@/lib/engine/console";
 import { cardName } from "@/lib/engine/polish";
+import { fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
 import { change } from "./change";
 import { ADJUSTABLE, type Adjustable } from "./commands/adjust";
@@ -33,6 +34,7 @@ import {
   addEffect,
   adjust,
   attackSeat,
+  sendRaider,
   beginFight,
   dropCard,
   equipCard,
@@ -266,6 +268,20 @@ export interface Actor {
  * That is why `Postać`, `Zaklęcie`, `Obszar` and `Miecz` are in English
  * sentences here and are not translated. They are what the thing is called.
  */
+/**
+ * Who is doing the fighting, when it is not the character.
+ *
+ * Only the Rycerz does this, and without saying so the fight line reads as a
+ * character who has mysteriously become 3 and 3 — worse for a player holding
+ * one, because his figure is often *lower* than their own and looks like a bug
+ * rather than the card working.
+ */
+function championLine(view: { abilities: readonly Ability[]; holdings: readonly { cardId: string }[] }): string {
+  if (!fightsForYou(view.abilities)) return "";
+  const who = view.holdings.find((held) => fightsForYou(heldAbilities([held.cardId])));
+  return who ? ` — ${cardName(who.cardId)} fights for you` : "";
+}
+
 export async function runCommand(
   gameId: string,
   actor: Actor,
@@ -1022,6 +1038,34 @@ export async function runCommand(
       return `${named(seatOf(null))} attacks ${named(seat)}.`;
     }
 
+    case "raid": {
+      /**
+       * "zaatakował Postać lub Wroga" — so a name here is either, and which one
+       * is settled by looking. A player is tried first because that is the
+       * commoner target and the names cannot collide: a Postać is somebody at
+       * the table, and a Wróg is a card lying on the board.
+       */
+      const me = seatOf(null);
+      const snapshot = await activeStore().load(gameId);
+      const player = seats.find((one) => {
+        const name = driver(one.seat_index)?.name;
+        return (
+          one.id !== me.id &&
+          ((name !== undefined && name !== null && sameName(name, command.who)) ||
+            sameName(cardName(one.character_id ?? ""), command.who))
+        );
+      });
+      if (player) {
+        await sendRaider(gameId, { targetSeatId: player.id });
+        return `${named(me)} sends a Przyjaciel against ${named(player)}.`;
+      }
+
+      const lying = snapshot.fieldCards.find((row) => sameName(cardName(row.card_id), command.who));
+      if (!lying) throw new Error(`No Postać or Wróg called \`${command.who}\`.`);
+      await sendRaider(gameId, { fieldCardId: lying.id });
+      return `${named(me)} sends a Przyjaciel against ${cardName(lying.card_id)}.`;
+    }
+
     case "summon": {
       const seat = seatOf(null);
       await stageFight(gameId, seat.id, command.cardId);
@@ -1360,7 +1404,19 @@ export async function runCommand(
       const byName = (a: { card_id: string }, b: { card_id: string }) =>
         cardName(a.card_id).localeCompare(cardName(b.card_id), "pl");
       const spells = mine.filter((one) => one.kind === "spell").sort(byName);
-      const items = mine.filter((one) => one.kind !== "spell");
+      /**
+       * Friends and trophies are not gear and do not belong under "Pack".
+       *
+       * 6.3 lets a character keep any number of Przyjaciele and `carriedCount`
+       * has always known it, so a Rycerz was being listed inside a "Pack 2/4"
+       * he was not one of the two of — the count and the list beneath it
+       * disagreed, and the list is what a player reads. A trophy is 1.4's, held
+       * to be traded for Miecz rather than carried, and was in there for the
+       * same reason: everything that was not a Zaklęcie fell through to gear.
+       */
+      const items = mine.filter((one) => one.kind === "item");
+      const friends = mine.filter((one) => one.kind === "friend").sort(byName);
+      const trophies = mine.filter((one) => one.kind === "trophy").sort(byName);
       const view = seatView(snapshot, seat.id);
       /**
        * Sorted for reading, not kept in the order somebody arranged them.
@@ -1381,7 +1437,26 @@ export async function runCommand(
       const carried = items.filter((one) => one.slot === null).sort(byName);
       return [
         `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
-        `Sword ${seat.sword_own}  Magic ${seat.magic_own}  Life ${seat.life}  Gold ${seat.gold}`,
+        /**
+         * Own points and the total they come to, which 1.5 and 2.5 make two
+         * different numbers. Only the first was printed, so a Pasterz lending a
+         * point of each was invisible: the card was in the list and every
+         * figure on the screen carried on as though it were not.
+         */
+        `Sword ${seat.sword_own} (${view.parametr.miecz})  ` +
+          `Magic ${seat.magic_own} (${view.parametr.magia})  ` +
+          `Life ${seat.life}  Gold ${seat.gold}`,
+        /**
+         * And what those become in a fight, when they differ.
+         *
+         * A Miecz, a Krzyżowiec and a Giermek all count "podczas walki" and
+         * nowhere else, and the Rycerz replaces the pair outright — none of
+         * which the line above can show, because none of it is true until
+         * somebody swings.
+         */
+        ...(view.walka.miecz !== view.parametr.miecz || view.walka.magia !== view.parametr.magia
+          ? [`In a fight: Sword ${view.walka.miecz}  Magic ${view.walka.magia}${championLine(view)}`]
+          : []),
         `Nature: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
         // Worn and carried are different places — 5.1 and the slot variant both
         // turn on which — and listing a Hełm you are wearing under "Pack" said
@@ -1400,6 +1475,14 @@ export async function runCommand(
           : []),
         `Pack ${view.carried}/${view.carryLimit} (${eqModeOf(snapshot.game)}): ` +
           `${carried.length ? carried.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,
+        // 6.2: friends lie face up, so everyone may read them — no `own` gate.
+        ...(friends.length
+          ? [`Friends: ${friends.map((one) => cardName(one.card_id)).join(", ")}`]
+          : []),
+        // 1.4: held to be traded for Miecz, which is not the same as carried.
+        ...(trophies.length
+          ? [`Trophies: ${trophies.map((one) => cardName(one.card_id)).join(", ")}`]
+          : []),
         own
           ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`
           : `Zaklęcia: ${spells.length} (face down — 9.3)`,

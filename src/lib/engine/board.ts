@@ -316,6 +316,30 @@ export function ringOf(fieldId: FieldId): readonly BoardField[] | null {
 }
 
 /**
+ * How many Obszary apart two fields are, walking the ring the short way.
+ *
+ * Null when they are not on the same ring, and that is the honest answer rather
+ * than a large number: the rings are joined by Przeprawy and the Kamienny Most,
+ * which are crossings with their own rules and prices, not steps. "Oddalony
+ * najwyżej o 3 Obszary" is a distance somebody walks, and nobody walks from the
+ * Górny Krąg to the Środkowy — they attempt a Przeprawa, which is a turn's work
+ * and can fail. Counting one as a step would put half the board within three of
+ * everywhere.
+ *
+ * Both directions are measured because the ring is a circle and the rulebook
+ * never says which way round to count.
+ */
+export function fieldsApart(from: FieldId, to: FieldId): number | null {
+  const ring = ringOf(from);
+  if (!ring || ringOf(to) !== ring) return null;
+  const a = ring.findIndex((field) => field.id === from);
+  const b = ring.findIndex((field) => field.id === to);
+  if (a === -1 || b === -1) return null;
+  const round = Math.abs(a - b);
+  return Math.min(round, ring.length - round);
+}
+
+/**
  * The same ring as a list of ids, for the cards that let a character pick.
  *
  * "przenieś się na dowolny Obszar w tym Kręgu" is a `dowolne-w-kregu`

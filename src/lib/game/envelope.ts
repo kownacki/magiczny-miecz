@@ -1,6 +1,7 @@
 /** What one device is sent, and everything the others are not. */
 
 import { visibleTo } from "@/lib/engine/holdings";
+import { fightsForYou, heldAbilities } from "@/lib/engine/abilities";
 import { bonusFrom, markOf } from "@/lib/engine/status";
 import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
@@ -304,6 +305,20 @@ export function envelopeFor(
         spell_capacity: view.spellCapacity,
         sword_in_fight: view.walka.miecz + spell.miecz,
         magic_in_fight: view.walka.magia + spell.magia,
+        /**
+         * The Przyjaciel doing the fighting, when it is not the character.
+         *
+         * Only the Rycerz, and the browser is told rather than left to work it
+         * out, because the number above is the thing that needs explaining: his
+         * 3 and 3 replace the character's own, which for most Postacie is a
+         * figure that goes *down* when he joins. Unexplained that reads as a
+         * bug in the app rather than as the card doing what it says.
+         */
+        fights_for_you:
+          fightsForYou(view.abilities) === null
+            ? null
+            : (view.holdings.find((held) => fightsForYou(heldAbilities([held.cardId])))?.cardId ??
+              null),
         // What a player is shown beside their name, already worked out: the
         // browser gets marks, not a modelling problem.
         effects: view.statuses.map((status) => ({

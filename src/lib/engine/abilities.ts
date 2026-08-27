@@ -166,8 +166,22 @@ export type Ability =
   | { kind: "przeprawa-wszedzie"; obstacle: "trzesawiska" | "lodowy-las" }
   /** Księżniczka at the Zamek, Władca at the Twierdza: up to two Życia a visit. */
   | { kind: "uzdrowienie"; field: FieldId; upTo: number }
-  /** Rycerz fights in your place, with his own points and none of your things. */
-  | { kind: "walczy-za-ciebie"; miecz: number; magia: number }
+  /**
+   * Fights with its own points rather than lending you any — and the two cards
+   * that do it are not doing the same thing.
+   *
+   * The Rycerz stands in for you at home: "będzie walczył zamiast ciebie w
+   * każdej walce (również magicznej)", so his figure replaces yours whenever
+   * anything attacks you. The Poszukiwacz Przygód never stands in for anybody.
+   * He "posiada 3 punkty Miecza" and spends them on the raid you send him out
+   * on, up to three Obszary away, and your own fights are still yours.
+   *
+   * `tylkoWyprawa` is the difference, and it has to be stated rather than
+   * inferred: without it, reading the registry for "who fights for me" found
+   * the Poszukiwacz too and quietly dropped a Barbarzyńca from Miecz 5 to the
+   * 3 his friend raids with.
+   */
+  | { kind: "walczy-za-ciebie"; miecz: number; magia: number; tylkoWyprawa?: true }
   /** The Magiczny Miecz cannot be picked up in the lower ring. */
   | { kind: "niedostepny"; region: "dolny" }
   /**
@@ -451,7 +465,7 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
    */
   "poszukiwacz-przygod": [
     // "posiada 3 punkty Miecza" — the strength it raids with, which nothing said.
-    { kind: "walczy-za-ciebie", miecz: 3, magia: 0 },
+    { kind: "walczy-za-ciebie", miecz: 3, magia: 0, tylkoWyprawa: true },
     { kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true },
   ],
   opiekun: [
@@ -720,10 +734,32 @@ export function opensTheWayTo(
 export function fightsForYou(
   abilities: readonly Ability[],
 ): { miecz: number; magia: number } | null {
-  const stand = abilities.find((ability) => ability.kind === "walczy-za-ciebie");
+  const stand = abilities.find(
+    (ability) => ability.kind === "walczy-za-ciebie" && !ability.tylkoWyprawa,
+  );
   return stand && stand.kind === "walczy-za-ciebie"
     ? { miecz: stand.miecz, magia: stand.magia }
     : null;
+}
+
+/**
+ * The friend you can send out, and what he is worth when he gets there.
+ *
+ * The other half of `walczy-za-ciebie`: a raider fights on his own account at
+ * arm's length instead of standing in front of you, so he is found by a
+ * different question and never answers this one at home.
+ */
+export function raidsForYou(
+  cardIds: readonly string[],
+): { cardId: string; miecz: number; magia: number } | null {
+  for (const cardId of cardIds) {
+    for (const ability of abilitiesOf(cardId)) {
+      if (ability.kind === "walczy-za-ciebie" && ability.tylkoWyprawa) {
+        return { cardId, miecz: ability.miecz, magia: ability.magia };
+      }
+    }
+  }
+  return null;
 }
 
 /** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */

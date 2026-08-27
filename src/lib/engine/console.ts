@@ -185,6 +185,7 @@ export type Command =
   | { kind: "fight"; cardId: string | null }
   | { kind: "escape" }
   | { kind: "attack"; who: string }
+  | { kind: "raid"; who: string }
   /* What you carry. A name, because a holding's id is a uuid nobody can type. */
   | { kind: "take"; name: string }
   | { kind: "putdown"; name: string }
@@ -476,6 +477,17 @@ export const COMMANDS: CommandSpec[] = [
     when: ["field"],
     usage: "attack <player>",
     summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
+    needs: "play",
+  },
+  {
+    // Named for what it is rather than for the card that does it: "wyprawa" is
+    // the word the Poszukiwacz's own text reaches for, and a second card that
+    // sends somebody out would use this verb rather than earn a new one.
+    name: "raid",
+    aliases: [],
+    when: ["field"],
+    usage: "raid <player>",
+    summary: "send a Przyjaciel to attack up to 3 Obszary away (Poszukiwacz Przygód)",
     needs: "play",
   },
   {
@@ -1142,6 +1154,11 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "attack") {
     return tail ? { ok: { kind: "attack", who: tail } } : needs("attack", "Attack whom?");
   }
+  if (word === "raid") {
+    return tail
+      ? { ok: { kind: "raid", who: tail } }
+      : needs("raid", "Send your Przyjaciel against whom?");
+  }
   if (word === "fight") {
     // Nothing named takes whatever is waiting, which is the usual case: a Wróg
     // attacks the character who drew him (16.2), and there is only one of him.
@@ -1517,6 +1534,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   fight: "play",
   escape: "play",
   attack: "play",
+  raid: "play",
   take: "play",
   putdown: "play",
   equip: "play",

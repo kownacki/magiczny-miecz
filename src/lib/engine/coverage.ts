@@ -57,15 +57,11 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   mul: "Tracąc Muła, zostawiasz na Obszarze niesione przez niego Przedmioty.",
   zaprzeg: "Tracąc Zaprzęg, zostawiasz na Obszarze to, czego sam nie uniesiesz.",
   "magiczna-sakwa": "Utrata Sakwy to utrata wszystkiego, co w niej niesiono.",
-  "bojowy-rumak": "Ginie zamiast ciebie tylko raz — potem odłóż jego Kartę.",
 
   // --- friends --------------------------------------------------------------
   chochlik: "Kosztuje 1 punkt Życia na wstępie. Pozwala obejrzeć 2 Karty Zaklęć i wybrać.",
   krzyzowiec: "Ma przy sobie 1 Zaklęcie, którego użyje na twoje życzenie.",
-  giermek: "Po przegranej rzuć kostką: 1 oznacza, że ginie Giermek zamiast twojego punktu.",
   alchemik: "Zamiana jest nieodwracalna — Karta Przedmiotu wraca na stos.",
-  "poszukiwacz-przygod":
-    "Sam atakuje Postać lub Wroga do 3 Obszarów stąd, własnymi 3 punktami Miecza.",
   tragarz: "Bez zapłaty 1 Sz. Z. odchodzi. Tracąc go, tracisz też niesione Przedmioty.",
   ksiezniczka: "Możesz oddać jej Kartę w Zamku za 3 Sztuki Złota.",
   wladca: "Możesz oddać jego Kartę w Twierdzy za 3 Sztuki Złota.",

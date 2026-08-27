@@ -5,6 +5,7 @@ import { findGame, verifyActor } from "@/lib/game/store";
 import { mayAct } from "@/lib/game/permission";
 import {
   attackSeat,
+  sendRaider,
   beginFight,
   crossRing,
   fightGuardian,
@@ -110,6 +111,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "attack":
         await attackSeat(game.id, String(body.targetSeatId));
+        break;
+      /**
+       * The Poszukiwacz Przygód, sent out at something up to three Obszary off.
+       * Either a Postać or a Wróg lying on the board, which is why there are two
+       * fields and exactly one of them is expected to be set.
+       */
+      case "raid":
+        await sendRaider(
+          game.id,
+          body.targetSeatId !== undefined
+            ? { targetSeatId: String(body.targetSeatId) }
+            : { fieldCardId: String(body.raidFieldCardId) },
+        );
         break;
       case "cross": {
         // The Trzęsawiska are settled by the app from the dice; the Lodowy Las

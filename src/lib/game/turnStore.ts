@@ -51,6 +51,7 @@ import {
 } from "./commands/effects";
 import {
   attackSeat as attackSeatOn,
+  sendRaider as sendRaiderOn,
   beginFight as beginFightOn,
   castSpell as castSpellOn,
   escape as escapeOn,
@@ -876,6 +877,20 @@ export async function reviveCharacter(gameId: string, seatId: string): Promise<s
  */
 export async function attackSeat(gameId: string, targetSeatId: string): Promise<void> {
   await change(gameId, attackSeatOn, { targetSeatId });
+}
+
+/**
+ * Sends the Poszukiwacz Przygód out at somebody up to three Obszary off.
+ *
+ * Separate from `attackSeat` because it is not the same fight: the character
+ * stays where they are, the friend fights with his own three points, and losing
+ * costs the friend rather than a point of Życie.
+ */
+export async function sendRaider(
+  gameId: string,
+  target: { targetSeatId?: string; fieldCardId?: string },
+): Promise<void> {
+  await change(gameId, sendRaiderOn, target);
 }
 
 

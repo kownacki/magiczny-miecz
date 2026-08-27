@@ -109,6 +109,18 @@ export interface Fight {
    */
   guardian?: GuardianFight;
   /**
+   * Set when a Przyjaciel was sent out to fight this rather than the character
+   * fighting it (the Poszukiwacz Przygód, "zlecić temu Przyjacielowi, by
+   * zaatakował Postać lub Wroga, oddalonego najwyżej o 3 Obszary").
+   *
+   * Carried on the fight because it changes who pays at the end of it: "w
+   * przypadku porażki ty nie tracisz punktu Życia, ale twój Przyjaciel ginie".
+   * The character is not in this fight and cannot be hurt by losing it, so the
+   * usual point of Życie is never spent — which is a fact about how the fight
+   * started, and by the time it is settled there is nothing else left to say so.
+   */
+  raid?: { cardId: string };
+  /**
    * The die that decides the guardian's own strength, where the board makes it
    * a roll rather than a number: "1 - 5; 2 - 6; ... 6 - 10" at both bridge
    * entrances. Null while it is still owed. Absent when the creature has a
@@ -367,6 +379,8 @@ export function startFight(
      * something to look up.
      */
     settles?: string[];
+    /** The Przyjaciel doing the fighting, when the character sent one out. */
+    raid?: { cardId: string };
   },
   playerTotals: { miecz: number; magia: number },
 ): TurnPhase {
@@ -380,6 +394,7 @@ export function startFight(
       cardName: card.cardName,
       ...(card.granted ? { granted: true } : {}),
       ...(card.opponentSeat !== undefined ? { opponentSeat: card.opponentSeat } : {}),
+      ...(card.raid ? { raid: card.raid } : {}),
       kind,
       enemyTotal,
       playerTotal: kind === "magical" ? playerTotals.magia : playerTotals.miecz,

@@ -387,6 +387,15 @@ export function describe(
       return line(`${who}: ucieczka się nie udaje.`);
     case "shielded":
       return line(data.saved ? `${who} osłania się przed ciosem.` : `${who} nie osłania się przed ciosem.`);
+    // The die is worth printing: the Giermek dies only on a 1, so a table that
+    // did not see the number has no way to tell a sacrifice from a bookkeeping
+    // slip. The Rumak rolls nothing and says nothing.
+    case "died-for-you":
+      return line(
+        data.die === null
+          ? `${card(data.cardId)} ginie zamiast ${who}.`
+          : `${card(data.cardId)} ginie zamiast ${who} (rzut: ${data.die}).`,
+      );
 
     // — what people have ————————————————————————————————————————————
     case "taken":

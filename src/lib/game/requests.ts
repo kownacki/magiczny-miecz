@@ -80,6 +80,8 @@ export interface Requests {
     strengthRoll: number;
     succeeded: boolean;
     targetSeatId: string;
+    /** A Wróg left lying on an Obszar, when a raid goes at one of those instead. */
+    raidFieldCardId: string;
     total: number;
     value: number;
     viaBridge: boolean;
