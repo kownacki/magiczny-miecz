@@ -124,6 +124,22 @@ function said(did: readonly string[], pending: boolean): string {
   return pending ? `${lines}\nWciąż czeka — odpowiedz jeszcze raz (\`look\`).` : lines;
 }
 
+/**
+ * The turn's phase in the language everything else here is read in.
+ *
+ * The rule this console draws is that what you *type* is English and what you
+ * *read* keeps the name printed on it. A phase is read, and it was coming out
+ * as `Faza: field` in the middle of a Polish sentence.
+ */
+const PHASE: Record<string, string> = {
+  roll: "rzut",
+  move: "ruch",
+  field: "obszar",
+  fight: "walka",
+  bridge: "most",
+  end: "koniec tury",
+};
+
 /** The question the turn is stuck on, for `look`. */
 function waitingOn(turnState: unknown): string[] {
   const state = turnState as {
@@ -161,6 +177,18 @@ export interface Actor {
  *
  * Returns the line to print back. Refusals come up as thrown errors, which the
  * route turns into the same message any other refusal gets.
+ *
+ * # Which language a reply is in
+ *
+ * The verbs that *play* answer in Polish, and the ones that overrule answer in
+ * English. That is the capability split doing double duty rather than a second
+ * rule to remember: a play reply is read by somebody playing a Polish game, and
+ * sits beside a journal that has always been Polish — while `kill`, `give` and
+ * `teleport` are developer controls and read like the function names they are.
+ *
+ * What is typed stays English throughout, and a thing that has a printed name
+ * keeps it. That was always the rule; this only settles which side a *reply*
+ * falls on, after `roll` spent a while answering "Rzut: 3. Reaches: Kurhan".
  */
 export async function runCommand(
   gameId: string,
@@ -557,7 +585,7 @@ export async function runCommand(
         seat.id,
       );
       const after = (await seatsFor(gameId)).find((one) => one.id === seat.id);
-      return `${named(seat)} plays ${characterName(after?.character_id ?? null)}.`;
+      return `${named(seat)} gra jako ${characterName(after?.character_id ?? null)}.`;
     }
 
     /**
@@ -752,7 +780,7 @@ export async function runCommand(
 
     case "endturn":
       await finishTurn(gameId);
-      return "Turn passed.";
+      return "Tura przekazana.";
 
     /* ----------------------------------------------------------------------
      * Playing. Everything below is the game as printed — the same functions
@@ -778,18 +806,18 @@ export async function runCommand(
         options?: { fieldId: string; fieldName: string }[];
       };
       const where = (state.options ?? []).map((one) => one.fieldName).join(", ");
-      return `Rzut: ${state.roll ?? "?"}. ${where ? `Reaches: ${where}.` : "Nowhere to go."}`;
+      return `Rzut: ${state.roll ?? "?"}.${where ? ` Dokąd: ${where}.` : " Nie ma dokąd pójść."}`;
     }
 
     case "move": {
       await moveTo(gameId, command.fieldId);
-      return `${named(seatOf(null))} walks to ${fieldName(command.fieldId)}.`;
+      return `${named(seatOf(null))} idzie na ${fieldName(command.fieldId)}.`;
     }
 
     case "draw": {
       const { card, recycled } = await drawCard(gameId, null);
-      const turned = recycled ? " The pile was turned over." : "";
-      return card ? `Drawn: ${card.name}.${turned}` : `Nothing to draw.${turned}`;
+      const turned = recycled ? " Stos przetasowany." : "";
+      return card ? `Dobrane: ${card.name}.${turned}` : `Nie ma czego dobierać.${turned}`;
     }
 
     /**
@@ -843,25 +871,55 @@ export async function runCommand(
 
     case "look": {
       const snapshot = await activeStore().load(gameId);
-      const state = snapshot.game.turn_state as {
+      const game = snapshot.game;
+
+      /**
+       * The poczekalnia is a different question, and used to get the turn's
+       * answer: "Tura 0 — nobody / Obszar: — / Faza: rzut", which is three
+       * facts about a game that has not started. What somebody wants here is
+       * who is at the table and what is still owed before `start` will work.
+       */
+      if (game.status !== "playing") {
+        const waiting = snapshot.users.map((who) => {
+          const seat = snapshot.seats.find((one) => one.seat_index === who.seat_index);
+          const has = seat?.character_id ? characterName(seat.character_id) : "bez Postaci";
+          return `  ${who.name ?? "?"} — ${has}${who.ready ? " · gotów" : ""}`;
+        });
+        const owed = snapshot.users.filter((who) => {
+          const seat = snapshot.seats.find((one) => one.seat_index === who.seat_index);
+          return !seat?.character_id || !who.ready;
+        });
+        return [
+          `Poczekalnia — ${snapshot.users.length} przy stole.`,
+          ...waiting,
+          owed.length === 0
+            ? "Wszyscy gotowi — `start` zaczyna grę."
+            : `Czekamy na: ${owed.map((who) => who.name ?? "?").join(", ")}.`,
+        ].join("\n");
+      }
+
+      const state = game.turn_state as {
         phase?: string;
         roll?: number;
         options?: { fieldId: string; fieldName: string }[];
       };
-      const active = snapshot.seats.find((one) => one.seat_index === snapshot.game.active_seat);
+      const active = snapshot.seats.find((one) => one.seat_index === game.active_seat);
       const here = snapshot.fieldCards.filter((one) => one.field_id === active?.field_id);
       const standing = snapshot.seats.filter(
         (one) => one.field_id === active?.field_id && !one.eliminated,
       );
+      const phase = state.phase ?? "";
       return [
-        `Tura ${snapshot.game.turn} — ${active ? named(active) : "nobody"}`,
+        `Tura ${game.turn} — ${active ? named(active) : "nikt"}`,
         `Obszar: ${fieldName(active?.field_id ?? null)}`,
-        `Faza: ${state.phase ?? "?"}${state.roll ? ` (rzut ${state.roll})` : ""}`,
+        `Faza: ${PHASE[phase] ?? phase}${state.roll ? ` (rzut ${state.roll})` : ""}`,
         ...(state.options?.length
           ? [`Dokąd: ${state.options.map((one) => one.fieldName).join(", ")}`]
           : []),
-        ...(here.length ? [`Na Obszarze: ${here.map((one) => cardName(one.card_id)).join(", ")}`] : []),
-        ...waitingOn(snapshot.game.turn_state),
+        ...(here.length
+          ? [`Na Obszarze: ${here.map((one) => cardName(one.card_id)).join(", ")}`]
+          : []),
+        ...waitingOn(game.turn_state),
         ...(standing.length > 1
           ? [`Stoją tu: ${standing.map((one) => named(one)).join(", ")}`]
           : []),
