@@ -23,6 +23,8 @@ interface Rule {
   id: string | null;
   paras: string[];
   examples: string[];
+  /** What the transcriber flagged about the printed page — see `Note`. */
+  notes: string[];
 }
 interface Chapter {
   key: string;
@@ -159,7 +161,7 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                   )}
                   {rule.paras.map((para, n) => (
                     <p key={n} className="mb-2 text-[13px] leading-relaxed text-ink/90">
-                      <WithRules text={para} />
+                      <Prose text={para} />
                     </p>
                   ))}
                   {rule.examples.map((example, n) => (
@@ -170,7 +172,13 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                       className="mb-2 border-l-2 border-edge pl-3 text-[12px] leading-relaxed text-muted"
                     >
                       <span className="text-ochre/70">Przykład: </span>
-                      <WithRules text={example} />
+                      <Prose text={example} />
+                    </p>
+                  ))}
+                  {rule.notes.map((note, n) => (
+                    <p key={`note-${n}`} className="mt-2 text-[11px] leading-snug text-muted/70">
+                      <span className="text-muted/50">Uwaga do transkrypcji: </span>
+                      {note}
                     </p>
                   ))}
                 </div>
@@ -183,6 +191,34 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
         <p className="text-[13px] text-muted">Nic takiego nie ma w Instrukcji.</p>
       )}
     </div>
+  );
+}
+
+/**
+ * A paragraph of the book, with its two kinds of markup honoured.
+ *
+ * The transcript is Markdown and keeps the printed emphasis — **PLANSZA**,
+ * **KARTY ZDARZEŃ (165 sztuk)** — which is how the book introduces each thing
+ * in the box. Rendered raw, those asterisks were on screen: the app was showing
+ * its own file format to a player. So the bold is bold, and each half still
+ * goes through `WithRules`, because a rule number can fall on either side of it.
+ */
+function Prose({ text }: { text: string }) {
+  const parts = text.split(/\*\*/);
+  if (parts.length === 1) return <WithRules text={text} />;
+  return (
+    <>
+      {parts.map((part, at) =>
+        // Odd pieces are what sat between a pair of asterisks.
+        at % 2 === 1 ? (
+          <strong key={at} className="font-semibold text-ink">
+            <WithRules text={part} />
+          </strong>
+        ) : (
+          <WithRules key={at} text={part} />
+        ),
+      )}
+    </>
   );
 }
 

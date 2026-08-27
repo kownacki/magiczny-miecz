@@ -39,24 +39,46 @@ let rule = null;
 
 /** A `### 5.3` heading, or `### 12.1a` — the book has a few lettered ones. */
 const RULE_HEADING = /^###\s+(\d+\.\d+[a-z]?)\.?\s*$/;
-/** `## 5. PRZEDMIOTY.` — numbered — or `## PRZYGOTOWANIE DO GRY`, which is not. */
-const CHAPTER_HEADING = /^##\s+(?:(\d+)\.\s*)?(.+?)\.?\s*$/;
+/**
+ * `## 5. PRZEDMIOTY.` — numbered — or `## PRZYGOTOWANIE DO GRY`, which is not.
+ *
+ * The title keeps whatever punctuation the book gave it. Six of the chapters
+ * print a full stop after the name and the rest do not, and tidying that up
+ * here would be the transcript's one job undone: this is what the page says.
+ */
+const CHAPTER_HEADING = /^##\s+(?:(\d+)\.\s+)?(.+?)\s*$/;
 
 const shut = () => {
-  if (rule && (rule.paras.length > 0 || rule.examples.length > 0)) chapter?.rules.push(rule);
+  if (rule && (rule.paras.length > 0 || rule.examples.length > 0 || rule.notes.length > 0))
+    chapter?.rules.push(rule);
   rule = null;
 };
 
 for (const raw of body.split("\n")) {
   const line = raw.trim();
   if (line === "" || line === "# INSTRUKCJA") continue;
-  // Notes to a reader of the scans, not to a player.
-  if (line.startsWith("<!--")) continue;
+  /**
+   * The transcriber's notes — kept, not dropped.
+   *
+   * They were skipped as being about the scans rather than about the game, and
+   * most of them are: "literówka w oryginale", "transkrybowane dosłownie". But
+   * two are not. One says a sentence in 11.3 stops mid-air because that is
+   * where the page ends, and another that a printed table has a column too few
+   * — and a reader who meets either without the note thinks the app has lost
+   * something. A transcript that hides where it is uncertain is worse than one
+   * that says so.
+   */
+  if (line.startsWith("<!--")) {
+    const note = line.replace(/^<!--\s*/, "").replace(/\s*-->$/, "");
+    if (rule) rule.notes.push(note);
+    else if (chapter) chapter.rules.push({ id: null, paras: [], examples: [], notes: [note] });
+    continue;
+  }
 
   const asRule = line.match(RULE_HEADING);
   if (asRule) {
     shut();
-    rule = { id: asRule[1], paras: [], examples: [] };
+    rule = { id: asRule[1], paras: [], examples: [], notes: [] };
     continue;
   }
 
@@ -68,13 +90,13 @@ for (const raw of body.split("\n")) {
     chapters.push(chapter);
     // An unnumbered chapter is prose with no rule numbers in it, so it gets one
     // nameless rule to hold the prose rather than a special case downstream.
-    rule = number ? null : { id: null, paras: [], examples: [] };
+    rule = number ? null : { id: null, paras: [], examples: [], notes: [] };
     continue;
   }
 
   if (!chapter) continue;
   // Prose before the first `###` in a numbered chapter — rare, but 20. has it.
-  if (!rule) rule = { id: null, paras: [], examples: [] };
+  if (!rule) rule = { id: null, paras: [], examples: [], notes: [] };
 
   if (line.startsWith(">")) {
     // "> Przykład: …" — the book's worked examples, which are the best part of
@@ -99,5 +121,6 @@ const ruleCount = chapters.reduce((n, one) => n + one.rules.filter((r) => r.id).
 writeFileSync(OUT, `${JSON.stringify(chapters, null, 2)}\n`);
 console.log(
   `wrote ${OUT}: ${chapters.length} rozdziałów, ${ruleCount} numbered rules, ` +
-    `${chapters.reduce((n, c) => n + c.rules.reduce((m, r) => m + r.examples.length, 0), 0)} przykładów`,
+    `${chapters.reduce((n, c) => n + c.rules.reduce((m, r) => m + r.examples.length, 0), 0)} przykładów, ` +
+    `${chapters.reduce((n, c) => n + c.rules.reduce((m, r) => m + r.notes.length, 0), 0)} uwag`,
 );
