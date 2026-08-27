@@ -139,7 +139,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
    * character who turns Zła does not merely stop counting it — it leaves their
    * hands at once, and 12.1 says where it lands.
    */
-  it("puts down what the new Natura may not possess", () => {
+  it("puts down what the new Natura may not possess, in klasyczny", () => {
     const held = [
       aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" }),
       aHolding({ id: "h-helm", card_id: "helm", kind: "item" }),
@@ -151,6 +151,28 @@ describe("zmiana Natury (7.2-7.4)", () => {
     expect(writes.fieldCards?.insert).toEqual([
       { field_id: "mroczna-polana", card_id: "swieta-wlocznia", granted: false },
     ]);
+  });
+
+  /**
+   * And not in slotowy, which has already split carrying from using.
+   *
+   * 5.3 forbids possession *because* it forbids use, and in the variant a card
+   * in the Plecak is carried and not used. So it stays — red, inert, and
+   * refused by `equipCard` — and is still named, because naming it is what
+   * turns the tile red.
+   */
+  it("leaves it in the pack where the variant has places to put things", () => {
+    const held = [aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" })];
+    const slotted = aTable({
+      game: { turn: 5, eq_mode: "slots" },
+      seats: [aSeat({ nature: "good" })],
+      holdings: held,
+    });
+    const { writes, result } = changeNature(slotted, { seatId: "seat-a", nature: "evil" });
+    expect(result.nowForbidden).toEqual(["swieta-wlocznia"]);
+    expect(writes.holdings).toBeUndefined();
+    expect(writes.fieldCards).toBeUndefined();
+    expect(writes.journal?.map((row) => row.kind)).toEqual(["nature-change"]);
   });
 
   /**

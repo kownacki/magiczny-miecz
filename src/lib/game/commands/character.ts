@@ -26,7 +26,7 @@ import {
 import type { SeatRow } from "../store";
 import { driverOf } from "./lobby";
 import type { OwedSpells } from "./movement";
-import { seatById } from "./seat";
+import { eqModeOf, seatById } from "./seat";
 
 /** The 27 Karty Postaci, read the same way `turnStore` reads them. */
 const CHARACTERS = charactersData as Character[];
@@ -156,23 +156,38 @@ export function changeNature(
   }
 
   /**
-   * 5.3 forbids *having* the card, not only wearing it.
+   * 5.3 forbids *having* the card — but only where having it is using it.
    *
-   * "Nie może być w posiadaniu" — so a Natura that moves under a Topór does
-   * not merely stop it counting: the card cannot stay in the pack either, and
-   * 5.5 says it goes at once. Trophies are not in this: 1.4 makes a beaten
-   * Wróg's card a token to trade, not a Przedmiot anybody possesses.
+   * "Żadna Postać nie może posiadać Przedmiotów, którymi na mocy zasad nie
+   * wolno się jej posługiwać": possession is forbidden *because* use is, and
+   * in klasyczny those are one thing. Every card a character holds counts, so
+   * a forbidden card in the pack is a contradiction and 7.4 has the only way
+   * out of it — "musi zostać natychmiast odrzucony (5.5)".
+   *
+   * Slotowy is this app's own variant and it has already split the two: a card
+   * in the Plecak is carried and not used, which is the whole point of having
+   * places to put things. There a forbidden card is inert baggage rather than
+   * a contradiction, so it stays where it is — drawn red, lending nothing
+   * through `inEffect`, and refused by `equipCard` if anybody tries to put it
+   * on. Worn when the Natura moved under it, it stays worn and stays dead:
+   * taking it off on the owner's behalf decides something that is theirs.
+   *
+   * This is a departure from 7.4 as printed, and the variant is where it
+   * belongs — klasyczny is the game as the box has it. See docs/COVERAGE.md.
+   *
+   * Trophies are in neither: 1.4 makes a beaten Wróg's card a token to trade,
+   * not a Przedmiot anybody possesses.
    */
-  const losing = snapshot.holdings
+  const barred = snapshot.holdings
     .filter((h) => h.seat_id === seat.id)
     .filter((h) => h.kind === "item" || h.kind === "friend")
     .filter((h) => {
       const card = EVENTS.find((c) => c.id === h.card_id);
-      return card
-        ? !mayHold({ ...card, forbiddenTo: forbiddenFor(card) }, command.nature)
-        : false;
+      return card ? !mayHold({ ...card, forbiddenTo: forbiddenFor(card) }, command.nature) : false;
     });
-  const nowForbidden = losing.map((h) => h.card_id);
+  // Named in both modes — they go red in both — and put down in only one.
+  const nowForbidden = barred.map((h) => h.card_id);
+  const losing = eqModeOf(snapshot.game) === "slots" ? [] : barred;
 
   /**
    * And they land where anything put down lands — 12.1's Obszar, face up for
