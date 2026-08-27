@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
-import { COMMANDS, complete, confirmationFor, parseCommand } from "@/lib/engine/console";
+import {
+  COMMANDS,
+  complete,
+  confirmationFor,
+  parseCommand,
+  type Stage,
+} from "@/lib/engine/console";
 import { LAYER } from "./layers";
 import { AnswersEscape, useDismissable } from "./overlay";
 import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
@@ -33,6 +39,7 @@ export function TestConsole({
   table,
   busy,
   players,
+  stage,
   onClose,
   onRun,
 }: {
@@ -53,6 +60,14 @@ export function TestConsole({
   busy: boolean;
   /** Who is at the table, so a player's name can be finished like a card's. */
   players: string[];
+  /**
+   * Where the game has got to, so Tab offers what would run.
+   *
+   * The same reading `mm` makes, from the same function — a completer that
+   * offered `roll` in a poczekalnia on one surface and not the other would be
+   * two consoles wearing one vocabulary.
+   */
+  stage?: Stage;
   onClose: () => void;
   /** Runs one line and answers with what to print — the reply, or the refusal. */
   onRun: (line: string) => Promise<string>;
@@ -406,7 +421,8 @@ export function TestConsole({
              */
             if (event.key === "Tab") {
               event.preventDefault();
-              const done = complete(line, players);
+              // Everything here is unlocked: this console only opens in test mode.
+              const done = complete(line, players, { stage, testmode: true });
               setLine(done.line);
               if (done.options.length > 0) say(done.options.join("   "));
               return;

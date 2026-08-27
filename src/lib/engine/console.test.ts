@@ -1,8 +1,11 @@
 import { describe as suite, expect, it } from "vitest";
 import {
   COMMANDS,
+  availableIn,
   needsOf,
   permits,
+  stageOf,
+  type Stage,
   complete,
   helpLines,
   confirmationFor,
@@ -313,6 +316,43 @@ suite("playing the game, and overruling it", () => {
     });
     // Nothing to choose is a real answer: the Karczma rolls and does not ask.
     expect(ok("answer")).toEqual({ kind: "answer", card: null, choices: [] });
+  });
+
+  /**
+   * Offering and allowing are different jobs, and only one of them is a rule.
+   *
+   * `availableIn` decides what to put in front of somebody; every command still
+   * refuses for itself at the wrong moment, and *that* is the rule. So a wrong
+   * answer here costs a bad suggestion rather than a bad game — which is the
+   * only reason it is allowed to be as coarse as it is.
+   */
+  it("offers a verb where it belongs and not before", () => {
+    const at = (stage: Stage) => availableIn({ stage }).map((spec) => spec.name);
+    expect(at("lobby")).toContain("ready");
+    expect(at("lobby")).not.toContain("roll");
+    expect(at("lobby")).not.toContain("endturn");
+    expect(at("roll")).toContain("roll");
+    expect(at("roll")).not.toContain("move");
+    expect(at("field")).toContain("answer");
+    // 4.4 lets a player whose Postać died choose again mid-game, so `pick` is
+    // not a poczekalnia verb even though that is where it is usually typed.
+    expect(at("roll")).toContain("pick");
+  });
+
+  it("reads a game as a stage the same way for everybody", () => {
+    expect(stageOf("lobby", "roll")).toBe("lobby");
+    expect(stageOf("playing", "roll")).toBe("roll");
+    expect(stageOf("playing", "field")).toBe("field");
+    // A phase nothing is keyed on is still a phase, and still not the lobby.
+    expect(stageOf("playing", "bridge")).toBe("other");
+    expect(stageOf("playing", undefined)).toBe("other");
+  });
+
+  it("keeps the overrides out of an offer until testmode is on", () => {
+    expect(availableIn({ testmode: false }).map((one) => one.name)).not.toContain("kill");
+    expect(availableIn({ testmode: true }).map((one) => one.name)).toContain("kill");
+    // `help` still lists them: a command you cannot discover does not exist.
+    expect(helpLines(null, { testmode: false }).join("\n")).toContain("kill");
   });
 
   it("does not lock a verb that is the game working", () => {

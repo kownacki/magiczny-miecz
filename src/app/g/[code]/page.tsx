@@ -21,6 +21,7 @@ import {
 import { CardLibrary } from "./card-library";
 import { useTable, type Person } from "./use-table";
 import { TestConsole } from "./console";
+import { stageOf } from "@/lib/engine/console";
 import { TurnFab, owedLabel } from "./turn-fab";
 import { Lobby } from "./lobby";
 import { JoinGate, LeaveButton, ReturnGate, SecondTabNotice, TakeOverGate } from "./door";
@@ -595,6 +596,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           players={seats
             .filter((seat) => seat.character_id)
             .map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`)}
+          stage={stageOf(game.status, game.turn_state.phase)}
           onClose={() => {
             setConsoleOpen(false);
             setFailure(null);

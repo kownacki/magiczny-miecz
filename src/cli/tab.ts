@@ -1,6 +1,6 @@
 /** Tab at a terminal, answered by the same function the browser's console answers it with. */
 
-import { complete } from "@/lib/engine/console";
+import { complete, type Stage } from "@/lib/engine/console";
 
 /**
  * Why this is not just a call to `complete`.
@@ -23,6 +23,8 @@ export function tabFor(
   line: string,
   players: readonly string[],
   local: readonly string[],
+  /** Where the game has got to, so Tab offers what would actually run. */
+  offering: { stage?: Stage; testmode?: boolean } = {},
 ): [string[], string] {
   /**
    * The local words are in the pool, and they are not part of the shared
@@ -33,12 +35,23 @@ export function tabFor(
    * Only while typing the first word: `load AB` is finishing a save code, and
    * nothing here knows those.
    */
-  if (!line.includes(" ")) {
-    const hits = local.filter((word) => word.startsWith(line.toLowerCase()));
-    if (hits.length > 0) return [hits.map((word) => `${word} `), line];
-  }
+  const localHits = line.includes(" ")
+    ? []
+    : local.filter((word) => word.startsWith(line.toLowerCase()));
 
-  const { line: filled, options } = complete(line, players);
+  const { line: filled, options } = complete(line, players, offering);
+
+  /**
+   * An empty line is asked about both halves at once.
+   *
+   * Short-circuiting to the local words whenever one matched meant Tab on a
+   * bare prompt listed `new`, `load`, `saves` and nothing else — every local
+   * word starts with "", so the game's own vocabulary never got a turn.
+   */
+  if (localHits.length > 0) {
+    const also = line === "" ? options.filter((one) => !localHits.includes(one)) : [];
+    return [[...localHits, ...also].map((word) => `${word} `), line];
+  }
   if (options.length === 0) return [filled === line ? [] : [filled], line];
 
   const head = filled.slice(0, filled.length - sharedTail(filled, options).length);

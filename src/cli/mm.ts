@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { helpLines, parseCommand, permits } from "@/lib/engine/console";
 import { tabFor } from "./tab";
+import { stageOf, type Stage } from "@/lib/engine/console";
 import { runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
 import { deleteSave, homeDir, listSaves, newSave, openSave } from "@/lib/game/saves";
@@ -66,6 +67,13 @@ let leaving = false;
  * synchronous, and the answer only changes when a command changes it.
  */
 let players: string[] = [];
+/**
+ * Where the game has got to, for Tab.
+ *
+ * Cached beside the names and for the same reason: readline's completer cannot
+ * await, and this only changes when a command changes it.
+ */
+let stage: Stage = "lobby";
 
 /**
  * Opened after the startup reads, not before.
@@ -86,10 +94,17 @@ function say(text: string): void {
  * The table: opening one, and finding the one to open.
  * ----------------------------------------------------------------------- */
 
-async function knowPlayers(): Promise<void> {
-  players = table
-    ? (await usersFor(table.gameId)).map((one) => one.name).filter((one): one is string => !!one)
-    : [];
+async function knowTable(): Promise<void> {
+  if (!table) {
+    players = [];
+    stage = "lobby";
+    return;
+  }
+  players = (await usersFor(table.gameId))
+    .map((one) => one.name)
+    .filter((one): one is string => !!one);
+  const game = (await activeStore().load(table.gameId)).game;
+  stage = stageOf(game.status, (game.turn_state as { phase?: string }).phase);
 }
 
 async function openTable(code: string): Promise<void> {
@@ -97,7 +112,7 @@ async function openTable(code: string): Promise<void> {
   setStore(store);
   table = { code, gameId, tables };
   announced = null;
-  await knowPlayers();
+  await knowTable();
   say(`Stół ${code}.`);
   await show();
 }
@@ -111,7 +126,7 @@ async function makeTable(names: string[]): Promise<void> {
   for (const name of rest) await joinGame(gameId, name, null, false, null, memoryHandle(tables));
   table = { code, gameId, tables };
   announced = null;
-  await knowPlayers();
+  await knowTable();
   say(`Stół ${code} — ${names.join(", ")}.`);
   say("Każdy wybiera Postać (`pick MAGOG`), potem `ready`, potem `start`.");
   await show();
@@ -231,7 +246,7 @@ async function run(line: string): Promise<void> {
   try {
     say(await runCommand(table!.gameId, { userId: who.userId, seatId: who.seatId }, parsed.ok));
     // `rename`, `kick` and `seat` all change who Tab should offer.
-    await knowPlayers();
+    await knowTable();
   } catch (error) {
     // The message is the game refusing something and belongs on screen; the
     // stack is a bug and belongs in a file.
@@ -270,7 +285,11 @@ async function local(line: string): Promise<boolean> {
       return true;
     case "testmode":
       testmode = tail.toLowerCase() !== "off";
-      say(testmode ? "Tryb testowy włączony — komendy łamiące zasady są dostępne." : "Tryb testowy wyłączony.");
+      say(
+        testmode
+          ? "Tryb testowy włączony — komendy łamiące zasady są dostępne."
+          : "Tryb testowy wyłączony.",
+      );
       return true;
     default:
       return false;
@@ -282,7 +301,7 @@ async function main(): Promise<void> {
   rl = createInterface({
     input: stdin,
     output: stdout,
-    completer: (line: string) => tabFor(line, players, LOCAL),
+    completer: (line: string) => tabFor(line, players, LOCAL, { stage, testmode }),
   });
 
   say("Magiczny Miecz — konsola.");

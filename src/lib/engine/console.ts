@@ -35,6 +35,15 @@ export interface CommandSpec {
   usage: string;
   summary: string;
   /**
+   * When it is worth offering, or absent for "whenever".
+   *
+   * Only the verbs that are genuinely stage-bound carry one — `roll` before the
+   * move, `answer` on an Obszar that asked something. The overrides mostly do
+   * not: `kill` and `give` exist to put a table into a state it could not reach
+   * on its own, so restricting when they may be reached for would defeat them.
+   */
+  when?: readonly Stage[];
+  /**
    * Whether this is playing the game or overruling it.
    *
    * Required rather than defaulted, so a verb cannot be added without somebody
@@ -52,6 +61,33 @@ export interface CommandSpec {
 
 /** What a line needs before it may run. */
 export type Capability = "play" | "testmode";
+
+/**
+ * Where the game has got to, as far as *offering* a command is concerned.
+ *
+ * Coarser than the turn state on purpose. This decides what to put in front of
+ * somebody, not what to allow: every command still refuses for itself at the
+ * wrong moment — `roll` throws "Nie czas na rzut" — and that refusal is the
+ * rule. This is the difference between a shell offering a filename and the
+ * program deciding whether it can open it, and it is why a wrong answer here
+ * costs a bad suggestion rather than a bad game.
+ */
+export type Stage = "lobby" | "roll" | "move" | "field" | "fight" | "other";
+
+/**
+ * A game read as a stage, from the two plain values that decide it.
+ *
+ * Takes the status and the phase rather than a game row, so the engine stays
+ * ignorant of the store — and so both surfaces reach the same answer through
+ * the same function. Two readings of "where has this got to" would be two
+ * consoles wearing one vocabulary.
+ */
+export function stageOf(status: string, phase: string | undefined): Stage {
+  if (status !== "playing") return "lobby";
+  return phase === "roll" || phase === "move" || phase === "field" || phase === "fight"
+    ? phase
+    : "other";
+}
 
 /** Which parameter a stat command moves. The column names, as the store knows them. */
 export type StatName = "sword" | "magic" | "life" | "gold";
@@ -186,6 +222,7 @@ export const COMMANDS: CommandSpec[] = [
    * ----------------------------------------------------------------------- */
   {
     name: "ready",
+    when: ["lobby"],
     aliases: ["unready"],
     usage: "ready [player]",
     summary: "say you have chosen — `unready` takes it back",
@@ -193,6 +230,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "start",
+    when: ["lobby"],
     aliases: [],
     usage: "start",
     summary: "begin the game; everyone who has a Postać must be ready",
@@ -200,6 +238,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "roll",
+    when: ["roll"],
     aliases: [],
     usage: "roll",
     summary: "throw the die for your move (10.2)",
@@ -207,6 +246,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "move",
+    when: ["move"],
     aliases: ["walk"],
     usage: "move Karczma",
     summary: "walk the roll out and stand there (10.2) — `look` lists where it reaches",
@@ -214,6 +254,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "draw",
+    when: ["field"],
     aliases: [],
     usage: "draw",
     summary: "take what the Obszar you are standing on owes you (13.4)",
@@ -221,6 +262,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "answer",
+    when: ["field"],
     aliases: ["a"],
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
@@ -397,7 +439,15 @@ export const COMMANDS: CommandSpec[] = [
     summary: "drop the fight without settling it",
     needs: "testmode",
   },
-  { name: "endturn", aliases: ["pass"], usage: "endturn", summary: "hand the turn on", needs: "play" },
+  {
+    name: "endturn",
+    aliases: ["pass"],
+    usage: "endturn",
+    summary: "hand the turn on",
+    // Anything but the poczekalnia, where there is no turn to hand on.
+    when: ["roll", "move", "field", "fight", "other"],
+    needs: "play",
+  },
   {
     name: "spell",
     aliases: [],
@@ -959,7 +1009,12 @@ function nameOfCharacter(id: string | null): string | null {
 export function complete(
   line: string,
   players: readonly string[] = [],
+  /** What to offer. Everything, unless a surface says where the game has got to. */
+  offering: { stage?: Stage; testmode?: boolean } = {},
 ): { line: string; options: string[] } {
+  const words = new Set(
+    availableIn(offering).flatMap((spec) => [spec.name, ...spec.aliases]),
+  );
   const slash = line.startsWith("/") ? "/" : "";
   const bare = line.slice(slash.length);
   const parts = bare.split(/\s+/);
@@ -971,9 +1026,10 @@ export function complete(
   /** Every name this position could take, and where the fragment being typed starts. */
   const from = (): { pool: string[]; at: number } => {
     if (typingVerb) {
-      return { pool: [...VERBS], at: 0 };
+      return { pool: [...words], at: 0 };
     }
-    // `help` takes a command where everything else takes a card or a person.
+    // `help` takes every command, locked or out of season: asking about one you
+    // cannot run is a fair question, and the answer says why.
     if (verb === "help" || verb === "?") return { pool: [...VERBS], at: 1 };
     // A stat takes its amount first and a player after it; everything else
     // takes its one argument straight away.
@@ -1137,6 +1193,22 @@ export function needsOf(command: Command): Capability {
  * so the refusal can say what it was rather than "no such command". A verb you
  * cannot discover is a verb that does not exist.
  */
+/**
+ * The commands worth offering right now.
+ *
+ * Used by Tab and by nothing that decides anything. `help` deliberately does
+ * *not* use it: a command you cannot discover is a command that does not
+ * exist, and the list is where you go to find a word — Tab is where you go to
+ * finish one you already know will work.
+ */
+export function availableIn(at: { stage?: Stage; testmode?: boolean }): CommandSpec[] {
+  return COMMANDS.filter((spec) => {
+    if (spec.needs === "testmode" && at.testmode === false) return false;
+    if (at.stage === undefined || spec.when === undefined) return true;
+    return spec.when.includes(at.stage);
+  });
+}
+
 export function permits(
   command: Command,
   at: { testmode: boolean },
