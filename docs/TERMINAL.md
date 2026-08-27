@@ -1,6 +1,32 @@
 # The terminal-first engine
 
 **Status: plan, not built.** Nothing in here exists yet except where it says so.
+The decisions under "Settled" are taken; the rest is the shape of the work.
+
+## Settled
+
+- **Command names are open.** This is a redesign, not an extension — an existing
+  verb may be renamed or replaced where a better name exists.
+- **`move` / `go` is the lawful move. `teleport` is the cheat.** The old `go`
+  meaning "put this figure anywhere" moves out of the way.
+- **Verbs are English, output is Polish.** The commands are engine controls and
+  stay English, as the console's are today; everything a player *reads* — the
+  journal above all — stays Polish, exactly as CLAUDE.md's "Polish only" rule
+  intends. Controls are not UI text.
+- **`testmode` keeps its name.** It is already the word on screen ("tryb
+  testowy"); a synonym would cost more than it buys.
+- **Hot seat is real, and not enforced.** Six players share one terminal and one
+  scrollback. Hidden information (9.3) is not hidden from somebody who scrolls
+  up, and that is accepted: this is one person's machine, not a tournament. The
+  handover is a confirmation between turns — "Ola's turn" — so changing seats is
+  a deliberate act rather than a surprise. No screen clearing.
+- **Offline first; online is a later store.** `mm` opens a save file. Online
+  arrives as a fourth `GameStore` (`HttpStore`) over the routes that already
+  exist, plus a "something changed" loop in the runner — both additive. Step 1
+  does not anticipate them beyond keeping the compare-and-swap.
+- **The record ships from day one.** See "The journal is not the record". A save
+  written without it can never be rewound, which makes this the one genuinely
+  irreversible decision here.
 
 The goal in one sentence: a whole game of Magiczny Miecz played at a terminal
 prompt, offline, from a save file — with the browser demoted to a *renderer* over
@@ -179,6 +205,13 @@ Given those, replay from the start reproduces the state exactly, and *that* is
 the undo: to go back to move 40, replay 1–40 into a fresh store. No inverse
 patches, no undo stack.
 
+**It ships from the first save, and stays dumb until it needs not to be.** An
+append-only `log` array beside the other tables — `{ seq, actor, verb, args,
+decisions }` and a state checksum per move — written from step 2. Rewind itself
+is step 5. The reason not to defer the *data* is that a save written without it
+can never be wound back, and the reason to keep it dumb is that a record is also
+the best bug report there is: hand over the save, replay it, watch it break.
+
 **Why replay rather than inverse patches.** Inverting a `Changeset` means
 inverting a shuffle, a reshuffle, a deal from a pile — and getting one of them
 subtly wrong yields a state that looks fine and is not. Replay cannot be subtly
@@ -210,7 +243,16 @@ So the shuffle is the gap. Two options:
 Recommendation: **seed**, with a per-move state checksum in the record so a
 divergence is caught immediately rather than discovered later. `shuffleWith`
 already takes its RNG as a parameter, so this is a binding change at the edge and
-not an engine change at all.
+not an engine change at all. The seed lives on the games row, which means
+`decks.ts`'s module-level `export const shuffle = shuffleWith(Math.random)` has
+to become per-game and be handed in at the edge — the same way `turnStore`
+already hands `shuffle` to `drawCard`.
+
+**One trap in that.** `attempt()` retries a losing commit by re-running the
+handler, and it already replays the *dice* so the retry throws the same numbers
+(that is what the `rolls` array is for). A seeded shuffle stream needs the same
+treatment, or a retry advances the PRNG a second time and the replay of that game
+diverges from what was played. Whatever wraps the dice has to wrap the shuffle.
 
 ### Notation
 
@@ -240,9 +282,12 @@ Four steps, each independently testable, in this order:
    promoted to first-class commands.
 4. **`mm`.** Pick or start a save, hot-seat prompt, render board + seat + journal.
 
-The record and replay are a fifth step and deliberately last: it wants the
-grammar settled first, because the record is a log of commands and the commands
-are what step 3 defines.
+Rewind is a fifth step and deliberately last: it wants the grammar settled first,
+because the record is a log of commands and the commands are what step 3 defines.
+The *record itself* is written from step 2 — only replaying it waits.
+
+The seed comes forward into step 2 with it, for the same reason: a log of
+commands means nothing without deterministic randomness behind it.
 
 **Step 3 is not a fixed-size job.** Playing whole turns through the console will
 be the first time anything outside the tests does that end to end, and it will
