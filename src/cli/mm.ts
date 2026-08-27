@@ -74,7 +74,7 @@ let players: string[] = [];
  * Cached beside the names and for the same reason: readline's completer cannot
  * await, and this only changes when a command changes it.
  */
-let stage: Stage = "lobby";
+let stage: Stage = "none";
 
 /**
  * Opened after the startup reads, not before.
@@ -104,7 +104,9 @@ function offTable(line: string): boolean {
 async function knowTable(): Promise<void> {
   if (!table) {
     players = [];
-    stage = "lobby";
+    // Not "lobby". No game open is its own state, and calling it a poczekalnia
+    // put `ready`, `start` and `pick` in front of somebody who had no table.
+    stage = "none";
     return;
   }
   players = (await usersFor(table.gameId))

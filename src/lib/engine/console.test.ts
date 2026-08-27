@@ -340,6 +340,20 @@ suite("playing the game, and overruling it", () => {
     expect(at("roll")).toContain("pick");
   });
 
+  /**
+   * No game open is its own state, and not a poczekalnia.
+   *
+   * Conflating them put `ready`, `start` and `pick` in front of somebody who
+   * had not opened a table — thirteen words, none of which could run. What is
+   * left is the pair that read the box rather than a game.
+   */
+  it("offers nothing that needs a game when there is not one", () => {
+    const names = availableIn({ stage: "none", testmode: true }).map((one) => one.name);
+    expect(names).toEqual(["help", "card"]);
+    // Even with the overrides unlocked: `kill` needs somebody to kill.
+    expect(names).not.toContain("kill");
+  });
+
   it("reads a game as a stage the same way for everybody", () => {
     expect(stageOf("lobby", "roll")).toBe("lobby");
     expect(stageOf("playing", "roll")).toBe("roll");

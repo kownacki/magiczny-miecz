@@ -80,7 +80,15 @@ export type Capability = "play" | "testmode";
  * program deciding whether it can open it, and it is why a wrong answer here
  * costs a bad suggestion rather than a bad game.
  */
-export type Stage = "lobby" | "roll" | "move" | "field" | "fight" | "other";
+export type Stage = "none" | "lobby" | "roll" | "move" | "field" | "fight" | "other";
+
+/**
+ * The stages a game is actually being played in.
+ *
+ * Named once because three verbs need exactly this list, and a fourth would
+ * have been written out by hand and got it slightly wrong.
+ */
+const PLAYING: readonly Stage[] = ["roll", "move", "field", "fight", "other"];
 
 /**
  * A game read as a stage, from the two plain values that decide it.
@@ -383,6 +391,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "nature",
+    when: PLAYING,
     aliases: [],
     usage: "nature good|evil|chaotic [player] [force]",
     summary: "change a Natura (7.2) — `force` ignores 7.3's once a turn",
@@ -397,6 +406,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "stone",
+    when: PLAYING,
     aliases: [],
     usage: "stone [player]",
     summary: "turn to stone for three turns (20.1)",
@@ -475,11 +485,12 @@ export const COMMANDS: CommandSpec[] = [
     usage: "endturn",
     summary: "hand the turn on",
     // Anything but the poczekalnia, where there is no turn to hand on.
-    when: ["roll", "move", "field", "fight", "other"],
+    when: PLAYING,
     needs: "play",
   },
   {
     name: "spell",
+    when: PLAYING,
     aliases: [],
     usage: "spell [player]",
     summary: "draw a Zaklęcie (9.5)",
@@ -1244,6 +1255,14 @@ export function needsOf(command: Command): Capability {
  * finish one you already know will work.
  */
 export function availableIn(at: { stage?: Stage; testmode?: boolean }): CommandSpec[] {
+  /**
+   * No game open is not the same as a poczekalnia, and treating it as one is
+   * what put `ready`, `start` and `pick` in front of somebody who had not
+   * opened a table yet. Nothing that needs a game can be offered when there
+   * is not one, whatever else a verb says about itself.
+   */
+  if (at.stage === "none") return COMMANDS.filter((spec) => spec.offTable === true);
+
   return COMMANDS.filter((spec) => {
     if (spec.needs === "testmode" && at.testmode === false) return false;
     if (at.stage === undefined || spec.when === undefined) return true;
