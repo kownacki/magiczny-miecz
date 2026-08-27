@@ -183,7 +183,12 @@ export function PlayersDrawer({
                         />
                       </button>
                     )}
-                    <dl className="grid flex-1 grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
+                    {/* A third for the names and two for the answers. Even
+                        columns gave the six shortest words in the app half the
+                        room and truncated "chaotyczna (niezmieniona)" next to
+                        them, which is the wrong way round: the labels are
+                        fixed and known, the values are the part that varies. */}
+                    <dl className="grid flex-1 grid-cols-[1fr_2fr] gap-x-3 gap-y-1 text-[11px]">
                       <Row
                         label="Obszar"
                         value={

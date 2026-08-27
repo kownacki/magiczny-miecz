@@ -28,7 +28,11 @@ const IN = "assets/extracted";
 const OUT = "public/cards/art";
 
 /** Sheets with cards on them. The standees are their own picture already. */
-const CARD_SHEETS = /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia|karta)$/;
+// Not `karta`: a Karta Postaci already has its picture printed on a card of
+// its own — the standee — so cutting a rectangle out of the big one produced
+// 28 files that were the illustration plus a slice of the Charakterystyka, and
+// nothing wanted them. See `characterArtUrl`.
+const CARD_SHEETS = /^(zdarzenia-\d|zaklecia|wyposazenie|wyposazenie-zaklecia)$/;
 
 /** Twice the biggest slot it is drawn in, so it stays sharp on a retina screen. */
 const WIDTH = 240;

@@ -18,7 +18,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 SOURCE = "assets/extracted/karta/karta-07.png"   # GOBLIN — chosen as the template
 OUT_CARD = "public/cards/karta-random.jpg"
-OUT_ART = "public/cards/art/karta-random.jpg"
+# No `art/karta-random.jpg` any more: the 240x155 art box is a Karta Zdarzeń's,
+# and a Karta Postaci has its picture printed on a card of its own. This card
+# gets a standee like the other 27 — see `save_standee` below.
 
 SERIF = "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf"
 
@@ -36,10 +38,8 @@ OUTLINE = (255, 255, 255)
 # the source aspect, because deriving lands a pixel off on two of the three and
 # a card grid with one odd tile in it visibly jitters.
 CARD_SIZE = (629, 780)
-ART_SIZE = (240, 155)
 STANDEE_SIZE = (249, 420)
 CARD_WIDTH = 629
-ART = {"left": 0.1, "right": 0.9022, "top": 0.1447, "bottom": 0.5651}
 QUALITY = 82
 
 
@@ -145,24 +145,11 @@ def mark(draw, box, fill_ratio, by_ink=False, cap=None):
     )
 
 
-def art_box(card):
-    return (
-        round(card.width * ART["left"]), round(card.height * ART["top"]),
-        round(card.width * ART["right"]), round(card.height * ART["bottom"]),
-    )
-
-
 def save_web():
     card = build(PANEL, 0.62)
     card.resize(CARD_SIZE, Image.LANCZOS).save(OUT_CARD, quality=QUALITY)
 
-    # Rebuilt rather than cropped, with the mark sized for the shallower box.
-    thumb = build(art_box(card), 0.78)
-    crop = thumb.crop((
-        *art_box(thumb)[:2], *art_box(thumb)[2:],
-    ))
-    crop.resize(ART_SIZE, Image.LANCZOS).save(OUT_ART, quality=QUALITY)
-    print(f"wrote {OUT_CARD} {CARD_SIZE} and {OUT_ART} {ART_SIZE}")
+    print(f"wrote {OUT_CARD} {CARD_SIZE}")
 
 
 

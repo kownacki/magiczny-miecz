@@ -21,7 +21,19 @@ import { RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
  * box built for the 28 Karty Postaci and crop a quarter off each.
  */
 export const ART_RATIO = 240 / 209;
-export const CHARACTER_ART_RATIO = 240 / 155;
+/**
+ * The mała Karta Postaci, not a crop of the duża one.
+ *
+ * There used to be a `karta-*` under `/cards/art/`, cut at 240x155 — the
+ * Zdarzenia illustration rectangle laid over a card that is not a Karta
+ * Zdarzeń, so it took the picture and a strip of the Charakterystyka under it
+ * and every character in the Księga was a portrait with two lines of print
+ * sliced through the middle. The box already prints the picture on its own,
+ * on a separate card, for exactly this purpose: «małych Kart, na których
+ * znajduje się tylko ilustracja». So the tiles use that, and the miscut files
+ * are gone rather than left lying around to be picked up again.
+ */
+export const CHARACTER_ART_RATIO = 249 / 420;
 
 const AVAILABLE = new Set(manifest as string[]);
 const ART_AVAILABLE = new Set(artManifest as string[]);
@@ -41,7 +53,6 @@ const ART_AVAILABLE = new Set(artManifest as string[]);
 const RANDOM_CARD = {
   karta: "/cards/karta-random.jpg",
   standee: "/cards/standee-random.jpg",
-  art: "/cards/art/karta-random.jpg",
 } as const;
 
 /**
@@ -146,10 +157,9 @@ export function cardArtUrl(cardId: string, ref?: string): string | null {
 
 /** The illustration off a character's big card, for the same reasons. */
 export function characterArtUrl(characterId: string): string | null {
-  if (characterId === RANDOM_CHARACTER_ID) return RANDOM_CARD.art;
-  const slice = (portraits as Record<string, string>)[characterId];
-  if (slice && ART_AVAILABLE.has(slice)) return `/cards/art/${fileNameFor(slice)}.jpg`;
-  return characterImageUrl(characterId);
+  // The standee IS the character's art — see `CHARACTER_ART_RATIO`. The whole
+  // Karta only where a character has no standee, which is nowhere today.
+  return characterStandeeUrl(characterId) ?? characterImageUrl(characterId);
 }
 
 /**
