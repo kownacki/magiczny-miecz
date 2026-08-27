@@ -606,7 +606,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
 
   if (word in STATS) {
     let [amount, ...rest2] = tail.split(/\s+/).filter(Boolean);
-    if (!amount) return { error: `How much? ${usageOf("gold")}` };
+    if (!amount) return needs("gold", "How much?");
     // `= 12` as readily as `=12`, since one is what a person types and the
     // other is what they type when they are being careful.
     if (amount === "=" && rest2.length > 0) {
@@ -654,7 +654,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    * to a fumbled line.
    */
   if (word === "kick") {
-    return tail ? { ok: { kind: "kick", who: tail } } : { error: "Kick whom?" };
+    return tail ? { ok: { kind: "kick", who: tail } } : needs("kick", "Kick whom?");
   }
   if (word === "spell") return { ok: { kind: "spell", who: tail || null } };
   // Spelled out, because `win` alone is two different things: the fight in
@@ -671,7 +671,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return name(HOLDABLE, (card) => card.name, tail, "card", (card) => ({
       kind: "give",
       cardId: card.id,
-    }));
+    }), "give");
   }
 
   /**
@@ -698,7 +698,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
       kind: "place",
       cardId: c.id,
       fieldId,
-    }));
+    }), "place");
   }
 
   if (word === "nature") {
@@ -726,10 +726,10 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    * lose your own seat to a fumbled line.
    */
   if (word === "kick") {
-    return tail ? { ok: { kind: "kick", who: tail } } : { error: "Kick whom?" };
+    return tail ? { ok: { kind: "kick", who: tail } } : needs("kick", "Kick whom?");
   }
   if (word === "host") {
-    return tail ? { ok: { kind: "host", who: tail } } : { error: "Hand it to whom?" };
+    return tail ? { ok: { kind: "host", who: tail } } : needs("host", "Hand it to whom?");
   }
 
   /**
@@ -739,11 +739,11 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    */
   if (word === "rename") {
     const cut = tail.search(AS);
-    if (cut === -1) return { error: `Rename them to what? ${usageOf("rename")}` };
+    if (cut === -1) return needs("rename", "Rename them to what?");
     const who = tail.slice(0, cut).trim();
     const name = tail.slice(cut).replace(AS, "").trim();
-    if (!who) return { error: "Rename whom?" };
-    if (!name) return { error: "Rename them to what?" };
+    if (!who) return needs("rename", "Rename whom?");
+    if (!name) return needs("rename", "Rename them to what?");
     return { ok: { kind: "rename", who, name } };
   }
 
@@ -757,9 +757,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "seat") {
     const parts = tail.split(/\s+/).filter(Boolean);
     const last = parts[parts.length - 1] ?? "";
-    if (!/^\d+$/.test(last)) return { error: `Into which seat? ${usageOf("seat")}` };
+    if (!/^\d+$/.test(last)) return needs("seat", "Into which seat?");
     const who = parts.slice(0, -1).join(" ");
-    if (!who) return { error: "Seat whom?" };
+    if (!who) return needs("seat", "Seat whom?");
     return { ok: { kind: "seat", who, seat: Number(last) } };
   }
 
@@ -801,7 +801,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     const parts = tail.split(/\s+/).filter(Boolean);
     const hard = parts.length > 0 && parts[parts.length - 1].toLowerCase() === "hard";
     const said = (hard ? parts.slice(0, -1) : parts).join(" ");
-    if (said === "") return { error: `Which Postać? ${usageOf(word === "revive" ? "revive" : "remove")}` };
+    if (said === "") return needs(word === "revive" ? "revive" : "remove", "Which Postać?");
 
     let seat: number | null = null;
     let characterId: string | null = null;
@@ -834,7 +834,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return name(FOES, (card) => card.name, tail, "Wróg", (card) => ({
       kind: "summon",
       cardId: card.id,
-    }));
+    }), "summon");
   }
 
   if (word === "answer" || word === "a") {
@@ -853,7 +853,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
   if (word === "start") return { ok: { kind: "start" } };
   if (word === "card" || word === "read") {
-    if (!tail) return { error: `Which card? ${usageOf("card")}` };
+    if (!tail) return needs("card", "Which card?");
     return { ok: { kind: "card", name: tail } };
   }
 
@@ -866,14 +866,14 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return name(PLACES, (field) => field.name, tail, "Obszar", (field) => ({
       kind: "move",
       fieldId: field.id,
-    }));
+    }), "move");
   }
 
   if (word === "teleport") {
     return name(PLACES, (field) => field.name, tail, "Obszar", (field) => ({
       kind: "teleport",
       fieldId: field.id,
-    }));
+    }), "teleport");
   }
 
   // Only reachable if something is advertised and then not read, which the
@@ -882,14 +882,32 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
 }
 
 /** Resolves one name, or says why it could not. */
+/**
+ * Something is missing, and here is the shape of the line.
+ *
+ * Every one of these used to be written by hand and about half of them
+ * remembered the usage — so `card` taught you how to type it and `kick` did
+ * not, for no reason anybody chose. Being stopped is exactly the moment the
+ * shape is worth seeing.
+ *
+ * The usage rather than the whole of `help <command>`: you have just typed the
+ * verb, so you know what it does; what you are missing is where the argument
+ * goes.
+ */
+function needs(verb: string, question: string): { error: string } {
+  return { error: `${question} ${usageOf(verb)}` };
+}
+
 function name<T>(
   items: readonly T[],
   nameOf: (item: T) => string,
   query: string,
   what: string,
   build: (item: T) => Command,
+  /** Whose usage to show when nothing was named. */
+  verb: string,
 ): { ok: Command } | { error: string } {
-  if (query === "") return { error: `Which ${what}?` };
+  if (query === "") return needs(verb, `Which ${what}?`);
   const hit = findByName(items, nameOf, query);
   if ("found" in hit) return { ok: build(hit.found) };
   if ("ambiguous" in hit) {

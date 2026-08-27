@@ -453,6 +453,38 @@ suite("playing the game, and overruling it", () => {
     expect(all.some((line) => line.startsWith(" ") && line.includes("pick"))).toBe(true);
   });
 
+  /**
+   * Being stopped is the moment the shape is worth seeing.
+   *
+   * These were written by hand and about half remembered the usage, so `card`
+   * taught you how to type it and `kick` did not, for no reason anybody chose.
+   */
+  it("shows the shape whenever something is missing", () => {
+    for (const [line, shape] of [
+      ["kick", "kick <player>"],
+      ["host", "host <player>"],
+      ["seat 3", "seat <player> 3"],
+      ["rename", "rename <player> as Ola"],
+      ["card", "card MAGOG"],
+      ["gold", "gold +5|=12 [player] [force]"],
+      ["move", "move Karczma"],
+      ["teleport", "teleport Karczma"],
+      ["summon", "summon WILKOŁAK"],
+      ["give", "give MAGICZNY MIECZ"],
+      ["remove", "remove 3|MAGOG [hard]"],
+    ] as const) {
+      expect(err(line), line).toContain(shape);
+    }
+  });
+
+  it("does not bury a real answer under the usage", () => {
+    // An ambiguous name already carries the candidates, which is the useful
+    // half; the shape would be noise on top of it.
+    expect(err("give krysz")).toBe("Which one — KRYSZTAŁ LOSU, KRYSZTAŁ MAGÓW?");
+    // A name nothing answers to is a wrong answer, not a missing one.
+    expect(err("give Narnia")).toBe("No card called `Narnia`.");
+  });
+
   it("takes `all` as a word about the list rather than a command name", () => {
     expect(parseCommand("help all")).toEqual({ ok: { kind: "help", about: "all" } });
     expect(parseCommand("help nonsense")).toHaveProperty("error");
@@ -737,7 +769,9 @@ suite("people and Postacie are addressed differently", () => {
 
   it("wants to know which seat", () => {
     expect(err("seat Ola")).toMatch(/Into which seat/);
-    expect(err("seat 3")).toBe("Seat whom?");
+    // Being stopped is the moment the shape is worth seeing, so every
+    // missing-argument answer carries the usage.
+    expect(err("seat 3")).toBe("Seat whom? seat <player> 3");
   });
 
   it("means me when `unseat` is given nobody", () => {
@@ -751,7 +785,7 @@ suite("people and Postacie are addressed differently", () => {
    * own seat to a fumbled line.
    */
   it("refuses a bare kick rather than reading it as `kick me`", () => {
-    expect(err("kick")).toBe("Kick whom?");
+    expect(err("kick")).toBe("Kick whom? kick <player>");
   });
 
   it("splits a rename on `as`, like `place` splits on `at`", () => {
