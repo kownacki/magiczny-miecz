@@ -45,6 +45,7 @@ import { ConfirmDialog, type Confirmation } from "./confirm";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { MAX_SEATS } from "@/lib/game/modes";
+import { Toasts } from "./toast";
 import { PlayersDrawer } from "./players";
 import { PilesDrawer } from "./piles";
 
@@ -118,6 +119,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     failure,
     setFailure,
     error,
+    notices,
+    dismissNotice,
     busy,
     post,
     runConsole,
@@ -952,11 +955,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     if (mySeatIndex === null) {
       return (
         <>
-          {error && (
-            <p className="fixed inset-x-0 top-0 z-30 bg-vermilion/20 px-4 py-2 text-center text-sm text-vermilion">
-              {error}
-            </p>
-          )}
+          <Toasts notices={notices} onDismiss={dismissNotice} />
           <JoinGate
             code={game.join_code}
             seats={seats.map((seat) => lobbySeat(seat))}
@@ -975,11 +974,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     return (
       <>
         {overlays}
-        {error && (
-          <p className="fixed inset-x-0 top-0 z-30 bg-vermilion/20 px-4 py-2 text-center text-sm text-vermilion">
-            {error}
-          </p>
-        )}
+        <Toasts notices={notices} onDismiss={dismissNotice} />
         <Lobby
           code={game.join_code}
           mode={game.mode}
@@ -1039,11 +1034,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       }));
     return (
       <>
-        {error && (
-          <p className="fixed inset-x-0 top-0 z-30 bg-vermilion/20 px-4 py-2 text-center text-sm text-vermilion">
-            {error}
-          </p>
-        )}
+        <Toasts notices={notices} onDismiss={dismissNotice} />
         <TakeOverGate
           code={game.join_code}
           free={free}
@@ -1373,7 +1364,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 }}
               />
             </div>
-            {error && <p className="text-sm text-vermilion">{error}</p>}
+            {/* The refusal used to sit here, in the column, and shove the
+                Karta Postaci down the page on every mis-click. It is a remark
+                about what you just tried, so it goes to the rail in the corner
+                with the others. */}
+            <Toasts notices={notices} onDismiss={dismissNotice} />
             {/* The notice is gone from here.
 
                 It said what the app had just decided — "ELIKSIR SIŁY: +2

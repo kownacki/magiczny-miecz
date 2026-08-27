@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Notice } from "./toast";
 import { useRouter } from "next/navigation";
 import type { Requests, Route } from "@/lib/game/requests";
 import {
@@ -133,6 +134,9 @@ export interface Table {
   setFailure: (failure: string | null) => void;
   error: string | null;
   setError: (error: string | null) => void;
+  /** The same messages, as a queue the rail draws — see `Toasts`. */
+  notices: Notice[];
+  dismissNotice: (id: number) => void;
   busy: boolean;
   refresh: () => Promise<void>;
   /** One request, with its body checked against what that route reads. */
@@ -192,7 +196,35 @@ export function useTable(code: string): Table {
    * next poll rather than lingering as a lie.
    */
   const [taking, setTaking] = useState<Record<string, SeatCharacter>>({});
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * The last thing that went wrong, kept for the one place that is not a
+   * remark: a table that would not load at all has no board to put a notice
+   * over, so that one is still a page. Everything else goes to the rail.
+   */
+  const [error, said] = useState<string | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  /** Ids, not indexes: a notice that leaves must not renumber the ones above. */
+  const noticeSeq = useRef(0);
+  const setError = useCallback((message: string | null) => {
+    said(message);
+    if (message !== null) {
+      noticeSeq.current += 1;
+      const id = noticeSeq.current;
+      setNotices((were) => {
+        // The same refusal twice over is one refusal you have hit twice. A
+        // second click on the same forbidden card is the most likely thing
+        // anybody does after the first, and a column of identical notices says
+        // nothing the first one did not — so the standing one is replaced,
+        // which also restarts its clock and keeps it on screen.
+        const last = were[were.length - 1];
+        const rest = last?.text === message ? were.slice(0, -1) : were;
+        return [...rest, { id, text: message }];
+      });
+    }
+  }, []);
+  const dismissNotice = useCallback((id: number) => {
+    setNotices((were) => were.filter((one) => one.id !== id));
+  }, []);
   const [busy, setBusy] = useState(false);
   const [users, setUsers] = useState<Person[]>([]);
   /** Who this browser was at this table, if it can be them again. */
@@ -755,6 +787,8 @@ export function useTable(code: string): Table {
     setFailure,
     error,
     setError,
+    notices,
+    dismissNotice,
     busy,
     refresh,
     post,

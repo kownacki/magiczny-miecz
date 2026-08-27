@@ -21,6 +21,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
 import { CardMark, type SlotMark } from "./card-mark";
+import { PICKABLE } from "./pickable";
 
 /**
  * One size, everywhere.
@@ -307,7 +308,14 @@ export function ItemSlot({
           // `isolate` because of the wash below: a blend mode reaches down
           // through everything under it in its stacking context, and this one
           // has no business colouring the panel the slot is sitting on.
-          className={`relative isolate overflow-hidden rounded border transition ${TONE[shown]}`}
+          //
+          // The hover goes on last so its gold wins over the tone's border: a
+          // square answering a card in the air is saying something louder than
+          // "the pointer is here", and green or red should not be overruled
+          // while it says it.
+          className={`relative isolate overflow-hidden rounded border ${TONE[shown]} ${
+            disabled || lifted ? "transition" : PICKABLE
+          }`}
         >
           <button
             type="button"

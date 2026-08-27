@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { PICKABLE } from "./pickable";
 import {
   ART_RATIO,
   CHARACTER_ART_RATIO,
@@ -121,7 +122,7 @@ export function CardTile({
         style={{ width, height }}
         className={`relative overflow-hidden rounded border border-edge bg-raised transition ${
           draggable ? "cursor-grab active:cursor-grabbing" : onClick ? "cursor-pointer" : "cursor-default"
-        } ${onClick ? "hover:border-ochre" : ""} ${dimmed ? "opacity-45" : ""}`}
+        } ${onClick ? PICKABLE : ""} ${dimmed ? "opacity-45" : ""}`}
       >
         {src ? (
           // Explicit dimensions rather than `fill`: the portraits elsewhere on
