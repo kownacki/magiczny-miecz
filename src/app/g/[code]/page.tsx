@@ -372,11 +372,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const name = CARD_NAMES.get(held.cardId) ?? held.cardId;
     const here = seat?.field_id ? FIELD_NAMES.get(seat.field_id) : null;
     setAsk({
-      title: `Wyrzuć: ${name}`,
+      title: `Odrzuć: ${name}`,
       body: here
         ? `${name} zostanie na Obszarze ${here}, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`
         : `${name} zostanie na Obszarze, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`,
-      confirmLabel: "Wyrzuć",
+      confirmLabel: "Odrzuć",
       tone: "grave",
       onConfirm: () => {
         setAsk(null);

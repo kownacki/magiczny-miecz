@@ -514,7 +514,7 @@ export function Hand({
                 {/* Always drawn where a card has a use, whether or not the
                     double-click reaches it — a gesture nobody can see is not
                     an offer. In ochre because it costs you the card, unlike
-                    "wyrzuć", which leaves it lying on the Obszar (5.5). */}
+                    "odrzuć", which leaves it lying on the Obszar (5.5). */}
                 {onUse && isUsable(held.cardId) && (
                   <button
                     onClick={() => onUse(held.id, held.cardId)}
@@ -547,7 +547,7 @@ export function Hand({
                   onClick={() => onDrop(held.id)}
                   className="text-[9px] text-muted underline hover:text-vermilion"
                 >
-                  wyrzuć
+                  odrzuć
                 </button>
               </span>
             )}

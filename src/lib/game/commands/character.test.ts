@@ -156,7 +156,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
   /**
    * The Natura first and the cards after it, which is the order somebody
    * reading the journal needs: the line that explains the drop is above it.
-   * The drop itself explains nothing — "wyrzuca: X" and no more.
+   * The drop itself explains nothing — "odrzuca: X" and no more.
    */
   it("journals the change, then the cards it cost", () => {
     const held = [aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" })];

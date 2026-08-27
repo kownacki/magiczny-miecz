@@ -73,6 +73,8 @@ interface Lent {
   walka: HeldTotals;
 }
 
+const NOTHING: HeldTotals = { miecz: 0, magia: 0 };
+
 const BONUS_BY_ID = new Map<string, Lent>();
 for (const card of EVENTS) {
   if (isUsable(card.id)) continue;
@@ -87,6 +89,27 @@ for (const [cardId, abilities] of Object.entries(ABILITIES)) {
       parametr: points.tylkoWalka ? { miecz: 0, magia: 0 } : lent,
       walka: lent,
     });
+  }
+}
+
+/**
+ * A printed number is not always a loan.
+ *
+ * The fallback above reads the corner of every card as points lent to whoever
+ * holds it, which is right for the Pasterz ("doda ci 1 punkt Miecza i 1 punkt
+ * Magii") and wrong for the two friends who fight on their own account. The
+ * Rycerz prints 3 and 3 because *he* has 3 and 3 — "będzie walczył zamiast
+ * ciebie" — and the Poszukiwacz Przygód prints 3 because that is what he raids
+ * with. Read as loans they made their owner permanently stronger, a Rycerz
+ * handing out +3/+3 for standing next to him, which is close to the opposite of
+ * what the card says.
+ *
+ * So a card that fights for you lends nothing, and its number is read by
+ * `fightsForYou` at the moment the fight needs it.
+ */
+for (const [cardId, abilities] of Object.entries(ABILITIES)) {
+  if (abilities.some((ability) => ability.kind === "walczy-za-ciebie")) {
+    BONUS_BY_ID.set(cardId, { parametr: NOTHING, walka: NOTHING });
   }
 }
 

@@ -504,7 +504,7 @@ describe("wearing a Przedmiot (slotowy)", () => {
     );
     const table = slotted([...pack, aHolding({ id: "h1", card_id: "helm", slot: "head" })]);
     expect(() => equipCard(table, { holdingId: "h1", slot: null })).toThrow(
-      "Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).",
+      "Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).",
     );
   });
 });

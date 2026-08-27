@@ -1,7 +1,12 @@
 /** One seat, read off a snapshot: everything a rule asks about a character, worked out once. */
 
 import { abilitiesOfCharacter, asCharacterId, startingKit } from "@/lib/engine/characters";
-import { heldAbilities, type Ability } from "@/lib/engine/abilities";
+import {
+  addsMagiaToMiecz,
+  fightsForYou,
+  heldAbilities,
+  type Ability,
+} from "@/lib/engine/abilities";
 import { bonusFromHoldings, inEffect, type Reckoning } from "@/lib/engine/holdings";
 import { carriedCount, carryLimit, spellAllowance } from "@/lib/engine/derive";
 import { allStatuses, type Status } from "@/lib/engine/status";
@@ -109,6 +114,35 @@ function natureOf(row: SeatRow): Nature | null {
     : null;
 }
 
+/**
+ * What the character is worth once a fight has actually started (1.5).
+ *
+ * Two cards rewrite the sum rather than adding to it, so neither can be a
+ * `punkty` bonus and both have to land after the ordinary reckoning:
+ *
+ * - the Rycerz "będzie walczył zamiast ciebie w każdej walce (również
+ *   magicznej)" and "nie może używać twoich Zaklęć ani Przedmiotów", so his own
+ *   3 and 3 REPLACE the whole figure — the character's own points included,
+ *   because the character is not the one swinging;
+ * - the Bojowy Rumak lets you "do punktów Miecza dodać swoje punkty Magii",
+ *   which is the Magia total as reckoned for a fight, arrived at last so the
+ *   Miecz it folds in is the one everything else has already agreed on.
+ *
+ * The stand-in wins when both are held: a Rumak improves a swing the Rycerz is
+ * taking on your behalf with his own gear, which the card forbids in as many
+ * words.
+ */
+function inFight(
+  total: { miecz: number; magia: number },
+  abilities: readonly Ability[],
+): { miecz: number; magia: number } {
+  const champion = fightsForYou(abilities);
+  if (champion) return champion;
+  return addsMagiaToMiecz(abilities)
+    ? { miecz: total.miecz + total.magia, magia: total.magia }
+    : total;
+}
+
 export function seatView(snapshot: Snapshot, seatId: string): SeatView {
   const row = seatById(snapshot, seatId);
   const mode = eqModeOf(snapshot.game);
@@ -139,7 +173,10 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     abilities: [...heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)), ...mine],
     fromCards,
     parametr: { miecz: row.sword_own + parametr.miecz, magia: row.magic_own + parametr.magia },
-    walka: { miecz: row.sword_own + walka.miecz, magia: row.magic_own + walka.magia },
+    walka: inFight(
+      { miecz: row.sword_own + walka.miecz, magia: row.magic_own + walka.magia },
+      heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)),
+    ),
     carried: carriedCount(holdings, mode),
     carryLimit: carryLimit(holdings, mode),
     spellCapacity: spellAllowance(

@@ -429,7 +429,7 @@ export function equipCard(
     // something (5.6) — so it says so rather than quietly making a fifth place.
     const mine = holdingsOf(snapshot, held.seat_id);
     if (carriedCount(mine, "slots") >= carryLimit(mine, "slots")) {
-      throw new Error("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
+      throw new Error("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
     }
     // Nothing to write when the card is already there: the client sends this
     // whenever a card is dropped, including onto the pack it was picked up

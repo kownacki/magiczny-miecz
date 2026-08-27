@@ -696,3 +696,74 @@ export function opensTheWayTo(
 ): boolean {
   return abilities.some((ability) => ability.kind === "wymagany" && ability.place === place);
 }
+
+/* --------------------------------------------------------------------------
+ * Przyjaciele (6.1-6.4), and the two things a friend does that no item does.
+ *
+ * The rulebook's own chapter on friends is about custody only — how you gain
+ * one, that it lies face up, that you may hold any number, and how you lose
+ * one. It never says a friend fights, adds points, or takes a hit for you.
+ * Every one of those is printed on the individual card, which is why they are
+ * read here off the ability registry rather than out of a numbered rule.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * The friend who fights in your place, with its own points (Rycerz).
+ *
+ * "Rycerz będzie walczył zamiast ciebie w każdej walce (również magicznej). Nie
+ * może jednak używać twoich Zaklęć ani Przedmiotów." So this REPLACES the
+ * character's combat figure rather than adding to it — the whole of it, own
+ * points included, because the Rycerz is the one swinging.
+ *
+ * Null when nobody is standing in, which is the ordinary case.
+ */
+export function fightsForYou(
+  abilities: readonly Ability[],
+): { miecz: number; magia: number } | null {
+  const stand = abilities.find((ability) => ability.kind === "walczy-za-ciebie");
+  return stand && stand.kind === "walczy-za-ciebie"
+    ? { miecz: stand.miecz, magia: stand.magia }
+    : null;
+}
+
+/** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */
+export function addsMagiaToMiecz(abilities: readonly Ability[]): boolean {
+  return abilities.some((ability) => ability.kind === "magia-do-miecza");
+}
+
+/**
+ * Who will die rather than let you lose the point of Życie, in the order asked.
+ *
+ * Two cards do this and they are not the same offer. The Bojowy Rumak is
+ * certain — "Jeżeli zostaniesz pokonany zginie tylko twój Rumak, ty zaś nie
+ * utracisz punktu Życia" — while the Giermek is a one-in-six: "rzuć kostką.
+ * Wynik równy 1 oznacza, że zginął Giermek, ty zaś nie utraciłeś punktu."
+ *
+ * The rolled ones are offered first, and that ordering is a real decision
+ * rather than an accident of iteration. Neither card is optional, so holding
+ * both means one of them dies whatever happens; asking the Giermek first is the
+ * literal reading of its trigger (the point is not yet saved when it rolls) and
+ * it is the only order under which the Giermek can ever be the one to go.
+ *
+ * `raiding` is the Poszukiwacz Przygód, who is different in kind: he is spent
+ * on the raid you send him out on and stands in for nothing at home. Without
+ * the flag he would offer his life every time you lost a fight of your own.
+ */
+export function diesForYou(
+  cardIds: readonly string[],
+  { raiding = false }: { raiding?: boolean } = {},
+): { cardId: string; onRollUpTo?: number }[] {
+  const offers: { cardId: string; onRollUpTo?: number }[] = [];
+  for (const cardId of cardIds) {
+    for (const ability of abilitiesOf(cardId)) {
+      if (ability.kind !== "ginie-zamiast-ciebie") continue;
+      // A raider dies only on his own raid, and everyone else only off it.
+      if ((ability.onlyWhenRaiding ?? false) !== raiding) continue;
+      offers.push({ cardId, onRollUpTo: ability.onRollUpTo });
+    }
+  }
+  return [
+    ...offers.filter((offer) => offer.onRollUpTo !== undefined),
+    ...offers.filter((offer) => offer.onRollUpTo === undefined),
+  ];
+}

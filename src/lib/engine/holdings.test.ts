@@ -35,7 +35,21 @@ describe("bonuses from a hand (1.5, 2.5)", () => {
   });
 
   it("adds a friend's", () => {
-    expect(bonusFromHoldings([held("rycerz", "friend")], "classic", "parametr")).toEqual({ miecz: 3, magia: 3 });
+    // The Pasterz says it in as many words: "doda ci 1 punkt Miecza i 1 punkt Magii".
+    expect(bonusFromHoldings([held("pasterz", "friend")], "classic", "parametr")).toEqual({ miecz: 1, magia: 1 });
+  });
+
+  /**
+   * The Rycerz used to be this test, lending +3/+3 for being held. He prints 3
+   * and 3 because *he* has them — "będzie walczył zamiast ciebie" — and reading
+   * a corner number as a loan made him a permanent statue buff instead of a
+   * champion. Same for the Poszukiwacz Przygód and the 3 he raids with.
+   */
+  it("lends nothing for a friend who fights on his own account", () => {
+    for (const who of ["rycerz", "poszukiwacz-przygod"]) {
+      expect(bonusFromHoldings([held(who, "friend")], "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
+      expect(bonusFromHoldings([held(who, "friend")], "classic", "walka")).toEqual({ miecz: 0, magia: 0 });
+    }
   });
 
   it("gives a trophy nothing, even though its card prints a Miecz", () => {
@@ -55,8 +69,8 @@ describe("bonuses from a hand (1.5, 2.5)", () => {
 
   it("sums a whole hand", () => {
     expect(
-      bonusFromHoldings([held("excalibur", "item"), held("rycerz", "friend")], "classic", "parametr"),
-    ).toEqual({ miecz: 4, magia: 3 });
+      bonusFromHoldings([held("excalibur", "item"), held("pasterz", "friend")], "classic", "parametr"),
+    ).toEqual({ miecz: 2, magia: 1 });
   });
 });
 

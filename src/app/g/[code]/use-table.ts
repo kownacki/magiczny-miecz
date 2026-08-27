@@ -670,7 +670,7 @@ export function useTable(code: string): Table {
     if (slot === null && held.slot != null) {
       const mineCards = asHoldings(mineNow.holdings);
       if (carriedCount(mineCards, "slots") >= carryLimit(mineCards, "slots")) {
-        return setError("Plecak jest pełny — najpierw coś wyrzuć (5.4, 5.6).");
+        return setError("Plecak jest pełny — najpierw coś odrzuć (5.4, 5.6).");
       }
     }
 

@@ -177,7 +177,7 @@ export function changeNature(
   /**
    * And they land where anything put down lands — 12.1's Obszar, face up for
    * whoever comes past next. One `discarded` row each, which is the line the
-   * journal already has for a card leaving a hand: "wyrzuca: TOPÓR". No reason
+   * journal already has for a card leaving a hand: "odrzuca: TOPÓR". No reason
    * given, because the journal reports what happened at the table and the
    * Natura change is written on the line above it.
    */

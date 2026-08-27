@@ -442,7 +442,12 @@ export function describe(
     }
 
     case "discarded":
-      return line(`${who} wyrzuca: ${card(data.cardId)}.`);
+      // 5.5's own verb, and 7.4's: "ma prawo w dowolnym momencie odrzucić
+      // posiadany Przedmiot", "musi zostać natychmiast odrzucony". It covers
+      // both destinations too, which is why one line serves — an odrzucony
+      // Przedmiot stays on the Obszar and an odrzucony Przyjaciel goes to the
+      // used pile (6.4).
+      return line(`${who} odrzuca: ${card(data.cardId)}.`);
 
     // Spending a card by using it. One word for all nine — the cards have their
     // own idioms, but this is one act and the line is read as a list.
