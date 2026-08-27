@@ -46,3 +46,15 @@ export function normaliseJoinCode(input: string): string {
 export function makeClaimToken(): string {
   return randomBytes(24).toString("base64url");
 }
+
+/**
+ * Where a game's shuffles come from, minted once when the table is opened.
+ *
+ * Not a secret and not trying to be — a save file holds the whole game, and the
+ * seed is in it. What it has to be is *stable*: written down once so that
+ * replaying the game reaches the same order, which is the whole of why it
+ * exists. See `prng.ts`.
+ */
+export function makeSeed(): string {
+  return randomBytes(9).toString("base64url");
+}

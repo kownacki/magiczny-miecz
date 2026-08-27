@@ -67,6 +67,20 @@ create table if not exists magiczny_miecz.games (
   -- rule-break and is journalled manual for that reason; `remove ... hard`
   -- adds to it instead. `pick` chooses from characters neither seated nor here.
   characters_out text[] not null default '{}',
+  -- Where every shuffle in this game comes from.
+  --
+  -- A command is a pure function of its snapshot, its inputs and its
+  -- randomness, which is what lets a game be replayed from its inputs — and
+  -- replay is how the terminal build winds one back (docs/TERMINAL.md). Dice
+  -- were always recoverable; the order a used pile came back in was not,
+  -- because `decks.ts` bound its shuffle to Math.random at module load.
+  --
+  -- Every shuffle is now a function of this and the revision it happens at, so
+  -- the same game replayed reaches the same order. Null on tables opened before
+  -- the column existed, which fall back to Math.random and simply cannot be
+  -- replayed — there is nothing to migrate, because their shuffles were never
+  -- written down.
+  seed text,
   -- The last line number this game's journal has handed out.
   --
   -- Here rather than worked out from max(seq) in `moves`, so that claiming the

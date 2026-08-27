@@ -3,7 +3,8 @@
 import events from "@/data/events.json";
 import spellsData from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
-import { buildDeck, cardRef, shuffleWith, type DeckState } from "@/lib/engine/deck";
+import { buildDeck, cardRef, shuffleWith, type DeckState, type Shuffle } from "@/lib/engine/deck";
+import { streamFor } from "@/lib/engine/prng";
 
 export const EVENTS = events as EventCard[];
 export const SPELLS = spellsData as Spell[];
@@ -46,28 +47,54 @@ for (const card of SPELLS) {
  * rules either side of it are identical, which is why the engine never learns
  * which mode it is running in.
  *
- * Still bound at module load, which is the one thing here a test cannot reach
- * past. Nothing in the converted commands draws — they only discard, and
- * `discardTo` does not shuffle — so it is left alone until the draw path moves
- * across and can take a `Shuffle` the way the commands take a `RandomPort`.
+ * Still bound at module load, and now the fallback rather than the rule: a game
+ * with a seed gets `shuffleFor` below instead. This is what a table opened
+ * before the seed column existed still uses, and it is why those games cannot
+ * be replayed — their shuffles were never written down anywhere.
  */
 export const shuffle = shuffleWith(Math.random);
+
+/**
+ * The shuffle for one moment in one game.
+ *
+ * Keyed on the game's seed and the revision it is happening at, so replaying
+ * the game reaches the same order — and so two piles turned over at different
+ * moments do not come back the same way. See `prng.ts` for why a game has a
+ * seed at all.
+ *
+ * The bargain in `commands/draw.ts` is unchanged: the rule decides *whether*
+ * the pile is turned over, the edge decides what order it comes back in. All
+ * that has changed is that the edge can now be asked twice.
+ */
+export function shuffleFor(game: { seed: string | null; revision: number }): Shuffle {
+  return game.seed === null ? shuffle : shuffleWith(streamFor(game.seed, game.revision));
+}
 
 export interface Decks {
   events: DeckState;
   spells: DeckState;
 }
 
-export function freshDecks(): Decks {
+export function freshDecks(order: Shuffle = shuffle): Decks {
   return {
-    events: buildDeck(EVENTS.map((card) => cardRef(card.source)), shuffle),
-    spells: buildDeck(SPELLS.map((card) => cardRef(card.source)), shuffle),
+    events: buildDeck(EVENTS.map((card) => cardRef(card.source)), order),
+    spells: buildDeck(SPELLS.map((card) => cardRef(card.source)), order),
   };
 }
 
-export function decksOf(game: { deck: unknown }): Decks {
+export function decksOf(game: { deck: unknown; seed?: string | null; revision?: number }): Decks {
   const stored = game.deck as Partial<Decks> | null;
-  if (!stored?.events) return freshDecks();
+  // The thread `commands/draw.ts` said could not be cut from there: a row with
+  // no pile builds one here. Seeded too when the game has a seed, so the one
+  // branch that used to reach `Math.random` behind everything's back no longer
+  // does.
+  if (!stored?.events) {
+    return freshDecks(
+      typeof game.revision === "number" && game.seed !== undefined
+        ? shuffleFor({ seed: game.seed, revision: game.revision })
+        : shuffle,
+    );
+  }
   return {
     events: stored.events,
     spells: stored.spells ?? buildDeck(SPELLS.map((c) => cardRef(c.source)), shuffle),

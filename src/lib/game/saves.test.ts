@@ -3,7 +3,7 @@ import { mkdtemp, rm, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deleteSave, listSaves, newSave, openSave, readSave, savesDir } from "./saves";
-import { useDefaultStore, useStore } from "./gameStore";
+import { resetStore, setStore } from "./gameStore";
 import { joinGame } from "./store";
 import { memoryHandle } from "./gameStore";
 import { setReady } from "./lobbyStore";
@@ -26,14 +26,14 @@ beforeEach(async () => {
 
 afterEach(async () => {
   delete process.env.MM_HOME;
-  useDefaultStore();
+  resetStore();
   await rm(home, { recursive: true, force: true });
 });
 
 describe("a game kept in a file", () => {
   it("opens a table, plays a turn, and is still there after reopening it", async () => {
     const { code, gameId, tables, store } = await newSave("Michał");
-    useStore(store);
+    setStore(store);
 
     // The same functions the routes call, all the way down.
     // `byId` is the *seat* asking, not the person — see `mayChooseFor`.
@@ -57,7 +57,7 @@ describe("a game kept in a file", () => {
 
   it("writes after every change, not when somebody remembers to", async () => {
     const { code, gameId, tables, store } = await newSave("Michał");
-    useStore(store);
+    setStore(store);
 
     const before = (await readSave(code)).savedAt;
     const seat = tables.seats[0].id as string;
@@ -120,7 +120,7 @@ describe("a game kept in a file", () => {
 
   it("seats a second player at a local table", async () => {
     const { gameId, tables, store } = await newSave("Michał");
-    useStore(store);
+    setStore(store);
 
     const { user, seat } = await joinGame(gameId, "Ola", null, false, null, memoryHandle(tables));
     expect(user.name).toBe("Ola");

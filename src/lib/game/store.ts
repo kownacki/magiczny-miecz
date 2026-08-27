@@ -4,7 +4,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import { db, type DbHandle } from "@/lib/supabase";
 import * as tables from "./tables";
 import { tablesFor } from "./tables";
-import { makeClaimToken, makeJoinCode } from "./codes";
+import { makeClaimToken, makeJoinCode, makeSeed } from "./codes";
 import { MAX_SEATS, type GameMode } from "./modes";
 import { isQuiet } from "./commands/lobby";
 import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
@@ -92,6 +92,14 @@ export interface GameRow {
   /** Shuffled event deck; null in companion mode, where the table holds it. */
   deck: unknown;
   /**
+   * Where every shuffle in this game comes from — see `prng.ts`.
+   *
+   * Null on a table opened before the column existed. Those fall back to
+   * `Math.random` and cannot be replayed, which is not a migration anybody can
+   * do: their shuffles were never written down.
+   */
+  seed: string | null;
+  /**
    * The Karty Postaci that are out of the game (4.4).
    *
    * A list because nothing else remembers. "Jej Kartę odłożyć do pozostałych
@@ -109,7 +117,7 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 export const GAME_COLUMNS =
-  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out";
+  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out,seed";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
@@ -157,7 +165,9 @@ export async function createGame(
     const joinCode = makeJoinCode();
     const { data, error } = await on
       .from("games")
-      .insert({ join_code: joinCode, mode, eq_mode: eqMode })
+      // Seeded at birth, because a shuffle that happened before there was a
+      // seed cannot be recovered afterwards.
+      .insert({ join_code: joinCode, mode, eq_mode: eqMode, seed: makeSeed() })
       .select(GAME_COLUMNS)
       .single();
 

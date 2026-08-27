@@ -1,7 +1,8 @@
 # The terminal-first engine
 
-**Status: steps 1 and 2 are built.** `GameStore`, `MemoryStore`, `FileStore` and
-saves exist and are tested; the grammar, `mm` and rewind are not.
+**Status: steps 1 and 2 are built, and the seed with them.** `GameStore`,
+`MemoryStore`, `FileStore`, saves and deterministic shuffling exist and are
+tested; the grammar, `mm` and rewind are not.
 The decisions under "Settled" are taken; the rest is the shape of the work.
 
 ## Settled
@@ -241,8 +242,26 @@ So the shuffle is the gap. Two options:
 - **Record the permutation.** Log the resulting order alongside the command.
   Bigger record, but it cannot drift no matter what order anything happens in.
 
-Recommendation: **seed**, with a per-move state checksum in the record so a
-divergence is caught immediately rather than discovered later. `shuffleWith`
+**Done — seeded.** `games.seed` is minted when the table is opened, and every
+shuffle is `shuffleFor(game)` = a stream keyed on `(seed, revision)`. `seed.test.ts`
+deals the same game twice and gets the same table.
+
+The revision is in the key for a reason: without it every reshuffle in one game
+would deal the same order. And the stream's first three values are pinned in a
+test, because a change to the generator would silently invalidate every save that
+could previously be replayed.
+
+Nothing about the bargain in `commands/draw.ts` changed — the rule still decides
+*whether* the pile is turned over, the edge still decides what order it comes
+back in. What changed is that the edge can now be asked twice. The one new shape
+is that `change()` accepts a command *or* a function of the snapshot (`Asked<C>`),
+because the shuffle depends on a revision the caller cannot know before the read.
+
+Games opened before the column cannot be migrated: `seed` is null, they fall back
+to `Math.random`, and their shuffles were never written down.
+
+Superseded recommendation, kept for the reasoning: **seed**, with a per-move
+state checksum in the record so a divergence is caught immediately. `shuffleWith`
 already takes its RNG as a parameter, so this is a binding change at the edge and
 not an engine change at all. The seed lives on the games row, which means
 `decks.ts`'s module-level `export const shuffle = shuffleWith(Math.random)` has

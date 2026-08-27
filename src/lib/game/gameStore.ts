@@ -134,12 +134,16 @@ export function emptyTables(): Tables {
  */
 let current: GameStore | null = null;
 
-export function useStore(store: GameStore): void {
+/**
+ * Not `useStore`. React's lint rule reads any `useX` as a Hook and refuses it
+ * outside a component — even here, in a file that has never seen React.
+ */
+export function setStore(store: GameStore): void {
   current = store;
 }
 
 /** Back to Postgres. For a test that changed it, and for nothing else. */
-export function useDefaultStore(): void {
+export function resetStore(): void {
   current = null;
 }
 

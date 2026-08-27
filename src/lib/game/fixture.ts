@@ -106,6 +106,8 @@ export function aTable(over: TableOver = {}): Snapshot {
     deck: noDeck(),
     /** 4.4's list, empty until somebody dies. */
     characters_out: [],
+    /** Fixed, so a test that shuffles gets the same order every run. */
+    seed: "test-seed",
     ...(over.game ?? {}),
   };
   const seats = over.seats ?? [aSeat()];

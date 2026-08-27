@@ -750,10 +750,25 @@ const ATTEMPTS = 4;
  * cannot leave half a change behind, which is not true of the code this
  * replaces.
  */
+/**
+ * A command, or a way to build one once the snapshot is in hand.
+ *
+ * Almost every command is a plain object the caller already has. The exceptions
+ * are the ones carrying a `Shuffle`, which has to be derived from the game's
+ * seed and the revision it is happening at — neither of which the caller knows
+ * before the snapshot is read. See `shuffleFor`.
+ *
+ * Built inside the retry loop rather than once, and deliberately: a losing
+ * commit re-reads the table, and the note in `commands/draw.ts` is right that
+ * it is then not even the same pile being turned over. The rebuilt command gets
+ * the shuffle belonging to the revision it actually commits at.
+ */
+export type Asked<C> = C | ((snapshot: Snapshot) => C);
+
 export async function change<C, T>(
   gameId: string,
   handler: Handler<C, T>,
-  command: C,
+  command: Asked<C>,
   options: { random?: RandomPort; now?: () => number; store?: GameStore } = {},
 ): Promise<T> {
   // One change to a table at a time, in the order the table asked for them.
@@ -767,7 +782,7 @@ export async function change<C, T>(
 async function attempt<C, T>(
   gameId: string,
   handler: Handler<C, T>,
-  command: C,
+  command: Asked<C>,
   options: { random?: RandomPort; now?: () => number; store?: GameStore },
 ): Promise<T> {
   // Where this game is kept. A property of the process rather than of the
@@ -781,7 +796,9 @@ async function attempt<C, T>(
 
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     const snapshot = await store.load(gameId);
-    const { writes, result } = await handler(snapshot, command, {
+    const asked =
+      typeof command === "function" ? (command as (of: Snapshot) => C)(snapshot) : command;
+    const { writes, result } = await handler(snapshot, asked, {
       random: replayable(base, rolls),
       now: options.now ?? Date.now,
     });

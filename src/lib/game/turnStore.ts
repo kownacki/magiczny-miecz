@@ -22,7 +22,7 @@ import {
 import {
   EVENTS,
   freshDecks,
-  shuffle,
+  shuffleFor,
   type Decks,
 } from "./decks";
 import {
@@ -198,7 +198,10 @@ export async function startGame(gameId: string): Promise<void> {
   // reads the table would be dealt no kit at all.
   await change(gameId, dealCharactersOn, { to: "surprises" });
 
-  const owed = await change(gameId, startGameOn, { decks: freshDecks() });
+  // The first shuffle of the game, and seeded like every one after it.
+  const owed = await change(gameId, startGameOn, (of) => ({
+    decks: freshDecks(shuffleFor(of.game)),
+  }));
   // 9.5's deal, run through the same draw as every other Zaklęcie so that the
   // pile, the reshuffle and the journal line are the one implementation.
   for (const seat of owed) {
@@ -268,7 +271,7 @@ export async function drawCard(
   gameId: string,
   named: { cardId: string; cardClass: CardClass } | null,
 ): Promise<{ card: EventCard | null; recycled: boolean }> {
-  return change(gameId, drawCardOn, { named, shuffle });
+  return change(gameId, drawCardOn, (of) => ({ named, shuffle: shuffleFor(of.game) }));
 }
 
 /**
@@ -296,11 +299,11 @@ export async function drawCard(
  * that is as often as the wand can be asked.
  */
 export async function drawSpellWithWand(gameId: string, seatId: string): Promise<string> {
-  return change(gameId, drawSpellWithWandOn, { seatId, shuffle });
+  return change(gameId, drawSpellWithWandOn, (of) => ({ seatId, shuffle: shuffleFor(of.game) }));
 }
 
 export async function drawSpell(gameId: string, seatId: string): Promise<string> {
-  return change(gameId, drawSpellOn, { seatId, shuffle });
+  return change(gameId, drawSpellOn, (of) => ({ seatId, shuffle: shuffleFor(of.game) }));
 }
 
 /**
@@ -710,7 +713,7 @@ export async function reorderPack(
 
 
 export async function spendHolding(gameId: string, holdingId: string): Promise<UseResult> {
-  return change(gameId, spendHoldingOn, { holdingId, shuffle });
+  return change(gameId, spendHoldingOn, (of) => ({ holdingId, shuffle: shuffleFor(of.game) }));
 }
 
 /**
@@ -1360,7 +1363,13 @@ export async function applyEffect(
   reason: string,
   decided: Decisions = {},
 ): Promise<Resolution> {
-  return change(gameId, applyEffectOn, { seatId, effect, reason, decided, shuffle });
+  return change(gameId, applyEffectOn, (of) => ({
+    seatId,
+    effect,
+    reason,
+    decided,
+    shuffle: shuffleFor(of.game),
+  }));
 }
 
 /**
@@ -1382,12 +1391,12 @@ export async function resolveFieldOffer(
   value: number | null,
   decided: Decisions = {},
 ): Promise<{ offer: string; face?: number; did: string[]; pending: Effect | null }> {
-  return change(gameId, resolveFieldOfferOn, {
+  return change(gameId, resolveFieldOfferOn, (of) => ({
     offerName,
     decided,
     manual: value !== null,
-    shuffle,
-  }, { random: supplied([value], appRandom()) });
+    shuffle: shuffleFor(of.game),
+  }), { random: supplied([value], appRandom()) });
 }
 
 /**
@@ -1408,12 +1417,12 @@ export async function resolveDrawnCard(
   value: number | null,
   decided: Decisions = {},
 ): Promise<{ card: string; face?: number; did: string[]; pending: Effect | null }> {
-  return change(gameId, resolveDrawnCardOn, {
+  return change(gameId, resolveDrawnCardOn, (of) => ({
     cardId,
     decided,
     manual: value !== null,
-    shuffle,
-  }, { random: supplied([value], appRandom()) });
+    shuffle: shuffleFor(of.game),
+  }), { random: supplied([value], appRandom()) });
 }
 
 /**

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Conflict, apply } from "./change";
-import { activeStore, memoryStore, useDefaultStore, useStore } from "./gameStore";
+import { activeStore, memoryStore, resetStore, setStore } from "./gameStore";
 import type { Tables } from "./fakeDb";
 import { rollForMove } from "./turnStore";
 
@@ -66,12 +66,12 @@ function seed(): Tables {
   };
 }
 
-afterEach(() => useDefaultStore());
+afterEach(() => resetStore());
 
 describe("a game kept somewhere that is not Postgres", () => {
   it("plays a real command end to end, with no database anywhere", async () => {
     const tables = seed();
-    useStore(memoryStore(tables));
+    setStore(memoryStore(tables));
 
     // Not a fixture and not a hand-written changeset: the same function the
     // HTTP route calls, through the same `change()`, against the same rules.
@@ -144,7 +144,7 @@ describe("a game kept somewhere that is not Postgres", () => {
   it("is the store the rules actually reach for", async () => {
     const tables = seed();
     const store = memoryStore(tables);
-    useStore(store);
+    setStore(store);
     expect(activeStore()).toBe(store);
 
     // And `apply` still describes what a commit would do, so a command can read
