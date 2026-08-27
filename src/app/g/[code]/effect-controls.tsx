@@ -1,5 +1,7 @@
 "use client";
 
+import { Rules } from "./rule-ref";
+
 /** A card's or a field's script drawn as controls: what the app can apply for you becomes a button, and what it cannot is stated. */
 
 import { type Effect } from "@/lib/engine/cardScript";
@@ -42,7 +44,10 @@ export function EffectControls({
   const stated = (text: string) => (
     <p className="text-[11px] text-muted">
       {prefix}
-      {text}
+      {/* Here rather than at the call sites: a dozen of these are built from
+          template strings and four happen to cite a rule, and which four is
+          not a thing worth keeping track of. */}
+      <Rules>{text}</Rules>
     </p>
   );
 

@@ -15,7 +15,7 @@
  * from the beginning because that is how its own comments are checked.
  */
 
-import { createContext, useContext } from "react";
+import { Fragment, cloneElement, createContext, isValidElement, useContext } from "react";
 import rules from "@/data/rules.json";
 
 /** Every rule the transcript actually has, so a link is never offered to nothing. */
@@ -97,4 +97,39 @@ export function WithRules({ text, className }: { text: string; className?: strin
   if (pieces.length === 0) return <span className={className}>{text}</span>;
   if (at < text.length) pieces.push(text.slice(at));
   return <span className={className}>{pieces}</span>;
+}
+
+/**
+ * The same, for anything already written as JSX.
+ *
+ * `WithRules` takes a string, which is fine for text that arrives as data — a
+ * card's prose, a journal line, a refusal. It is no use at all for the thirty
+ * places where the sentence is *written in the component*, half of them with a
+ * `<span>` in the middle of them: "— bez rzutu kostką (11.3, 11.7)."
+ *
+ * Wrapping those one string at a time is how three of them ended up linked and
+ * twenty-seven did not, which is worse than none — a reader learns the numbers
+ * are clickable and then finds that mostly they are not. So this walks whatever
+ * it is given and linkifies the text leaves, and a component wraps its block
+ * once rather than its sentences one at a time.
+ */
+export function Rules({ children }: { children: React.ReactNode }) {
+  return <>{linkify(children)}</>;
+}
+
+function linkify(node: React.ReactNode): React.ReactNode {
+  if (typeof node === "string") return <WithRules text={node} />;
+  if (Array.isArray(node)) {
+    return node.map((one, at) => <Fragment key={at}>{linkify(one)}</Fragment>);
+  }
+  // Only where there is something to descend into. A component element is left
+  // alone: its children belong to it and are rendered by it, and reaching in
+  // here would be rewriting somebody else's output.
+  if (isValidElement(node)) {
+    const props = node.props as { children?: React.ReactNode };
+    if (typeof node.type === "string" && props.children !== undefined) {
+      return cloneElement(node, undefined, linkify(props.children));
+    }
+  }
+  return node;
 }

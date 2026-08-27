@@ -1,5 +1,7 @@
 "use client";
 
+import { Rules } from "./rule-ref";
+
 /**
  * The four stacks the box actually has, drawn as stacks.
  *
@@ -187,7 +189,9 @@ function Deck({
         <Used top={used} count={spent} nameOf={nameOf} onInspect={onInspect} />
       </div>
 
-      <p className="mt-2 text-[10px] leading-snug text-muted/80">{note}</p>
+      <p className="mt-2 text-[10px] leading-snug text-muted/80">
+        <Rules>{note}</Rules>
+      </p>
     </section>
   );
 }

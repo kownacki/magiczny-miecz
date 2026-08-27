@@ -1,5 +1,7 @@
 "use client";
 
+import { Rules } from "./rule-ref";
+
 /** A fight, one die at a time — the two totals, the two rolls, and what the result costs (17.x, and a guardian's own terms at 11.8 and 11.11). */
 
 import { type Fight } from "@/lib/engine/turn";
@@ -226,19 +228,31 @@ function FightVerdict({
     if (guardian) {
       return (
         <span className="text-muted">
-          Remis — nie tracisz Życia, ale zatrzymujesz się po tej stronie (11.8).
+          <Rules>Remis — nie tracisz Życia, ale zatrzymujesz się po tej stronie (11.8).</Rules>
         </span>
       );
     }
-    return <span className="text-muted">Remis — nikt nic nie traci (17.10).</span>;
+    return (
+      <span className="text-muted">
+        <Rules>Remis — nikt nic nie traci (17.10).</Rules>
+      </span>
+    );
   }
 
   if (outcome === "wygrana") {
     if (guardian?.kind === "bridge") {
-      return <span className="text-verdigris">Pokonany — wchodzisz na Most (11.10).</span>;
+      return (
+        <span className="text-verdigris">
+          <Rules>Pokonany — wchodzisz na Most (11.10).</Rules>
+        </span>
+      );
     }
     if (guardian) {
-      return <span className="text-verdigris">Pokonany — przeprawiasz się (11.7).</span>;
+      return (
+        <span className="text-verdigris">
+          <Rules>Pokonany — przeprawiasz się (11.7).</Rules>
+        </span>
+      );
     }
     return (
       <span className="text-verdigris">

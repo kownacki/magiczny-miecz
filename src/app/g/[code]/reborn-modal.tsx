@@ -1,5 +1,7 @@
 "use client";
 
+import { Rules } from "./rule-ref";
+
 import { useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
@@ -69,9 +71,11 @@ export function RebornModal({
               {arriving ? "Wybierz Postać" : "Twoja Postać zginęła"}
             </h2>
             <p className="text-[11px] text-muted">
+              <Rules>
               {arriving
                 ? "Gra już trwa. Bierzesz Postać, której nikt nie ma, i zaczynasz od jej Obszaru startowego — z pełnym Życiem i wyposażeniem początkowym."
                 : "Jej Przedmioty i Przyjaciele zostali na Obszarze, na którym zginęła. Możesz wybrać nową i zacząć od jej Obszaru startowego (4.4)."}
+              </Rules>
             </p>
           </div>
           <button

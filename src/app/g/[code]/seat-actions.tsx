@@ -1,5 +1,7 @@
 "use client";
 
+import { Rules } from "./rule-ref";
+
 import { useState } from "react";
 import { NATURE_LABEL } from "@/lib/engine/polish";
 
@@ -65,19 +67,23 @@ export function SeatActions({
       </button>
 
       {open && (
-        <div className="mt-3 flex flex-col gap-3 text-xs">
-          {byHand && (
-          <Row label="Zaklęcie (9.5)">
-            <Action busy={busy} onClick={onSpell}>
-              Wyciągnij Zaklęcie
-            </Action>
-            <Note>Limit zależy od Magii (2.6).</Note>
-          </Row>
-          )}
+        // Wrapped once around the block rather than around each label: the
+        // rule numbers here are in six different sentences and half of them
+        // sit beside other markup.
+        <Rules>
+          <div className="mt-3 flex flex-col gap-3 text-xs">
+            {byHand && (
+              <Row label="Zaklęcie (9.5)">
+                <Action busy={busy} onClick={onSpell}>
+                  Wyciągnij Zaklęcie
+                </Action>
+                <Note>Limit zależy od Magii (2.6).</Note>
+              </Row>
+            )}
 
-          {showNature && (
-          <Row label="Natura (7.2)">
-            {/* Good, chaotic, evil — in that order, because 7.1 describes them
+            {showNature && (
+              <Row label="Natura (7.2)">
+                {/* Good, chaotic, evil — in that order, because 7.1 describes them
                 as two departures from a middle rather than as a list, and the
                 middle belongs between them.
 
@@ -85,53 +91,60 @@ export function SeatActions({
                 say one of them was: the map that has held these words since the
                 rename was two directories away, and `option` went to the screen
                 for the other two. */}
-            {(["good", "chaotic", "evil"] as const).map((option) => (
-              <Action
-                key={option}
-                busy={busy}
-                active={nature === option}
-                onClick={() => onNature(option)}
-              >
-                {NATURE_LABEL[option] ?? option}
-              </Action>
-            ))}
-            <Note>Najwyżej raz na turę (7.3).</Note>
-          </Row>
-          )}
+                {(["good", "chaotic", "evil"] as const).map((option) => (
+                  <Action
+                    key={option}
+                    busy={busy}
+                    active={nature === option}
+                    onClick={() => onNature(option)}
+                  >
+                    {NATURE_LABEL[option] ?? option}
+                  </Action>
+                ))}
+                <Note>Najwyżej raz na turę (7.3).</Note>
+              </Row>
+            )}
 
-          {byHand && (
-          <Row label="Życie (4.7)">
-            <Action busy={busy} onClick={onHeal}>
-              Uzdrowienie
-            </Action>
-            <Note>Tylko do 4 punktów z początku gry.</Note>
-          </Row>
-          )}
+            {byHand && (
+              <Row label="Życie (4.7)">
+                <Action busy={busy} onClick={onHeal}>
+                  Uzdrowienie
+                </Action>
+                <Note>Tylko do 4 punktów z początku gry.</Note>
+              </Row>
+            )}
 
-          {byHand && (
-          <Row label="Zamiana w Kamień (20.1)">
-            <Action busy={busy} onClick={onStone}>
-              Zamień w Kamień
-            </Action>
-            <Note>Trzy tury bez ruchu.</Note>
-          </Row>
-          )}
+            {byHand && (
+              <Row label="Zamiana w Kamień (20.1)">
+                <Action busy={busy} onClick={onStone}>
+                  Zamień w Kamień
+                </Action>
+                <Note>Trzy tury bez ruchu.</Note>
+              </Row>
+            )}
 
-          {canFightBeast && (
-            <Row label="Zamek Bestii (14.7)">
-              <Action busy={busy} danger onClick={onBeast}>
-                Stocz walkę z Bestią
-              </Action>
-              <Note>Wygrana kończy grę (22). Przegrana to 2 Życia.</Note>
-            </Row>
-          )}
-        </div>
+            {canFightBeast && (
+              <Row label="Zamek Bestii (14.7)">
+                <Action busy={busy} danger onClick={onBeast}>
+                  Stocz walkę z Bestią
+                </Action>
+                <Note>Wygrana kończy grę (22). Przegrana to 2 Życia.</Note>
+              </Row>
+            )}
+          </div>
+        </Rules>
       )}
     </div>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="w-full text-[10px] uppercase tracking-wide text-muted sm:w-40">

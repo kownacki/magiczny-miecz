@@ -47,7 +47,7 @@ import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { Toasts } from "./toast";
-import { OpenRule } from "./rule-ref";
+import { OpenRule, Rules } from "./rule-ref";
 import type { RulesShelf } from "./rules-shelf";
 import { Settings } from "./settings";
 import { usePreferences } from "./preferences";
@@ -1623,9 +1623,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     of the round until they pick one, which is the same state a
                     death leaves behind and the same way out of it. */}
                 <p className="mb-2 text-[11px] leading-relaxed text-muted">
+                  <Rules>
                   {mine.character_id
                     ? "Jesteś poza kolejnością tur i oglądasz grę. Możesz wrócić nową Postacią, kiedy zechcesz (4.4)."
                     : "Wybierz Postać, a wejdziesz do gry od jej Miejsca Gracza. Do tego czasu tury cię omijają."}
+                  </Rules>
                 </p>
                 <button
                   disabled={busy}

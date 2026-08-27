@@ -15,6 +15,7 @@
  */
 
 import { Drawer } from "./drawer";
+import { Rules } from "./rule-ref";
 import { setPreference, usePreferences, type Preferences } from "./preferences";
 
 export function Settings({ onClose }: { onClose: () => void }) {
@@ -29,7 +30,8 @@ export function Settings({ onClose }: { onClose: () => void }) {
           said="Numery w rodzaju (5.3) otwierają Instrukcję w Księdze. Wyłącz, jeśli znasz zasady i wolisz czysty tekst."
         />
         <p className="border-t border-edge pt-3 text-[11px] leading-relaxed text-muted/70">
-          Ustawienia są tego okna, nie stołu — nikt inny ich nie widzi i nie zmieniają gry.
+          Ustawienia są tego okna, nie stołu — nikt inny ich nie widzi i nie
+          zmieniają gry.
         </p>
       </div>
     </Drawer>
@@ -47,29 +49,46 @@ function Switch({
   label: string;
   said: string;
 }) {
+  /**
+   * The explanation is outside the button, not inside it.
+   *
+   * It carries a rule number and rule numbers are links, and a `<button>` in a
+   * `<button>` is not something HTML allows — the browser closes the outer one
+   * where the inner starts, and what you get is two controls in a row where
+   * the markup said one inside another.
+   */
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => setPreference(name, !on)}
-      className="flex items-start gap-3 rounded border border-edge bg-raised/40 p-3 text-left transition hover:border-ochre/60"
-    >
-      {/* Drawn rather than a checkbox: the rest of this app is drawn, and a
+    <div className="rounded border border-edge bg-raised/40 p-3 transition hover:border-ochre/60">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        onClick={() => setPreference(name, !on)}
+        className="flex w-full items-center gap-3 text-left"
+      >
+        {/* Drawn rather than a checkbox: the rest of this app is drawn, and a
           browser's own checkbox in the middle of it is a piece of somebody
           else's furniture. */}
-      <span
-        aria-hidden
-        className={`mt-0.5 flex h-4 w-7 shrink-0 items-center rounded-full border p-0.5 transition ${
-          on ? "justify-end border-ochre bg-ochre/25" : "justify-start border-edge bg-night"
-        }`}
-      >
-        <span className={`h-2.5 w-2.5 rounded-full ${on ? "bg-ochre" : "bg-muted/60"}`} />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm text-ink">{label}</span>
-        <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">{said}</span>
-      </span>
-    </button>
+        <span
+          aria-hidden
+          className={`flex h-4 w-7 shrink-0 items-center rounded-full border p-0.5 transition ${
+            on
+              ? "justify-end border-ochre bg-ochre/25"
+              : "justify-start border-edge bg-night"
+          }`}
+        >
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${on ? "bg-ochre" : "bg-muted/60"}`}
+          />
+        </span>
+        <span className="min-w-0 text-sm text-ink">{label}</span>
+      </button>
+      {/* Linked, so the switch demonstrates what it just turned on: this is the
+        nearest rule number to the control that governs them, and a reader who
+        flips it and looks straight down is looking here. */}
+      <p className="mt-1 pl-10 text-[11px] leading-relaxed text-muted">
+        <Rules>{said}</Rules>
+      </p>
+    </div>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Rules } from "./rule-ref";
+
 /** Everything the board asks of a character leaving one Obszar for another: a toll, a guardian, a threshold, and the six squares of the Kamienny Most (11.x, 14.x). */
 
 import { crossingFrom } from "@/lib/engine/rings";
@@ -72,10 +74,12 @@ export function BridgeControls({
         <span className="text-vermilion">{bridge.guardian}</span>.
       </p>
       <p className="mb-3 text-[11px] text-muted">
+        <Rules>
         Rzuć kostką, by poznać jego siłę {stat}: 1&nbsp;→&nbsp;5, 2&nbsp;→&nbsp;6,
         3&nbsp;→&nbsp;7, 4&nbsp;→&nbsp;8, 5&nbsp;→&nbsp;9, 6&nbsp;→&nbsp;10. Potem
         zwykła walka. Przegrana to 1 punkt {stat}; remis nic nie kosztuje. Po obu
         nie spróbujesz ponownie w następnej turze (11.11).
+        </Rules>
       </p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -203,6 +207,7 @@ export function Crossing({
   return (
     <div className="mb-4 rounded border border-ochre/40 bg-night/60 p-3">
       <p className="mb-1 text-xs text-muted">
+        <Rules>
         Stąd można przejść do: <span className="text-ink">{to}</span>
         {!test && (
           <>
@@ -210,6 +215,7 @@ export function Crossing({
             — <span className="text-verdigris">bez rzutu kostką</span> (11.3, 11.7).
           </>
         )}
+        </Rules>
       </p>
       {/* Uroczysko and Przełęcz Wichrów both print the same exemption: the card
           this field would otherwise make you draw is not drawn if you are

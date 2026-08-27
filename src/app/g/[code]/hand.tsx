@@ -1,10 +1,12 @@
 "use client";
 
+import { Rules } from "./rule-ref";
+
 /** The pack: what a character is carrying, in the order its owner put it in. */
 
 import { useState } from "react";
 import { orderWith } from "./pack-order";
-import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import { asCharacterId, mayHaveFriends, startingKit } from "@/lib/engine/characters";
 import { carriedCount, carryLimit, wandRefills } from "@/lib/engine/derive";
 import { SLOTS, fitsIn, type Slot } from "@/lib/engine/slots";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
@@ -42,6 +44,7 @@ export function Hand({
   onUse,
   onWand,
   onReorder,
+  onInspect,
 }: {
   seat: Seat;
   isMine: boolean;
@@ -91,6 +94,21 @@ export function Hand({
   );
 
   const shown = seat.holdings.filter((held) => held.kind !== "spell");
+  /**
+   * Przyjaciele, kept out of the pack entirely.
+   *
+   * 6.3 gives them no limit — "Możesz posiadać dowolną ilość Przyjaciół" — and
+   * `carriedCount` has always known it, counting only `kind === "item"`. So the
+   * *number* over the pack was right the whole time while the *picture* under
+   * it was not: a Rycerz sat in the row of squares that 5.4's four are drawn
+   * as, inside a "2 / 4" he was not one of the two of. The console made exactly
+   * this mistake once and it was a listing bug there too.
+   *
+   * They are not gear, so they do not go in the bag: they stand beside it, in a
+   * section of their own with no denominator, because a tally is a thing to
+   * check against a limit and this one has none.
+   */
+  const friends = shown.filter((held) => held.kind === "friend");
   // Counted through the engine rather than beside it, so what the pack says is
   // what `takeCard` and `equipCard` will actually allow. Still counted here and
   // not sent down ready-made: `mine.holdings` carries the optimistic slot a
@@ -109,7 +127,9 @@ export function Hand({
    * it. The rules underneath are still `pack-order.ts`'s, and the doc comments
    * that explain why each of them is the way it is are still there.
    */
-  const inPack = shown.filter((held) => !slotted || held.slot == null);
+  const inPack = shown
+    .filter((held) => held.kind !== "friend")
+    .filter((held) => !slotted || held.slot == null);
   const packOrder = inPack.map((held) => held.id);
   const {
     arranged,
@@ -173,17 +193,18 @@ export function Hand({
   // one is information, and "nothing" is a whole row to say it in.
   if (!isMine && shown.length === 0 && seat.hidden_count === 0) return null;
 
+  /**
+   * A card in the air holds the pack open whatever the summary was last told,
+   * because a place to put things down that is folded away is not a place to
+   * put things down.
+   *
+   * Which is why `open` is driven from here and the browser's own toggling is
+   * cancelled on the summary: two things setting one attribute agree right up
+   * until they don't, and then the pack is shut with a card in the air and no
+   * click will open it.
+   */
   return (
-    /**
-     * A card in the air holds the pack open whatever the summary was last told,
-     * because a place to put things down that is folded away is not a place to
-     * put things down.
-     *
-     * Which is why `open` is driven from here and the browser's own toggling is
-     * cancelled on the summary: two things setting one attribute agree right up
-     * until they don't, and then the pack is shut with a card in the air and no
-     * click will open it.
-     */
+    <>
     <Fold
       title="Plecak"
       /* What is in the pack, against what will fit. In the variant a place on
@@ -592,8 +613,134 @@ export function Hand({
         </button>
       )}
     </Fold>
+    <FriendsHeld
+      friends={friends}
+      seat={seat}
+      isMine={isMine}
+      moving={moving}
+      onInspect={onInspect}
+    />
+    </>
   );
 }
+
+/**
+ * Przyjaciele, in a section of their own beside the pack.
+ *
+ * They were in the pack for a long time and looked exactly like gear there,
+ * which was wrong in the one way a player would act on: 5.4's four are drawn as
+ * a row of squares with a "2 / 4" over them, and a Rycerz standing in that row
+ * looks like one of the four things you may carry. He is not. 6.3 is explicit —
+ * "Możesz posiadać dowolną ilość Przyjaciół" — and the engine has always agreed
+ * (`carriedCount` counts `kind === "item"` and nothing else), so the count over
+ * the pack was never wrong. Only the picture was.
+ *
+ * So: no denominator on the tally. Every other count in this app is "so many of
+ * so many" because every other count is against a limit; this one is a number
+ * of things you have, and writing "3 / ∞" would be inventing a limit to
+ * reassure somebody there isn't one.
+ *
+ * Nothing here is draggable and nothing has a place on the body. A Przyjaciel
+ * is not put on, not swapped, and not arranged — he follows you until he dies
+ * for you (6.4) or you pay him off. Clicking one opens its Karta, which is the
+ * only thing there is to do with it, and is why this does not take the pack's
+ * pick-up machinery.
+ */
+function FriendsHeld({
+  friends,
+  seat,
+  isMine,
+  moving,
+  onInspect,
+}: {
+  friends: readonly Seat["holdings"][number][];
+  seat: Seat;
+  /** Whose card this is. The empty state is addressed to its owner. */
+  isMine: boolean;
+  /** Something is in the air over the pack; no Karta opens while it is. */
+  moving: boolean;
+  onInspect: (card: TileCard) => void;
+}) {
+  // Somebody else's empty section is not drawn. Both of the things an empty one
+  // says — where your friends will go, and that you may have any number — are
+  // said to the person deciding, and neither is worth a row on each of five
+  // opponents. The same reasoning that hides another player's empty pack.
+  if (!isMine && friends.length === 0) return null;
+
+  // 8.2 lets a Charakterystyka override the general rules, and the ŁOTR's does
+  // it flatly: "Nie możesz mieć żadnych Przyjaciół." He still gets the section,
+  // with the rule in it instead of a list — hiding it would answer the question
+  // "where do my friends go" with silence, which reads as a missing feature
+  // rather than as a card doing what it says.
+  const barred = !mayHaveFriends(asCharacterId(seat.character_id));
+
+  // The ban is a *note*: nothing in the app refuses to hand a ŁOTR a
+  // Przyjaciel, and the test console can grant anybody anything. So the two
+  // halves are drawn independently — what the card says, and what the seat
+  // actually holds — because a UI that hides a card on the grounds that the
+  // rules forbid it is lying about the game to defend a rule it is not
+  // enforcing.
+  const tiles = (
+    <div className="flex flex-wrap gap-2 p-1">
+      {friends.map((held) => (
+        <ItemSlot
+          key={held.id}
+          item={{
+            holdingId: held.id,
+            cardId: held.cardId,
+            card: tileFor(held),
+            granted: held.granted,
+            // 5.3 is about Przedmioty and a Przyjaciel is not one, so nothing
+            // here goes inert on a Natura. The field is on the shape either
+            // way and saying so is cheaper than wondering later.
+            inert: false,
+          }}
+          label={tileFor(held).name}
+          eqMode={slottedIrrelevant}
+          nature={asNature(seat.nature)}
+          tone="filled"
+          quiet={moving}
+          onClick={() => onInspect(tileFor(held))}
+        />
+      ))}
+    </div>
+  );
+
+  // Drawn whether or not anything is in it. A player looking for where friends
+  // go should find the place before they have one, the way the pack is there
+  // before anything is in it — and this is where 6.3's "dowolną liczbę" is
+  // stated, which is worth reading when you are deciding whether to take a
+  // second one.
+  return (
+    <Fold title="Przyjaciele" tally={friends.length}>
+      {barred && (
+        <p className="p-1 text-[11px] leading-snug text-vermilion/90">
+          Nie możesz mieć żadnych Przyjaciół — tak mówi twoja Karta Postaci
+          {friends.length > 0 ? ", a mimo to ktoś z tobą idzie" : ""} (8.2).
+        </p>
+      )}
+      {!barred && friends.length === 0 && (
+        <p className="p-1 text-[11px] leading-snug text-muted">
+          <Rules>
+            Nikt z tobą nie idzie. Przyjaciół możesz mieć dowolną liczbę i nie liczą się do
+            czterech Przedmiotów (6.3).
+          </Rules>
+        </p>
+      )}
+      {friends.length > 0 && tiles}
+    </Fold>
+  );
+}
+
+/**
+ * A Przyjaciel is the same object in both variants.
+ *
+ * `ItemSlot` takes an `eqMode` because a Przedmiot's tile changes with it —
+ * there are places on the body in one and not the other. Nothing about a friend
+ * does, so this names the fact rather than threading a prop through to have it
+ * ignored.
+ */
+const slottedIrrelevant = "classic" as const;
 
 /**
  * Putting a Przedmiot on.
