@@ -242,6 +242,27 @@ export const CHARACTER_NOTES: Readonly<Partial<Record<CharacterId, readonly stri
  * Not a character id anybody could otherwise hold: the 27 printed ones are all
  * names, and none of them is this.
  */
+/**
+ * The one character 6.3 does not apply to.
+ *
+ * "Postać może posiadać dowolną liczbę Przyjaciół" is the rule, and the ŁOTR's
+ * Karta overrides it flatly: "Nie możesz mieć żadnych Przyjaciół." 8.2 is what
+ * lets a Charakterystyka do that, and this is the only card in the box that
+ * does it to friends.
+ *
+ * Named here rather than tested for wherever it matters, for the reason ids
+ * exist at all: `"lotr"` typed into a component is a string the compiler cannot
+ * check, and there would be nothing to find if the id ever changed. It is still
+ * a *note* rather than an enforced ability — nothing refuses to hand a ŁOTR a
+ * Przyjaciel — so this answers "may they?", not "did the app stop them?".
+ *
+ * Not the same question as being Zamienionym w Kamień, which strips friends
+ * from anybody (20.x) and gives them back. That is a state; this is the card.
+ */
+export function mayHaveFriends(characterId: CharacterId | null): boolean {
+  return characterId !== "lotr";
+}
+
 export const RANDOM_CHARACTER_ID = "losowa";
 
 /** Whether a seat is holding the surprise rather than a Karta Postaci. */

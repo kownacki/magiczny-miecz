@@ -7,6 +7,7 @@ import { skipsRollAt, tollIsWaived, isForbidden, rollModifier } from "./abilitie
 import {
   CHARACTER_ABILITIES,
   CHARACTER_NOTES,
+  mayHaveFriends,
   RANDOM_CHARACTER_ID,
   STARTING_KIT,
   abilitiesOfCharacter,
@@ -172,5 +173,37 @@ describe("where characters start", () => {
     for (const character of CHARACTERS) {
       expect(fieldByName(character.start)!.region, character.id).toBe("dolny");
     }
+  });
+});
+
+/**
+ * 6.3 gives everybody friends without limit and exactly one Karta takes them
+ * all away. Read off the printed prose rather than restating the id, so the day
+ * a second character gets the same clause this fails instead of quietly being
+ * wrong about one of them.
+ */
+describe("who may have Przyjaciele (6.3, 8.2)", () => {
+  const barred = (characters as Character[]).filter((character) =>
+    (character.abilities ?? []).some((line) =>
+      /nie mo[żz]esz mie[ćc][^.]*Przyjaci/i.test(line),
+    ),
+  );
+
+  it("is everybody but the ŁOTR", () => {
+    expect(barred.map((character) => character.id)).toEqual(["lotr"]);
+  });
+
+  it("matches what the printed cards say", () => {
+    for (const character of characters as Character[]) {
+      const printed = !barred.some((one) => one.id === character.id);
+      expect(mayHaveFriends(character.id as never), character.id).toBe(printed);
+    }
+  });
+
+  it("says yes for a seat with no character chosen yet", () => {
+    // The poczekalnia. Nobody has a Karta to be overridden by, so nothing bars
+    // them — and a section that hid itself before the deal would be a rule
+    // applied to a character who does not exist.
+    expect(mayHaveFriends(null)).toBe(true);
   });
 });

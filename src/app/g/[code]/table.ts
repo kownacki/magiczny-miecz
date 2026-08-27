@@ -78,6 +78,16 @@ export interface Seat {
   sword_in_fight: number;
   magic_in_fight: number;
   /**
+   * The Przyjaciel swinging instead of the character, or null for the usual case.
+   *
+   * Sent rather than worked out here, and worth drawing wherever the fight
+   * figure is: the Rycerz's 3 and 3 *replace* what the character has of its
+   * own, so for most Postacie `sword_in_fight` goes **down** the moment he
+   * joins. A number that falls when you gain a card reads as a bug in the app
+   * unless something names the card doing it.
+   */
+  fights_for_you: CardId | null;
+  /**
    * What the character is under, already worked out into marks.
    *
    * The server folds the stored effects together with the four ad-hoc columns

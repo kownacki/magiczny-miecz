@@ -35,6 +35,7 @@ import Image from "next/image";
 import { characterKind, plural } from "@/lib/engine/polish";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { RailStat, StatFigure } from "./token-rail";
+import { FightsForYou } from "./fights-for-you";
 import { Fold } from "./fold";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
@@ -678,6 +679,14 @@ export function SeatCard({
               </div>
 
               <NatureLine nature={seat.nature} printed={character.nature} />
+              {/* Under the rails, because it explains the rails. The two
+                  figures above go *down* when a Rycerz joins, and this is the
+                  card saying so. */}
+              <FightsForYou
+                cardId={seat.fights_for_you}
+                sword={seat.sword_in_fight}
+                magic={seat.magic_in_fight}
+              />
             </div>
 
             {/* The body, beside the character card, in the slotted variant

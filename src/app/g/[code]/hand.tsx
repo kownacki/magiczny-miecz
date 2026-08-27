@@ -661,6 +661,20 @@ function FriendsHeld({
   moving: boolean;
   onInspect: (card: TileCard) => void;
 }) {
+  /**
+   * Open to begin with, like the pack above it and unlike the Zdolności below.
+   *
+   * A Przyjaciel is a card that is *doing something to your numbers* right now —
+   * the Pasterz's +1/+1, the Rycerz's 3 and 3 in place of your own — so it is
+   * the half of a seat card you want in front of you while you decide anything,
+   * and a section that hid it by default would be hiding the explanation for
+   * figures on the rail two inches away.
+   *
+   * Before the early returns, because a hook that runs on some renders and not
+   * others is not a hook. React counts them in order.
+   */
+  const [showing, setShowing] = useState(true);
+
   // Somebody else's empty section is not drawn. Both of the things an empty one
   // says — where your friends will go, and that you may have any number — are
   // said to the person deciding, and neither is worth a row on each of five
@@ -711,19 +725,42 @@ function FriendsHeld({
   // before anything is in it — and this is where 6.3's "dowolną liczbę" is
   // stated, which is worth reading when you are deciding whether to take a
   // second one.
+  //
+  // What it does NOT say is that friends are free of 5.4's four. Standing in
+  // their own section, away from the pack and its "2 / 4", is that fact drawn —
+  // and saying it as well would be the caption arguing with the picture. It is
+  // also not quite one fact: the slotowy variant counts what is on the body
+  // separately, so "cztery Przedmioty" is the klasyczny number and a sentence
+  // that names it is wrong at half the tables.
   return (
-    <Fold title="Przyjaciele" tally={friends.length}>
+    <Fold
+      title="Przyjaciele"
+      tally={friends.length}
+      /* What the heading keeps when it is shut: who is actually with you. The
+         count alone says how many cards are hidden and not which, and the whole
+         reason to fold this away is that you already know what is in it. */
+      aside={
+        showing || friends.length === 0 ? undefined : (
+          <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-ochre/80">
+            {friends.map((held) => tileFor(held).name).join(" · ")}
+          </span>
+        )
+      }
+      open={showing}
+      onToggle={() => setShowing(!showing)}
+    >
       {barred && (
         <p className="p-1 text-[11px] leading-snug text-vermilion/90">
-          Nie możesz mieć żadnych Przyjaciół — tak mówi twoja Karta Postaci
-          {friends.length > 0 ? ", a mimo to ktoś z tobą idzie" : ""} (8.2).
+          <Rules>
+            Nie możesz mieć żadnych Przyjaciół — tak mówi twoja Karta Postaci
+            {friends.length > 0 ? ", a mimo to ktoś z tobą idzie" : ""} (8.2).
+          </Rules>
         </p>
       )}
       {!barred && friends.length === 0 && (
         <p className="p-1 text-[11px] leading-snug text-muted">
           <Rules>
-            Nikt z tobą nie idzie. Przyjaciół możesz mieć dowolną liczbę i nie liczą się do
-            czterech Przedmiotów (6.3).
+            Nikt z tobą nie idzie. Przyjaciół możesz mieć dowolną liczbę (6.3).
           </Rules>
         </p>
       )}
