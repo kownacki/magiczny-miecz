@@ -204,7 +204,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   // Everything on the Wyposażenie sheet is a Przedmiot; only the event deck
   // needs its class read to tell an item from a friend from a trophy.
   const kind = card ? kindForCard(card) : "item";
-  if (!kind) throw new Error("Tej karty nie można zabrać ze sobą.");
+  if (!kind) throw new Error("Tej Karty nie można zabrać ze sobą (16.6).");
 
   /**
    * Money is not luggage.
@@ -637,7 +637,7 @@ export function takeFromField(
   command: { seatId: string; fieldCardId: string },
 ): Outcome<Taken> {
   const seat = seatById(snapshot, command.seatId);
-  if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura.");
+  if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura (10.1).");
 
   const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
   if (!lying) throw new Error("Tej Karty już tam nie ma.");
@@ -756,7 +756,7 @@ export function grantCard(
 
   const kind = spell ? "spell" : equipment ? "item" : event ? kindForCard(event) : null;
   if (kind === null) throw new Error(`Nie wiem, czym jest: ${cardId}`);
-  if (kind === "trophy") throw new Error("Wroga trzeba pokonać, nie wziąć.");
+  if (kind === "trophy") throw new Error("Wroga trzeba pokonać, nie wziąć (16.2).");
 
   return {
     writes: merge(escortFor(snapshot, seatId, cardId, true), {

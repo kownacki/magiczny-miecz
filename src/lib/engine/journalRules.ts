@@ -101,8 +101,12 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   "new-character": "4.4",
   /** Przyjaciel ginie zamiast ciebie. */
   "died-for-you": "6.4",
-  /** Najemnik, opłacony za turę swojej pomocy — the card's own price. */
-  "paid-friend": "6.1",
+  /**
+   * Najemnik, opłacony za turę of his help. The price and the bargain are
+   * printed on his own Karta; chapter 6 is about custody and says nothing
+   * about hiring anybody, so there is no rule to point at.
+   */
+  "paid-friend": null,
 
   // — Natura i Kamień ——————————————————————————————————————————————————
   /** Zmiana Natury: najwyżej raz na turę, i Karta Zmiany obok Karty Postaci. */

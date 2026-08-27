@@ -48,7 +48,7 @@ export function claimFloor(
   }
 
   // 17.4 ends the fight at the dice, so there is nothing left to react to.
-  if (state.fight.result) throw new Error("Walka jest już rozstrzygnięta.");
+  if (state.fight.result) throw new Error("Walka jest już rozstrzygnięta (17.4).");
 
   // The same reading `castSpell` will refuse against, so the floor is never
   // granted for a hand that could not legally speak anyway.
@@ -58,7 +58,7 @@ export function claimFloor(
     const script = spellScript(held2.card_id);
     return script ? castableNow(script, open) : false;
   });
-  if (!canCast) throw new Error("Nie masz Zaklęcia, które można teraz rzucić.");
+  if (!canCast) throw new Error("Nie masz Zaklęcia, które można teraz rzucić (9.1).");
 
   return {
     writes: {

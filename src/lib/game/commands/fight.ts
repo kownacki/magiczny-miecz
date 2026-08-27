@@ -194,7 +194,9 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
   // difference between hard and hopeless.
   const asOne = attackAsOne(foes.map((f) => f.foe));
   if (!asOne) {
-    throw new Error("Zwykli i magiczni Wrogowie nie atakują razem — rozpatrzcie osobno.");
+    throw new Error(
+      "Zwykli i magiczni Wrogowie nie atakują razem — rozpatrzcie osobno (18.1).",
+    );
   }
   const { kind, total } = asOne;
 

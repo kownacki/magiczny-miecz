@@ -133,6 +133,35 @@ anything.
   kicked themselves. Field names live in `Requests`; the client sends through
   `post` and the route reads through `bodyOf`. It is a shared vocabulary, not
   validation — every route still checks what it got.
+- **A rule number is a promise you can keep, so only write one you checked.**
+  `(5.3)` is not decoration: `WithRules` turns every one of them into a link
+  into the Instrukcja, and a reader who follows one and lands on a rule about
+  something else trusts the next one less. Two were already wrong when this was
+  written — `paid-friend` cited 6.1, which is about *acquiring* a friend, and the
+  Wyprawa heading cited 6.2, which is about their Karty lying face up. Chapter 6
+  has nothing to say about hiring anybody or sending them out, because that is
+  printed on the Karta and 8.2 puts a Charakterystyka above the general rules.
+
+  **Where they go.** A refusal that enforces a printed rule names it, in the
+  message: "To nie twoja tura (10.1)." Journal lines do *not* say it in the
+  sentence — `RULE_FOR` in `journalRules.ts` keys it off the line's kind, so a
+  new kind cannot be added without the compiler asking which rule it is, and one
+  table serves every line at once. The app's own explanatory copy names it where
+  a player might argue.
+
+  **Where they do not.** Printed text: no card, spell, Postać or Obszar in the
+  box carries a rule number, and wrapping their text implies otherwise. Plumbing
+  refusals — "Nieznane miejsce", "Nie masz tej karty" — because a number there is
+  noise, and noise is what makes the real ones stop being read. Button labels,
+  since a link inside a button is a button inside a button. `title` attributes,
+  which cannot hold one. And anywhere the honest answer is `null`: things that
+  happen to the *table* rather than in the game — joining, leaving, an override,
+  anything the console conjured — are not covered by the rulebook, and saying so
+  is worth more than a plausible guess.
+
+  The check is `src/lib/engine/journalRules.test.ts`, which fails on a citation
+  the Instrukcja does not have; `17.11` typechecks and links to nothing.
+
 - **The database is biggerfish's, shared four ways.** This is a `magiczny_miecz`
   schema in project `aqqdamoqwxiquhkzzcix`, alongside finalbid and wheatbid, and
   the service-role key grants all of them. Two of those take real payments.

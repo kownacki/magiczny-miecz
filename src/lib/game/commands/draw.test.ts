@@ -80,7 +80,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
         named: null,
         shuffle: never,
       }),
-    ).toThrow("Nie czas na ciągnięcie kart.");
+    ).toThrow("Nie czas na ciągnięcie kart (13.4).");
   });
 
   it("takes the top card and puts the pile back one shorter", () => {

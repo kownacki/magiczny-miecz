@@ -321,7 +321,7 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
   const chosen = phase.options.find(
     (option) => option.fieldId === fieldId && !!option.bridge === viaBridge,
   );
-  if (!chosen) throw new Error("To pole nie jest w zasięgu tego rzutu.");
+  if (!chosen) throw new Error("To pole nie jest w zasięgu tego rzutu (10.2).");
 
   const field = FIELDS.get(fieldId);
   if (!field) throw new Error(`Nieznane pole: ${fieldId}`);

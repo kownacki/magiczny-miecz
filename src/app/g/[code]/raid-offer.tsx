@@ -127,7 +127,10 @@ export function RaidOffer({
 
   return (
     <section className="border-t border-edge pt-3">
-      <h3 className="text-[11px] uppercase tracking-widest text-muted">Wyprawa (6.2)</h3>
+      {/* No rule number: 6.2 is "Karty Przyjaciół są układane odkryte", and a
+          wyprawa is not in chapter 6 at all — it is printed on the Karta of the
+          Przyjaciel who can go on one, which 8.2 puts above the general rules. */}
+      <h3 className="text-[11px] uppercase tracking-widest text-muted">Wyprawa</h3>
 
       {targets.length === 0 ? (
         // Said rather than left blank. An empty list under a heading reads as

@@ -75,7 +75,7 @@ export function tradeTrophies(
     return sum + (combatValueOf(card ?? { cardClass: "foe" })?.total ?? 0);
   }, 0);
   const gained = Math.floor(points / TROPHY_RATE);
-  if (gained < 1) throw new Error(`Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów.`);
+  if (gained < 1) throw new Error(`Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4).`);
 
   const handed = {
     ...(trophies.length ? { holdings: { delete: trophies.map((t) => t.id) } } : {}),

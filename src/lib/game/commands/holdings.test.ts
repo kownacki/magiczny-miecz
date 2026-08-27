@@ -49,7 +49,7 @@ describe("taking a card", () => {
   /** A Spotkanie is read and set aside; nobody carries one. */
   it("refuses a card that is not a thing you can hold", () => {
     expect(() => takeCard(table(), { seatId: "seat-a", cardId: "mgla" })).toThrow(
-      "Tej karty nie można zabrać ze sobą.",
+      "Tej Karty nie można zabrać ze sobą (16.6).",
     );
   });
 
@@ -545,7 +545,7 @@ describe("picking something up off the Obszar (12.1)", () => {
   it("refuses somebody whose turn it is not", () => {
     const other = table({ game: { active_seat: 1 } });
     expect(() => takeFromField(other, { seatId: "seat-a", fieldCardId: "fc1" })).toThrow(
-      "To nie twoja tura.",
+      "To nie twoja tura (10.1).",
     );
   });
 
@@ -729,7 +729,7 @@ describe("granting a card by fiat", () => {
   /** A trophy is a memory of a fight, so there is nothing to conjure. */
   it("refuses a Wróg", () => {
     expect(() => grantCard(table(), { seatId: "seat-a", cardId: "cyklop" })).toThrow(
-      "Wroga trzeba pokonać, nie wziąć.",
+      "Wroga trzeba pokonać, nie wziąć (16.2).",
     );
   });
 

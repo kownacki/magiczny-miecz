@@ -348,7 +348,7 @@ describe("ruch (10.2, 13.4)", () => {
   it("refuses a field the roll does not reach", () => {
     expect(() =>
       moveTo(walking("zaczarowane-wzgorza"), { destination: "las-blednych-ogni" }),
-    ).toThrow("To pole nie jest w zasięgu tego rzutu.");
+    ).toThrow("To pole nie jest w zasięgu tego rzutu (10.2).");
   });
 
   it("refuses something that is not a field at all", () => {
@@ -426,7 +426,7 @@ describe("ruch (10.2, 13.4)", () => {
      */
     it("is not something a plain walk can reach", () => {
       expect(() => moveTo(table(), { destination: "ruiny-twierdzy" })).toThrow(
-        "To pole nie jest w zasięgu tego rzutu.",
+        "To pole nie jest w zasięgu tego rzutu (10.2).",
       );
     });
   });

@@ -92,7 +92,7 @@ export interface Drawn {
 export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> {
   const seat = activeSeat(snapshot);
   if (snapshot.game.turn_state.phase !== "field") {
-    throw new Error("Nie czas na ciągnięcie kart.");
+    throw new Error("Nie czas na ciągnięcie kart (13.4).");
   }
 
   if (snapshot.game.mode === "companion") {
