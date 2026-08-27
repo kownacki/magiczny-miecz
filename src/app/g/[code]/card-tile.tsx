@@ -249,13 +249,11 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
               {card.kindLabel}
             </p>
           )}
+          {/* Printed text, and printed text cites nothing: no card in the box
+              carries a rule number. The note below is the app's own writing and
+              is the one thing here that could. */}
           {card.text && (
-            <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
-              {/* The cards cite the book at each other — "(5.4.)", "(3.5.)" —
-                  and those citations are the reason this app can be read
-                  without the box open beside it. */}
-              <WithRules text={card.text} />
-            </p>
+            <p className="whitespace-pre-line text-xs leading-relaxed text-muted">{card.text}</p>
           )}
           {coverage !== "pelne" && (
             <p

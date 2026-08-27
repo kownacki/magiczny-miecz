@@ -1,5 +1,4 @@
 "use client";
-import { WithRules } from "./rule-ref";
 
 import Image from "next/image";
 import { fieldWithText } from "@/lib/view/fieldText";
@@ -179,7 +178,7 @@ export function FieldModal({
               </p>
             ) : null}
             <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
-              <WithRules text={field.text ?? "Brak przepisanego tekstu dla tego Obszaru."} />
+              {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
             </p>
           </section>
 

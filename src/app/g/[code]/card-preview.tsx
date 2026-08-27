@@ -1,5 +1,4 @@
 "use client";
-import { WithRules } from "./rule-ref";
 
 /**
  * The card, big enough to read, with what the app knows about it beside it.
@@ -298,7 +297,7 @@ export function CardPreview({
               what the app will actually DO, off the bottom of the panel. */}
           {card.text && !src && (
             <p className="whitespace-pre-line border-t border-edge/60 pt-2 text-[11px] leading-relaxed text-muted">
-              <WithRules text={card.text} />
+              {card.text}
             </p>
           )}
         </div>
