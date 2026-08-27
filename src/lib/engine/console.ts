@@ -891,3 +891,34 @@ export function needsConfirming(command: Command): boolean {
     command.kind === "kick" || command.kind === "kill" || command.kind === "remove"
   );
 }
+
+/**
+ * The question a destructive line is answered with, in the words of what it
+ * would do.
+ *
+ * "Are you sure?" is a question nobody reads, because it is the same question
+ * every time and carries none of the answer. These name the thing that goes, so
+ * the second of somebody's time it costs buys them something: which player,
+ * which seat, and whether it can be had back.
+ *
+ * Built from the parsed command rather than from the table, so it stays in the
+ * pure half. What it cannot say is which Postać is sitting in seat 3 — that is
+ * the reply's job, after the fact.
+ */
+export function confirmationFor(command: Command): string | null {
+  if (!needsConfirming(command)) return null;
+  const said = (what: string) => `${what} Type \`yes\` to go ahead, anything else to drop it.`;
+
+  if (command.kind === "kick") return said(`${command.who} goes from the table.`);
+  if (command.kind === "kill") {
+    return said(`${command.who ?? "You"} drops to 0 Życia — the hand goes with it (4.4).`);
+  }
+  if (command.kind !== "remove") return null;
+  const which =
+    command.seat !== null ? `The Postać in seat ${command.seat}` : (command.characterId ?? "It");
+  return said(
+    command.hard
+      ? `${which} leaves the game for good — nobody picks it again.`
+      : `${which} leaves the game; its Karty go to the used piles.`,
+  );
+}

@@ -3,6 +3,7 @@ import {
   COMMANDS,
   complete,
   helpLines,
+  confirmationFor,
   needsConfirming,
   parseCommand,
   pickPlayer,
@@ -575,6 +576,23 @@ suite("what the console asks about first", () => {
   it("asks before being rude to somebody else, and not before leaving yourself", () => {
     expect(needsConfirming(ok("kick Ola"))).toBe(true);
     expect(needsConfirming(ok("leave"))).toBe(false);
+  });
+
+  it("asks in the words of what it would do, not \"are you sure\"", () => {
+    // The same question every time is a question nobody reads. These name the
+    // thing that goes, so the second they cost buys something.
+    expect(confirmationFor(ok("kick Ola"))).toContain("Ola goes from the table");
+    expect(confirmationFor(ok("remove 3"))).toContain("seat 3 leaves the game");
+    expect(confirmationFor(ok("remove 3 hard"))).toContain("for good");
+    expect(confirmationFor(ok("kill Ola"))).toContain("0 Życia");
+    // And every one of them says how to agree, in the same words.
+    expect(confirmationFor(ok("kick Ola"))).toContain("`yes`");
+  });
+
+  it("has nothing to ask about a line that takes nothing away", () => {
+    expect(confirmationFor(ok("unseat Ola"))).toBeNull();
+    expect(confirmationFor(ok("leave"))).toBeNull();
+    expect(confirmationFor(ok("pick MAGOG"))).toBeNull();
   });
 
   it("does not ask about what takes nothing away", () => {

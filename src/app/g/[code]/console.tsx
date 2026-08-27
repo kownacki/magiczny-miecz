@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
-import { COMMANDS, complete } from "@/lib/engine/console";
+import { COMMANDS, complete, confirmationFor, parseCommand } from "@/lib/engine/console";
 import { LAYER } from "./layers";
 import { AnswersEscape, useDismissable } from "./overlay";
 import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
@@ -159,6 +159,8 @@ export function TestConsole({
     typeof window === "undefined" ? [] : readConsole(table).past,
   );
   const back = useRef<number | null>(null);
+  /** A destructive line, typed and not yet agreed to. */
+  const held = useRef<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const tail = useRef<HTMLDivElement>(null);
 
@@ -212,6 +214,37 @@ export function TestConsole({
     back.current = null;
     setLine("");
     say(`> ${typed}`, true);
+
+    /**
+     * The line that is waiting to be agreed to, and the one word that agrees.
+     *
+     * Anything else drops it and is read as a fresh line — so changing your
+     * mind is typing the thing you meant instead, and there is no way for the
+     * next command to confirm the last one by accident.
+     */
+    const pending = held.current;
+    held.current = null;
+    if (pending) {
+      if (typed.toLowerCase() === "yes") return say(await onRun(pending));
+      say("Dropped.");
+      // Falls through: whatever was typed instead is a line of its own.
+    }
+
+    /**
+     * Asked here rather than by the server, because the console *is* the place
+     * that asks. The grammar is pure and the browser has it, so the question
+     * costs nothing and the destructive line never leaves this tab until
+     * somebody has said yes to it.
+     */
+    const parsed = parseCommand(typed);
+    if ("ok" in parsed) {
+      const question = confirmationFor(parsed.ok);
+      if (question) {
+        held.current = typed;
+        return say(question);
+      }
+    }
+
     say(await onRun(typed));
   };
 
