@@ -3,14 +3,7 @@
 /** The pack: what a character is carrying, in the order its owner put it in. */
 
 import { useState } from "react";
-import {
-  arrangedBy,
-  insertIndexIn,
-  landsBefore,
-  orderWith,
-  sameOrder,
-  stepFor,
-} from "./pack-order";
+import { orderWith } from "./pack-order";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import { carriedCount, carryLimit, wandRefills } from "@/lib/engine/derive";
 import { SLOTS, fitsIn, type Slot } from "@/lib/engine/slots";
@@ -19,6 +12,7 @@ import { CardBack, type TileCard } from "./card-tile";
 import { type Carried } from "./carry";
 import { EquipButton } from "./equip-button";
 import { Fold } from "./fold";
+import { useRack } from "./rack";
 import { ItemSlot } from "./item-slot";
 import { DRAG_TYPE, startHoldingDrag } from "./slot-panel";
 import { asHoldings, asNature, tileFor, type Seat, wornBySlot } from "./table";
@@ -74,19 +68,6 @@ export function Hand({
   onInspect: (card: TileCard) => void;
 }) {
   /** Something is being carried or dragged over the pack itself. */
-  const [dragOver, setDragOver] = useState(false);
-  /** The card a reordering drag is currently over, so it can show where it lands. */
-  const [insertAt, setInsertAt] = useState<string | null>(null);
-  /**
-   * The order this device has just asked for and the server has not confirmed.
-   *
-   * Without it a card dragged across the pack snaps back for as long as the
-   * round trip takes, which for a gesture that is *about* where the card ends
-   * up reads as the drag having failed. Never cleared: once the server agrees,
-   * sorting by it is a no-op, and the moment a card is gained or lost it stops
-   * matching the pack and is ignored.
-   */
-  const [wanted, setWanted] = useState<string[] | null>(null);
   /**
    * Whether the pack is showing, the way the Zdolności below it fold away.
    *
@@ -120,107 +101,27 @@ export function Hand({
   const limit = carryLimit(cards, variant);
 
   /**
-   * The pack, in the order it should be drawn.
+   * The pack as a row somebody arranges — the order, the gaps, the moves.
    *
-   * The server's order is the truth; `wanted` overrides it only while it still
-   * describes exactly this set of cards. A stale one — from before a card was
-   * taken or lost — is simply ignored rather than cleared, which keeps this a
-   * derivation and not a thing that has to be kept in step.
+   * All of it is `useRack`'s now, because none of it was ever about
+   * Przedmioty: the hand of Zaklęcia is the same row with a different cap on
+   * it. The rules underneath are still `pack-order.ts`'s, and the doc comments
+   * that explain why each of them is the way it is are still there.
    */
   const inPack = shown.filter((held) => !slotted || held.slot == null);
   const packOrder = inPack.map((held) => held.id);
-  const arranged = arrangedBy(inPack, wanted);
-
-  /**
-   * The one square that is not a place to put a card: the square it came from.
-   *
-   * No gap opens there, because the hollow left behind is already the answer —
-   * and dropping there used to do worse than nothing. It asked the row to put
-   * the card in front of itself, which stops being a position the moment the
-   * card is lifted out of the row to look for one, so it fell through to "no
-   * position given", which means the end of the queue. A card picked up and put
-   * straight back down came to rest at the back of the pack.
-   *
-   * The square *after* it is a place, even though landing there leaves the card
-   * exactly where it started. It was quiet for a while on the reasoning that a
-   * gap is a promise something will change — but every other square in the row
-   * answers, so the one next door staying dark reads as a hole in the
-   * interface rather than as an argument about identity. Nothing is written
-   * when nothing moves; that belongs on the write, not on the gap.
-   */
-  const liftedIndex = arranged.findIndex((held) => held.id === liftedHoldingId);
-  const itsOwnSquare = (id: string) => id === liftedHoldingId;
-
-  /**
-   * Which way each card steps aside, and how few of them have to.
-   *
-   * A card leaves a hollow where it was, and the row closes over it from
-   * whichever side the card is going. Aim to your left and the cards between
-   * there and the hollow step right, the way a hand opens a place. Aim to your
-   * right and they step *left* instead, into the hollow, because that is the
-   * direction they will really travel — everything from the target rightwards
-   * stays exactly where it is, since nothing past the landing place moves.
-   *
-   * Stepping one way for both was the wrong picture in half the cases: dropping
-   * on the far end pushed the whole tail of the pack sideways to make a place
-   * that was already there, five squares back.
-   *
-   * A card off the body leaves no hollow, so there is nothing to close and the
-   * row opens in front of the target as before.
-   *
-   * The gap is drawn by moving pictures and not by moving boxes (see
-   * `ItemSlot`): laying it out would slide the row sideways under the pointer
-   * and take the card you were aiming at with it.
-   */
-  /**
-   * Where the gap is, and nowhere when nothing is in the air.
-   *
-   * The insertion point is a hover, and a hover outlives what it was for: put
-   * the card down with Escape or a click on the board and the pointer has not
-   * moved, so nothing tells the row to close. It used to stay open — and open
-   * far wider than it had been, because with no card in the air the rule that
-   * decides which way each one steps reads the row as a card arriving from the
-   * body, and the whole tail steps aside for it. Fourteen cards stepped and
-   * twelve places drawn, for a card that was already back in the pack.
-   *
-   * Read from what is actually in the air rather than from what was last
-   * hovered, and the row cannot be left open by anything at all.
-   */
-  const insertIndex = insertIndexIn(arranged, insertAt, liftedHoldingId);
-  const stepAt = (index: number) => stepFor(index, { liftedIndex, insertIndex });
-
-  /**
-   * The card a landing card goes in front of, given the square you aimed at.
-   *
-   * You aim at a square and the card takes it. Coming from the left that means
-   * going in front of the card *after* the one under the pointer, not in front
-   * of that one — which is the same square counted from the other end, and
-   * counting it from the wrong end put the card down one place short of where
-   * it was aimed. Point at the fifth square and the fourth card was the one
-   * that moved.
-   *
-   * Coming from the right, and for a card off the body with no place in the row
-   * yet, the square you aim at is the one you go in front of.
-   */
-  const lands = (targetId: string) => landsBefore(arranged, targetId, liftedIndex);
-
-  /**
-   * Moves a card already in the pack to sit before another, or on the end.
-   *
-   * A move that changes nothing writes nothing. Dropping a card in front of the
-   * one that already follows it is a real aim at a real place, and the place
-   * happens to be the one it is in — so it is allowed, and answered with
-   * silence rather than with a round trip that reorders the pack into the order
-   * it is already in.
-   */
-  const moveWithin = (holdingId: string, beforeId: string | null) => {
-    if (!onReorder) return;
-    if (!arranged.some((held) => held.id === holdingId)) return;
-    const order = orderWith(arranged, holdingId, beforeId);
-    if (sameOrder(order, arranged)) return;
-    setWanted(order);
-    onReorder(order);
-  };
+  const {
+    arranged,
+    stepAt,
+    lands,
+    insertAt,
+    setInsertAt,
+    dragOver,
+    setDragOver,
+    moveWithin,
+    itsOwnSquare,
+    ask,
+  } = useRack({ cards: inPack, liftedHoldingId, onReorder });
 
   /**
    * Takes a card off the body and puts it in the pack, where the pointer says.
@@ -238,9 +139,7 @@ export function Hand({
   const dropIntoPack = (holdingId: string, beforeId: string | null) => {
     onEquip(holdingId, null);
     if (!onReorder) return;
-    const order = orderWith(arranged, holdingId, beforeId);
-    setWanted(order);
-    onReorder(order);
+    ask(orderWith(arranged, holdingId, beforeId));
   };
 
   /**
@@ -434,10 +333,11 @@ export function Hand({
                     // arrive at the back of the pack and then jump.
                     const displaced = wornBySlot(seat)[slot];
                     if (displaced && onReorder) {
-                      const order = arranged.map((card) => card.id).filter((id) => id !== held.id);
+                      const order = arranged
+                        .map((card) => card.id)
+                        .filter((id) => id !== held.id);
                       order.splice(index, 0, displaced.holdingId);
-                      setWanted(order);
-                      onReorder(order);
+                      ask(order);
                     }
                     onEquip(held.id, slot);
                   }}

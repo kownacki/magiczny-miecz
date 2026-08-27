@@ -1493,6 +1493,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       const held = mine.holdings.find((card) => card.id === holdingId);
                       if (held) askToCast(holdingId, held.cardId, target);
                     }}
+                    /* The same write the pack's arranging goes through:
+                       `reorderPack` numbers whatever holdings it is given and
+                       never asked whether they were Przedmioty. */
+                    onReorder={(holdingIds) =>
+                      post("holdings", { action: "order", seatId: mine.id, holdingIds })
+                    }
                   />
                 }
               />
