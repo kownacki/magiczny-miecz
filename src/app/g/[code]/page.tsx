@@ -1212,7 +1212,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 title="Kto siedzi przy stole (G)"
                 className="text-ochre/80 transition hover:text-ochre"
               >
-                Gracze <span className="tnum text-muted">{seats.length}</span>
+                Gracze{" "}
+                <span className="tnum text-muted">
+                  {seats.length}/{MAX_SEATS}
+                </span>
               </button>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
               {/* Loud on purpose while it is on. Everything it unlocks writes a

@@ -30,7 +30,7 @@ export function ToneGlyph({ shape }: { shape: "up" | "down" | "square" }) {
     <svg
       viewBox="0 0 10 10"
       aria-hidden
-      className="mr-0.5 inline-block h-[0.7em] w-[0.7em] align-[-0.05em]"
+      className="mr-0.5 inline-block h-[0.85em] w-[0.85em] align-[-0.1em]"
       fill="currentColor"
     >
       {shape === "up" && <path d="M5 1.5 L9 8.5 H1 Z" />}

@@ -28,6 +28,8 @@ import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import type { PublicSeat } from "./table-layout";
 import { Drawer } from "./drawer";
+import { StatFigure } from "./token-rail";
+import { MAX_SEATS } from "@/lib/game/modes";
 import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 
 export function PlayersDrawer({
@@ -85,7 +87,10 @@ export function PlayersDrawer({
       side="right"
       title={
         <>
-          Gracze <span className="tnum text-muted">{seats.length}/6</span>
+          Gracze{" "}
+          <span className="tnum text-muted">
+            {seats.length}/{MAX_SEATS}
+          </span>
         </>
       }
       onClose={onClose}
@@ -195,14 +200,25 @@ export function PlayersDrawer({
                         label="Natura"
                         value={seat.nature ? (NATURE_LABEL[seat.nature] ?? seat.nature) : "—"}
                       />
+                      {/* All four, in the order the Karta prints them up its
+                          own edges and in the colours they wear everywhere
+                          else — the same figures the folded seat card shows,
+                          said the same way. Two of them were missing here
+                          entirely, which made the roster the one place at the
+                          table where you could not see how much Życia somebody
+                          had left. */}
                       <Row
                         label="Miecz"
-                        value={`${seat.miecz}${seat.miecz !== seat.swordOwn ? ` (${seat.swordOwn} własne)` : ""}`}
+                        tone="text-miecz"
+                        value={<StatFigure value={seat.swordOwn} total={seat.miecz} />}
                       />
                       <Row
                         label="Magia"
-                        value={`${seat.magia}${seat.magia !== seat.magicOwn ? ` (${seat.magicOwn} własne)` : ""}`}
+                        tone="text-magia"
+                        value={<StatFigure value={seat.magicOwn} total={seat.magia} />}
                       />
+                      <Row label="Życie" tone="text-zycie" value={seat.life} />
+                      <Row label="Złoto" tone="text-zloto" value={seat.gold} />
                       {seat.turnsLost > 0 && (
                         <Row label="Traci tur" value={String(seat.turnsLost)} />
                       )}
@@ -275,11 +291,20 @@ export function PlayersDrawer({
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({
+  label,
+  value,
+  tone = "text-ink",
+}: {
+  label: string;
+  value: React.ReactNode;
+  /** The colour a figure wears everywhere else — Miecz, Magia, Życie, Złoto. */
+  tone?: string;
+}) {
   return (
     <>
       <dt className="text-muted">{label}</dt>
-      <dd className="truncate text-ink">{value}</dd>
+      <dd className={`tnum truncate ${tone}`}>{value}</dd>
     </>
   );
 }
