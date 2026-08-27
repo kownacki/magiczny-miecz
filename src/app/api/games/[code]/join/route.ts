@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { bodyOf } from "@/lib/game/requests";
 import { bumpRevision, findGame, joinGame, seatsFor, verifyActor } from "@/lib/game/store";
-import { resumeDevice, takeSeat } from "@/lib/game/lobbyStore";
+import { noteArrival, resumeDevice, takeSeat } from "@/lib/game/lobbyStore";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -61,14 +61,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
       const actor = body.token ? await verifyActor(game.id, String(body.token)) : null;
       if (!actor) {
-        const { user, token } = await joinGame(
+        const { user, seat, token } = await joinGame(
           game.id,
           name,
           deviceId,
           game.status === "playing",
           wanted.seat_index,
         );
-        await bumpRevision(game.id);
+        await announce(game.id, user.name, seat?.id ?? wanted.id);
         return NextResponse.json({ userId: user.id, seatIndex: wanted.seat_index, token });
       }
       await takeSeat(game.id, actor.user.id, wanted.seat_index);
@@ -90,9 +90,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       deviceId,
       game.status === "playing",
     );
-    await bumpRevision(game.id);
+    await announce(game.id, user.name, seat?.id ?? null);
     return NextResponse.json({ userId: user.id, seatIndex: seat?.seat_index ?? null, token });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 409 });
+  }
+}
+
+/**
+ * Writes the arrival down, and wakes the table either way.
+ *
+ * `noteArrival` goes through `change`, which bumps the revision as part of
+ * committing — so it replaces the `bumpRevision` that used to be the only thing
+ * here, rather than being a second write beside it.
+ *
+ * The join has already happened by the time this runs: `joinGame` is the app's
+ * one read-modify-write, because it must insert a row and hand a claim token
+ * back. So a failure here must not become a failed join — the person is at the
+ * table whatever the journal says. It falls back to the bare revision bump,
+ * which is what everybody else's browser is waiting on.
+ */
+async function announce(gameId: string, name: string, seatId: string | null): Promise<void> {
+  try {
+    await noteArrival(gameId, name, seatId);
+  } catch {
+    await bumpRevision(gameId);
   }
 }

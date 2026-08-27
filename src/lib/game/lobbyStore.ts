@@ -6,6 +6,7 @@ import {
   takeSeat as takeSeatOn,
   unseat as unseatOn,
   leaveTable as leaveTableOn,
+  noteArrival as noteArrivalOn,
   needsSweep,
   renameUser as renameUserOn,
   setReady as setReadyOn,
@@ -180,6 +181,23 @@ export async function leaveTable(
   byUser?: string,
 ): Promise<LeaveResult> {
   return change(gameId, leaveTableOn, { userId, kicked, byUser });
+}
+
+/**
+ * Writes down that somebody arrived.
+ *
+ * Called *after* `joinGame` rather than as part of it, because that one is the
+ * app's single read-modify-write: it inserts the user row and hands back a
+ * claim token, and a Changeset can do neither. So the arrival is a fact by the
+ * time this runs, and this only records it — which also means a failure here
+ * must not undo the join. The caller keeps it off the response path.
+ */
+export async function noteArrival(
+  gameId: string,
+  name: string,
+  seatId: string | null,
+): Promise<void> {
+  await change(gameId, noteArrivalOn, { name, seatId });
 }
 
 /** Sits somebody down in a seat. Refused only if somebody is actively driving it. */

@@ -11,6 +11,7 @@ import {
   nameOfSeat,
   needsSweep,
   nextHost,
+  noteArrival,
   promoteHost,
   renameUser,
   resumeAs,
@@ -859,5 +860,47 @@ describe("the cheap question asked on every poll", () => {
     // Everybody has just arrived and none of them has polled once. A fresh
     // poczekalnia is not a room everybody walked out of.
     expect(goneFrom(here({}, {}), NOW)).toEqual([]);
+  });
+});
+
+/**
+ * Arriving, which the journal did not record until it did.
+ *
+ * The gap this closes: `joined` is written by `takeNewCharacter` and means a
+ * *Postać* entered play. Between opening the join gate and choosing a Karta a
+ * person sits in the poczekalnia, and everything they did there was invisible —
+ * so a table filling up read as silence followed by four characters at once.
+ */
+describe("somebody arriving at the table", () => {
+  it("writes a line naming them, against the seat they were given", () => {
+    expect(noteArrival(table(2), { name: "Ola", seatId: "seat-1" }).writes.journal?.[0]).toEqual({
+      seatId: "seat-1",
+      turn: 3,
+      kind: "joined-table",
+      payload: { name: "Ola" },
+    });
+  });
+
+  it("says so when they got no chair", () => {
+    // Six seats is a limit on Postacie, not on people (LOBBY.md), so a full
+    // table still admits somebody — and "przygląda się" is a different sentence
+    // from "przychodzi do stołu", which is the whole reason the flag is in the
+    // payload rather than inferred from a null seat by the reader.
+    const watching = noteArrival(table(2), { name: "Ola", seatId: null });
+    expect(watching.writes.journal?.[0]).toEqual({
+      seatId: null,
+      turn: 3,
+      kind: "joined-table",
+      payload: { name: "Ola", spectator: true },
+    });
+  });
+
+  it("keeps the name rather than pointing at the row it came from", () => {
+    // The same copy `left-table` makes, for the same reason: the user row can
+    // be deleted — swept, kicked, walked away — and a journal that loses the
+    // name with it cannot answer what it is opened to answer.
+    const line = noteArrival(table(2), { name: "Ola", seatId: "seat-1" }).writes.journal?.[0];
+    expect(line?.payload).toMatchObject({ name: "Ola" });
+    expect(line?.payload).not.toHaveProperty("user");
   });
 });

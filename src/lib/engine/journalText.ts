@@ -608,6 +608,32 @@ export function describe(
     case "joined":
       return line(`${justPerson} dosiada się do stołu jako ${characterName(data.characterId)}.`);
     /**
+     * Somebody arrived. Not the same event as `joined`, and usually minutes
+     * earlier.
+     *
+     * `joined` is a *Postać* entering play — it carries a characterId and only
+     * exists once somebody has chosen one. Between opening the join gate and
+     * picking a Karta a person is at the table, in the poczekalnia, visible to
+     * everybody and doing nothing the journal recorded. So a table filling up
+     * read as silence, and then four characters appeared at once.
+     *
+     * The name is a copy, for the same reason `left-table`'s is: the row it
+     * came from can be deleted — being swept, being kicked, leaving — and a
+     * journal that loses the name when the person goes cannot answer the
+     * question it is opened for.
+     *
+     * Spectators get a line too. Six seats is a limit on Postacie, not on
+     * people (LOBBY.md), and somebody watching is somebody at the table.
+     */
+    case "joined-table": {
+      const who = typeof data.name === "string" && data.name ? data.name : "Ktoś";
+      return line(
+        data.spectator === true
+          ? `${who} przygląda się rozgrywce.`
+          : `${who} przychodzi do stołu.`,
+      );
+    }
+    /**
      * Somebody left, and whether they chose to.
      *
      * Its own kind rather than `left-behind`, which means *cards* left lying on

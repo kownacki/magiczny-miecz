@@ -324,6 +324,44 @@ export function unseat(snapshot: Snapshot, command: { userId: string }): Outcome
  * has its own copy of it: a rule the client keeps and the server does not is
  * not a rule.
  */
+/**
+ * Somebody arrived, written down at the moment they did.
+ *
+ * The counterpart of `leaveTable`, and it was missing: the journal recorded
+ * every departure and no arrival, because the only line near a join was
+ * `joined`, which `takeNewCharacter` writes when a *Postać* enters play. That
+ * is a different event minutes later — a person opens the join gate, sits in
+ * the poczekalnia deciding, and picks a Karta when they are ready. So a table
+ * filling up read as silence and then four characters at once.
+ *
+ * Takes the name rather than a user id, because the row this is about may not
+ * be in the snapshot: `joinGame` inserts the user itself — it has to mint and
+ * hand back a claim token, which a Changeset cannot do — so by the time a
+ * command could look, the arrival has already happened outside it. The name is
+ * copied into the payload for the reason `left-table` copies it: the row can be
+ * deleted and the line has to survive it.
+ */
+export function noteArrival(
+  snapshot: Snapshot,
+  command: { name: string; seatId: string | null },
+): Outcome<void> {
+  return {
+    writes: {
+      journal: [
+        {
+          seatId: command.seatId,
+          turn: snapshot.game.turn,
+          kind: "joined-table",
+          // A person with no chair is watching, which is a thing six seats
+          // allows and the journal should say plainly rather than by omission.
+          payload: { name: command.name, ...(command.seatId ? {} : { spectator: true }) },
+        },
+      ],
+    },
+    result: undefined,
+  };
+}
+
 export function leaveTable(
   snapshot: Snapshot,
   command: { userId: string; kicked?: boolean; byUser?: string },

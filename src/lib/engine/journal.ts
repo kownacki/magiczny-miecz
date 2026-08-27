@@ -56,6 +56,11 @@ export const JOURNAL_KINDS = [
   "healed",
   "healing",
   "joined",
+  /**
+   * A person arrived at the table. Not the same event as `joined`, which is a
+   * Postać entering play — and the gap between the two is usually minutes.
+   */
+  "joined-table",
   /** Somebody left the table, or was put out of it. Not the same as `left-behind`. */
   "left-table",
   "left-behind",
