@@ -26,7 +26,21 @@ import {
 /**
  * One seat, tall rather than wide: six have to sit side by side, and what a slot
  * shows — a portrait, a name, a state — stacks naturally.
+ *
+ * `SLOT` is the width all three chair shapes share, and it *shrinks*. Six at a
+ * fixed 190 need about 1,200 pixels and a laptop leaves the row about 1,100
+ * once the settings column has its 380, so the sixth chair was cut off — and
+ * the first one with it, because a centred flex row that overflows loses both
+ * ends rather than one. Everything inside a slot is fluid (the name truncates,
+ * the portrait is `object-contain`, the buttons are full-width), so the only
+ * thing that ever held it at 190 was `shrink-0`.
+ *
+ * The floor is a formality: what actually stops a chair getting narrower is its
+ * own contents — the two admin buttons on one line come to about 135 — and this
+ * only says so out loud, so that a slot which one day *could* shrink further
+ * still does not become a sliver.
  */
+const SLOT = "h-full max-h-[340px] w-[190px] min-w-[132px] shrink";
 export function SeatSlot({
   seat,
   character,
@@ -70,7 +84,7 @@ export function SeatSlot({
       onMouseEnter={() => onPreview(seat.characterId)}
       onMouseLeave={() => onPreview(null)}
       style={{ borderTopColor: colour, borderTopWidth: 3 }}
-      className={`relative flex h-full max-h-[340px] w-[190px] shrink-0 flex-col rounded-lg border p-2 ${
+      className={`relative flex ${SLOT} flex-col rounded-lg border p-2 ${
         isTarget
           ? "border-ochre bg-panel"
           : seat.ready
@@ -260,7 +274,7 @@ export function EmptySlot({
 
   if (!canAdd) {
     return (
-      <div className="flex h-full max-h-[340px] w-[190px] shrink-0 items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[12px] leading-snug text-muted/60">
+      <div className={`flex ${SLOT} items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[12px] leading-snug text-muted/60`}>
         wolne miejsce — dołączcie kodem
       </div>
     );
@@ -274,7 +288,7 @@ export function EmptySlot({
         onAdd(name);
         setName("");
       }}
-      className="flex h-full max-h-[340px] w-[190px] shrink-0 flex-col justify-center gap-2 rounded-lg border border-dashed border-edge p-2"
+      className={`flex ${SLOT} flex-col justify-center gap-2 rounded-lg border border-dashed border-edge p-2`}
     >
       <span className="text-center text-[12px] uppercase tracking-widest text-muted">
         Dodaj gracza

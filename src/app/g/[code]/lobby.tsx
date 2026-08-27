@@ -226,7 +226,18 @@ export function Lobby({
             refused to shrink below the width of the character strip and pushed
             the reading column clean off the screen. */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <section className="flex min-h-0 flex-1 items-center justify-center gap-3 overflow-x-auto px-4 py-3">
+          {/**
+           * Centred by auto margins on the ends rather than by `justify-center`.
+           *
+           * They look the same until the row does not fit, and then they are
+           * opposite: `justify-center` splits the *negative* free space in two
+           * and puts half of it off the left edge, where no amount of scrolling
+           * reaches it — so an overflowing row of six chairs lost the first one
+           * completely and cut the last in half. An auto margin clamps at zero
+           * instead, so the row centres while it fits and scrolls from its own
+           * start once it does not.
+           */}
+          <section className="flex min-h-0 flex-1 items-center gap-2 overflow-x-auto px-4 py-3 [&>*:first-child]:ml-auto [&>*:last-child]:mr-auto">
             {Array.from({ length: MAX_SEATS }, (_, index) => {
               const seat = seats[index];
               /**
