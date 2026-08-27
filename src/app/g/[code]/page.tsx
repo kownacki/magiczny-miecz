@@ -628,9 +628,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           Postać is neither — `remove` clears `eliminated` on purpose, because a
           chair with nothing standing in it is waiting rather than dead — so its
           player sat there reading "bez postaci" with nothing on screen to press.
-          The question the gate is really asking is whether this seat has a
-          Postać in play, so that is what it asks. */}
-      {mySeat &&
+
+          `status` is asked outright because `eliminated` had been answering it
+          by accident: it is never set in the poczekalnia, so testing it also
+          meant "the game is running" without saying so. Asking the real
+          question instead — has this seat a Postać? — was true of every seat in
+          a lobby that has not started, and this opened over the lobby's own
+          picker to announce that the game was already under way. Two conditions
+          because there are two: the game is running, and this chair is empty. */}
+      {game.status === "playing" &&
+        mySeat &&
         (mySeat.eliminated || !mySeat.character_id) &&
         (reborn || !mySeat.character_id) && (
         <RebornModal
