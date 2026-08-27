@@ -15,14 +15,33 @@
  */
 
 import { Drawer } from "./drawer";
+import type { EqMode } from "@/lib/engine/slots";
 import { Rules } from "./rule-ref";
 import { setPreference, usePreferences, type Preferences } from "./preferences";
 
-export function Settings({ onClose }: { onClose: () => void }) {
+export function Settings({
+  onClose,
+  eqMode,
+}: {
+  onClose: () => void;
+  eqMode: EqMode;
+}) {
   const prefs = usePreferences();
   return (
     <Drawer side="right" width="max-w-sm" title="Ustawienia" onClose={onClose}>
       <div className="flex flex-col gap-4 p-4">
+        {/* Not a preference — the table's, chosen when it was opened, and the
+            same for everybody sitting at it. It is here because this is where
+            somebody goes to ask "what is this game doing", and it was a bare
+            word in the bar that said "slotowy" to people who had never met the
+            word. Fixed for the life of the table: half the rules below have
+            already been applied to cards that are lying on the board. */}
+        <Switch
+          on={eqMode === "slots"}
+          label="Ekwipunek slotowy"
+          fixed="Wybrane przy otwieraniu stołu — w trakcie gry już nie do zmiany."
+          said="Działa tylko to, co Postać ma na sobie; reszta czeka w Plecaku. Wyłączone znaczy zasady z pudełka: cztery Przedmioty i wszystkie działają. Szczegóły w Księdze, na półce Wariant."
+        />
         <Switch
           name="ruleRefs"
           on={prefs.ruleRefs}
@@ -43,11 +62,21 @@ function Switch({
   on,
   label,
   said,
+  fixed,
 }: {
-  name: keyof Preferences;
+  /** Absent where the switch is showing something rather than deciding it. */
+  name?: keyof Preferences;
   on: boolean;
   label: string;
   said: string;
+  /**
+   * Why this one cannot be moved.
+   *
+   * Shown rather than hidden. A setting that is simply missing leaves a reader
+   * wondering where it went; one that is there and will not move, with the
+   * reason under it, answers the question it raises.
+   */
+  fixed?: string;
 }) {
   /**
    * The explanation is outside the button, not inside it.
@@ -57,14 +86,21 @@ function Switch({
    * where the inner starts, and what you get is two controls in a row where
    * the markup said one inside another.
    */
+  const locked = name === undefined;
   return (
-    <div className="rounded border border-edge bg-raised/40 p-3 transition hover:border-ochre/60">
+    <div
+      className={`rounded border border-edge bg-raised/40 p-3 ${
+        locked ? "" : "transition hover:border-ochre/60"
+      }`}
+    >
       <button
         type="button"
         role="switch"
         aria-checked={on}
-        onClick={() => setPreference(name, !on)}
-        className="flex w-full items-center gap-3 text-left"
+        disabled={locked}
+        title={fixed}
+        onClick={() => name && setPreference(name, !on)}
+        className={`flex w-full items-center gap-3 text-left ${locked ? "cursor-default" : ""}`}
       >
         {/* Drawn rather than a checkbox: the rest of this app is drawn, and a
           browser's own checkbox in the middle of it is a piece of somebody
@@ -73,12 +109,14 @@ function Switch({
           aria-hidden
           className={`flex h-4 w-7 shrink-0 items-center rounded-full border p-0.5 transition ${
             on
-              ? "justify-end border-ochre bg-ochre/25"
+              ? `justify-end ${locked ? "border-muted/50 bg-muted/15" : "border-ochre bg-ochre/25"}`
               : "justify-start border-edge bg-night"
           }`}
         >
           <span
-            className={`h-2.5 w-2.5 rounded-full ${on ? "bg-ochre" : "bg-muted/60"}`}
+            className={`h-2.5 w-2.5 rounded-full ${
+              on ? (locked ? "bg-muted/70" : "bg-ochre") : "bg-muted/60"
+            }`}
           />
         </span>
         <span className="min-w-0 text-sm text-ink">{label}</span>
@@ -89,6 +127,7 @@ function Switch({
       <p className="mt-1 pl-10 text-[11px] leading-relaxed text-muted">
         <Rules>{said}</Rules>
       </p>
+      {fixed && <p className="mt-1 pl-10 text-[11px] text-muted/60">{fixed}</p>}
     </div>
   );
 }

@@ -50,6 +50,7 @@ import { Toasts } from "./toast";
 import { OpenRule, Rules } from "./rule-ref";
 import type { RulesShelf } from "./rules-shelf";
 import { Settings } from "./settings";
+import { BarButton } from "./bar-button";
 import { usePreferences } from "./preferences";
 import { PlayersDrawer } from "./players";
 import { PilesDrawer } from "./piles";
@@ -1143,7 +1144,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               />
             ) : null}
             {rightDrawer === "ustawienia" ? (
-              <Settings onClose={() => setRightDrawer(null)} />
+              <Settings
+                onClose={() => setRightDrawer(null)}
+                eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+              />
             ) : null}
             {rightDrawer === "gracze" ? (
             <PlayersDrawer
@@ -1216,13 +1220,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   piles are the two things you consult rather than play, and
                   they take turns over the board because only one drawer opens
                   down a side at a time. */}
-              <button
+              <BarButton
+                glyph="book"
+                active={leftDrawer === "ksiega"}
                 onClick={() => setLeftDrawer((out) => (out === "ksiega" ? null : "ksiega"))}
-                title="Każda Karta i każdy Obszar w grze — zdradzi ci tajemnicę (K)"
-                className="text-[11px] text-ochre/80 transition hover:text-ochre"
-              >
-                Księga Tolimana
-              </button>
+                title="Księga Tolimana — każda Karta, każdy Obszar i cała Instrukcja (K)"
+              />
               {/* Both piles, beside the turn they are being drawn into. At a
                   physical table the stacks sit on the table and everybody
                   watches them thin; in simulation they were invisible, so a
@@ -1264,50 +1267,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               {/* Who is at the table, which is a question about the table and
                   not about the turn — so it lives up here with the rest of
                   them, and stays reachable while a fight is open. */}
-              <button
+              <BarButton
+                glyph="people"
+                active={rightDrawer === "gracze"}
+                tally={`${seats.length}/${MAX_SEATS}`}
                 onClick={() => setRightDrawer((out) => (out === "gracze" ? null : "gracze"))}
-                title="Kto siedzi przy stole (G)"
-                className="text-ochre/80 transition hover:text-ochre"
-              >
-                Gracze{" "}
-                <span className="tnum text-muted">
-                  {seats.length}/{MAX_SEATS}
-                </span>
-              </button>
-              {/* Which house rule this table plays, said on the table rather
-                  than only in the poczekalnia where it was chosen. Half the
-                  people at a slotowy table did not open it, and nothing on
-                  screen told them the Przedmiot in their Plecak has stopped
-                  working. The word is the door to what it changes. */}
-              <button
-                onClick={() => setRightDrawer((out) => (out === "ustawienia" ? null : "ustawienia"))}
-                title="Ustawienia tego okna"
-                aria-label="Ustawienia"
-                className="text-ochre/80 transition hover:text-ochre"
-              >
-                {/* A gear, drawn small enough to sit on the bar's line. */}
-                <svg
-                  viewBox="0 0 24 24"
-                  width="14"
-                  height="14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.61.77 1 1.42 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => openAt("wariant", null)}
-                title="Czym ten stół różni się od Instrukcji"
-                className="text-muted transition hover:text-ochre"
-              >
-                {game.eq_mode === "slots" ? "slotowy" : "klasycznie"}
-              </button>
+                title="Gracze — kto siedzi przy stole (G)"
+              />
+              <BarButton
+                glyph="gear"
+                active={rightDrawer === "ustawienia"}
+                onClick={() =>
+                  setRightDrawer((out) => (out === "ustawienia" ? null : "ustawienia"))
+                }
+                title="Ustawienia — numery zasad, tryb ekwipunku"
+              />
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
               {/* Loud on purpose while it is on. Everything it unlocks writes a
                   manual override into the journal, and a switch you can forget

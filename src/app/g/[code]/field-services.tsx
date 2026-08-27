@@ -1,5 +1,6 @@
 "use client";
 
+
 /** A field that trades: the Płatnerz's price list, the Medyk's wounds and the Lichwiarz's offer, each with the thing it does attached to a button. */
 
 import { useState } from "react";
