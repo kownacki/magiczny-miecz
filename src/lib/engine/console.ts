@@ -235,6 +235,21 @@ export type Command =
    * decides, with it the console does — so the capability comes off the flag
    * rather than off a second word. `gold +5 force` set the pattern.
    */
+  /**
+   * `force` here is only half of what it is on `gold`, because 7.3 has two
+   * halves and only one of them was ever the console's business.
+   *
+   * *Writing* the mark never is. Typing a Natura is not the character changing
+   * one, so it cannot use up the change 7.3 allows them — and the plain line
+   * used to spend it anyway, on something that never happened in the game. The
+   * next card to turn them Zły would be refused over a change nobody at the
+   * table had made. That is not a switch, so there is no word for it.
+   *
+   * *Reading* it is, and that is what the word is left for. A character who
+   * already changed Natura this turn — really, in the game — refuses, and says
+   * so, because a tester who was not told would read the refusal as the console
+   * being broken. `force` is the answer to having been told.
+   */
   | { kind: "nature"; nature: Nature; who: string | null; force: boolean }
   | { kind: "turn"; who: string | null }
   | { kind: "stone"; who: string | null }
@@ -577,7 +592,7 @@ export const COMMANDS: CommandSpec[] = [
     when: PLAYING,
     aliases: [],
     usage: "nature good|evil|chaotic [player] [force]",
-    summary: "change a Natura (7.2) — `force` ignores 7.3, and leaves no mark of it",
+    summary: "change a Natura (7.2) — leaves no mark of 7.3; `force` ignores one",
     needs: "play",
   },
   {
@@ -1545,7 +1560,8 @@ const NEEDS: Record<Command["kind"], Capability> = {
 
 export function needsOf(command: Command): Capability {
   // One verb whose capability is on the line rather than in the table: 7.2's
-  // change is playing the game, and skipping 7.3's "once a turn" is not.
+  // change is playing the game, and overruling a 7.3 the game itself wrote is
+  // not.
   if (command.kind === "nature") return command.force ? "testmode" : "play";
   return NEEDS[command.kind];
 }

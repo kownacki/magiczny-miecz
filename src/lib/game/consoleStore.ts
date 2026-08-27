@@ -629,7 +629,16 @@ export async function runCommand(
 
     case "nature": {
       const seat = seatOf(command.who);
-      const { nowForbidden } = await changeNature(gameId, seat.id, command.nature, command.force);
+      // By hand always, forced only when asked: a Natura somebody typed does
+      // not use up the character's one change of the turn, but a change the
+      // *game* made this turn still refuses until `force` says otherwise.
+      const { nowForbidden } = await changeNature(
+        gameId,
+        seat.id,
+        command.nature,
+        command.force,
+        true,
+      );
       // 7.4 by way of 5.5: the cards the new Natura may not hold have to go,
       // and a tester who was not told which they are would find out two turns
       // later. `changeNature` works this out already; nothing was reading it.

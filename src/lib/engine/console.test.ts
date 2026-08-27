@@ -428,7 +428,7 @@ suite("playing the game, and overruling it", () => {
     for (const line of ["stone", "spell", "nature evil"]) {
       expect(permits(ok(line), { testmode: false }).ok, line).toBe(true);
     }
-    // The same word, with the flag that skips 7.3's once a turn.
+    // The same word, with the flag that overrules a 7.3 the game itself wrote.
     expect(permits(ok("nature evil force"), { testmode: false }).ok).toBe(false);
     expect(permits(ok("nature evil force"), { testmode: true }).ok).toBe(true);
   });

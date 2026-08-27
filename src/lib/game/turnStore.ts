@@ -807,9 +807,12 @@ export async function changeNature(
   gameId: string,
   seatId: string,
   nature: "good" | "evil" | "chaotic",
+  /** Ignores a 7.3 mark the game itself wrote. `byHand` is the other half. */
   force = false,
+  /** Somebody typed it, so 7.3 gets no mark out of it — see the command. */
+  byHand = false,
 ): Promise<{ nowForbidden: string[] }> {
-  return change(gameId, changeNatureOn, { seatId, nature, force });
+  return change(gameId, changeNatureOn, { seatId, nature, force, byHand });
 }
 
 /**

@@ -68,6 +68,36 @@ describe("zmiana Natury (7.2-7.4)", () => {
     expect(writes.journal?.[0]).toMatchObject({ kind: "nature-change", manual: true });
   });
 
+  /**
+   * The half of 7.3 the console has no business in. Typing a Natura is not the
+   * character changing one, so it cannot use up the change 7.3 allows them —
+   * and the mark this used to leave would refuse the next card that tried.
+   */
+  it("leaves no mark of 7.3 when somebody typed it", () => {
+    const { writes } = changeNature(table(), {
+      seatId: "seat-a",
+      nature: "evil",
+      byHand: true,
+    });
+    expect(writes.seats?.[0].patch).toEqual({ nature: "evil" });
+    expect(writes.journal?.[0]).toMatchObject({ manual: true });
+  });
+
+  /**
+   * And the half it does: a mark that is already there can only be the game's
+   * own, so the console meets a change that really happened and is told about
+   * it rather than quietly walking through.
+   */
+  it("still refuses a typed change over a 7.3 the game wrote", () => {
+    expect(() =>
+      changeNature(table({ nature_changed_turn: 5 }), {
+        seatId: "seat-a",
+        nature: "evil",
+        byHand: true,
+      }),
+    ).toThrow(/force/);
+  });
+
   it("marks an ordinary change as what it is: not manual", () => {
     const { writes } = changeNature(table(), { seatId: "seat-a", nature: "evil" });
     expect(writes.journal?.[0].manual ?? false).toBe(false);

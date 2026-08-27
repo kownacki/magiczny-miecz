@@ -67,23 +67,27 @@ function forbiddenFor(card: EventCard): Nature[] | undefined {
 export function changeNature(
   snapshot: Snapshot,
   /**
-   * `force` is the test console's, and lifts 7.3 rather than working around it.
+   * 7.3 is a memory of which turn the Natura last changed on, and it is read
+   * and written on two different questions.
    *
-   * The rule is a memory of which turn the Natura last changed on, so the only
-   * other way to set one twice in a turn would be to clear that memory behind
-   * the command's back — which is the same act with the rule out of sight. It
-   * marks the journal row manual as well, because a Natura that moved because
-   * somebody typed it must not read like one that moved because a card said so.
+   * `byHand` answers "did the character change it?". Somebody typing into the
+   * console is not the character doing anything, so nothing is written: a hack
+   * that left the mark behind would spend the character's one change of the
+   * turn on something that never happened in the game, and the next card to
+   * turn them Zły would be refused over it. It marks the journal row manual for
+   * the same reason — a Natura that moved because somebody typed must not read
+   * like one that moved because a card said so.
    *
-   * And it lifts the rule in *both* directions: a forced change neither reads
-   * the memory nor writes one. A hack that left 7.3's mark behind would be
-   * spending the character's one change of the turn on something that never
-   * happened in the game — the next card to turn them Zły would be refused,
-   * and the player would be looking at "drugiej zmiany nie będzie" over a
-   * Natura nobody at the table had changed. Without `force` this is the game
-   * doing it, and the mark is exactly right.
+   * `force` answers "may this ignore a mark that is already there?", and that
+   * mark can only have been the game's own. So it is the narrower thing, and
+   * the one worth a word on the line: without it a hack is refused by a rule
+   * about a change that really did happen, and being told is the point.
+   *
+   * Lifting the rule by clearing the memory behind the command's back would be
+   * the same act with the rule out of sight, which is why neither of these is
+   * a patch a caller writes.
    */
-  command: { seatId: string; nature: Nature; force?: boolean },
+  command: { seatId: string; nature: Nature; force?: boolean; byHand?: boolean },
 ): Outcome<{ nowForbidden: string[] }> {
   const seat = seatById(snapshot, command.seatId);
   /**
@@ -100,6 +104,9 @@ export function changeNature(
    * become forbidden by 7.4 when the Natura it would be forbidden by is the one
    * already in force.
    */
+  /** Somebody typed it, so 7.3 has nothing to remember. See `byHand` above. */
+  const byHand = command.byHand === true || command.force === true;
+
   if (seat.nature === command.nature) {
     return {
       writes: {
@@ -109,7 +116,7 @@ export function changeNature(
             turn: snapshot.game.turn,
             kind: "nature-change",
             payload: { from: seat.nature, to: command.nature, nowForbidden: [] },
-            manual: command.force ?? false,
+            manual: byHand,
           },
         ],
       },
@@ -126,7 +133,11 @@ export function changeNature(
     (ability) => ability.kind === "natura-dowolna",
   );
   if (!freely && !command.force && seat.nature_changed_turn === snapshot.game.turn) {
-    throw new Error("Naturę można zmienić najwyżej raz na turę (7.3).");
+    // Said with the way out in it. The mark can only have been the game's own
+    // — nothing typed writes one — so a tester meeting this is meeting a real
+    // change that really happened, and the next thing they need to know is
+    // that there is a word for going ahead anyway.
+    throw new Error("Naturę można zmienić najwyżej raz na turę (7.3) — `force` to pomija.");
   }
 
   const nowForbidden = snapshot.holdings
@@ -145,9 +156,9 @@ export function changeNature(
           id: seat.id,
           patch: {
             nature: command.nature,
-            // 7.3's memory, and only when 7.3 is what allowed the change. See
-            // `force` above.
-            ...(command.force ? {} : { nature_changed_turn: snapshot.game.turn }),
+            // 7.3's memory, and only where the character is who changed it.
+            // See `byHand` above.
+            ...(byHand ? {} : { nature_changed_turn: snapshot.game.turn }),
           },
         },
       ],
@@ -157,7 +168,7 @@ export function changeNature(
           turn: snapshot.game.turn,
           kind: "nature-change",
           payload: { from: seat.nature, to: command.nature, nowForbidden },
-          manual: command.force ?? false,
+          manual: byHand,
         },
       ],
     },
