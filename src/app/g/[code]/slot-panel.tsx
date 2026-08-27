@@ -246,6 +246,9 @@ export function SlotPanel({
               onDragLeave={() => setOver((current) => (current === slot ? null : current))}
               onDrop={(event) => {
                 setOver(null);
+                // The drop is the end of the drag: `dragend` fires on the card
+                // that was picked up, which a landing drop has just unmounted.
+                onDragging(null);
                 if (!canAct) return;
                 const holdingId = event.dataTransfer.getData(DRAG_TYPE);
                 if (!holdingId) return;

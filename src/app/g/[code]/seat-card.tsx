@@ -151,11 +151,26 @@ export function SeatCard({
    * is not a place at all — a click on the board, or Escape — because a card
    * picked up and not put anywhere has not gone anywhere.
    */
+  /**
+   * Nothing is in the air any more, whichever half was holding it.
+   *
+   * There are two: a card picked up by clicking (`carried`) and one picked up
+   * by dragging (`dragging`), and both feed `liftedHoldingId` and
+   * `movingCardId` — the fade on the place it came from, and the lit places it
+   * could go. Clearing one and not the other leaves the table looking exactly
+   * like a gesture still in progress, which is the state a mixed run of
+   * double-clicks, drags and corner buttons kept ending in.
+   */
+  const putDown = useCallback(() => {
+    setCarried(null);
+    announceDrag(null);
+  }, [announceDrag, setCarried]);
+
   const place = (slot: Slot | null) => {
     if (!carried) return;
-    if (carried.from === (slot ?? "plecak")) return setCarried(null);
+    if (carried.from === (slot ?? "plecak")) return putDown();
     onEquip(carried.holdingId, slot);
-    setCarried(null);
+    putDown();
   };
 
   // A click anywhere that is not a place, or Escape, puts it back. The places
@@ -166,10 +181,10 @@ export function SeatCard({
     if (!carried) return;
     let cancel: (() => void) | undefined;
     const timer = setTimeout(() => {
-      const putBack = () => setCarried(null);
+      const putBack = () => putDown();
       const onKey = (event: KeyboardEvent) => {
         // Not while a sheet is open over the table: Escape is the top one's.
-        if (event.key === "Escape" && !dismissableOpen()) setCarried(null);
+        if (event.key === "Escape" && !dismissableOpen()) putDown();
       };
       window.addEventListener("click", putBack);
       window.addEventListener("keydown", onKey);
@@ -185,6 +200,31 @@ export function SeatCard({
   }, [carried]);
 
   /**
+   * A drag ends when it ends, wherever that is.
+   *
+   * `dragend` fires on the element the drag started from — and a drop that
+   * lands moves that card, so React has usually unmounted it by the time the
+   * event would arrive. The handler on the card then never runs, `dragging`
+   * stays set, and the table sits there with the origin faded and every place
+   * it could go lit up: a gesture that finished minutes ago, still showing.
+   *
+   * Listening at the window catches all of it — the drop that landed, the one
+   * that missed, the drag let go outside the window — and `drop` is here as
+   * well as `dragend` because one of the card handlers stops propagation, so
+   * that one would otherwise arrive only as the `dragend` that goes missing.
+   */
+  useEffect(() => {
+    if (!dragging) return;
+    const done = () => announceDrag(null);
+    window.addEventListener("dragend", done, true);
+    window.addEventListener("drop", done, true);
+    return () => {
+      window.removeEventListener("dragend", done, true);
+      window.removeEventListener("drop", done, true);
+    };
+  }, [dragging, announceDrag]);
+
+  /**
    * Going away puts the card down.
    *
    * A card on the cursor is a gesture half finished, and a gesture cannot be
@@ -198,7 +238,7 @@ export function SeatCard({
    */
   useEffect(() => {
     if (!carried) return;
-    const putBack = () => setCarried(null);
+    const putBack = () => putDown();
     const onHidden = () => {
       if (document.hidden) putBack();
     };
@@ -525,7 +565,7 @@ export function SeatCard({
                   setCarried({ ...item, name: item.card.name, from })
                 }
                 onTakeOff={(holdingId) => {
-                  setCarried(null);
+                  putDown();
                   onEquip(holdingId, null);
                 }}
                 onUse={onUse}

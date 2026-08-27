@@ -341,6 +341,8 @@ export function Hand({
           const before = insertAt === null ? null : lands(insertAt);
           setDragOver(false);
           setInsertAt(null);
+          // The drop is the end of the drag, whatever `dragend` does about it.
+          onDragging(null);
           if (!canAct) return;
           const holdingId = event.dataTransfer.getData(DRAG_TYPE);
           if (!holdingId) return;
@@ -546,6 +548,7 @@ export function Hand({
             onDrop={(event) => {
               setInsertAt(null);
               setDragOver(false);
+              onDragging(null);
               if (!canAct) return;
               const holdingId = event.dataTransfer.getData(DRAG_TYPE);
               if (!holdingId || holdingId === held.id) return;
