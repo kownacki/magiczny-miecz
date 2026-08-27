@@ -105,8 +105,6 @@ export function SeatCard({
    */
   /** Whether the sheet is open, the way the Plecak and the Zaklęcia inside it fold. */
   const [showing, setShowing] = useState(true);
-  /** And the body separately, because it is the half that is read least often. */
-  const [wearing, setWearing] = useState(true);
   const [carried, setCarried] = useState<Carried | null>(null);
   /**
    * The card being dragged, by id.
@@ -222,12 +220,18 @@ export function SeatCard({
      * what you are worth, and what Natura you are of — and the rest is one
      * click away.
      */
-    <details
-      open={showing}
+    <article
       className={`rounded-lg border bg-panel p-4 transition ${
         active ? "border-ochre shadow-[0_0_0_1px_var(--color-ochre)]" : "border-edge"
       }`}
     >
+      {/* The Postać and what it is wearing, folded together and apart from the
+          rest. What is under this heading is the *character sheet* — who you
+          are, what you are worth, what you have on — and the two things below
+          it are hands of cards, which fold on their own and are wanted at
+          different moments. Folding all three from one place would mean
+          reaching for the Plecak and getting the Karta with it. */}
+      <details open={showing}>
       {/* A fixed height, so a seat card does not jump when an effect appears or
           wears off — the row is as tall as a mark can be whether or not any are
           there.
@@ -277,7 +281,15 @@ export function SeatCard({
             <span className="truncate text-ink">
               {seat.player_name ?? `Miejsce ${seat.seat_index + 1}`}
             </span>
-            {character && <span className="shrink-0 text-muted">{character.name}</span>}
+            {character && (
+              <Lookable
+                kind="character"
+                id={character.id}
+                name={character.name}
+                eqMode={slotted ? "slots" : "classic"}
+                className="shrink-0 text-muted"
+              />
+            )}
             {seat.nature && (
               <span className="shrink-0 text-muted/70">
                 {NATURE_LABEL[seat.nature] ?? seat.nature}
@@ -320,20 +332,16 @@ export function SeatCard({
             </span>
           )}
         </h3>
-        {/* What you are, beside who you are — and always, not only when the
-            card is folded. The roster has said it next to every other player's
-            name from the beginning; your own was the one place you had to read
-            the picture to find out, which is the one place you already know
-            and the one place it is written smallest. Lookable, so it is the
-            same name here as everywhere else and opens the same Karta. */}
+        {/* What you are, beside who you are. The roster has said it next to
+            every other player's name from the beginning; your own was the one
+            place you had to read the picture to find out.
+
+            A plain word and not a `Lookable`: the whole Karta is six lines
+            below, so a hover that opens it again covers the card with a copy of
+            the card. Folded it *is* a Lookable — see the summary — because
+            then there is nothing else on screen to read. */}
         {character && (
-          <Lookable
-            kind="character"
-            id={character.id}
-            name={character.name}
-            eqMode={slotted ? "slots" : "classic"}
-            className="shrink-0 text-[11px] text-muted"
-          />
+          <span className="shrink-0 text-[11px] text-muted">{character.name}</span>
         )}
         {/* What is true of this character right now, beside the name it is
             true of. A mark is a reminder that something holds, not an
@@ -353,7 +361,7 @@ export function SeatCard({
 
       </header>
 
-      {character ? (
+      {character && (
         <>
           {/* The character and what it is wearing, pushed to opposite sides.
               They are two different things to look at — who this is, and what
@@ -470,28 +478,20 @@ export function SeatCard({
 
             {/* The body, beside the character card, in the slotted variant
                 only — klasyczny play has nowhere to put anything. */}
-            {/* The body, folded on its own.
+            {/* The body does not fold on its own.
                 
-                It is the largest thing in the card after the Karta itself and
-                the one that changes least: what you are wearing is settled for
-                whole turns at a time, and the eleven places are eleven whether
-                or not anything is in them. The tally is what a folded body has
-                to keep — "three things on" is the question it answers. */}
+                It folds with the Karta beside it, under POSTAĆ, because the two
+                are one answer: who you are and what you have on. A second
+                handle inside the section its own heading already folds was one
+                control too many — reaching for the sheet and hitting the body
+                is what it actually got used for. The tally stays, since it is
+                the part worth reading without counting. */}
             {slotted && (
-              <details
-                open={wearing}
-                className="min-w-0 flex-1"
-              >
-                <summary
-                  onClick={(event) => {
-                    event.preventDefault();
-                    setWearing(!wearing);
-                  }}
-                  className="mb-2 cursor-pointer text-[11px] uppercase tracking-widest text-muted"
-                >
+              <div className="min-w-0 flex-1">
+                <p className="mb-2 text-[11px] uppercase tracking-widest text-muted">
                   Na sobie{" "}
                   <span className="text-muted/70">{Object.keys(wornBySlot(seat)).length}</span>
-                </summary>
+                </p>
               <SlotPanel
                 worn={wornBySlot(seat)}
                 canAct={canAdjust}
@@ -514,10 +514,15 @@ export function SeatCard({
                   holdingId ? onEquip(holdingId, slot) : place(slot)
                 }
               />
-              </details>
+              </div>
             )}
           </div>
+        </>
+      )}
+      </details>
 
+      {character ? (
+        <>
           <Hand
             seat={seat}
             isMine={isMine}
@@ -574,6 +579,6 @@ export function SeatCard({
       ) : (
         <p className="text-sm text-muted">bez postaci</p>
       )}
-    </details>
+    </article>
   );
 }
