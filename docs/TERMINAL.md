@@ -380,6 +380,60 @@ covered writes and not everything else:
 which is the mid-game arrival line — the browser's lobby pick does not journal at
 all. Harmless, wrong, and worth a look when the setup verbs are finished.
 
+## The conventions — settled, do not relitigate
+
+Two established ones, because the console does two different jobs and they are
+not the same job. Everything below follows from that, and a new verb should be
+checked against these rather than against taste.
+
+### The game is interactive fiction
+
+`look`, `move Karczma`, `take MIECZ`, `drop MIECZ`, `card MAGOG`. Verb first, one
+short word, no prefix, the rest of the line is the thing it acts on. This is
+Zork's parser and it is forty-five years old: somebody sitting down at a game
+they type at already knows `look` and `i` and `x`, and every one of those
+guesses should work.
+
+- **Single-letter aliases for the most-typed**, IF's own: `l` = look,
+  `i` = me (inventory), `x` = card (examine). No others — a letter that saves
+  nothing costs a word somebody else wanted.
+- **`at` joins two names**: `place MIECZ at Karczma`, and `cast X at Ola` when
+  it lands. **`as` renames**: `rename Ola as Ala`.
+- **A trailing bare word is a flag**: `gold +5 force`, `remove 3 hard`,
+  `nature evil force`. Never a `--flag`; this is a game, not a shell.
+
+### The session is git
+
+`table new`, `table open`, `table delete`, and a bare `table` lists. Noun first,
+then the verb — `git remote add`, `docker image ls`. It groups what belongs
+together, keeps the good verbs for the game, and `table ⇥` shows the family
+instead of scattering it across the alphabet.
+
+Applies to anything that acts on the *program* rather than the world:
+`testmode on|off` is the other one. **A bare family word reports or lists; it
+never toggles** — a switch that flips with no argument does opposite things
+depending on state you cannot see.
+
+### Both
+
+- **Frequency earns brevity.** `roll` is typed every turn and stays one word;
+  `table new` is typed once a session and can afford a prefix. This is the
+  tie-breaker when the two conventions disagree.
+- **Missing an argument answers with the shape**: `Kick whom? kick <player>`.
+  A *wrong* name does not — that is an answer, not an absence, and an ambiguous
+  one already carries the candidates.
+- **Names are matched as printed**, case- and accent-insensitively, and the
+  rest of the line is one name: `give swiety graal` finds ŚWIĘTY GRAAL.
+
+### What we deliberately do not do
+
+- **No `\q` or `.exit` sigils.** psql and node need them to separate meta from a
+  data language; there is no data language here, so the prefix costs a keystroke
+  and buys nothing.
+- **No `--flags`.** See above.
+- **No compound verbs** — `newtable`, `opentable`. They do not compose, do not
+  complete, and scatter one family across four letters.
+
 ## Which language a line is in
 
 The audience decides, not the word. Splitting it by word type — "is *Miecz*

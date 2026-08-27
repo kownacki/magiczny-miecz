@@ -299,7 +299,9 @@ export const COMMANDS: CommandSpec[] = [
     // reading one than for conjuring one, and reading is the commoner want.
     name: "card",
     offTable: true,
-    aliases: ["read"],
+    // `x` is `examine` — Zork's word, and forty-five years of muscle memory
+    // for "tell me about that thing".
+    aliases: ["read", "x"],
     usage: "card MAGOG",
     summary: "what a Karta says — Postać, Zdarzenie, Przedmiot or Zaklęcie",
     needs: "play",
@@ -313,7 +315,9 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "me",
-    aliases: ["sheet"],
+    // `i` is `inventory`, the most-typed word in interactive fiction. What it
+    // shows here is a Karta Postaci, which is that and the numbers beside it.
+    aliases: ["sheet", "i"],
     usage: "me [player]",
     summary: "a Karta Postaci as it stands: points, Życie, Złoto, Natura and what is carried",
     needs: "play",
@@ -852,7 +856,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "ready", who: tail || null, ready: word === "ready" } };
   }
   if (word === "start") return { ok: { kind: "start" } };
-  if (word === "card" || word === "read") {
+  if (word === "card" || word === "read" || word === "x") {
     if (!tail) return needs("card", "Which card?");
     return { ok: { kind: "card", name: tail } };
   }
@@ -860,7 +864,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "roll") return { ok: { kind: "roll" } };
   if (word === "draw") return { ok: { kind: "draw" } };
   if (word === "look" || word === "l") return { ok: { kind: "look" } };
-  if (word === "me" || word === "sheet") return { ok: { kind: "me", who: tail || null } };
+  if (word === "me" || word === "sheet" || word === "i") {
+    return { ok: { kind: "me", who: tail || null } };
+  }
 
   if (word === "move" || word === "walk") {
     return name(PLACES, (field) => field.name, tail, "Obszar", (field) => ({
@@ -1111,7 +1117,7 @@ export function complete(
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
     if (verb === "summon") return { pool: FOES.map((c) => c.name), at: 1 };
-    if (verb === "card" || verb === "read") {
+    if (verb === "card" || verb === "read" || verb === "x") {
       return { pool: [...HOLDABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
     }
     if (verb === "teleport" || verb === "move" || verb === "walk") {
