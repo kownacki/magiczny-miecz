@@ -75,7 +75,7 @@ import {
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { eqModeOf, seatView } from "./commands/seat";
-import { fitsIn, slotsFor, type Slot } from "@/lib/engine/slots";
+import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 import { fold } from "@/lib/engine/search";
 
 /**
@@ -1356,11 +1356,29 @@ export async function runCommand(
        * and not named.
        */
       const own = seat.id === actor.seatId;
-      const spells = mine.filter((one) => one.kind === "spell");
+      /** Polish collation: ŁÓDŹ sorts after LIST, where somebody would look for it. */
+      const byName = (a: { card_id: string }, b: { card_id: string }) =>
+        cardName(a.card_id).localeCompare(cardName(b.card_id), "pl");
+      const spells = mine.filter((one) => one.kind === "spell").sort(byName);
       const items = mine.filter((one) => one.kind !== "spell");
       const view = seatView(snapshot, seat.id);
-      const worn = items.filter((one) => one.slot !== null);
-      const carried = items.filter((one) => one.slot === null);
+      /**
+       * Sorted for reading, not kept in the order somebody arranged them.
+       *
+       * `ordinal` is the browser's: you drag a pack into an order so cards can
+       * be *recognised* by where they sit, which is a thing a hand of tiles has
+       * and a list of words does not. A list is scanned instead, so it is
+       * alphabetical — and Polish collation, because ŁÓDŹ sorts after LIST and
+       * a default sort puts it somewhere nobody would look.
+       *
+       * Worn is the exception and goes in the body's own order: head, amulet,
+       * body, hands. That is not a list being searched, it is a figure being
+       * read down, and alphabetical would scatter it.
+       */
+      const worn = items
+        .filter((one) => one.slot !== null)
+        .sort((a, b) => SLOTS.indexOf(a.slot as Slot) - SLOTS.indexOf(b.slot as Slot));
+      const carried = items.filter((one) => one.slot === null).sort(byName);
       return [
         `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
         `Sword ${seat.sword_own}  Magic ${seat.magic_own}  Life ${seat.life}  Gold ${seat.gold}`,
