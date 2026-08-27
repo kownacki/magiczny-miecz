@@ -1,0 +1,265 @@
+# The terminal-first engine
+
+**Status: plan, not built.** Nothing in here exists yet except where it says so.
+
+The goal in one sentence: a whole game of Magiczny Miecz played at a terminal
+prompt, offline, from a save file — with the browser demoted to a *renderer* over
+the same engine rather than the only way in.
+
+Three things fall out of that, and they are the actual reasons to do it:
+
+- The engine becomes testable without a browser, a dev server, or Postgres.
+- An AI (or a script) can play a full game, which is the only honest way to find
+  out whether the rules hold up over ninety turns.
+- Whatever the terminal can do, the browser console can do, because they are the
+  same vocabulary. Today the browser console can only *break* rules; it cannot
+  play.
+
+## What already holds — do not rebuild it
+
+Most of the hard part is done, and it is worth being precise about that so the
+work does not turn into a rewrite of things that are already right.
+
+- **The engine is pure.** `src/lib/engine/` and the sixteen files in
+  `src/lib/game/commands/` import nothing but JSON data, their own types, and
+  each other. No React, no Supabase, no `node:fs`, no `Math.random`. A command is
+  already `(Snapshot, Command, Ports) → Outcome<Changeset, T>`.
+- **The console grammar is pure.** `src/lib/engine/console.ts` parses a line into
+  a `Command` union with no I/O at all, and `confirmationFor` already guards the
+  destructive ones.
+- **The commit is already correct under concurrency.** `change.ts` does
+  load → decide → write, with the write taking the games row on a
+  compare-and-swap against `revision`. A loser writes nothing rather than half of
+  something.
+- **An in-memory database already exists.** `src/lib/game/fakeDb.ts` is 154 lines
+  of "enough PostgREST to commit against", written so `commit`'s CAS could be
+  tested without a server. `commit.test.ts` swaps it in with `vi.mock`. It is a
+  test-time seam that wants to become a runtime one.
+
+## The one seam that is missing
+
+Everything funnels through `change()`:
+
+```
+change(gameId, handler, command, ports)
+  → loadSnapshot(gameId)        ← Supabase
+  → handler(snapshot, cmd, ports)   ← already pure, already portable
+  → commit(snapshot, writes)    ← Supabase, CAS on games.revision
+```
+
+Load and commit are the only coupled parts, and they reach a module-level
+singleton `db` imported by exactly three files (`store.ts`, `change.ts`,
+`tables.ts` — the grep invariant in CLAUDE.md is what keeps that true).
+
+So: **extract a `GameStore` port** with `load(gameId)` and
+`commit(snapshot, writes)`, and give it three implementations.
+
+| Implementation | Holds | For |
+| --- | --- | --- |
+| `SupabaseStore` | Postgres | the browser today, unchanged |
+| `MemoryStore` | a `Tables` object | tests, and the base of the next one |
+| `FileStore` | `MemoryStore` + JSON on disk | offline play |
+
+Later, a fourth — `HttpStore`, talking to the routes that already exist — makes
+`mm --join K7DQM` work with no new server code. That is the payoff for doing the
+seam properly rather than special-casing "offline".
+
+### The rule that keeps this from costing double
+
+**Offline keeps the compare-and-swap.** It still bumps `revision`, still claims
+journal ranges in the same statement, still refuses a stale write. Not because
+one terminal has concurrent writers, but because the moment the offline store
+gets its own simpler rules there are two games to keep honest — which is the
+exact reason companion mode is parked (see `COMPANION_PARKED` and the note in
+docs/TASKS.md). One conformance suite runs against every implementation.
+
+## Save files
+
+The format is already designed: `fakeDb`'s `Tables` **is** a saved game —
+`{ games, seats, users, holdings, seat_effects, field_cards, moves }`. Those rows
+are the whole of what a game is.
+
+- One file per save, under `~/.magiczny-miecz/saves/`.
+- Written at the end of every `commit`, so "auto-save on every change" needs no
+  scheduling and no separate code path.
+- List / load / delete mirror the table list the browser already has.
+- Because commit is a CAS, a half-written file is detectable rather than silently
+  wrong: write to a temp file and rename.
+
+## One vocabulary, two capability sets
+
+Today the browser console mixes lawful and rule-breaking verbs, and that is
+*correct for what it is*: the console only opens in test mode, so everything in
+it is already a break. A terminal is not always in test mode, so the two have to
+be told apart — without becoming two grammars that can disagree.
+
+The move: the `VERBS` table in `console.ts` already carries
+`{ name, aliases, usage, summary }`. Add one field:
+
+```ts
+needs: "play" | "testmode"
+```
+
+and a pure `permits(command, { testmode: boolean })` that returns allowed, or
+refused with a reason. **Both the CLI runner and the browser's debug route call
+that one function.** The engine owns the classification, so the two surfaces
+cannot drift.
+
+Parsing stays unconditional: `help` still *lists* the testmode verbs and marks
+them locked, because a command you cannot discover is a command that does not
+exist.
+
+Turning testmode on is itself journalled, the same way every override is marked
+`manual`. A save file where somebody switched cheats on halfway through should
+say so.
+
+## The vocabulary
+
+The play verbs mostly **do not exist yet**. The game is currently driven by HTTP
+actions — 22 on the turn route, 16 on holdings — and the console only has debug
+shortcuts. Promoting those into the grammar is the substantial part of this work,
+and it is what makes the browser console useful for more than cheating.
+
+### Play — the turn
+`roll` · `move <pole>` · `bridge` · `cross` · `draw` · `end`
+
+### Play — encounters
+`fight [kto]` · `attack <gracz>` · `escape` · `beast` · `guardian` · `ferry`
+
+### Play — what you carry
+`take <karta>` · `drop <karta>` · `equip <karta> [slot]` · `use <karta>` ·
+`cast <zaklęcie>` · `buy <karta>` · `sell <karta>` · `trade` · `order` · `heal`
+
+### Setup and table
+`new` · `load [save]` · `saves` · `character <nazwa>` · `ready` · `start` ·
+`who` · `join` · `leave`
+
+### Looking — always allowed, never journalled
+`look` (the field and what is on it) · `me` · `eq [gracz]` · `board` ·
+`players` · `journal [n]` · `piles` · `card <nazwa>` · `history [n]`
+
+### Testmode only
+Everything the console has today: `kill` · `revive` · `remove` · `give` ·
+`place` · `winfight` · `wingame` · `endfight` · `stone` · `effect` · `nature` ·
+`gold`/`miecz`/`magia` · `turn` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
+`host` · `rename`
+
+**One collision to settle:** `go` is currently the cheat that teleports a figure
+anywhere. The lawful move wants a short name too. Suggest `move` for the lawful
+one and renaming the cheat to `teleport`, so nothing reads ambiguously.
+
+## The journal is not the record
+
+The new idea — a full history that can be wound back — needs one distinction
+made up front, because conflating the two is the way this goes wrong.
+
+- **The journal** is prose for people: *"Ola (WIEDŹMA) ginie na polu Step I."* It
+  is deliberately lossy. Some things are left out on purpose (9.3 hides spells;
+  shuffling your own pack is nobody's business). It already exists, it already
+  freezes the actor's name, and the terminal should render exactly what the
+  browser renders.
+- **The record** is data for the machine: every input that produced the state.
+  It does not exist yet.
+
+They are different artefacts with different rules, and the record is what makes
+time travel possible.
+
+### What the record has to contain
+
+A command is a pure function of its snapshot, its inputs, and its randomness. So
+to reconstruct any point in a game you need those inputs and nothing else:
+
+1. **The command** — which verb, with which arguments.
+2. **The decisions** — already numeric and already designed for this. `Decisions`
+   is `{ choices?: number[], destination?: FieldId }`, because "the client never
+   sends an effect — it sends which option it picked".
+3. **The randomness** — see below, this is the part that needs work.
+
+Given those, replay from the start reproduces the state exactly, and *that* is
+the undo: to go back to move 40, replay 1–40 into a fresh store. No inverse
+patches, no undo stack.
+
+**Why replay rather than inverse patches.** Inverting a `Changeset` means
+inverting a shuffle, a reshuffle, a deal from a pile — and getting one of them
+subtly wrong yields a state that looks fine and is not. Replay cannot be subtly
+wrong: it either reproduces the state or it does not, and a checksum per move
+says which. The codebase is already shaped for it, because commands are pure and
+`scriptedRandom(results)` — the thing that makes replay possible — already exists
+in `ports.ts` for the tests. Cost is O(n) per rewind, which for a board game with
+a few hundred moves is nothing.
+
+### Randomness enters through three doors, and only one is captured
+
+This is the finding that decides how much work the record is:
+
+| Door | Where | Captured today? |
+| --- | --- | --- |
+| Dice | `RandomPort`, via `ports.random.rollD6` | **Yes** — `attempt()` in `change.ts` already collects rolls into an array so a retry throws the same dice |
+| Shuffles | `decks.ts`: `export const shuffle = shuffleWith(Math.random)` | **No** |
+| Ids | `makeJoinCode`, `makeUserId`, `makeClaimToken` | No, but they are stored in the rows, so replay does not need to reproduce them |
+
+So the shuffle is the gap. Two options:
+
+- **Seed the game.** Store a seed on the games row, bind `shuffle` to a PRNG from
+  that seed, and every shuffle becomes reproducible. Smallest record, but every
+  shuffle must then be consumed in a deterministic order — which it is today, but
+  nothing enforces it.
+- **Record the permutation.** Log the resulting order alongside the command.
+  Bigger record, but it cannot drift no matter what order anything happens in.
+
+Recommendation: **seed**, with a per-move state checksum in the record so a
+divergence is caught immediately rather than discovered later. `shuffleWith`
+already takes its RNG as a parameter, so this is a binding change at the edge and
+not an engine change at all.
+
+### Notation
+
+Chess-like notation is a *rendering* of the record, not the record itself. Design
+the data first; the notation is then a formatting function and can change freely.
+Something like:
+
+```
+41. ola  roll 4 → karczma
+42. ola  draw ×1 → WILKOŁAK
+43. ola  fight 3+2=8 vs 6  win
+44. ola  take MAGICZNY MIECZ
+45. ola  end
+```
+
+## Build order
+
+Four steps, each independently testable, in this order:
+
+1. **`GameStore` port.** Extract load/commit behind an interface; `SupabaseStore`
+   is the current code moved, `MemoryStore` is `fakeDb` promoted out of the
+   tests. One conformance suite run against both. *Do this alone and prove it
+   before touching anything else* — it is the step where a mistake is expensive.
+2. **`FileStore` and saves.** Serialisation, list/load/save/delete, auto-save in
+   commit.
+3. **The grammar split.** `needs` on every verb, `permits()`, and the play verbs
+   promoted to first-class commands.
+4. **`mm`.** Pick or start a save, hot-seat prompt, render board + seat + journal.
+
+The record and replay are a fifth step and deliberately last: it wants the
+grammar settled first, because the record is a log of commands and the commands
+are what step 3 defines.
+
+**Step 3 is not a fixed-size job.** Playing whole turns through the console will
+be the first time anything outside the tests does that end to end, and it will
+find rules the engine does not carry yet. That is a feature — but it is not
+schedulable.
+
+## Stack
+
+No new language. `mm` is a Node process importing the same TypeScript modules the
+Next.js routes import — the engine has no browser dependency, so there is nothing
+to port and nothing to keep in sync.
+
+- Node 22 can strip types natively but will not resolve the `@/` path alias, so
+  development runs under `tsx`; shipping bundles to one file with esbuild.
+- A `bin` entry in package.json plus `npm link` puts `mm` on the PATH.
+- Plain `readline`, not a TUI. The prompt dumps what you asked for and gives you
+  the prompt back. No full-screen interface, no widget layer — the point is that
+  it behaves like any other terminal program.
+- Debug dumps go to a file rather than the screen, so a session stays readable
+  and a bug report is a path.
