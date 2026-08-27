@@ -50,18 +50,26 @@ const stack: Array<() => void> = [];
  * inside any of them promises nothing.
  */
 /**
- * Which of a surface's controls Escape presses, or null for none.
+ * Which of a surface's controls Escape belongs to, and whether it is live.
  *
- * Not a boolean any more. Escape used to mean "close" everywhere, so saying
- * *whether* a surface answered it was the same as saying *what* it would do —
- * and then the console started minimising instead, and the hint sat on
- * `zamknij` advertising a key that no longer did that. What a surface has to
- * publish is the control, so the button that owns it can be the one to say so
- * and the others can stay quiet.
+ * Two questions, and they were one boolean. Escape used to mean "close"
+ * everywhere, so saying *whether* a surface answered it was the same as saying
+ * *what* it would do — and then the console started minimising instead. Worse,
+ * a pinned window has no live answer at all, and the hint would fall back to
+ * `zamknij` and sit there struck through: the key it was striking out was one
+ * that never pressed that button in the first place.
+ *
+ * So `on` is the window's design — the console minimises, a drawer closes —
+ * and does not move. `live` is whether the key is answering just now, which
+ * pinning turns off. The hint stays on the one control throughout and only
+ * goes quiet.
  */
-export type EscapeAnswer = "close" | "minimise" | null;
+export interface EscapeAnswer {
+  on: "close" | "minimise";
+  live: boolean;
+}
 
-export const AnswersEscape = createContext<EscapeAnswer>(null);
+export const AnswersEscape = createContext<EscapeAnswer>({ on: "close", live: false });
 
 /** Whether anything on screen would answer an Escape of its own. */
 export function dismissableOpen(): boolean {
@@ -389,7 +397,7 @@ export function Overlay({
       {/* The sheet itself is not "elsewhere": clicking inside one must not
           close it, which is the half of this that is easy to leave out. */}
       <div className="contents" onClick={(event) => event.stopPropagation()}>
-        <AnswersEscape.Provider value={onDismiss === null ? null : "close"}>
+        <AnswersEscape.Provider value={{ on: "close", live: onDismiss !== null }}>
           {children}
         </AnswersEscape.Provider>
       </div>

@@ -83,7 +83,7 @@ export function Drawer({
     // Escapable unless it is pinned — which is the one thing pinning means.
     // Escape closes a drawer — there is no smaller state for it to go to — so
     // the hint belongs on `zamknij`, which is where `CloseButton` puts it.
-    <AnswersEscape.Provider value={pinned ? null : "close"}>
+    <AnswersEscape.Provider value={{ on: "close", live: !pinned }}>
     <aside
       ref={panel}
       role="dialog"

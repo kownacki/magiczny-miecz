@@ -129,15 +129,11 @@ export function CloseButton({
       className="shrink-0 text-xs text-muted transition hover:text-ink"
     >
       {label}
-      {/* Only where closing is what Escape does. Where it presses another
-          control — the console, which minimises — the hint belongs on that one
-          and this button says nothing about a key it does not own. */}
-      {escape !== "minimise" && (
-        <span className={escape === "close" ? "text-muted/50" : "text-muted/30 line-through"}>
-          {" "}
-          (Esc)
-        </span>
-      )}
+      {/* Only where closing is the control Escape belongs to. Where it belongs
+          to another — the console's chevron, which minimises — this button says
+          nothing about it, live or not: a struck-through hint here would be
+          striking out a key that was never on this button. */}
+      {escape.on === "close" && <EscapeHint live={escape.live} />}
     </button>
   );
 }
@@ -185,6 +181,23 @@ const PATHS: Record<Glyph, React.ReactNode> = {
  * says what the button does, so it is required rather than optional, and it is
  * the accessible name as well.
  */
+/**
+ * The `(Esc)` beside whichever control the key presses.
+ *
+ * Struck through where the window has stopped answering — pinned, or already
+ * shrunk as far as it goes. It says the same thing either way: this is the
+ * button that key is for. It moves *off* only where the key belongs to a
+ * different control entirely.
+ */
+function EscapeHint({ live }: { live: boolean }) {
+  return (
+    <span className={`text-xs ${live ? "text-muted/50" : "text-muted/30 line-through"}`}>
+      {" "}
+      (Esc)
+    </span>
+  );
+}
+
 export function ChromeButton({
   glyph,
   title,
@@ -206,15 +219,15 @@ export function ChromeButton({
    * own, and a surface that changes its mind — pinning the console — moves the
    * hint rather than leaving it somewhere stale.
    */
-  answers?: Exclude<EscapeAnswer, null>;
+  answers?: EscapeAnswer["on"];
   onClick: () => void;
 }) {
   const escape = useContext(AnswersEscape);
-  const mine = answers !== undefined && escape === answers;
+  const mine = answers !== undefined && escape.on === answers;
   return (
     <button
       onClick={onClick}
-      title={mine ? `${title} (Esc)` : title}
+      title={mine && escape.live ? `${title} (Esc)` : title}
       aria-label={title}
       aria-pressed={active || undefined}
       /**
@@ -245,10 +258,10 @@ export function ChromeButton({
       >
         {PATHS[glyph]}
       </svg>
-      {/* Said out loud on the control the key actually presses, in the same
-          dim the word `zamknij` wears it in — a shortcut a glyph carries is a
-          shortcut nobody finds. */}
-      {mine && <span className="text-xs text-muted/50">(Esc)</span>}
+      {/* Said out loud on the control the key presses, in the same dim the word
+          `zamknij` wears it in — a shortcut a glyph carries is a shortcut
+          nobody finds. */}
+      {mine && <EscapeHint live={escape.live} />}
     </button>
   );
 }

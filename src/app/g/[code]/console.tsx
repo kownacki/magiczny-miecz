@@ -284,9 +284,10 @@ export function TestConsole({
 
   return (
     /* Escape shrinks this one, so the hint rides on the chevron rather than on
-       `zamknij` — see `ChromeButton`. Null while pinned or already a bar, which
-       is what strikes the hint through instead. */
-    <AnswersEscape.Provider value={pinned || size === "mini" ? null : "minimise"}>
+       `zamknij` — see `ChromeButton`. Pinned, or already a bar, and it stays on
+       that same chevron struck through: the key has not moved anywhere else,
+       it is simply not answering. */
+    <AnswersEscape.Provider value={{ on: "minimise", live: !pinned && size !== "mini" }}>
     <section
       ref={panel}
       /**
