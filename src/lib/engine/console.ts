@@ -112,6 +112,13 @@ export type Command =
   | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
   | { kind: "endturn" }
+  /* Playing. These are the game as printed: you roll, you walk it out, you meet
+     what is on the Obszar, you hand the turn on. */
+  | { kind: "roll" }
+  | { kind: "move"; fieldId: FieldId }
+  | { kind: "draw" }
+  | { kind: "look" }
+  | { kind: "me"; who: string | null }
   | { kind: "spell"; who: string | null }
   | { kind: "nature"; nature: Nature; who: string | null }
   | { kind: "turn"; who: string | null }
@@ -149,6 +156,44 @@ export const COMMANDS: CommandSpec[] = [
     usage: "gold +5|=12 [player] [force]",
     summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor",
     needs: "testmode",
+  },
+  /* --------------------------------------------------------------------------
+   * Playing. The game as printed: roll, walk it out, meet what is there, pass.
+   * ----------------------------------------------------------------------- */
+  {
+    name: "roll",
+    aliases: [],
+    usage: "roll",
+    summary: "throw the die for your move (10.2)",
+    needs: "play",
+  },
+  {
+    name: "move",
+    aliases: ["walk"],
+    usage: "move Karczma",
+    summary: "walk the roll out and stand there (10.2) — `look` lists where it reaches",
+    needs: "play",
+  },
+  {
+    name: "draw",
+    aliases: [],
+    usage: "draw",
+    summary: "take what the Obszar you are standing on owes you (13.4)",
+    needs: "play",
+  },
+  {
+    name: "look",
+    aliases: ["l"],
+    usage: "look",
+    summary: "the Obszar you are on, what is on it, and what the turn is waiting for",
+    needs: "play",
+  },
+  {
+    name: "me",
+    aliases: ["sheet"],
+    usage: "me [player]",
+    summary: "a Karta Postaci as it stands: points, Życie, Złoto, Natura and what is carried",
+    needs: "play",
   },
   {
     name: "who",
@@ -647,6 +692,18 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     }));
   }
 
+  if (word === "roll") return { ok: { kind: "roll" } };
+  if (word === "draw") return { ok: { kind: "draw" } };
+  if (word === "look" || word === "l") return { ok: { kind: "look" } };
+  if (word === "me" || word === "sheet") return { ok: { kind: "me", who: tail || null } };
+
+  if (word === "move" || word === "walk") {
+    return name(PLACES, (field) => field.name, tail, "Obszar", (field) => ({
+      kind: "move",
+      fieldId: field.id,
+    }));
+  }
+
   if (word === "teleport") {
     return name(PLACES, (field) => field.name, tail, "Obszar", (field) => ({
       kind: "teleport",
@@ -865,7 +922,9 @@ export function complete(
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
     if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
-    if (verb === "teleport") return { pool: PLACES.map((f) => f.name), at: 1 };
+    if (verb === "teleport" || verb === "move" || verb === "walk") {
+      return { pool: PLACES.map((f) => f.name), at: 1 };
+    }
     if (
       verb === "kill" ||
       verb === "kick" ||
@@ -960,6 +1019,11 @@ const NEEDS: Record<Command["kind"], Capability> = {
   host: "play",
   pick: "play",
   endturn: "play",
+  roll: "play",
+  move: "play",
+  draw: "play",
+  look: "play",
+  me: "play",
   stat: "testmode",
   remove: "testmode",
   revive: "testmode",

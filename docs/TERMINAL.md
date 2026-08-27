@@ -149,7 +149,8 @@ shortcuts. Promoting those into the grammar is the substantial part of this work
 and it is what makes the browser console useful for more than cheating.
 
 ### Play — the turn
-`roll` · `move <pole>` · `bridge` · `cross` · `draw` · `end`
+**Built:** `roll` · `move <pole>` · `draw` · `endturn` · `look` · `me`
+**Left:** `bridge` · `cross`
 
 ### Play — encounters
 `fight [kto]` · `attack <gracz>` · `escape` · `beast` · `guardian` · `ferry`
@@ -172,9 +173,15 @@ Everything the console has today: `kill` · `revive` · `remove` · `give` ·
 `gold`/`miecz`/`magia` · `turn` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
 `host` · `rename`
 
-**One collision to settle:** `go` is currently the cheat that teleports a figure
-anywhere. The lawful move wants a short name too. Suggest `move` for the lawful
-one and renaming the cheat to `teleport`, so nothing reads ambiguously.
+**Settled:** `go` is now `teleport` and has lost its `move` alias; `place` has
+lost `drop`. Both freed words belong to the lawful vocabulary, and neither can
+also mean its testmode namesake.
+
+**Still open, found while building:** `me` prints a character's *own* Miecz and
+Magia. Rules 1.2–1.5 and 2.2–2.6 say points from items and friends are computed
+at read time and never stored, so a player reading `me` is not seeing what they
+would fight with. `commands/seat.ts` already derives `parametr` and `walka`;
+`me` should use them.
 
 ## The journal is not the record
 
@@ -299,8 +306,14 @@ Four steps, each independently testable, in this order:
    `~/.magiczny-miecz/saves/<KOD>.json`, overridable with `MM_HOME`. Written
    temp-then-rename, because the file is rewritten after *every* change and the
    window is most of the program's life.
-3. **The grammar split.** `needs` on every verb, `permits()`, and the play verbs
-   promoted to first-class commands.
+3. **The grammar split.** *Half done.* `needs` is on every verb, `permits()` is
+   the one function both surfaces ask, and `help` lists locked commands rather
+   than hiding them. The turn loop is playable — `roll`, `move`, `draw`,
+   `endturn`, with `look` and `me` to see by. What is left is the rest of the
+   vocabulary: encounters (`fight`, `attack`, `escape`, `beast`, `guardian`,
+   `ferry`) and what you carry (`take`, `drop`, `equip`, `use`, `cast`, `buy`,
+   `sell`, `trade`, `heal`), plus setup (`new`, `load`, `saves`, `character`,
+   `ready`, `start`).
 4. **`mm`.** Pick or start a save, hot-seat prompt, render board + seat + journal.
 
 Rewind is a fifth step and deliberately last: it wants the grammar settled first,

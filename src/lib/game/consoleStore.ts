@@ -30,8 +30,11 @@ import {
   addEffect,
   adjust,
   changeNature,
+  drawCard,
   drawSpell,
   finishTurn,
+  moveTo,
+  rollForMove,
   grantCard,
   placeCard,
   placeSeat,
@@ -42,6 +45,7 @@ import {
   takeNewCharacter,
   turnToStone,
 } from "./turnStore";
+import { activeStore } from "./gameStore";
 
 /**
  * The third edge, beside `turnStore.ts` and `lobbyStore.ts`.
@@ -717,6 +721,83 @@ export async function runCommand(
     case "endturn":
       await finishTurn(gameId);
       return "Turn passed.";
+
+    /* ----------------------------------------------------------------------
+     * Playing. Everything below is the game as printed — the same functions
+     * the browser's buttons call, reached by typing instead of clicking.
+     * ------------------------------------------------------------------- */
+
+    case "roll": {
+      // Null, not a number: the app throws it. A typed die is companion mode's,
+      // and "in simulation, nothing is entered by hand".
+      await rollForMove(gameId, null);
+      const state = (await activeStore().load(gameId)).game.turn_state as {
+        roll?: number;
+        options?: { fieldId: string; fieldName: string }[];
+      };
+      const where = (state.options ?? []).map((one) => one.fieldName).join(", ");
+      return `Rzut: ${state.roll ?? "?"}. ${where ? `Reaches: ${where}.` : "Nowhere to go."}`;
+    }
+
+    case "move": {
+      await moveTo(gameId, command.fieldId);
+      return `${named(seatOf(null))} walks to ${fieldName(command.fieldId)}.`;
+    }
+
+    case "draw": {
+      const { card, recycled } = await drawCard(gameId, null);
+      const turned = recycled ? " The pile was turned over." : "";
+      return card ? `Drawn: ${card.name}.${turned}` : `Nothing to draw.${turned}`;
+    }
+
+    case "look": {
+      const snapshot = await activeStore().load(gameId);
+      const state = snapshot.game.turn_state as {
+        phase?: string;
+        roll?: number;
+        options?: { fieldId: string; fieldName: string }[];
+      };
+      const active = snapshot.seats.find((one) => one.seat_index === snapshot.game.active_seat);
+      const here = snapshot.fieldCards.filter((one) => one.field_id === active?.field_id);
+      const standing = snapshot.seats.filter(
+        (one) => one.field_id === active?.field_id && !one.eliminated,
+      );
+      return [
+        `Tura ${snapshot.game.turn} — ${active ? named(active) : "nobody"}`,
+        `Obszar: ${fieldName(active?.field_id ?? null)}`,
+        `Faza: ${state.phase ?? "?"}${state.roll ? ` (rzut ${state.roll})` : ""}`,
+        ...(state.options?.length
+          ? [`Dokąd: ${state.options.map((one) => one.fieldName).join(", ")}`]
+          : []),
+        ...(here.length ? [`Na Obszarze: ${here.map((one) => cardName(one.card_id)).join(", ")}`] : []),
+        ...(standing.length > 1
+          ? [`Stoją tu: ${standing.map((one) => named(one)).join(", ")}`]
+          : []),
+      ].join("\n");
+    }
+
+    case "me": {
+      const seat = seatOf(command.who);
+      const snapshot = await activeStore().load(gameId);
+      const mine = snapshot.holdings.filter((one) => one.seat_id === seat.id);
+      /**
+       * 9.3 keeps a hand of Zaklęcia concealed, and this prints your own —
+       * which is exactly what a player may look at. Somebody else's is counted
+       * and not named.
+       */
+      const own = seat.id === actor.seatId;
+      const spells = mine.filter((one) => one.kind === "spell");
+      const items = mine.filter((one) => one.kind !== "spell");
+      return [
+        `${named(seat)}${seat.eliminated ? " — nie żyje" : ""}`,
+        `Miecz ${seat.sword_own}  Magia ${seat.magic_own}  Życie ${seat.life}  Złoto ${seat.gold}`,
+        `Natura: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
+        `Plecak: ${items.length ? items.map((one) => cardName(one.card_id)).join(", ") : "pusty"}`,
+        own
+          ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "brak"}`
+          : `Zaklęcia: ${spells.length} (zakryte — 9.3)`,
+      ].join("\n");
+    }
 
     case "spell": {
       const seat = seatOf(command.who);
