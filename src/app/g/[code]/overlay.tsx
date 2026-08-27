@@ -49,7 +49,19 @@ const stack: Array<() => void> = [];
  * reads it and says so. False by default, so a button somewhere that is not
  * inside any of them promises nothing.
  */
-export const AnswersEscape = createContext(false);
+/**
+ * Which of a surface's controls Escape presses, or null for none.
+ *
+ * Not a boolean any more. Escape used to mean "close" everywhere, so saying
+ * *whether* a surface answered it was the same as saying *what* it would do —
+ * and then the console started minimising instead, and the hint sat on
+ * `zamknij` advertising a key that no longer did that. What a surface has to
+ * publish is the control, so the button that owns it can be the one to say so
+ * and the others can stay quiet.
+ */
+export type EscapeAnswer = "close" | "minimise" | null;
+
+export const AnswersEscape = createContext<EscapeAnswer>(null);
 
 /** Whether anything on screen would answer an Escape of its own. */
 export function dismissableOpen(): boolean {
@@ -377,7 +389,9 @@ export function Overlay({
       {/* The sheet itself is not "elsewhere": clicking inside one must not
           close it, which is the half of this that is easy to leave out. */}
       <div className="contents" onClick={(event) => event.stopPropagation()}>
-        <AnswersEscape.Provider value={onDismiss !== null}>{children}</AnswersEscape.Provider>
+        <AnswersEscape.Provider value={onDismiss === null ? null : "close"}>
+          {children}
+        </AnswersEscape.Provider>
       </div>
     </div>
   );

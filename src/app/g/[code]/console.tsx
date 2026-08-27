@@ -283,7 +283,10 @@ export function TestConsole({
   };
 
   return (
-    <AnswersEscape.Provider value={!pinned && size !== "mini"}>
+    /* Escape shrinks this one, so the hint rides on the chevron rather than on
+       `zamknij` — see `ChromeButton`. Null while pinned or already a bar, which
+       is what strikes the hint through instead. */
+    <AnswersEscape.Provider value={pinned || size === "mini" ? null : "minimise"}>
     <section
       ref={panel}
       /**
@@ -351,6 +354,7 @@ export function TestConsole({
             />
             <ChromeButton
               glyph={mini ? "restore" : "minimise"}
+              answers="minimise"
               title={mini ? "Pokaż konsolę" : "Zwiń do paska — log zostaje"}
               onClick={() => setSize(mini ? "normal" : "mini")}
             />

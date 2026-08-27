@@ -1,7 +1,7 @@
 "use client";
 
 import { useContext } from "react";
-import { AnswersEscape } from "./overlay";
+import { AnswersEscape, type EscapeAnswer } from "./overlay";
 
 /**
  * The buttons that act on a surface rather than on the game.
@@ -122,14 +122,22 @@ export function CloseButton({
   onClose: () => void;
   label?: string;
 }) {
-  const byEscape = useContext(AnswersEscape);
+  const escape = useContext(AnswersEscape);
   return (
     <button
       onClick={onClose}
       className="shrink-0 text-xs text-muted transition hover:text-ink"
     >
       {label}
-      <span className={byEscape ? "text-muted/50" : "text-muted/30 line-through"}> (Esc)</span>
+      {/* Only where closing is what Escape does. Where it presses another
+          control — the console, which minimises — the hint belongs on that one
+          and this button says nothing about a key it does not own. */}
+      {escape !== "minimise" && (
+        <span className={escape === "close" ? "text-muted/50" : "text-muted/30 line-through"}>
+          {" "}
+          (Esc)
+        </span>
+      )}
     </button>
   );
 }
@@ -181,18 +189,32 @@ export function ChromeButton({
   glyph,
   title,
   active = false,
+  answers,
   onClick,
 }: {
   glyph: Glyph;
   title: string;
   /** Doing its thing right now — a pin that is holding. */
   active?: boolean;
+  /**
+   * Which dismissal this button *is*, so it can claim Escape when Escape means
+   * it.
+   *
+   * The surface says what Escape does (`AnswersEscape`) and the button says
+   * what it does; where the two agree, this is the control the key presses and
+   * the one that says so. Nothing else in the row mentions a key it does not
+   * own, and a surface that changes its mind — pinning the console — moves the
+   * hint rather than leaving it somewhere stale.
+   */
+  answers?: Exclude<EscapeAnswer, null>;
   onClick: () => void;
 }) {
+  const escape = useContext(AnswersEscape);
+  const mine = answers !== undefined && escape === answers;
   return (
     <button
       onClick={onClick}
-      title={title}
+      title={mine ? `${title} (Esc)` : title}
       aria-label={title}
       aria-pressed={active || undefined}
       /**
@@ -206,7 +228,7 @@ export function ChromeButton({
        * padding that gives it somewhere to be pressed is taken back off the
        * outside: it lands on the title's line rather than making room for itself.
        */
-      className={`-my-1 -mx-0.5 rounded p-1 transition ${
+      className={`-my-1 -mx-0.5 inline-flex items-center gap-1 rounded p-1 transition ${
         active ? "text-vermilion" : "text-ochre/70 hover:text-ochre"
       }`}
     >
@@ -223,6 +245,10 @@ export function ChromeButton({
       >
         {PATHS[glyph]}
       </svg>
+      {/* Said out loud on the control the key actually presses, in the same
+          dim the word `zamknij` wears it in — a shortcut a glyph carries is a
+          shortcut nobody finds. */}
+      {mine && <span className="text-xs text-muted/50">(Esc)</span>}
     </button>
   );
 }
