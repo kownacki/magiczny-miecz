@@ -27,6 +27,7 @@ import type { SeatRow } from "../store";
 import { driverOf } from "./lobby";
 import type { OwedSpells } from "./movement";
 import { eqModeOf, seatById } from "./seat";
+import { stowStartingKit } from "@/lib/engine/slots";
 
 /** The 27 Karty Postaci, read the same way `turnStore` reads them. */
 const CHARACTERS = charactersData as Character[];
@@ -525,6 +526,8 @@ export async function takeNewCharacter(
   if (!character) throw new Error(`Nieznana postać: ${wanted}`);
 
   const kit = startingKit(character.id);
+  const stowed =
+    eqModeOf(snapshot.game) === "slots" ? stowStartingKit(kit.items ?? []) : [];
 
   /**
    * One patch, where the old path wrote three.
@@ -552,14 +555,18 @@ export async function takeNewCharacter(
         },
       },
     ],
+    // Worn from the start in slotowy, exactly as at setup: a Postać taken
+    // after a death (4.4) arrives with the same gear and no reason to arrive
+    // with it in a bag. See `stowStartingKit`.
     ...(kit.items?.length
       ? {
           holdings: {
-            insert: kit.items.map((cardId) => ({
+            insert: kit.items.map((cardId, at) => ({
               seat_id: seat.id,
               card_id: cardId,
               kind: "item" as const,
               face: "open" as const,
+              ...(stowed[at] ? { slot: stowed[at] } : {}),
             })),
           },
         }

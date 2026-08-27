@@ -6,6 +6,7 @@ import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
 import { movementCap } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import { stowStartingKit, type EqMode } from "@/lib/engine/slots";
 import {
   afterMove,
   afterRoll,
@@ -23,7 +24,7 @@ import {
   type Snapshot,
 } from "../change";
 import type { GameRow, SeatRow } from "../store";
-import { activeSeat } from "./seat";
+import { activeSeat, eqModeOf } from "./seat";
 import { driverOf, nameOfSeat } from "./lobby";
 
 /* --------------------------------------------------------------------------
@@ -130,7 +131,20 @@ export function startGame(
   // Miecz and a Tarcza. Dealing everyone one Sztuka Złota and nothing else is
   // wrong from the first turn, and wrong in the direction that flattens the
   // characters into each other.
-  const kits = chosen.map(startingGear);
+  // `map` handed the index as a second argument, which would have been read as
+  // the mode the moment one was added. Named, so it cannot.
+  //
+  // And only to a seat that has not been dealt already. The console's `pick`
+  // goes through `takeNewCharacter` — 4.4's door, which deals the kit because
+  // mid-game it has to — so starting a table from the console handed the
+  // Błędny Rycerz a second Miecz and a second Zbroja, and two Miecze are two
+  // points of Miecz in a fight. Nobody saw it because in klasyczny they were
+  // four cards in a pack of four; in slotowy they are two cards in one place.
+  const kits = chosen.map((seat) =>
+    snapshot.holdings.some((held) => held.seat_id === seat.id)
+      ? {}
+      : startingGear(seat, eqModeOf(snapshot.game)),
+  );
 
   const started: Changeset = {
     journal: [{ seatId: null, turn: FIRST_TURN, kind: "start", payload: { seats: chosen.length } }],
@@ -168,20 +182,25 @@ function startedAt(now: number): Partial<GameRow> {
 }
 
 /** What one character owns before anybody rolls, minus the Zaklęcia. */
-function startingGear(seat: SeatRow): Changeset {
+function startingGear(seat: SeatRow, eqMode: EqMode): Changeset {
   // `asCharacterId` answers null for both "nothing chosen" and "the surprise",
   // and `startingKit` gives an empty kit for either — so an unresolved seat
   // that reached here is dealt nothing rather than crashing the start.
   const kit = startingKit(asCharacterId(seat.character_id));
 
+  // Worn from the start where there are places to wear them — see
+  // `stowStartingKit`. In klasyczny there is nowhere to put them and nothing to
+  // gain: a card counts wherever it lies.
+  const stowed = eqMode === "slots" ? stowStartingKit(kit.items ?? []) : [];
   const items: Changeset = kit.items?.length
     ? {
         holdings: {
-          insert: kit.items.map((cardId) => ({
+          insert: kit.items.map((cardId, at) => ({
             seat_id: seat.id,
             card_id: cardId,
             kind: "item" as const,
             face: "open" as const,
+            ...(stowed[at] ? { slot: stowed[at] } : {}),
           })),
         },
       }

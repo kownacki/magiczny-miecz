@@ -52,12 +52,46 @@ export const VARIANT_CHANGES: readonly VariantChange[] = [
     here: "Zostaje tam, gdzie jest — na czerwono, bez żadnego działania, i nie da się go założyć. 5.3 zakazuje posiadania dlatego, że zakazuje używania, a tu niesienie używaniem nie jest.",
   },
   {
+    rules: ["8.1"],
+    title: "Wyposażenie początkowe masz od razu na sobie",
+    book: "Karta Postaci mówi, z czym zaczynasz — „Rozpoczynasz grę posiadając Miecz i Zbroję” — i nie ma znaczenia, gdzie te Karty leżą.",
+    here: "Trafiają od razu na swoje miejsca: Miecz do ręki, Zbroja na tułów, Tarcza do drugiej ręki. Inaczej Postać zaczynałaby grę, nie mogąc użyć rzeczy, które ma z własnej Karty. Dotyczy też Postaci branej po śmierci.",
+  },
+  {
     rules: ["5.6"],
     title: "Nadmiar Przedmiotów nie jest wyrzucany za ciebie",
     book: "Postać, która przekroczy limit, „musi natychmiast odrzucić Przedmioty, których nie jest w stanie unieść”, wybierając które.",
     here: "Wzięcie ponad limit jest odmawiane od razu, więc nadmiar zwykle nie powstaje. Jeśli powstanie — po stracie Konia — aplikacja nie wybiera za gracza.",
   },
 ] as const;
+
+/**
+ * Where each of a character's starting Przedmioty goes, in slotowy.
+ *
+ * The variant's whole claim is that only what you wear counts, and the box
+ * hands seven characters their gear before anybody rolls: the Błędny Rycerz
+ * "rozpoczynasz grę posiadając Miecz i Zbroję", the Książę a Hełm and a Miecz,
+ * the Krasnolud a Tarcza and a Sztylet. Dropped into the Plecak, all eleven of
+ * those did nothing at all, and a Rycerz who starts the game unable to use his
+ * own sword is not playing the variant, he is being penalised by it.
+ *
+ * Every one of the eleven has a place and no two of them want the same one, so
+ * this is settled rather than negotiated. It still assigns rather than assumes:
+ * the first free place a card fits, in the order the card names them, so a
+ * future Przedmiot with two homes lands somewhere sensible instead of on top of
+ * something else.
+ *
+ * `null` for anything that cannot be worn, which today is nothing.
+ */
+export function stowStartingKit(cardIds: readonly string[]): (Slot | null)[] {
+  const taken = new Set<Slot>();
+  return cardIds.map((cardId) => {
+    const free = slotsFor(cardId).find((slot) => !taken.has(slot));
+    if (free === undefined) return null;
+    taken.add(free);
+    return free;
+  });
+}
 
 /**
  * The places on a character, in the order they are drawn.
