@@ -1,6 +1,7 @@
 /** Turns a journal row into the one sentence the table is allowed to read. */
 
 import events from "@/data/events.json";
+import { ruleForKind } from "./journalRules";
 import spells from "@/data/spells.json";
 import items from "@/data/items.json";
 import characters from "@/data/characters.json";
@@ -65,6 +66,14 @@ export interface JournalLine {
   seatIndex: number | null;
   /** Cards and fields this line named, in the order it named them. */
   refs?: JournalRef[];
+  /**
+   * The rule this line is an instance of, where one covers it.
+   *
+   * Off the kind rather than written into the sentence — see `RULE_FOR`. It is
+   * not part of the text because it is not part of what happened: the sentence
+   * reads the same to somebody who has the book open beside them.
+   */
+  rule?: string;
   /**
    * A round boundary rather than something somebody did.
    *
@@ -290,6 +299,9 @@ export function describe(
     manual: entry.manual,
     seatIndex: seat?.seatIndex ?? null,
     refs: refs.length > 0 ? refs : undefined,
+    // Every line at once, because it hangs off the kind. A sentence given its
+    // number by hand is a sentence that gets one when somebody remembers.
+    rule: ruleForKind(entry.kind) ?? undefined,
   });
 
   switch (entry.kind) {

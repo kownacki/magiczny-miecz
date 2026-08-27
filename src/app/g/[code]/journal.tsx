@@ -238,6 +238,14 @@ function Line({
           {line.manual && (
             <span className="ml-1 text-[10px] text-ochre/70">tryb testowy</span>
           )}
+          {/* The rule this line happened under, dim and at the end, where a
+              citation goes. Quiet on purpose: the journal is read for what
+              happened, and this is only for the line you stop at and query.
+              `WithRules` hides it outright where the reader has said they do
+              not want rule numbers, punctuation and all. */}
+          {line.rule && (
+            <WithRules className="ml-1 text-[10px] text-muted/60" text={`(${line.rule})`} />
+          )}
         </span>
       </li>
     </>
