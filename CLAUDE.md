@@ -175,6 +175,28 @@ anything.
   `getBoundingClientRect` read back out of the DOM is better evidence than a
   picture, and it can be pasted into a commit message.
 
+- **Commit your own work, and do not wait to be asked.** Finished work sitting
+  in the working tree is work nobody else can see, build on, or revert — and
+  this repo has a particular reason to care: **another agent works in it at the
+  same time as you.** Twice in one session it committed uncommitted changes of
+  mine inside its own commits, so the raid UI is filed under a message about
+  rule links. Nothing was lost, but the history now says the wrong thing about
+  who did what and why.
+
+  So: verify, then commit, in coherent pieces, as you finish them.
+
+  **Never `git add -A`, never `git commit -a`, never `git stash`.** The dirty
+  tree is not yours alone. Stage the files you actually changed, by name, and
+  read `git diff` on each one first — a file you edited may have picked up
+  somebody else's edit since. `git stash` is the worst of them: it reverts the
+  other agent's uncommitted work with no warning that it was there.
+
+  The message is a sentence in the present tense saying what is now true, with
+  no full stop and no `feat:` prefix — "Every journal line says which rule it
+  happened under", "Only klasyczny puts the forbidden card down; slotowy reddens
+  it". The body carries the why at length, because that is what the log is for
+  here; several of them are the best documentation the decision has.
+
 ## Settled — don't reopen
 
 - **Base game only.** The five expansions are out of scope; their scans are
