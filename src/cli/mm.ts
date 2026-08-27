@@ -469,6 +469,17 @@ async function main(): Promise<void> {
     }
     await prompt();
   }
+  /**
+   * Closed here, and this is why `quit` looked broken.
+   *
+   * Breaking the loop leaves `readline` holding stdin open, so node has a
+   * live handle and never exits: "Bye." printed, `main` returned, and the
+   * interface went on prompting. `quit` typed three times said goodbye three
+   * times and stayed. It cannot be closed from inside the handler either —
+   * that kills the iterator mid-await — so it happens exactly here, once the
+   * loop is done with it.
+   */
+  rl.close();
   say("Bye.");
 }
 
