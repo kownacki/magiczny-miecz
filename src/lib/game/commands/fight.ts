@@ -19,7 +19,7 @@ import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
 import { combatValueOf } from "@/lib/engine/cards";
 import { attackAsOne, type CombatKind } from "@/lib/engine/combat";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
-import { bonusFromHoldings, inEffect, suppressesItems } from "@/lib/engine/holdings";
+import { bonusFromHoldings, inEffect, suppressesSpells } from "@/lib/engine/holdings";
 import {
   castableNow,
   momentsIn,
@@ -33,7 +33,7 @@ import {
   startFight,
 } from "@/lib/engine/turn";
 import { EVENTS, SPELL_BY_ID } from "../decks";
-import { cardName } from "@/lib/engine/polish";
+import { cardName, fieldName } from "@/lib/engine/polish";
 import { nameOfSeat } from "./lobby";
 import {
   apply,
@@ -408,11 +408,17 @@ export function castSpell(
 
   // 9.7: "Żadne Zaklęcie nie działa na istoty napotkane na Kamiennym Moście ani
   // na samą Bestię." Where the caster stands is what decides it.
-  // "Nie możesz też rzucać Zaklęć." The same sentence that suspends the
-  // Przedmioty here, and the half of it that is about speaking rather than
-  // carrying.
-  if (suppressesItems(caster.field_id)) {
-    throw new Error("Na Zaczarowanych Wzgórzach nie rzuca się Zaklęć.");
+  /**
+   * "Nie możesz też rzucać Zaklęć" (Zaczarowane Wzgórza), and "Nie możesz tu
+   * używać Zaklęć" (Rozstajne Drogi II).
+   *
+   * Asked of its own list rather than of the Przedmiot one. The Wzgórza carry
+   * both rules and the two Rozstajne Drogi carry one apiece, so reading the
+   * item list for this banned magic on the crossroads that permits it and
+   * allowed it on the one that does not.
+   */
+  if (suppressesSpells(caster.field_id)) {
+    throw new Error(`${fieldName(caster.field_id as FieldId)}: tu nie rzuca się Zaklęć.`);
   }
 
   /**

@@ -217,20 +217,42 @@ export type Reckoning = keyof Lent;
 /**
  * The Obszary where a Przedmiot lends nothing.
  *
- * One, and it says so on the board: "Na tym Obszarze nie możesz liczyć na Miecz
- * i Magię czerpane z Przedmiotów i Przedmiotów Magicznych. Nie możesz też
- * rzucać Zaklęć." Both halves of that sentence, and note that it is every
- * Przedmiot rather than only the magical ones — the second clause names the
- * magical ones as well as, not instead of.
+ * "Nie możesz liczyć na Magię i Miecz czerpane z Przedmiotów i Przedmiotów
+ * Magicznych" — note that it is every Przedmiot rather than only the magical
+ * ones: the sentence names the magical ones as well as, not instead of.
  *
  * Przyjaciele are not Przedmioty and keep lending what they lend. A character
  * standing here is worth its own points plus its friends', and nothing else.
  */
-export const NO_ITEM_BONUS: ReadonlySet<FieldId> = new Set<FieldId>(["zaczarowane-wzgorza"]);
+export const NO_ITEM_BONUS: ReadonlySet<FieldId> = new Set<FieldId>([
+  "zaczarowane-wzgorza",
+  "rozstajne-drogi-1",
+]);
+
+/**
+ * The Obszary where no Zaklęcie may be spoken.
+ *
+ * A separate list, because the board does not pair the two rules the way one
+ * set implied. The Zaczarowane Wzgórza carry both — "nie możesz liczyć na Miecz
+ * i Magię ... Nie możesz też rzucać Zaklęć" — but the Rozstajne Drogi split
+ * them one apiece: the first Obszar suspends the Przedmioty and says nothing
+ * about Zaklęcia, and the second forbids Zaklęcia and leaves the Przedmioty
+ * alone. Reading one set for both would have banned magic on a crossroads that
+ * permits it and allowed it on the one that does not.
+ */
+export const NO_SPELLS: ReadonlySet<FieldId> = new Set<FieldId>([
+  "zaczarowane-wzgorza",
+  "rozstajne-drogi-2",
+]);
 
 /** Whether this Obszar suspends what a Przedmiot is worth. */
 export function suppressesItems(fieldId: FieldId | null): boolean {
   return fieldId !== null && NO_ITEM_BONUS.has(fieldId);
+}
+
+/** Whether this Obszar forbids speaking a Zaklęcie at all. */
+export function suppressesSpells(fieldId: FieldId | null): boolean {
+  return fieldId !== null && NO_SPELLS.has(fieldId);
 }
 
 export function bonusFromHoldings(

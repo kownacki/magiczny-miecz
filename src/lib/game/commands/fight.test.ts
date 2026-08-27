@@ -4,6 +4,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import type { Fight, TurnPhase } from "@/lib/engine/turn";
 import type { DeckState } from "@/lib/engine/deck";
 import { aHolding, aSeat, aTable, aUser, NOW, ports } from "../fixture";
+import { pointsOf } from "./seat";
 import {
   attackSeat,
   beginFight,
@@ -765,7 +766,43 @@ describe("Zaczarowane Wzgórza and the spoken word", () => {
     // `castSpell` is synchronous — it needs no die — so this throws rather
     // than rejecting.
     expect(() => castSpell(there, { seatId: "seat-a", holdingId: "s1" }, ports())).toThrow(
-      /Zaczarowanych Wzgórzach nie rzuca/,
+      /tu nie rzuca się Zaklęć/,
     );
+  });
+
+  /**
+   * The board does not pair the two rules the way one list implied. The Wzgórza
+   * carry both — "nie możesz liczyć na Miecz i Magię ... Nie możesz też rzucać
+   * Zaklęć" — and the Rozstajne Drogi split them one apiece.
+   */
+  it("refuses on the crossroads that forbids Zaklęcia, and allows the other", () => {
+    const standing = (field: string) =>
+      aTable({
+        game: { active_seat: 0 },
+        seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId(field) })],
+        holdings: [aHolding({ id: "s1", card_id: "krag-plomieni", kind: "spell" })],
+      });
+
+    expect(() =>
+      castSpell(standing("rozstajne-drogi-2"), { seatId: "seat-a", holdingId: "s1" }, ports()),
+    ).toThrow(/tu nie rzuca się Zaklęć/);
+
+    // Rozstajne Drogi I suspends the Przedmioty and says nothing about Zaklęcia.
+    expect(() =>
+      castSpell(standing("rozstajne-drogi-1"), { seatId: "seat-a", holdingId: "s1" }, ports()),
+    ).not.toThrow(/tu nie rzuca się Zaklęć/);
+  });
+
+  /** And the other half, the other way round. */
+  it("suspends Przedmioty on the crossroads that says so, and not on the other", () => {
+    const worth = (field: string) => {
+      const t = aTable({
+        seats: [aSeat({ id: "seat-a", sword_own: 2, field_id: asFieldId(field) })],
+        holdings: [aHolding({ id: "i1", seat_id: "seat-a", card_id: "excalibur", kind: "item" })],
+      });
+      return pointsOf(t, "seat-a", "walka").miecz;
+    };
+    expect(worth("rozstajne-drogi-1")).toBe(2);
+    expect(worth("rozstajne-drogi-2")).toBe(3);
   });
 });

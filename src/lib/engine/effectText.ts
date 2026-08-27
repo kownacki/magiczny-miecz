@@ -302,6 +302,15 @@ export function summariseEffect(effect: Effect): string {
         (effect.inaczej ? `, inaczej ${summariseEffect(effect.inaczej)}` : "")
       );
 
+    /**
+     * The Wieża Przeznaczenia rolls it on two of its six faces, and 16.5 makes
+     * that a table nobody may walk past — so the app has to be able to say what
+     * happened rather than hand the row back. This is the hole the comment
+     * above predicted, found by the test that was written to find it.
+     */
+    case "ruch-dodatkowy":
+      return "dodatkowy ruch";
+
     default:
       return "rozpatrzcie sami";
   }

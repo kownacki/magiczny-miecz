@@ -282,13 +282,18 @@ describe("the ops the terse register has no short form for", () => {
   /**
    * The hole, written down.
    *
-   * Thirteen of the twenty-four ops fall through to "rozpatrzcie sami" — the
-   * app handing the rule back to the table. None of them can be reached by a
+   * Twelve of the twenty-four ops fall through to "rozpatrzcie sami" — the app
+   * handing the rule back to the table. None of them can be reached by a
    * compulsory field offer as the box stands, which is why it has never been a
    * bug. Adding a branch for one of these is meant to fail here, so that the
    * decision is taken once and out loud.
+   *
+   * It was thirteen until the Wieża Przeznaczenia was scripted: two of its six
+   * faces are `ruch-dodatkowy`, and 16.5 makes that a table nobody may walk
+   * past, so the app had to be able to say what happened. Taken out loud, as
+   * intended.
    */
-  it("hands exactly thirteen of them back to the players", () => {
+  it("hands exactly twelve of them back to the players", () => {
     const givenUp = Object.entries(ONE_OF_EACH)
       .filter(([, effect]) => summariseEffect(effect) === "rozpatrzcie sami")
       .map(([op]) => op)
@@ -301,7 +306,6 @@ describe("the ops the terse register has no short form for", () => {
         "natura",
         "otrzymaj",
         "poloz-karte",
-        "ruch-dodatkowy",
         "rzut",
         "sprzedaj",
         "strata",

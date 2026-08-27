@@ -282,6 +282,131 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
     offers: [{ name: "Bagna", effect: BAGNA }],
   },
 
+  /* ------------------------------------------------------------------------
+   * Obszary that make you roll.
+   *
+   * All five print "MUSISZ RZUCIĆ KOSTKĄ" or the same thing in other words, so
+   * all five are `obowiazkowe`. These are what the Opiekun, the Przewodnik, the
+   * Elflin and the Rusałka were written to walk past — `bezpieczny` with
+   * `from: "rzut"` — and until the tables existed there was no roll for any of
+   * them to skip.
+   * --------------------------------------------------------------------- */
+
+  // "1 - zyskujesz 1 punkt Miecza; 2-3 nic się nie dzieje; 4-5 zostałeś opętany
+  // przez duchy, tracisz 1 turę; 6 - zostałeś zaatakowany przez Ducha (Magia 4)."
+  kurhan: {
+    obowiazkowe: true,
+    offers: [
+      {
+        name: "Kurhan",
+        effect: {
+          op: "rzut",
+          faces: {
+            1: { op: "punkty", stat: "sword", delta: 1 },
+            2: { op: "nic" },
+            3: { op: "nic" },
+            4: { op: "tura-stracona", turns: 1 },
+            5: { op: "tura-stracona", turns: 1 },
+            6: { op: "walka", nazwa: "Duch", magia: 4 },
+          },
+        },
+      },
+    ],
+  },
+
+  /**
+   * "1, 2, 3 - udało ci się bezpiecznie przemknąć; 4 - zaatakował cię
+   * mieszkający tu Wilkołak (Miecz 4); 5 - ... (Miecz 5); 6 - ... (Miecz 6)."
+   *
+   * The same creature at three strengths rather than three creatures, which is
+   * why the name does not change with the face. Arondight and the Topór both
+   * know it by name and are worth their other figure against it.
+   */
+  "wilczy-parow": {
+    obowiazkowe: true,
+    offers: [
+      {
+        name: "Wilczy Parów",
+        effect: {
+          op: "rzut",
+          faces: {
+            1: { op: "nic" },
+            2: { op: "nic" },
+            3: { op: "nic" },
+            4: { op: "walka", nazwa: "Wilkołak", miecz: 4 },
+            5: { op: "walka", nazwa: "Wilkołak", miecz: 5 },
+            6: { op: "walka", nazwa: "Wilkołak", miecz: 6 },
+          },
+        },
+      },
+    ],
+  },
+
+  // The same shape as the Wilczy Parów, in Magia rather than Miecz.
+  "krypta-upiorow": {
+    obowiazkowe: true,
+    offers: [
+      {
+        name: "Krypta Upiorów",
+        effect: {
+          op: "rzut",
+          faces: {
+            1: { op: "nic" },
+            2: { op: "nic" },
+            3: { op: "nic" },
+            4: { op: "walka", nazwa: "Upiór", magia: 4 },
+            5: { op: "walka", nazwa: "Upiór", magia: 5 },
+            6: { op: "walka", nazwa: "Upiór", magia: 6 },
+          },
+        },
+      },
+    ],
+  },
+
+  // "1 - Strażnik Kręgu (Miecz 5); 2, 3 - tracisz 1 turę; 4, 5 - nic się nie
+  // dzieje; 6 - zyskujesz 1 punkt Magii."
+  "krag-mocy": {
+    obowiazkowe: true,
+    offers: [
+      {
+        name: "Krąg Mocy",
+        effect: {
+          op: "rzut",
+          faces: {
+            1: { op: "walka", nazwa: "Strażnik Kręgu", miecz: 5 },
+            2: { op: "tura-stracona", turns: 1 },
+            3: { op: "tura-stracona", turns: 1 },
+            4: { op: "nic" },
+            5: { op: "nic" },
+            6: { op: "punkty", stat: "magic", delta: 1 },
+          },
+        },
+      },
+    ],
+  },
+
+  // "1 - tracisz 1 turę; 2-3 zostajesz Zamieniony w Kamień; 4-5 zyskujesz
+  // dodatkowy ruch; 6 - zostałeś zignorowany."
+  "wieza-przeznaczenia": {
+    obowiazkowe: true,
+    offers: [
+      {
+        name: "Wieża Przeznaczenia",
+        effect: {
+          op: "rzut",
+          faces: {
+            1: { op: "tura-stracona", turns: 1 },
+            2: { op: "kamien" },
+            3: { op: "kamien" },
+            4: { op: "ruch-dodatkowy" },
+            5: { op: "ruch-dodatkowy" },
+            6: { op: "nic" },
+          },
+        },
+      },
+    ],
+  },
+
 };
 
 export function fieldScriptFor(fieldId: FieldId): FieldScript | null {
