@@ -289,6 +289,20 @@ export function SeatCard({
                 className="shrink-0 text-muted"
               />
             )}
+            {/* The four numbers next to the name they belong to, ahead of the
+                Natura: they are what the rails say, in the order the Karta
+                prints them up its own edges, and they change every turn. The
+                Natura changes about twice a game and reads as a caption after
+                them rather than as a column between them and the name. */}
+            <span className="tnum shrink-0">
+              <span className="text-miecz">{seat.sword_total}</span>
+              <span className="text-muted"> / </span>
+              <span className="text-magia">{seat.magic_total}</span>
+              <span className="text-muted"> / </span>
+              <span className="text-zycie">{seat.life}</span>
+              <span className="text-muted"> / </span>
+              <span className="text-zloto">{seat.gold}</span>
+            </span>
             {/* The same words the line under the Karta uses, minus the label
                 it does not need: with the Karta out of sight there is nothing
                 for "Natura:" to disambiguate. A changed one says only what it
@@ -301,15 +315,16 @@ export function SeatCard({
                   <span className="shrink-0 truncate text-muted/70">{said.label}</span>
                 ) : null;
               })()}
-            <span className="tnum ml-auto shrink-0">
-              <span className="text-miecz">{seat.sword_total}</span>
-              <span className="text-muted"> / </span>
-              <span className="text-magia">{seat.magic_total}</span>
-              <span className="text-muted"> / </span>
-              <span className="text-zycie">{seat.life}</span>
-              <span className="text-muted"> / </span>
-              <span className="text-zloto">{seat.gold}</span>
-            </span>
+            {/* What the body is carrying, where the body itself sits when the
+                sheet is open — the right-hand end of the row. A count and not
+                a list: which places are filled is what the paper doll is for,
+                and this is the one thing about it worth knowing without
+                opening it. Only in the variant that has places at all. */}
+            {slotted && (
+              <span className="ml-auto shrink-0 text-muted/70">
+                na sobie <span className="tnum text-ink/80">{Object.keys(wornBySlot(seat)).length}</span>
+              </span>
+            )}
           </span>
         )}
       </summary>
@@ -493,7 +508,12 @@ export function SeatCard({
                 is what it actually got used for. The tally stays, since it is
                 the part worth reading without counting. */}
             {slotted && (
-              <div className="min-w-0 flex-1">
+              /* `shrink-0`, so the row's `justify-between` pushes it to the
+                 far edge: the Karta and the body are two things to look at,
+                 and a body that stretches to fill the gap makes one wide
+                 object out of them. It was `flex-1` for a version, which is
+                 what pulled it in against the card. */
+              <div className="shrink-0">
                 <p className="mb-2 text-[11px] uppercase tracking-widest text-muted">
                   Na sobie{" "}
                   <span className="text-muted/70">{Object.keys(wornBySlot(seat)).length}</span>
