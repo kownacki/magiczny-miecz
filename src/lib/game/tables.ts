@@ -1,6 +1,6 @@
 /** Typed doors onto the tables this game owns, so a write cannot name a column that is not there. */
 
-import { db } from "@/lib/supabase";
+import { db, type DbHandle } from "@/lib/supabase";
 import type { EffectRow } from "./change";
 import type { FieldCardRow, GameRow, HoldingRow, SeatRow, UserRow } from "./store";
 
@@ -64,7 +64,7 @@ type Write<Row> = Partial<Row>;
  * but it is written once, here, beside the type it belongs to, rather than at
  * eighteen call sites that each had to remember it.
  */
-function table<Row, Extra = Record<never, never>>(name: string) {
+function table<Row, Extra = Record<never, never>>(on: DbHandle, name: string) {
   // The casts on the way out are the point rather than a hole in it. `db` takes
   // anything, and that is what these signatures exist to stop — so the check
   // happens here, at the door, and what goes through it has already been
@@ -72,11 +72,11 @@ function table<Row, Extra = Record<never, never>>(name: string) {
   // when the shape was proved one line earlier.
   return {
     insert: (rows: (Write<Row> & Extra) | (Write<Row> & Extra)[]) =>
-      db.from(name).insert(rows as never),
+      on.from(name).insert(rows as never),
     update: (patch: Write<Omit<Row, "id">> & Partial<Extra>) =>
-      db.from(name).update(patch as never),
+      on.from(name).update(patch as never),
     /** For the reads, which are narrowed by their own column lists and cast. */
-    from: () => db.from(name),
+    from: () => on.from(name),
   };
 }
 
@@ -121,10 +121,25 @@ interface MoveWrite {
   manual: boolean;
 }
 
-export const seats = table<SeatRow, Owned>("seats");
-export const users = table<UserRow, UserSecrets>("users");
-export const games = table<GameRow>("games");
-export const holdings = table<HoldingRow, Owned>("holdings");
-export const fieldCards = table<FieldCardRow, Owned>("field_cards");
-export const seatEffects = table<EffectRow, Owned>("seat_effects");
-export const moves = table<MoveWrite, Owned>("moves");
+/**
+ * Every typed door, onto one handle.
+ *
+ * A factory rather than seven constants because the write path is being handed
+ * its database instead of importing it — see `gameStore.ts`. Nothing here
+ * touches the handle while building, so the lazy connection in `supabase.ts`
+ * stays lazy.
+ */
+export function tablesFor(on: DbHandle) {
+  return {
+    seats: table<SeatRow, Owned>(on, "seats"),
+    users: table<UserRow, UserSecrets>(on, "users"),
+    games: table<GameRow>(on, "games"),
+    holdings: table<HoldingRow, Owned>(on, "holdings"),
+    fieldCards: table<FieldCardRow, Owned>(on, "field_cards"),
+    seatEffects: table<EffectRow, Owned>(on, "seat_effects"),
+    moves: table<MoveWrite, Owned>(on, "moves"),
+  };
+}
+
+/** The default handle's, for the reads and the two writes that are not a change. */
+export const { seats, users, games, holdings, fieldCards, seatEffects, moves } = tablesFor(db);

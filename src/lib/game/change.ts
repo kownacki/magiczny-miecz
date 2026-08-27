@@ -1,7 +1,8 @@
 /** One change to one game: the snapshot it reads, the changeset it writes, and the commit that makes the whole of it true at once. */
 
-import { db } from "@/lib/supabase";
-import * as tables from "./tables";
+import { db, type DbHandle } from "@/lib/supabase";
+import { activeStore, type GameStore } from "./gameStore";
+import { tablesFor } from "./tables";
 import {
   GAME_COLUMNS,
   fieldCardsFor,
@@ -435,8 +436,8 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
  * Reading and writing it.
  * ----------------------------------------------------------------------- */
 
-export async function effectRowsFor(gameId: string): Promise<EffectRow[]> {
-  const { data, error } = await db
+export async function effectRowsFor(gameId: string, on: DbHandle = db): Promise<EffectRow[]> {
+  const { data, error } = await on
     .from("seat_effects")
     .select("id,seat_id,source,label,modifier,ends")
     .eq("game_id", gameId)
@@ -445,8 +446,8 @@ export async function effectRowsFor(gameId: string): Promise<EffectRow[]> {
   return (data ?? []) as EffectRow[];
 }
 
-async function gameRow(gameId: string): Promise<Snapshot["game"]> {
-  const { data, error } = await db
+async function gameRow(gameId: string, on: DbHandle = db): Promise<Snapshot["game"]> {
+  const { data, error } = await on
     .from("games")
     .select(GAME_COLUMNS)
     .eq("id", gameId)
@@ -455,14 +456,14 @@ async function gameRow(gameId: string): Promise<Snapshot["game"]> {
   return data as Snapshot["game"];
 }
 
-export async function loadSnapshot(gameId: string): Promise<Snapshot> {
+export async function loadSnapshot(gameId: string, on: DbHandle = db): Promise<Snapshot> {
   const [game, seats, users, holdings, fieldCards, effects] = await Promise.all([
-    gameRow(gameId),
-    seatsFor(gameId),
-    usersFor(gameId),
-    holdingsFor(gameId),
-    fieldCardsFor(gameId),
-    effectRowsFor(gameId),
+    gameRow(gameId, on),
+    seatsFor(gameId, on),
+    usersFor(gameId, on),
+    holdingsFor(gameId, on),
+    fieldCardsFor(gameId, on),
+    effectRowsFor(gameId, on),
   ]);
   // Off the games row, which is also the row that has to be won to write at
   // all. It used to be a sixth query — `max(seq)` — read at the same moment as
@@ -524,7 +525,12 @@ export function isEmpty(writes: Changeset): boolean {
   );
 }
 
-export async function commit(snapshot: Snapshot, writes: Changeset): Promise<number> {
+export async function commit(
+  snapshot: Snapshot,
+  writes: Changeset,
+  on: DbHandle = db,
+): Promise<number> {
+  const t = tablesFor(on);
   const gameId = snapshot.game.id;
   const base = snapshot.game.revision;
   const next = base + 1;
@@ -545,7 +551,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   if (isEmpty(writes)) return base;
 
   const lines = writes.journal ?? [];
-  const { data: won, error: gameError } = await db
+  const { data: won, error: gameError } = await on
     .from("games")
     .update({
       ...(writes.game ?? {}),
@@ -587,56 +593,56 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   // service-role key reaches all of them, so a delete whose only filter is a
   // list of ids is one bad id away from being somebody else's problem.
   if (writes.seatsRemoved?.length) {
-    const { error } = await db.from("seats").delete().eq("game_id", gameId).in("id", writes.seatsRemoved);
+    const { error } = await on.from("seats").delete().eq("game_id", gameId).in("id", writes.seatsRemoved);
     if (error) throw new Failure(`commit(seatsRemoved): ${error.message}`);
   }
   for (const seat of writes.seats ?? []) {
     // Passed whole rather than spread into a literal, so the excess-property
     // check does not fire here — `SeatPatch` is what guards this one, and it is
     // built off `SeatRow` for exactly that reason.
-    const { error } = await tables.seats.update(seat.patch).eq("id", seat.id);
+    const { error } = await t.seats.update(seat.patch).eq("id", seat.id);
     if (error) throw new Failure(`commit(seats): ${error.message}`);
   }
 
   if (writes.usersRemoved?.length) {
-    const { error } = await db.from("users").delete().eq("game_id", gameId).in("id", writes.usersRemoved);
+    const { error } = await on.from("users").delete().eq("game_id", gameId).in("id", writes.usersRemoved);
     if (error) throw new Failure(`commit(usersRemoved): ${error.message}`);
   }
   if (writes.usersNew?.length) {
-    const { error } = await db
+    const { error } = await on
       .from("users")
       // A spread suppresses the excess-property check, so what protects this is
       // `NewUser` upstream rather than the door itself. One of the three writes
-      // in this file the compiler cannot see into — see `tables.ts`.
+      // in this file the compiler cannot see into — see `t.ts`.
       .insert(writes.usersNew.map((fresh) => ({ ...fresh, game_id: gameId })));
     if (error) throw new Failure(`commit(usersNew): ${error.message}`);
   }
   for (const user of writes.users ?? []) {
-    const { error } = await tables.users.update(user.patch).eq("id", user.id);
+    const { error } = await t.users.update(user.patch).eq("id", user.id);
     if (error) throw new Failure(`commit(users): ${error.message}`);
   }
 
   if (writes.holdings?.delete?.length) {
-    const { error } = await db.from("holdings").delete().eq("game_id", gameId).in("id", writes.holdings.delete);
+    const { error } = await on.from("holdings").delete().eq("game_id", gameId).in("id", writes.holdings.delete);
     if (error) throw new Failure(`commit(holdings.delete): ${error.message}`);
   }
   for (const held of writes.holdings?.patch ?? []) {
-    const { error } = await tables.holdings.update(held.patch).eq("id", held.id);
+    const { error } = await t.holdings.update(held.patch).eq("id", held.id);
     if (error) throw new Failure(`commit(holdings.patch): ${error.message}`);
   }
   if (writes.holdings?.insert?.length) {
-    const { error } = await db
+    const { error } = await on
       .from("holdings")
       .insert(writes.holdings.insert.map((one) => ({ game_id: gameId, ...one })));
     if (error) throw new Failure(`commit(holdings.insert): ${error.message}`);
   }
 
   if (writes.fieldCards?.delete?.length) {
-    const { error } = await db.from("field_cards").delete().eq("game_id", gameId).in("id", writes.fieldCards.delete);
+    const { error } = await on.from("field_cards").delete().eq("game_id", gameId).in("id", writes.fieldCards.delete);
     if (error) throw new Failure(`commit(fieldCards.delete): ${error.message}`);
   }
   if (writes.fieldCards?.insert?.length) {
-    const { error } = await tables.fieldCards.insert(
+    const { error } = await t.fieldCards.insert(
       writes.fieldCards.insert.map((one) => ({
         game_id: gameId,
         ...one,
@@ -652,15 +658,15 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   }
 
   if (writes.effects?.delete?.length) {
-    const { error } = await db.from("seat_effects").delete().eq("game_id", gameId).in("id", writes.effects.delete);
+    const { error } = await on.from("seat_effects").delete().eq("game_id", gameId).in("id", writes.effects.delete);
     if (error) throw new Failure(`commit(effects.delete): ${error.message}`);
   }
   for (const effect of writes.effects?.patch ?? []) {
-    const { error } = await tables.seatEffects.update(effect.patch).eq("id", effect.id);
+    const { error } = await t.seatEffects.update(effect.patch).eq("id", effect.id);
     if (error) throw new Failure(`commit(effects.patch): ${error.message}`);
   }
   if (writes.effects?.insert?.length) {
-    const { error } = await db
+    const { error } = await on
       .from("seat_effects")
       .insert(writes.effects.insert.map((one) => ({ game_id: gameId, ...one })));
     if (error) throw new Failure(`commit(effects.insert): ${error.message}`);
@@ -671,7 +677,7 @@ export async function commit(snapshot: Snapshot, writes: Changeset): Promise<num
   // line that could not be written was silently dropped, which is the one
   // failure the journal must not have: it exists to be believed when the app
   // and the board disagree.
-  if (lines.length > 0) await appendJournal(gameId, snapshot.journalSeq, lines, snapshot);
+  if (lines.length > 0) await appendJournal(gameId, snapshot.journalSeq, lines, snapshot, on);
 
   return next;
 }
@@ -690,6 +696,7 @@ async function appendJournal(
   lines: readonly JournalWrite[],
   /** Read for one thing: who was driving each seat at the moment this happened. */
   snapshot: Snapshot,
+  on: DbHandle,
 ): Promise<void> {
   /**
    * The name is frozen here rather than looked up when the line is read.
@@ -712,7 +719,8 @@ async function appendJournal(
     return snapshot.users.find((one) => one.seat_index === seat.seat_index) ?? null;
   };
 
-  const { error } = await tables.moves.insert(
+  const t = tablesFor(on);
+  const { error } = await t.moves.insert(
     lines.map((line, index) => ({
       game_id: gameId,
       seq: from + 1 + index,
@@ -746,7 +754,7 @@ export async function change<C, T>(
   gameId: string,
   handler: Handler<C, T>,
   command: C,
-  options: { random?: RandomPort; now?: () => number } = {},
+  options: { random?: RandomPort; now?: () => number; store?: GameStore } = {},
 ): Promise<T> {
   // One change to a table at a time, in the order the table asked for them.
   // The revision check below is what makes concurrent writes *correct*; the
@@ -760,20 +768,25 @@ async function attempt<C, T>(
   gameId: string,
   handler: Handler<C, T>,
   command: C,
-  options: { random?: RandomPort; now?: () => number },
+  options: { random?: RandomPort; now?: () => number; store?: GameStore },
 ): Promise<T> {
+  // Where this game is kept. A property of the process rather than of the
+  // change — a server is Postgres for its whole life and `mm` is one save file
+  // for its whole life — so it is read here rather than passed down sixty call
+  // sites. The override is for a test that wants to be explicit.
+  const store = options.store ?? activeStore();
   const base = options.random ?? appRandom();
   // Outlives the attempts, so a retry throws the same dice: see `replayable`.
   const rolls: number[] = [];
 
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-    const snapshot = await loadSnapshot(gameId);
+    const snapshot = await store.load(gameId);
     const { writes, result } = await handler(snapshot, command, {
       random: replayable(base, rolls),
       now: options.now ?? Date.now,
     });
     try {
-      await commit(snapshot, writes);
+      await store.commit(snapshot, writes);
       return result;
     } catch (error) {
       if (!(error instanceof Conflict) || attempt === ATTEMPTS) throw error;

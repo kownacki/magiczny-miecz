@@ -46,6 +46,18 @@ function connect(): SupabaseClient {
  * because the database is — it grants the other three tenants' tables too, two
  * of which take real payments. Treat a leak here as a leak of all of them.
  */
+/**
+ * A thing `.from()` can be called on.
+ *
+ * Named so that everything on the write path can be *handed* one instead of
+ * importing the singleton below. The only two that exist are this file's Proxy
+ * and `fakeDb`, which mimics enough PostgREST to commit against — and which has
+ * to be cast to this on the way in, because it implements the four call shapes
+ * the app uses rather than the whole client. That cast is the seam, and the
+ * conformance suite is what keeps it honest.
+ */
+export type DbHandle = SupabaseClient;
+
 export const db = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
     const connection = connect();

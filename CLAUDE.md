@@ -28,6 +28,8 @@ anything.
 - **[CONTEXT.md](CONTEXT.md)** — the referee's own vocabulary: Snapshot, Changeset, Command
 - **[docs/TASKS.md](docs/TASKS.md)** — the live checklist; what is done and what is next
 - **[docs/COVERAGE.md](docs/COVERAGE.md)** — every numbered rule, and whether the app carries it
+- **[docs/TERMINAL.md](docs/TERMINAL.md)** — the terminal-first engine: the
+  store port, save files, and the one console vocabulary both surfaces share
 - **[docs/LOBBY.md](docs/LOBBY.md)** — host, players, presence: the part that is not Magiczny Miecz
 - **[docs/RULES.md](docs/RULES.md)** — the rulebook transcribed
 - **[docs/EXPANSIONS.md](docs/EXPANSIONS.md)** — what is in the five boxes that
@@ -67,10 +69,12 @@ anything.
   The sixteen files in `src/lib/game/commands/` are 5,600 lines of that one
   shape, and `turnStore.ts` is the thin dispatcher over them. Do not add a
   database call or a hand-rolled journal write back into it. The invariant to
-  check is `grep -rl 'from "@/lib/supabase"' src`, which must answer with
-  `store.ts` and `change.ts` and nothing else — grepping for `db.from` looks
-  equivalent and is not, because the handle and the call can sit on separate
-  lines, which is exactly how the last two escapees stayed hidden. Two traps worth
+  check is `grep -rl 'from "@/lib/supabase"' src`, which must answer with exactly
+  four files and no fifth: `store.ts` (rows and reads), `change.ts` (the load and
+  the commit), `tables.ts` (the typed doors, which need the default handle) and
+  `gameStore.ts` (which is where the default is *chosen*). Grepping for `db.from`
+  looks equivalent and is not, because the handle and the call can sit on
+  separate lines, which is exactly how the last two escapees stayed hidden. Two traps worth
   knowing before you write one: `merge` resolves two writes to the same column
   as *later wins*, never a sum, so anything that reads a column and writes it
   back — above all `game.deck` through `putOnPile` — must chain through
@@ -82,6 +86,16 @@ anything.
   mint the tokens, hand in the shuffles and run the commands. The one
   read-modify-write left in the app is `bumpRevision`, for `joinGame`, which
   inserts a seat row and hands its token back: a `Changeset` can do neither.
+- **Where a game is kept is a port too.** `change()` used to reach the Supabase
+  singleton on both sides of the decision, which made the rules pure and yet
+  impossible to run anywhere else. `GameStore` in `src/lib/game/gameStore.ts` is
+  the seam: `load` and `commit`, one interface, and Postgres or a `Map` or a file
+  behind it. Two rules keep it from costing anything. Every implementation is
+  `storeOver(handle)` — the commit logic is the same code, so there is no second
+  CAS to get subtly wrong — and **every implementation keeps the
+  compare-and-swap**, offline included, because the moment an in-memory game
+  gets cheaper rules there are two games to keep honest. See docs/TERMINAL.md.
+
 - **Randomness is a port, not a branch.** `RandomPort` is bound to a human
   typing what they rolled, to an RNG, or to `scriptedRandom` in a test, and
   rules code must never learn which. It is the only port left: `DeckPort` and

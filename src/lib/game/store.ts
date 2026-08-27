@@ -1,7 +1,7 @@
 /** Every database read and write for a game, so route handlers never touch Supabase directly. */
 
 import type { EqMode } from "@/lib/engine/slots";
-import { db } from "@/lib/supabase";
+import { db, type DbHandle } from "@/lib/supabase";
 import * as tables from "./tables";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import { MAX_SEATS, type GameMode } from "./modes";
@@ -312,8 +312,8 @@ export async function journalRows(
  * about people — who is host, who is quiet, who arrived first — and half of
  * them are in no seat at all.
  */
-export async function usersFor(gameId: string): Promise<UserRow[]> {
-  const { data, error } = await db
+export async function usersFor(gameId: string, on: DbHandle = db): Promise<UserRow[]> {
+  const { data, error } = await on
     .from("users")
     .select(USER_COLUMNS)
     .eq("game_id", gameId)
@@ -341,8 +341,8 @@ export function makeUserId(pick: () => number = Math.random): string {
   return out;
 }
 
-export async function seatsFor(gameId: string): Promise<SeatRow[]> {
-  const { data, error } = await db
+export async function seatsFor(gameId: string, on: DbHandle = db): Promise<SeatRow[]> {
+  const { data, error } = await on
     .from("seats")
     .select(SEAT_COLUMNS)
     .eq("game_id", gameId)
@@ -561,8 +561,8 @@ export interface HoldingRow {
   granted: boolean;
 }
 
-export async function holdingsFor(gameId: string): Promise<HoldingRow[]> {
-  const { data, error } = await db
+export async function holdingsFor(gameId: string, on: DbHandle = db): Promise<HoldingRow[]> {
+  const { data, error } = await on
     .from("holdings")
     .select("id,seat_id,card_id,kind,face,slot,ordinal,granted")
     .eq("game_id", gameId)
@@ -590,8 +590,8 @@ export interface FieldCardRow {
   granted: boolean;
 }
 
-export async function fieldCardsFor(gameId: string): Promise<FieldCardRow[]> {
-  const { data, error } = await db
+export async function fieldCardsFor(gameId: string, on: DbHandle = db): Promise<FieldCardRow[]> {
+  const { data, error } = await on
     .from("field_cards")
     .select("id,field_id,card_id,granted")
     .eq("game_id", gameId)
