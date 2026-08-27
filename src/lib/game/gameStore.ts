@@ -88,7 +88,31 @@ export const supabaseStore: GameStore = {
  * without the store knowing anything about files.
  */
 export function memoryStore(tables: Tables): GameStore {
-  return storeOver(fakeDb(tables) as unknown as DbHandle);
+  return storeOver(memoryHandle(tables));
+}
+
+/**
+ * The cast, in one place.
+ *
+ * `createGame` and `joinGame` are the two writes that are not a `Changeset` — a
+ * changeset can neither invent an id nor hand a token back — so they take a
+ * handle rather than a store, and they need this too.
+ */
+export function memoryHandle(tables: Tables): DbHandle {
+  return fakeDb(tables) as unknown as DbHandle;
+}
+
+/** A game nobody has played yet. */
+export function emptyTables(): Tables {
+  return {
+    games: [],
+    seats: [],
+    users: [],
+    holdings: [],
+    seat_effects: [],
+    field_cards: [],
+    moves: [],
+  };
 }
 
 /**

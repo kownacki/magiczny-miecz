@@ -3,6 +3,7 @@
 import type { EqMode } from "@/lib/engine/slots";
 import { db, type DbHandle } from "@/lib/supabase";
 import * as tables from "./tables";
+import { tablesFor } from "./tables";
 import { makeClaimToken, makeJoinCode } from "./codes";
 import { MAX_SEATS, type GameMode } from "./modes";
 import { isQuiet } from "./commands/lobby";
@@ -143,10 +144,18 @@ export async function createGame(
   eqMode: EqMode = "slots",
   /** Which browser this is, so the host can be recognised coming back. */
   deviceId: string | null = null,
+  /**
+   * Where the game is being made. Defaults to Postgres, and is a `Map` or a
+   * save file when `mm` opens a table — the same handle `GameStore` is built
+   * over. Opening a table is one of the two writes that is not a `Changeset`,
+   * so it cannot go through the store and has to be handed the handle itself.
+   */
+  on: DbHandle = db,
 ): Promise<{ game: GameRow; hostToken: string }> {
+  const t = tablesFor(on);
   for (let attempt = 0; attempt < 5; attempt++) {
     const joinCode = makeJoinCode();
-    const { data, error } = await db
+    const { data, error } = await on
       .from("games")
       .insert({ join_code: joinCode, mode, eq_mode: eqMode })
       .select(GAME_COLUMNS)
@@ -176,10 +185,10 @@ export async function createGame(
      * is gated on it — it buys a way back, and its absence costs only that.
      */
     const hostToken = makeClaimToken();
-    const { error: seatError } = await tables.seats.insert({ game_id: data.id, seat_index: 0 });
+    const { error: seatError } = await t.seats.insert({ game_id: data.id, seat_index: 0 });
     if (seatError) throw new Error(`createGame seat: ${seatError.message}`);
 
-    const { error: userError } = await tables.users.insert({
+    const { error: userError } = await t.users.insert({
       id: makeUserId(),
       game_id: data.id,
       name: hostName ?? "Gospodarz",
@@ -406,22 +415,25 @@ export async function joinGame(
    * table after closing the tab on a device that does not remember them.
    */
   wanted: number | null = null,
+  /** Where the table is. See `createGame`. */
+  on: DbHandle = db,
 ): Promise<{ user: UserRow; seat: SeatRow | null; token: string }> {
+  const t = tablesFor(on);
   const token = makeClaimToken();
   const name = (playerName ?? "").trim() || null;
 
   // A name has to be unique at the table for `kick Michał` to mean one person,
   // so the collision is refused rather than quietly suffixed.
   if (name) {
-    const here = await usersFor(gameId);
+    const here = await usersFor(gameId, on);
     if (here.some((one) => one.name === name)) {
       throw new Error(`Przy stole jest już ${name}.`);
     }
   }
 
   for (let attempt = 0; attempt < MAX_SEATS + 4; attempt++) {
-    const existing = await seatsFor(gameId);
-    const here = await usersFor(gameId);
+    const existing = await seatsFor(gameId, on);
+    const here = await usersFor(gameId, on);
     const driven = new Set(
       here.map((one) => one.seat_index).filter((at): at is number => at !== null),
     );
@@ -465,7 +477,7 @@ export async function joinGame(
         throw new Error("To miejsce ma już swojego gracza.");
       }
       if (holder) {
-        const { error } = await tables.users.update({ seat_index: null }).eq("id", holder.id);
+        const { error } = await t.users.update({ seat_index: null }).eq("id", holder.id);
         if (error) throw new Failure(`joinGame(displace): ${error.message}`);
       }
       seatIndex = wanted;
@@ -476,7 +488,7 @@ export async function joinGame(
 
     let seat: SeatRow | null = null;
     if (seatIndex !== null && !taken.has(seatIndex)) {
-      const made = await tables.seats.insert({ game_id: gameId, seat_index: seatIndex, eliminated: midGame })
+      const made = await t.seats.insert({ game_id: gameId, seat_index: seatIndex, eliminated: midGame })
         .select(SEAT_COLUMNS)
         .single();
       if (made.error) {
@@ -488,7 +500,7 @@ export async function joinGame(
       seat = existing.find((one) => one.seat_index === seatIndex) ?? null;
     }
 
-    const { data, error } = await db
+    const { data, error } = await on
       .from("users")
       .insert({
         id: makeUserId(),

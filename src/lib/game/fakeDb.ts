@@ -28,6 +28,68 @@ export interface Tables {
  * the snapshot being read and the games row being taken, which is precisely the
  * gap a second player writes into.
  */
+/**
+ * What Postgres would have filled in.
+ *
+ * `tables.ts` says out loud that most columns have defaults and that a row type
+ * cannot see them — "requiring every column would mean writing out the whole of
+ * db/schema.sql at every insert". True, and it means a fake that stores exactly
+ * what it was handed is *not* a database: `createGame` inserts a game with three
+ * columns and Postgres returns a row with fifteen, so an in-memory table came
+ * back with no status, no revision, and no Życie on any seat.
+ *
+ * Kept beside db/schema.sql by hand, like the row types above it. A default that
+ * drifts shows up as a game that behaves differently offline, which is the one
+ * thing the store port exists to prevent.
+ */
+const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
+  games: {
+    mode: "simulation",
+    eq_mode: "classic",
+    die_source: "app",
+    status: "lobby",
+    turn: 0,
+    turn_state: { phase: "roll" },
+    revision: 0,
+    characters_out: [],
+    journal_seq: 0,
+    active_seat: null,
+    deck: null,
+  },
+  seats: {
+    sword_own: 0,
+    magic_own: 0,
+    sword_floor: 0,
+    magic_floor: 0,
+    life: 4,
+    gold: 1,
+    turns_lost: 0,
+    eliminated: false,
+    character_id: null,
+    field_id: null,
+    nature: null,
+    nature_changed_turn: null,
+    stone_until_turn: null,
+    bridge_blocked_until_turn: null,
+  },
+  users: { is_host: false, ready: false, seat_index: null, device_id: null, left_at: null },
+  holdings: { face: "open", granted: false, slot: null, note: null, points: null },
+  seat_effects: {},
+  field_cards: { granted: false },
+  moves: { turn: 0, payload: {}, manual: false, seat_id: null, user_id: null, actor_name: null },
+};
+
+/** Now, as a timestamp column would be. */
+const STAMPED: Record<keyof Tables, readonly string[]> = {
+  games: ["created_at", "last_played_at"],
+  seats: ["created_at"],
+  users: ["created_at", "seen_at"],
+  holdings: ["created_at"],
+  seat_effects: ["created_at"],
+  field_cards: ["created_at"],
+  moves: ["created_at"],
+};
+
 export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
   // Called before every write, not once: whether the interloper strikes a
   // single time or keeps striking is the test's business, not the fake's.
@@ -43,6 +105,10 @@ export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
       let sortBy: { column: string; ascending: boolean } | null = null;
       let cap: number | null = null;
       let one = false;
+      // PostgREST hands an insert back only when it was asked to. `createGame`
+      // is the caller that asks — `.insert(...).select(...).single()` — and it
+      // needs the row it just made, because that is where the id comes from.
+      let returning = false;
 
       const matches = (row: Row) =>
         filters.every((f) =>
@@ -51,7 +117,7 @@ export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
 
       const builder = {
         select() {
-          if (mode === "select") mode = "select";
+          returning = true;
           return builder;
         },
         update(next: Record<string, unknown>) {
@@ -122,10 +188,26 @@ export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
               }
             }
             let n = 0;
+            const made: Row[] = [];
+            const now = new Date().toISOString();
+            const stamps = Object.fromEntries(STAMPED[name].map((column) => [column, now]));
             for (const row of inserted) {
-              rows().push({ id: `${name}-${rows().length + ++n}`, ...row } as Row);
+              // Defaults first, so anything the caller named wins — which is
+              // what `default` means.
+              const stored = {
+                id: `${name}-${rows().length + ++n}`,
+                ...DEFAULTS[name],
+                ...stamps,
+                ...row,
+              } as Row;
+              rows().push(stored);
+              made.push(stored);
             }
-            return resolve({ data: null, error: null });
+            if (!returning) return resolve({ data: null, error: null });
+            return resolve({
+              data: one ? ({ ...made[0] } as unknown) : made.map((r) => ({ ...r })),
+              error: null,
+            });
           }
           if (mode === "delete") {
             tables[name] = rows().filter((row) => !matches(row));

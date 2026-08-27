@@ -1,6 +1,7 @@
 # The terminal-first engine
 
-**Status: plan, not built.** Nothing in here exists yet except where it says so.
+**Status: steps 1 and 2 are built.** `GameStore`, `MemoryStore`, `FileStore` and
+saves exist and are tested; the grammar, `mm` and rewind are not.
 The decisions under "Settled" are taken; the rest is the shape of the work.
 
 ## Settled
@@ -272,12 +273,13 @@ Something like:
 
 Four steps, each independently testable, in this order:
 
-1. **`GameStore` port.** Extract load/commit behind an interface; `SupabaseStore`
-   is the current code moved, `MemoryStore` is `fakeDb` promoted out of the
-   tests. One conformance suite run against both. *Do this alone and prove it
-   before touching anything else* — it is the step where a mistake is expensive.
-2. **`FileStore` and saves.** Serialisation, list/load/save/delete, auto-save in
-   commit.
+1. ~~**`GameStore` port.**~~ **Done.** `gameStore.ts`; `gameStore.test.ts` plays
+   a real turn against memory with nothing mocked.
+2. ~~**`FileStore` and saves.**~~ **Done.** `saves.ts`; a whole game is opened,
+   played, written to disk and reopened in `saves.test.ts`. Saves live under
+   `~/.magiczny-miecz/saves/<KOD>.json`, overridable with `MM_HOME`. Written
+   temp-then-rename, because the file is rewritten after *every* change and the
+   window is most of the program's life.
 3. **The grammar split.** `needs` on every verb, `permits()`, and the play verbs
    promoted to first-class commands.
 4. **`mm`.** Pick or start a save, hot-seat prompt, render board + seat + journal.
@@ -293,6 +295,28 @@ commands means nothing without deterministic randomness behind it.
 be the first time anything outside the tests does that end to end, and it will
 find rules the engine does not carry yet. That is a feature — but it is not
 schedulable.
+
+## What building it turned up
+
+Three things, all of them the sort that only appear when something real runs:
+
+- **The in-memory database was not a database.** `tables.ts` says out loud that
+  most columns have defaults and a row type cannot see them — which means a fake
+  that stores exactly what it is handed returns a game with no `status`, no
+  `revision`, and seats with no Życie. `createGame` inserts three columns and
+  Postgres hands back fifteen. `fakeDb` now carries a `DEFAULTS` table mirroring
+  db/schema.sql by hand, and a default that drifts will show up as a game that
+  behaves differently offline — exactly what the port exists to prevent.
+- **It also could not hand back what it had just written.** `createGame` does
+  `.insert(...).select(...).single()` because that is where the id comes from;
+  the fake answered `null`. Both gaps were invisible while it was only ever used
+  to test `commit`.
+- **`byId` means two different things.** `takeNewCharacter(gameId, seatId,
+  characterId, byId)` wants the *seat* asking (`mayChooseFor` compares it to
+  `seatId`), while `removeCharacter(gameId, seatId, hard, byId)` wants the
+  *user*. Same name, same file family, no way to tell them apart at a call site
+  — the shape `requests.ts` was written to stop, one layer further in. Worth
+  settling when step 3 redesigns the vocabulary.
 
 ## Stack
 
