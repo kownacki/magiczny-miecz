@@ -38,6 +38,21 @@ create table if not exists magiczny_miecz.games (
   -- is 'slots', because that is how this table plays. Left as 'classic' so
   -- that a row inserted by hand gets the game as published.
   eq_mode text not null default 'classic' check (eq_mode in ('classic', 'slots')),
+  -- Whether the Wyposażenie pile can run out (21.2).
+  --
+  -- The printed rule is that it can: "Jeżeli zabraknie Kart jakiegoś
+  -- Przedmiotu, oznacza to, że Przedmiot ten jest w danej chwili
+  -- nieosiągalny." It is a good rule for a Magiczny Miecz, which is meant to
+  -- be scarce and fought over. It is a strange one for a Miecz, a Hełm or a
+  -- Sztylet — common things, of which the box happens to hold five, three and
+  -- four — and it bites hardest at setup, where five sword-starting characters
+  -- can empty the supply before anybody has rolled.
+  --
+  -- True by default because that is how this app opens a table. The printed
+  -- rule stays reachable rather than being removed: set false and the pile is
+  -- finite again. Once a table is playing this only goes one way — see
+  -- `setEndlessStock`, which is why there is no check constraint pinning it.
+  endless_stock boolean not null default true,
   -- Where randomness comes from. 'physical' means a human types in what they
   -- rolled; this is the RandomPort's binding, stored so it survives a reload.
   die_source text not null default 'app' check (die_source in ('app', 'physical')),

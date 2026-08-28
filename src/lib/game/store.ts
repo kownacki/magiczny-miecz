@@ -76,6 +76,8 @@ export interface GameRow {
   mode: string;
   /** Which equipment variant this table plays: see `EqMode` in `slots.ts`. */
   eq_mode: string;
+  /** Whether the Wyposażenie pile can run out (21.2). See `stockLeft`. */
+  endless_stock: boolean;
   die_source: string;
   status: string;
   active_seat: number | null;
@@ -118,7 +120,7 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 export const GAME_COLUMNS =
-  "id,join_code,mode,eq_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out,seed";
+  "id,join_code,mode,eq_mode,endless_stock,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out,seed";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
@@ -160,6 +162,17 @@ export async function createGame(
    * so it cannot go through the store and has to be handed the handle itself.
    */
   on: DbHandle = handleNow(),
+  /**
+   * Whether the Wyposażenie pile can run out (21.2).
+   *
+   * Last, and defaulted, so that adding it moved nobody: five callers pass
+   * these positionally and one of them is a save file being replayed.
+   *
+   * True unless the table asks otherwise, which is the opposite way round from
+   * the column's own default: the printed rule is that the pile is finite, and
+   * this app opens tables that ignore it. See the column's note in schema.sql.
+   */
+  endlessStock: boolean = true,
 ): Promise<{ game: GameRow; hostToken: string }> {
   const t = tablesFor(on);
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -168,7 +181,7 @@ export async function createGame(
       .from("games")
       // Seeded at birth, because a shuffle that happened before there was a
       // seed cannot be recovered afterwards.
-      .insert({ join_code: joinCode, mode, eq_mode: eqMode, seed: makeSeed() })
+      .insert({ join_code: joinCode, mode, eq_mode: eqMode, endless_stock: endlessStock, seed: makeSeed() })
       .select(GAME_COLUMNS)
       .single();
 

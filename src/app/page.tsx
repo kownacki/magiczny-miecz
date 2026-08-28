@@ -105,6 +105,7 @@ export default function Home() {
     name: string,
     mode: "simulation" | "companion",
     eqMode: "classic" | "slots",
+    endlessStock: boolean,
   ) {
     setBusy(true);
     setError(null);
@@ -112,7 +113,7 @@ export default function Home() {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, mode, eqMode, deviceId: deviceId() }),
+        body: JSON.stringify({ name, mode, eqMode, endlessStock, deviceId: deviceId() }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -465,18 +466,20 @@ function CreateDialog({
     name: string,
     mode: "simulation" | "companion",
     eqMode: "classic" | "slots",
+    endlessStock: boolean,
   ) => void;
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"simulation" | "companion">("simulation");
   const [eqMode, setEqMode] = useState<"classic" | "slots">("slots");
+  const [endlessStock, setEndlessStock] = useState(true);
 
   return (
     <Dialog title="Nowy stół" onCancel={onCancel}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (name.trim()) onCreate(name.trim(), mode, eqMode);
+          if (name.trim()) onCreate(name.trim(), mode, eqMode, endlessStock);
         }}
         className="flex flex-col gap-2"
       >
@@ -533,6 +536,28 @@ function CreateDialog({
             onPick={() => setEqMode("classic")}
             label="Klasyczny"
             hint="Jak w Instrukcji: 4 Przedmioty, bez podziału na noszone i niesione."
+          />
+        </fieldset>
+
+        {/* Third, and last, because it is the smallest of the three: the mode
+            decides whether there is a board in the room and the variant decides
+            what wearing something means, while this decides whether one pile
+            can run dry. */}
+        <fieldset className="mt-3 flex flex-col gap-2">
+          <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
+            Wyposażenie
+          </legend>
+          <ModeChoice
+            active={endlessStock}
+            onPick={() => setEndlessStock(true)}
+            label="Niewyczerpane"
+            hint="Miecza, Hełmu czy Sztyletu nigdy nie zabraknie. Magiczny Miecz i Tarcza Tolimana zostają rzadkie."
+          />
+          <ModeChoice
+            active={!endlessStock}
+            onPick={() => setEndlessStock(false)}
+            label="Jak w pudełku"
+            hint="Stos jest skończony (21.2) — pięć Mieczy na pięciu graczy i już żadnego."
           />
         </fieldset>
 

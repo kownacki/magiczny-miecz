@@ -229,7 +229,7 @@ export function envelopeFor(
     })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.
-    stock: shopStock({ holdings, fieldCards }),
+    stock: shopStock({ holdings, fieldCards, game }),
     seats: seats.map((seat) => {
       const own = holdings
         .filter((holding) => holding.seat_id === seat.id)

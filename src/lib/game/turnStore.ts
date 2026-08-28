@@ -104,6 +104,7 @@ import {
   takeNewCharacter as takeNewCharacterOn,
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
+import { setEndlessStock as setEndlessStockOn } from "./commands/seat";
 import {
   removeCharacter as removeCharacterOn,
   reviveCharacter as reviveCharacterOn,
@@ -1488,3 +1489,12 @@ export async function takeFromField(
  * lying there face up until the turn ends, so "still on the field" cannot mean
  * "still to be resolved". The same distinction `fought` makes for a Wróg.
  */
+
+/**
+ * Stops the Wyposażenie pile running out (21.2), for good.
+ *
+ * One way, and the command says why — see `setEndlessStock`.
+ */
+export async function endlessStock(gameId: string, on: boolean): Promise<void> {
+  await change(gameId, setEndlessStockOn, { on });
+}

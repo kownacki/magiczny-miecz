@@ -55,6 +55,8 @@ export interface Game {
   id: string;
   /** Which equipment variant this table plays (`EqMode`). */
   eq_mode: string;
+  /** Whether the Wyposażenie pile can run out (21.2). One way only. */
+  endless_stock: boolean;
   join_code: string;
   mode: string;
   status: string;

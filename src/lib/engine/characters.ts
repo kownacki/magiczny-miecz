@@ -299,6 +299,21 @@ export function notesForCharacter(characterId: CharacterId | null): readonly str
   return characterId ? (CHARACTER_NOTES[characterId] ?? []) : [];
 }
 
+/**
+ * The kit without its promised Przedmioty, for a journal line that has to name
+ * what actually arrived.
+ *
+ * 21.2 can leave a character short — three Miecze in the pile and five Karty
+ * Postaci printed with one — and the line then has to say what was handed over
+ * and nothing else. Spreading the kit and adding the real list after it does
+ * not work: the key is the same, and the promise wins wherever the real list
+ * is empty.
+ */
+export function withoutItems(kit: StartingKit): Omit<StartingKit, "items"> {
+  const { items: _promised, ...rest } = kit;
+  return rest;
+}
+
 export function startingKit(characterId: CharacterId | null): StartingKit {
   return characterId ? (STARTING_KIT[characterId] ?? {}) : {};
 }

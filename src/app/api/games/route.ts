@@ -32,9 +32,20 @@ export async function POST(request: Request) {
   // the default has to be the game as printed.
   // Slotowy unless the caller asks for the printed rules.
   const eqMode: EqMode = body.eqMode === "classic" ? "classic" : "slots";
+  // 21.2's finite pile unless the table asks for it: the rule is right about a
+  // Magiczny Miecz and odd about a Hełm, and this app opens tables that say so.
+  // The two relics stay scarce either way — see `RELICS`.
+  const endlessStock: boolean = body.endlessStock !== false;
   // Which browser opened the table, so that closing the tab is not the end of
   // being its host. See `createGame`.
   const deviceId = typeof body.deviceId === "string" ? body.deviceId : null;
-  const { game, hostToken } = await createGame(name, mode, eqMode, deviceId);
+  const { game, hostToken } = await createGame(
+    name,
+    mode,
+    eqMode,
+    deviceId,
+    undefined,
+    endlessStock,
+  );
   return NextResponse.json({ joinCode: game.join_code, token: hostToken });
 }

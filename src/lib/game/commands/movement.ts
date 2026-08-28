@@ -5,8 +5,9 @@ import type { FieldId } from "@/lib/engine/board";
 import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
 import { movementCap } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
-import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import { asCharacterId, startingKit, withoutItems } from "@/lib/engine/characters";
 import { stowStartingKit, type EqMode } from "@/lib/engine/slots";
+import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import {
   afterMove,
   afterRoll,
@@ -140,11 +141,20 @@ export function startGame(
   // Błędny Rycerz a second Miecz and a second Zbroja, and two Miecze are two
   // points of Miecz in a fight. Nobody saw it because in klasyczny they were
   // four cards in a pack of four; in slotowy they are two cards in one place.
-  const kits = chosen.map((seat) =>
-    snapshot.holdings.some((held) => held.seat_id === seat.id)
-      ? {}
-      : startingGear(seat, eqModeOf(snapshot.game)),
-  );
+  //
+  // In seat order, and the order matters where 21.2 is in force: the pile holds
+  // three Miecze and five characters can be printed with one, so the fourth
+  // Karta Postaci to ask simply does not get it. That is the rule and it is
+  // meant to feel like the rule — the alternative is conjuring a card the box
+  // does not contain.
+  const taken: Record<string, number> = {};
+  const kits = [...chosen]
+    .sort((a, b) => a.seat_index - b.seat_index)
+    .map((seat) =>
+      snapshot.holdings.some((held) => held.seat_id === seat.id)
+        ? {}
+        : startingGear(seat, eqModeOf(snapshot.game), snapshot, taken),
+    );
 
   const started: Changeset = {
     journal: [{ seatId: null, turn: FIRST_TURN, kind: "start", payload: { seats: chosen.length } }],
@@ -182,20 +192,31 @@ function startedAt(now: number): Partial<GameRow> {
 }
 
 /** What one character owns before anybody rolls, minus the Zaklęcia. */
-function startingGear(seat: SeatRow, eqMode: EqMode): Changeset {
+function startingGear(
+  seat: SeatRow,
+  eqMode: EqMode,
+  snapshot: Snapshot,
+  /** What earlier seats in this same deal have already taken off the pile. */
+  taken: Record<string, number>,
+): Changeset {
   // `asCharacterId` answers null for both "nothing chosen" and "the surprise",
   // and `startingKit` gives an empty kit for either — so an unresolved seat
   // that reached here is dealt nothing rather than crashing the start.
   const kit = startingKit(asCharacterId(seat.character_id));
 
+  // What the pile can actually supply. With `endless_stock` on — which is how
+  // this app opens a table — every one of them; with 21.2 in force, only while
+  // there is a Karta left to take.
+  const dealt = (kit.items ?? []).filter((cardId) => onTheShelf(snapshot, cardId, taken));
+
   // Worn from the start where there are places to wear them — see
   // `stowStartingKit`. In klasyczny there is nowhere to put them and nothing to
   // gain: a card counts wherever it lies.
-  const stowed = eqMode === "slots" ? stowStartingKit(kit.items ?? []) : [];
-  const items: Changeset = kit.items?.length
+  const stowed = eqMode === "slots" ? stowStartingKit(dealt) : [];
+  const items: Changeset = dealt.length
     ? {
         holdings: {
-          insert: kit.items.map((cardId, at) => ({
+          insert: dealt.map((cardId, at) => ({
             seat_id: seat.id,
             card_id: cardId,
             kind: "item" as const,
@@ -211,18 +232,45 @@ function startingGear(seat: SeatRow, eqMode: EqMode): Changeset {
   const purse: Changeset =
     kit.gold !== undefined ? { seats: [{ id: seat.id, patch: { gold: kit.gold } }] } : {};
 
-  if (!kit.items?.length && kit.gold === undefined && !kit.spells) return {};
+  if (!dealt.length && kit.gold === undefined && !kit.spells) return {};
 
+  // The line says what arrived, not what the Karta promised. An item the pile
+  // could not supply leaves no trace at all: 21.2 makes it "w danej chwili
+  // nieosiągalny", which is a fact about the box rather than an event at the
+  // table, and a journal that reported it would be reporting the absence of
+  // something nobody ever held.
   return mergeAll(items, purse, {
     journal: [
       {
         seatId: seat.id,
         turn: FIRST_TURN,
         kind: "starting-kit",
-        payload: { character: seat.character_id, ...kit },
+        // The promised list is dropped out of the spread: `...kit` would put
+          // back the Miecz that never came, which is the one thing this
+          // line must not say.
+          payload: { character: seat.character_id, ...withoutItems(kit), ...(dealt.length ? { items: dealt } : {}) },
       },
     ],
   });
+}
+
+/**
+ * Whether the Wyposażenie pile can still supply this card, counting what this
+ * deal has already handed out.
+ *
+ * The tally is needed because a whole table is dealt in one Changeset: without
+ * it, five characters asking for a Miecz would each look at the same untouched
+ * pile of three and all five would get one.
+ */
+function onTheShelf(snapshot: Snapshot, cardId: string, taken: Record<string, number>): boolean {
+  if (!fromTheShop(cardId)) return true;
+  const inPlay =
+    snapshot.holdings.filter((held) => held.card_id === cardId).length +
+    snapshot.fieldCards.filter((card) => card.card_id === cardId).length +
+    (taken[cardId] ?? 0);
+  if (stockLeft(cardId, inPlay, snapshot.game.endless_stock) <= 0) return false;
+  taken[cardId] = (taken[cardId] ?? 0) + 1;
+  return true;
 }
 
 /* --------------------------------------------------------------------------

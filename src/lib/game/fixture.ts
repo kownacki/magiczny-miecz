@@ -97,6 +97,7 @@ export function aTable(over: TableOver = {}): Snapshot {
     join_code: "ABCD",
     mode: "simulation",
     eq_mode: "classic",
+    endless_stock: false,
     die_source: "app",
     status: "playing",
     active_seat: 0,

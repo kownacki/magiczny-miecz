@@ -9,6 +9,7 @@ import {
   asCharacterId,
   isRandomPick,
   startingKit,
+  withoutItems,
 } from "@/lib/engine/characters";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { mayHold } from "@/lib/engine/derive";
@@ -28,6 +29,7 @@ import { driverOf } from "./lobby";
 import type { OwedSpells } from "./movement";
 import { eqModeOf, seatById } from "./seat";
 import { stowStartingKit } from "@/lib/engine/slots";
+import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 
 /** The 27 Karty Postaci, read the same way `turnStore` reads them. */
 const CHARACTERS = charactersData as Character[];
@@ -526,8 +528,22 @@ export async function takeNewCharacter(
   if (!character) throw new Error(`Nieznana postać: ${wanted}`);
 
   const kit = startingKit(character.id);
-  const stowed =
-    eqModeOf(snapshot.game) === "slots" ? stowStartingKit(kit.items ?? []) : [];
+  /**
+   * What the Wyposażenie pile can supply, for somebody arriving mid-game.
+   *
+   * The likeliest place 21.2 bites: by now some of the three Miecze are on
+   * other people's arms, and a Postać taken after a death simply does not get
+   * one. No line about it either — an item the box cannot supply is a fact
+   * about the box, not something that happened at the table.
+   */
+  const supplied = (kit.items ?? []).filter((cardId) => {
+    if (!fromTheShop(cardId)) return true;
+    const inPlay =
+      snapshot.holdings.filter((held) => held.card_id === cardId).length +
+      snapshot.fieldCards.filter((card) => card.card_id === cardId).length;
+    return stockLeft(cardId, inPlay, snapshot.game.endless_stock) > 0;
+  });
+  const stowed = eqModeOf(snapshot.game) === "slots" ? stowStartingKit(supplied) : [];
 
   /**
    * One patch, where the old path wrote three.
@@ -558,10 +574,10 @@ export async function takeNewCharacter(
     // Worn from the start in slotowy, exactly as at setup: a Postać taken
     // after a death (4.4) arrives with the same gear and no reason to arrive
     // with it in a bag. See `stowStartingKit`.
-    ...(kit.items?.length
+    ...(supplied.length
       ? {
           holdings: {
-            insert: kit.items.map((cardId, at) => ({
+            insert: supplied.map((cardId, at) => ({
               seat_id: seat.id,
               card_id: cardId,
               kind: "item" as const,
@@ -574,14 +590,18 @@ export async function takeNewCharacter(
   };
 
   const dealt: Changeset =
-    kit.items?.length || kit.gold !== undefined || kit.spells
+    supplied.length || kit.gold !== undefined || kit.spells
       ? {
           journal: [
             {
               seatId: seat.id,
               turn: snapshot.game.turn,
               kind: "starting-kit",
-              payload: { character: character.id, ...kit },
+              // What arrived, not what the Karta promised — see `dealt`.
+              // The promised list is dropped out of the spread: `...kit` would put
+          // back the Miecz that never came, which is the one thing this
+          // line must not say.
+          payload: { character: character.id, ...withoutItems(kit), ...(supplied.length ? { items: supplied } : {}) },
             },
           ],
         }

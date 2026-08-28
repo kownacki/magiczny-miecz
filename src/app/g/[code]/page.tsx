@@ -1150,6 +1150,25 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               <Settings
                 onClose={() => setRightDrawer(null)}
                 eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+                endlessStock={game.endless_stock}
+                /**
+                 * Asked before it is done, because it cannot be undone. The
+                 * question says what changes and what does not: the two relics
+                 * the endgame stands on stay scarce either way, which is the
+                 * part somebody agreeing to this most needs to hear.
+                 */
+                onEndlessStock={() =>
+                  setAsk({
+                    title: "Niewyczerpane Wyposażenie",
+                    body: "Miecza, Hełmu, Sztyletu, Zbroi i Tarczy przestanie brakować do końca tej gry. Magiczny Miecz i Tarcza Tolimana zostają rzadkie. Tego się już nie cofa — do skończonego stosu wraca się tylko przy nowym stole.",
+                    confirmLabel: "Włącz na stałe",
+                    tone: "grave",
+                    onConfirm: () => {
+                      setAsk(null);
+                      post("holdings", { action: "endless-stock", on: true });
+                    },
+                  })
+                }
               />
             ) : null}
             {rightDrawer === "gracze" ? (

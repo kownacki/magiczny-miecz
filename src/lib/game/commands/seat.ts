@@ -15,7 +15,7 @@ import type { Holding } from "@/lib/engine/state";
 import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { HoldingRow, SeatRow } from "../store";
-import type { Snapshot } from "../change";
+import type { Outcome, Snapshot } from "../change";
 
 export function eqModeOf(game: { eq_mode: string }): EqMode {
   return game.eq_mode === "slots" ? "slots" : "classic";
@@ -255,4 +255,49 @@ export function pointsOf(
 ): { miecz: number; magia: number } {
   const view = seatView(snapshot, seatId);
   return as === "walka" ? view.walka : view.parametr;
+}
+
+/* --------------------------------------------------------------------------
+ * The table's own answer to 21.2.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Stops the Wyposażenie pile running out, for the rest of this game.
+ *
+ * One way only, and that is the rule rather than a caution. Turning it *on*
+ * changes nothing that has already happened: a card refused an hour ago stays
+ * refused in the journal, and the pile simply stops being counted from here.
+ * Turning it off cannot say the same. By then there may be six Miecze on the
+ * board where the box holds five, and 21.2 would have to answer "how did we
+ * get here" — so the honest choices are to confiscate somebody's card or to
+ * carry a negative supply, and neither is a thing a referee should do.
+ *
+ * So it is refused rather than hidden: a table that wants the printed rule
+ * back opens a new one, and is told so.
+ */
+export function setEndlessStock(
+  snapshot: Snapshot,
+  command: { on: boolean },
+): Outcome<void> {
+  if (!command.on) {
+    throw new Error(
+      "Niewyczerpanego Wyposażenia nie da się już wyłączyć w trakcie gry — otwórz nowy stół (21.2).",
+    );
+  }
+  if (snapshot.game.endless_stock) return { writes: {}, result: undefined };
+  return {
+    writes: {
+      game: { endless_stock: true },
+      journal: [
+        {
+          seatId: null,
+          turn: snapshot.game.turn,
+          kind: "override",
+          payload: { what: "endless-stock" },
+          manual: true,
+        },
+      ],
+    },
+    result: undefined,
+  };
 }

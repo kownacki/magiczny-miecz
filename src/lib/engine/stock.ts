@@ -37,9 +37,29 @@ export function fromTheShop(cardId: string): boolean {
  * field where somebody dropped it — occupies one of the printed slots. Counting
  * them is therefore the same answer as keeping a tally, and it cannot drift out
  * of step with the board the way a tally can.
+ *
+ * `endless` is the table's answer to 21.2 — see `endless_stock` in schema.sql.
+ * It does not reach the two relics: see `RELICS` below.
  */
-export function stockLeft(cardId: string, inPlay: number): number {
+export function stockLeft(cardId: string, inPlay: number, endless = false): number {
   const printed = PRINTED_STOCK[cardId];
   if (printed === undefined) return Infinity;
+  if (endless && !RELICS.has(cardId)) return Infinity;
   return Math.max(0, printed - inPlay);
 }
+
+/**
+ * The two the scarcity is *for*, which stay scarce however the table is set.
+ *
+ * 21.2 reads as a rule about a shortage of cardboard, and for a Miecz or a Hełm
+ * that is all it is: common things, of which the box holds five and three, and
+ * a table whose Karty Postaci ask for five Miecze has emptied the supply before
+ * anybody rolls. There is nothing in the fiction there to preserve.
+ *
+ * The Magiczny Miecz and the Tarcza Tolimana are the opposite. 11.9 will not
+ * let you onto the Most without the first and 14.7 will not let you into the
+ * Zamek without the second, so "there are four and five of you want one" is not
+ * a shortage of cardboard, it is the endgame. An endless pile of those is a
+ * different game, and a quieter one.
+ */
+export const RELICS: ReadonlySet<string> = new Set(["magiczny-miecz", "tarcza-tolimana"]);

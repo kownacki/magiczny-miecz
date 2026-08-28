@@ -295,7 +295,10 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     // characters are already carrying is "w danej chwili nieosiągalny", and
     // 16.6 makes a drawn one the same card rather than a fifth — which is why
     // counting what is in play is the same answer as keeping a tally.
-    if (fromTheShop(cardId) && stockLeft(cardId, copiesInPlay(snapshot, cardId)) <= 0) {
+    if (
+      fromTheShop(cardId) &&
+      stockLeft(cardId, copiesInPlay(snapshot, cardId), snapshot.game.endless_stock) <= 0
+    ) {
       throw new Error(`${cardName(cardId)} — nie ma już ani jednej w Wyposażeniu (21.2).`);
     }
 

@@ -308,6 +308,8 @@ export function drawSpellWithWand(snapshot: Snapshot, command: DrawSpell): Outco
 interface Counted {
   holdings: readonly { card_id: string }[];
   fieldCards: readonly { card_id: string }[];
+  /** The table's answer to 21.2. Absent reads as the printed rule. */
+  game?: { endless_stock?: boolean };
 }
 
 /**
@@ -325,11 +327,12 @@ interface Counted {
  */
 export function shopStock(snapshot: Counted): Record<string, number> {
   const stock: Record<string, number> = {};
+  const endless = snapshot.game?.endless_stock ?? false;
   for (const cardId of Object.keys(PRINTED_STOCK)) {
     const inPlay =
       snapshot.holdings.filter((h) => h.card_id === cardId).length +
       snapshot.fieldCards.filter((c) => c.card_id === cardId).length;
-    stock[cardId] = stockLeft(cardId, inPlay);
+    stock[cardId] = stockLeft(cardId, inPlay, endless);
   }
   return stock;
 }

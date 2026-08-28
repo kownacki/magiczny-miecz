@@ -4,6 +4,7 @@ import { refused } from "@/app/api/refused";
 import { findGame, verifyActor } from "@/lib/game/store";
 import type { Slot } from "@/lib/engine/slots";
 import {
+  endlessStock,
   buyGoods,
   castSpell,
   changeNature,
@@ -127,6 +128,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         return NextResponse.json({
           spellId: await drawSpellWithWand(game.id, String(body.seatId ?? seat.id)),
         });
+      /**
+       * The table's answer to 21.2, turned on for good.
+       *
+       * Any seated player may, not only the host: it takes nothing away from
+       * anybody, cannot be undone into a state worth arguing about, and a
+       * table that has just watched a Miecz be refused should not have to find
+       * out who opened it.
+       */
+      case "endless-stock": {
+        await endlessStock(game.id, body.on !== false);
+        return NextResponse.json({ ok: true });
+      }
       case "nature": {
         const nature = body.nature;
         if (nature !== "good" && nature !== "evil" && nature !== "chaotic") {

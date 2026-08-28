@@ -22,9 +22,14 @@ import { setPreference, usePreferences, type Preferences } from "./preferences";
 export function Settings({
   onClose,
   eqMode,
+  endlessStock,
+  onEndlessStock,
 }: {
   onClose: () => void;
   eqMode: EqMode;
+  /** The table's answer to 21.2, which only ever moves one way. */
+  endlessStock: boolean;
+  onEndlessStock: () => void;
 }) {
   const prefs = usePreferences();
   return (
@@ -42,6 +47,22 @@ export function Settings({
           fixed="Wybrane przy otwieraniu stołu — w trakcie gry już nie do zmiany."
           said="Działa tylko to, co Postać ma na sobie; reszta czeka w Plecaku. Wyłączone znaczy zasady z pudełka: cztery Przedmioty i wszystkie działają. Szczegóły w Księdze, na półce Wariant."
         />
+        {/* The one table setting that can still be moved, and only one way.
+            Turning it on changes nothing that already happened — the pile
+            simply stops being counted from here. Turning it off could not say
+            the same, so it is refused rather than hidden: by then there may be
+            six Miecze on a board that holds five. */}
+        <Switch
+          on={endlessStock}
+          label="Niewyczerpane Wyposażenie"
+          onAsk={endlessStock ? undefined : onEndlessStock}
+          fixed={
+            endlessStock
+              ? "Włączone na dobre — do skończonego stosu wraca się tylko przy nowym stole."
+              : undefined
+          }
+          said="Miecza, Hełmu czy Sztyletu nigdy nie zabraknie. Magiczny Miecz i Tarcza Tolimana zostają rzadkie, bo na nich stoi końcówka gry (11.9, 14.7)."
+        />
         <Switch
           name="ruleRefs"
           on={prefs.ruleRefs}
@@ -49,8 +70,8 @@ export function Settings({
           said="Zdania kończą się numerem w rodzaju (5.3), który otwiera Instrukcję w Księdze. Wyłącz, a numery znikną ze zdań."
         />
         <p className="border-t border-edge pt-3 text-[11px] leading-relaxed text-muted/70">
-          Ustawienia są tego okna, nie stołu — nikt inny ich nie widzi i nie
-          zmieniają gry.
+          Dwa górne należą do stołu i widzą je wszyscy; reszta jest tego okna —
+          nikt inny ich nie widzi i nie zmieniają gry.
         </p>
       </div>
     </Drawer>
@@ -63,9 +84,18 @@ function Switch({
   label,
   said,
   fixed,
+  onAsk,
 }: {
   /** Absent where the switch is showing something rather than deciding it. */
   name?: keyof Preferences;
+  /**
+   * Asks somebody else to decide, for a switch that is not a preference.
+   *
+   * A table's setting is not this browser's, so it goes through a command and
+   * — where it cannot be taken back — through a question first. Absent once
+   * the answer can no longer change, which is what `fixed` then explains.
+   */
+  onAsk?: () => void;
   on: boolean;
   label: string;
   said: string;
@@ -86,7 +116,7 @@ function Switch({
    * where the inner starts, and what you get is two controls in a row where
    * the markup said one inside another.
    */
-  const locked = name === undefined;
+  const locked = name === undefined && onAsk === undefined;
   return (
     <div
       className={`rounded border border-edge bg-raised/40 p-3 ${
@@ -99,7 +129,7 @@ function Switch({
         aria-checked={on}
         disabled={locked}
         title={fixed}
-        onClick={() => name && setPreference(name, !on)}
+        onClick={() => (name ? setPreference(name, !on) : onAsk?.())}
         className={`flex w-full items-center gap-3 text-left ${locked ? "cursor-default" : ""}`}
       >
         {/* Drawn rather than a checkbox: the rest of this app is drawn, and a

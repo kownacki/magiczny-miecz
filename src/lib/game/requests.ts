@@ -49,6 +49,8 @@ export interface Requests {
     note: string;
     points: number;
     targetSeat: number;
+    /** `endless-stock`: which way. Only `true` is accepted — see the command. */
+    on: boolean;
   };
   host: { userId: string };
   join: { name: string; deviceId: string | null; seatId: string; resume: boolean };
