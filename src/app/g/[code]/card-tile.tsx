@@ -209,6 +209,15 @@ export const SPELL_BACK_WIDTH = 52;
 const TILE_WIDTH = 92;
 /** The widest a back may show of the one beneath it. */
 const SPELL_BACK_STEP = 20;
+/**
+ * The least of a back that is still a back: its own edge, and a pixel of it.
+ *
+ * One pixel of border in Magia's colour and one of the black it frames. Below
+ * that there is nothing left to thin — the next card would be drawn entirely
+ * underneath the one before it, and a stack that adds an invisible card per
+ * Zaklęcie is a picture that stops answering the question it is there for.
+ */
+const SPELL_BACK_MIN_STEP = 2;
 
 /**
  * Zaklęcia somebody is holding that nobody else may look at (9.3).
@@ -238,20 +247,30 @@ const SPELL_BACK_STEP = 20;
  *
  * Past three the step closes up instead of the stack growing. A fourth Zaklęcie
  * is reachable — the Różdżka Zaklęć is the one card in the box that says so —
- * and at twenty it stood 112 across, which is one card sticking out of the row
- * and a caption no longer centred under anything. So the step is whatever
- * divides the tile: 13.3 at four, and smaller again for a hand no rule allows,
- * because a stack that cannot overflow is one fewer thing to be surprised by.
+ * and at twenty it stood 112 across, so it wrapped onto a row of its own,
+ * dragging its caption with it and leaving a gap where it had been. So the step
+ * is whatever divides the tile: 13.3 at four, and smaller again beyond that.
+ *
+ * Which runs out at twenty-one, and that end is drawn rather than left to
+ * happen. Forty pixels of room over two apiece is twenty cards behind the top
+ * one; a twenty-second would have to be thinner than its own edge, which is a
+ * card nobody can see. So the stack stops there and the caption carries the
+ * rest — it says the true number in figures, which is what it is for, and the
+ * picture says „more than you can count", which is true.
+ *
+ * None of this is reachable in a game: 2.6 caps the hand at three and the
+ * Różdżka lifts it to four. It is here because a picture whose only rule is
+ * „never wider than a tile" has to say what it does when it cannot keep it.
  */
 export function CardBack({ count }: { count: number }) {
-  const step =
-    count > 1
-      ? Math.min(SPELL_BACK_STEP, (TILE_WIDTH - SPELL_BACK_WIDTH) / (count - 1))
-      : SPELL_BACK_STEP;
+  const room = TILE_WIDTH - SPELL_BACK_WIDTH;
+  const most = 1 + Math.floor(room / SPELL_BACK_MIN_STEP);
+  const drawn = Math.max(0, Math.min(count, most));
+  const step = drawn > 1 ? Math.min(SPELL_BACK_STEP, room / (drawn - 1)) : SPELL_BACK_STEP;
   return (
     <figure className="flex flex-col items-center gap-1">
       <span className="flex h-[80px] items-center">
-        {Array.from({ length: count }, (_, at) => (
+        {Array.from({ length: drawn }, (_, at) => (
           <Image
             key={at}
             src="/cards/back-zaklecie.jpg"
@@ -266,7 +285,15 @@ export function CardBack({ count }: { count: number }) {
           />
         ))}
       </span>
-      <figcaption className="text-center text-[9px] leading-tight text-magia/80">
+      {/* A tile's width, and truncated in it, exactly as a card's name is. The
+          caption is part of what has to fit in one place in the row: „4 zakryte
+          Zaklęcia" was wider than the picture above it and took the whole tile
+          onto a line of its own. */}
+      <figcaption
+        style={{ width: TILE_WIDTH }}
+        title={`${count} Zaklęcie`}
+        className="truncate text-center text-[9px] leading-tight text-magia/80"
+      >
         ×{count} Zaklęcie
       </figcaption>
     </figure>
