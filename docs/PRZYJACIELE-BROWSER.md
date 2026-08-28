@@ -1,50 +1,68 @@
-# Przyjaciele in the browser — start here
+# Przyjaciele — what is done, and what is left
 
-The engine half is done and committed (`1cda398`). **No rules work is needed** —
-the browser reads derived figures, so the cards already arrive through the API.
+This page was a handoff for the browser half, and that half is finished. It is
+now a statement of where the chapter stands, which is **not finished**: twelve of
+the eighteen cards are fully encoded and six are not.
 
-## What the API already sends (per seat, from `envelope.ts`)
+## Custody, and the four things the browser draws
 
-- `sword_total` / `magic_total` — 1.5's "parametr", the number on the Karta
-- `sword_in_fight` / `magic_in_fight` — what it becomes when somebody swings
-- `fights_for_you` — cardId of the Przyjaciel doing the fighting, or `null`
-- `holdings[]` — each with `kind: "spell" | "item" | "friend" | "trophy"`
+Chapter 6 itself (6.1–6.4) is done and ✅ in COVERAGE — friends are gained, lie
+face up, may be held without limit, and go to the used pile when they die. What
+a friend *does* is printed on its own card and lives in `ABILITIES`, not in the
+chapter, which is why COVERAGE could mark 6 complete while a Rycerz stood there
+being decorative.
 
-## Four things worth drawing
+All four of the drawing tasks this page used to list are built:
 
-1. **Group friends away from gear.** 6.3 makes them unlimited and they never
-   count against 5.4's four. The console got this wrong for a while, listing a
-   Rycerz inside a "Pack 2/4" he was not one of the two of.
-2. **Show both figures.** Own points and the total are different numbers, and
-   the fight figure is a third. A Pasterz lending +1/+1 is invisible if you
-   print only own points.
-3. **Name who is swinging when `fights_for_you` is set.** The Rycerz's 3 and 3
-   *replace* the character's own, so for most Postacie the fight number goes
-   **down** when he joins. Unexplained, that reads as a bug in your UI.
-4. **The `raid` turn action** (Poszukiwacz Przygód): send `targetSeatId` **or**
-   `raidFieldCardId`, exactly one. Range 3 Obszary, same ring only. Offer it in
-   the `field` phase, after the move.
+- **Friends are out of the Plecak**, in a section of their own with no
+  denominator. 6.3 gives them no limit and `carriedCount` has only ever counted
+  `kind === "item"`, so the number over the pack was always right — it was the
+  picture that put a Rycerz inside a "2 / 4" he was not one of the two of.
+- **`fights_for_you` is named under the rails.** The Rycerz's 3 and 3 *replace*
+  the character's own, so for most Postacie the fight figure goes **down** when
+  he joins, and unexplained that reads as a bug rather than as the card doing
+  what it says.
+- **Both figures are shown** — own points and the total are different numbers,
+  and the fight figure is a third.
+- **The `raid`** (Poszukiwacz Przygód) is offered in the `field` phase, after the
+  move: `targetSeatId` **or** `raidFieldCardId`, exactly one; range
+  `RAID_RANGE` = 3 by `withinRaid`, same ring only, because a Przeprawa is a
+  turn's work that can fail rather than a step. `engine/raid.ts` holds both, so
+  the targets the browser offers and the check `sendRaider` refuses against
+  cannot come apart.
 
-## The database — nothing owed
+The ŁOTR is the one Postać barred from friends outright — `mayHaveFriends`, off
+his own Karta, which 8.2 puts above 6.3.
 
-A second round went in after the sweep below, for the Przyjaciele who carry a
-Zaklęcie: `carried` added to `holdings_kind_check`, a `carried_by text` column
-on `holdings`, and `carried-spell` in `moves_kind_check` (61 kinds now, again
-generated from `JOURNAL_KINDS` rather than retyped). Applied and read back;
-nothing outside `magiczny_miecz` was touched. **The schema is in step with the
-code — start drawing.**
+## The six that are still `czesciowe`
 
-## The thing that would have bitten you — done
+Every one of the eighteen now has encoded abilities; none is `brak`. What is
+left is the half of six cards that the app names but does not do — `MANUAL` in
+`coverage.ts`, printed on the card and applied by the players:
 
-`moves_kind_check` on the live database has been altered and is back in step
-with `JOURNAL_KINDS`. It was staler than one kind: it held 50 and the list holds
-60, so `died-for-you`, `paid-friend`, `card-table`, the two `beast-*` and all
-six `bridge-*` would each have been refused. It also carried `adjust` and
-`arrived`, which the list has dropped and no row used, so the constraint
-validated clean. Generated from `journal.ts` rather than retyped, and nothing
-outside `magiczny_miecz.moves` was touched — that database is shared with three
-other projects, two of which take real payments, so schema-qualify everything
-and ask first.
+| Karta | what is left to the table |
+| --- | --- |
+| NAJEMNIK | joining costs 1 Sztuka Złota; unpaid, he stays on the Obszar and waits |
+| TRAGARZ | 1 Sz. Z. upkeep, and losing him loses the Przedmioty he was carrying |
+| KSIĘŻNICZKA | may be given up at the Zamek for 3 Sztuki Złota |
+| WŁADCA | the same at the Twierdza |
+| CHOCHLIK | 1 Życie to look at two Zaklęcia and choose |
+| ALCHEMIK | the swap is irreversible — the Przedmiot's card goes back on the pile |
 
-Fuller notes: `docs/TASKS.md` → "Przyjaciele, and what the browser still has to
-draw". Card behaviour: `src/lib/engine/abilities.ts`.
+Two mechanisms and two one-offs. **A friend with a price** (NAJEMNIK, TRAGARZ)
+and **a friend sold at a named place** (KSIĘŻNICZKA, WŁADCA, 3 Sztuki Złota
+each) would close four of the six between them; CHOCHLIK stands alone, and
+ALCHEMIK's note is a warning rather than a gap.
+
+## The database owes nothing
+
+`moves_kind_check` matches `JOURNAL_KINDS`, `holdings_kind_check` has `carried`,
+and `holdings.carried_by` exists. Each round was generated from the source list
+rather than retyped, and named `magiczny_miecz` and nothing else — that database
+is shared with three other projects, two of which take real payments, so
+schema-qualify everything and ask first. A new journal kind still needs its own
+`ALTER`; the note above the list in `db/schema.sql` says so.
+
+Fuller notes: `docs/TASKS.md` → "Przyjaciele". Card behaviour:
+`src/lib/engine/abilities.ts`. What each card leaves undone:
+`src/lib/engine/coverage.ts`.
