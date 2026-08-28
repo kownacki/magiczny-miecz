@@ -213,7 +213,8 @@ export type Command =
       who: string | null;
       force: boolean;
     }
-  | { kind: "give"; cardId: string }
+  /** `cardId` is null for a bare `give`, which lists what there is to ask for. */
+  | { kind: "give"; cardId: string | null }
   | { kind: "place"; cardId: string; fieldId: FieldId | null }
   | { kind: "teleport"; fieldId: FieldId }
   | { kind: "summon"; cardId: string }
@@ -813,8 +814,8 @@ export const COMMANDS: CommandSpec[] = [
     // `card` was an alias here and has become a verb: reading one is what
     // somebody usually wants from that word, and conjuring one is `give`.
     aliases: [],
-    usage: "give MAGICZNY MIECZ",
-    summary: "put a card in a hand",
+    usage: "give [MIECZ]",
+    summary: "put a card in a hand — bare, it lists what there is to ask for",
     needs: "testmode",
     group: "override",
   },
@@ -924,15 +925,59 @@ const CARDS: { id: string; name: string }[] = [
 ];
 
 /**
- * What a hand can hold, which is the above plus the Zaklęcia.
+ * What `give` will actually put in a hand, in the three groups a player thinks
+ * in.
  *
- * `grantCard` has always taken a spell — 9.3 keeps it face down even when it
- * arrived by fiat — but the console could not name one, so the thirteen spells
- * that may be cast "w dowolnej chwili" were reachable only by drawing until one
- * turned up. Kept out of `place`, where 9.6 refuses them anyway: a list that
- * offers what the next line will reject is worse than a shorter list.
+ * `grantCard` takes an item, a friend or a spell and refuses everything else:
+ * a Wróg with 16.2 ("Wroga trzeba pokonać, nie wziąć") and a Spotkanie, a
+ * Nieznajomy or a Miejsce with "Nie wiem, czym jest" — `kindForCard` answers
+ * null for the three that nobody carries. So of the 165 Karty Zdarzeń plus the
+ * Wyposażenie, 82 were on offer and could not be given, which is the failure
+ * the note below this one already names for `place`: a list that offers what
+ * the next line will reject is worse than a shorter list.
+ *
+ * Grouped rather than merely filtered because `give` is how a test table is
+ * dressed, and "what can I get?" is a question about kinds before it is a
+ * question about names. Tab cannot draw the headings — readline owns that grid
+ * — so the order clusters them there, and bare `give` prints the catalogue.
  */
-const HOLDABLE: { id: string; name: string }[] = [...CARDS, ...(spells as Spell[])];
+export const GIVEABLE: readonly { title: string; cards: readonly { id: string; name: string }[] }[] = [
+  {
+    title: "Przedmioty",
+    cards: byName([
+      ...(events as EventCard[]).filter((card) => card.cardClass === "item"),
+      ...(itemCards as Item[]).filter((item) => !events.some((card) => card.id === item.id)),
+    ]),
+  },
+  {
+    title: "Przyjaciele",
+    cards: byName((events as EventCard[]).filter((card) => card.cardClass === "friend")),
+  },
+  // 9.3 keeps a Zaklęcie face down even when it arrived by fiat. Without these
+  // the thirteen that may be cast "w dowolnej chwili" were reachable only by
+  // drawing until one turned up.
+  { title: "Zaklęcia", cards: byName(spells as Spell[]) },
+];
+
+/**
+ * One entry per card, alphabetically.
+ *
+ * These files are the *deck* — fifteen rows of 1 SZTUKA ZŁOTA, four of the
+ * Tarcza Tolimana, two Miecze — and a catalogue of what you may ask for wants
+ * each name once, because you type a name and not a copy. Polish order, so ŁÓDŹ
+ * sits after LATARNIA rather than past Z where nobody looks.
+ */
+function byName(cards: readonly { id: string; name: string }[]): { id: string; name: string }[] {
+  const seen = new Map<string, { id: string; name: string }>();
+  for (const card of cards) if (!seen.has(card.id)) seen.set(card.id, { id: card.id, name: card.name });
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, "pl"));
+}
+
+/** The same, flat, in group order — what `give` matches a name against. */
+const HOLDABLE: { id: string; name: string }[] = GIVEABLE.flatMap((group) => [...group.cards]);
+
+/** Everything with a Karta worth reading, which is more than a hand may hold. */
+const READABLE: { id: string; name: string }[] = [...CARDS, ...(spells as Spell[])];
 
 const PEOPLE = characters as Character[];
 
@@ -1096,6 +1141,10 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
 
   if (word === "give") {
+    // Bare, it is a question rather than a mistake: "what can I ask for?" is
+    // the thing somebody dressing a test table wants, and Tab's grid cannot
+    // carry the headings that answer it.
+    if (tail === "") return { ok: { kind: "give", cardId: null } };
     return name(HOLDABLE, (card) => card.name, tail, "card", (card) => ({
       kind: "give",
       cardId: card.id,
@@ -1645,7 +1694,9 @@ export function complete(
     // A stat takes its amount first and a player after it; everything else
     // takes its one argument straight away.
     if (stat) return { pool: [...players, "force"], at: 2 };
-    if (verb === "give" || verb === "card") return { pool: HOLDABLE.map((c) => c.name), at: 1 };
+    // Only what `give` will accept, and in the order `GIVEABLE` groups them —
+    // Tab prints a plain grid, so clustering is the most it can carry.
+    if (verb === "give") return { pool: HOLDABLE.map((c) => c.name), at: 1 };
     if (verb === "place" || verb === "put" || verb === "drop") {
       // Which half of the line is being typed. Past the `at`, the names on
       // offer are the board's; before it, the deck's.
@@ -1656,7 +1707,9 @@ export function complete(
     }
     if (verb === "summon" || verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "card" || verb === "read" || verb === "x") {
-      return { pool: [...HOLDABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
+      // Everything readable, which is every Karta in the box: a Wróg cannot be
+      // given and can certainly be looked at.
+      return { pool: [...READABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
     }
     if (verb === "teleport" || verb === "move" || verb === "walk") {
       return { pool: PLACES.map((f) => f.name), at: 1 };

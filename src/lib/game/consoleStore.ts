@@ -87,6 +87,7 @@ import {
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
+import { GIVEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 import { fold } from "@/lib/engine/search";
@@ -651,6 +652,21 @@ export async function runCommand(
     }
 
     case "give": {
+      /**
+       * Bare, it lists what there is to ask for, by kind.
+       *
+       * `give` is how a test table is dressed, and "what can I get?" is a
+       * question about kinds before it is a question about names. Tab answers
+       * with a grid readline draws itself and no heading can survive, so the
+       * headings live here — the same shape `help` prints, for the same reason.
+       */
+      if (command.cardId === null) {
+        return GIVEABLE.flatMap((group, at) => [
+          ...(at > 0 ? [""] : []),
+          `${group.title} (${group.cards.length})`,
+          ...columns(group.cards.map((one) => one.name)),
+        ]).join("\n");
+      }
       const seat = seatOf(null);
       await grantCard(gameId, seat.id, command.cardId);
       return `${named(seat)} takes ${cardName(command.cardId)}.`;
@@ -1691,6 +1707,29 @@ export async function runCommand(
       return `${named(seat)} draws ${cardName(spellId)}.`;
     }
   }
+}
+
+/**
+ * A list of names as indented rows, so a long one does not scroll a heading off.
+ *
+ * Sixty-three Przedmioty in one column is a page; in rows of four it is a
+ * paragraph. Fixed at four rather than measured against a terminal, because
+ * nothing here knows how wide one is and a wrong guess wraps every row.
+ */
+function columns(names: readonly string[], perRow = 4): string[] {
+  const widest = Math.max(...names.map((one) => one.length), 0);
+  const rows: string[] = [];
+  for (let at = 0; at < names.length; at += perRow) {
+    rows.push(
+      "  " +
+        names
+          .slice(at, at + perRow)
+          .map((one) => one.padEnd(widest))
+          .join("  ")
+          .trimEnd(),
+    );
+  }
+  return rows;
 }
 
 /** What one beaten Wróg is worth towards 1.4's sevens. */

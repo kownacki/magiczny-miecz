@@ -244,8 +244,19 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("asks for the name when none was given", () => {
-    expect(err("give")).toMatch(/Which card/);
     expect(err("teleport")).toMatch(/Which Obszar/);
+    expect(err("summon")).toMatch(/Which Wróg/);
+  });
+
+  /**
+   * Except `give`, where naming nothing is a question rather than a mistake.
+   *
+   * "What can I ask for?" is the thing somebody dressing a test table wants,
+   * and Tab answers with a grid readline draws itself, which no heading
+   * survives — so the console lists them by kind instead.
+   */
+  it("takes a bare `give` as a request for the list", () => {
+    expect(ok("give")).toEqual({ kind: "give", cardId: null });
   });
 
   it("says when nothing is called that", () => {
@@ -528,7 +539,9 @@ suite("playing the game, and overruling it", () => {
       ["move", "move Karczma"],
       ["teleport", "teleport Karczma"],
       ["summon", "summon WILKOŁAK"],
-      ["give", "give MAGICZNY MIECZ"],
+      // `give` is not here: naming nothing is a request for the list rather
+      // than a line with something missing, and an unknown name gets the real
+      // answer instead of the shape — see the test below.
       ["remove", "remove 3|MAGOG [hard]"],
     ] as const) {
       expect(err(line), line).toContain(shape);
