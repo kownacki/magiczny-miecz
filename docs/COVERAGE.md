@@ -206,7 +206,7 @@ they are rules, and one of them was missing.
 | | rule | status | where |
 |---|---|---|---|
 | 16.1 | Spotkanie — obey it; a lost turn ends the turn at once | ✅ | |
-| 16.2 | Wróg attacks immediately; its card is kept as a trophy | ✅ | `beginFight`, `kindForCard` |
+| 16.2 | Wróg attacks immediately; its card is kept as a trophy | ✅ | `beginFight` opens it; `trophiesFrom` banks the Karta when it is won. The keeping was the half that was missing — `kindForCard` only ever said what kind a trophy *would* be, and until this was written no beaten Wróg became one, which left the whole of 1.4 unreachable in play |
 | 16.3 | a Demon forces magical combat | ✅ | `startFight` |
 | 16.4 | all Spotkania and Wrogowie first, then the rest | ✅ | `resolutionOrder` |
 | 16.5 | Nieznajomy — obey it | ✅ | |

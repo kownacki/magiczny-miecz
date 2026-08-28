@@ -1429,7 +1429,7 @@ export async function resolveFight(
   const errand = fight.raid ? {} : missionDone(snapshot, seat, fight);
 
   return {
-    writes: mergeAll(cleared, paid, errand, {
+    writes: mergeAll(cleared, paid, errand, trophiesFrom(snapshot, seat, fight), {
       game: { turn_state: endFight(state) },
       journal: [
         {
@@ -1441,6 +1441,63 @@ export async function resolveFight(
       ],
     }),
     result: undefined,
+  };
+}
+
+/**
+ * The Karty of the Wrogowie just beaten, kept to be cashed in later (1.4, 16.2).
+ *
+ * "Karty pokonanych Wrogów należy zatrzymać, ponieważ w dowolnym momencie mogą
+ * zostać wymienione na dodatkowe punkty Miecza." A beaten Wróg is not spent
+ * when it is beaten — that is what makes it a trophy — and `tradeTrophies` is
+ * where it finally reaches the used pile.
+ *
+ * Only the ones with a printed Miecz. 1.4 says so twice over: the walks are
+ * "z napotkanymi Wrogami (mającymi określony parametr Miecza)" and 16.2 keeps
+ * "Karty pokonanych Wrogów **tego rodzaju**". A Demon is fought magically and
+ * carries a Magia, so it is beaten and gone, and the seven-point arithmetic
+ * never has to decide what a Magia is worth in Miecze.
+ *
+ * Nothing for a duel — 17.9 gives the winner a Życie, a Przedmiot or a Sztuka
+ * Złota, and the loser is a Postać rather than a Karta — and nothing for a
+ * guardian, who is not a drawn card and stays at his door either way.
+ *
+ * 17.5's pack is settled as one and every creature in it becomes its own
+ * trophy, which is what `fought` already lists.
+ */
+function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset {
+  if (fight.result?.outcome !== "wygrana") return {};
+  if (fight.opponentSeat !== undefined || fight.guardian || fight.raid) return {};
+
+  const won = (fight.fought ?? [fight.cardId]).flatMap((cardId) => {
+    const card = EVENTS.find((one) => one.id === cardId);
+    const foe = card ? combatValueOf(card) : null;
+    return foe && foe.kind === "ordinary" ? [{ cardId, card }] : [];
+  });
+  if (won.length === 0) return {};
+
+  // The mark travels onto the holding: a conjured Cyklop must not reach a pile
+  // the deck still holds its own copy of. See `granted` in db/schema.sql.
+  const staged = new Set(
+    (fight.drawn ?? []).filter((entry) => entry.granted === true).map((entry) => entry.cardId),
+  );
+
+  return {
+    holdings: {
+      insert: won.map(({ cardId }) => ({
+        seat_id: seat.id,
+        card_id: cardId,
+        kind: "trophy" as const,
+        face: "open" as const,
+        granted: staged.has(cardId),
+      })),
+    },
+    journal: won.map(({ cardId }) => ({
+      seatId: seat.id,
+      turn: snapshot.game.turn,
+      kind: "taken" as const,
+      payload: { cardId, kind: "trophy" },
+    })),
   };
 }
 
