@@ -102,6 +102,7 @@ export function SeatCard({
   slotted,
   onAdjust,
   onDrop,
+  asked = [],
   onTrade,
   trophyMode,
   onEquip,
@@ -130,6 +131,8 @@ export function SeatCard({
   slotted: boolean;
   onAdjust: (stat: string, delta: number) => void;
   onDrop: (holdingId: string) => void;
+  /** Cards whose drop the server has not answered yet — see `asked` in the table. */
+  asked?: readonly string[];
   /** How many Miecze to buy (1.4); the engine picks the cheapest Karty for it. */
   onTrade: (swords: number) => void;
   /** Which trofea rule this table plays (1.4) — `game.trophy_mode`. */
@@ -772,6 +775,7 @@ export function SeatCard({
             onCarry={setCarried}
             onDragging={announceDrag}
             onDrop={onDrop}
+            asked={asked}
             onEquip={onEquip}
             onUse={onUse}
             onWand={onWand}

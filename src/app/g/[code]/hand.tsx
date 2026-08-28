@@ -38,6 +38,7 @@ export function Hand({
   onCarry,
   onDragging,
   onDrop,
+  asked = [],
   onEquip,
   onUse,
   onWand,
@@ -58,6 +59,15 @@ export function Hand({
   /** The card id being dragged out of the pack, or null when the drag ends. */
   onDragging: (moving: { cardId: string; holdingId: string } | null) => void;
   onDrop: (holdingId: string) => void;
+  /**
+   * Cards asked about and not yet answered, greyed where they lie.
+   *
+   * 5.5 is confirmed in a dialog and carried out by the server, so between the
+   * two there is a card that is still in the pack and already on its way out of
+   * it. Without this the pack looks untouched until it suddenly is not, and the
+   * „odrzuć" under an unchanged card invites a second press.
+   */
+  asked?: readonly string[];
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it. Absent on somebody else's pack. */
   onUse?: (holdingId: string, cardId: string) => void;
@@ -396,7 +406,10 @@ export function Hand({
             }
             // The one on the cursor is not also in the pack.
             lifted={held.id === liftedHoldingId}
-            dimmed={held.kind === "trophy"}
+            // A trofeum is not gear, and a card with a drop already asked
+            // for is on its way out — both are greyed, for different reasons
+            // that look the same from here: not a card to be reaching for.
+            dimmed={held.kind === "trophy" || asked.includes(held.id)}
             disabled={!canAct}
             // One click picks it up; the next puts down whatever is on the
             // cursor, in front of the card it lands on. Clicking moves things;

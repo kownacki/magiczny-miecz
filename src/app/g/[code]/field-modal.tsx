@@ -3,7 +3,6 @@
 import { fieldWithText } from "@/lib/view/fieldText";
 import { CardTile } from "./card-tile";
 import { WithRules } from "./rule-ref";
-import { useState } from "react";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { kindForCard } from "@/lib/engine/holdings";
@@ -75,6 +74,7 @@ export function FieldModal({
   onEnd,
   busy,
   onTake,
+  asked = [],
   onInspect,
   onClose,
   notice,
@@ -147,32 +147,12 @@ export function FieldModal({
    */
   friend?: React.ReactNode;
   busy: boolean;
-  /** Awaited, so the tile can stay dimmed for exactly as long as the ask is out. */
-  onTake: (fieldCardId: string) => void | Promise<void>;
+  onTake: (fieldCardId: string) => void;
+  /** Cards whose take the server has not answered yet — see `asked` in the table. */
+  asked?: readonly string[];
   onInspect: (cardId: CardId) => void;
   onClose: () => void;
 }) {
-  /**
-   * The card somebody has just asked for, dimmed until the server answers.
-   *
-   * The answer is not a foregone conclusion and the round trip is not instant:
-   * two characters can be standing on the same Obszar, and the one who presses
-   * second is told the card has gone. A tile that looks untouched in the
-   * meantime invites a second press, which is the same request again.
-   *
-   * Held here rather than read off `busy`, which is the whole table's flag and
-   * would dim every card on the field for anything anybody does.
-   */
-  const [taking, setTaking] = useState<string | null>(null);
-  const take = async (fieldCardId: string) => {
-    setTaking(fieldCardId);
-    try {
-      await onTake(fieldCardId);
-    } finally {
-      setTaking(null);
-    }
-  };
-
   const field = fieldWithText(fieldId);
 
   if (!field) return null;
@@ -243,13 +223,17 @@ export function FieldModal({
                       }}
                       eqMode={eqMode}
                       nature={nature}
-                      dimmed={taking === lying.id}
+                      /* The ask is out and the answer is not a foregone
+                         conclusion — 12.1 can be lost to somebody standing on
+                         the same Obszar — so the card greys where it lies and
+                         moves once the server says it moved. */
+                      dimmed={asked.includes(lying.id)}
                       onClick={() => onInspect(lying.cardId)}
                     >
                       {takeable && standingHere && canAct && arrived && (
                         <button
                           disabled={busy}
-                          onClick={() => take(lying.id)}
+                          onClick={() => onTake(lying.id)}
                           className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
                         >
                           weź

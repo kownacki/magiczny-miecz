@@ -177,6 +177,31 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }, []);
   const openRule = useCallback((id: string) => openAt("instrukcja", id), [openAt]);
   /**
+   * Cards with a request out, drawn where they are and greyed until it lands.
+   *
+   * Taking and dropping are the two writes that move a card from one place to
+   * another, and neither may be done optimistically. 12.1 gives what is lying
+   * on an Obszar to whoever's move ends there, and two characters can be
+   * standing on it — so the browser does not know it has the card until the
+   * server says so. 5.5's drop is the same fact from the other end: where the
+   * card lands is the Obszar the server thinks you are on.
+   *
+   * So the card does not move on the press. It greys, which says the ask is
+   * out, and it moves when the answer arrives — the whole journey in one step
+   * rather than a card that leaves and comes back. `equip` is the opposite
+   * bargain on purpose: nobody can race you to your own Hełm, so that one moves
+   * under the hand and is corrected by the next refresh.
+   */
+  const [asked, setAsked] = useState<readonly string[]>([]);
+  const askFor = useCallback(async (id: string, run: () => Promise<void>) => {
+    setAsked((was) => [...was, id]);
+    try {
+      await run();
+    } finally {
+      setAsked((was) => was.filter((one) => one !== id));
+    }
+  }, []);
+  /**
    * A drawer opened for its own sake, rather than at a reference.
    *
    * `rule` is forgotten on the way in and on the way out, because it is the
@@ -453,7 +478,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       tone: "grave",
       onConfirm: () => {
         setAsk(null);
-        post("holdings", { action: "drop", holdingId });
+        void askFor(holdingId, () => post("holdings", { action: "drop", holdingId }));
       },
     });
   }
@@ -982,8 +1007,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             void post("turn", { action: "end" });
           }}
           busy={busy}
+          asked={asked}
           onTake={(fieldCardId) =>
-            post("holdings", { action: "take-field", fieldCardId })
+            void askFor(fieldCardId, () => post("holdings", { action: "take-field", fieldCardId }))
           }
           onInspect={(cardId) =>
             setInspectingCard({
@@ -1647,6 +1673,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 slotted={game.eq_mode === "slots"}
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
                 onDrop={askToDrop}
+                asked={asked}
                 onEquip={equip}
                 /* A count, not a list. The engine resolves it to the cheapest
                    Karty before anything is spent — `offersFor` is exhaustive
