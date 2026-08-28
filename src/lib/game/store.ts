@@ -33,6 +33,8 @@ export interface SeatRow {
   magic_floor: number;
   life: number;
   gold: number;
+  /** Points from beaten Wrogowie in `punkty` mode (1.4); zero in `karty` mode. */
+  trophy_points: number;
   nature: string | null;
   turns_lost: number;
   stone_until_turn: number | null;
@@ -78,6 +80,8 @@ export interface GameRow {
   eq_mode: string;
   /** Whether the Wyposażenie pile can run out (21.2). See `stockLeft`. */
   endless_stock: boolean;
+  /** How a beaten Wróg is kept (1.4): `punkty` accrues, `karty` holds the Karty. */
+  trophy_mode: string;
   die_source: string;
   status: string;
   active_seat: number | null;
@@ -120,11 +124,11 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 export const GAME_COLUMNS =
-  "id,join_code,mode,eq_mode,endless_stock,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out,seed";
+  "id,join_code,mode,eq_mode,endless_stock,trophy_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out,seed";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,eliminated,created_at";
+  "id,seat_index,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,trophy_points,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,eliminated,created_at";
 
 /** The same for a user. `claim_token` is never among them. */
 export const USER_COLUMNS =

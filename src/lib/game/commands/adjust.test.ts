@@ -83,7 +83,11 @@ describe("correcting somebody down to nothing", () => {
       "death",
       "turn-end",
     ]);
-    expect(writes.seats).toContainEqual({ id: "seat-a", patch: { eliminated: true } });
+    expect(writes.seats).toContainEqual({
+      id: "seat-a",
+      // 1.4: the score goes with the Karty. See docs/TROFEA.md.
+      patch: { eliminated: true, trophy_points: 0 },
+    });
   });
 
   it("does not kill somebody already out", () => {

@@ -217,6 +217,7 @@ export type Command =
   | { kind: "heal"; points: number | null }
   | { kind: "cast"; name: string; who: string | null }
   | { kind: "trade"; cards: string[] }
+  | { kind: "trophies"; mode: "punkty" | "karty" | null }
   /**
    * What a card asked, answered.
    *
@@ -395,6 +396,18 @@ export const COMMANDS: CommandSpec[] = [
     when: PLAYING,
     usage: "cast BŁYSKAWICA [at Ola]",
     summary: "cast a Zaklęcie you are holding (9.6)",
+    needs: "play",
+  },
+  {
+    // A table setting, so it lives in the noun-space beside `table` and
+    // `testmode` rather than in the game's verb-space. Bare `trophies` says
+    // which way it is, as bare `testmode` does.
+    name: "trophies",
+    aliases: [],
+    when: ["none", "lobby"],
+    offTable: false,
+    usage: "trophies [punkty|karty]",
+    summary: "how beaten Wrogowie are kept (1.4) — points, or the Karty as printed",
     needs: "play",
   },
   {
@@ -1195,6 +1208,14 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "sell") {
     return tail ? { ok: { kind: "sell", name: tail } } : needs("sell", "Sell what?");
   }
+  if (word === "trophies") {
+    if (!tail) return { ok: { kind: "trophies", mode: null } };
+    const asked = tail.trim().toLowerCase();
+    if (asked === "punkty" || asked === "karty") {
+      return { ok: { kind: "trophies", mode: asked } };
+    }
+    return needs("trophies", "`punkty` (points) or `karty` (the Karty, as printed)?");
+  }
   if (word === "trade") {
     // Commas or spaces: "trade CYKLOP, NOBBIN" and "trade CYKLOP NOBBIN" are the
     // same list, because a player typing two card names will use either.
@@ -1636,6 +1657,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   heal: "play",
   cast: "play",
   trade: "play",
+  trophies: "play",
   ready: "play",
   start: "play",
   me: "play",

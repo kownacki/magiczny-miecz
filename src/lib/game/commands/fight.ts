@@ -55,7 +55,15 @@ import {
 import { liftOffField } from "./holdings";
 import { applyEffect, type Decisions } from "./effects";
 import { asReturnable, putOnPile } from "./piles";
-import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById, seatView } from "./seat";
+import {
+  activeSeat,
+  eqModeOf,
+  holdingsOf,
+  pointsOf,
+  seatById,
+  seatView,
+  trophyModeOf,
+} from "./seat";
 import { floorOf } from "./spellFloor";
 import { afterFight, hasAttacked, missionOf } from "@/lib/engine/status";
 import { addEffect, keepOnly, statusesOf } from "./turn";
@@ -1469,10 +1477,12 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
   if (fight.result?.outcome !== "wygrana") return {};
   if (fight.opponentSeat !== undefined || fight.guardian || fight.raid) return {};
 
+  // Carrying the points rather than the card: what a trophy is worth is the
+  // only thing either mode wants from it, and `punkty` keeps nothing else.
   const won = (fight.fought ?? [fight.cardId]).flatMap((cardId) => {
     const card = EVENTS.find((one) => one.id === cardId);
     const foe = card ? combatValueOf(card) : null;
-    return foe && foe.kind === "ordinary" ? [{ cardId, card }] : [];
+    return foe && foe.kind === "ordinary" ? [{ cardId, points: foe.total }] : [];
   });
   if (won.length === 0) return {};
 
@@ -1482,7 +1492,41 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
     (fight.drawn ?? []).filter((entry) => entry.granted === true).map((entry) => entry.cardId),
   );
 
-  return {
+  const said: Changeset = {
+    journal: won.map(({ cardId }) => ({
+      seatId: seat.id,
+      turn: snapshot.game.turn,
+      kind: "taken" as const,
+      payload: { cardId, kind: "trophy" },
+    })),
+  };
+
+  /**
+   * In `punkty` the Karta does not stay: it goes to the used pile at once and
+   * the seat keeps the number that was printed on it.
+   *
+   * Which is the whole of the variant. 9.5 refills the deck from that pile, so
+   * a Wróg beaten here is a Wróg somebody can meet again — where in `karty` he
+   * sits in a pack until traded, and an eighth of the Karty Zdarzeń can end up
+   * doing that at once. See docs/TROFEA.md.
+   *
+   * A conjured Wróg is worth his points and reaches no pile, because the deck
+   * never gave that copy up. Both halves of `granted` matter here and they pull
+   * different ways, which is why the pile is asked separately from the score.
+   */
+  if (trophyModeOf(snapshot.game) === "punkty") {
+    const points = won.reduce((sum, one) => sum + one.points, 0);
+    const real = won.filter(({ cardId }) => !staged.has(cardId));
+    return mergeAll(
+      said,
+      { seats: [{ id: seat.id, patch: { trophy_points: seat.trophy_points + points } }] },
+      real.length > 0
+        ? putOnPile(snapshot, "events", real.map(({ cardId }) => ({ cardId, granted: false })))
+        : {},
+    );
+  }
+
+  return mergeAll(said, {
     holdings: {
       insert: won.map(({ cardId }) => ({
         seat_id: seat.id,
@@ -1492,13 +1536,7 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
         granted: staged.has(cardId),
       })),
     },
-    journal: won.map(({ cardId }) => ({
-      seatId: seat.id,
-      turn: snapshot.game.turn,
-      kind: "taken" as const,
-      payload: { cardId, kind: "trophy" },
-    })),
-  };
+  });
 }
 
 /**

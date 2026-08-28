@@ -53,6 +53,18 @@ create table if not exists magiczny_miecz.games (
   -- finite again. Once a table is playing this only goes one way — see
   -- `setEndlessStock`, which is why there is no check constraint pinning it.
   endless_stock boolean not null default true,
+  -- How a beaten Wróg is kept (1.4). See docs/TROFEA.md.
+  --
+  -- `punkty` is the variant and the default: the Karta goes straight to the
+  -- used pile and the seat accrues points. `karty` is the printed rule — you
+  -- hold the Karty and hand in the ones you choose.
+  --
+  -- Defaulting away from the book for the same reason `endless_stock` does. In
+  -- 1993 the card *is* the counter, with its number printed on it; an app that
+  -- tracks numbers perfectly keeps the ceremony after removing its reason. And
+  -- a held trophy is a card out of circulation — 9.5 reshuffles only the used
+  -- pile, so hoarding locks away an eighth of the deck's Karty Zdarzeń.
+  trophy_mode text not null default 'punkty' check (trophy_mode in ('punkty', 'karty')),
   -- Where randomness comes from. 'physical' means a human types in what they
   -- rolled; this is the RandomPort's binding, stored so it survives a reload.
   die_source text not null default 'app' check (die_source in ('app', 'physical')),
@@ -157,6 +169,13 @@ create table if not exists magiczny_miecz.seats (
 
   life integer not null default 4,
   gold integer not null default 1,
+  -- Points from beaten Wrogowie, in `punkty` mode only (1.4).
+  --
+  -- The counter the Karty are in the printed rule. It dies with the character:
+  -- 4.4 sends held trophies to the pile, and points that survived a death would
+  -- make hoarding free — which is the one thing the variant must not change,
+  -- since the run at the Bestia costs 2 Życia on a loss.
+  trophy_points integer not null default 0,
 
   -- Nature can change mid-game (7.2), so it is seat state, not character data.
   nature text check (nature in ('good', 'evil', 'chaotic')),

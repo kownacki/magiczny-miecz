@@ -405,6 +405,27 @@ export function unseat(
  * mid-game. `Settings` in the game says exactly this about it, and now says it
  * about a setting that really was fixed rather than one nobody had moved.
  */
+/**
+ * How this table keeps a beaten Wróg (1.4). See docs/TROFEA.md.
+ *
+ * The poczekalnia only, for the same reason the ekwipunek is settled there: by
+ * the time anybody has beaten a Wróg the choice has already been applied to a
+ * card — either it is in a pack or its points are on a seat — and there is no
+ * honest way to reinterpret that mid-game. Switching to `punkty` in play would
+ * have to invent points for Karty already held, and switching the other way
+ * would have to invent Karty for points already banked.
+ */
+export function setTrophyMode(
+  snapshot: Snapshot,
+  command: { mode: "punkty" | "karty" },
+): Outcome<void> {
+  if (snapshot.game.status !== "lobby") {
+    throw new Error("Trofea wybiera się przed rozpoczęciem gry — w trakcie już nie do zmiany.");
+  }
+  if (snapshot.game.trophy_mode === command.mode) return { writes: {}, result: undefined };
+  return { writes: { game: { trophy_mode: command.mode } }, result: undefined };
+}
+
 export function setEqMode(
   snapshot: Snapshot,
   command: { eqMode: EqMode },

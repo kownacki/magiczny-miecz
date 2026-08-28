@@ -29,6 +29,7 @@ import {
   leaveTable,
   renameUser,
   setReady,
+  setTrophyMode,
   takeSeat,
   unseat,
 } from "./lobbyStore";
@@ -84,7 +85,7 @@ import {
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
-import { eqModeOf, seatView } from "./commands/seat";
+import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 import { fold } from "@/lib/engine/search";
 
@@ -830,6 +831,29 @@ export async function runCommand(
     }
 
     /**
+     * Which way this table keeps a beaten Wróg (1.4). See docs/TROFEA.md.
+     *
+     * Reading it needs no seat and no turn, so a bare `trophies` answers from
+     * the poczekalnia as well as mid-game — which is the point of asking: the
+     * one moment you can still change it is the one moment the answer is not
+     * yet on any card.
+     */
+    case "trophies": {
+      const snapshot = await activeStore().load(gameId);
+      if (command.mode === null) {
+        const mode = trophyModeOf(snapshot.game);
+        const how =
+          mode === "karty"
+            ? "the Karty are kept and handed in (as printed)"
+            : "Wrogowie are scored and the Karty go back to the pile";
+        const may = snapshot.game.status === "lobby" ? "" : " — the game has started, so it stands.";
+        return `Trophies: ${mode} — ${how}${may}`;
+      }
+      await setTrophyMode(gameId, command.mode);
+      return `Trophies: ${command.mode}.`;
+    }
+
+    /**
      * The Bestia, which is how the game is won (14.7, 22).
      *
      * Four dice — the kind of fight, its strength, and one each — and all four
@@ -1554,6 +1578,15 @@ export async function runCommand(
          * they total, and what a trade of everything would waste. Without it
          * the choice 1.4 gives you has to be done on paper.
          */
+        /**
+         * The same line in the „Punkty" variant, where the score is a number.
+         *
+         * Phrased as the Karty are, minus the waste: nothing is handed in, so a
+         * remainder stays where it is and there is nothing to warn about.
+         */
+        ...(trophyModeOf(snapshot.game) === "punkty" && seat.trophy_points > 0
+          ? [`Trophies: ${pointLedger(seat.trophy_points)}`]
+          : []),
         ...(trophies.length
           ? [
               `Trophies: ${trophies
@@ -1615,4 +1648,15 @@ function trophyLedger(cardIds: readonly string[]): string {
   const wasted = points - swords * TROPHY_RATE;
   if (swords < 1) return `  (${points} pkt — ${TROPHY_RATE} za Miecz)`;
   return `  (${points} pkt → ${swords} Miecz${swords === 1 ? "" : "e"}, ${wasted} przepadnie)`;
+}
+
+/** The same arithmetic on a score rather than a hand, and nothing is wasted. */
+function pointLedger(points: number): string {
+  const swords = Math.floor(points / TROPHY_RATE);
+  if (swords < 1) return `${points} pkt — ${TROPHY_RATE} za Miecz`;
+  const left = points - swords * TROPHY_RATE;
+  return (
+    `${points} pkt → ${swords} Miecz${swords === 1 ? "" : "e"}` +
+    (left > 0 ? `, zostanie ${left}` : "")
+  );
 }

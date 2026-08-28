@@ -115,7 +115,16 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
   const returned = mergeAll(spellsBack, trophiesBack);
 
   const gone: Changeset = {
-    seats: [{ id: seatId, patch: { eliminated: true } }],
+    /**
+     * The points go with the Karty (1.4, 4.4).
+     *
+     * Held trophies reach the used pile a few lines above, and `punkty` mode's
+     * score has to go the same way — a variant where hoarding survived death
+     * would be an easier game than the printed rule, and the risk is the point:
+     * a lost fight at the Bestia costs 2 Życia and 14.5 can put you off the
+     * Most on the way there.
+     */
+    seats: [{ id: seatId, patch: { eliminated: true, trophy_points: 0 } }],
     /**
      * "Jej Kartę odłożyć do pozostałych nie biorących udziału w grze" (4.4).
      *

@@ -13,7 +13,7 @@ import type { SeatRow } from "../store";
 import { asReturnable, putOnPile } from "./piles";
 import { takeCard, type Taken } from "./holdings";
 import { cardName } from "@/lib/engine/polish";
-import { seatById } from "./seat";
+import { seatById, trophyModeOf } from "./seat";
 
 /** 1.4: seven points of beaten Wróg buy one point of Miecz. */
 export const TROPHY_RATE = 7;
@@ -77,6 +77,48 @@ export function tradeTrophies(
   command: { seatId: string; cardIds?: readonly string[] },
 ): Outcome<number> {
   const seat = seatById(snapshot, command.seatId);
+
+  /**
+   * In `punkty` there are no Karty to choose between, so the fork 1.4 leaves
+   * open does not arise: convert in sevens and keep the remainder.
+   *
+   * Keeping it rather than burning it is the same ruling as the printed mode's,
+   * arrived at from the other side — a player who may hold cards back may hold
+   * points back, and a variant that was harsher than the rule it replaces would
+   * be changing the game rather than the bookkeeping.
+   */
+  if (trophyModeOf(snapshot.game) === "punkty") {
+    const swords = Math.floor(seat.trophy_points / TROPHY_RATE);
+    if (swords < 1) {
+      throw new Error(
+        `Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4) — masz ${seat.trophy_points}.`,
+      );
+    }
+    const spent = swords * TROPHY_RATE;
+    return {
+      writes: {
+        seats: [
+          {
+            id: seat.id,
+            patch: {
+              sword_own: seat.sword_own + swords,
+              trophy_points: seat.trophy_points - spent,
+            },
+          },
+        ],
+        journal: [
+          {
+            seatId: seat.id,
+            turn: snapshot.game.turn,
+            kind: "trophies-traded",
+            payload: { points: spent, gained: swords, lost: 0 },
+          },
+        ],
+      },
+      result: swords,
+    };
+  }
+
   const held = snapshot.holdings.filter((h) => h.seat_id === seat.id && h.kind === "trophy");
 
   // Named cards are matched one holding each, so asking for two Cyklopy hands in

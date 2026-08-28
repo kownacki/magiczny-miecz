@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
+import { EVENT_COPIES, decksOf } from "../decks";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFight } from "./fight";
@@ -22,11 +23,13 @@ const won = (over: {
   opponentSeat?: number;
   granted?: boolean;
   outcome?: string;
+  mode?: "punkty" | "karty";
 } = {}) => {
   const cardId = over.cardId ?? "cyklop";
   return aTable({
     game: {
       active_seat: 0,
+      trophy_mode: over.mode ?? "karty",
       turn_state: {
         phase: "fight",
         fight: {
@@ -62,6 +65,13 @@ const won = (over: {
 const settle = async (table: ReturnType<typeof won>) => {
   const out = await resolveFight(table, undefined as never, ports({ random: scriptedRandom([1, 1, 1, 1]) }));
   return apply(table, out.writes);
+};
+
+/** The refs of one card that have reached the stos zużytych. */
+const returned = (t: ReturnType<typeof apply>, cardId: string) => {
+  const copies = EVENT_COPIES.get(cardId) ?? [];
+  const deck = decksOf(t.game).events;
+  return deck.discard.filter((ref) => copies.includes(ref));
 };
 
 const trophies = (t: ReturnType<typeof apply>) =>
@@ -103,6 +113,50 @@ describe("keeping a beaten Wróg (16.2)", () => {
   it("carries the granted mark onto the trophy", async () => {
     const staged = await settle(won({ granted: true }));
     expect(staged.holdings.find((h) => h.kind === "trophy")?.granted).toBe(true);
+  });
+
+  /**
+   * The „Punkty" variant. Same fights, same arithmetic; what changes is where
+   * the answer is kept. See docs/TROFEA.md.
+   *
+   * Twenty-one hoardable Wrogowie is twenty-one Karty face up in front of
+   * somebody, and a referee that can add is the one thing at this table that
+   * does not need them lying there to remember what they were worth.
+   */
+  describe("in punkty mode", () => {
+    it("scores the Wróg rather than keeping it", async () => {
+      const after = await settle(won({ mode: "punkty" }));
+      expect(trophies(after)).toEqual([]);
+      // CYKLOP's printed Miecz, not the fight's totals.
+      expect(after.seats[0].trophy_points).toBe(6);
+    });
+
+    it("adds a pack up", async () => {
+      const pack = await settle(won({ mode: "punkty", fought: ["cyklop", "nobbin"] }));
+      expect(pack.seats[0].trophy_points).toBe(6 + 2);
+    });
+
+    /**
+     * The Karta itself is not kept anywhere, so it has to reach the stos
+     * zużytych — a Wróg that vanished would shrink the deck a card per fight.
+     */
+    it("puts the Karta back on the used pile", async () => {
+      const after = await settle(won({ mode: "punkty" }));
+      // A pile holds refs, not ids — one Wróg has several copies (`decks.ts`).
+      expect(returned(after, "cyklop")).toHaveLength(1);
+    });
+
+    /** A conjured Cyklop was never dealt, so it must not arrive on the pile. */
+    it("returns nothing that the deck still holds", async () => {
+      const after = await settle(won({ mode: "punkty", granted: true }));
+      expect(after.seats[0].trophy_points).toBe(6);
+      expect(returned(after, "cyklop")).toEqual([]);
+    });
+
+    it("scores nothing for a Wróg fought magically, as the Karta rule keeps none", async () => {
+      const after = await settle(won({ mode: "punkty", cardId: "demon" }));
+      expect(after.seats[0].trophy_points).toBe(0);
+    });
   });
 });
 

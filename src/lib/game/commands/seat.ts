@@ -26,6 +26,18 @@ export function eqModeOf(game: { eq_mode: string }): EqMode {
   return game.eq_mode === "slots" ? "slots" : "classic";
 }
 
+/**
+ * How a beaten Wróg is kept (1.4). See docs/TROFEA.md.
+ *
+ * `punkty` is the variant and the database's default; `karty` is the printed
+ * rule. Read through one function for the same reason `eqModeOf` is: the column
+ * is a `string` and every reader would otherwise have its own opinion about
+ * what an unrecognised value means.
+ */
+export function trophyModeOf(game: { trophy_mode?: string }): "punkty" | "karty" {
+  return game.trophy_mode === "karty" ? "karty" : "punkty";
+}
+
 export function asHolding(row: HoldingRow): Holding {
   return {
     cardId: row.card_id,

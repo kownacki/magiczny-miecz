@@ -108,6 +108,48 @@ describe("trading trophies (1.4)", () => {
     });
     expect(tradeTrophies(table, { seatId: "seat-a" }).writes.holdings?.delete).toEqual(["t0"]);
   });
+
+  /**
+   * The „Punkty" variant, where there are no Karty to choose between.
+   *
+   * Same rate and same shop; what changes is that the score is a number on the
+   * seat, so a trade takes sevens out of it and leaves the rest standing —
+   * there is nothing to hand in and nothing to waste. See docs/TROFEA.md.
+   */
+  describe("in punkty mode", () => {
+    const scoring = (points: number, sword = 2) =>
+      aTable({
+        game: { trophy_mode: "punkty" },
+        seats: [aSeat({ id: "seat-a", sword_own: sword, trophy_points: points })],
+      });
+
+    it("pays one Miecz per seven and keeps the remainder", () => {
+      const { writes, result } = tradeTrophies(scoring(TROPHY_RATE * 2 + 3), {
+        seatId: "seat-a",
+      });
+      expect(result).toBe(2);
+      expect(writes.seats).toEqual([
+        { id: "seat-a", patch: { sword_own: 4, trophy_points: 3 } },
+      ]);
+      // Nothing was held, so nothing goes back to a pile.
+      expect(writes.holdings).toBeUndefined();
+    });
+
+    it("refuses below the rate rather than banking a fraction", () => {
+      expect(() => tradeTrophies(scoring(TROPHY_RATE - 1), { seatId: "seat-a" })).toThrow(
+        new RegExp(`${TROPHY_RATE} punktów`),
+      );
+    });
+
+    /** The Karty are on the pile, so naming one is naming something nobody has. */
+    it("ignores a named card, there being none to name", () => {
+      const { result } = tradeTrophies(scoring(TROPHY_RATE), {
+        seatId: "seat-a",
+        cardIds: ["smok"],
+      });
+      expect(result).toBe(1);
+    });
+  });
 });
 
 describe("selling to the Lichwiarz (21.2)", () => {

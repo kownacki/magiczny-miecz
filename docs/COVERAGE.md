@@ -58,7 +58,13 @@ they are rules, and one of them was missing.
 | 1.3 | losses recorded, never below the starting value | ✅ | `sword_floor`, `adjustOwn` |
 | 1.4 | trophies trade at 1 Miecz per 7 points, remainder lost | ✅ | `tradeTrophies`, `TROPHY_RATE` |
 | 1.4 | the traded Wróg card goes to the stos zużytych | ✅ | `returnToPile` |
+| 1.4 | a table may score Wrogowie instead of hoarding the Karty | ✅¹ | `trophy_mode`, docs/TROFEA.md |
 | 1.5 | total = own + Przedmioty + Przyjaciele | ✅ | `totalsFor` |
+
+¹ A variant, not the printed rule, and the default — see docs/TROFEA.md. „Karty"
+plays 1.4 as written; „Punkty" banks the beaten Wróg's Miecz on the seat and
+sends the Karta to the stos zużytych. The rate, the refusal below it and the
+loss on death are the same either way, so nothing above this line changes.
 
 ## 2. Magia Postaci
 

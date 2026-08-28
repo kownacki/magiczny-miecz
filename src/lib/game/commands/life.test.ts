@@ -72,7 +72,11 @@ describe("śmierć (4.4)", () => {
 
   it("marks the seat out and says so", () => {
     const writes = killSeat(table(), "seat-a");
-    expect(writes.seats).toContainEqual({ id: "seat-a", patch: { eliminated: true } });
+    expect(writes.seats).toContainEqual({
+      id: "seat-a",
+      // 1.4: the score goes with the Karty. See docs/TROFEA.md.
+      patch: { eliminated: true, trophy_points: 0 },
+    });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "death",
       payload: { droppedOnField: ["helm", "wilk"], spellsDiscarded: 1, field: "mroczna-polana" },

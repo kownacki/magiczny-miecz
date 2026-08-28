@@ -121,6 +121,32 @@ points itself from `combatValueOf` for „Karty pokonanych", so that mode needs
 **no envelope change**. If „Punkty" mode keeps a running total on the seat, name
 the field and the seat card will draw it.
 
+## Built — the engine half, and the field the seat card asked for
+
+The variant is in, verified at the terminal rather than only in tests: nine
+Nobbiny → 18 pkt → `trade` → 2 Miecze and 4 points left standing, and `kill`
+takes the score to zero.
+
+- **`games.trophy_mode`** — `'punkty'` (default) or `'karty'`. Read it through
+  `trophyModeOf` in `commands/seat.ts`; never off the row.
+- **`seats.trophy_points`** — the running total the seat card asked to be named.
+  Integer, never null, zero in „Karty" mode. **This is the field to draw.**
+- `setTrophyMode` in `commands/lobby.ts` refuses once `status !== "lobby"`, the
+  same shape as `setEqMode` and for a sharper reason: by then the choice is
+  already applied to a card, and neither direction can be reinterpreted —
+  switching to „Punkty" would have to invent points for Karty already held,
+  switching back would have to invent Karty for points already banked.
+- `trophiesFrom` in `commands/fight.ts` forks: „Karty" inserts holdings,
+  „Punkty" adds the printed Miecz to the seat and sends the Karta to the stos
+  zużytych. A conjured Wróg (`granted`) scores and returns nothing, because the
+  deck still holds its own copy.
+- `killSeat` zeroes the points beside `eliminated`, which is the constraint above.
+- Console: `trophies` reads the mode, `trophies punkty|karty` sets it in the
+  poczekalnia, and `me` prints the ledger in whichever mode the table plays.
+
+**Not yet applied to the live database.** Both columns are in `db/schema.sql`;
+a browser game will error on the first fight won until the migration is run.
+
 ## Attributing work between sessions
 
 Commits carry a `Claude-Session:` trailer, and that is the only reliable way to

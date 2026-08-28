@@ -9,6 +9,7 @@ import {
   noteArrival as noteArrivalOn,
   openTable as openTableOn,
   setEqMode as setEqModeOn,
+  setTrophyMode as setTrophyModeOn,
   needsSweep,
   renameUser as renameUserOn,
   setReady as setReadyOn,
@@ -188,6 +189,11 @@ export async function leaveTable(
 /** The equipment variant, while the table is still the poczekalnia. */
 export async function setEqMode(gameId: string, eqMode: "slots" | "classic"): Promise<void> {
   await change(gameId, setEqModeOn, { eqMode });
+}
+
+/** How this table keeps a beaten Wróg (1.4). Poczekalnia only. */
+export async function setTrophyMode(gameId: string, mode: "punkty" | "karty"): Promise<void> {
+  await change(gameId, setTrophyModeOn, { mode });
 }
 
 /**

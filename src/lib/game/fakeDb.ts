@@ -46,6 +46,9 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
   games: {
     mode: "simulation",
     eq_mode: "classic",
+    trophy_mode: "punkty",
+    // 21.2 as this table plays it. Found missing by fakeDb.test.ts, not by a bug.
+    endless_stock: true,
     die_source: "app",
     status: "lobby",
     turn: 0,
@@ -63,6 +66,7 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
     magic_floor: 0,
     life: 4,
     gold: 1,
+    trophy_points: 0,
     turns_lost: 0,
     eliminated: false,
     character_id: null,

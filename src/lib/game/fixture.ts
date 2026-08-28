@@ -28,6 +28,7 @@ export function aSeat(over: Partial<SeatRow> = {}): SeatRow {
     magic_floor: 1,
     life: 4,
     gold: 1,
+    trophy_points: 0,
     nature: "good",
     turns_lost: 0,
     stone_until_turn: null,
@@ -97,6 +98,10 @@ export function aTable(over: TableOver = {}): Snapshot {
     join_code: "ABCD",
     mode: "simulation",
     eq_mode: "classic",
+    // The printed rule, not the database's default. A fixture that quietly
+    // moved every trophy test onto the variant would be testing the variant
+    // and saying it tested 1.4. Tests for `punkty` pass it explicitly.
+    trophy_mode: "karty",
     endless_stock: false,
     die_source: "app",
     status: "playing",

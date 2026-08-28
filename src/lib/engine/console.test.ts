@@ -764,6 +764,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   sell: { line: "sell MIECZ", becomes: { kind: "sell", name: "MIECZ" } },
   heal: { line: "heal", becomes: { kind: "heal", points: null } },
   trade: { line: "trade", becomes: { kind: "trade", cards: [] } },
+  trophies: { line: "trophies punkty", becomes: { kind: "trophies", mode: "punkty" } },
   cast: { line: "cast BŁYSKAWICA", becomes: { kind: "cast", name: "BŁYSKAWICA", who: null } },
   bridge: { line: "bridge", becomes: { kind: "bridge" } },
   cross: { line: "cross", becomes: { kind: "cross" } },
