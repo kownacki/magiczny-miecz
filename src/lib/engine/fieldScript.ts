@@ -503,6 +503,121 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
     ],
   },
 
+  /**
+   * "MOŻESZ MODLIĆ SIĘ RZUCAJĄC 2 KOSTKAMI" — the first two-die table in the
+   * box, and an offer rather than a duty: nobody has to pray.
+   *
+   * Two dice and eleven rows, so the middle is far likelier than the ends. The
+   * 2 and the 12 are the extremes for a reason and it would be wrong to flatten
+   * them onto one die.
+   *
+   * The Jabłko Natchnienia lets its holder shift this roll by one either way,
+   * and it names both Świątynie — `modyfikator-rzutu` with `dowolnyZnak`.
+   */
+  "swiatynia-bogini-nemed": {
+    offers: [
+      {
+        name: "Modlitwa",
+        effect: {
+          op: "rzut",
+          kostki: 2,
+          faces: {
+            2: { op: "punkty", stat: "life", delta: 2 },
+            3: { op: "punkty", stat: "life", delta: -1 },
+            // "tracisz do wyboru: 1 punkt Życia lub 1 z Przyjaciół" — the
+            // choice is stated on the board, so it is the holder's twice: which
+            // kind, and then which Przyjaciel.
+            4: {
+              op: "wybor",
+              options: [
+                { label: "Tracisz 1 Życie", effect: { op: "punkty", stat: "life", delta: -1 } },
+                {
+                  label: "Tracisz Przyjaciela",
+                  effect: { op: "strata", co: "przyjaciel", count: 1, wybor: "ty" },
+                },
+              ],
+            },
+            5: { op: "punkty", stat: "sword", delta: 1 },
+            6: { op: "punkty", stat: "magic", delta: 1 },
+            7: { op: "zaklecie", count: 1 },
+            8: { op: "punkty", stat: "life", delta: 1 },
+            9: {
+              op: "efekt",
+              label: "Opętany — nie ruszysz się stąd, póki nie wyrzucisz 1, 2 lub 3",
+              modifier: { kind: "move-max", pola: 0 },
+              ends: { kind: "rzut", upTo: 3 },
+            },
+            10: {
+              op: "wybor",
+              options: [
+                { label: "Tracisz 1 Magii", effect: { op: "punkty", stat: "magic", delta: -1 } },
+                { label: "Tracisz 1 Miecza", effect: { op: "punkty", stat: "sword", delta: -1 } },
+              ],
+            },
+            // "(jeżeli jeszcze jakieś są)" is 21.2's stock rule, and `otrzymaj`
+            // leaves it to `takeCard`, which already refuses an empty pile.
+            11: { op: "otrzymaj", co: "MAGICZNY MIECZ" },
+            12: { op: "punkty", stat: "life", delta: -2 },
+          },
+        },
+      },
+    ],
+  },
+
+  /**
+   * "MOŻESZ MODLIĆ SIĘ DO GROŹNEGO BÓSTWA." The same shape as the Nemed's and
+   * the opposite temper: seven of its eleven rows take something.
+   */
+  "swiatynia-tolimana": {
+    offers: [
+      {
+        name: "Modlitwa",
+        effect: {
+          op: "rzut",
+          kostki: 2,
+          faces: {
+            2: { op: "punkty", stat: "life", delta: -1 },
+            // "tracisz po 1 punkcie Magii i Miecza" — both, not a choice.
+            3: {
+              op: "po-kolei",
+              steps: [
+                { op: "punkty", stat: "magic", delta: -1 },
+                { op: "punkty", stat: "sword", delta: -1 },
+              ],
+            },
+            4: { op: "strata", co: "zaklecie", count: 1, wybor: "ty" },
+            5: { op: "strata", co: "przyjaciel", count: 1, wybor: "ty" },
+            6: { op: "zaklecie", count: 1 },
+            7: {
+              op: "wybor",
+              options: [
+                { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
+                { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
+              ],
+            },
+            8: { op: "ruch-dodatkowy" },
+            9: {
+              op: "efekt",
+              label: "Opętany — nie ruszysz się stąd, póki nie wyrzucisz 1, 2 lub 3",
+              modifier: { kind: "move-max", pola: 0 },
+              ends: { kind: "rzut", upTo: 3 },
+            },
+            10: { op: "otrzymaj", co: "TARCZA TOLIMANA" },
+            11: { op: "punkty", stat: "life", delta: 1 },
+            12: {
+              op: "po-kolei",
+              steps: [
+                { op: "punkty", stat: "life", delta: -1 },
+                { op: "punkty", stat: "magic", delta: -1 },
+                { op: "punkty", stat: "sword", delta: -1 },
+              ],
+            },
+          },
+        },
+      },
+    ],
+  },
+
   // "1 - tracisz 1 turę; 2-3 zostajesz Zamieniony w Kamień; 4-5 zyskujesz
   // dodatkowy ruch; 6 - zostałeś zignorowany."
   "wieza-przeznaczenia": {

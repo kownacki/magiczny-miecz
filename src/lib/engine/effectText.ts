@@ -181,6 +181,11 @@ export function describeEffect(effect: Effect): string {
     case "ruch-dodatkowy":
       return "dodatkowy ruch";
 
+    // The label is the card's own words for it, so it is trusted rather than
+    // rebuilt out of the modifier — "Opętany" says more than "ruch: 0 pól".
+    case "efekt":
+      return effect.label;
+
     case "zaklecie":
       return `bierzesz ${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
 
@@ -310,6 +315,8 @@ export function summariseEffect(effect: Effect): string {
      */
     case "ruch-dodatkowy":
       return "dodatkowy ruch";
+    case "efekt":
+      return effect.label;
 
     default:
       return "rozpatrzcie sami";

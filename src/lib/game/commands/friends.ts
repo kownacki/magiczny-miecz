@@ -1,11 +1,12 @@
 /** The things a Przyjaciel does that are not a fight (6.1-6.4, and the cards' own text). */
 
 import { carriesSpell, sellsPoints } from "@/lib/engine/abilities";
+import { afterBreakout, heldByARoll } from "@/lib/engine/status";
 import { inEffect } from "@/lib/engine/holdings";
 import { cardName } from "@/lib/engine/polish";
 import { apply, merge, mergeAll, type CommandPorts, type Outcome, type Snapshot } from "../change";
 import { activeSeat, eqModeOf, seatById, seatView } from "./seat";
-import { addEffect } from "./turn";
+import { addEffect, keepOnly, statusesOf } from "./turn";
 import { castSpell, type Cast, type CastSpell } from "./fight";
 import { asReturnable, putOnPile } from "./piles";
 
@@ -150,5 +151,51 @@ export async function speakCarriedSpell(
       ],
     }),
     result: spoken.result,
+  };
+}
+
+/**
+ * Throws for your freedom, where something is holding you in place.
+ *
+ * Both Świątynie end their ninth row this way: "zostałeś opętany, pozostaniesz
+ * tu, dopóki nie wyrzucisz podczas swojej tury 1, 2 lub 3 oczek (na 1 kostce)."
+ *
+ * One throw a turn, read by every status waiting on a die — the board asks for
+ * a roll, not a roll per affliction, and a character unlucky enough to be held
+ * by both Świątynie is not made to throw twice.
+ *
+ * Explicit rather than folded into the start of a turn, because the roll needs
+ * the port and starting a turn is pure. It is the same bargain `roll` makes: a
+ * die a player can see being asked for.
+ */
+export async function breakFree(
+  snapshot: Snapshot,
+  command: { seatId?: string },
+  ports: CommandPorts,
+): Promise<Outcome<{ die: number; freed: string[] }>> {
+  const seat = command.seatId ? seatById(snapshot, command.seatId) : activeSeat(snapshot);
+  const held = statusesOf(snapshot, seat.id);
+  if (!heldByARoll(held)) throw new Error("Nic cię tu nie trzyma.");
+
+  const die = await ports.random.rollD6("opętanie: rzut o wolność");
+  const left = afterBreakout(held, die);
+  const freed = held.filter((was) => !left.some((still) => still.id === was.id));
+
+  return {
+    writes: mergeAll(keepOnly(snapshot, seat.id, left), {
+      journal: [
+        {
+          seatId: seat.id,
+          turn: snapshot.game.turn,
+          kind: "effect",
+          payload: {
+            source: "opętanie",
+            label: freed.length > 0 ? `uwolniony (${die})` : `nadal opętany (${die})`,
+            ends: { kind: "rzut", upTo: 3 },
+          },
+        },
+      ],
+    }),
+    result: { die, freed: freed.map((one) => one.label) },
   };
 }

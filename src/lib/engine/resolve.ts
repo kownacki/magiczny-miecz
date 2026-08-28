@@ -27,6 +27,10 @@ export function isSettled(effect: Effect): boolean {
     case "walka":
     case "ruch-dodatkowy":
     case "wyciagnij":
+    // What it does and how long it lasts are both written on the card.
+    case "efekt":
+    // The card is named and the stock is the app's to count.
+    case "otrzymaj":
       return true;
 
     // Healing with no price is capped by 4.7 and has one answer. Healing that
@@ -70,15 +74,28 @@ export function isSettled(effect: Effect): boolean {
 
     // A die table is settled only if every face it can land on is. Rolled
     // separately, so this asks about the table as a whole.
-    case "rzut":
-      return [1, 2, 3, 4, 5, 6].every((face) => isSettled(effect.faces[face]));
+    // Every face it can land on, which is 2-12 for a two-die table and 1-6 for
+    // the usual one. Reading the wrong range asked about faces that cannot come
+    // up and skipped the ones that can — and `isSettled(undefined)` throws.
+    case "rzut": {
+      const faces =
+        effect.kostki === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [1, 2, 3, 4, 5, 6];
+      return faces.every((face) => isSettled(effect.faces[face]));
+    }
 
-    // Shops, borrowed tables and named gifts are interactions rather than
-    // outcomes, and putting a card somewhere is not something a seat does.
+    // Shops and borrowed tables are interactions rather than outcomes, and
+    // putting a card somewhere is not something a seat does.
+    //
+    // `otrzymaj` used to be counted among them and is not one: the card is
+    // named by the effect, the Wyposażenie's stock is checked by `takeCard`,
+    // and there is nothing left for anybody to answer. It sat here because it
+    // had no implementation at all, and while it was unsettled the two rows
+    // that hand out a Magiczny Miecz and a Tarcza Tolimana came back pending
+    // and empty — a prayer that appeared to do nothing and left the turn
+    // waiting on a question nobody had been asked.
     case "kup":
     case "sprzedaj":
     case "jak-pole":
-    case "otrzymaj":
     case "poloz-karte":
     case "zaklecia-do-limitu":
     case "zamien-punkty":

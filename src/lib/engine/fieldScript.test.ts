@@ -65,11 +65,22 @@ describe("the fields that trade", () => {
     ]);
   });
 
-  it("gives every die table all six faces", () => {
+  /**
+   * Every face a table can actually land on, which is not the same range for
+   * both kinds. One die is 1-6; two dice are 2-12 and can never read 1, so a
+   * two-die table with a face 1 would be a row nobody could ever reach and a
+   * missing face 12 would be a hole where the worst outcome belongs.
+   */
+  it("gives every die table every face it can land on", () => {
     for (const { fieldId, offer, effect } of ALL) {
       if (effect.op !== "rzut") continue;
-      for (const face of [1, 2, 3, 4, 5, 6]) {
+      const faces =
+        effect.kostki === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [1, 2, 3, 4, 5, 6];
+      for (const face of faces) {
         expect(effect.faces[face], `${fieldId}/${offer} face ${face}`).toBeDefined();
+      }
+      if (effect.kostki === 2) {
+        expect(effect.faces[1], `${fieldId}/${offer} cannot roll a 1`).toBeUndefined();
       }
     }
   });

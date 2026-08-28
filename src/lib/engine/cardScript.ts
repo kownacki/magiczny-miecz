@@ -1,6 +1,7 @@
 /** What a one-shot or fixture card does, and — just as importantly — where the card goes afterwards. */
 
 import type { Nature } from "@/data/types";
+import type { Ends, Modifier } from "./status";
 import { MIEJSCA } from "./scripts/miejsca";
 import { NIEZNAJOMI } from "./scripts/nieznajomi";
 import { PRZEDMIOTY } from "./scripts/przedmioty";
@@ -132,8 +133,17 @@ export type Effect =
   | { op: "po-kolei"; steps: Effect[] }
   /** The character picks one (Król Lasu, Wróżka, Koszmar). */
   | { op: "wybor"; options: { label: string; effect: Effect }[] }
-  /** One die, six outcomes (Grota, Sidh, Urocza Diablica, Nieznana Świątynia). */
-  | { op: "rzut"; faces: Record<number, Effect> }
+  /**
+   * A die table: one die and six outcomes (Grota, Sidh, Urocza Diablica,
+   * Nieznana Świątynia), or two dice and eleven.
+   *
+   * `kostki` is the count, and defaults to one because that is what every card
+   * in the box rolls. The two Świątynie are the exception — "MOŻESZ MODLIĆ SIĘ
+   * RZUCAJĄC 2 KOSTKAMI" — and their tables are keyed 2 to 12, which is why the
+   * faces are a map rather than a tuple: a two-die table has no face 1 and the
+   * middle of it is far likelier than the ends.
+   */
+  | { op: "rzut"; faces: Record<number, Effect>; kostki?: 2 }
   | { op: "punkty"; stat: "sword" | "magic" | "life" | "gold"; delta: number; target?: Target }
   /**
    * Restores Życie but no higher than the four a character starts with (4.7) —
@@ -239,6 +249,20 @@ export type Effect =
    * generic "+1 Przedmiot" would not do.
    */
   | { op: "otrzymaj"; co: string }
+  /**
+   * Puts the character under something that lasts (`status.ts`).
+   *
+   * The gap this fills was the oldest one in the vocabulary: `seat_effects` and
+   * the whole Modifier/Ends model existed, `movementCap` was read by the
+   * movement rules, and nothing in any card or Obszar could *cause* one — the
+   * only way into the table was the test console's `effect` shortcut. So the
+   * Mgła machinery worked and the Mgła card could not reach it.
+   *
+   * The two Świątynie are the first callers: "zostałeś opętany, pozostaniesz
+   * tu, dopóki nie wyrzucisz 1, 2 lub 3 oczka" is a cap of nought on how far
+   * you may walk, held until something lifts it.
+   */
+  | { op: "efekt"; label: string; modifier: Modifier; ends: Ends }
   /** Only happens to some characters (Posłańcy Bogów, Sabat Czarownic). */
   | { op: "gdy"; warunek: Condition; to: Effect; inaczej?: Effect };
 

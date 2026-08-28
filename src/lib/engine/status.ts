@@ -23,7 +23,17 @@ export type Ends =
   /** When a particular thing happens to the holder. */
   | { kind: "event"; co: EndingEvent }
   /** Never on its own — only when something takes it off. Fatum, Krąg Płomieni. */
-  | { kind: "dispelled" };
+  | { kind: "dispelled" }
+  /**
+   * When the holder throws this or less, on their own turn.
+   *
+   * Both Świątynie end their worst row that way: "zostałeś opętany,
+   * pozostaniesz tu, dopóki nie wyrzucisz podczas swojej tury 1, 2 lub 3 oczek
+   * (na 1 kostce)". Not a countdown — it may take one turn or a dozen — and not
+   * `dispelled` either, because nothing else lifts it and a status nothing can
+   * lift is a character nothing can move.
+   */
+  | { kind: "rzut"; upTo: number };
 
 /**
  * The events that end something.
@@ -137,6 +147,22 @@ export function afterFight(statuses: readonly Status[]): Status[] {
   return statuses.filter((status) => status.ends.kind !== "fight");
 }
 
+/**
+ * The holder threw for their freedom (both Świątynie, face 9).
+ *
+ * Rolled once and read by every status waiting on a die, because the board asks
+ * for one throw a turn rather than one per affliction — and a character
+ * unlucky enough to be held by two of them is not asked to roll twice.
+ */
+export function afterBreakout(statuses: readonly Status[], die: number): Status[] {
+  return statuses.filter((status) => !(status.ends.kind === "rzut" && die <= status.ends.upTo));
+}
+
+/** Whether anything the holder is under can be thrown off at all. */
+export function heldByARoll(statuses: readonly Status[]): boolean {
+  return statuses.some((status) => status.ends.kind === "rzut");
+}
+
 /** Something happened to the holder. */
 export function afterEvent(statuses: readonly Status[], event: EndingEvent): Status[] {
   return statuses.filter(
@@ -172,6 +198,8 @@ export function describeEnd(ends: Ends): string {
           : "do śmierci Postaci";
     case "dispelled":
       return "dopóki ktoś tego nie zdejmie";
+    case "rzut":
+      return `dopóki nie wyrzucisz ${ends.upTo} lub mniej`;
   }
 }
 

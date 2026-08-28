@@ -4,6 +4,9 @@ import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFieldOffer } from "./effects";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { breakFree } from "./friends";
+import { movementCap } from "@/lib/engine/status";
+import { statusesOf } from "./turn";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
@@ -332,5 +335,114 @@ describe("the Studnia Wieczności, which only answers a Dobra Postać", () => {
       expect(life).toBe(3);
       expect(said).toMatch(/nic się nie dzieje/);
     }
+  });
+});
+
+
+/**
+ * The two Świątynie — the only two-die tables in the box.
+ *
+ * Eleven rows each, so the middle is far likelier than the ends, and both are
+ * offers: "MOŻESZ MODLIĆ SIĘ". Between them they were the first callers for
+ * three things the vocabulary had and nothing used — a two-die table, a Karta
+ * the Obszar simply gives you, and a status a card can actually cause.
+ */
+const praying = (field: FieldId) =>
+  aTable({
+    game: {
+      turn_state: {
+        phase: "field", fieldId: field, from: null, draw: 0, drawn: [], resolved: [],
+      } as TurnPhase,
+      active_seat: 0,
+    },
+    seats: [
+      aSeat({
+        id: "seat-a",
+        character_id: asSeatCharacter("awanturnik"),
+        field_id: field,
+        life: 3,
+        nature: "good",
+      }),
+    ],
+  });
+
+/** Two dice summing to what the row needs. */
+const pair = (sum: number): number[] => {
+  const first = Math.min(6, sum - 1);
+  return [first, sum - first];
+};
+
+const pray = async (field: FieldId, sum: number, choices: number[] = []) => {
+  const table = praying(field);
+  const out = await resolveFieldOffer(
+    table,
+    { offerName: "Modlitwa", decided: { choices }, shuffle: (items) => [...items] },
+    ports({ random: scriptedRandom([...pair(sum), 1, 1]) }),
+  );
+  return { out, after: apply(table, out.writes) };
+};
+
+describe("the two Świątynie, and their two dice", () => {
+  it("reads the row the pair of dice actually landed on", async () => {
+    expect((await pray("swiatynia-bogini-nemed", 2)).after.seats[0].life).toBe(5);
+    expect((await pray("swiatynia-bogini-nemed", 12)).after.seats[0].life).toBe(1);
+    expect((await pray("swiatynia-tolimana", 11)).after.seats[0].life).toBe(4);
+  });
+
+  /** "otrzymujesz Magiczny Miecz (jeżeli jeszcze jakieś są)" */
+  it("hands over the Karta the row names", async () => {
+    const nemed = await pray("swiatynia-bogini-nemed", 11);
+    expect(nemed.after.holdings.map((h) => h.card_id)).toContain("magiczny-miecz");
+
+    const toliman = await pray("swiatynia-tolimana", 10);
+    expect(toliman.after.holdings.map((h) => h.card_id)).toContain("tarcza-tolimana");
+  });
+
+  /**
+   * A gift the character may not accept is said out loud rather than thrown.
+   * The Awanturnik's Magia allows no Zaklęcia at all (2.6), and this row used
+   * to abort the whole prayer with a stack trace.
+   */
+  it("says why a gift could not be taken, and finishes the prayer", async () => {
+    const { out } = await pray("swiatynia-bogini-nemed", 7);
+    expect(out.result.did.join(" ")).toMatch(/2\.6/);
+    expect(out.result.pending).toBeNull();
+  });
+
+  it("takes both points where the row says both", async () => {
+    const { out } = await pray("swiatynia-tolimana", 3);
+    expect(out.result.did.join(" ")).toMatch(/Magii/);
+    expect(out.result.did.join(" ")).toMatch(/Miecza/);
+  });
+});
+
+describe("being held in place, and throwing to get out", () => {
+  /**
+   * "zostałeś opętany, pozostaniesz tu, dopóki nie wyrzucisz podczas swojej
+   * tury 1, 2 lub 3 oczek (na 1 kostce)" — a cap of nought on how far you may
+   * walk, and an ending that is neither a countdown nor something anybody else
+   * can lift.
+   */
+  it("caps the character's movement at nothing", async () => {
+    const { after } = await pray("swiatynia-tolimana", 9);
+    expect(movementCap(statusesOf(after, "seat-a"))).toBe(0);
+  });
+
+  it("keeps holding on a high roll and lets go on a low one", async () => {
+    const { after } = await pray("swiatynia-bogini-nemed", 9);
+
+    const missed = await breakFree(after, {}, ports({ random: scriptedRandom([5]) }));
+    expect(missed.result.freed).toHaveLength(0);
+    expect(movementCap(statusesOf(apply(after, missed.writes), "seat-a"))).toBe(0);
+
+    const escaped = await breakFree(after, {}, ports({ random: scriptedRandom([3]) }));
+    expect(escaped.result.freed).toHaveLength(1);
+    expect(movementCap(statusesOf(apply(after, escaped.writes), "seat-a"))).toBeNull();
+  });
+
+  it("refuses to throw when nothing is holding you", async () => {
+    await expect(breakFree(praying("swiatynia-tolimana"), {}, ports())).rejects.toThrow(
+      /Nic cię tu nie trzyma/,
+    );
   });
 });

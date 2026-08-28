@@ -37,6 +37,7 @@ import {
   sendRaider,
   payFriend,
   speakCarriedSpell,
+  breakFree,
   beginFight,
   dropCard,
   equipCard,
@@ -1038,6 +1039,14 @@ export async function runCommand(
       const seat = seatOf(command.who);
       await attackSeat(gameId, seat.id);
       return `${named(seatOf(null))} attacks ${named(seat)}.`;
+    }
+
+    case "free": {
+      const seat = seatOf(null);
+      const out = await breakFree(gameId);
+      return out.freed.length > 0
+        ? `${named(seat)} rolls ${out.die} and breaks free.`
+        : `${named(seat)} rolls ${out.die} — still held.`;
     }
 
     case "ask": {

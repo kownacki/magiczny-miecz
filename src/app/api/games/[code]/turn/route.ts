@@ -8,6 +8,7 @@ import {
   sendRaider,
   payFriend,
   speakCarriedSpell,
+  breakFree,
   beginFight,
   crossRing,
   fightGuardian,
@@ -123,6 +124,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       // one card in the box sells anything, so there is nothing to name.
       // The Krzyżowiec or the Gnom speaking what he carries. No holding named:
       // a character has at most one of each and the command finds it.
+      // Throwing to shake off an Obszar that is holding the character in place
+      // (both Świątynie, face 9). No body: it is always the actor's own seat.
+      case "free":
+        await breakFree(game.id);
+        break;
       case "ask":
         await speakCarriedSpell(game.id);
         break;

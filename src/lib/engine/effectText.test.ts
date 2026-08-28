@@ -169,6 +169,12 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   "jak-pole": { op: "jak-pole", fieldId: "swiatynia-bogini-nemed" },
   "poloz-karte": { op: "poloz-karte", gdzie: { kind: "dowolne-w-kregu" } },
   otrzymaj: { op: "otrzymaj", co: "Magiczny Miecz" },
+  efekt: {
+    op: "efekt",
+    label: "Opętany",
+    modifier: { kind: "move-max", pola: 0 },
+    ends: { kind: "dispelled" },
+  },
 };
 
 describe("what one row of a field's table says", () => {

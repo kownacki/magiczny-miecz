@@ -380,19 +380,21 @@ describe("spending a Karta that is used up by using it", () => {
   });
 
   /**
-   * A face the app cannot finish is handed back rather than dropped.
+   * Face 1 is the Tarcza Tolimana, and the app hands it over itself now.
    *
-   * Face 1 is the Tarcza Tolimana — a Karta somebody has to pass across the
-   * table — so the card is still spent and the rest is the table's.
+   * It used to be given back to the table — `otrzymaj` was in the vocabulary
+   * with no implementation behind it, so a Karta the Obszar or the Szkatuła
+   * simply gives you was a rule the players had to carry out. 21.2's stock is
+   * counted by `takeCard`, which is the same door a bought one goes through.
    */
-  it("hands back what it cannot finish", async () => {
+  it("hands over a Karta the card simply gives you", async () => {
     const { result } = await spendHolding(
       holding("tajemnicza-szkatula"),
       { holdingId: "h1", shuffle: asIs },
       ports({ random: scriptedRandom([1]) }),
     );
-    expect(result.stol).toBe(true);
-    expect(result.did.length).toBeGreaterThan(0);
+    expect(result.stol).toBe(false);
+    expect(result.did.join(" ")).toMatch(/TARCZA TOLIMANA/);
   });
 });
 

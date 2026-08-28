@@ -188,6 +188,7 @@ export type Command =
   | { kind: "raid"; who: string }
   | { kind: "pay" }
   | { kind: "ask" }
+  | { kind: "free" }
   /* What you carry. A name, because a holding's id is a uuid nobody can type. */
   | { kind: "take"; name: string }
   | { kind: "putdown"; name: string }
@@ -479,6 +480,17 @@ export const COMMANDS: CommandSpec[] = [
     when: ["field"],
     usage: "attack <player>",
     summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
+    needs: "play",
+  },
+  {
+    // Named for what it is trying to do rather than for what is holding you:
+    // the Świątynie call it being opętany, and a second Obszar that pinned a
+    // character would reach for this verb rather than earn its own.
+    name: "free",
+    aliases: [],
+    when: ["field", "move", "roll"],
+    usage: "free",
+    summary: "throw to shake off something holding you in place (Świątynie)",
     needs: "play",
   },
   {
@@ -1178,6 +1190,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
   if (word === "pay") return { ok: { kind: "pay" } };
   if (word === "ask") return { ok: { kind: "ask" } };
+  if (word === "free") return { ok: { kind: "free" } };
   if (word === "raid") {
     return tail
       ? { ok: { kind: "raid", who: tail } }
@@ -1561,6 +1574,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   raid: "play",
   pay: "play",
   ask: "play",
+  free: "play",
   take: "play",
   putdown: "play",
   equip: "play",

@@ -50,6 +50,7 @@ import {
   type UseResult,
 } from "./commands/effects";
 import {
+  breakFree as breakFreeOn,
   payFriend as payFriendOn,
   speakCarriedSpell as speakCarriedSpellOn,
 } from "./commands/friends";
@@ -899,6 +900,11 @@ export async function payFriend(gameId: string, seatId?: string): Promise<string
 /** Has a Przyjaciel speak the Zaklęcie he carries. Returns what the table must now do. */
 export async function speakCarriedSpell(gameId: string, seatId?: string) {
   return await change(gameId, speakCarriedSpellOn, { seatId });
+}
+
+/** Throws to shake off something holding the character in place. */
+export async function breakFree(gameId: string, seatId?: string) {
+  return await change(gameId, breakFreeOn, { seatId });
 }
 
 export async function sendRaider(

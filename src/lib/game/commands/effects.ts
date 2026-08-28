@@ -5,6 +5,8 @@ import type { Shuffle } from "@/lib/engine/deck";
 import { isSettled } from "@/lib/engine/resolve";
 import { scriptFor } from "@/lib/engine/cardScript";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
+import { cardIdNamed } from "@/lib/engine/lookup";
+import { takeCard } from "./holdings";
 import { describeEffect } from "@/lib/engine/effectText";
 import { usageOf } from "@/lib/engine/uses";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
@@ -253,7 +255,13 @@ async function walk(
      * part and a table that rolled silently would be a table nobody can check.
      */
     case "rzut": {
-      const face = await ports.random.rollD6(`${reason}: tabela`);
+      // Two dice are two throws and a sum, not one throw of a bigger die: the
+      // distribution is the whole point of a 2-12 table.
+      const face =
+        effect.kostki === 2
+          ? (await ports.random.rollD6(`${reason}: tabela (1)`)) +
+            (await ports.random.rollD6(`${reason}: tabela (2)`))
+          : await ports.random.rollD6(`${reason}: tabela`);
       const rolled: Changeset = {
         journal: [
           {
@@ -271,6 +279,59 @@ async function walk(
         writes: merge(rolled, done.writes),
         result: { did: done.result.did, pending: done.result.pending },
       };
+    }
+
+    /**
+     * A Karta the Obszar hands you outright.
+     *
+     * "otrzymujesz Magiczny Miecz (jeżeli jeszcze jakieś są)" at the Świątynia
+     * Bogini Nemed, and the Tarcza Tolimana at the other one. The parenthesis
+     * is 21.2's stock rule and needs nothing here: `takeCard` already refuses
+     * when the Wyposażenie has none left, along with 5.3's Natura restriction
+     * and 5.4's carrying limit, and each of those is a real reason a character
+     * walks away empty-handed. The refusal is reported rather than swallowed,
+     * because "nie ma już ani jednej" and "twoja Natura nie pozwala" are things
+     * a table will otherwise argue about.
+     *
+     * Declared in the vocabulary from the start and never implemented — no card
+     * used it, and the two Obszary that do were not scripted until now.
+     */
+    /**
+     * Puts the character under something that lasts.
+     *
+     * Delegated to `addEffect` rather than writing the row here, so a status a
+     * card causes and a status the test console conjures reach `seat_effects`
+     * by the same door and get the same journal line. 1.2 and 2.2 are why it is
+     * a row and not an adjustment: an effect is added at read time and never
+     * written into own points, or it would outlive its own expiry.
+     */
+    case "efekt": {
+      const put = addEffect(snapshot, {
+        seatId,
+        effect: {
+          source: reason,
+          label: effect.label,
+          modifier: effect.modifier,
+          ends: effect.ends,
+        },
+      });
+      return { writes: put, result: { did: [effect.label], pending: null } };
+    }
+
+    case "otrzymaj": {
+      const found = cardIdNamed(effect.co);
+      if (!("id" in found)) {
+        return nothing([`${effect.co} — nie wiadomo, o którą Kartę chodzi`]);
+      }
+      try {
+        const taken = takeCard(snapshot, { seatId, cardId: found.id });
+        return {
+          writes: taken.writes,
+          result: { did: [`otrzymujesz: ${cardName(found.id)}`], pending: null },
+        };
+      } catch (refused) {
+        return nothing([(refused as Error).message]);
+      }
     }
 
     case "punkty": {
@@ -548,10 +609,35 @@ async function walk(
     case "zaklecie": {
       let writes: Changeset = {};
       const names: string[] = [];
+      /**
+       * A gift the character may not accept is reported, not thrown.
+       *
+       * 2.6 caps the hand by Magia and `drawSpell` refuses over it — which is
+       * right, and used to abort the whole resolution: a Świątynia table whose
+       * seventh row is a Zaklęcie would crash mid-prayer for a Postać with
+       * Magia 0, losing the rows already applied. The same bargain `otrzymaj`
+       * makes, and for the same reason: "your Magia does not allow it" is an
+       * outcome a table needs told, not a stack trace.
+       *
+       * Anything drawn before the refusal is kept — the pile really did give
+       * those up, and putting them back would need a second write nothing asked
+       * for.
+       */
       for (let i = 0; i < effect.count; i++) {
-        const done = drawSpell(apply(snapshot, writes), { seatId, shuffle });
-        writes = merge(writes, done.writes);
-        names.push(done.result);
+        try {
+          const done = drawSpell(apply(snapshot, writes), { seatId, shuffle });
+          writes = merge(writes, done.writes);
+          names.push(done.result);
+        } catch (refused) {
+          const said = (refused as Error).message;
+          return {
+            writes,
+            result: {
+              did: names.length > 0 ? [`Zaklęcie: ${names.join(", ")}`, said] : [said],
+              pending: null,
+            },
+          };
+        }
       }
       return { writes, result: { did: [`Zaklęcie: ${names.join(", ")}`], pending: null } };
     }
@@ -814,7 +900,16 @@ export async function resolveFieldOffer(
     };
   }
 
-  const face = table ? await ports.random.rollD6(`${offer.name}: tabela`) : undefined;
+  // Two dice where the Obszar prints two — "MOŻESZ MODLIĆ SIĘ RZUCAJĄC 2
+  // KOSTKAMI" — because a 2-12 table read off one die would never reach half
+  // its rows and would reach the rest far too evenly.
+  const pair = table && offer.effect.op === "rzut" && offer.effect.kostki === 2;
+  const face = !table
+    ? undefined
+    : pair
+      ? (await ports.random.rollD6(`${offer.name}: tabela (1)`)) +
+        (await ports.random.rollD6(`${offer.name}: tabela (2)`))
+      : await ports.random.rollD6(`${offer.name}: tabela`);
   const rolled: Changeset =
     face !== undefined
       ? {
