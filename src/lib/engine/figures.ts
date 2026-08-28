@@ -9,14 +9,14 @@
  * > każdej innej sytuacji… W efekcie Troll posiada **parametr Miecza równy 8
  * > (6+1+1), a podczas walki 11**.
  *
- * So: **własne** are the żetony and nothing else (1.2 — a Przedmiot's points
+ * So: **bazowe** are the żetony and nothing else (1.2 — a Przedmiot's points
  * are never marked with a token); **parametr** adds what is always on;
  * **w walce** adds what only counts when somebody swings.
  *
  * All three are read by something. `w walce` is 17.4 and every `op: "walka"`.
  * `parametr` is what the Trzęsawiska test and the six Kamienny Most ordeals
  * subtract, and what the Labirynt and the Spalona Ziemia measure — obstacles
- * rather than fights, which is the line the box actually draws. `własne` is
+ * rather than fights, which is the line the box actually draws. `bazowe` is
  * 1.3's floor and what 1.4's trophies raise.
  */
 
@@ -37,17 +37,21 @@ export interface Figures {
  *
  * The rule, once, so both surfaces read the same:
  *
- * > **Parentheses always hold własne. A bare second number is the parametr. The
- * > crossed swords mark the fight figure. A figure you cannot see equals the
- * > one to its right.**
+ * > **Parentheses always hold the bazowe figure. A bare second number is the
+ * > parametr. The crossed swords mark the fight figure. A figure you cannot see
+ * > equals the one to its right.**
  *
  * ```
- * 6           nothing lends anything
- * 8 (6)       always-on only        — w walce = parametr = 8
- * 9⚔ (6)      fight-only only       — parametr = własne = 6
- * 11⚔ 8 (6)   both, which is 1.5's Troll
- * 3⚔ (5)      a Rycerz standing in for you — lower, and that is not a bug
+ * 6            nothing lends anything
+ * 8 (6)        always-on only        — w walce = parametr = 8
+ * 9⚔ (6)       fight-only only       — parametr = bazowe = 6
+ * 11⚔, 8 (6)   both, which is 1.5's Troll
+ * 3⚔ (5)       a Rycerz standing in for you — lower, and that is not a bug
  * ```
+ *
+ * The comma appears only where two bare numbers would otherwise touch. "11 8"
+ * reads as one run and needs separating; "9⚔ (6)" does not, because the
+ * parenthesis has already done it.
  *
  * The last one is why nothing here assumes the numbers descend.
  * `walczy-za-ciebie` *replaces* the fight figure with the champion's rather
@@ -75,11 +79,12 @@ export const IN_FIGHT = "⚔";
 export function figuresText(own: number, parametr: number, walka: number): string {
   const figures = figuresOf(own, parametr, walka);
   if (figures.bare) return String(own);
-  return [
-    figures.walka === null ? null : `${figures.walka}${IN_FIGHT}`,
-    figures.parametr === null ? null : String(figures.parametr),
-    `(${own})`,
-  ]
+  // The comma only where two bare numbers would touch — see the note above.
+  const fight =
+    figures.walka === null
+      ? null
+      : `${figures.walka}${IN_FIGHT}${figures.parametr === null ? "" : ","}`;
+  return [fight, figures.parametr === null ? null : String(figures.parametr), `(${own})`]
     .filter((part): part is string => part !== null)
     .join(" ");
 }

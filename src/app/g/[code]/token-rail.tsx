@@ -346,13 +346,42 @@ export function StatFigure({
       {figures.walka !== null && (
         <>
           {figures.walka}
-          <span className="opacity-70">{IN_FIGHT}</span>{" "}
+          {/* Bigger than the digits it sits among, the same way an effect mark
+              is drawn at 15px inside 13px text: a symbol at the size of a
+              numeral reads smaller than one, because it has no x-height to
+              match. The comma only where a bare parametr follows — "11 8"
+              reads as one run and needs separating, "9⚔ (6)" does not. */}
+          <span className="text-[15px] leading-none opacity-70">{IN_FIGHT}</span>
+          {figures.parametr !== null ? ", " : " "}
         </>
       )}
       {figures.parametr !== null && <>{figures.parametr} </>}
       <span className="opacity-60">({value})</span>
     </>
   );
+}
+
+/**
+ * The hover for one rail: every figure that says something, named, in the order
+ * the numeral draws them.
+ *
+ * ```
+ * Miecz: 6                                    nothing lends anything
+ * Miecz: parametr 8, bazowe 6                 always-on only
+ * Miecz: w walce 9, bazowe 6                  fight-only only
+ * Miecz: w walce 11, parametr 8, bazowe 6     all three
+ * ```
+ */
+function statTitle(label: string, own: number, parametr: number, walka: number): string {
+  const figures = figuresOf(own, parametr, walka);
+  if (figures.bare) return `${label}: ${own}`;
+  return `${label}: ${[
+    figures.walka === null ? null : `w walce ${figures.walka}`,
+    figures.parametr === null ? null : `parametr ${figures.parametr}`,
+    `bazowe ${own}`,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(", ")}`;
 }
 
 export function RailStat({
@@ -433,25 +462,20 @@ export function RailStat({
       */}
       <span
         /**
-         * Each number once, and only the ones that differ.
+         * The same three figures the numeral shows, named, and in the same
+         * order it draws them.
          *
-         * The fight branch printed "(własne N)" unconditionally, so a character
-         * whose total *is* its own points read "Miecz: 103, w walce 104 (własne
-         * 103)" — the same figure twice, which makes a correct reading look
-         * like a broken one. It is the commonest case there is, too: a plain
-         * Miecz is `tylkoWalka`, so it lifts the fight figure and leaves the
-         * parametr alone, and then own and total agree by definition.
+         * It used to read them the other way round, so the rail said
+         * "106⚔, 105 (104)" and the hover answered "105, w walce 106, własne
+         * 104". Two orders for three numbers is one order too many.
          *
-         * Built up rather than branched, because three independent facts make
-         * eight sentences and only three of them were ever written.
+         * Off `figuresOf`, so which of them are worth saying is decided once
+         * and not twice. Every one that survives is named, because the middle
+         * figure has no parenthesis or glyph to identify it — and „parametr"
+         * and „w walce" are the rulebook's words, defined in the shelf's own
+         * glossary.
          */
-        title={[
-          `${label}: ${shown}`,
-          inFight !== undefined && inFight !== shown ? `w walce ${inFight}` : null,
-          shown !== value ? `własne ${value}` : null,
-        ]
-          .filter(Boolean)
-          .join(", ")}
+        title={statTitle(label, value, shown, inFight ?? shown)}
         className={`tnum mt-1 min-h-[13px] text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
       >
         {/* All three, in `figures.ts`'s notation: the fight figure marked with

@@ -1572,10 +1572,10 @@ export async function runCommand(
          * counts „w walce" and nowhere else, so for anybody armed it is *the*
          * number, and it was the one below the fold.
          *
-         * Own points were also the wrong way round here — printed first with
-         * the parametr in parentheses, where the notation puts własne in the
-         * parentheses and reads left to right from the most situational figure
-         * to the plainest.
+         * The bazowe figure was also the wrong way round here — printed
+         * first with the parametr in parentheses, where the notation puts the
+         * bazowe figure in the parentheses and reads left to right from the
+         * most situational figure to the plainest.
          */
         `Sword ${figuresText(seat.sword_own, view.parametr.miecz, view.walka.miecz)}  ` +
           `Magic ${figuresText(seat.magic_own, view.parametr.magia, view.walka.magia)}  ` +

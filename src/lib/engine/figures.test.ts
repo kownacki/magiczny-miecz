@@ -20,8 +20,9 @@ describe("saying all three figures", () => {
   });
 
   /** 1.5's Troll, which is the example the whole thing is read off. */
+  /** The comma only where two bare numbers would otherwise touch. */
   it("says all three when all three differ", () => {
-    expect(figuresText(6, 8, 11)).toBe("11⚔ 8 (6)");
+    expect(figuresText(6, 8, 11)).toBe("11⚔, 8 (6)");
   });
 
   /**
@@ -30,7 +31,7 @@ describe("saying all three figures", () => {
    */
   it("does not assume the numbers go down", () => {
     expect(figuresText(5, 5, 3)).toBe("3⚔ (5)");
-    expect(figuresText(5, 6, 3)).toBe("3⚔ 6 (5)");
+    expect(figuresText(5, 6, 3)).toBe("3⚔, 6 (5)");
   });
 
   it("hands the parts back for a surface that draws rather than prints", () => {
