@@ -136,7 +136,7 @@ describe("Zaklęcia that leave something behind", () => {
     const script = (SPELLS as Record<string, { stosuje?: { modifier: unknown; ends: unknown } }>)[
       "magia-i-miecz"
     ];
-    expect(script.stosuje?.modifier).toEqual({ kind: "magia-do-miecza" });
+    expect(script.stosuje?.modifier).toEqual({ kind: "magia-as-miecz" });
     expect(script.stosuje?.ends).toEqual({ kind: "fight" });
   });
 });

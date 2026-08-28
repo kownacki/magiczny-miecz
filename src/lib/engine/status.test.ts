@@ -51,8 +51,8 @@ describe("what a character is under", () => {
     // Mgła caps at one Obszar; Południca does too. Two caps do not add up, and
     // the stricter of them is the one being obeyed.
     const under = [
-      status({ modifier: { kind: "move-max", pola: 2 } }),
-      status({ id: "b", modifier: { kind: "move-max", pola: 1 } }),
+      status({ modifier: { kind: "move-max", fields: 2 } }),
+      status({ id: "b", modifier: { kind: "move-max", fields: 1 } }),
     ];
     expect(movementCap(under)).toBe(1);
     expect(movementCap([])).toBeNull();
@@ -64,7 +64,7 @@ describe("what a character is under", () => {
   });
 
   it("reports a Natura being forced", () => {
-    expect(forcedNature([status({ modifier: { kind: "nature", na: "evil" } })])).toBe("evil");
+    expect(forcedNature([status({ modifier: { kind: "nature", to: "evil" } })])).toBe("evil");
     expect(forcedNature([status()])).toBeNull();
   });
 });
@@ -95,8 +95,8 @@ describe("what makes an effect stop", () => {
 
   it("ends an effect on the event it was waiting for, and no other", () => {
     const under = [
-      status({ id: "poludnica", ends: { kind: "event", co: "crossing" } }),
-      status({ id: "most", ends: { kind: "event", co: "bridge-entry" } }),
+      status({ id: "poludnica", ends: { kind: "event", what: "crossing" } }),
+      status({ id: "most", ends: { kind: "event", what: "bridge-entry" } }),
     ];
     expect(ids(afterEvent(under, "crossing"))).toEqual(["most"]);
     expect(ids(afterEvent(under, "death"))).toEqual(["poludnica", "most"]);
@@ -117,7 +117,7 @@ describe("telling the player how long", () => {
     expect(describeEnd({ kind: "turns", turns: 1 })).toBe("do końca tej tury");
     expect(describeEnd({ kind: "turns", turns: 3 })).toContain("3");
     expect(describeEnd({ kind: "fight" })).toBe("do końca walki");
-    expect(describeEnd({ kind: "event", co: "crossing" })).toContain("Trzęsawiska");
+    expect(describeEnd({ kind: "event", what: "crossing" })).toContain("Trzęsawiska");
     expect(describeEnd({ kind: "dispelled" })).toContain("zdejmie");
   });
 
@@ -126,8 +126,8 @@ describe("telling the player how long", () => {
     const all = [
       { kind: "turns", turns: 2 },
       { kind: "fight" },
-      { kind: "event", co: "bridge-entry" },
-      { kind: "event", co: "death" },
+      { kind: "event", what: "bridge-entry" },
+      { kind: "event", what: "death" },
       { kind: "dispelled" },
     ] as const;
     for (const ends of all) expect(describeEnd(ends).length).toBeGreaterThan(0);
@@ -198,9 +198,9 @@ describe("what a player sees on a name", () => {
     // compile error, not a blank space on somebody's name.
     const all: Status["modifier"][] = [
       { kind: "points", miecz: 1 },
-      { kind: "move-max", pola: 1 },
+      { kind: "move-max", fields: 1 },
       { kind: "frozen" },
-      { kind: "nature", na: "evil" },
+      { kind: "nature", to: "evil" },
       { kind: "barred", place: "most" },
       { kind: "note" },
     ];

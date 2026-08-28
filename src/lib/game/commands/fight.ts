@@ -1048,7 +1048,7 @@ export function attackSeat(
         effect: {
           source: "13.3",
           label: "Podniósł rękę na inną Postać",
-          modifier: { kind: "napastnik" },
+          modifier: { kind: "attacker" },
           ends: { kind: "dispelled" },
         },
       });
@@ -1549,10 +1549,10 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
 function missionDone(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset {
   if (fight.result?.outcome !== "wygrana") return {};
   const errand = missionOf(statusesOf(snapshot, seat.id));
-  if (!errand || errand.gotowa) return {};
+  if (!errand || errand.done) return {};
 
-  const wanted = fight.opponentSeat !== undefined ? "postac" : "wrog";
-  if (errand.co !== wanted) return {};
+  const wanted = fight.opponentSeat !== undefined ? "character" : "foe";
+  if (errand.what !== wanted) return {};
 
   return {
     effects: {
@@ -1560,7 +1560,7 @@ function missionDone(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset
         {
           id: errand.id,
           patch: {
-            modifier: { kind: "misja", co: errand.co, gotowa: true },
+            modifier: { kind: "mission", what: errand.what, done: true },
             label: "Misja wypełniona — wróć po Tarczę",
           },
         },
@@ -1568,7 +1568,7 @@ function missionDone(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset
     },
     // "po wypełnieniu misji zostaniesz natychmiast przeniesiony do Twierdzy" —
     // only the errand against another Postać carries you back.
-    ...(errand.co === "postac"
+    ...(errand.what === "character"
       ? { seats: [{ id: seat.id, patch: { field_id: "twierdza-strzegaca-drog" } }] }
       : {}),
     journal: [

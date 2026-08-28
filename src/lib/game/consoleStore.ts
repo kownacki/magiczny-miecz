@@ -114,7 +114,7 @@ import { fold } from "@/lib/engine/search";
  * exactly like the card's.
  */
 const EFFECTS: Record<EffectName, { label: string; modifier: Modifier }> = {
-  fog: { label: "Mgła (tryb testowy)", modifier: { kind: "move-max", pola: 1 } },
+  fog: { label: "Mgła (tryb testowy)", modifier: { kind: "move-max", fields: 1 } },
   frozen: { label: "Bez ruchu (tryb testowy)", modifier: { kind: "frozen" } },
   barred: {
     label: "Most zamknięty (tryb testowy)",

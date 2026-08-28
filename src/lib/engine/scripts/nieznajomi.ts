@@ -189,7 +189,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   "dobre-bostwo": {
     effect: {
       op: "gdy",
-      warunek: { is: "napastnik" },
+      warunek: { is: "attacker" },
       to: {
         op: "wybor",
         options: [
@@ -199,7 +199,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
             effect: {
               op: "efekt",
               label: "Osądzony — nie ruszysz się stąd przez turę",
-              modifier: { kind: "move-max", pola: 0 },
+              modifier: { kind: "move-max", fields: 0 },
               ends: { kind: "turns", turns: 1 },
             },
           },

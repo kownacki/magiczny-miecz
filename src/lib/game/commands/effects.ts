@@ -312,7 +312,7 @@ async function walk(
           ? seat.gold > 0
           : // What the character did earlier, which 13.3 wrote down for the one
             // card that asks.
-            effect.warunek.is === "napastnik"
+            effect.warunek.is === "attacker"
             ? hasAttacked(statusesOf(snapshot, seat.id))
             : (effect.warunek.stat === "sword" ? seat.sword_own : seat.magic_own) <
               effect.warunek.ponizej;

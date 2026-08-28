@@ -65,7 +65,7 @@ export function describeCondition(condition: Condition): string {
               return `jeśli ${condition.jedna_z.map((n) => NATURE_LABEL[n] ?? n).join(" lub ")}`;
     case "prog":
       return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
-    case "napastnik":
+    case "attacker":
       return "jeśli zaatakowałeś inną Postać w tej rozgrywce";
     case "ma-zloto":
       return "jeśli masz złoto";

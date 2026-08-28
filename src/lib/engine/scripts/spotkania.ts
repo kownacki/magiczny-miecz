@@ -231,8 +231,8 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "efekt",
       label: "Południca — najwyżej 1 Obszar na turę",
-      modifier: { kind: "move-max", pola: 1 },
-      ends: { kind: "event", co: "crossing" },
+      modifier: { kind: "move-max", fields: 1 },
+      ends: { kind: "event", what: "crossing" },
     },
     disposition: { kind: "bierzesz" },
   },
@@ -260,7 +260,7 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
         {
           op: "efekt",
           label: "Zły Duch — nie zdobędziesz Przyjaciół, póki nie odwiedzisz Pustelni",
-          modifier: { kind: "bez-przyjaciol" },
+          modifier: { kind: "no-friends" },
           ends: { kind: "dispelled" },
         },
       ],

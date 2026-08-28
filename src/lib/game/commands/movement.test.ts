@@ -240,7 +240,7 @@ describe("rzut na ruch (10.2)", () => {
         seat_id: "seat-a",
         source: "mgla",
         label: "Mgła",
-        modifier: { kind: "move-max", pola: 1 },
+        modifier: { kind: "move-max", fields: 1 },
         ends: { kind: "turns", turns: 1 },
       },
     ];

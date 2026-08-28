@@ -106,7 +106,7 @@ describe("finishing it, which happens somewhere else", () => {
   it("marks the Wróg errand done on a won fight, and leaves you where you are", async () => {
     const { after } = await accept(1);
     const done = await settle(havingWon(after, "cyklop"));
-    expect(missionOf(statusesOf(done, "seat-a"))?.gotowa).toBe(true);
+    expect(missionOf(statusesOf(done, "seat-a"))?.done).toBe(true);
     expect(done.seats[0].field_id).toBe("wrzosowiska");
   });
 
@@ -114,18 +114,18 @@ describe("finishing it, which happens somewhere else", () => {
   it("carries you back for the Postać errand, and only that one", async () => {
     const { after } = await accept(2);
     const done = await settle(havingWon(after, "seat:1", 1));
-    expect(missionOf(statusesOf(done, "seat-a"))?.gotowa).toBe(true);
+    expect(missionOf(statusesOf(done, "seat-a"))?.done).toBe(true);
     expect(done.seats[0].field_id).toBe(TWIERDZA);
   });
 
   it("does not count the wrong kind of victory", async () => {
     const one = await accept(1);
     const wrog = await settle(havingWon(one.after, "seat:1", 1));
-    expect(missionOf(statusesOf(wrog, "seat-a"))?.gotowa).toBe(false);
+    expect(missionOf(statusesOf(wrog, "seat-a"))?.done).toBe(false);
 
     const two = await accept(2);
     const postac = await settle(havingWon(two.after, "cyklop"));
-    expect(missionOf(statusesOf(postac, "seat-a"))?.gotowa).toBe(false);
+    expect(missionOf(statusesOf(postac, "seat-a"))?.done).toBe(false);
   });
 });
 

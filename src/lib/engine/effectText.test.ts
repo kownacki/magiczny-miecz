@@ -175,7 +175,7 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   efekt: {
     op: "efekt",
     label: "Opętany",
-    modifier: { kind: "move-max", pola: 0 },
+    modifier: { kind: "move-max", fields: 0 },
     ends: { kind: "dispelled" },
   },
 };

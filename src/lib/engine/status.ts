@@ -21,7 +21,7 @@ export type Ends =
   /** When the next fight finishes, however it finishes (17.4). */
   | { kind: "fight" }
   /** When a particular thing happens to the holder. */
-  | { kind: "event"; co: EndingEvent }
+  | { kind: "event"; what: EndingEvent }
   /** Never on its own — only when something takes it off. Fatum, Krąg Płomieni. */
   | { kind: "dispelled" }
   /**
@@ -33,7 +33,7 @@ export type Ends =
    * `dispelled` either, because nothing else lifts it and a status nothing can
    * lift is a character nothing can move.
    */
-  | { kind: "rzut"; upTo: number };
+  | { kind: "roll"; upTo: number };
 
 /**
  * The events that end something.
@@ -55,11 +55,11 @@ export type Modifier =
   /** Added to the total at read time, never written to own points (1.2-1.5). */
   | { kind: "points"; miecz?: number; magia?: number }
   /** A hard cap on how far the holder may move, whatever the die says. Mgła. */
-  | { kind: "move-max"; pola: number }
+  | { kind: "move-max"; fields: number }
   /** Cannot act at all: Kamień, and the turn a Zaklinacz Czasu takes. */
   | { kind: "frozen" }
   /** Natura is forced to something while this lasts. */
-  | { kind: "nature"; na: Nature }
+  | { kind: "nature"; to: Nature }
   /**
    * Shut out of one place. 11.11 bars a failed attempt on the Kamienny Most
    * from trying again next turn, which is not a cap on movement and not a
@@ -83,11 +83,11 @@ export type Modifier =
    * It lives in `seat_effects` rather than in a column of its own because that
    * is already the table for things that are true of a character for a while,
    * and a mission needs exactly what a status needs: something to show the
-   * player, and something the rules can read. `gotowa` is set when the errand
+   * player, and something the rules can read. `done` is set when the errand
    * is done but the Tarcza has not been collected — for a Wróg or a Postać the
    * doing and the collecting happen in different places.
    */
-  | { kind: "misja"; co: "wrog" | "postac" | "zloto"; ile?: number; gotowa?: true }
+  | { kind: "mission"; what: "foe" | "character" | "gold"; count?: number; done?: true }
   /**
    * No new Przyjaciele while this lasts (Zły Duch).
    *
@@ -95,7 +95,7 @@ export type Modifier =
    * odwiedzając Pustelnię." A prohibition rather than a cost, and the only one
    * in the box that bars a whole kind of card from being picked up.
    */
-  | { kind: "bez-przyjaciol" }
+  | { kind: "no-friends" }
   /**
    * Magia counts towards Miecz for one fight (Magia i Miecz).
    *
@@ -106,7 +106,7 @@ export type Modifier =
    * "lecz nie w walce magicznej": there is no sense in adding Magia to Magia,
    * and the card says so rather than leaving it to be worked out.
    */
-  | { kind: "magia-do-miecza" }
+  | { kind: "magia-as-miecz" }
   /**
    * The movement roll is doubled (Formuła Przestrzeni).
    *
@@ -115,7 +115,7 @@ export type Modifier =
    * a fight. It multiplies where `move-max` caps, so a character under both
    * walks the smaller of the two.
    */
-  | { kind: "ruch-x2" }
+  | { kind: "move-x2" }
   /**
    * This character has raised a hand against another (Dobre Bóstwo).
    *
@@ -128,7 +128,7 @@ export type Modifier =
    * last, and this one lasts the whole game: nothing lifts it, which is what
    * `Ends.dispelled` says when nothing dispels.
    */
-  | { kind: "napastnik" };
+  | { kind: "attacker" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -164,7 +164,7 @@ export function bonusFrom(statuses: readonly Status[]): { miecz: number; magia: 
 export function movementCap(statuses: readonly Status[]): number | null {
   const caps = statuses
     .filter((status) => status.modifier.kind === "move-max")
-    .map((status) => (status.modifier as { kind: "move-max"; pola: number }).pola);
+    .map((status) => (status.modifier as { kind: "move-max"; fields: number }).fields);
   return caps.length > 0 ? Math.min(...caps) : null;
 }
 
@@ -176,7 +176,7 @@ export function frozen(statuses: readonly Status[]): boolean {
 /** The Natura being forced on the holder, if any. */
 export function forcedNature(statuses: readonly Status[]): Nature | null {
   const forced = statuses.find((status) => status.modifier.kind === "nature");
-  return forced ? (forced.modifier as { kind: "nature"; na: Nature }).na : null;
+  return forced ? (forced.modifier as { kind: "nature"; to: Nature }).to : null;
 }
 
 /**
@@ -212,40 +212,40 @@ export function afterFight(statuses: readonly Status[]): Status[] {
  * unlucky enough to be held by two of them is not asked to roll twice.
  */
 export function afterBreakout(statuses: readonly Status[], die: number): Status[] {
-  return statuses.filter((status) => !(status.ends.kind === "rzut" && die <= status.ends.upTo));
+  return statuses.filter((status) => !(status.ends.kind === "roll" && die <= status.ends.upTo));
 }
 
 /** Whether this character has attacked another during the game (Dobre Bóstwo). */
 export function hasAttacked(statuses: readonly Status[]): boolean {
-  return statuses.some((status) => status.modifier.kind === "napastnik");
+  return statuses.some((status) => status.modifier.kind === "attacker");
 }
 
 /** Whether a status folds Magia into Miecz for a fight (Magia i Miecz). */
 export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
-  return statuses.some((status) => status.modifier.kind === "magia-do-miecza");
+  return statuses.some((status) => status.modifier.kind === "magia-as-miecz");
 }
 
 /** How much the movement roll is multiplied by (Formuła Przestrzeni). */
 export function moveMultiplier(statuses: readonly Status[]): number {
-  return statuses.some((status) => status.modifier.kind === "ruch-x2") ? 2 : 1;
+  return statuses.some((status) => status.modifier.kind === "move-x2") ? 2 : 1;
 }
 
 /** Whether something is barring this character from gaining Przyjaciele (Zły Duch). */
 export function barredFromFriends(statuses: readonly Status[]): boolean {
-  return statuses.some((status) => status.modifier.kind === "bez-przyjaciol");
+  return statuses.some((status) => status.modifier.kind === "no-friends");
 }
 
 /** The errand this character is carrying for the Władca, if any. */
 export function missionOf(
   statuses: readonly Status[],
-): { id: string; co: "wrog" | "postac" | "zloto"; ile: number; gotowa: boolean } | null {
+): { id: string; what: "foe" | "character" | "gold"; count: number; done: boolean } | null {
   for (const status of statuses) {
-    if (status.modifier.kind !== "misja") continue;
+    if (status.modifier.kind !== "mission") continue;
     return {
       id: status.id,
-      co: status.modifier.co,
-      ile: status.modifier.ile ?? 0,
-      gotowa: status.modifier.gotowa ?? false,
+      what: status.modifier.what,
+      count: status.modifier.count ?? 0,
+      done: status.modifier.done ?? false,
     };
   }
   return null;
@@ -253,13 +253,13 @@ export function missionOf(
 
 /** Whether anything the holder is under can be thrown off at all. */
 export function heldByARoll(statuses: readonly Status[]): boolean {
-  return statuses.some((status) => status.ends.kind === "rzut");
+  return statuses.some((status) => status.ends.kind === "roll");
 }
 
 /** Something happened to the holder. */
 export function afterEvent(statuses: readonly Status[], event: EndingEvent): Status[] {
   return statuses.filter(
-    (status) => !(status.ends.kind === "event" && status.ends.co === event),
+    (status) => !(status.ends.kind === "event" && status.ends.what === event),
   );
 }
 
@@ -284,14 +284,14 @@ export function describeEnd(ends: Ends): string {
     case "fight":
       return "do końca walki";
     case "event":
-      return ends.co === "crossing"
+      return ends.what === "crossing"
         ? "do przeprawy przez Trzęsawiska lub Lodowy Las"
-        : ends.co === "bridge-entry"
+        : ends.what === "bridge-entry"
           ? "do wejścia na Kamienny Most"
           : "do śmierci Postaci";
     case "dispelled":
       return "dopóki ktoś tego nie zdejmie";
-    case "rzut":
+    case "roll":
       return `dopóki nie wyrzucisz ${ends.upTo} lub mniej`;
   }
 }
@@ -422,24 +422,24 @@ export function markOf(status: Status): Mark {
     // An errand rather than an affliction, so it is neither good nor bad to be
     // carrying one — and a filled star once it is done and only the collecting
     // is left.
-    case "misja":
+    case "mission":
       return {
-        glyph: status.modifier.gotowa ? "\u2605" : "\u2606",
+        glyph: status.modifier.done ? "\u2605" : "\u2606",
         tone: "obojetny",
         title,
       };
     // A door closed rather than a weight carried — nothing is worse about the
     // character, there is simply something they may no longer do.
-    case "bez-przyjaciol":
+    case "no-friends":
       return { glyph: "\u2298", tone: "zly", title };
     // Both make the character worth more for a moment, so they read as the same
     // upward mark a `points` buff does.
-    case "magia-do-miecza":
-    case "ruch-x2":
+    case "magia-as-miecz":
+    case "move-x2":
       return { glyph: "\u25B2", tone: "dobry", title };
     // A record rather than an effect: nothing about the character has changed,
     // and one Nieznajomy will want to know.
-    case "napastnik":
+    case "attacker":
       return { glyph: "\u2694", tone: "obojetny", title };
     case "note":
       return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };

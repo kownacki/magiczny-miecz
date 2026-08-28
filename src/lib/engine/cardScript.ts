@@ -368,7 +368,7 @@ export type Condition =
    * marked, because no encoded ability is aimed at another Postać. If one ever
    * is, it marks the same way and this needs no change.
    */
-  | { is: "napastnik" };
+  | { is: "attacker" };
 
 /**
  * Every encoded card, gathered from the per-class modules.

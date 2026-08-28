@@ -347,7 +347,7 @@ export async function breakFree(
           payload: {
             source: "opętanie",
             label: freed.length > 0 ? `uwolniony (${die})` : `nadal opętany (${die})`,
-            ends: { kind: "rzut", upTo: 3 },
+            ends: { kind: "roll", upTo: 3 },
           },
         },
       ],
@@ -383,14 +383,14 @@ export function claimMission(snapshot: Snapshot, command: { seatId?: string }): 
   if (!errand) throw new Error("Nie masz misji od Władcy.");
 
   let paid: Changeset = {};
-  if (errand.co === "zloto") {
-    if (seat.gold < errand.ile) {
-      throw new Error(`Władca chce ${errand.ile} Sz. Z. — masz ${seat.gold}.`);
+  if (errand.what === "gold") {
+    if (seat.gold < errand.count) {
+      throw new Error(`Władca chce ${errand.count} Sz. Z. — masz ${seat.gold}.`);
     }
-    paid = { seats: [{ id: seat.id, patch: { gold: seat.gold - errand.ile } }] };
-  } else if (!errand.gotowa) {
+    paid = { seats: [{ id: seat.id, patch: { gold: seat.gold - errand.count } }] };
+  } else if (!errand.done) {
     throw new Error(
-      errand.co === "wrog" ? "Najpierw pokonaj Wroga." : "Najpierw pokonaj inną Postać.",
+      errand.what === "foe" ? "Najpierw pokonaj Wroga." : "Najpierw pokonaj inną Postać.",
     );
   }
 

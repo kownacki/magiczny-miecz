@@ -165,7 +165,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     stosuje: {
       op: "efekt",
       label: "Magia i Miecz — Magia liczy się do Miecza",
-      modifier: { kind: "magia-do-miecza" },
+      modifier: { kind: "magia-as-miecz" },
       ends: { kind: "fight" },
     },
   },
@@ -376,7 +376,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     stosuje: {
       op: "efekt",
       label: "Formuła Przestrzeni — podwójny rzut na ruch",
-      modifier: { kind: "ruch-x2" },
+      modifier: { kind: "move-x2" },
       ends: { kind: "turns", turns: 1 },
     },
   },
