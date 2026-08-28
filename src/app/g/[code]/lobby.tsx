@@ -15,6 +15,7 @@ import { ConfirmDialog, type Confirmation } from "./confirm";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { CharacterStrip } from "./character-picker";
 import { JoinCode, LeaveButton } from "./door";
+import { TableBar } from "./table-layout";
 import { EmptySlot, SeatSlot } from "./seat-slot";
 import {
   aimedAt,
@@ -152,7 +153,7 @@ export function Lobby({
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden">
       <ConfirmDialog ask={ask} busy={busy} onCancel={() => setAsk(null)} />
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-edge px-4 py-2">
+      <TableBar>
         <div className="flex items-baseline gap-3">
           <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
             Magiczny Miecz
@@ -239,7 +240,7 @@ export function Lobby({
             </button>
           )}
         </div>
-      </header>
+      </TableBar>
 
       {/* `relative`, for the same reason `table-layout.tsx` says: a drawer is
           laid over the columns and has to start *below* the bar rather than

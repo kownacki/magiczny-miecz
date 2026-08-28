@@ -248,10 +248,29 @@ export function LeaveButton({
 export function JoinCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
+  /**
+   * One line, because it lives in a bar.
+   *
+   * It was three stacked ones — a label, the code at `text-3xl`, and a line
+   * held empty against the word "skopiowano" ever appearing in it — which made
+   * the poczekalnia's bar half again as tall as the game's, so starting a game
+   * moved everything on the page up by thirty pixels.
+   *
+   * The code is still the biggest thing in the bar and much bigger than the one
+   * the game prints beside the turn counter: this is the thing somebody reads
+   * out across a room, and it was eight grey pixels next to the word "kod"
+   * before it was ever three lines. `text-lg` is what the title beside it is,
+   * so it is as large as it can be without being what decides the height.
+   *
+   * "Skopiowano" replaces the label rather than sitting under it. The reserved
+   * line existed so the bar would not jump when the word arrived; in one line
+   * there is nothing to reserve, because the two words take turns in the same
+   * place.
+   */
   return (
-    <div className="flex flex-col items-center leading-none">
-      <span className="mb-1 text-[12px] uppercase tracking-widest text-muted">
-        Kod stołu
+    <div className="flex items-baseline gap-2 leading-none">
+      <span className="text-[11px] uppercase tracking-widest text-muted">
+        {copied ? "skopiowano" : "Kod stołu"}
       </span>
       <button
         onClick={() => {
@@ -261,13 +280,10 @@ export function JoinCode({ code }: { code: string }) {
             .catch(() => {});
         }}
         title="Skopiuj link do stołu"
-        className="tnum font-[family-name:var(--font-display)] text-3xl tracking-[0.3em] text-ochre transition hover:text-ink"
+        className="tnum font-[family-name:var(--font-display)] text-lg tracking-[0.3em] text-ochre transition hover:text-ink"
       >
         {code}
       </button>
-      <span className="mt-1 h-3 text-[12px] text-muted">
-        {copied ? "skopiowano link" : ""}
-      </span>
     </div>
   );
 }

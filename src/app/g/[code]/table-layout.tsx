@@ -23,6 +23,34 @@ import type { TileCard } from "./card-tile";
  * every button, scrolled. The split is the golden ratio instead, the larger
  * share to the right: 61.8 / 38.2.
  */
+/**
+ * The bar across the top of a table, in the poczekalnia and in the game.
+ *
+ * One component because it is one bar: the same name on the left, the same
+ * doors on the right, and the same height — which is the part that showed. The
+ * lobby had a copy of these classes with `gap-y-2` instead of `gap-y-1`, and a
+ * join code three lines tall inside it, so the two screens were thirty pixels
+ * apart and the whole page appeared to jump on starting the game.
+ *
+ * Height is left to the content on purpose. Both bars are `py-2` around a
+ * `text-lg` title, so anything that stays on one line beside it keeps them
+ * level; anything that does not is what makes them differ, which is the fault
+ * to fix rather than a number to pin here.
+ */
+export function TableBar({ children }: { children: React.ReactNode }) {
+  return (
+    <header
+      // Marked so a drawer can tell the bar apart from "elsewhere": clicking
+      // the bar is never a way of being finished with a drawer, and clicking
+      // it is usually a way of opening the other one. See `drawer.tsx`.
+      data-table-bar
+      className={`relative flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-edge bg-night px-4 py-2 ${LAYER.bar}`}
+    >
+      {children}
+    </header>
+  );
+}
+
 export function TableLayout({
   header,
   map,
@@ -47,15 +75,7 @@ export function TableLayout({
           open, which made the fight the only thing on the screen at exactly the
           moment that is least true. `bg-night` because the modals' own backdrop
           would otherwise show through it. */}
-      <header
-        // Marked so a drawer can tell the bar apart from "elsewhere": clicking
-        // the bar is never a way of being finished with a drawer, and clicking
-        // it is usually a way of opening the other one. See `drawer.tsx`.
-        data-table-bar
-        className={`relative flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-edge bg-night px-4 py-2 ${LAYER.bar}`}
-      >
-        {header}
-      </header>
+      <TableBar>{header}</TableBar>
       {/* `relative`, so a drawer can be laid over the columns and start *below*
           the bar rather than beside it. Overlapping the two put the roster's
           own header level with the bar's right-hand end and hid Karty and the
