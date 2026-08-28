@@ -1248,7 +1248,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         }
         header={
           <>
-            <div className="flex items-baseline gap-3">
+            {/* Centred, not on the baseline. Baseline is right for a row of
+                words and wrong the moment a glyph joins it: an SVG has no
+                baseline of its own, so the browser sits it on the bottom edge
+                of its box and the Księga rode 2.5px high of the title while the
+                deck counts sat 1.25px low. The other half of this bar has been
+                `items-center` all along, which is why only this end looked
+                unsettled. */}
+            <div className="flex items-center gap-3">
               <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
                 Magiczny Miecz
               </h1>
