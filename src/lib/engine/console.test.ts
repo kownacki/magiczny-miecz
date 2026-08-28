@@ -1,6 +1,7 @@
 import { describe as suite, expect, it } from "vitest";
 import {
   COMMANDS,
+  GROUPS,
   availableIn,
   needsOf,
   permits,
@@ -15,6 +16,19 @@ import {
   pickPlayer,
   statReply,
 } from "./console";
+
+/**
+ * Just the command rows: not the headings, the blank lines or the footer.
+ *
+ * A row is indented by a space or the idle dot; a heading sits hard against the
+ * left margin. That is the whole difference, and it is the one a reader uses.
+ */
+function commandRows(lines: readonly string[]): string[] {
+  return lines.filter(
+    (line) => /^[ \u00b7]\S/.test(line) && !line.includes("`help all`"),
+  );
+}
+
 
 const ok = (line: string) => {
   const parsed = parseCommand(line);
@@ -476,7 +490,7 @@ suite("playing the game, and overruling it", () => {
 
   it("shows everything when asked, marking what does not apply", () => {
     const all = helpLines(null, { testmode: false, stage: "lobby", all: true });
-    expect(all).toHaveLength(COMMANDS.length);
+    expect(commandRows(all)).toHaveLength(COMMANDS.length);
     expect(all.join("\n")).toContain("teleport");
     // Marked, so the list still says which of them you could type now.
     expect(all.filter((line) => line.startsWith("·")).length).toBeGreaterThan(10);
@@ -594,7 +608,29 @@ suite("help", () => {
   });
 
   it("lists every command it knows", () => {
-    expect(helpLines()).toHaveLength(COMMANDS.length);
+    expect(commandRows(helpLines())).toHaveLength(COMMANDS.length);
+  });
+
+  /**
+   * Fifty-nine in one column is a list nobody reads twice, so `help` groups
+   * them — and a heading over nothing is the same burying, one level up.
+   */
+  it("puts every command under a heading, and prints no empty ones", () => {
+    const lines = helpLines(null, { testmode: true, stage: "lobby" });
+    const titles = GROUPS.map((one) => one.title);
+    const headings = lines.filter((line) => titles.includes(line));
+    expect(headings.length).toBeGreaterThan(0);
+    // Something under each one.
+    for (const title of headings) {
+      expect(lines[lines.indexOf(title) + 1], title).toMatch(/^[ \u00b7]\S/);
+    }
+    // In the declared order, and never twice.
+    expect(headings).toEqual(titles.filter((one) => headings.includes(one)));
+  });
+
+  it("gives every command a group that exists", () => {
+    const ids = GROUPS.map((one) => one.id);
+    for (const spec of COMMANDS) expect(ids, spec.name).toContain(spec.group);
   });
 
   it("gives every command a usage and a summary", () => {

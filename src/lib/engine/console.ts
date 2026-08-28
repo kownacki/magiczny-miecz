@@ -66,10 +66,55 @@ export interface CommandSpec {
    * this is not it.
    */
   needs: Capability;
+  /**
+   * Which heading it is listed under.
+   *
+   * Required, like `needs`, so a verb cannot be added without somebody saying
+   * what kind of thing it is. Fifty-nine of them in one column is a list you
+   * read once and then stop reading — you cannot find `raid` in it unless you
+   * already know it is called `raid`, which is the one case where you did not
+   * need the list.
+   *
+   * Orthogonal to `needs`: the group says what you are doing, the capability
+   * says whether you may. `nature` and `stone` sit under Overruling and are
+   * `play`, because 7.2 and 20.1 do let you reach them.
+   */
+  group: Group;
 }
 
 /** What a line needs before it may run. */
 export type Capability = "play" | "testmode";
+
+/**
+ * The headings `help` lists under, in the order it lists them.
+ *
+ * Ordered as somebody meets them: what to read, then a turn, then the things
+ * a turn runs into, then the table around it, and the overrides last because
+ * they are the only ones that are not the game.
+ */
+export type Group =
+  | "reading"
+  | "turn"
+  | "fight"
+  | "board"
+  | "carrying"
+  | "friends"
+  | "trade"
+  | "table"
+  | "override";
+
+/** The heading each group prints, in listing order. */
+export const GROUPS: readonly { id: Group; title: string }[] = [
+  { id: "reading", title: "Reading the game" },
+  { id: "turn", title: "Your turn" },
+  { id: "fight", title: "Fighting" },
+  { id: "board", title: "What the board asks of you" },
+  { id: "carrying", title: "What you carry" },
+  { id: "friends", title: "Przyjaciele" },
+  { id: "trade", title: "Złoto and trofea" },
+  { id: "table", title: "The table" },
+  { id: "override", title: "Overruling the game" },
+];
 
 /**
  * Where the game has got to, as far as *offering* a command is concerned.
@@ -296,6 +341,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "help [command]",
     summary: "list these commands, or explain one of them",
     needs: "play",
+    group: "reading",
   },
   {
     name: "rule",
@@ -304,6 +350,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "rule [5.3|5]",
     summary: "read a rule out of the Instrukcji, or list a chapter",
     needs: "play",
+    group: "reading",
   },
   {
     name: "gold",
@@ -311,6 +358,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "gold +5|=12 [player] [force]",
     summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor",
     needs: "testmode",
+    group: "override",
   },
   /* --------------------------------------------------------------------------
    * Playing. The game as printed: roll, walk it out, meet what is there, pass.
@@ -322,6 +370,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "ready [player]",
     summary: "say you have chosen — `unready` takes it back",
     needs: "play",
+    group: "table",
   },
   {
     name: "start",
@@ -330,6 +379,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "start",
     summary: "begin the game; everyone who has a Postać must be ready",
     needs: "play",
+    group: "table",
   },
   {
     name: "roll",
@@ -338,6 +388,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "roll",
     summary: "throw the die for your move (10.2)",
     needs: "play",
+    group: "turn",
   },
   {
     name: "move",
@@ -346,6 +397,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "move Karczma",
     summary: "walk the roll out and stand there (10.2) — `look` lists where it reaches",
     needs: "play",
+    group: "turn",
   },
   {
     name: "draw",
@@ -354,6 +406,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "draw",
     summary: "take what the Obszar you are standing on owes you (13.4)",
     needs: "play",
+    group: "turn",
   },
   {
     name: "answer",
@@ -365,6 +418,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "answer [2] [KARTA]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
     needs: "play",
+    group: "turn",
   },
   {
     name: "buy",
@@ -373,6 +427,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "buy MIECZ",
     summary: "buy from the Obszar you are standing on, at its printed price",
     needs: "play",
+    group: "trade",
   },
   {
     name: "sell",
@@ -381,6 +436,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "sell MIECZ",
     summary: "sell one back to the Lichwiarz in the Gród",
     needs: "play",
+    group: "trade",
   },
   {
     name: "heal",
@@ -389,6 +445,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "heal [2]",
     summary: "take back a point of Życie, or buy several where they are sold (4.2)",
     needs: "play",
+    group: "trade",
   },
   {
     name: "cast",
@@ -397,6 +454,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "cast BŁYSKAWICA [at Ola]",
     summary: "cast a Zaklęcie you are holding (9.6)",
     needs: "play",
+    group: "carrying",
   },
   {
     // A table setting, so it lives in the noun-space beside `table` and
@@ -409,6 +467,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "trophies [points|cards]",
     summary: "how beaten Wrogowie are kept (1.4) — points, or the Karty as printed",
     needs: "play",
+    group: "trade",
   },
   {
     // Naming nothing hands in everything, which is what a player cashing out is
@@ -420,6 +479,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "trade [CYKLOP, NOBBIN]",
     summary: "cash beaten Wrogowie in at 7 points a Miecz (1.4) — all of them, or the ones you name",
     needs: "play",
+    group: "trade",
   },
   {
     name: "beast",
@@ -428,6 +488,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "beast",
     summary: "fight the Bestia at the Zamek — winning ends the game (14.7, 22)",
     needs: "play",
+    group: "fight",
   },
   {
     name: "bridge",
@@ -436,6 +497,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "bridge",
     summary: "try to step onto the Kamienny Most from an entrance (11.10)",
     needs: "play",
+    group: "board",
   },
   {
     name: "cross",
@@ -444,6 +506,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "cross",
     summary: "cross between the Kręgi — the Trzęsawiska or the Lodowy Las (11.1-11.8)",
     needs: "play",
+    group: "board",
   },
   {
     name: "guardian",
@@ -452,6 +515,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "guardian",
     summary: "square up to whatever is standing in the way (11.9-11.11)",
     needs: "play",
+    group: "fight",
   },
   {
     name: "ferry",
@@ -460,6 +524,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "ferry [pay]",
     summary: "the Przeprawa — `pay` a Sztuka Złota, or be sent back",
     needs: "play",
+    group: "board",
   },
   {
     name: "take",
@@ -468,6 +533,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "take MAGICZNY MIECZ",
     summary: "pick up a Karta you drew or one lying on your Obszar (12.1, 13.4)",
     needs: "play",
+    group: "carrying",
   },
   {
     name: "drop",
@@ -476,6 +542,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "drop MAGICZNY MIECZ",
     summary: "put one down on the Obszar you are standing on (12.1)",
     needs: "play",
+    group: "carrying",
   },
   {
     name: "equip",
@@ -484,6 +551,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "equip HEŁM [slot]",
     summary: "put a Przedmiot on — the place is worked out unless it fits two",
     needs: "play",
+    group: "carrying",
   },
   {
     name: "use",
@@ -492,6 +560,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "use KRYSZTAŁ LOSU",
     summary: "spend a Karta that is spent by using it",
     needs: "play",
+    group: "carrying",
   },
   {
     name: "fight",
@@ -500,6 +569,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "fight [WILKOŁAK]",
     summary: "square up to a Wróg on your Obszar — named when more than one is there (16.2)",
     needs: "play",
+    group: "fight",
   },
   {
     name: "escape",
@@ -508,6 +578,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "escape",
     summary: "try to slip away instead of fighting (19.1)",
     needs: "play",
+    group: "fight",
   },
   {
     name: "attack",
@@ -516,6 +587,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "attack <player>",
     summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
     needs: "play",
+    group: "fight",
   },
   {
     // The Władca's word is "wypełnić", but what the player does at the counter
@@ -526,6 +598,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "claim",
     summary: "hand the Władca's misja in and take the Tarcza (Twierdza)",
     needs: "play",
+    group: "board",
   },
   {
     // Named for what it is trying to do rather than for what is holding you:
@@ -537,6 +610,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "free",
     summary: "throw to shake off something holding you in place (Świątynie)",
     needs: "play",
+    group: "board",
   },
   {
     // "gdy sobie tego zażyczysz" — the card's own word for it is asking, and a
@@ -547,6 +621,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "ask",
     summary: "have a Przyjaciel speak the Zaklęcie he carries (Krzyżowiec, Gnom)",
     needs: "play",
+    group: "friends",
   },
   {
     // No argument: only one card in the box sells anything, and naming him
@@ -557,6 +632,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "pay",
     summary: "buy a turn of a Przyjaciel's help with a Sztuka Złota (Najemnik)",
     needs: "play",
+    group: "friends",
   },
   {
     // Named for what it is rather than for the card that does it: "wyprawa" is
@@ -568,6 +644,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "raid <player>",
     summary: "send a Przyjaciel to attack up to 3 Obszary away (Poszukiwacz Przygód)",
     needs: "play",
+    group: "friends",
   },
   {
     // `card` is the alias `give` used to answer to. It is a better name for
@@ -580,6 +657,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "card MAGOG",
     summary: "what a Karta says — Postać, Zdarzenie, Przedmiot or Zaklęcie",
     needs: "play",
+    group: "reading",
   },
   {
     name: "look",
@@ -587,6 +665,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "look",
     summary: "the Obszar you are on, what is on it, and what the turn is waiting for",
     needs: "play",
+    group: "reading",
   },
   {
     name: "me",
@@ -596,6 +675,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "me [player]",
     summary: "a Karta Postaci as it stands: points, Życie, Złoto, Natura and what is carried",
     needs: "play",
+    group: "reading",
   },
   {
     name: "who",
@@ -603,6 +683,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "who",
     summary: "everyone at the table, and which seat they drive",
     needs: "play",
+    group: "reading",
   },
   {
     name: "seat",
@@ -610,6 +691,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "seat <player> 3",
     summary: "put somebody in a seat; refuses one that is taken",
     needs: "play",
+    group: "table",
   },
   {
     name: "unseat",
@@ -617,6 +699,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "unseat [player]",
     summary: "out of the seat, still at the table — the Postać stays put",
     needs: "play",
+    group: "table",
   },
   {
     name: "kick",
@@ -624,6 +707,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "kick <player>",
     summary: "put somebody out of the table",
     needs: "play",
+    group: "table",
   },
   {
     // No `exit` alias. `mm` claims that word for leaving the *program*, and its
@@ -635,6 +719,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "leave",
     summary: "go, by your own choice",
     needs: "play",
+    group: "table",
   },
   {
     name: "rename",
@@ -642,6 +727,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "rename <player> as Ola",
     summary: "give somebody a name",
     needs: "play",
+    group: "table",
   },
   {
     name: "host",
@@ -649,6 +735,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "host <player>",
     summary: "hand over the host role",
     needs: "play",
+    group: "table",
   },
   {
     name: "pick",
@@ -656,6 +743,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "pick [MAGOG] [3]",
     summary: "a Postać into a seat — drawn unless named, yours unless numbered (4.4)",
     needs: "play",
+    group: "table",
   },
   {
     name: "remove",
@@ -663,6 +751,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "remove 3|MAGOG [hard]",
     summary: "a Postać out of the game, its Karty to the used piles — `hard` bars it for good",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "revive",
@@ -670,6 +759,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "revive 3|MAGOG",
     summary: "back to life where it fell, with its own points and no Przedmioty",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "kill",
@@ -677,6 +767,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "kill [player]",
     summary: "take a character to 0 Życia (4.4)",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "nature",
@@ -685,6 +776,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "nature good|evil|chaotic [player] [force]",
     summary: "change a Natura (7.2) — leaves no mark of 7.3; `force` ignores one",
     needs: "play",
+    group: "override",
   },
   {
     name: "turn",
@@ -692,6 +784,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "turn [player]",
     summary: "pass until it is their turn (10.1)",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "stone",
@@ -700,6 +793,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "stone [player]",
     summary: "turn to stone for three turns (20.1)",
     needs: "play",
+    group: "override",
   },
   {
     name: "effect",
@@ -707,6 +801,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "effect fog|frozen|barred [player]",
     summary: "a Mgła's cap, a stolen turn, or 11.11's year off the Most",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "give",
@@ -716,6 +811,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "give MAGICZNY MIECZ",
     summary: "put a card in a hand",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "place",
@@ -726,6 +822,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "place MIECZ at Karczma",
     summary: "leave a card on an Obszar, the one you stand on unless named",
     needs: "testmode",
+    group: "override",
   },
   {
     // Was `go`, with `move` as an alias. Both words belong to the lawful walk
@@ -736,6 +833,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "teleport Karczma",
     summary: "stand on any Obszar, without a roll and without walking there",
     needs: "testmode",
+    group: "override",
   },
   {
     // Was `fight`. The lawful word is what a player types all game — you fight
@@ -746,6 +844,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "summon WILKOŁAK",
     summary: "conjure a Wróg onto your Obszar and square up to it",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "settle",
@@ -753,6 +852,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "settle won|lost|draw",
     summary: "settle the fight you are in — won, lost or drawn",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "endgame",
@@ -760,6 +860,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "endgame won|lost",
     summary: "end the game on the Bestia — losing to it costs 2 Życia (14.7)",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "endfight",
@@ -767,6 +868,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "endfight",
     summary: "drop the fight without settling it",
     needs: "testmode",
+    group: "override",
   },
   {
     name: "endturn",
@@ -776,6 +878,7 @@ export const COMMANDS: CommandSpec[] = [
     // Anything but the poczekalnia, where there is no turn to hand on.
     when: PLAYING,
     needs: "play",
+    group: "turn",
   },
   {
     name: "spell",
@@ -784,6 +887,7 @@ export const COMMANDS: CommandSpec[] = [
     usage: "spell [player] [wand]",
     summary: "draw a Zaklęcie (9.5) — `wand` is the Różdżka refilling a hand",
     needs: "play",
+    group: "carrying",
   },
 ];
 
@@ -1810,17 +1914,41 @@ export function helpLines(
    * Nothing becomes unfindable — it just stops being in the way.
    */
   const shown = [...(at.all === true ? COMMANDS : availableIn(at)), ...extra];
-  const rows = shown.map((spec) => `${words(spec)} ${args(spec)}`.trimEnd());
-  const widest = Math.max(...rows.map((row) => row.length), 0);
-  const lines = shown.map((spec, index) => {
+
+  /**
+   * The column is measured across the whole list, not per heading.
+   *
+   * Ragged columns under headings read as several small tables rather than one
+   * grouped one, and the eye stops carrying down the page. One width costs a
+   * few spaces in the short groups and keeps the summaries in a line.
+   */
+  const row = (spec: CommandSpec) => `${words(spec)} ${args(spec)}`.trimEnd();
+  const widest = Math.max(...shown.map((spec) => row(spec).length), 0);
+  const listed = (spec: CommandSpec) => {
     const idle = at.all === true && !availableIn(at).includes(spec) && !extra.includes(spec);
-    return `${idle ? "·" : " "}${rows[index].padEnd(widest)}  ${spec.summary}`;
-  });
+    return `${idle ? "\u00b7" : " "}${row(spec).padEnd(widest)}  ${spec.summary}`;
+  };
+
+  /**
+   * A heading is only worth its two lines when it has something under it.
+   *
+   * In a poczekalnia most of these are empty — there is no Zaklęcie to cast and
+   * nothing to fight — and printing "Fighting" over nothing would be the same
+   * burying this was written to stop, one level up.
+   */
+  const lines: string[] = [];
+  for (const group of GROUPS) {
+    const mine = shown.filter((spec) => spec.group === group.id);
+    if (mine.length === 0) continue;
+    if (lines.length > 0) lines.push("");
+    lines.push(`${group.title}`);
+    for (const spec of mine) lines.push(listed(spec));
+  }
 
   const hidden = COMMANDS.length + extra.length - shown.length;
   return hidden === 0
     ? lines
-    : [...lines, ` ${`(${hidden} more)`.padEnd(widest)}  \`help all\` — every command, whenever it applies`];
+    : [...lines, "", ` ${`(${hidden} more)`.padEnd(widest)}  \`help all\` — every command, whenever it applies`];
 }
 
 /**

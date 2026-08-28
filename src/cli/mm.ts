@@ -79,6 +79,7 @@ const LOCAL: CommandSpec[] = [
     usage: "table [new|open|delete]",
     summary: "list, open or start one — `table new Kowi, Ola`, `…, classic` for 5.4's rules",
     needs: "play",
+    group: "table",
     offTable: true,
   },
   {
@@ -87,9 +88,10 @@ const LOCAL: CommandSpec[] = [
     usage: "testmode [on|off]",
     summary: "unlock the commands that overrule the rules; bare `testmode` says which way it is",
     needs: "play",
+    group: "override",
     offTable: true,
   },
-  { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", offTable: true },
+  { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", group: "table", offTable: true },
 ];
 
 /** What each family takes after its noun, for Tab and for the "I know:" answer. */

@@ -20,6 +20,7 @@ const LOCAL_SPECS: CommandSpec[] = [
     usage: "table [new|open|delete]",
     summary: "tables",
     needs: "play",
+    group: "table",
     offTable: true,
   },
     {
@@ -28,9 +29,10 @@ const LOCAL_SPECS: CommandSpec[] = [
     usage: "testmode [on|off]",
     summary: "overrides",
     needs: "play",
+    group: "override",
     offTable: true,
   },
-  { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", offTable: true },
+  { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", group: "table", offTable: true },
 ];
 const LOCAL = LOCAL_SPECS.flatMap((spec) => [spec.name, ...spec.aliases]);
 const FAMILIES = { table: ["new", "open", "delete"], testmode: ["on", "off"] };
