@@ -790,9 +790,18 @@ export async function runCommand(
       const done = await castSpell(gameId, seat.id, held.id, {
         ...(at ? { seatIndex: at.seat_index } : {}),
       });
+      /**
+       * What happened where the app carried the Zaklęcie out, and the card's
+       * own sentence where it did not.
+       *
+       * Printing the prose for both made an applied spell look exactly like an
+       * announced one — "Ofiara rzuca kostką: 1 — Kamień; …" reads as an
+       * instruction to the table whether or not the die has already been
+       * thrown, and thirteen of them have now.
+       */
       return [
         `${named(seat)} casts ${done.spell}${at ? ` at ${named(at)}` : ""}.`,
-        ...(done.effect ? [done.effect] : []),
+        ...(done.did && done.did.length > 0 ? done.did : done.effect ? [done.effect] : []),
       ].join("\n");
     }
 

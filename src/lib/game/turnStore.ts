@@ -60,6 +60,7 @@ import {
   sendRaider as sendRaiderOn,
   beginFight as beginFightOn,
   castSpell as castSpellOn,
+  type Cast,
   escape as escapeOn,
   fightRoll as fightRollOn,
   resolveFight as resolveFightOn,
@@ -553,7 +554,7 @@ export async function castSpell(
   seatId: string,
   holdingId: string,
   target: { seatIndex?: number; note?: string; fieldCardId?: string } = {},
-): Promise<{ spell: string; effect: string }> {
+): Promise<Cast> {
   return change(gameId, castSpellOn, { seatId, holdingId, target });
 }
 

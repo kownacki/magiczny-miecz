@@ -344,6 +344,15 @@ export interface Cast {
   spell: string;
   /** What the table now has to do, in the card's own words. */
   effect: string;
+  /**
+   * What actually happened, for the spells the app carries out.
+   *
+   * Empty for the ones it only announces, which is the difference a player
+   * needs to see: "Fatum: −1 Miecza" is the app having thrown the die, and the
+   * card's own sentence is the app handing the rule back. Printing the prose
+   * for both made a spell that had been applied look like one that had not.
+   */
+  did?: readonly string[];
 }
 
 /**
@@ -633,6 +642,7 @@ export async function castSpell(
     writes: merge(soFar, cleared),
     result: {
       spell: spell?.name ?? held.card_id,
+      ...(worked && worked.result.did.length > 0 ? { did: worked.result.did } : {}),
       effect: script?.effect ?? spell?.text ?? "",
     },
   };
