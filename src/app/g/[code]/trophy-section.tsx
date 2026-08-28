@@ -171,6 +171,23 @@ export function TrophySection({
             </div>
           )}
 
+          {/* Why there is nothing to look at.
+              
+              In „Punkty" the Karta goes to the stos zużytych as the Wróg dies
+              and only his number is kept, so this section has a total and no
+              pictures. Unsaid, that reads as art failing to load rather than as
+              the rule working — which is exactly how it was first reported. The
+              other mode needs no such line: the Karty are there, and they say
+              it themselves. */}
+          {byPoints && (
+            <p className="text-[11px] leading-snug text-muted/70">
+              <Rules>
+                Karty pokonanych Wrogów wracają na stos zużytych — przy tym stole
+                liczą się same punkty (1.4).
+              </Rules>
+            </p>
+          )}
+
           <Ledger
             offering={offering}
             swords={swords}

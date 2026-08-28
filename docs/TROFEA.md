@@ -159,6 +159,36 @@ schema is English — `classic|slots`, `lobby|playing|finished`,
 against `points`, so the Polish outlier was the thing to move. The Polish stays
 where a player reads it: „Punkty" and „Karty pokonanych" are labels, not values.
 
+## Owed to the seat card: who was beaten, in „Punkty"
+
+Michał wants the trofea drawn with their art in **both** modes. In „Karty
+pokonanych" that already happens — the Karty are holdings and the tiles show
+`cardArtUrl` like any Przedmiot. In „Punkty" there is nothing to draw: the Karta
+goes to the stos zużytych as the Wróg dies, only his number is kept, and the
+envelope carries no journal, so the browser has no way to learn that it was a
+Wilkołak.
+
+**What would fix it:** a display-only list on the seat — `trophy_beaten`, the
+card ids of Wrogowie beaten and banked. Appended where `trophy_points` is
+appended, cleared with the seat on death exactly as those points are, and never
+read by the arithmetic. The points stay the authority on what a trade costs;
+this is only so the shelf has faces on it.
+
+**One thing to decide with it, because the two modes are not symmetric.** In
+„Karty pokonanych" the tiles *are* the currency: hand them in and they leave,
+because those are the Karty you gave up. In „Punkty" you trade points, which are
+fungible — no particular corpse paid for the sword, so no particular portrait
+should vanish when you cash one.
+
+That points at the honest reading: in „Punkty" the art is a **memorial rather
+than a wallet**. It never shrinks. Everyone you beat stays on the shelf for the
+rest of the game while the ledger beside it rises and falls — you did kill the
+Wilkołak, and trading does not un-kill him. Which is the half of 1.4 the printed
+rule throws away, and the better feature for the app to keep.
+
+If it lands as append-only, the seat card needs no further contract: it will
+draw the list where it draws the Karty today.
+
 ## Attributing work between sessions
 
 Commits carry a `Claude-Session:` trailer, and that is the only reliable way to
