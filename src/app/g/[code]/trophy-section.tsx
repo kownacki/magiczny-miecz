@@ -13,6 +13,7 @@ import { ItemSlot } from "./item-slot";
 import { CARD_NAMES, tileFor, type Seat } from "./table";
 import type { TileCard } from "./card-tile";
 import type { CardId } from "@/data/ids";
+import { shelfFor } from "./trophy-shelf";
 
 const EVENTS = events as EventCard[];
 
@@ -85,8 +86,9 @@ export function TrophySection({
 
   const byPoints = mode === "points";
   const held = seat.holdings.filter((one) => one.kind === "trophy");
-  /** Who is on the shelf: the Karty in hand, or the memorial the seat carries. */
-  const shelf = byPoints ? (seat.trophy_beaten ?? []) : held.map((one) => one.cardId);
+  /** Everyone beaten, and which of them are still in hand. */
+  const shelf = shelfFor(seat.trophy_beaten ?? [], held.map((one) => one.cardId), byPoints);
+  const gone = shelf.filter((one) => one.gone);
   const counting = byPoints
     ? (seat.trophy_points ?? 0)
     : held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
@@ -105,9 +107,35 @@ export function TrophySection({
   const most = offers[offers.length - 1] ?? null;
   const offer = offers.find((one) => one.swords === wanted) ?? most;
 
+  /**
+   * Whether *this* tile is one the trade takes, asked once per tile as the row
+   * is drawn.
+   *
+   * A countdown rather than `cardIds.includes`, for the reason the shelf is a
+   * multiset: holding two Nobbiny and handing in one, `includes` is true for
+   * both and lights the pair. The offer names a bag of Karty and each tile
+   * takes one out of it, so the second Nobbin stays dark and the count on the
+   * screen matches the count in the trade.
+   *
+   * Rebuilt on every render, which is what makes it safe to spend while
+   * mapping: the bag is this render's, and the next one starts full again.
+   */
+  const bag = new Map<string, number>();
+  for (const cardId of offer && !byPoints ? offer.cardIds : []) {
+    bag.set(cardId, (bag.get(cardId) ?? 0) + 1);
+  }
+  const takes = (cardId: string): boolean => {
+    const left = bag.get(cardId) ?? 0;
+    if (left === 0) return false;
+    bag.set(cardId, left - 1);
+    return true;
+  };
+
   // Somebody else's empty shelf is not worth a row; your own is, because it is
-  // where the count appears the moment you win a fight.
-  if (!isMine && counting === 0) return null;
+  // where the count appears the moment you win a fight. Asked of the shelf and
+  // not the count: a player who has cashed in everything is at zero points and
+  // still has Wrogowie worth showing.
+  if (!isMine && shelf.length === 0) return null;
 
   return (
     <Fold
@@ -118,7 +146,7 @@ export function TrophySection({
         </span>
       }
     >
-      {counting === 0 ? (
+      {shelf.length === 0 ? (
         <p className="p-1 text-[11px] leading-snug text-muted">
           {/* Linked here and plain in the buttons below: this is the app
               explaining itself, and a label is a label. */}
@@ -130,19 +158,22 @@ export function TrophySection({
         </p>
       ) : (
         <div className="flex flex-col gap-2 p-1">
-          {/* Everyone beaten, drawn the same way in both modes. In „Punkty" the
-              Karta is long gone and this is a memorial, so nothing here ever
-              lights up: no particular corpse paid for a given Miecz. */}
+          {/* Those still in hand, which are the only ones a trade can reach. In
+              „Punkty" every one of them is here and none lights up: the Karta is
+              long gone, points are fungible, and no particular corpse paid for a
+              given Miecz. */}
           <div className="flex flex-wrap gap-2">
-            {shelf.map((cardId, at) => (
-              <TrophyTile
-                key={`${cardId}-${at}`}
-                cardId={cardId}
-                spent={!byPoints && (offer?.cardIds.includes(cardId) ?? false)}
-                choosing={!byPoints && offer !== null}
-                onInspect={onInspect}
-              />
-            ))}
+            {shelf
+              .filter((one) => !one.gone)
+              .map((one, at) => (
+                <TrophyTile
+                  key={`${one.cardId}-${at}`}
+                  cardId={one.cardId}
+                  spent={takes(one.cardId)}
+                  choosing={!byPoints && offer !== null}
+                  onInspect={onInspect}
+                />
+              ))}
           </div>
 
           {byPoints && (
@@ -206,6 +237,39 @@ export function TrophySection({
                 </button>
               )}
             </>
+          )}
+
+          {gone.length > 0 && (
+            /* Last, and after the trade, because nothing here can be traded:
+               these Karty are on the stos zużytych and the row is a record. It
+               is a row of its own rather than the tail of the one above, so the
+               dimming reads as "gone" rather than as the trade's "not this
+               time" — the same fade meaning two things in one row is what the
+               caption and the gap are here to stop. */
+            <div className="flex flex-col gap-1 border-t border-edge/50 pt-2">
+              <p className="text-[11px] leading-snug text-muted/70">
+                {/* Not "sprzedane". A trade is the usual way a trophy leaves a
+                    hand and not the only one — a Karta can also be put down —
+                    and which of the two happened is not recorded anywhere. So
+                    the sentence says what is certainly true and names the rule
+                    only for the half that has one. */}
+                <Rules>
+                  Pokonani, których Kart już nie masz — oddanych za punkty Miecza
+                  (1.4) albo odrzuconych.
+                </Rules>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {gone.map((one, at) => (
+                  <TrophyTile
+                    key={`gone-${one.cardId}-${at}`}
+                    cardId={one.cardId}
+                    spent={false}
+                    choosing
+                    onInspect={onInspect}
+                  />
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
