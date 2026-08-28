@@ -14,7 +14,8 @@
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
-import { characterTitle } from "@/lib/engine/polish";
+import { characterKind, characterTitle } from "@/lib/engine/polish";
+import { useCardPreview } from "./card-preview";
 import {
   RANDOM_CHARACTER_ID,
   isRandomPick,
@@ -39,13 +40,46 @@ import {
  * half of the roster, and the characters at the end were the ones nobody ever
  * looked at.
  */
+/**
+ * A Karta Postaci on hover, in the app's one way of showing a card.
+ *
+ * This replaces a reading column — a panel down the side of the lobby and
+ * another down the side of the reborn window, each holding one big Karta of
+ * whatever the cursor was last over. Two of them, doing by hand what
+ * `useCardPreview` already does for every other card in the game: the Karta
+ * comes up beside the thing you are pointing at, which is where you are looking,
+ * rather than in a box you have to look away to read.
+ *
+ * The abilities go in as `text`, which the panel shows only when it has no
+ * picture to show — "repeating its text is repeating what the reader is already
+ * looking at", and they are printed on the Karta itself. So they are the
+ * fallback for a character whose scan is missing, not a second copy beside one
+ * that is there.
+ */
+export function useCharacterPreview(character: Character | null, id: SeatCharacter | null) {
+  return useCardPreview(
+    character
+      ? {
+          cardId: character.id,
+          name: character.name,
+          text: character.abilities.join("\n\n"),
+          kindLabel: characterKind(character),
+          character: true,
+        }
+      : id
+        ? // The surprise, which has a Karta and no Charakterystyka: the whole
+          // point of it is that it says nothing about what you get.
+          { cardId: id, name: "Losowa", character: true }
+        : null,
+  );
+}
+
 export function CharacterStrip({
   characters,
   seats,
   target,
   pendingCharacterId,
   busy,
-  onPreview,
   onPick,
 }: {
   characters: Character[];
@@ -56,7 +90,6 @@ export function CharacterStrip({
   /** Asked for, not yet granted. Everything else in the strip waits with it. */
   pendingCharacterId: string | null;
   busy: boolean;
-  onPreview: (characterId: SeatCharacter | null) => void;
   onPick: (characterId: string) => void;
 }) {
   const inOrder = charactersInOrder(characters);
@@ -95,7 +128,6 @@ export function CharacterStrip({
           busy={busy || pendingCharacterId !== null || !target}
           pending={pendingCharacterId === RANDOM_CHARACTER_ID}
           dimmed={pendingCharacterId !== null && pendingCharacterId !== RANDOM_CHARACTER_ID}
-          onPreview={onPreview}
           onPick={() => onPick(RANDOM_CHARACTER_ID)}
         />
         {inOrder.map((character) => (
@@ -113,7 +145,6 @@ export function CharacterStrip({
             busy={busy}
             pending={pendingCharacterId === character.id}
             waiting={pendingCharacterId !== null && pendingCharacterId !== character.id}
-            onPreview={onPreview}
             onPick={() => onPick(character.id)}
           />
         ))}
@@ -131,7 +162,6 @@ function CharacterTile({
   busy,
   pending,
   waiting,
-  onPreview,
   onPick,
 }: {
   character: Character;
@@ -143,7 +173,6 @@ function CharacterTile({
   busy: boolean;
   pending: boolean;
   waiting: boolean;
-  onPreview: (characterId: SeatCharacter | null) => void;
   onPick: () => void;
 }) {
   const colour = owner ? seatColour(owner) : null;
@@ -152,6 +181,7 @@ function CharacterTile({
   // them scannable at this size where 27 pages of small type were not.
   const standee = characterStandeeUrl(character.id);
   const dim = tileDimming({ pending, waiting, held: owner !== null, ours, aimed });
+  const { handlers, preview } = useCharacterPreview(character, character.id);
 
   return (
     // Pointing at a card reads it, and that has to work for cards nobody can
@@ -159,11 +189,7 @@ function CharacterTile({
     // handlers on the button itself every character somebody had already taken
     // became unreadable — which is exactly when you most want to know what it
     // does.
-    <div
-      className="min-w-0"
-      onMouseEnter={() => onPreview(character.id)}
-      onMouseLeave={() => onPreview(null)}
-    >
+    <div className="min-w-0" {...handlers}>
       <button
         // Already theirs: nothing to ask for. Re-sending it would rewrite the
         // seat with the values it already has and, worse, clear the ready flag
@@ -171,8 +197,6 @@ function CharacterTile({
         // un-ready you.
         disabled={busy || owner !== null || !aimed || pending || waiting}
         onClick={onPick}
-        onFocus={() => onPreview(character.id)}
-        onBlur={() => onPreview(null)}
         title={characterTitle(character)}
         // Whoever holds it, holds it — including while somebody else's pick is
         // in flight. Dropping the colour during `waiting` left the border with
@@ -215,6 +239,7 @@ function CharacterTile({
           </span>
         )}
       </button>
+      {preview}
     </div>
   );
 }
@@ -242,7 +267,6 @@ function RandomChoice({
   busy,
   pending,
   dimmed,
-  onPreview,
   onPick,
 }: {
   /** Every seat holding the surprise, in seat order. */
@@ -253,7 +277,6 @@ function RandomChoice({
   busy: boolean;
   pending: boolean;
   dimmed: boolean;
-  onPreview: (characterId: SeatCharacter | null) => void;
   onPick: () => void;
 }) {
   const standee = characterStandeeUrl(RANDOM_CHARACTER_ID);
@@ -263,21 +286,18 @@ function RandomChoice({
   // mention of its own — a seat can only be holding the surprise if there is a
   // seat being aimed at.
   const dim = tileDimming({ pending, waiting: dimmed, held: false, ours: mine, aimed });
+  // No `Character` to read from — the surprise has a Karta and no
+  // Charakterystyka, which is the whole point of it.
+  const { handlers, preview } = useCharacterPreview(null, RANDOM_CHARACTER_ID);
 
   return (
-    <div
-      className="min-w-0"
-      onMouseEnter={() => onPreview(RANDOM_CHARACTER_ID)}
-      onMouseLeave={() => onPreview(null)}
-    >
+    <div className="min-w-0" {...handlers}>
       <button
         // Live even while somebody else holds it — unless that somebody is you,
         // in which case there is nothing to ask for and a second click could
         // only un-ready you.
         disabled={busy || mine}
         onClick={onPick}
-        onFocus={() => onPreview(RANDOM_CHARACTER_ID)}
-        onBlur={() => onPreview(null)}
         title="Losowa — Karta Postaci zostanie wylosowana i odsłonięta po rozpoczęciu gry"
         style={border && !pending ? { borderColor: border, borderWidth: 2 } : undefined}
         className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
@@ -311,6 +331,7 @@ function RandomChoice({
           </span>
         )}
       </button>
+      {preview}
     </div>
   );
 }

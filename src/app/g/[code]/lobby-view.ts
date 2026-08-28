@@ -431,21 +431,6 @@ export function tileDimming(tile: TileState): string {
   return tile.aimed ? "opacity-100" : "opacity-40";
 }
 
-/**
- * Which character the reading column shows.
- *
- * Whatever the cursor is over wins — running along the strip and reading each
- * one is how you choose — falling back to the character of whoever you are
- * choosing for, so the column is never blank once anything has been picked.
- */
-export function readingCharacter(
-  preview: SeatCharacter | null,
-  target: LobbySeat | null,
-  me: LobbySeat | null,
-): SeatCharacter | null {
-  return preview ?? target?.characterId ?? me?.characterId ?? null;
-}
-
 /* --------------------------------------------------------------------------
  * The door.
  * ----------------------------------------------------------------------- */

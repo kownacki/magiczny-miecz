@@ -6,7 +6,8 @@ import { useState } from "react";
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { RANDOM_CHARACTER_ID, type SeatCharacter } from "@/lib/engine/characters";
-import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
+import { characterStandeeUrl } from "@/lib/view/cardImages";
+import { useCharacterPreview } from "./character-picker";
 import { Overlay } from "./overlay";
 import { characterTitle } from "@/lib/engine/polish";
 
@@ -45,16 +46,8 @@ export function RebornModal({
   onClose: () => void;
 }) {
   const [picked, setPicked] = useState<SeatCharacter | null>(null);
-  const [hovered, setHovered] = useState<SeatCharacter | null>(null);
 
   const free = characters.filter((character) => !taken.has(character.id));
-  // What the reading column shows: whatever the cursor is over wins, because
-  // running along the strip and reading each one is how you choose.
-  const at = hovered ?? picked;
-  const reading = characters.find((c) => c.id === at) ?? null;
-  // The surprise has a card of its own, and it is the one thing in the strip
-  // that is worth reading precisely because it says nothing about what you get.
-  const card = at === RANDOM_CHARACTER_ID ? characterImageUrl(RANDOM_CHARACTER_ID) : reading ? characterImageUrl(reading.id) : null;
   const randomStandee = characterStandeeUrl(RANDOM_CHARACTER_ID);
 
   return (
@@ -95,95 +88,26 @@ export function RebornModal({
                   surprise the first time still wants one now. Unlike in the
                   poczekalnia there is no start of the game left to reveal it
                   at, so the draw happens on the press. */}
-              <button
+              <RandomTile
                 disabled={busy || free.length === 0}
-                onClick={() => setPicked(RANDOM_CHARACTER_ID)}
-                onMouseEnter={() => setHovered(RANDOM_CHARACTER_ID)}
-                onMouseLeave={() =>
-                  setHovered((was) => (was === RANDOM_CHARACTER_ID ? null : was))
-                }
-                onFocus={() => setHovered(RANDOM_CHARACTER_ID)}
-                onBlur={() => setHovered(null)}
-                title="Losowa — Karta Postaci zostanie wylosowana spośród tych, które zostały"
-                className={`overflow-hidden rounded border transition disabled:opacity-40 ${
-                  picked === RANDOM_CHARACTER_ID
-                    ? "border-ochre"
-                    : "border-edge hover:border-ochre/60"
-                }`}
-              >
-                {randomStandee ? (
-                  <Image
-                    src={randomStandee}
-                    alt="Losowa postać"
-                    width={114}
-                    height={190}
-                    className={`h-auto w-full transition-opacity ${
-                      picked === RANDOM_CHARACTER_ID || !picked ? "opacity-100" : "opacity-45"
-                    }`}
-                    unoptimized
-                  />
-                ) : (
-                  <span className="block p-2 text-[10px] text-ink">Losowa</span>
-                )}
-              </button>
-              {free.map((character) => {
-                const standee = characterStandeeUrl(character.id);
-                const chosen = picked === character.id;
-                return (
-                  <button
-                    key={character.id}
-                    disabled={busy}
-                    onClick={() => setPicked(character.id)}
-                    onMouseEnter={() => setHovered(character.id)}
-                    onMouseLeave={() =>
-                      setHovered((at) => (at === character.id ? null : at))
-                    }
-                    onFocus={() => setHovered(character.id)}
-                    onBlur={() => setHovered(null)}
-                    title={characterTitle(character)}
-                    className={`overflow-hidden rounded border transition disabled:opacity-40 ${
-                      chosen ? "border-ochre" : "border-edge hover:border-ochre/60"
-                    }`}
-                  >
-                    {standee ? (
-                      <Image
-                        src={standee}
-                        alt={character.name}
-                        width={114}
-                        height={190}
-                        className={`h-auto w-full transition-opacity ${
-                          chosen || !picked ? "opacity-100" : "opacity-45"
-                        }`}
-                        unoptimized
-                      />
-                    ) : (
-                      <span className="block p-2 text-[10px] text-ink">{character.name}</span>
-                    )}
-                  </button>
-                );
-              })}
+                dim={picked === RANDOM_CHARACTER_ID || !picked ? "opacity-100" : "opacity-45"}
+                standee={randomStandee}
+                chosen={picked === RANDOM_CHARACTER_ID}
+                onPick={() => setPicked(RANDOM_CHARACTER_ID)}
+              />
+              {free.map((character) => (
+                <RebornTile
+                  key={character.id}
+                  character={character}
+                  disabled={busy}
+                  chosen={picked === character.id}
+                  dim={picked === character.id || !picked ? "opacity-100" : "opacity-45"}
+                  onPick={() => setPicked(character.id)}
+                />
+              ))}
             </div>
           </div>
 
-          {/* The Karta, big enough to read. A character is four numbered
-              clauses and two numbers, and every one of them matters to the
-              choice being made to the left of it. */}
-          <aside className="hidden w-[260px] shrink-0 flex-col items-center gap-3 lg:flex">
-            {card && reading ? (
-              <Image
-                src={card}
-                alt={`Karta Postaci: ${reading.name}`}
-                width={520}
-                height={648}
-                className="max-h-full w-auto rounded border border-edge object-contain"
-                unoptimized
-              />
-            ) : (
-              <p className="mt-8 max-w-[16rem] text-center text-[12px] leading-relaxed text-muted/70">
-                Najedź na Postać, żeby przeczytać jej Kartę.
-              </p>
-            )}
-          </aside>
         </div>
 
         <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-edge px-4 py-3">
@@ -204,5 +128,112 @@ export function RebornModal({
         </footer>
       </div>
     </Overlay>
+  );
+}
+
+/**
+ * One choosable Postać, with its Karta on hover.
+ *
+ * A component rather than a branch inside the `map` it replaced, because the
+ * preview is a hook and a hook cannot be called from a loop body. That is the
+ * whole reason this exists; everything it draws was already here.
+ *
+ * The handlers go on a wrapper and not on the button. A disabled button fires
+ * no mouse events at all, and while nothing here is disabled today, `busy`
+ * makes every tile so for as long as a pick is in flight — which is exactly the
+ * moment somebody is still reading them.
+ */
+function RebornTile({
+  character,
+  disabled,
+  chosen,
+  dim,
+  onPick,
+}: {
+  character: Character;
+  disabled: boolean;
+  chosen: boolean;
+  /** How faded, once something else is picked — the strip's own ladder. */
+  dim: string;
+  onPick: () => void;
+}) {
+  const standee = characterStandeeUrl(character.id);
+  const { handlers, preview } = useCharacterPreview(character, character.id);
+
+  return (
+    <div className="min-w-0" {...handlers}>
+      <button
+        disabled={disabled}
+        onClick={onPick}
+        title={characterTitle(character)}
+        className={`block w-full overflow-hidden rounded border transition disabled:opacity-40 ${
+          chosen ? "border-ochre" : "border-edge hover:border-ochre/60"
+        }`}
+      >
+        {standee ? (
+          <Image
+            src={standee}
+            alt={character.name}
+            width={114}
+            height={190}
+            className={`h-auto w-full transition-opacity ${dim}`}
+            unoptimized
+          />
+        ) : (
+          <span className="block p-2 text-[10px] text-ink">{character.name}</span>
+        )}
+      </button>
+      {preview}
+    </div>
+  );
+}
+
+/**
+ * The surprise, which has a Karta and no Charakterystyka.
+ *
+ * Worth pointing at precisely because it says nothing about what you get: the
+ * card is the whole of the answer, so there is no character to read abilities
+ * off and the preview shows the picture alone.
+ */
+function RandomTile({
+  disabled,
+  chosen,
+  dim,
+  standee,
+  onPick,
+}: {
+  disabled: boolean;
+  chosen: boolean;
+  dim: string;
+  standee: string | null;
+  onPick: () => void;
+}) {
+  const { handlers, preview } = useCharacterPreview(null, RANDOM_CHARACTER_ID);
+
+  return (
+    <div className="min-w-0" {...handlers}>
+      <button
+        disabled={disabled}
+        onClick={onPick}
+        title="Losowa — Karta Postaci zostanie wylosowana spośród tych, które zostały"
+        className={`block w-full overflow-hidden rounded border transition disabled:opacity-40 ${
+          chosen ? "border-ochre" : "border-edge hover:border-ochre/60"
+        }`}
+      >
+        {standee ? (
+          <Image
+            src={standee}
+            alt="Losowa postać"
+            width={114}
+            height={190}
+            className={`h-auto w-full transition-opacity ${dim}`}
+            unoptimized
+          />
+        ) : (
+          <span className="block p-2 text-[10px] text-ink">Losowa</span>
+        )}
+      </button>
+      {preview}
+    </div>
   );
 }

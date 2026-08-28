@@ -12,9 +12,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Character } from "@/data/types";
 import { ConfirmDialog, type Confirmation } from "./confirm";
-import type { SeatCharacter } from "@/lib/engine/characters";
 import { MAX_SEATS } from "@/lib/game/modes";
-import { CharacterStrip, ReadingCard } from "./character-picker";
+import { CharacterStrip } from "./character-picker";
 import { JoinCode, LeaveButton } from "./door";
 import { EmptySlot, SeatSlot } from "./seat-slot";
 import {
@@ -24,7 +23,6 @@ import {
   mayAdminister,
   mayChooseFor,
   mySeat,
-  readingCharacter,
   seatName,
   seatNameInline,
   seatState,
@@ -134,10 +132,6 @@ export function Lobby({
   const refusal = startRefusal(seats);
   const cardFor = cardLookup(characters);
 
-  // Which character the reading column shows. Whatever the cursor is over wins
-  // — running along the strip and reading each one is how you choose.
-  const [preview, setPreview] = useState<SeatCharacter | null>(null);
-  const reading = readingCharacter(preview, target, me);
 
   /**
    * The question on screen, or null.
@@ -326,7 +320,6 @@ export function Lobby({
                     })
                   }
                   onReady={seat.seatIndex === mySeatIndex ? onReady : undefined}
-                  onPreview={setPreview}
                 />
               );
             })}
@@ -388,7 +381,6 @@ export function Lobby({
               target={target}
               pendingCharacterId={pendingCharacterId}
               busy={busy}
-              onPreview={setPreview}
               onPick={(characterId) => target && onChooseCharacter(target, characterId)}
             />
           </section>
@@ -423,36 +415,25 @@ export function Lobby({
           )}
 
           {/**
-           * The Karta and the Dziennik, in the shape the board column already
-           * uses for the map and the Dziennik.
+           * The Dziennik, at the foot of the column.
            *
-           * Deliberately the same shape, because it is the same arrangement:
-           * one thing that has to fit, with the feed along the bottom of it. So
-           * the two are siblings in a `relative` flex column — the Karta takes
-           * `flex-1` exactly as the map does, and the Dziennik keeps its own
-           * three heights rather than being given a fourth for this column.
+           * It used to share this column with a reading panel — one big Karta
+           * of whatever the cursor was last over. That panel is gone: the Karty
+           * now come up on hover, beside the tile being pointed at, through the
+           * same `useCardPreview` every other card in the game uses. A box you
+           * have to look away from the strip to read is a worse answer to "what
+           * does this one do" than one that appears where you are already
+           * looking, and it cost this column two thirds of its height.
            *
-           * That is what went wrong first time round. Sitting it between the
-           * settings and the Karta made `h-[20.25%]` a share of a wrapper with
-           * no height of its own, so the feed floated mid-column; the fix was
-           * briefly a "fill your box" mode, which is a second set of heights to
-           * keep in step with the first for no reason anybody reading it would
-           * guess. Mini, normal and expanded now mean the same thing in both
-           * rooms.
+           * `mt-auto` on the feed itself keeps it on the bottom edge, so what
+           * the panel gave up goes to the settings above rather than to a gap
+           * under the log.
            *
-           * `relative` is what expanding needs: it is `absolute inset-0`, and
-           * this is the box it opens over — the Karta and the feed, leaving the
-           * settings above it alone, just as the board's own keeps the table
-           * header.
+           * `relative`, because expanding it is `absolute inset-0` and wants an
+           * ancestor to be inset-zero *of*. Without one it would lay itself over
+           * the whole page rather than over this column.
            */}
-          <div className="relative flex min-h-0 flex-1 flex-col gap-2">
-            {/* `min-h-0`, or the Karta refuses to shrink past its own content
-                and takes the room the feed is owed. */}
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-end">
-              <ReadingCard reading={reading} character={cardFor(reading)} />
-            </div>
-            {journal}
-          </div>
+          <div className="relative flex min-h-0 flex-1 flex-col">{journal}</div>
         </aside>
 
         {/* Last, so it lies over both columns — the seats and the reading

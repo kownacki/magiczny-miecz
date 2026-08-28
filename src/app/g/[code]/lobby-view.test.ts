@@ -10,7 +10,6 @@ import {
   mayChooseFor,
   mySeat,
   namedSeats,
-  readingCharacter,
   seatColour,
   seatName,
   seatNameInline,
@@ -481,28 +480,6 @@ describe("how bright a tile is", () => {
     // The tile passes `held: false` however many people are standing on it —
     // a card that cannot be taken away from you is never the greyed-out kind.
     expect(tileDimming({ ...tile, ours: true })).toBe("opacity-100");
-  });
-});
-
-describe("which Karta the reading column shows", () => {
-  const me = aSeat({ id: "mine", seatIndex: 0, characterId: goblin });
-  const target = aSeat({ id: "theirs", seatIndex: 1, characterId: kaplanka });
-
-  it("is whatever the cursor is over", () => {
-    // Running along the strip and reading each one is how you choose.
-    expect(readingCharacter(goblin, target, me)).toBe(goblin);
-  });
-
-  it("falls back to the seat being chosen for", () => {
-    expect(readingCharacter(null, target, me)).toBe(kaplanka);
-  });
-
-  it("falls back to your own, so the column is never blank once you have picked", () => {
-    expect(readingCharacter(null, aSeat({ characterId: null }), me)).toBe(goblin);
-  });
-
-  it("is blank when nobody anywhere has chosen anything", () => {
-    expect(readingCharacter(null, null, aSeat())).toBeNull();
   });
 });
 

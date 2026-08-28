@@ -12,7 +12,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { Character } from "@/data/types";
-import type { SeatCharacter } from "@/lib/engine/characters";
+import { useCharacterPreview } from "./character-picker";
 import {
   seatColour,
   seatName,
@@ -54,7 +54,6 @@ export function SeatSlot({
   onRemove,
   onMakeHost,
   onReady,
-  onPreview,
 }: {
   seat: LobbySeat;
   character: Character | null;
@@ -71,18 +70,20 @@ export function SeatSlot({
   onMakeHost: () => void;
   /** Only your own slot gets this. */
   onReady?: (ready: boolean) => void;
-  /** Points the reading column at this player's character while pointed at. */
-  onPreview: (characterId: SeatCharacter | null) => void;
 }) {
   const portrait = seatPortrait(seat, character);
   const colour = seatColour(seat);
   const standing = seatStanding(seat, isMine);
   const readiness = seatReadiness(seat);
+  // The Karta of whoever is sitting here, on hover — the same panel the strip
+  // below shows, rather than a column off to the side that both used to point
+  // at. A chair with nobody's Postać in it has nothing to show and shows
+  // nothing.
+  const { handlers, preview } = useCharacterPreview(character, seat.characterId);
 
   return (
     <div
-      onMouseEnter={() => onPreview(seat.characterId)}
-      onMouseLeave={() => onPreview(null)}
+      {...handlers}
       style={{ borderTopColor: colour, borderTopWidth: 3 }}
       className={`relative flex ${SLOT} flex-col rounded-lg border p-2 ${
         isTarget
@@ -249,6 +250,7 @@ export function SeatSlot({
           </p>
         )}
       </div>
+      {preview}
     </div>
   );
 }
