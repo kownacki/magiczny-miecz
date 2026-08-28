@@ -292,13 +292,33 @@ export function PlayersDrawer({
                             something up, and on a full pack it was the tile
                             that had wrapped onto the next line. */}
                         {seat.hiddenSpells > 0 && <CardBack count={seat.hiddenSpells} />}
-                        {seat.cards.map((card, index) => (
-                          <CardTile
-                            key={`${card.cardId}-${index}`}
-                            card={card}
-                            onClick={() => onInspect(card)}
-                          />
-                        ))}
+                        {/* Then what is on the body, then what is in the pack.
+                        
+                            The row answers „what has this character got" and
+                            those are three different answers: Zaklęcia are
+                            spoken, worn Przedmioty are already counting towards
+                            the Miecz and Magia printed above, and the pack is
+                            what could be got at or dropped. Reading them in
+                            that order is reading the seat card's own order —
+                            Na sobie, then Plecak — in a row that has no room to
+                            label them.
+                            
+                            A stable sort, so within each half the cards stay in
+                            the order their owner arranged them (5.4 has no
+                            opinion about it, and `reorderPack` writes it down
+                            because the player does).
+                            
+                            Nothing moves in the klasyczny variant, where no
+                            card is worn and every one of them is in the pack. */}
+                        {[...seat.cards]
+                          .sort((a, b) => (a.slot ? 0 : 1) - (b.slot ? 0 : 1))
+                          .map((card, index) => (
+                            <CardTile
+                              key={`${card.cardId}-${index}`}
+                              card={card}
+                              onClick={() => onInspect(card)}
+                            />
+                          ))}
                       </div>
                     </Fold>
                   )}
