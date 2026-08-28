@@ -273,3 +273,63 @@ tell three sessions apart — the git author is Michał for all of them. Read it
 before crediting or blaming a change; a dirty working tree says who is *editing*
 a file, never who committed it. See CLAUDE.md for staging by name, which is what
 keeps one session's unfinished work out of another's commit.
+
+## Correction: „Punkty" was built on the wrong difference
+
+**Everything above about „Punkty" being fungible is wrong**, including the
+ruling that it keeps the remainder and the argument that no portrait can dim
+there. Michał said what the variant is, and it is not what this page assumed:
+
+> In both modes we don't need to spend them immediately — that's the point, you
+> always decide: wait, or exchange with possible loss. The difference is only
+> **when the card of the enemy goes back to used**. 1. the cards are hoarded
+> physically until spent (then go back to used). 2. the cards physically go to
+> used immediately — in the trophies it's just a trophy as a copy.
+
+So the fork does **not** dissolve in „Punkty". It is the same trade in both
+modes — pick a subset, `offersFor` finds the cheapest set, points above the
+multiple of seven are lost — and the only thing that differs is one
+`putOnPile` call, at the moment of victory instead of at the moment of trade.
+
+### What that makes wrong today
+
+- **`trophy_points` is the wrong shape.** A single integer cannot hold a choice
+  between Wrogowie. Beating a Wilkołak (10) and cashing him for one Miecz has
+  to burn 3, and today it cannot: the pool is always divisible by seven, so
+  „punkty ponad wielokrotność 7 są stracone" is dead text in the mode that was
+  supposed to keep the rule and drop only the cardboard.
+- **"Keep the remainder" was a ruling about the wrong thing.** The remainder to
+  keep is the *trophies you did not hand in*, which both modes keep. Waste
+  inside the set you did hand in is lost in both. Those got conflated.
+- **The fungibility argument goes with it.** „No particular corpse paid for a
+  given Miecz" is true of a pool and false of a list, and a list is what this
+  is. It was my reason for refusing to dim anything in „Punkty", and it was
+  reasoning from a wrong premise, not from the rule.
+
+### The shape that collapses the special case
+
+A beaten Wróg inserts a `trophy` holding in **both** modes. „Punkty" *also*
+returns the Karta to the stos zużytych there and then; „Karty pokonanych" holds
+it back until the trade. One branch, at one `putOnPile`, and after it every
+other piece is shared: `offersFor`, `tradeTrophies`, the console ledger, the
+seat card, and `shelfFor`'s beaten-minus-held — which then dims spent trophies
+in both modes, which is what was asked for in the first place.
+
+That is Michał's "just a trophy as a copy": the holding is the copy, and the
+Karta is back in circulation. It also keeps the mechanical difference this page
+argues for — in „Punkty" a Wróg can be drawn again immediately, where the
+printed rule takes 21 of the 32 out of the deck for as long as they are hoarded.
+
+`trophy_points` becomes vestigial. Existing „Punkty" tables carry a total with
+no trophies behind it, so a conversion has to decide between reading it as
+already-spent or seeding a holding per `trophy_beaten` entry — the shelf is
+written on every win in both modes since `d5fd4e7`, so for anything played
+after that the entries are there to seed from.
+
+### Whose this is
+
+Engine and console. The seat card's part is mostly deletion — its „Punkty"
+branch, the `trophy_points` prop, the memorial caption and the
+`Z 10 punktów … wymieniłeś już 7` line all exist to work around the pool, and
+`shelfFor` already treats a mode with holdings correctly. Nothing in the
+browser should be built against the current shape.
