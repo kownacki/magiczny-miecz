@@ -3,7 +3,7 @@ import { ruleLines } from "./ruleLines";
 import { parseCommand, worksOffTable } from "./console";
 
 const ok = (line: string) => {
-  const parsed = parseCommand(line, { stage: "playing" });
+  const parsed = parseCommand(line);
   if (!("ok" in parsed)) throw new Error(`nie sparsowano: ${line}`);
   return parsed.ok;
 };
