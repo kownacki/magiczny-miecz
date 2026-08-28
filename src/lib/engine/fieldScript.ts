@@ -385,6 +385,124 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
     ],
   },
 
+  /**
+   * "Jeżeli jesteś: Dobry - tracisz 1 Życie; Chaotyczny - rzuć kostką 1, 2, 3 -
+   * zyskujesz 1 Życie; 4, 5, 6 - tracisz 1 Życie; Zły - możesz wezwać Siły
+   * Ciemności: ..."
+   *
+   * Three Natury and three different things, which is why it is a `gdy` chain
+   * rather than a table: the die is only thrown for two of them, and for the
+   * Dobra Postać there is nothing to throw. Checked against the board scan
+   * rather than trusted from the transcription, because a mis-split here would
+   * cost the wrong Natura a point of Życie.
+   *
+   * The Zły branch is the only optional one — "możesz wezwać" — so it is a
+   * `wybor` inside the compulsory whole. Declining is a real answer: two of the
+   * six faces are bad, and calling on the Siły Ciemności is a gamble the board
+   * offers rather than imposes.
+   *
+   * The Relikwiarz spares a Dobra Postać here, and `sparedHere` reaches it
+   * because the Dobry branch is an ordinary loss of Życie.
+   */
+  "czarci-mlyn": {
+    obowiazkowe: true,
+    offers: [
+      {
+        name: "Czarci Młyn",
+        effect: {
+          op: "gdy",
+          warunek: { is: "natura", jedna_z: ["good"] },
+          to: { op: "punkty", stat: "life", delta: -1 },
+          inaczej: {
+            op: "gdy",
+            warunek: { is: "natura", jedna_z: ["chaotic"] },
+            to: {
+              op: "rzut",
+              faces: {
+                1: { op: "punkty", stat: "life", delta: 1 },
+                2: { op: "punkty", stat: "life", delta: 1 },
+                3: { op: "punkty", stat: "life", delta: 1 },
+                4: { op: "punkty", stat: "life", delta: -1 },
+                5: { op: "punkty", stat: "life", delta: -1 },
+                6: { op: "punkty", stat: "life", delta: -1 },
+              },
+            },
+            inaczej: {
+              op: "wybor",
+              options: [
+                {
+                  label: "Wezwij Siły Ciemności",
+                  effect: {
+                    op: "rzut",
+                    faces: {
+                      1: { op: "punkty", stat: "sword", delta: 1 },
+                      2: { op: "punkty", stat: "magic", delta: 1 },
+                      3: { op: "zaklecie", count: 1 },
+                      4: { op: "ruch-dodatkowy" },
+                      5: { op: "tura-stracona", turns: 1 },
+                      6: { op: "punkty", stat: "life", delta: -1 },
+                    },
+                  },
+                },
+                { label: "Nie wzywaj", effect: { op: "nic" } },
+              ],
+            },
+          },
+        },
+      },
+    ],
+  },
+
+  /**
+   * "Jeżeli jesteś Dobry możesz odzyskać punkty Życia z początku gry, lub rzuć
+   * kostką: 1-3 moc wody nie działa na ciebie, 4 - zyskujesz 1 punkt Życia, 5 -
+   * zyskujesz 1 Zaklęcie, 6 - zyskujesz dodatkowy ruch."
+   *
+   * The whole sentence hangs off "Jeżeli jesteś Dobry", so a Postać of any
+   * other Natura is offered nothing at all — and it is "możesz", so even a
+   * Dobra one may walk on. That is why this is an offer rather than
+   * `obowiazkowe`: nothing here happens to anybody against their will.
+   *
+   * Read off the board scan, twice, because the Relikwiarz says a Zła Postać
+   * "nie traci punktu Życia przy Studni Wieczności" and the Obszar has no such
+   * clause — no Natura loses anything here, and no face of the table is a loss.
+   * The card's own claim is left alone rather than a rule invented to match it.
+   */
+  "studnia-wiecznosci": {
+    offers: [
+      {
+        name: "Studnia Wieczności",
+        effect: {
+          op: "gdy",
+          warunek: { is: "natura", jedna_z: ["good"] },
+          to: {
+            op: "wybor",
+            options: [
+              // 4.7 caps a restoration at what the character started with, which
+              // is exactly "punkty Życia z początku gry".
+              { label: "Odzyskaj Życie z początku gry", effect: { op: "uzdrow", upTo: 4 } },
+              {
+                label: "Rzuć kostką",
+                effect: {
+                  op: "rzut",
+                  faces: {
+                    1: { op: "nic" },
+                    2: { op: "nic" },
+                    3: { op: "nic" },
+                    4: { op: "punkty", stat: "life", delta: 1 },
+                    5: { op: "zaklecie", count: 1 },
+                    6: { op: "ruch-dodatkowy" },
+                  },
+                },
+              },
+            ],
+          },
+          inaczej: { op: "nic" },
+        },
+      },
+    ],
+  },
+
   // "1 - tracisz 1 turę; 2-3 zostajesz Zamieniony w Kamień; 4-5 zyskujesz
   // dodatkowy ruch; 6 - zostałeś zignorowany."
   "wieza-przeznaczenia": {

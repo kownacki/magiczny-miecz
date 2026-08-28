@@ -183,6 +183,38 @@ async function walk(
    * Written here rather than inside `isSettled` because that function is the
    * browser's too and answers about an effect alone, with no decisions in hand.
    */
+  /**
+   * A condition the app can test is the app's to test, and only the branch it
+   * takes is anybody's to answer.
+   *
+   * Handled here rather than in the switch, beside `wybor` and `przenies`, for
+   * the reason those are: the gate below asks `isSettled` of the whole effect,
+   * and a `gdy` counts as unsettled while *either* branch holds a question. The
+   * Czarci Młyn is exactly that — a Dobra Postać there simply loses a point of
+   * Życie, and it was the Zły branch's "możesz wezwać Siły Ciemności" that made
+   * the Obszar unanswerable for all three Natury at once.
+   *
+   * `resolve.ts` already draws the line here: the browser cannot test a
+   * condition without a Snapshot, so it leaves the question to the server, and
+   * this is the server getting there.
+   */
+  if (effect.op === "gdy") {
+    const seat = snapshot.seats.find((s) => s.id === seatId);
+    if (!seat) throw new Error("Nieznane miejsce.");
+    const nature = seat.nature as Nature | null;
+    const holds =
+      effect.warunek.is === "natura"
+        ? nature !== null && effect.warunek.jedna_z.includes(nature)
+        : effect.warunek.is === "ma-zloto"
+          ? seat.gold > 0
+          : (effect.warunek.stat === "sword" ? seat.sword_own : seat.magic_own) <
+            effect.warunek.ponizej;
+    const branch = holds ? effect.to : effect.inaczej;
+    return branch
+      ? walk(snapshot, command, branch, reason, ports)
+      : nothing(["warunek niespełniony — nic się nie dzieje"]);
+  }
+
   const holderPicks =
     effect.op === "strata" && !isSettled(effect) && (decided.choices?.length ?? 0) > 0;
   if (!isSettled(effect) && !holderPicks) return owed();
@@ -207,21 +239,38 @@ async function walk(
       return { writes, result: { did, pending: null } };
     }
 
-    case "gdy": {
-      const seat = snapshot.seats.find((s) => s.id === seatId);
-      if (!seat) throw new Error("Nieznane miejsce.");
-      const nature = seat.nature as Nature | null;
-      const holds =
-        effect.warunek.is === "natura"
-          ? nature !== null && effect.warunek.jedna_z.includes(nature)
-          : effect.warunek.is === "ma-zloto"
-            ? seat.gold > 0
-            : (effect.warunek.stat === "sword" ? seat.sword_own : seat.magic_own) <
-              effect.warunek.ponizej;
-      const branch = holds ? effect.to : effect.inaczej;
-      return branch
-        ? walk(snapshot, command, branch, reason, ports)
-        : nothing(["warunek niespełniony — nic się nie dzieje"]);
+    /**
+     * A die table reached from inside something else.
+     *
+     * `resolveFieldOffer` rolls a table that *is* the offer and hands the face
+     * down, so this is only for the nested ones — and until the Czarci Młyn
+     * there were none, because every table in the box was the whole of what its
+     * Obszar or Karta did. That one puts a different table behind two of the
+     * three Natury, so the roll cannot happen until the condition has been
+     * tested and it lands here instead.
+     *
+     * Journalled the same way a top-level table is: the die is the interesting
+     * part and a table that rolled silently would be a table nobody can check.
+     */
+    case "rzut": {
+      const face = await ports.random.rollD6(`${reason}: tabela`);
+      const rolled: Changeset = {
+        journal: [
+          {
+            seatId,
+            turn: snapshot.game.turn,
+            kind: "field-table",
+            payload: { offer: reason, face },
+          },
+        ],
+      };
+      const landed = effect.faces[face];
+      if (!landed) return { writes: rolled, result: { did: [`${face}: nic`], pending: null } };
+      const done = await walk(apply(snapshot, rolled), command, landed, `${reason} (${face})`, ports);
+      return {
+        writes: merge(rolled, done.writes),
+        result: { did: done.result.did, pending: done.result.pending },
+      };
     }
 
     case "punkty": {

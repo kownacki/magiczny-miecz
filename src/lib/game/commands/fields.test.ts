@@ -228,3 +228,109 @@ describe("Obszary that make you roll", () => {
     expect(out.result.did.join(" ")).toMatch(/bezpiecznie — bez rzutu/);
   });
 });
+
+
+/**
+ * The two Obszary that ask what Natura you are.
+ *
+ * Both were read off the board scan rather than trusted from the transcription,
+ * because a mis-split here costs the wrong Natura a point of Życie. Both came
+ * back matching, and the Studnia came back with something missing that the
+ * Relikwiarz claims — see the note on its script.
+ */
+const asNature = (field: FieldId, nature: "good" | "evil" | "chaotic", cards: string[] = []) =>
+  aTable({
+    game: {
+      turn_state: {
+        phase: "field", fieldId: field, from: null, draw: 0, drawn: [], resolved: [],
+      } as TurnPhase,
+      active_seat: 0,
+    },
+    seats: [
+      aSeat({
+        id: "seat-a",
+        character_id: asSeatCharacter("awanturnik"),
+        field_id: field,
+        life: 3,
+        nature,
+      }),
+    ],
+    holdings: cards.map((cardId, at) =>
+      aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId, kind: "item" }),
+    ),
+  });
+
+const visit = async (
+  field: FieldId,
+  offer: string,
+  nature: "good" | "evil" | "chaotic",
+  die: number,
+  choices: number[] = [],
+  cards: string[] = [],
+) => {
+  const table = asNature(field, nature, cards);
+  const out = await resolveFieldOffer(
+    table,
+    { offerName: offer, decided: { choices }, shuffle: (items) => [...items] },
+    ports({ random: scriptedRandom([die, die, die]) }),
+  );
+  return { said: out.result.did.join("; "), life: apply(table, out.writes).seats[0].life };
+};
+
+describe("the Czarci Młyn, which asks your Natura first", () => {
+  /** "Dobry - tracisz 1 Życie" — no die for them at all. */
+  it("takes a point from a Dobra Postać", async () => {
+    expect((await visit("czarci-mlyn", "Czarci Młyn", "good", 1)).life).toBe(2);
+  });
+
+  it("is the Obszar the Relikwiarz spares a Dobra Postać at", async () => {
+    const { life, said } = await visit("czarci-mlyn", "Czarci Młyn", "good", 1, [], ["relikwiarz"]);
+    expect(life).toBe(3);
+    expect(said).toMatch(/chroni na tym Obszarze/);
+  });
+
+  /** "Chaotyczny - rzuć kostką 1, 2, 3 - zyskujesz 1 Życie; 4, 5, 6 - tracisz 1 Życie" */
+  it("makes a Chaotyczna Postać roll for it, either way", async () => {
+    expect((await visit("czarci-mlyn", "Czarci Młyn", "chaotic", 2)).life).toBe(4);
+    expect((await visit("czarci-mlyn", "Czarci Młyn", "chaotic", 5)).life).toBe(2);
+  });
+
+  /**
+   * "Zły - możesz wezwać Siły Ciemności" — the only optional branch, and
+   * declining is a real answer: two of its six faces are bad.
+   */
+  it("lets a Zła Postać call on the Siły Ciemności, or not", async () => {
+    expect((await visit("czarci-mlyn", "Czarci Młyn", "evil", 1, [0])).said).toMatch(/\+1 Miecza/);
+    expect((await visit("czarci-mlyn", "Czarci Młyn", "evil", 6, [0])).life).toBe(2);
+
+    const declined = await visit("czarci-mlyn", "Czarci Młyn", "evil", 6, [1]);
+    expect(declined.life).toBe(3);
+    expect(declined.said).toMatch(/Nie wzywaj/);
+  });
+});
+
+describe("the Studnia Wieczności, which only answers a Dobra Postać", () => {
+  /** "możesz odzyskać punkty Życia z początku gry" — 4.7 caps it at the four. */
+  it("restores what the character started with", async () => {
+    expect((await visit("studnia-wiecznosci", "Studnia Wieczności", "good", 1, [0])).life).toBe(4);
+  });
+
+  it("or rolls the water's own table instead", async () => {
+    expect((await visit("studnia-wiecznosci", "Studnia Wieczności", "good", 4, [1])).life).toBe(4);
+    expect((await visit("studnia-wiecznosci", "Studnia Wieczności", "good", 1, [1])).life).toBe(3);
+  });
+
+  /**
+   * The whole sentence hangs off "Jeżeli jesteś Dobry", so nobody else is
+   * offered anything — and no face of the table is a loss, for any Natura.
+   * The Relikwiarz says a Zła Postać "nie traci punktu Życia przy Studni
+   * Wieczności"; the Obszar has no such clause, checked twice against the scan.
+   */
+  it("does nothing at all to any other Natura", async () => {
+    for (const nature of ["evil", "chaotic"] as const) {
+      const { life, said } = await visit("studnia-wiecznosci", "Studnia Wieczności", nature, 4);
+      expect(life).toBe(3);
+      expect(said).toMatch(/nic się nie dzieje/);
+    }
+  });
+});
