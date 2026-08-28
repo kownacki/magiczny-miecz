@@ -471,8 +471,18 @@ function CreateDialog({
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"simulation" | "companion">("simulation");
-  const [eqMode, setEqMode] = useState<"classic" | "slots">("slots");
-  const [endlessStock, setEndlessStock] = useState(true);
+  /**
+   * What a table opens with, before its players have talked about it.
+   *
+   * Both are moved in the poczekalnia now, so these are the defaults rather
+   * than answers: slotowy because it is how this table plays, and the endless
+   * pile because 21.2 is right about a Magiczny Miecz and odd about a Hełm.
+   * Still sent explicitly rather than left to the route's own defaults — the
+   * dialog is where a table's first state is decided, and a caller that sends
+   * nothing is a caller that cannot be read.
+   */
+  const eqMode = "slots" as const;
+  const endlessStock = true;
 
   return (
     <Dialog title="Nowy stół" onCancel={onCancel}>
@@ -515,56 +525,17 @@ function CreateDialog({
           />
         </fieldset>
 
-        {/* Slotowy first and preselected: it is how this table plays. The
-            variant is still a house rule and klasyczny is still the game as
-            printed, which is why both are offered rather than one assumed —
-            the order says which is expected, not which is legitimate. Settled
-            here with the mode because both describe the table rather than the
-            moment. */}
-        <fieldset className="mt-3 flex flex-col gap-2">
-          <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
-            Ekwipunek
-          </legend>
-          <ModeChoice
-            active={eqMode === "slots"}
-            onPick={() => setEqMode("slots")}
-            label="Slotowy"
-            hint="Co nosisz, zakładasz na miejsce; reszta w plecaku."
-          />
-          <ModeChoice
-            active={eqMode === "classic"}
-            onPick={() => setEqMode("classic")}
-            label="Klasyczny"
-            hint="Jak w Instrukcji: 4 Przedmioty, bez podziału na noszone i niesione."
-          />
-        </fieldset>
+        {/* The variant and the pile are not asked here any more.
 
-        {/* Third, and last, because it is the smallest of the three: the mode
-            decides whether there is a board in the room and the variant decides
-            what wearing something means, while this decides whether one pile
-            can run dry. */}
-        <fieldset className="mt-3 flex flex-col gap-2">
-          {/* Not "Wyposażenie": chapter 21 is titled "MAGICZNE MIECZE, TARCZE
-              TOLIMANA I KARTY WYPOSAŻENIA", three things joined by *i*, and
-              both relics are printed on the Wyposażenie sheet all the same. A
-              legend reading "Wyposażenie" beside a setting that deliberately
-              spares those two would be read as covering them. */}
-          <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
-            Zapas Wyposażenia
-          </legend>
-          <ModeChoice
-            active={endlessStock}
-            onPick={() => setEndlessStock(true)}
-            label="Zwykłego Wyposażenia nie brakuje"
-            hint="Miecz, Hełm, Sztylet, Zbroja, Tarcza — bez limitu. Wyjątek: Magiczne Miecze i Tarcze Tolimana zostają po cztery, bo na nich stoi wejście na Most i do Zamku."
-          />
-          <ModeChoice
-            active={!endlessStock}
-            onPick={() => setEndlessStock(false)}
-            label="Jak w pudełku"
-            hint="Cały stos Wyposażenia jest skończony (21.2): trzy Miecze, a Postaci z Mieczem w Charakterystyce jest pięć."
-          />
-        </fieldset>
+            They were, and that meant they were answered before anybody else had
+            arrived: whoever clicked fastest settled a house rule for five other
+            people, who found out later by discovering they had a Plecak.
+            Neither has to be decided at the door, because nothing is dealt
+            until the game starts — so both are in the poczekalnia now, where
+            the table is all present and has nothing to do but talk about them.
+
+            The mode stays. It is the one answer that really does precede the
+            table: it decides whether there is a board in the room at all. */}
 
         <Actions
           busy={busy}

@@ -8,6 +8,7 @@ import {
   leaveTable as leaveTableOn,
   noteArrival as noteArrivalOn,
   openTable as openTableOn,
+  setEqMode as setEqModeOn,
   needsSweep,
   renameUser as renameUserOn,
   setReady as setReadyOn,
@@ -182,6 +183,11 @@ export async function leaveTable(
   byUser?: string,
 ): Promise<LeaveResult> {
   return change(gameId, leaveTableOn, { userId, kicked, byUser });
+}
+
+/** The equipment variant, while the table is still the poczekalnia. */
+export async function setEqMode(gameId: string, eqMode: "slots" | "classic"): Promise<void> {
+  await change(gameId, setEqModeOn, { eqMode });
 }
 
 /**

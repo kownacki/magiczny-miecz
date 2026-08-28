@@ -1,5 +1,6 @@
 /** The poczekalnia: seats arriving, going quiet, being taken over, and going away. */
 
+import type { EqMode } from "@/lib/engine/slots";
 import {
   apply,
   merge,
@@ -390,6 +391,31 @@ export function unseat(
  * copied into the payload for the reason `left-table` copies it: the row can be
  * deleted and the line has to survive it.
  */
+/**
+ * Which equipment variant the table plays, settled while it is still settling.
+ *
+ * It used to be answered in the dialog that opens a table, before anybody else
+ * had arrived — so the one person clicking fastest chose a house rule for
+ * everybody, and the others found out by discovering they had a Plecak. The
+ * poczekalnia is where a table talks, so it is where this belongs.
+ *
+ * Only there, though. Half of what the variant decides has already been applied
+ * to cards the moment play starts — what is worn, what merely carried, what
+ * counts in a fight — and there is no honest way to reinterpret a board
+ * mid-game. `Settings` in the game says exactly this about it, and now says it
+ * about a setting that really was fixed rather than one nobody had moved.
+ */
+export function setEqMode(
+  snapshot: Snapshot,
+  command: { eqMode: EqMode },
+): Outcome<void> {
+  if (snapshot.game.status !== "lobby") {
+    throw new Error("Ekwipunek wybiera się przed rozpoczęciem gry — w trakcie już nie do zmiany.");
+  }
+  if (snapshot.game.eq_mode === command.eqMode) return { writes: {}, result: undefined };
+  return { writes: { game: { eq_mode: command.eqMode } }, result: undefined };
+}
+
 /**
  * The two lines a brand-new table starts with.
  *

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { aHolding, aSeat, aTable } from "../fixture";
-import { seatView } from "./seat";
+import { seatView, setEndlessStock } from "./seat";
 
 const view = (
   seat: Parameters<typeof aSeat>[0] = {},
@@ -183,5 +183,43 @@ describe("Zaczarowane Wzgórza", () => {
     expect(withSword("mroczna-polana").parametr.miecz).toBeGreaterThan(
       withSword("zaczarowane-wzgorza").parametr.miecz,
     );
+  });
+});
+
+/**
+ * 21.2's pile, which can be given up but not taken back — after the start.
+ *
+ * The refusal is about what is already on the table: by then there may be six
+ * Miecze on a board the finite pile holds five of, and switching back would
+ * make the app start refusing cards people are holding. None of that is true in
+ * the poczekalnia, where nothing has been dealt — and a setting you cannot take
+ * back while still choosing your Postać is a trap rather than a rule.
+ */
+describe("the finite pile, before and after the start (21.2)", () => {
+  const lobby = (endless: boolean) =>
+    aTable({ game: { status: "lobby", endless_stock: endless }, seats: [aSeat()] });
+  const playing = (endless: boolean) =>
+    aTable({ game: { endless_stock: endless }, seats: [aSeat()] });
+
+  it("goes back to the box's pile while the table is still filling up", () => {
+    expect(setEndlessStock(lobby(true), { on: false }).writes.game).toEqual({
+      endless_stock: false,
+    });
+  });
+
+  it("refuses to go back once the game has started", () => {
+    expect(() => setEndlessStock(playing(true), { on: false })).toThrow(/otwórz nowy stół/);
+  });
+
+  it("writes nothing when it is already off and asked for off", () => {
+    expect(setEndlessStock(lobby(false), { on: false }).writes).toEqual({});
+  });
+
+  it("can still be turned on mid-game, which was always allowed", () => {
+    // Turning it ON changes nothing that already happened: the pile simply
+    // stops being counted from here.
+    expect(setEndlessStock(playing(false), { on: true }).writes.game).toEqual({
+      endless_stock: true,
+    });
   });
 });

@@ -61,6 +61,16 @@ export interface Requests {
    */
   leave: { userId: string; standing: boolean };
   seat: { ready: boolean; name: string };
+  /**
+   * The table's own house rules, while it is still the poczekalnia.
+   *
+   * Both are answered in the dialog that opens a table today and neither has to
+   * be: nobody else has arrived yet, so the fastest clicker settles the variant
+   * for everybody. Sent one at a time — each switch posts the one it moved —
+   * because a body carrying both would let a stale lobby page put back a
+   * setting somebody else had just changed.
+   */
+  settings: { eqMode: string; endlessStock: boolean };
   start: Record<never, never>;
   turn: {
     action: string;

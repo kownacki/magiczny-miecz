@@ -279,10 +279,25 @@ export function setEndlessStock(
   snapshot: Snapshot,
   command: { on: boolean },
 ): Outcome<void> {
+  /**
+   * Off is refused once play has begun, and freely allowed before it.
+   *
+   * The refusal is about what is already on the table: by then there may be six
+   * Miecze on a board the finite pile holds five of, and switching back would
+   * make the app start refusing cards people are holding. In the poczekalnia
+   * none of that is true — nothing has been dealt, nothing is in anybody's
+   * pack — so this is still just a table settling its house rules, and a
+   * setting you cannot take back while still choosing your Postać is a trap
+   * rather than a rule.
+   */
   if (!command.on) {
-    throw new Error(
-      "Niewyczerpanego Wyposażenia nie da się już wyłączyć w trakcie gry — otwórz nowy stół (21.2).",
-    );
+    if (snapshot.game.status !== "lobby") {
+      throw new Error(
+        "Niewyczerpanego Wyposażenia nie da się już wyłączyć w trakcie gry — otwórz nowy stół (21.2).",
+      );
+    }
+    if (!snapshot.game.endless_stock) return { writes: {}, result: undefined };
+    return { writes: { game: { endless_stock: false } }, result: undefined };
   }
   if (snapshot.game.endless_stock) return { writes: {}, result: undefined };
   return {

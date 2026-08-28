@@ -13,6 +13,7 @@ import {
   nextHost,
   noteArrival,
   openTable,
+  setEqMode,
   promoteHost,
   renameUser,
   resumeAs,
@@ -1028,5 +1029,39 @@ describe("opening a table", () => {
     const table = aTable({ seats: seated({}), users: here({}) });
     const line = openTable(table, { hostName: "Michał", hostSeatId: null }).writes.journal?.at(1);
     expect(line?.seatId).toBeNull();
+  });
+});
+
+/**
+ * The variant, settled in the room rather than in the dialog that opened it.
+ *
+ * It was answered before anybody else had arrived, so the fastest clicker chose
+ * a house rule for five other people. Nothing is dealt until the game starts,
+ * so there is nothing to protect until then — and everything to protect after.
+ */
+describe("choosing the equipment variant", () => {
+  it("moves it while the table is still filling up", () => {
+    // `aTable` opens klasyczny, so slotowy is the move.
+    const table = aTable({ game: { status: "lobby" }, seats: seated({}), users: here({}) });
+    expect(setEqMode(table, { eqMode: "slots" }).writes.game).toEqual({ eq_mode: "slots" });
+  });
+
+  it("writes nothing when it is already what was asked for", () => {
+    // Otherwise every render of the panel could post the state it is showing.
+    const table = aTable({
+      game: { status: "lobby", eq_mode: "classic" },
+      seats: seated({}),
+      users: here({}),
+    });
+    expect(setEqMode(table, { eqMode: "classic" }).writes).toEqual({});
+  });
+
+  it("refuses once the game has started", () => {
+    // Half of what the variant decides has already been applied to cards on the
+    // board by then — what is worn, what is merely carried, what counts in a
+    // fight — and there is no honest way to reinterpret that.
+    // `aTable` is a playing table by default, which is the case this refuses.
+    const playing = aTable({ seats: seated({}), users: here({}) });
+    expect(() => setEqMode(playing, { eqMode: "classic" })).toThrow(/przed rozpoczęciem/);
   });
 });

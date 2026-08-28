@@ -53,6 +53,7 @@ export function Lobby({
   users,
   mySeatIndex,
   journal,
+  settings,
   characters,
   pickingFor,
   pendingCharacterId,
@@ -87,6 +88,11 @@ export function Lobby({
    * as at the table.
    */
   journal?: React.ReactNode;
+  /**
+   * The table's house rules, passed in for the same reason the Dziennik is:
+   * changing one is a post, and this component does not own the door.
+   */
+  settings?: React.ReactNode;
   characters: Character[];
   pickingFor: LobbySeat | null;
   /** Asked for, not yet granted. Everything else in the strip waits with it. */
@@ -415,25 +421,28 @@ export function Lobby({
           )}
 
           {/**
-           * The Dziennik, at the foot of the column.
+           * The house rules above the Dziennik, and both inside one box.
            *
-           * It used to share this column with a reading panel — one big Karta
-           * of whatever the cursor was last over. That panel is gone: the Karty
-           * now come up on hover, beside the tile being pointed at, through the
-           * same `useCardPreview` every other card in the game uses. A box you
-           * have to look away from the strip to read is a worse answer to "what
-           * does this one do" than one that appears where you are already
-           * looking, and it cost this column two thirds of its height.
+           * The settings scroll and the feed does not: the feed is a fixed
+           * strip on the bottom edge (see `NORMAL_HEIGHT`) and the questions
+           * above it take whatever is left, which on a short window is not much
+           * and on a tall one is plenty. What must not happen is the feed being
+           * pushed off, which is what a column of settings in the same flow
+           * would do the moment a third question was added.
            *
-           * `mt-auto` on the feed itself keeps it on the bottom edge, so what
-           * the panel gave up goes to the settings above rather than to a gap
-           * under the log.
-           *
-           * `relative`, because expanding it is `absolute inset-0` and wants an
-           * ancestor to be inset-zero *of*. Without one it would lay itself over
-           * the whole page rather than over this column.
+           * One `relative` wrapper around the pair, because expanding the
+           * Dziennik is `absolute inset-0` and this is the box it should open
+           * over — the settings and the feed, leaving the name field above it
+           * reachable. The same bargain it strikes with the map at the table.
            */}
-          <div className="relative flex min-h-0 flex-1 flex-col">{journal}</div>
+          <div className="relative flex min-h-0 flex-1 flex-col gap-3">
+            {settings && (
+              // `pr-1` so a scrollbar has somewhere to be that is not on top of
+              // the options it is scrolling.
+              <div className="min-h-0 flex-1 overflow-y-auto pr-1">{settings}</div>
+            )}
+            {journal}
+          </div>
         </aside>
 
         {/* Last, so it lies over both columns — the seats and the reading
