@@ -12,12 +12,16 @@ import { endlessStock } from "@/lib/game/turnStore";
  * rest found out by discovering they had a Plecak. The lobby is where a table
  * talks, so it is where these belong.
  *
- * Any seated player may move them, not just the host. Settling house rules is
- * what the room is doing while it waits, and a setting only one person can
- * touch is one nobody discusses — they just ask that person to click it. Where
- * the *rules* forbid a change the commands refuse it, which is the check that
- * matters: `setEqMode` once the game has started, and `setEndlessStock` trying
- * to go back to the finite pile with cards already on the board.
+ * The host's, and only the host's. These are the table's house rules rather
+ * than anybody's preference, and one of them cannot be taken back — a table
+ * that has turned the pile endless does not get to be finite again. A room
+ * where six people can all reach a one-way switch is a room where it gets
+ * pressed by whoever misreads it first.
+ *
+ * The commands still refuse what the *rules* refuse, which is the other half:
+ * `setEqMode` once the game has started, and `setEndlessStock` trying to go
+ * back to the finite pile with cards already on the board. This check is about
+ * who is asking; those are about whether it can be done at all.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -27,6 +31,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const body = await bodyOf(request, "settings");
   const actor = body.token ? await verifyActor(game.id, String(body.token)) : null;
   if (!actor) return NextResponse.json({ error: "Nieznany gracz." }, { status: 403 });
+  if (!actor.user.is_host) {
+    return NextResponse.json(
+      { error: "Zasady stołu ustala gospodarz." },
+      { status: 403 },
+    );
+  }
 
   try {
     // One at a time, whichever switch was pressed. A body carrying both would

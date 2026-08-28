@@ -128,6 +128,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     error,
     notices,
     dismissNotice,
+    setHouseRule,
     busy,
     post,
     runConsole,
@@ -1053,12 +1054,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           /* The house rules, where the table can talk about them. Each switch
              posts only the setting it moved — see the route. */
           settings={
+            // The host's, and only the host's: one of these cannot be taken
+            // back, and a one-way switch six people can reach is one that gets
+            // pressed by whoever misreads it first. Everybody else sees what
+            // the table has settled on, which is the part that matters to them.
             <TableSettings
               eqMode={game.eq_mode === "classic" ? "classic" : "slots"}
               endlessStock={game.endless_stock}
               busy={busy}
-              onEqMode={(eqMode) => post("settings", { eqMode })}
-              onEndlessStock={(on) => post("settings", { endlessStock: on })}
+              canChange={amHost}
+              onEqMode={(eqMode) => setHouseRule({ eq_mode: eqMode })}
+              onEndlessStock={(on) => setHouseRule({ endless_stock: on })}
             />
           }
           characters={CHARACTERS}

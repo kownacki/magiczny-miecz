@@ -29,12 +29,21 @@ export function TableSettings({
   eqMode,
   endlessStock,
   busy,
+  canChange,
   onEqMode,
   onEndlessStock,
 }: {
   eqMode: EqMode;
   endlessStock: boolean;
   busy: boolean;
+  /**
+   * Whether this device may move them, which means: whether it is the host's.
+   *
+   * Everybody still *sees* them, and that is most of the point — a table
+   * settles its house rules by reading them together. What the rest cannot do
+   * is press one, and one of these does not come back.
+   */
+  canChange: boolean;
   onEqMode: (eqMode: EqMode) => void;
   onEndlessStock: (on: boolean) => void;
 }) {
@@ -68,6 +77,7 @@ export function TableSettings({
           },
         ]}
         busy={busy}
+        canChange={canChange}
       />
 
       <Group
@@ -99,6 +109,7 @@ export function TableSettings({
           },
         ]}
         busy={busy}
+        canChange={canChange}
       />
 
       {/* Said once, under both, rather than on each of the four options. It is
@@ -117,10 +128,12 @@ function Group({
   legend,
   options,
   busy,
+  canChange,
 }: {
   legend: string;
   options: { active: boolean; label: string; hint: string; onPick: () => void }[];
   busy: boolean;
+  canChange: boolean;
 }) {
   return (
     <fieldset className="flex flex-col gap-2">
@@ -130,15 +143,21 @@ function Group({
           key={option.label}
           type="button"
           onClick={option.onPick}
-          disabled={busy || option.active}
+          disabled={busy || option.active || !canChange}
+          title={canChange ? undefined : "Zasady stołu ustala gospodarz"}
           aria-pressed={option.active}
           // Disabled on the one already chosen rather than merely lit: pressing
           // it would post a change to what it already is, and the only thing
           // that could do is lose a race with somebody else's press.
+          // A guest sees what the table has settled on and cannot press it —
+          // but the one in force is still lit, because reading it is the part
+          // that matters to everybody.
           className={`rounded-lg border px-3 py-2 text-left transition disabled:cursor-default ${
             option.active
               ? "border-ochre bg-ochre/10"
-              : "border-edge bg-panel/40 hover:border-ochre/60 disabled:opacity-50"
+              : `border-edge bg-panel/40 disabled:opacity-50 ${
+                  canChange ? "hover:border-ochre/60" : ""
+                }`
           }`}
         >
           <span

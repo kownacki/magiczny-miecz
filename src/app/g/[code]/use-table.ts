@@ -140,6 +140,8 @@ export interface Table {
   /** The same messages, as a queue the rail draws — see `Toasts`. */
   notices: Notice[];
   dismissNotice: (id: number) => void;
+  /** Moves one of the table's house rules — the host's, and instant. */
+  setHouseRule: (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => Promise<void>;
   busy: boolean;
   refresh: () => Promise<void>;
   /** One request, with its body checked against what that route reads. */
@@ -191,6 +193,20 @@ export function useTable(code: string): Table {
   const watched = useRef<Watched | null>(null);
   /** Moves this device has made and the server has not confirmed (see `equip`). */
   const [moved, setMoved] = useState<Record<string, Slot | null>>({});
+  /**
+   * A house rule the host has just moved and the server has not confirmed.
+   *
+   * The same bargain as `moved`: nobody is racing you for it. Only the host may
+   * touch these and there is nothing for the server to work out — a switch is
+   * the whole decision — so waiting a round trip to see your own click land
+   * makes a control that is instant everywhere else feel broken here.
+   *
+   * Cleared when the server reports the same thing, so a request that never
+   * arrived reverts on the next poll rather than lingering as a lie.
+   */
+  const [houseRules, setHouseRules] = useState<Partial<Pick<Game, "eq_mode" | "endless_stock">>>(
+    {},
+  );
   /**
    * Characters taken client-first, by seat id.
    *
@@ -282,6 +298,22 @@ export function useTable(code: string): Table {
       return;
     }
 
+    // The house rule this device asked for, kept only until the server says the
+    // same thing. Compared rather than counted down: a request that never
+    // arrived reverts here, and one that did stops overriding.
+    setHouseRules((wanted) => {
+      const still: Partial<Pick<Game, "eq_mode" | "endless_stock">> = {};
+      if (wanted.eq_mode !== undefined && wanted.eq_mode !== data.game.eq_mode) {
+        still.eq_mode = wanted.eq_mode;
+      }
+      if (
+        wanted.endless_stock !== undefined &&
+        wanted.endless_stock !== data.game.endless_stock
+      ) {
+        still.endless_stock = wanted.endless_stock;
+      }
+      return still;
+    });
     setGame(data.game);
     setSeats(data.seats);
     const now = Date.now();
@@ -690,6 +722,26 @@ export function useTable(code: string): Table {
    * server refuses anyway, the next refresh has the truth in it and the
    * optimistic move is dropped on top of it, which puts the card back.
    */
+  /**
+   * Moves a house rule, on screen first.
+   *
+   * Nobody is racing the host for these, so the switch answers immediately and
+   * the server is told afterwards — the same bargain `equip` strikes, and for
+   * the same reason. A refusal comes back as a toast and the next refresh puts
+   * the switch back where the table actually has it.
+   */
+  const setHouseRule = useCallback(
+    async (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => {
+      setHouseRules((was) => ({ ...was, ...patch }));
+      await post("settings", {
+        ...(patch.eq_mode !== undefined ? { eqMode: patch.eq_mode } : {}),
+        ...(patch.endless_stock !== undefined ? { endlessStock: patch.endless_stock } : {}),
+      });
+      await refresh();
+    },
+    [post, refresh],
+  );
+
   async function equip(holdingId: string, slot: Slot | null) {
     const mineNow = seats.find((seat) => seat.seat_index === mySeatIndex);
     const held = mineNow?.holdings.find((h) => h.id === holdingId);
@@ -785,7 +837,12 @@ export function useTable(code: string): Table {
   }
 
   return {
-    game,
+    // What the server said, with the host's own unconfirmed switch over the top
+    // — see `houseRules`. Everything downstream reads `game.eq_mode`, so laying
+    // it on here means no caller has to know the difference.
+    game: game && (houseRules.eq_mode !== undefined || houseRules.endless_stock !== undefined)
+      ? { ...game, ...houseRules }
+      : game,
     seats,
     fieldCards,
     stock,
@@ -805,6 +862,7 @@ export function useTable(code: string): Table {
     setError,
     notices,
     dismissNotice,
+    setHouseRule,
     busy,
     refresh,
     post,
