@@ -188,6 +188,10 @@ export function CardTile({
  */
 export const TILE_ART_HEIGHT = 80;
 export const SPELL_BACK_WIDTH = 52;
+/** What one tile takes across, which is what a stack of backs must not exceed. */
+const TILE_WIDTH = 92;
+/** The widest a back may show of the one beneath it. */
+const SPELL_BACK_STEP = 20;
 
 /**
  * Zaklęcia somebody is holding that nobody else may look at (9.3).
@@ -202,15 +206,25 @@ export const SPELL_BACK_WIDTH = 52;
  * says the same number in the row's own language, and the caption still says it
  * in figures for anybody counting past three.
  *
- * A stack with one step, not a width per count. Each back shows twenty pixels
- * of the one under it, which is chosen from the top of the range: at three
- * cards the stack is 52 + 2 x 20 = 92, exactly a Przedmiot's tile, so the hand
- * 2.6 allows on Magia alone still occupies one place in the row. Two come to 72
- * and one to 52 — narrower, and narrower by the same step, which is what makes
- * a column of these look measured rather than fitted. The fourth, which only a
- * Różdżka Zaklęć reaches, is the one that runs a tile's width over.
+ * One tile wide, whatever the count. Each back shows twenty pixels of the one
+ * under it, which is chosen from the top of the range: at three cards the stack
+ * is 52 + 2 x 20 = 92, exactly a Przedmiot's tile, so the hand 2.6 allows on
+ * Magia alone occupies one place in the row. Two come to 72 and one to 52 —
+ * narrower, and narrower by the same step, which is what makes a column of
+ * these look measured rather than fitted.
+ *
+ * Past three the step closes up instead of the stack growing. A fourth Zaklęcie
+ * is reachable — the Różdżka Zaklęć is the one card in the box that says so —
+ * and at twenty it stood 112 across, which is one card sticking out of the row
+ * and a caption no longer centred under anything. So the step is whatever
+ * divides the tile: 13.3 at four, and smaller again for a hand no rule allows,
+ * because a stack that cannot overflow is one fewer thing to be surprised by.
  */
 export function CardBack({ count, caption }: { count: number; caption?: React.ReactNode }) {
+  const step =
+    count > 1
+      ? Math.min(SPELL_BACK_STEP, (TILE_WIDTH - SPELL_BACK_WIDTH) / (count - 1))
+      : SPELL_BACK_STEP;
   return (
     <figure className="flex flex-col items-center gap-1">
       <span className="flex h-[80px] items-center">
@@ -221,8 +235,11 @@ export function CardBack({ count, caption }: { count: number; caption?: React.Re
             alt=""
             width={SPELL_BACK_WIDTH}
             height={TILE_ART_HEIGHT}
-            // 52 wide, stepped by 20: the margin is the difference.
-            className={`rounded border border-magia/40 ${at > 0 ? "-ml-8" : ""}`}
+            // The card is 52 wide and shows `step` of it: the overlap is the
+            // difference, and a fraction of a pixel is a thing browsers lay out
+            // exactly and blades do not.
+            style={at > 0 ? { marginLeft: step - SPELL_BACK_WIDTH } : undefined}
+            className="rounded border border-magia/40"
           />
         ))}
       </span>
