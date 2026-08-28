@@ -137,18 +137,19 @@ export function TableSettings({
         canChange={canChange}
       />
 
-      {/* Said once, under both, rather than on each of the four options. It is
-          the same fact about all of them and the reason the panel is here at
-          all: after the start these stop being questions.
+      {/* Only for a guest, who is reading the answers rather than giving them:
+          naming who to ask is their next move.
           
-          And a different fact for a guest, who is reading the answers rather
-          than giving them — naming who to ask is more use to them than being
-          told when the asking closes. */}
-      <p className="text-[11px] leading-snug text-muted/70">
-        {canChange
-          ? "Ustalacie to razem, dopóki gra się nie zaczęła — potem ekwipunku już nie zmienicie, a skończony stos wraca dopiero przy nowym stole."
-          : "Tak gra ten stół. Zasady ustala gospodarz — dopóki gra się nie zaczęła, można go poprosić o zmianę."}
-      </p>
+          The host had a line here too, about the questions closing at the
+          start. It went because it was telling them something the panel shows
+          by itself — this whole panel is the poczekalnia's, and after the start
+          it is not on screen to be read. */}
+      {!canChange && (
+        <p className="text-[11px] leading-snug text-muted/70">
+          Tak gra ten stół. Zasady ustala gospodarz — dopóki gra się nie zaczęła, można go
+          poprosić o zmianę.
+        </p>
+      )}
 
       {/* The long answer, one drawer away. Everybody gets this, not only the
           host: a guest who cannot move a switch is exactly the person who
