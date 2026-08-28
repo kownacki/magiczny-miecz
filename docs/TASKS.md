@@ -766,6 +766,19 @@ seat cannot simply be allowed to act until it has answered.
 
 `docs/COVERAGE.md` marks 5.6 ◐ and says the same in one line.
 
+### One house rule journals itself, the other does not
+
+`setEndlessStock` writes a line — "Zwykłego Wyposażenia nie będzie już
+brakować (21.2)" — and `setEqMode` writes nothing at all. Both are the table's
+own rules, both are the host's to move, and both stop being movable once the
+game starts; only one of them leaves a trace of having been moved.
+
+Either answer is defensible and they should match. The variant can only change
+in the poczekalnia, where the Dziennik is already thin and a line about it
+would read as noise; on the other hand a table that starts with a Plecak
+nobody expected has nothing to point at. Left as it is because it is the peer's
+command and the asymmetry is cosmetic, not because it is right.
+
 ### The host cannot withdraw a Postać from the board
 
 `removeCharacter` exists, is tested, spills the holdings onto the Obszar (12.1)
