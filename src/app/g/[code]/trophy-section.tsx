@@ -86,6 +86,16 @@ export function TrophySection({
 }) {
   const held = seat.holdings.filter((one) => one.kind === "trophy");
   const [picked, setPicked] = useState<string[]>([]);
+  /**
+   * Shut to begin with, unlike the pack and the Przyjaciele.
+   *
+   * Those two are open because what is in them is changing your numbers right
+   * now — a Pasterz lending +1/+1 is a fact about this turn's fight. Trofea
+   * change nothing until you trade them, and the tally in the heading already
+   * carries the only thing that would make you look: how many points, and
+   * whether they are worth a Miecz yet. Open it when you mean to spend them.
+   */
+  const [showing, setShowing] = useState(false);
 
   const counting = points ?? held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
   // What the trade would actually hand in: the chosen Karty, or everything when
@@ -102,6 +112,8 @@ export function TrophySection({
   return (
     <Fold
       title="Trofea"
+      open={showing}
+      onToggle={() => setShowing(!showing)}
       tally={
         <span className={swords > 0 ? "text-ochre" : undefined}>
           {counting} pkt{swords > 0 ? ` · ${swords} Miecz${swords > 1 ? "a" : ""}` : ""}
