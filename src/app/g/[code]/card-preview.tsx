@@ -656,11 +656,18 @@ export function CardPreview({
                 ))}
                 {kit.spells ? (
                   <figure className="flex flex-col items-center gap-1">
-                    {/* Side by side, not overlapped. Two backs then run wider
-                        than a Przedmiot's tile, which is the cost — but a fan
-                        reads as one card with something behind it, and what
-                        this has to say is how many there are. */}
-                    <span className="flex h-[80px] items-center gap-1">
+                    {/**
+                     * A stack with one step, not a width per count.
+                     *
+                     * Each back shows twenty pixels of the one under it, which
+                     * is chosen from the top of the range: at three cards the
+                     * stack is 52 + 2 x 20 = 92, exactly a Przedmiot's tile, so
+                     * the widest hand this can hold still occupies one place in
+                     * the row. Two then come to 72 and one to 52 — narrower,
+                     * and narrower by the same step, which is what makes a
+                     * column of these look measured rather than fitted.
+                     */}
+                    <span className="flex h-[80px] items-center">
                       {Array.from({ length: kit.spells }, (_, at) => (
                         <Image
                           key={at}
@@ -668,7 +675,8 @@ export function CardPreview({
                           alt=""
                           width={SPELL_BACK_WIDTH}
                           height={TILE_ART_HEIGHT}
-                          className="rounded border border-magia/40"
+                          // 52 wide, stepped by 20: the margin is the difference.
+                        className={`rounded border border-magia/40 ${at > 0 ? "-ml-8" : ""}`}
                         />
                       ))}
                     </span>
