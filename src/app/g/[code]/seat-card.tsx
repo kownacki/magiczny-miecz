@@ -103,6 +103,7 @@ export function SeatCard({
   onAdjust,
   onDrop,
   onTrade,
+  trophyMode,
   onEquip,
   onUse,
   onWand,
@@ -129,7 +130,10 @@ export function SeatCard({
   slotted: boolean;
   onAdjust: (stat: string, delta: number) => void;
   onDrop: (holdingId: string) => void;
-  onTrade: () => void;
+  /** The chosen Karty (1.4); an empty list means all of them, as the command reads it. */
+  onTrade: (cardIds: string[]) => void;
+  /** Which trofea rule this table plays (1.4) — `game.trophy_mode`. */
+  trophyMode: "points" | "cards";
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it — asked about first, because it cannot be undone. */
   onUse?: (holdingId: string, cardId: string) => void;
@@ -770,14 +774,28 @@ export function SeatCard({
               as one story: what you wear, what you carry, who walks with you,
               what you have killed, what you know. Each section a different kind
               of thing rather than four flavours of inventory. */}
+          {spells}
+          {/* After the Zaklęcia, not before them.
+              
+              Na sobie, Plecak and Przyjaciele are one kind of thing: three sorts
+              of held object that add to your totals right now, which is what 1.5
+              enumerates when it defines Całkowity Miecz. Trofea add nothing —
+              they are a currency waiting to be converted — so sitting inside
+              that run split it with something that is not a member of it.
+              
+              Their real sibling is the hand. Zaklęcia and trofea are the two
+              things you *spend*: both leave you when used, both go to a used
+              pile, neither changes a number while held. Side by side they read
+              as a pair. The hand also goes first because it is consulted before
+              every fight (17.3) and trofea a handful of times a game. */}
           <TrophySection
             seat={seat}
             isMine={isMine}
+            mode={trophyMode}
             busy={!canAdjust}
             onTrade={isMine ? onTrade : undefined}
             onInspect={onInspect}
           />
-          {spells}
           <CarriedCard carried={carried} />
           {/* Where the figure is standing is not repeated here. The board says
               it, the turn header says it for whoever is playing, and the roster

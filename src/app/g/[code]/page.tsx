@@ -1615,7 +1615,18 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
                 onDrop={askToDrop}
                 onEquip={equip}
-                onTrade={() => post("holdings", { action: "trade", seatId: mine.id })}
+                /* Naming nothing hands in everything, which is what the
+                   command reads an absent list as — so the seat card sends the
+                   chosen Karty and sends none when none were chosen. In
+                   „Punkty" there is nothing to choose and the field is ignored. */
+                onTrade={(cardIds: string[]) =>
+                  void post("holdings", {
+                    action: "trade",
+                    seatId: mine.id,
+                    ...(cardIds.length > 0 ? { cardIds } : {}),
+                  })
+                }
+                trophyMode={game.trophy_mode === "cards" ? "cards" : "points"}
                 onUse={askToUse}
                 onWand={() => post("holdings", { action: "wand-spell", seatId: mine.id })}
                 onReorder={(holdingIds) =>

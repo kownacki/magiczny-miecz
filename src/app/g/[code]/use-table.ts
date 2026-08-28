@@ -61,9 +61,13 @@ export interface Game {
   /**
    * Which trofea rule the table plays (1.4) — see `docs/TROFEA.md`.
    *
-   * Optional because the engine half has not landed yet: until the envelope
-   * carries it, the control is not drawn at all rather than drawn and refused.
-   * "cards" is 1.4 as printed and "points" is the variant.
+   * "points" is the variant and the default — a beaten Wróg goes to the stos
+   * zużytych and his printed Miecz lands on `seat.trophy_points`. "cards" is
+   * 1.4 as printed: you hold the Karty and hand in the ones you choose.
+   *
+   * Still optional in the type, though the column is `not null`: a page held
+   * open across the deploy that added it would otherwise read `undefined` as a
+   * mode and draw the wrong section until the next refresh.
    */
   trophy_mode?: "cards" | "points";
   join_code: string;

@@ -63,7 +63,7 @@ export function trophyValue(cardId: string): number {
 export function TrophySection({
   seat,
   isMine,
-  points,
+  mode,
   busy,
   onTrade,
   onInspect,
@@ -71,14 +71,14 @@ export function TrophySection({
   seat: Seat;
   isMine: boolean;
   /**
-   * The running total in „Punkty" mode, or undefined in „Karty pokonanych".
+   * Which rule this table plays, said outright rather than inferred.
    *
-   * Undefined is the signal, not a separate flag: in the printed mode there is
-   * no total to send because the Karty are the total, and the browser adds them
-   * up itself. When the engine lands the variant this arrives from the seat and
-   * the cards do not.
+   * It was inferred from whether a total arrived, which stopped working the
+   * moment the engine landed: `seat.trophy_points` is `not null` and reads `0`
+   * in "cards" mode, so an absent total and a table with no kills yet look
+   * identical. `game.trophy_mode` is the only thing that knows.
    */
-  points?: number;
+  mode: "points" | "cards";
   busy: boolean;
   /** Absent on somebody else's card: you cash in your own trofea. */
   onTrade?: (cardIds: string[]) => void;
@@ -97,17 +97,29 @@ export function TrophySection({
    */
   const [showing, setShowing] = useState(false);
 
-  const counting = points ?? held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
+  const byPoints = mode === "points";
+  const counting = byPoints ? (seat.trophy_points ?? 0) : sum(held);
   // What the trade would actually hand in: the chosen Karty, or everything when
   // nothing is chosen — the same rule the command uses for an absent list.
   const chosen = held.filter((one) => picked.includes(one.id));
-  const offering = points ?? (chosen.length > 0 ? sum(chosen) : counting);
+  const offering = byPoints ? counting : chosen.length > 0 ? sum(chosen) : counting;
   const swords = Math.floor(offering / RATE);
-  const wasted = offering - swords * RATE;
+  /**
+   * The remainder, and whether handing it in loses it.
+   *
+   * Only in "cards". A Karta cannot be split, so offering a Cyklop worth six
+   * against a sword that costs seven spends all six — "punkty ponad
+   * wielokrotność 7 są stracone" is about what you handed in. In "points" there
+   * is nothing to split: the trade takes whole sevens and the rest stays on the
+   * seat, so the same number is a remainder rather than a loss and must not be
+   * written in the colour of one.
+   */
+  const over = offering - swords * RATE;
+  const wasted = byPoints ? 0 : over;
 
   // Somebody else's empty shelf is not worth a row; your own is, because it is
   // where the count appears the moment you win a fight.
-  if (!isMine && held.length === 0 && !points) return null;
+  if (!isMine && counting === 0) return null;
 
   return (
     <Fold
@@ -129,8 +141,9 @@ export function TrophySection({
               allows. The `title` on the same control keeps it plain for the
               duller reason that an attribute cannot hold one. */}
           <Rules>
-            Nikogo jeszcze nie pokonałeś. Za każde {RATE} punktów Miecza pokonanych
-            Wrogów dostaniesz 1 punkt Miecza (1.4).
+            {byPoints
+              ? `Nikogo jeszcze nie pokonałeś. Za każde ${RATE} punktów Miecza pokonanych Wrogów dostaniesz 1 punkt Miecza; reszta zostaje na później (1.4).`
+              : `Nikogo jeszcze nie pokonałeś. Zatrzymasz Kartę każdego pokonanego Wroga i oddasz wybrane, gdy zechcesz — za każde ${RATE} punktów Miecza dostaniesz 1 punkt Miecza (1.4).`}
           </Rules>
         </p>
       ) : (
@@ -162,6 +175,8 @@ export function TrophySection({
             offering={offering}
             swords={swords}
             wasted={wasted}
+            over={over}
+            keepsRest={byPoints}
             picking={chosen.length > 0}
             total={counting}
           />
@@ -183,8 +198,12 @@ export function TrophySection({
             >
               {swords < 1
                 ? `Za mało na Miecz — ${offering} z ${RATE}`
-                : `Wymień ${offering} pkt na ${swords} ${swords === 1 ? "punkt" : "punkty"} Miecza` +
-                  (wasted > 0 ? ` (${wasted} przepadnie)` : "")}
+                : `Wymień ${swords * RATE} pkt na ${swords} ${swords === 1 ? "punkt" : "punkty"} Miecza` +
+                  (wasted > 0
+                    ? ` (${wasted} przepadnie)`
+                    : byPoints && over > 0
+                      ? ` (${over} zostaje)`
+                      : "")}
             </button>
           )}
         </div>
@@ -208,12 +227,19 @@ function Ledger({
   offering,
   swords,
   wasted,
+  over,
+  keepsRest,
   picking,
   total,
 }: {
   offering: number;
   swords: number;
+  /** Lost by trading now — "cards" only, where a Karta cannot be split. */
   wasted: number;
+  /** What is left over either way; only its fate differs. */
+  over: number;
+  /** "points": the remainder stays on the seat instead of burning. */
+  keepsRest: boolean;
   picking: boolean;
   total: number;
 }) {
@@ -235,12 +261,13 @@ function Ledger({
           <span className="text-vermilion/90">{wasted} przepadnie</span>
           {/* The useful half of the warning: not that you would lose six, but
               that two more points would save them. */}
-          <span className="text-muted/70">
-            {" "}
-            — jeszcze {toNext} i nie przepadnie nic
-          </span>
+          <span className="text-muted/70"> — jeszcze {toNext} i nie przepadnie nic</span>
         </>
       )}
+      {/* The same number, and not a warning at all: in „Punkty" the trade takes
+          whole sevens and the rest stays where it is. Saying "przepadnie" here
+          would invent a cost the rule does not charge. */}
+      {keepsRest && over > 0 && <span className="text-muted/70">, {over} zostaje</span>}
     </p>
   );
 }

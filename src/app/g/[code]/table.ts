@@ -104,6 +104,14 @@ export interface Seat {
   }[];
   life: number;
   gold: number;
+  /**
+   * Points of beaten Wrogowie waiting to become Miecz (1.4).
+   *
+   * Always a number and `0` in "cards" mode, where the Karty are the record
+   * instead — so this cannot be read as "which mode is this". `game.trophy_mode`
+   * says that, and nothing else does.
+   */
+  trophy_points?: number;
   nature: string | null;
   turns_lost: number;
   /** Turn the Kamień wears off on (20.1). Null when not petrified. */
