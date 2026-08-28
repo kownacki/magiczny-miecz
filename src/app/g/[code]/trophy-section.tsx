@@ -282,7 +282,16 @@ function TrophyTile({
       // its Miecz is the currency, and the currency is what a choice is made on.
       label={`${name} · ${worth}`}
       eqMode="classic"
-      tone={spent ? "filled" : "empty"}
+      // Always `filled`. A trophy tile always has a Karta in it, and `empty` is
+      // the dashed outline of a *vacant place* — the look the body uses for a
+      // slot with nothing on it. Borrowing it to mean "not in this trade" said
+      // the wrong thing twice over: dashed reads as "something could go here",
+      // and every unpicked Wróg looked like a hole in the shelf.
+      //
+      // What is and is not being spent is the dimming's job, and it is enough:
+      // one signal, not two, and the one that does not collide with a meaning
+      // the rest of the card already has.
+      tone="filled"
       marks={["trofeum"]}
       // Dimmed only while a trade is being weighed, and only for the ones it
       // would leave. With nothing on offer there is nothing to contrast with.
