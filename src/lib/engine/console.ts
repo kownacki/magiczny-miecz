@@ -113,7 +113,7 @@ export const GROUPS: readonly { id: Group; title: string }[] = [
   { id: "friends", title: "Przyjaciele" },
   { id: "trade", title: "Złoto and trofea" },
   { id: "table", title: "The table" },
-  { id: "override", title: "Overruling the game" },
+  { id: "override", title: "Test mode" },
 ];
 
 /**
@@ -775,7 +775,9 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "nature good|evil|chaotic [player] [force]",
     summary: "change a Natura (7.2) — leaves no mark of 7.3; `force` ignores one",
-    needs: "play",
+    // 7.2 changes a Natura by Karta Zmiany Natury. Typing it changes one with
+    // no card, which is the definition this file gives for `testmode`.
+    needs: "testmode",
     group: "override",
   },
   {
@@ -792,7 +794,9 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "stone [player]",
     summary: "turn to stone for three turns (20.1)",
-    needs: "play",
+    // Likewise: 20.1 says what turns a Postać to stone, and it is never a
+    // player deciding to be.
+    needs: "testmode",
     group: "override",
   },
   {
@@ -1772,11 +1776,11 @@ const NEEDS: Record<Command["kind"], Capability> = {
   // Not "testmode": `changeNature` is the same function the browser's own
   // control calls, and 7.2 is a rule of the game. What overrules anything is
   // `force`, which is why this is decided in `needsOf` rather than here.
-  nature: "play",
+  nature: "testmode",
   turn: "testmode",
   // Both sides call `turnToStone`. There was never a second act here to
   // separate — 20.1 is a rule, and this is how it is reached.
-  stone: "play",
+  stone: "testmode",
   effect: "testmode",
   give: "testmode",
   place: "testmode",
@@ -1790,10 +1794,6 @@ const NEEDS: Record<Command["kind"], Capability> = {
 };
 
 export function needsOf(command: Command): Capability {
-  // One verb whose capability is on the line rather than in the table: 7.2's
-  // change is playing the game, and overruling a 7.3 the game itself wrote is
-  // not.
-  if (command.kind === "nature") return command.force ? "testmode" : "play";
   return NEEDS[command.kind];
 }
 

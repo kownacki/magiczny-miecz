@@ -439,12 +439,26 @@ suite("playing the game, and overruling it", () => {
   });
 
   it("does not lock a verb that is the game working", () => {
-    for (const line of ["stone", "spell", "nature evil"]) {
+    // `spell` is 9.5 drawing a Zaklęcie, which is a turn happening.
+    for (const line of ["spell", "draw", "roll"]) {
       expect(permits(ok(line), { testmode: false }).ok, line).toBe(true);
     }
-    // The same word, with the flag that overrules a 7.3 the game itself wrote.
-    expect(permits(ok("nature evil force"), { testmode: false }).ok).toBe(false);
-    expect(permits(ok("nature evil force"), { testmode: true }).ok).toBe(true);
+  });
+
+  /**
+   * Two that read as the game and are not.
+   *
+   * `nature` was `play` unless you added `force`, and `stone` was `play`
+   * outright — a reading that works for companion mode, where typing one is
+   * recording what a Karta just did at a physical table. In simulation the
+   * Karta does it, and typing it is a Natura changed with no card and a Postać
+   * turned to stone by nobody. 7.2 and 20.1 both say what causes them.
+   */
+  it("locks the two that look like the game and are not", () => {
+    for (const line of ["stone", "nature evil", "nature evil force"]) {
+      expect(permits(ok(line), { testmode: false }).ok, line).toBe(false);
+      expect(permits(ok(line), { testmode: true }).ok, line).toBe(true);
+    }
   });
 
   it("allows everything once testmode is on", () => {
