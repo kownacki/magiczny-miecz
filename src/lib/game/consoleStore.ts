@@ -1561,6 +1561,23 @@ export async function runCommand(
         .filter((one) => one.slot !== null)
         .sort((a, b) => SLOTS.indexOf(a.slot as Slot) - SLOTS.indexOf(b.slot as Slot));
       const carried = items.filter((one) => one.slot === null).sort(byName);
+      /**
+       * Beaten minus held, as a multiset: two Nobbiny are two of each, and a
+       * set difference would call the second one gone. Empty in „Punkty",
+       * which never has a trophy holding to subtract — see `trophiesFrom`.
+       */
+      const leftHand =
+        trophyModeOf(snapshot.game) === "cards"
+          ? (() => {
+              const still = trophies.map((one) => one.card_id);
+              return seat.trophy_beaten.filter((cardId) => {
+                const at = still.indexOf(cardId);
+                if (at === -1) return true;
+                still.splice(at, 1);
+                return false;
+              });
+            })()
+          : [];
       return [
         `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
         /**
@@ -1629,6 +1646,18 @@ export async function runCommand(
                 .join(", ")}` + trophyLedger(trophies.map((one) => one.card_id)),
               ...tradeMenu(trophies.map((one) => one.card_id)),
             ]
+          : []),
+        /**
+         * And who you beat and no longer hold, which the hand cannot say.
+         *
+         * A cashed Karta is deleted and 1.4 sends it to the stos zużytych, so
+         * the list above shrinks and nothing records that it ever had them. The
+         * seat's own list of everyone beaten is the other half; the difference
+         * is this. Said after the hand, greyed by the parenthesis, because it
+         * is a record rather than something to act on.
+         */
+        ...(own && leftHand.length > 0
+          ? [`Beaten, not held: ${leftHand.map((cardId) => cardName(cardId)).join(", ")}`]
           : []),
         /**
          * What a Przyjaciel is carrying, which is not in the hand.

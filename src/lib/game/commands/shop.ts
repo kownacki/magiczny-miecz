@@ -113,14 +113,13 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
       patch: {
         trophy_points: seat.trophy_points + points,
         /**
-         * Everyone converted goes onto the shelf, or the switch would lose
-         * them: their Karty are about to reach the stos zużytych and in
-         * „Punkty" the hand is where they were remembered.
+         * The shelf is not touched here, though it once was.
+         *
+         * It had to be, back when „Karty pokonanych" kept no shelf and the hand
+         * was where a Wróg was remembered — the switch would have dropped every
+         * one of them. Both modes write it on the win now, so everyone held is
+         * already on it, and appending here would list each of them twice.
          */
-        trophy_beaten: [
-          ...seat.trophy_beaten,
-          ...held.filter((one) => one.seat_id === id).map((one) => one.card_id),
-        ],
       },
     };
   });

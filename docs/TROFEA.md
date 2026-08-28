@@ -205,6 +205,41 @@ Three places write it, and the third is the one that is easy to miss:
 
 Nothing reads it. It never shrinks on a trade — the memorial reading, above.
 
+## Which trofea have left the hand — for the shelf
+
+Asked for by the seat-card session: sold trophies should sort last and draw
+dimmed. They could not be, and the finding was theirs: **nothing recorded it.**
+In „Karty pokonanych" a cashed trophy is deleted and 1.4 sends its Karta to the
+stos zużytych, so the hand can only ever say who you *still* have; and
+`trophy_beaten` was written on a win in „Punkty" only.
+
+**Now it is written in both modes**, on the win, beside the Karta rather than
+instead of it. No schema change — the column was already there — and no rule
+reads it in either mode. So:
+
+> **beaten − held = the Wrogowie whose Karty have left the hand.**
+
+Three things to know before deriving it, each of them a way to get it wrong:
+
+- **It is a multiset.** Two Nobbiny are two entries on the shelf and two
+  holdings. A set difference calls the second one gone.
+- **„Sold" is not quite the word.** `dropCard` also lets a trophy go — to the
+  same stos zużytych, so nothing leaks — and which of the two happened is not
+  recorded. The honest label is "beaten, and no longer in hand". If the
+  difference ever matters, that is a new column and a conversation, not a
+  derivation.
+- **Only in „Karty pokonanych".** „Punkty" never has a trophy holding to
+  subtract, so the difference there is the whole shelf and means nothing. In
+  that mode the shelf is a memorial and stays whole — the ruling recorded
+  above.
+
+`convertTrophies` no longer appends on the mode switch: both modes write the
+shelf on the win now, so everyone held is already on it and appending would
+list each of them twice.
+
+The console prints it under the hand as `Beaten, not held: SMOK, NOBBIN`, which
+is the same subtraction and a worked example to check a browser against.
+
 ## Asking for an outcome instead of naming Karty
 
 The subset ruling made the choice real and did nothing to help anybody make it.

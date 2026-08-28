@@ -6,6 +6,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFight } from "./fight";
 import { tradeTrophies, TROPHY_RATE } from "./shop";
 import { setTrophyMode } from "./lobby";
+import { dropCard } from "./holdings";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { TurnPhase } from "@/lib/engine/turn";
 
@@ -242,19 +243,41 @@ describe("switching to punkty mid-game", () => {
     expect(returned(after, "cyklop")).toEqual([]);
   });
 
-  /** The Karty are leaving the hand, so the shelf has to take them over. */
-  it("puts everyone converted onto the shelf", () => {
-    const table = playing([
-      trophy("t0", "seat-a", "cyklop"),
-      trophy("t1", "seat-a", "nobbin"),
-      trophy("t2", "seat-b", "smok"),
-    ]);
+  /**
+   * The shelf survives the switch untouched, and nobody is listed twice.
+   *
+   * This test used to say the opposite: the switch put everyone converted onto
+   * the shelf, because „Karty pokonanych" kept no shelf and the hand was the
+   * only place a Wróg was remembered. Both modes write it on the win now, so
+   * everyone held is already there and appending again would double them.
+   */
+  it("leaves the shelf alone, everyone on it already", () => {
+    const table = aTable({
+      game: { status: "playing", trophy_mode: "cards" },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, trophy_beaten: ["cyklop", "nobbin"] }),
+        aSeat({ id: "seat-b", seat_index: 1, trophy_beaten: ["smok"] }),
+      ],
+      holdings: [
+        trophy("t0", "seat-a", "cyklop"),
+        trophy("t1", "seat-a", "nobbin"),
+        trophy("t2", "seat-b", "smok"),
+      ],
+    });
     const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
     expect(after.seats.find((one) => one.id === "seat-a")?.trophy_beaten).toEqual([
       "cyklop",
       "nobbin",
     ]);
     expect(after.seats.find((one) => one.id === "seat-b")?.trophy_beaten).toEqual(["smok"]);
+  });
+
+  /** And the win is where it now happens, in this mode as much as the other. */
+  it("puts a beaten Wróg on the shelf in kartach pokonanych too", async () => {
+    const after = await settle(won({ mode: "cards" }));
+    expect(after.seats.find((one) => one.id === "seat-a")?.trophy_beaten).toEqual(["cyklop"]);
+    // And he is still in hand: the shelf is a second record, not a move.
+    expect(trophies(after)).toEqual(["cyklop"]);
   });
 
   it("says so per seat, and once for the table", () => {
@@ -395,5 +418,78 @@ describe("cashing them in (1.4)", () => {
     expect(out.result).toBe(2);
     expect(after.seats[0].sword_own).toBe(7);
     expect(trophies(after)).toEqual([]);
+  });
+});
+
+/**
+ * Beaten minus held — the Wrogowie whose Karty have left the hand.
+ *
+ * Not a column: the seat carries who was beaten and the holdings carry who is
+ * still held, and the difference is the answer. Pinned here because a shelf is
+ * going to be drawn off it and every one of these is a way to get it wrong.
+ */
+describe("who has left the hand", () => {
+  /** As a surface would do it: a multiset difference, not a set one. */
+  const gone = (beaten: readonly string[], held: readonly string[]) => {
+    const left = [...held];
+    return beaten.filter((cardId) => {
+      const at = left.indexOf(cardId);
+      if (at === -1) return true;
+      left.splice(at, 1);
+      return false;
+    });
+  };
+
+  const heldOf = (t: ReturnType<typeof apply>) =>
+    t.holdings.filter((one) => one.kind === "trophy").map((one) => one.card_id);
+  const beatenOf = (t: ReturnType<typeof apply>) => t.seats[0].trophy_beaten;
+
+  it("is empty while everything beaten is still in hand", async () => {
+    const after = await settle(won({ mode: "cards", fought: ["cyklop", "nobbin"] }));
+    expect(gone(beatenOf(after), heldOf(after))).toEqual([]);
+  });
+
+  it("names the trophies that were cashed in", async () => {
+    // SMOK 5 and NOBBIN 2 make an exact seven; the CYKLOP stays in hand.
+    const after = await settle(won({ mode: "cards", fought: ["cyklop", "nobbin", "smok"] }));
+    const traded = apply(
+      after,
+      tradeTrophies(after, { seatId: "seat-a", cardIds: ["smok", "nobbin"] }).writes,
+    );
+    expect(gone(beatenOf(traded), heldOf(traded)).sort()).toEqual(["nobbin", "smok"]);
+    expect(heldOf(traded)).toEqual(["cyklop"]);
+  });
+
+  /**
+   * The one the derivation cannot tell apart, and the reason it is called
+   * "no longer in hand" rather than "sold": `dropCard` sends a trophy to the
+   * same stos zużytych and records no reason.
+   */
+  it("names a trophy that was thrown away, the same as one sold", async () => {
+    const after = await settle(won({ mode: "cards", fought: ["cyklop", "nobbin"] }));
+    const held = after.holdings.find((one) => one.card_id === "nobbin");
+    const dropped = apply(after, dropCard(after, { holdingId: held?.id ?? "" }).writes);
+    expect(gone(beatenOf(dropped), heldOf(dropped))).toEqual(["nobbin"]);
+  });
+
+  /** Two of the same Wróg are two entries, and cashing one leaves one. */
+  it("counts copies rather than names", async () => {
+    const after = await settle(won({ mode: "cards", fought: ["nobbin", "nobbin"] }));
+    expect(beatenOf(after)).toEqual(["nobbin", "nobbin"]);
+    expect(gone(beatenOf(after), heldOf(after))).toEqual([]);
+
+    const one = after.holdings.find((held) => held.kind === "trophy");
+    const dropped = apply(after, dropCard(after, { holdingId: one?.id ?? "" }).writes);
+    expect(gone(beatenOf(dropped), heldOf(dropped))).toEqual(["nobbin"]);
+  });
+
+  /** Death takes both lists, so nothing is left looking sold. */
+  it("is empty again once the Postać dies (4.4)", async () => {
+    const after = await settle(won({ mode: "cards", fought: ["cyklop"] }));
+    const dead = apply(after, {
+      seats: [{ id: "seat-a", patch: { trophy_beaten: [], eliminated: true } }],
+      holdings: { delete: after.holdings.filter((one) => one.kind === "trophy").map((one) => one.id) },
+    });
+    expect(gone(beatenOf(dead), heldOf(dead))).toEqual([]);
   });
 });

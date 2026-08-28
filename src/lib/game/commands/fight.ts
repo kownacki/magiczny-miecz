@@ -1618,6 +1618,40 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
         granted: staged.has(cardId),
       })),
     },
+    seats: [
+      {
+        id: seat.id,
+        patch: {
+          /**
+           * The shelf is written in „Karty pokonanych" too, though the Karta is
+           * in hand and says the same thing — because it stops saying it the
+           * moment 1.4 is used. A cashed trophy is deleted and its Karta goes
+           * to the stos zużytych, so the holdings alone can only ever show who
+           * you still have, never who you beat.
+           *
+           * Display only, exactly as in „Punkty": no rule reads it, and 1.4's
+           * arithmetic goes on running off the holdings.
+           *
+           * # Reading the two lists together
+           *
+           * Beaten minus held is the Wrogowie whose Karty have left the hand,
+           * which is what a shelf wants to draw greyed and last. Three things
+           * to know before deriving it, because none is obvious:
+           *
+           * - **It is a multiset.** Two Nobbiny are two entries here and two
+           *   holdings, and set subtraction would call the second one gone.
+           * - **„Sold" is not quite the word.** `dropCard` also lets a trophy
+           *   go — to the same stos zużytych, so nothing leaks — and the
+           *   difference between selling and discarding one is not recorded.
+           *   What the list means is "beaten, and no longer in hand".
+           * - **Only in „Karty pokonanych".** „Punkty" never has a trophy
+           *   holding at all, so the subtraction there returns the whole shelf
+           *   and means nothing. It is a memorial in that mode and stays whole.
+           */
+          trophy_beaten: [...seat.trophy_beaten, ...won.map(({ cardId }) => cardId)],
+        },
+      },
+    ],
   });
 }
 
