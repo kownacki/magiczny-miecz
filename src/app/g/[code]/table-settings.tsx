@@ -129,10 +129,15 @@ export function TableSettings({
 
       {/* Said once, under both, rather than on each of the four options. It is
           the same fact about all of them and the reason the panel is here at
-          all: after the start these stop being questions. */}
+          all: after the start these stop being questions.
+          
+          And a different fact for a guest, who is reading the answers rather
+          than giving them — naming who to ask is more use to them than being
+          told when the asking closes. */}
       <p className="text-[11px] leading-snug text-muted/70">
-        Ustalacie to razem, dopóki gra się nie zaczęła — potem ekwipunku już nie
-        zmienicie, a skończony stos wraca dopiero przy nowym stole.
+        {canChange
+          ? "Ustalacie to razem, dopóki gra się nie zaczęła — potem ekwipunku już nie zmienicie, a skończony stos wraca dopiero przy nowym stole."
+          : "Tak gra ten stół. Zasady ustala gospodarz — dopóki gra się nie zaczęła, można go poprosić o zmianę."}
       </p>
     </div>
   );
@@ -155,6 +160,35 @@ function Group({
   }[];
   canChange: boolean;
 }) {
+  /**
+   * A guest is told, not asked.
+   *
+   * Four boxes at half opacity, two of them greyed for being current and two
+   * for not being yours, is a question put to somebody who has no answer — and
+   * it reads as broken rather than as settled. What a guest needs from this
+   * panel is one fact per question: what the table is playing. So they get the
+   * chosen option, drawn like the chosen option and nothing else, with no
+   * controls at all.
+   *
+   * The legends stay, because those are what make the two facts questions
+   * somebody could raise at the table — which is the point of showing a guest
+   * any of this.
+   */
+  if (!canChange) {
+    const chosen = options.find((option) => option.active);
+    return (
+      <section className="flex flex-col gap-2">
+        <h3 className="mb-2 text-[11px] uppercase tracking-widest text-muted">{legend}</h3>
+        <div className="rounded-lg border border-ochre/40 bg-ochre/5 px-3 py-2">
+          <span className="block font-[family-name:var(--font-display)] text-[13px] text-ochre">
+            {chosen?.label ?? "—"}
+          </span>
+          <span className="mt-0.5 block text-[11px] leading-snug text-muted">{chosen?.hint}</span>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-2 text-[11px] uppercase tracking-widest text-muted">{legend}</legend>
