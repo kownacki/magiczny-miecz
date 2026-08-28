@@ -22,6 +22,8 @@ import { OpenRule, WithRules } from "./rule-ref";
 
 interface Rule {
   id: string | null;
+  /** A named section rather than a numbered one — the Most's field instructions. */
+  title: string | null;
   paras: string[];
   examples: string[];
   /** What the transcriber flagged about the printed page — see `Note`. */
@@ -160,11 +162,15 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                   data-rule={rule.id ?? undefined}
                   className={`scroll-mt-4 rounded ${
                     rule.id && rule.id === focus ? "bg-ochre/10 ring-1 ring-ochre/40" : ""
-                  } ${rule.id ? "p-2" : ""}`}
+                  } ${rule.id || rule.title ? "p-2" : ""}`}
                 >
-                  {rule.id && (
+                  {/* A number or a name, in the same place and the same shape:
+                      the Kamienny Most's instructions have no number — 14.3
+                      says so — and printing them without their heading left
+                      nine paragraphs about different Obszary running together. */}
+                  {(rule.id || rule.title) && (
                     <p className="tnum mb-1 text-[11px] uppercase tracking-widest text-ochre/80">
-                      {rule.id}
+                      {rule.id ?? rule.title}
                     </p>
                   )}
                   {rule.paras.map((para, n) => (

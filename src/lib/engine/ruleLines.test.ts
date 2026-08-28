@@ -55,3 +55,43 @@ describe("Instrukcja w konsoli", () => {
     expect(ok("rule")).toEqual({ kind: "rule", about: null });
   });
 });
+
+describe("wszystko, co Instrukcja stawia pod nagłówkiem", () => {
+  /**
+   * Chapter 22's only rule is numbered "22" — no decimal — and the parser used
+   * to want `\d+\.\d+`, so it fell through and the Księga printed "### 22" as
+   * a line of prose.
+   */
+  it("reads a rule numbered without a decimal", () => {
+    const said = ruleLines("22");
+    expect(said[0]).toBe("22");
+    expect(said[1]).toContain("Zwycięzcą w grze");
+  });
+
+  /**
+   * And the boxed Kamienny Most section, whose nine instructions 14.3 calls
+   * "poza numeracją". They have names instead of numbers, and printing them
+   * without their headings ran nine different Obszary together.
+   */
+  it("keeps the Most's field instructions under their own names", () => {
+    const said = ruleLines("kamienny-most-zamek-bestii").join("\n");
+    for (const name of ["WEJŚCIE NA MOST", "CERBER", "ZAMEK BESTII", "GRA ZE ŚMIERCIĄ"]) {
+      expect(said, name).toContain(name);
+    }
+  });
+
+  it("leaves no heading behind as prose", () => {
+    for (const id of ["22", "2.6", "14.7", "kamienny-most-zamek-bestii"]) {
+      expect(ruleLines(id).some((line) => line.startsWith("#")), id).toBe(false);
+    }
+  });
+
+  /** 2.6's table, the only one in the book, and where it stood. */
+  it("prints the table between the paragraphs it was printed between", () => {
+    const said = ruleLines("2.6");
+    const table = said.findIndex((line) => line.startsWith("Całkowita Magia"));
+    expect(said[table - 1]).toContain("w następujący sposób:");
+    expect(said[table + 1]).toContain("Maksymalna liczba Zaklęć");
+    expect(said[table + 2]).toContain("Jak widać");
+  });
+});

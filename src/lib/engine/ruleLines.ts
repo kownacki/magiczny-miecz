@@ -4,6 +4,7 @@ import rules from "@/data/rules.json";
 
 interface Rule {
   id: string | null;
+  title: string | null;
   paras: string[];
   examples: string[];
   notes: string[];
@@ -71,12 +72,14 @@ function chapterList(): string[] {
 }
 
 function oneChapter(chapter: Chapter): string[] {
-  const numbered = chapter.rules.filter((rule) => rule.id !== null);
+  // Numbered rules, and the Most's named instructions, which are the same kind
+  // of thing to somebody reading a chapter and have no number to list under.
+  const listed = chapter.rules.filter((rule) => rule.id !== null || rule.title !== null);
   return [
     `${chapter.number ? `${chapter.number}. ` : ""}${plain(chapter.title)}`,
-    ...(numbered.length === 0
+    ...(listed.length === 0
       ? chapter.rules.flatMap((rule) => rule.paras.map(plain))
-      : numbered.map((rule) => `  ${rule.id}  ${first(rule)}`)),
+      : listed.map((rule) => `  ${(rule.id ?? rule.title ?? "").padEnd(6)} ${first(rule)}`)),
   ];
 }
 

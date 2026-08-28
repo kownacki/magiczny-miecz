@@ -37,8 +37,22 @@ const chapters = [];
 let chapter = null;
 let rule = null;
 
-/** A `### 5.3` heading, or `### 12.1a` — the book has a few lettered ones. */
-const RULE_HEADING = /^###\s+(\d+\.\d+[a-z]?)\.?\s*$/;
+/**
+ * Everything the book puts under a `###`, which is not only numbered rules.
+ *
+ * Three shapes. `### 5.3` is the ordinary one. `### 22` is chapter 22's single
+ * rule, numbered with no decimal at all. And the boxed Kamienny Most section
+ * heads its nine field instructions by name — `### WEJŚCIE NA MOST`, `###
+ * CERBER` — which 14.3 calls "poza numeracją" and which are as much a part of
+ * the book as anything with a number on it.
+ *
+ * Matching only the first shape left the other ten falling through to prose,
+ * so the Księga printed "### CERBER" as a line of text. Same failure as the
+ * table, one heading level up.
+ */
+const RULE_HEADING = /^###\s+(.+?)\.?\s*$/;
+/** What counts as a rule number rather than a name. */
+const IS_NUMBER = /^\d+(\.\d+)?[a-z]?$/;
 /**
  * `## 5. PRZEDMIOTY.` — numbered — or `## PRZYGOTOWANIE DO GRY`, which is not.
  *
@@ -75,14 +89,34 @@ for (const raw of body.split("\n")) {
   if (line.startsWith("<!--")) {
     const note = line.replace(/^<!--\s*/, "").replace(/\s*-->$/, "");
     if (rule) rule.notes.push(note);
-    else if (chapter) chapter.rules.push({ id: null, paras: [], examples: [], notes: [note], table: [], tableAfter: 0 });
+    else if (chapter) chapter.rules.push({
+      id: null,
+      title: null,
+      paras: [],
+      examples: [],
+      notes: [note],
+      table: [],
+      tableAfter: 0,
+    });
     continue;
   }
 
   const asRule = line.match(RULE_HEADING);
   if (asRule) {
     shut();
-    rule = { id: asRule[1], paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
+    const said = asRule[1];
+    const numbered = IS_NUMBER.test(said);
+    rule = {
+      id: numbered ? said : null,
+      // A named one — the Most's own instructions. Kept apart from `id`
+      // because nothing cites these and nothing can: they have no number.
+      title: numbered ? null : said,
+      paras: [],
+      examples: [],
+      notes: [],
+      table: [],
+      tableAfter: 0,
+    };
     continue;
   }
 
@@ -94,13 +128,13 @@ for (const raw of body.split("\n")) {
     chapters.push(chapter);
     // An unnumbered chapter is prose with no rule numbers in it, so it gets one
     // nameless rule to hold the prose rather than a special case downstream.
-    rule = number ? null : { id: null, paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
+    rule = number ? null : { id: null, title: null, paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
     continue;
   }
 
   if (!chapter) continue;
   // Prose before the first `###` in a numbered chapter — rare, but 20. has it.
-  if (!rule) rule = { id: null, paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
+  if (!rule) rule = { id: null, title: null, paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
 
   /**
    * The one table in the book — 2.6's Magia against the Zaklęcia it allows.
