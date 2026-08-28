@@ -8,6 +8,7 @@ import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardDetail, type TileCard } from "./card-tile";
+import { plural } from "@/lib/engine/polish";
 import { SeatCard } from "./seat-card";
 import {
   CARD_NAMES,
@@ -1676,12 +1677,40 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onDrop={askToDrop}
                 asked={asked}
                 onEquip={equip}
-                /* A count, not a list. The engine resolves it to the cheapest
-                   Karty before anything is spent — `offersFor` is exhaustive
-                   where a greedy pick would burn points — so the browser sends
-                   what the player decided and not how to pay for it. */
-                onTrade={(swords: number) =>
-                  void post("holdings", { action: "trade", seatId: mine.id, swords })
+                /* A list, not a count.
+                   
+                   It was a count, and the engine resolved it to the cheapest
+                   Karty — right while the buttons were the only way to choose.
+                   A player can pick the set by hand now, and a hand-made set is
+                   often not the one `offersFor` would have found, so sending
+                   the count would quietly trade something else. The list is
+                   what was on screen. */
+                onTrade={(cardIds, deal) =>
+                  setAsk({
+                    title: "Wymiana trofeów",
+                    /* The waste is why this asks at all. Everything else here
+                       is reversible or free; points over a multiple of seven
+                       are gone, and 1.4 says so in a subordinate clause that is
+                       easy to read past. */
+                    body:
+                      `Oddasz ${cardIds.length} ${plural(cardIds.length, "trofeum", "trofea", "trofeów")} ` +
+                      `warte ${deal.points} pkt i zyskasz ${deal.swords} ` +
+                      `${plural(deal.swords, "punkt", "punkty", "punktów")} Miecza.` +
+                      (deal.wasted > 0
+                        ? ` ${deal.wasted} ${plural(deal.wasted, "punkt", "punkty", "punktów")} ` +
+                          `${plural(deal.wasted, "przepadnie", "przepadną", "przepadnie")} — tego nie da się odzyskać.`
+                        : " Nic nie przepadnie."),
+                    confirmLabel: "Wymień",
+                    tone: deal.wasted > 0 ? "grave" : "normal",
+                    onConfirm: () => {
+                      setAsk(null);
+                      void post("holdings", {
+                        action: "trade",
+                        seatId: mine.id,
+                        cardIds: [...cardIds],
+                      });
+                    },
+                  })
                 }
                 trophyMode={game.trophy_mode === "cards" ? "cards" : "points"}
                 onUse={askToUse}

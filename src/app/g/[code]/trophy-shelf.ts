@@ -3,8 +3,17 @@
 /** One beaten Wróg on the shelf, and whether his Karta is still in hand. */
 export interface Beaten {
   readonly cardId: string;
-  /** Beaten, and the Karta has since left the hand. Never true in „Punkty". */
+  /** Beaten, and no longer held: traded away (1.4) or put down. */
   readonly gone: boolean;
+  /**
+   * The holding this trophy still is, absent once it has gone.
+   *
+   * Carried because a choice needs an identity and a card id is not one: two
+   * Nobbiny are one name and two trophies, and a player picking the second one
+   * out of the row means *that* tile. `trophy_beaten` has only names, so the
+   * id comes from the holding it was matched to.
+   */
+  readonly holdingId?: string;
 }
 
 /**
@@ -40,16 +49,22 @@ export interface Beaten {
  * oldest thing there is: that is a table whose fights were won before the shelf
  * was written, so it predates every entry that has a date at all.
  */
-export function shelfFor(beaten: readonly string[], held: readonly string[]): Beaten[] {
+export function shelfFor(
+  beaten: readonly string[],
+  held: readonly { holdingId: string; cardId: string }[],
+): Beaten[] {
   const left = [...held];
   const dated: Beaten[] = beaten.map((cardId) => {
-    const at = left.indexOf(cardId);
+    const at = left.findIndex((one) => one.cardId === cardId);
     if (at === -1) return { cardId, gone: true };
-    left.splice(at, 1);
-    return { cardId, gone: false };
+    const [taken] = left.splice(at, 1);
+    return { cardId, gone: false, holdingId: taken.holdingId };
   });
 
   // Oldest first while it is being built, so one reverse settles both halves.
-  const all = [...left.map((cardId) => ({ cardId, gone: false })), ...dated].reverse();
+  const all: Beaten[] = [
+    ...left.map((one) => ({ cardId: one.cardId, gone: false, holdingId: one.holdingId })),
+    ...dated,
+  ].reverse();
   return [...all.filter((one) => !one.gone), ...all.filter((one) => one.gone)];
 }

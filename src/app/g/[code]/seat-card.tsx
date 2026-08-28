@@ -134,7 +134,10 @@ export function SeatCard({
   /** Cards whose drop the server has not answered yet — see `asked` in the table. */
   asked?: readonly string[];
   /** How many Miecze to buy (1.4); the engine picks the cheapest Karty for it. */
-  onTrade: (swords: number) => void;
+  onTrade: (
+    cardIds: readonly string[],
+    deal: { swords: number; points: number; wasted: number },
+  ) => void;
   /** Which trofea rule this table plays (1.4) — `game.trophy_mode`. */
   trophyMode: "points" | "cards";
   onEquip: (holdingId: string, slot: Slot | null) => void;

@@ -7,6 +7,7 @@ import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { TROPHY_RATE, offersFor, type Offer } from "@/lib/engine/trophies";
+import { plural as polishPlural } from "@/lib/engine/polish";
 import { Fold } from "./fold";
 import { Rules } from "./rule-ref";
 import { ItemSlot } from "./item-slot";
@@ -77,17 +78,36 @@ export function TrophySection({
    */
   mode: "points" | "cards";
   busy: boolean;
-  /** Absent on somebody else's card: you cash in your own trofea. */
-  onTrade?: (swords: number) => void;
+  /**
+   * Absent on somebody else's card: you cash in your own trofea.
+   *
+   * A list of Karty, not a count. It used to send the count and let the engine
+   * pick — right while the buttons were the only way to choose, and wrong the
+   * moment a player can pick the set themselves, because a hand-made set is
+   * frequently not the one the solver would have found. The deal travels with
+   * it so the confirmation can say what is about to happen without doing the
+   * arithmetic a second time.
+   */
+  onTrade?: (
+    cardIds: readonly string[],
+    deal: { swords: number; points: number; wasted: number },
+  ) => void;
   onInspect: (card: TileCard) => void;
 }) {
-  /** Which trade is being looked at, by count. Null means "the most it buys". */
-  const [wanted, setWanted] = useState<number | null>(null);
+  /**
+   * The trophies the player has picked out, by holding id.
+   *
+   * `null` is not "none" — it is "nobody has chosen yet", and the best trade
+   * the hand can make stands in. That distinction is the whole of the state
+   * machine here: an empty Set is a player who has deliberately deselected
+   * everything and should see a trade of nothing, where `null` is a section
+   * just opened and should show what it is worth.
+   */
+  const [picked, setPicked] = useState<ReadonlySet<string> | null>(null);
   /**
    * Open to start with, like the pack and the Zaklęcia it stands beside.
    *
-   * `Fold` reads a missing `onToggle` as "this section does not fold", which is
-   * what this was: a heading with a triangle's worth of nothing beside it. The
+   * `Fold` reads a missing `onToggle` as "this section does not fold". The
    * tally is what makes folding it cheap — „14 pkt · 2 punkty Miecza" stays on
    * the bar when the row is shut, so what a player checks trofea for is legible
    * without opening them.
@@ -95,9 +115,11 @@ export function TrophySection({
   const [showing, setShowing] = useState(true);
 
   const byPoints = mode === "points";
-  const held = seat.holdings.filter((one) => one.kind === "trophy");
+  const held = seat.holdings
+    .filter((one) => one.kind === "trophy")
+    .map((one) => ({ holdingId: one.id, cardId: one.cardId }));
   /** Everyone beaten, and which of them are still held. */
-  const shelf = shelfFor(seat.trophy_beaten ?? [], held.map((one) => one.cardId));
+  const shelf = shelfFor(seat.trophy_beaten ?? [], held);
   const gone = shelf.filter((one) => one.gone);
   const counting = held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
 
@@ -106,40 +128,70 @@ export function TrophySection({
    * answer, not a second opinion computed here.
    *
    * One list for both variants, because there is one trade. „Punkty" used to
-   * be a pool converted in sevens, and had its own branch here and a notional
-   * trophy standing in for the total; it is not a pool. It holds trophies like
-   * the printed rule and differs only in where the cardboard is, so the choice,
-   * the rate and the waste are all this function's, in both.
+   * be a pool converted in sevens, and had its own branch here; it is not a
+   * pool. It holds trophies like the printed rule and differs only in where
+   * the cardboard is, so the choice, the rate and the waste are all shared.
    */
   const offers: Offer[] = offersFor(
     held.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId) })),
   );
-
   const most = offers[offers.length - 1] ?? null;
-  const offer = offers.find((one) => one.swords === wanted) ?? most;
 
   /**
-   * Whether *this* tile is one the trade takes, asked once per tile as the row
-   * is drawn.
+   * An offer, which names Karty, resolved to the trophies on this shelf.
    *
-   * A countdown rather than `cardIds.includes`, for the reason the shelf is a
-   * multiset: holding two Nobbiny and handing in one, `includes` is true for
-   * both and lights the pair. The offer names a bag of Karty and each tile
-   * takes one out of it, so the second Nobbin stays dark and the count on the
-   * screen matches the count in the trade.
-   *
-   * Rebuilt on every render, which is what makes it safe to spend while
-   * mapping: the bag is this render's, and the next one starts full again.
+   * A multiset walk rather than `includes`, for the reason the shelf is one:
+   * holding two Nobbiny and handing in one, a name test is true for both and
+   * would select the pair. Each name takes one holding out of the row.
    */
-  const bag = new Map<string, number>();
-  for (const cardId of offer?.cardIds ?? []) {
-    bag.set(cardId, (bag.get(cardId) ?? 0) + 1);
-  }
-  const takes = (cardId: string): boolean => {
-    const left = bag.get(cardId) ?? 0;
-    if (left === 0) return false;
-    bag.set(cardId, left - 1);
-    return true;
+  const idsFor = (of: Offer | null): ReadonlySet<string> => {
+    if (!of) return new Set();
+    const left = shelf.filter((one) => !one.gone);
+    const out = new Set<string>();
+    for (const cardId of of.cardIds) {
+      const at = left.findIndex((one) => one.cardId === cardId);
+      if (at === -1) continue;
+      const [taken] = left.splice(at, 1);
+      if (taken.holdingId) out.add(taken.holdingId);
+    }
+    return out;
+  };
+
+  /**
+   * What is actually selected right now.
+   *
+   * Stale ids are dropped rather than remembered: a trade deletes holdings and
+   * a won fight adds one, and a Set left over from before either would light a
+   * tile that is not there or miss one that is.
+   */
+  const alive = new Set(held.map((one) => one.holdingId));
+  const chosen: ReadonlySet<string> =
+    picked === null
+      ? idsFor(most)
+      : new Set([...picked].filter((id) => alive.has(id)));
+
+  /**
+   * The deal on the table, computed from the selection rather than looked up.
+   *
+   * This is what lets a hand-picked set answer the same questions a button's
+   * set does — how many Mieczy, how many points lost — without the two paths
+   * having separate arithmetic. 1.4 is one sentence and it applies to whatever
+   * you decided to hand in.
+   */
+  const points = shelf
+    .filter((one) => one.holdingId && chosen.has(one.holdingId))
+    .reduce((sum, one) => sum + trophyValue(one.cardId), 0);
+  const swords = Math.floor(points / TROPHY_RATE);
+  const wasted = points - swords * TROPHY_RATE;
+  const cardIds = shelf
+    .filter((one) => one.holdingId && chosen.has(one.holdingId))
+    .map((one) => one.cardId);
+
+  const toggle = (holdingId: string) => {
+    const next = new Set(chosen);
+    if (next.has(holdingId)) next.delete(holdingId);
+    else next.add(holdingId);
+    setPicked(next);
   };
 
   // Somebody else's empty shelf is not worth a row; your own is, because it is
@@ -178,10 +230,19 @@ export function TrophySection({
           <div className="flex flex-wrap gap-2">
             {shelf.map((one, at) => (
               <TrophyTile
-                key={`${one.cardId}-${at}`}
+                key={one.holdingId ?? `${one.cardId}-${at}`}
                 cardId={one.cardId}
                 gone={one.gone}
-                inTrade={!one.gone && takes(one.cardId)}
+                inTrade={!!one.holdingId && chosen.has(one.holdingId)}
+                // A trophy you hold is a thing you are deciding about, so the
+                // click decides — and the Karta is a hover away either way. One
+                // that has gone is not up for anything, so its click keeps the
+                // meaning every other tile in the app has.
+                onPick={
+                  isMine && one.holdingId && !one.gone
+                    ? () => toggle(one.holdingId as string)
+                    : undefined
+                }
                 onInspect={onInspect}
               />
             ))}
@@ -215,31 +276,35 @@ export function TrophySection({
             </p>
           )}
 
-          {most === null ? (
+          {most === null && chosen.size === 0 ? (
             <p className="text-[11px] leading-snug text-muted">
               {counting} pkt — na jeden punkt Miecza trzeba {TROPHY_RATE}, czyli
               jeszcze {TROPHY_RATE - counting}.
             </p>
           ) : (
             <>
-              {/* One button per number of Miecze, because that is the decision a
-                  player is making. Each carries its own cost, so choosing two
-                  over one happens with the waste in view rather than after it. */}
-              {offers.length > 1 && (
+              {/* One button per number of Mieczy the hand can reach, because
+                  that is the decision a player is making — and each is a
+                  shortcut, not a mode: pressing it replaces whatever is picked
+                  with the set that buys that many for the least waste. The one
+                  matching what is picked lights up, so a hand-made selection
+                  finds its own answer on the same row rather than being told
+                  nothing about itself. */}
+              {offers.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {offers.map((one) => (
                     <button
                       key={one.swords}
                       type="button"
-                      onClick={() => setWanted(one.swords)}
-                      aria-pressed={offer?.swords === one.swords}
+                      onClick={() => setPicked(idsFor(one))}
+                      aria-pressed={swords === one.swords}
                       title={
                         one.wasted > 0
                           ? `${one.points} pkt, ${one.wasted} przepadnie`
                           : `${one.points} pkt, nic nie przepadnie`
                       }
                       className={`rounded border px-2 py-0.5 text-[11px] transition ${
-                        offer?.swords === one.swords
+                        swords === one.swords
                           ? "border-ochre bg-ochre/10 text-ochre"
                           : "border-edge text-muted hover:border-ochre/60"
                       }`}
@@ -250,34 +315,49 @@ export function TrophySection({
                 </div>
               )}
 
-              {offer && <Ledger offer={offer} total={counting} />}
+              <Ledger
+                points={points}
+                swords={swords}
+                wasted={wasted}
+                total={counting}
+                cards={chosen.size}
+              />
 
-              {isMine && onTrade && offer && (
+              {isMine && onTrade && (
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    onTrade(offer.swords);
-                    setWanted(null);
-                  }}
-                  className="rounded border border-edge px-2 py-1.5 text-left text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+                  disabled={busy || swords < 1}
+                  onClick={() =>
+                    onTrade(cardIds, { swords, points, wasted })
+                  }
+                  /* The one thing in this section that changes the game, drawn
+                     the way the app draws those: the Obszar's „Rzuć i rozpatrz"
+                     and the door's own button are this, and a trade that costs
+                     Karty deserves the same weight as either. It was the same
+                     grey outline as a filter above it. */
+                  className="rounded border border-ochre bg-ochre/10 px-3 py-2 font-[family-name:var(--font-display)] text-sm tracking-wide text-ochre transition hover:bg-ochre/20 disabled:border-edge disabled:bg-transparent disabled:text-muted"
                 >
-                  Wymień {offer.points} pkt na {offer.swords} {plural(offer.swords)}
-                  {offer.wasted > 0 ? ` (${offer.wasted} przepadnie)` : ""}
+                  {swords < 1
+                    ? `Wybierz co najmniej ${TROPHY_RATE} pkt`
+                    : `Wymień ${points} pkt na ${swords} ${plural(swords)}`}
+                  {swords >= 1 && wasted > 0 ? ` (${wasted} przepadnie)` : ""}
                 </button>
               )}
             </>
           )}
-
         </div>
       )}
     </Fold>
   );
 }
 
-/** So a button never reads "1 punkty Miecza". */
+/**
+ * So a button never reads „1 punkty Miecza" — nor „5 punkty", which the
+ * two-case version got wrong and a hand of trofea can reach: 75 points of
+ * Wrogowie are hoardable and seven buy a Miecz.
+ */
 function plural(swords: number): string {
-  return swords === 1 ? "punkt Miecza" : "punkty Miecza";
+  return `${polishPlural(swords, "punkt", "punkty", "punktów")} Miecza`;
 }
 
 /**
@@ -289,22 +369,50 @@ function plural(swords: number): string {
  * cardboard is. What is *not* handed in is a different number and stays yours,
  * which is why the two are printed apart.
  *
- * This used to take a `keepsRest` flag, for a „Punkty" that kept the remainder
- * of a pool. There is no pool — see docs/TROFEA.md.
+ * Takes the selection rather than an `Offer`, since the player may have made
+ * one the solver would not have. The arithmetic is 1.4's either way.
  */
-function Ledger({ offer, total }: { offer: Offer; total: number }) {
-  const left = total - offer.points;
+function Ledger({
+  points,
+  swords,
+  wasted,
+  total,
+  cards,
+}: {
+  points: number;
+  swords: number;
+  wasted: number;
+  /** Everything held, so the part staying behind can be named. */
+  total: number;
+  /** How many Karty are picked, for the case where they buy nothing yet. */
+  cards: number;
+}) {
+  const left = total - points;
+  if (cards === 0) {
+    return (
+      <p className="text-[11px] leading-snug text-muted">
+        Nic nie wybrano — kliknij trofea, które chcesz oddać.
+      </p>
+    );
+  }
   return (
     <p className="text-[11px] leading-snug text-muted">
-      Weźmie {offer.points} z {total} pkt
-      {offer.wasted > 0 && (
+      Weźmie {points} z {total} pkt
+      {swords < 1 ? (
+        <span className="text-muted/70">
+          {" "}
+          — za mało na Miecz, trzeba {TROPHY_RATE}
+        </span>
+      ) : (
         <>
-          {", "}
-          <span className="text-vermilion/90">{offer.wasted} przepadnie</span>
+          {wasted > 0 && (
+            <>
+              {", "}
+              <span className="text-vermilion/90">{wasted} przepadnie</span>
+            </>
+          )}
+          {left > 0 && <span className="text-muted/70">, reszta zostaje u ciebie</span>}
         </>
-      )}
-      {left > 0 && (
-        <span className="text-muted/70">, reszta zostaje u ciebie</span>
       )}
     </p>
   );
@@ -315,6 +423,7 @@ function TrophyTile({
   cardId,
   gone,
   inTrade,
+  onPick,
   onInspect,
 }: {
   cardId: string;
@@ -322,6 +431,8 @@ function TrophyTile({
   gone: boolean;
   /** The trade being weighed would hand this one in. */
   inTrade: boolean;
+  /** Put this one in or take it out. Absent where there is nothing to decide. */
+  onPick?: () => void;
   onInspect: (card: TileCard) => void;
 }) {
   const worth = trophyValue(cardId);
@@ -354,7 +465,7 @@ function TrophyTile({
       // when he is. Position and fade both say the same thing from across the
       // row; this is the one that survives being looked at directly.
       marks={gone ? [] : ["trofeum"]}
-      onClick={() => onInspect(card)}
+      onClick={onPick ?? (() => onInspect(card))}
     />
   );
 }
