@@ -9,14 +9,14 @@
  * > każdej innej sytuacji… W efekcie Troll posiada **parametr Miecza równy 8
  * > (6+1+1), a podczas walki 11**.
  *
- * So: **własne** are the żetony and nothing else (1.2 — a Przedmiot's points
+ * So: **bazowe** are the żetony and nothing else (1.2 — a Przedmiot's points
  * are never marked with a token); **parametr** adds what is always on;
  * **w walce** adds what only counts when somebody swings.
  *
  * All three are read by something. `w walce` is 17.4 and every `op: "walka"`.
  * `parametr` is what the Trzęsawiska test and the six Kamienny Most ordeals
  * subtract, and what the Labirynt and the Spalona Ziemia measure — obstacles
- * rather than fights, which is the line the box actually draws. `własne` is
+ * rather than fights, which is the line the box actually draws. `bazowe` is
  * 1.3's floor and what 1.4's trophies raise.
  */
 
@@ -45,12 +45,13 @@ export interface Figures {
  * The rule, once, so both surfaces read the same:
  *
  * > **The parametr leads. The crossed swords mark the fight figure, where it
- * > differs. Parentheses hold własne, where anything has been added to it.**
+ * > differs. Parentheses hold the bazowe figure, where anything has been
+ * > added to it.**
  *
  * ```
  * 6              nothing lends anything
  * 8 (6)          always-on only        — w walce = parametr
- * 6, 9⚔          fight-only only       — parametr = własne
+ * 6, 9⚔          fight-only only       — parametr = bazowe
  * 105, 106⚔ (104)   all three
  * 5, 3⚔          a Rycerz standing in for you — lower, and that is not a bug
  * ```

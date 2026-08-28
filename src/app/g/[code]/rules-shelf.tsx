@@ -411,11 +411,11 @@ function Glossary() {
     },
     {
       word: "parametr / w walce",
-      said: "Miecz Postaci to jej parametr — własne punkty plus to, co Przedmioty i Przyjaciele dodają zawsze. O to pyta Karta, to odejmuje Pułapka i to sprawdza przeprawa; na pasku parametr jest pierwszy. W walce bywa inaczej: każda broń w pudełku działa wyłącznie podczas walki, a Rycerz walczy zamiast ciebie swoimi punktami, więc ta liczba potrafi być i większa, i mniejsza (1.5). Oznacza ją ⚔.",
+      said: "Miecz Postaci to jej parametr — bazowe punkty plus to, co Przedmioty i Przyjaciele dodają zawsze. O to pyta Karta, to odejmuje Pułapka i to sprawdza przeprawa; na pasku parametr jest pierwszy. W walce bywa inaczej: każda broń w pudełku działa wyłącznie podczas walki, a Rycerz walczy zamiast ciebie swoimi punktami, więc ta liczba potrafi być i większa, i mniejsza (1.5). Oznacza ją ⚔.",
     },
     {
-      word: "własne punkty",
-      said: "To, co Postać ma sama z siebie — żetony przy jej Karcie, i nic poza nimi. Nigdy nie spadają poniżej tego, z czym zaczynała, a punkty z Przedmiotów i Przyjaciół nie są własne: dolicza się je dopiero przy liczeniu (1.2, 2.2). Na pasku to liczba w nawiasie.",
+      word: "bazowe punkty",
+      said: "To, co Postać ma sama z siebie — żetony przy jej Karcie, i nic poza nimi. Nigdy nie spadają poniżej tego, z czym zaczynała, a punkty z Przedmiotów i Przyjaciół nie są bazowe: dolicza się je dopiero przy liczeniu (1.2, 2.2). Na pasku to liczba w nawiasie.",
     },
     {
       word: "Natura",

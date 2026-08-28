@@ -1591,7 +1591,7 @@ export async function runCommand(
          *
          * Own points were also the wrong way round here — printed first with
          * the parametr in parentheses, where the notation leads with the
-         * parametr and keeps własne in them.
+         * parametr and keeps the bazowe figure in them.
          */
         `Sword ${figuresText(seat.sword_own, view.parametr.miecz, view.walka.miecz)}  ` +
           `Magic ${figuresText(seat.magic_own, view.parametr.magia, view.walka.magia)}  ` +

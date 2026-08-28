@@ -11,11 +11,11 @@ describe("saying all three figures", () => {
     expect(figuresOf(6, 6, 6).bare).toBe(true);
   });
 
-  it("puts własne in parentheses when something is always on", () => {
+  it("puts the bazowe figure in parentheses when something is always on", () => {
     expect(figuresText(6, 8, 8)).toBe("8 (6)");
   });
 
-  /** No parentheses: nothing has been added, so własne is the parametr. */
+  /** No parentheses: nothing has been added, so bazowe is the parametr. */
   it("marks the fight figure when only a weapon lifts it", () => {
     expect(figuresText(6, 6, 9)).toBe("6, 9⚔");
   });

@@ -369,9 +369,9 @@ export function StatFigure({
  *
  * ```
  * Miecz: 6                                nothing lends anything
- * Miecz: 8, własne 6                      always-on only
+ * Miecz: 8, bazowe 6                      always-on only
  * Miecz: 6, w walce 9                     fight-only only
- * Miecz: 105, w walce 106, własne 104     all three
+ * Miecz: 105, w walce 106, bazowe 104     all three
  * ```
  */
 function statTitle(label: string, own: number, parametr: number, walka: number): string {
@@ -379,7 +379,7 @@ function statTitle(label: string, own: number, parametr: number, walka: number):
   return `${label}: ${[
     String(figures.parametr),
     figures.walka === null ? null : `w walce ${figures.walka}`,
-    figures.own === null ? null : `własne ${figures.own}`,
+    figures.own === null ? null : `bazowe ${figures.own}`,
   ]
     .filter((part): part is string => part !== null)
     .join(", ")}`;
@@ -467,7 +467,7 @@ export function RailStat({
          * order it draws them.
          *
          * It used to read them the other way round, so the rail said
-         * "106⚔, 105 (104)" and the hover answered "105, w walce 106, własne
+         * "106⚔, 105 (104)" and the hover answered "105, w walce 106, bazowe
          * 104". Two orders for three numbers is one order too many.
          *
          * Off `figuresOf`, so which of them are worth saying is decided once
