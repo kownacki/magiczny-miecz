@@ -82,7 +82,21 @@ export function PlayersDrawer({
   /** Sit down as somebody new. Offered only to a device with no seat. */
   onJoin?: () => void;
 }) {
-  const [open, setOpen] = useState<string | null>(openSeatId ?? null);
+  /**
+   * Which seat is unfolded. Shut by default, with two exceptions.
+   *
+   * Arriving from a player's name is a question about *them*, which `openSeatId`
+   * carries. And a roster of one has nothing to choose between: the list is
+   * that person, so the click that opens them answers a question nobody asked
+   * — it is the drawer opening itself a second time.
+   *
+   * Read once, when the drawer mounts, which is every time it opens: it is a
+   * starting point and not a rule, so somebody who shuts the only seat gets to
+   * keep it shut for as long as they are looking at it.
+   */
+  const [open, setOpen] = useState<string | null>(
+    openSeatId ?? (seats.length === 1 ? seats[0].id : null),
+  );
   /**
    * Which seats have their cards unfolded, by exception.
    *
