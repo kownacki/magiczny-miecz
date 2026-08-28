@@ -40,6 +40,7 @@ import spells from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
 import { FieldModal } from "./field-modal";
 import { RaidOffer } from "./raid-offer";
+import { FriendOffer } from "./friend-offer";
 import { DrawModal } from "./draw-modal";
 import { RebornModal } from "./reborn-modal";
 import { AnnouncementModal } from "./announcement";
@@ -973,6 +974,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 // `raidFieldCardId` and never both — the route reads whichever
                 // is set, and a body carrying two would silently be a raid on
                 // the Postać.
+                // The Księżniczka and the Władca, where each is worth
+                // something. Built here because it reads the seat's own hand.
+                friend: (
+                  <FriendOffer
+                    seat={active}
+                    fieldId={inspecting}
+                    busy={busy}
+                    onHeal={(points) => post("turn", { action: "friend-heal", points })}
+                    onPart={(holdingId) => post("turn", { action: "friend-part", holdingId })}
+                  />
+                ),
                 raid: (
                   <RaidOffer
                     seat={active}

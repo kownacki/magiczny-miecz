@@ -522,7 +522,7 @@ describe("a friend who mends you at her own Obszar (Księżniczka, Władca)", ()
     const table = at("zamek");
     const after = apply(table, healFromFriend(table, { seatId: "seat-a", points: 1 }).writes);
     expect(() => healFromFriend(after, { seatId: "seat-a", points: 1 })).toThrow(
-      /już w tej turze/,
+      /raz na wizytę/,
     );
   });
 });
@@ -549,7 +549,7 @@ describe("giving that friend up for gold, where she belongs", () => {
     // This is the one place she is worth something.
     expect(() =>
       partWithFriend(at("przelecz-wichrow"), { seatId: "seat-a", holdingId: "h-friend" }),
-    ).toThrow(/tylko w/);
+    ).toThrow(/oddaje się tylko w/);
   });
 
   it("refuses a friend who is not one of the two", () => {

@@ -88,6 +88,7 @@ export function FieldModal({
   stock,
   sellable,
   raid,
+  friend,
 }: {
   /** Which variant the table plays, so a hover can say where a card must be. */
   eqMode?: EqMode;
@@ -138,6 +139,13 @@ export function FieldModal({
    * own business, above the button that ends the turn.
    */
   raid?: React.ReactNode;
+  /**
+   * What a Przyjaciel in your own hand offers on this Obszar and no other.
+   *
+   * Passed in for the same reason the wyprawa is: it is built from what the
+   * seat is holding, which this window does not know and should not learn.
+   */
+  friend?: React.ReactNode;
   busy: boolean;
   onTake: (fieldCardId: string) => void;
   onInspect: (cardId: CardId) => void;
@@ -328,6 +336,11 @@ export function FieldModal({
                   gate for the two crossings 11.4 and the Most put in the next
                   turn, and a raid is not one of them. */}
               {phase === "field" && raid}
+
+              {/* The Księżniczka and the Władca, on the one Obszar each of them
+                  is worth something. Same gate as the wyprawa: after the move,
+                  where you ended it. */}
+              {phase === "field" && friend}
 
               {/* Ending the turn, which lives here and nowhere else.
                   

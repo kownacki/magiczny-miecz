@@ -2,7 +2,7 @@
 
 import { carriesSpell, heldAbilities, sellsPoints } from "@/lib/engine/abilities";
 import { HEAL_CEILING } from "@/lib/engine/derive";
-import type { FieldId } from "@/lib/engine/board";
+import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { afterBreakout, heldByARoll, missionOf } from "@/lib/engine/status";
 import { inEffect } from "@/lib/engine/holdings";
 import { cardName } from "@/lib/engine/polish";
@@ -83,7 +83,10 @@ export function healFromFriend(
   );
   const name = from ? cardName(from.cardId) : "Przyjaciel";
   if (view.statuses.some((status) => status.source === from?.cardId)) {
-    throw new Error(`${name} pomógł ci już w tej turze.`);
+    // No verb agreeing with the name: the KSIĘŻNICZKA is feminine and the
+    // WŁADCA is not, and "pomógł" was wrong about half the cards it can name.
+    // A noun phrase agrees with nothing and says the same thing.
+    throw new Error(`${name} — pomoc tylko raz na wizytę, a ta już była.`);
   }
 
   const wanted = Math.min(
@@ -161,7 +164,11 @@ export function partWithFriend(
     throw new Error(`${cardName(held.card_id)} nie jest kartą, którą się gdziekolwiek oddaje.`);
   }
   if (offer.field !== seat.field_id) {
-    throw new Error(`${cardName(held.card_id)} przyjmuje zapłatę tylko w: ${offer.field}.`);
+    // The Obszar's name, not its id: `zamek` and `twierdza-strzegaca-drog` are
+    // what the database calls them, and a refusal is read by a player.
+    throw new Error(
+      `${cardName(held.card_id)} — Kartę oddaje się tylko w: ${FIELDS.get(offer.field)?.name ?? offer.field}.`,
+    );
   }
 
   const gone: Changeset = { holdings: { delete: [held.id] } };
