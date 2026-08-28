@@ -16,7 +16,7 @@
  * came up *behind* the modal that had just offered it.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cardImageUrl, characterImageUrl } from "@/lib/view/cardImages";
@@ -57,6 +57,36 @@ const CARD_RATIO = 780 / 629;
 const GAP = 12;
 
 /**
+ * Which preview, if any, has been pinned — shared by every one of them.
+ *
+ * `useCardPreview` runs once per tile, so there are dozens of these on a seat
+ * card alone and each knows only about itself. Pinning has to be the table's
+ * business rather than a tile's: without somewhere shared to put it, pinning
+ * one card and then pointing at another would leave two panels open, and the
+ * pinned one would be the one you could not get rid of.
+ *
+ * A symbol per hook instance rather than a card id, because the same card can
+ * be drawn twice — the same Miecz in two players' packs — and pinning one of
+ * them should not light up the other.
+ */
+let pinnedPreview: symbol | null = null;
+const pinListeners = new Set<() => void>();
+
+function setPinnedPreview(id: symbol | null): void {
+  if (pinnedPreview === id) return;
+  pinnedPreview = id;
+  for (const listen of pinListeners) listen();
+}
+
+function subscribeToPin(listen: () => void): () => void {
+  pinListeners.add(listen);
+  return () => pinListeners.delete(listen);
+}
+
+/** Nothing is pinned on the server, and nothing is pinned before hydration. */
+const noPin = () => null;
+
+/**
  * Hover plumbing for one small card.
  *
  * Returns handlers to spread onto whatever the pointer lands on, and the
@@ -72,24 +102,110 @@ export function useCardPreview(
   nature: Nature | null = null,
 ) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  /**
+   * This instance's name in the shared pin — see `pinnedPreview`.
+   *
+   * Lazy state rather than a ref, because it is read while rendering to decide
+   * whether this is the pinned one, and a ref read during render is a value
+   * React has not promised is current. The initialiser runs once, so the
+   * identity is as stable as a ref's would have been.
+   */
+  const [me] = useState(() => Symbol("preview"));
+  /**
+   * Whether the pointer is still on the tile, read when Shift comes up.
+   *
+   * A ref and not state: nothing renders differently for it, and it is only
+   * ever read from an event handler — which is the one place a ref may be read.
+   */
+  const over = useRef(false);
+
+  const pinned = useSyncExternalStore(subscribeToPin, () => pinnedPreview, noPin);
+  const mine = pinned === me;
+  /**
+   * Somebody else's preview is pinned, so this one stays shut.
+   *
+   * Otherwise pointing at a second card while the first is pinned puts two
+   * panels on screen, one of which cannot be dismissed by moving the mouse.
+   * Pinning is a way of saying "this one, and hold still".
+   */
+  const elsewhere = pinned !== null && !mine;
+
+  /**
+   * Held Shift holds the panel: down to keep it, up to let it go.
+   *
+   * Shift because it is the one modifier that means nothing on its own —
+   * anywhere. Tapping Alt focuses Chrome's menu bar on Windows; Ctrl is the
+   * modifier every OS overloads and on macOS Ctrl-click *is* a right-click, so
+   * anybody still holding it while reaching for a rule number would get a
+   * context menu instead. Shift-clicking a `<button>` is an ordinary click, so
+   * the panel stays usable in the hand that is holding it open.
+   *
+   * Releasing closes it only when the pointer has since left the tile. Holding
+   * Shift over a card and letting go should leave you exactly where you were —
+   * hovering it — rather than shutting a panel that hovering alone would have
+   * kept open.
+   *
+   * `blur` releases it too, and is not paranoia: a keyup that happens while the
+   * window is not focused never arrives, so anything that takes focus mid-hold
+   * would leave the panel stuck open over the board with no key to press.
+   */
+  useEffect(() => {
+    if (anchor === null && !mine) return;
+    const onDown = (event: KeyboardEvent) => {
+      if (event.key === "Shift" && !mine && anchor !== null) setPinnedPreview(me);
+      if (event.key === "Escape" && mine) setPinnedPreview(null);
+    };
+    const onUp = (event: KeyboardEvent) => {
+      if (event.key !== "Shift" || !mine) return;
+      setPinnedPreview(null);
+      // The pointer wandered off while it was held, so there is nothing keeping
+      // it open any more.
+      if (!over.current) setAnchor(null);
+    };
+    const onBlur = () => {
+      if (!mine) return;
+      setPinnedPreview(null);
+      if (!over.current) setAnchor(null);
+    };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [anchor, mine, me]);
 
   const handlers = {
-    onMouseEnter: (event: React.MouseEvent<HTMLElement>) =>
-      setAnchor(event.currentTarget.getBoundingClientRect()),
-    onMouseLeave: () => setAnchor(null),
+    onMouseEnter: (event: React.MouseEvent<HTMLElement>) => {
+      over.current = true;
+      if (elsewhere) return;
+      setAnchor(event.currentTarget.getBoundingClientRect());
+    },
+    // A pinned panel outlives the pointer leaving the tile it came from, which
+    // is the whole point of pinning it.
+    onMouseLeave: () => {
+      over.current = false;
+      if (!mine) setAnchor(null);
+    },
     // A dragged element leaves no mouseleave behind it, and a preview left
     // hanging over the board during a drag hides where the card is going.
-    onPointerDown: () => setAnchor(null),
+    onPointerDown: () => {
+      if (!mine) setAnchor(null);
+    },
   };
 
   const preview =
-    anchor && card ? (
+    anchor && card && !elsewhere ? (
       <CardPreview
         card={card}
         anchor={anchor}
         imageless={imageless}
         eqMode={eqMode}
         nature={nature}
+        pinned={mine}
+        onUnpin={() => setPinnedPreview(null)}
       />
     ) : null;
   return { handlers, preview, hovering: anchor !== null };
@@ -101,9 +217,21 @@ export function CardPreview({
   imageless = false,
   eqMode = "classic",
   nature = null,
+  pinned = false,
+  onUnpin,
 }: {
   card: TileCard;
   anchor: DOMRect;
+  /**
+   * Held open on purpose, and therefore reachable.
+   *
+   * Unpinned this thing is `pointer-events-none` — it has to be, because it is
+   * drawn over the tile it describes and the tile is a control. Pinned, it is
+   * the opposite: the reason to pin is to put the pointer *in* it, to select a
+   * line of a card's text or to follow a rule number into the Instrukcja.
+   */
+  pinned?: boolean;
+  onUnpin?: () => void;
   nature?: Nature | null;
   /**
    * There is no picture of this and there should be no lookup for one.
@@ -129,8 +257,18 @@ export function CardPreview({
    * taller or wider than the window, and tall content scrolls instead of
    * overflowing it.
    */
+  /**
+   * The panel itself, kept so a press elsewhere can be told from a press in it.
+   *
+   * Set by the same ref callback that places it, rather than a second ref on
+   * the same element: two refs on one node is two things to keep in step, and
+   * the placement one already runs at exactly the moment the node appears.
+   */
+  const held = useRef<HTMLDivElement | null>(null);
+
   const place = useCallback(
     (node: HTMLDivElement | null) => {
+      held.current = node;
       if (!node) return;
       const box = node.getBoundingClientRect();
       const room = { x: window.innerWidth, y: window.innerHeight };
@@ -145,6 +283,27 @@ export function CardPreview({
     },
     [anchor],
   );
+
+  /**
+   * A press anywhere else lets a pinned panel go.
+   *
+   * `pointerdown` and not `click`, so it releases as the press lands rather
+   * than after it — otherwise the click that dismisses the panel also lands on
+   * whatever was behind it, which on a seat card is a tile that picks a card
+   * up. Presses *inside* are the panel being used and are left alone.
+   *
+   * Nothing is bound while it is merely hovering: there is no state to leave
+   * behind then, and the mouse leaving the tile has already closed it.
+   */
+  useEffect(() => {
+    if (!pinned || !onUnpin) return;
+    const onPress = (event: PointerEvent) => {
+      if (held.current?.contains(event.target as Node)) return;
+      onUnpin();
+    };
+    window.addEventListener("pointerdown", onPress, true);
+    return () => window.removeEventListener("pointerdown", onPress, true);
+  }, [pinned, onUnpin]);
 
   if (typeof document === "undefined") return null;
 
@@ -191,8 +350,19 @@ export function CardPreview({
         maxWidth: `calc(100vw - ${GAP * 2}px)`,
         maxHeight: `calc(100vh - ${GAP * 2}px)`,
       }}
-      // Never under the pointer: a preview that can be hovered flickers.
-      className={`pointer-events-none fixed ${LAYER.hover} flex gap-3 overflow-y-auto rounded-lg border border-ochre/40 bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]`}
+      /* Never under the pointer while it is only hovering: a preview you can
+         hover flickers, because it is drawn over the tile that opened it and
+         the pointer would cross from one to the other.
+
+         Pinned it is exactly the opposite. The whole reason to pin is to put
+         the pointer in it — to drag a line of the card's text, or to follow a
+         rule number into the Instrukcja — so it takes events, and says so with
+         a brighter edge. */
+      className={`fixed ${LAYER.hover} flex gap-3 overflow-y-auto rounded-lg border bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)] ${
+        pinned
+          ? "pointer-events-auto select-text border-ochre"
+          : "pointer-events-none select-none border-ochre/40"
+      }`}
     >
       {src && (
         <div className="relative shrink-0 self-start">
@@ -319,6 +489,22 @@ export function CardPreview({
               {card.text}
             </p>
           )}
+
+          {/**
+           * How to hold it still, and what holding it is for.
+           *
+           * Without this the feature does not exist for anybody who was not
+           * told about it: a modifier key leaves no trace on screen, and the
+           * panel it acts on is one that disappears the moment you look away
+           * from the thing that opened it.
+           *
+           * At the foot of the column rather than over the picture, and in the
+           * quietest ink on the panel — it is chrome about the panel, not
+           * something the card says.
+           */}
+          <p className="mt-auto pt-2 text-[10px] leading-none text-muted/50">
+            {pinned ? "trzymasz Shift — puść, żeby zamknąć" : "Shift — przytrzymaj, żeby zaznaczyć"}
+          </p>
         </div>
       )}
     </div>,
