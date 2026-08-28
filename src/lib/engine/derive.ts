@@ -197,18 +197,20 @@ export function wandRefills(spellsHeld: number, spellsAtSetup: number): boolean 
 export const BASE_CARRY_LIMIT = 4;
 
 /**
- * How many the pack holds in the slotted variant.
+ * How many the pack holds in the slotted variant. 5.4's four, same as the book.
  *
- * Not four. In klasyczny the limit of 5.4 is on everything a character has, and
- * four is the whole of what it may own; in slotowy the worn things hang on the
- * character and the pack is what is left over, so keeping it at four would make
- * the variant *stricter* than the book while claiming to be a convenience.
+ * It was sixteen, on the argument that four would make the variant *stricter*
+ * than the rulebook — and that argument was simply wrong. Worn things do not
+ * count against the pack here, so a character with four in the Plecak and nine
+ * places filled owns thirteen Przedmioty where klasyczny allows four. The
+ * variant is already the loose one; sixteen made it loose twice over, and a
+ * pack nobody can fill is a limit that never comes up.
  *
- * Sixteen is the Diablo grid this is modelled on, and it is a house number for
- * a house rule. Transport still adds on top: a Koń in the mount place is eight
- * more.
+ * So the departure stays where it was meant to be — worn against carried — and
+ * the number the book gives is left alone. Transport still adds on top, the way
+ * the cards say: a Koń in the mount place is eight more.
  */
-export const SLOTTED_PACK_LIMIT = 16;
+export const SLOTTED_PACK_LIMIT = BASE_CARRY_LIMIT;
 
 /**
  * What a character can actually carry.
