@@ -252,9 +252,23 @@ export function TestConsole({
    */
   const [nudge, setNudge] = useState(0);
 
+  /**
+   * The prompt takes focus whenever the console arrives in front of you.
+   *
+   * Opening it is a request to type something, and so is growing it back from
+   * its bar — nobody restores a console to look at it. It used to watch `open`
+   * alone, which covered opening (the panel is remounted for that) and missed
+   * every way back from `mini`: the key, the restore glyph, and a click on the
+   * bar all left the cursor wherever it had been, so the first thing you typed
+   * went somewhere else.
+   *
+   * Not on the way *down*. Minimising is how you put the console aside — with
+   * Escape, most often — and a shrunk console that keeps hold of the keyboard
+   * has not been put aside at all.
+   */
   useEffect(() => {
-    if (open) input.current?.focus();
-  }, [open]);
+    if (open && size !== "mini") input.current?.focus();
+  }, [open, size]);
 
   /**
    * Written back whenever the transcript grows.
