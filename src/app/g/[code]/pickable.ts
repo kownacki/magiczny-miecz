@@ -37,17 +37,12 @@ export const PICKABLE =
 export const ART_BORDER = "border-ochre/60";
 
 /**
- * The same emphasis the pointer gives, for a card the player has *chosen*.
+ * Selection is a tint, not a border. See `WASH` in `item-slot.tsx`.
  *
- * Deliberately not a third strength. A picked trophy was sitting between the
- * resting gold and the hover gold — `border-ochre` against `border-ochre/60`,
- * a step so small it read as nothing, and it had to be found rather than seen.
- * Three weights along one axis is one more than the eye separates.
- *
- * So there are two, and this is the loud one: what the pointer says about a
- * card under it, said about a card that is spoken for. They cannot collide,
- * because the pointer is somewhere else by definition when you are reading the
- * row — and where they do coincide, hovering your own choice, the answer is
- * the same either way.
+ * There was a `PICKED` here — the hover's own weight, ring and all, spent on a
+ * card the player had chosen. It read well and was still wrong: a chosen card
+ * and a hovered card were bidding for the same edge, so the pointer had
+ * nowhere louder to go over something already picked. Colouring the paper
+ * instead leaves the border to answer the pointer and nothing else, which is
+ * what it does everywhere else in the app.
  */
-export const PICKED = "border-ochre ring-1 ring-ochre/60";

@@ -21,7 +21,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
 import { CardMark, type SlotMark } from "./card-mark";
-import { ART_BORDER, PICKABLE, PICKED } from "./pickable";
+import { ART_BORDER, PICKABLE } from "./pickable";
 
 /**
  * One size, everywhere.
@@ -110,18 +110,36 @@ const TONE: Record<SlotTone, string> = {
   /**
    * Picked out of a row by something the player is deciding, not by the pointer.
    *
-   * `PICKED`, which is the hover's own weight — ring and all. It was the full
-   * ochre without the ring, which put it between the resting gold and the
-   * hovered one and made it almost invisible: a third step along an axis the
-   * eye reads two steps of.
+   * The frame is the resting one, deliberately: the *paper* is what changes,
+   * washed gold by `WASH` below. Borders were the wrong instrument for this —
+   * a chosen card and a hovered card were competing for the same edge, so
+   * either the hover had nowhere louder to go or the choice was a weight of
+   * border you had to look twice at. The tint leaves the edge free, and the
+   * pointer goes on doing what it does everywhere else in the app.
    *
    * It exists because the alternative was dimming everything else, and the
    * trofea already spend dimming on „this one is gone": one fade cannot mean
-   * both "spent" and "not in this trade" in the same row, and the row is one
-   * row now.
+   * both "spent" and "not in this trade" in the same row.
    */
-  chosen: `border-solid ${PICKED} bg-ochre/15`,
+  chosen: `border-solid ${ART_BORDER} bg-raised`,
   empty: "border-dashed border-edge/70 bg-night/40",
+};
+
+/**
+ * Tones that colour the paper rather than the frame.
+ *
+ * Multiplied, not laid over, so the ink stays black and only the paper takes
+ * the colour — which is the only thing that works on these scans, pen and ink
+ * with almost nothing in between. `mix-blend-color` keeps the backdrop's
+ * luminosity and does nothing at all here.
+ *
+ * Red for a card the square would refuse, gold for one the player has picked.
+ * Two answers to two different questions, and neither is a border, which is
+ * what leaves the border free to answer the pointer.
+ */
+const WASH: Partial<Record<SlotTone, string>> = {
+  rejects: "bg-vermilion",
+  chosen: "bg-ochre/75",
 };
 
 export function ItemSlot({
@@ -424,10 +442,10 @@ export function ItemSlot({
 
               Above the picture and below the corner marks, which have their own
               ground and are meant to be read off it. */}
-          {shown === "rejects" && (
+          {WASH[shown] && (
             <span
               aria-hidden
-              className="pointer-events-none absolute inset-0 bg-vermilion mix-blend-multiply"
+              className={`pointer-events-none absolute inset-0 ${WASH[shown]} mix-blend-multiply`}
             />
           )}
 
