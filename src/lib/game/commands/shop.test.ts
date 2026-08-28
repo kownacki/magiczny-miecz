@@ -116,38 +116,55 @@ describe("trading trophies (1.4)", () => {
    * seat, so a trade takes sevens out of it and leaves the rest standing —
    * there is nothing to hand in and nothing to waste. See docs/TROFEA.md.
    */
+  /**
+   * The same trade, and the tests are the other block's with one line changed.
+   *
+   * „Punkty" holds trophies exactly as „Karty pokonanych" does; what it does
+   * not hold is the cardboard, which went back to the stos zużytych when the
+   * Wróg died. So the choice, the rate and the waste are all shared, and the
+   * only thing this block has to prove is that no Karta goes back twice.
+   */
   describe("in punkty mode", () => {
-    const scoring = (points: number, sword = 2) =>
+    const scoring = (cardIds: string[], sword = 2) =>
       aTable({
         game: { trophy_mode: "points" },
-        seats: [aSeat({ id: "seat-a", sword_own: sword, trophy_points: points })],
+        seats: [aSeat({ id: "seat-a", sword_own: sword })],
+        holdings: cardIds.map((cardId, at) =>
+          aHolding({ id: `t${at}`, seat_id: "seat-a", card_id: cardId, kind: "trophy" }),
+        ),
       });
 
-    it("pays one Miecz per seven and keeps the remainder", () => {
-      const { writes, result } = tradeTrophies(scoring(TROPHY_RATE * 2 + 3), {
+    it("pays one Miecz per seven, as the printed mode does", () => {
+      // CYKLOP 6 + SMOK 5 + NOBBIN 2 = 13, one Miecz and six wasted.
+      const { writes, result } = tradeTrophies(scoring(["cyklop", "smok", "nobbin"]), {
         seatId: "seat-a",
       });
-      expect(result).toBe(2);
-      expect(writes.seats).toEqual([
-        { id: "seat-a", patch: { sword_own: 4, trophy_points: 3 } },
-      ]);
-      // Nothing was held, so nothing goes back to a pile.
-      expect(writes.holdings).toBeUndefined();
+      expect(result).toBe(1);
+      expect(writes.seats).toEqual([{ id: "seat-a", patch: { sword_own: 3 } }]);
+    });
+
+    /** The one thing this mode changes, and the one thing worth its own test. */
+    it("sends no Karta back, the pile having had it since the kill", () => {
+      const { writes } = tradeTrophies(scoring(["cyklop", "smok", "nobbin"]), {
+        seatId: "seat-a",
+      });
+      expect(writes.holdings?.delete).toHaveLength(3);
+      expect(writes.game).toBeUndefined();
     });
 
     it("refuses below the rate rather than banking a fraction", () => {
-      expect(() => tradeTrophies(scoring(TROPHY_RATE - 1), { seatId: "seat-a" })).toThrow(
+      expect(() => tradeTrophies(scoring(["nobbin"]), { seatId: "seat-a" })).toThrow(
         new RegExp(`${TROPHY_RATE} punktów`),
       );
     });
 
-    /** The Karty are on the pile, so naming one is naming something nobody has. */
-    it("ignores a named card, there being none to name", () => {
-      const { result } = tradeTrophies(scoring(TROPHY_RATE), {
+    /** Naming Karty works here too: they are trophies, whoever holds the paper. */
+    it("hands in only the trophies that were named", () => {
+      const { writes } = tradeTrophies(scoring(["cyklop", "smok", "nobbin"]), {
         seatId: "seat-a",
-        cardIds: ["smok"],
+        cardIds: ["cyklop", "nobbin"],
       });
-      expect(result).toBe(1);
+      expect(writes.holdings?.delete).toEqual(["t0", "t2"]);
     });
   });
 });

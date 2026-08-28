@@ -10,11 +10,11 @@ import type { FieldId } from "@/lib/engine/board";
 import { EVENTS } from "../decks";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import type { SeatRow } from "../store";
-import { asReturnable, putOnPile } from "./piles";
+import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { takeCard, type Taken } from "./holdings";
 import { cardName, plural } from "@/lib/engine/polish";
 import { TROPHY_RATE, offerFor, offersFor } from "@/lib/engine/trophies";
-import { seatById, trophyModeOf } from "./seat";
+import { seatById } from "./seat";
 
 /**
  * 1.4's rate, and the search over a hand that spends it well.
@@ -86,16 +86,17 @@ export function trophyPointsOf(cardId: string): number {
 }
 
 /**
- * Every held Wróg turned into the number printed on it, for the whole table.
+ * Every hoarded Karta back to the stos zużytych, for the whole table.
  *
  * The one conversion that can be made mid-game, and only in this direction.
- * Each Karta already carries its value, so turning „Karty pokonanych" into
- * „Punkty" takes nothing away from anybody — the Karty go to the stos zużytych
- * and the seat keeps exactly what it was holding. Going back cannot be done at
- * all: the Wrogowie are on the pile and there is nothing to hand out again.
+ * Turning „Karty pokonanych" into „Punkty" takes nothing away from anybody —
+ * every trophy stays exactly where it is and only the cardboard moves, which
+ * is the entire difference between the two modes.
  *
- * A `granted` Karta scores and returns nothing, because the deck still holds
- * its own copy — the same rule `trophiesFrom` follows in a fight.
+ * Going back cannot be done, and the reason is unchanged by that: the Karty are
+ * on the pile, 9.5 may have dealt some of them out again, and a referee that
+ * pulled them back would be inventing copies of Wrogowie the table is already
+ * meeting. The trophies would survive the trip; the cardboard cannot.
  */
 export function convertTrophies(snapshot: Snapshot): Changeset {
   const held = snapshot.holdings.filter((one) => one.kind === "trophy");
@@ -106,31 +107,26 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
     bySeat.set(one.seat_id, (bySeat.get(one.seat_id) ?? 0) + trophyPointsOf(one.card_id));
   }
 
-  const seats = [...bySeat].map(([id, points]) => {
-    const seat = seatById(snapshot, id);
-    return {
-      id,
-      patch: {
-        trophy_points: seat.trophy_points + points,
-        /**
-         * The shelf is not touched here, though it once was.
-         *
-         * It had to be, back when „Karty pokonanych" kept no shelf and the hand
-         * was where a Wróg was remembered — the switch would have dropped every
-         * one of them. Both modes write it on the win now, so everyone held is
-         * already on it, and appending here would list each of them twice.
-         */
-      },
-    };
-  });
-
+  /**
+   * Nobody loses a trophy here, and that is the whole change.
+   *
+   * This used to cash every hoard in and bank the points, because „Punkty" was
+   * built as a pool and a Karta was the only place a trophy lived. It is not:
+   * the trophy survives the switch and only its Karta moves. So the holdings
+   * stay exactly as they are, the shelf is untouched, and the one thing that
+   * happens is the cardboard going back to the stos zużytych — which is the
+   * difference the player just asked for.
+   *
+   * A `granted` Karta reaches no pile, because the deck still holds its own
+   * copy — the same rule `trophiesFrom` follows in a fight.
+   */
   return mergeAll(
-    { holdings: { delete: held.map((one) => one.id) } },
-    { seats },
     putOnPile(
       snapshot,
       "events",
-      held.map((one) => ({ cardId: one.card_id, granted: one.granted === true })),
+      held
+        .filter((one) => one.granted !== true)
+        .map((one) => ({ cardId: one.card_id, granted: false })),
     ),
     {
       journal: [...bySeat].map(([seatId, points]) => ({
@@ -184,58 +180,6 @@ export function tradeTrophies(
 ): Outcome<number> {
   const seat = seatById(snapshot, command.seatId);
 
-  /**
-   * In `punkty` there are no Karty to choose between, so the fork 1.4 leaves
-   * open does not arise: convert in sevens and keep the remainder.
-   *
-   * Keeping it rather than burning it is the same ruling as the printed mode's,
-   * arrived at from the other side — a player who may hold cards back may hold
-   * points back, and a variant that was harsher than the rule it replaces would
-   * be changing the game rather than the bookkeeping.
-   */
-  if (trophyModeOf(snapshot.game) === "points") {
-    const most = Math.floor(seat.trophy_points / TROPHY_RATE);
-    if (most < 1) {
-      throw new Error(
-        `Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4) — masz ${seat.trophy_points}.`,
-      );
-    }
-    // Asking for fewer than you can afford is allowed: the rest stays banked,
-    // which is the whole difference this mode has from the printed one.
-    const swords = command.swords ?? most;
-    if (!Number.isInteger(swords) || swords < 1) {
-      throw new Error("Ile Mieczy? Podaj liczbę całkowitą.");
-    }
-    if (swords > most) {
-      throw new Error(
-        `Za ${seat.trophy_points} pkt kupisz najwyżej ${most} ${plural(most, "Miecz", "Miecze", "Mieczy")}.`,
-      );
-    }
-    const spent = swords * TROPHY_RATE;
-    return {
-      writes: {
-        seats: [
-          {
-            id: seat.id,
-            patch: {
-              sword_own: seat.sword_own + swords,
-              trophy_points: seat.trophy_points - spent,
-            },
-          },
-        ],
-        journal: [
-          {
-            seatId: seat.id,
-            turn: snapshot.game.turn,
-            kind: "trophies-traded",
-            payload: { points: spent, gained: swords, lost: 0 },
-          },
-        ],
-      },
-      result: swords,
-    };
-  }
-
   const held = snapshot.holdings.filter((h) => h.seat_id === seat.id && h.kind === "trophy");
 
   /**
@@ -285,8 +229,9 @@ export function tradeTrophies(
   // 1.4, said in as many words: "Po tego rodzaju wymianie, Kartę pokonanego
   // Wroga należy odłożyć na stos zużytych Kart Zdarzeń." A beaten Wróg is not
   // spent when it is beaten — that is what makes it a trophy — it is spent
-  // here, when it is cashed in.
-  const returned = putOnPile(apply(snapshot, handed), "events", trophies.map(asReturnable));
+  // here, when it is cashed in. In „Punkty" the Karta went back at the kill and
+  // this trophy is a copy of him, which is what `trophiesToPile` knows.
+  const returned = trophiesToPile(apply(snapshot, handed), trophies);
 
   return {
     writes: merge(merge(handed, returned), {

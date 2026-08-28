@@ -21,21 +21,16 @@ export interface Beaten {
  * - **Not „sold".** 1.4's trade is the usual way a Karta leaves, and putting one
  *   down is another; which happened is recorded nowhere. Hence `gone`, and a
  *   caption that claims no more than that.
- * - **„Punkty" cannot say.** There are no trophy holdings in that mode, so the
- *   subtraction would call the whole shelf gone. It is a memorial there and
- *   every entry stays whole.
+ * It answers for both variants. It used to refuse in „Punkty", which held no
+ * trophies to subtract from — that was a wrong reading of the variant, which
+ * hoards exactly as the printed rule does and differs only in having sent the
+ * Karty back at the kill. See docs/TROFEA.md.
  *
  * A held Karta that is *not* on the shelf is kept too, at the end of the living
  * ones: that is a table whose fights were won before the shelf was written in
  * this mode, and dropping it would empty a Plecak somebody can see.
  */
-export function shelfFor(
-  beaten: readonly string[],
-  held: readonly string[],
-  byPoints: boolean,
-): Beaten[] {
-  if (byPoints) return beaten.map((cardId) => ({ cardId, gone: false }));
-
+export function shelfFor(beaten: readonly string[], held: readonly string[]): Beaten[] {
   const left = [...held];
   const shelf: Beaten[] = beaten.map((cardId) => {
     const at = left.indexOf(cardId);

@@ -1579,21 +1579,22 @@ export async function runCommand(
       const carried = items.filter((one) => one.slot === null).sort(byName);
       /**
        * Beaten minus held, as a multiset: two Nobbiny are two of each, and a
-       * set difference would call the second one gone. Empty in „Punkty",
-       * which never has a trophy holding to subtract — see `trophiesFrom`.
+       * set difference would call the second one gone.
+       *
+       * Asked in both variants now. It used to be „Karty pokonanych" only,
+       * because „Punkty" had no trophy holding to subtract from — it does, and
+       * the subtraction means the same thing there: whom this seat beat and no
+       * longer has.
        */
-      const leftHand =
-        trophyModeOf(snapshot.game) === "cards"
-          ? (() => {
-              const still = trophies.map((one) => one.card_id);
-              return seat.trophy_beaten.filter((cardId) => {
-                const at = still.indexOf(cardId);
-                if (at === -1) return true;
-                still.splice(at, 1);
-                return false;
-              });
-            })()
-          : [];
+      const leftHand = (() => {
+        const still = trophies.map((one) => one.card_id);
+        return seat.trophy_beaten.filter((cardId) => {
+          const at = still.indexOf(cardId);
+          if (at === -1) return true;
+          still.splice(at, 1);
+          return false;
+        });
+      })();
       return [
         `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
         /**
@@ -1647,14 +1648,14 @@ export async function runCommand(
          * the choice 1.4 gives you has to be done on paper.
          */
         /**
-         * The same line in the „Punkty" variant, where the score is a number.
+         * One line for both variants, because there is one trade.
          *
-         * Phrased as the Karty are, minus the waste: nothing is handed in, so a
-         * remainder stays where it is and there is nothing to warn about.
+         * „Punkty" used to print a pool here — `pointLedger`, a running total
+         * in sevens — which was the wrong model of the variant: it holds
+         * trophies like the printed rule and differs only in having sent the
+         * Karty back at the kill. So the ledger above serves both, waste
+         * included, and that is the whole of it.
          */
-        ...(trophyModeOf(snapshot.game) === "points" && seat.trophy_points > 0
-          ? [`Trophies: ${pointLedger(seat.trophy_points)}`]
-          : []),
         ...(trophies.length
           ? [
               `Trophies: ${trophies
@@ -1781,13 +1782,3 @@ function tradeMenu(cardIds: readonly string[]): string[] {
   });
 }
 
-/** The same arithmetic on a score rather than a hand, and nothing is wasted. */
-function pointLedger(points: number): string {
-  const swords = Math.floor(points / TROPHY_RATE);
-  if (swords < 1) return `${points} pkt — ${TROPHY_RATE} za Miecz`;
-  const left = points - swords * TROPHY_RATE;
-  return (
-    `${points} pkt → ${swords} Miecz${swords === 1 ? "" : "e"}` +
-    (left > 0 ? `, zostanie ${left}` : "")
-  );
-}

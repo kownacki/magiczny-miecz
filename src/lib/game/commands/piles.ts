@@ -4,6 +4,7 @@ import { discardTo, returningRef } from "@/lib/engine/deck";
 import { fromTheShop } from "@/lib/engine/stock";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import type { Changeset, Snapshot } from "../change";
+import { trophyModeOf } from "./seat";
 
 /**
  * All a pile ever looks at.
@@ -98,4 +99,28 @@ export function pushOntoPile(
 
   if (!any) return {};
   return { game: { deck: { ...decks, [pile]: deck } } };
+}
+
+/**
+ * Trophy Karty back on the stos zużytych — in the mode where they ever left it.
+ *
+ * „Karty pokonanych" hoards the Karta until it is spent, so every way of losing
+ * a trophy sends it to the pile: 1.4's trade, putting it down, dying, walking
+ * out of the realm.
+ *
+ * „Punkty" already sent it, at the moment the Wróg died. What stays on the seat
+ * is a copy of him — the trophy — and the deck has its card back and can deal
+ * it to somebody else. So the same four ways of losing that trophy must return
+ * nothing at all, or a box holding one Wilkołak ends the evening holding two.
+ *
+ * Four callers and one rule, which is the whole reason this is a function.
+ * Written out four times, three of them would be right.
+ */
+export function trophiesToPile(
+  snapshot: Snapshot,
+  trophies: readonly { card_id: string; granted: boolean }[],
+): Changeset {
+  if (trophies.length === 0) return {};
+  if (trophyModeOf(snapshot.game) === "points") return {};
+  return putOnPile(snapshot, "events", trophies.map(asReturnable));
 }

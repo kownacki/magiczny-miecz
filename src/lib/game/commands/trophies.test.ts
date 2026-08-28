@@ -126,21 +126,25 @@ describe("keeping a beaten Wróg (16.2)", () => {
    * does not need them lying there to remember what they were worth.
    */
   describe("in punkty mode", () => {
-    it("scores the Wróg rather than keeping it", async () => {
+    /**
+     * The trophy is kept here as much as in the other mode. What „Punkty"
+     * changes is one thing only: the Karta goes back at the kill.
+     */
+    it("keeps the trophy and hands the Karta back at once", async () => {
       const after = await settle(won({ mode: "points" }));
-      expect(trophies(after)).toEqual([]);
-      // CYKLOP's printed Miecz, not the fight's totals.
-      expect(after.seats[0].trophy_points).toBe(6);
+      expect(trophies(after)).toEqual(["cyklop"]);
+      expect(returned(after, "cyklop")).toHaveLength(1);
     });
 
-    it("adds a pack up", async () => {
+    it("keeps a pack of them", async () => {
       const pack = await settle(won({ mode: "points", fought: ["cyklop", "nobbin"] }));
-      expect(pack.seats[0].trophy_points).toBe(6 + 2);
+      expect(trophies(pack)).toEqual(["cyklop", "nobbin"]);
     });
 
     /**
-     * The Karta itself is not kept anywhere, so it has to reach the stos
-     * zużytych — a Wróg that vanished would shrink the deck a card per fight.
+     * The Karta reaches the stos zużytych at the kill, which is the variant.
+     * 9.5 refills from that pile, so this Wróg can be met again while the
+     * trophy for him sits on the seat that beat him.
      */
     it("puts the Karta back on the used pile", async () => {
       const after = await settle(won({ mode: "points" }));
@@ -151,7 +155,7 @@ describe("keeping a beaten Wróg (16.2)", () => {
     /** A conjured Cyklop was never dealt, so it must not arrive on the pile. */
     it("returns nothing that the deck still holds", async () => {
       const after = await settle(won({ mode: "points", granted: true }));
-      expect(after.seats[0].trophy_points).toBe(6);
+      expect(trophies(after)).toEqual(["cyklop"]);
       expect(returned(after, "cyklop")).toEqual([]);
     });
 
@@ -174,20 +178,32 @@ describe("keeping a beaten Wróg (16.2)", () => {
       expect(returned(after, "cyklop")).toEqual([]);
     });
 
-    /** Points are fungible, so no particular corpse paid for a given Miecz. */
-    it("does not shrink when the points are spent", async () => {
-      const after = await settle(won({ mode: "points", fought: ["cyklop", "nobbin"] }));
-      const rich = apply(after, {
-        seats: [{ id: after.seats[0].id, patch: { trophy_points: 14 } }],
-      });
-      const spent = apply(rich, tradeTrophies(rich, { seatId: rich.seats[0].id }).writes);
-      expect(spent.seats[0].trophy_points).toBe(0);
-      expect(spent.seats[0].trophy_beaten).toEqual(["cyklop", "nobbin"]);
+    /**
+     * Cashing one in is the same trade as in the other mode — the trophy goes,
+     * the shelf keeps him — and it sends no Karta anywhere, because his went
+     * back at the kill and what was spent is a copy of him.
+     */
+    it("spends a trophy without sending a second Karta to the pile", async () => {
+      const after = await settle(won({ mode: "points", cardId: "wilkolak" }));
+      const seat = after.seats[0];
+      const out = tradeTrophies(after, { seatId: seat.id });
+      const spent = apply(after, out.writes);
+
+      // The Wilkołak is worth 10 and buys one Miecz, so 3 are lost — 1.4's
+      // „punkty ponad wielokrotność 7 są stracone", which the pool this mode
+      // used to keep could never charge, sevens being all it could hold.
+      expect(out.result).toBe(1);
+      expect(spent.seats[0].sword_own).toBe(seat.sword_own + 1);
+
+      expect(trophies(spent)).toEqual([]);
+      expect(spent.seats[0].trophy_beaten).toEqual(["wilkolak"]);
+      // The one from the kill, and not a second one from the trade.
+      expect(returned(spent, "wilkolak")).toHaveLength(1);
     });
 
-    it("scores nothing for a Wróg fought magically, as the Karta rule keeps none", async () => {
+    it("keeps nothing for a Wróg fought magically, as the other mode keeps none", async () => {
       const after = await settle(won({ mode: "points", cardId: "demon" }));
-      expect(after.seats[0].trophy_points).toBe(0);
+      expect(trophies(after)).toEqual([]);
     });
   });
 });
@@ -213,7 +229,12 @@ describe("switching to punkty mid-game", () => {
   const trophy = (id: string, seat: string, cardId: string, granted = false) =>
     aHolding({ id, seat_id: seat, card_id: cardId, kind: "trophy", granted });
 
-  it("turns every held Karta into the number printed on it", () => {
+  /**
+   * Nobody loses a trophy in the switch. It used to cash every hoard in, back
+   * when „Punkty" was a pool; the modes differ only in where the cardboard is,
+   * so the trophies stay and the Karty go.
+   */
+  it("leaves every trophy where it is, and moves only the Karta", () => {
     const table = playing([
       trophy("t0", "seat-a", "cyklop"),
       trophy("t1", "seat-a", "nobbin"),
@@ -222,10 +243,13 @@ describe("switching to punkty mid-game", () => {
     const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
 
     expect(after.game.trophy_mode).toBe("points");
-    expect(after.holdings.filter((h) => h.kind === "trophy")).toEqual([]);
-    // Added to what the seat already had, not replacing it.
-    expect(after.seats.find((s) => s.id === "seat-a")?.trophy_points).toBe(1 + 6 + 2);
-    expect(after.seats.find((s) => s.id === "seat-b")?.trophy_points).toBe(5);
+    expect(after.holdings.filter((h) => h.kind === "trophy").map((h) => h.card_id)).toEqual([
+      "cyklop",
+      "nobbin",
+      "smok",
+    ]);
+    // Untouched: it is not what this mode spends any more.
+    expect(after.seats.find((s) => s.id === "seat-a")?.trophy_points).toBe(1);
   });
 
   /** The Karty are nobody's now, so they have to reach the stos zużytych. */
@@ -239,7 +263,7 @@ describe("switching to punkty mid-game", () => {
   it("returns nothing the deck still holds", () => {
     const table = playing([trophy("t0", "seat-a", "cyklop", true)]);
     const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
-    expect(after.seats[0].trophy_points).toBe(1 + 6);
+    expect(after.holdings.filter((h) => h.kind === "trophy")).toHaveLength(1);
     expect(returned(after, "cyklop")).toEqual([]);
   });
 

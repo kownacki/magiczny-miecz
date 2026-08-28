@@ -69,11 +69,11 @@ export function TrophySection({
   seat: Seat;
   isMine: boolean;
   /**
-   * Which rule this table plays, said outright rather than inferred.
+   * Which rule this table plays.
    *
-   * It was inferred from whether a total arrived, which stopped working when
-   * the engine landed: `trophy_points` is `not null` and reads `0` in "cards",
-   * so an absent total and a table with no kills look identical.
+   * It buys one sentence now, and nothing else: both variants hold trophies and
+   * trade them the same way, and all this decides is whether to say that the
+   * Karty have already gone back to the stos zużytych.
    */
   mode: "points" | "cards";
   busy: boolean;
@@ -96,43 +96,24 @@ export function TrophySection({
 
   const byPoints = mode === "points";
   const held = seat.holdings.filter((one) => one.kind === "trophy");
-  /** Everyone beaten, and which of them are still in hand. */
-  const shelf = shelfFor(seat.trophy_beaten ?? [], held.map((one) => one.cardId), byPoints);
+  /** Everyone beaten, and which of them are still held. */
+  const shelf = shelfFor(seat.trophy_beaten ?? [], held.map((one) => one.cardId));
   const gone = shelf.filter((one) => one.gone);
-  const counting = byPoints
-    ? (seat.trophy_points ?? 0)
-    : held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
-
-  /**
-   * What „Punkty" spends instead of a Karta, said out loud.
-   *
-   * The shelf there is a memorial and no tile ever dims, which is the honest
-   * reading — points are fungible and no particular corpse paid for a given
-   * Miecz — but it left the section unable to show that anything had been
-   * spent at all. A Wilkołak worth 10 above a total of 3 is a subtraction the
-   * player is left to do, and the answer is the whole of what they came to
-   * find out.
-   *
-   * So the arithmetic is done here: everyone beaten is worth this much, the
-   * seat still holds that much, and the difference has been traded. Floored at
-   * zero for a table converted to „Punkty" before the shelf was written on
-   * every win, where the total can honestly exceed what the shelf accounts for.
-   */
-  const beatenWorth = byPoints
-    ? shelf.reduce((sum, one) => sum + trophyValue(one.cardId), 0)
-    : 0;
-  const exchanged = Math.max(0, beatenWorth - counting);
+  const counting = held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
 
   /**
    * Every trade this hand can make, each by its cheapest set — the engine's
    * answer, not a second opinion computed here.
    *
-   * In „Punkty" there are no Karty, so the hand is one notional trophy worth
-   * the running total and the same function answers the same question.
+   * One list for both variants, because there is one trade. „Punkty" used to
+   * be a pool converted in sevens, and had its own branch here and a notional
+   * trophy standing in for the total; it is not a pool. It holds trophies like
+   * the printed rule and differs only in where the cardboard is, so the choice,
+   * the rate and the waste are all this function's, in both.
    */
-  const offers: Offer[] = byPoints
-    ? offersFor(counting > 0 ? [{ cardId: "", points: counting }] : [])
-    : offersFor(held.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId) })));
+  const offers: Offer[] = offersFor(
+    held.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId) })),
+  );
 
   const most = offers[offers.length - 1] ?? null;
   const offer = offers.find((one) => one.swords === wanted) ?? most;
@@ -151,7 +132,7 @@ export function TrophySection({
    * mapping: the bag is this render's, and the next one starts full again.
    */
   const bag = new Map<string, number>();
-  for (const cardId of offer && !byPoints ? offer.cardIds : []) {
+  for (const cardId of offer?.cardIds ?? []) {
     bag.set(cardId, (bag.get(cardId) ?? 0) + 1);
   }
   const takes = (cardId: string): boolean => {
@@ -182,18 +163,17 @@ export function TrophySection({
         <p className="p-1 text-[11px] leading-snug text-muted">
           {/* Linked here and plain in the buttons below: this is the app
               explaining itself, and a label is a label. */}
+          {/* The trade is the same sentence in both variants — you keep whom
+              you beat and hand in whom you choose — so only the clause about
+              the cardboard differs. */}
           <Rules>
-            {byPoints
-              ? `Nikogo jeszcze nie pokonałeś. Za każde ${TROPHY_RATE} punktów Miecza pokonanych Wrogów dostaniesz 1 punkt Miecza (1.4).`
-              : `Nikogo jeszcze nie pokonałeś. Zatrzymasz Kartę każdego pokonanego Wroga i oddasz wybrane, gdy zechcesz — za każde ${TROPHY_RATE} punktów Miecza dostaniesz 1 punkt Miecza (1.4).`}
+            {`Nikogo jeszcze nie pokonałeś. Zatrzymasz każdego pokonanego Wroga i oddasz wybranych, gdy zechcesz — za każde ${TROPHY_RATE} punktów Miecza dostaniesz 1 punkt Miecza (1.4).`}
           </Rules>
         </p>
       ) : (
         <div className="flex flex-col gap-2 p-1">
-          {/* Those still in hand, which are the only ones a trade can reach. In
-              „Punkty" every one of them is here and none lights up: the Karta is
-              long gone, points are fungible, and no particular corpse paid for a
-              given Miecz. */}
+          {/* Those still held, which are the only ones a trade can reach — the
+              same row in both variants, because both hold them. */}
           <div className="flex flex-wrap gap-2">
             {shelf
               .filter((one) => !one.gone)
@@ -202,23 +182,22 @@ export function TrophySection({
                   key={`${one.cardId}-${at}`}
                   cardId={one.cardId}
                   spent={takes(one.cardId)}
-                  choosing={!byPoints && offer !== null}
+                  choosing={offer !== null}
                   onInspect={onInspect}
                 />
               ))}
           </div>
 
           {byPoints && (
+            /* The whole of what this variant changes, and the only place the
+               seat card still needs to know which one is being played: the
+               trophy is yours to spend either way, but its Karta went back to
+               the stos zużytych when he fell, so 9.5 can deal him to somebody
+               else while you are still holding him here. */
             <p className="text-[11px] leading-snug text-muted/70">
-              {/* One line, and which one depends on whether there is anything
-                  to account for. Before the first trade the thing worth saying
-                  is why these Karty are pictures and not cards; after it, where
-                  the missing points went. Both at once is two grey lines under
-                  a row of one tile. */}
               <Rules>
-                {exchanged > 0
-                  ? `Z ${beatenWorth} punktów Miecza pokonanych Wrogów wymieniłeś już ${exchanged} (1.4).`
-                  : "Karty pokonanych Wrogów wracają na stos zużytych — zostaje pamięć i punkty (1.4)."}
+                Karty pokonanych Wrogów wróciły na stos zużytych — trofea
+                zostają u ciebie (1.4, 9.5).
               </Rules>
             </p>
           )}
@@ -258,7 +237,7 @@ export function TrophySection({
                 </div>
               )}
 
-              {offer && <Ledger offer={offer} total={counting} keepsRest={byPoints} />}
+              {offer && <Ledger offer={offer} total={counting} />}
 
               {isMine && onTrade && offer && (
                 <button
@@ -324,19 +303,15 @@ function plural(swords: number): string {
  * What this trade costs, said before it is made.
  *
  * The waste is the half 1.4 hides in a subordinate clause and the only reason
- * to wait, so it is named — and named as a *loss* only where it is one. In
- * „Punkty" the remainder stays on the seat, so the same number is a remainder;
- * writing "przepadnie" over it would invent a cost the rule does not charge.
+ * to wait, so it is named, and named as a loss because it is one in both
+ * variants: „punkty ponad wielokrotność 7 są stracone" does not ask where the
+ * cardboard is. What is *not* handed in is a different number and stays yours,
+ * which is why the two are printed apart.
+ *
+ * This used to take a `keepsRest` flag, for a „Punkty" that kept the remainder
+ * of a pool. There is no pool — see docs/TROFEA.md.
  */
-function Ledger({
-  offer,
-  total,
-  keepsRest,
-}: {
-  offer: Offer;
-  total: number;
-  keepsRest: boolean;
-}) {
+function Ledger({ offer, total }: { offer: Offer; total: number }) {
   const left = total - offer.points;
   return (
     <p className="text-[11px] leading-snug text-muted">
@@ -348,9 +323,7 @@ function Ledger({
         </>
       )}
       {left > 0 && (
-        <span className="text-muted/70">
-          {keepsRest ? `, ${left} zostaje` : `, reszta zostaje w ręku`}
-        </span>
+        <span className="text-muted/70">, reszta zostaje u ciebie</span>
       )}
     </p>
   );

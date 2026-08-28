@@ -276,7 +276,8 @@ keeps one session's unfinished work out of another's commit.
 
 ## Correction: „Punkty" was built on the wrong difference
 
-**Everything above about „Punkty" being fungible is wrong**, including the
+**Built.** Engine, console and seat card, in one change. Everything above about
+„Punkty" being fungible is wrong, including the
 ruling that it keeps the remainder and the argument that no portrait can dim
 there. Michał said what the variant is, and it is not what this page assumed:
 
@@ -326,10 +327,31 @@ already-spent or seeding a holding per `trophy_beaten` entry — the shelf is
 written on every win in both modes since `d5fd4e7`, so for anything played
 after that the entries are there to seed from.
 
-### Whose this is
+### As built
 
-Engine and console. The seat card's part is mostly deletion — its „Punkty"
-branch, the `trophy_points` prop, the memorial caption and the
-`Z 10 punktów … wymieniłeś już 7` line all exist to work around the pool, and
-`shelfFor` already treats a mode with holdings correctly. Nothing in the
-browser should be built against the current shape.
+`trophiesFrom` inserts a `trophy` holding in both modes and, in „Punkty" only,
+returns the Karta at once. Everything downstream is now shared: `tradeTrophies`
+lost its points branch, `offersFor` answers for both, the console prints one
+ledger, and the seat card's own „Punkty" branch is down to a single sentence
+saying where the cardboard went.
+
+**One rule needed a home.** Four things can take a trophy away — the trade,
+`dropCard`, death and withdrawal — and each used to put its Karta on the pile.
+In „Punkty" the pile already has it, so all four now go through
+`trophiesToPile`, which returns nothing in that mode. Written out four times,
+three of them would eventually be right and the fourth would quietly deal a
+second Wilkołak.
+
+**`convertTrophies` barely does anything now.** Switching a running table to
+„Punkty" used to cash every hoard in; it hands the Karty back and leaves the
+trophies alone. Going the other way is still refused, and for a better reason
+than before: the trophies would survive the trip, the cardboard cannot — 9.5
+may already have dealt some of it out again.
+
+**`trophy_points` is vestigial.** Nothing writes it and nothing reads it; the
+column stays because dropping one is not worth a migration. Two consequences
+worth knowing: a „Punkty" table started before this change carries a total with
+no trophies behind it and those points are now unreachable, and its
+`trophy_beaten` will draw every entry as spent, because the seat holds none of
+them. Both are correct readings of what is stored and neither can be recovered
+— the record of which Wrogowie those points came from was never kept.

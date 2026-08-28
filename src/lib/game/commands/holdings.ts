@@ -29,7 +29,7 @@ import {
   type Snapshot,
 } from "../change";
 import type { HoldingRow } from "../store";
-import { asReturnable, pushOntoPile, putOnPile } from "./piles";
+import { asReturnable, pushOntoPile, putOnPile, trophiesToPile } from "./piles";
 import { eqModeOf, holdingsOf, seatById, seatView } from "./seat";
 import { cardName } from "@/lib/engine/polish";
 
@@ -535,11 +535,16 @@ export function dropCard(
     // a spoken one, and a trophy nobody wants goes where 1.4 sends a traded
     // one — both to the used pile, which until now they reached by being
     // deleted, which is not the same place at all.
-    placed = putOnPile(
-      apply(snapshot, gone),
-      held.kind === "spell" || held.kind === "carried" ? "spells" : "events",
-      [asReturnable(held)],
-    );
+    placed =
+      held.kind === "trophy"
+        ? // In „Punkty" his Karta went back at the kill and this is a copy of
+          // him, so putting the copy down puts nothing anywhere.
+          trophiesToPile(apply(snapshot, gone), [held])
+        : putOnPile(
+            apply(snapshot, gone),
+            held.kind === "spell" || held.kind === "carried" ? "spells" : "events",
+            [asReturnable(held)],
+          );
   }
 
   return {

@@ -2,7 +2,7 @@
 
 import { HEAL_CEILING, heal } from "@/lib/engine/derive";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
-import { asReturnable, putOnPile } from "./piles";
+import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
 
 /**
@@ -107,11 +107,7 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
   // Chained rather than merged: both write `deck`, and a merge would let the
   // second overwrite the first's pile instead of adding to it.
   const spellsBack = putOnPile(apply(snapshot, put), "spells", spellCards.map(asReturnable));
-  const trophiesBack = putOnPile(
-    apply(snapshot, mergeAll(put, spellsBack)),
-    "events",
-    trophies.map(asReturnable),
-  );
+  const trophiesBack = trophiesToPile(apply(snapshot, mergeAll(put, spellsBack)), trophies);
   const returned = mergeAll(spellsBack, trophiesBack);
 
   const gone: Changeset = {

@@ -2,7 +2,7 @@
 
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
-import { asReturnable, putOnPile } from "./piles";
+import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
 
 /**
@@ -130,11 +130,7 @@ export function removeCharacter(
   const kitBack = putOnPile(apply(snapshot, put), "events", left.map(asReturnable));
   const withKit = mergeAll(put, kitBack);
   const spellsBack = putOnPile(apply(snapshot, withKit), "spells", spellCards.map(asReturnable));
-  const trophiesBack = putOnPile(
-    apply(snapshot, mergeAll(withKit, spellsBack)),
-    "events",
-    trophies.map(asReturnable),
-  );
+  const trophiesBack = trophiesToPile(apply(snapshot, mergeAll(withKit, spellsBack)), trophies);
 
   /**
    * The chair, emptied back to what it is before anybody chooses.

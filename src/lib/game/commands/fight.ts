@@ -1576,83 +1576,81 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
    * never gave that copy up. Both halves of `granted` matter here and they pull
    * different ways, which is why the pile is asked separately from the score.
    */
-  if (trophyModeOf(snapshot.game) === "points") {
-    const points = won.reduce((sum, one) => sum + one.points, 0);
-    const real = won.filter(({ cardId }) => !staged.has(cardId));
-    return mergeAll(
-      said,
-      {
-        seats: [
-          {
-            id: seat.id,
-            patch: {
-              trophy_points: seat.trophy_points + points,
-              /**
-               * The shelf, which is the only thing that will remember him.
-               *
-               * The Karta reaches the stos zużytych in the next line and his
-               * Miecz reaches the score in the one above, and after that
-               * nothing on the wire has ever named the Wilkołak again. Display
-               * only — no rule reads this. A conjured Wróg is on it too: he was
-               * still beaten, and the shelf is about that rather than about
-               * which pile his Karta belongs to.
-               */
-              trophy_beaten: [...seat.trophy_beaten, ...won.map(({ cardId }) => cardId)],
-            },
-          },
-        ],
-      },
-      real.length > 0
-        ? putOnPile(snapshot, "events", real.map(({ cardId }) => ({ cardId, granted: false })))
-        : {},
-    );
-  }
+  /**
+   * The one thing the two modes disagree about: when the cardboard goes back.
+   *
+   * Both hoard the trophy, both let you choose when and what to hand in, and
+   * both lose the points above a multiple of seven — 1.4 entire, in either
+   * variant. „Punkty" differs by returning the Wróg's Karta the moment he dies
+   * rather than when he is cashed in, so what the seat keeps is a copy of him.
+   *
+   * Which is the whole of the variant, and it is mechanical: 9.5 refills the
+   * deck from that pile, so a Wróg beaten here is a Wróg somebody can meet
+   * again — where in „Karty pokonanych" he sits in a pack until traded, and an
+   * eighth of the Karty Zdarzeń can be doing that at once. See docs/TROFEA.md.
+   *
+   * A conjured Wróg is worth his points and reaches no pile, because the deck
+   * never gave that copy up. Both halves of `granted` matter and they pull
+   * different ways, which is why the pile is asked separately from the trophy.
+   */
+  const returned =
+    trophyModeOf(snapshot.game) === "points"
+      ? putOnPile(
+          snapshot,
+          "events",
+          won
+            .filter(({ cardId }) => !staged.has(cardId))
+            .map(({ cardId }) => ({ cardId, granted: false })),
+        )
+      : {};
 
-  return mergeAll(said, {
-    holdings: {
-      insert: won.map(({ cardId }) => ({
-        seat_id: seat.id,
-        card_id: cardId,
-        kind: "trophy" as const,
-        face: "open" as const,
-        granted: staged.has(cardId),
-      })),
-    },
-    seats: [
-      {
-        id: seat.id,
-        patch: {
-          /**
-           * The shelf is written in „Karty pokonanych" too, though the Karta is
-           * in hand and says the same thing — because it stops saying it the
-           * moment 1.4 is used. A cashed trophy is deleted and its Karta goes
-           * to the stos zużytych, so the holdings alone can only ever show who
-           * you still have, never who you beat.
-           *
-           * Display only, exactly as in „Punkty": no rule reads it, and 1.4's
-           * arithmetic goes on running off the holdings.
-           *
-           * # Reading the two lists together
-           *
-           * Beaten minus held is the Wrogowie whose Karty have left the hand,
-           * which is what a shelf wants to draw greyed and last. Three things
-           * to know before deriving it, because none is obvious:
-           *
-           * - **It is a multiset.** Two Nobbiny are two entries here and two
-           *   holdings, and set subtraction would call the second one gone.
-           * - **„Sold" is not quite the word.** `dropCard` also lets a trophy
-           *   go — to the same stos zużytych, so nothing leaks — and the
-           *   difference between selling and discarding one is not recorded.
-           *   What the list means is "beaten, and no longer in hand".
-           * - **Only in „Karty pokonanych".** „Punkty" never has a trophy
-           *   holding at all, so the subtraction there returns the whole shelf
-           *   and means nothing. It is a memorial in that mode and stays whole.
-           */
-          trophy_beaten: [...seat.trophy_beaten, ...won.map(({ cardId }) => cardId)],
-        },
+  return mergeAll(
+    said,
+    {
+      holdings: {
+        insert: won.map(({ cardId }) => ({
+          seat_id: seat.id,
+          card_id: cardId,
+          kind: "trophy" as const,
+          face: "open" as const,
+          granted: staged.has(cardId),
+        })),
       },
-    ],
-  });
+      seats: [
+        {
+          id: seat.id,
+          patch: {
+            /**
+             * The shelf, in both modes, beside the trophy rather than instead
+             * of it — because the trophy stops saying who you beat the moment
+             * 1.4 is used on it. A cashed trophy is deleted, so the holdings
+             * alone can only ever show who you *still* have.
+             *
+             * Display only: no rule reads it, and 1.4's arithmetic runs off the
+             * holdings in either mode. A conjured Wróg is on it too — he was
+             * still beaten, and the shelf is about that rather than about which
+             * pile his Karta belongs to.
+             *
+             * # Reading the two lists together
+             *
+             * Beaten minus held is the Wrogowie whose trophies have gone, which
+             * is what a shelf wants to draw greyed and last. Two things to know
+             * before deriving it:
+             *
+             * - **It is a multiset.** Two Nobbiny are two entries here and two
+             *   holdings, and set subtraction would call the second one gone.
+             * - **„Sold" is not quite the word.** `dropCard` also lets a trophy
+             *   go, and the difference between selling and discarding one is
+             *   not recorded. What the list means is "beaten, and no longer
+             *   held".
+             */
+            trophy_beaten: [...seat.trophy_beaten, ...won.map(({ cardId }) => cardId)],
+          },
+        },
+      ],
+    },
+    returned,
+  );
 }
 
 /**
