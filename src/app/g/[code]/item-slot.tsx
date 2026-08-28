@@ -438,8 +438,8 @@ export function ItemSlot({
               X is the mark somebody puts on a thing that is done with. */}
           {struck && (
             <span aria-hidden className="pointer-events-none absolute inset-0">
-              <span className="absolute left-1/2 top-1/2 h-px w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
-              <span className="absolute left-1/2 top-1/2 h-px w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
+              <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
+              <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
             </span>
           )}
 
