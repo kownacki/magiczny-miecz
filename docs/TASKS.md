@@ -725,3 +725,38 @@ A second round went in for the carried Zaklęcia: `carried` added to
 `carried-spell` in `moves_kind_check` — 61 kinds now, generated from
 `JOURNAL_KINDS` the same way. Applied and read back, `magiczny_miecz` only. The
 schema and the code are in step; nothing is owed.
+
+## Known gaps, left open on purpose
+
+Two rules the app carries only halfway, both looked at and both deliberately
+not finished. Written down so the next person meets them here rather than in a
+game.
+
+### 5.6 — an existing excess is not forced out
+
+Taking a fifth Przedmiot is refused, so the limit is kept at the moment it
+would be broken. What is missing is the other direction: **lose the transport
+and nothing makes you drop back down.** "Postać, która zdobyła więcej niż 4
+Przedmioty i nie dysponuje żadnym środkiem transportu (5.4.) musi natychmiast
+odrzucić Przedmioty, których nie jest w stanie unieść." The Awanturnik takes a
+Koń, and its owner keeps carrying six.
+
+It is the same shape as the 5.3 spill that landed this session, with one
+difference that is the whole of the work: 5.4 leaves the choice to the player —
+"Które z Przedmiotów Postać zachowa, które zaś zostaną odrzucone, zależy
+wyłącznie od decyzji gracza" — so it wants a prompt, not an automatic drop. The
+seat cannot simply be allowed to act until it has answered.
+
+`docs/COVERAGE.md` marks 5.6 ◐ and says the same in one line.
+
+### The host cannot withdraw a Postać from the board
+
+`removeCharacter` exists, is tested, spills the holdings onto the Obszar (12.1)
+and refuses anybody who is not the host. The route exists. **Nothing in the
+interface calls it** — only the console's `remove`, which means the one person
+the rule is written for cannot reach it without turning test mode on.
+
+Not the rulebook's, which says nothing about a player leaving. It is the
+poczekalnia's other half: `leaveTable` puts the *person* out and leaves the
+Postać standing, and this is the act that takes the Postać off the board. See
+docs/LOBBY.md.
