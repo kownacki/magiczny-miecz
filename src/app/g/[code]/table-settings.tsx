@@ -55,7 +55,11 @@ export function TableSettings({
           {
             active: eqMode === "classic",
             label: "Klasyczny",
-            hint: "Jak w Instrukcji (5.4): cztery Przedmioty i wszystkie działają.",
+            // Not "cztery miejsca": miejsca are the variant's, and having none
+            // is precisely what klasyczny is. The rule is a ceiling on how many
+            // you may own, and the half worth saying beside slotowy is that
+            // owning one is enough — nothing has to be worn.
+            hint: "Jak w Instrukcji (5.4): najwyżej cztery Przedmioty, a każdy działa, gdziekolwiek leży.",
             onPick: () => onEqMode("classic"),
           },
         ]}
