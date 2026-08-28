@@ -112,6 +112,15 @@ export interface Seat {
    * says that, and nothing else does.
    */
   trophy_points?: number;
+  /**
+   * Everyone this Postać has beaten, in „Punkty" — the shelf, not the wallet.
+   *
+   * Append-only and never spent: points are fungible, so no particular corpse
+   * paid for a given Miecz and no portrait can be the one that vanishes when
+   * you trade. You did kill the Wilkołak; cashing seven points does not un-kill
+   * him. Cleared with the seat on death, beside `trophy_points`.
+   */
+  trophy_beaten?: string[];
   nature: string | null;
   turns_lost: number;
   /** Turn the Kamień wears off on (20.1). Null when not petrified. */

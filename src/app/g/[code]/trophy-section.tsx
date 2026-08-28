@@ -1,33 +1,31 @@
 "use client";
 
-/** Trofea (1.4): what you beat, what it is worth, and what a trade would waste. */
+/** Trofea (1.4): who you beat, what it buys, and what a trade would waste. */
 
 import { useState } from "react";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
+import { TROPHY_RATE, offersFor, type Offer } from "@/lib/engine/trophies";
 import { Fold } from "./fold";
 import { Rules } from "./rule-ref";
 import { ItemSlot } from "./item-slot";
-import { CARD_NAMES, tileFor, type Held, type Seat } from "./table";
+import { CARD_NAMES, tileFor, type Seat } from "./table";
 import type { TileCard } from "./card-tile";
+import type { CardId } from "@/data/ids";
 
 const EVENTS = events as EventCard[];
-
-/** 1.4: one point of Miecz for every seven points of beaten Wrogowie. */
-const RATE = 7;
 
 /**
  * What one beaten Wróg is worth, by the number printed on his Karta.
  *
- * Read here rather than sent, because the browser already holds the card id and
+ * Read here rather than sent, because the browser holds the card id and
  * `combatValueOf` is the same function the engine prices trophies with — so the
- * ledger below and `tradeTrophies` cannot disagree about what a Cyklop is worth.
+ * ledger and `tradeTrophies` cannot disagree about a Cyklop.
  *
- * Zero for anything that is not a foe with a Miecz. Since `dd74cba` only those
- * become trophies at all — a Demon is fought magically, beaten and gone — so
- * this should never fire; it is here so that a stray holding cannot silently
- * inflate somebody's total.
+ * Zero for anything that is not a foe with a Miecz. Only those become trophies
+ * at all — a Demon is fought magically, beaten and gone — so this should never
+ * fire; it is here so a stray holding cannot silently inflate a total.
  */
 export function trophyValue(cardId: string): number {
   const card = EVENTS.find((one) => one.id === cardId);
@@ -36,29 +34,28 @@ export function trophyValue(cardId: string): number {
 }
 
 /**
- * The trofea a character is carrying, and the arithmetic that decides when to
- * cash them.
+ * The trofea a character has, and the trade worth making.
  *
- * They used to be drawn inside the Plecak, dimmed, with a `trofeum` mark — in
- * the row of squares that 5.4's four are drawn as. `carriedCount` has only ever
- * counted `kind === "item"`, so a trophy never occupied one of those four; the
- * picture said it did. The same category error the Przyjaciele had, and the same
- * fix: a section of its own.
+ * They used to be drawn inside the Plecak, dimmed, in the row of squares 5.4's
+ * four are drawn as — though `carriedCount` counts `kind === "item"` and a
+ * trophy never occupied one of them. The same category error the Przyjaciele
+ * had, and the same fix.
  *
- * The heading carries the ledger because the ledger *is* the decision. 1.4 lets
- * you exchange "w dowolnym momencie" and says "punkty ponad wielokrotność 7 są
- * stracone", so the only real question a player has is whether to trade now or
- * wait — and the button used to read "Wymień trofea na punkty Miecza (1.4)" with
- * no numbers anywhere near it.
+ * **The control is the number of Miecze, not the Karty.** Nobody wants a subset
+ * of dead Wrogowie; they want Miecz points, and the Karty are how it is paid.
+ * `offersFor` does the choosing, exhaustively, because greedy gets it wrong: a
+ * hand of 6, 5, 2, 2 buys a sword with 5+2 and wastes nothing, where taking the
+ * biggest first spends 6+5 and burns four.
  *
- * Two modes, and the section is the same object in both:
+ * Two modes, one section:
  *
- * - **Karty pokonanych** — the Karty are held, so they are shown and picked
- *   between. Michał ruled the subset reading, so the trade takes exactly what
- *   you select.
- * - **Punkty** — the Karta went to the stos zużytych when the Wróg died and the
- *   seat carries a running total. Nothing to select; the ledger is the whole of
- *   it.
+ * - **Karty pokonanych** — the Karty are held. They are shown, and the offer
+ *   lights the ones it would take.
+ * - **Punkty** — the Karta went to the stos zużytych as the Wróg died and the
+ *   seat carries a total. The shelf still shows everyone beaten, from
+ *   `trophy_beaten`, because that is a memorial rather than a wallet: points
+ *   are fungible, so no portrait can be the one that vanishes when you cash a
+ *   seven.
  */
 export function TrophySection({
   seat,
@@ -73,49 +70,40 @@ export function TrophySection({
   /**
    * Which rule this table plays, said outright rather than inferred.
    *
-   * It was inferred from whether a total arrived, which stopped working the
-   * moment the engine landed: `seat.trophy_points` is `not null` and reads `0`
-   * in "cards" mode, so an absent total and a table with no kills yet look
-   * identical. `game.trophy_mode` is the only thing that knows.
+   * It was inferred from whether a total arrived, which stopped working when
+   * the engine landed: `trophy_points` is `not null` and reads `0` in "cards",
+   * so an absent total and a table with no kills look identical.
    */
   mode: "points" | "cards";
   busy: boolean;
   /** Absent on somebody else's card: you cash in your own trofea. */
-  onTrade?: (cardIds: string[]) => void;
+  onTrade?: (swords: number) => void;
   onInspect: (card: TileCard) => void;
 }) {
-  const held = seat.holdings.filter((one) => one.kind === "trophy");
-  const [picked, setPicked] = useState<string[]>([]);
-  /**
-   * Shut to begin with, unlike the pack and the Przyjaciele.
-   *
-   * Those two are open because what is in them is changing your numbers right
-   * now — a Pasterz lending +1/+1 is a fact about this turn's fight. Trofea
-   * change nothing until you trade them, and the tally in the heading already
-   * carries the only thing that would make you look: how many points, and
-   * whether they are worth a Miecz yet. Open it when you mean to spend them.
-   */
-  const [showing, setShowing] = useState(false);
+  /** Which trade is being looked at, by count. Null means "the most it buys". */
+  const [wanted, setWanted] = useState<number | null>(null);
 
   const byPoints = mode === "points";
-  const counting = byPoints ? (seat.trophy_points ?? 0) : sum(held);
-  // What the trade would actually hand in: the chosen Karty, or everything when
-  // nothing is chosen — the same rule the command uses for an absent list.
-  const chosen = held.filter((one) => picked.includes(one.id));
-  const offering = byPoints ? counting : chosen.length > 0 ? sum(chosen) : counting;
-  const swords = Math.floor(offering / RATE);
+  const held = seat.holdings.filter((one) => one.kind === "trophy");
+  /** Who is on the shelf: the Karty in hand, or the memorial the seat carries. */
+  const shelf = byPoints ? (seat.trophy_beaten ?? []) : held.map((one) => one.cardId);
+  const counting = byPoints
+    ? (seat.trophy_points ?? 0)
+    : held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
+
   /**
-   * The remainder, and whether handing it in loses it.
+   * Every trade this hand can make, each by its cheapest set — the engine's
+   * answer, not a second opinion computed here.
    *
-   * Only in "cards". A Karta cannot be split, so offering a Cyklop worth six
-   * against a sword that costs seven spends all six — "punkty ponad
-   * wielokrotność 7 są stracone" is about what you handed in. In "points" there
-   * is nothing to split: the trade takes whole sevens and the rest stays on the
-   * seat, so the same number is a remainder rather than a loss and must not be
-   * written in the colour of one.
+   * In „Punkty" there are no Karty, so the hand is one notional trophy worth
+   * the running total and the same function answers the same question.
    */
-  const over = offering - swords * RATE;
-  const wasted = byPoints ? 0 : over;
+  const offers: Offer[] = byPoints
+    ? offersFor(counting > 0 ? [{ cardId: "", points: counting }] : [])
+    : offersFor(held.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId) })));
+
+  const most = offers[offers.length - 1] ?? null;
+  const offer = offers.find((one) => one.swords === wanted) ?? most;
 
   // Somebody else's empty shelf is not worth a row; your own is, because it is
   // where the count appears the moment you win a fight.
@@ -124,104 +112,100 @@ export function TrophySection({
   return (
     <Fold
       title="Trofea"
-      open={showing}
-      onToggle={() => setShowing(!showing)}
       tally={
-        <span className={swords > 0 ? "text-ochre" : undefined}>
-          {counting} pkt{swords > 0 ? ` · ${swords} Miecz${swords > 1 ? "a" : ""}` : ""}
+        <span className={most ? "text-ochre" : undefined}>
+          {counting} pkt{most ? ` · ${most.swords} ${plural(most.swords)}` : ""}
         </span>
       }
     >
       {counting === 0 ? (
         <p className="p-1 text-[11px] leading-snug text-muted">
-          {/* The rule is a link here, and plain text in the button below.
-              This is the app explaining itself, which is where CLAUDE.md says a
-              citation belongs; a label is not, because `Rules` turns "(1.4)"
-              into a button and a button inside a button is not something HTML
-              allows. The `title` on the same control keeps it plain for the
-              duller reason that an attribute cannot hold one. */}
+          {/* Linked here and plain in the buttons below: this is the app
+              explaining itself, and a label is a label. */}
           <Rules>
             {byPoints
-              ? `Nikogo jeszcze nie pokonałeś. Za każde ${RATE} punktów Miecza pokonanych Wrogów dostaniesz 1 punkt Miecza; reszta zostaje na później (1.4).`
-              : `Nikogo jeszcze nie pokonałeś. Zatrzymasz Kartę każdego pokonanego Wroga i oddasz wybrane, gdy zechcesz — za każde ${RATE} punktów Miecza dostaniesz 1 punkt Miecza (1.4).`}
+              ? `Nikogo jeszcze nie pokonałeś. Za każde ${TROPHY_RATE} punktów Miecza pokonanych Wrogów dostaniesz 1 punkt Miecza; reszta zostaje na później (1.4).`
+              : `Nikogo jeszcze nie pokonałeś. Zatrzymasz Kartę każdego pokonanego Wroga i oddasz wybrane, gdy zechcesz — za każde ${TROPHY_RATE} punktów Miecza dostaniesz 1 punkt Miecza (1.4).`}
           </Rules>
         </p>
       ) : (
         <div className="flex flex-col gap-2 p-1">
-          {/* The Karty, only where there are Karty. In „Punkty" the Wróg went to
-              the stos zużytych as he died and there is nothing to draw. */}
-          {held.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {held.map((one) => (
-                <TrophyTile
-                  key={one.id}
-                  held={one}
-                  picked={picked.includes(one.id)}
-                  choosable={isMine && onTrade !== undefined}
-                  onPick={() =>
-                    setPicked((was) =>
-                      was.includes(one.id)
-                        ? was.filter((id) => id !== one.id)
-                        : [...was, one.id],
-                    )
-                  }
-                  onInspect={onInspect}
-                />
-              ))}
-            </div>
-          )}
+          {/* Everyone beaten, drawn the same way in both modes. In „Punkty" the
+              Karta is long gone and this is a memorial, so nothing here ever
+              lights up: no particular corpse paid for a given Miecz. */}
+          <div className="flex flex-wrap gap-2">
+            {shelf.map((cardId, at) => (
+              <TrophyTile
+                key={`${cardId}-${at}`}
+                cardId={cardId}
+                spent={!byPoints && (offer?.cardIds.includes(cardId) ?? false)}
+                choosing={!byPoints && offer !== null}
+                onInspect={onInspect}
+              />
+            ))}
+          </div>
 
-          {/* Why there is nothing to look at.
-              
-              In „Punkty" the Karta goes to the stos zużytych as the Wróg dies
-              and only his number is kept, so this section has a total and no
-              pictures. Unsaid, that reads as art failing to load rather than as
-              the rule working — which is exactly how it was first reported. The
-              other mode needs no such line: the Karty are there, and they say
-              it themselves. */}
           {byPoints && (
             <p className="text-[11px] leading-snug text-muted/70">
               <Rules>
-                Karty pokonanych Wrogów wracają na stos zużytych — przy tym stole
-                liczą się same punkty (1.4).
+                Karty pokonanych Wrogów wracają na stos zużytych — zostaje pamięć i
+                punkty (1.4).
               </Rules>
             </p>
           )}
 
-          <Ledger
-            offering={offering}
-            swords={swords}
-            wasted={wasted}
-            over={over}
-            keepsRest={byPoints}
-            picking={chosen.length > 0}
-            total={counting}
-          />
+          {most === null ? (
+            <p className="text-[11px] leading-snug text-muted">
+              {counting} pkt — na jeden punkt Miecza trzeba {TROPHY_RATE}, czyli
+              jeszcze {TROPHY_RATE - counting}.
+            </p>
+          ) : (
+            <>
+              {/* One button per number of Miecze, because that is the decision a
+                  player is making. Each carries its own cost, so choosing two
+                  over one happens with the waste in view rather than after it. */}
+              {offers.length > 1 && (
+                <div className="flex flex-wrap gap-1">
+                  {offers.map((one) => (
+                    <button
+                      key={one.swords}
+                      type="button"
+                      onClick={() => setWanted(one.swords)}
+                      aria-pressed={offer?.swords === one.swords}
+                      title={
+                        one.wasted > 0
+                          ? `${one.points} pkt, ${one.wasted} przepadnie`
+                          : `${one.points} pkt, nic nie przepadnie`
+                      }
+                      className={`rounded border px-2 py-0.5 text-[11px] transition ${
+                        offer?.swords === one.swords
+                          ? "border-ochre bg-ochre/10 text-ochre"
+                          : "border-edge text-muted hover:border-ochre/60"
+                      }`}
+                    >
+                      {one.swords} {plural(one.swords)}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-          {isMine && onTrade && (
-            <button
-              type="button"
-              disabled={busy || swords < 1}
-              onClick={() => {
-                onTrade(chosen.map((one) => one.cardId));
-                setPicked([]);
-              }}
-              title={
-                swords < 1
-                  ? `Potrzeba ${RATE} punktów — masz ${offering}`
-                  : undefined
-              }
-              className="rounded border border-edge px-2 py-1.5 text-left text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-            >
-              {swords < 1
-                ? `Za mało na Miecz — ${offering} z ${RATE}`
-                : `Wymień ${swords * RATE} pkt na ${swords} ${swords === 1 ? "punkt" : "punkty"} Miecza` +
-                  (wasted > 0
-                    ? ` (${wasted} przepadnie)`
-                    : byPoints && over > 0
-                      ? ` (${over} zostaje)`
-                      : "")}
-            </button>
+              {offer && <Ledger offer={offer} total={counting} keepsRest={byPoints} />}
+
+              {isMine && onTrade && offer && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    onTrade(offer.swords);
+                    setWanted(null);
+                  }}
+                  className="rounded border border-edge px-2 py-1.5 text-left text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+                >
+                  Wymień {offer.points} pkt na {offer.swords} {plural(offer.swords)}
+                  {offer.wasted > 0 ? ` (${offer.wasted} przepadnie)` : ""}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -229,101 +213,81 @@ export function TrophySection({
   );
 }
 
-function sum(cards: readonly Held[]): number {
-  return cards.reduce((total, one) => total + trophyValue(one.cardId), 0);
+/** So a button never reads "1 punkty Miecza". */
+function plural(swords: number): string {
+  return swords === 1 ? "punkt Miecza" : "punkty Miecza";
 }
 
 /**
- * The arithmetic, said in words rather than left to the reader.
+ * What this trade costs, said before it is made.
  *
- * Three numbers and only two of them are obvious. What you hold and what it buys
- * are plain; what a trade *right now* would burn is the one that decides whether
- * to wait, and it is the one 1.4 hides in a subordinate clause.
+ * The waste is the half 1.4 hides in a subordinate clause and the only reason
+ * to wait, so it is named — and named as a *loss* only where it is one. In
+ * „Punkty" the remainder stays on the seat, so the same number is a remainder;
+ * writing "przepadnie" over it would invent a cost the rule does not charge.
  */
 function Ledger({
-  offering,
-  swords,
-  wasted,
-  over,
-  keepsRest,
-  picking,
+  offer,
   total,
+  keepsRest,
 }: {
-  offering: number;
-  swords: number;
-  /** Lost by trading now — "cards" only, where a Karta cannot be split. */
-  wasted: number;
-  /** What is left over either way; only its fate differs. */
-  over: number;
-  /** "points": the remainder stays on the seat instead of burning. */
-  keepsRest: boolean;
-  picking: boolean;
+  offer: Offer;
   total: number;
+  keepsRest: boolean;
 }) {
-  const toNext = RATE - (offering % RATE);
+  const left = total - offer.points;
   return (
     <p className="text-[11px] leading-snug text-muted">
-      {picking ? `Wybrane: ${offering} z ${total} pkt` : `${total} pkt`}
-      {swords > 0 && (
-        <>
-          {" — "}
-          <span className="text-ochre">
-            {swords} {swords === 1 ? "punkt" : "punkty"} Miecza
-          </span>
-        </>
-      )}
-      {wasted > 0 && (
+      Weźmie {offer.points} z {total} pkt
+      {offer.wasted > 0 && (
         <>
           {", "}
-          <span className="text-vermilion/90">{wasted} przepadnie</span>
-          {/* The useful half of the warning: not that you would lose six, but
-              that two more points would save them. */}
-          <span className="text-muted/70"> — jeszcze {toNext} i nie przepadnie nic</span>
+          <span className="text-vermilion/90">{offer.wasted} przepadnie</span>
         </>
       )}
-      {/* The same number, and not a warning at all: in „Punkty" the trade takes
-          whole sevens and the rest stays where it is. Saying "przepadnie" here
-          would invent a cost the rule does not charge. */}
-      {keepsRest && over > 0 && <span className="text-muted/70">, {over} zostaje</span>}
+      {left > 0 && (
+        <span className="text-muted/70">
+          {keepsRest ? `, ${left} zostaje` : `, reszta zostaje w ręku`}
+        </span>
+      )}
     </p>
   );
 }
 
 /** One beaten Wróg, with what he is worth printed where a name goes. */
 function TrophyTile({
-  held,
-  picked,
-  choosable,
-  onPick,
+  cardId,
+  spent,
+  choosing,
   onInspect,
 }: {
-  held: Held;
-  picked: boolean;
-  choosable: boolean;
-  onPick: () => void;
+  cardId: string;
+  /** This trade would hand him in. */
+  spent: boolean;
+  /** There is a trade on offer at all, so unlit means "stays behind". */
+  choosing: boolean;
   onInspect: (card: TileCard) => void;
 }) {
-  const worth = trophyValue(held.cardId);
-  const name = CARD_NAMES.get(held.cardId) ?? held.cardId;
+  const worth = trophyValue(cardId);
+  const name = CARD_NAMES.get(cardId) ?? cardId;
+  // `trophy_beaten` is a `text[]` off the wire, so it is narrowed here rather
+  // than trusted — the one boundary this component has. An id the box does not
+  // know draws its own name and no picture, which is what `tileFor` does with
+  // anything it cannot place.
+  const card = tileFor({ id: cardId, cardId: cardId as CardId, kind: "trophy", face: "open" });
   return (
     <ItemSlot
-      item={{
-        holdingId: held.id,
-        cardId: held.cardId,
-        card: tileFor(held),
-        granted: held.granted,
-        inert: false,
-      }}
-      // The number is the point of the tile. A trophy's name is a memory and its
-      // Miecz is the currency, and the currency is what the choice is made on.
+      item={{ holdingId: cardId, cardId, card, inert: false }}
+      // The number is the point of the tile: a trophy's name is a memory and
+      // its Miecz is the currency, and the currency is what a choice is made on.
       label={`${name} · ${worth}`}
       eqMode="classic"
-      tone={picked ? "filled" : "empty"}
+      tone={spent ? "filled" : "empty"}
       marks={["trofeum"]}
-      // Picked reads as lit rather than as dimmed: choosing is the ordinary act
-      // here, and the unchosen are what stays behind.
-      dimmed={choosable && !picked}
-      onClick={() => (choosable ? onPick() : onInspect(tileFor(held)))}
+      // Dimmed only while a trade is being weighed, and only for the ones it
+      // would leave. With nothing on offer there is nothing to contrast with.
+      dimmed={choosing && !spent}
+      onClick={() => onInspect(card)}
     />
   );
 }

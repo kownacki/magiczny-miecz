@@ -130,8 +130,8 @@ export function SeatCard({
   slotted: boolean;
   onAdjust: (stat: string, delta: number) => void;
   onDrop: (holdingId: string) => void;
-  /** The chosen Karty (1.4); an empty list means all of them, as the command reads it. */
-  onTrade: (cardIds: string[]) => void;
+  /** How many Miecze to buy (1.4); the engine picks the cheapest Karty for it. */
+  onTrade: (swords: number) => void;
   /** Which trofea rule this table plays (1.4) — `game.trophy_mode`. */
   trophyMode: "points" | "cards";
   onEquip: (holdingId: string, slot: Slot | null) => void;
