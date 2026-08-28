@@ -698,11 +698,28 @@ browser's screen and invisible to every rule. And a **carried card would have
 been deleted outright on death**, appearing in neither the "goes to the spell
 pile" nor the "lies on the Obszar" list, quietly taking a Zaklęcie out of play.
 
-What is left on the six `czesciowe` clusters into two mechanisms and two
-one-offs: a **friend with a price** (NAJEMNIK's recruitment, TRAGARZ's upkeep)
-and a **friend sold at a named place** (KSIĘŻNICZKA at the Zamek, WŁADCA at the
-Twierdza, 3 Sztuki Złota each); then CHOCHLIK (1 Życie to look at two Zaklęcia
-and choose) and ALCHEMIK, whose note is a warning rather than a gap.
+Four of those six are closed, and a fifth was never open. Two mechanisms did
+the work, each given to the cards that share it: `cena-przyjecia`, **a friend
+who charges to join** — the NAJEMNIK and TRAGARZ a Sztuka Złota, the CHOCHLIK a
+point of Życie — which also carries what each does when you refuse, since 16.8
+leaves the Najemnik waiting on the Obszar and the Tragarz's own text sends him
+to the stos zużytych; and `uzdrowienie` + `oddaj-w`, **a friend who mends you at
+one Obszar or is given up there for gold** (KSIĘŻNICZKA at the Zamek, WŁADCA at
+the Twierdza). The healing half of that second pair had been declared in
+`ABILITIES` and read by nothing — `payHealer` asks the Obszar and never the
+hand — which made it the fifth dead ability after the four the sweep caught.
+
+The ALCHEMIK is off the list without work: his note said the swap is
+irreversible, which is what `sellHolding` already does, and the Lichwiarz makes
+the identical trade with nothing written against him.
+
+Two clauses are left, and each waits on something the app has not got. The
+CHOCHLIK's look-at-two-and-choose needs a pending decision the player answers,
+and the spell draw has no shape for one — `wybor` exists but belongs to card
+scripts, and a Zaklęcie draw is not a card script. The TRAGARZ's "losing him
+loses what he carried" needs to know *which* Przedmioty are his, and `udzwig`
+only raises the limit by four; nothing records who carries what, so the app
+would have to choose somebody's cards for them.
 
 ### The migration, now paid — both rounds
 

@@ -60,10 +60,11 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
 
   // --- friends --------------------------------------------------------------
   chochlik: "Przy braniu Zaklęcia pozwala obejrzeć 2 Karty i wybrać jedną.",
-  // The per-turn hire is the app's now; joining you is not. Taking him is an
-  // ordinary `take` and nothing charges the Sztuka Złota or leaves him standing
-  // on the Obszar when you decline.
-  alchemik: "Zamiana jest nieodwracalna — Karta Przedmiotu wraca na stos.",
+  // The ALCHEMIK was here for "zamiana jest nieodwracalna", which is not
+  // something the table has to do — `sellHolding` deletes the holding and
+  // `putOnPile` sends the Karta back, so the app *is* the irreversibility. The
+  // Lichwiarz makes the identical trade with no note against his name, and one
+  // of the two had to be wrong. A warning about a click belongs on the click.
   tragarz: "Tracąc go, tracisz też niesione przez niego Przedmioty — aplikacja nie wie, które to.",
 
   // --- cards whose disposition is handled but whose body is not -------------

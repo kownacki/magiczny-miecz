@@ -1,8 +1,9 @@
 # Przyjaciele — what is done, and what is left
 
 This page was a handoff for the browser half, and that half is finished. It is
-now a statement of where the chapter stands, which is **not finished**: twelve of
-the eighteen cards are fully encoded and six are not.
+now a statement of where the chapter stands: sixteen of the eighteen cards are
+fully encoded, and the two that are not are each waiting on a mechanism the app
+does not have rather than on somebody getting round to them.
 
 ## Custody, and the four things the browser draws
 
@@ -34,25 +35,28 @@ All four of the drawing tasks this page used to list are built:
 The ŁOTR is the one Postać barred from friends outright — `mayHaveFriends`, off
 his own Karta, which 8.2 puts above 6.3.
 
-## The six that are still `czesciowe`
+## The two that are still `czesciowe`
 
-Every one of the eighteen now has encoded abilities; none is `brak`. What is
-left is the half of six cards that the app names but does not do — `MANUAL` in
-`coverage.ts`, printed on the card and applied by the players:
+Sixteen of the eighteen are `pelne`. Four were closed by giving two mechanisms
+to the cards that share them — **a friend who charges to join** (NAJEMNIK,
+TRAGARZ, CHOCHLIK, `cena-przyjecia`) and **a friend who mends you at one Obszar
+or is given up there for gold** (KSIĘŻNICZKA, WŁADCA, `uzdrowienie` +
+`oddaj-w`) — and a fifth, the ALCHEMIK, was never a gap: his note described what
+`sellHolding` already does, and the Lichwiarz makes the identical irreversible
+trade with nothing written against his name.
 
-| Karta | what is left to the table |
-| --- | --- |
-| NAJEMNIK | joining costs 1 Sztuka Złota; unpaid, he stays on the Obszar and waits |
-| TRAGARZ | 1 Sz. Z. upkeep, and losing him loses the Przedmioty he was carrying |
-| KSIĘŻNICZKA | may be given up at the Zamek for 3 Sztuki Złota |
-| WŁADCA | the same at the Twierdza |
-| CHOCHLIK | 1 Życie to look at two Zaklęcia and choose |
-| ALCHEMIK | the swap is irreversible — the Przedmiot's card goes back on the pile |
+Two clauses are left, and neither is a card that has been forgotten. Each needs
+something the app does not have yet:
 
-Two mechanisms and two one-offs. **A friend with a price** (NAJEMNIK, TRAGARZ)
-and **a friend sold at a named place** (KSIĘŻNICZKA, WŁADCA, 3 Sztuki Złota
-each) would close four of the six between them; CHOCHLIK stands alone, and
-ALCHEMIK's note is a warning rather than a gap.
+| Karta | what is left | what it would take |
+| --- | --- | --- |
+| CHOCHLIK | at a spell draw, look at the top two Zaklęcia and choose one | a pending decision the player answers, which the spell draw has no shape for — `wybor` exists but belongs to card scripts, and a Zaklęcie draw is not one |
+| TRAGARZ | losing him loses the Przedmioty he was carrying | knowing *which* Przedmioty are his. `udzwig` raises the limit by four and nothing records who carries what, so there is no honest answer to which cards go with him |
+
+Both are named on the card in the app, which is what `MANUAL` is for: the table
+applies them and knows it is doing so. Guessing at either would be worse than
+saying so — the second especially, where the app would have to pick somebody's
+cards for them.
 
 ## The database owes nothing
 
