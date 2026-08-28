@@ -14,6 +14,7 @@ import { CardBack, type TileCard } from "./card-tile";
 import { type Carried } from "./carry";
 import { EquipButton } from "./equip-button";
 import { Fold } from "./fold";
+import { TileRow } from "./tile-row";
 import { useRack } from "./rack";
 import { ItemSlot } from "./item-slot";
 import { DRAG_TYPE, startHoldingDrag } from "./slot-panel";
@@ -258,7 +259,7 @@ export function Hand({
           
           So the whole rectangle answers instead — for as long as a card is in
           the air, and the gap that opens under the pointer says where in it. */}
-      <div
+      <TileRow
         onDragOver={(event) => {
           if (!canAct || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
           event.preventDefault();
@@ -317,22 +318,9 @@ export function Hand({
         // dashed and faint for somewhere the card could go, solid and filled in
         // for where it would go. Red is 5.4 — no room — said while the card is
         // still in the air rather than as a refusal after it lands.
-        // Clipped to itself, because a card at the start of a wrapped row steps
-        // aside into nothing: there is no room inside the rectangle to its
-        // left, so it leans out past the edge and was being cut off by the
-        // panel behind, several pixels further out and in the wrong colour.
-        // Cut by the pack's own border it reads as a card half out of the bag.
-        className={`flex flex-wrap gap-2 overflow-hidden rounded border p-1 transition ${
-          !landing
-            ? "border-transparent"
-            : refuses
-              ? dragOver
-                ? "border-solid border-vermilion bg-vermilion/25"
-                : "border-dashed border-vermilion/60 bg-vermilion/10"
-              : dragOver
-                ? "border-solid border-verdigris bg-verdigris/25"
-                : "border-dashed border-verdigris/60 bg-verdigris/10"
-        }`}
+        answer={
+          landing ? { colour: refuses ? "vermilion" : "verdigris", over: dragOver } : null
+        }
       >
         {/* Your own Zaklęcia are not repeated here: they have their own panel
             above, face up and with the cast controls on them. What belongs on a
@@ -631,7 +619,7 @@ export function Hand({
           ));
         })()}
         {seat.hidden_count > 0 && <CardBack count={seat.hidden_count} />}
-      </div>
+      </TileRow>
 
     </Fold>
     <FriendsHeld
@@ -716,7 +704,7 @@ function FriendsHeld({
   // rules forbid it is lying about the game to defend a rule it is not
   // enforcing.
   const tiles = (
-    <div className="flex flex-wrap gap-2 p-1">
+    <TileRow>
       {friends.map((held) => (
         <ItemSlot
           key={held.id}
@@ -738,7 +726,7 @@ function FriendsHeld({
           onClick={() => onInspect(tileFor(held))}
         />
       ))}
-    </div>
+    </TileRow>
   );
 
   // Drawn whether or not anything is in it. A player looking for where friends

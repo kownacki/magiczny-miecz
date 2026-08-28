@@ -5,6 +5,7 @@ import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
 import type { TileCard } from "./card-tile";
 import { Fold } from "./fold";
+import { TileRow } from "./tile-row";
 import { Rules } from "./rule-ref";
 import { useRack } from "./rack";
 import { ItemSlot, SLOT_WIDTH } from "./item-slot";
@@ -253,7 +254,7 @@ export function SpellHand({
           a place to aim at, and a Zaklęcie held over the cap has to be visible
           to be discarded. */}
       {(capacity !== 0 || held.length > 0) && (
-      <div
+      <TileRow
         onDragOver={(event) => {
           if (!onReorder || !event.dataTransfer.types.includes(SPELL_DRAG)) return;
           event.preventDefault();
@@ -284,13 +285,7 @@ export function SpellHand({
           rack.moveWithin(lifted, before);
           setLifted(null);
         }}
-        className={`flex flex-wrap gap-3 rounded border p-1 transition ${
-          lifted === null
-            ? "border-transparent"
-            : rack.dragOver
-              ? "border-solid border-magia bg-magia/25"
-              : "border-dashed border-magia/60 bg-magia/10"
-        }`}
+        answer={lifted === null ? null : { colour: "magia", over: rack.dragOver }}
       >
         {hand.map((entry, index) => {
           const card = SPELL_BY_ID.get(entry.cardId);
@@ -474,7 +469,7 @@ export function SpellHand({
               onDragOver={() => rack.setInsertAt(null)}
             />
           ))}
-      </div>
+      </TileRow>
       )}
     </Fold>
     </div>

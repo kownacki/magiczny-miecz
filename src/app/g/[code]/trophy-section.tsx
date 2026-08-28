@@ -9,6 +9,7 @@ import { combatValueOf } from "@/lib/engine/cards";
 import { TROPHY_RATE, offersFor, type Offer } from "@/lib/engine/trophies";
 import { plural as polishPlural } from "@/lib/engine/polish";
 import { Fold } from "./fold";
+import { TileRow } from "./tile-row";
 import { Rules } from "./rule-ref";
 import { ItemSlot } from "./item-slot";
 import { CARD_NAMES, tileFor, type Seat } from "./table";
@@ -236,11 +237,15 @@ export function TrophySection({
           </Rules>
         </p>
       ) : (
-        <div className="flex flex-col gap-2 p-1">
+        /* No padding of its own: `TileRow` brings the inset every other row in
+           the seat card has, and adding a second one here put the trofea four
+           pixels right of the Plecak down the same column. The prose and the
+           controls take it back below, where there is no row to align to. */
+        <div className="flex flex-col gap-2">
           {/* One row, in the order the shelf hands back: newest first, spent
               pushed to the end. Nothing is arranged by hand here — see
               `shelfFor` for why a shelf is not a pack. */}
-          <div className="flex flex-wrap gap-2">
+          <TileRow>
             {shelf.map((one, at) => (
               <TrophyTile
                 key={one.holdingId ?? `${one.cardId}-${at}`}
@@ -258,8 +263,9 @@ export function TrophySection({
                 }
               />
             ))}
-          </div>
+          </TileRow>
 
+          <div className="flex flex-col gap-2 px-1">
           {gone.length > 0 && (
             <p className="text-[11px] leading-snug text-muted/70">
               {/* Not "sprzedane". A trade is the usual way a trophy goes and not
@@ -364,6 +370,7 @@ export function TrophySection({
               )}
             </>
           )}
+          </div>
         </div>
       )}
     </Fold>
