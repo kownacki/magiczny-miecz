@@ -36,6 +36,17 @@ import { cardName, plural } from "@/lib/engine/polish";
 const CHARACTERS = charactersData as Character[];
 
 /**
+ * A starting Zaklęcie, drawn as tall as a Przedmiot's tile and no taller.
+ *
+ * 92 is `CardTile`'s own width and 240/209 its art's shape, so 80 is what a
+ * Przedmiot occupies here. The back keeps its own proportions at that height —
+ * 460 x 701 as it was cut — which is 52 across. Matching the height rather than
+ * the width is what makes a mixed row read as one row.
+ */
+const TILE_ART_HEIGHT = 80;
+const SPELL_BACK_WIDTH = 52;
+
+/**
  * Width of the card picture.
  *
  * 208 CSS px is 416 on a retina screen, and the cards are exported 528 across —
@@ -619,6 +630,39 @@ export function CardPreview({
                   character's gear — which is what they are. `CardTile` brings
                   its own hover with it, which is the whole trick: the tiles
                   answer once this panel is pinned, and are inert until then. */}
+              {/**
+               * The Zaklęcia as backs, one per card, at the tiles' own height.
+               *
+               * "2 Zaklęcia" is a number a reader has to turn back into a
+               * picture; two card backs beside two Przedmioty is the hand this
+               * Postać starts with, laid out the way it will be laid out. They
+               * are backs because that is what they are — 9.5 deals them off
+               * the top of a shuffled pile at setup and 9.3 keeps them hidden,
+               * so which two they are is not knowable and should not be drawn
+               * as though it were.
+               *
+               * Sized to the Przedmiot tiles rather than to a card: same
+               * height, its own width, so the row reads as one row of things
+               * and not as a card that wandered in.
+               */}
+              {kit.spells ? (
+                <div className="flex flex-wrap items-end gap-1">
+                  {Array.from({ length: kit.spells }, (_, at) => (
+                    <Image
+                      key={at}
+                      src="/cards/back-zaklecie.jpg"
+                      alt=""
+                      width={SPELL_BACK_WIDTH}
+                      height={TILE_ART_HEIGHT}
+                      className="rounded border border-magia/40"
+                    />
+                  ))}
+                  <span className="ml-1 text-[11px] text-magia">
+                    {kit.spells} {plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}
+                  </span>
+                </div>
+              ) : null}
+
               {kit.items && kit.items.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {kit.items.map((cardId, at) => (
@@ -632,11 +676,7 @@ export function CardPreview({
                 </div>
               )}
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px] text-ink">
-                {kit.spells ? (
-                  <span className="text-magia">
-                    {kit.spells} {plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}
-                  </span>
-                ) : null}
+
               </p>
             </div>
           )}
