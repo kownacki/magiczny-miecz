@@ -8,6 +8,7 @@ import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { SLOTS } from "./slots";
 import { findByName, fold } from "./search";
+import { RANDOM_CHARACTER_ID, RANDOM_CHARACTER_NAME } from "./characters";
 
 /**
  * A tester's console, and why the game has one.
@@ -740,8 +741,8 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "pick",
     aliases: [],
-    usage: "pick [MAGOG] [3]",
-    summary: "a Postać into a seat — drawn unless named, yours unless numbered (4.4)",
+    usage: "pick [LOSOWA|MAGOG] [3]",
+    summary: "a Postać into a seat — LOSOWA or nothing takes the surprise, yours unless numbered (4.4)",
     needs: "play",
     group: "table",
   },
@@ -1206,6 +1207,12 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     const seat = numbered ? Number(parts[parts.length - 1]) : null;
     const said = (numbered ? parts.slice(0, -1) : parts).join(" ");
     if (said === "") return { ok: { kind: "pick", characterId: null, seat } };
+    // The surprise, by the name on its own Karta. `null` already means it — a
+    // bare `pick` takes it — and this is the same answer said out loud, so
+    // typing what Tab offered does what Tab implied.
+    if (said.toUpperCase() === RANDOM_CHARACTER_NAME) {
+      return { ok: { kind: "pick", characterId: RANDOM_CHARACTER_ID, seat } };
+    }
     const hit = findByName(PEOPLE, (person) => person.name, said);
     if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
     if ("missing" in hit) return { error: `No Postać called \`${said}\`.` };
@@ -1677,7 +1684,12 @@ export function complete(
     // Postacie by name — and for `remove` and `revive` a seat number would do
     // just as well, but a number has nothing to finish.
     if (verb === "pick" || verb === "remove" || verb === "erase" || verb === "revive") {
-      return { pool: PEOPLE.map((person) => person.name), at: 1 };
+      const names = PEOPLE.map((person) => person.name);
+      // First, and only for `pick`: it is the one entry that is not a Postać,
+      // and the other three verbs act on a Karta that is already in the game.
+      // A player scanning for "any of them" should not have to know that the
+      // way to say it is to say nothing.
+      return { pool: verb === "pick" ? [RANDOM_CHARACTER_NAME, ...names] : names, at: 1 };
     }
     if (verb === "effect") {
       return parts.length === 2

@@ -265,6 +265,16 @@ export function mayHaveFriends(characterId: CharacterId | null): boolean {
 
 export const RANDOM_CHARACTER_ID = "losowa";
 
+/**
+ * What the surprise is called where a player has to read or type it.
+ *
+ * The name printed on the card the picker draws, so the console offers the same
+ * word the browser shows. It was reachable at the prompt only as a bare `pick`
+ * with nothing after it — which does take it, and which no completion list ever
+ * said, so a wall of twenty-seven names looked like the whole choice.
+ */
+export const RANDOM_CHARACTER_NAME = "LOSOWA";
+
 /** Whether a seat is holding the surprise rather than a Karta Postaci. */
 export function isRandomPick(characterId: string | null | undefined): boolean {
   return characterId === RANDOM_CHARACTER_ID;

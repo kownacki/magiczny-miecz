@@ -20,6 +20,7 @@ import {
   HOST_MISSING_AFTER_MS,
   type LeaveResult,
 } from "./commands/lobby";
+import { chooseCharacter as chooseCharacterOn } from "./commands/character";
 import { deleteGame, recentGames, seatsInGames, usersFor, usersInGames } from "./store";
 
 export type { LeaveResult };
@@ -189,6 +190,27 @@ export async function leaveTable(
 /** The equipment variant, while the table is still the poczekalnia. */
 export async function setEqMode(gameId: string, eqMode: "slots" | "classic"): Promise<void> {
   await change(gameId, setEqModeOn, { eqMode });
+}
+
+/**
+ * A Postać onto a seat while the table is still a poczekalnia.
+ *
+ * Distinct from `takeNewCharacter`, which is 4.4's — a player whose Postać has
+ * died taking another, mid-game. Two different acts with different conditions,
+ * and the console used the second for both: so it could not change its mind
+ * before the game started ("Ta Postać wciąż żyje"), and `pick LOSOWA` drew a
+ * card and showed it, where the browser's Losowa stays face down until
+ * `startGame`. The same word meant two different things depending on which
+ * surface a player was sitting at.
+ */
+export async function chooseCharacter(
+  gameId: string,
+  seatId: string,
+  characterId: string,
+  /** The *seat* asking — `mayChooseFor` compares it to `seatId`. */
+  bySeat: string,
+): Promise<void> {
+  await change(gameId, chooseCharacterOn, { seatId, characterId, bySeat });
 }
 
 /** How this table keeps a beaten Wróg (1.4). Poczekalnia only. */

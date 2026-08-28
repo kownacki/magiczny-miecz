@@ -28,6 +28,7 @@ import {
   claimTableScreen,
   leaveTable,
   renameUser,
+  chooseCharacter,
   setReady,
   setTrophyMode,
   takeSeat,
@@ -415,7 +416,15 @@ export async function runCommand(
    */
   const roster = async () => {
     const now = Date.now();
-    const game = await gameById(gameId);
+    /**
+     * Through the store, not through `gameById`.
+     *
+     * `gameById` reads the Supabase singleton directly, so `who` answered
+     * "Missing SUPABASE_URL" at a terminal playing a save file — the one
+     * surface that has no Postgres behind it. Every other read in here goes
+     * through the port, which is the whole reason the port exists.
+     */
+    const game = (await activeStore().load(gameId)).game;
     // Readiness is the poczekalnia's word and means nothing once play has
     // started, so it is only printed where it can still be acted on.
     const waiting = game.status === "lobby";
@@ -677,15 +686,27 @@ export async function runCommand(
      */
     case "pick": {
       const seat = command.seat === null ? seatOf(null) : seatByNumber(command.seat);
-      // The console acts as the seat it is naming: this is the test shortcut,
-      // and refusing it on `mayChooseFor` would refuse the one caller that is
-      // deliberately allowed to be anybody.
-      await takeNewCharacter(
-        gameId,
-        seat.id,
-        command.characterId ?? RANDOM_CHARACTER_ID,
-        seat.id,
-      );
+      const wanted = command.characterId ?? RANDOM_CHARACTER_ID;
+      /**
+       * Two different acts, and the console used to reach for the second one
+       * for both.
+       *
+       * Choosing in the poczekalnia is `chooseCharacter`; taking a new Postać
+       * after a death is 4.4's `takeNewCharacter`, which refuses a seat whose
+       * Postać is still alive. So the console could not change its mind before
+       * the game began, and `pick LOSOWA` drew a Karta and named it out loud —
+       * where the browser's Losowa stays face down until `startGame`, which is
+       * the whole point of it.
+       *
+       * The console acts as the seat it is naming, in both: this is the test
+       * shortcut, and refusing it on `mayChooseFor` would refuse the one caller
+       * deliberately allowed to be anybody.
+       */
+      if ((await activeStore().load(gameId)).game.status === "lobby") {
+        await chooseCharacter(gameId, seat.id, wanted, seat.id);
+      } else {
+        await takeNewCharacter(gameId, seat.id, wanted, seat.id);
+      }
       const after = (await seatsFor(gameId)).find((one) => one.id === seat.id);
       return `${named(seat)} plays ${characterName(after?.character_id ?? null)}.`;
     }
