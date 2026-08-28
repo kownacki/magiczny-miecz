@@ -31,6 +31,8 @@ export function isSettled(effect: Effect): boolean {
     case "efekt":
     // The card is named and the stock is the app's to count.
     case "otrzymaj":
+    // The Obszar is rolled for, not chosen, on all three cards that do this.
+    case "poloz-karte":
     // A die per card, and nobody picks which — 5.6 is not engaged.
     case "rzut-za-kazdego":
     // The card is named by the effect; there is nothing to ask.
@@ -109,7 +111,6 @@ export function isSettled(effect: Effect): boolean {
     case "kup":
     case "sprzedaj":
     case "jak-pole":
-    case "poloz-karte":
     case "zaklecia-do-limitu":
     case "zamien-punkty":
       return false;

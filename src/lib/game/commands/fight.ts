@@ -57,8 +57,8 @@ import { applyEffect, type Decisions } from "./effects";
 import { asReturnable, putOnPile } from "./piles";
 import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById, seatView } from "./seat";
 import { floorOf } from "./spellFloor";
-import { afterFight, missionOf } from "@/lib/engine/status";
-import { keepOnly, statusesOf } from "./turn";
+import { afterFight, hasAttacked, missionOf } from "@/lib/engine/status";
+import { addEffect, keepOnly, statusesOf } from "./turn";
 import type { SeatRow } from "../store";
 import { settleBridge, settleCrossing } from "./bridge";
 import { spendLife } from "./life";
@@ -1021,8 +1021,32 @@ export function attackSeat(
   const mine = pointsOf(snapshot, attacker.id, "walka");
   const theirs = pointsOf(snapshot, target.id, "walka");
 
+  /**
+   * Remembered, because one Nieznajomy asks.
+   *
+   * "Jeśli podczas tej rozgrywki zaatakowałeś inną Postać ... musisz złożyć w
+   * ofierze 1 Sz.Z." The Dobre Bóstwo is the only card that asks what you did
+   * earlier rather than what is true of you now, and 13.3 is where the doing
+   * happens — the moment of *attacking*, not of winning, which is what the card
+   * says and is why this is written whatever the fight then does.
+   *
+   * Written once: a second duel adds nothing, and a character with two marks
+   * would read as twice the sinner for no reason the card gives.
+   */
+  const marked = hasAttacked(statusesOf(snapshot, attacker.id))
+    ? {}
+    : addEffect(snapshot, {
+        seatId: attacker.id,
+        effect: {
+          source: "13.3",
+          label: "Podniósł rękę na inną Postać",
+          modifier: { kind: "napastnik" },
+          ends: { kind: "dispelled" },
+        },
+      });
+
   return {
-    writes: {
+    writes: mergeAll(marked, {
       game: {
         turn_state: startFight(
           state,
@@ -1043,7 +1067,7 @@ export function attackSeat(
           payload: { target: target.seat_index, field: attacker.field_id },
         },
       ],
-    },
+    }),
     result: undefined,
   };
 }

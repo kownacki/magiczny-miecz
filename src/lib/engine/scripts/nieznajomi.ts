@@ -98,9 +98,21 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     disposition: { kind: "zostaje" },
   },
   // A standing shop rather than a one-off gift, which is why he stays.
+  /**
+   * "Postacie, którym pozwala na to ich Magia, mogą podczas każdej wizyty kupić
+   * u niego 1 Zaklęcie za 1 Sztukę Złota."
+   *
+   * Not a `kup`, though it reads like one: `kup` sells Wyposażenie and a
+   * Zaklęcie is not on that sheet. It comes off the pile, under 2.6's limit and
+   * 9.5's reshuffle, and only the drawing knows whether either refused — which
+   * is why the price rides on the draw.
+   *
+   * "Podczas każdej wizyty" is the disposition: he lives there to the end of
+   * the game and sells again to whoever comes back.
+   */
   sztukmistrz: {
     optional: true,
-    effect: { op: "kup", towar: [{ co: "Zaklęcie", cena: 1 }] },
+    effect: { op: "zaklecie", count: 1, cena: 1 },
     disposition: { kind: "zostaje" },
   },
   // Two rolls' worth of card in one: where he settles, and what he hands the
@@ -156,6 +168,45 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    */
   medrzec: {
     effect: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
+    disposition: { kind: "odloz" },
+  },
+
+  /**
+   * "Dobre Bóstwo osądza twoje uczynki. Jeśli podczas tej rozgrywki
+   * zaatakowałeś inną Postać lub użyłeś swoich zdolności na jej niekorzyść,
+   * musisz złożyć w ofierze 1 Sz.Z. Jeśli nie chcesz będziesz uwięziony na tym
+   * Obszarze przez 1 turę. Po osądzeniu cię, Bóstwo znika."
+   *
+   * The only card that asks what you did earlier in the game, which is why 13.3
+   * leaves a mark and this reads it. An innocent walks on: the judgement
+   * happens either way and finds nothing.
+   *
+   * The offering is a choice and the card says so — "jeśli nie chcesz" — so a
+   * guilty Postać picks between the coin and a turn pinned here. Being held is
+   * `move-max: 0` for one turn, the same shape the Świątynie's opętanie uses,
+   * and it is not a lost turn: you may still do everything but leave.
+   */
+  "dobre-bostwo": {
+    effect: {
+      op: "gdy",
+      warunek: { is: "napastnik" },
+      to: {
+        op: "wybor",
+        options: [
+          { label: "Złóż 1 Sz. Z. w ofierze", effect: { op: "punkty", stat: "gold", delta: -1 } },
+          {
+            label: "Odmów — zostajesz tu na 1 turę",
+            effect: {
+              op: "efekt",
+              label: "Osądzony — nie ruszysz się stąd przez turę",
+              modifier: { kind: "move-max", pola: 0 },
+              ends: { kind: "turns", turns: 1 },
+            },
+          },
+        ],
+      },
+      inaczej: { op: "nic" },
+    },
     disposition: { kind: "odloz" },
   },
 };

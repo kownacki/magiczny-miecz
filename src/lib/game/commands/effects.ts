@@ -12,7 +12,7 @@ import { usageOf } from "@/lib/engine/uses";
 import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, goldLost, lossTaken, reachableBy } from "@/lib/engine/losses";
 import { endTurn } from "@/lib/engine/turn";
-import { cardName, NATURE_LABEL, plural } from "@/lib/engine/polish";
+import { cardName, fieldName, NATURE_LABEL, plural } from "@/lib/engine/polish";
 import type { Effect } from "@/lib/engine/cardScript";
 import type { FieldId } from "@/lib/engine/board";
 import type { Nature } from "@/data/types";
@@ -35,6 +35,7 @@ import { nameOfSeat } from "./lobby";
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
 import { keepOnly, statusesOf } from "./turn";
+import { hasAttacked } from "@/lib/engine/status";
 import { turnToStone } from "./stone";
 import { activeSeat, seatView } from "./seat";
 import { isSpared, skipsRollAt } from "@/lib/engine/abilities";
@@ -85,6 +86,15 @@ export interface ApplyEffect {
    * somebody.
    */
   toSeatId?: string;
+  /**
+   * The Karta being resolved, where the effect is about the card itself.
+   *
+   * Only `poloz-karte` uses it: the Eremita, the Upiór and the Lewiatan all
+   * settle *themselves* somewhere the die chooses, so the effect needs to know
+   * which card it is. Absent when an effect is not about its own card, which is
+   * every other one.
+   */
+  cardId?: string;
 }
 
 /** How many of a thing, in Polish. */
@@ -199,6 +209,42 @@ async function walk(
    * card changes hands — so it passes the same way once they have.
    */
   /**
+   * A sequence is walked before the gate, because its settledness is its steps'
+   * business and not its own.
+   *
+   * `isSettled` calls a `po-kolei` settled only when *every* step is, so one
+   * step holding a question refused the whole card — the Eremita rolls for
+   * where he settles and then offers a choice of two Karty, and that choice
+   * made the roll unreachable. Each step is gated on its own merits now, and
+   * the first one nobody has answered still stops the sequence: what follows
+   * may depend on it, and doing the rest first would resolve the card out of
+   * its own order.
+   */
+  if (effect.op === "po-kolei") {
+    /**
+     * All or nothing while nobody has answered.
+     *
+     * A sequence with an undecided step stops at the door rather than half-way
+     * down it: the first step's point of Miecz must not be written for a card
+     * whose second step is still a question. `owedIn` hands the browser that
+     * question, the answer comes back with the next attempt, and *then* the
+     * sequence runs — which is the case below.
+     */
+    if (!isSettled(effect) && (decided.choices?.length ?? 0) === 0) return owed();
+
+    const did: string[] = [];
+    let writes: Changeset = {};
+    for (const step of effect.steps) {
+      // Each step reads what the ones before it wrote.
+      const done = await walk(apply(snapshot, writes), command, step, reason, ports);
+      writes = merge(writes, done.writes);
+      if (done.result.pending) return { writes, result: { did, pending: done.result.pending } };
+      did.push(...done.result.did);
+    }
+    return { writes, result: { did, pending: null } };
+  }
+
+  /**
    * A die table is rolled before the gate, because the gate asks about the
    * whole table and a throw lands on one row of it.
    *
@@ -264,8 +310,12 @@ async function walk(
         ? nature !== null && effect.warunek.jedna_z.includes(nature)
         : effect.warunek.is === "ma-zloto"
           ? seat.gold > 0
-          : (effect.warunek.stat === "sword" ? seat.sword_own : seat.magic_own) <
-            effect.warunek.ponizej;
+          : // What the character did earlier, which 13.3 wrote down for the one
+            // card that asks.
+            effect.warunek.is === "napastnik"
+            ? hasAttacked(statusesOf(snapshot, seat.id))
+            : (effect.warunek.stat === "sword" ? seat.sword_own : seat.magic_own) <
+              effect.warunek.ponizej;
     const branch = holds ? effect.to : effect.inaczej;
     return branch
       ? walk(snapshot, command, branch, reason, ports)
@@ -281,22 +331,6 @@ async function walk(
   switch (effect.op) {
     case "nic":
       return nothing(["nic się nie dzieje"]);
-
-    case "po-kolei": {
-      const did: string[] = [];
-      let writes: Changeset = {};
-      for (const step of effect.steps) {
-        // Each step reads what the ones before it wrote.
-        const done = await walk(apply(snapshot, writes), command, step, reason, ports);
-        writes = merge(writes, done.writes);
-        // A step nobody has decided yet stops the sequence: what follows it may
-        // depend on it, and doing the rest first would resolve the card out of
-        // its own order.
-        if (done.result.pending) return { writes, result: { did, pending: done.result.pending } };
-        did.push(...done.result.did);
-      }
-      return { writes, result: { did, pending: null } };
-    }
 
     /**
      * A Karta the Obszar hands you outright.
@@ -480,6 +514,59 @@ async function walk(
           ],
         },
         result: { did: [`zabierasz: ${cardName(card.card_id)}`], pending: null },
+      };
+    }
+
+    /**
+     * The Karta settles somewhere the board chose rather than staying where it
+     * was drawn.
+     *
+     * Three do it — the Eremita, the Upiór and the Lewiatan — and all three roll
+     * for the Obszar, which is why the destination is a `pole` and not a
+     * question. It comes off the turn's own stack, because a card that has gone
+     * to live somewhere else is not one of the Karty this character still has
+     * to deal with (16.8).
+     */
+    case "poloz-karte": {
+      if (!command.cardId) return nothing(["nie wiadomo, którą Kartę położyć"]);
+      if (effect.gdzie.kind !== "pole") return owed();
+
+      const state = snapshot.game.turn_state;
+      const lifted: Changeset =
+        state.phase === "field"
+          ? {
+              game: {
+                turn_state: {
+                  ...state,
+                  drawn: state.drawn.filter((entry) => entry.cardId !== command.cardId),
+                },
+              },
+            }
+          : {};
+      const granted =
+        state.phase === "field" &&
+        (state.drawn.find((entry) => entry.cardId === command.cardId)?.granted ?? false);
+
+      return {
+        writes: merge(lifted, {
+          fieldCards: {
+            insert: [
+              { field_id: effect.gdzie.fieldId, card_id: command.cardId, granted },
+            ],
+          },
+          journal: [
+            {
+              seatId,
+              turn: snapshot.game.turn,
+              kind: "left-behind",
+              payload: { cardId: command.cardId, field: effect.gdzie.fieldId },
+            },
+          ],
+        }),
+        result: {
+          did: [`${cardName(command.cardId)} osiada na: ${fieldName(effect.gdzie.fieldId)}`],
+          pending: null,
+        },
       };
     }
 
@@ -774,6 +861,22 @@ async function walk(
     case "zaklecie": {
       let writes: Changeset = {};
       const names: string[] = [];
+
+      /**
+       * The Sztukmistrz's price, checked before the pile is touched.
+       *
+       * "za 1 Sztukę Złota" per Zaklęcie, so a purse that cannot cover the lot
+       * buys none: this is a shop refusing a sale rather than a card doing half
+       * of what it says. The coins are taken after the draw and only for the
+       * Zaklęcia actually drawn — 2.6 or an empty pile may stop it short, and
+       * nobody pays to be told their Magia is too low.
+       */
+      const buyer = effect.cena ? snapshot.seats.find((one) => one.id === seatId) : undefined;
+      if (effect.cena && buyer && buyer.gold < effect.cena * effect.count) {
+        return nothing([
+          `Za mało złota: ${plural(effect.cena * effect.count, "Sztuka Złota", "Sztuki Złota", "Sztuk Złota")}.`,
+        ]);
+      }
       /**
        * A gift the character may not accept is reported, not thrown.
        *
@@ -804,7 +907,26 @@ async function walk(
           };
         }
       }
-      return { writes, result: { did: [`Zaklęcie: ${names.join(", ")}`], pending: null } };
+      const paid =
+        effect.cena && buyer && names.length > 0
+          ? {
+              seats: [
+                { id: buyer.id, patch: { gold: buyer.gold - effect.cena * names.length } },
+              ],
+            }
+          : {};
+      return {
+        writes: merge(writes, paid),
+        result: {
+          did: [
+            `Zaklęcie: ${names.join(", ")}` +
+              (effect.cena && names.length > 0
+                ? ` (za ${effect.cena * names.length} Sz. Z.)`
+                : ""),
+          ],
+          pending: null,
+        },
+      };
     }
 
     case "kamien":
@@ -1171,6 +1293,9 @@ export async function resolveDrawnCard(
     {
       seatId: seat.id,
       effect,
+      // The card is its own subject for `poloz-karte`: three Karty roll for
+      // where they settle, and the effect has to know which card it is.
+      cardId: command.cardId,
       reason:
         face !== undefined ? `${cardName(command.cardId)} (${face})` : cardName(command.cardId),
       decided: command.decided,

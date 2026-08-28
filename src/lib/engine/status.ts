@@ -115,7 +115,20 @@ export type Modifier =
    * a fight. It multiplies where `move-max` caps, so a character under both
    * walks the smaller of the two.
    */
-  | { kind: "ruch-x2" };
+  | { kind: "ruch-x2" }
+  /**
+   * This character has raised a hand against another (Dobre Bóstwo).
+   *
+   * "Jeśli podczas tej rozgrywki zaatakowałeś inną Postać ... musisz złożyć w
+   * ofierze 1 Sz.Z." — the only rule in the box that asks what you did earlier
+   * in the game rather than what is true of you now, so it is the only one that
+   * needs remembering.
+   *
+   * It is a status because that is the table for facts about a character that
+   * last, and this one lasts the whole game: nothing lifts it, which is what
+   * `Ends.dispelled` says when nothing dispels.
+   */
+  | { kind: "napastnik" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -200,6 +213,11 @@ export function afterFight(statuses: readonly Status[]): Status[] {
  */
 export function afterBreakout(statuses: readonly Status[], die: number): Status[] {
   return statuses.filter((status) => !(status.ends.kind === "rzut" && die <= status.ends.upTo));
+}
+
+/** Whether this character has attacked another during the game (Dobre Bóstwo). */
+export function hasAttacked(statuses: readonly Status[]): boolean {
+  return statuses.some((status) => status.modifier.kind === "napastnik");
 }
 
 /** Whether a status folds Magia into Miecz for a fight (Magia i Miecz). */
@@ -419,6 +437,10 @@ export function markOf(status: Status): Mark {
     case "magia-do-miecza":
     case "ruch-x2":
       return { glyph: "\u25B2", tone: "dobry", title };
+    // A record rather than an effect: nothing about the character has changed,
+    // and one Nieznajomy will want to know.
+    case "napastnik":
+      return { glyph: "\u2694", tone: "obojetny", title };
     case "note":
       return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };
   }

@@ -192,7 +192,20 @@ export type Effect =
       oprocz?: readonly string[];
     }
   | { op: "ruch-dodatkowy" }
-  | { op: "zaklecie"; count: number }
+  /**
+   * Draws Zaklęcia, and where one is being sold, charges for it.
+   *
+   * The Sztukmistrz is the only seller: "mogą podczas każdej wizyty kupić u
+   * niego 1 Zaklęcie za 1 Sztukę Złota". A price here rather than in `kup`
+   * because `kup` sells Wyposażenie, and a Zaklęcie is not a thing on that
+   * sheet — it comes off the pile, under 2.6's limit and 9.5's reshuffle, and
+   * only the drawing knows whether either of those refused.
+   *
+   * Charged after the draw and only if it happened, which is the order that
+   * matters: a Postać whose Magia allows no Zaklęcia must not pay to be told
+   * so.
+   */
+  | { op: "zaklecie"; count: number; cena?: number }
   /** "taką liczbę Zaklęć, na jaką pozwala ci twoja Magia" (Magiczna Tablica). */
   | { op: "zaklecia-do-limitu" }
   | { op: "przenies"; to: Destination }
@@ -342,7 +355,20 @@ export type Effect =
 export type Condition =
   | { is: "natura"; jedna_z: Nature[] }
   | { is: "prog"; stat: "sword" | "magic"; ponizej: number }
-  | { is: "ma-zloto" };
+  | { is: "ma-zloto" }
+  /**
+   * Whether this character has attacked another during the game.
+   *
+   * The Dobre Bóstwo alone: "Jeśli podczas tej rozgrywki zaatakowałeś inną
+   * Postać lub użyłeś swoich zdolności na jej niekorzyść". Every other
+   * condition in the box asks what is true of a character now; this one asks
+   * what they did, which is why 13.3 leaves a mark for it to read.
+   *
+   * The second half — abilities used to somebody's disadvantage — is not
+   * marked, because no encoded ability is aimed at another Postać. If one ever
+   * is, it marks the same way and this needs no change.
+   */
+  | { is: "napastnik" };
 
 /**
  * Every encoded card, gathered from the per-class modules.

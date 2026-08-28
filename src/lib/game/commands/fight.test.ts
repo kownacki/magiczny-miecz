@@ -5,6 +5,9 @@ import type { Fight, TurnPhase } from "@/lib/engine/turn";
 import type { DeckState } from "@/lib/engine/deck";
 import { aHolding, aSeat, aTable, aUser, NOW, ports } from "../fixture";
 import { pointsOf } from "./seat";
+import { hasAttacked } from "@/lib/engine/status";
+import { statusesOf } from "./turn";
+import { apply } from "../change";
 import {
   attackSeat,
   beginFight,
@@ -488,12 +491,31 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
     const { writes } = attackSeat(table(), { targetSeatId: "seat-b" });
     expect(fightIn(writes)).toMatchObject({ playerRoll: null, enemyRoll: null });
     expect(fightIn(writes).caster).toBeUndefined();
-    expect(writes.journal).toEqual([
+    expect(writes.journal).toContainEqual(
       expect.objectContaining({
         kind: "duel",
         payload: { target: 1, field: "mroczna-polana" },
       }),
-    ]);
+    );
+  });
+
+  /**
+   * 13.3 is where the Dobre Bóstwo's question is answered — "jeśli podczas tej
+   * rozgrywki zaatakowałeś inną Postać". The mark goes on at the moment of
+   * attacking rather than of winning, which is what the card asks about, and it
+   * goes on once: a second duel would otherwise read as twice the sinner for no
+   * reason the card gives.
+   */
+  it("remembers that the attacker raised a hand (13.3)", () => {
+    const first = table();
+    const marked = apply(first, attackSeat(first, { targetSeatId: "seat-b" }).writes);
+    expect(hasAttacked(statusesOf(marked, "seat-a"))).toBe(true);
+    expect(hasAttacked(statusesOf(marked, "seat-b"))).toBe(false);
+
+    // A later duel adds nothing. Only the mark is carried over — the first
+    // attack also opened a fight, and 13.1 refuses a second from inside one.
+    const later = apply(first, { effects: attackSeat(first, { targetSeatId: "seat-b" }).writes.effects });
+    expect(attackSeat(later, { targetSeatId: "seat-b" }).writes.effects?.insert ?? []).toHaveLength(0);
   });
 
   it("refuses a Postać who is not standing here (13.1)", async () => {

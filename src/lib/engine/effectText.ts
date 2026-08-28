@@ -65,6 +65,8 @@ export function describeCondition(condition: Condition): string {
               return `jeśli ${condition.jedna_z.map((n) => NATURE_LABEL[n] ?? n).join(" lub ")}`;
     case "prog":
       return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
+    case "napastnik":
+      return "jeśli zaatakowałeś inną Postać w tej rozgrywce";
     case "ma-zloto":
       return "jeśli masz złoto";
   }
@@ -209,8 +211,14 @@ export function describeEffect(effect: Effect): string {
       return `zabierasz ofierze ${what}${who}`;
     }
 
-    case "zaklecie":
-      return `bierzesz ${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
+    case "zaklecie": {
+      const many = `${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
+      // The Sztukmistrz sells; everybody else gives. A price left unsaid is the
+      // one thing a player would want to have known first.
+      return effect.cena
+        ? `kupujesz ${many} za ${plural(effect.cena * effect.count, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}`
+        : `bierzesz ${many}`;
+    }
 
     case "zaklecia-do-limitu":
       return "dobierasz Zaklęcia do swojego limitu (2.6)";

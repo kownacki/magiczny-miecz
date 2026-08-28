@@ -69,10 +69,8 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
 
   // --- cards whose disposition is handled but whose body is not -------------
 
-  sztukmistrz: "Kupno Zaklęcia rozliczcie sami, o ile pozwala na to Magia.",
   "kapliczka-nemed": "Rozpatrzcie modlitwę tak jak w Świątyni Bogini Nemed.",
   "kapliczka-tolimana": "Rozpatrzcie modlitwę tak jak w Świątyni Tolimana.",
-  eremita: "Magiczny Miecz i Tarcza Tolimana są skończone — tylko jeśli jeszcze są.",
   lewiatan: "Połóż Kartę na wolnym Obszarze. Jeśli żaden nie jest wolny, odłóż ją.",
   zloczynca: "Płaci tylko ta Postać, która przegrała walkę.",
 };
