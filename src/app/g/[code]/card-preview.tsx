@@ -27,6 +27,7 @@ import { CardMark } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import { CardTile, type TileCard } from "./card-tile";
+import { WithRules } from "./rule-ref";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
@@ -541,7 +542,7 @@ export function CardPreview({
                         : "text-verdigris"
                   }`}
                 >
-                  {need.what}
+                  <WithRules text={need.what} />
                 </li>
               ))}
             </ul>
@@ -551,14 +552,18 @@ export function CardPreview({
             <ul className="flex flex-col gap-1.5 border-t border-edge/60 pt-2">
               {profile.facts.map((fact, at) => (
                 <li key={at} className="flex flex-col text-[11px] leading-snug">
-                  <span className="text-ink">{fact.what}</span>
+                  <span className="text-ink">
+                    <WithRules text={fact.what} />
+                  </span>
                   {/* Only where there is a condition to meet, and there can be
                       two: a MIECZ has to be in your hand *and* only counts in a
                       fight, and neither of those implies the other. Almost
                       everything simply has to be on you, and saying so every
                       time said nothing. */}
                   {fact.when.length > 0 && (
-                    <span className="text-magia/80">{fact.when.join(", ")}</span>
+                    <span className="text-magia/80">
+                      <WithRules text={fact.when.join(", ")} />
+                    </span>
                   )}
                 </li>
               ))}
@@ -570,7 +575,7 @@ export function CardPreview({
             <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
               {profile.special.map((line, at) => (
                 <li key={at} className="text-[11px] leading-snug text-ochre/90">
-                  {line}
+                  <WithRules text={line} />
                 </li>
               ))}
             </ul>
@@ -582,7 +587,7 @@ export function CardPreview({
             <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
               {profile.notes.map((note, at) => (
                 <li key={at} className="text-[11px] leading-snug text-ochre/90">
-                  {note}
+                  <WithRules text={note} />
                   {at === 0 && (
                     <span className="ml-1 text-[10px] text-muted/70">· pilnujesz sam</span>
                   )}

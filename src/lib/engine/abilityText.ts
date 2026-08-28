@@ -28,7 +28,16 @@ function fieldNames(fieldIds: readonly FieldId[]): string {
  * question with an existing answer: `slotsFor` knows if it has a place, and the
  * variant decides whether being in that place is required.
  */
-export type AbilityWhen = "gdy założony" | "tylko w walce" | "warunek";
+/**
+ * When a bonus counts, and only one of the two is a rule.
+ *
+ * "Gdy założony" is slotowy's — the book draws no line between a worn Hełm and
+ * a carried one, so there is nothing to cite and citing anything would be
+ * inventing a rule for a house variant. "Tylko w walce" is 1.5's, which is the
+ * distinction the whole app leans on: a parametr against what it becomes in a
+ * fight, said on nine cards and defined nowhere they can see.
+ */
+export type AbilityWhen = "gdy założony" | "tylko w walce (1.5)" | "warunek";
 
 /**
  * The conditions on one ability — none, one, or both of the two real ones.
@@ -79,7 +88,7 @@ export function whenApplies(
    * now leads with, and a +1 that quietly does nothing on the Kamienny Most is
    * exactly the surprise this is here to prevent.
    */
-  if (ability.kind === "punkty" && ability.tylkoWalka) when.push("tylko w walce");
+  if (ability.kind === "punkty" && ability.tylkoWalka) when.push("tylko w walce (1.5)");
 
   return when;
 }
@@ -261,7 +270,9 @@ export function describeAbility(ability: Ability): string {
       const przed = (ability.przed ?? ["wrog"]).map((what) =>
         what === "postac" ? "Postacią" : "Wrogiem",
       );
-      return `ucieczka przed ${przed.join(" lub ")}: ${fieldNames(ability.fields)}`;
+      // 19.1 is the rule this is an instance of: "Używając specjalnych
+      // zdolności opisanych w charakterystyce […] Postać może wymknąć się".
+      return `ucieczka przed ${przed.join(" lub ")} (19.1): ${fieldNames(ability.fields)}`;
     }
     case "udzwig": {
       if (ability.items === "bez-limitu") return "niesiesz bez ograniczeń (5.4)";
@@ -302,8 +313,12 @@ export function describeAbility(ability: Ability): string {
       return `zamienia Przedmiot na złoto (${ability.cena} Sz. Z. za sztukę)`;
     case "przeprawa-wszedzie":
       return ability.obstacle === "trzesawiska"
-        ? "przeprawa przez Trzęsawiska w dowolnym miejscu"
-        : "przeprawa przez Lodowy Las w dowolnym miejscu";
+        // Both are the rulebook's own sentences: 11.2 "Trzęsawiska można
+        // przebyć w dowolnym miejscu przy pomocy Łodzi", 11.6 "Postać
+        // posiadająca Latarnię może przeprawić się przez Lodowy Las w dowolnym
+        // miejscu". The card restates a rule, so the rule is worth naming.
+        ? "przeprawa przez Trzęsawiska w dowolnym miejscu (11.2)"
+        : "przeprawa przez Lodowy Las w dowolnym miejscu (11.6)";
     case "uzdrowienie":
       return `do ${ability.upTo} Życia w: ${fieldName(ability.field)}`;
     case "oddaj-w":

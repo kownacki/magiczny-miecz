@@ -10,14 +10,14 @@ describe("what an item gives, and when", () => {
     const miecz = itemProfile("miecz", "slots");
     expect(miecz.slotLabel).toBe("Ręka główna");
     expect(miecz.facts).toEqual([
-      { kind: "punkty", what: "+1 Miecza", when: ["gdy założony", "tylko w walce"] },
+      { kind: "punkty", what: "+1 Miecza", when: ["gdy założony", "tylko w walce (1.5)"] },
     ]);
   });
 
   it("keeps the fight condition in klasyczny, where nothing is worn", () => {
     // A property of the card and not of the variant: 5.4 has one kind of
     // possession, and the Miecz still says „podczas walki".
-    expect(itemProfile("miecz", "classic").facts[0].when).toEqual(["tylko w walce"]);
+    expect(itemProfile("miecz", "classic").facts[0].when).toEqual(["tylko w walce (1.5)"]);
   });
 
   it("says only where it must be for something always on", () => {
@@ -30,7 +30,7 @@ describe("what an item gives, and when", () => {
   /** 6.3 gives a Przyjaciel no place on the body, so he only ever has the one. */
   it("says only when it counts for a Przyjaciel", () => {
     for (const id of ["giermek", "krzyzowiec"]) {
-      expect(itemProfile(id, "slots").facts[0].when, id).toEqual(["tylko w walce"]);
+      expect(itemProfile(id, "slots").facts[0].when, id).toEqual(["tylko w walce (1.5)"]);
     }
   });
 
@@ -98,7 +98,7 @@ describe("what an item gives, and when", () => {
     ]);
     expect(
       whenApplies({ kind: "punkty", miecz: 1, tylkoWalka: true }, "sztylet", "slots"),
-    ).toEqual(["gdy założony", "tylko w walce"]);
+    ).toEqual(["gdy założony", "tylko w walce (1.5)"]);
   });
 
   it("says a carried-only item works from the pack even in slotowy", () => {
