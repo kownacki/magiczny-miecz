@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { cardArtUrl, cardImageUrl } from "@/lib/view/cardImages";
+import { itemProfile } from "@/lib/engine/abilityText";
+import { CardFacts, hasFacts } from "./card-facts";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
@@ -206,6 +208,10 @@ export function FieldModal({
                   // lying here is fought and a Spotkanie is read — and a card
                   // off the Wyposażenie sheet is always a Przedmiot.
                   const event = EVENT_BY_ID.get(lying.cardId as EventCard["id"]);
+                  // Only a card the app carries abilities for has any; a Wróg
+                  // and a Spotkanie have none, and `itemProfile` says so with
+                  // four empty lists rather than by refusing.
+                  const profile = itemProfile(lying.cardId, eqMode);
                   const takeable = event ? kindForCard(event) !== null : NAMES.has(lying.cardId);
                   return (
                     <li
@@ -221,11 +227,26 @@ export function FieldModal({
                         art={art}
                         onInspect={onInspect}
                       />
-                      <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
                         <p className="truncate text-sm text-ink">{name}</p>
-                        <p className="line-clamp-2 text-[11px] leading-snug text-muted">
-                          {text}
-                        </p>
+                        {/* What the app knows it does, not the first two lines
+                            of what is printed on it. The prose was clamped, so
+                            a Hełm ended mid-word — and the question here is
+                            whether this is worth ending a move on, which is
+                            what the formalised lines answer. The prose is still
+                            a hover away, on the Karta itself.
+
+                            Anything the app has no lines for — a Wróg, a
+                            Spotkanie, a Przedmiot nobody has transcribed —
+                            keeps the prose, because half a sentence beats
+                            nothing at all. */}
+                        {hasFacts(profile) ? (
+                          <CardFacts cardId={lying.cardId} profile={profile} nature={nature} />
+                        ) : (
+                          <p className="line-clamp-2 text-[11px] leading-snug text-muted">
+                            {text}
+                          </p>
+                        )}
                       </div>
                       {takeable && standingHere && canAct && arrived && (
                         <button

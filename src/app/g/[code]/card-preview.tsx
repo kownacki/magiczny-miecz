@@ -20,14 +20,14 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { cardImageUrl, characterImageUrl } from "@/lib/view/cardImages";
-import { characterProfile, forbiddenNatures, itemProfile } from "@/lib/engine/abilityText";
+import { characterProfile, itemProfile } from "@/lib/engine/abilityText";
+import { CardFacts, hasFacts } from "./card-facts";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";
 import { CardMark } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import { CardTile, type TileCard } from "./card-tile";
-import { WithRules } from "./rule-ref";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
@@ -472,17 +472,8 @@ export function CardPreview({
   // The Karta's own printed figures. Absent for the "Losowa" card, which is
   // nobody yet and has nothing to print.
   const starting = card.character ? (CHARACTERS.find((one) => one.id === card.cardId) ?? null) : null;
-  // 5.3, answered for the reader rather than stated in the abstract.
-  const barred = nature !== null && (forbiddenNatures(card.cardId)?.includes(nature) ?? false);
   const anythingToSay =
-    !src ||
-    card.text ||
-    card.kindLabel ||
-    profile?.slotLabel ||
-    (profile?.facts.length ?? 0) > 0 ||
-    (profile?.requirements.length ?? 0) > 0 ||
-    (profile?.special.length ?? 0) > 0 ||
-    (profile?.notes.length ?? 0) > 0;
+    !src || card.text || card.kindLabel || profile?.slotLabel || hasFacts(profile);
 
   return createPortal(
     <div
@@ -566,79 +557,7 @@ export function CardPreview({
             </p>
           )}
 
-          {/* What it asks before it gives. Above the bonuses on purpose: a card
-              you may not hold is not a card whose bonuses matter.
-
-              Green or red by whether the person reading it passes — the useful
-              question is not "does this have a restriction" but "does it shut
-              ME out", and the answer is known. Neutral only when no Natura is
-              known, which is the shelf read from outside a game. */}
-          {profile && profile.requirements.length > 0 && (
-            <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
-              {profile.requirements.map((need, at) => (
-                <li
-                  key={at}
-                  className={`text-[11px] leading-snug ${
-                    nature === null
-                      ? "text-muted"
-                      : barred
-                        ? "text-vermilion"
-                        : "text-verdigris"
-                  }`}
-                >
-                  <WithRules text={need.what} />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {profile && profile.facts.length > 0 && (
-            <ul className="flex flex-col gap-1.5 border-t border-edge/60 pt-2">
-              {profile.facts.map((fact, at) => (
-                <li key={at} className="flex flex-col text-[11px] leading-snug">
-                  <span className="text-ink">
-                    <WithRules text={fact.what} />
-                  </span>
-                  {/* Only where there is a condition to meet, and there can be
-                      two: a MIECZ has to be in your hand *and* only counts in a
-                      fight, and neither of those implies the other. Almost
-                      everything simply has to be on you, and saying so every
-                      time said nothing. */}
-                  {fact.when.length > 0 && (
-                    <span className="text-magia/80">
-                      <WithRules text={fact.when.join(", ")} />
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* What using it does, once — as opposed to what holding it gives. */}
-          {profile && profile.special.length > 0 && (
-            <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
-              {profile.special.map((line, at) => (
-                <li key={at} className="text-[11px] leading-snug text-ochre/90">
-                  <WithRules text={line} />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* Rules the app states but does not apply. Marked, because at a table
-              the difference is who has to remember them. */}
-          {profile && profile.notes.length > 0 && (
-            <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
-              {profile.notes.map((note, at) => (
-                <li key={at} className="text-[11px] leading-snug text-ochre/90">
-                  <WithRules text={note} />
-                  {at === 0 && (
-                    <span className="ml-1 text-[10px] text-muted/70">· pilnujesz sam</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
+          {profile && <CardFacts cardId={card.cardId} profile={profile} nature={nature} />}
 
           {/**
            * What a Postać owns before anybody rolls (8.1).
