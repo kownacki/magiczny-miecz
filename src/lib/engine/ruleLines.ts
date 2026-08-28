@@ -7,6 +7,8 @@ interface Rule {
   paras: string[];
   examples: string[];
   notes: string[];
+  table: string[][];
+  tableAfter: number;
 }
 interface Chapter {
   key: string;
@@ -81,13 +83,27 @@ function oneChapter(chapter: Chapter): string[] {
 function oneRule(id: string, rule: Rule): string[] {
   return [
     id,
-    ...rule.paras.map(plain),
+    // The table where it was printed, not after everything: 2.6's first
+    // paragraph ends "w następujący sposób:" and this is what follows it.
+    // Columns padded to their widest cell, which is a terminal's whole idea of
+    // a table.
+    ...rule.paras.flatMap((para, at) => [
+      plain(para),
+      ...(rule.table.length > 0 && rule.tableAfter === at + 1 ? asColumns(rule.table) : []),
+    ]),
     // The book's own worked examples, marked the way it marks them.
     ...rule.examples.map((example) => `Przykład: ${plain(example)}`),
     // And where the transcript flagged something about the printed page — a
     // sentence that stops at a page break, a table with a column missing.
     ...rule.notes.map((note) => `[uwaga do transkrypcji: ${plain(note)}]`),
   ];
+}
+
+/** Rows padded into columns, which is a terminal's whole idea of a table. */
+function asColumns(rows: readonly (readonly string[])[]): string[] {
+  if (rows.length === 0) return [];
+  const width = (at: number) => Math.max(...rows.map((row) => (row[at] ?? "").length));
+  return rows.map((row) => row.map((cell, at) => cell.padEnd(width(at))).join("  ").trimEnd());
 }
 
 /** One line of a rule, for a list where the whole of it will not fit. */

@@ -13,7 +13,7 @@
  * words mean.
  */
 
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useMemo, useRef, useState } from "react";
 import rulesData from "@/data/rules.json";
 import { ENDLESS_STOCK_CHANGE, VARIANT_CHANGES, type EqMode } from "@/lib/engine/slots";
 import { fold } from "@/lib/engine/search";
@@ -26,6 +26,10 @@ interface Rule {
   examples: string[];
   /** What the transcriber flagged about the printed page — see `Note`. */
   notes: string[];
+  /** The book's one table, 2.6's: rows of cells, the header row first. */
+  table: string[][];
+  /** How many paragraphs stood above it, so it goes back where it was. */
+  tableAfter: number;
 }
 interface Chapter {
   key: string;
@@ -164,9 +168,18 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                     </p>
                   )}
                   {rule.paras.map((para, n) => (
-                    <p key={n} className="mb-2 text-[13px] leading-relaxed text-ink/90">
-                      <Prose text={para} />
-                    </p>
+                    <Fragment key={n}>
+                      <p className="mb-2 text-[13px] leading-relaxed text-ink/90">
+                        <Prose text={para} />
+                      </p>
+                      {/* Where it was printed. 2.6's first paragraph ends "w
+                          następujący sposób:" and the table is what follows it,
+                          so hanging it under the whole rule left the colon
+                          introducing the sentence after it. */}
+                      {rule.table.length > 0 && rule.tableAfter === n + 1 && (
+                        <RuleTable rows={rule.table} />
+                      )}
+                    </Fragment>
                   ))}
                   {rule.examples.map((example, n) => (
                     // Set apart because the book sets them apart, and because
@@ -194,6 +207,43 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
       {chapters.length === 0 && (
         <p className="text-[13px] text-muted">Nic takiego nie ma w Instrukcji.</p>
       )}
+    </div>
+  );
+}
+
+/**
+ * The one table the book prints, 2.6's Magia against the Zaklęcia it allows.
+ *
+ * It used to arrive as three paragraphs of pipes, separator row and all, which
+ * is the transcript's Markdown showing through: "|---|---|---|" on a line of
+ * its own, and the numbers under it reading as a list rather than as the answer
+ * to "how many may I hold".
+ *
+ * Scrolls in its own box. Eight columns do not fit a drawer this wide, and a
+ * table that widened the panel would push the rules either side of it off the
+ * edge of it.
+ */
+function RuleTable({ rows }: { rows: string[][] }) {
+  return (
+    <div className="mb-2 overflow-x-auto">
+      <table className="tnum border-collapse text-[12px]">
+        <tbody>
+          {rows.map((row, at) => (
+            <tr key={at}>
+              {row.map((cell, col) => (
+                <td
+                  key={col}
+                  className={`whitespace-nowrap border border-edge/60 px-2 py-1 ${
+                    col === 0 ? "text-muted" : "text-center text-ink"
+                  } ${at === 0 ? "text-ochre/80" : ""}`}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

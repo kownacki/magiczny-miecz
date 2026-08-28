@@ -49,7 +49,11 @@ const RULE_HEADING = /^###\s+(\d+\.\d+[a-z]?)\.?\s*$/;
 const CHAPTER_HEADING = /^##\s+(?:(\d+)\.\s+)?(.+?)\s*$/;
 
 const shut = () => {
-  if (rule && (rule.paras.length > 0 || rule.examples.length > 0 || rule.notes.length > 0))
+  if (
+    rule &&
+    (rule.paras.length > 0 || rule.examples.length > 0 || rule.notes.length > 0 ||
+      rule.table.length > 0)
+  )
     chapter?.rules.push(rule);
   rule = null;
 };
@@ -71,14 +75,14 @@ for (const raw of body.split("\n")) {
   if (line.startsWith("<!--")) {
     const note = line.replace(/^<!--\s*/, "").replace(/\s*-->$/, "");
     if (rule) rule.notes.push(note);
-    else if (chapter) chapter.rules.push({ id: null, paras: [], examples: [], notes: [note] });
+    else if (chapter) chapter.rules.push({ id: null, paras: [], examples: [], notes: [note], table: [], tableAfter: 0 });
     continue;
   }
 
   const asRule = line.match(RULE_HEADING);
   if (asRule) {
     shut();
-    rule = { id: asRule[1], paras: [], examples: [], notes: [] };
+    rule = { id: asRule[1], paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
     continue;
   }
 
@@ -90,13 +94,38 @@ for (const raw of body.split("\n")) {
     chapters.push(chapter);
     // An unnumbered chapter is prose with no rule numbers in it, so it gets one
     // nameless rule to hold the prose rather than a special case downstream.
-    rule = number ? null : { id: null, paras: [], examples: [], notes: [] };
+    rule = number ? null : { id: null, paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
     continue;
   }
 
   if (!chapter) continue;
   // Prose before the first `###` in a numbered chapter — rare, but 20. has it.
-  if (!rule) rule = { id: null, paras: [], examples: [], notes: [] };
+  if (!rule) rule = { id: null, paras: [], examples: [], notes: [], table: [], tableAfter: 0 };
+
+  /**
+   * The one table in the book — 2.6's Magia against the Zaklęcia it allows.
+   *
+   * Kept as rows rather than as three paragraphs of pipes. A reader of the
+   * Księga was getting "|---|---|---|" on a line of its own, which is Markdown
+   * showing through, and the numbers underneath it read as a list rather than
+   * as the answer to "how many may I hold".
+   *
+   * The separator row is dropped: it is the format's, not the book's.
+   */
+  if (line.startsWith("|")) {
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.every((cell) => /^-{2,}$/.test(cell))) continue;
+    // Where it stood, so the reader can put it back there. 2.6's first
+    // paragraph ends "w następujący sposób:" and the table is what follows;
+    // collecting rows and prose separately had the colon introducing the
+    // sentence after the table instead.
+    if (rule.table.length === 0) rule.tableAfter = rule.paras.length;
+    rule.table.push(cells);
+    continue;
+  }
 
   if (line.startsWith(">")) {
     // "> Przykład: …" — the book's worked examples, which are the best part of
@@ -122,5 +151,6 @@ writeFileSync(OUT, `${JSON.stringify(chapters, null, 2)}\n`);
 console.log(
   `wrote ${OUT}: ${chapters.length} rozdziałów, ${ruleCount} numbered rules, ` +
     `${chapters.reduce((n, c) => n + c.rules.reduce((m, r) => m + r.examples.length, 0), 0)} przykładów, ` +
-    `${chapters.reduce((n, c) => n + c.rules.reduce((m, r) => m + r.notes.length, 0), 0)} uwag`,
+    `${chapters.reduce((n, c) => n + c.rules.reduce((m, r) => m + r.notes.length, 0), 0)} uwag, ` +
+    `${chapters.reduce((n, c) => n + c.rules.filter((r) => r.table.length > 0).length, 0)} tabela`,
 );

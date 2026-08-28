@@ -21,7 +21,9 @@
           "**KOSTKA.** Używa się jej przy wykonywaniu ruchów, rozstrzyganiu walki (zwykłej i magicznej) oraz, w niektórych przypadkach przy określaniu skutków wykonania pewnych instrukcji i użycia Zaklęć. Jeżeli instrukcja zaleca użycie więcej niż jednej kostki, należy kilkakrotnie rzucić kostką znajdującą się w zestawie."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -41,7 +43,9 @@
           "Gdy wszystkie Karty zostaną już rozłożone, gracze (drogą losowania lub w jakikolwiek inny sposób) ustalają, który z nich rozpocznie grę. Następnie uczestnicy wykonują ruchy kolejno zgodnie z kierunkiem ruchu wskazówek zegara."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -62,7 +66,9 @@
           "Treść karty: **natura:** dobra, **MGR:** Bezdroża. Miecz 3. Magia 3.",
           "Charakterystyka: ① Rozpoczynasz grę posiadając Miecz i Zbroję. ② Jeżeli przegrasz walkę (lecz nie walkę magiczną) możesz zignorować jej rezultat i walczyć ponownie. Podczas drugiej walki działać będą wszystkie Zaklęcia i Magiczne Przedmioty użyte w pierwszej walce. Musisz zaakceptować wynik drugiej walki. ③ Jeżeli w twoim posiadaniu znajdzie się Excalibur, lub Święty Grall, możesz wziąć o jedną Kartę Zaklęć więcej niż powinieneś i odrzucić to, które ci mniej odpowiada. ④ Każdej napotkanej Postaci możesz odebrać Krzyżowca i Giermka."
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -77,7 +83,9 @@
           "Celem gry jest dotarcie do leżącego w centrum planszy Zamku i pokonanie władającej Magicznym Światem Bestii. Na początku rozgrywki, Postacie powinny wędrować po Krainie Dolnego, Środkowego i Górnego Kręgu, by podbudować swoje parametry Magii i Miecza, a dopiero następnie wkroczyć na Kamienny Most. Postacie wchodzące na Most muszą jednak posiadać Magiczny Miecz, a zamierzające wedrzeć się do Zamku Bestii - Tarczę Tolimana. Postać, która wejdzie na Most nie posiadając tej Tarczy, musi ominąć Zamek (potraktować to pole tak, jakby go nie było)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -98,7 +106,9 @@
           "Cecha ta obrazuje siłę fizyczną Postaci, jej aktualną kondycję i możliwości bojowe. Używana jest podczas walki (18.1-10); może być również wykorzystywana do pokonywania niektórych przeszkód, pojawiających się w trakcie rozgrywki. Wysokość parametru Miecza oznacza się przez umieszczenie przy Karcie Postaci odpowiedniej liczby właściwych (czerwonych) żetonów."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "1.2",
@@ -106,7 +116,9 @@
           "Tylko początkowy Miecz Postaci i ewentualny wzrost tego parametru podczas gry jest reprezentowany przez żetony. Punkty Miecza uzyskane dzięki Przedmiotom, Przedmiotom Magicznym i Przyjaciołom nie są w ten sposób oznaczane, jednak dodaje się je, gdy jest to wymagane lub dozwolone."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "1.3",
@@ -114,7 +126,9 @@
           "Każda utrata punktów Miecza musi zostać zarejestrowana przez usunięcie żetonów o odpowiednim nominale. Miecz Postaci nie może jednak spaść poniżej poziomu, z jakim rozpoczęła ona grę."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "1.4",
@@ -122,7 +136,9 @@
           "Wzrost parametru Miecza. Postać może podnieść wartość parametru Miecza tocząc w trakcie wędrówki zwycięskie walki z napotkanymi Wrogami (mającymi określony parametr Miecza). Karty pokonanych Wrogów należy zatrzymać, ponieważ w dowolnym momencie mogą zostać wymienione na dodatkowe punkty Miecza. Postać zyskuje 1 punkt Miecza, za każde 7 punktów Miecza pokonanych Wrogów. (Punkty te zostały oznaczone na Kartach Wrogów). Punkty ponad wielokrotność 7 są stracone. Po tego rodzaju wymianie, Kartę pokonanego Wroga należy odłożyć na stos zużytych Kart Zdarzeń. Wartość parametru Miecza może zostać zwiększona również w wyniku spotkań lub badania Obszaru, na którym znalazła się Postać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "1.5",
@@ -132,7 +148,9 @@
         "examples": [
           "Troll posiada oznaczony żetonami parametr Miecza równy 6 punktom. Ponieważ posiada Srebrną Strzałę (Przedmiot Magiczny o wartości 1 punktu Miecza i 1 punktu Magii), jego Miecz wynosi już 7 punktów. W posiadaniu Trolla znajduje się też Miecz (Przedmiot o identycznej wartości jak Strzała lecz mający znaczenie tylko podczas walki), więc do jego Miecza należy dodać kolejny punkt (razem otrzymujemy 8 punktów Miecza podczas walki lub 7 w każdej innej sytuacji). Przyjaciółmi Trolla są Pasterz i Krzyżowiec. Pasterz dodaje mu po 1 punkcie Magii i Miecza, a Krzyżowiec 2 punkty Miecza, lecz jedynie podczas walki. W efekcie więc Troll posiada parametr Miecza równy 8 (6+1+1), a podczas walki 11 punktom (6+1+1+1+2). Jeżeli Troll trafi na Zaczarowane Wzgórza, gdzie nie będzie mógł liczyć na punkty zyskane dzięki Przedmiotom i Przedmiotom Magicznym, jego całkowity Miecz (dopóki będzie przebywać na tym Obszarze) zmniejszy się do wartości 7 (6+1), a podczas walki 9 (6+1+2) punktów."
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -147,7 +165,9 @@
           "Określa jej możliwości intelektualne i duchowe oraz umiejętności magiczne. Cecha ta ma podstawowe znaczenie przy prowadzeniu walki magicznej (19.1-2), warunkuje również liczbę Zaklęć, które może posiadać dana Postać. Wysokość parametru Magii, podobnie jak wysokość parametru Miecza, oznacza się poprzez umieszczenie obok karty Postaci odpowiedniej liczby niebieskich żetonów."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "2.2",
@@ -155,7 +175,9 @@
           "Tylko początkowa Magia Postaci i ewentualny wzrost tego parametru podczas gry jest reprezentowany przez żetony. Punkty Magii zyskane dzięki Przedmiotom, Przedmiotom Magicznym i Przyjaciołom nie są w ten sposób oznaczane, jednak dodaje się je, gdy jest to wymagane lub dozwolone."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "2.3",
@@ -163,7 +185,9 @@
           "Utrata punktów Magii musi zostać zarejestrowana przez usunięcie żetonów o odpowiednim nominale. Magia Postaci nie może jednak spaść poniżej poziomu z jakim rozpoczęła ona grę."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "2.4",
@@ -171,7 +195,9 @@
           "Wzrost parametru Magii może nastąpić w wyniku spotkań lub badania Obszaru, na którym znalazła się Postać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "2.5",
@@ -179,15 +205,14 @@
           "Całkowita Magia Postaci w każdym momencie gry składa się z jej własnych punktów Magii (oznaczonych żetonami) oraz punktów dodatkowych, zyskanych dzięki posiadaniu Przyjaciół i Przedmiotów."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "2.6",
         "paras": [
           "Liczba Zaklęć, które w danym momencie może posiadać Postać jest określana przez jego Magię w następujący sposób:",
-          "| Całkowita Magia Postaci | 1 | 2 | 3 | 4 | 5 | 6 i więcej | (dodatkowa wartość w druku) |",
-          "|---|---|---|---|---|---|---|---|",
-          "| Maksymalna liczba Zaklęć | 0 | 1 | 2 | 2 | 3 | 3 | 3 |",
           "Jak widać Zaklęciami może posługiwać się tylko Postać o odpowiednio wysokim parametrze Magii. Jeżeli w jakimkolwiek momencie gry, Postać posiada więcej Zaklęć niż wynosi limit ustalony przez jej Magię, musi tę nadwyżkę natychmiast zlikwidować odkładając odpowiednią liczbę Zaklęć."
         ],
         "examples": [
@@ -195,7 +220,30 @@
         ],
         "notes": [
           "Tabela wydrukowana z 7 wartościami w drugim wierszu dla nagłówków \"1 2 3 4 5 6 i więcej\" (6 kolumn) — ostatnia wartość \"3\" jest wyraźnie odsunięta w druku, jakby odpowiadała osobnej kolumnie \"i więcej\" następującej po kolumnie \"6\". Odczyt zweryfikowany wielokrotnym powiększeniem skanu: cyfry to 0 1 2 2 3 3 [odstęp] 3. Ta siódma wartość jest sprzeczna z przykładem podanym niżej w tym samym punkcie (Mag o Magii 5 → 2 Zaklęcia, Mag o Magii 7, mieszczący się w „6 i więcej\" → 3 Zaklęcia), który wymagałby raczej ciągu w rodzaju 0 1 1 2 2 3. Transkrybowane dosłownie tak, jak wydrukowano; niezgodność nie została poprawiona."
-        ]
+        ],
+        "table": [
+          [
+            "Całkowita Magia Postaci",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6 i więcej",
+            "(dodatkowa wartość w druku)"
+          ],
+          [
+            "Maksymalna liczba Zaklęć",
+            "0",
+            "1",
+            "2",
+            "2",
+            "3",
+            "3",
+            "3"
+          ]
+        ],
+        "tableAfter": 1
       }
     ]
   },
@@ -210,7 +258,9 @@
           "Pozwala Postaciom nabywać Przedmioty i płacić za usługi. Stopień zamożności Postaci jest oznaczony przez umieszczenie obok jego Karty odpowiedniej liczby żetonów symbolizujących Sztuki Złota (żółte). Zazwyczaj Postacie zdobywają złoto podczas spotkań lub badania Obszaru, na którym się znalazły."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "3.2",
@@ -218,7 +268,9 @@
           "Na początku rozgrywki każda Postać posiada 1 Sztukę Złota (1 żeton), chyba, że jej Karta daje w tym względzie inne instrukcje."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "3.3",
@@ -226,7 +278,9 @@
           "Wszystkie obowiązujące w grze ceny podane są w Sztukach Złota. (Na niektórych Kartach Zdarzeń Sztuki Złota oznaczane są skrótem Sz.Z)"
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "3.4",
@@ -236,7 +290,9 @@
         "examples": [],
         "notes": [
           "W druku \"wszelkiego rodzju\" — literówka w oryginale (brak \"a\": powinno być \"rodzaju\"); transkrybowane dosłownie."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "3.5",
@@ -244,7 +300,9 @@
           "Sztuki Złota nie są wliczane do limitu Przedmiotów, jakie może posiadać jedna Postać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -259,7 +317,9 @@
           "Życie Postaci jest dokładnie tym, co słowo to sugeruje. Ujmując rzecz nieco ściślej: liczba punktów Życia określa liczbę walk, które Postać może przegrać, nim zejdzie ze sceny Magicznego Świata. Parametr Życia może ulec zmniejszeniu w wyniku walki (obu jej rodzajów), a także wskutek rozlicznych niebezpieczeństw, czyhających na Postacie podczas wędrówki. Wysokość parametru Życia jest oznaczana przez umieszczenie obok Karty Postaci odpowiedniej liczby właściwych (zielonych) żetonów."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "4.2",
@@ -267,7 +327,9 @@
           "Każda Postać rozpoczyna grę posiadając 4 punkty Życia."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "4.3",
@@ -275,7 +337,9 @@
           "Utrata punktów Życia. Każda utrata punktów Życia musi zostać zarejestrowana przez usunięcie żetonów o odpowiednim nominale."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "4.4",
@@ -283,7 +347,9 @@
           "Utrata wszystkich punktów Życia. Postać, która utraciła wszystkie punkty Życia jest uważana za zmarłą. Należy ją zdjąć z planszy, a jej Kartę odłożyć do pozostałych nie biorących udziału w grze. Wszystkie należące do niej Przedmioty oraz jej Przyjaciele pozostają na Obszarze, na którym zginęła. Żetony określające jej Magię i Miecz powracają do Żetonów zapasowych, Karty Zaklęć umieszczane są wśród tych, które zostały już użyte. Gracz, który kierował niefortunną Postacią, może wybrać sobie nową i rozpocząć z nią grę od początku (z Obszaru oznaczonego jako MGR - Miejsce Gracza)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "4.5",
@@ -293,7 +359,9 @@
         "examples": [],
         "notes": [
           "W druku \"Zetony\" bez ogonka nad Z — brak diakrytyki (powinno być \"Żetony\"); transkrybowane dosłownie."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "4.6",
@@ -301,7 +369,9 @@
           "Każda Postać może posiadać parametr Życia o dowolnej wysokości."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "4.7",
@@ -309,7 +379,9 @@
           "Uzdrowienie może przywrócić Postaci tylko te punkty Życia, które posiadała ona na początku rozgrywki (czyli do poziomu 4 punktów)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -324,7 +396,9 @@
           "W dalszej części Instrukcji, jako Przedmioty określane będą zarówno Przedmioty zwykłe, jak i Magiczne (chyba, że różnica między jednymi i drugimi zostanie wyraźnie zaznaczona). W trakcie rozgrywki Postacie wchodzą w posiadanie Przedmiotów zwykle w wyniku spotkań lub badania Obszaru, na którym się znalazły. Karty posiadanych Przedmiotów należy układać w pobliżu Karty Postaci."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "5.2",
@@ -332,7 +406,9 @@
           "Karty wszystkich Przedmiotów należących do Postaci układa się w formie odkrytej (koszulkami do dołu), tak, by ich treść była widoczna dla pozostałych uczestników gry."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "5.3",
@@ -342,7 +418,9 @@
         "examples": [
           "Hobgoblin znajduje Świętego Graala, którego nie wolno mu posiadać, gdyż jego Natura jest Zła, a Przedmiotem tym mogą posługiwać się jedynie Dobre i Chaotyczne Postacie. Hobgoblin musi więc zostawić Graala na Obszarze, na którym go znalazł."
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "5.4",
@@ -350,7 +428,9 @@
           "Ograniczenie liczby posiadanych Przedmiotów. Żadna Postać nie może posiadać więcej niż 4 Przedmiotów na raz, chyba, że dysponuje jakimś środkiem transportu (Koniem, Mułem, Zaprzęgiem albo Tragarzem). Do liczby Przedmiotów nie wlicza się Sztuk Złota (3.5.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "5.5",
@@ -358,7 +438,9 @@
           "Postać ma prawo w dowolnym momencie odrzucić posiadany Przedmiot, zostawiając jego odkrytą Kartę na Obszarze, na którym właśnie się znajduje."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "5.6",
@@ -368,7 +450,9 @@
         "examples": [
           "Magog posiada Konia, którego używa do noszenia 6 Przedmiotów. Na jego drodze staje Awanturnik, który postanawia odebrać mu Konia, i po wykonaniu rzutu kostką (patrz Karta Awanturnika) rzeczywiście mu go odbiera. Teraz Magog może nieść najwyżej 4 Przedmioty, toteż 2 Przedmioty musi natychmiast odrzucić. Awanturnik, tak jak każda Postać, może później starać się je zdobyć, o ile ponownie trafi na ten Obszar (12.1)."
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -383,7 +467,9 @@
           "Postacie zdobywają sobie Przyjaciół z reguły w wyniku spotkań lub badania Obszaru, na którym się znalazły. Karty Przyjaciół należy układać w pobliżu Karty Postaci."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "6.2",
@@ -391,7 +477,9 @@
           "Karty Przyjaciół towarzyszących Postaci są układane w formie odkrytej (koszulkami do dołu), tak by ich treść była widoczna dla wszystkich grających."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "6.3",
@@ -399,7 +487,9 @@
           "Postać może posiadać dowolną liczbę Przyjaciół."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "6.4",
@@ -407,7 +497,9 @@
           "Utrata Przyjaciół. Karty wszystkich Przyjaciół, którzy zostali zabici lub muszą zostać odrzuceni z innych przyczyn, są odkładane na stos zużytych Kart Zdarzeń. Postać może w każdej chwili pozbyć się posiadanego Przyjaciela (jednego lub kilku), pozostawiając jego Kartę, na Obszarze, na którym aktualnie się znajduje."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -422,7 +514,9 @@
           "Każda Postać posiada określoną Naturę: Dobrą, Złą lub Chaotyczną. Z posiadaniem Dobrej lub Złej Natury wiążą się określone korzyści, lecz także pewne niebezpieczeństwa. Postać o Naturze Chaotycznej nie czerpie z niej prawie żadnych korzyści, ale też nic jej nie grozi z tytułu neutralnego poglądu na świat. W trakcie gry, Natura Postaci może ulec zmianom."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "7.2",
@@ -430,7 +524,9 @@
           "Zmiany Natury. Gdy Postać zmienia swoją Naturę, obok jej Karty musi zostać umieszczona Karta Zmiany Natury. Kartę należy położyć w ten sposób, by ukazywała nową Naturę Postaci (właściwym napisem ku górze). Jeżeli Postać powróci później do swojej pierwotnej Natury, Kartę Zmiany należy odłożyć."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "7.3",
@@ -438,7 +534,9 @@
           "Żadna Postać nie może zmienić swojej Natury częściej niż raz w trakcie tury gry."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "7.4",
@@ -446,7 +544,9 @@
           "Jeżeli Postać posiada Magiczny Przedmiot, którym po zmianie Natury nie wolno jej się posługiwać, Przedmiot ten musi zostać natychmiast odrzucony (5.5.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -461,7 +561,9 @@
           "Każda Postać posiada kilka specjalnych zdolności, opisanych w jej Karcie i nazwanych Charakterystyką. Oprócz zdolności, Charakterystyka często zawiera także ograniczenia, jakim podlega dana Postać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "8.2",
@@ -469,7 +571,9 @@
           "W sytuacji, gdy użycie specjalnych zdolności narusza reguły zawarte w niniejszej Instrukcji, specjalną zdolność uważa się za nadrzędną w stosunku do tych reguł."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -484,7 +588,9 @@
           "Efekt użycia Zaklęcia jest zawsze opisany w jego Karcie. Karta zawiera również informacje, w jakich sytuacjach dane Zaklęcie może zostać zastosowane."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "9.2",
@@ -492,7 +598,9 @@
           "Postacie mają prawo posiadać Zaklęcia, jeśli tylko na to pozwala wartość ich parametru Magii (2.6.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "9.3",
@@ -500,7 +608,9 @@
           "Karty Zaklęć znajdujących się w posiadaniu Postaci należy układać w formie zakrytej (koszulkami do góry), tak, by pozostali gracze nie mogli widzieć ich treści."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "9.4",
@@ -508,7 +618,9 @@
           "Postać nie może odrzucać Zaklęć, chyba, że posiada ich więcej, niż wynika to z jej parametru Magii (2.6.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "9.5",
@@ -516,7 +628,9 @@
           "Zdobywanie Zaklęć. Postacie zazwyczaj zdobywają Zaklęcia w wyniku spotkań lub badania Obszarów. Niektóre Postacie posiadają jedno lub więcej Zaklęć już w chwili rozpoczęcia gry. Karty Zaklęć należy brać z wierzchu stosu. Jeśli stos zostanie wyczerpany, tasuje się Karty Zaklęć już użyte i korzysta z nich ponownie."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "9.6",
@@ -524,7 +638,9 @@
           "Wypowiadanie (rzucanie) Zaklęć. Zaklęcie może być rzucone tylko w sposób zgodny ze wskazówkami zawartymi w jego Karcie. Po wypowiedzeniu Zaklęcia i po wygaśnięciu jego efektów, reprezentująca je Karta jest odkładana na stos Kart już zużytych. Zaklęcia działające na Postacie lub skierowane przeciwko nim, dosięgają swoje ofiary bez względu na to, w jakim miejscu planszy się znajdują."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "9.7",
@@ -532,7 +648,9 @@
           "Żadne Zaklęcie nie działa na istoty napotkane na Kamiennym Moście ani na samą Bestię."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -553,7 +671,9 @@
           "Czas gry podzielony jest na tury, podczas których Postacie kolejno wykonują swoje czynności: a) ruch b) spotkania i badanie Obszaru, na którym się znalazły."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "10.2",
@@ -563,7 +683,9 @@
         "examples": [
           "Postać porusza się w krainie Środkowego Kręgu w kierunku zgodnym z ruchem wskazówek zegara. Na Płaskowyżu Mgieł wyrzuca 6 oczek. Dochodzi do Lasu Błękitnych Ogni, postanawia przeprawić się na Uroczysko i począwszy od tego Obszaru porusza się w kierunku przeciwnym do ruchu wskazówek zegara."
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "10.3",
@@ -573,7 +695,9 @@
         "examples": [],
         "notes": [
           "\"Zamku Besii\" w druku (bez \"t\") — literówka, powinno być \"Bestii\"; transkrybowane dosłownie."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "10.4",
@@ -581,7 +705,9 @@
           "Znajdująca się na Moście Postać zawsze może zrezygnować z próby dostania się do Zamku lub walki z Bestią i zawrócić lub ominąć Zamek - nawet jeśli ma Tarczę Tolimana. Jeżeli zdecydowała się na powrót, ignoruje instrukcje Obszarów leżących między Obszarem, na którym się znajduje, a granicą z Krainą Górnego Kręgu. Jeżeli zdecydowała, że ominie Zamek, będzie mogła ignorować instrukcje Obszarów leżących po przeciwnej stronie Mostu. Jednym słowem: ignorowanie instrukcji Obszarów na Kamiennym Moście jest dozwolone, gdy Postać - niezależnie od kierunku ruchu - oddala się od Zamku."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "10.5",
@@ -589,7 +715,9 @@
           "Postać, która zakomunikowała, że idzie walczyć z Bestią i dotarła do Zamku MUSI stoczyć walkę. Jeżeli zwycięży, będzie również zwycięzcą w grze."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -604,7 +732,9 @@
           "TRZĘSAWISKA. Przeprawa z Krainy Dolnego do Środkowego Kręgu jest możliwa wyłącznie na Obszarze Uroczyska i Lasu Błędnych Ogni. Jedyne wyjątki od tej reguły opisuje punkt 11.2."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.2",
@@ -612,7 +742,9 @@
           "Trzęsawiska można przebyć w dowolnym miejscu przy pomocy Łodzi. Można również zostać przeniesionym z Kręgu do Kręgu w rezultacie wykonania instrukcji związanych z niektórymi Obszarami i Kartami Zdarzeń jak również poprzez rzucenie Zaklęcia Pan Trzęsawisk."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.3",
@@ -631,7 +763,9 @@
         "notes": [
           "Zdanie urywa się w tym miejscu — to ostatnia linijka strony 6 skanu; dalszy ciąg punktu 11.3 znajduje się na kolejnej, nieobjętej tą transkrypcją stronie.",
           "This page begins mid-sentence, continuing rule 11.3 from the previous page (not included in this transcription batch). The section heading covering the 11.x rules (likely \"PRZEKRACZANIE GRANIC KRĘGÓW\", per the surrounding content about crossing between Rings/Circles) is on that earlier, un-supplied page."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.4",
@@ -639,7 +773,9 @@
           "Jeżeli próba przeprawienia się do Lasu Błędnych Ogni kończy się porażką, Postać traci 1 punkt Życia i nie może kontynuować wędrówki. Jeżeli wynik rzutu oznacza rozwiązanie remisowe, Postać nie traci punktu Życia, lecz musi się zatrzymać. Postać powinna zadecydować co zrobi w następnej turze czy będzie ponownie próbowała przekroczyć granicę Kręgów, czy zrezygnuje i będzie kontynuowała wędrówkę po Dolnym Kręgu."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.5",
@@ -647,7 +783,9 @@
           "LODOWY LAS. Przez Lodowy Las można przeprawić się wyłącznie na Obszarach Przełęczy Wichrów i Doliny Czaszek. Jedyne wyjątki od tej reguły opisuje punkt 11.6."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.6",
@@ -655,7 +793,9 @@
           "Postać posiadająca Latarnię może przeprawić się przez Lodowy Las w dowolnym miejscu. Postać może również zostać przeniesiona z Kręgu do Kręgu w rezultacie wykonania instrukcji związanych z niektórymi Obszarami i Kartami Zdarzeń, a również poprzez rzucenie Zaklęcia Władca Lodu."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.7",
@@ -663,7 +803,9 @@
           "Przeprawa przez Lodowy Las wymaga pokonania Rycerza Wiecznych Śniegów tylko wtedy, gdy Postać przechodzi z Krainy Środkowego do Górnego Kręgu. Rycerz nie atakuje Postaci wędrujących w przeciwnym kierunku, ani poruszających się po Środkowym Kręgu."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.8",
@@ -671,7 +813,9 @@
           "Jeżeli próba pokonania Rycerza nie powiodła się, Postać traci 1 punkt Życia i nie może kontynuować wędrówki. Jeśli wynik walki oznacza rozwiązanie remisowe, nie traci punktu Życia, lecz również musi się zatrzymać. Postać musi zadecydować co zrobi w następnej turze, czy ponownie zaatakuje Rycerza, czy będzie nadal wędrowała po Kręgu Środkowym."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.9",
@@ -680,7 +824,9 @@
           "Duch i Potwór atakują jedynie wtedy, gdy Postać wchodzi na Most (nie interesują się schodzącymi z Mostu, ani podróżującymi po Górnym Kręgu)"
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.10",
@@ -690,7 +836,9 @@
         "examples": [],
         "notes": [
           "Printed exactly as follows; \"tylko wtedy w tym samym ruchu\" reads as though a word (e.g. \"gdy\") is missing between \"wtedy\" and \"w tym samym ruchu\" — transcribed verbatim, not corrected."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "11.11",
@@ -698,7 +846,9 @@
           "Jeżeli próba pokonania Ducha lub Potwora zakończyła się porażką, Postać traci w pierwszym przypadku jeden punkt Magii w drugim, jeden punkt Miecza i musi kontynuować podróż po Górnym Kręgu ( nie może w następnej turze podjąć kolejnej próby). Jeżeli wynik walki jest remisowy Postać nie traci punktu Magii lub Miecza, lecz również nie może w następnej turze podjąć kolejnej próby wejścia na Most."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -718,7 +868,9 @@
         "examples": [
           "Książę kończy ruch na Ruchomych Skałach na których leżą już 2 Sztuki Złota, Opiekun (Przyjaciel), Sztylet i Rękawice (Przedmioty), Magiczny Miecz i Różdżka Zaklęć (Przedmioty Magiczne), pozostawione tam przez Hummita Zamienionego w Kamień. Książę ma już 3 Przedmioty (Miecz, Helm, Srebrną Strzałę (Przedmiot Magiczny). Bez problemów zabiera więc Opiekuna i Sztuki Złota, lecz ponieważ nie może unieść więcej niż 4 Przedmioty (5.4.), musi dobrze się zastanowić co zrobić dalej. Instrukcja dotycząca Ruchomych Skał przewiduje utratę jednego punktu Życia, chyba że Postać dysponuje Rękawicami, więc ten Przedmiot byłby rzeczywiście przydatny na tym Obszarze. Ponieważ Książe nie ma w tej chwili żadnych Zaklęć, chociaż Magia na to mu pozwala, bierze Różdżkę i natychmiast ciągnie kartę Zaklęcia. Jest to Zaklęcie Ocalony - dzięki odrobinie szczęścia, nie potrzebuje już Rękawic. Następnie odrzuca Srebną Strzałę i bierze Magiczny Miecz, który umożliwia mu wejście na Kamienny Most. Musi zastosować się do instrukcji Ruchomych Skał, czyli stracić jeden punkt Życia, lecz używa Zaklęcia Ocalony, by temu zapobiec. Ponieważ ma Różdżkę, natychmiast bierze następne Zaklęcie. Na tym kończy się jego tura. Gdy podczas następnej tury pójdzie dalej, Sztylet, Rękawice i Srebrna Strzała pozostaną na Ruchomych Skałach, czekając na Postać, która zakończy tutaj ruch."
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -733,7 +885,9 @@
           "Postacie mogą spotykać się tylko na Obszarze, na którym zakończyły swój ruch lub na Obszarze, na który zostały przeniesione wskutek spotkania. Podobnie: tylko te Obszary mogą badać. W żadnym przypadku nie mogą nikogo spotkać ani wogóle podejmować żadnych czynności na Obszarze, z którego rozpoczynają ruch."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "13.2",
@@ -741,7 +895,9 @@
           "Postać musi dokonać wyboru między spotkaniem z inną Postacią znajdującą się na tym samym Obszarze, a badaniem samego Obszaru."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "13.3",
@@ -749,7 +905,9 @@
           "Spotkanie z inną Postacią może przybrać jedną z dwóch form: Postać która właśnie weszła na dany Obszar może zaatakować Postać, która już się tam znajduje (17.6-10.) lub użyć w stosunku do niej swoich specjalnych zdolności."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "13.4",
@@ -759,7 +917,9 @@
           "Postać musi zastosować się do instrukcji, związanych z Obszarem, na którym się znalazła. Ciągnięte są wyłącznie Karty Zdarzeń. Karty te należy ciągnąć z wierzchu stosu Kart Zdarzeń. Jeżeli na danym Obszarze leżą już jakieś Karty, ciągnie się ich tylko tyle, by ich suma równała się liczbie Kart, które zgodnie z instrukcją powinny zostać na tym Obszarze wyciągnięte. Ciągnięcie Kart i zapoznawanie się z ich treścią określane jest jako badanie Obszaru (16.1-18.1.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "13.5",
@@ -769,7 +929,9 @@
         "examples": [
           "Quark znajduje się na Płaskowyżu Mgieł i wyrzuca 5 oczek. Może więc zakończyć swój ruch w Dolinie Cienia lub na Równinie Samotnych Skał. Jednak w Dolinie Cienia leży odkryta Karta Wilkołaka. Miecz Wilkołaka jest równy 10 punktom. Ponadto ze względu na magiczne działanie Doliny, Wilkołak otrzyma 1 dodatkowy punkt Miecza, wskutek czego jego całkowity Miecz wyniesie 11 punktów. Ponieważ aktualnie Miecz Quarka wynosi tylko 3 punkty, jego porażka, a tym samym utrata 1 punktu Życia jest pewna. Z drugiej strony, na Równinie Samotnych Skał leży Klątwa (Zaklęcie) pozostawiona tam przez inną Postać, więc i na tym Obszarze Quark będzie musiał utracić punkt Życia. Jednak na Równinie Samotnych Skał należy wyciągnąć 2 Karty, a Klątwa stanowi tylko jedną z nich. Quark będzie więc mógł wyciągnąć jeszcze jedną Kartę, co może się okazać dla niego korzystne. Wykonuje więc ruch do Obszaru Równiny Samotnych Skał, traci 1 punkt Życia wskutek Klątwy i ciągnie Kartę Zdarzeń. Niestety Karta ta reprezentuje Cyklopa (Miecz 6, a na Obszarze Równiny Samotnych Skał, Miecz 8). A to pech!"
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -784,7 +946,9 @@
           "Postacie mogą się spotykać wyłącznie na Obszarach Wejścia na Most."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "14.2",
@@ -792,7 +956,9 @@
           "Spotkania przebiegają tak samo, jak w Dolnym, Środkowym i Górnym Kręgu (13.3.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "14.3",
@@ -800,7 +966,9 @@
           "Na wszystkich innych Obszarach, sposób postępowania i ewentualne spotkania umieszczone są w opisie Obszarów na końcu Instrukcji (poza numeracją). Postać musi zastosować się do tych instrukcji, chyba że postanawia opuścić Most (10.3-4.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "14.4",
@@ -808,7 +976,9 @@
           "Na żadną z istot, które Postać spotyka na Moście nie działają Zaklęcia (9.7.), nie można też im się wymknąć (19.3.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "14.5",
@@ -816,7 +986,9 @@
           "PUŁAPKA/MAGICZNA PUŁAPKA. Obie Pułapki, chociaż posiadają całkiem różne sposoby działania, powodują w stosunku do Postaci podobne skutki. W obu przypadkach Postać musi rzucić 3 kostkami. Następnie - idąc od strony Wymarłego Miasta - odejmuje od sumy wyników wartość swojego parametru Magii. Jeżeli zbliża się do Zamku Bestii od strony Ruin Twierdzy, od sumy wyników odejmuje wartość swojego parametru Miecza. Rezultat tego działania wskazuje na miejsce, gdzie Postać zakończy swój ruch. Rezultat równy 0 oznacza, że udało się uniknąć Pułapki. Pozostałe rezultaty oznaczają, że Postać została strącona z Mostu. Rzecz jasna, jeśli Postać zostaje strącona, natychmiast po upadku z Mostu należy ją ustawić na Obszarze, na który upadła. Postać, która została strącona z Kamiennego Mostu musi wykonać po jednym rzucie kostką dla każdego ze swoich Przyjaciół lub Przedmiotów. Wynik równy 1 lub 2 oznacza, że Przyjaciel lub Przedmiot zostaje w jego posiadaniu. Inny rezultat - Postać traci Przedmiot lub Przyjaciela (należy odłożyć ich Karty)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "14.6",
@@ -824,7 +996,9 @@
           "DEMON ZAGŁADY/MONSTRUM. W obu przypadkach Postać rzuca kostką, by ustalić Magię Demona lub Miecz Monstrum. Nie może kontynuować podróży, dopóki nie pokona strzegącego Zamku Bestii Wroga."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "14.7",
@@ -834,7 +1008,9 @@
         "examples": [],
         "notes": [
           "Table transcribed exactly, including the inconsistent spacing around \"3 -12\" as printed."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -849,7 +1025,9 @@
           "Karty, które zgodnie z ich instrukcją powinny zostać położone na konkretnym Obszarze, niezależnie od tego, gdzie zostały wyciągnięte, rozpatrywane są w pierwszej kolejności. Nie mają one wpływu na Postać, która je wyciągnęła (oczywiście tylko podczas aktualnej tury)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "15.2",
@@ -857,7 +1035,9 @@
           "Następnie rozpatrywane są pozostałe Karty Zdarzeń (wykonywane są zawarte w nich instrukcje), znajdujące się lub wyciągnięte na danym Obszarze. Konieczne jest przy tym zachowanie kolejności zgodnej z numeracją Kart (numer znajduje się u góry każdej Karty) - Karta o najniższym numerze rozpatrywana jest jako pierwsza."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -872,7 +1052,9 @@
           "Istnieją następujące rodzaje Kart Zdarzeń i efektów związanych z ich znalezieniem (w kolejności w jakiej powinny być rozpatrywane):"
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.1",
@@ -880,7 +1062,9 @@
           "SPOTKANIE - należy wykonać zawartą w Karcie instrukcję. Jeżeli spowodowałoby to utratę tury przez Postać, musi ona powstrzymać się od podejmowania jakichkolwiek dalszych działań - ta właśnie tura liczy się jako stracona."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.2",
@@ -890,7 +1074,9 @@
         "examples": [],
         "notes": [
           "17.1a) below cites this rule's Miecz parameter as \"(16.5.)\", not \"(16.2.)\" — printed exactly as it appears; not corrected here."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.3",
@@ -898,7 +1084,9 @@
           "WRÓG (Demon) - Demon natychmiast atakuje Postać, która wyciągnęła przedstawiającą go Kartę. Walka przyjmyje w tej sytuacji formę walki magicznej (18.1-2.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.4",
@@ -906,7 +1094,9 @@
           "Dopiero po rozpatrzeniu skutków wszystkich Spotkań i pokonaniu wszystkich Wrogów (17.1-5) znajdujących się na danym Obszarze, albo wymknięciu się tym Wrogom (19.1-2.), Postać może przystąpić do rozpatrzenia pozostałych Kart Zdarzeń."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.5",
@@ -914,7 +1104,9 @@
           "NIEZNAJOMI - konieczne jest wykonanie zawartej w Karcie instrukcji."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.6",
@@ -924,7 +1116,9 @@
         "examples": [],
         "notes": [
           "Citation printed exactly as \"(58.3-4.)\". No rule 58 exists elsewhere in this document; the carrying-limit rule is cited elsewhere as \"(5.4.)\" (see 12.1, 13.5). Likely a printing error for \"(5.3-4.)\" but transcribed verbatim, not corrected."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.7",
@@ -932,7 +1126,9 @@
           "MIEJSCE - należy wykonać zawartą w Karcie instrukcję."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "16.8",
@@ -943,7 +1139,9 @@
         "examples": [
           "Przykład rozpatrywania Kart Zdarzeń: Obbol dociera do Płaskowyżu Mgieł i zgodnie z instrukcją ciągnie 3 Karty Zdarzeń. Wyciąga Zaklętą Ścieżkę (I Spotkanie), Niedźwiedzia (II Wróg) i 2 Sztuki Zlota (V Przedmiot). Obbol musi najpierw rozpatrzeć skutki Spotkania. Rzuca kostką i - ponieważ rezultatem rzutu są 2 oczka - przenosi się natychmiast na Równinę Traw. Nie zmierzy się już z Niedźwiedziem, ani nie weźmie 2 Sztuk Złota - pozostaną one w formie odkrytej na Płaskowyżu Mgieł stanowiąc 2 z 3 Kart dla następnej Postaci, która zakończy tu swój ruch. Obbol jednak musi kontynuować turę, czyli zachować się tak, jakby jego ruch zakończył się na Równinie Traw."
         ],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -960,7 +1158,9 @@
           "b) Postać atakuje inną Postać - chyba że może użyć swoich specjalnych zdolności i przeprowadzić atak magiczny (18.1-2.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.2",
@@ -969,7 +1169,9 @@
           "W pierwszej kolejności Postać musi zdecydować, czy będzie próbowała uciec Wrogowi, czy też nie. Po podjęciu decyzji, musi poinformować o niej pozostałych graczy. Do walki dochodzi wtedy, gdy Postać nie zamierza wymknąć się przeciwnikowi."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.3",
@@ -977,7 +1179,9 @@
           "Jeżeli Postać zamierza użyć Zaklęć, musi je wykorzystać przed wykonaniem rzutu kostką, chyba że inaczej stanowi o tym instrukcja zamieszczona na danym Zaklęciu."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.4",
@@ -985,7 +1189,9 @@
           "Postać wykonuje jeden rzut kostką i dodaje wynik rzutu do swojego Całkowitego Parametru Miecza (1.5.) - może przy tym używać tylko jednej broni. Uzyskana suma określa jego siłę w tej walce. Następnie jeden z pozostałych graczy wykonuje rzut za przeciwnika i w podobny sposób oblicza jego Miecz. Jeżeli Miecz Postaci okazał się większy, przeciwnik uznawany jest za zabitego. Jeżeli Miecz przeciwnika okazał się większy, Postać traci 1 punkt Życia (może temu zapobiec użycie Przedmiotu lub Zaklęcia). Na tym walka się kończy. Jeśli obie strony uzyskały ten sam wynik, rezultatem walki jest remis (17.10.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.5",
@@ -993,7 +1199,9 @@
           "Więcej niż jeden przeciwnik. Jeżeli Postać jest atakowana przez więcej niż jedną istotę, Miecze tych istot są sumowane, a do uzyskanego rezultatu dodawany jest wynik rzutu kostką. W ten sposób otrzymuje się Miecz z jakim te istoty atakują Postać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.6",
@@ -1001,7 +1209,9 @@
           "Rozstrzyganie walki między Postaciami. Postać, która została zaatakowana, może próbować wymknąć się przeciwnikowi (19.1-2.). Walka rozpoczyna się, jeżeli próba się nie powiedzie, lub wogóle nie zostanie podjęta."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.7",
@@ -1009,7 +1219,9 @@
           "Przed wykonaniem rzutu kostką obie Postacie mają możliwość użycia Zaklęć."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.8",
@@ -1017,7 +1229,9 @@
           "W pierwszej kolejności obliczany jest Miecz atakującego, a następnie atakowanego (17.4.). Postać której Całkowity Miecz w sumie z wykonanym rzutem kostką daje wyższy rezultat jest zwycięzcą. Jeżeli siły okazały się równe wynik walki jest remisowy (17.10.)."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.9",
@@ -1025,7 +1239,9 @@
           "Zwycięzca ma prawo zmusić pokonanego do utraty jednego punktu Życia (czemu może zapobiec użycie odpowiednich Przedmiotów lub Zaklęć) lub zabrać mu jeden Przedmiot (również Magiczny) albo Sztukę Złota. Na tym kończy się walka i cała tura."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "17.10",
@@ -1033,7 +1249,9 @@
           "REMIS. W przypadku remisu żadna z walczących stron nie ponosi strat. Wraz z końcem walki następuje koniec tury."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -1050,7 +1268,9 @@
           "b) Postać której pozwala na to jej charakterystyka, atakuje przy pomocy Magii inną Postać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "18.2",
@@ -1060,7 +1280,9 @@
           "b) żaden Przedmiot nie może zapobiec utracie punktu Życia."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -1075,7 +1297,9 @@
           "Używając specjalnych zdolności opisanych w charakterystyce lub Zaklęcia Krąg Płomieni, Postać może wymknąć się nieprzyjaznej istocie lub innej Postaci. Jeśli próba się powiedzie, Postać, której udało się uciec nie może w żaden sposób oddziaływać na istotę lub Postać, której się wymknęła i odwrotnie. Zaklęcie Krąg Płomieni umożliwia wymknięcie się jednej (unieruchomionej w Kręgu Płomieni) istocie. Dzięki pozostałym opisanym wyżej sposobom, Postać może wymknąć się jednocześnie wszystkim znajdującym się na danym Obszarze istotom."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "19.2",
@@ -1083,7 +1307,9 @@
           "Możliwa jest ucieczka przed każdą istotą (lub Postacią), która zaatakuje Postać w Dolnym, Środkowym lub Górnym Kręgu oraz każdej istocie opisanej w Kartach Zdarzeń, z którą Postać nie chce się spotkać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "19.3",
@@ -1091,7 +1317,9 @@
           "Na Kamiennym Moście można wymykać się tylko innym Postaciom."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -1106,7 +1334,9 @@
           "Jeżeli Postać zostanie na 3 tury Zamieniona w Kamień, reprezentującą ją na planszy Kartę należy zamienić na Kartę Zamieniony w Kamień. Postać powraca do swojego zwykłego wyglądu po zakończeniu 3 tury."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "20.2",
@@ -1114,7 +1344,9 @@
           "Postać Zamieniona w Kamień nie może posiadać Przedmiotów, Przedmiotów Magicznych, Sztuk Złota, ani Przyjaciół. Karty Przedmiotów i złota należy pozostawić na Obszarze na którym nastąpiła przemiana. Natomiast wszyscy Przyjaciele opuszczają Zamienionego w Kamień, odłóż ich Karty na stos Kart zużytych."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "20.3",
@@ -1122,7 +1354,9 @@
           "Postać Zamieniona w Kamień nie zmienia swojej wartości punktów Magii ani Miecza, ale nie może ich używać. Po powrocie do swojej zwykłej postaci, nadal ma taką samą wartość punktów Magii i Miecza."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "20.4",
@@ -1130,7 +1364,9 @@
           "Postać Zamieniona w Kamień przez trzy tury nie może się poruszać."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "20.5",
@@ -1138,7 +1374,9 @@
           "Postaci Zamienionej w Kamień nie można odebrać punktu Życia. Na taką Postać nie można rzucać Zaklęć, natomiast ona pozostawia swoje Zaklęcia. Będzie je mogła użyć po odczarowaniu z Kamienia, czyli po 3 turach."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -1153,7 +1391,9 @@
           "Ilekroć Postać dostaje lub nabywa jeden z wymienionych w tytule rozdziału Przedmiotów, powinna wziąć odpowiadającą mu Kartę."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "21.2",
@@ -1161,7 +1401,9 @@
           "Zakupione Przedmioty pod każdym względem odpowiadają Przedmiotom znalezionym w formie Kart Zdarzeń. Kart Przedmiotów zakupionych nie należy jednak odrzucać (umieszcza się je powtórnie w stosie Kart zakupów) ponieważ możliwe jest ponowne dokonanie ich zakupu. Jeżeli zabraknie Kart jakiegoś Przedmiotu, oznacza to, że Przedmiot ten jest w danej chwili nieosiągalny."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       },
       {
         "id": "21.3",
@@ -1169,7 +1411,9 @@
           "Karty wymienione w tytule rozdziału można zostawiać na planszy tak, jak wszystkie inne Karty."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -1185,7 +1429,9 @@
           "Zwycięzcą w grze zostaje Postać, która dotrze do Zamku Bestii i ją pokona."
         ],
         "examples": [],
-        "notes": []
+        "notes": [],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   },
@@ -1221,7 +1467,9 @@
           "This boxed section prints paired field instructions for the bridge's two approaches (from Wymarłe Miasto and from Ruiny Twierdzy) — hence \"WEJŚCIE NA MOST\" appears twice, with slightly different wording each time, and PUŁAPKA/MAGICZNA PUŁAPKA and DEMON ZAGŁADY/MONSTRUM each appear as a mirrored pair, matching rules 14.5-14.7 above. Both instances of \"WEJŚCIE NA MOST\" and their exact (differing) wording are transcribed as printed.",
           "Printed with a trailing period in the heading itself: \"ZAMEK BESTII.\"",
           "Unlike PUŁAPKA above, this range table has no entry for a raw result of 1 (jumps from 0 straight to 2, 3) — printed exactly as shown, not corrected."
-        ]
+        ],
+        "table": [],
+        "tableAfter": 0
       }
     ]
   }
