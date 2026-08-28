@@ -27,7 +27,7 @@ import type { Nature } from "@/data/types";
 import { CardMark } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
-import { CardTile, type TileCard } from "./card-tile";
+import { CardBack, CardTile, type TileCard } from "./card-tile";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
@@ -35,17 +35,6 @@ import { NATURE_LABEL } from "@/lib/engine/polish";
 import { cardName, plural } from "@/lib/engine/polish";
 
 const CHARACTERS = charactersData as Character[];
-
-/**
- * A starting Zaklęcie, drawn as tall as a Przedmiot's tile and no taller.
- *
- * 92 is `CardTile`'s own width and 240/209 its art's shape, so 80 is what a
- * Przedmiot occupies here. The back keeps its own proportions at that height —
- * 460 x 701 as it was cut — which is 52 across. Matching the height rather than
- * the width is what makes a mixed row read as one row.
- */
-const TILE_ART_HEIGHT = 80;
-const SPELL_BACK_WIDTH = 52;
 
 /**
  * Width of the card picture.
@@ -634,35 +623,15 @@ export function CardPreview({
                   />
                 ))}
                 {kit.spells ? (
-                  <figure className="flex flex-col items-center gap-1">
-                    {/**
-                     * A stack with one step, not a width per count.
-                     *
-                     * Each back shows twenty pixels of the one under it, which
-                     * is chosen from the top of the range: at three cards the
-                     * stack is 52 + 2 x 20 = 92, exactly a Przedmiot's tile, so
-                     * the widest hand this can hold still occupies one place in
-                     * the row. Two then come to 72 and one to 52 — narrower,
-                     * and narrower by the same step, which is what makes a
-                     * column of these look measured rather than fitted.
-                     */}
-                    <span className="flex h-[80px] items-center">
-                      {Array.from({ length: kit.spells }, (_, at) => (
-                        <Image
-                          key={at}
-                          src="/cards/back-zaklecie.jpg"
-                          alt=""
-                          width={SPELL_BACK_WIDTH}
-                          height={TILE_ART_HEIGHT}
-                          // 52 wide, stepped by 20: the margin is the difference.
-                        className={`rounded border border-magia/40 ${at > 0 ? "-ml-8" : ""}`}
-                        />
-                      ))}
-                    </span>
-                    <figcaption className="text-center text-[9px] leading-tight text-magia/80">
-                      ×{kit.spells} {plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}
-                    </figcaption>
-                  </figure>
+                  /* The same stack of backs the roster draws for a concealed
+                     hand, and the same component: 9.3's „you may not see these"
+                     and 8.1's „you start with these" are one picture, and they
+                     were two until this was pulled out. Only the caption
+                     differs, which is the only thing that does. */
+                  <CardBack
+                    count={kit.spells}
+                    caption={`×${kit.spells} ${plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}`}
+                  />
                 ) : null}
               </div>
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px] text-ink">

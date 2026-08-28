@@ -19,6 +19,7 @@ import { CloseButton } from "./chrome";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
+import { plural } from "@/lib/engine/polish";
 
 /**
  * One card, as a card.
@@ -177,24 +178,62 @@ export function CardTile({
 }
 
 /**
- * A card the other players are not allowed to see (9.3).
+ * The height a tile's picture is drawn at, and the width a Zaklęcie's back
+ * takes at that height.
  *
- * Drawn as a back rather than omitted, because how many spells a rival is
- * holding is public — the cards are visibly in their hand — and that count is
- * exactly the thing you weigh before attacking them.
+ * 92 is `CardTile`'s width and 240/209 its art's shape, so 80 is what a
+ * Przedmiot occupies. The back keeps its own proportions there — 460 x 701 as
+ * it was cut — which is 52 across. Matching the height rather than the width is
+ * what makes a mixed row read as one row.
  */
-export function CardBack({ count }: { count: number }) {
+export const TILE_ART_HEIGHT = 80;
+export const SPELL_BACK_WIDTH = 52;
+
+/**
+ * Zaklęcia somebody is holding that nobody else may look at (9.3).
+ *
+ * Drawn rather than omitted, because how many a rival holds is public — the
+ * cards are visibly in their hand — and that count is exactly the thing you
+ * weigh before attacking them. What is not public is which, so this is the
+ * printed back, as many times as there are cards.
+ *
+ * It used to be a number in a tinted rectangle: a count where every neighbour
+ * in the row was a picture, and 131px tall in a row of 80px tiles. The stack
+ * says the same number in the row's own language, and the caption still says it
+ * in figures for anybody counting past three.
+ *
+ * A stack with one step, not a width per count. Each back shows twenty pixels
+ * of the one under it, which is chosen from the top of the range: at three
+ * cards the stack is 52 + 2 x 20 = 92, exactly a Przedmiot's tile, so the hand
+ * 2.6 allows on Magia alone still occupies one place in the row. Two come to 72
+ * and one to 52 — narrower, and narrower by the same step, which is what makes
+ * a column of these look measured rather than fitted. The fourth, which only a
+ * Różdżka Zaklęć reaches, is the one that runs a tile's width over.
+ */
+export function CardBack({ count, caption }: { count: number; caption?: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="relative flex h-[131px] w-[92px] items-center justify-center rounded border border-magia/40 bg-gradient-to-br from-panel to-night">
-        <span className="font-[family-name:var(--font-display)] text-2xl text-magia/70">
-          {count}
-        </span>
-      </div>
-      <span className="text-[9px] text-muted">
-        {count === 1 ? "zakryte Zaklęcie" : "zakryte Zaklęcia"}
+    <figure className="flex flex-col items-center gap-1">
+      <span className="flex h-[80px] items-center">
+        {Array.from({ length: count }, (_, at) => (
+          <Image
+            key={at}
+            src="/cards/back-zaklecie.jpg"
+            alt=""
+            width={SPELL_BACK_WIDTH}
+            height={TILE_ART_HEIGHT}
+            // 52 wide, stepped by 20: the margin is the difference.
+            className={`rounded border border-magia/40 ${at > 0 ? "-ml-8" : ""}`}
+          />
+        ))}
       </span>
-    </div>
+      <figcaption className="text-center text-[9px] leading-tight text-magia/80">
+        {caption ?? (
+          <>
+            {count} {plural(count, "zakryte Zaklęcie", "zakryte Zaklęcia", "zakrytych Zaklęć")}
+          </>
+        )}
+      </figcaption>
+    </figure>
   );
 }
 
