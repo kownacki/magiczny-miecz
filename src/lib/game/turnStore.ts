@@ -51,6 +51,7 @@ import {
 } from "./commands/effects";
 import {
   breakFree as breakFreeOn,
+  claimMission as claimMissionOn,
   payFriend as payFriendOn,
   speakCarriedSpell as speakCarriedSpellOn,
 } from "./commands/friends";
@@ -900,6 +901,11 @@ export async function payFriend(gameId: string, seatId?: string): Promise<string
 /** Has a Przyjaciel speak the Zaklęcie he carries. Returns what the table must now do. */
 export async function speakCarriedSpell(gameId: string, seatId?: string) {
   return await change(gameId, speakCarriedSpellOn, { seatId });
+}
+
+/** Hands the Władca's misja in and takes the Tarcza Tolimana. */
+export async function claimMission(gameId: string, seatId?: string): Promise<string> {
+  return await change(gameId, claimMissionOn, { seatId });
 }
 
 /** Throws to shake off something holding the character in place. */

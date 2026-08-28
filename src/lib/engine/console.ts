@@ -199,6 +199,7 @@ export type Command =
   | { kind: "pay" }
   | { kind: "ask" }
   | { kind: "free" }
+  | { kind: "claim" }
   /* What you carry. A name, because a holding's id is a uuid nobody can type. */
   | { kind: "take"; name: string }
   | { kind: "putdown"; name: string }
@@ -498,6 +499,16 @@ export const COMMANDS: CommandSpec[] = [
     when: ["field"],
     usage: "attack <player>",
     summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
+    needs: "play",
+  },
+  {
+    // The Władca's word is "wypełnić", but what the player does at the counter
+    // is collect — the errand was finished somewhere else, often turns ago.
+    name: "claim",
+    aliases: [],
+    when: ["field", "move", "roll"],
+    usage: "claim",
+    summary: "hand the Władca's misja in and take the Tarcza (Twierdza)",
     needs: "play",
   },
   {
@@ -1211,6 +1222,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "pay") return { ok: { kind: "pay" } };
   if (word === "ask") return { ok: { kind: "ask" } };
   if (word === "free") return { ok: { kind: "free" } };
+  if (word === "claim") return { ok: { kind: "claim" } };
   if (word === "raid") {
     return tail
       ? { ok: { kind: "raid", who: tail } }
@@ -1596,6 +1608,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   pay: "play",
   ask: "play",
   free: "play",
+  claim: "play",
   take: "play",
   putdown: "play",
   equip: "play",

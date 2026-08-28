@@ -39,6 +39,7 @@ import {
   payFriend,
   speakCarriedSpell,
   breakFree,
+  claimMission,
   beginFight,
   dropCard,
   equipCard,
@@ -1040,6 +1041,12 @@ export async function runCommand(
       const seat = seatOf(command.who);
       await attackSeat(gameId, seat.id);
       return `${named(seatOf(null))} attacks ${named(seat)}.`;
+    }
+
+    case "claim": {
+      const seat = seatOf(null);
+      const took = await claimMission(gameId);
+      return `${named(seat)} completes the misja and receives ${took}.`;
     }
 
     case "free": {

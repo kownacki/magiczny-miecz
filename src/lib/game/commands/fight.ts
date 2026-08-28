@@ -37,6 +37,7 @@ import {
   recordFightRoll,
   setFightTotal,
   startFight,
+  type Fight,
 } from "@/lib/engine/turn";
 import { EVENTS, SPELL_BY_ID } from "../decks";
 import { cardName, fieldName } from "@/lib/engine/polish";
@@ -54,8 +55,9 @@ import { liftOffField } from "./holdings";
 import { asReturnable, putOnPile } from "./piles";
 import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById, seatView } from "./seat";
 import { floorOf } from "./spellFloor";
-import { afterFight } from "@/lib/engine/status";
+import { afterFight, missionOf } from "@/lib/engine/status";
 import { keepOnly, statusesOf } from "./turn";
+import type { SeatRow } from "../store";
 import { settleBridge, settleCrossing } from "./bridge";
 import { spendLife } from "./life";
 
@@ -1318,8 +1320,24 @@ export async function resolveFight(
     }
   }
 
+  /**
+   * The Władca's errand, if this fight was it.
+   *
+   * "1 - pokonasz Wroga; 2-3 pokonasz inną Postać (po wypełnieniu misji
+   * zostaniesz natychmiast przeniesiony do Twierdzy)." Read here because this
+   * is where a win becomes a fact, and marked rather than paid out: the Tarcza
+   * is the Władca's to give and he is at the Twierdza. The Postać errand is the
+   * one the board carries you back for, which is the difference between an
+   * errand you have done and one you have delivered.
+   *
+   * A raid does not count. The Poszukiwacz Przygód fights on his own account —
+   * it is his three points against them — and the Władca asked *you* to beat
+   * somebody.
+   */
+  const errand = fight.raid ? {} : missionDone(snapshot, seat, fight);
+
   return {
-    writes: mergeAll(cleared, paid, {
+    writes: mergeAll(cleared, paid, errand, {
       game: { turn_state: endFight(state) },
       journal: [
         {
@@ -1331,5 +1349,48 @@ export async function resolveFight(
       ],
     }),
     result: undefined,
+  };
+}
+
+/**
+ * Marks the Władca's errand done, where this fight was what he asked for.
+ *
+ * Nothing at all when there is no errand, when it is a gold one, when it is
+ * already done, or when the fight was lost — four ways of not being the thing
+ * that was asked, and none of them worth a journal line.
+ */
+function missionDone(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset {
+  if (fight.result?.outcome !== "wygrana") return {};
+  const errand = missionOf(statusesOf(snapshot, seat.id));
+  if (!errand || errand.gotowa) return {};
+
+  const wanted = fight.opponentSeat !== undefined ? "postac" : "wrog";
+  if (errand.co !== wanted) return {};
+
+  return {
+    effects: {
+      patch: [
+        {
+          id: errand.id,
+          patch: {
+            modifier: { kind: "misja", co: errand.co, gotowa: true },
+            label: "Misja wypełniona — wróć po Tarczę",
+          },
+        },
+      ],
+    },
+    // "po wypełnieniu misji zostaniesz natychmiast przeniesiony do Twierdzy" —
+    // only the errand against another Postać carries you back.
+    ...(errand.co === "postac"
+      ? { seats: [{ id: seat.id, patch: { field_id: "twierdza-strzegaca-drog" } }] }
+      : {}),
+    journal: [
+      {
+        seatId: seat.id,
+        turn: snapshot.game.turn,
+        kind: "effect",
+        payload: { source: "twierdza-strzegaca-drog", label: "Misja wypełniona" },
+      },
+    ],
   };
 }

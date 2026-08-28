@@ -1,13 +1,14 @@
 /** The things a Przyjaciel does that are not a fight (6.1-6.4, and the cards' own text). */
 
 import { carriesSpell, sellsPoints } from "@/lib/engine/abilities";
-import { afterBreakout, heldByARoll } from "@/lib/engine/status";
+import { afterBreakout, heldByARoll, missionOf } from "@/lib/engine/status";
 import { inEffect } from "@/lib/engine/holdings";
 import { cardName } from "@/lib/engine/polish";
-import { apply, merge, mergeAll, type CommandPorts, type Outcome, type Snapshot } from "../change";
+import { apply, merge, mergeAll, type Changeset, type CommandPorts, type Outcome, type Snapshot } from "../change";
 import { activeSeat, eqModeOf, seatById, seatView } from "./seat";
 import { addEffect, keepOnly, statusesOf } from "./turn";
 import { castSpell, type Cast, type CastSpell } from "./fight";
+import { takeCard } from "./holdings";
 import { asReturnable, putOnPile } from "./piles";
 
 /**
@@ -197,5 +198,70 @@ export async function breakFree(
       ],
     }),
     result: { die, freed: freed.map((one) => one.label) },
+  };
+}
+
+/**
+ * Hands the Władca's errand in, and takes the Tarcza Tolimana for it.
+ *
+ * "Po wypełnieniu misji, Władca ofiaruje ci Tarczę Tolimana." He is at the
+ * Twierdza, so the collecting happens there whatever the errand was — the
+ * board carries you back itself only for the one against another Postać, and
+ * the other two you walk.
+ *
+ * The gold errand is finished *here* rather than out in the world: "przyniesiesz
+ * 3 Sz. Z. (odłóż je)" is a delivery, and the coins leave the purse at the
+ * moment they are handed over. The other two were finished when the fight was
+ * won and only need collecting.
+ *
+ * Deliberately not the Twierdza's own offer. An offer is resolved once when a
+ * character arrives; this is a thing done on a later visit, possibly many turns
+ * later, and possibly on a visit where the character also takes a new errand.
+ */
+export function claimMission(snapshot: Snapshot, command: { seatId?: string }): Outcome<string> {
+  const seat = command.seatId ? seatById(snapshot, command.seatId) : activeSeat(snapshot);
+  if (seat.field_id !== "twierdza-strzegaca-drog") {
+    throw new Error("Władca czeka w Twierdzy Strzegącej Dróg.");
+  }
+
+  const errand = missionOf(statusesOf(snapshot, seat.id));
+  if (!errand) throw new Error("Nie masz misji od Władcy.");
+
+  let paid: Changeset = {};
+  if (errand.co === "zloto") {
+    if (seat.gold < errand.ile) {
+      throw new Error(`Władca chce ${errand.ile} Sz. Z. — masz ${seat.gold}.`);
+    }
+    paid = { seats: [{ id: seat.id, patch: { gold: seat.gold - errand.ile } }] };
+  } else if (!errand.gotowa) {
+    throw new Error(
+      errand.co === "wrog" ? "Najpierw pokonaj Wroga." : "Najpierw pokonaj inną Postać.",
+    );
+  }
+
+  // The Tarcza comes out of the Wyposażenie like any other, so 21.2's stock is
+  // counted and an empty pile refuses — the Władca cannot give what the box
+  // does not have.
+  const given = takeCard(apply(snapshot, paid), {
+    seatId: seat.id,
+    cardId: "tarcza-tolimana",
+  });
+
+  return {
+    writes: mergeAll(paid, given.writes, keepOnly(
+      apply(snapshot, mergeAll(paid, given.writes)),
+      seat.id,
+      statusesOf(snapshot, seat.id).filter((status) => status.id !== errand.id),
+    ), {
+      journal: [
+        {
+          seatId: seat.id,
+          turn: snapshot.game.turn,
+          kind: "effect",
+          payload: { source: "twierdza-strzegaca-drog", label: "Tarcza Tolimana za misję" },
+        },
+      ],
+    }),
+    result: "TARCZA TOLIMANA",
   };
 }

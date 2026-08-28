@@ -9,6 +9,7 @@ import {
   payFriend,
   speakCarriedSpell,
   breakFree,
+  claimMission,
   beginFight,
   crossRing,
   fightGuardian,
@@ -126,6 +127,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       // a character has at most one of each and the command finds it.
       // Throwing to shake off an Obszar that is holding the character in place
       // (both Świątynie, face 9). No body: it is always the actor's own seat.
+      // Handing the Władca's misja in at the Twierdza (15.x, board text).
+      case "claim":
+        await claimMission(game.id);
+        break;
       case "free":
         await breakFree(game.id);
         break;

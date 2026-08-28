@@ -71,7 +71,23 @@ export type Modifier =
    * changed, so "changed this turn" is a fact a player has to be able to see
    * without it altering anything by itself.
    */
-  | { kind: "note" };
+  | { kind: "note" }
+  /**
+   * A standing errand for the Władca Twierdzy, and the only rule on the board
+   * that outlives the turn it started in.
+   *
+   * "Władca Twierdzy może wyznaczyć ci misję ... Po wypełnieniu misji, Władca
+   * ofiaruje ci Tarczę Tolimana." Everything else an Obszar does is settled
+   * where you stand; this one sends you away and waits.
+   *
+   * It lives in `seat_effects` rather than in a column of its own because that
+   * is already the table for things that are true of a character for a while,
+   * and a mission needs exactly what a status needs: something to show the
+   * player, and something the rules can read. `gotowa` is set when the errand
+   * is done but the Tarcza has not been collected — for a Wróg or a Postać the
+   * doing and the collecting happen in different places.
+   */
+  | { kind: "misja"; co: "wrog" | "postac" | "zloto"; ile?: number; gotowa?: true };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -156,6 +172,22 @@ export function afterFight(statuses: readonly Status[]): Status[] {
  */
 export function afterBreakout(statuses: readonly Status[], die: number): Status[] {
   return statuses.filter((status) => !(status.ends.kind === "rzut" && die <= status.ends.upTo));
+}
+
+/** The errand this character is carrying for the Władca, if any. */
+export function missionOf(
+  statuses: readonly Status[],
+): { id: string; co: "wrog" | "postac" | "zloto"; ile: number; gotowa: boolean } | null {
+  for (const status of statuses) {
+    if (status.modifier.kind !== "misja") continue;
+    return {
+      id: status.id,
+      co: status.modifier.co,
+      ile: status.modifier.ile ?? 0,
+      gotowa: status.modifier.gotowa ?? false,
+    };
+  }
+  return null;
 }
 
 /** Whether anything the holder is under can be thrown off at all. */
@@ -326,6 +358,15 @@ export function markOf(status: Status): Mark {
       return { glyph: "\u25D1", tone: "obojetny", title };
     case "barred":
       return { glyph: "\u2298", tone: "zly", title };
+    // An errand rather than an affliction, so it is neither good nor bad to be
+    // carrying one — and a filled star once it is done and only the collecting
+    // is left.
+    case "misja":
+      return {
+        glyph: status.modifier.gotowa ? "\u2605" : "\u2606",
+        tone: "obojetny",
+        title,
+      };
     case "note":
       return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };
   }

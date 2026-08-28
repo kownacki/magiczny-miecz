@@ -182,9 +182,22 @@ describe("the offer an Obszar makes whether or not it is asked", () => {
   });
 
   it("says nothing about a field with no script at all", () => {
-    // The Twierdza Strzegąca Dróg's mission is deliberately not encoded;
-    // nothing may be inferred from its absence.
-    expect(fieldScriptFor("twierdza-strzegaca-drog")).toBeNull();
+    // The Wrzosowiska draw two Karty and print nothing else, so 13.4 covers the
+    // whole of it and there is no script to find. Nothing may be inferred from
+    // that absence — least of all that the Obszar does nothing.
+    expect(fieldScriptFor("wrzosowiska")).toBeNull();
+    expect(compulsoryOffer("wrzosowiska", [])).toBeNull();
+  });
+
+  /**
+   * The Twierdza used to stand here as the example of a deliberate absence.
+   * Its mission is encoded now, and the thing worth pinning instead is that
+   * nobody is given an errand for walking past: "Władca Twierdzy **może**
+   * wyznaczyć ci misję. **Jeżeli się zdecydowałeś** rzuć kostką" is optional
+   * twice over.
+   */
+  it("never presses the Władca's errand on a passer-by", () => {
+    expect(fieldScriptFor("twierdza-strzegaca-drog")).not.toBeNull();
     expect(compulsoryOffer("twierdza-strzegaca-drog", [])).toBeNull();
   });
 

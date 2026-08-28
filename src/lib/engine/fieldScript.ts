@@ -619,6 +619,78 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   },
 
   /**
+   * "Władca Twierdzy może wyznaczyć ci misję. Jeżeli się zdecydowałeś rzuć
+   * kostką: 1 - pokonasz Wroga; 2-3 pokonasz inną Postać (po wypełnieniu misji
+   * zostaniesz natychmiast przeniesiony do Twierdzy); 4-5 przyniesiesz 3 Sz. Z.
+   * (odłóż je); 6 - przyniesiesz 2 Sz. Z. (odłóż je). Po wypełnieniu misji,
+   * Władca ofiaruje ci Tarczę Tolimana."
+   *
+   * The only errand on the board, and the only rule that outlives the turn it
+   * started in: every other Obszar settles where you stand, and this one sends
+   * you away and waits. So the offer here does one thing — takes the mission on
+   * — and `claimMission` is what finishes it, because finishing happens
+   * somewhere else and possibly many turns later.
+   *
+   * "Możesz" and "jeżeli się zdecydowałeś", so it is an offer twice over: the
+   * Władca may set one and you may decline. Nobody is given an errand for
+   * walking past.
+   *
+   * Worth knowing what it is *for*: the Tarcza Tolimana is the key to the Zamek
+   * Bestii, so this is a route to winning rather than an errand for its own
+   * sake. It is not the only one — the Świątynia Tolimana hands one out on a
+   * ten, and the Wyposażenie has its own — but it is the only one a player can
+   * set out to do on purpose.
+   */
+  "twierdza-strzegaca-drog": {
+    offers: [
+      {
+        name: "Misja",
+        effect: {
+          op: "rzut",
+          faces: {
+            1: {
+              op: "efekt",
+              label: "Misja: pokonaj Wroga",
+              modifier: { kind: "misja", co: "wrog" },
+              ends: { kind: "dispelled" },
+            },
+            2: {
+              op: "efekt",
+              label: "Misja: pokonaj inną Postać",
+              modifier: { kind: "misja", co: "postac" },
+              ends: { kind: "dispelled" },
+            },
+            3: {
+              op: "efekt",
+              label: "Misja: pokonaj inną Postać",
+              modifier: { kind: "misja", co: "postac" },
+              ends: { kind: "dispelled" },
+            },
+            4: {
+              op: "efekt",
+              label: "Misja: przynieś 3 Sztuki Złota",
+              modifier: { kind: "misja", co: "zloto", ile: 3 },
+              ends: { kind: "dispelled" },
+            },
+            5: {
+              op: "efekt",
+              label: "Misja: przynieś 3 Sztuki Złota",
+              modifier: { kind: "misja", co: "zloto", ile: 3 },
+              ends: { kind: "dispelled" },
+            },
+            6: {
+              op: "efekt",
+              label: "Misja: przynieś 2 Sztuki Złota",
+              modifier: { kind: "misja", co: "zloto", ile: 2 },
+              ends: { kind: "dispelled" },
+            },
+          },
+        },
+      },
+    ],
+  },
+
+  /**
    * "Rzuć kostką: 1 lub 2 oczka oznaczają, że tracisz 1 Życie. Rzuć także za
    * każdego z Przyjaciół: 1 lub 2 oczka Przyjaciel traci Życie."
    *

@@ -778,6 +778,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   pay: { line: "pay", becomes: { kind: "pay" } },
   ask: { line: "ask", becomes: { kind: "ask" } },
   free: { line: "free", becomes: { kind: "free" } },
+  claim: { line: "claim", becomes: { kind: "claim" } },
   move: { line: "move Karczma", becomes: { kind: "move", fieldId: "karczma" } },
   draw: { line: "draw", becomes: { kind: "draw" } },
   look: { line: "look", becomes: { kind: "look" } },
