@@ -61,5 +61,13 @@ export function stockLeft(cardId: string, inPlay: number, endless = false): numb
  * Zamek without the second, so "there are four and five of you want one" is not
  * a shortage of cardboard, it is the endgame. An endless pile of those is a
  * different game, and a quieter one.
+ *
+ * They are printed on the Wyposażenie sheets and drawn from the same pile, so
+ * calling them Wyposażenie is not wrong about the cardboard. The rulebook still
+ * holds them apart: chapter 21 is titled "MAGICZNE MIECZE, TARCZE TOLIMANA I
+ * KARTY WYPOSAŻENIA" — three things joined by *i* — and 21.1 refers back to
+ * that title as a list. Which is why nothing a player reads calls this setting
+ * "Wyposażenie": on the sheet they are exactly that, and a label saying so
+ * would promise to cover them.
  */
 export const RELICS: ReadonlySet<string> = new Set(["magiczny-miecz", "tarcza-tolimana"]);

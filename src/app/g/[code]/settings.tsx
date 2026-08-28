@@ -54,14 +54,14 @@ export function Settings({
             six Miecze on a board that holds five. */}
         <Switch
           on={endlessStock}
-          label="Niewyczerpane Wyposażenie"
+          label="Zwykłych Przedmiotów nie brakuje"
           onAsk={endlessStock ? undefined : onEndlessStock}
           fixed={
             endlessStock
               ? "Włączone na dobre — do skończonego stosu wraca się tylko przy nowym stole."
               : undefined
           }
-          said="Miecza, Hełmu czy Sztyletu nigdy nie zabraknie. Magiczny Miecz i Tarcza Tolimana zostają rzadkie, bo na nich stoi końcówka gry (11.9, 14.7)."
+          said="Miecza, Hełmu, Sztyletu, Zbroi ani Tarczy nigdy nie zabraknie. Magiczne Miecze i Tarcze Tolimana zostają rzadkie — leżą na tym samym arkuszu, ale rozdział 21 wymienia je osobno, i na nich stoi końcówka gry (11.9, 14.7)."
         />
         <Switch
           name="ruleRefs"

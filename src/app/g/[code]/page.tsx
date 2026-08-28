@@ -1159,8 +1159,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                  */
                 onEndlessStock={() =>
                   setAsk({
-                    title: "Niewyczerpane Wyposażenie",
-                    body: "Miecza, Hełmu, Sztyletu, Zbroi i Tarczy przestanie brakować do końca tej gry. Magiczny Miecz i Tarcza Tolimana zostają rzadkie. Tego się już nie cofa — do skończonego stosu wraca się tylko przy nowym stole.",
+                    title: "Zwykłych Przedmiotów nie brakuje",
+                    body: "Miecza, Hełmu, Sztyletu, Zbroi i Tarczy przestanie brakować do końca tej gry. Magiczne Miecze i Tarcze Tolimana zostają rzadkie — rozdział 21 wymienia je osobno od Kart Wyposażenia, choć leżą na tym samym arkuszu. Tego się już nie cofa: do skończonego stosu wraca się tylko przy nowym stole.",
                     confirmLabel: "Włącz na stałe",
                     tone: "grave",
                     onConfirm: () => {

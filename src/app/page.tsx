@@ -544,20 +544,25 @@ function CreateDialog({
             what wearing something means, while this decides whether one pile
             can run dry. */}
         <fieldset className="mt-3 flex flex-col gap-2">
+          {/* Not "Wyposażenie": chapter 21 is titled "MAGICZNE MIECZE, TARCZE
+              TOLIMANA I KARTY WYPOSAŻENIA", three things joined by *i*, and
+              both relics are printed on the Wyposażenie sheet all the same. A
+              legend reading "Wyposażenie" beside a setting that deliberately
+              spares those two would be read as covering them. */}
           <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
-            Wyposażenie
+            Zapas Przedmiotów
           </legend>
           <ModeChoice
             active={endlessStock}
             onPick={() => setEndlessStock(true)}
-            label="Niewyczerpane"
-            hint="Miecza, Hełmu czy Sztyletu nigdy nie zabraknie. Magiczny Miecz i Tarcza Tolimana zostają rzadkie."
+            label="Zwykłego nigdy nie brakuje"
+            hint="Miecz, Hełm, Sztylet, Zbroja, Tarcza — bez limitu. Magiczne Miecze i Tarcze Tolimana to osobna sprawa i zostają rzadkie (rozdz. 21)."
           />
           <ModeChoice
             active={!endlessStock}
             onPick={() => setEndlessStock(false)}
             label="Jak w pudełku"
-            hint="Stos jest skończony (21.2) — pięć Mieczy na pięciu graczy i już żadnego."
+            hint="Cały stos jest skończony (21.2): trzy Miecze, a Postaci z Mieczem w Charakterystyce jest pięć."
           />
         </fieldset>
 
