@@ -6,6 +6,8 @@ import { mayAct } from "@/lib/game/permission";
 import {
   attackSeat,
   sendRaider,
+  healFromFriend,
+  partWithFriend,
   payFriend,
   speakCarriedSpell,
   breakFree,
@@ -140,6 +142,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       case "pay":
         await payFriend(game.id);
         break;
+      /**
+       * The two friends who mend you at one named Obszar, and who may be given
+       * up there instead. Both are the card's own offer rather than the
+       * Obszar's, which is why neither goes through the shop.
+       */
+      case "friend-heal":
+        return NextResponse.json({
+          healed: await healFromFriend(game.id, Number(body.points ?? 1)),
+        });
+      case "friend-part":
+        return NextResponse.json({
+          gold: await partWithFriend(game.id, String(body.holdingId)),
+        });
       case "raid":
         await sendRaider(
           game.id,

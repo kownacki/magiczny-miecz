@@ -66,8 +66,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   najemnik: "Przyjmujesz go za 1 Sz. Z. — bez zapłaty zostaje na Obszarze i czeka.",
   alchemik: "Zamiana jest nieodwracalna — Karta Przedmiotu wraca na stos.",
   tragarz: "Bez zapłaty 1 Sz. Z. odchodzi. Tracąc go, tracisz też niesione Przedmioty.",
-  ksiezniczka: "Możesz oddać jej Kartę w Zamku za 3 Sztuki Złota.",
-  wladca: "Możesz oddać jego Kartę w Twierdzy za 3 Sztuki Złota.",
 
   // --- cards whose disposition is handled but whose body is not -------------
 

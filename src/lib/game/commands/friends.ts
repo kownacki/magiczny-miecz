@@ -1,6 +1,8 @@
 /** The things a Przyjaciel does that are not a fight (6.1-6.4, and the cards' own text). */
 
-import { carriesSpell, sellsPoints } from "@/lib/engine/abilities";
+import { carriesSpell, heldAbilities, sellsPoints } from "@/lib/engine/abilities";
+import { HEAL_CEILING } from "@/lib/engine/derive";
+import type { FieldId } from "@/lib/engine/board";
 import { afterBreakout, heldByARoll, missionOf } from "@/lib/engine/status";
 import { inEffect } from "@/lib/engine/holdings";
 import { cardName } from "@/lib/engine/polish";
@@ -35,6 +37,152 @@ import { asReturnable, putOnPile } from "./piles";
  * it was bought in, so an effect from this card already sitting on the seat *is*
  * the record of having paid: no column, and nothing to reset when a turn ends.
  */
+/**
+ * The friend who mends you where she belongs (KSIĘŻNICZKA, WŁADCA).
+ *
+ * "Dzięki przyjaźni Księżniczki będziesz mógł odzyskać do 2 punktów Życia,
+ * podczas każdej wizyty w Zamku" — and the Władca says the same of the Twierdza
+ * Strzegąca Dróg. It costs nothing: the friendship *is* the payment, which is
+ * what separates this from the Medyk, who charges by the point.
+ *
+ * The ability was written down and read by nothing. `payHealer` asks the
+ * *Obszar* what it offers and never the cards in your hand, so both of these
+ * behaved exactly as they would have with the clause absent — the same fault
+ * four other kinds had before they were wired, and this was the fifth.
+ *
+ * 4.7's ceiling still holds. "Odzyskać" is recovering what you lost, and no
+ * card in the box lifts a Postać above the Życie it started with.
+ *
+ * Once per turn, recorded the way `payFriend` records its own: an effect from
+ * this card already on the seat *is* the record, so nothing is stored and
+ * nothing has to be cleared when the turn ends. "Każda wizyta" and "once in a
+ * turn you are standing here" are the same thing at this table — a move ends on
+ * one Obszar, so a second visit is a later turn.
+ */
+export function healFromFriend(
+  snapshot: Snapshot,
+  command: { seatId?: string; points: number },
+): Outcome<number> {
+  const seat = command.seatId ? seatById(snapshot, command.seatId) : activeSeat(snapshot);
+  if (!seat.field_id) throw new Error("Postać nie stoi jeszcze na Obszarze.");
+  const view = seatView(snapshot, seat.id);
+
+  const here = heldAbilities(
+    inEffect(view.holdings, eqModeOf(snapshot.game), view.nature).map((held) => held.cardId),
+  ).find(
+    (ability) => ability.kind === "uzdrowienie" && ability.field === (seat.field_id as FieldId),
+  );
+  if (!here || here.kind !== "uzdrowienie") {
+    throw new Error("Żaden twój Przyjaciel nie leczy na tym Obszarze.");
+  }
+
+  const from = view.holdings.find((held) =>
+    heldAbilities([held.cardId]).some(
+      (ability) => ability.kind === "uzdrowienie" && ability.field === seat.field_id,
+    ),
+  );
+  const name = from ? cardName(from.cardId) : "Przyjaciel";
+  if (view.statuses.some((status) => status.source === from?.cardId)) {
+    throw new Error(`${name} pomógł ci już w tej turze.`);
+  }
+
+  const wanted = Math.min(
+    Math.max(0, Math.floor(command.points)),
+    here.upTo,
+    Math.max(0, HEAL_CEILING - seat.life),
+  );
+  if (wanted <= 0) {
+    throw new Error(
+      seat.life >= HEAL_CEILING
+        ? `Życie jest już na poziomie początkowym (${HEAL_CEILING}) — 4.7 nie pozwala wyżej.`
+        : "Ile punktów?",
+    );
+  }
+
+  return {
+    writes: merge(
+      {
+        seats: [{ id: seat.id, patch: { life: seat.life + wanted } }],
+        journal: [
+          {
+            seatId: seat.id,
+            turn: snapshot.game.turn,
+            kind: "healed",
+            payload: { cardId: from?.cardId, points: wanted, price: 0 },
+          },
+        ],
+      },
+      addEffect(snapshot, {
+        seatId: seat.id,
+        effect: {
+          // The card, so the once-a-turn check above recognises it — the same
+          // trick `payFriend` uses, and for the same reason.
+          source: from?.cardId ?? "uzdrowienie",
+          label: `pomoc: ${name}`,
+          // Nothing to add — the Życie is already written to the seat. This
+          // effect is only a mark saying the visit has been used, which is
+          // exactly what `payFriend` uses one for.
+          modifier: { kind: "points" },
+          ends: { kind: "turns", turns: 1 },
+        },
+      }),
+    ),
+    result: wanted,
+  };
+}
+
+/**
+ * Giving a friend's Karta up where she belongs, for gold.
+ *
+ * "Jeżeli zrezygnujesz tam z jej Karty, otrzymasz 3 Sztuki Złota (lecz będziesz
+ * musiał odłożyć Kartę Księżniczki)." A trade rather than a dismissal: 6.4 lets
+ * anybody put a friend down anywhere for nothing, and that is `dropCard`. This
+ * is the one place each of these two is worth something, and it costs you the
+ * card for good.
+ *
+ * Not `sellHolding`, which is the Lichwiarz's desk and refuses anything that is
+ * not a Przedmiot — rightly, because 5.4 is about Przedmioty and so is he. This
+ * is one card's own offer at one Obszar.
+ */
+export function partWithFriend(
+  snapshot: Snapshot,
+  command: { seatId?: string; holdingId: string },
+): Outcome<number> {
+  const seat = command.seatId ? seatById(snapshot, command.seatId) : activeSeat(snapshot);
+  if (!seat.field_id) throw new Error("Postać nie stoi jeszcze na Obszarze.");
+
+  const held = snapshot.holdings.find(
+    (one) => one.id === command.holdingId && one.seat_id === seat.id,
+  );
+  if (!held) throw new Error("Nie masz tej karty.");
+
+  const offer = heldAbilities([held.card_id]).find((ability) => ability.kind === "oddaj-w");
+  if (!offer || offer.kind !== "oddaj-w") {
+    throw new Error(`${cardName(held.card_id)} nie jest kartą, którą się gdziekolwiek oddaje.`);
+  }
+  if (offer.field !== seat.field_id) {
+    throw new Error(`${cardName(held.card_id)} przyjmuje zapłatę tylko w: ${offer.field}.`);
+  }
+
+  const gone: Changeset = { holdings: { delete: [held.id] } };
+  const returned = putOnPile(apply(snapshot, gone), "events", [asReturnable(held)]);
+
+  return {
+    writes: mergeAll(gone, returned, {
+      seats: [{ id: seat.id, patch: { gold: seat.gold + offer.cena } }],
+      journal: [
+        {
+          seatId: seat.id,
+          turn: snapshot.game.turn,
+          kind: "sold",
+          payload: { cardId: held.card_id, price: offer.cena },
+        },
+      ],
+    }),
+    result: offer.cena,
+  };
+}
+
 export function payFriend(snapshot: Snapshot, command: { seatId?: string }): Outcome<string> {
   const seat = command.seatId ? seatById(snapshot, command.seatId) : activeSeat(snapshot);
   const view = seatView(snapshot, seat.id);

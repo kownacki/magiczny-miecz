@@ -52,6 +52,8 @@ import {
 import {
   breakFree as breakFreeOn,
   claimMission as claimMissionOn,
+  healFromFriend as healFromFriendOn,
+  partWithFriend as partWithFriendOn,
   payFriend as payFriendOn,
   speakCarriedSpell as speakCarriedSpellOn,
 } from "./commands/friends";
@@ -897,6 +899,24 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
 /** Buys a turn of the Najemnik's sword. Returns the card, so the console can name him. */
 export async function payFriend(gameId: string, seatId?: string): Promise<string> {
   return await change(gameId, payFriendOn, { seatId });
+}
+
+/** The Księżniczka or the Władca mending you where they belong. Returns the points given back. */
+export async function healFromFriend(
+  gameId: string,
+  points: number,
+  seatId?: string,
+): Promise<number> {
+  return await change(gameId, healFromFriendOn, { seatId, points });
+}
+
+/** Giving one of those two up at their own Obszar. Returns the gold taken for it. */
+export async function partWithFriend(
+  gameId: string,
+  holdingId: string,
+  seatId?: string,
+): Promise<number> {
+  return await change(gameId, partWithFriendOn, { seatId, holdingId });
 }
 
 /** Has a Przyjaciel speak the Zaklęcie he carries. Returns what the table must now do. */

@@ -167,6 +167,16 @@ export type Ability =
   /** Księżniczka at the Zamek, Władca at the Twierdza: up to two Życia a visit. */
   | { kind: "uzdrowienie"; field: FieldId; upTo: number }
   /**
+   * Giving the Karta up where the friend belongs, for gold.
+   *
+   * "Jeżeli zrezygnujesz tam z jej Karty, otrzymasz 3 Sztuki Złota" — the same
+   * offer on the Księżniczka and the Władca, each at their own Obszar. Its own
+   * kind rather than a field on `uzdrowienie`, because they are two different
+   * things a card offers at one place: one you may do on every visit and one
+   * you may do once, since it ends with the card on the used pile.
+   */
+  | { kind: "oddaj-w"; field: FieldId; cena: number }
+  /**
    * Fights with its own points rather than lending you any — and the two cards
    * that do it are not doing the same thing.
    *
@@ -531,8 +541,14 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
     { kind: "ucieczka", fields: ["mokradla-1", "mokradla-2", "las-blednych-ogni"] },
     { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 },
   ],
-  ksiezniczka: [{ kind: "uzdrowienie", field: "zamek", upTo: 2 }],
-  wladca: [{ kind: "uzdrowienie", field: "twierdza-strzegaca-drog", upTo: 2 }],
+  ksiezniczka: [
+    { kind: "uzdrowienie", field: "zamek", upTo: 2 },
+    { kind: "oddaj-w", field: "zamek", cena: 3 },
+  ],
+  wladca: [
+    { kind: "uzdrowienie", field: "twierdza-strzegaca-drog", upTo: 2 },
+    { kind: "oddaj-w", field: "twierdza-strzegaca-drog", cena: 3 },
+  ],
 };
 
 export function abilitiesOf(cardId: string): readonly Ability[] {

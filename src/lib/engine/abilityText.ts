@@ -277,6 +277,8 @@ export function describeAbility(ability: Ability): string {
         : "przeprawa przez Lodowy Las w dowolnym miejscu";
     case "uzdrowienie":
       return `do ${ability.upTo} Życia w: ${fieldName(ability.field)}`;
+    case "oddaj-w":
+      return `oddaj Kartę w: ${fieldName(ability.field)} za ${ability.cena} Sz. Z.`;
     case "walczy-za-ciebie":
       return `walczy za ciebie (Miecz ${ability.miecz}, Magia ${ability.magia})`;
     case "niedostepny":

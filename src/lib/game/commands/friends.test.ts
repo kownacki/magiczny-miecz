@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { castSpell, friendDiesInstead, sendRaider } from "./fight";
-import { payFriend, speakCarriedSpell } from "./friends";
+import { healFromFriend, partWithFriend, payFriend, speakCarriedSpell } from "./friends";
 import { apply } from "../change";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
@@ -456,5 +456,105 @@ describe("a Zaklęcie carried by a Przyjaciel", () => {
     const table = carrying("krzyzowiec");
     const after = apply(table, dropCard(table, { holdingId: "h-friend" }).writes);
     expect(after.holdings).toHaveLength(0);
+  });
+});
+
+/**
+ * The two who mend you where they belong, and may be given up there instead.
+ *
+ * "Dzięki przyjaźni Księżniczki będziesz mógł odzyskać do 2 punktów Życia,
+ * podczas każdej wizyty w Zamku. Jeżeli zrezygnujesz tam z jej Karty, otrzymasz
+ * 3 Sztuki Złota." The Władca says the same of the Twierdza Strzegąca Dróg.
+ *
+ * The healing half was declared in `ABILITIES` and read by nothing: `payHealer`
+ * asks the *Obszar* what it offers and never the cards in the hand, so both
+ * cards behaved exactly as they would have with the clause absent.
+ */
+describe("a friend who mends you at her own Obszar (Księżniczka, Władca)", () => {
+  const at = (field: FieldId | null, friend = "ksiezniczka", life = 1, gold = 0) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", field_id: field, life, gold })],
+      holdings: [aHolding({ id: "h-friend", seat_id: "seat-a", card_id: friend, kind: "friend" })],
+    });
+
+  it("gives back what was lost, up to the two the card names", () => {
+    const { writes, result } = healFromFriend(at("zamek"), { seatId: "seat-a", points: 2 });
+    expect(result).toBe(2);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 3 } }]);
+  });
+
+  it("costs nothing — the friendship is the payment", () => {
+    // The Medyk charges by the point; this is a friend, and the card names no
+    // price at all.
+    const { writes } = healFromFriend(at("zamek", "ksiezniczka", 1, 0), {
+      seatId: "seat-a",
+      points: 2,
+    });
+    expect(writes.seats?.[0].patch).not.toHaveProperty("gold");
+  });
+
+  it("stops at 4.7's ceiling rather than at the card's number", () => {
+    // Two points offered, one point missing: you get the one.
+    const { result } = healFromFriend(at("zamek", "ksiezniczka", 3), {
+      seatId: "seat-a",
+      points: 2,
+    });
+    expect(result).toBe(1);
+  });
+
+  it("refuses anywhere else, however friendly she is", () => {
+    expect(() => healFromFriend(at("gospoda"), { seatId: "seat-a", points: 1 })).toThrow(
+      /nie leczy na tym Obszarze/,
+    );
+  });
+
+  it("is the Twierdza for the Władca, and only the Twierdza", () => {
+    expect(
+      healFromFriend(at("twierdza-strzegaca-drog", "wladca"), { seatId: "seat-a", points: 2 })
+        .result,
+    ).toBe(2);
+    expect(() => healFromFriend(at("zamek", "wladca"), { seatId: "seat-a", points: 1 })).toThrow(
+      /nie leczy/,
+    );
+  });
+
+  it("helps once in a turn, and says so the second time", () => {
+    const table = at("zamek");
+    const after = apply(table, healFromFriend(table, { seatId: "seat-a", points: 1 }).writes);
+    expect(() => healFromFriend(after, { seatId: "seat-a", points: 1 })).toThrow(
+      /już w tej turze/,
+    );
+  });
+});
+
+describe("giving that friend up for gold, where she belongs", () => {
+  const at = (field: FieldId | null, friend = "ksiezniczka") =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", field_id: field, gold: 1 })],
+      holdings: [aHolding({ id: "h-friend", seat_id: "seat-a", card_id: friend, kind: "friend" })],
+    });
+
+  it("pays the three the card names and takes the Karta for good", () => {
+    const { writes, result } = partWithFriend(at("zamek"), {
+      seatId: "seat-a",
+      holdingId: "h-friend",
+    });
+    expect(result).toBe(3);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 4 } }]);
+    expect(writes.holdings?.delete).toEqual(["h-friend"]);
+  });
+
+  it("refuses at any other Obszar", () => {
+    // 6.4 lets you put a friend down anywhere for nothing — that is `dropCard`.
+    // This is the one place she is worth something.
+    expect(() =>
+      partWithFriend(at("gospoda"), { seatId: "seat-a", holdingId: "h-friend" }),
+    ).toThrow(/tylko w/);
+  });
+
+  it("refuses a friend who is not one of the two", () => {
+    expect(() =>
+      partWithFriend(at("zamek", "pasterz"), { seatId: "seat-a", holdingId: "h-friend" }),
+    ).toThrow(/nie jest kartą/);
   });
 });

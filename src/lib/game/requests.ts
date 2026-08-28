@@ -94,6 +94,10 @@ export interface Requests {
     targetSeatId: string;
     /** A Wróg left lying on an Obszar, when a raid goes at one of those instead. */
     raidFieldCardId: string;
+    /** How much Życie to take back from a friend who mends (KSIĘŻNICZKA, WŁADCA). */
+    points: number;
+    /** The friend's Karta being given up where she belongs, for gold. */
+    holdingId: string;
     total: number;
     value: number;
     viaBridge: boolean;
