@@ -5,6 +5,7 @@ import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
 import type { TileCard } from "./card-tile";
 import { Fold } from "./fold";
+import { Rules } from "./rule-ref";
 import { useRack } from "./rack";
 import { ItemSlot, SLOT_WIDTH } from "./item-slot";
 import type { SpellId } from "@/data/ids";
@@ -193,6 +194,31 @@ export function SpellHand({
       onToggle={() => setShowing(!showing)}
     >
       {blocked && <p className="mb-2 text-[11px] text-muted">{blocked}</p>}
+      {/* No room at all, said rather than drawn.
+       *
+       * 2.6's table starts [0, 0, 1, …], so a character of Magia 1 holds no
+       * Zaklęcia — not a corner case but the ordinary state of half the box,
+       * and the section for it was a heading, a red „0 / 0" and an empty
+       * outline. Three things that each look like something has gone wrong and
+       * together say nothing about the rule that made them.
+       *
+       * The threshold is the part worth printing. „You have no room" invites
+       * the question this answers in the same breath: room arrives at Magia 2,
+       * which is a thing a player can go and do something about.
+       */}
+      {capacity === 0 && (
+        <p
+          className={`p-1 text-[11px] leading-snug ${
+            held.length > 0 ? "text-vermilion/90" : "text-muted"
+          }`}
+        >
+          <Rules>
+            {held.length > 0
+              ? "Trzymasz Zaklęcia, na które nie masz miejsca — nadmiar trzeba odrzucić (9.4)."
+              : "Nie masz miejsca na Zaklęcia — pierwsze zmieści się przy Magii 2 (2.6)."}
+          </Rules>
+        </p>
+      )}
       {/* Face up, because they are yours — 9.3 hides them from everyone else,
           not from you, and a hand you cannot see is a hand you cannot plan
           with. */}
@@ -202,6 +228,13 @@ export function SpellHand({
           in the air, and the gap that opens under the pointer says where in it.
           A Zaklęcie never leaves this row — it has no place on the body and
           does not go in the pack — so this is the only target there is. */}
+      {/* The row itself goes away when it would hold nothing and could take
+          nothing: with no room and no Zaklęcia there is no rack, no drop target
+          and no gap to open, and an empty outline under the sentence above only
+          contradicts it. Kept the moment either is true — one square of room is
+          a place to aim at, and a Zaklęcie held over the cap has to be visible
+          to be discarded. */}
+      {(capacity !== 0 || held.length > 0) && (
       <div
         onDragOver={(event) => {
           if (!onReorder || !event.dataTransfer.types.includes(SPELL_DRAG)) return;
@@ -424,6 +457,7 @@ export function SpellHand({
             />
           ))}
       </div>
+      )}
     </Fold>
     </div>
   );
