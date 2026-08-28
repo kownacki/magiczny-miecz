@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MOVE_HOLDS_FOR_MS, isStale, standingMoves, standingPicks } from "./reconcile";
+import {
+  MOVE_HOLDS_FOR_MS,
+  isStale,
+  standingMoves,
+  standingPicks,
+  standingRules,
+} from "./reconcile";
 import type { Held, Seat } from "./table";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { asFieldId } from "@/lib/engine/board";
@@ -18,7 +24,14 @@ import type { Slot } from "@/lib/engine/slots";
 const NOW = Date.parse("2026-01-01T12:00:00Z");
 
 function held(over: Partial<Held> = {}): Held {
-  return { id: "h1", cardId: "helm" as CardId, kind: "item", face: "open", slot: null, ...over };
+  return {
+    id: "h1",
+    cardId: "helm" as CardId,
+    kind: "item",
+    face: "open",
+    slot: null,
+    ...over,
+  };
 }
 
 function seat(over: Partial<Seat> = {}): Seat {
@@ -88,13 +101,17 @@ describe("a Karta Postaci taken before the server said so", () => {
 
   it("stands while the seat still shows something else", () => {
     const pending = { "seat-a": goblin };
-    expect(standingPicks(pending, [seat({ character_id: null })])).toEqual(pending);
+    expect(standingPicks(pending, [seat({ character_id: null })])).toEqual(
+      pending,
+    );
   });
 
   it("is dropped the moment the server reports the same thing", () => {
     // Kept any longer it would be a second copy of a truth the table already
     // holds, and the two would drift the moment anything else changed the seat.
-    expect(standingPicks({ "seat-a": goblin }, [seat({ character_id: goblin })])).toEqual({});
+    expect(
+      standingPicks({ "seat-a": goblin }, [seat({ character_id: goblin })]),
+    ).toEqual({});
   });
 
   it("is dropped when the seat has gone", () => {
@@ -105,10 +122,10 @@ describe("a Karta Postaci taken before the server said so", () => {
   });
 
   it("keeps one seat's pick while dropping another's", () => {
-    const still = standingPicks(
-      { "seat-a": goblin, "seat-b": kaplanka },
-      [seat({ id: "seat-a", character_id: goblin }), seat({ id: "seat-b", character_id: null })],
-    );
+    const still = standingPicks({ "seat-a": goblin, "seat-b": kaplanka }, [
+      seat({ id: "seat-a", character_id: goblin }),
+      seat({ id: "seat-b", character_id: null }),
+    ]);
     expect(still).toEqual({ "seat-b": kaplanka });
   });
 
@@ -122,7 +139,9 @@ describe("a Karta Postaci taken before the server said so", () => {
     const empty = {};
     expect(standingPicks(empty, [seat()])).toBe(empty);
     const pending = { "seat-a": goblin };
-    expect(standingPicks(pending, [seat({ character_id: null })])).toBe(pending);
+    expect(standingPicks(pending, [seat({ character_id: null })])).toBe(
+      pending,
+    );
   });
 });
 
@@ -132,11 +151,15 @@ describe("a card moved on screen before the server said so", () => {
 
   it("stands while the server still has the card where it was", () => {
     const pending = { h1: glowa };
-    expect(standingMoves(pending, wearing(null), { h1: NOW }, NOW)).toEqual(pending);
+    expect(standingMoves(pending, wearing(null), { h1: NOW }, NOW)).toEqual(
+      pending,
+    );
   });
 
   it("is dropped once the server agrees the card is there", () => {
-    expect(standingMoves({ h1: glowa }, wearing(glowa), { h1: NOW }, NOW)).toEqual({});
+    expect(
+      standingMoves({ h1: glowa }, wearing(glowa), { h1: NOW }, NOW),
+    ).toEqual({});
   });
 
   it("treats a card in the pack and a card with no slot at all as the same place", () => {
@@ -149,15 +172,29 @@ describe("a card moved on screen before the server said so", () => {
      * Written without the key rather than with a null one, which is the whole
      * point: a `held({ slot: null })` passes either way.
      */
-    const bare = { id: "h1", cardId: "helm" as CardId, kind: "item", face: "open" } as Held;
+    const bare = {
+      id: "h1",
+      cardId: "helm" as CardId,
+      kind: "item",
+      face: "open",
+    } as Held;
     expect("slot" in bare).toBe(false);
-    expect(standingMoves({ h1: null }, [seat({ holdings: [bare] })], { h1: NOW }, NOW)).toEqual({});
+    expect(
+      standingMoves(
+        { h1: null },
+        [seat({ holdings: [bare] })],
+        { h1: NOW },
+        NOW,
+      ),
+    ).toEqual({});
   });
 
   it("is dropped when the card itself has gone", () => {
     // Dropped, spent or lost while the move was in flight. There is nothing
     // left to pin.
-    expect(standingMoves({ h1: glowa }, [seat({ holdings: [] })], { h1: NOW }, NOW)).toEqual({});
+    expect(
+      standingMoves({ h1: glowa }, [seat({ holdings: [] })], { h1: NOW }, NOW),
+    ).toEqual({});
   });
 
   it("stops standing after two polls' worth of silence", () => {
@@ -169,8 +206,12 @@ describe("a card moved on screen before the server said so", () => {
      */
     const pending = { h1: glowa };
     const made = { h1: NOW };
-    expect(standingMoves(pending, wearing(null), made, NOW + MOVE_HOLDS_FOR_MS - 1)).toEqual(pending);
-    expect(standingMoves(pending, wearing(null), made, NOW + MOVE_HOLDS_FOR_MS + 1)).toEqual({});
+    expect(
+      standingMoves(pending, wearing(null), made, NOW + MOVE_HOLDS_FOR_MS - 1),
+    ).toEqual(pending);
+    expect(
+      standingMoves(pending, wearing(null), made, NOW + MOVE_HOLDS_FOR_MS + 1),
+    ).toEqual({});
   });
 
   it("times the wait from the move and not from any answer", () => {
@@ -190,16 +231,52 @@ describe("a card moved on screen before the server said so", () => {
      * stay where it was, which is not a swap, it is a glitch that fixes itself.
      */
     const hand = (a: Slot | null, b: Slot | null) => [
-      seat({ holdings: [held({ id: "h1", slot: a }), held({ id: "h2", slot: b })] }),
+      seat({
+        holdings: [held({ id: "h1", slot: a }), held({ id: "h2", slot: b })],
+      }),
     ];
     const pending = { h1: glowa, h2: null };
     const made = { h1: NOW, h2: NOW };
-    expect(standingMoves(pending, hand(null, glowa), made, NOW)).toEqual(pending);
+    expect(standingMoves(pending, hand(null, glowa), made, NOW)).toEqual(
+      pending,
+    );
     expect(standingMoves(pending, hand(glowa, null), made, NOW)).toEqual({});
   });
 
   it("hands back the very same object when nothing was dropped", () => {
     const empty = {};
     expect(standingMoves(empty, wearing(null), {}, NOW)).toBe(empty);
+  });
+});
+
+describe("zasady stołu trzymane przed serwerem", () => {
+  const table = { eq_mode: "slots", endless_stock: true };
+
+  it("keeps a rule the server has not caught up with", () => {
+    expect(standingRules({ eq_mode: "classic" }, table)).toEqual({
+      eq_mode: "classic",
+    });
+  });
+
+  it("drops one the table already has", () => {
+    expect(standingRules({ eq_mode: "slots" }, table)).toEqual({});
+  });
+
+  /**
+   * The reason this goes through `keepIf` rather than being written out: a
+   * table with nothing pending is the commonest case by far, and rebuilding
+   * the object every poll re-renders every device every two seconds.
+   */
+  it("hands back the very same object when nothing was dropped", () => {
+    const pending = { eq_mode: "classic" as const };
+    expect(standingRules(pending, table)).toBe(pending);
+  });
+
+  it("keeps the ones still waiting and drops the rest", () => {
+    expect(
+      standingRules({ eq_mode: "classic", endless_stock: true }, table),
+    ).toEqual({
+      eq_mode: "classic",
+    });
   });
 });

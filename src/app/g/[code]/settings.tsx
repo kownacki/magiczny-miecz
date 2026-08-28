@@ -35,17 +35,22 @@ export function Settings({
   return (
     <Drawer side="right" width="max-w-sm" title="Ustawienia" onClose={onClose}>
       <div className="flex flex-col gap-4 p-4">
-        {/* Not a preference — the table's, chosen when it was opened, and the
-            same for everybody sitting at it. It is here because this is where
-            somebody goes to ask "what is this game doing", and it was a bare
-            word in the bar that said "slotowy" to people who had never met the
-            word. Fixed for the life of the table: half the rules below have
-            already been applied to cards that are lying on the board. */}
+        {/* Not a preference — the table's, and the same for everybody sitting
+            at it. It is here because this is where somebody goes to ask "what
+            is this game doing", and it was a bare word in the bar that said
+            "slotowy" to people who had never met it.
+            
+            The same sentences the poczekalnia uses, and no longer than there:
+            two screens describing one setting in two lengths is two settings
+            to whoever reads both. What this one adds is where to find the rest
+            of it. */}
         <Switch
           on={eqMode === "slots"}
           label="Ekwipunek slotowy"
-          fixed="Wybrane przy otwieraniu stołu — w trakcie gry już nie do zmiany."
-          said="Co da się założyć, działa tylko założone; reszta działa z Plecaka, w którym mieszczą się cztery Przedmioty. Wyłączone znaczy zasady z pudełka: nic się nie zakłada, a każdy z czterech Przedmiotów działa, gdziekolwiek leży. Szczegóły w Księdze, na półce Wariant."
+          // Not "wybrane przy otwieraniu stołu" any more: it is settled in the
+          // poczekalnia now, where the whole table can see it argued.
+          fixed="Ustala się w poczekalni — w trakcie gry już nie do zmiany."
+          said="Co da się założyć, działa tylko założone. Reszta działa z Plecaka, w którym mieszczą się cztery Przedmioty. Wyłączone znaczy zasady z pudełka: nic się nie zakłada, a każdy z czterech Przedmiotów działa, gdziekolwiek leży. Szczegóły w Księdze, na półce Wariant."
         />
         {/* The one table setting that can still be moved, and only one way.
             Turning it on changes nothing that already happened — the pile
@@ -54,14 +59,20 @@ export function Settings({
             six Miecze on a board that holds five. */}
         <Switch
           on={endlessStock}
-          label="Zwykłego Wyposażenia nie brakuje"
+          // A noun, like the two switches around it. The sentence-label was the
+          // same mistake the poczekalnia's options had, and it made this panel
+          // say the thing twice.
+          label="Niewyczerpany zapas Wyposażenia"
           onAsk={endlessStock ? undefined : onEndlessStock}
           fixed={
             endlessStock
               ? "Włączone na dobre — do skończonego stosu wraca się tylko przy nowym stole."
               : undefined
           }
-          said="Zwykłego Wyposażenia — Miecza, Hełmu, Sztyletu, Zbroi, Tarczy — nigdy nie zabraknie. Wyjątkiem są Magiczne Miecze i Tarcze Tolimana: tych zostaje po cztery, jak w pudełku. To nie przeoczenie — bez Magicznego Miecza nie wejdziesz na Most (11.9), bez Tarczy do Zamku (14.7), a 16.6 pilnuje, żeby wyciągnięty ze stosu Zdarzeń nie był piątym."
+          // The poczekalnia's sentence, plus the one thing a reader standing
+          // here is most likely to be asking: why those two are excepted. This
+          // is the panel somebody opens *because* they want a reason.
+          said="Zwykłego Wyposażenia nigdy nie zabraknie. Magiczne Miecze i Tarcze Tolimana zostają po cztery — na nich stoi wejście na Most (11.9) i do Zamku (14.7)."
         />
         <Switch
           name="ruleRefs"

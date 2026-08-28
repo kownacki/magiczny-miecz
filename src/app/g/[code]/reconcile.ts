@@ -70,6 +70,30 @@ export function standingPicks(
 }
 
 /**
+ * Which house rules the host has moved and the server has not yet echoed.
+ *
+ * The third thing on this page held on screen ahead of the server, and the one
+ * with the simplest test: a rule stands until the table has it. No clock, and
+ * no third way out — unlike a card, a switch cannot be lost between the press
+ * and the answer, because the value *is* the whole request.
+ *
+ * Through `keepIf` like its two neighbours, which is not tidiness. This ran
+ * inline in `refresh` and rebuilt its object every poll, so a table with
+ * nothing pending re-rendered every two seconds per device for the whole game
+ * — exactly the case the note under `keepIf` was written about.
+ */
+export function standingRules<T extends object>(
+  pending: Readonly<Partial<T>>,
+  said: T,
+): Partial<T> {
+  const settled = said as Record<string, unknown>;
+  return keepIf(
+    pending as Record<string, unknown>,
+    (field, wanted) => settled[field] !== wanted,
+  ) as Partial<T>;
+}
+
+/**
  * Which slot moves made on screen are still waiting to be confirmed.
  *
  * Three ways to stop standing, and the middle one is the one that took two

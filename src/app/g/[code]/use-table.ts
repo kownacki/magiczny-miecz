@@ -23,7 +23,7 @@ import { announce, watch, type Announcement, type Watched } from "@/lib/engine/a
 import { describeResult } from "@/lib/engine/noticeText";
 import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
 import { forbiddenSaid, forbiddenTo } from "@/lib/engine/holdings";
-import { isStale, standingMoves, standingPicks } from "./reconcile";
+import { isStale, standingMoves, standingPicks, standingRules } from "./reconcile";
 
 /**
  * The table, and everything a device may do to it.
@@ -299,22 +299,11 @@ export function useTable(code: string): Table {
       return;
     }
 
-    // The house rule this device asked for, kept only until the server says the
-    // same thing. Compared rather than counted down: a request that never
-    // arrived reverts here, and one that did stops overriding.
-    setHouseRules((wanted) => {
-      const still: Partial<Pick<Game, "eq_mode" | "endless_stock">> = {};
-      if (wanted.eq_mode !== undefined && wanted.eq_mode !== data.game.eq_mode) {
-        still.eq_mode = wanted.eq_mode;
-      }
-      if (
-        wanted.endless_stock !== undefined &&
-        wanted.endless_stock !== data.game.endless_stock
-      ) {
-        still.endless_stock = wanted.endless_stock;
-      }
-      return still;
-    });
+    // The house rule this device asked for, kept only until the table has it.
+    // `standingRules` is `standingMoves`' neighbour and shares its `keepIf`,
+    // which hands the same object back when nothing was dropped — the reason
+    // this is not written out here.
+    setHouseRules((wanted) => standingRules(wanted, data.game as Game));
     setGame(data.game);
     setSeats(data.seats);
     const now = Date.now();
