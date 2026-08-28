@@ -270,20 +270,26 @@ export function CardBack({ count }: { count: number }) {
   const most = 1 + Math.floor(room / SPELL_BACK_MIN_STEP);
   const drawn = Math.max(0, Math.min(count, most));
   /**
-   * Down to the layout grid, and the stack's own width declared from it.
+   * Whole pixels, and the stack's own width declared from them.
    *
-   * A step of 13.333 is not a length a browser has: Blink lays out on a
-   * thirty-second of a pixel and rounded four cards *up*, to 92.03, which is
-   * wider than the 92 a tile takes — so in a row with exactly one tile of room
-   * left the stack wrapped onto a line of its own, which is the thing all this
-   * arithmetic exists to prevent. Flooring to the same grid keeps every step a
-   * length that survives being drawn, and the width on the span means a hair
-   * of overflow could not push the tile out even if one appeared.
+   * A fractional step is not a length a browser draws. It rounded 13.333 *up*,
+   * to a stack of 92.03 where a tile takes 92 — so in a row with exactly one
+   * tile of room left it wrapped onto a line of its own, which is the thing all
+   * this arithmetic exists to prevent. Rounding to a thirty-second of a pixel
+   * fixed the wrap and left the other half: at 3.0625 apiece every card lands
+   * on a different sub-pixel phase, so its 1px border is drawn 1px wide or 2px
+   * wide depending where it fell, and a stack of evenly spaced cards came out
+   * visibly uneven.
+   *
+   * So the step is a whole number of pixels — the same gap between every pair,
+   * drawn the same way — and the stack is as wide as that makes it rather than
+   * exactly a tile: 91 at fourteen, 87 at eight, centred in the tile's width
+   * either way. The declared width is what keeps the tile from being pushed
+   * out by a hair of overflow inside it.
    */
-  const grid = 32;
   const step =
     drawn > 1
-      ? Math.min(SPELL_BACK_STEP, Math.floor((room / (drawn - 1)) * grid) / grid)
+      ? Math.min(SPELL_BACK_STEP, Math.max(SPELL_BACK_MIN_STEP, Math.floor(room / (drawn - 1))))
       : SPELL_BACK_STEP;
   const wide = SPELL_BACK_WIDTH + (drawn - 1) * step;
   return (
