@@ -189,6 +189,18 @@ export function SpellHand({
       first={!section}
       title={title ?? (section ? "Zaklęcia" : "Twoje Zaklęcia")}
       tally={tally}
+      /* Which Zaklęcia, kept on the bar while the hand is shut — the same
+         thing the Plecak and Przyjaciele keep, for the same reason: „1 / 1"
+         says how full the hand is and nothing about what is in it. Only ever
+         your own hand: 9.3 keeps everybody else's concealed, and this
+         component is never given anybody else's cards. */
+      aside={
+        showing || hand.length === 0 ? undefined : (
+          <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-magia/80">
+            {hand.map((entry) => SPELL_BY_ID.get(entry.cardId)?.name ?? entry.cardId).join(" · ")}
+          </span>
+        )
+      }
       tone={section ? "text-muted" : "text-magia"}
       open={showing}
       onToggle={() => setShowing(!showing)}

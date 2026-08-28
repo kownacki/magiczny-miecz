@@ -220,6 +220,18 @@ export function Hand({
           {packed} / {Number.isFinite(limit) ? limit : "∞"}
         </span>
       }
+      /* What the heading keeps when it is shut, exactly as Przyjaciele does:
+         which cards, not only how many. „2 / 4" is the answer to 5.4 and no
+         answer at all to what you are carrying — and a pack is folded away by
+         somebody who has decided they know what is in it, which is precisely
+         the moment to be able to check. */
+      aside={
+        showing || landing || arranged.length === 0 ? undefined : (
+          <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-ochre/80">
+            {arranged.map((held) => tileFor(held).name).join(" · ")}
+          </span>
+        )
+      }
       open={showing || landing}
       onToggle={() => setShowing(!showing)}
     >
