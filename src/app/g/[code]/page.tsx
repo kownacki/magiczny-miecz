@@ -658,6 +658,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           is only playing. */}
       {(testing || failure !== null) && (
         <TestConsole
+          /**
+           * Remounted each time it opens, so it opens at its usual size.
+           *
+           * How big the console is is a thing you decide *while* using it —
+           * shrink it to see the board, throw it wide to read a long answer —
+           * and none of that is a preference about the next time. Closing it
+           * minimised and finding a one-line strip when you next press the key
+           * reads as the console failing to open.
+           *
+           * A remount rather than a reset, because the state worth keeping is
+           * already kept elsewhere: the transcript is written to storage on
+           * every line and read back on mount, which is what makes reloading
+           * mid-test safe in the first place.
+           */
+          key={consoleOpen ? "open" : "shut"}
           open={consoleOpen || failure !== null}
           folded={!consoleOpen && failure !== null}
           failure={failure}
