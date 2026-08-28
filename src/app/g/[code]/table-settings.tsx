@@ -30,6 +30,7 @@ export function TableSettings({
   endlessStock,
   started,
   canChange,
+  onExplain,
   onEqMode,
   onEndlessStock,
 }: {
@@ -37,6 +38,15 @@ export function TableSettings({
   endlessStock: boolean;
   /** Whether the game has begun, which is what closes one of these for good. */
   started: boolean;
+  /**
+   * Opens the Księga at the Wariant shelf, where the long answer lives.
+   *
+   * Four sentences can say what each choice does; they cannot show the printed
+   * rule beside it. The shelf quotes 5.4 and 21.2 against what this table does
+   * instead, which is the thing a room actually argues about — and it is one
+   * drawer away in the poczekalnia, same as at the table.
+   */
+  onExplain: () => void;
   /**
    * Whether this device may move them, which means: whether it is the host's.
    *
@@ -139,6 +149,16 @@ export function TableSettings({
           ? "Ustalacie to razem, dopóki gra się nie zaczęła — potem ekwipunku już nie zmienicie, a skończony stos wraca dopiero przy nowym stole."
           : "Tak gra ten stół. Zasady ustala gospodarz — dopóki gra się nie zaczęła, można go poprosić o zmianę."}
       </p>
+
+      {/* The long answer, one drawer away. Everybody gets this, not only the
+          host: a guest who cannot move a switch is exactly the person who
+          wants to read what it does before asking for it to be moved. */}
+      <button
+        onClick={onExplain}
+        className="self-start text-[11px] text-ochre/80 underline decoration-dotted underline-offset-2 transition hover:text-ochre"
+      >
+        Czym to się różni od Instrukcji? — Księga, półka Wariant
+      </button>
     </div>
   );
 }

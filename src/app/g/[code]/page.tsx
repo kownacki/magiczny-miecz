@@ -1100,6 +1100,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               endlessStock={game.endless_stock}
               started={game.status === "playing"}
               canChange={amHost}
+              onExplain={() => openAt("wariant", null)}
               onEqMode={(eqMode) => setHouseRule({ eq_mode: eqMode })}
               onEndlessStock={(on) => setHouseRule({ endless_stock: on })}
             />
