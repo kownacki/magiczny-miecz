@@ -19,6 +19,12 @@ A card-by-card equivalent of this table is enforced in code rather than written
 down: see `src/lib/engine/coverage.ts`, which puts the same three states on
 screen next to every drawn card.
 
+**Where it stands.** 117 rules ✅, 20 ◐, none ❌. Of the 138 Karty Zdarzeń, 104
+are `pelne` and 7 `brak`; of the 27 Zaklęcia, 13 are carried out and 14
+announced; and all 57 Obszary do what is printed on them. The counts move, so
+trust the code over this paragraph — `coverage.ts` and `fieldScript.ts` are
+where the truth is, and both are checked by tests.
+
 ---
 
 ## 0. Przygotowanie do gry
@@ -119,12 +125,12 @@ they are rules, and one of them was missing.
 
 | | rule | status | where |
 |---|---|---|---|
-| 9.1 | a spell's effect is on its card | ◐ | every spell's timing, target and effect are typed; the effect is stated, not applied |
+| 9.1 | a spell's effect is on its card | ◐ | every spell's timing, target and effect are typed; **thirteen of twenty-seven are carried out** (`SpellScript.stosuje`), the rest are stated |
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side |
 | 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |
 | 9.5 | drawn from the top; the pile is reshuffled when empty; some characters start holding one | ✅ | `drawSpell`, `STARTING_KIT`; the reshuffle is journalled and both piles are counted in the top bar |
-| 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ◐ | `castSpell` — the window is enforced, the card reaches the used pile and the table is told; the effect is the players', except the two that take cards out of play (`SpellScript.applies`) |
+| 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ◐ | `castSpell` — the window is enforced, the card reaches the used pile and the table is told. Thirteen spells are then applied; the fourteen left are the ones the model cannot hold, and each says so in its own entry |
 | 9.7 | no spell works on the Most or the Bestia | ✅ | refused in `castSpell` |
 
 ## 10. Tury
@@ -177,7 +183,7 @@ they are rules, and one of them was missing.
 | 14.1 | characters may meet only at the two Wejścia | ✅ | `attackSeat` refuses elsewhere on the Most |
 | 14.2 | meetings resolve as elsewhere | ✅ | `attackSeat` |
 | 14.3 | each Most field's printed instruction | ✅ | `most-fields.json` — all nine |
-| 14.4 | no spells and no escape on the Most | ◐ | escape is blocked (19.3); spells do not exist |
+| 14.4 | no spells and no escape on the Most | ◐ | escape is blocked (19.3); a spell is refused where 9.7 says so, but a spell the app does not apply cannot be stopped from doing what it does not do |
 | 14.5 | Pułapka / Magiczna Pułapka: 3 dice less Miecz or Magia, then a roll per item | ✅ | `bridge.ts`, `resolveBridgeOrdeal` |
 | 14.6 | Demon Zagłady / Monstrum: roll for its strength, fight until beaten | ✅ | two dice, then the ordinary fight machinery |
 | 14.7 | Zamek Bestii: roll the kind of fight, roll the Bestia at 10–15, win = win the game | ✅ | `fightBeast` |
@@ -227,7 +233,7 @@ they are rules, and one of them was missing.
 |---|---|---|---|
 | 18.1 | when magical combat happens | ✅ | |
 | 18.2a | Magia replaces Miecz | ✅ | `CombatKind` |
-| 18.2b | no item can prevent the loss of Życie | ◐ | true by accident: no item prevention exists at all |
+| 18.2b | no item can prevent the loss of Życie | ✅ | `shieldSaves` returns false for a magical fight before it looks at anything worn — the Hełm, Tarcza and Zbroja are read for an ordinary one and never for this |
 
 ## 19. Ucieczka
 
@@ -270,10 +276,15 @@ they are rules, and one of them was missing.
 Counting rules is misleading — 20.5 and 9.6 are not the same size of hole. In
 descending order of what they cost a table:
 
-1. **9.6 — spells are cast but not applied.** All 27 have a typed window and
-   target, the card leaves the hand and the table is told; what the spell does
-   is still the players'. The remaining piece is 17.7's explicit reaction pause
-   before combat dice.
+1. **9.6 — half the Zaklęcia are still the table's.** Thirteen of twenty-seven
+   are carried out now. The fourteen left divide cleanly: six answer another
+   spell or a loss as it happens (Zwierciadło, Władca Zaklęć, Ocalony, Wojna
+   Żywiołów, Krąg Płomieni, Formuła Czasu) and want a spell to be *pending*
+   rather than resolved — 17.7's reaction pause, and a turn state that can hold
+   an unanswered cast. The other eight each want one specific thing: a field to
+   aim at (Władca Gromu, Władca Zdarzeń), a conjured attacker (Golem,
+   Homunculus), a redraw (Odmiana Losu), a peek (Olśnienie), and the crossing
+   permission 11.2 and 11.6 are also waiting on (Pan Trzęsawisk, Władca Lodu).
 2. **8.1 — character abilities are only half alive.** The mechanical ones now
    work; the ones that bend a rule rather than add a number (the Krasnolud's
    reroll, the Łotr's dirty fighting, the Olbrzym's extra card) are named on
@@ -282,8 +293,11 @@ descending order of what they cost a table:
    what previous characters left behind, the map marks which fields are holding
    something, and a field draws only up to its printed count.
 
-After those: the two Pułapki and the Demon Zagłady / Monstrum (14.5, 14.6) print
-their own procedures and the app shows them but does not run them.
+~~After those: the two Pułapki and the Demon Zagłady / Monstrum.~~ Also done —
+`resolveBridgeOrdeal` runs all six of the Kamienny Most's stopping Obszary, and
+the board itself is finished: fifty-seven of fifty-seven Obszary now do what is
+printed on them, between `FIELD_SCRIPTS`, `bridge.ts`, the crossings, the ferry
+and 13.4's general rule about drawing down to a field's printed count.
 
 ---
 
@@ -345,7 +359,13 @@ they came from the board rather than from a card.
 | Magiczne Wrota | życzenie: Miecz, Magia, Zaklęcie albo Złoto | ✅ |
 | Strażnik Magicznych Wrót | 1 Sz.Z. albo 1 Życia | ✅ |
 | Przeprawa ×2 | 1 Sz.Z. przewoźnikowi | ✅ `payFerry` |
-| Twierdza Strzegąca Dróg | misja Władcy | ❌ celowo — misja to wyprawa przez planszę, nie tablica kostki; zostaje prozą |
+| Twierdza Strzegąca Dróg | misja Władcy, potem Tarcza Tolimana | ✅ misja żyje w `seat_effects`; `resolveFight` ją zalicza, `claimMission` wypłaca |
+| Ruchome Skały ×2 | 1 Życie | ✅ |
+| Bagna ×2 | Przedmiot albo Przyjaciel, twój wybór | ✅ |
+| Urwisko ×2 | kostka za ciebie i za każdego Przyjaciela | ✅ `rzut-za-kazdego` |
+| Kurhan, Wilczy Parów, Krypta Upiorów, Krąg Mocy, Wieża Przeznaczenia | obowiązkowa kostka | ✅ |
+| Czarci Młyn, Studnia Wieczności | zależnie od Natury | ✅ |
+| Świątynia Bogini Nemed, Świątynia Tolimana | modlitwa na 2 kostkach | ✅ |
 
 Ceny czyta serwer z planszy, nigdy z żądania. Klient mówi *co* kupuje; ile to
 kosztuje nie jest jego rzeczą, a sędzia, który przyjmuje cenę od kupującego,
