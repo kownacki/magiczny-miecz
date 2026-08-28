@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import { FIELDS, ringFields, type FieldId } from "@/lib/engine/board";
@@ -193,11 +193,39 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * under the hand and is corrected by the next refresh.
    */
   const [asked, setAsked] = useState<readonly string[]>([]);
+  /**
+   * The same list, readable during an event rather than after the next render.
+   *
+   * One card, one ask: a second press on a card already out is dropped here and
+   * not left to the server to refuse. State cannot answer that — two clicks
+   * landing in one batch both read the same `asked` — so the ref is the
+   * authority and the state is how it is drawn.
+   */
+  const outstanding = useRef<Set<string>>(new Set());
+  /**
+   * Asks about one card, while any number of other cards are being asked about.
+   *
+   * Deliberately per card and not a single flag. Two Przedmioty lying on one
+   * Obszar are two independent questions — 5.4 may allow one and refuse the
+   * other, and the answers are decided one at a time against the table as it
+   * stands when each is decided — so pressing „weź" on the first must not close
+   * the second. `busy` would have: it is the whole table's flag.
+   *
+   * Which is safe to do because the writes are ordered underneath: `change`
+   * puts every change to one game through one chain in arrival order, and the
+   * compare-and-swap on `games.revision` is what makes it correct when two
+   * servers have two chains. So a second take is decided against a table that
+   * already has the first card in the pack, and „nie uniesiesz" and „tej Karty
+   * już tam nie ma" are answers the rules give rather than accidents of timing.
+   */
   const askFor = useCallback(async (id: string, run: () => Promise<void>) => {
+    if (outstanding.current.has(id)) return;
+    outstanding.current.add(id);
     setAsked((was) => [...was, id]);
     try {
       await run();
     } finally {
+      outstanding.current.delete(id);
       setAsked((was) => was.filter((one) => one !== id));
     }
   }, []);

@@ -232,7 +232,12 @@ export function FieldModal({
                     >
                       {takeable && standingHere && canAct && arrived && (
                         <button
-                          disabled={busy}
+                          /* Only this card's own ask, never the table's
+                             `busy`: what is lying on one Obszar is several
+                             independent questions, and closing all of them
+                             because one is out makes a player wait a round trip
+                             per card for no reason the rules give. */
+                          disabled={asked.includes(lying.id)}
                           onClick={() => onTake(lying.id)}
                           className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
                         >
