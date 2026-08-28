@@ -12,14 +12,13 @@ import {
   characterImageUrl,
 } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
-import { CardMark } from "./card-mark";
+import { CardMark, WornMark } from "./card-mark";
 import { LAYER } from "./layers";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
-import type { EqMode } from "@/lib/engine/slots";
+import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
-import { plural } from "@/lib/engine/polish";
 
 /**
  * One card, as a card.
@@ -61,6 +60,15 @@ export interface TileCard {
    * one that did not say.
    */
   granted?: boolean;
+  /**
+   * Where this copy is being worn, in the slotted variant.
+   *
+   * A fact about the holding rather than about the card, and carried on the
+   * card for the same reason `granted` is: it has to follow the picture to
+   * wherever the picture is drawn. Absent everywhere it would mean nothing —
+   * the Księga's catalogue, the klasyczny variant, a card in the pack.
+   */
+  slot?: Slot | null;
 }
 
 export function CardTile({
@@ -155,6 +163,15 @@ export function CardTile({
             {card.name}
           </span>
         )}
+        {/* Which place on the body this one is in (5.6), where the pack's own
+            arrow to put it there would be. Small, in the corner, and over the
+            picture rather than under the name: the name is what the card is,
+            and this is where it happens to be. */}
+        {card.slot && (
+          <span className="absolute right-0 top-0 rounded-bl bg-night/85 px-1 py-0.5">
+            <WornMark slot={card.slot} />
+          </span>
+        )}
         {/* Bottom edge, not the top: the top of every card in this game is its
             printed title, and covering that is covering the one thing a player
             scans for. */}
@@ -206,6 +223,12 @@ const SPELL_BACK_STEP = 20;
  * says the same number in the row's own language, and the caption still says it
  * in figures for anybody counting past three.
  *
+ * „×3 Zaklęcie" and not „3 zakryte Zaklęcia". The picture is of card backs, so
+ * saying they are face down is captioning what the reader can see; and „×3" is
+ * a count of a thing, which is why the noun after it stays singular however
+ * many there are — the same shape a Karta Postaci's starting kit is written in,
+ * which is where this came from.
+ *
  * One tile wide, whatever the count. Each back shows twenty pixels of the one
  * under it, which is chosen from the top of the range: at three cards the stack
  * is 52 + 2 x 20 = 92, exactly a Przedmiot's tile, so the hand 2.6 allows on
@@ -220,7 +243,7 @@ const SPELL_BACK_STEP = 20;
  * divides the tile: 13.3 at four, and smaller again for a hand no rule allows,
  * because a stack that cannot overflow is one fewer thing to be surprised by.
  */
-export function CardBack({ count, caption }: { count: number; caption?: React.ReactNode }) {
+export function CardBack({ count }: { count: number }) {
   const step =
     count > 1
       ? Math.min(SPELL_BACK_STEP, (TILE_WIDTH - SPELL_BACK_WIDTH) / (count - 1))
@@ -244,11 +267,7 @@ export function CardBack({ count, caption }: { count: number; caption?: React.Re
         ))}
       </span>
       <figcaption className="text-center text-[9px] leading-tight text-magia/80">
-        {caption ?? (
-          <>
-            {count} {plural(count, "zakryte Zaklęcie", "zakryte Zaklęcia", "zakrytych Zaklęć")}
-          </>
-        )}
+        ×{count} Zaklęcie
       </figcaption>
     </figure>
   );

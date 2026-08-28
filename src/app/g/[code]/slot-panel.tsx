@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
+import { SLOT_ICON } from "@/lib/view/slotIcons";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
 
@@ -74,34 +75,6 @@ const LAYOUT: Record<Slot, string> = {
  * they cannot.
  */
 export const PLACES_ON_THE_BODY = Object.keys(LAYOUT).length;
-
-/**
- * Drawn in the empty places, so a gap says which gap it is.
- *
- * Silhouettes from game-icons.net (CC BY 3.0 — see README), used as masks so
- * they take the slot's own colour. They were Unicode glyphs, which meant a
- * helmet where the font happened to have a helmet, a chess knight standing in
- * for a horse and a shaded square standing in for a bag. These are drawings of
- * the eleven things.
- *
- * Deliberately not the cards' own illustrations, though every one of them is
- * exported and to hand: those are white-on-black hatched engravings, and a
- * ghost of one reads as a card already in the place rather than as the shape of
- * the place itself.
- */
-const ICON: Record<Slot, string> = {
-  head: "/slots/glowa.svg",
-  amulet: "/slots/amulet.svg",
-  body: "/slots/tulow.svg",
-  "main-hand": "/slots/reka-glowna.svg",
-  "off-hand": "/slots/reka-pomocnicza.svg",
-  gloves: "/slots/rekawice.svg",
-  ring: "/slots/pierscien.svg",
-  mount: "/slots/wierzchowiec.svg",
-  pouch: "/slots/sakwa.svg",
-  "magiczny-miecz": "/slots/magiczny-miecz.svg",
-  "tarcza-tolimana": "/slots/tarcza-tolimana.svg",
-};
 
 /** What a drag carries: the id of the holding being moved. */
 export const DRAG_TYPE = "application/x-magiczny-miecz-holding";
@@ -233,7 +206,7 @@ export function SlotPanel({
               // The place says what it is for while it is empty, and what is in
               // it once it is filled.
               label={item ? item.card.name : SLOT_LABEL[slot]}
-              icon={ICON[slot]}
+              icon={SLOT_ICON[slot]}
               tone={tone}
               lifted={lifted}
               draggable={canAct && item !== undefined}

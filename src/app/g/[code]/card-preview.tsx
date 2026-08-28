@@ -32,7 +32,7 @@ import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { NATURE_LABEL } from "@/lib/engine/polish";
-import { cardName, plural } from "@/lib/engine/polish";
+import { cardName } from "@/lib/engine/polish";
 
 const CHARACTERS = charactersData as Character[];
 
@@ -624,14 +624,11 @@ export function CardPreview({
                 ))}
                 {kit.spells ? (
                   /* The same stack of backs the roster draws for a concealed
-                     hand, and the same component: 9.3's „you may not see these"
-                     and 8.1's „you start with these" are one picture, and they
-                     were two until this was pulled out. Only the caption
-                     differs, which is the only thing that does. */
-                  <CardBack
-                    count={kit.spells}
-                    caption={`×${kit.spells} ${plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}`}
-                  />
+                     hand, and the same component, caption included: 9.3's „you
+                     may not see these" and 8.1's „you start with these" are one
+                     picture of the same object, and „×2 Zaklęcie" is true of
+                     both. */
+                  <CardBack count={kit.spells} />
                 ) : null}
               </div>
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px] text-ink">

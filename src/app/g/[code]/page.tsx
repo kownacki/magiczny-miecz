@@ -1912,6 +1912,10 @@ function asPublicSeat(seat: Seat, driver: Person | null): PublicSeat {
         name: CARD_NAMES.get(held.cardId) ?? held.cardId,
         text: CARD_TEXTS.get(held.cardId),
         kindLabel: KIND_LABEL[held.kind],
+        // The roster is the one place a rival's Przedmioty are drawn with no
+        // body under them, so what is worn and what is merely carried is a
+        // mark on the tile — see `WornMark`.
+        slot: held.slot ?? null,
       })),
     hiddenSpells:
       seat.hidden_count + seat.holdings.filter((held) => held.kind === "spell").length,
