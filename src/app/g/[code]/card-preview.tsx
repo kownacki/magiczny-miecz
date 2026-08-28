@@ -57,6 +57,33 @@ const CARD_RATIO = 780 / 629;
 const GAP = 12;
 
 /**
+ * Whether this event is the command key going down or coming up.
+ *
+ * Both are accepted rather than one being chosen by sniffing the platform:
+ * whichever of the two a browser treats as *command* is the one whose C means
+ * copy there, and holding the other simply does nothing. `key` and not
+ * `metaKey`/`ctrlKey`, because the flags are also true for every combination
+ * *containing* the key — `Cmd-C` itself would otherwise read as a fresh press
+ * and re-open a panel the copy was meant to finish with.
+ */
+function isHold(event: KeyboardEvent): boolean {
+  return event.key === "Meta" || event.key === "Control";
+}
+
+/**
+ * What to call it on this machine, for the hint.
+ *
+ * The label is the one printed on the key in front of the reader — "Cmd" on a
+ * Mac, "Ctrl" everywhere else — because a hint naming the other one is a hint
+ * that reads as being about somebody else's computer. Guarded for the server,
+ * where there is no navigator and no hint being drawn either.
+ */
+function holdKeyName(): string {
+  if (typeof navigator === "undefined") return "Ctrl";
+  return /Mac|iPhone|iPad/.test(navigator.platform) ? "Cmd" : "Ctrl";
+}
+
+/**
  * Which preview, if any, has been pinned — shared by every one of them.
  *
  * `useCardPreview` runs once per tile, so there are dozens of these on a seat
@@ -131,14 +158,34 @@ export function useCardPreview(
   const elsewhere = pinned !== null && !mine;
 
   /**
-   * Held Shift holds the panel: down to keep it, up to let it go.
+   * Held Cmd — Ctrl away from a Mac — holds the panel: down to keep it, up to
+   * let it go.
    *
-   * Shift because it is the one modifier that means nothing on its own —
-   * anywhere. Tapping Alt focuses Chrome's menu bar on Windows; Ctrl is the
-   * modifier every OS overloads and on macOS Ctrl-click *is* a right-click, so
-   * anybody still holding it while reaching for a rule number would get a
-   * context menu instead. Shift-clicking a `<button>` is an ordinary click, so
-   * the panel stays usable in the hand that is holding it open.
+   * The key is decided by what you do while holding it, and there are three
+   * things: drag to select, press C to copy, click a rule number. Copy is the
+   * demanding one, because the selection dies with the panel — release the key
+   * and there is nothing left to copy — so the copy has to happen *while* the
+   * key is down. That makes the hold key the one that already means copy when
+   * you add C to it, which is exactly the platform's command key: Cmd here,
+   * Ctrl on Windows.
+   *
+   * The three that lost, each for a different reason:
+   *
+   * - Shift is the extend-selection modifier. Holding it and dragging selects
+   *   from the last selection anchor to the pointer, which is most of the page.
+   * - Ctrl *on macOS* is the right-click modifier, so reaching for a rule
+   *   number while holding it opens a context menu. It is only the right key
+   *   where it is not that, which is everywhere else.
+   * - Alt survives the drag and the click and then fails the copy: holding it
+   *   and pressing Cmd-C is Cmd-Option-C, which is Chrome's Inspect Element.
+   *
+   * `metaKey`/`ctrlKey` rather than a platform sniff. Whichever of the two is
+   * down is the one that browser treats as command, and holding the wrong one
+   * for your machine simply does nothing.
+   *
+   * Firefox reads this pair as *discontiguous* selection, so there a drag adds
+   * to the selection instead of replacing it. Worse, not broken — and the same
+   * class of blemish Alt has there for a different reason.
    *
    * Releasing closes it only when the pointer has since left the tile. Holding
    * Shift over a card and letting go should leave you exactly where you were —
@@ -152,11 +199,11 @@ export function useCardPreview(
   useEffect(() => {
     if (anchor === null && !mine) return;
     const onDown = (event: KeyboardEvent) => {
-      if (event.key === "Shift" && !mine && anchor !== null) setPinnedPreview(me);
+      if (isHold(event) && !mine && anchor !== null) setPinnedPreview(me);
       if (event.key === "Escape" && mine) setPinnedPreview(null);
     };
     const onUp = (event: KeyboardEvent) => {
-      if (event.key !== "Shift" || !mine) return;
+      if (!isHold(event) || !mine) return;
       setPinnedPreview(null);
       // The pointer wandered off while it was held, so there is nothing keeping
       // it open any more.
@@ -503,7 +550,7 @@ export function CardPreview({
            * something the card says.
            */}
           <p className="mt-auto pt-2 text-[10px] leading-none text-muted/50">
-            {pinned ? "trzymasz Shift — puść, żeby zamknąć" : "Shift — przytrzymaj, żeby zaznaczyć"}
+            {pinned ? holdKeyName() + " trzymany — puść, żeby zamknąć" : holdKeyName() + " — przytrzymaj, żeby zaznaczyć"}
           </p>
         </div>
       )}
