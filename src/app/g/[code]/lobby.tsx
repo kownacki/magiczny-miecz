@@ -239,7 +239,7 @@ export function Lobby({
               it should not sit between two that do not. Ahead of the start
               button it was also the thing a host's cursor passed over on the
               way to beginning the game. */}
-          {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
+          {me && <LeaveButton onLeave={onLeave} />}
         </div>
       </TableBar>
 

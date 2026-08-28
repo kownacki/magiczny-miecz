@@ -195,45 +195,27 @@ export function SecondTabNotice({ busy, onSomebodyElse }: { busy: boolean; onSom
  * character stays in the game exactly as it is and somebody can pick it up
  * again. Only this device stops speaking for it.
  */
-export function LeaveButton({
-  playing,
-  busy,
-  onLeave,
-}: {
-  playing: boolean;
-  busy: boolean;
-  onLeave: () => void;
-}) {
-  const [armed, setArmed] = useState(false);
-  if (!armed) {
-    // A glyph, like the other doors on the bar. The name is in the tooltip and
-    // the question it asks next says it again in full, so nothing is lost — and
-    // "Opuść stół" was the longest phrase in a row that is otherwise counters.
-    return (
-      <BarButton
-        glyph="door"
-        tone={{ rest: "text-muted", hover: "hover:text-vermilion" }}
-        onClick={() => setArmed(true)}
-        title="Opuść stół"
-      />
-    );
-  }
+/**
+ * The way out, which asks first — in the dialog everything else asks in.
+ *
+ * It used to arm itself: the glyph became a sentence and two small words in
+ * the middle of the bar, which pushed the counters along, put "na pewno?" at
+ * eleven pixels beside a join code, and answered a grave question in the
+ * least grave place on the screen. Dropping a Karta already opens a modal;
+ * leaving a table one's Postać stays behind on deserves the same.
+ *
+ * So this is a glyph and nothing else, and the caller does the asking — see
+ * `askToLeave`. That also puts the question where both screens can use it,
+ * since the poczekalnia's way out is the same act with a different answer.
+ */
+export function LeaveButton({ onLeave }: { onLeave: () => void }) {
   return (
-    <span className="flex items-center gap-2">
-      <span className="text-vermilion">
-        {playing ? "Postać zostanie w grze bez gracza — na pewno?" : "Na pewno?"}
-      </span>
-      <button
-        onClick={onLeave}
-        disabled={busy}
-        className="rounded border border-vermilion/60 px-1.5 text-vermilion disabled:opacity-50"
-      >
-        tak
-      </button>
-      <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
-        nie
-      </button>
-    </span>
+    <BarButton
+      glyph="door"
+      tone={{ rest: "text-muted", hover: "hover:text-vermilion" }}
+      onClick={onLeave}
+      title="Opuść stół"
+    />
   );
 }
 

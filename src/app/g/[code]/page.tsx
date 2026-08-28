@@ -394,6 +394,31 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * The question says where it will be lying, because that is the part a player
    * is deciding and the button cannot say it.
    */
+  /**
+   * Leaving, asked in the dialog everything else is asked in.
+   *
+   * Two answers to one act, which is why the question is here rather than in
+   * the button: in the poczekalnia the seat goes with you, and mid-game the
+   * Postać stays on the board without a driver for somebody else to take over.
+   * The second is the one worth stopping somebody over, and it used to be a
+   * sentence squeezed into the bar between a join code and a test-mode switch.
+   */
+  function askToLeave() {
+    const playing = game?.status === "playing" && mySeatIndex !== null;
+    setAsk({
+      title: "Opuść stół",
+      body: playing
+        ? "Twoja Postać zostanie w grze, na swoim Obszarze i ze wszystkim, co ma — tyle że bez gracza, dopóki ktoś jej nie przejmie. Ty zostajesz przy stole jako widz."
+        : "Twoje miejsce przy stole zniknie. Wrócić można tym samym kodem, dopóki gra się nie zaczęła.",
+      confirmLabel: "Opuść stół",
+      tone: "grave",
+      onConfirm: () => {
+        setAsk(null);
+        void leave();
+      },
+    });
+  }
+
   function askToDrop(holdingId: string) {
     const seat = seats.find((candidate) => candidate.seat_index === mySeatIndex);
     const held = seat?.holdings.find((candidate) => candidate.id === holdingId);
@@ -1084,7 +1109,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           onMakeHost={(seat) => seat.driverId && post("host", { userId: seat.driverId })}
           onReady={(ready) => post("seat", { ready })}
           onRename={(name) => post("seat", { name })}
-          onLeave={leave}
+          onLeave={askToLeave}
           onDeal={() => post("character", { deal: true })}
           isHost={amHost}
           // The host is somebody, so "gone" is something they are rather than
@@ -1366,11 +1391,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 title="Ustawienia — numery zasad, tryb ekwipunku"
               />
               {mySeatIndex !== null && (
-                <LeaveButton
-                  playing
-                  busy={busy}
-                  onLeave={leave}
-                />
+                <LeaveButton onLeave={askToLeave} />
               )}
             </div>
           </>
