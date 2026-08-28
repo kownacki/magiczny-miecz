@@ -12,7 +12,13 @@ import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardTile, type TileCard } from "./card-tile";
 import { Fold } from "./fold";
-import { RULES_SHELVES, RulesShelfView, type RulesShelf } from "./rules-shelf";
+import {
+  RULES_SHELVES,
+  RuleHit,
+  RulesShelfView,
+  rulesMatching,
+  type RulesShelf,
+} from "./rules-shelf";
 import { useCardPreview } from "./card-preview";
 import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
@@ -278,6 +284,8 @@ export function CardLibrary({
   // including another rule, or following one would depend on where you were.
   const [side, setSide] = useState<"karty" | "zasady">(openShelf ? "zasady" : "karty");
   const [rulesShelf, setRulesShelf] = useState<RulesShelf>(openShelf ?? "instrukcja");
+  /** A rule the reader picked out of the search, rather than followed a link to. */
+  const [focus, setFocus] = useState<string | null>(null);
   const [shelf, setShelf] = useState<Shelf>("zaklecia");
 
   /**
@@ -413,10 +421,23 @@ export function CardLibrary({
         }
       >
       <div className="p-4">
+        {/* A search reads both halves. The switch above chooses what you
+            browse; somebody typing a word does not know which half holds the
+            answer, which is the reason they are typing. */}
+        {searching && (
+          <RulesFound
+            query={query}
+            onOpen={(id) => {
+              setSide("zasady");
+              setRulesShelf("instrukcja");
+              setFocus(id);
+            }}
+          />
+        )}
         {side === "zasady" ? (
           <RulesShelfView
             shelf={rulesShelf}
-            focus={openRule}
+            focus={focus ?? openRule}
             eqMode={eqMode}
             endlessStock={endlessStock}
             query={query}
@@ -534,5 +555,38 @@ export function CardLibrary({
       </div>
       </Drawer>
     </>
+  );
+}
+
+/**
+ * What the Instrukcja has to say about the words in the box, above the cards.
+ *
+ * Above rather than below: a search for "natura" or "5.3" is more often a
+ * question about the rules than about a picture, and the cards are the longer
+ * list. Silent when the book has nothing, so an ordinary hunt for a Karta looks
+ * exactly as it did.
+ */
+function RulesFound({ query, onOpen }: { query: string; onOpen: (id: string) => void }) {
+  const { found, total } = rulesMatching(query);
+  if (found.length === 0) return null;
+  return (
+    <section className="mb-4">
+      <h3 className="mb-2 flex items-baseline gap-2 border-b border-edge/60 pb-1 text-[11px] uppercase tracking-wide text-muted">
+        Instrukcja
+        <span className="tnum text-muted/70">
+          {total > found.length ? `${found.length} z ${total}` : total}
+        </span>
+      </h3>
+      <div className="flex flex-col gap-1">
+        {found.map((hit, at) => (
+          <RuleHit key={hit.id ?? at} hit={hit} onOpen={() => hit.id && onOpen(hit.id)} />
+        ))}
+      </div>
+      {total > found.length && (
+        <p className="mt-1 text-[10px] text-muted/70">
+          Więcej na półce Zasady — tam szukanie przegląda całą Instrukcję.
+        </p>
+      )}
+    </section>
   );
 }

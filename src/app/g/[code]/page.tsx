@@ -1143,6 +1143,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   spells: "/cards/back-zaklecie.jpg",
                 }}
                 nameOf={cardOfRef}
+                stock={stock}
                 onInspect={setInspectingCard}
                 onClose={() => setLeftDrawer(null)}
               />

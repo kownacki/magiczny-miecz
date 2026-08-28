@@ -16,6 +16,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import rulesData from "@/data/rules.json";
 import { ENDLESS_STOCK_CHANGE, VARIANT_CHANGES, type EqMode } from "@/lib/engine/slots";
+import { fold } from "@/lib/engine/search";
 import { Fold } from "./fold";
 import { OpenRule, WithRules } from "./rule-ref";
 
@@ -73,16 +74,16 @@ export function RulesShelfView({
  * ----------------------------------------------------------------------- */
 
 function Manual({ focus, query }: { focus: string | null; query: string }) {
-  const needle = query.trim().toLowerCase();
+  // `fold`, the same one the shelves search with. It was `toLowerCase`, so
+  // "zaklecia" found nothing here and "Zaklęcia" found everything — while one
+  // switch away the cards answered to both.
+  const needle = fold(query.trim());
   const chapters = useMemo(() => {
     if (!needle) return CHAPTERS;
     return CHAPTERS.map((chapter) => ({
       ...chapter,
       rules: chapter.rules.filter((rule) =>
-        [rule.id ?? "", ...rule.paras, ...rule.examples]
-          .join(" ")
-          .toLowerCase()
-          .includes(needle),
+        fold([rule.id ?? "", ...rule.paras, ...rule.examples].join(" ")).includes(needle),
       ),
     })).filter((chapter) => chapter.rules.length > 0);
   }, [needle]);
@@ -412,5 +413,67 @@ function Keys() {
         pełną listę.
       </p>
     </div>
+  );
+}
+
+/**
+ * The rules a search turns up, for a caller that is showing cards as well.
+ *
+ * The Księga is one box with two halves, and a reader typing a word does not
+ * know which half holds the answer — that is the whole reason they are typing.
+ * So the switch above the tabs decides what you *browse*, and a search ignores
+ * it and reads both.
+ *
+ * Capped, because a common word matches a third of the book and a shelf of
+ * cards would be four screens below it. The cap is `log`ged to the reader
+ * rather than silent: a list that quietly stops is a list you think you have
+ * read.
+ */
+export function rulesMatching(query: string, limit = 8): { found: FoundRule[]; total: number } {
+  const needle = fold(query.trim());
+  if (!needle) return { found: [], total: 0 };
+  const hits: FoundRule[] = [];
+  for (const chapter of CHAPTERS) {
+    for (const rule of chapter.rules) {
+      // Numbered rules only. The front matter — what is in the box, how to set
+      // up — is worth reading and is one tab away, but it has no number, so a
+      // hit on it would be a result that cannot be opened. Every hit here goes
+      // somewhere.
+      if (rule.id === null) continue;
+      // Without the emphasis marks: the transcript is Markdown and a search
+      // result is not the place to show it.
+      const text = [...rule.paras, ...rule.examples].join(" ").replace(/\*\*/g, "");
+      // A number is a query. Somebody who types "5.3" wants 5.3, and now that
+      // the numbers are links it is the likeliest thing anybody types.
+      const byNumber = fold(rule.id).startsWith(needle);
+      if (byNumber || fold(text).includes(needle)) {
+        hits.push({ id: rule.id, chapter: chapter.title, text, byNumber });
+      }
+    }
+  }
+  // Numbers first, then the order of the book.
+  hits.sort((a, b) => Number(b.byNumber) - Number(a.byNumber));
+  return { found: hits.slice(0, limit), total: hits.length };
+}
+
+export interface FoundRule {
+  id: string | null;
+  chapter: string;
+  text: string;
+  byNumber: boolean;
+}
+
+/** One rule as a search result — the number, and enough of it to recognise. */
+export function RuleHit({ hit, onOpen }: { hit: FoundRule; onOpen: () => void }) {
+  return (
+    <button
+      onClick={onOpen}
+      className="w-full rounded border border-edge bg-raised/40 p-2 text-left transition hover:border-ochre/60"
+    >
+      <span className="tnum text-[11px] uppercase tracking-widest text-ochre/80">
+        {hit.id ?? hit.chapter}
+      </span>
+      <span className="mt-0.5 block truncate text-[12px] text-ink/85">{hit.text}</span>
+    </button>
   );
 }

@@ -1,5 +1,8 @@
 "use client";
 
+import items from "@/data/items.json";
+import type { Item } from "@/data/types";
+import { RELICS } from "@/lib/engine/stock";
 import { Rules } from "./rule-ref";
 
 /**
@@ -94,8 +97,11 @@ export function PilesDrawer({
   nameOf,
   onInspect,
   onClose,
+  stock,
 }: {
   counts: PileCounts;
+  /** What the Wyposażenie pile still has, per card (21.2) — `shopStock`'s. */
+  stock?: Record<string, number>;
   used: UsedPiles;
   /** What the box holds, from the manual — the denominator for each deck. */
   printed: { events: number; spells: number };
@@ -136,6 +142,7 @@ export function PilesDrawer({
           note="Gdy stos się wyczerpie, zużyte tasuje się i bierze ponownie (9.5)."
         />
 
+        <Relics stock={stock} />
       </div>
     </Drawer>
   );
@@ -320,3 +327,68 @@ function Used({
     </div>
   );
 }
+
+/**
+ * The two the endgame stands on, counted.
+ *
+ * At a table these lie face up: setup says the Magiczne Miecze, the Tarcze
+ * Tolimana and the Karty Wyposażenia go down "wszystkie w formie odkrytej", and
+ * goes on to suggest sorting them into a stack per Przedmiot because it "ułatwi
+ * i przyspieszy grę". So how many are left is not something the rules withhold
+ * — it is something anybody can see by glancing at the table, and the app had
+ * nowhere to glance.
+ *
+ * Only these two, and not the other ten on the sheet. 11.9 will not let a
+ * Postać onto the Most without a Magiczny Miecz and 14.7 will not let one into
+ * the Zamek without a Tarcza, and there are four of each against six podstawki
+ * — so "two left" is the state of the race, while "two Hełmy left" is a fact
+ * about cardboard. It is also the one supply still moving once a table has
+ * turned `endless_stock` on.
+ */
+function Relics({ stock }: { stock?: Record<string, number> }) {
+  if (!stock) return null;
+  const shown = RELIC_ROWS.filter((relic) => stock[relic.id] !== undefined);
+  if (shown.length === 0) return null;
+  return (
+    <section>
+      <h3 className="mb-2 border-b border-edge/60 pb-1 text-[11px] uppercase tracking-wide text-ochre/80">
+        Wyjątkowe Przedmioty
+      </h3>
+      <dl className="flex flex-col gap-1">
+        {shown.map((relic) => {
+          const left = stock[relic.id] ?? 0;
+          return (
+            <div key={relic.id} className="flex items-baseline justify-between gap-3">
+              <dt className="text-[11px] text-muted">{relic.name}</dt>
+              <dd
+                className={`tnum text-[11px] ${left === 0 ? "text-vermilion" : "text-ink"}`}
+                title={left === 0 ? "Nie ma już ani jednej (21.2)" : undefined}
+              >
+                {left}
+                <span className="text-muted/60">/{relic.printed}</span>
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+      <p className="mt-2 text-[10px] leading-snug text-muted/80">
+        <Rules>
+          Bez Magicznego Miecza nie ma wejścia na Most (11.9), bez Tarczy — do Zamku (14.7).
+          Wyciągnięty ze stosu Zdarzeń wymienia się na Kartę z Wyposażenia, więc więcej ich nie
+          przybywa (16.6).
+        </Rules>
+      </p>
+    </section>
+  );
+}
+
+/**
+ * Read off the cards rather than written down, so the day a scan turns out to
+ * be short one Tarcza this number moves with it.
+ */
+const RELIC_ROWS = [...RELICS]
+  .map((id) => {
+    const copies = (items as Item[]).filter((card) => card.id === id);
+    return { id, name: copies[0]?.name ?? id, printed: copies.length };
+  })
+  .filter((relic) => relic.printed > 0);
