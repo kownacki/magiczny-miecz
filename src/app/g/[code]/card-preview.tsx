@@ -667,12 +667,18 @@ export function CardPreview({
                           alt=""
                           width={SPELL_BACK_WIDTH}
                           height={TILE_ART_HEIGHT}
-                          // Twenty of the fifty-two showing, so a pair comes to
-                        // about a Przedmiot's width and the row keeps its
-                        // rhythm. Overlapped further and the first card is a
-                        // sliver; not at all and two Zaklęcia are wider than
-                        // the Miecz beside them.
-                        className={`rounded border border-magia/40 ${at > 0 ? "-ml-5" : ""}`}
+                          /**
+                         * Overlapped by twelve, which is not a taste: two backs
+                         * at 52 then come to exactly 92, a Przedmiot's tile, so
+                         * a hand of Zaklęcia occupies one place in the row like
+                         * everything beside it. Forty of the first card shows,
+                         * which is enough of one to be a card.
+                         *
+                         * Two is the most any Karta Postaci starts with — Mag,
+                         * Czarodziej, Kapłanka — so the fan never has to hold
+                         * more and the width never has to give.
+                         */
+                        className={`rounded border border-magia/40 ${at > 0 ? "-ml-3" : ""}`}
                         />
                       ))}
                     </span>
