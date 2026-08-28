@@ -27,6 +27,9 @@ import { CardMark } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import type { TileCard } from "./card-tile";
+import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import { cardName, plural } from "@/lib/engine/polish";
+import { Lookable } from "./lookable";
 
 /**
  * Width of the card picture.
@@ -156,6 +159,24 @@ export function useCardPreview(
    * Pinning is a way of saying "this one, and hold still".
    */
   const elsewhere = pinned !== null && !mine;
+  /**
+   * Whether this lookup lives *inside* a preview, which changes what the rule
+   * above is protecting against.
+   *
+   * `elsewhere` exists so that pointing at a second card on the board while one
+   * is pinned does not leave a panel nobody can wave away. A name written in a
+   * pinned panel is the opposite case: the pointer can only be there because
+   * somebody put it there deliberately, having pinned the thing first, and the
+   * whole reason to pin is to reach into it. A Postać's starting Przedmioty are
+   * the case this was added for — the Karta names them and the reader wants to
+   * see what they are.
+   *
+   * Read off the DOM rather than passed down. It is a fact about where this
+   * lookup was rendered, and threading it through every `Lookable` between here
+   * and the panel would be four components carrying an answer that the element
+   * already knows.
+   */
+  const [nested, setNested] = useState(false);
 
   /**
    * Held Cmd — Ctrl away from a Mac — holds the panel: down to keep it, up to
@@ -227,7 +248,9 @@ export function useCardPreview(
   const handlers = {
     onMouseEnter: (event: React.MouseEvent<HTMLElement>) => {
       over.current = true;
-      if (elsewhere) return;
+      const inside = event.currentTarget.closest('[role="tooltip"]') !== null;
+      setNested(inside);
+      if (elsewhere && !inside) return;
       setAnchor(event.currentTarget.getBoundingClientRect());
     },
     // A pinned panel outlives the pointer leaving the tile it came from, which
@@ -244,7 +267,7 @@ export function useCardPreview(
   };
 
   const preview =
-    anchor && card && !elsewhere ? (
+    anchor && card && (!elsewhere || nested) ? (
       <CardPreview
         card={card}
         anchor={anchor}
@@ -374,6 +397,9 @@ export function CardPreview({
   // Postaci and anything off the Wyposażenie sheets — none of those is a Karta
   // Zdarzeń and none of them carries one.
   const numeral = numeralOf(card.cardId);
+  // Only a Postać has one, and `startingKit` answers with an empty kit for
+  // anything else — including the "Losowa" card, which is nobody yet.
+  const kit = card.character ? startingKit(asCharacterId(card.cardId)) : null;
   // 5.3, answered for the reader rather than stated in the abstract.
   const barred = nature !== null && (forbiddenNatures(card.cardId)?.includes(nature) ?? false);
   const anythingToSay =
@@ -525,6 +551,46 @@ export function CardPreview({
                 </li>
               ))}
             </ul>
+          )}
+
+          {/**
+           * What a Postać owns before anybody rolls (8.1).
+           *
+           * It is printed on the Karta and the Karta is right there — but at
+           * this size the Charakterystyka is a grey smear, and "z czym zaczynam"
+           * is the question somebody comparing twenty-seven of them is actually
+           * asking. So it is pulled out and named.
+           *
+           * The Przedmioty are `Lookable`, which means they open previews of
+           * their own — and that only works with the pointer inside this panel,
+           * which only happens once it is pinned. The note at the bottom already
+           * says how; this is one more thing pinning is for.
+           */}
+          {kit && (kit.items?.length || kit.gold !== undefined || kit.spells) && (
+            <div className="flex flex-col gap-1 border-t border-edge/60 pt-2">
+              <p className="text-[11px] text-muted">Na start:</p>
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px] text-ink">
+                {kit.items?.map((cardId) => (
+                  <Lookable
+                    key={cardId}
+                    kind="card"
+                    id={cardId}
+                    name={cardName(cardId)}
+                    eqMode={eqMode}
+                  />
+                ))}
+                {/* 3.2's single coin is everybody's, so only a Karta that says
+                    otherwise is worth a word. */}
+                {kit.gold !== undefined && kit.gold !== 1 && (
+                  <span className="text-zloto">{kit.gold} Sz. Z.</span>
+                )}
+                {kit.spells ? (
+                  <span className="text-magia">
+                    {kit.spells} {plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}
+                  </span>
+                ) : null}
+              </p>
+            </div>
           )}
 
           {/* The prose only when there is no picture of it.
