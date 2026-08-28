@@ -12,7 +12,6 @@ import { Fold } from "./fold";
 import { Rules } from "./rule-ref";
 import { ItemSlot } from "./item-slot";
 import { CARD_NAMES, tileFor, type Seat } from "./table";
-import type { TileCard } from "./card-tile";
 import type { CardId } from "@/data/ids";
 import { shelfFor } from "./trophy-shelf";
 
@@ -65,7 +64,6 @@ export function TrophySection({
   mode,
   busy,
   onTrade,
-  onInspect,
 }: {
   seat: Seat;
   isMine: boolean;
@@ -92,7 +90,6 @@ export function TrophySection({
     cardIds: readonly string[],
     deal: { swords: number; points: number; wasted: number },
   ) => void;
-  onInspect: (card: TileCard) => void;
 }) {
   /**
    * The trophies the player has picked out, by holding id.
@@ -259,7 +256,6 @@ export function TrophySection({
                     ? () => toggle(one.holdingId as string)
                     : undefined
                 }
-                onInspect={onInspect}
               />
             ))}
           </div>
@@ -447,16 +443,22 @@ function TrophyTile({
   gone,
   inTrade,
   onPick,
-  onInspect,
 }: {
   cardId: string;
   /** Beaten, and no longer held: traded away (1.4) or put down. */
   gone: boolean;
   /** The trade being weighed would hand this one in. */
   inTrade: boolean;
-  /** Put this one in or take it out. Absent where there is nothing to decide. */
+  /**
+   * Put this one in the trade or take it out.
+   *
+   * The only thing a click does here. A trophy tile used to open the Karta like
+   * every other card in the app, and on a row where the click is a *choice*
+   * that is one gesture with two meanings — pick this one, or read it — decided
+   * by which trophy you happened to hit. Absent for a spent one, which is a
+   * record and has nothing to decide.
+   */
   onPick?: () => void;
-  onInspect: (card: TileCard) => void;
 }) {
   const worth = trophyValue(cardId);
   const name = CARD_NAMES.get(cardId) ?? cardId;
@@ -489,7 +491,15 @@ function TrophyTile({
       // when he is. Position and fade both say the same thing from across the
       // row; this is the one that survives being looked at directly.
       marks={gone ? [] : ["trofeum"]}
-      onClick={onPick ?? (() => onInspect(card))}
+      // Inert exactly when there is nothing to decide: a spent trophy, or
+      // anybody's shelf but your own. Both used to be live buttons that either
+      // did nothing or opened a window, and one fact settles both.
+      //
+      // The Karta is still a hover away — the preview lives on the square
+      // rather than on the button, so switching the button off does not take it
+      // with it — which is why nothing is lost by refusing the click.
+      disabled={!onPick}
+      onClick={onPick}
     />
   );
 }

@@ -809,7 +809,6 @@ export function SeatCard({
             mode={trophyMode}
             busy={!canAdjust}
             onTrade={isMine ? onTrade : undefined}
-            onInspect={onInspect}
           />
           <CarriedCard carried={carried} />
           {/* Where the figure is standing is not repeated here. The board says
