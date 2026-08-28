@@ -19,11 +19,17 @@ A card-by-card equivalent of this table is enforced in code rather than written
 down: see `src/lib/engine/coverage.ts`, which puts the same three states on
 screen next to every drawn card.
 
-**Where it stands.** 117 rules ✅, 20 ◐, none ❌. Of the 138 Karty Zdarzeń, 104
-are `pelne` and 7 `brak`; of the 27 Zaklęcia, 13 are carried out and 14
-announced; and all 57 Obszary do what is printed on them. The counts move, so
-trust the code over this paragraph — `coverage.ts` and `fieldScript.ts` are
-where the truth is, and both are checked by tests.
+**Where it stands.** 117 rules ✅, 20 ◐, none ❌. Of the 138 Karty Zdarzeń, 109
+are `pelne` and 6 `brak` — all 17 Nieznajomi are done; of the 27 Zaklęcia, 13
+are carried out and 14 announced; and all 57 Obszary do what is printed on them.
+The counts move, so trust the code over this paragraph — `coverage.ts` and
+`fieldScript.ts` are where the truth is, and both are checked by tests.
+
+One caveat on that first number, learned the hard way on the Eremita:
+`coverageOf` reports whether a card has a *script*, not whether the script can
+resolve. He was `pelne` for months while his first step, `poloz-karte`, was
+declared and unimplemented — so he rolled for where to settle and settled
+nowhere. If a card matters, run it rather than counting it.
 
 ---
 
