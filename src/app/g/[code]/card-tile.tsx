@@ -306,7 +306,22 @@ export function CardBack({ count }: { count: number }) {
             // difference, and a fraction of a pixel is a thing browsers lay out
             // exactly and blades do not.
             style={at > 0 ? { marginLeft: step - SPELL_BACK_WIDTH } : undefined}
-            className="rounded border border-magia/40"
+            /**
+             * Rounded at the two ends of the stack and square in between.
+             *
+             * A corner radius is four pixels and a sliver is three, so a
+             * covered card shows nothing of its top edge except the curve — and
+             * fourteen curves side by side stopped being a line and became a
+             * four-pixel saturated band along the top and the bottom, which is
+             * not a thing a stack of cards does. Square in the middle leaves one
+             * hairline at 40%, the same weight as the edges down the side.
+             *
+             * The ends keep theirs: the first card's left corners are the
+             * stack's own outer corner, the last card is the one you can see
+             * whole, and everything they round away is underneath the next card
+             * anyway.
+             */
+            className={`border border-magia/40 ${at === 0 || at === drawn - 1 ? "rounded" : ""}`}
           />
         ))}
       </span>
