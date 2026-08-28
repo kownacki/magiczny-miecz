@@ -457,7 +457,22 @@ export function TestConsole({
               // Everything here is unlocked: this console only opens in test mode.
               const done = complete(line, players, { stage, testmode: true });
               setLine(done.line);
-              if (done.options.length > 0) say(done.options.join("   "));
+              /**
+               * Under headings where the pool has them.
+               *
+               * A terminal cannot do this — readline draws its own grid from a
+               * flat list and no heading survives it — but this console draws
+               * its own, and `give`'s ninety names are three kinds a player is
+               * choosing between before they are ninety names. Everything else
+               * has no shape of its own and stays one run.
+               */
+              if (done.sections) {
+                for (const group of done.sections) {
+                  say(`${group.title}\n  ${group.options.join("   ")}`);
+                }
+              } else if (done.options.length > 0) {
+                say(done.options.join("   "));
+              }
               return;
             }
             // The last thing typed, the way a shell gives it back. Testing is

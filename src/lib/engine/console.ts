@@ -1671,7 +1671,19 @@ export function complete(
   players: readonly string[] = [],
   /** What to offer. Everything, unless a surface says where the game has got to. */
   offering: { stage?: Stage; testmode?: boolean } = {},
-): { line: string; options: string[] } {
+): {
+  line: string;
+  options: string[];
+  /**
+   * The same options under headings, where the pool has them.
+   *
+   * A terminal cannot use this — readline draws its own grid from a flat list
+   * and no heading survives — but a console that draws its own list can, and
+   * `give`'s ninety names are three kinds a player is choosing between before
+   * they are ninety names. Absent when the pool has no shape of its own.
+   */
+  sections?: { title: string; options: string[] }[];
+} {
   const words = new Set(
     availableIn(offering).flatMap((spec) => [spec.name, ...spec.aliases]),
   );
@@ -1691,7 +1703,12 @@ export function complete(
    * read in; everything else is sorted alphabetically below, which is right for
    * a list of names with no shape of its own.
    */
-  const from = (): { pool: string[]; at: number; ordered?: true } => {
+  const from = (): {
+    pool: string[];
+    at: number;
+    ordered?: true;
+    groups?: readonly { title: string; names: readonly string[] }[];
+  } => {
     if (typingVerb) {
       return { pool: [...words], at: 0 };
     }
@@ -1710,7 +1727,17 @@ export function complete(
      * forgotten. Tab draws a plain grid and cannot label the groups, so their
      * order is the whole of what it can carry.
      */
-    if (verb === "give") return { pool: HOLDABLE.map((c) => c.name), at: 1, ordered: true };
+    if (verb === "give") {
+      return {
+        pool: HOLDABLE.map((c) => c.name),
+        at: 1,
+        ordered: true,
+        groups: GIVEABLE.map((group) => ({
+          title: group.title,
+          names: group.cards.map((one) => one.name),
+        })),
+      };
+    }
     if (verb === "place" || verb === "put" || verb === "drop") {
       // Which half of the line is being typed. Past the `at`, the names on
       // offer are the board's; before it, the deck's.
@@ -1772,7 +1799,7 @@ export function complete(
     return { pool: [], at: parts.length - 1 };
   };
 
-  const { pool, at, ordered } = from();
+  const { pool, at, ordered, groups } = from();
   // The rest of the line is one argument, so a name with spaces in it can be
   // completed from any word of it: `give magiczny mie` is still one fragment.
   const fragment = parts.slice(at).join(" ");
@@ -1795,7 +1822,19 @@ export function complete(
   for (const name of hits) {
     while (!fold(name).startsWith(fold(shared))) shared = shared.slice(0, -1);
   }
-  return { line: joined(shared), options: hits };
+  // Cut the same hits into the pool's own groups, dropping any the fragment has
+  // emptied — a heading over nothing is the burying this exists to stop.
+  const sections = groups
+    ?.map((group) => ({
+      title: group.title,
+      options: hits.filter((name) => group.names.includes(name)),
+    }))
+    .filter((group) => group.options.length > 0);
+  return {
+    line: joined(shared),
+    options: hits,
+    ...(sections && sections.length > 0 ? { sections } : {}),
+  };
 }
 
 /**

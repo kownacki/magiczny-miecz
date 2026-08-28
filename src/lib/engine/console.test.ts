@@ -277,6 +277,36 @@ suite("naming a card, a field or a creature", () => {
     }
   });
 
+  /**
+   * And the same hits under headings, for a console that draws its own list.
+   *
+   * A terminal cannot use them: readline builds its grid from a flat array and
+   * no heading survives. The browser console builds its own, so it gets the
+   * three kinds labelled rather than ninety names in one run.
+   */
+  it("cuts the giveable cards into named groups for a surface that can draw them", () => {
+    const { sections } = complete("give ", []);
+    expect(sections?.map((one) => one.title)).toEqual([
+      "Przedmioty",
+      "Przyjaciele",
+      "Zaklęcia",
+    ]);
+    // The same hits, cut up rather than added to.
+    const { options } = complete("give ", []);
+    expect(sections?.flatMap((one) => one.options).sort()).toEqual([...options].sort());
+  });
+
+  it("drops a heading the fragment has emptied", () => {
+    // Nothing in Przyjaciele or Zaklęcia begins "TA".
+    expect(complete("give TA", []).sections?.map((one) => one.title)).toEqual(["Przedmioty"]);
+  });
+
+  /** Every other pool is a list of names with no shape, and stays one run. */
+  it("says nothing about groups where there are none", () => {
+    expect(complete("place ", []).sections).toBeUndefined();
+    expect(complete("teleport ", []).sections).toBeUndefined();
+  });
+
   it("takes a bare `give` as a request for the list", () => {
     expect(ok("give")).toEqual({ kind: "give", cardId: null });
   });
@@ -762,7 +792,9 @@ suite("finishing a half-typed line", () => {
   it("goes as far as the candidates agree, and lists them", () => {
     // get, give, gold and guardian all start here, so there is nothing to add.
     expect(tab("g")).toEqual({ line: "g", options: ["get", "give", "gold", "guardian"] });
-    expect(tab("give krysz")).toEqual({
+    // `give` also hands back the same hits under their headings, which a
+    // terminal ignores and the browser console draws.
+    expect(tab("give krysz")).toMatchObject({
       line: "give KRYSZTAŁ ",
       options: ["KRYSZTAŁ LOSU", "KRYSZTAŁ MAGÓW"],
     });
