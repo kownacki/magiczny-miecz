@@ -269,11 +269,41 @@ export function useTable(code: string): Table {
   const movedAt = useRef<Record<string, number>>({});
   const router = useRouter();
 
+/**
+ * What went wrong, out of a response that may not be JSON at all.
+ *
+ * Every refusal this app writes is `{ error }`, so reading the body as JSON was
+ * right for every case anybody had seen. It is wrong for the case that matters
+ * most: a route that *crashed* answers with a 500 and an empty body, and
+ * `response.json()` on nothing throws `Unexpected end of JSON input` — so a
+ * server fault surfaced as a SyntaxError in the client, pointing at the line
+ * that was trying to report it rather than at anything broken.
+ *
+ * That is worse than an unhelpful message. It hid a missing database column
+ * behind a stack trace in `use-table.ts`, which is the one file that had
+ * nothing to do with it.
+ *
+ * Text first, then JSON if it parses. An empty body, Next's HTML error page and
+ * a real refusal all arrive here, and only the last of them has an `error` to
+ * read; the status is what is left to say about the other two, and saying it
+ * beats saying "Błąd".
+ */
+async function saidWrong(response: Response): Promise<string> {
+  const body = await response.text().catch(() => "");
+  try {
+    const said = JSON.parse(body) as { error?: unknown };
+    if (typeof said.error === "string" && said.error) return said.error;
+  } catch {
+    // Not JSON. Which is the point of reading it as text first.
+  }
+  return `Błąd serwera (${response.status}).`;
+}
+
   const refresh = useCallback(async () => {
     const stored = readSeatToken(code);
     const query = stored ? `?token=${encodeURIComponent(stored)}` : "";
     const response = await fetch(`/api/games/${code}${query}`);
-    if (!response.ok) return setError((await response.json()).error ?? "Błąd");
+    if (!response.ok) return setError(await saidWrong(response));
     const data = await response.json();
 
     // What this device believes, against what the server has just said. All
@@ -575,7 +605,7 @@ export function useTable(code: string): Table {
         body: JSON.stringify({ token: readSeatToken(code) }),
       });
       if (!response.ok) {
-        setError((await response.json()).error);
+        setError(await saidWrong(response));
         return;
       }
       // Forget the seat locally too, or this browser keeps showing the
@@ -868,7 +898,7 @@ export function useTable(code: string): Table {
       // own.
       body: JSON.stringify({ name: name.trim() || null, local: true }),
     });
-    if (!response.ok) return setError((await response.json()).error);
+    if (!response.ok) return setError(await saidWrong(response));
     refresh();
   }
 
