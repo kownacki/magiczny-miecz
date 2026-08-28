@@ -3,6 +3,7 @@
 import { nextSeat, startTurn } from "@/lib/engine/turn";
 import { afterTurn, type Status } from "@/lib/engine/status";
 import { scriptFor } from "@/lib/engine/cardScript";
+import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
 import { apply, merge, mergeAll, type Changeset, type Snapshot } from "../change";
 import { putOnPile } from "./piles";
@@ -81,7 +82,18 @@ export function leaveCardsBehind(
   const spentByReading = (card: TurnCard) =>
     CONSUMED_BY_READING.has(card.cardClass) &&
     scriptFor(card.cardId)?.disposition.kind === "odloz";
-  const stays = input.remaining.filter((card) => !spentByReading(card));
+  /**
+   * The one friend who does not wait to be picked up.
+   *
+   * 16.8 leaves what you did not take lying face up on the Obszar, and the
+   * Najemnik says so himself — "będzie czekał tu na bardziej hojną Postać".
+   * The Tragarz is the exception and prints it: unpaid, "odejdzie na stos
+   * użytych Kart". So he leaves by the same door as a Karta whose own text
+   * says `odłóż`, which is the door this function already has.
+   */
+  const walksOff = (card: TurnCard) => entryPrice(abilitiesOf(card.cardId))?.bezZaplaty === "odchodzi";
+  const goes = (card: TurnCard) => spentByReading(card) || walksOff(card);
+  const stays = input.remaining.filter((card) => !goes(card));
 
   // The other half of the same sentence: a Karta whose own text says "odłóż" is
   // not left on the Obszar (16.8) and is not destroyed either — it joins the
@@ -89,7 +101,7 @@ export function leaveCardsBehind(
   const discarded = putOnPile(
     snapshot,
     "events",
-    input.remaining.filter(spentByReading).map((card) => ({
+    input.remaining.filter(goes).map((card) => ({
       cardId: card.cardId,
       granted: card.granted,
     })),

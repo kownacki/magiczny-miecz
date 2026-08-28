@@ -279,6 +279,17 @@ export function describeAbility(ability: Ability): string {
       return `do ${ability.upTo} Życia w: ${fieldName(ability.field)}`;
     case "oddaj-w":
       return `oddaj Kartę w: ${fieldName(ability.field)} za ${ability.cena} Sz. Z.`;
+    case "cena-przyjecia": {
+      const price = [
+        ability.zloto ? `${ability.zloto} Sz. Z.` : null,
+        ability.zycie ? `${ability.zycie} Życia` : null,
+      ]
+        .filter(Boolean)
+        .join(" i ");
+      return ability.bezZaplaty === "odchodzi"
+        ? `przyjęcie kosztuje ${price}; bez zapłaty odchodzi na stos`
+        : `przyjęcie kosztuje ${price}; bez zapłaty czeka na Obszarze`;
+    }
     case "walczy-za-ciebie":
       return `walczy za ciebie (Miecz ${ability.miecz}, Magia ${ability.magia})`;
     case "niedostepny":

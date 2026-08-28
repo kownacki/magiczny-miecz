@@ -7,7 +7,7 @@ import { apply } from "../change";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import { pointsOf, seatView } from "./seat";
-import { dropCard } from "./holdings";
+import { dropCard, takeCard } from "./holdings";
 
 /**
  * Przyjaciele, which the rulebook barely describes.
@@ -503,7 +503,7 @@ describe("a friend who mends you at her own Obszar (Księżniczka, Władca)", ()
   });
 
   it("refuses anywhere else, however friendly she is", () => {
-    expect(() => healFromFriend(at("gospoda"), { seatId: "seat-a", points: 1 })).toThrow(
+    expect(() => healFromFriend(at("przelecz-wichrow"), { seatId: "seat-a", points: 1 })).toThrow(
       /nie leczy na tym Obszarze/,
     );
   });
@@ -548,7 +548,7 @@ describe("giving that friend up for gold, where she belongs", () => {
     // 6.4 lets you put a friend down anywhere for nothing — that is `dropCard`.
     // This is the one place she is worth something.
     expect(() =>
-      partWithFriend(at("gospoda"), { seatId: "seat-a", holdingId: "h-friend" }),
+      partWithFriend(at("przelecz-wichrow"), { seatId: "seat-a", holdingId: "h-friend" }),
     ).toThrow(/tylko w/);
   });
 
@@ -556,5 +556,49 @@ describe("giving that friend up for gold, where she belongs", () => {
     expect(() =>
       partWithFriend(at("zamek", "pasterz"), { seatId: "seat-a", holdingId: "h-friend" }),
     ).toThrow(/nie jest kartą/);
+  });
+});
+
+/**
+ * The three friends who charge to join at all.
+ *
+ * "Najemnik będzie twoim Przyjacielem, jeżeli zapłacisz mu 1 Sztukę Złota."
+ * The Tragarz is paid "przedtem" and the Chochlik takes a point of Życie
+ * instead. Taking the card is agreeing to the price — there is no third state
+ * between paying and walking away, and walking away is leaving it on the
+ * Obszar.
+ */
+describe("a friend who charges to join (Najemnik, Tragarz, Chochlik)", () => {
+  const arriving = (gold = 2, life = 4) =>
+    aTable({ seats: [aSeat({ id: "seat-a", gold, life, field_id: "przelecz-wichrow" })] });
+
+  it("takes the Sztuka Złota as the Najemnik joins", () => {
+    const { writes } = takeCard(arriving(2), { seatId: "seat-a", cardId: "najemnik" });
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 1, life: 4 } }]);
+    expect(writes.holdings?.insert?.[0]).toMatchObject({ card_id: "najemnik", kind: "friend" });
+  });
+
+  it("refuses when the purse is empty", () => {
+    expect(() => takeCard(arriving(0), { seatId: "seat-a", cardId: "najemnik" })).toThrow(
+      /za mało złota/i,
+    );
+  });
+
+  it("takes a point of Życie for the Chochlik instead of gold", () => {
+    const { writes } = takeCard(arriving(2, 4), { seatId: "seat-a", cardId: "chochlik" });
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 2, life: 3 } }]);
+  });
+
+  it("will not let the Chochlik take your last point of Życie", () => {
+    // 15.5 kills a Postać at zero, and no card in the box asks you to die in
+    // order to make a friend.
+    expect(() => takeCard(arriving(2, 1), { seatId: "seat-a", cardId: "chochlik" })).toThrow(
+      /ostatni/,
+    );
+  });
+
+  it("charges nothing for a friend who asks nothing", () => {
+    const { writes } = takeCard(arriving(2), { seatId: "seat-a", cardId: "pasterz" });
+    expect(writes.seats).toBeUndefined();
   });
 });

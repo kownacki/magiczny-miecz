@@ -59,13 +59,12 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   "magiczna-sakwa": "Utrata Sakwy to utrata wszystkiego, co w niej niesiono.",
 
   // --- friends --------------------------------------------------------------
-  chochlik: "Kosztuje 1 punkt Życia na wstępie. Pozwala obejrzeć 2 Karty Zaklęć i wybrać.",
+  chochlik: "Przy braniu Zaklęcia pozwala obejrzeć 2 Karty i wybrać jedną.",
   // The per-turn hire is the app's now; joining you is not. Taking him is an
   // ordinary `take` and nothing charges the Sztuka Złota or leaves him standing
   // on the Obszar when you decline.
-  najemnik: "Przyjmujesz go za 1 Sz. Z. — bez zapłaty zostaje na Obszarze i czeka.",
   alchemik: "Zamiana jest nieodwracalna — Karta Przedmiotu wraca na stos.",
-  tragarz: "Bez zapłaty 1 Sz. Z. odchodzi. Tracąc go, tracisz też niesione Przedmioty.",
+  tragarz: "Tracąc go, tracisz też niesione przez niego Przedmioty — aplikacja nie wie, które to.",
 
   // --- cards whose disposition is handled but whose body is not -------------
 

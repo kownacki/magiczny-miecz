@@ -3,7 +3,7 @@
 import items from "@/data/items.json";
 import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
-import { carriesSpell, unavailableIn } from "@/lib/engine/abilities";
+import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
 import { barredFromFriends } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
@@ -350,12 +350,53 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
       ? pushOntoPile(snapshot, "events", [cardId])
       : {};
 
-  const kept: Changeset = merge(
+  /**
+   * What the friend charges to join you at all.
+   *
+   * Three cards ask a price up front — the Najemnik and the Tragarz a Sztuka
+   * Złota, the Chochlik a point of Życie — and taking the card *is* agreeing to
+   * it. There is no third state between paying and walking away, and walking
+   * away is already what leaving a card on the Obszar means; what each of them
+   * does when you walk away is `cena-przyjecia`'s `bezZaplaty`, read at the end
+   * of the turn by `leaveCardsBehind`.
+   *
+   * Refused rather than allowed on credit. The Chochlik's point of Życie is
+   * refused when it is your last one as well: 15.5 kills a Postać at zero, and
+   * no card in the box asks you to die in order to make a friend.
+   */
+  const price = kind === "friend" ? entryPrice(abilitiesOf(cardId)) : null;
+  const paid: Changeset = {};
+  if (price && taker) {
+    const zloto = price.zloto ?? 0;
+    const zycie = price.zycie ?? 0;
+    if (taker.gold < zloto) {
+      throw new Error(`${cardName(cardId)} bierze ${zloto} Sz. Z. — za mało złota.`);
+    }
+    if (zycie > 0 && taker.life - zycie < 1) {
+      throw new Error(
+        `${cardName(cardId)} chce ${zycie} punkt Życia, a to ostatni — 15.5 nie pozwala.`,
+      );
+    }
+    paid.seats = [
+      { id: taker.id, patch: { gold: taker.gold - zloto, life: taker.life - zycie } },
+    ];
+    paid.journal = [
+      {
+        seatId,
+        turn: snapshot.game.turn,
+        kind: "paid-friend",
+        payload: { cardId, price: zloto, life: zycie, joining: true },
+      },
+    ];
+  }
+
+  const kept: Changeset = mergeAll(
     {
       holdings: {
         insert: [{ seat_id: seatId, card_id: cardId, kind, face: "open", granted }],
       },
     },
+    paid,
     escortFor(snapshot, seatId, cardId, granted),
   );
 

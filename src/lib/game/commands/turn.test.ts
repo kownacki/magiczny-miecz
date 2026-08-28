@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
 import { aSeat, aTable } from "../fixture";
-import { passTurn, tickEffects } from "./turn";
+import { leaveCardsBehind, passTurn, tickEffects } from "./turn";
 
 const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
   aTable({
@@ -157,5 +157,38 @@ describe("effects counting down", () => {
       ],
     });
     expect(tickEffects(table, "seat-a")).toEqual({});
+  });
+});
+
+/**
+ * 16.8 leaves what nobody took lying face up on the Obszar — with one exception
+ * the card prints itself.
+ */
+describe("what is left on the Obszar at the end of a turn", () => {
+  const leaving = (...cardIds: string[]) =>
+    leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
+      fieldId: "przelecz-wichrow",
+      seatId: "seat-a",
+      turn: 3,
+      remaining: cardIds.map((cardId) => ({ cardId, cardClass: "friend" }) as never),
+    });
+
+  it("leaves an unpaid Najemnik lying there, because he says he waits", () => {
+    // "Jeśli odmówisz zapłaty, będzie czekał tu na bardziej hojną Postać."
+    const writes = leaving("najemnik");
+    expect(writes.fieldCards?.insert?.map((row) => row.card_id)).toEqual(["najemnik"]);
+  });
+
+  it("sends an unpaid Tragarz to the stos zużytych instead", () => {
+    // "Jeśli mu nie zapłacisz, odejdzie na stos użytych Kart" — the one friend
+    // who does not wait to be picked up.
+    const writes = leaving("tragarz");
+    expect(writes.fieldCards?.insert ?? []).toEqual([]);
+    expect(writes.journal?.map((line) => line.kind) ?? []).not.toContain("left-behind");
+  });
+
+  it("tells the two apart in the same handful", () => {
+    const writes = leaving("najemnik", "tragarz", "pasterz");
+    expect(writes.fieldCards?.insert?.map((row) => row.card_id)).toEqual(["najemnik", "pasterz"]);
   });
 });

@@ -177,6 +177,28 @@ export type Ability =
    */
   | { kind: "oddaj-w"; field: FieldId; cena: number }
   /**
+   * What it costs to take this friend at all, and what he does if you refuse.
+   *
+   * Three cards ask a price up front and each names its own consequence.
+   * "Najemnik będzie twoim Przyjacielem, jeżeli zapłacisz mu 1 Sztukę Złota.
+   * Jeśli odmówisz zapłaty, będzie czekał tu na bardziej hojną Postać" — so he
+   * lies on the Obszar like anything else left behind (16.8). The Tragarz is
+   * paid "przedtem" and otherwise "odejdzie na stos użytych Kart", which is the
+   * exception: he does not wait. The Chochlik asks for a point of Życie rather
+   * than gold.
+   *
+   * Taking the card *is* agreeing to the price — there is no third state
+   * between paying and walking away, and walking away is already what leaving a
+   * card on the Obszar means.
+   */
+  | {
+      kind: "cena-przyjecia";
+      zloto?: number;
+      zycie?: number;
+      /** Unpaid: waits where it lies (16.8), or goes to the stos zużytych. */
+      bezZaplaty: "zostaje" | "odchodzi";
+    }
+  /**
    * Fights with its own points rather than lending you any — and the two cards
    * that do it are not doing the same thing.
    *
@@ -481,7 +503,10 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   alchemik: [{ kind: "skup", cena: 1 }],
   pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
   strzyga: [{ kind: "punkty", magia: 1 }],
-  chochlik: [{ kind: "punkty", magia: 2 }],
+  chochlik: [
+    { kind: "cena-przyjecia", zycie: 1, bezZaplaty: "zostaje" },
+    { kind: "punkty", magia: 2 },
+  ],
   giermek: [
     // "będzie dodawał ci 2 punkty Miecza podczas każdej walki".
     { kind: "punkty", miecz: 2, tylkoWalka: true },
@@ -497,12 +522,18 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   ],
   // "dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1 Sztukę
   // Złota. Płacić Najemnikowi można tylko raz na turę."
-  najemnik: [{ kind: "za-oplata", cena: 1, miecz: 3, razNaTure: true }],
+  najemnik: [
+    { kind: "cena-przyjecia", zloto: 1, bezZaplaty: "zostaje" },
+    { kind: "za-oplata", cena: 1, miecz: 3, razNaTure: true },
+  ],
   // "Gnom posiada 1 Zaklęcie (weź Kartę Zaklęcia i połóż ją razem z Kartą
   // Gnoma - wolno ci ją obejrzeć). Gnom wypowie Zaklęcie, gdy ofiarujesz mu 1
   // Sztukę Złota, a następnie zniknie zabierając swoją zapłatę."
   gnom: [{ kind: "nosi-zaklecie", cena: 1, znika: true, mozeszObejrzec: true }],
-  tragarz: [{ kind: "udzwig", items: 4 }],
+  tragarz: [
+    { kind: "cena-przyjecia", zloto: 1, bezZaplaty: "odchodzi" },
+    { kind: "udzwig", items: 4 },
+  ],
   przewoznika: [{ kind: "bez-oplaty", fields: ["przeprawa-1", "przeprawa-2"] }],
   rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
   /**
@@ -871,6 +902,24 @@ export function fightsForYou(
  * arm's length instead of standing in front of you, so he is found by a
  * different question and never answers this one at home.
  */
+/**
+ * What a friend charges to join, if he charges anything.
+ *
+ * Read at the moment of taking, and at the end of the turn by whatever decides
+ * where an untaken card goes — the price and the consequence of not paying it
+ * are one clause on the card and one ability here.
+ */
+export function entryPrice(
+  abilities: readonly Ability[],
+): { zloto?: number; zycie?: number; bezZaplaty: "zostaje" | "odchodzi" } | null {
+  for (const ability of abilities) {
+    if (ability.kind === "cena-przyjecia") {
+      return { zloto: ability.zloto, zycie: ability.zycie, bezZaplaty: ability.bezZaplaty };
+    }
+  }
+  return null;
+}
+
 export function raidsForYou(
   cardIds: readonly string[],
 ): { cardId: string; miecz: number; magia: number } | null {
