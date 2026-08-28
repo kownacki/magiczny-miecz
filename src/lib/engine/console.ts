@@ -126,6 +126,16 @@ export type EffectName = "fog" | "frozen" | "barred";
 
 export type Command =
   | { kind: "help"; about: string | null }
+  /**
+   * A rule out of the Instrukcja, by number or by chapter.
+   *
+   * `mm` has no Księga and never will — there is no drawer in a terminal — so
+   * every "(5.3)" it prints is a dead end there, and the terminal is where a
+   * player meets refusals fastest, because they are typing commands rather
+   * than clicking legal moves. This is the way out that the browser has by
+   * making the number a link.
+   */
+  | { kind: "rule"; about: string | null }
   | { kind: "kill"; who: string | null }
   /* People. `who` is a user: their id, their name, or the number of the seat
      they are driving — see `pickPlayer`. */
@@ -283,6 +293,14 @@ export const COMMANDS: CommandSpec[] = [
     aliases: ["?"],
     usage: "help [command]",
     summary: "list these commands, or explain one of them",
+    needs: "play",
+  },
+  {
+    name: "rule",
+    offTable: true,
+    aliases: [],
+    usage: "rule [5.3|5]",
+    summary: "read a rule out of the Instrukcji, or list a chapter",
     needs: "play",
   },
   {
@@ -987,6 +1005,8 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "nature", nature, who: who || null, force: forced } };
   }
 
+  if (word === "rule") return { ok: { kind: "rule", about: tail.trim() || null } };
+
   if (word === "who") return { ok: { kind: "who" } };
   if (word === "leave") return { ok: { kind: "leave" } };
   if (word === "unseat") return { ok: { kind: "unseat", who: tail || null } };
@@ -1553,6 +1573,7 @@ export function complete(
  */
 const NEEDS: Record<Command["kind"], Capability> = {
   help: "play",
+  rule: "play",
   who: "play",
   seat: "play",
   unseat: "play",
@@ -1669,7 +1690,7 @@ export function availableIn(at: { stage?: Stage; testmode?: boolean }): CommandS
  * parsed to. `CommandSpec.offTable` is the same fact for `help` to print, and a
  * test types every usage line to check the two agree.
  */
-const OFF_TABLE = new Set<Command["kind"]>(["help", "card"]);
+const OFF_TABLE = new Set<Command["kind"]>(["help", "card", "rule"]);
 
 export function worksOffTable(command: Command): boolean {
   return OFF_TABLE.has(command.kind);

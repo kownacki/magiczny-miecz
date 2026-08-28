@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { WithRules } from "./rule-ref";
 import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
 import {
   COMMANDS,
@@ -419,7 +420,13 @@ export function TestConsole({
                 data-echo={entry.mine ? "" : undefined}
                 className={entry.mine ? "text-ochre" : "text-ink"}
               >
-                {entry.said}
+                {/* This transcript is React, not a terminal, so the numbers in
+                    it can be what they are everywhere else on this screen. The
+                    console prints more of them than anything: every refusal it
+                    hands back cites the rule it is enforcing, and `rule 5.3`
+                    now prints whole ones. In `mm` the same text arrives as
+                    text, which is what the verb is for. */}
+                <WithRules text={entry.said} />
               </p>
             ))
           )}

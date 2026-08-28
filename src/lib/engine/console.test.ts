@@ -379,7 +379,7 @@ suite("playing the game, and overruling it", () => {
    */
   it("offers nothing that needs a game when there is not one", () => {
     const names = availableIn({ stage: "none", testmode: true }).map((one) => one.name);
-    expect(names).toEqual(["help", "card"]);
+    expect(names).toEqual(["help", "rule", "card"]);
     // Even with the overrides unlocked: `kill` needs somebody to kill.
     expect(names).not.toContain("kill");
   });
@@ -751,6 +751,7 @@ suite("finishing a half-typed line", () => {
  */
 const USAGE: Record<string, { line: string; becomes: unknown }> = {
   help: { line: "help", becomes: { kind: "help", about: null } },
+  rule: { line: "rule 5.3", becomes: { kind: "rule", about: "5.3" } },
   ready: { line: "ready", becomes: { kind: "ready", who: null, ready: true } },
   start: { line: "start", becomes: { kind: "start" } },
   roll: { line: "roll", becomes: { kind: "roll" } },

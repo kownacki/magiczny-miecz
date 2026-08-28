@@ -1,6 +1,7 @@
 /** One typed line from the test console, carried out against a real table. */
 
 import characters from "@/data/characters.json";
+import { ruleLines } from "@/lib/engine/ruleLines";
 import { cardIdNamed, describeCard } from "@/lib/engine/lookup";
 
 import type { Character } from "@/data/types";
@@ -1316,6 +1317,16 @@ export async function runCommand(
      */
     case "card":
       return cardLines(command.name).join("\n");
+
+    /**
+     * The Instrukcja, for the surface that cannot open the Księga.
+     *
+     * Off the table like `help` and `card`: a rule is true before anybody sits
+     * down, and somebody reading up on 17.4 before starting should not have to
+     * open a game to do it.
+     */
+    case "rule":
+      return ruleLines(command.about).join("\n");
 
     case "look": {
       const snapshot = await activeStore().load(gameId);
