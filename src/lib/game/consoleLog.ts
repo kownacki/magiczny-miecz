@@ -20,6 +20,16 @@ const KEY = (table: string) => `mm:konsola:${table}`;
 export interface ConsoleLine {
   said: string;
   mine: boolean;
+  /**
+   * The first line of a block that should be read from its top.
+   *
+   * The scroll lines the newest one of these up with the top edge. An echo of
+   * what was typed is one by definition; the only other is a Tab listing, which
+   * nobody typed and which can be taller than the box. Optional, and absent
+   * from every line written before it existed — a restored history is fine
+   * without it, because the echoes it does have are enough to anchor on.
+   */
+  anchor?: boolean;
 }
 
 export interface ConsoleHistory {

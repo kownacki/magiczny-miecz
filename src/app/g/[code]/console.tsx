@@ -216,12 +216,17 @@ export function TestConsole({
    * look short. Line the echo of what was typed up with the top edge instead,
    * and every answer is read from its first line. `scrollTo` clamps for us, so
    * a short answer still ends up wherever it fits.
+   *
+   * A Tab listing needs an anchor of its own, because nobody typed it and so
+   * there is no echo above it. Without one the box lined up the *previous*
+   * command instead and left ninety card names below the fold — and pressing
+   * Tab again anchored on the same old echo, so the console looked stuck.
    */
   useEffect(() => {
     const box = tail.current;
     if (!box) return;
-    const echoes = box.querySelectorAll<HTMLElement>("[data-echo]");
-    const last = echoes[echoes.length - 1];
+    const anchors = box.querySelectorAll<HTMLElement>("[data-echo],[data-anchor]");
+    const last = anchors[anchors.length - 1];
     const top = last
       ? box.scrollTop + last.getBoundingClientRect().top - box.getBoundingClientRect().top
       : box.scrollHeight;
@@ -232,6 +237,18 @@ export function TestConsole({
 
   const say = (said: string, mine = false) =>
     setLog((before) => [...before, { said, mine }].slice(-100));
+
+  /**
+   * Several lines at once, read from the first of them.
+   *
+   * One `setLog` rather than one per line, so the scroll runs against the whole
+   * block instead of against each line as it arrives — and the anchor is the
+   * first, which is where a list of candidates begins to be useful.
+   */
+  const sayBlock = (lines: readonly string[]) =>
+    setLog((before) =>
+      [...before, ...lines.map((said, at) => ({ said, mine: false, anchor: at === 0 }))].slice(-100),
+    );
 
   const run = async () => {
     const typed = line.trim();
@@ -418,6 +435,7 @@ export function TestConsole({
               <p
                 key={index}
                 data-echo={entry.mine ? "" : undefined}
+                data-anchor={entry.anchor ? "" : undefined}
                 className={entry.mine ? "text-ochre" : "text-ink"}
               >
                 {/* This transcript is React, not a terminal, so the numbers in
@@ -467,11 +485,9 @@ export function TestConsole({
                * has no shape of its own and stays one run.
                */
               if (done.sections) {
-                for (const group of done.sections) {
-                  say(`${group.title}\n  ${group.options.join("   ")}`);
-                }
+                sayBlock(done.sections.map((g) => `${g.title}\n  ${g.options.join("   ")}`));
               } else if (done.options.length > 0) {
-                say(done.options.join("   "));
+                sayBlock([done.options.join("   ")]);
               }
               return;
             }
