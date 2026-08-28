@@ -322,17 +322,16 @@ export function CardBack({ count }: { count: number }) {
               borderColor: "color-mix(in srgb, var(--color-magia) 40%, var(--color-night))",
             }}
             /**
-             * Rounded at the two ends of the stack and square in between.
+             * Every card rounded, the shape they actually are.
              *
-             * A corner radius is four pixels and a sliver of a covered card is
-             * three, so all a covered card shows of its top edge is the curve,
-             * and a row of curves reads as a serrated edge rather than as cards
-             * behind cards. The ends keep theirs: the first card's left corners
-             * are the stack's own outer corner, the last card is the one you
-             * can see whole, and everything the middle rounds away is
-             * underneath the next card anyway.
+             * The middle ones were squared while the top and bottom edges were
+             * a saturated band, on the theory that a 4px radius in a 3px sliver
+             * is all curve and a row of curves serrates. The band turned out to
+             * be the see-through border stacking on itself, and with that fixed
+             * the curves are what they are: a scallop a pixel deep, which is
+             * what a fan of rounded cards looks like from the side.
              */
-            className={`border ${at === 0 || at === drawn - 1 ? "rounded" : ""}`}
+            className="rounded border"
           />
         ))}
       </span>
