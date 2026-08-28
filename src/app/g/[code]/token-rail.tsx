@@ -406,13 +406,26 @@ export function RailStat({
         end level.
       */}
       <span
-        title={
-          inFight !== undefined && inFight !== shown
-            ? `${label}: ${shown}, w walce ${inFight} (własne ${value})`
-            : shown !== value
-              ? `${label}: ${shown} (własne ${value})`
-              : `${label}: ${shown}`
-        }
+        /**
+         * Each number once, and only the ones that differ.
+         *
+         * The fight branch printed "(własne N)" unconditionally, so a character
+         * whose total *is* its own points read "Miecz: 103, w walce 104 (własne
+         * 103)" — the same figure twice, which makes a correct reading look
+         * like a broken one. It is the commonest case there is, too: a plain
+         * Miecz is `tylkoWalka`, so it lifts the fight figure and leaves the
+         * parametr alone, and then own and total agree by definition.
+         *
+         * Built up rather than branched, because three independent facts make
+         * eight sentences and only three of them were ever written.
+         */
+        title={[
+          `${label}: ${shown}`,
+          inFight !== undefined && inFight !== shown ? `w walce ${inFight}` : null,
+          shown !== value ? `własne ${value}` : null,
+        ]
+          .filter(Boolean)
+          .join(", ")}
         className={`tnum mt-1 min-h-[13px] text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
       >
         {/* Two numbers and no more. The fight figure is a third — 1.5 quotes
