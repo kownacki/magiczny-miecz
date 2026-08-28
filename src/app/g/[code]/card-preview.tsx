@@ -72,7 +72,23 @@ const PICTURE_WIDTH = 208;
  * fill and this has to sit beside a tile without covering the board.
  */
 const CHARACTER_PICTURE_WIDTH = 340;
-const CARD_RATIO = 780 / 629;
+/**
+ * What a picture is shaped like, near enough to hold space for it.
+ *
+ * This is the `height` on the `<img>`, which is a promise about a file that has
+ * not arrived yet — and the panel is placed against the height that promise
+ * reserves. There was one number here, the Karta Postaci's 629 by 780, used for
+ * every picture in the box; every other card is cut 528 by 880, so the panel
+ * held 258px for a picture that landed 347 tall, grew by a third of itself
+ * after it had been placed, and hung off the bottom of the window.
+ *
+ * Near enough and not exact, because it cannot be exact: the slicer follows the
+ * printed cut lines and they wander, so a Karta Zdarzeń is anywhere from 515 to
+ * 550 across at the same 880 tall. That is why `place` measures the panel again
+ * whenever it changes size rather than trusting either of these.
+ */
+const CARD_RATIO = 880 / 528;
+const CHARACTER_CARD_RATIO = 780 / 629;
 const GAP = 12;
 
 /**
@@ -348,6 +364,19 @@ export function CardPreview({
    * screen. A ref callback runs at commit, before paint, so measuring and then
    * positioning is invisible rather than a jump.
    *
+   * Measuring once is not enough either, which is what the cut-off panels were:
+   * a picture is `<img width height>` until the file lands and its own
+   * proportions take over, so the panel commits at one height and paints at
+   * another, and the difference — 89px on every Karta Zdarzeń, see `CARD_RATIO`
+   * — is exactly the strip that hung off the bottom of the window. So the panel
+   * watches its own box and places itself again whenever it changes, and the
+   * window's `resize` is the same fact from the other side: shrink the window
+   * under a pinned panel and it climbs back inside instead of being cropped by
+   * it.
+   *
+   * It cannot chase its own tail, because moving a fixed panel changes nothing
+   * about how wide its content wraps — only the caps below decide that.
+   *
    * The CSS caps do the rest: whatever ends up inside, the panel can never be
    * taller or wider than the window, and tall content scrolls instead of
    * overflowing it.
@@ -365,16 +394,30 @@ export function CardPreview({
     (node: HTMLDivElement | null) => {
       held.current = node;
       if (!node) return;
-      const box = node.getBoundingClientRect();
-      const room = { x: window.innerWidth, y: window.innerHeight };
-      const fitsRight = room.x - anchor.right > box.width + GAP;
-      const wanted = fitsRight ? anchor.right + GAP : anchor.left - box.width - GAP;
-      node.style.left = `${clamp(wanted, GAP, room.x - box.width - GAP)}px`;
-      node.style.top = `${clamp(
-        anchor.top + anchor.height / 2 - box.height / 2,
-        GAP,
-        room.y - box.height - GAP,
-      )}px`;
+      const put = () => {
+        const box = node.getBoundingClientRect();
+        const room = { x: window.innerWidth, y: window.innerHeight };
+        const fitsRight = room.x - anchor.right > box.width + GAP;
+        const wanted = fitsRight ? anchor.right + GAP : anchor.left - box.width - GAP;
+        node.style.left = `${clamp(wanted, GAP, room.x - box.width - GAP)}px`;
+        node.style.top = `${clamp(
+          anchor.top + anchor.height / 2 - box.height / 2,
+          GAP,
+          room.y - box.height - GAP,
+        )}px`;
+      };
+      put();
+      // Fires once with the size it already has, which is the placement above
+      // done twice and no harm; every firing after that is the panel having
+      // actually changed shape.
+      const watching = new ResizeObserver(put);
+      watching.observe(node);
+      window.addEventListener("resize", put);
+      return () => {
+        watching.disconnect();
+        window.removeEventListener("resize", put);
+        held.current = null;
+      };
     },
     [anchor],
   );
@@ -413,6 +456,7 @@ export function CardPreview({
   // A Postać is read at the size the detail view reads one at; everything else
   // is recognised at the smaller one. See `CHARACTER_PICTURE_WIDTH`.
   const pictureWidth = card.character ? CHARACTER_PICTURE_WIDTH : PICTURE_WIDTH;
+  const pictureRatio = card.character ? CHARACTER_CARD_RATIO : CARD_RATIO;
   const profile = imageless
     ? null
     : card.character
@@ -471,7 +515,7 @@ export function CardPreview({
             src={src}
             alt={card.name}
             width={pictureWidth}
-            height={Math.round(pictureWidth * CARD_RATIO)}
+            height={Math.round(pictureWidth * pictureRatio)}
             style={{ width: pictureWidth }}
             className="block h-auto rounded"
           />
