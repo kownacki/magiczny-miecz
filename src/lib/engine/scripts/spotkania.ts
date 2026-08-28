@@ -212,4 +212,59 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
     effect: { op: "strata", co: "wszystkie-zaklecia", target: "wszyscy" },
     disposition: { kind: "odloz" },
   },
+
+  /**
+   * "Od pewnego czasu towarzyszy ci Południca. Musisz ją zabrać jako
+   * Przyjaciela chociaż jej obecność osłabia cię, że możesz poruszać się tylko
+   * o 1 Obszar na turę. Jedynym sposobem pozbycia się Południcy jest przeprawa
+   * przez Trzęsawiska lub Lodowy Las. Gdy to zrobisz, odłóż jej Kartę."
+   *
+   * A Przyjaciel nobody wants, and the reason `Ends` has named `crossing` since
+   * the day it was written — the union's own comment calls it "what sheds
+   * Południca". Nothing raised that event until now, so both halves of this
+   * card existed separately and neither could reach the other.
+   *
+   * Not optional: "Musisz ją zabrać". And a cap of one rather than a freeze —
+   * she slows the walk, she does not stop the turn.
+   */
+  poludnica: {
+    effect: {
+      op: "efekt",
+      label: "Południca — najwyżej 1 Obszar na turę",
+      modifier: { kind: "move-max", pola: 1 },
+      ends: { kind: "event", co: "crossing" },
+    },
+    disposition: { kind: "bierzesz" },
+  },
+
+  /**
+   * "Od pewnego czasu towarzyszy ci Zły Duch. Musisz zabrać go jako
+   * Przyjaciela. Natychmiast opuszczą cię wszyscy dotychczasowi Przyjaciele (z
+   * wyjątkiem Południcy). Nie możesz zdobywać nowych Przyjaciół, dopóki nie
+   * uwolnisz się od niego, odwiedzając Pustelnię. Po wizycie u Pustelnika odłóż
+   * Kartę."
+   *
+   * Three things at once, in the order the card states them: everybody leaves,
+   * he moves in, and nobody new may join until the Pustelnia is visited. The
+   * middle one is the disposition; the other two are the effect.
+   *
+   * The Południca is spared by name, which is the card telling you these two
+   * are meant to be met together — she is not a Przyjaciel you gained, she is
+   * one you are stuck with, and the Zły Duch has no quarrel with her.
+   */
+  "zly-duch": {
+    effect: {
+      op: "po-kolei",
+      steps: [
+        { op: "strata", co: "wszyscy-przyjaciele-oprocz", oprocz: ["poludnica"] },
+        {
+          op: "efekt",
+          label: "Zły Duch — nie zdobędziesz Przyjaciół, póki nie odwiedzisz Pustelni",
+          modifier: { kind: "bez-przyjaciol" },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    },
+    disposition: { kind: "bierzesz" },
+  },
 };

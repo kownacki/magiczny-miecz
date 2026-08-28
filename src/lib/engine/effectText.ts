@@ -2,6 +2,7 @@
 
 import type { Condition, Destination, Effect, Target } from "./cardScript";
 import {
+  cardName,
   characterName,
   fieldName,
   NATURE_LABEL,
@@ -192,6 +193,9 @@ export function describeEffect(effect: Effect): string {
         `${effect.gubiPrzy} lub mniej i przepada`
       );
 
+    case "uwolnij":
+      return `uwalniasz się od: ${cardName(effect.od)}`;
+
     case "zaklecie":
       return `bierzesz ${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
 
@@ -325,6 +329,8 @@ export function summariseEffect(effect: Effect): string {
       return effect.label;
     case "rzut-za-kazdego":
       return effect.co === "przyjaciel" ? "rzut za każdego Przyjaciela" : "rzut za każdy Przedmiot";
+    case "uwolnij":
+      return `uwolnienie od: ${cardName(effect.od)}`;
 
     default:
       return "rozpatrzcie sami";

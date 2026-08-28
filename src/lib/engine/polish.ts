@@ -116,6 +116,7 @@ export type Loss = Extract<Effect, { op: "strata" }>["co"];
 export const LOST_LABEL: Record<Loss, string> = {
   przedmiot: "Przedmiot",
   przyjaciel: "Przyjaciela",
+  "wszyscy-przyjaciele-oprocz": "wszystkich Przyjaciół",
   zaklecie: "Zaklęcie",
   gold: "całe złoto",
   "wszystkie-przedmioty": "wszystkie Przedmioty",

@@ -208,6 +208,15 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       // Sztuka Złota per wound as the Osada's Medyk; the renunciation is the
       // flavour on it.
       { name: "Pustelnik", effect: { op: "uzdrow", upTo: 4, cena: 1 } },
+      /**
+       * "Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od
+       * niego, odwiedzając Pustelnię."
+       *
+       * A second thing to visit the Pustelnik for, and the only cure for the
+       * Zły Duch anywhere on the board. Free — the renunciation is the price of
+       * the healing, and the card asks nothing for this.
+       */
+      { name: "Egzorcyzm", effect: { op: "uwolnij", od: "zly-duch" } },
     ],
   },
 

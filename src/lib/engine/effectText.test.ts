@@ -170,6 +170,7 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   "poloz-karte": { op: "poloz-karte", gdzie: { kind: "dowolne-w-kregu" } },
   otrzymaj: { op: "otrzymaj", co: "Magiczny Miecz" },
   "rzut-za-kazdego": { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
+  uwolnij: { op: "uwolnij", od: "zly-duch" },
   efekt: {
     op: "efekt",
     label: "Opętany",

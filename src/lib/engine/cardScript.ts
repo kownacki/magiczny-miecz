@@ -197,7 +197,16 @@ export type Effect =
         | "zaklecie"
         | "gold"
         | "wszystkie-przedmioty"
-        | "wszystkie-zaklecia";
+        | "wszystkie-zaklecia"
+        /**
+         * Every Przyjaciel but the ones named. Only the Zły Duch: "Natychmiast
+         * opuszczą cię wszyscy dotychczasowi Przyjaciele (z wyjątkiem
+         * Południcy)" — and the exception is the card telling you these two are
+         * meant to be met together. She is not a Przyjaciel anybody gained.
+         */
+        | "wszyscy-przyjaciele-oprocz";
+      /** Cards a sweeping loss leaves alone, by id. */
+      oprocz?: readonly string[];
       count?: number;
       /** Who picks which one goes: the holder, or chance. */
       wybor?: "ty" | "losowo";
@@ -278,6 +287,20 @@ export type Effect =
    * because it reaches for Przedmioty as well and 14.5 states it separately.
    */
   | { op: "rzut-za-kazdego"; co: "przyjaciel" | "przedmiot"; gubiPrzy: number }
+  /**
+   * Rid of a named card and everything it was doing to you.
+   *
+   * "Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od niego,
+   * odwiedzając Pustelnię. Po wizycie u Pustelnika odłóż Kartę." Both halves in
+   * one op, because they are one act: the status it laid on you goes and the
+   * Karta goes with it, and a card whose weight had lifted but which was still
+   * in the pack would be a Przyjaciel doing nothing.
+   *
+   * The Południca ends the same way on a crossing — that one is `Ends` raising
+   * an event rather than an Obszar offering a cure, which is the difference
+   * between shaking something off and being freed of it.
+   */
+  | { op: "uwolnij"; od: string }
   /** Only happens to some characters (Posłańcy Bogów, Sabat Czarownic). */
   | { op: "gdy"; warunek: Condition; to: Effect; inaczej?: Effect };
 

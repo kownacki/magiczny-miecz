@@ -34,6 +34,7 @@ import { nameOfSeat } from "./lobby";
 
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
+import { keepOnly, statusesOf } from "./turn";
 import { turnToStone } from "./stone";
 import { activeSeat, seatView } from "./seat";
 import { isSpared, skipsRollAt } from "@/lib/engine/abilities";
@@ -368,6 +369,36 @@ async function walk(
           })),
         }),
         result: { did: said, pending: null },
+      };
+    }
+
+    /**
+     * Rid of a named card and everything it laid on you.
+     *
+     * "Po wizycie u Pustelnika odłóż Kartę." One act, so both halves here: the
+     * statuses that card gave go, and the Karta goes to the used pile with
+     * them. Statuses are matched on `source`, which `applyEffect` fills with the
+     * printed name — the reason a player was given is the reason they read.
+     *
+     * Nothing at all when the character is not carrying it, which is a visit to
+     * the Pustelnia by somebody who never met the Zły Duch.
+     */
+    case "uwolnij": {
+      const name = cardName(effect.od);
+      const held = statusesOf(snapshot, seatId);
+      const left = held.filter((status) => status.source !== name);
+      const card = snapshot.holdings.find(
+        (h) => h.seat_id === seatId && h.card_id === effect.od,
+      );
+      if (left.length === held.length && !card) return nothing([`${name} — nic cię nie trzyma`]);
+
+      const lifted: Changeset = card ? { holdings: { delete: [card.id] } } : {};
+      const piled = card
+        ? putOnPile(apply(snapshot, lifted), "events", [asReturnable(card)])
+        : {};
+      return {
+        writes: mergeAll(keepOnly(snapshot, seatId, left), lifted, piled),
+        result: { did: [`uwalniasz się od: ${name}`], pending: null },
       };
     }
 
@@ -1067,7 +1098,37 @@ export async function resolveDrawnCard(
     ports,
   );
 
-  const soFar = merge(rolled, done.writes);
+  /**
+   * "Musisz ją zabrać jako Przyjaciela" — a Spotkanie that stays with you.
+   *
+   * Two cards do it, the Południca and the Zły Duch, and neither is a Przyjaciel
+   * anybody wanted: `kindForCard` reads the printed class and says a Spotkanie
+   * is carried by nobody, which is true of the other seventy. The disposition is
+   * what knows otherwise, and it was described in `cardScript.ts` from the start
+   * and acted on nowhere.
+   *
+   * Taken as a `friend` because that is the word the cards use and because it is
+   * what the rest of the game then does to them: 6.3 puts no limit on how many
+   * you may have, the Bagna can take one, the Urwisko rolls for each, and the
+   * Zły Duch's own text has to name the Południca as the exception it spares.
+   */
+  const kept =
+    script.disposition.kind === "bierzesz" && !done.result.pending
+      ? ({
+          holdings: {
+            insert: [
+              {
+                seat_id: seat.id,
+                card_id: command.cardId,
+                kind: "friend" as const,
+                face: "open" as const,
+              },
+            ],
+          },
+        } satisfies Changeset)
+      : {};
+
+  const soFar = mergeAll(rolled, done.writes, kept);
   const noted = done.result.pending ? {} : markResolved(apply(snapshot, soFar), command.cardId);
 
   return {

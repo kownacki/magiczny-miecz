@@ -41,6 +41,8 @@ import {
 } from "../change";
 
 import { asReturnable, putOnPile } from "./piles";
+import { keepOnly, statusesOf } from "./turn";
+import { afterEvent } from "@/lib/engine/status";
 import { spendLife } from "./life";
 import { activeSeat, pointsOf, seatView } from "./seat";
 
@@ -196,8 +198,41 @@ export function settleCrossing(
   const field = FIELDS.get(crossing.to);
   if (!field) throw new Error(`Nieznane pole: ${crossing.to}`);
 
+  /**
+   * What the crossing sheds.
+   *
+   * "Jedynym sposobem pozbycia się Południcy jest przeprawa przez Trzęsawiska
+   * lub Lodowy Las." Both obstacles are crossings and this is the only place
+   * either succeeds, so it is the one place that ending can fire. `afterEvent`
+   * was written for it and had nothing calling it: the Ends union has named
+   * `crossing` since the day it existed, and nothing ever raised the event.
+   *
+   * The Karta goes with the effect — "Gdy to zrobisz, odłóż jej Kartę" — which
+   * is why the holding is looked for by name rather than the status simply
+   * being dropped. A Południca whose weight had lifted but whose card was still
+   * in the pack would be a Przyjaciel doing nothing, which is exactly the state
+   * this rule exists to end.
+   */
+  const held = statusesOf(snapshot, seat.id);
+  const shed = afterEvent(held, "crossing");
+  const gone = held.filter((was) => !shed.some((still) => still.id === was.id));
+  // Matched on the printed name, because that is what `applyEffect` writes into
+  // a status's `source`: the reason it was given is the reason a player reads.
+  const cards = snapshot.holdings.filter(
+    (h) => h.seat_id === seat.id && gone.some((status) => status.source === cardName(h.card_id)),
+  );
+  const lifted: Changeset =
+    cards.length > 0 ? { holdings: { delete: cards.map((h) => h.id) } } : {};
+  const shedding = mergeAll(
+    keepOnly(snapshot, seat.id, shed),
+    lifted,
+    cards.length > 0
+      ? putOnPile(apply(snapshot, lifted), "events", cards.map(asReturnable))
+      : {},
+  );
+
   return {
-    writes: {
+    writes: mergeAll(shedding, {
       seats: [{ id: seat.id, patch: { field_id: crossing.to } }],
       game: { turn_state: afterMove(field, crossing.from) },
       journal: [
@@ -208,7 +243,7 @@ export function settleCrossing(
           payload: { from: crossing.from, to: crossing.to, obstacle: crossing.obstacle, ...extra },
         },
       ],
-    },
+    }),
     result: { to: crossing.to },
   };
 }

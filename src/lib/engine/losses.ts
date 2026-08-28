@@ -8,7 +8,10 @@ export interface Loss {
     | "zaklecie"
     | "gold"
     | "wszystkie-przedmioty"
-    | "wszystkie-zaklecia";
+    | "wszystkie-zaklecia"
+    | "wszyscy-przyjaciele-oprocz";
+  /** Cards a sweeping loss leaves alone, by id (the Zły Duch spares the Południca). */
+  oprocz?: readonly string[];
   count?: number;
   /** Whose choice it is. Absent means the holder's, which is the rulebook's default (5.6). */
   wybor?: "ty" | "losowo";
@@ -41,6 +44,7 @@ export function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
     case "wszystkie-przedmioty":
       return "item";
     case "przyjaciel":
+    case "wszyscy-przyjaciele-oprocz":
       return "friend";
     case "zaklecie":
     case "wszystkie-zaklecia":
@@ -86,6 +90,19 @@ export function chooseLosses(
   // posiadaniu Postaci") and the Władca Czarów of one victim.
   if (loss.co === "wszystkie-przedmioty" || loss.co === "wszystkie-zaklecia") {
     return candidates.map((held) => held.id);
+  }
+
+  /**
+   * The same, minus the ones the card names. Only the Zły Duch: "wszyscy
+   * dotychczasowi Przyjaciele (z wyjątkiem Południcy)".
+   *
+   * Still not a choice — everybody named goes and everybody spared stays — so
+   * it never comes back asking which, and a character whose only Przyjaciel is
+   * the Południca loses nobody.
+   */
+  if (loss.co === "wszyscy-przyjaciele-oprocz") {
+    const spared = new Set(loss.oprocz ?? []);
+    return candidates.filter((held) => !spared.has(held.cardId)).map((held) => held.id);
   }
 
   const wanted = Math.min(loss.count ?? 1, candidates.length);
@@ -150,6 +167,7 @@ export function lossTaken(loss: Loss): string {
   const what = {
     przedmiot: "Przedmiot",
     przyjaciel: "Przyjaciela",
+    "wszyscy-przyjaciele-oprocz": "wszystkich Przyjaciół",
     zaklecie: "Zaklęcie",
     gold: "złoto",
     "wszystkie-przedmioty": "wszystkie Przedmioty",

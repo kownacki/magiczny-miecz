@@ -4,6 +4,8 @@ import items from "@/data/items.json";
 import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { carriesSpell, unavailableIn } from "@/lib/engine/abilities";
+import { barredFromFriends } from "@/lib/engine/status";
+import { statusesOf } from "./turn";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
 import { drawFrom } from "@/lib/engine/deck";
@@ -279,6 +281,22 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     const where = seat?.field_id ? FIELDS.get(seat.field_id)?.region : undefined;
     if (where === barred) {
       throw new Error(`${cardName(cardId)} — tej Karty nie można otrzymać w Krainie Dolnego Kręgu.`);
+    }
+  }
+
+  /**
+   * "Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od niego,
+   * odwiedzając Pustelnię."
+   *
+   * The Zły Duch is the only card that bars a whole kind from being picked up,
+   * and it bars *gaining* rather than holding: the Przyjaciele you kept — which
+   * is the Południca and nobody else, since he sent the rest away — stay where
+   * they are.
+   */
+  if (kind === "friend") {
+    const bearer = snapshot.seats.find((one) => one.id === seatId);
+    if (bearer && barredFromFriends(statusesOf(snapshot, bearer.id))) {
+      throw new Error(`${cardName(cardId)} — Zły Duch nie pozwala ci zdobywać Przyjaciół.`);
     }
   }
 

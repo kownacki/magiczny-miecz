@@ -87,7 +87,15 @@ export type Modifier =
    * is done but the Tarcza has not been collected — for a Wróg or a Postać the
    * doing and the collecting happen in different places.
    */
-  | { kind: "misja"; co: "wrog" | "postac" | "zloto"; ile?: number; gotowa?: true };
+  | { kind: "misja"; co: "wrog" | "postac" | "zloto"; ile?: number; gotowa?: true }
+  /**
+   * No new Przyjaciele while this lasts (Zły Duch).
+   *
+   * "Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od niego,
+   * odwiedzając Pustelnię." A prohibition rather than a cost, and the only one
+   * in the box that bars a whole kind of card from being picked up.
+   */
+  | { kind: "bez-przyjaciol" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -172,6 +180,11 @@ export function afterFight(statuses: readonly Status[]): Status[] {
  */
 export function afterBreakout(statuses: readonly Status[], die: number): Status[] {
   return statuses.filter((status) => !(status.ends.kind === "rzut" && die <= status.ends.upTo));
+}
+
+/** Whether something is barring this character from gaining Przyjaciele (Zły Duch). */
+export function barredFromFriends(statuses: readonly Status[]): boolean {
+  return statuses.some((status) => status.modifier.kind === "bez-przyjaciol");
 }
 
 /** The errand this character is carrying for the Władca, if any. */
@@ -367,6 +380,10 @@ export function markOf(status: Status): Mark {
         tone: "obojetny",
         title,
       };
+    // A door closed rather than a weight carried — nothing is worse about the
+    // character, there is simply something they may no longer do.
+    case "bez-przyjaciol":
+      return { glyph: "\u2298", tone: "zly", title };
     case "note":
       return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };
   }

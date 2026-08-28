@@ -33,6 +33,8 @@ export function isSettled(effect: Effect): boolean {
     case "otrzymaj":
     // A die per card, and nobody picks which — 5.6 is not engaged.
     case "rzut-za-kazdego":
+    // The card is named by the effect; there is nothing to ask.
+    case "uwolnij":
       return true;
 
     // Healing with no price is capped by 4.7 and has one answer. Healing that
@@ -72,6 +74,10 @@ export function isSettled(effect: Effect): boolean {
      */
     case "strata":
       if (effect.co === "wszystkie-przedmioty" || effect.co === "gold") return true;
+      // Everything of a kind but the ones the card names is not a choice
+      // either: the Zły Duch decides who goes, and he says all of them bar the
+      // Południca.
+      if (effect.co === "wszyscy-przyjaciele-oprocz") return true;
       return effect.wybor === "losowo";
 
     // A die table is settled only if every face it can land on is. Rolled
