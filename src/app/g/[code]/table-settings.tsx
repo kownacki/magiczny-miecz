@@ -28,14 +28,12 @@ import type { EqMode } from "@/lib/engine/slots";
 export function TableSettings({
   eqMode,
   endlessStock,
-  busy,
   canChange,
   onEqMode,
   onEndlessStock,
 }: {
   eqMode: EqMode;
   endlessStock: boolean;
-  busy: boolean;
   /**
    * Whether this device may move them, which means: whether it is the host's.
    *
@@ -76,7 +74,6 @@ export function TableSettings({
             onPick: () => onEqMode("classic"),
           },
         ]}
-        busy={busy}
         canChange={canChange}
       />
 
@@ -108,7 +105,6 @@ export function TableSettings({
             onPick: () => onEndlessStock(false),
           },
         ]}
-        busy={busy}
         canChange={canChange}
       />
 
@@ -127,12 +123,10 @@ export function TableSettings({
 function Group({
   legend,
   options,
-  busy,
   canChange,
 }: {
   legend: string;
   options: { active: boolean; label: string; hint: string; onPick: () => void }[];
-  busy: boolean;
   canChange: boolean;
 }) {
   return (
@@ -143,7 +137,11 @@ function Group({
           key={option.label}
           type="button"
           onClick={option.onPick}
-          disabled={busy || option.active || !canChange}
+          // No `busy`. The answer is already on screen — the switch moved when
+          // it was pressed — so greying it out while the request goes reads as
+          // the app taking the answer back. The only reasons to refuse a press
+          // are that it changes nothing, or that it is not yours to press.
+          disabled={option.active || !canChange}
           title={canChange ? undefined : "Zasady stołu ustala gospodarz"}
           aria-pressed={option.active}
           // Disabled on the one already chosen rather than merely lit: pressing

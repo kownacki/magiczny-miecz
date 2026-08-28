@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Notice } from "./toast";
+import { useSettled } from "./settle";
 import { useRouter } from "next/navigation";
 import type { Requests, Route } from "@/lib/game/requests";
 import {
@@ -141,7 +142,7 @@ export interface Table {
   notices: Notice[];
   dismissNotice: (id: number) => void;
   /** Moves one of the table's house rules — the host's, and instant. */
-  setHouseRule: (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => Promise<void>;
+  setHouseRule: (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => void;
   busy: boolean;
   refresh: () => Promise<void>;
   /** One request, with its body checked against what that route reads. */
@@ -730,16 +731,36 @@ export function useTable(code: string): Table {
    * the same reason. A refusal comes back as a toast and the next refresh puts
    * the switch back where the table actually has it.
    */
-  const setHouseRule = useCallback(
+  const sendHouseRule = useSettled(
     async (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => {
-      setHouseRules((was) => ({ ...was, ...patch }));
-      await post("settings", {
-        ...(patch.eq_mode !== undefined ? { eqMode: patch.eq_mode } : {}),
-        ...(patch.endless_stock !== undefined ? { endlessStock: patch.endless_stock } : {}),
+      /**
+       * Deliberately not `post`, which raises `busy` for the whole page.
+       *
+       * These controls have already answered — nothing here is waiting on a
+       * reply — and a switch that greys out after it has visibly moved reads as
+       * the app taking the answer back. `equip` fetches directly for the same
+       * reason, and this is the one other place with the same bargain.
+       */
+      const response = await fetch(`/api/games/${code}/settings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          token: readSeatToken(code),
+          ...(patch.eq_mode !== undefined ? { eqMode: patch.eq_mode } : {}),
+          ...(patch.endless_stock !== undefined ? { endlessStock: patch.endless_stock } : {}),
+        }),
       });
+      if (!response.ok) setError((await response.json().catch(() => ({}))).error ?? null);
       await refresh();
     },
-    [post, refresh],
+  );
+
+  const setHouseRule = useCallback(
+    (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => {
+      setHouseRules((was) => ({ ...was, ...patch }));
+      sendHouseRule(patch);
+    },
+    [sendHouseRule],
   );
 
   async function equip(holdingId: string, slot: Slot | null) {
