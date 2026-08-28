@@ -67,6 +67,7 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
     life: 4,
     gold: 1,
     trophy_points: 0,
+    trophy_beaten: [],
     turns_lost: 0,
     eliminated: false,
     character_id: null,

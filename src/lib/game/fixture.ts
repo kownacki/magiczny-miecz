@@ -29,6 +29,7 @@ export function aSeat(over: Partial<SeatRow> = {}): SeatRow {
     life: 4,
     gold: 1,
     trophy_points: 0,
+    trophy_beaten: [],
     nature: "good",
     turns_lost: 0,
     stone_until_turn: null,

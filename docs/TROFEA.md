@@ -159,7 +159,7 @@ schema is English — `classic|slots`, `lobby|playing|finished`,
 against `points`, so the Polish outlier was the thing to move. The Polish stays
 where a player reads it: „Punkty" and „Karty pokonanych" are labels, not values.
 
-## Owed to the seat card: who was beaten, in „Punkty"
+## Built for the seat card: who was beaten, in „Punkty"
 
 Michał wants the trofea drawn with their art in **both** modes. In „Karty
 pokonanych" that already happens — the Karty are holdings and the tiles show
@@ -186,8 +186,50 @@ rest of the game while the ledger beside it rises and falls — you did kill the
 Wilkołak, and trading does not un-kill him. Which is the half of 1.4 the printed
 rule throws away, and the better feature for the app to keep.
 
-If it lands as append-only, the seat card needs no further contract: it will
-draw the list where it draws the Karty today.
+**Built, and the ruling above is the one taken.** `seats.trophy_beaten` is
+`text[] not null default '{}'`, live on the database, in `SEAT_COLUMNS`, and
+therefore already on the wire — the envelope spreads the whole seat row, so
+there is no further contract to agree. Draw it where the Karty are drawn.
+
+Three places write it, and the third is the one that is easy to miss:
+
+- `trophiesFrom` appends as the Wróg falls, beside the points. A conjured Wróg
+  goes on too — he was still beaten, and which pile his Karta belongs to is a
+  separate fact.
+- `convertTrophies` appends everyone converted when a table switches mid-game.
+  Without that the switch would lose every Wróg beaten before it: their Karty
+  are on their way to the stos zużytych and in „Punkty" the hand is where they
+  had been remembered.
+- `killSeat` empties it beside `trophy_points`, so the shelf dies with the
+  Postać (4.4).
+
+Nothing reads it. It never shrinks on a trade — the memorial reading, above.
+
+## Asking for an outcome instead of naming Karty
+
+The subset ruling made the choice real and did nothing to help anybody make it.
+Holding CYKLOP 6, SMOK 5, NOBBIN 2, NOBBIN 2, one Miecz costs either 5+2 and
+nothing wasted or — reaching for the biggest first, which is what a person does
+— 6+5 and four points burned. Same sword, four points apart, invisible unless
+somebody adds it up.
+
+`src/lib/engine/trophies.ts` adds it up, and is pure: `offersFor(held)` returns
+every number of Miecze a hand can buy, each by the set that reaches it with the
+least waste, and among equally wasteful sets the fewest Karty — which keeps the
+small denominations back, because a hand of ones and twos is what hits an exact
+seven next time and a hand of tens is not. Exhaustive rather than greedy,
+because greedy gets the case above wrong; the hand is at most twenty-one cards
+totalling 75, so it costs nothing.
+
+`pointOffers(points)` answers the same question in „Punkty" through the same
+shape, so a surface that can draw one can draw the other.
+
+**For the seat card:** `offersFor` over the holdings already on the wire is
+exactly a stepper's model — one row per buyable count, with the Karty it would
+cost and what it would burn. `POST /api/games/:code/holdings` with
+`{ action: "trade", swords: 2 }` spends it; `cardIds` still wins if both are
+sent, because a named list is an explicit answer. The console does the same
+thing with `trade 2`, and `me` prints the menu.
 
 ## Attributing work between sessions
 

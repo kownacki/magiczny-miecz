@@ -74,8 +74,9 @@ describe("śmierć (4.4)", () => {
     const writes = killSeat(table(), "seat-a");
     expect(writes.seats).toContainEqual({
       id: "seat-a",
-      // 1.4: the score goes with the Karty. See docs/TROFEA.md.
-      patch: { eliminated: true, trophy_points: 0 },
+      // 1.4: the score goes with the Karty, and so does the shelf that
+      // remembers who paid for it. See docs/TROFEA.md.
+      patch: { eliminated: true, trophy_points: 0, trophy_beaten: [] },
     });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "death",

@@ -85,8 +85,9 @@ describe("correcting somebody down to nothing", () => {
     ]);
     expect(writes.seats).toContainEqual({
       id: "seat-a",
-      // 1.4: the score goes with the Karty. See docs/TROFEA.md.
-      patch: { eliminated: true, trophy_points: 0 },
+      // 1.4: the score goes with the Karty, and so does the shelf that
+      // remembers who paid for it. See docs/TROFEA.md.
+      patch: { eliminated: true, trophy_points: 0, trophy_beaten: [] },
     });
   });
 

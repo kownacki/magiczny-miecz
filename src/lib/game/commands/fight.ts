@@ -1519,7 +1519,27 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
     const real = won.filter(({ cardId }) => !staged.has(cardId));
     return mergeAll(
       said,
-      { seats: [{ id: seat.id, patch: { trophy_points: seat.trophy_points + points } }] },
+      {
+        seats: [
+          {
+            id: seat.id,
+            patch: {
+              trophy_points: seat.trophy_points + points,
+              /**
+               * The shelf, which is the only thing that will remember him.
+               *
+               * The Karta reaches the stos zużytych in the next line and his
+               * Miecz reaches the score in the one above, and after that
+               * nothing on the wire has ever named the Wilkołak again. Display
+               * only — no rule reads this. A conjured Wróg is on it too: he was
+               * still beaten, and the shelf is about that rather than about
+               * which pile his Karta belongs to.
+               */
+              trophy_beaten: [...seat.trophy_beaten, ...won.map(({ cardId }) => cardId)],
+            },
+          },
+        ],
+      },
       real.length > 0
         ? putOnPile(snapshot, "events", real.map(({ cardId }) => ({ cardId, granted: false })))
         : {},

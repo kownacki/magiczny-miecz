@@ -35,6 +35,13 @@ export interface SeatRow {
   gold: number;
   /** Points from beaten Wrogowie in `punkty` mode (1.4); zero in `karty` mode. */
   trophy_points: number;
+  /**
+   * Everyone this Postać has beaten, in the order they fell. Display only.
+   *
+   * Written in `points` mode, where the Karta is on the pile and nothing else
+   * remembers the Wilkołak. Never read by a rule — see db/schema.sql.
+   */
+  trophy_beaten: string[];
   nature: string | null;
   turns_lost: number;
   stone_until_turn: number | null;
@@ -128,7 +135,7 @@ export const GAME_COLUMNS =
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,trophy_points,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,eliminated,created_at";
+  "id,seat_index,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,trophy_points,trophy_beaten,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,eliminated,created_at";
 
 /** The same for a user. `claim_token` is never among them. */
 export const USER_COLUMNS =

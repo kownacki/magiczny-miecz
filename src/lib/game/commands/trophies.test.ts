@@ -154,6 +154,36 @@ describe("keeping a beaten Wróg (16.2)", () => {
       expect(returned(after, "cyklop")).toEqual([]);
     });
 
+    /**
+     * The shelf, which the seat card draws and no rule reads.
+     *
+     * In this mode the Wróg is gone the instant he dies — Karta to the pile,
+     * Miecz to the score — so without this nothing on the wire has ever named
+     * him again.
+     */
+    it("remembers who was beaten, for the shelf", async () => {
+      const after = await settle(won({ mode: "points", fought: ["cyklop", "nobbin"] }));
+      expect(after.seats[0].trophy_beaten).toEqual(["cyklop", "nobbin"]);
+    });
+
+    /** He was still beaten. Which pile his Karta belongs to is a separate fact. */
+    it("remembers a conjured Wróg too", async () => {
+      const after = await settle(won({ mode: "points", granted: true }));
+      expect(after.seats[0].trophy_beaten).toEqual(["cyklop"]);
+      expect(returned(after, "cyklop")).toEqual([]);
+    });
+
+    /** Points are fungible, so no particular corpse paid for a given Miecz. */
+    it("does not shrink when the points are spent", async () => {
+      const after = await settle(won({ mode: "points", fought: ["cyklop", "nobbin"] }));
+      const rich = apply(after, {
+        seats: [{ id: after.seats[0].id, patch: { trophy_points: 14 } }],
+      });
+      const spent = apply(rich, tradeTrophies(rich, { seatId: rich.seats[0].id }).writes);
+      expect(spent.seats[0].trophy_points).toBe(0);
+      expect(spent.seats[0].trophy_beaten).toEqual(["cyklop", "nobbin"]);
+    });
+
     it("scores nothing for a Wróg fought magically, as the Karta rule keeps none", async () => {
       const after = await settle(won({ mode: "points", cardId: "demon" }));
       expect(after.seats[0].trophy_points).toBe(0);
@@ -210,6 +240,21 @@ describe("switching to punkty mid-game", () => {
     const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
     expect(after.seats[0].trophy_points).toBe(1 + 6);
     expect(returned(after, "cyklop")).toEqual([]);
+  });
+
+  /** The Karty are leaving the hand, so the shelf has to take them over. */
+  it("puts everyone converted onto the shelf", () => {
+    const table = playing([
+      trophy("t0", "seat-a", "cyklop"),
+      trophy("t1", "seat-a", "nobbin"),
+      trophy("t2", "seat-b", "smok"),
+    ]);
+    const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
+    expect(after.seats.find((one) => one.id === "seat-a")?.trophy_beaten).toEqual([
+      "cyklop",
+      "nobbin",
+    ]);
+    expect(after.seats.find((one) => one.id === "seat-b")?.trophy_beaten).toEqual(["smok"]);
   });
 
   it("says so per seat, and once for the table", () => {

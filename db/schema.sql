@@ -176,6 +176,19 @@ create table if not exists magiczny_miecz.seats (
   -- make hoarding free — which is the one thing the variant must not change,
   -- since the run at the Bestia costs 2 Życia on a loss.
   trophy_points integer not null default 0,
+  -- Everyone this Postać has beaten, for the shelf the seat card draws.
+  --
+  -- Display only: the arithmetic never reads it, and 1.4's sevens come off
+  -- `trophy_points` or off the held Karty as they always did. It exists because
+  -- in `points` mode the Wróg is gone the instant he dies — Karta to the stos
+  -- zużytych, his Miecz onto the score — and nothing else on the wire has ever
+  -- named him again.
+  --
+  -- Append-only, and it does not shrink when points are spent: points are
+  -- fungible and no particular corpse paid for a given Miecz, so there is no
+  -- non-arbitrary portrait to remove. In `points` mode the art is a memorial
+  -- rather than a wallet. It dies with the Postać, as the points do (4.4).
+  trophy_beaten text[] not null default '{}',
 
   -- Nature can change mid-game (7.2), so it is seat state, not character data.
   nature text check (nature in ('good', 'evil', 'chaotic')),

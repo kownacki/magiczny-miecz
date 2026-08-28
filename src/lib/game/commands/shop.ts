@@ -108,7 +108,21 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
 
   const seats = [...bySeat].map(([id, points]) => {
     const seat = seatById(snapshot, id);
-    return { id, patch: { trophy_points: seat.trophy_points + points } };
+    return {
+      id,
+      patch: {
+        trophy_points: seat.trophy_points + points,
+        /**
+         * Everyone converted goes onto the shelf, or the switch would lose
+         * them: their Karty are about to reach the stos zużytych and in
+         * „Punkty" the hand is where they were remembered.
+         */
+        trophy_beaten: [
+          ...seat.trophy_beaten,
+          ...held.filter((one) => one.seat_id === id).map((one) => one.card_id),
+        ],
+      },
+    };
   });
 
   return mergeAll(

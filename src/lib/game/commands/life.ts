@@ -124,7 +124,7 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
      * a lost fight at the Bestia costs 2 Życia and 14.5 can put you off the
      * Most on the way there.
      */
-    seats: [{ id: seatId, patch: { eliminated: true, trophy_points: 0 } }],
+    seats: [{ id: seatId, patch: { eliminated: true, trophy_points: 0, trophy_beaten: [] } }],
     /**
      * "Jej Kartę odłożyć do pozostałych nie biorących udziału w grze" (4.4).
      *
