@@ -506,7 +506,14 @@ export function CardPreview({
               </span>
             )}
           </div>
-          {card.kindLabel && <p className="text-[11px] text-muted">{card.kindLabel}</p>}
+          {/* Not for a Postać, whose figures are set out in full below:
+              "Postać · Miecz 2 · Magia 4 · dowolna" was the same three facts
+              in a row, in a worse shape, immediately above the table that
+              answers them. Every other card keeps it — a Przedmiot's line is
+              the only place its class is said. */}
+          {card.kindLabel && !starting && (
+            <p className="text-[11px] text-muted">{card.kindLabel}</p>
+          )}
 
           {profile?.slotLabel && (
             <p className="text-[11px] text-muted">
