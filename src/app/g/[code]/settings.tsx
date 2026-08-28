@@ -77,7 +77,7 @@ export function Settings({
         <Switch
           name="ruleRefs"
           on={prefs.ruleRefs}
-          label="Numery zasad"
+          label="Odnośniki do zasad"
           said="Zdania kończą się numerem w rodzaju (5.3), który otwiera Instrukcję w Księdze. Wyłącz, a numery znikną ze zdań."
         />
         <p className="border-t border-edge pt-3 text-[11px] leading-relaxed text-muted/70">
