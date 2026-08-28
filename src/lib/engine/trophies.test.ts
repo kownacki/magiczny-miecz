@@ -107,3 +107,92 @@ describe("the same question in punkty mode", () => {
     expect(pointOffers(0)).toEqual([]);
   });
 });
+
+/**
+ * Optimal, and not merely better than greedy.
+ *
+ * Every test above is a case somebody thought of. This one thinks of none: it
+ * enumerates every subset of a hand by brute force, works out the best each
+ * number of Mieczy can do, and demands `offersFor` match it — on a hundred
+ * hands, with the sizes and the printed values a real shelf has.
+ *
+ * Asked because the question is worth an answer rather than a reading of the
+ * code: for each `+1 Miecza` on offer, is that really the combination of
+ * unspent trofea that wastes the fewest points? The DP in `reachable` says so
+ * and this checks it, including the tie-break — among sets that waste the same,
+ * the one that hands over the fewest Karty, which keeps the small
+ * denominations back for hitting an exact seven later.
+ */
+describe("every offer is the best the hand can do", () => {
+  /** The same question answered the slow, obviously-correct way. */
+  function bruteForce(hand: readonly { points: number }[]) {
+    const best = new Map<number, { wasted: number; cards: number }>();
+    for (let mask = 1; mask < 1 << hand.length; mask++) {
+      let points = 0;
+      let cards = 0;
+      for (let at = 0; at < hand.length; at++) {
+        if (mask & (1 << at)) {
+          points += hand[at].points;
+          cards += 1;
+        }
+      }
+      const swords = Math.floor(points / TROPHY_RATE);
+      if (swords < 1) continue;
+      const wasted = points - swords * TROPHY_RATE;
+      const standing = best.get(swords);
+      if (
+        standing === undefined ||
+        wasted < standing.wasted ||
+        (wasted === standing.wasted && cards < standing.cards)
+      ) {
+        best.set(swords, { wasted, cards });
+      }
+    }
+    return best;
+  }
+
+  /** Deterministic, because a test that fails only on Tuesdays is not a test. */
+  function rolls(seed: number) {
+    let at = seed;
+    return (upTo: number) => {
+      at = (at * 1103515245 + 12345) % 2147483648;
+      return 1 + (at % upTo);
+    };
+  }
+
+  it("matches a brute force over every subset, on a hundred hands", () => {
+    const roll = rolls(20260828);
+    for (let round = 0; round < 100; round += 1) {
+      // Up to ten Karty, each worth what a Wróg in the box is worth (1 to 10).
+      const size = roll(10);
+      const held = Array.from({ length: size }, (_, at) => ({
+        cardId: `w${at}`,
+        points: roll(10),
+      }));
+
+      const truth = bruteForce(held);
+      const offers = offersFor(held);
+
+      // Every count the hand can reach is offered, and no count it cannot.
+      expect(offers.map((one) => one.swords)).toEqual(
+        [...truth.keys()].sort((a, b) => a - b),
+      );
+
+      for (const offer of offers) {
+        const want = truth.get(offer.swords);
+        expect({
+          swords: offer.swords,
+          wasted: offer.wasted,
+          cards: offer.cardIds.length,
+        }).toEqual({ swords: offer.swords, wasted: want?.wasted, cards: want?.cards });
+
+        // And the set it names really is the set it charges for.
+        const spent = offer.cardIds.reduce(
+          (sum, cardId) => sum + (held.find((one) => one.cardId === cardId)?.points ?? 0),
+          0,
+        );
+        expect(spent).toBe(offer.points);
+      }
+    }
+  });
+});
