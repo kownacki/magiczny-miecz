@@ -656,10 +656,11 @@ export function CardPreview({
                 ))}
                 {kit.spells ? (
                   <figure className="flex flex-col items-center gap-1">
-                    {/* Overlapped rather than spaced: a hand of cards is held
-                        in a hand, and three abreast at this size is wider than
-                        the two Przedmioty beside them. */}
-                    <span className="flex h-[80px] items-center">
+                    {/* Side by side, not overlapped. Two backs then run wider
+                        than a Przedmiot's tile, which is the cost — but a fan
+                        reads as one card with something behind it, and what
+                        this has to say is how many there are. */}
+                    <span className="flex h-[80px] items-center gap-1">
                       {Array.from({ length: kit.spells }, (_, at) => (
                         <Image
                           key={at}
@@ -667,18 +668,7 @@ export function CardPreview({
                           alt=""
                           width={SPELL_BACK_WIDTH}
                           height={TILE_ART_HEIGHT}
-                          /**
-                         * Overlapped by twelve, which is not a taste: two backs
-                         * at 52 then come to exactly 92, a Przedmiot's tile, so
-                         * a hand of Zaklęcia occupies one place in the row like
-                         * everything beside it. Forty of the first card shows,
-                         * which is enough of one to be a card.
-                         *
-                         * Two is the most any Karta Postaci starts with — Mag,
-                         * Czarodziej, Kapłanka — so the fan never has to hold
-                         * more and the width never has to give.
-                         */
-                        className={`rounded border border-magia/40 ${at > 0 ? "-ml-3" : ""}`}
+                          className="rounded border border-magia/40"
                         />
                       ))}
                     </span>
