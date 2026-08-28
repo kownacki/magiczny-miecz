@@ -1086,6 +1086,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             <TableSettings
               eqMode={game.eq_mode === "classic" ? "classic" : "slots"}
               endlessStock={game.endless_stock}
+              started={game.status === "playing"}
               canChange={amHost}
               onEqMode={(eqMode) => setHouseRule({ eq_mode: eqMode })}
               onEndlessStock={(on) => setHouseRule({ endless_stock: on })}

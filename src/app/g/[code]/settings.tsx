@@ -66,7 +66,7 @@ export function Settings({
           onAsk={endlessStock ? undefined : onEndlessStock}
           fixed={
             endlessStock
-              ? "Włączone na dobre — do skończonego stosu wraca się tylko przy nowym stole."
+              ? "Gra już trwa — do skończonego stosu wraca się tylko przy nowym stole."
               : undefined
           }
           // The poczekalnia's sentence, plus the one thing a reader standing

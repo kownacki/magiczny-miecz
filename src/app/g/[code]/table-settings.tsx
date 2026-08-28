@@ -28,12 +28,15 @@ import type { EqMode } from "@/lib/engine/slots";
 export function TableSettings({
   eqMode,
   endlessStock,
+  started,
   canChange,
   onEqMode,
   onEndlessStock,
 }: {
   eqMode: EqMode;
   endlessStock: boolean;
+  /** Whether the game has begun, which is what closes one of these for good. */
+  started: boolean;
   /**
    * Whether this device may move them, which means: whether it is the host's.
    *
@@ -101,6 +104,22 @@ export function TableSettings({
           {
             active: !endlessStock,
             label: "Skończony",
+            /**
+             * Not offered where the command will refuse it — which is once
+             * play has begun, and not before. In the poczekalnia nothing has
+             * been dealt and a table may still change its mind; at the table
+             * there may already be six Miecze on a board the finite pile holds
+             * five of, and switching back would start refusing cards people
+             * are holding.
+             *
+             * Said on the option rather than left to be discovered by pressing
+             * it: a control that can be pressed and then refused is a control
+             * that lies for as long as it takes to be told.
+             */
+            unavailable:
+              started && endlessStock
+                ? "Gra już trwa — skończony stos wraca dopiero przy nowym stole."
+                : undefined,
             hint: "Zapas jest ten z pudełka i może się skończyć (21.2).",
             onPick: () => onEndlessStock(false),
           },
@@ -126,7 +145,14 @@ function Group({
   canChange,
 }: {
   legend: string;
-  options: { active: boolean; label: string; hint: string; onPick: () => void }[];
+  options: {
+    active: boolean;
+    label: string;
+    hint: string;
+    /** Why this one cannot be picked, where something other than being current stops it. */
+    unavailable?: string;
+    onPick: () => void;
+  }[];
   canChange: boolean;
 }) {
   return (
@@ -141,8 +167,10 @@ function Group({
           // it was pressed — so greying it out while the request goes reads as
           // the app taking the answer back. The only reasons to refuse a press
           // are that it changes nothing, or that it is not yours to press.
-          disabled={option.active || !canChange}
-          title={canChange ? undefined : "Zasady stołu ustala gospodarz"}
+          disabled={option.active || option.unavailable !== undefined || !canChange}
+          title={
+            option.unavailable ?? (canChange ? undefined : "Zasady stołu ustala gospodarz")
+          }
           aria-pressed={option.active}
           // Disabled on the one already chosen rather than merely lit: pressing
           // it would post a change to what it already is, and the only thing
@@ -174,6 +202,13 @@ function Group({
               click away on its own shelf; these two numbers are here to say
               which rule is being set aside, not to be followed. */}
           <span className="mt-0.5 block text-[11px] leading-snug text-muted">{option.hint}</span>
+          {/* Said on the option itself, not only in a tooltip: a greyed choice
+              with no reason beside it reads as something broken. */}
+          {option.unavailable && (
+            <span className="mt-1 block text-[11px] leading-snug text-muted/60">
+              {option.unavailable}
+            </span>
+          )}
         </button>
       ))}
     </fieldset>

@@ -739,7 +739,24 @@ export function useTable(code: string): Table {
           ...(patch.endless_stock !== undefined ? { endlessStock: patch.endless_stock } : {}),
         }),
       });
-      if (!response.ok) setError((await response.json().catch(() => ({}))).error ?? null);
+      if (!response.ok) {
+        /**
+         * Put it back, now, rather than waiting for an agreement that is not
+         * coming.
+         *
+         * `standingRules` drops an overlay when the table *has* the value, and
+         * a refused one never will — so a switch the server said no to stayed
+         * moved for the rest of the session, quietly showing a rule the table
+         * was not playing. Every other optimistic thing here is reverted by
+         * the truth arriving; this is the one that has to revert itself.
+         */
+        setHouseRules((was) => {
+          const back = { ...was };
+          for (const field of Object.keys(patch)) delete back[field as keyof typeof back];
+          return back;
+        });
+        setError((await response.json().catch(() => ({}))).error ?? null);
+      }
       await refresh();
     },
   );
