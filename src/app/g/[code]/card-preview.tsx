@@ -28,7 +28,12 @@ import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import { CardTile, type TileCard } from "./card-tile";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
+import charactersData from "@/data/characters.json";
+import type { Character } from "@/data/types";
+import { NATURE_LABEL } from "@/lib/engine/polish";
 import { cardName, plural } from "@/lib/engine/polish";
+
+const CHARACTERS = charactersData as Character[];
 
 /**
  * Width of the card picture.
@@ -219,7 +224,16 @@ export function useCardPreview(
   useEffect(() => {
     if (anchor === null && !mine) return;
     const onDown = (event: KeyboardEvent) => {
-      if (isHold(event) && !mine && anchor !== null) setPinnedPreview(me);
+      /**
+       * A nested lookup does not pin.
+       *
+       * The pin is a single seat and holding the key inside a pinned panel
+       * would take it from the panel you are standing in — which closes it,
+       * and the thing you were pointing at with it. One level deep is as far as
+       * this goes on purpose: the second panel is for reading, and it is
+       * dismissed by moving the pointer off the name that opened it.
+       */
+      if (isHold(event) && !mine && !nested && anchor !== null) setPinnedPreview(me);
       if (event.key === "Escape" && mine) setPinnedPreview(null);
     };
     const onUp = (event: KeyboardEvent) => {
@@ -242,7 +256,7 @@ export function useCardPreview(
       window.removeEventListener("keyup", onUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [anchor, mine, me]);
+  }, [anchor, mine, me, nested]);
 
   const handlers = {
     onMouseEnter: (event: React.MouseEvent<HTMLElement>) => {
@@ -399,6 +413,9 @@ export function CardPreview({
   // Only a Postać has one, and `startingKit` answers with an empty kit for
   // anything else — including the "Losowa" card, which is nobody yet.
   const kit = card.character ? startingKit(asCharacterId(card.cardId)) : null;
+  // The Karta's own printed figures. Absent for the "Losowa" card, which is
+  // nobody yet and has nothing to print.
+  const starting = card.character ? (CHARACTERS.find((one) => one.id === card.cardId) ?? null) : null;
   // 5.3, answered for the reader rather than stated in the abstract.
   const barred = nature !== null && (forbiddenNatures(card.cardId)?.includes(nature) ?? false);
   const anythingToSay =
@@ -565,7 +582,35 @@ export function CardPreview({
            * which only happens once it is pinned. The note at the bottom already
            * says how; this is one more thing pinning is for.
            */}
-          {kit && (kit.items?.length || kit.gold !== undefined || kit.spells) && (
+          {/**
+           * What a Postać is before anybody rolls, laid out the way the roster
+           * lays out what one has become.
+           *
+           * The same four figures in the same order and the same colours, so
+           * comparing a Karta you are thinking of taking against a player who
+           * already has one is reading the same table twice. The Karta prints
+           * all of it — Natura, MGR, Miecz, Magia — at a size where it is a
+           * grey smear, and Życie and Złoto are not on it at all: 4.2 and 3.2
+           * give everybody four and one unless a Charakterystyka says otherwise.
+           */}
+          {starting && (
+            <dl className="grid grid-cols-[1fr_2fr] gap-x-3 gap-y-1 border-t border-edge/60 pt-2 text-[11px]">
+              <dt className="text-muted">Zaczyna na</dt>
+              <dd className="truncate text-ink">{starting.start}</dd>
+              <dt className="text-muted">Natura</dt>
+              <dd className="text-ink">{NATURE_LABEL[starting.nature] ?? starting.nature}</dd>
+              <dt className="text-muted">Miecz</dt>
+              <dd className="tnum text-miecz">{starting.miecz}</dd>
+              <dt className="text-muted">Magia</dt>
+              <dd className="tnum text-magia">{starting.magia}</dd>
+              <dt className="text-muted">Życie</dt>
+              <dd className="tnum text-zycie">4</dd>
+              <dt className="text-muted">Złoto</dt>
+              <dd className="tnum text-zloto">{kit?.gold ?? 1}</dd>
+            </dl>
+          )}
+
+          {kit && (kit.items?.length || kit.spells) && (
             <div className="flex flex-col gap-1 border-t border-edge/60 pt-2">
               <p className="text-[11px] text-muted">Na start:</p>
               {/* Pictures, not names. A Przedmiot is recognised by its
@@ -587,11 +632,6 @@ export function CardPreview({
                 </div>
               )}
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px] text-ink">
-                {/* 3.2's single coin is everybody's, so only a Karta that says
-                    otherwise is worth a word. */}
-                {kit.gold !== undefined && kit.gold !== 1 && (
-                  <span className="text-zloto">{kit.gold} Sz. Z.</span>
-                )}
                 {kit.spells ? (
                   <span className="text-magia">
                     {kit.spells} {plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}

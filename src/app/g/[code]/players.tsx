@@ -28,6 +28,7 @@ import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import type { PublicSeat } from "./table-layout";
 import { Drawer } from "./drawer";
+import { Fold } from "./fold";
 import { StatFigure } from "./token-rail";
 import { natureSaid } from "./nature-line";
 import { MAX_SEATS } from "@/lib/game/modes";
@@ -81,6 +82,14 @@ export function PlayersDrawer({
   onJoin?: () => void;
 }) {
   const [open, setOpen] = useState<string | null>(openSeatId ?? null);
+  /**
+   * Which seats have their cards unfolded, by exception.
+   *
+   * A set of the open ones, so the default is shut: unfolding a seat is asking
+   * about a *player*, and their whole hand of Przedmioty is a second question.
+   * The tally answers most of it without opening anything.
+   */
+  const [showCards, setShowCards] = useState<ReadonlySet<string>>(new Set());
   const byId = new Map(characters.map((character) => [character.id, character]));
 
   return (
@@ -94,6 +103,22 @@ export function PlayersDrawer({
           </span>
         </>
       }
+      /**
+       * Three Przedmioty across, exactly.
+       *
+       * The roster's widest thing is a row of `CardTile`s, and a row that fits
+       * three and a sliver reads as a row that could not decide. Counted rather
+       * than rounded: 3 x 92 (`CardTile`'s own width) + 2 x 8 (`gap-2`) = 292,
+       * + 16 for the seat box's `px-2`, + 2 for its border, + 24 for the
+       * column's `p-3`, + 15 for the scrollbar gutter the drawer always
+       * reserves — measured, not assumed — + 1 for the drawer's own left edge,
+       * which the sum missed and which left the row a pixel short of three.
+       * = 350, and the row measures 292 exactly.
+       *
+       * The gutter stays reserved whether or not the list scrolls, which is
+       * what keeps the tiles from stepping sideways when a seat is unfolded.
+       */
+      width="max-w-[350px]"
       onClose={onClose}
     >
       <div className="flex flex-col gap-2 p-3">
@@ -239,18 +264,40 @@ export function PlayersDrawer({
                   </div>
 
                   {/* 5.2 and 6.2 put these face up, so they are everybody's to
-                      read. A spell hand is 9.3's and shows as a back. */}
+                      read. A spell hand is 9.3's and shows as a back.
+                      
+                      Folded, like the sections of one's own sheet, and by the
+                      same component — a seat holding nine Przedmioty pushed
+                      every other player off the bottom of the roster, which is
+                      the one thing this panel exists to show. The tally on the
+                      bar is what a folded section owes its reader: how many
+                      there are is usually the whole question. */}
                   {(seat.cards.length > 0 || seat.hiddenSpells > 0) && (
-                    <div className="mb-2 flex flex-wrap gap-2">
-                      {seat.cards.map((card, index) => (
-                        <CardTile
-                          key={`${card.cardId}-${index}`}
-                          card={card}
-                          onClick={() => onInspect(card)}
-                        />
-                      ))}
-                      {seat.hiddenSpells > 0 && <CardBack count={seat.hiddenSpells} />}
-                    </div>
+                    <Fold
+                      first
+                      title="Ma przy sobie"
+                      tally={seat.cards.length + seat.hiddenSpells}
+                      open={showCards.has(seat.id)}
+                      onToggle={() =>
+                        setShowCards((were) => {
+                          const next = new Set(were);
+                          if (next.has(seat.id)) next.delete(seat.id);
+                          else next.add(seat.id);
+                          return next;
+                        })
+                      }
+                    >
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        {seat.cards.map((card, index) => (
+                          <CardTile
+                            key={`${card.cardId}-${index}`}
+                            card={card}
+                            onClick={() => onInspect(card)}
+                          />
+                        ))}
+                        {seat.hiddenSpells > 0 && <CardBack count={seat.hiddenSpells} />}
+                      </div>
+                    </Fold>
                   )}
 
                   <div className="flex flex-wrap gap-2">
