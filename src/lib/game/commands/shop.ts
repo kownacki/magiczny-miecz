@@ -8,7 +8,7 @@ import { HEAL_CEILING } from "@/lib/engine/derive";
 import { goodsId } from "@/lib/engine/goods";
 import type { FieldId } from "@/lib/engine/board";
 import { EVENTS } from "../decks";
-import { apply, merge, type Outcome, type Snapshot } from "../change";
+import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import type { SeatRow } from "../store";
 import { asReturnable, putOnPile } from "./piles";
 import { takeCard, type Taken } from "./holdings";
@@ -72,6 +72,57 @@ export function standingShopper(snapshot: Snapshot, seatId: string): SeatRow {
  * Naming nothing still means everything, which is what a player asking to cash
  * out is usually after and what the console has always done.
  */
+/** What one beaten Wróg is worth towards 1.4's sevens. */
+export function trophyPointsOf(cardId: string): number {
+  const card = EVENTS.find((one) => one.id === cardId);
+  return (card ? combatValueOf(card)?.total : 0) ?? 0;
+}
+
+/**
+ * Every held Wróg turned into the number printed on it, for the whole table.
+ *
+ * The one conversion that can be made mid-game, and only in this direction.
+ * Each Karta already carries its value, so turning „Karty pokonanych" into
+ * „Punkty" takes nothing away from anybody — the Karty go to the stos zużytych
+ * and the seat keeps exactly what it was holding. Going back cannot be done at
+ * all: the Wrogowie are on the pile and there is nothing to hand out again.
+ *
+ * A `granted` Karta scores and returns nothing, because the deck still holds
+ * its own copy — the same rule `trophiesFrom` follows in a fight.
+ */
+export function convertTrophies(snapshot: Snapshot): Changeset {
+  const held = snapshot.holdings.filter((one) => one.kind === "trophy");
+  if (held.length === 0) return {};
+
+  const bySeat = new Map<string, number>();
+  for (const one of held) {
+    bySeat.set(one.seat_id, (bySeat.get(one.seat_id) ?? 0) + trophyPointsOf(one.card_id));
+  }
+
+  const seats = [...bySeat].map(([id, points]) => {
+    const seat = seatById(snapshot, id);
+    return { id, patch: { trophy_points: seat.trophy_points + points } };
+  });
+
+  return mergeAll(
+    { holdings: { delete: held.map((one) => one.id) } },
+    { seats },
+    putOnPile(
+      snapshot,
+      "events",
+      held.map((one) => ({ cardId: one.card_id, granted: one.granted === true })),
+    ),
+    {
+      journal: [...bySeat].map(([seatId, points]) => ({
+        seatId,
+        turn: snapshot.game.turn,
+        kind: "override" as const,
+        payload: { what: "trophy-mode", points, cards: held.filter((h) => h.seat_id === seatId).length },
+      })),
+    },
+  );
+}
+
 export function tradeTrophies(
   snapshot: Snapshot,
   command: { seatId: string; cardIds?: readonly string[] },

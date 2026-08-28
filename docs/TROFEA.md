@@ -131,11 +131,15 @@ takes the score to zero.
   `trophyModeOf` in `commands/seat.ts`; never off the row.
 - **`seats.trophy_points`** — the running total the seat card asked to be named.
   Integer, never null, zero in „Karty pokonanych" mode. **This is the field to draw.**
-- `setTrophyMode` in `commands/lobby.ts` refuses once `status !== "lobby"`, the
-  same shape as `setEqMode` and for a sharper reason: by then the choice is
-  already applied to a card, and neither direction can be reinterpreted —
-  switching to „Punkty" would have to invent points for Karty already held,
-  switching back would have to invent Karty for points already banked.
+- `setTrophyMode` in `commands/lobby.ts`. Free either way in the poczekalnia.
+  Once the game is running it closes in **one direction only**, which the
+  seat-card session had right and this first got wrong: turning „Punkty" *on*
+  is a conversion the table can make together, because every held Karta has its
+  Miecz printed on it and becomes that many points; turning it back *off* would
+  have to hand Karty out again, and the Wrogowie are on the stos zużytych by
+  then. `convertTrophies` in `commands/shop.ts` does the sweep — every seat at
+  once, `granted` Karty scoring but returning nothing, one journal line per
+  seat that was holding something and one for the table.
 - `trophiesFrom` in `commands/fight.ts` forks: „Karty" inserts holdings,
   „Punkty" adds the printed Miecz to the seat and sends the Karta to the stos
   zużytych. A conjured Wróg (`granted`) scores and returns nothing, because the

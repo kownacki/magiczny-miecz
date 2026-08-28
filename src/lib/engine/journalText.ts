@@ -532,6 +532,25 @@ export function describe(
       if (data.what === "endless-stock") {
         return line("Zwykłego Wyposażenia nie będzie już brakować (21.2).");
       }
+      /**
+       * The trophy rule moved mid-game, which is the one conversion allowed.
+       *
+       * Two shapes: the table's own line, and one per seat that was holding
+       * something — because "the rule changed" and "four of your Karty just
+       * became eleven points" are different things to be told, and the second
+       * is the one somebody will want to check.
+       */
+      if (data.what === "trophy-mode") {
+        const cards = num(data.cards);
+        if (cards === 0) {
+          return line("Pokonani Wrogowie liczą się teraz na punkty, nie na Karty.");
+        }
+        return line(
+          `${who}: ${cards} ${plural(cards, "Karta", "Karty", "Kart")} pokonanych ` +
+            `${plural(cards, "przeliczona", "przeliczone", "przeliczonych")} na ` +
+            `${num(data.points)} pkt; na stos zużytych.`,
+        );
+      }
       if (data.what === "remove" || data.what === "revive") {
         const postac = characterName(data.character);
         const named = remember("character", data.character, postac);

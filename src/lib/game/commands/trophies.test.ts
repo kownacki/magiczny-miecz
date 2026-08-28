@@ -5,6 +5,7 @@ import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFight } from "./fight";
 import { tradeTrophies, TROPHY_RATE } from "./shop";
+import { setTrophyMode } from "./lobby";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { TurnPhase } from "@/lib/engine/turn";
 
@@ -157,6 +158,86 @@ describe("keeping a beaten Wróg (16.2)", () => {
       const after = await settle(won({ mode: "points", cardId: "demon" }));
       expect(after.seats[0].trophy_points).toBe(0);
     });
+  });
+});
+
+/**
+ * The one conversion allowed once the game is running (docs/TROFEA.md).
+ *
+ * A table may decide mid-game that hoarding is not worth the table space, and
+ * nobody loses by it: every held Karta has its Miecz printed on it. The other
+ * direction cannot be done at all — the Wrogowie are on the pile by then.
+ */
+describe("switching to punkty mid-game", () => {
+  const playing = (holdings: ReturnType<typeof aHolding>[]) =>
+    aTable({
+      game: { status: "playing", trophy_mode: "cards" },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, trophy_points: 1 }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
+      ],
+      holdings,
+    });
+
+  const trophy = (id: string, seat: string, cardId: string, granted = false) =>
+    aHolding({ id, seat_id: seat, card_id: cardId, kind: "trophy", granted });
+
+  it("turns every held Karta into the number printed on it", () => {
+    const table = playing([
+      trophy("t0", "seat-a", "cyklop"),
+      trophy("t1", "seat-a", "nobbin"),
+      trophy("t2", "seat-b", "smok"),
+    ]);
+    const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
+
+    expect(after.game.trophy_mode).toBe("points");
+    expect(after.holdings.filter((h) => h.kind === "trophy")).toEqual([]);
+    // Added to what the seat already had, not replacing it.
+    expect(after.seats.find((s) => s.id === "seat-a")?.trophy_points).toBe(1 + 6 + 2);
+    expect(after.seats.find((s) => s.id === "seat-b")?.trophy_points).toBe(5);
+  });
+
+  /** The Karty are nobody's now, so they have to reach the stos zużytych. */
+  it("sends the Karty to the used pile", () => {
+    const table = playing([trophy("t0", "seat-a", "cyklop")]);
+    const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
+    expect(returned(after, "cyklop")).toHaveLength(1);
+  });
+
+  /** A conjured Cyklop scores and returns nothing: the deck holds its own copy. */
+  it("returns nothing the deck still holds", () => {
+    const table = playing([trophy("t0", "seat-a", "cyklop", true)]);
+    const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
+    expect(after.seats[0].trophy_points).toBe(1 + 6);
+    expect(returned(after, "cyklop")).toEqual([]);
+  });
+
+  it("says so per seat, and once for the table", () => {
+    const table = playing([trophy("t0", "seat-a", "cyklop")]);
+    const said = setTrophyMode(table, { mode: "points" }).writes.journal ?? [];
+    expect(said).toContainEqual(
+      expect.objectContaining({ seatId: "seat-a", payload: { what: "trophy-mode", points: 6, cards: 1 } }),
+    );
+    expect(said).toContainEqual(
+      expect.objectContaining({ seatId: null, payload: { what: "trophy-mode" } }),
+    );
+  });
+
+  it("refuses to go back, there being nothing to hand out", () => {
+    const table = aTable({ game: { status: "playing", trophy_mode: "points" } });
+    expect(() => setTrophyMode(table, { mode: "cards" })).toThrow(/nie ma czego rozdać/);
+  });
+
+  /** Nobody holding anything is not an error — it is the ordinary case. */
+  it("moves the rule even when nothing is held", () => {
+    const table = playing([]);
+    const after = apply(table, setTrophyMode(table, { mode: "points" }).writes);
+    expect(after.game.trophy_mode).toBe("points");
+  });
+
+  it("is free in the poczekalnia, both ways", () => {
+    const lobby = aTable({ game: { status: "lobby", trophy_mode: "points" } });
+    expect(apply(lobby, setTrophyMode(lobby, { mode: "cards" }).writes).game.trophy_mode).toBe("cards");
   });
 });
 

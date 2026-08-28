@@ -846,7 +846,17 @@ export async function runCommand(
           mode === "cards"
             ? "the Karty are kept and handed in (as printed)"
             : "Wrogowie are scored and the Karty go back to the pile";
-        const may = snapshot.game.status === "lobby" ? "" : " — the game has started, so it stands.";
+        /**
+         * What can still be done about it, which is not symmetric once the game
+         * is running: „Karty pokonanych" can still become „Punkty", because
+         * every held Karta carries its own value, and nothing can go back.
+         */
+        const may =
+          snapshot.game.status === "lobby"
+            ? ""
+            : mode === "cards"
+              ? " — the game has started; `trophies points` still converts, but not back."
+              : " — the game has started, so it stands.";
         return `Trophies: ${mode} — ${how}${may}`;
       }
       await setTrophyMode(gameId, command.mode);

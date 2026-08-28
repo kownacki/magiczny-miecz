@@ -11,6 +11,7 @@ import {
   type Snapshot,
 } from "../change";
 import type { SeatRow, UserRow } from "../store";
+import { convertTrophies } from "./shop";
 
 /**
  * The part that is not Magiczny Miecz.
@@ -419,11 +420,51 @@ export function setTrophyMode(
   snapshot: Snapshot,
   command: { mode: "points" | "cards" },
 ): Outcome<void> {
-  if (snapshot.game.status !== "lobby") {
-    throw new Error("Trofea wybiera się przed rozpoczęciem gry — w trakcie już nie do zmiany.");
-  }
   if (snapshot.game.trophy_mode === command.mode) return { writes: {}, result: undefined };
-  return { writes: { game: { trophy_mode: command.mode } }, result: undefined };
+
+  /** In the poczekalnia either answer is free: nobody holds anything yet. */
+  if (snapshot.game.status === "lobby") {
+    return { writes: { game: { trophy_mode: command.mode } }, result: undefined };
+  }
+  if (snapshot.game.status !== "playing") {
+    throw new Error("Gra się skończyła.");
+  }
+
+  /**
+   * Mid-game it closes in one direction only, and the asymmetry is the rule
+   * rather than caution.
+   *
+   * Turning „Punkty" *on* is a conversion the table can make together: every
+   * held Karta has its Miecz printed on it, so each one becomes that many
+   * points and goes to the stos zużytych, and nobody is better or worse off
+   * for it. Turning it back *off* would have to hand Karty out again, and
+   * there are none — the Wrogowie went to the pile as they were beaten, and a
+   * referee that dealt replacements would be inventing cards.
+   */
+  if (command.mode === "cards") {
+    throw new Error(
+      "Gra już trwa — Karty pokonanych wracają dopiero przy nowym stole: " +
+        "pokonani Wrogowie leżą na stosie zużytych i nie ma czego rozdać.",
+    );
+  }
+
+  return {
+    writes: mergeAll(
+      { game: { trophy_mode: command.mode } },
+      convertTrophies(snapshot),
+      {
+        journal: [
+          {
+            seatId: null,
+            turn: snapshot.game.turn,
+            kind: "override" as const,
+            payload: { what: "trophy-mode" },
+          },
+        ],
+      },
+    ),
+    result: undefined,
+  };
 }
 
 export function setEqMode(
