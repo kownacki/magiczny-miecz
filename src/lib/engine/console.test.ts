@@ -255,6 +255,28 @@ suite("naming a card, a field or a creature", () => {
    * and Tab answers with a grid readline draws itself, which no heading
    * survives — so the console lists them by kind instead.
    */
+  /**
+   * And Tab keeps the three kinds apart, which is the most a grid can carry.
+   *
+   * `complete` sorts every pool alphabetically, which is right for a list of
+   * names with no shape of its own and wrong for this one — it put ALCHEMIK
+   * between 2 SZTUKI ZŁOTA and ARONDIGHT and shuffled the kinds together. The
+   * pool says it has already chosen an order; readline prints what it is given.
+   */
+  it("offers the giveable cards grouped, not shuffled together alphabetically", () => {
+    const { options } = complete("give ", []);
+    const at = (name: string) => options.indexOf(name);
+    // Last Przedmiot, first Przyjaciel, first Zaklęcie — in that order.
+    expect(at("ZWIERCIADŁO ZNISZCZENIA")).toBeLessThan(at("ALCHEMIK"));
+    expect(at("ALCHEMIK")).toBeLessThan(at("FATUM"));
+    // Alphabetical *within* a group, so a name is still findable.
+    expect(at("ALCHEMIK")).toBeLessThan(at("RYCERZ"));
+    // And nothing `give` would refuse: no Wróg, no Spotkanie, no Miejsce.
+    for (const refused of ["CYKLOP", "MGŁA", "KARCZMA"]) {
+      expect(options, refused).not.toContain(refused);
+    }
+  });
+
   it("takes a bare `give` as a request for the list", () => {
     expect(ok("give")).toEqual({ kind: "give", cardId: null });
   });

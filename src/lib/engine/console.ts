@@ -1683,8 +1683,15 @@ export function complete(
   const verb = parts[0].toLowerCase();
   const stat = verb in STATS;
 
-  /** Every name this position could take, and where the fragment being typed starts. */
-  const from = (): { pool: string[]; at: number } => {
+  /**
+   * Every name this position could take, and where the fragment being typed
+   * starts.
+   *
+   * `ordered` for a pool that has already decided what order it wants to be
+   * read in; everything else is sorted alphabetically below, which is right for
+   * a list of names with no shape of its own.
+   */
+  const from = (): { pool: string[]; at: number; ordered?: true } => {
     if (typingVerb) {
       return { pool: [...words], at: 0 };
     }
@@ -1694,9 +1701,16 @@ export function complete(
     // A stat takes its amount first and a player after it; everything else
     // takes its one argument straight away.
     if (stat) return { pool: [...players, "force"], at: 2 };
-    // Only what `give` will accept, and in the order `GIVEABLE` groups them —
-    // Tab prints a plain grid, so clustering is the most it can carry.
-    if (verb === "give") return { pool: HOLDABLE.map((c) => c.name), at: 1 };
+    /**
+     * Only what `give` will accept, in the order `GIVEABLE` groups them.
+     *
+     * `ordered`, or the sort below would put ALCHEMIK between 2 SZTUKI ZŁOTA
+     * and ARONDIGHT and the three kinds would be shuffled together — which is
+     * what happened when this pool was first grouped and the sort was
+     * forgotten. Tab draws a plain grid and cannot label the groups, so their
+     * order is the whole of what it can carry.
+     */
+    if (verb === "give") return { pool: HOLDABLE.map((c) => c.name), at: 1, ordered: true };
     if (verb === "place" || verb === "put" || verb === "drop") {
       // Which half of the line is being typed. Past the `at`, the names on
       // offer are the board's; before it, the deck's.
@@ -1758,16 +1772,17 @@ export function complete(
     return { pool: [], at: parts.length - 1 };
   };
 
-  const { pool, at } = from();
+  const { pool, at, ordered } = from();
   // The rest of the line is one argument, so a name with spaces in it can be
   // completed from any word of it: `give magiczny mie` is still one fragment.
   const fragment = parts.slice(at).join(" ");
   if (pool.length === 0 || at >= parts.length) return { line, options: [] };
 
   const needle = fold(fragment);
-  const hits = [...new Set(pool.filter((name) => fold(name).startsWith(needle)))].sort((a, b) =>
-    a.localeCompare(b, "pl"),
-  );
+  const matched = [...new Set(pool.filter((name) => fold(name).startsWith(needle)))];
+  // Polish order, so ŁÓDŹ sits after LATARNIA rather than past Z — unless the
+  // pool said it had already chosen an order, in which case that one is kept.
+  const hits = ordered ? matched : matched.sort((a, b) => a.localeCompare(b, "pl"));
   if (hits.length === 0) return { line, options: [] };
 
   const head = parts.slice(0, at).join(" ");
