@@ -176,6 +176,24 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setRule((was) => ({ shelf, id, nth: (was?.nth ?? 0) + 1 }));
   }, []);
   const openRule = useCallback((id: string) => openAt("instrukcja", id), [openAt]);
+  /**
+   * A drawer opened for its own sake, rather than at a reference.
+   *
+   * `rule` is forgotten on the way in and on the way out, because it is the
+   * destination of one click and stops being anybody's destination the moment
+   * the drawer shuts. Left standing, the next plain Księga — the button, the K
+   * — opened back at a rule somebody followed twenty minutes ago, remounted at
+   * it and scrolled to it, with nothing on screen saying why it had not opened
+   * where they left it.
+   */
+  const toggleDrawer = useCallback((which: "ksiega" | "stosy") => {
+    setRule(null);
+    setLeftDrawer((out) => (out === which ? null : which));
+  }, []);
+  const closeDrawer = useCallback(() => {
+    setRule(null);
+    setLeftDrawer(null);
+  }, []);
   const prefs = usePreferences();
   /** The stacks, drawn as stacks (`piles.tsx`). */
   /**
@@ -295,11 +313,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       switch (event.key.toLowerCase()) {
         case "k":
           event.preventDefault();
-          setLeftDrawer((out) => (out === "ksiega" ? null : "ksiega"));
+          toggleDrawer("ksiega");
           return;
         case "s":
           event.preventDefault();
-          setLeftDrawer((out) => (out === "stosy" ? null : "stosy"));
+          toggleDrawer("stosy");
           return;
         case "g":
           event.preventDefault();
@@ -309,7 +327,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [toggleDrawer]);
 
   /**
    * The irreversible thing waiting to be confirmed.
@@ -1063,7 +1081,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         {...(testing && mySeatIndex !== null
           ? { onGrant: (cardId: string) => post("debug", { action: "grant", cardId }) }
           : {})}
-        onClose={() => setLeftDrawer(null)}
+        onClose={closeDrawer}
       />
     ) : null;
 
@@ -1149,7 +1167,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           // something their chair is: no host at all, or one who has gone quiet.
           hostAway={!users.some((one) => one.isHost && !one.away)}
           onStart={() => post("start", {})}
-          onLibrary={() => setLeftDrawer("ksiega")}
+          onLibrary={() => toggleDrawer("ksiega")}
           library={library}
         />
       </>
@@ -1220,7 +1238,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 nameOf={cardOfRef}
                 stock={stock}
                 onInspect={setInspectingCard}
-                onClose={() => setLeftDrawer(null)}
+                onClose={closeDrawer}
               />
             ) : null}
             {rightDrawer === "ustawienia" ? (
@@ -1330,7 +1348,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 glyph="book"
                 label="Księga Tolimana"
                 active={leftDrawer === "ksiega"}
-                onClick={() => setLeftDrawer((out) => (out === "ksiega" ? null : "ksiega"))}
+                onClick={() => toggleDrawer("ksiega")}
                 title="Księga Tolimana — każda Karta, każdy Obszar i cała Instrukcja (K)"
               />
               {/* Both piles, beside the turn they are being drawn into. At a
@@ -1341,7 +1359,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   a reshuffle will bring back. */}
               {game.deckCounts && (
                 <button
-                  onClick={() => setLeftDrawer((out) => (out === "stosy" ? null : "stosy"))}
+                  onClick={() => toggleDrawer("stosy")}
                   title="Stosy — co zostało w taliach (S)"
                   className="flex items-baseline gap-3 text-[11px] text-muted/70 transition hover:text-ink"
                 >
