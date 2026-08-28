@@ -32,6 +32,7 @@ import { NowBox } from "./now-box";
 import { factsIn, turnSteps, windowsFor } from "@/lib/engine/turnWindows";
 import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "@/lib/engine/duties";
 import { Journal } from "./journal";
+import { TableSettings } from "./table-settings";
 import { momentsIn, spellScript } from "@/lib/engine/spells";
 import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
@@ -1049,6 +1050,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           /* The same feed the table gets, in the room where the lines about
              arriving and sitting down are actually written. */
           journal={<Journal code={code} revision={game.revision} covers="kolumnę" />}
+          /* The house rules, where the table can talk about them. Each switch
+             posts only the setting it moved — see the route. */
+          settings={
+            <TableSettings
+              eqMode={game.eq_mode === "classic" ? "classic" : "slots"}
+              endlessStock={game.endless_stock}
+              busy={busy}
+              onEqMode={(eqMode) => post("settings", { eqMode })}
+              onEndlessStock={(on) => post("settings", { endlessStock: on })}
+            />
+          }
           characters={CHARACTERS}
           pickingFor={pickingFor ? lobbySeat(pickingFor) : null}
           busy={busy}
@@ -1246,6 +1258,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   down a side at a time. */}
               <BarButton
                 glyph="book"
+                label="Księga Tolimana"
                 active={leftDrawer === "ksiega"}
                 onClick={() => setLeftDrawer((out) => (out === "ksiega" ? null : "ksiega"))}
                 title="Księga Tolimana — każda Karta, każdy Obszar i cała Instrukcja (K)"
@@ -1288,24 +1301,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 Tura <span className="tnum text-ink/70">{game.turn}</span> ·{" "}
                 {active ? (active.player_name ?? "—") : "—"}
               </span>
-              {/* Who is at the table, which is a question about the table and
-                  not about the turn — so it lives up here with the rest of
-                  them, and stays reachable while a fight is open. */}
-              <BarButton
-                glyph="people"
-                active={rightDrawer === "gracze"}
-                tally={`${seats.length}/${MAX_SEATS}`}
-                onClick={() => setRightDrawer((out) => (out === "gracze" ? null : "gracze"))}
-                title="Gracze — kto siedzi przy stole (G)"
-              />
-              <BarButton
-                glyph="gear"
-                active={rightDrawer === "ustawienia"}
-                onClick={() =>
-                  setRightDrawer((out) => (out === "ustawienia" ? null : "ustawienia"))
-                }
-                title="Ustawienia — numery zasad, tryb ekwipunku"
-              />
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
               {/* Loud on purpose while it is on. Everything it unlocks writes a
                   manual override into the journal, and a switch you can forget
@@ -1330,14 +1325,34 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 </button>
               )}
               {testing && (
-                <button
+                <BarButton
+                  glyph="prompt"
+                  active={consoleOpen}
+                  tone={{ rest: "text-vermilion/80", hover: "hover:text-vermilion" }}
                   onClick={() => setConsoleOpen((was) => !was)}
                   title="Konsola testowa (`)"
-                  className="text-vermilion/80 transition hover:text-vermilion"
-                >
-                  konsola
-                </button>
+                />
               )}
+              {/* The three doors together at the end of the row, in the order
+                  you are least likely to want them: who is here, how it is set,
+                  and the way out. They were scattered among the counters, so
+                  "Opuść stół" sat beside the console with the code between it
+                  and everything else it belongs with. */}
+              <BarButton
+                glyph="people"
+                active={rightDrawer === "gracze"}
+                tally={`${seats.length}/${MAX_SEATS}`}
+                onClick={() => setRightDrawer((out) => (out === "gracze" ? null : "gracze"))}
+                title="Gracze — kto siedzi przy stole (G)"
+              />
+              <BarButton
+                glyph="gear"
+                active={rightDrawer === "ustawienia"}
+                onClick={() =>
+                  setRightDrawer((out) => (out === "ustawienia" ? null : "ustawienia"))
+                }
+                title="Ustawienia — numery zasad, tryb ekwipunku"
+              />
               {mySeatIndex !== null && (
                 <LeaveButton
                   playing

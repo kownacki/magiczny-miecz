@@ -11,6 +11,7 @@
  */
 
 import { useState } from "react";
+import { BarButton } from "./bar-button";
 import { namedSeats, tableIsFull, type LobbySeat } from "./lobby-view";
 
 /**
@@ -205,10 +206,16 @@ export function LeaveButton({
 }) {
   const [armed, setArmed] = useState(false);
   if (!armed) {
+    // A glyph, like the other doors on the bar. The name is in the tooltip and
+    // the question it asks next says it again in full, so nothing is lost — and
+    // "Opuść stół" was the longest phrase in a row that is otherwise counters.
     return (
-      <button onClick={() => setArmed(true)} className="text-muted hover:text-vermilion">
-        Opuść stół
-      </button>
+      <BarButton
+        glyph="door"
+        tone={{ rest: "text-muted", hover: "hover:text-vermilion" }}
+        onClick={() => setArmed(true)}
+        title="Opuść stół"
+      />
     );
   }
   return (
