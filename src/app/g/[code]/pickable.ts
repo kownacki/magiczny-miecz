@@ -35,3 +35,19 @@ export const PICKABLE =
  * on purpose, and a vacant place is not a card.
  */
 export const ART_BORDER = "border-ochre/60";
+
+/**
+ * The same emphasis the pointer gives, for a card the player has *chosen*.
+ *
+ * Deliberately not a third strength. A picked trophy was sitting between the
+ * resting gold and the hover gold — `border-ochre` against `border-ochre/60`,
+ * a step so small it read as nothing, and it had to be found rather than seen.
+ * Three weights along one axis is one more than the eye separates.
+ *
+ * So there are two, and this is the loud one: what the pointer says about a
+ * card under it, said about a card that is spoken for. They cannot collide,
+ * because the pointer is somewhere else by definition when you are reading the
+ * row — and where they do coincide, hovering your own choice, the answer is
+ * the same either way.
+ */
+export const PICKED = "border-ochre ring-1 ring-ochre/60";

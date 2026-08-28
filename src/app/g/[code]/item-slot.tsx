@@ -21,7 +21,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
 import { CardMark, type SlotMark } from "./card-mark";
-import { ART_BORDER, PICKABLE } from "./pickable";
+import { ART_BORDER, PICKABLE, PICKED } from "./pickable";
 
 /**
  * One size, everywhere.
@@ -110,13 +110,17 @@ const TONE: Record<SlotTone, string> = {
   /**
    * Picked out of a row by something the player is deciding, not by the pointer.
    *
-   * The full ochre the hover reserves, plus a wash — enough that a chosen card
-   * is found at a glance in a row of its own kind. It exists because the
-   * alternative was dimming everything else, and the trofea already spend
-   * dimming on „this one is gone": one fade cannot mean both "spent" and "not
-   * in this trade" in the same row, and the row is one row now.
+   * `PICKED`, which is the hover's own weight — ring and all. It was the full
+   * ochre without the ring, which put it between the resting gold and the
+   * hovered one and made it almost invisible: a third step along an axis the
+   * eye reads two steps of.
+   *
+   * It exists because the alternative was dimming everything else, and the
+   * trofea already spend dimming on „this one is gone": one fade cannot mean
+   * both "spent" and "not in this trade" in the same row, and the row is one
+   * row now.
    */
-  chosen: "border-solid border-ochre bg-ochre/15",
+  chosen: `border-solid ${PICKED} bg-ochre/15`,
   empty: "border-dashed border-edge/70 bg-night/40",
 };
 
