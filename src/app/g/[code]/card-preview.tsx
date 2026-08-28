@@ -552,10 +552,14 @@ export function CardPreview({
               {profile.facts.map((fact, at) => (
                 <li key={at} className="flex flex-col text-[11px] leading-snug">
                   <span className="text-ink">{fact.what}</span>
-                  {/* Only where there is a condition to meet. Almost everything
-                      simply has to be on you, and saying so every time said
-                      nothing. */}
-                  {fact.when && <span className="text-magia/80">{fact.when}</span>}
+                  {/* Only where there is a condition to meet, and there can be
+                      two: a MIECZ has to be in your hand *and* only counts in a
+                      fight, and neither of those implies the other. Almost
+                      everything simply has to be on you, and saying so every
+                      time said nothing. */}
+                  {fact.when.length > 0 && (
+                    <span className="text-magia/80">{fact.when.join(", ")}</span>
+                  )}
                 </li>
               ))}
             </ul>

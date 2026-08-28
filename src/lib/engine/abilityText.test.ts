@@ -2,19 +2,44 @@ import { describe, expect, it } from "vitest";
 import { forbiddenNatures, itemProfile, whenApplies } from "./abilityText";
 
 describe("what an item gives, and when", () => {
-  it("reads a flat bonus and where it is worn", () => {
+  /**
+   * Both conditions, because they are independent: a MIECZ has to be in your
+   * hand *and* only counts once somebody swings, and neither implies the other.
+   */
+  it("reads a flat bonus, where it is worn and when it counts", () => {
     const miecz = itemProfile("miecz", "slots");
     expect(miecz.slotLabel).toBe("Ręka główna");
     expect(miecz.facts).toEqual([
-      { kind: "punkty", what: "+1 Miecza", when: "gdy założony" },
+      { kind: "punkty", what: "+1 Miecza", when: ["gdy założony", "tylko w walce"] },
     ]);
+  });
+
+  it("keeps the fight condition in klasyczny, where nothing is worn", () => {
+    // A property of the card and not of the variant: 5.4 has one kind of
+    // possession, and the Miecz still says „podczas walki".
+    expect(itemProfile("miecz", "classic").facts[0].when).toEqual(["tylko w walce"]);
+  });
+
+  it("says only where it must be for something always on", () => {
+    // PIERŚCIEŃ MOCY „dodaje właścicielowi 2 punkty Magii" — no „w walce", and
+    // after the weapons were corrected it is the only item in the box that is
+    // both wearable and always on.
+    expect(itemProfile("pierscien-mocy", "slots").facts[0].when).toEqual(["gdy założony"]);
+  });
+
+  /** 6.3 gives a Przyjaciel no place on the body, so he only ever has the one. */
+  it("says only when it counts for a Przyjaciel", () => {
+    for (const id of ["giermek", "krzyzowiec"]) {
+      expect(itemProfile(id, "slots").facts[0].when, id).toEqual(["tylko w walce"]);
+    }
   });
 
   it("says nothing about where an item must be when there is no condition", () => {
     // 5.4 has one kind of possession: a Miecz in the pack is a Miecz. Only the
     // slotted variant makes wearing it a condition, and a label that is true of
     // almost every card tells a player nothing.
-    expect(itemProfile("miecz", "classic").facts[0].when).toBeNull();
+    // The Łódź is not worn anywhere and lends no points, so it has neither.
+    expect(itemProfile("lodz", "classic").facts.every((one) => one.when.length === 0)).toBe(true);
   });
 
   it("knows the Bojowy Rumak's two rules and that both are combat-only", () => {
@@ -29,7 +54,9 @@ describe("what an item gives, and when", () => {
     // in a fight is already in the text of both lines, so repeating it added
     // nothing — and it was only ever added to four hand-picked kinds, which
     // made the other seventeen look like they applied at moments they do not.
-    for (const fact of rumak.facts) expect(fact.when).toBe("gdy założony");
+    // Neither of the Rumak's two is a `punkty`, so both carry only the place —
+    // and both already say "in a fight" in their own text.
+    for (const fact of rumak.facts) expect(fact.when).toEqual(["gdy założony"]);
   });
 
   it("says carrying capacity is added to the four, not a cap of its own", () => {
@@ -38,7 +65,7 @@ describe("what an item gives, and when", () => {
     // you leave whatever you cannot carry yourself.
     const kon = itemProfile("kon", "slots");
     expect(kon.facts[0].what).toBe("+8 Przedmiotów ponad limit (5.4)");
-    expect(kon.facts[0].when).toBe("gdy założony");
+    expect(kon.facts[0].when).toEqual(["gdy założony"]);
     // The Muł takes the few-form, which Polish spells differently.
     expect(itemProfile("mul").facts[0].what).toBe("+4 Przedmioty ponad limit (5.4)");
   });
@@ -55,18 +82,32 @@ describe("what an item gives, and when", () => {
     expect(itemProfile("1-sztuka-zlota", "slots").slotLabel).toBeNull();
   });
 
-  it("labels only where a card must be, never when it fires", () => {
-    // A Sztylet's +1 Miecza matters only in a fight too, and never carried a
-    // combat label — so annotating the Tarcza and not the Sztylet was telling
-    // the player something untrue about the difference between them.
-    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "classic")).toBeNull();
-    expect(whenApplies({ kind: "oslona", upTo: 2 }, "tarcza", "slots")).toBe("gdy założony");
-    expect(whenApplies({ kind: "punkty", miecz: 1 }, "sztylet", "slots")).toBe("gdy założony");
+  /**
+   * The fight label is read off `tylkoWalka` rather than guessed from the
+   * ability's kind, which is what was wrong with the version that was removed:
+   * it annotated the Tarcza and not the Sztylet, and the difference it implied
+   * between them was not real.
+   */
+  it("labels a card by its own data, not by the kind of its ability", () => {
+    const shield = { kind: "oslona", upTo: 2 } as const;
+    expect(whenApplies(shield, "tarcza", "classic")).toEqual([]);
+    expect(whenApplies(shield, "tarcza", "slots")).toEqual(["gdy założony"]);
+    // Same kind, same card, and the flag is what decides.
+    expect(whenApplies({ kind: "punkty", miecz: 1 }, "sztylet", "slots")).toEqual([
+      "gdy założony",
+    ]);
+    expect(
+      whenApplies({ kind: "punkty", miecz: 1, tylkoWalka: true }, "sztylet", "slots"),
+    ).toEqual(["gdy założony", "tylko w walce"]);
   });
 
   it("says a carried-only item works from the pack even in slotowy", () => {
     // Nothing wearable about it, so there is no slot to require.
-    expect(itemProfile("tajemnicza-szkatula", "slots").facts.every((f) => f.when !== "gdy założony")).toBe(true);
+    expect(
+      itemProfile("tajemnicza-szkatula", "slots").facts.every(
+        (one) => !one.when.includes("gdy założony"),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -81,7 +122,7 @@ describe("what an item asks of you (5.3)", () => {
   });
 
   it("calls a requirement a condition rather than a moment", () => {
-    expect(itemProfile("swieta-wlocznia").requirements[0].when).toBe("warunek");
+    expect(itemProfile("swieta-wlocznia").requirements[0].when).toEqual(["warunek"]);
   });
 
   it("names the Natures each restricted card shuts out", () => {

@@ -28,43 +28,68 @@ function fieldNames(fieldIds: readonly FieldId[]): string {
  * question with an existing answer: `slotsFor` knows if it has a place, and the
  * variant decides whether being in that place is required.
  */
-export type AbilityWhen = "gdy założony" | "warunek";
+export type AbilityWhen = "gdy założony" | "tylko w walce" | "warunek";
 
+/**
+ * The conditions on one ability — none, one, or both of the two real ones.
+ *
+ * They are independent and neither implies the other, which is why this is a
+ * list and not a choice. A MIECZ is wearable *and* fight-only and needs both
+ * lines; a PIERŚCIEŃ MOCY is wearable and always on; a GIERMEK is fight-only
+ * and never worn at all, because 6.3 gives a Przyjaciel no place on the body.
+ *
+ * ```
+ * MIECZ           gdy założony, tylko w walce
+ * PIERŚCIEŃ MOCY  gdy założony
+ * GIERMEK         tylko w walce
+ * ŁÓDŹ            —
+ * ```
+ */
 export function whenApplies(
   ability: Ability,
   cardId: string,
   eqMode: EqMode,
-): AbilityWhen | null {
+): AbilityWhen[] {
   // A requirement is not something that happens at a moment; it is true or the
   // card is not yours at all.
-  if (ability.kind === "tylko-natura") return "warunek";
+  if (ability.kind === "tylko-natura") return ["warunek"];
+
+  const when: AbilityWhen[] = [];
 
   /**
-   * Where the card has to be, and nothing else.
-   *
-   * It used to add "w walce" to four hand-picked kinds, which was wrong twice
-   * over. It was redundant — "osłona przy przegranej" and "walczy za ciebie"
-   * already say when they happen — and it was inconsistent, because a Sztylet's
-   * +1 Miecza only matters in a fight too and never carried the label. Picking
-   * four kinds out of twenty-one to annotate made the other seventeen look like
-   * they applied at moments they do not.
-   *
-   * What is left is the half that is not in the text: whether the thing has to
-   * be worn. In klasyczny nothing does — 5.4 has one kind of possession, and a
-   * Miecz in the pack is a Miecz.
+   * Where the card has to be. In klasyczny nothing has to be anywhere — 5.4
+   * has one kind of possession, and a Miecz in the pack is a Miecz. "Gdy w
+   * plecaku" is true of almost everything and so tells a player nothing; the
+   * line is worth printing only where there is a condition to meet.
    */
-  // Nothing to say when the card just has to be on you. "Gdy w plecaku" was
-  // true of almost everything and therefore told a player nothing; the label is
-  // worth a line only where there is a condition to meet.
-  return eqMode === "slots" && isWearable(cardId) ? "gdy założony" : null;
+  if (eqMode === "slots" && isWearable(cardId)) when.push("gdy założony");
+
+  /**
+   * And when it counts, which is a property of the card and true in both
+   * variants.
+   *
+   * This used to be guessed from four hand-picked ability kinds and was dropped
+   * for being inconsistent — a Sztylet's +1 only matters in a fight too and
+   * never carried the label. It is not a guess any more: `tylkoWalka` is on the
+   * ability, it is on every one of the nine cards whose text says „w walce",
+   * and a test holds it to the printed words. So the label is read off the data
+   * instead of chosen, which is what was wrong with it.
+   *
+   * It matters more than it looks. The figure it explains is the one the rail
+   * now leads with, and a +1 that quietly does nothing on the Kamienny Most is
+   * exactly the surprise this is here to prevent.
+   */
+  if (ability.kind === "punkty" && ability.tylkoWalka) when.push("tylko w walce");
+
+  return when;
 }
 
 /** One formalised line: what it gives, and when it gives it. */
 export interface AbilityFact {
   kind: Ability["kind"];
   what: string;
-  /** Null when the card simply has to be on you, which is not worth a line. */
-  when: AbilityWhen | null;
+  /** Empty when the card simply has to be on you, which is not worth a line. */
+  when: AbilityWhen[];
 }
 
 /** Everything the app carries about one card, ready to be shown. */
