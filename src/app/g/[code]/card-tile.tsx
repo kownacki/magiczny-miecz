@@ -305,23 +305,34 @@ export function CardBack({ count }: { count: number }) {
             // The card is 52 wide and shows `step` of it: the overlap is the
             // difference, and a fraction of a pixel is a thing browsers lay out
             // exactly and blades do not.
-            style={at > 0 ? { marginLeft: step - SPELL_BACK_WIDTH } : undefined}
+            style={{
+              ...(at > 0 ? { marginLeft: step - SPELL_BACK_WIDTH } : {}),
+              /**
+               * Opaque, and the reason it has to be.
+               *
+               * The border was `border-magia/40`, and a border is painted
+               * *around* an image rather than under it — so the top and bottom
+               * rows of the stack are one card's ring over the next one's, and
+               * a fourteenth of a hand put fourteen coats of 40% blue on the
+               * same pixel. It came out a saturated band along both edges while
+               * every vertical, being a single ring over an opaque card, stayed
+               * a hairline. Mixed to the same colour it was, against the ground
+               * it is drawn on, it can be laid over itself all day.
+               */
+              borderColor: "color-mix(in srgb, var(--color-magia) 40%, var(--color-night))",
+            }}
             /**
              * Rounded at the two ends of the stack and square in between.
              *
-             * A corner radius is four pixels and a sliver is three, so a
-             * covered card shows nothing of its top edge except the curve — and
-             * fourteen curves side by side stopped being a line and became a
-             * four-pixel saturated band along the top and the bottom, which is
-             * not a thing a stack of cards does. Square in the middle leaves one
-             * hairline at 40%, the same weight as the edges down the side.
-             *
-             * The ends keep theirs: the first card's left corners are the
-             * stack's own outer corner, the last card is the one you can see
-             * whole, and everything they round away is underneath the next card
-             * anyway.
+             * A corner radius is four pixels and a sliver of a covered card is
+             * three, so all a covered card shows of its top edge is the curve,
+             * and a row of curves reads as a serrated edge rather than as cards
+             * behind cards. The ends keep theirs: the first card's left corners
+             * are the stack's own outer corner, the last card is the one you
+             * can see whole, and everything the middle rounds away is
+             * underneath the next card anyway.
              */
-            className={`border border-magia/40 ${at === 0 || at === drawn - 1 ? "rounded" : ""}`}
+            className={`border ${at === 0 || at === drawn - 1 ? "rounded" : ""}`}
           />
         ))}
       </span>
