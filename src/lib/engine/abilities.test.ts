@@ -171,9 +171,12 @@ describe("the two places a bonus can come from", () => {
   it("counts a card that has both a printed number and an encoded one only once", () => {
     // Excalibur prints 1 in the corner and is encoded as punkty miecz 1. Summing
     // the two sources instead of preferring one would silently make it worth
-    // two, and nothing on screen would say so.
+    // two, and nothing on screen would say so. Read as `walka`, because the
+    // encoded ability is `tylkoWalka` — which is the whole point: the corner
+    // number cannot say *when*, and the encoding can.
     const held = [{ cardId: "excalibur", kind: "item" as const, face: "open" as const }];
-    expect(bonusFromHoldings(held, "classic", "parametr")).toEqual({ miecz: 1, magia: 0 });
+    expect(bonusFromHoldings(held, "classic", "walka")).toEqual({ miecz: 1, magia: 0 });
+    expect(bonusFromHoldings(held, "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
   });
 
   it("counts a card whose bonus is only in its text", () => {

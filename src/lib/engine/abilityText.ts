@@ -253,6 +253,10 @@ export function describeAbility(ability: Ability): string {
         : `+${ability.min}–${ability.max} do ruchu`;
     case "magia-do-miecza":
       return "do punktów Miecza dodajesz swoje punkty Magii";
+    case "zabiera-zycie":
+      return ability.zycie === 1
+        ? "po każdej wygranej walce zabierasz pokonanemu 1 punkt Życia"
+        : `po każdej wygranej walce zabierasz pokonanemu ${ability.zycie} punkty Życia`;
     case "ginie-zamiast-ciebie":
       return ability.onRollUpTo
         ? `ginie zamiast ciebie (rzut ≤ ${ability.onRollUpTo})`

@@ -21,6 +21,52 @@ const run = (
     ports(over.random ? { random: over.random } : {}),
   );
 
+/**
+ * `prog` reads the parametr, not the żetony.
+ *
+ * The two Obszary that ask — LABIRYNT „każdy, kto tu trafi o Magii mniejszej
+ * niż 5" and SPALONA ZIEMIA „jeżeli jego Miecz jest mniejszy niż 5 punktów" —
+ * say neither "własnej" nor "w walce". 1.5 settles what a bare "Miecz" means
+ * for a character: „Troll posiada parametr Miecza równy 8 (6+1+1)".
+ *
+ * It read `magic_own` / `sword_own`, so a character with Magia 3 and a
+ * Pierścień Mocy had a parametr of 5 and still got lost in the Labirynt.
+ */
+describe("a threshold on a character's points", () => {
+  const lost = { op: "tura-stracona", turns: 1 } as const;
+  const labirynt = { op: "gdy", warunek: { is: "prog", stat: "magic", ponizej: 5 }, to: lost } as const;
+
+  const standing = (magicOwn: number, cards: string[] = []) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, magic_own: magicOwn })],
+      holdings: cards.map((cardId, at) =>
+        aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId, kind: "item" }),
+      ),
+    });
+
+  const caught = async (table: ReturnType<typeof standing>) =>
+    (await run(labirynt as unknown as Effect, table)).writes.seats !== undefined;
+
+  it("catches a character below the threshold", async () => {
+    expect(await caught(standing(3))).toBe(true);
+  });
+
+  it("lets an always-on Przedmiot carry you over it", async () => {
+    // Pierścień Mocy: „dodaje właścicielowi 2 punkty Magii", no „w walce".
+    expect(await caught(standing(3, ["pierscien-mocy"]))).toBe(false);
+  });
+
+  /** Neither Obszar is a fight, so a fight-only card lends nothing here. */
+  it("is not helped by anything that only works in a fight", async () => {
+    const sword = { op: "gdy", warunek: { is: "prog", stat: "sword", ponizej: 5 }, to: lost } as const;
+    const armed = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, sword_own: 4 })],
+      holdings: [aHolding({ id: "h0", seat_id: "seat-a", card_id: "excalibur", kind: "item" })],
+    });
+    expect((await run(sword as unknown as Effect, armed)).writes.seats).toBeDefined();
+  });
+});
+
 describe("carrying out what a Karta says", () => {
   it("does nothing, and says so", async () => {
     const { writes, result } = await run({ op: "nic" });

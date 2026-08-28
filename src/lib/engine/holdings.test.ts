@@ -31,7 +31,9 @@ describe("which pile a card joins (16.6, 1.4)", () => {
 
 describe("bonuses from a hand (1.5, 2.5)", () => {
   it("adds an item's printed bonus", () => {
-    expect(bonusFromHoldings([held("excalibur", "item")], "classic", "parametr")).toEqual({ miecz: 1, magia: 0 });
+    // Srebrna Strzała, because it is one of the few that is always on: every
+    // weapon in the box says "w walce" and lends nothing to the parametr.
+    expect(bonusFromHoldings([held("srebrna-strzala", "item")], "classic", "parametr")).toEqual({ miecz: 1, magia: 1 });
   });
 
   it("adds a friend's", () => {
@@ -69,8 +71,8 @@ describe("bonuses from a hand (1.5, 2.5)", () => {
 
   it("sums a whole hand", () => {
     expect(
-      bonusFromHoldings([held("excalibur", "item"), held("pasterz", "friend")], "classic", "parametr"),
-    ).toEqual({ miecz: 2, magia: 1 });
+      bonusFromHoldings([held("srebrna-strzala", "item"), held("pasterz", "friend")], "classic", "parametr"),
+    ).toEqual({ miecz: 2, magia: 2 });
   });
 });
 
@@ -144,21 +146,24 @@ describe("concealment (9.3, 5.2, 6.2)", () => {
 });
 
 describe("what counts, in each equipment variant", () => {
-  // Excalibur rather than the plain Miecz: the variant is about *where* a card
-  // is, and a card that only counts in a fight would answer 0 in both places
-  // and make the test agree with itself for the wrong reason.
-  const blade = { cardId: "excalibur", kind: "item", face: "open" } as const;
+  // Srebrna Strzała rather than a weapon: the variant is about *where* a card
+  // is, and every weapon is fight-only, so reading the parametr would answer 0
+  // in both places and make the test agree with itself for the wrong reason.
+  // The Pierścień Mocy, which after the weapons were corrected is the *only*
+  // item in the box that is both wearable and always on — every weapon says
+  // "w walce" and the other always-on cards have no place on the body.
+  const blade = { cardId: "pierscien-mocy", kind: "item", face: "open" } as const;
   const graal = { cardId: "swiety-graal", kind: "item", face: "open" } as const;
 
   it("counts everything in klasyczny play, worn or not", () => {
     // The rulebook has one kind of possession: a Miecz in the pack is a Miecz.
-    expect(bonusFromHoldings([{ ...blade, slot: null }], "classic", "parametr").miecz).toBe(1);
-    expect(bonusFromHoldings([{ ...blade, slot: "main-hand" }], "classic", "parametr").miecz).toBe(1);
+    expect(bonusFromHoldings([{ ...blade, slot: null }], "classic", "parametr").magia).toBe(2);
+    expect(bonusFromHoldings([{ ...blade, slot: "ring" }], "classic", "parametr").magia).toBe(2);
   });
 
   it("counts a wearable card in slotowy only where it is worn", () => {
-    expect(bonusFromHoldings([{ ...blade, slot: null }], "slots", "parametr").miecz).toBe(0);
-    expect(bonusFromHoldings([{ ...blade, slot: "main-hand" }], "slots", "parametr").miecz).toBe(1);
+    expect(bonusFromHoldings([{ ...blade, slot: null }], "slots", "parametr").magia).toBe(0);
+    expect(bonusFromHoldings([{ ...blade, slot: "ring" }], "slots", "parametr").magia).toBe(2);
   });
 
   it("still counts a card with nowhere to be worn", () => {
@@ -205,7 +210,7 @@ describe("the two figures a character has (1.5)", () => {
   it("counts a card nobody has encoded towards both, as it always did", () => {
     // A printed corner number says how much and never when, so the two figures
     // agree until somebody writes the ability down.
-    const printed = [held("excalibur", "item")];
+    const printed = [held("relikwiarz", "item")];
     expect(bonusFromHoldings(printed, "classic", "parametr")).toEqual(
       bonusFromHoldings(printed, "classic", "walka"),
     );

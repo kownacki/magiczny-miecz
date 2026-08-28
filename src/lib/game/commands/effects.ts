@@ -37,7 +37,7 @@ import { asReturnable, putOnPile } from "./piles";
 import { keepOnly, statusesOf } from "./turn";
 import { hasAttacked } from "@/lib/engine/status";
 import { turnToStone } from "./stone";
-import { activeSeat, seatView } from "./seat";
+import { activeSeat, pointsOf, seatView } from "./seat";
 import { isSpared, skipsRollAt } from "@/lib/engine/abilities";
 import { addEffect } from "./turn";
 
@@ -314,8 +314,24 @@ async function walk(
             // card that asks.
             effect.warunek.is === "attacker"
             ? hasAttacked(statusesOf(snapshot, seat.id))
-            : (effect.warunek.stat === "sword" ? seat.sword_own : seat.magic_own) <
-              effect.warunek.ponizej;
+            : /**
+               * `prog` reads the **parametr**, not the żetony.
+               *
+               * The two Obszary that ask say "każdy, kto tu trafi o Magii
+               * mniejszej niż 5" (Labirynt) and "jeżeli jego Miecz jest
+               * mniejszy niż 5 punktów" (Spalona Ziemia). Neither says
+               * "własnej", and 1.5's worked example settles what a bare
+               * "Miecz" means for a character: "Troll posiada parametr Miecza
+               * równy 8 (6+1+1)" — own plus what the cards lend.
+               *
+               * It read `sword_own` / `magic_own`, so a character with Magia 3
+               * and a Pierścień Mocy had a parametr of 5 and still got lost in
+               * the Labirynt. Not `walka`: neither Obszar is a fight, which is
+               * the same line the Trzęsawiska and the six Most ordeals draw.
+               */
+              (effect.warunek.stat === "sword"
+                ? pointsOf(snapshot, seat.id, "parametr").miecz
+                : pointsOf(snapshot, seat.id, "parametr").magia) < effect.warunek.ponizej;
     const branch = holds ? effect.to : effect.inaczej;
     return branch
       ? walk(snapshot, command, branch, reason, ports)

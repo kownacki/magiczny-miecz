@@ -12,6 +12,7 @@ import {
   cannotUseSpells,
   raidsForYou,
   type EscapeTarget,
+  stealsLife,
 } from "@/lib/engine/abilities";
 import {
   asFieldId,
@@ -1436,8 +1437,19 @@ export async function resolveFight(
    */
   const errand = fight.raid ? {} : missionDone(snapshot, seat, fight);
 
+  /**
+   * Excalibur's point of Życie, taken after everything the loss already cost.
+   *
+   * Chained through `apply` rather than merged flat, because the point it takes
+   * is off a Życie the lines above may already have moved — `paid` spends the
+   * loser's for losing — and `merge` resolves two writes to one column as later
+   * wins rather than as a sum.
+   */
+  const upToNow = mergeAll(cleared, paid, errand);
+  const stolen = stolenLife(apply(snapshot, upToNow), seat, fight);
+
   return {
-    writes: mergeAll(cleared, paid, errand, trophiesFrom(snapshot, seat, fight), {
+    writes: mergeAll(upToNow, stolen, trophiesFrom(snapshot, seat, fight), {
       game: { turn_state: endFight(state) },
       journal: [
         {
@@ -1450,6 +1462,56 @@ export async function resolveFight(
     }),
     result: undefined,
   };
+}
+
+/**
+ * A point of Życie off the beaten opponent, for whatever does that (Excalibur).
+ *
+ * "Po każdej zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając
+ * ten punkt pokonanemu przeciwnikowi)."
+ *
+ * The parenthesis is bookkeeping and not flavour, so a duel really does move
+ * the point: the loser pays one for losing (17.9) and another to Excalibur, and
+ * a lost duel against it costs two. That can be the second one's last, and it
+ * goes through `spendLife` for exactly that reason — 4.4 is then somebody
+ * else's rule to apply, not a special case here.
+ *
+ * A Wróg has no Życie track to take from, so the winner simply gains. The gain
+ * is uncapped: 4.7's ceiling of four is about what a Uzdrowiciel restores, and
+ * 4.6 says points won are not healing.
+ *
+ * Not on a raid. The Poszukiwacz fights on his own account — his three points
+ * against theirs — and the Excalibur is in your pack, not in his hand. The same
+ * reading `missionDone` and `trophiesFrom` already take.
+ */
+function stolenLife(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset {
+  if (fight.result?.outcome !== "wygrana" || fight.raid) return {};
+
+  const points = stealsLife(seatView(snapshot, seat.id).abilities);
+  if (points < 1) return {};
+
+  const winner = snapshot.seats.find((one) => one.id === seat.id);
+  if (!winner) return {};
+
+  const gained: Changeset = {
+    seats: [{ id: seat.id, patch: { life: winner.life + points } }],
+    journal: [
+      {
+        seatId: seat.id,
+        turn: snapshot.game.turn,
+        kind: "healed",
+        payload: { points, stolen: true },
+      },
+    ],
+  };
+
+  const loser =
+    fight.opponentSeat === undefined
+      ? undefined
+      : snapshot.seats.find((one) => one.seat_index === fight.opponentSeat);
+  if (!loser || loser.eliminated) return gained;
+
+  return merge(gained, spendLife(apply(snapshot, gained), loser.id, points).writes);
 }
 
 /**

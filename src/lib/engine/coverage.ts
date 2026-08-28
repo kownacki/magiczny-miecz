@@ -45,7 +45,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // --- equipment and magic items -------------------------------------------
   arondight: "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
   "topor-swiatla-i-ciemnosci": "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
-  excalibur: "Po wygranej walce zyskujesz 1 Życie, odbierając je pokonanemu.",
   "czarodziejska-kosc":
     "W Pułapce i Magicznej Pułapce daje zamiast tego 1 punkt Miecza lub Magii.",
   relikwiarz: "Pokonuje wszystkie Demony bez walki.",

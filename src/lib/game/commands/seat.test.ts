@@ -20,8 +20,10 @@ describe("what a seat is worth (1.5, 2.5)", () => {
     const bare = view({ sword_own: 2, magic_own: 1 });
     expect(bare.parametr).toEqual({ miecz: 2, magia: 1 });
 
+    // Srebrna Strzała and not a weapon: every weapon in the box says "w walce"
+    // and so lends nothing to the parametr (1.5).
     const armed = view({ sword_own: 2, magic_own: 1 }, [
-      aHolding({ id: "h1", card_id: "excalibur", kind: "item" }),
+      aHolding({ id: "h1", card_id: "srebrna-strzala", kind: "item" }),
     ]);
     expect(armed.parametr.miecz).toBeGreaterThan(2);
   });
@@ -157,7 +159,7 @@ describe("Zaczarowane Wzgórza", () => {
    */
   const withSword = (fieldId: string) =>
     view({ sword_own: 2, field_id: asFieldId(fieldId) }, [
-      aHolding({ id: "h1", card_id: "excalibur", kind: "item" }),
+      aHolding({ id: "h1", card_id: "srebrna-strzala", kind: "item" }),
     ]);
 
   it("suspends what a Przedmiot lends while a character stands there", () => {

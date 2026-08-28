@@ -49,6 +49,19 @@ export type Ability =
    */
   | { kind: "punkty"; miecz?: number; magia?: number; tylkoWalka?: true }
   /**
+   * A point of Życie off every opponent you beat (Excalibur).
+   *
+   * "Po każdej zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając
+   * ten punkt pokonanemu przeciwnikowi)." The parenthesis is bookkeeping rather
+   * than flavour: in a duel the point really does leave the other Postać, which
+   * makes a lost duel against Excalibur cost two. Against a Wróg there is no
+   * track to take it from and the winner simply gains one.
+   *
+   * A gain and not healing, so 4.7's ceiling of four does not apply — 4.6 caps
+   * only what a Uzdrowiciel restores.
+   */
+  | { kind: "zabiera-zycie"; zycie: number }
+  /**
    * A save against the point of Życie a lost fight costs: Hełm on a 1, Tarcza on
    * 1-2, Zbroja on 1-3. The fight is still lost either way.
    */
@@ -303,7 +316,6 @@ export type Ability =
  * read what they are holding.
  */
 export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = {
-  excalibur: ["po każdej wygranej walce zabierasz pokonanemu 1 punkt Życia"],
   "czarodziejska-kosc": ["+1 Miecza lub Magii w Pułapce i Magicznej Pułapce — wybierasz"],
   "poszukiwacz-przygod": ["atakuje Postać lub Wroga do 3 Obszarów stąd, po twoim ruchu"],
   "diament-krolow": [
@@ -402,27 +414,34 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // the one that applies in every other fight; the exception is left to the
   // text rather than half-encoded.
   arondight: [
-    { kind: "punkty", miecz: 1 },
+    { kind: "punkty", miecz: 1, tylkoWalka: true },
     { kind: "przeciw", komu: ["wilkolak"], miecz: 2 },
   ],
   // "nie może być w posiadaniu Chaotycznych Postaci" — a 5.3 restriction the
   // prose-reading version never found, because it is phrased differently again.
   "topor-swiatla-i-ciemnosci": [
     { kind: "tylko-natura", natury: ["good", "evil"] },
-    { kind: "punkty", miecz: 1 },
+    { kind: "punkty", miecz: 1, tylkoWalka: true },
     { kind: "przeciw", komu: ["wilkolak"], miecz: 2 },
   ],
-  /** Excalibur also takes a point of Życie off each beaten opponent — not encodable. */
-  excalibur: [{ kind: "punkty", miecz: 1 }],
+  // "Miecz króla Artura użyty w walce dodaje 1 punkt Miecza. Po każdej
+  // zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając ten punkt
+  // pokonanemu przeciwnikowi)." Both halves, now that there is a kind for the
+  // second — without it the flag alone would have made Excalibur strictly worse
+  // than a common Miecz.
+  excalibur: [
+    { kind: "punkty", miecz: 1, tylkoWalka: true },
+    { kind: "zabiera-zycie", zycie: 1 },
+  ],
   // "Włóczni nie mogą posiadać Złe Postacie."
   "swieta-wlocznia": [
     { kind: "tylko-natura", natury: ["good", "chaotic"] },
-    { kind: "punkty", miecz: 1 },
+    { kind: "punkty", miecz: 1, tylkoWalka: true },
   ],
   // "Miecza Chaosu nie może posiadać Dobra Postać."
   "miecz-chaosu": [
     { kind: "tylko-natura", natury: ["evil", "chaotic"] },
-    { kind: "punkty", miecz: 2 },
+    { kind: "punkty", miecz: 2, tylkoWalka: true },
   ],
   "pierscien-mocy": [{ kind: "punkty", magia: 2 }],
   "srebrna-strzala": [{ kind: "punkty", miecz: 1, magia: 1 }],
@@ -884,6 +903,19 @@ export function opensTheWayTo(
  *
  * Null when nobody is standing in, which is the ordinary case.
  */
+/**
+ * A point of Życie taken off each beaten opponent, if anything held does that.
+ *
+ * Read off abilities rather than card ids, so it goes through `seatView` and
+ * therefore through slotowy's "worn or it does nothing" — an Excalibur in the
+ * Plecak wins you no Życie, for the same reason it lends no Miecz.
+ */
+export function stealsLife(abilities: readonly Ability[]): number {
+  return abilities
+    .filter((ability) => ability.kind === "zabiera-zycie")
+    .reduce((sum, ability) => sum + (ability.kind === "zabiera-zycie" ? ability.zycie : 0), 0);
+}
+
 export function fightsForYou(
   abilities: readonly Ability[],
 ): { miecz: number; magia: number } | null {

@@ -66,7 +66,9 @@ describe("what the app claims about itself", () => {
     // encoded this test should be updated rather than deleted.
     expect(coverageOf("wampir")).toBe("brak");
     expect(coverageOf("jednorozec")).toBe("pelne");
-    expect(coverageOf("excalibur")).toBe("czesciowe");
+    // Excalibur was the example here until its Życie-stealing clause was
+    // encoded; Czarodziejska Kość still carries a note nothing acts on.
+    expect(coverageOf("czarodziejska-kosc")).toBe("czesciowe");
   });
 
   it("does not disclaim a card it carries in one of the other two registries", () => {

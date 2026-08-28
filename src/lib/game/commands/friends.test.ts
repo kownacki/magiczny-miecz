@@ -58,9 +58,12 @@ describe("a friend who fights in your place (Rycerz)", () => {
    * pack is the character's, and the character is not the one swinging.
    */
   it("fights with none of your gear", () => {
-    const armed = withCards({ id: "rycerz" }, { id: "excalibur", kind: "item" });
+    // Srebrna Strzała rather than a blade: every weapon is fight-only, and the
+    // Rycerz replaces the fight figure outright, so a weapon would be dropped
+    // by both readings and the test would pass without proving anything.
+    const armed = withCards({ id: "rycerz" }, { id: "srebrna-strzala", kind: "item" });
     expect(pointsOf(armed, "seat-a", "walka")).toEqual({ miecz: 3, magia: 3 });
-    // The Excalibur still counts for the character's own parameter (1.5).
+    // The Strzała still counts towards the character's own parametr (1.5).
     expect(pointsOf(armed, "seat-a", "parametr").miecz).toBe(3);
   });
 });
