@@ -340,45 +340,46 @@ export function StatFigure({
 }) {
   const parametr = total ?? value;
   const figures = figuresOf(value, parametr, inFight ?? parametr);
-  if (figures.bare) return <>{value}</>;
+  if (figures.bare) return <>{figures.parametr}</>;
   return (
     <>
+      {figures.parametr}
       {figures.walka !== null && (
         <>
+          {", "}
           {figures.walka}
           {/* Bigger than the digits it sits among, the same way an effect mark
               is drawn at 15px inside 13px text: a symbol at the size of a
               numeral reads smaller than one, because it has no x-height to
-              match. The comma only where a bare parametr follows — "11 8"
-              reads as one run and needs separating, "9⚔ (6)" does not. */}
+              match. */}
           <span className="text-[15px] leading-none opacity-70">{IN_FIGHT}</span>
-          {figures.parametr !== null ? ", " : " "}
         </>
       )}
-      {figures.parametr !== null && <>{figures.parametr} </>}
-      <span className="opacity-60">({value})</span>
+      {figures.own !== null && <span className="opacity-60"> ({figures.own})</span>}
     </>
   );
 }
 
 /**
- * The hover for one rail: every figure that says something, named, in the order
- * the numeral draws them.
+ * The hover for one rail: the numeral in words, in the same order it is drawn.
+ *
+ * The parametr needs no name — it is what the label already said, and it is
+ * what a Karta means by „Miecz". The other two are departures from it and are
+ * named as such.
  *
  * ```
- * Miecz: 6                                    nothing lends anything
- * Miecz: parametr 8, bazowe 6                 always-on only
- * Miecz: w walce 9, bazowe 6                  fight-only only
- * Miecz: w walce 11, parametr 8, bazowe 6     all three
+ * Miecz: 6                                nothing lends anything
+ * Miecz: 8, własne 6                      always-on only
+ * Miecz: 6, w walce 9                     fight-only only
+ * Miecz: 105, w walce 106, własne 104     all three
  * ```
  */
 function statTitle(label: string, own: number, parametr: number, walka: number): string {
   const figures = figuresOf(own, parametr, walka);
-  if (figures.bare) return `${label}: ${own}`;
   return `${label}: ${[
+    String(figures.parametr),
     figures.walka === null ? null : `w walce ${figures.walka}`,
-    figures.parametr === null ? null : `parametr ${figures.parametr}`,
-    `bazowe ${own}`,
+    figures.own === null ? null : `własne ${figures.own}`,
   ]
     .filter((part): part is string => part !== null)
     .join(", ")}`;

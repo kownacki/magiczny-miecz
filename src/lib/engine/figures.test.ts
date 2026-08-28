@@ -11,32 +11,38 @@ describe("saying all three figures", () => {
     expect(figuresOf(6, 6, 6).bare).toBe(true);
   });
 
-  it("adds the parametr when something is always on", () => {
+  it("puts własne in parentheses when something is always on", () => {
     expect(figuresText(6, 8, 8)).toBe("8 (6)");
   });
 
+  /** No parentheses: nothing has been added, so własne is the parametr. */
   it("marks the fight figure when only a weapon lifts it", () => {
-    expect(figuresText(6, 6, 9)).toBe("9⚔ (6)");
+    expect(figuresText(6, 6, 9)).toBe("6, 9⚔");
   });
 
   /** 1.5's Troll, which is the example the whole thing is read off. */
-  /** The comma only where two bare numbers would otherwise touch. */
   it("says all three when all three differ", () => {
-    expect(figuresText(6, 8, 11)).toBe("11⚔, 8 (6)");
+    expect(figuresText(6, 8, 11)).toBe("8, 11⚔ (6)");
   });
 
   /**
    * The Rycerz replaces the fight figure rather than adding to it, so it can
    * be the lowest of the three. Nothing here may assume they descend.
    */
-  it("does not assume the numbers go down", () => {
-    expect(figuresText(5, 5, 3)).toBe("3⚔ (5)");
-    expect(figuresText(5, 6, 3)).toBe("3⚔, 6 (5)");
+  it("does not assume the numbers go up", () => {
+    expect(figuresText(5, 5, 3)).toBe("5, 3⚔");
+    expect(figuresText(5, 6, 3)).toBe("6, 3⚔ (5)");
+  });
+
+  /** The comma only between the two bare numbers; the parenthesis separates itself. */
+  it("separates only where two numbers would touch", () => {
+    expect(figuresText(6, 8, 8)).not.toContain(",");
+    expect(figuresText(6, 8, 11)).toContain("8, 11");
   });
 
   it("hands the parts back for a surface that draws rather than prints", () => {
-    expect(figuresOf(6, 8, 11)).toEqual({ own: 6, parametr: 8, walka: 11, bare: false });
-    expect(figuresOf(6, 6, 9)).toEqual({ own: 6, parametr: null, walka: 9, bare: false });
-    expect(figuresOf(6, 8, 8)).toEqual({ own: 6, parametr: 8, walka: null, bare: false });
+    expect(figuresOf(6, 8, 11)).toEqual({ parametr: 8, walka: 11, own: 6, bare: false });
+    expect(figuresOf(6, 6, 9)).toEqual({ parametr: 6, walka: 9, own: null, bare: false });
+    expect(figuresOf(6, 8, 8)).toEqual({ parametr: 8, walka: null, own: 6, bare: false });
   });
 });

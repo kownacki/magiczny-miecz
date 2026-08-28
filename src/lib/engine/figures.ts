@@ -9,25 +9,32 @@
  * > każdej innej sytuacji… W efekcie Troll posiada **parametr Miecza równy 8
  * > (6+1+1), a podczas walki 11**.
  *
- * So: **bazowe** are the żetony and nothing else (1.2 — a Przedmiot's points
+ * So: **własne** are the żetony and nothing else (1.2 — a Przedmiot's points
  * are never marked with a token); **parametr** adds what is always on;
  * **w walce** adds what only counts when somebody swings.
  *
  * All three are read by something. `w walce` is 17.4 and every `op: "walka"`.
  * `parametr` is what the Trzęsawiska test and the six Kamienny Most ordeals
  * subtract, and what the Labirynt and the Spalona Ziemia measure — obstacles
- * rather than fights, which is the line the box actually draws. `bazowe` is
+ * rather than fights, which is the line the box actually draws. `własne` is
  * 1.3's floor and what 1.4's trophies raise.
  */
 
 /** What a rail or a line should print, with the figures that say nothing left out. */
 export interface Figures {
-  /** The żetony. Always shown, because it is the one that is always true. */
-  own: number;
-  /** Shown only when something always-on lifts it above `own`. */
-  parametr: number | null;
+  /**
+   * The everyday figure, and the anchor the other two hang off.
+   *
+   * Always shown, because it is the one a Karta means when it says „Miecz" and
+   * the one every obstacle on the board subtracts. The other two are read as
+   * departures from it: „and in a fight, this instead", „and of that, this much
+   * is yours".
+   */
+  parametr: number;
   /** Shown only when it differs from the parametr — and it can be *lower*. */
   walka: number | null;
+  /** The żetony. Shown only when something has been added to them. */
+  own: number | null;
   /** True when all three agree, so the number stands alone with no parentheses. */
   bare: boolean;
 }
@@ -37,31 +44,34 @@ export interface Figures {
  *
  * The rule, once, so both surfaces read the same:
  *
- * > **Parentheses always hold the bazowe figure. A bare second number is the
- * > parametr. The crossed swords mark the fight figure. A figure you cannot see
- * > equals the one to its right.**
+ * > **The parametr leads. The crossed swords mark the fight figure, where it
+ * > differs. Parentheses hold własne, where anything has been added to it.**
  *
  * ```
- * 6            nothing lends anything
- * 8 (6)        always-on only        — w walce = parametr = 8
- * 9⚔ (6)       fight-only only       — parametr = bazowe = 6
- * 11⚔, 8 (6)   both, which is 1.5's Troll
- * 3⚔ (5)       a Rycerz standing in for you — lower, and that is not a bug
+ * 6              nothing lends anything
+ * 8 (6)          always-on only        — w walce = parametr
+ * 6, 9⚔          fight-only only       — parametr = własne
+ * 105, 106⚔ (104)   all three
+ * 5, 3⚔          a Rycerz standing in for you — lower, and that is not a bug
  * ```
  *
- * The comma appears only where two bare numbers would otherwise touch. "11 8"
- * reads as one run and needs separating; "9⚔ (6)" does not, because the
- * parenthesis has already done it.
+ * The comma appears only between the two bare numbers, which would otherwise
+ * read as one run. Nothing before the parenthesis, which separates by itself.
  *
- * The last one is why nothing here assumes the numbers descend.
+ * The parametr leads rather than the fight figure because it is the figure that
+ * is true right now: a rail is read at rest far more often than in a fight, and
+ * the number a player is asked for by a Karta, a Pułapka or a przeprawa is this
+ * one. The fight figure is the departure, and reads as one.
+ *
+ * The last line is why nothing here assumes the numbers descend.
  * `walczy-za-ciebie` *replaces* the fight figure with the champion's rather
  * than adding to it, so a Barbarzyńca of Miecz 5 fights at the Rycerz's 3.
  */
 export function figuresOf(own: number, parametr: number, walka: number): Figures {
   return {
-    own,
-    parametr: parametr === own ? null : parametr,
+    parametr,
     walka: walka === parametr ? null : walka,
+    own: own === parametr ? null : own,
     bare: parametr === own && walka === parametr,
   };
 }
@@ -78,13 +88,13 @@ export const IN_FIGHT = "⚔";
  */
 export function figuresText(own: number, parametr: number, walka: number): string {
   const figures = figuresOf(own, parametr, walka);
-  if (figures.bare) return String(own);
-  // The comma only where two bare numbers would touch — see the note above.
-  const fight =
-    figures.walka === null
-      ? null
-      : `${figures.walka}${IN_FIGHT}${figures.parametr === null ? "" : ","}`;
-  return [fight, figures.parametr === null ? null : String(figures.parametr), `(${own})`]
+  if (figures.bare) return String(parametr);
+  return [
+    // The comma only between the two bare numbers — see the note above.
+    figures.walka === null ? String(parametr) : `${parametr},`,
+    figures.walka === null ? null : `${figures.walka}${IN_FIGHT}`,
+    figures.own === null ? null : `(${figures.own})`,
+  ]
     .filter((part): part is string => part !== null)
     .join(" ");
 }
