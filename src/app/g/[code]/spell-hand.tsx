@@ -424,13 +424,6 @@ export function SpellHand({
             />
           ))}
       </div>
-      {/* The app takes the card and tells the table; it does not apply the
-          spell. Saying so where the button is means nobody waits for an effect
-          that is not coming. */}
-      <p className="mt-2 border-t border-edge/60 pt-1 text-[10px] leading-snug text-ochre/70">
-        Rzucone Zaklęcie znika z ręki i trafia do dziennika — skutek rozpatrzcie sami.
-        Podwójne kliknięcie Karty rzuca ją tak samo jak przycisk.
-      </p>
     </Fold>
     </div>
   );
