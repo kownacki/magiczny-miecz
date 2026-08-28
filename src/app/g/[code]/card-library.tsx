@@ -210,6 +210,7 @@ export function CardLibrary({
   nature = null,
   openRule = null,
   openShelf = null,
+  endlessStock = false,
 }: {
   onClose: () => void;
   /**
@@ -260,6 +261,8 @@ export function CardLibrary({
   openRule?: string | null;
   /** Which shelf that reference wants — `wariant` for the mode chip in the bar. */
   openShelf?: RulesShelf | null;
+  /** The table's answer to 21.2, which the Wariant shelf lists where it is on. */
+  endlessStock?: boolean;
 }) {
   /**
    * Which half of the Księga is open.
@@ -411,7 +414,13 @@ export function CardLibrary({
       >
       <div className="p-4">
         {side === "zasady" ? (
-          <RulesShelfView shelf={rulesShelf} focus={openRule} eqMode={eqMode} query={query} />
+          <RulesShelfView
+            shelf={rulesShelf}
+            focus={openRule}
+            eqMode={eqMode}
+            endlessStock={endlessStock}
+            query={query}
+          />
         ) : (
         <>
         {/* Said only where there is something to say.

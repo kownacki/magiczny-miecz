@@ -61,7 +61,7 @@ export function Settings({
               ? "Włączone na dobre — do skończonego stosu wraca się tylko przy nowym stole."
               : undefined
           }
-          said="Miecza, Hełmu, Sztyletu, Zbroi ani Tarczy nigdy nie zabraknie. Magiczne Miecze i Tarcze Tolimana zostają rzadkie — leżą na tym samym arkuszu, ale rozdział 21 wymienia je osobno, i na nich stoi końcówka gry (11.9, 14.7)."
+          said="Miecza, Hełmu, Sztyletu, Zbroi ani Tarczy nigdy nie zabraknie. Wyjątkiem są Magiczne Miecze i Tarcze Tolimana: tych zostaje po cztery, jak w pudełku. To nie przeoczenie — bez Magicznego Miecza nie wejdziesz na Most (11.9), bez Tarczy do Zamku (14.7), a 16.6 pilnuje, żeby wyciągnięty ze stosu Zdarzeń nie był piątym."
         />
         <Switch
           name="ruleRefs"

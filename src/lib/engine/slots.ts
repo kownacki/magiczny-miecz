@@ -38,6 +38,18 @@ export interface VariantChange {
   here: string;
 }
 
+/**
+ * The stock rule is a table's own answer rather than the variant's, so it is
+ * listed apart — see `RulesShelfView`, which shows it only where it is in
+ * force.
+ */
+export const ENDLESS_STOCK_CHANGE: VariantChange = {
+  rules: ["21.2", "16.6"],
+  title: "Zwykłych Przedmiotów nie brakuje — poza dwoma",
+  book: "„Jeżeli zabraknie Kart jakiegoś Przedmiotu, oznacza to, że Przedmiot ten jest w danej chwili nieosiągalny.” Stos jest skończony: trzy Miecze, dwie Zbroje, dwa Hełmy.",
+  here: "Zwykłych Przedmiotów nigdy nie brakuje — trzy Miecze na pięć Postaci, które mają Miecz w Charakterystyce, to liczba wydrukowanych kartoników, a nie zasada gry. Wyjątkiem są Magiczne Miecze i Tarcze Tolimana: tych zostaje po cztery. Tu skończoność jest zamierzona — 16.6 każe wyciągnięty ze stosu Zdarzeń wymienić na kartę z Wyposażenia, żeby stosy się nie sumowały, a 11.9 i 14.7 stawiają na tych dwóch całą końcówkę gry.",
+};
+
 export const VARIANT_CHANGES: readonly VariantChange[] = [
   {
     rules: ["5.4"],

@@ -15,7 +15,7 @@
 
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import rulesData from "@/data/rules.json";
-import { VARIANT_CHANGES, type EqMode } from "@/lib/engine/slots";
+import { ENDLESS_STOCK_CHANGE, VARIANT_CHANGES, type EqMode } from "@/lib/engine/slots";
 import { Fold } from "./fold";
 import { OpenRule, WithRules } from "./rule-ref";
 
@@ -49,16 +49,19 @@ export function RulesShelfView({
   shelf,
   focus,
   eqMode,
+  endlessStock,
   query,
 }: {
   shelf: RulesShelf;
   /** A rule to scroll to and mark, from a `(5.3)` somewhere else in the app. */
   focus: string | null;
   eqMode: EqMode;
+  /** The table's answer to 21.2, which is a house rule like the variant is. */
+  endlessStock: boolean;
   /** The Księga's own search box, which reads the book as well as the deck. */
   query: string;
 }) {
-  if (shelf === "wariant") return <Variant eqMode={eqMode} />;
+  if (shelf === "wariant") return <Variant eqMode={eqMode} endlessStock={endlessStock} />;
   if (shelf === "aplikacja") return <WhatItDoes />;
   if (shelf === "slowniczek") return <Glossary />;
   if (shelf === "skroty") return <Keys />;
@@ -226,8 +229,18 @@ function Prose({ text }: { text: string }) {
  * The four the box does not contain.
  * ----------------------------------------------------------------------- */
 
-function Variant({ eqMode }: { eqMode: EqMode }) {
+function Variant({ eqMode, endlessStock }: { eqMode: EqMode; endlessStock: boolean }) {
   const refs = useContext(OpenRule) !== null;
+  /**
+   * The variant's changes, plus the stock rule where the table has taken it.
+   *
+   * Kept out of `VARIANT_CHANGES` because it is not the variant's: a klasyczny
+   * table can have it too, and a slotowy one can be without it. Listed here
+   * because a reader on this shelf is asking one question — what does this
+   * table do that the book does not — and the answer does not care which
+   * setting each part came from.
+   */
+  const changes = endlessStock ? [...VARIANT_CHANGES, ENDLESS_STOCK_CHANGE] : VARIANT_CHANGES;
   return (
     <div className="flex flex-col gap-4 text-[13px] leading-relaxed">
       <p className="text-muted">
@@ -243,7 +256,7 @@ function Variant({ eqMode }: { eqMode: EqMode }) {
           </>
         )}
       </p>
-      {VARIANT_CHANGES.map((change) => (
+      {changes.map((change) => (
         <section key={change.title} className="rounded border border-edge bg-raised/40 p-3">
           <h4 className="mb-2 text-ink">{change.title}</h4>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">

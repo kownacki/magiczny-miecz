@@ -556,7 +556,7 @@ function CreateDialog({
             active={endlessStock}
             onPick={() => setEndlessStock(true)}
             label="Zwykłego nigdy nie brakuje"
-            hint="Miecz, Hełm, Sztylet, Zbroja, Tarcza — bez limitu. Magiczne Miecze i Tarcze Tolimana to osobna sprawa i zostają rzadkie (rozdz. 21)."
+            hint="Miecz, Hełm, Sztylet, Zbroja, Tarcza — bez limitu. Wyjątek: Magiczne Miecze i Tarcze Tolimana zostają po cztery, bo na nich stoi wejście na Most i do Zamku."
           />
           <ModeChoice
             active={!endlessStock}
