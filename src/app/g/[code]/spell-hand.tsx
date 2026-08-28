@@ -205,6 +205,12 @@ export function SpellHand({
        * The threshold is the part worth printing. „You have no room" invites
        * the question this answers in the same breath: room arrives at Magia 2,
        * which is a thing a player can go and do something about.
+       *
+       * In 2.6's and 9.4's own verbs. „Zmieścić się" was mine and sounded like
+       * luggage; the rulebook says a Postać *posiada* Zaklęcia, that a Magia
+       * *pozwala* on a number of them, and that anything over it is a
+       * *nadwyżka* to be dropped *natychmiast*. Copy that vocabulary and a
+       * player who goes to the Instrukcja from here reads the same words twice.
        */}
       {capacity === 0 && (
         <p
@@ -214,8 +220,8 @@ export function SpellHand({
         >
           <Rules>
             {held.length > 0
-              ? "Trzymasz Zaklęcia, na które nie masz miejsca — nadmiar trzeba odrzucić (9.4)."
-              : "Nie masz miejsca na Zaklęcia — pierwsze zmieści się przy Magii 2 (2.6)."}
+              ? "Posiadasz więcej Zaklęć, niż wynika z twojej Magii — nadwyżkę trzeba natychmiast odrzucić (9.4)."
+              : "Twoja Magia nie pozwala posiadać żadnych Zaklęć — pierwsze wolno przy Magii 2 (2.6)."}
           </Rules>
         </p>
       )}

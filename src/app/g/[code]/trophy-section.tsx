@@ -104,6 +104,26 @@ export function TrophySection({
     : held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
 
   /**
+   * What „Punkty" spends instead of a Karta, said out loud.
+   *
+   * The shelf there is a memorial and no tile ever dims, which is the honest
+   * reading — points are fungible and no particular corpse paid for a given
+   * Miecz — but it left the section unable to show that anything had been
+   * spent at all. A Wilkołak worth 10 above a total of 3 is a subtraction the
+   * player is left to do, and the answer is the whole of what they came to
+   * find out.
+   *
+   * So the arithmetic is done here: everyone beaten is worth this much, the
+   * seat still holds that much, and the difference has been traded. Floored at
+   * zero for a table converted to „Punkty" before the shelf was written on
+   * every win, where the total can honestly exceed what the shelf accounts for.
+   */
+  const beatenWorth = byPoints
+    ? shelf.reduce((sum, one) => sum + trophyValue(one.cardId), 0)
+    : 0;
+  const exchanged = Math.max(0, beatenWorth - counting);
+
+  /**
    * Every trade this hand can make, each by its cheapest set — the engine's
    * answer, not a second opinion computed here.
    *
@@ -190,9 +210,15 @@ export function TrophySection({
 
           {byPoints && (
             <p className="text-[11px] leading-snug text-muted/70">
+              {/* One line, and which one depends on whether there is anything
+                  to account for. Before the first trade the thing worth saying
+                  is why these Karty are pictures and not cards; after it, where
+                  the missing points went. Both at once is two grey lines under
+                  a row of one tile. */}
               <Rules>
-                Karty pokonanych Wrogów wracają na stos zużytych — zostaje pamięć i
-                punkty (1.4).
+                {exchanged > 0
+                  ? `Z ${beatenWorth} punktów Miecza pokonanych Wrogów wymieniłeś już ${exchanged} (1.4).`
+                  : "Karty pokonanych Wrogów wracają na stos zużytych — zostaje pamięć i punkty (1.4)."}
               </Rules>
             </p>
           )}
