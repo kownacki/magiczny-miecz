@@ -210,14 +210,17 @@ const TILE_WIDTH = 92;
 /** The widest a back may show of the one beneath it. */
 const SPELL_BACK_STEP = 20;
 /**
- * The least of a back that is still a back: its own edge, and a pixel of it.
+ * The least of a back that is still a back: its own edge, and a gap after it.
  *
- * One pixel of border in Magia's colour and one of the black it frames. Below
- * that there is nothing left to thin — the next card would be drawn entirely
- * underneath the one before it, and a stack that adds an invisible card per
- * Zaklęcie is a picture that stops answering the question it is there for.
+ * One pixel of border in Magia's colour and two of the black it frames. A
+ * single pixel of gap was tried and is too little — at that width the borders
+ * touch and the stack reads as one hatched block rather than as cards — so the
+ * gap is the two pixels it takes for the edges to stay separate. Below that
+ * there is nothing left to thin, and a stack that adds an invisible card per
+ * Zaklęcie is a picture that has stopped answering the question it is there
+ * for.
  */
-const SPELL_BACK_MIN_STEP = 2;
+const SPELL_BACK_MIN_STEP = 3;
 
 /**
  * Zaklęcia somebody is holding that nobody else may look at (9.3).
@@ -251,12 +254,12 @@ const SPELL_BACK_MIN_STEP = 2;
  * dragging its caption with it and leaving a gap where it had been. So the step
  * is whatever divides the tile: 13.3 at four, and smaller again beyond that.
  *
- * Which runs out at twenty-one, and that end is drawn rather than left to
- * happen. Forty pixels of room over two apiece is twenty cards behind the top
- * one; a twenty-second would have to be thinner than its own edge, which is a
- * card nobody can see. So the stack stops there and the caption carries the
- * rest — it says the true number in figures, which is what it is for, and the
- * picture says „more than you can count", which is true.
+ * Which runs out at fourteen, and that end is drawn rather than left to happen.
+ * Forty pixels of room over three apiece is thirteen cards behind the top one;
+ * a fifteenth would have to be thinner than its own edge and a gap, which is a
+ * card nobody can pick out. So the stack stops there and the caption carries
+ * the rest — it says the true number in figures, which is what it is for, and
+ * the picture says „more than you can count", which is true.
  *
  * None of this is reachable in a game: 2.6 caps the hand at three and the
  * Różdżka lifts it to four. It is here because a picture whose only rule is
