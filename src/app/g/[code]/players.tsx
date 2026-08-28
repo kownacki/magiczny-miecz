@@ -29,6 +29,7 @@ import { CardBack, CardTile, type TileCard } from "./card-tile";
 import type { PublicSeat } from "./table-layout";
 import { Drawer } from "./drawer";
 import { Fold } from "./fold";
+import { useCardPreview } from "./card-preview";
 import { StatFigure } from "./token-rail";
 import { natureSaid } from "./nature-line";
 import { MAX_SEATS } from "@/lib/game/modes";
@@ -187,26 +188,7 @@ export function PlayersDrawer({
                 <div className="border-t border-edge/60 px-2 py-2">
                   <div className="mb-2 flex items-start gap-3">
                     {portrait && character && (
-                      <button
-                        onClick={() =>
-                          onInspect({
-                            cardId: character.id,
-                            name: character.name,
-                            character: true,
-                            text: character.abilities.join("\n\n"),
-                            kindLabel: characterKind(character),
-                          })
-                        }
-                        className="shrink-0 rounded border border-edge transition hover:border-ochre"
-                      >
-                        <Image
-                          src={portrait}
-                          alt={character.name}
-                          width={56}
-                          height={94}
-                          className="rounded"
-                        />
-                      </button>
+                      <Standee character={character} portrait={portrait} />
                     )}
                     {/* A third for the names and two for the answers. Even
                         columns gave the six shortest words in the app half the
@@ -485,6 +467,38 @@ function WithdrawButton({
       >
         anuluj
       </button>
+    </span>
+  );
+}
+
+/**
+ * The Postać a seat is playing, read by pointing at it.
+ *
+ * It used to be a click that opened the whole Karta over the table — a modal to
+ * answer "which one is that again?", with the roster gone behind it while you
+ * read. The hover says the same thing beside the figure and leaves the roster
+ * where it was; holding Cmd keeps it, which is the way to read the
+ * Charakterystyka at length.
+ *
+ * Its own component because `useCardPreview` is a hook and the roster draws one
+ * of these per seat. A hook cannot be called in a loop, so the loop calls a
+ * component instead.
+ */
+function Standee({ character, portrait }: { character: Character; portrait: string }) {
+  const card = {
+    cardId: character.id,
+    name: character.name,
+    character: true,
+    text: character.abilities.join("\n\n"),
+    kindLabel: characterKind(character),
+  };
+  // No `eqMode`: a Karta Postaci has no slots and `characterProfile` ignores
+  // it. The variant only matters for a Przedmiot, which this never is.
+  const { handlers, preview } = useCardPreview(card);
+  return (
+    <span {...handlers} className="shrink-0 rounded border border-edge transition hover:border-ochre">
+      <Image src={portrait} alt={character.name} width={56} height={94} className="rounded" />
+      {preview}
     </span>
   );
 }

@@ -53,7 +53,18 @@ export function natureSaid(
   const label = NATURE_LABEL[nature] ?? nature;
   if (printed === "any") return { label, changed: false };
   const changed = nature !== printed;
-  return { label: changed ? label : `${label} (niezmieniona)`, changed };
+  /**
+   * Both halves said out loud, rather than one of them said by omission.
+   *
+   * "(niezmieniona)" was the only word here, so a changed Natura was a bare
+   * "zła" — and the reader had to know that the parenthesis is what an
+   * unchanged one carries in order to read its absence as a change. That is
+   * the reading nobody does. Where it matters most it is a picture instead: a
+   * Karta Zmiany Natury lying beside the Karta Postaci, which is 7.2's own
+   * answer. Everywhere it will not fit — a folded sheet's heading, a row in
+   * the roster — it is now a word.
+   */
+  return { label: `${label} (${changed ? "zmieniona" : "niezmieniona"})`, changed };
 }
 
 /**
