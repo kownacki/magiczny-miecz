@@ -152,7 +152,7 @@ export function TrophySection({
               explaining itself, and a label is a label. */}
           <Rules>
             {byPoints
-              ? `Nikogo jeszcze nie pokonałeś. Za każde ${TROPHY_RATE} punktów Miecza pokonanych Wrogów dostaniesz 1 punkt Miecza; reszta zostaje na później (1.4).`
+              ? `Nikogo jeszcze nie pokonałeś. Za każde ${TROPHY_RATE} punktów Miecza pokonanych Wrogów dostaniesz 1 punkt Miecza (1.4).`
               : `Nikogo jeszcze nie pokonałeś. Zatrzymasz Kartę każdego pokonanego Wroga i oddasz wybrane, gdy zechcesz — za każde ${TROPHY_RATE} punktów Miecza dostaniesz 1 punkt Miecza (1.4).`}
           </Rules>
         </p>
