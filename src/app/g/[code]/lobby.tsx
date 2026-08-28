@@ -16,6 +16,7 @@ import { MAX_SEATS } from "@/lib/game/modes";
 import { CharacterStrip } from "./character-picker";
 import { JoinCode, LeaveButton } from "./door";
 import { TableBar } from "./table-layout";
+import { BarButton } from "./bar-button";
 import { EmptySlot, SeatSlot } from "./seat-slot";
 import {
   aimedAt,
@@ -154,24 +155,26 @@ export function Lobby({
     <main className="flex h-[100dvh] flex-col overflow-hidden">
       <ConfirmDialog ask={ask} busy={busy} onCancel={() => setAsk(null)} />
       <TableBar>
-        <div className="flex items-baseline gap-3">
+        {/* The same left end the game has: the name, and the one door that is
+            open on both screens. `items-center` and not `items-baseline` — a
+            glyph has no baseline of its own, so the browser sits it on the
+            bottom of its box and it rides high of the title beside it. The
+            table's bar learned this already.
+
+            The mode used to be written here, beside the title. It said "Pełna
+            symulacja" on every table anybody can open, because companion play
+            is parked — a label that never varies is not telling anybody
+            anything, and it was taking the space this door now uses. */}
+        <div className="flex items-center gap-3">
           <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
             Magiczny Miecz
           </h1>
-          {/* Stated, not offered. The mode was settled when the table was
-              opened — it decides whether there is a board in the room, and
-              changing that halfway through setting up is not a thing anybody
-              does. */}
-          <span
-            className="text-[12px] text-muted"
-            title={
-              mode === "companion"
-                ? "Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
-                : "Wszystko dzieje się tutaj — plansza i karty nie są potrzebne."
-            }
-          >
-            {mode === "companion" ? "Sędzia przy planszy" : "Pełna symulacja"}
-          </span>
+          <BarButton
+            glyph="book"
+            label="Księga Tolimana"
+            onClick={onLibrary}
+            title="Księga Tolimana — każda Karta, każdy Obszar i cała Instrukcja"
+          />
         </div>
 
         {/* The one thing everybody in the room needs off this screen. It was
@@ -180,14 +183,6 @@ export function Lobby({
         <JoinCode code={code} />
 
         <div className="flex items-center gap-3 text-[12px]">
-          <button
-            onClick={onLibrary}
-            title="Każda Karta i każdy Obszar w grze — zdradzi ci tajemnicę"
-            className="text-ochre/80 hover:text-ochre"
-          >
-            Księga Tolimana
-          </button>
-          {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
           {/* The host starts the table, and only the host. Everybody else has
               already said what they have to say by marking themselves ready;
               somebody has to decide that the waiting is over, and that is what
@@ -239,6 +234,12 @@ export function Lobby({
                   : `Rozpocznij grę — czekamy na ${refusal.on.length}`}
             </button>
           )}
+          {/* Last, hard against the edge, which is where the way out belongs on
+              both screens: it is the only control here that ends something, and
+              it should not sit between two that do not. Ahead of the start
+              button it was also the thing a host's cursor passed over on the
+              way to beginning the game. */}
+          {me && <LeaveButton playing={false} busy={busy} onLeave={onLeave} />}
         </div>
       </TableBar>
 
