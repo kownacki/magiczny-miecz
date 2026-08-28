@@ -735,8 +735,12 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
  * used pile.
  */
 
-export async function tradeTrophies(gameId: string, seatId: string): Promise<number> {
-  return change(gameId, tradeTrophiesFor, { seatId });
+export async function tradeTrophies(
+  gameId: string,
+  seatId: string,
+  cardIds?: readonly string[],
+): Promise<number> {
+  return change(gameId, tradeTrophiesFor, { seatId, cardIds });
 }
 
 /**

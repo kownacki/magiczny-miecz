@@ -122,7 +122,42 @@ describe("cashing them in (1.4)", () => {
     );
   });
 
-  /** "Punkty ponad wielokrotność 7 są stracone" — 6 + 10 buys two, not two and a bit. */
+  /**
+   * "w dowolnym momencie mogą zostać wymienione" — the player picks which.
+   *
+   * The rule never says all of them at once, and the choice is worth real
+   * points: holding 6, 2 and 5 and handing in the first two buys a Miecz for
+   * eight, where handing in everything buys the same Miecz for thirteen.
+   */
+  it("hands in only the Karty that were named", () => {
+    const table = holding("cyklop", "nobbin", "smok");
+    const out = tradeTrophies(table, { seatId: "seat-a", cardIds: ["cyklop", "nobbin"] });
+    const after = apply(table, out.writes);
+
+    expect(out.result).toBe(1);
+    expect(after.seats[0].sword_own).toBe(6);
+    expect(trophies(after)).toEqual(["smok"]);
+  });
+
+  it("refuses a Karta the character is not holding", () => {
+    expect(() =>
+      tradeTrophies(holding("cyklop"), { seatId: "seat-a", cardIds: ["smok"] }),
+    ).toThrow(/nie masz takiego trofeum/);
+  });
+
+  /** Two of the same Wróg are two cards, not one asked for twice. */
+  it("matches one holding per name", () => {
+    const table = holding("nobbin", "nobbin", "cyklop");
+    const out = tradeTrophies(table, { seatId: "seat-a", cardIds: ["nobbin", "nobbin", "cyklop"] });
+    expect(out.result).toBe(1);
+    expect(trophies(apply(table, out.writes))).toEqual([]);
+  });
+
+  it("says how many points were actually offered when it refuses", () => {
+    expect(() => tradeTrophies(holding("smok"), { seatId: "seat-a" })).toThrow(/masz 5/);
+  });
+
+  /** "Punkty ponad wielokrotność 7 są stracone" — naming nothing still means all. */
   it("pays one Miecz per seven and loses the remainder", () => {
     const table = holding("cyklop", "wilkolak");
     const out = tradeTrophies(table, { seatId: "seat-a" });

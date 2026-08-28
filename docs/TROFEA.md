@@ -54,10 +54,13 @@ anybody chose.
 Ordered variant-first, like `Slotowy/Klasyczny` and `Niewyczerpany/Skończony`;
 `endlessStock` already defaults away from 21.2 the same way.
 
-**Why it is mechanical, not cosmetic.** There are **32 Wrogowie among 165 Kart
-Zdarzeń**. A held trophy is a card out of circulation and 9.5 reshuffles only the
-*used* pile, so a few players hoarding beaten foes lock away most of the enemy
-pool — and the table runs short of things to fight exactly when everyone is
+**Why it is mechanical, not cosmetic.** There are 32 Wróg cards among the 165
+Kart Zdarzeń, but only **21 of them can ever be held**: since `dd74cba` the ten
+magical ones are beaten and gone, never banked. So the hoardable pool is 21 of
+165 — an eighth of the deck, worth 75 points in all, which is ten Miecze if one
+character somehow beat every tradeable foe in the box. A held trophy is a card
+out of circulation and 9.5 reshuffles only the *used* pile, so several players
+hoarding beaten foes lock away a large part of the enemy pool — and the table runs short of things to fight exactly when everyone is
 finally strong enough to want them. In 1993 the card *is* the counter, with the
 number printed on it; an app that tracks numbers perfectly is keeping the
 ceremony after removing its reason.
@@ -85,9 +88,22 @@ The values decide whether that is livable, and they are kind to it — **1×2, 2
 3×7, 4×1, 5×2, 6×1, 10×2** — so exact sevens are usually easy (3+2+2, 3+3+1).
 Under all-in, holding 13 and trading burns 6, which punishes a good run.
 
-Unruled. The argument here is for the subset. In „Punkty" mode the fork
-dissolves: convert in multiples of seven, keep the remainder, no card selection
-needed anywhere.
+**Ruled: the subset.** Michał chose it, and the counter-argument that nearly
+carried the day does not survive the values. It ran: if you may pick, then
+"punkty ponad wielokrotność 7 są stracone" becomes dead text, because sevens are
+always assemblable — and a clause that never bites is one nobody would have
+written. But a card cannot be split and the largest is six, so a character
+holding a single Cyklop still loses six or waits. The clause bites less often,
+not never.
+
+Built in `tradeTrophies`: naming nothing still hands in everything, which is
+what a player cashing out is usually after, and naming Karty hands in those. The
+console prints the ledger beside the hand — what each is worth, the total, and
+what an all-in trade would burn — because a choice you have to do arithmetic for
+on paper is a choice the referee is not helping with.
+
+In „Punkty" mode the fork dissolves: convert in multiples of seven, keep the
+remainder, no card selection needed anywhere.
 
 ## The seam
 

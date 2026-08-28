@@ -55,27 +55,54 @@ export function standingShopper(snapshot: Snapshot, seatId: string): SeatRow {
 }
 
 /**
- * Cashes in every beaten Wróg (1.4).
+ * Cashes in beaten Wrogowie (1.4).
  *
- * Everything is handed in at once because the rule says points above a multiple
- * of seven are lost, not banked — so holding one back to add to it later is not
- * a thing the rule allows.
+ * The player chooses which. 1.4 says the Karty "w dowolnym momencie mogą zostać
+ * wymienione" and never says all of them at once — so a character holding 6, 3,
+ * 2 and 2 hands in seven of it and keeps the six, rather than burning the six
+ * for nothing.
+ *
+ * This function used to take everything, reasoning that points above a multiple
+ * of seven are lost so holding one back was not allowed. That does not follow:
+ * the loss is what happens to what you *handed in*, not a rule against handing
+ * in less. And the clause is not made dead by the choice — two Wrogowie are
+ * worth ten apiece and a card cannot be split, so somebody holding a single
+ * Smok still loses three or waits.
+ *
+ * Naming nothing still means everything, which is what a player asking to cash
+ * out is usually after and what the console has always done.
  */
 export function tradeTrophies(
   snapshot: Snapshot,
-  command: { seatId: string },
+  command: { seatId: string; cardIds?: readonly string[] },
 ): Outcome<number> {
   const seat = seatById(snapshot, command.seatId);
-  const trophies = snapshot.holdings.filter(
-    (h) => h.seat_id === seat.id && h.kind === "trophy",
-  );
+  const held = snapshot.holdings.filter((h) => h.seat_id === seat.id && h.kind === "trophy");
+
+  // Named cards are matched one holding each, so asking for two Cyklopy hands in
+  // two rather than the same one twice.
+  const left = [...held];
+  const trophies = command.cardIds
+    ? command.cardIds.map((cardId) => {
+        const at = left.findIndex((h) => h.card_id === cardId);
+        if (at === -1) throw new Error(`${cardName(cardId)} — nie masz takiego trofeum.`);
+        return left.splice(at, 1)[0];
+      })
+    : held;
 
   const points = trophies.reduce((sum, t) => {
     const card = EVENTS.find((c) => c.id === t.card_id);
     return sum + (combatValueOf(card ?? { cardClass: "foe" })?.total ?? 0);
   }, 0);
   const gained = Math.floor(points / TROPHY_RATE);
-  if (gained < 1) throw new Error(`Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4).`);
+  // The count is worth saying: a player refused at five points wants to know it
+  // was five, not that seven is the rate. Especially now they choose what to
+  // offer — the refusal is about their choice, not about the rule.
+  if (gained < 1) {
+    throw new Error(
+      `Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4) — masz ${points}.`,
+    );
+  }
 
   const handed = {
     ...(trophies.length ? { holdings: { delete: trophies.map((t) => t.id) } } : {}),

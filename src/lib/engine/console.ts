@@ -216,7 +216,7 @@ export type Command =
   | { kind: "sell"; name: string }
   | { kind: "heal"; points: number | null }
   | { kind: "cast"; name: string; who: string | null }
-  | { kind: "trade" }
+  | { kind: "trade"; cards: string[] }
   /**
    * What a card asked, answered.
    *
@@ -398,11 +398,14 @@ export const COMMANDS: CommandSpec[] = [
     needs: "play",
   },
   {
+    // Naming nothing hands in everything, which is what a player cashing out is
+    // usually after. Naming cards hands in those — 1.4 lets you pick, and a
+    // Smok held back is six points not burnt.
     name: "trade",
     aliases: [],
     when: PLAYING,
-    usage: "trade",
-    summary: "turn beaten Wrogowie into a point, where they are traded (18)",
+    usage: "trade [CYKLOP, NOBBIN]",
+    summary: "cash beaten Wrogowie in at 7 points a Miecz (1.4) — all of them, or the ones you name",
     needs: "play",
   },
   {
@@ -1192,7 +1195,17 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "sell") {
     return tail ? { ok: { kind: "sell", name: tail } } : needs("sell", "Sell what?");
   }
-  if (word === "trade") return { ok: { kind: "trade" } };
+  if (word === "trade") {
+    // Commas or spaces: "trade CYKLOP, NOBBIN" and "trade CYKLOP NOBBIN" are the
+    // same list, because a player typing two card names will use either.
+    const named = tail
+      ? tail
+          .split(",")
+          .flatMap((part) => part.trim())
+          .filter((part) => part.length > 0)
+      : [];
+    return { ok: { kind: "trade", cards: named } };
+  }
   if (word === "heal") {
     if (!tail) return { ok: { kind: "heal", points: null } };
     if (!/^\d+$/.test(tail)) return needs("heal", `How many — \`${tail}\`?`);

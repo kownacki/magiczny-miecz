@@ -15,6 +15,9 @@ import {
   type EffectName,
 } from "@/lib/engine/console";
 import { cardName } from "@/lib/engine/polish";
+import { combatValueOf } from "@/lib/engine/cards";
+import { EVENTS } from "./decks";
+import { TROPHY_RATE } from "./commands/shop";
 import { carriesSpell, fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
 import { change } from "./change";
@@ -807,9 +810,22 @@ export async function runCommand(
 
     case "trade": {
       const seat = seatOf(null);
-      const gained = await tradeTrophies(gameId, seat.id);
+      /**
+       * Names are matched the way every other card name is, so a player types
+       * what is printed rather than an id. Naming nothing trades everything.
+       */
+      const chosen = command.cards.map((name) => {
+        const found = cardIdNamed(name);
+        if ("id" in found) return found.id;
+        if ("candidates" in found) {
+          throw new Error(`Which one — ${found.candidates.join(", ")}?`);
+        }
+        throw new Error(`No card called \`${name}\`.`);
+      });
+
+      const gained = await tradeTrophies(gameId, seat.id, chosen.length ? chosen : undefined);
       return gained > 0
-        ? `${named(seat)} trades trophies for ${gained}.`
+        ? `${named(seat)} trades trophies for ${gained} Miecz${gained === 1 ? "" : "e"}.`
         : `${named(seat)} has nothing to trade.`;
     }
 
@@ -1530,9 +1546,20 @@ export async function runCommand(
         ...(friends.length
           ? [`Friends: ${friends.map((one) => cardName(one.card_id)).join(", ")}`]
           : []),
-        // 1.4: held to be traded for Miecz, which is not the same as carried.
+        /**
+         * 1.4: held to be traded for Miecz, which is not the same as carried.
+         *
+         * The arithmetic is the useful half and the player is the one choosing
+         * what to hand in, so the line carries what each Karta is worth, what
+         * they total, and what a trade of everything would waste. Without it
+         * the choice 1.4 gives you has to be done on paper.
+         */
         ...(trophies.length
-          ? [`Trophies: ${trophies.map((one) => cardName(one.card_id)).join(", ")}`]
+          ? [
+              `Trophies: ${trophies
+                .map((one) => `${cardName(one.card_id)} ${trophyPoints(one.card_id)}`)
+                .join(", ")}` + trophyLedger(trophies.map((one) => one.card_id)),
+            ]
           : []),
         /**
          * What a Przyjaciel is carrying, which is not in the hand.
@@ -1566,4 +1593,26 @@ export async function runCommand(
       return `${named(seat)} draws ${cardName(spellId)}.`;
     }
   }
+}
+
+/** What one beaten Wróg is worth towards 1.4's sevens. */
+function trophyPoints(cardId: string): number {
+  const card = EVENTS.find((one) => one.id === cardId);
+  return (card ? combatValueOf(card)?.total : 0) ?? 0;
+}
+
+/**
+ * The sum, the Miecze it buys and what handing in all of it would burn.
+ *
+ * Said because 1.4 gives the player the choice of what to offer, and a choice
+ * you have to do arithmetic for on paper is a choice the referee is not helping
+ * with. Empty when there is nothing to say — a hand worth less than one Miecz
+ * has no waste to warn about, only a total.
+ */
+function trophyLedger(cardIds: readonly string[]): string {
+  const points = cardIds.reduce((sum, cardId) => sum + trophyPoints(cardId), 0);
+  const swords = Math.floor(points / TROPHY_RATE);
+  const wasted = points - swords * TROPHY_RATE;
+  if (swords < 1) return `  (${points} pkt — ${TROPHY_RATE} za Miecz)`;
+  return `  (${points} pkt → ${swords} Miecz${swords === 1 ? "" : "e"}, ${wasted} przepadnie)`;
 }
