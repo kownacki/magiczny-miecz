@@ -631,50 +631,57 @@ export function CardPreview({
                   its own hover with it, which is the whole trick: the tiles
                   answer once this panel is pinned, and are inert until then. */}
               {/**
-               * The Zaklęcia as backs, one per card, at the tiles' own height.
+               * One row: the Przedmioty, then the Zaklęcia at the end of it.
                *
-               * "2 Zaklęcia" is a number a reader has to turn back into a
-               * picture; two card backs beside two Przedmioty is the hand this
-               * Postać starts with, laid out the way it will be laid out. They
-               * are backs because that is what they are — 9.5 deals them off
-               * the top of a shuffled pile at setup and 9.3 keeps them hidden,
-               * so which two they are is not knowable and should not be drawn
-               * as though it were.
+               * They belong together because they arrive together — this is
+               * what is in front of the player before anybody rolls — and two
+               * rows made the hand look like two separate facts. The Zaklęcia
+               * go last because they are the ones you cannot name.
                *
-               * Sized to the Przedmiot tiles rather than to a card: same
-               * height, its own width, so the row reads as one row of things
-               * and not as a card that wandered in.
+               * Backs, because that is what they are: 9.5 deals them off the
+               * top of a shuffled pile at setup and 9.3 keeps them hidden, so
+               * which ones they are is not knowable and must not be drawn as
+               * though it were. The count goes where a Przedmiot's name goes,
+               * for the same reason a name is there — it is what the picture
+               * cannot say.
                */}
-              {kit.spells ? (
-                <div className="flex flex-wrap items-end gap-1">
-                  {Array.from({ length: kit.spells }, (_, at) => (
-                    <Image
-                      key={at}
-                      src="/cards/back-zaklecie.jpg"
-                      alt=""
-                      width={SPELL_BACK_WIDTH}
-                      height={TILE_ART_HEIGHT}
-                      className="rounded border border-magia/40"
-                    />
-                  ))}
-                  <span className="ml-1 text-[11px] text-magia">
-                    {kit.spells} {plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}
-                  </span>
-                </div>
-              ) : null}
-
-              {kit.items && kit.items.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {kit.items.map((cardId, at) => (
-                    <CardTile
-                      key={`${cardId}-${at}`}
-                      card={{ cardId, name: cardName(cardId) }}
-                      eqMode={eqMode}
-                      nature={nature}
-                    />
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-wrap items-start gap-2">
+                {kit.items?.map((cardId, at) => (
+                  <CardTile
+                    key={`${cardId}-${at}`}
+                    card={{ cardId, name: cardName(cardId) }}
+                    eqMode={eqMode}
+                    nature={nature}
+                  />
+                ))}
+                {kit.spells ? (
+                  <figure className="flex flex-col items-center gap-1">
+                    {/* Overlapped rather than spaced: a hand of cards is held
+                        in a hand, and three abreast at this size is wider than
+                        the two Przedmioty beside them. */}
+                    <span className="flex h-[80px] items-center">
+                      {Array.from({ length: kit.spells }, (_, at) => (
+                        <Image
+                          key={at}
+                          src="/cards/back-zaklecie.jpg"
+                          alt=""
+                          width={SPELL_BACK_WIDTH}
+                          height={TILE_ART_HEIGHT}
+                          // Twenty of the fifty-two showing, so a pair comes to
+                        // about a Przedmiot's width and the row keeps its
+                        // rhythm. Overlapped further and the first card is a
+                        // sliver; not at all and two Zaklęcia are wider than
+                        // the Miecz beside them.
+                        className={`rounded border border-magia/40 ${at > 0 ? "-ml-5" : ""}`}
+                        />
+                      ))}
+                    </span>
+                    <figcaption className="text-center text-[9px] leading-tight text-magia/80">
+                      ×{kit.spells} {plural(kit.spells, "Zaklęcie", "Zaklęcia", "Zaklęć")}
+                    </figcaption>
+                  </figure>
+                ) : null}
+              </div>
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px] text-ink">
 
               </p>
