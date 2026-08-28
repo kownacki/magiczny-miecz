@@ -171,6 +171,7 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   otrzymaj: { op: "otrzymaj", co: "Magiczny Miecz" },
   "rzut-za-kazdego": { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
   uwolnij: { op: "uwolnij", od: "zly-duch" },
+  zabierz: { op: "zabierz", co: "przyjaciel" },
   efekt: {
     op: "efekt",
     label: "Opętany",

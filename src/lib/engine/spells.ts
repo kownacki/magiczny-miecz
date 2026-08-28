@@ -1,5 +1,6 @@
 /** When a Zaklęcie may be cast, at what, and what casting it does (9.1, 9.6). */
 import type { SpellId } from "@/data/ids";
+import type { Effect } from "./cardScript";
 import type { TurnPhase } from "./turn";
 
 /**
@@ -84,6 +85,23 @@ export interface SpellScript {
     | "gasi-zaklecia"
     /** Siewca Spustoszenia: one face-up Karta Zdarzeń, off the board. */
     | "zdejmuje-karte";
+  /**
+   * What the spell does, where the effect vocabulary can say it.
+   *
+   * `effect` above is the sentence a player acts on and every spell has one;
+   * this is the same rule written in the terms the engine already carries out
+   * for Karty and Obszary, and only some spells have it. A spell with `stosuje`
+   * is applied; a spell without is announced, which is what all thirty used to
+   * be.
+   *
+   * The ones deliberately left announced are the ones the model cannot hold: a
+   * Zwierciadło reflects whatever was cast a moment ago and a Władca Zaklęć
+   * negates it, which needs a spell to be *pending* rather than resolved — and
+   * nothing here is pending. Ocalony is the same shape from the other side: it
+   * answers a loss that is about to happen. Those wait for a response model,
+   * and saying so in the data is better than half-applying them.
+   */
+  stosuje?: Effect;
 }
 
 /**
@@ -124,6 +142,9 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["poczatek-tury"],
     target: "siebie",
     effect: "Odłóż dowolną liczbę swoich Przedmiotów, biorąc 1 Sz. Z. za każdy.",
+    // "Należy odłożyć Karty Przedmiotów biorąc za każdą z nich 1 Sztukę Złota"
+    // — the Lichwiarz's own trade, at the Lichwiarz's own rate.
+    stosuje: { op: "sprzedaj", cena: 1 },
   },
   "krag-plomieni": {
     timing: ["dowolna-chwila"],
@@ -135,11 +156,26 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["przed-walka"],
     target: "siebie",
     effect: "W tej jednej walce (nie magicznej) dodajesz Magię do Miecza.",
+    /**
+     * "Zaklęciem tym możesz posłużyć się tylko w jednej walce" — so it ends
+     * with the fight, however the fight ends, which is what `Ends.fight` is.
+     * The Bojowy Rumak does the same thing as a held card; a character with
+     * both folds its Magia in once.
+     */
+    stosuje: {
+      op: "efekt",
+      label: "Magia i Miecz — Magia liczy się do Miecza",
+      modifier: { kind: "magia-do-miecza" },
+      ends: { kind: "fight" },
+    },
   },
   "magiczna-wedrowka": {
     timing: ["zamiast-ruchu"],
     target: "siebie",
     effect: "Przenieś się na dowolny Obszar w tym Kręgu. Nie działa na Kamiennym Moście.",
+    // "natychmiastowe przeniesienie się do dowolnego Obszaru w tym samym
+    // Kręgu". The bar on using it on the Kamienny Most is `timing`'s, not this.
+    stosuje: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
   },
   ocalony: {
     timing: ["dowolna-chwila", "w-walce"],
@@ -156,6 +192,9 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["dowolna-chwila"],
     target: "siebie-lub-postac",
     effect: "Przywraca Życie do 4 punktów z początku gry.",
+    // "przywraca punkty Życia z początku rozgrywki (czyli 4 punkty)" — the card
+    // states the number the rulebook's 4.7 would have given anyway.
+    stosuje: { op: "uzdrow", upTo: 4 },
   },
   olsnienie: {
     timing: ["przed-ruchem"],
@@ -166,11 +205,18 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["dowolna-chwila"],
     target: "postac",
     effect: "Zabierz ofierze 1 Przedmiot albo 1 Sztukę Złota.",
+    // "Pozwala zabrać wybranej Postaci jeden Przedmiot lub jedną Sztukę Złota."
+    // The coin is the fallback: a victim with nothing to carry still has a purse.
+    stosuje: { op: "zabierz", co: "przedmiot-lub-zloto" },
   },
   "pan-przyjaciol": {
     timing: ["dowolna-chwila"],
     target: "postac",
     effect: "Zabierz ofierze 1 Przyjaciela i dołącz go do swoich.",
+    // "zabrać wybranej Postaci jednego z Przyjaciół i dołączyć go do swoich" —
+    // changing hands rather than being destroyed, which is why this is not a
+    // `strata`.
+    stosuje: { op: "zabierz", co: "przyjaciel" },
   },
   "pan-trzesawisk": {
     timing: ["zamiast-ruchu"],
@@ -182,11 +228,31 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "postac-lub-wrog",
     effect:
       "Zabija Wroga (oprócz Demonów) bez walki; Postaci odbiera 2 punkty Życia. Napadnięty może się wymknąć.",
+    /**
+     * "Zabija natychmiast każdego Wroga (oprócz Demonów), a Postaci odbiera 2
+     * punkty Życia."
+     *
+     * Only the half aimed at a Postać, and only when one was named: the guard
+     * in `castSpell` refuses an unnamed victim rather than letting two points
+     * land on the caster. Killing a Wróg outright is the other half and stays
+     * prose — the creature is a Karta in a turn's stack, not a seat, and
+     * `stosuje` reaches seats.
+     */
+    stosuje: { op: "punkty", stat: "life", delta: -2 },
   },
   "siedem-wichrow": {
     timing: ["dowolna-chwila"],
     target: "postac",
     effect: "Rzuć kostką za każdy Przedmiot ofiary: 1 niszczy go. Tylko w tej samej Krainie.",
+    /**
+     * "Rzuć raz kostką dla każdego Przedmiotu będącego w posiadaniu ofiary.
+     * Jeśli wynikiem jest 1, Wichry niszczą Przedmiot."
+     *
+     * The same shape as the Urwisko's roll for each Przyjaciel, one number
+     * apart, and aimed at the victim rather than the caster — which is what
+     * `target: "postac"` and the seat it names are for.
+     */
+    stosuje: { op: "rzut-za-kazdego", co: "przedmiot", gubiPrzy: 1 },
   },
   "siewca-spustoszenia": {
     timing: ["poczatek-tury", "po-ruchu"],
@@ -198,6 +264,15 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["dowolna-chwila"],
     target: "postac",
     effect: "Wskaż ofiarę, potem obejrzyj jej Zaklęcia i zabierz jedno.",
+    /**
+     * "Najpierw należy zdecydować, kto padnie ofiarą Szaleństwa, a dopiero
+     * następnie obejrzeć Zaklęcia i wybrać jedno z nich."
+     *
+     * The choice is the caster's, against 5.6's default — and it is the one
+     * place in the box where a hand held face down under 9.3 is opened to
+     * somebody else.
+     */
+    stosuje: { op: "zabierz", co: "zaklecie", wybiera: "rzucajacy" },
   },
   "wladca-czarow": {
     timing: ["dowolna-chwila"],
@@ -210,6 +285,20 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "obszar",
     effect:
       "Wszystkie istoty na Obszarze sparaliżowane: nie wolno ich atakować, można się wymknąć. Postacie tracą następną turę.",
+    /**
+     * Announced, and the target is why.
+     *
+     * "Wszystkie istoty w tym Obszarze (także Postacie) tracą następną turę" is
+     * expressible — `wszyscy-tutaj` was added for it — but the Obszar is one
+     * the caster points at, "w Kręgu, po którym wędrujesz", and a cast carries
+     * no field to point with. Resolved against the caster's own square it would
+     * reliably cost them the turn they were trying to take from somebody else,
+     * which is worse than leaving the sentence to the table.
+     *
+     * It wants a field on `CastSpell.target`, which is the browser's question
+     * as much as the engine's — the same shape as a Zaklęcie aimed at a Karta
+     * on the board.
+     */
   },
   "wladca-lodu": {
     timing: ["zamiast-ruchu"],
@@ -245,6 +334,29 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "postac",
     effect:
       "Ofiara rzuca kostką: 1 — Kamień; 2 — całe złoto; 3 — 1 Miecza; 4 — 1 Magii; 5 — zyskuje 1 Miecza lub Magii; 6 — zyskuje 1 Życie.",
+    /**
+     * The one spell that is a die table and nothing else, so the whole of it
+     * fits the vocabulary. Face 2 takes "całe złoto" — a number rather than a
+     * count of cards, and `adjustSeat` floors a purse at nothing, so asking for
+     * more than anyone could hold is how "all of it" is said.
+     */
+    stosuje: {
+      op: "rzut",
+      faces: {
+        1: { op: "kamien" },
+        2: { op: "punkty", stat: "gold", delta: -99 },
+        3: { op: "punkty", stat: "sword", delta: -1 },
+        4: { op: "punkty", stat: "magic", delta: -1 },
+        5: {
+          op: "wybor",
+          options: [
+            { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
+            { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
+          ],
+        },
+        6: { op: "punkty", stat: "life", delta: 1 },
+      },
+    },
   },
   "formula-czasu": {
     timing: ["przed-ruchem"],
@@ -256,6 +368,17 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["dowolna-chwila"],
     target: "siebie-lub-postac",
     effect: "Wynik rzutu na ruch mnożysz przez 2.",
+    /**
+     * "prędkość Postaci (twoja lub kogokolwiek innego) podwoi się" — cast on
+     * anybody, which is why it is `siebie-lub-postac` and why the doubling is a
+     * status on the seat rather than a fact about the caster.
+     */
+    stosuje: {
+      op: "efekt",
+      label: "Formuła Przestrzeni — podwójny rzut na ruch",
+      modifier: { kind: "ruch-x2" },
+      ends: { kind: "turns", turns: 1 },
+    },
   },
   golem: {
     timing: ["przed-ruchem"],

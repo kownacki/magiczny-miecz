@@ -90,7 +90,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
       holdings,
     });
 
-  it("weighs the character with everything it is carrying (1.5)", () => {
+  it("weighs the character with everything it is carrying (1.5)", async () => {
     // Zła, because the Miecz Chaosu is one of the three cards 5.3 keeps from a
     // Natura — and a card its holder may not hold lends nothing (`inEffect`).
     // The fixture was Dobra and counted the two points anyway, which is the
@@ -101,7 +101,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
     expect(fightIn(writes)).toMatchObject({ playerTotal: 4, enemyTotal: 6, kind: "ordinary" });
   });
 
-  it("tells the table what it is fighting", () => {
+  it("tells the table what it is fighting", async () => {
     const { writes } = beginFight(table(), { cardIds: ["cyklop"] });
     expect(writes.journal).toEqual([
       expect.objectContaining({
@@ -112,12 +112,12 @@ describe("otwarcie walki (17.4, 17.5)", () => {
   });
 
   /** 17.3's window opens empty: nobody is polled and nobody is named. */
-  it("leaves the floor for whoever wants it", () => {
+  it("leaves the floor for whoever wants it", async () => {
     const { writes } = beginFight(table(), { cardIds: ["cyklop"] });
     expect(fightIn(writes).caster).toBeUndefined();
   });
 
-  it("sums several creatures into one opponent (17.5)", () => {
+  it("sums several creatures into one opponent (17.5)", async () => {
     const two = table({ drawn: [
       { cardId: "cyklop", cardClass: "foe" },
       { cardId: "nobbin", cardClass: "foe" },
@@ -127,35 +127,35 @@ describe("otwarcie walki (17.4, 17.5)", () => {
     expect(writes.journal?.[0].payload).toMatchObject({ together: true });
   });
 
-  it("refuses to let a Wróg and a magiczny Wróg attack together (17.5)", () => {
+  it("refuses to let a Wróg and a magiczny Wróg attack together (17.5)", async () => {
     expect(() => beginFight(table(), { cardIds: ["cyklop", "demon"] })).toThrow(
       /nie atakują razem/,
     );
   });
 
-  it("reads Magia against a magiczny Wróg (18.2)", () => {
+  it("reads Magia against a magiczny Wróg (18.2)", async () => {
     const magical = table({ drawn: [{ cardId: "demon", cardClass: "foe" }] });
     const { writes } = beginFight(magical, { cardIds: ["demon"] });
     expect(fightIn(writes)).toMatchObject({ kind: "magical", enemyTotal: 6, playerTotal: 1 });
   });
 
-  it("will not fight the same creature twice in one turn (17.4)", () => {
+  it("will not fight the same creature twice in one turn (17.4)", async () => {
     const done = table({ fought: ["cyklop"] });
     expect(() => beginFight(done, { cardIds: ["cyklop"] })).toThrow(/CYKLOP już się/);
   });
 
-  it("refuses a card that is not a Wróg", () => {
+  it("refuses a card that is not a Wróg", async () => {
     expect(() => beginFight(table(), { cardIds: ["helm"] })).toThrow(/HEŁM nie jest Wrogiem/);
   });
 
-  it("refuses with nobody to fight, and off the field", () => {
+  it("refuses with nobody to fight, and off the field", async () => {
     expect(() => beginFight(table(), { cardIds: [] })).toThrow(/Nie ma z kim/);
     const rolling = aTable({ game: { active_seat: 0, turn_state: { phase: "roll" } } });
     expect(() => beginFight(rolling, { cardIds: ["cyklop"] })).toThrow(/Nie czas na walkę/);
   });
 
   /** A staged fight is one the deck never dealt, and the sheet says so. */
-  it("carries the staged mark through from the stack", () => {
+  it("carries the staged mark through from the stack", async () => {
     const staged = table({
       drawn: [{ cardId: "cyklop", cardClass: "foe", granted: true }],
     });
@@ -194,20 +194,20 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       ],
     });
 
-  it("puts the spoken card on the used pile (9.6)", () => {
-    const { writes } = castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
+  it("puts the spoken card on the used pile (9.6)", async () => {
+    const { writes } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(writes.holdings?.delete).toEqual(["s-1"]);
     expect(pileIn(writes, "spells").discard).toHaveLength(1);
   });
 
-  it("says what was cast, and what the table now has to do", () => {
-    const { result } = castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
+  it("says what was cast, and what the table now has to do", async () => {
+    const { result } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(result.spell).toBe("WŁADCA GROMU");
     expect(result.effect).toMatch(/sparaliżowane/);
   });
 
-  it("journals the card, whom it was aimed at and what was said", () => {
-    const { writes } = castSpell(
+  it("journals the card, whom it was aimed at and what was said", async () => {
+    const { writes } = await castSpell(
       casting(),
       { seatId: "seat-a", holdingId: "s-1", target: { seatIndex: 1, note: "na Cyklopa" } },
       ports(),
@@ -218,57 +218,45 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     });
   });
 
-  it("refuses a card the Postać is not holding", () => {
-    expect(() =>
-      castSpell(casting(), { seatId: "seat-b", holdingId: "s-1" }, ports()),
-    ).toThrow(/nie ma tego Zaklęcia/);
-    expect(() =>
-      castSpell(casting(), { seatId: "seat-z", holdingId: "s-1" }, ports()),
-    ).toThrow(/Nie ma takiego gracza/);
+  it("refuses a card the Postać is not holding", async () => {
+    await expect(castSpell(casting(), { seatId: "seat-b", holdingId: "s-1" }, ports())).rejects.toThrow(/nie ma tego Zaklęcia/);
+    await expect(castSpell(casting(), { seatId: "seat-z", holdingId: "s-1" }, ports())).rejects.toThrow(/Nie ma takiego gracza/);
   });
 
   /** 9.7: nothing works on the creatures of the Kamienny Most, nor on the Bestia. */
-  it("refuses a Zaklęcie aimed at what stands on the Kamienny Most", () => {
+  it("refuses a Zaklęcie aimed at what stands on the Kamienny Most", async () => {
     const onTheBridge = casting({ cardId: "krag-plomieni", fieldId: "pulapka" });
-    expect(() =>
-      castSpell(onTheBridge, { seatId: "seat-a", holdingId: "s-1" }, ports()),
-    ).toThrow(/9\.7/);
+    await expect(castSpell(onTheBridge, { seatId: "seat-a", holdingId: "s-1" }, ports())).rejects.toThrow(/9\.7/);
   });
 
-  it("lets a Zaklęcie that touches nothing there be spoken on the bridge anyway", () => {
+  it("lets a Zaklęcie that touches nothing there be spoken on the bridge anyway", async () => {
     // WŁADCA GROMU is aimed at an Obszar, not at the creatures on it.
     const onTheBridge = casting({ fieldId: "pulapka" });
-    expect(() =>
+    await expect(
       castSpell(onTheBridge, { seatId: "seat-a", holdingId: "s-1" }, ports()),
-    ).not.toThrow();
+    ).resolves.toBeDefined();
   });
 
-  it("refuses a Zaklęcie whose moment has not come (9.1)", () => {
+  it("refuses a Zaklęcie whose moment has not come (9.1)", async () => {
     const wrongMoment = casting({ cardId: "kamien-filozoficzny" });
-    expect(() =>
-      castSpell(wrongMoment, { seatId: "seat-a", holdingId: "s-1" }, ports()),
-    ).toThrow(/Nie ta chwila/);
+    await expect(castSpell(wrongMoment, { seatId: "seat-a", holdingId: "s-1" }, ports())).rejects.toThrow(/Nie ta chwila/);
   });
 
-  it("refuses in a fight until the floor has been asked for (17.3)", () => {
+  it("refuses in a fight until the floor has been asked for (17.3)", async () => {
     const fighting = casting({ state: walka() });
-    expect(() =>
-      castSpell(fighting, { seatId: "seat-a", holdingId: "s-1" }, ports()),
-    ).toThrow(/Najpierw zgłoś/);
+    await expect(castSpell(fighting, { seatId: "seat-a", holdingId: "s-1" }, ports())).rejects.toThrow(/Najpierw zgłoś/);
   });
 
-  it("refuses while somebody else is speaking", () => {
+  it("refuses while somebody else is speaking", async () => {
     const theirs = casting({ state: walka({ caster: { seat: 1, until: NOW + 1000 } }) });
-    expect(() =>
-      castSpell(theirs, { seatId: "seat-a", holdingId: "s-1" }, ports()),
-    ).toThrow(/poczekaj na swoją kolej/);
+    await expect(castSpell(theirs, { seatId: "seat-a", holdingId: "s-1" }, ports())).rejects.toThrow(/poczekaj na swoją kolej/);
   });
 
   /**
    * 17.3 has the spells before the roll, so a spell spoken into a fight puts it
    * back where it started and hands the floor back to the table.
    */
-  it("clears the dice and the floor once it has been spoken", () => {
+  it("clears the dice and the floor once it has been spoken", async () => {
     const mine = casting({
       state: walka({
         caster: { seat: 0, until: NOW + 1000 },
@@ -277,7 +265,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         result: { outcome: "wygrana", winner: "Postać", loser: "CYKLOP", kind: "ordinary" },
       }),
     });
-    const { writes } = castSpell(mine, { seatId: "seat-a", holdingId: "s-1" }, ports());
+    const { writes } = await castSpell(mine, { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(fightIn(writes)).toMatchObject({
       caster: null,
       playerRoll: null,
@@ -286,8 +274,8 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     });
   });
 
-  it("leaves the turn state alone outside a fight", () => {
-    const { writes } = castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
+  it("leaves the turn state alone outside a fight", async () => {
+    const { writes } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(writes.game?.turn_state).toBeUndefined();
   });
 
@@ -300,7 +288,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
    * exactly that pile. Merged side by side rather than chained, one of the two
    * writes would be dropped without a word and the discard would be short.
    */
-  it("puts the caster's card and the whole hand it took on the pile (Władca Czarów)", () => {
+  it("puts the caster's card and the whole hand it took on the pile (Władca Czarów)", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: pole() },
       seats: [
@@ -315,7 +303,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       ],
     });
 
-    const { writes } = castSpell(
+    const { writes } = await castSpell(
       table,
       { seatId: "seat-a", holdingId: "s-1", target: { seatIndex: 1 } },
       ports(),
@@ -328,7 +316,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     });
   });
 
-  it("will not empty a hand nobody pointed at", () => {
+  it("will not empty a hand nobody pointed at", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: pole() },
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
@@ -336,13 +324,13 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         aHolding({ id: "s-1", seat_id: "seat-a", card_id: "wladca-czarow", kind: "spell" }),
       ],
     });
-    expect(() => castSpell(table, { seatId: "seat-a", holdingId: "s-1" }, ports())).toThrow(
+    await expect(castSpell(table, { seatId: "seat-a", holdingId: "s-1" }, ports())).rejects.toThrow(
       /Wskaż Postać/,
     );
   });
 
   /** "zdjąć z planszy jedną odkrytą Kartę Zdarzeń" — off the board, onto the pile. */
-  it("takes a face-up Karta off the board and files it (Siewca Spustoszenia)", () => {
+  it("takes a face-up Karta off the board and files it (Siewca Spustoszenia)", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: pole() },
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
@@ -354,7 +342,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       ],
     });
 
-    const { writes } = castSpell(
+    const { writes } = await castSpell(
       table,
       { seatId: "seat-a", holdingId: "s-1", target: { fieldCardId: "fc-1" } },
       ports(),
@@ -445,12 +433,12 @@ describe("kostki w walce (17.3, 17.4)", () => {
 describe("poprawianie sumy Postaci", () => {
   const table = aTable({ game: { active_seat: 0, turn_state: walka() } });
 
-  it("takes the corrected total", () => {
+  it("takes the corrected total", async () => {
     const { writes } = setFightPlayerTotal(table, { total: 9 });
     expect(fightIn(writes).playerTotal).toBe(9);
   });
 
-  it("never goes below zero", () => {
+  it("never goes below zero", async () => {
     expect(fightIn(setFightPlayerTotal(table, { total: -3 }).writes).playerTotal).toBe(0);
   });
 });
@@ -483,7 +471,7 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
       holdings: [aHolding({ id: "h-1", seat_id: "seat-b", card_id: "miecz-chaosu" })],
     });
 
-  it("opens the fight with both characters at their full totals (1.5, 2.5)", () => {
+  it("opens the fight with both characters at their full totals (1.5, 2.5)", async () => {
     const { writes } = attackSeat(table(), { targetSeatId: "seat-b" });
     // The attacker's own 3, against Ala's 2 and the 2 her Miecz Chaosu lends.
     expect(fightIn(writes)).toMatchObject({
@@ -496,7 +484,7 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
   });
 
   /** 17.7 gives "obie Postacie" their Zaklęcia before the roll, so nobody rolls yet. */
-  it("opens the window rather than rolling", () => {
+  it("opens the window rather than rolling", async () => {
     const { writes } = attackSeat(table(), { targetSeatId: "seat-b" });
     expect(fightIn(writes)).toMatchObject({ playerRoll: null, enemyRoll: null });
     expect(fightIn(writes).caster).toBeUndefined();
@@ -508,7 +496,7 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
     ]);
   });
 
-  it("refuses a Postać who is not standing here (13.1)", () => {
+  it("refuses a Postać who is not standing here (13.1)", async () => {
     const apart = aTable({
       game: { active_seat: 0, turn_state: pole({ drawn: [] }) },
       seats: [
@@ -519,7 +507,7 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
     expect(() => attackSeat(apart, { targetSeatId: "seat-b" })).toThrow(/tym samym Obszarze/);
   });
 
-  it("refuses oneself, the dead and the unknown", () => {
+  it("refuses oneself, the dead and the unknown", async () => {
     expect(() => attackSeat(table(), { targetSeatId: "seat-a" })).toThrow(/sama ze sobą/);
     expect(() => attackSeat(table(), { targetSeatId: "seat-z" })).toThrow(/Nieznane miejsce/);
 
@@ -533,14 +521,14 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
     expect(() => attackSeat(dead, { targetSeatId: "seat-b" })).toThrow(/nie żyje/);
   });
 
-  it("refuses outside the moment the move ended", () => {
+  it("refuses outside the moment the move ended", async () => {
     expect(() => attackSeat(table({ state: walka() }), { targetSeatId: "seat-b" })).toThrow(
       /Nie czas na spotkanie/,
     );
   });
 
   /** 14.1: on the bridge characters meet at the two Wejścia and nowhere else. */
-  it("refuses beside a Demon on the Most, and allows it at the Wejście", () => {
+  it("refuses beside a Demon on the Most, and allows it at the Wejście", async () => {
     expect(() => attackSeat(table({ field: "pulapka" }), { targetSeatId: "seat-b" })).toThrow(
       /tylko na Wejściu/,
     );
@@ -570,7 +558,7 @@ describe("ucieczka (17.6, 19)", () => {
     { cardId: "nobbin", cardClass: "foe" as const },
   ];
 
-  it("takes the character away from everything standing here, not just the one it faced (19.1)", () => {
+  it("takes the character away from everything standing here, not just the one it faced (19.1)", async () => {
     const table = aTable({
       game: {
         active_seat: 0,
@@ -584,7 +572,7 @@ describe("ucieczka (17.6, 19)", () => {
     expect(fieldIn(writes).fought).toEqual(["cyklop", "nobbin"]);
   });
 
-  it("settles the Wrogowie lying here even before a fight began", () => {
+  it("settles the Wrogowie lying here even before a fight began", async () => {
     const table = aTable({
       game: {
         active_seat: 0,
@@ -597,7 +585,7 @@ describe("ucieczka (17.6, 19)", () => {
     expect(fieldIn(writes).fought).toEqual(["cyklop", "nobbin"]);
   });
 
-  it("says no when nothing gets the character away, and writes nothing but the line", () => {
+  it("says no when nothing gets the character away, and writes nothing but the line", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: walka() },
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
@@ -611,7 +599,7 @@ describe("ucieczka (17.6, 19)", () => {
   });
 
   /** A companion table answers for itself, and "no" is an answer. */
-  it("takes the table's own answer over the abilities", () => {
+  it("takes the table's own answer over the abilities", async () => {
     const table = aTable({
       game: {
         active_seat: 0,
@@ -635,7 +623,7 @@ describe("ucieczka (17.6, 19)", () => {
         holdings,
       });
 
-    it("is spoken, spent and filed (9.6)", () => {
+    it("is spoken, spent and filed (9.6)", async () => {
       const { writes, result } = escape(duel(), { reported: null, actorSeatId: "seat-b" });
       expect(result.succeeded).toBe(true);
       expect(writes.holdings?.delete).toEqual(["s-1"]);
@@ -645,17 +633,17 @@ describe("ucieczka (17.6, 19)", () => {
     });
 
     /** One creature, not the Obszar: it ends the fight in hand and nothing more. */
-    it("ends the fight in hand and sweeps nothing", () => {
+    it("ends the fight in hand and sweeps nothing", async () => {
       const { writes } = escape(duel(), { reported: null, actorSeatId: "seat-b" });
       expect(fieldIn(writes).fought).toEqual(["cyklop"]);
     });
 
-    it("is not burnt when the table answered for itself", () => {
+    it("is not burnt when the table answered for itself", async () => {
       const { writes } = escape(duel(), { reported: true, actorSeatId: "seat-b" });
       expect(writes.holdings).toBeUndefined();
     });
 
-    it("does nothing for a Postać who is not holding one", () => {
+    it("does nothing for a Postać who is not holding one", async () => {
       expect(escape(duel([]), { reported: null, actorSeatId: "seat-b" }).result.succeeded).toBe(
         false,
       );
@@ -666,7 +654,7 @@ describe("ucieczka (17.6, 19)", () => {
    * 17.6 gives the attempt to the character who was attacked, and a duel is the
    * one fight where that is never the active seat.
    */
-  it("belongs to the attacked Postać, decided against the fight and not the button", () => {
+  it("belongs to the attacked Postać, decided against the fight and not the button", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: walka({ opponentSeat: 1 }) },
       seats: [
@@ -681,7 +669,7 @@ describe("ucieczka (17.6, 19)", () => {
     expect(writes.journal?.[0].seatId).toBe("seat-b");
   });
 
-  it("is the active seat's outside a duel", () => {
+  it("is the active seat's outside a duel", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: walka() },
       seats: [
@@ -695,7 +683,7 @@ describe("ucieczka (17.6, 19)", () => {
   });
 
   /** 19.3 leaves exactly one kind of escape on the Kamienny Most. */
-  it("refuses to slip a Wróg on the Kamienny Most", () => {
+  it("refuses to slip a Wróg on the Kamienny Most", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: walka({ fieldId: "pulapka" }) },
       seats: [hobgoblin({ field_id: "pulapka" })],
@@ -703,7 +691,7 @@ describe("ucieczka (17.6, 19)", () => {
     expect(() => escape(table, { reported: null })).toThrow(/19\.3/);
   });
 
-  it("says so when there is nothing to flee", () => {
+  it("says so when there is nothing to flee", async () => {
     const rolling = aTable({ game: { active_seat: 0, turn_state: { phase: "roll" } } });
     expect(() => escape(rolling, { reported: null })).toThrow(/Nie ma przed czym uciekać/);
   });
@@ -763,7 +751,7 @@ describe("osłona (17.4, 18.2b)", () => {
 
 describe("Zaczarowane Wzgórza and the spoken word", () => {
   /** "Nie możesz też rzucać Zaklęć." The other half of the same sentence. */
-  it("refuses a Zaklęcie spoken from the Wzgórza", () => {
+  it("refuses a Zaklęcie spoken from the Wzgórza", async () => {
     const there = aTable({
       game: { active_seat: 0 },
       seats: [
@@ -777,7 +765,7 @@ describe("Zaczarowane Wzgórza and the spoken word", () => {
     });
     // `castSpell` is synchronous — it needs no die — so this throws rather
     // than rejecting.
-    expect(() => castSpell(there, { seatId: "seat-a", holdingId: "s1" }, ports())).toThrow(
+    await expect(castSpell(there, { seatId: "seat-a", holdingId: "s1" }, ports())).rejects.toThrow(
       /tu nie rzuca się Zaklęć/,
     );
   });
@@ -787,7 +775,7 @@ describe("Zaczarowane Wzgórza and the spoken word", () => {
    * carry both — "nie możesz liczyć na Miecz i Magię ... Nie możesz też rzucać
    * Zaklęć" — and the Rozstajne Drogi split them one apiece.
    */
-  it("refuses on the crossroads that forbids Zaklęcia, and allows the other", () => {
+  it("refuses on the crossroads that forbids Zaklęcia, and allows the other", async () => {
     const standing = (field: string) =>
       aTable({
         game: { active_seat: 0 },
@@ -795,18 +783,16 @@ describe("Zaczarowane Wzgórza and the spoken word", () => {
         holdings: [aHolding({ id: "s1", card_id: "krag-plomieni", kind: "spell" })],
       });
 
-    expect(() =>
-      castSpell(standing("rozstajne-drogi-2"), { seatId: "seat-a", holdingId: "s1" }, ports()),
-    ).toThrow(/tu nie rzuca się Zaklęć/);
+    await expect(castSpell(standing("rozstajne-drogi-2"), { seatId: "seat-a", holdingId: "s1" }, ports())).rejects.toThrow(/tu nie rzuca się Zaklęć/);
 
     // Rozstajne Drogi I suspends the Przedmioty and says nothing about Zaklęcia.
-    expect(() =>
+    await expect(
       castSpell(standing("rozstajne-drogi-1"), { seatId: "seat-a", holdingId: "s1" }, ports()),
-    ).not.toThrow(/tu nie rzuca się Zaklęć/);
+    ).resolves.toBeDefined();
   });
 
   /** And the other half, the other way round. */
-  it("suspends Przedmioty on the crossroads that says so, and not on the other", () => {
+  it("suspends Przedmioty on the crossroads that says so, and not on the other", async () => {
     const worth = (field: string) => {
       const t = aTable({
         seats: [aSeat({ id: "seat-a", sword_own: 2, field_id: asFieldId(field) })],

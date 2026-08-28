@@ -37,6 +37,11 @@ export function isSettled(effect: Effect): boolean {
     case "uwolnij":
       return true;
 
+    // Somebody has to say which card changes hands (5.6, or Szaleństwo's own
+    // text handing the choice to the caster).
+    case "zabierz":
+      return false;
+
     // Healing with no price is capped by 4.7 and has one answer. Healing that
     // charges is a purchase, and how much to buy is the buyer's.
     case "uzdrow":

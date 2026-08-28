@@ -196,6 +196,19 @@ export function describeEffect(effect: Effect): string {
     case "uwolnij":
       return `uwalniasz się od: ${cardName(effect.od)}`;
 
+    case "zabierz": {
+      const what =
+        effect.co === "przedmiot-lub-zloto"
+          ? "1 Przedmiot lub 1 Sztukę Złota"
+          : effect.co === "przyjaciel"
+            ? "1 Przyjaciela"
+            : effect.co === "zaklecie"
+              ? "1 Zaklęcie"
+              : "1 Przedmiot";
+      const who = effect.wybiera === "rzucajacy" ? " (ty wybierasz)" : "";
+      return `zabierasz ofierze ${what}${who}`;
+    }
+
     case "zaklecie":
       return `bierzesz ${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
 
@@ -331,6 +344,8 @@ export function summariseEffect(effect: Effect): string {
       return effect.co === "przyjaciel" ? "rzut za każdego Przyjaciela" : "rzut za każdy Przedmiot";
     case "uwolnij":
       return `uwolnienie od: ${cardName(effect.od)}`;
+    case "zabierz":
+      return "zabierasz ofierze Kartę";
 
     default:
       return "rozpatrzcie sami";

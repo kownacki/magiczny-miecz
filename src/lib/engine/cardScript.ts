@@ -88,6 +88,16 @@ export type Target =
   /** Whoever later stops on the field the card is lying on. */
   | "kazdy-kto-tu-trafi"
   /**
+   * Everybody standing on one Obszar, the caster included where they stand
+   * there. The Władca Gromu: "Wszystkie istoty w tym Obszarze (także Postacie)
+   * zostaną sparaliżowane lękiem."
+   *
+   * Distinct from `wszyscy-w-kregu`, which is a whole Kraina — this is the
+   * square somebody is pointing at, and the only spell in the box that aims at
+   * one.
+   */
+  | "wszyscy-tutaj"
+  /**
    * A group picked out by Natura or by which ring they are walking. The Danina
    * rolls a die to decide which of the six groups pays the Beast this time, so
    * these are not six special cases but one card's six faces.
@@ -301,6 +311,30 @@ export type Effect =
    * between shaking something off and being freed of it.
    */
   | { op: "uwolnij"; od: string }
+  /**
+   * Takes a card off somebody else and gives it to the caster.
+   *
+   * Three Zaklęcia do it and they differ only in what they reach for: the Pan
+   * Bogactwa "zabrać wybranej Postaci jeden Przedmiot lub jedną Sztukę Złota",
+   * the Pan Przyjaciół "jednego z Przyjaciół i dołączyć go do swoich", and
+   * Szaleństwo "jedno z należących do niej Zaklęć".
+   *
+   * Distinct from `strata`, which destroys: what is taken here changes hands
+   * and is still in the game. That difference is the whole of the Pan
+   * Przyjaciół — a Przyjaciel who went to the used pile would be no use to
+   * anybody, and the card says "dołączyć go do swoich".
+   *
+   * Which card goes is the victim's to choose under 5.6, except for Szaleństwo,
+   * whose own text hands the choice to the caster: "obejrzeć Zaklęcia i wybrać
+   * jedno z nich" — the one place a hand held under 9.3 is opened to somebody
+   * else.
+   */
+  | {
+      op: "zabierz";
+      co: "przedmiot" | "przyjaciel" | "zaklecie" | "przedmiot-lub-zloto";
+      /** Who picks. Defaults to the victim, which is 5.6's rule. */
+      wybiera?: "ofiara" | "rzucajacy";
+    }
   /** Only happens to some characters (Posłańcy Bogów, Sabat Czarownic). */
   | { op: "gdy"; warunek: Condition; to: Effect; inaczej?: Effect };
 

@@ -60,6 +60,21 @@ export function seatsTargeted(
       return only(playing.filter((seat) => regionOf(seat.fieldId) === ring));
     }
 
+    /**
+     * One Obszar rather than a whole Kraina (Władca Gromu).
+     *
+     * Read off where the effect is landing, which for a Zaklęcie is the seat it
+     * was aimed at — so a spell thrown at somebody else catches everyone
+     * standing with them, and one thrown at your own feet catches you too. That
+     * is what "także Postacie" is doing in the card's own sentence: it is
+     * warning you.
+     */
+    case "wszyscy-tutaj": {
+      const here = actor?.fieldId ?? null;
+      if (!here) return [];
+      return only(playing.filter((seat) => seat.fieldId === here));
+    }
+
     case "w-dolnym-kregu":
       return only(playing.filter((seat) => regionOf(seat.fieldId) === "dolny"));
     case "w-srodkowym-kregu":

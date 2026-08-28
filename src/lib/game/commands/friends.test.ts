@@ -445,10 +445,10 @@ describe("a Zaklęcie carried by a Przyjaciel", () => {
    * The Gnom's whole bargain is that the spell cannot be had for nothing, so
    * the ordinary casting path must not reach a carried card at all.
    */
-  it("cannot be spoken by the character through the ordinary cast", () => {
-    expect(() =>
+  it("cannot be spoken by the character through the ordinary cast", async () => {
+    await expect(
       castSpell(carrying("gnom"), { seatId: "seat-a", holdingId: "h-spell" }, ports()),
-    ).toThrow(/nie ma tego Zaklęcia/);
+    ).rejects.toThrow(/nie ma tego Zaklęcia/);
   });
 
   /** 6.4: the friend leaves, and what he was holding goes where 9.6 sends it. */

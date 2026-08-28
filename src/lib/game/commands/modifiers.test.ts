@@ -146,7 +146,7 @@ describe("the Magiczny Miecz, which cannot be had in the Dolny Krąg", () => {
 });
 
 describe("the Kryształ Magów, whose owner gives up magic", () => {
-  it("refuses to speak a Zaklęcie", () => {
+  it("refuses to speak a Zaklęcie", async () => {
     const table = aTable({
       seats: [aSeat({ id: "seat-a" })],
       holdings: [
@@ -154,8 +154,8 @@ describe("the Kryształ Magów, whose owner gives up magic", () => {
         aHolding({ id: "h1", seat_id: "seat-a", card_id: "wladca-gromu", kind: "spell" }),
       ],
     });
-    expect(() => castSpell(table, { seatId: "seat-a", holdingId: "h1" }, ports())).toThrow(
-      /Kryształu Magów/,
-    );
+    await expect(
+      castSpell(table, { seatId: "seat-a", holdingId: "h1" }, ports()),
+    ).rejects.toThrow(/Kryształu Magów/);
   });
 });

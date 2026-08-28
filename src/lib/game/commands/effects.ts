@@ -76,6 +76,15 @@ export interface ApplyEffect {
    * `FromThePile` in `./draw`.
    */
   shuffle: Shuffle;
+  /**
+   * Who gains, where an effect moves a card rather than destroying it.
+   *
+   * Only `zabierz` uses it, and only three Zaklęcia use that: `seatId` is the
+   * victim the spell was aimed at, and this is the caster it changes hands to.
+   * Absent everywhere else, because nothing else in the box takes a card *for*
+   * somebody.
+   */
+  toSeatId?: string;
 }
 
 /** How many of a thing, in Polish. */
@@ -185,7 +194,52 @@ async function walk(
    *
    * Written here rather than inside `isSettled` because that function is the
    * browser's too and answers about an effect alone, with no decisions in hand.
+   *
+   * `zabierz` is the same shape from the other side — somebody has to say which
+   * card changes hands — so it passes the same way once they have.
    */
+  /**
+   * A die table is rolled before the gate, because the gate asks about the
+   * whole table and a throw lands on one row of it.
+   *
+   * `isSettled` calls a `rzut` settled only when *every* face is, which is the
+   * right answer for the browser — it cannot know the face before the die is
+   * thrown — and the wrong one here. Fatum has a choice on its fifth face and
+   * nothing else, and that one row made the other five unreachable: the table
+   * was refused whole for a question only one of its outcomes asks.
+   *
+   * `resolveFieldOffer` and `resolveDrawnCard` roll a table that *is* the whole
+   * effect and hand the face down; this is every other one, and it journals the
+   * die the same way, because a table that rolled silently is a table nobody
+   * can check.
+   */
+  if (effect.op === "rzut") {
+    // Two dice are two throws and a sum, not one throw of a bigger die: the
+    // distribution is the whole point of a 2-12 table.
+    const face =
+      effect.kostki === 2
+        ? (await ports.random.rollD6(`${reason}: tabela (1)`)) +
+          (await ports.random.rollD6(`${reason}: tabela (2)`))
+        : await ports.random.rollD6(`${reason}: tabela`);
+    const rolled: Changeset = {
+      journal: [
+        {
+          seatId,
+          turn: snapshot.game.turn,
+          kind: "field-table",
+          payload: { offer: reason, face },
+        },
+      ],
+    };
+    const landed = effect.faces[face];
+    if (!landed) return { writes: rolled, result: { did: [`${face}: nic`], pending: null } };
+    const done = await walk(apply(snapshot, rolled), command, landed, `${reason} (${face})`, ports);
+    return {
+      writes: merge(rolled, done.writes),
+      result: { did: done.result.did, pending: done.result.pending },
+    };
+  }
+
   /**
    * A condition the app can test is the app's to test, and only the branch it
    * takes is anybody's to answer.
@@ -219,7 +273,9 @@ async function walk(
   }
 
   const holderPicks =
-    effect.op === "strata" && !isSettled(effect) && (decided.choices?.length ?? 0) > 0;
+    (effect.op === "strata" || effect.op === "zabierz") &&
+    !isSettled(effect) &&
+    (decided.choices?.length ?? 0) > 0;
   if (!isSettled(effect) && !holderPicks) return owed();
 
   switch (effect.op) {
@@ -240,46 +296,6 @@ async function walk(
         did.push(...done.result.did);
       }
       return { writes, result: { did, pending: null } };
-    }
-
-    /**
-     * A die table reached from inside something else.
-     *
-     * `resolveFieldOffer` rolls a table that *is* the offer and hands the face
-     * down, so this is only for the nested ones — and until the Czarci Młyn
-     * there were none, because every table in the box was the whole of what its
-     * Obszar or Karta did. That one puts a different table behind two of the
-     * three Natury, so the roll cannot happen until the condition has been
-     * tested and it lands here instead.
-     *
-     * Journalled the same way a top-level table is: the die is the interesting
-     * part and a table that rolled silently would be a table nobody can check.
-     */
-    case "rzut": {
-      // Two dice are two throws and a sum, not one throw of a bigger die: the
-      // distribution is the whole point of a 2-12 table.
-      const face =
-        effect.kostki === 2
-          ? (await ports.random.rollD6(`${reason}: tabela (1)`)) +
-            (await ports.random.rollD6(`${reason}: tabela (2)`))
-          : await ports.random.rollD6(`${reason}: tabela`);
-      const rolled: Changeset = {
-        journal: [
-          {
-            seatId,
-            turn: snapshot.game.turn,
-            kind: "field-table",
-            payload: { offer: reason, face },
-          },
-        ],
-      };
-      const landed = effect.faces[face];
-      if (!landed) return { writes: rolled, result: { did: [`${face}: nic`], pending: null } };
-      const done = await walk(apply(snapshot, rolled), command, landed, `${reason} (${face})`, ports);
-      return {
-        writes: merge(rolled, done.writes),
-        result: { did: done.result.did, pending: done.result.pending },
-      };
     }
 
     /**
@@ -399,6 +415,71 @@ async function walk(
       return {
         writes: mergeAll(keepOnly(snapshot, seatId, left), lifted, piled),
         result: { did: [`uwalniasz się od: ${name}`], pending: null },
+      };
+    }
+
+    /**
+     * A card taken off the victim and handed to the caster.
+     *
+     * Not a `strata`: what is taken changes hands and is still in the game,
+     * which is the whole of the Pan Przyjaciół — "dołączyć go do swoich".
+     *
+     * Which card goes is answered the same way every other choice is, as an
+     * index into the candidates. Whose answer it is differs by card and is the
+     * data's business, not this function's: 5.6 gives it to the victim, and
+     * Szaleństwo's own text takes it back — "obejrzeć Zaklęcia i wybrać jedno
+     * z nich", the one place a hand held under 9.3 is opened to somebody else.
+     */
+    case "zabierz": {
+      const taker = command.toSeatId;
+      if (!taker) return nothing(["nie wiadomo, komu miałoby przypaść"]);
+      if (taker === seatId) return nothing(["nie zabierasz Kart samemu sobie"]);
+
+      // "jeden Przedmiot lub jedną Sztukę Złota" — the coin is the simpler half
+      // and is taken when the victim has no Przedmiot to give.
+      const kind = effect.co === "przedmiot-lub-zloto" ? "item" : reachableBy(effect.co);
+      const mine = snapshot.holdings.filter(
+        (held) => held.seat_id === seatId && held.kind === kind,
+      );
+
+      if (mine.length === 0) {
+        const victim = snapshot.seats.find((one) => one.id === seatId);
+        if (effect.co === "przedmiot-lub-zloto" && victim && victim.gold > 0) {
+          return {
+            writes: {
+              seats: [
+                { id: victim.id, patch: { gold: victim.gold - 1 } },
+                ...snapshot.seats
+                  .filter((one) => one.id === taker)
+                  .map((one) => ({ id: one.id, patch: { gold: one.gold + 1 } })),
+              ],
+            },
+            result: { did: ["zabierasz 1 Sztukę Złota"], pending: null },
+          };
+        }
+        return nothing(["nie ma czego zabrać"]);
+      }
+
+      const picked = decided.choices?.shift();
+      if (picked === undefined) return owed();
+      const at = Math.min(Math.max(0, Math.trunc(picked)), mine.length - 1);
+      const card = mine[at];
+
+      return {
+        writes: {
+          holdings: {
+            patch: [{ id: card.id, patch: { seat_id: taker, slot: null, ordinal: null } }],
+          },
+          journal: [
+            {
+              seatId: taker,
+              turn: snapshot.game.turn,
+              kind: "taken",
+              payload: { cardId: card.card_id, kind: card.kind, od: seatId },
+            },
+          ],
+        },
+        result: { did: [`zabierasz: ${cardName(card.card_id)}`], pending: null },
       };
     }
 

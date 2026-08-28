@@ -3,7 +3,7 @@
 import { FIELDS, requireFieldId } from "@/lib/engine/board";
 import type { FieldId } from "@/lib/engine/board";
 import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
-import { movementCap } from "@/lib/engine/status";
+import { movementCap, moveMultiplier } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
 import { asCharacterId, startingKit, withoutItems } from "@/lib/engine/characters";
 import { stowStartingKit, type EqMode } from "@/lib/engine/slots";
@@ -335,8 +335,18 @@ export async function rollForMove(
   const seat = activeSeat(snapshot);
   if (snapshot.game.turn_state.phase !== "roll") throw new Error("Nie czas na rzut.");
 
-  const roll = await ports.random.rollD6("ruch: rzut kostką");
+  const thrown = await ports.random.rollD6("ruch: rzut kostką");
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+
+  /**
+   * Formuła Przestrzeni doubles the die, not the distance.
+   *
+   * "wynik rzutu kostką przy wykonywaniu ruchu należy pomnożyć przez 2" — the
+   * same distinction the Talizmany make in a fight, and it matters because the
+   * cap below is read against the result: a character under both the Formuła
+   * and an Mgła walks the smaller of the two, which is the Mgła.
+   */
+  const roll = thrown * moveMultiplier(statusesOf(snapshot, seat.id));
 
   // 11.10 offers the bridge as part of the move, so whether it is on the table
   // has to be settled before the destinations are drawn: a Magiczny Miecz is

@@ -9,7 +9,12 @@ import {
 } from "@/lib/engine/abilities";
 import { bonusFromHoldings, inEffect, type Reckoning } from "@/lib/engine/holdings";
 import { carriedCount, carryLimit, spellAllowance } from "@/lib/engine/derive";
-import { allStatuses, bonusFrom, type Status } from "@/lib/engine/status";
+import {
+  allStatuses,
+  bonusFrom,
+  magiaCountsAsMiecz,
+  type Status,
+} from "@/lib/engine/status";
 import type { TargetSeat } from "@/lib/engine/targets";
 import type { Holding } from "@/lib/engine/state";
 import type { EqMode, Slot } from "@/lib/engine/slots";
@@ -135,10 +140,13 @@ function natureOf(row: SeatRow): Nature | null {
 function inFight(
   total: { miecz: number; magia: number },
   abilities: readonly Ability[],
+  statuses: readonly Status[],
 ): { miecz: number; magia: number } {
   const champion = fightsForYou(abilities);
   if (champion) return champion;
-  return addsMagiaToMiecz(abilities)
+  // A held card and a spoken Zaklęcie do the same thing here — the Bojowy Rumak
+  // and Magia i Miecz — and a character with both folds its Magia in once.
+  return addsMagiaToMiecz(abilities) || magiaCountsAsMiecz(statuses)
     ? { miecz: total.miecz + total.magia, magia: total.magia }
     : total;
 }
@@ -215,6 +223,7 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
         magia: row.magic_own + walka.magia + under.magia,
       },
       heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)),
+      statuses,
     ),
     carried: carriedCount(holdings, mode),
     carryLimit: carryLimit(holdings, mode),

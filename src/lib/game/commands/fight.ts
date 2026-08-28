@@ -20,6 +20,7 @@ import {
   ringOf,
   type FieldId,
 } from "@/lib/engine/board";
+import type { Shuffle } from "@/lib/engine/deck";
 import { RAID_RANGE, withinRaid } from "@/lib/engine/raid";
 import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
 import { combatValueOf } from "@/lib/engine/cards";
@@ -52,6 +53,7 @@ import {
   type Snapshot,
 } from "../change";
 import { liftOffField } from "./holdings";
+import { applyEffect, type Decisions } from "./effects";
 import { asReturnable, putOnPile } from "./piles";
 import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById, seatView } from "./seat";
 import { floorOf } from "./spellFloor";
@@ -322,6 +324,10 @@ export interface CastSpell {
   seatId: string;
   holdingId: string;
   target?: { seatIndex?: number; note?: string; fieldCardId?: string };
+  /** Answers a spell's own effect asks for, where it has one (`SpellScript.stosuje`). */
+  decided?: Decisions;
+  /** How a pile is shuffled, for the spells that draw. */
+  shuffle?: Shuffle;
   /**
    * Set only by `speakCarriedSpell`, to reach a `carried` holding.
    *
@@ -407,11 +413,11 @@ function applySpell(
  * No dice — a Zaklęcie is spoken, never rolled — but it reads the clock,
  * because the claim on the floor lapses (17.3).
  */
-export function castSpell(
+export async function castSpell(
   snapshot: Snapshot,
   command: CastSpell,
   ports: CommandPorts,
-): Outcome<Cast> {
+): Promise<Outcome<Cast>> {
   const target = command.target ?? {};
   const caster = snapshot.seats.find((s) => s.id === command.seatId);
   if (!caster) throw new Error("Nie ma takiego gracza.");
@@ -511,6 +517,58 @@ export function castSpell(
     ? applySpell(apply(snapshot, cast), script.applies, target)
     : null;
 
+  /**
+   * What the spell does, where the effect vocabulary can say it.
+   *
+   * Chained onto everything above for the same reason `applies` is: the card
+   * has already gone to the pile and a `zaklecie` face would write the same
+   * `game.deck` again. Aimed at the seat the caster named where the spell names
+   * a victim, and at the caster otherwise — `target` is the spell's own word
+   * for who, and 9.6 lets a Zaklęcie reach anywhere on the board.
+   *
+   * Errors are not caught: a spell that cannot be carried out has been spent
+   * either way, and the refusal belongs to the player who spoke it rather than
+   * being swallowed into a line saying nothing happened.
+   */
+  /**
+   * Who the effect lands on, and why an unnamed victim is a refusal.
+   *
+   * A spell whose target is somebody else — "na wybraną Postać", "na inną
+   * Postać" — reaching nobody must not quietly land on the caster instead. That
+   * is the difference between a Siedem Wichrów and a Siedem Wichrów aimed at
+   * your own pack, and defaulting is exactly how it would happen.
+   *
+   * `siebie` and `brak` are the ones that mean the caster and say so.
+   */
+  const named =
+    target.seatIndex !== undefined
+      ? snapshot.seats.find((one) => one.seat_index === target.seatIndex)
+      : undefined;
+  const wantsAnother =
+    script?.target === "postac" ||
+    script?.target === "postac-lub-wrog" ||
+    script?.target === "siebie-lub-postac";
+  if (script?.stosuje && wantsAnother && !named && script.target === "postac") {
+    throw new Error(`${spell?.name ?? held.card_id} — wskaż Postać, na którą rzucasz.`);
+  }
+  const onSeat = named?.id ?? caster.id;
+  const worked = script?.stosuje
+    ? await applyEffect(
+        apply(snapshot, mergeAll(cast, applied?.writes ?? {})),
+        {
+          seatId: onSeat,
+          // Where a Zaklęcie moves a card rather than destroying it, the caster
+          // is who it moves to. Only the three that take one use this.
+          toSeatId: caster.id,
+          effect: script.stosuje,
+          reason: spell?.name ?? held.card_id,
+          decided: command.decided,
+          shuffle: command.shuffle ?? ((items) => [...items]),
+        },
+        ports,
+      )
+    : null;
+
   const victim =
     target.seatIndex !== undefined
       ? nameOfSeat(snapshot.users, target.seatIndex)
@@ -533,7 +591,7 @@ export function castSpell(
     ],
   };
 
-  const soFar = mergeAll(cast, applied?.writes ?? {}, said);
+  const soFar = mergeAll(cast, applied?.writes ?? {}, worked?.writes ?? {}, said);
 
   /**
    * A spell spoken puts the fight back where it started, and hands the floor

@@ -95,7 +95,27 @@ export type Modifier =
    * odwiedzając Pustelnię." A prohibition rather than a cost, and the only one
    * in the box that bars a whole kind of card from being picked up.
    */
-  | { kind: "bez-przyjaciol" };
+  | { kind: "bez-przyjaciol" }
+  /**
+   * Magia counts towards Miecz for one fight (Magia i Miecz).
+   *
+   * The Bojowy Rumak does the same thing as a held card and the spell does it
+   * as a status, which is why the reckoning has to ask both — a character with
+   * the Rumak and the Zaklęcie folds its Magia in once, not twice.
+   *
+   * "lecz nie w walce magicznej": there is no sense in adding Magia to Magia,
+   * and the card says so rather than leaving it to be worked out.
+   */
+  | { kind: "magia-do-miecza" }
+  /**
+   * The movement roll is doubled (Formuła Przestrzeni).
+   *
+   * "wynik rzutu kostką przy wykonywaniu ruchu należy pomnożyć przez 2" — the
+   * die, not the distance, which is the same distinction the Talizmany make in
+   * a fight. It multiplies where `move-max` caps, so a character under both
+   * walks the smaller of the two.
+   */
+  | { kind: "ruch-x2" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -180,6 +200,16 @@ export function afterFight(statuses: readonly Status[]): Status[] {
  */
 export function afterBreakout(statuses: readonly Status[], die: number): Status[] {
   return statuses.filter((status) => !(status.ends.kind === "rzut" && die <= status.ends.upTo));
+}
+
+/** Whether a status folds Magia into Miecz for a fight (Magia i Miecz). */
+export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
+  return statuses.some((status) => status.modifier.kind === "magia-do-miecza");
+}
+
+/** How much the movement roll is multiplied by (Formuła Przestrzeni). */
+export function moveMultiplier(statuses: readonly Status[]): number {
+  return statuses.some((status) => status.modifier.kind === "ruch-x2") ? 2 : 1;
 }
 
 /** Whether something is barring this character from gaining Przyjaciele (Zły Duch). */
@@ -384,6 +414,11 @@ export function markOf(status: Status): Mark {
     // character, there is simply something they may no longer do.
     case "bez-przyjaciol":
       return { glyph: "\u2298", tone: "zly", title };
+    // Both make the character worth more for a moment, so they read as the same
+    // upward mark a `points` buff does.
+    case "magia-do-miecza":
+    case "ruch-x2":
+      return { glyph: "\u25B2", tone: "dobry", title };
     case "note":
       return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };
   }
