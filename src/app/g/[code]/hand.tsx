@@ -31,7 +31,6 @@ export function Hand({
   seat,
   isMine,
   canAct,
-  trophies,
   slotted,
   carried,
   moving,
@@ -39,7 +38,6 @@ export function Hand({
   onCarry,
   onDragging,
   onDrop,
-  onTrade,
   onEquip,
   onUse,
   onWand,
@@ -50,7 +48,6 @@ export function Hand({
   isMine: boolean;
   canAct: boolean;
   slotted: boolean;
-  trophies: number;
   /** The card on the cursor, if any. */
   carried: Carried | null;
   /** A card is in the air, however it was picked up — so nothing offers to be read. */
@@ -61,7 +58,6 @@ export function Hand({
   /** The card id being dragged out of the pack, or null when the drag ends. */
   onDragging: (moving: { cardId: string; holdingId: string } | null) => void;
   onDrop: (holdingId: string) => void;
-  onTrade: () => void;
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it. Absent on somebody else's pack. */
   onUse?: (holdingId: string, cardId: string) => void;
@@ -109,6 +105,7 @@ export function Hand({
    * check against a limit and this one has none.
    */
   const friends = shown.filter((held) => held.kind === "friend");
+
   // Counted through the engine rather than beside it, so what the pack says is
   // what `takeCard` and `equipCard` will actually allow. Still counted here and
   // not sent down ready-made: `mine.holdings` carries the optimistic slot a
@@ -127,8 +124,15 @@ export function Hand({
    * it. The rules underneath are still `pack-order.ts`'s, and the doc comments
    * that explain why each of them is the way it is are still there.
    */
+  /**
+   * Neither Przyjaciele nor trofea are gear, and both were drawn as though they
+   * were. `carriedCount` counts `kind === "item"` and nothing else, so neither
+   * ever occupied one of 5.4's four — but both sat in the row of squares those
+   * four are drawn as, which is a picture contradicting the number above it.
+   * Each has a section of its own now.
+   */
   const inPack = shown
-    .filter((held) => held.kind !== "friend")
+    .filter((held) => held.kind !== "friend" && held.kind !== "trophy")
     .filter((held) => !slotted || held.slot == null);
   const packOrder = inPack.map((held) => held.id);
   const {
@@ -604,14 +608,6 @@ export function Hand({
         {seat.hidden_count > 0 && <CardBack count={seat.hidden_count} />}
       </div>
 
-      {isMine && trophies > 0 && (
-        <button
-          onClick={onTrade}
-          className="mt-2 rounded border border-edge px-2 py-1 text-[11px] text-ink transition hover:border-ochre"
-        >
-          Wymień trofea na punkty Miecza (1.4)
-        </button>
-      )}
     </Fold>
     <FriendsHeld
       friends={friends}

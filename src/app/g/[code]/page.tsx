@@ -1103,6 +1103,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               onExplain={() => openAt("wariant", null)}
               onEqMode={(eqMode) => setHouseRule({ eq_mode: eqMode })}
               onEndlessStock={(on) => setHouseRule({ endless_stock: on })}
+              /* Absent until the engine half lands, which is what keeps the
+                 group off the panel rather than on it and refused. */
+              trophyMode={game.trophy_mode}
+              onTrophyMode={(mode) => setHouseRule({ trophy_mode: mode })}
             />
           }
           characters={CHARACTERS}

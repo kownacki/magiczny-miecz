@@ -58,6 +58,14 @@ export interface Game {
   eq_mode: string;
   /** Whether the Wyposażenie pile can run out (21.2). One way only. */
   endless_stock: boolean;
+  /**
+   * Which trofea rule the table plays (1.4) — see `docs/TROFEA.md`.
+   *
+   * Optional because the engine half has not landed yet: until the envelope
+   * carries it, the control is not drawn at all rather than drawn and refused.
+   * "cards" is 1.4 as printed and "points" is the variant.
+   */
+  trophy_mode?: "cards" | "points";
   join_code: string;
   mode: string;
   status: string;
@@ -142,7 +150,7 @@ export interface Table {
   notices: Notice[];
   dismissNotice: (id: number) => void;
   /** Moves one of the table's house rules — the host's, and instant. */
-  setHouseRule: (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => void;
+  setHouseRule: (patch: Partial<Pick<Game, "eq_mode" | "endless_stock" | "trophy_mode">>) => void;
   busy: boolean;
   refresh: () => Promise<void>;
   /** One request, with its body checked against what that route reads. */
@@ -205,7 +213,7 @@ export function useTable(code: string): Table {
    * Cleared when the server reports the same thing, so a request that never
    * arrived reverts on the next poll rather than lingering as a lie.
    */
-  const [houseRules, setHouseRules] = useState<Partial<Pick<Game, "eq_mode" | "endless_stock">>>(
+  const [houseRules, setHouseRules] = useState<Partial<Pick<Game, "eq_mode" | "endless_stock" | "trophy_mode">>>(
     {},
   );
   /**
@@ -721,7 +729,7 @@ export function useTable(code: string): Table {
    * the switch back where the table actually has it.
    */
   const sendHouseRule = useSettled(
-    async (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => {
+    async (patch: Partial<Pick<Game, "eq_mode" | "endless_stock" | "trophy_mode">>) => {
       /**
        * Deliberately not `post`, which raises `busy` for the whole page.
        *
@@ -737,6 +745,7 @@ export function useTable(code: string): Table {
           token: readSeatToken(code),
           ...(patch.eq_mode !== undefined ? { eqMode: patch.eq_mode } : {}),
           ...(patch.endless_stock !== undefined ? { endlessStock: patch.endless_stock } : {}),
+          ...(patch.trophy_mode !== undefined ? { trophyMode: patch.trophy_mode } : {}),
         }),
       });
       if (!response.ok) {
@@ -762,7 +771,7 @@ export function useTable(code: string): Table {
   );
 
   const setHouseRule = useCallback(
-    (patch: Partial<Pick<Game, "eq_mode" | "endless_stock">>) => {
+    (patch: Partial<Pick<Game, "eq_mode" | "endless_stock" | "trophy_mode">>) => {
       setHouseRules((was) => ({ ...was, ...patch }));
       sendHouseRule(patch);
     },

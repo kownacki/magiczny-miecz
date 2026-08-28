@@ -44,6 +44,11 @@ export interface Requests {
     fieldCardId: string;
     holdingId: string;
     holdingIds: string[];
+    /**
+     * `trade`: which trofea to hand in (1.4). Absent means all of them, which
+     * is what a player cashing out is usually after — see `tradeTrophies`.
+     */
+    cardIds: string[];
     slot: string | null;
     nature: string;
     note: string;
@@ -70,7 +75,7 @@ export interface Requests {
    * because a body carrying both would let a stale lobby page put back a
    * setting somebody else had just changed.
    */
-  settings: { eqMode: string; endlessStock: boolean };
+  settings: { eqMode: string; endlessStock: boolean; trophyMode: string };
   start: Record<never, never>;
   turn: {
     action: string;

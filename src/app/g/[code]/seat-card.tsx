@@ -27,6 +27,7 @@ import { characterImageUrl } from "@/lib/view/cardImages";
 import { type TileCard } from "./card-tile";
 import { CarriedCard, type Carried } from "./carry";
 import { Hand } from "./hand";
+import { TrophySection } from "./trophy-section";
 import { dismissableOpen } from "./overlay";
 import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
@@ -148,7 +149,6 @@ export function SeatCard({
   spells?: React.ReactNode;
 }) {
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
-  const trophies = seat.holdings.filter((h) => h.kind === "trophy");
 
   /**
    * The card on the cursor.
@@ -754,18 +754,27 @@ export function SeatCard({
             isMine={isMine}
             canAct={canAdjust}
             slotted={slotted}
-            trophies={trophies.length}
             carried={carried}
             moving={movingCardId !== null}
             liftedHoldingId={liftedHoldingId}
             onCarry={setCarried}
             onDragging={announceDrag}
             onDrop={onDrop}
-            onTrade={onTrade}
             onEquip={onEquip}
             onUse={onUse}
             onWand={onWand}
             onReorder={onReorder}
+            onInspect={onInspect}
+          />
+          {/* After the Przyjaciele and before the Zaklęcia, so the card reads
+              as one story: what you wear, what you carry, who walks with you,
+              what you have killed, what you know. Each section a different kind
+              of thing rather than four flavours of inventory. */}
+          <TrophySection
+            seat={seat}
+            isMine={isMine}
+            busy={!canAdjust}
+            onTrade={isMine ? onTrade : undefined}
             onInspect={onInspect}
           />
           {spells}

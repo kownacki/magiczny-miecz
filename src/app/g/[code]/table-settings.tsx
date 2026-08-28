@@ -33,6 +33,8 @@ export function TableSettings({
   onExplain,
   onEqMode,
   onEndlessStock,
+  trophyMode,
+  onTrophyMode,
 }: {
   eqMode: EqMode;
   endlessStock: boolean;
@@ -57,6 +59,16 @@ export function TableSettings({
   canChange: boolean;
   onEqMode: (eqMode: EqMode) => void;
   onEndlessStock: (on: boolean) => void;
+  /**
+   * Which trofea rule the table plays (1.4) — see `docs/TROFEA.md`.
+   *
+   * Optional, and the group is not drawn without it: the engine half is still
+   * landing, and a switch that posts to a route which does not know the field
+   * yet is a switch that lies until somebody else's work arrives. It appears
+   * the moment the envelope carries the mode.
+   */
+  trophyMode?: "cards" | "points";
+  onTrophyMode?: (mode: "cards" | "points") => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -136,6 +148,42 @@ export function TableSettings({
         ]}
         canChange={canChange}
       />
+
+      {trophyMode && onTrophyMode && (
+        <Group
+          legend="Trofea"
+          options={[
+            {
+              active: trophyMode === "points",
+              label: "Punkty",
+              hint: "Pokonany Wróg wraca na stos zużytych, a jego punkty zostają przy Postaci. Wymieniasz je, kiedy chcesz.",
+              onPick: () => onTrophyMode("points"),
+            },
+            {
+              active: trophyMode === "cards",
+              label: "Karty pokonanych",
+              /**
+               * The one that closes, and it closes the same way the finite pile
+               * does — only ever in one direction.
+               *
+               * In the poczekalnia either answer is free. Once play has begun
+               * the Karty are in people's hands: turning the variant *on* is a
+               * conversion the table can make together, since every held Karta
+               * has a printed number and becomes that many points. Turning it
+               * back *off* would have to invent cards to hand back, and there
+               * are none — the Wrogowie went to the stos zużytych as they died.
+               */
+              unavailable:
+                started && trophyMode === "points"
+                  ? "Gra już trwa — Karty pokonanych wracają dopiero przy nowym stole."
+                  : undefined,
+              hint: "Zatrzymujesz Kartę każdego pokonanego Wroga i oddajesz wybrane, gdy chcesz (1.4).",
+              onPick: () => onTrophyMode("cards"),
+            },
+          ]}
+          canChange={canChange}
+        />
+      )}
 
       {/* Only for a guest, who is reading the answers rather than giving them:
           naming who to ask is their next move.
