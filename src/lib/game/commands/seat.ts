@@ -309,7 +309,11 @@ export function setEndlessStock(
           turn: snapshot.game.turn,
           kind: "override",
           payload: { what: "endless-stock" },
-          manual: true,
+          // Not `manual`. That flag draws "tryb testowy" beside the line and
+          // means somebody overruled the referee from the console; this is the
+          // host settling a house rule, which the table agreed to and which the
+          // app then keeps. Marking it manual would file a legitimate decision
+          // as a correction.
         },
       ],
     },

@@ -522,6 +522,16 @@ export function describe(
        * withdrawal rendered as "Ola: ? 0 (0 → 0)", every field of it missing,
        * because the reader assumed the only override there had ever been.
        */
+      /**
+       * The table's own rule, moved by the host. Not somebody's number and not
+       * a Postać leaving, so it takes neither branch below — and without this
+       * it fell into the numeric one and read "Ktoś: ? 0 (0 → 0)", which is
+       * word for word the failure the note above was written about. A third
+       * override arrived and the reader still assumed two.
+       */
+      if (data.what === "endless-stock") {
+        return line("Zwykłego Wyposażenia nie będzie już brakować (21.2).");
+      }
       if (data.what === "remove" || data.what === "revive") {
         const postac = characterName(data.character);
         const named = remember("character", data.character, postac);
