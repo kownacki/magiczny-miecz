@@ -192,7 +192,7 @@ export async function setEqMode(gameId: string, eqMode: "slots" | "classic"): Pr
 }
 
 /** How this table keeps a beaten Wróg (1.4). Poczekalnia only. */
-export async function setTrophyMode(gameId: string, mode: "punkty" | "karty"): Promise<void> {
+export async function setTrophyMode(gameId: string, mode: "points" | "cards"): Promise<void> {
   await change(gameId, setTrophyModeOn, { mode });
 }
 

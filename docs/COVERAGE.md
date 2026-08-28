@@ -62,7 +62,7 @@ they are rules, and one of them was missing.
 | 1.5 | total = own + Przedmioty + Przyjaciele | ✅ | `totalsFor` |
 
 ¹ A variant, not the printed rule, and the default — see docs/TROFEA.md. „Karty"
-plays 1.4 as written; „Punkty" banks the beaten Wróg's Miecz on the seat and
+plays 1.4 as written; „Punkty" (`points`) banks the beaten Wróg's Miecz on the seat and
 sends the Karta to the stos zużytych. The rate, the refusal below it and the
 loss on death are the same either way, so nothing above this line changes.
 

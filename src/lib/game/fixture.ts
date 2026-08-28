@@ -101,7 +101,7 @@ export function aTable(over: TableOver = {}): Snapshot {
     // The printed rule, not the database's default. A fixture that quietly
     // moved every trophy test onto the variant would be testing the variant
     // and saying it tested 1.4. Tests for `punkty` pass it explicitly.
-    trophy_mode: "karty",
+    trophy_mode: "cards",
     endless_stock: false,
     die_source: "app",
     status: "playing",

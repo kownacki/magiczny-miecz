@@ -87,7 +87,7 @@ export function tradeTrophies(
    * points back, and a variant that was harsher than the rule it replaces would
    * be changing the game rather than the bookkeeping.
    */
-  if (trophyModeOf(snapshot.game) === "punkty") {
+  if (trophyModeOf(snapshot.game) === "points") {
     const swords = Math.floor(seat.trophy_points / TROPHY_RATE);
     if (swords < 1) {
       throw new Error(

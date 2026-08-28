@@ -34,8 +34,8 @@ export function eqModeOf(game: { eq_mode: string }): EqMode {
  * is a `string` and every reader would otherwise have its own opinion about
  * what an unrecognised value means.
  */
-export function trophyModeOf(game: { trophy_mode?: string }): "punkty" | "karty" {
-  return game.trophy_mode === "karty" ? "karty" : "punkty";
+export function trophyModeOf(game: { trophy_mode?: string }): "points" | "cards" {
+  return game.trophy_mode === "cards" ? "cards" : "points";
 }
 
 export function asHolding(row: HoldingRow): Holding {

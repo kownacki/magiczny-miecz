@@ -127,10 +127,10 @@ The variant is in, verified at the terminal rather than only in tests: nine
 Nobbiny → 18 pkt → `trade` → 2 Miecze and 4 points left standing, and `kill`
 takes the score to zero.
 
-- **`games.trophy_mode`** — `'punkty'` (default) or `'karty'`. Read it through
+- **`games.trophy_mode`** — `'points'` (default) or `'cards'`. Read it through
   `trophyModeOf` in `commands/seat.ts`; never off the row.
 - **`seats.trophy_points`** — the running total the seat card asked to be named.
-  Integer, never null, zero in „Karty" mode. **This is the field to draw.**
+  Integer, never null, zero in „Karty pokonanych" mode. **This is the field to draw.**
 - `setTrophyMode` in `commands/lobby.ts` refuses once `status !== "lobby"`, the
   same shape as `setEqMode` and for a sharper reason: by then the choice is
   already applied to a card, and neither direction can be reinterpreted —
@@ -141,11 +141,19 @@ takes the score to zero.
   zużytych. A conjured Wróg (`granted`) scores and returns nothing, because the
   deck still holds its own copy.
 - `killSeat` zeroes the points beside `eliminated`, which is the constraint above.
-- Console: `trophies` reads the mode, `trophies punkty|karty` sets it in the
+- Console: `trophies` reads the mode, `trophies points|cards` sets it in the
   poczekalnia, and `me` prints the ledger in whichever mode the table plays.
 
-**Not yet applied to the live database.** Both columns are in `db/schema.sql`;
-a browser game will error on the first fight won until the migration is run.
+**Applied to the live database**, 2026-08-28, and the settings route now reads
+`trophyMode` — it declared the field and ignored it, so the switch moved on
+screen and changed nothing.
+
+**The values are English**, `points` / `cards`, not the Polish of this doc's
+headings. They were `punkty` / `karty` for a day. Every other stored enum in the
+schema is English — `classic|slots`, `lobby|playing|finished`,
+`good|evil|chaotic` — and the seat-card session had already written its toggle
+against `points`, so the Polish outlier was the thing to move. The Polish stays
+where a player reads it: „Punkty" and „Karty pokonanych" are labels, not values.
 
 ## Attributing work between sessions
 

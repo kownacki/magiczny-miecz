@@ -64,7 +64,7 @@ create table if not exists magiczny_miecz.games (
   -- tracks numbers perfectly keeps the ceremony after removing its reason. And
   -- a held trophy is a card out of circulation — 9.5 reshuffles only the used
   -- pile, so hoarding locks away an eighth of the deck's Karty Zdarzeń.
-  trophy_mode text not null default 'punkty' check (trophy_mode in ('punkty', 'karty')),
+  trophy_mode text not null default 'points' check (trophy_mode in ('points', 'cards')),
   -- Where randomness comes from. 'physical' means a human types in what they
   -- rolled; this is the RandomPort's binding, stored so it survives a reload.
   die_source text not null default 'app' check (die_source in ('app', 'physical')),

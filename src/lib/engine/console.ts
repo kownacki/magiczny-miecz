@@ -217,7 +217,7 @@ export type Command =
   | { kind: "heal"; points: number | null }
   | { kind: "cast"; name: string; who: string | null }
   | { kind: "trade"; cards: string[] }
-  | { kind: "trophies"; mode: "punkty" | "karty" | null }
+  | { kind: "trophies"; mode: "points" | "cards" | null }
   /**
    * What a card asked, answered.
    *
@@ -406,7 +406,7 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     when: ["none", "lobby"],
     offTable: false,
-    usage: "trophies [punkty|karty]",
+    usage: "trophies [points|cards]",
     summary: "how beaten Wrogowie are kept (1.4) — points, or the Karty as printed",
     needs: "play",
   },
@@ -1211,10 +1211,10 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "trophies") {
     if (!tail) return { ok: { kind: "trophies", mode: null } };
     const asked = tail.trim().toLowerCase();
-    if (asked === "punkty" || asked === "karty") {
+    if (asked === "points" || asked === "cards") {
       return { ok: { kind: "trophies", mode: asked } };
     }
-    return needs("trophies", "`punkty` (points) or `karty` (the Karty, as printed)?");
+    return needs("trophies", "`points` (score them) or `cards` (keep the Karty, as printed)?");
   }
   if (word === "trade") {
     // Commas or spaces: "trade CYKLOP, NOBBIN" and "trade CYKLOP NOBBIN" are the

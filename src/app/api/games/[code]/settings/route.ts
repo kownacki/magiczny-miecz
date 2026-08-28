@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { bodyOf } from "@/lib/game/requests";
 import { findGame, verifyActor } from "@/lib/game/store";
-import { setEqMode } from "@/lib/game/lobbyStore";
+import { setEqMode, setTrophyMode } from "@/lib/game/lobbyStore";
 import { endlessStock } from "@/lib/game/turnStore";
 
 /**
@@ -46,6 +46,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
     if (body.endlessStock !== undefined) {
       await endlessStock(game.id, body.endlessStock === true);
+    }
+    /**
+     * How this table keeps a beaten Wróg (1.4). See docs/TROFEA.md.
+     *
+     * Read the same way `eqMode` is — one of two words or the other one, never
+     * whatever arrived. `setTrophyMode` is what refuses it once the game has
+     * started; this only decides which of the two was asked for.
+     */
+    if (body.trophyMode !== undefined) {
+      await setTrophyMode(game.id, body.trophyMode === "cards" ? "cards" : "points");
     }
     return NextResponse.json({ ok: true });
   } catch (error) {

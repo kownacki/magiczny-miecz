@@ -23,13 +23,13 @@ const won = (over: {
   opponentSeat?: number;
   granted?: boolean;
   outcome?: string;
-  mode?: "punkty" | "karty";
+  mode?: "points" | "cards";
 } = {}) => {
   const cardId = over.cardId ?? "cyklop";
   return aTable({
     game: {
       active_seat: 0,
-      trophy_mode: over.mode ?? "karty",
+      trophy_mode: over.mode ?? "cards",
       turn_state: {
         phase: "fight",
         fight: {
@@ -125,14 +125,14 @@ describe("keeping a beaten Wróg (16.2)", () => {
    */
   describe("in punkty mode", () => {
     it("scores the Wróg rather than keeping it", async () => {
-      const after = await settle(won({ mode: "punkty" }));
+      const after = await settle(won({ mode: "points" }));
       expect(trophies(after)).toEqual([]);
       // CYKLOP's printed Miecz, not the fight's totals.
       expect(after.seats[0].trophy_points).toBe(6);
     });
 
     it("adds a pack up", async () => {
-      const pack = await settle(won({ mode: "punkty", fought: ["cyklop", "nobbin"] }));
+      const pack = await settle(won({ mode: "points", fought: ["cyklop", "nobbin"] }));
       expect(pack.seats[0].trophy_points).toBe(6 + 2);
     });
 
@@ -141,20 +141,20 @@ describe("keeping a beaten Wróg (16.2)", () => {
      * zużytych — a Wróg that vanished would shrink the deck a card per fight.
      */
     it("puts the Karta back on the used pile", async () => {
-      const after = await settle(won({ mode: "punkty" }));
+      const after = await settle(won({ mode: "points" }));
       // A pile holds refs, not ids — one Wróg has several copies (`decks.ts`).
       expect(returned(after, "cyklop")).toHaveLength(1);
     });
 
     /** A conjured Cyklop was never dealt, so it must not arrive on the pile. */
     it("returns nothing that the deck still holds", async () => {
-      const after = await settle(won({ mode: "punkty", granted: true }));
+      const after = await settle(won({ mode: "points", granted: true }));
       expect(after.seats[0].trophy_points).toBe(6);
       expect(returned(after, "cyklop")).toEqual([]);
     });
 
     it("scores nothing for a Wróg fought magically, as the Karta rule keeps none", async () => {
-      const after = await settle(won({ mode: "punkty", cardId: "demon" }));
+      const after = await settle(won({ mode: "points", cardId: "demon" }));
       expect(after.seats[0].trophy_points).toBe(0);
     });
   });

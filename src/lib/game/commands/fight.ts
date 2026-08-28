@@ -1514,7 +1514,7 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
    * never gave that copy up. Both halves of `granted` matter here and they pull
    * different ways, which is why the pile is asked separately from the score.
    */
-  if (trophyModeOf(snapshot.game) === "punkty") {
+  if (trophyModeOf(snapshot.game) === "points") {
     const points = won.reduce((sum, one) => sum + one.points, 0);
     const real = won.filter(({ cardId }) => !staged.has(cardId));
     return mergeAll(

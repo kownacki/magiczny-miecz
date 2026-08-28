@@ -119,7 +119,7 @@ describe("trading trophies (1.4)", () => {
   describe("in punkty mode", () => {
     const scoring = (points: number, sword = 2) =>
       aTable({
-        game: { trophy_mode: "punkty" },
+        game: { trophy_mode: "points" },
         seats: [aSeat({ id: "seat-a", sword_own: sword, trophy_points: points })],
       });
 

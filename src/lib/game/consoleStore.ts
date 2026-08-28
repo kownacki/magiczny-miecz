@@ -843,7 +843,7 @@ export async function runCommand(
       if (command.mode === null) {
         const mode = trophyModeOf(snapshot.game);
         const how =
-          mode === "karty"
+          mode === "cards"
             ? "the Karty are kept and handed in (as printed)"
             : "Wrogowie are scored and the Karty go back to the pile";
         const may = snapshot.game.status === "lobby" ? "" : " — the game has started, so it stands.";
@@ -1584,7 +1584,7 @@ export async function runCommand(
          * Phrased as the Karty are, minus the waste: nothing is handed in, so a
          * remainder stays where it is and there is nothing to warn about.
          */
-        ...(trophyModeOf(snapshot.game) === "punkty" && seat.trophy_points > 0
+        ...(trophyModeOf(snapshot.game) === "points" && seat.trophy_points > 0
           ? [`Trophies: ${pointLedger(seat.trophy_points)}`]
           : []),
         ...(trophies.length

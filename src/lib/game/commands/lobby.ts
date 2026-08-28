@@ -417,7 +417,7 @@ export function unseat(
  */
 export function setTrophyMode(
   snapshot: Snapshot,
-  command: { mode: "punkty" | "karty" },
+  command: { mode: "points" | "cards" },
 ): Outcome<void> {
   if (snapshot.game.status !== "lobby") {
     throw new Error("Trofea wybiera się przed rozpoczęciem gry — w trakcie już nie do zmiany.");
