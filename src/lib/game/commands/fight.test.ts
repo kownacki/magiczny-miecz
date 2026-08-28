@@ -71,10 +71,22 @@ const pileIn = (writes: { game?: { deck?: unknown } }, which: "events" | "spells
  * ----------------------------------------------------------------------- */
 
 describe("otwarcie walki (17.4, 17.5)", () => {
+  /**
+   * Wrzosowiska rather than the fixture's Mroczna Polana, because six Obszary
+   * make every Wróg met on them stronger and the Polana is one of them: "Każdy
+   * Wróg ... dodaje 1 punkt do swojej Magii lub Miecza." These are tests about
+   * combat arithmetic and not about the ground, so they stand somewhere the
+   * ground does nothing.
+   */
   const table = (over: Partial<TurnPhase> = {}, holdings = [aHolding()], nature = "good") =>
     aTable({
-      game: { active_seat: 0, turn_state: { ...pole(), ...over } as TurnPhase },
-      seats: [aSeat({ sword_own: 2, magic_own: 1, nature })],
+      game: {
+        active_seat: 0,
+        turn_state: { ...pole(), fieldId: "wrzosowiska", ...over } as TurnPhase,
+      },
+      seats: [
+        aSeat({ sword_own: 2, magic_own: 1, nature, field_id: asFieldId("wrzosowiska") }),
+      ],
       holdings,
     });
 

@@ -169,6 +169,7 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   "jak-pole": { op: "jak-pole", fieldId: "swiatynia-bogini-nemed" },
   "poloz-karte": { op: "poloz-karte", gdzie: { kind: "dowolne-w-kregu" } },
   otrzymaj: { op: "otrzymaj", co: "Magiczny Miecz" },
+  "rzut-za-kazdego": { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
   efekt: {
     op: "efekt",
     label: "Opętany",

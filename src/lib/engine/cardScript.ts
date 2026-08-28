@@ -263,6 +263,21 @@ export type Effect =
    * you may walk, held until something lifts it.
    */
   | { op: "efekt"; label: string; modifier: Modifier; ends: Ends }
+  /**
+   * One die per card of a kind, each thrown for that card alone.
+   *
+   * Both Urwiska: "Rzuć także za każdego z Przyjaciół: 1 lub 2 oczka Przyjaciel
+   * traci Życie (odłóż jego kartę)." Not a `strata` — nobody chooses and no
+   * single card is at stake — and not a `rzut`, whose one die decides one
+   * outcome for the whole seat. A character with four Przyjaciele throws four
+   * times and may lose all of them or none.
+   *
+   * `gubiPrzy` is the highest face that loses the card. The Kamienny Most's
+   * fall is the same shape with the polarity reversed — there 1 and 2 are what
+   * *keeps* a card — and it is left in `bridge.ts` where its own rule lives,
+   * because it reaches for Przedmioty as well and 14.5 states it separately.
+   */
+  | { op: "rzut-za-kazdego"; co: "przyjaciel" | "przedmiot"; gubiPrzy: number }
   /** Only happens to some characters (Posłańcy Bogów, Sabat Czarownic). */
   | { op: "gdy"; warunek: Condition; to: Effect; inaczej?: Effect };
 

@@ -13,7 +13,13 @@ import {
   raidsForYou,
   type EscapeTarget,
 } from "@/lib/engine/abilities";
-import { asFieldId, KAMIENNY_MOST, ringOf, type FieldId } from "@/lib/engine/board";
+import {
+  asFieldId,
+  foeBonusAt,
+  KAMIENNY_MOST,
+  ringOf,
+  type FieldId,
+} from "@/lib/engine/board";
 import { RAID_RANGE, withinRaid } from "@/lib/engine/raid";
 import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
 import { combatValueOf } from "@/lib/engine/cards";
@@ -198,7 +204,20 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
       "Zwykli i magiczni Wrogowie nie atakują razem — rozpatrzcie osobno (18.1).",
     );
   }
-  const { kind, total } = asOne;
+  const { kind } = asOne;
+
+  /**
+   * Six Obszary make every Wróg met on them stronger: "Każdy Wróg, z którym
+   * zmierzysz się w Kamiennym Lesie dodaje 3 punkty do swojej Magii lub
+   * Miecza."
+   *
+   * "Każdy" is the word that decides how it is counted. A pack attacking as one
+   * under 17.5 has its Miecze summed, and each of those is already the bigger
+   * number — so the ground's bonus is added once per creature, not once to the
+   * sum. The same Cyklop is worth six on most of the board and nine here.
+   */
+  const harder = foeBonusAt(seat.field_id);
+  const total = asOne.total + harder * foes.length;
 
   // The character brings everything it has (1.5, 17.4), not just its own
   // tokens: a Miecz card adds its point in the fight it was found for.

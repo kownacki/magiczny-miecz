@@ -186,6 +186,12 @@ export function describeEffect(effect: Effect): string {
     case "efekt":
       return effect.label;
 
+    case "rzut-za-kazdego":
+      return (
+        `rzut za każdego z ${effect.co === "przyjaciel" ? "Przyjaciół" : "Przedmiotów"} — ` +
+        `${effect.gubiPrzy} lub mniej i przepada`
+      );
+
     case "zaklecie":
       return `bierzesz ${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
 
@@ -317,6 +323,8 @@ export function summariseEffect(effect: Effect): string {
       return "dodatkowy ruch";
     case "efekt":
       return effect.label;
+    case "rzut-za-kazdego":
+      return effect.co === "przyjaciel" ? "rzut za każdego Przyjaciela" : "rzut za każdy Przedmiot";
 
     default:
       return "rozpatrzcie sami";

@@ -5,6 +5,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFieldOffer } from "./effects";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { breakFree } from "./friends";
+import { beginFight } from "./fight";
 import { movementCap } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
 import type { TurnPhase } from "@/lib/engine/turn";
@@ -444,5 +445,147 @@ describe("being held in place, and throwing to get out", () => {
     await expect(breakFree(praying("swiatynia-tolimana"), {}, ports())).rejects.toThrow(
       /Nic cię tu nie trzyma/,
     );
+  });
+});
+
+
+/**
+ * The Urwisko, which throws for the character and again for each Przyjaciel.
+ *
+ * "Rzuć kostką: 1 lub 2 oczka oznaczają, że tracisz 1 Życie. Rzuć także za
+ * każdego z Przyjaciół: 1 lub 2 oczka Przyjaciel traci Życie." So a character
+ * walking the cliff with three friends throws four times, and may lose all of
+ * them or none — which is neither a `strata` (nobody chooses) nor a `rzut`
+ * (one die settling one outcome for the whole seat).
+ */
+const onTheCliff = (who: string, friends: string[]) =>
+  aTable({
+    game: {
+      turn_state: {
+        phase: "field", fieldId: "urwisko-1", from: null, draw: 0, drawn: [], resolved: [],
+      } as TurnPhase,
+      active_seat: 0,
+    },
+    seats: [
+      aSeat({
+        id: "seat-a",
+        character_id: asSeatCharacter(who),
+        field_id: "urwisko-1",
+        life: 4,
+        nature: "good",
+      }),
+    ],
+    holdings: friends.map((cardId, at) =>
+      aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId, kind: "friend" }),
+    ),
+  });
+
+const walkTheCliff = async (who: string, friends: string[], dice: number[]) => {
+  const table = onTheCliff(who, friends);
+  const out = await resolveFieldOffer(
+    table,
+    { offerName: "Urwisko", decided: {}, shuffle: (items) => [...items] },
+    ports({ random: scriptedRandom(dice) }),
+  );
+  return { out, after: apply(table, out.writes) };
+};
+
+describe("the Urwisko, and one die for each Przyjaciel", () => {
+  it("costs the point on a one or a two, and nothing above", async () => {
+    expect((await walkTheCliff("awanturnik", [], [1])).after.seats[0].life).toBe(3);
+    expect((await walkTheCliff("awanturnik", [], [4])).after.seats[0].life).toBe(4);
+  });
+
+  /** A die each, so some go and some stay. */
+  it("throws separately for every Przyjaciel", async () => {
+    const { after, out } = await walkTheCliff(
+      "awanturnik",
+      ["pasterz", "krzyzowiec", "giermek"],
+      [5, 1, 4, 2],
+    );
+    expect(after.holdings.map((h) => h.card_id)).toEqual(["krzyzowiec"]);
+    expect(out.result.did.join(" ")).toMatch(/PASTERZ przepada/);
+    expect(out.result.did.join(" ")).toMatch(/KRZYŻOWIEC zostaje/);
+  });
+
+  it("keeps all of them when every die is high", async () => {
+    const { after } = await walkTheCliff("awanturnik", ["pasterz", "giermek"], [6, 6, 6]);
+    expect(after.holdings).toHaveLength(2);
+    expect(after.seats[0].life).toBe(4);
+  });
+
+  /**
+   * The bug this pins. The guard asked whether the offer was a top-level `rzut`,
+   * which held while every protected Obszar was one die and one table — and the
+   * Urwisko is a `po-kolei`, so the Opiekun, the Elflin and the Barbarzyńca
+   * walked straight into it. The cards say *where*, not *how*.
+   */
+  it("is walked past by the cards and Postacie written for it", async () => {
+    const byCard = await walkTheCliff("awanturnik", ["elflin", "pasterz"], [1, 1, 1]);
+    expect(byCard.after.seats[0].life).toBe(4);
+    expect(byCard.after.holdings).toHaveLength(2);
+    expect(byCard.out.result.did.join(" ")).toMatch(/bezpiecznie — bez rzutu/);
+
+    // The Barbarzyńca's own Karta names both Urwiska.
+    const byCharacter = await walkTheCliff("barbarzynca", ["pasterz"], [1, 1]);
+    expect(byCharacter.after.seats[0].life).toBe(4);
+    expect(byCharacter.after.holdings).toHaveLength(1);
+  });
+});
+
+
+/**
+ * Six Obszary that make every Wróg met on them stronger.
+ *
+ * "Każdy Wróg, z którym zmierzysz się w Kamiennym Lesie dodaje 3 punkty do
+ * swojej Magii lub Miecza." Not an offer and not a table — a property of the
+ * ground that the fight reads, which is why it lives in `board.ts` beside the
+ * fields rather than in a script.
+ *
+ * It went unimplemented longer than it should have because the clause reads
+ * like boilerplate: it sits under a "WYCIĄGNIJ 2 KARTY" on six different
+ * Obszary, and an audit that stripped the draw sentence stripped this with it.
+ */
+const meeting = (field: FieldId, foes: string[]) =>
+  aTable({
+    game: {
+      active_seat: 0,
+      turn_state: {
+        phase: "field",
+        fieldId: field,
+        from: null,
+        draw: 1,
+        drawn: foes.map((cardId) => ({ cardId, cardClass: "foe" })),
+      } as TurnPhase,
+    },
+    seats: [aSeat({ id: "seat-a", field_id: field })],
+  });
+
+const strengthAt = (field: FieldId, foes: string[]) =>
+  (
+    beginFight(meeting(field, foes), { cardIds: foes }).writes.game?.turn_state as {
+      fight: { enemyTotal: number };
+    }
+  ).fight.enemyTotal;
+
+describe("Obszary where a Wróg fights harder", () => {
+  it("leaves a creature alone on ground that says nothing", () => {
+    expect(strengthAt("wrzosowiska", ["cyklop"])).toBe(6);
+  });
+
+  it("adds what the Obszar prints", () => {
+    expect(strengthAt("mroczna-polana", ["cyklop"])).toBe(7);
+    expect(strengthAt("rownina-samotnych-skal", ["cyklop"])).toBe(8);
+    expect(strengthAt("kamienny-las", ["cyklop"])).toBe(9);
+  });
+
+  /**
+   * "Każdy" is the word that decides how a pack is counted. 17.5 sums their
+   * Miecze, and each of those is already the bigger number — so the ground's
+   * bonus lands once per creature, not once on the sum.
+   */
+  it("adds it once for each creature in a pack (17.5)", () => {
+    const alone = strengthAt("wrzosowiska", ["cyklop", "nobbin"]);
+    expect(strengthAt("kamienny-las", ["cyklop", "nobbin"])).toBe(alone + 3 * 2);
   });
 });

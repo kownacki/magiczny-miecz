@@ -33,7 +33,7 @@ import { beginNamedFight } from "./fight";
 import { nameOfSeat } from "./lobby";
 
 import { healSeat } from "./life";
-import { putOnPile } from "./piles";
+import { asReturnable, putOnPile } from "./piles";
 import { turnToStone } from "./stone";
 import { activeSeat, seatView } from "./seat";
 import { isSpared, skipsRollAt } from "@/lib/engine/abilities";
@@ -316,6 +316,59 @@ async function walk(
         },
       });
       return { writes: put, result: { did: [effect.label], pending: null } };
+    }
+
+    /**
+     * A die for each card of a kind, thrown for that card alone.
+     *
+     * Both Urwiska: "Rzuć także za każdego z Przyjaciół: 1 lub 2 oczka
+     * Przyjaciel traci Życie (odłóż jego kartę)." A character with four
+     * Przyjaciele throws four times and may lose all of them or none, which is
+     * why this is neither a `strata` (nobody chooses) nor a `rzut` (one die
+     * settling one outcome for the whole seat).
+     *
+     * 6.4 sends a Przyjaciel who dies to the used pile, which is where a
+     * discarded Przedmiot goes too — neither is left on the Obszar, because
+     * nobody put it down.
+     */
+    case "rzut-za-kazdego": {
+      // The board names the kinds in Polish and the rows are stored in the
+      // engine's own words; `reachableBy` is the one place that translation
+      // lives, so a loss and a roll agree about what a Przyjaciel is.
+      const kind = reachableBy(effect.co);
+      const mine = snapshot.holdings.filter(
+        (held) => held.seat_id === seatId && held.kind === kind,
+      );
+      if (mine.length === 0) {
+        return nothing([`nie masz ${effect.co === "przyjaciel" ? "Przyjaciół" : "Przedmiotów"}`]);
+      }
+
+      const gone: typeof mine = [];
+      const said: string[] = [];
+      for (const held of mine) {
+        const die = await ports.random.rollD6(`${reason}: ${held.card_id}`);
+        if (die <= effect.gubiPrzy) {
+          gone.push(held);
+          said.push(`${cardName(held.card_id)} przepada (${die})`);
+        } else {
+          said.push(`${cardName(held.card_id)} zostaje (${die})`);
+        }
+      }
+      if (gone.length === 0) return nothing(said);
+
+      const lifted: Changeset = { holdings: { delete: gone.map((held) => held.id) } };
+      const piled = putOnPile(apply(snapshot, lifted), "events", gone.map(asReturnable));
+      return {
+        writes: mergeAll(lifted, piled, {
+          journal: gone.map((held) => ({
+            seatId,
+            turn: snapshot.game.turn,
+            kind: "lost-card" as const,
+            payload: { cardId: held.card_id, kind: held.kind },
+          })),
+        }),
+        result: { did: said, pending: null },
+      };
     }
 
     case "otrzymaj": {
@@ -879,7 +932,19 @@ export async function resolveFieldOffer(
    * Marked resolved on the way out, so the turn does not stand there waiting for
    * an offer the character is entitled to ignore.
    */
-  if (table && skipsRollAt(seatView(snapshot, seat.id).abilities, seat.field_id)) {
+  /**
+   * Asked of the Obszar, not of the shape the offer happens to have.
+   *
+   * This used to require a top-level `rzut`, which held while every protected
+   * Obszar was one die and one table. The Urwisko is not: it throws once for
+   * the character and again for each Przyjaciel, so its offer is a `po-kolei`
+   * — and the Opiekun, the Elflin and the Barbarzyńca walked straight into it,
+   * because the guard was looking at the encoding rather than at the board.
+   *
+   * The cards say where, not how: "nie musisz wykonywać rzutów kostką w Wieży
+   * Przeznaczenia i na Urwisku. Zawsze możesz tamtędy bezpiecznie przejść."
+   */
+  if (skipsRollAt(seatView(snapshot, seat.id).abilities, seat.field_id)) {
     const passed: Changeset = {
       journal: [
         {

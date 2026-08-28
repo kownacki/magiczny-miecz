@@ -31,6 +31,8 @@ export function isSettled(effect: Effect): boolean {
     case "efekt":
     // The card is named and the stock is the app's to count.
     case "otrzymaj":
+    // A die per card, and nobody picks which — 5.6 is not engaged.
+    case "rzut-za-kazdego":
       return true;
 
     // Healing with no price is capped by 4.7 and has one answer. Healing that

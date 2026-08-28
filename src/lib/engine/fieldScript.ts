@@ -618,6 +618,60 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
     ],
   },
 
+  /**
+   * "Rzuć kostką: 1 lub 2 oczka oznaczają, że tracisz 1 Życie. Rzuć także za
+   * każdego z Przyjaciół: 1 lub 2 oczka Przyjaciel traci Życie."
+   *
+   * Two separate throws and the second is per Przyjaciel, so a character
+   * walking the cliff with four friends throws five times in all. The Obszary
+   * print the same rule in slightly different words — the first spells out
+   * "1 lub 2 oczka" where the second writes "1-2" — and mean the same thing.
+   *
+   * This is what the Opiekun, the Elflin and the Barbarzyńca walk past: their
+   * `bezpieczny` skips the roll, and skipping the roll skips the friends' rolls
+   * with it, which is what "zawsze możesz tamtędy bezpiecznie przejść" says.
+   */
+  "urwisko-1": {
+    obowiazkowe: true,
+    offers: [{ name: "Urwisko", effect: {
+          op: "po-kolei",
+          steps: [
+            {
+              op: "rzut",
+              faces: {
+                1: { op: "punkty", stat: "life", delta: -1 },
+                2: { op: "punkty", stat: "life", delta: -1 },
+                3: { op: "nic" },
+                4: { op: "nic" },
+                5: { op: "nic" },
+                6: { op: "nic" },
+              },
+            },
+            { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
+          ],
+        } }],
+  },
+  "urwisko-2": {
+    obowiazkowe: true,
+    offers: [{ name: "Urwisko", effect: {
+          op: "po-kolei",
+          steps: [
+            {
+              op: "rzut",
+              faces: {
+                1: { op: "punkty", stat: "life", delta: -1 },
+                2: { op: "punkty", stat: "life", delta: -1 },
+                3: { op: "nic" },
+                4: { op: "nic" },
+                5: { op: "nic" },
+                6: { op: "nic" },
+              },
+            },
+            { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
+          ],
+        } }],
+  },
+
   // "1 - tracisz 1 turę; 2-3 zostajesz Zamieniony w Kamień; 4-5 zyskujesz
   // dodatkowy ruch; 6 - zostałeś zignorowany."
   "wieza-przeznaczenia": {

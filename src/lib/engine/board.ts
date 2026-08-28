@@ -316,6 +316,33 @@ export function ringOf(fieldId: FieldId): readonly BoardField[] | null {
 }
 
 /**
+ * The Obszary where a Wróg fights harder, and by how much.
+ *
+ * Six of them say it in the same words: "Każdy Wróg, z którym zmierzysz się w
+ * Kamiennym Lesie dodaje 3 punkty do swojej Magii lub Miecza." It is the
+ * creature's own figure that moves, whichever of the two it fights with — so
+ * one number covers both, and it is added to whichever the fight is about.
+ *
+ * "Każdy" is why this is not a property of the card: the same Cyklop is worth
+ * six on most of the board and nine in the Kamienny Las. It belongs to the
+ * ground, and it applies to a pack of them one by one — 17.5 sums their Miecze,
+ * and each of those Miecze is already the bigger number.
+ */
+export const FOE_BONUS: Readonly<Partial<Record<FieldId, number>>> = {
+  "dolina-cienia": 1,
+  "mroczna-polana": 1,
+  "rownina-samotnych-skal": 2,
+  "rownina-snu": 2,
+  "kamienny-las": 3,
+  "rownina-traw": 3,
+};
+
+/** What this Obszar adds to every Wróg met on it. */
+export function foeBonusAt(fieldId: FieldId | null): number {
+  return fieldId === null ? 0 : (FOE_BONUS[fieldId] ?? 0);
+}
+
+/**
  * How many Obszary apart two fields are, walking the ring the short way.
  *
  * Null when they are not on the same ring, and that is the honest answer rather
