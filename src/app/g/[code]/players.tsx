@@ -282,6 +282,16 @@ export function PlayersDrawer({
                       }
                     >
                       <div className="mb-2 flex flex-wrap gap-2">
+                        {/* The hand first, and always in the same corner.
+                        
+                            It is the one thing in the row that cannot be read,
+                            which makes it the thing you look for: how many
+                            Zaklęcia somebody is holding is what you weigh
+                            before attacking them (9.3 hides which, not how
+                            many). At the end it moved every time they picked
+                            something up, and on a full pack it was the tile
+                            that had wrapped onto the next line. */}
+                        {seat.hiddenSpells > 0 && <CardBack count={seat.hiddenSpells} />}
                         {seat.cards.map((card, index) => (
                           <CardTile
                             key={`${card.cardId}-${index}`}
@@ -289,7 +299,6 @@ export function PlayersDrawer({
                             onClick={() => onInspect(card)}
                           />
                         ))}
-                        {seat.hiddenSpells > 0 && <CardBack count={seat.hiddenSpells} />}
                       </div>
                     </Fold>
                   )}
