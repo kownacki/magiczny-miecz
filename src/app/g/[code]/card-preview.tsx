@@ -37,6 +37,22 @@ import type { TileCard } from "./card-tile";
  * picture is there to be recognised.
  */
 const PICTURE_WIDTH = 208;
+/**
+ * A Karta Postaci, which is read rather than recognised.
+ *
+ * The same 340 the click-to-open detail draws one at, and for the same reason:
+ * everything that decides the choice is printed *on* it — four numbered clauses
+ * of small type, the two starting figures, the Natura and the MGR — and none of
+ * that survives 208. Every other card in the box is a picture and a name, with
+ * whatever the app knows about it set in real text beside the picture, so 208 is
+ * plenty; a Postać carries no such column, because the abilities are the card.
+ *
+ * Kept in step with `CardDetail` by hand, which is the sort of thing that
+ * drifts. It has not been pulled into one constant because the two disagree
+ * about the *other* cards on purpose — the detail view has a whole overlay to
+ * fill and this has to sit beside a tile without covering the board.
+ */
+const CHARACTER_PICTURE_WIDTH = 340;
 const CARD_RATIO = 780 / 629;
 const GAP = 12;
 
@@ -140,6 +156,9 @@ export function CardPreview({
     : card.character
       ? characterImageUrl(card.cardId)
       : cardImageUrl(card.cardId, card.ref);
+  // A Postać is read at the size the detail view reads one at; everything else
+  // is recognised at the smaller one. See `CHARACTER_PICTURE_WIDTH`.
+  const pictureWidth = card.character ? CHARACTER_PICTURE_WIDTH : PICTURE_WIDTH;
   const profile = imageless
     ? null
     : card.character
@@ -180,9 +199,9 @@ export function CardPreview({
           <Image
             src={src}
             alt={card.name}
-            width={PICTURE_WIDTH}
-            height={Math.round(PICTURE_WIDTH * CARD_RATIO)}
-            style={{ width: PICTURE_WIDTH }}
+            width={pictureWidth}
+            height={Math.round(pictureWidth * CARD_RATIO)}
+            style={{ width: pictureWidth }}
             className="block h-auto rounded"
           />
           {/* On the card, where the tile puts it, so the hover and the thing
