@@ -266,10 +266,26 @@ export function CardBack({ count }: { count: number }) {
   const room = TILE_WIDTH - SPELL_BACK_WIDTH;
   const most = 1 + Math.floor(room / SPELL_BACK_MIN_STEP);
   const drawn = Math.max(0, Math.min(count, most));
-  const step = drawn > 1 ? Math.min(SPELL_BACK_STEP, room / (drawn - 1)) : SPELL_BACK_STEP;
+  /**
+   * Down to the layout grid, and the stack's own width declared from it.
+   *
+   * A step of 13.333 is not a length a browser has: Blink lays out on a
+   * thirty-second of a pixel and rounded four cards *up*, to 92.03, which is
+   * wider than the 92 a tile takes — so in a row with exactly one tile of room
+   * left the stack wrapped onto a line of its own, which is the thing all this
+   * arithmetic exists to prevent. Flooring to the same grid keeps every step a
+   * length that survives being drawn, and the width on the span means a hair
+   * of overflow could not push the tile out even if one appeared.
+   */
+  const grid = 32;
+  const step =
+    drawn > 1
+      ? Math.min(SPELL_BACK_STEP, Math.floor((room / (drawn - 1)) * grid) / grid)
+      : SPELL_BACK_STEP;
+  const wide = SPELL_BACK_WIDTH + (drawn - 1) * step;
   return (
     <figure className="flex flex-col items-center gap-1">
-      <span className="flex h-[80px] items-center">
+      <span className="flex h-[80px] items-center" style={{ width: wide }}>
         {Array.from({ length: drawn }, (_, at) => (
           <Image
             key={at}
