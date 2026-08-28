@@ -22,6 +22,26 @@ import { WithRules } from "./rule-ref";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
 import type { EqMode } from "@/lib/engine/slots";
 
+/**
+ * How tall the Dziennik stands when it is neither shrunk nor opened out.
+ *
+ * A number, and not the `20.25%` it used to be. The percentage was written for
+ * one column — the board's, where the map is the thing that has to fit — and it
+ * only ever meant "a fifth of whatever is left", which is a different number of
+ * *lines* on every window and none of them chosen. On a short laptop it fell to
+ * about four, which the reasoning behind that percentage had already called too
+ * few to read a turn back; on a tall monitor it grew to a third of the screen
+ * for no better reason.
+ *
+ * So: the heading, and six lines under it. A fight is three lines on its own, so
+ * six is one fight and enough of what came before it to see what started it,
+ * which is what the feed is actually read for. At `text-xs leading-snug` a line
+ * is about seventeen pixels and the heading measures thirty-one.
+ *
+ * The same number in both rooms, which is the whole point of it being one.
+ */
+const NORMAL_HEIGHT = 144;
+
 export function Journal({
   code,
   revision,
@@ -96,17 +116,12 @@ export function Journal({
             ? // Its heading, and nothing under it. `shrink-0` with no height of
               // its own, so what it gives up goes to the board above.
               "mt-auto flex shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
-            : // A share of the column rather than a number of lines: the board
-              // above it is the thing that has to fit, and it scales with the
-              // window. Four lines was too few to read a turn back — a fight is
-              // three of them on its own — so this is half again as tall, less a
-              // tenth given back to the map.
-              // `mt-auto` pins it to the bottom whatever the board above does.
-              // The board wrapper is flex-1 and absorbs the slack today, but
-              // that is the board business and not something this should depend
-              // on to stay where it belongs.
-              "mt-auto flex h-[20.25%] shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
+            : // A number of lines, not a share of the column — see
+              // `NORMAL_HEIGHT`. `mt-auto` pins it to the bottom whatever is
+              // above it, in either room.
+              "mt-auto flex shrink-0 flex-col rounded-t border border-b-0 border-edge bg-panel/50"
       }
+      style={expanded || mini ? undefined : { height: NORMAL_HEIGHT }}
     >
       <SurfaceHead
         title="Dziennik"
