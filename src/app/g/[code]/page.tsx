@@ -8,7 +8,6 @@ import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { CardDetail, type TileCard } from "./card-tile";
-import { characterKind } from "@/lib/engine/polish";
 import { SeatCard } from "./seat-card";
 import {
   CARD_NAMES,
@@ -1569,21 +1568,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 activeSeat={game.active_seat}
                 turn={game.turn}
                 mySeatIndex={mySeatIndex}
-                // Every other picture of a Postać opens its Karta; this one is
-                // the one you are looking at for most of the game, and it was
-                // the only one that did nothing.
+                /**
+                 * The roster, opened on that seat — the same place the name in
+                 * the NowBox goes.
+                 *
+                 * It used to open the Karta Postaci, on the reasoning that
+                 * every other picture of a Postać does. But a chip in this bar
+                 * is not a picture of a card: it carries a player's name, their
+                 * seat colour, and the reason they are being passed over, and
+                 * the question it raises is "who is that and what have they
+                 * got" — which is the roster's question, not the Karta's. The
+                 * Karta is one more click from there, on the seat's own tile.
+                 */
                 onPick={(seatIndex) => {
                   const row = seats.find((one) => one.seat_index === seatIndex);
-                  const who = asCharacterId(row?.character_id);
-                  const character = who ? CHARACTERS.find((one) => one.id === who) : null;
-                  if (!character) return;
-                  setInspectingCard({
-                    cardId: character.id,
-                    name: character.name,
-                    text: character.abilities.join("\n\n"),
-                    kindLabel: characterKind(character),
-                    character: true,
-                  });
+                  if (!row) return;
+                  setAskedAbout(row.id);
+                  setRightDrawer("gracze");
                 }}
               />
             </div>

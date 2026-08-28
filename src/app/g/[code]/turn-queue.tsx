@@ -37,7 +37,7 @@ export function TurnQueue({
   activeSeat: number | null;
   turn: number;
   mySeatIndex: number | null;
-  /** Open that seat's Karta Postaci. Absent where there is nothing to open. */
+  /** Open the roster on that seat. Absent where there is nobody to open. */
   onPick?: (seatIndex: number) => void;
   depth?: number;
 }) {
@@ -116,16 +116,20 @@ function QueueChip({
           Tura {entry.turn}
         </span>
       )}
-      {/* A button, because it draws a Postać and every other picture of a
-          Postać in this app opens the Karta. The queue was the exception, and
-          it is the one on screen the whole time — so "click your character to
-          read it" was true everywhere except where you were looking. */}
+      {/* A button, and what it opens is the *player*.
+          
+          The figure is the recognisable part, but the chip is about a turn:
+          whose it is, when it comes round, and why it is being skipped. So the
+          question somebody has when they press one is "who is that, and what
+          have they got" — which the roster answers, on that seat, the same way
+          the name in the NowBox does. The Karta Postaci is a click further in,
+          on the seat's own tile, where it is a card again. */}
       <button
         type="button"
         onClick={onPick ? () => onPick(entry.seatIndex) : undefined}
         title={
           onPick
-            ? `${name}${reason ? ` — ${reason}` : ""} — otwórz Kartę Postaci`
+            ? `${name}${reason ? ` — ${reason}` : ""} — otwórz w Graczach`
             : reason
               ? `${name} — ${reason}`
               : name
@@ -134,7 +138,7 @@ function QueueChip({
           // Solid, for the same reason the turn button is: a tint replaces the
           // background rather than layering over it, so the active seat's tile
           // went translucent exactly when you pointed at it.
-          onPick ? "cursor-zoom-in transition hover:bg-raised" : ""
+          onPick ? "cursor-pointer transition hover:bg-raised" : ""
         } ${
           active ? "bg-raised" : ""
         } ${
