@@ -401,7 +401,12 @@ export function Lobby({
             goes back to — it sits directly above the roster it is read against
             — while the settings are touched once, at the start, and then never
             again. */}
-        <aside className="hidden w-[300px] shrink-0 flex-col gap-4 border-l border-edge p-3 lg:flex xl:w-[380px]">
+        {/* No padding along the bottom, because the Dziennik is drawn to sit on
+            it: `rounded-t` with `border-b-0`, a panel the column's own edge
+            closes. Given twelve pixels underneath, that missing border stops
+            being a join and becomes a gap — the box simply stops short with one
+            side open. It is flush under the board for the same reason. */}
+        <aside className="hidden w-[300px] shrink-0 flex-col gap-4 border-l border-edge px-3 pt-3 lg:flex xl:w-[380px]">
           <h2 className="text-[12px] uppercase tracking-widest text-muted">Ustawienia</h2>
           {me && (
             <label className="flex flex-col gap-1 text-[12px] text-muted">
