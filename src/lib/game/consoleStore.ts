@@ -86,6 +86,7 @@ import {
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
+import { figuresText } from "@/lib/engine/figures";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 import { fold } from "@/lib/engine/search";
 
@@ -288,7 +289,7 @@ export interface Actor {
 function championLine(view: { abilities: readonly Ability[]; holdings: readonly { cardId: string }[] }): string {
   if (!fightsForYou(view.abilities)) return "";
   const who = view.holdings.find((held) => fightsForYou(heldAbilities([held.cardId])));
-  return who ? ` — ${cardName(who.cardId)} fights for you` : "";
+  return who ? `${cardName(who.cardId)} fights for you` : "";
 }
 
 export async function runCommand(
@@ -1542,25 +1543,26 @@ export async function runCommand(
       return [
         `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
         /**
-         * Own points and the total they come to, which 1.5 and 2.5 make two
-         * different numbers. Only the first was printed, so a Pasterz lending a
-         * point of each was invisible: the card was in the list and every
-         * figure on the screen carried on as though it were not.
-         */
-        `Sword ${seat.sword_own} (${view.parametr.miecz})  ` +
-          `Magic ${seat.magic_own} (${view.parametr.magia})  ` +
-          `Life ${seat.life}  Gold ${seat.gold}`,
-        /**
-         * And what those become in a fight, when they differ.
+         * All three figures 1.5 quotes, in one line and in `figures.ts`'s
+         * notation — the same one the browser draws.
          *
-         * A Miecz, a Krzyżowiec and a Giermek all count "podczas walki" and
-         * nowhere else, and the Rycerz replaces the pair outright — none of
-         * which the line above can show, because none of it is true until
-         * somebody swings.
+         * The fight figure was on a line of its own and only when it differed,
+         * which is the figure a player is deciding on: every weapon in the box
+         * counts „w walce" and nowhere else, so for anybody armed it is *the*
+         * number, and it was the one below the fold.
+         *
+         * Own points were also the wrong way round here — printed first with
+         * the parametr in parentheses, where the notation puts własne in the
+         * parentheses and reads left to right from the most situational figure
+         * to the plainest.
          */
-        ...(view.walka.miecz !== view.parametr.miecz || view.walka.magia !== view.parametr.magia
-          ? [`In a fight: Sword ${view.walka.miecz}  Magic ${view.walka.magia}${championLine(view)}`]
-          : []),
+        `Sword ${figuresText(seat.sword_own, view.parametr.miecz, view.walka.miecz)}  ` +
+          `Magic ${figuresText(seat.magic_own, view.parametr.magia, view.walka.magia)}  ` +
+          `Life ${seat.life}  Gold ${seat.gold}`,
+        // Who is doing the fighting, when it is not you. The numbers above
+        // already say what he brings; this says whose they are — and why the
+        // fight figure can be the smallest of the three.
+        ...(championLine(view) ? [`In a fight: ${championLine(view)}`] : []),
         `Nature: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
         // Worn and carried are different places — 5.1 and the slot variant both
         // turn on which — and listing a Hełm you are wearing under "Pack" said

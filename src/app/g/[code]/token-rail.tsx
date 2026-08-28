@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { pileColumns, tokensFor } from "@/lib/view/tokens";
+import { IN_FIGHT, figuresOf } from "@/lib/engine/figures";
 
 /**
  * The pictures, and the sums that arrange them.
@@ -305,8 +306,8 @@ function MoreThanFits({
  * only the owner can use is useless in the moment someone else notices.
  */
 /**
- * What a parameter reads as: the total, with own points behind it where they
- * differ.
+ * What a parameter reads as: all three figures, with the ones that say nothing
+ * left out.
  *
  * One place decides it, because two say it — the rail under the pile and the
  * folded sheet's own heading — and a folded card reading "3" against a rail
@@ -320,12 +321,36 @@ function MoreThanFits({
  * żetony the whole value — it is one number and no parenthesis: "12 (12)" is
  * the same fact twice.
  */
-export function StatFigure({ value, total }: { value: number; total?: number }) {
-  const shown = total ?? value;
+export function StatFigure({
+  value,
+  total,
+  inFight,
+}: {
+  value: number;
+  total?: number;
+  /**
+   * The same reckoned for a fight (1.5).
+   *
+   * It used to be a `title`, reachable only by pointing — absent on a phone,
+   * which is the device at a table, and invisible to the person deciding
+   * whether to start a fight. Every weapon in the box counts „w walce" and
+   * nowhere else, so for anybody armed this is *the* number.
+   */
+  inFight?: number;
+}) {
+  const parametr = total ?? value;
+  const figures = figuresOf(value, parametr, inFight ?? parametr);
+  if (figures.bare) return <>{value}</>;
   return (
     <>
-      {shown}
-      {shown !== value && <span className="opacity-60"> ({value})</span>}
+      {figures.walka !== null && (
+        <>
+          {figures.walka}
+          <span className="opacity-70">{IN_FIGHT}</span>{" "}
+        </>
+      )}
+      {figures.parametr !== null && <>{figures.parametr} </>}
+      <span className="opacity-60">({value})</span>
     </>
   );
 }
@@ -344,14 +369,12 @@ export function RailStat({
   /** Own points plus what is carried. Shown only when the two differ. */
   total?: number;
   /**
-   * The same reckoned for a fight, which is the same or more.
+   * The same reckoned for a fight, and not necessarily more.
    *
-   * A character has two figures and 1.5 quotes both — the Troll's "parametr
-   * Miecza równy 8" and "podczas walki 11 punktom" — because the Miecz card and
-   * the Krzyżowiec count in a fight and nowhere else. The rail shows the
-   * parameter, which is what the card is asking for and what 14.5's Pułapka
-   * subtracts; the fight figure is a hover away, where somebody deciding
-   * whether to start one will look for it.
+   * 1.5 quotes both — the Troll's "parametr Miecza równy 8" and "podczas walki
+   * 11" — because a Miecz and a Krzyżowiec count in a fight and nowhere else.
+   * It can also be *lower*: a Rycerz fights in your place with his own three,
+   * not with yours, so nothing here may assume it is the largest of the three.
    */
   inFight?: number;
   stat: string;
@@ -366,7 +389,10 @@ export function RailStat({
   // sense that matters — its stack is all ones — and a total the żetony do not
   // add up to has to be written down whatever the pile looks like.
   const saysItself =
-    stat !== "gold" && shown === value && tokensFor(value).length === 1;
+    stat !== "gold" &&
+    shown === value &&
+    (inFight === undefined || inFight === shown) &&
+    tokensFor(value).length === 1;
 
   return (
     // No width of its own. It was a fixed nine while a pile was always one
@@ -428,12 +454,13 @@ export function RailStat({
           .join(", ")}
         className={`tnum mt-1 min-h-[13px] text-[13px] font-medium leading-none ${STAT_COLOUR[stat] ?? "text-ink"}`}
       >
-        {/* Two numbers and no more. The fight figure is a third — 1.5 quotes
-            it and it is real, but a rail reading "53 (51) 54" is three numbers
-            to hold in your head at a glance, which is worse than knowing one of
-            them late. It is on the hover, where somebody weighing a fight will
-            be looking anyway. */}
-        {saysItself ? "" : <StatFigure value={value} total={total} />}
+        {/* All three, in `figures.ts`'s notation: the fight figure marked with
+            crossed swords, then the parametr, then own in parentheses — and
+            each one dropped where it equals the next. Three numbers is a lot at
+            a glance, which is why most rails show one or two: only nine of the
+            fifteen point-giving cards are fight-only and only one item in the
+            box is both wearable and always on, so all three differ rarely. */}
+        {saysItself ? "" : <StatFigure value={value} total={total} inFight={inFight} />}
       </span>
       {canAdjust && (
         // Always visible rather than revealed on hover. Phones are the primary

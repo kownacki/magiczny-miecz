@@ -407,17 +407,25 @@ export function SeatCard({
                   className="shrink-0 text-muted"
                 />
               )}
-              {/* The same figures the rails show, said the same way: a total
-                  with own points behind it where the cards have added something
-                  (1.2, 2.2). Ahead of the Natura, which changes about twice a
-                  game and reads as a caption after them. */}
+              {/* The same figures the rails show, said the same way — all
+                  three of 1.5's, with the ones that add nothing left out.
+                  Ahead of the Natura, which changes about twice a game and
+                  reads as a caption after them. */}
               <span className="tnum shrink-0">
                 <span className="text-miecz">
-                  <StatFigure value={seat.sword_own} total={seat.sword_total} />
+                  <StatFigure
+                    value={seat.sword_own}
+                    total={seat.sword_total}
+                    inFight={seat.sword_in_fight}
+                  />
                 </span>
                 <span className="text-muted"> / </span>
                 <span className="text-magia">
-                  <StatFigure value={seat.magic_own} total={seat.magic_total} />
+                  <StatFigure
+                    value={seat.magic_own}
+                    total={seat.magic_total}
+                    inFight={seat.magic_in_fight}
+                  />
                 </span>
                 <span className="text-muted"> / </span>
                 <span className="text-zycie">{seat.life}</span>

@@ -141,6 +141,14 @@ export interface PublicSeat {
   swordOwn: number;
   magia: number;
   magicOwn: number;
+  /**
+   * The fight figures (1.5), which the roster carried neither of.
+   *
+   * Every weapon in the box counts „w walce" and nowhere else, so a roster
+   * showing only the parametr shows the number nobody is deciding on.
+   */
+  mieczWWalce: number;
+  magiaWWalce: number;
   life: number;
   gold: number;
   nature: string | null;

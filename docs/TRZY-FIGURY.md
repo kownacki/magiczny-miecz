@@ -1,8 +1,10 @@
 # Trzy figury — własne, parametr, w walce
 
-A page for whoever picks this up next. It is one display change and two engine
-corrections, and the corrections matter more than they look: without them the
-display would faithfully show a wrong number.
+**Built.** All of it: three engine corrections, the notation in the engine, and
+the three places that draw the figures. What follows is the page as it was
+written, with a section at the end recording the four claims in it that did not
+survive checking — two of them made the work bigger, and one was a bug the page
+said did not exist.
 
 ## The three figures, and what is in each
 
@@ -25,11 +27,9 @@ All three are already computed and already on the wire. Nothing is missing from
 the engine for the display work.
 
 **Where each is read.** `w walce` is 17.4 and every `op: "walka"` on a Karta or
-Obszar. `parametr` is read in exactly one place in the whole game — the six
-Kamienny Most ordeals, `bridge.ts:582`, where 14.5 subtracts "wartość swojego
-parametru Miecza" from 3d6 to decide how far you fall. There is a `prog`
-threshold type in `cardScript.ts` and **no card uses it**, so there is no third
-consumer. `własne` is 1.3's floor and what 1.4's trophies raise.
+Obszar. `parametr` is read wherever the board sets an *obstacle* — see the
+corrections at the end; this page originally claimed one place and there are
+three. `własne` is 1.3's floor and what 1.4's trophies raise.
 
 ## What to build
 
@@ -134,3 +134,88 @@ loot somebody found.
 
 The mess was never the rule. It was three cards behaving unlike three
 near-identical cards for no stated reason.
+
+## What was checked, and what did not survive it
+
+Four claims on this page were wrong. Recorded because three of them were the
+kind that a reader would have carried forward.
+
+**The list of three missing `tylkoWalka` was five.** ARONDIGHT („Miecz Lancelota
+**użyty w walce**") and ŚWIĘTA WŁÓCZNIA („**Użyta w walce**") were missed. The
+audit is now a test — `excalibur.test.ts` compares every `punkty` ability's flag
+against its own card text and fails on any disagreement — so a transcription
+that says „w walce" and forgets the flag cannot slip through again. The page's
+conclusion holds and is stronger than it stated: *every* weapon in the box is
+fight-only by its own words, with no exceptions.
+
+**`parametr` is read in three places, not one.** Beside the six Kamienny Most
+ordeals (`bridge.ts:582`) it is the Trzęsawiska / Lodowy Las crossing
+(`bridge.ts:508`, a Magia threshold, 11.x) and — see below — the two Obszary
+that measure a character. So the line is not "the endgame gate is special", it
+is **fights read `walka`, obstacles read `parametr`**, and obstacles happen all
+game. The argument for keeping the figures apart is better than the version
+written above.
+
+**`prog` is used, and it read the wrong figure.** This page said no card uses
+it. Two do — LABIRYNT („każdy, kto tu trafi **o Magii mniejszej niż 5**") and
+SPALONA ZIEMIA („jeżeli **jego Miecz** jest mniejszy niż 5 punktów") — and
+`effects.ts` evaluated them against `sword_own` / `magic_own`. Neither card says
+„własnej", and 1.5 settles what a bare „Miecz" means for a character: „Troll
+posiada parametr Miecza równy 8 (6+1+1)". So a character with Magia 3 and a
+Pierścień Mocy had a parametr of 5 and still got lost in the Labirynt. Fixed,
+and it was a **third** engine correction of exactly the class this page exists
+to catch.
+
+**„Four of sixteen" was four of fifteen, and is now nine of fifteen.** After the
+weapons were corrected a *majority* of point-giving cards are fight-only, so the
+two figures differ for most armed characters rather than few. "The rail should
+stay as quiet as it is today" does not hold — which makes the compact notation
+more necessary than this page argued, not less.
+
+One more fact that fell out of the audit and is worth having: after the
+correction, **PIERŚCIEŃ MOCY is the only item in the box that is both wearable
+and always-on**. Every weapon says „w walce", and the other always-on cards
+(SREBRNA STRZAŁA, ŚWIĘTY GRAAL) have no place on the body. Several tests used a
+blade as their always-on example and had to move.
+
+## The notation, as built
+
+`src/lib/engine/figures.ts`, so the console and the browser cannot drift:
+
+> **Parentheses always hold własne. A bare second number is the parametr. The
+> crossed swords mark the fight figure. A figure you cannot see equals the one
+> to its right.**
+
+```
+6           nothing lends anything
+8 (6)       always-on only        — w walce = parametr
+9⚔ (6)      fight-only only       — parametr = własne
+11⚔ 8 (6)   both, which is 1.5's Troll
+3⚔ (5)      a Rycerz standing in for you
+```
+
+The last line is why nothing assumes the numbers descend: `walczy-za-ciebie`
+*replaces* the fight figure with the champion's rather than adding to it, so a
+Barbarzyńca of Miecz 5 fights at the Rycerz's 3. The page did not mention this
+and a display that sorted or assumed an order would have been wrong.
+
+`figuresOf` hands the parts back for the browser; `figuresText` prints the line
+for the console. Drawn by `StatFigure` (the rails and the folded POSTAĆ
+heading) and by the roster, which needed `sword_in_fight` / `magic_in_fight`
+plumbed into `LobbySeat` as this page said.
+
+**Measured rather than guessed**, since the rails have no width of their own: at
+13px tabular-nums, `6` is 8.3px, `8 (6)` 30.3px, `9⚔ (6)` 38.1px and
+`11⚔ 8 (6)` 58.1px. A full żeton pile is three 16px columns with 2px gaps — 52px
+— so only the all-three case widens a rail at all, by about six pixels.
+
+## Excalibur
+
+Both halves landed together, as this page required. `{ kind: "zabiera-zycie" }`
+is read at the end of `resolveFight`: a win adds the point, and in a duel it is
+really taken off the loser, who has already paid one for losing — so a lost duel
+against Excalibur costs two, and that can be the second one's last. It goes
+through `spendLife`, so 4.4 applies itself. Uncapped, because 4.6 makes a point
+won a gain and 4.7's ceiling of four is about what a Uzdrowiciel restores. Not
+on a raid: the Poszukiwacz fights on his own account and the blade is in your
+pack, not his hand.

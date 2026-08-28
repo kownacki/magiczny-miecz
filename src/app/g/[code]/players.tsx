@@ -230,12 +230,24 @@ export function PlayersDrawer({
                       <Row
                         label="Miecz"
                         tone="text-miecz"
-                        value={<StatFigure value={seat.swordOwn} total={seat.miecz} />}
+                        value={
+                          <StatFigure
+                            value={seat.swordOwn}
+                            total={seat.miecz}
+                            inFight={seat.mieczWWalce}
+                          />
+                        }
                       />
                       <Row
                         label="Magia"
                         tone="text-magia"
-                        value={<StatFigure value={seat.magicOwn} total={seat.magia} />}
+                        value={
+                          <StatFigure
+                            value={seat.magicOwn}
+                            total={seat.magia}
+                            inFight={seat.magiaWWalce}
+                          />
+                        }
                       />
                       <Row label="Życie" tone="text-zycie" value={seat.life} />
                       <Row label="Złoto" tone="text-zloto" value={seat.gold} />

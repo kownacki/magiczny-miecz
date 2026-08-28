@@ -1781,6 +1781,8 @@ function asPublicSeat(seat: Seat, driver: Person | null): PublicSeat {
     swordOwn: seat.sword_own,
     magia: seat.magic_total,
     magicOwn: seat.magic_own,
+    mieczWWalce: seat.sword_in_fight,
+    magiaWWalce: seat.magic_in_fight,
     life: seat.life,
     gold: seat.gold,
     nature: seat.nature,
