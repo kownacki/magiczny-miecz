@@ -49,17 +49,21 @@ export function TableSettings({
           {
             active: eqMode === "slots",
             label: "Slotowy",
-            hint: "Co nosisz, zakładasz na miejsce; reszta czeka w Plecaku.",
+            // Not "działa tylko to, co założone": nineteen of the forty-five
+            // Przedmioty have no place at all — an Eliksir, a Relikwiarz, the
+            // Graal — and those work out of the Plecak exactly as the book has
+            // them. The line is whether a thing *can* be worn, not whether it
+            // happens to be, and "reszta czeka" said the pack was dead weight.
+            hint: "Co da się założyć, działa tylko założone. Reszta działa z Plecaka, w którym mieszczą się cztery Przedmioty.",
             onPick: () => onEqMode("slots"),
           },
           {
             active: eqMode === "classic",
             label: "Klasyczny",
-            // Not "cztery miejsca": miejsca are the variant's, and having none
-            // is precisely what klasyczny is. The rule is a ceiling on how many
-            // you may own, and the half worth saying beside slotowy is that
-            // owning one is enough — nothing has to be worn.
-            hint: "Jak w Instrukcji (5.4): najwyżej cztery Przedmioty, a każdy działa, gdziekolwiek leży.",
+            // Opening on the exact negation of the line above, so the two read
+            // as one choice rather than two descriptions. Not "cztery miejsca":
+            // miejsca are the variant's, and having none is what klasyczny is.
+            hint: "Nic się nie zakłada. Najwyżej cztery Przedmioty i każdy działa, gdziekolwiek leży (5.4).",
             onPick: () => onEqMode("classic"),
           },
         ]}
@@ -76,14 +80,21 @@ export function TableSettings({
         options={[
           {
             active: endlessStock,
-            label: "Zwykłego Wyposażenia nie brakuje",
-            hint: "Miecz, Hełm, Sztylet, Zbroja, Tarcza — bez limitu. Magiczne Miecze i Tarcze Tolimana zostają po cztery, bo na nich stoi wejście na Most i do Zamku.",
+            // One word, like Slotowy and Klasyczny above. These two were
+            // sentences pretending to be names, so the pair said everything
+            // twice — once in the label and again underneath — which is what
+            // pushed the hints into chat.
+            label: "Niewyczerpany",
+            // Why the two relics are excepted is not said here. It is said in
+            // Ustawienia and at length on the Wariant shelf, which is where a
+            // reader goes for a reason; this dialog states the choice.
+            hint: "Zwykłego Wyposażenia nigdy nie zabraknie. Magiczne Miecze i Tarcze Tolimana zostają po cztery.",
             onPick: () => onEndlessStock(true),
           },
           {
             active: !endlessStock,
-            label: "Jak w pudełku",
-            hint: "Cały stos Wyposażenia jest skończony (21.2): trzy Miecze, a Postaci z Mieczem w Charakterystyce jest pięć.",
+            label: "Skończony",
+            hint: "Zapas jest ten z pudełka i może się skończyć (21.2).",
             onPick: () => onEndlessStock(false),
           },
         ]}

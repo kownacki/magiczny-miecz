@@ -45,7 +45,7 @@ export function Settings({
           on={eqMode === "slots"}
           label="Ekwipunek slotowy"
           fixed="Wybrane przy otwieraniu stołu — w trakcie gry już nie do zmiany."
-          said="Działa tylko to, co Postać ma na sobie; reszta czeka w Plecaku. Wyłączone znaczy zasady z pudełka: najwyżej cztery Przedmioty, a każdy działa, gdziekolwiek leży. Szczegóły w Księdze, na półce Wariant."
+          said="Co da się założyć, działa tylko założone; reszta działa z Plecaka, w którym mieszczą się cztery Przedmioty. Wyłączone znaczy zasady z pudełka: nic się nie zakłada, a każdy z czterech Przedmiotów działa, gdziekolwiek leży. Szczegóły w Księdze, na półce Wariant."
         />
         {/* The one table setting that can still be moved, and only one way.
             Turning it on changes nothing that already happened — the pile
