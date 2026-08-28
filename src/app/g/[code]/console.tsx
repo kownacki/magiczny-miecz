@@ -189,6 +189,24 @@ export function TestConsole({
   const held = useRef<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const tail = useRef<HTMLDivElement>(null);
+  /**
+   * How many lines have ever been printed, which is not `log.length`.
+   *
+   * The transcript is capped at a hundred, so its length stops answering "has
+   * anything been said since?" the moment it fills up. A counter that only ever
+   * goes up does answer it.
+   */
+  const printed = useRef(0);
+  /** The listing Tab last put on screen, and the line it was the answer to. */
+  const listed = useRef<{ line: string; printed: number } | null>(null);
+  /**
+   * Asks the scroll to run again when nothing has changed for it to react to.
+   *
+   * Pressing Tab twice on the same line is a request to *see* the answer, not
+   * for a second copy of it, and the effect below only fires when the
+   * transcript does.
+   */
+  const [nudge, setNudge] = useState(0);
 
   useEffect(() => {
     if (open) input.current?.focus();
@@ -231,12 +249,14 @@ export function TestConsole({
       ? box.scrollTop + last.getBoundingClientRect().top - box.getBoundingClientRect().top
       : box.scrollHeight;
     box.scrollTo({ top });
-  }, [log, open, big]);
+  }, [log, open, big, nudge]);
 
   if (!open) return null;
 
-  const say = (said: string, mine = false) =>
+  const say = (said: string, mine = false) => {
+    printed.current += 1;
     setLog((before) => [...before, { said, mine }].slice(-100));
+  };
 
   /**
    * Several lines at once, read from the first of them.
@@ -245,10 +265,12 @@ export function TestConsole({
    * block instead of against each line as it arrives — and the anchor is the
    * first, which is where a list of candidates begins to be useful.
    */
-  const sayBlock = (lines: readonly string[]) =>
+  const sayBlock = (lines: readonly string[]) => {
+    printed.current += lines.length;
     setLog((before) =>
       [...before, ...lines.map((said, at) => ({ said, mine: false, anchor: at === 0 }))].slice(-100),
     );
+  };
 
   const run = async () => {
     const typed = line.trim();
@@ -476,6 +498,23 @@ export function TestConsole({
               const done = complete(line, players, { stage, testmode: true });
               setLine(done.line);
               /**
+               * The same question twice is a request to see the answer again,
+               * not for a second copy of it.
+               *
+               * Ninety card names printed twice is a transcript you have to
+               * scroll past to reach the thing you asked for, and the listing
+               * is tall enough that the first copy is usually still on screen —
+               * just above where you are looking. So Tab on an unchanged line
+               * with nothing said since scrolls back to what it already
+               * printed. Compared against the line as it stood *after* the
+               * first press, because that is what the second one starts from.
+               */
+              const already = listed.current;
+              if (already && already.line === line && already.printed === printed.current) {
+                setNudge((count) => count + 1);
+                return;
+              }
+              /**
                * Under headings where the pool has them.
                *
                * A terminal cannot do this — readline draws its own grid from a
@@ -488,7 +527,12 @@ export function TestConsole({
                 sayBlock(done.sections.map((g) => `${g.title}\n  ${g.options.join("   ")}`));
               } else if (done.options.length > 0) {
                 sayBlock([done.options.join("   ")]);
+              } else {
+                // Nothing on screen to go back to, so nothing to remember.
+                listed.current = null;
+                return;
               }
+              listed.current = { line: done.line, printed: printed.current };
               return;
             }
             // The last thing typed, the way a shell gives it back. Testing is
