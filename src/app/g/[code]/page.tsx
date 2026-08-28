@@ -20,7 +20,7 @@ import {
 } from "./table";
 import { CardLibrary } from "./card-library";
 import { useTable, type Person } from "./use-table";
-import { TestConsole } from "./console";
+import { TestConsole, wakeConsole } from "./console";
 import { stageOf } from "@/lib/engine/console";
 import { TurnFab, owedLabel } from "./turn-fab";
 import { Lobby } from "./lobby";
@@ -296,7 +296,18 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       }
       if (event.key === "`") {
         event.preventDefault();
-        setConsoleOpen((was) => !was);
+        /**
+         * The key means "give me the console", so a minimised one grows rather
+         * than closing.
+         *
+         * Shrunk to its bar it is technically open, and a toggle read that as
+         * "already here, take it away" — which threw away the transcript for a
+         * key somebody pressed to *see* it. Growing first costs nothing: with
+         * nothing minimised `wakeConsole` does nothing and says so, and the
+         * toggle behaves exactly as it did.
+         */
+        const grew = wakeConsole();
+        setConsoleOpen((was) => !was || grew);
       }
     };
     window.addEventListener("keydown", onKey);

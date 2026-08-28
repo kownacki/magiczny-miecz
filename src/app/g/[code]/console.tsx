@@ -29,6 +29,26 @@ import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
  * same routes as everything else, and journalled as a manual override — a
  * tested game must not be mistakable for a played one.
  */
+/**
+ * The one shrunk console on screen, if there is one, and how to grow it.
+ *
+ * A module slot rather than a prop or a context: only one console is ever
+ * mounted, the thing that needs it is a `keydown` on the window, and the state
+ * it reaches is deliberately private to the panel. See the effect that fills
+ * it in.
+ */
+let grow: (() => boolean) | null = null;
+
+/**
+ * Grows a minimised console back to its usual height.
+ *
+ * True when it did, false when there was nothing minimised — so a caller can
+ * treat the key as "give me the console" and fall back to its own meaning.
+ */
+export function wakeConsole(): boolean {
+  return grow?.() ?? false;
+}
+
 /** The words that only ever mean "no", so answering with one is not a command. */
 const NO = new Set(["no", "n", "nie", "cancel", "anuluj", "stop", "abort"]);
 
@@ -95,6 +115,30 @@ export function TestConsole({
    * back exactly as it was, log and all.
    */
   const [size, setSize] = useState<"mini" | "normal" | "big">(folded ? "mini" : "normal");
+
+  /**
+   * Lets the backtick grow a shrunk console instead of shutting it.
+   *
+   * How big it is belongs to this component — the size is decided while using
+   * it and deliberately does not outlive a close (see the remount in
+   * `page.tsx`) — but the key that summons it lives on the window, two
+   * components up, and had no way to ask. So it asks through here: a module
+   * slot, the same shape the card preview's pin uses, rather than lifting a
+   * piece of state whose whole point is that it is local and short-lived.
+   *
+   * Returns whether there was anything to grow, which is what lets the caller
+   * tell "I opened it" from "there was nothing minimised and you meant close".
+   */
+  useEffect(() => {
+    grow = () => {
+      if (size !== "mini") return false;
+      setSize("normal");
+      return true;
+    };
+    return () => {
+      grow = null;
+    };
+  }, [size]);
 
   /**
    * The bottom edge of the same system the drawers are in.
