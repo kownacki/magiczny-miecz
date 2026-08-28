@@ -26,10 +26,9 @@ import type { Nature } from "@/data/types";
 import { CardMark } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
-import type { TileCard } from "./card-tile";
+import { CardTile, type TileCard } from "./card-tile";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import { cardName, plural } from "@/lib/engine/polish";
-import { Lookable } from "./lookable";
 
 /**
  * Width of the card picture.
@@ -569,16 +568,25 @@ export function CardPreview({
           {kit && (kit.items?.length || kit.gold !== undefined || kit.spells) && (
             <div className="flex flex-col gap-1 border-t border-edge/60 pt-2">
               <p className="text-[11px] text-muted">Na start:</p>
+              {/* Pictures, not names. A Przedmiot is recognised by its
+                  illustration the way everything else in this app is, and two
+                  names in a row read as prose while two tiles read as a
+                  character's gear — which is what they are. `CardTile` brings
+                  its own hover with it, which is the whole trick: the tiles
+                  answer once this panel is pinned, and are inert until then. */}
+              {kit.items && kit.items.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {kit.items.map((cardId, at) => (
+                    <CardTile
+                      key={`${cardId}-${at}`}
+                      card={{ cardId, name: cardName(cardId) }}
+                      eqMode={eqMode}
+                      nature={nature}
+                    />
+                  ))}
+                </div>
+              )}
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px] text-ink">
-                {kit.items?.map((cardId) => (
-                  <Lookable
-                    key={cardId}
-                    kind="card"
-                    id={cardId}
-                    name={cardName(cardId)}
-                    eqMode={eqMode}
-                  />
-                ))}
                 {/* 3.2's single coin is everybody's, so only a Karta that says
                     otherwise is worth a word. */}
                 {kit.gold !== undefined && kit.gold !== 1 && (

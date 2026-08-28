@@ -114,7 +114,19 @@ export function CardTile({
         type="button"
         onClick={onClick}
         onDoubleClick={onDoubleClick}
-        disabled={!onClick}
+        /**
+         * `aria-disabled`, not `disabled`.
+         *
+         * A disabled button fires no mouse events at all, so a tile with
+         * nothing to click had no hover either — and the hover is most of what
+         * a tile is for. That cost nothing while every tile in the app was
+         * clickable; the first read-only ones are a Postać's starting
+         * Przedmioty, drawn inside a preview, and they came out inert.
+         *
+         * Screen readers are told the same thing either way. What changes is
+         * that the pointer is now allowed to ask what the picture is.
+         */
+        aria-disabled={onClick ? undefined : true}
         draggable={draggable}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
