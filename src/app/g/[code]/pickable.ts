@@ -15,3 +15,23 @@
  */
 export const PICKABLE =
   "transition hover:border-ochre hover:ring-1 hover:ring-ochre/60";
+
+/**
+ * The gold a card rests at, before the pointer thickens it.
+ *
+ * The other half of the same rule, and it was the half still drifting: the pack
+ * and the trofea rested gold while the Księga's tiles and the lobby's standees
+ * rested `border-edge`, so the same object — a picture cut off a card, which
+ * you can point at and get the whole card — was drawn two ways depending on
+ * which panel it landed in. Gold at rest is the honest one: these tiles all
+ * *do* something, and grey is what the rest of the app spends on things that do
+ * not.
+ *
+ * Narrow, at 60% — the full ochre is reserved for the pointer, so hovering
+ * still has somewhere to go. Together with `PICKABLE` that is the whole
+ * vocabulary: **thin gold means you can reach it, thicker gold means you are.**
+ *
+ * Not for a square with nothing in it. `ItemSlot`'s `empty` is dashed and grey
+ * on purpose, and a vacant place is not a card.
+ */
+export const ART_BORDER = "border-ochre/60";

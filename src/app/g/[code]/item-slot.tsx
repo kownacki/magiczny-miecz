@@ -21,7 +21,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
 import { CardMark, type SlotMark } from "./card-mark";
-import { PICKABLE } from "./pickable";
+import { ART_BORDER, PICKABLE } from "./pickable";
 
 /**
  * One size, everywhere.
@@ -106,7 +106,7 @@ const TONE: Record<SlotTone, string> = {
   accepts: "border-solid border-verdigris bg-verdigris/25",
   rejects: "border-solid border-vermilion bg-vermilion/25",
   candidate: "border-dashed border-verdigris/60 bg-verdigris/10",
-  filled: "border-solid border-ochre/60 bg-raised",
+  filled: `border-solid ${ART_BORDER} bg-raised`,
   empty: "border-dashed border-edge/70 bg-night/40",
 };
 

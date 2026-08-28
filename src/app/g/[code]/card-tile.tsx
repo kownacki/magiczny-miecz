@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { PICKABLE } from "./pickable";
+import { ART_BORDER, PICKABLE } from "./pickable";
 import { WithRules } from "./rule-ref";
 import {
   ART_RATIO,
@@ -133,9 +133,9 @@ export function CardTile({
         {...handlers}
         title={card.name}
         style={{ width, height }}
-        className={`relative overflow-hidden rounded border border-edge bg-raised transition ${
+        className={`relative overflow-hidden rounded border ${ART_BORDER} bg-raised transition ${
           draggable ? "cursor-grab active:cursor-grabbing" : onClick ? "cursor-pointer" : "cursor-default"
-        } ${onClick ? PICKABLE : ""} ${dimmed ? "opacity-45" : ""}`}
+        } ${PICKABLE} ${dimmed ? "opacity-45" : ""}`}
       >
         {src ? (
           // Explicit dimensions rather than `fill`: the portraits elsewhere on

@@ -16,6 +16,7 @@ import type { Character } from "@/data/types";
 import { characterImageUrl, characterStandeeUrl } from "@/lib/view/cardImages";
 import { characterKind, characterTitle } from "@/lib/engine/polish";
 import { useCardPreview } from "./card-preview";
+import { ART_BORDER, PICKABLE } from "./pickable";
 import {
   RANDOM_CHARACTER_ID,
   isRandomPick,
@@ -208,7 +209,7 @@ function CharacterTile({
             ? "animate-pulse border-ochre"
             : colour
               ? "" // the border colour is set inline, and stays lit
-              : "border-edge hover:border-ochre"
+              : `${ART_BORDER} ${PICKABLE}`
         }`}
       >
         {standee ? (
@@ -301,7 +302,7 @@ function RandomChoice({
         title="Losowa — Karta Postaci zostanie wylosowana i odsłonięta po rozpoczęciu gry"
         style={border && !pending ? { borderColor: border, borderWidth: 2 } : undefined}
         className={`relative block w-full overflow-hidden rounded border transition disabled:cursor-default ${
-          pending ? "animate-pulse border-ochre" : border ? "" : "border-edge hover:border-ochre"
+          pending ? "animate-pulse border-ochre" : border ? "" : `${ART_BORDER} ${PICKABLE}`
         }`}
       >
         {standee && (

@@ -5,6 +5,7 @@ import { type Nature } from "@/data/types";
 import { CARD_NAMES, CARD_TEXTS, type Seat } from "./table";
 import { cardArtUrl } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
+import { ART_BORDER, PICKABLE } from "./pickable";
 import { type TileCard } from "./card-tile";
 import { SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
 
@@ -69,7 +70,7 @@ function EffectMark({
       ? "border-verdigris text-verdigris"
       : mark.tone === "zly"
         ? "border-vermilion text-vermilion"
-        : "border-edge text-muted";
+        : `${ART_BORDER} text-muted`;
 
   return (
     <>
@@ -79,7 +80,7 @@ function EffectMark({
         // things appearing at once over the same mark is one too many.
         title={card ? undefined : mark.title}
         style={{ width: MARK_WIDTH, height }}
-        className={`flex shrink-0 cursor-help items-center justify-center overflow-hidden rounded border leading-none ${ring}`}
+        className={`flex shrink-0 cursor-help items-center justify-center overflow-hidden rounded border leading-none ${ring} ${PICKABLE}`}
       >
         {art ? (
           <Image
