@@ -2,6 +2,7 @@
 
 import { fieldWithText } from "@/lib/view/fieldText";
 import { CardTile } from "./card-tile";
+import { WithRules } from "./rule-ref";
 import { useState } from "react";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
@@ -193,7 +194,7 @@ export function FieldModal({
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 py-3">
           {notice && (
             <p className="rounded border-l-2 border-ochre bg-ochre/5 px-3 py-2 text-sm text-ochre">
-              {notice}
+              <WithRules text={notice} />
             </p>
           )}
 
@@ -380,7 +381,11 @@ export function FieldModal({
                     Zakończ turę
                   </button>
                   {!canEnd && whyNotEnd && (
-                    <p className="text-[11px] text-muted">{whyNotEnd}</p>
+                    <p className="text-[11px] text-muted">
+                      {/* „Najpierw: Stocz walkę z Bestią (14.7)." — the number
+                          is the refusal's evidence. */}
+                      <WithRules text={whyNotEnd} />
+                    </p>
                   )}
                 </div>
               )}

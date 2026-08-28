@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 import type { Announcement } from "@/lib/engine/announcements";
 import { Overlay } from "./overlay";
 import { LAYER } from "./layers";
+import { WithRules } from "./rule-ref";
 
 export function AnnouncementModal({
   announcement,
@@ -60,7 +61,13 @@ export function AnnouncementModal({
         >
           {announcement.title}
         </h2>
-        <p className="mb-4 text-[13px] leading-relaxed text-muted">{announcement.body}</p>
+        {/* Every one of these cites a rule — 4.4 for a death, 20.1-20.5 for
+            the stone, 16.1 and 16.8 for a lost turn — and this is the one
+            screen a player reads about something that happened to them while
+            somebody else was playing. */}
+        <p className="mb-4 text-[13px] leading-relaxed text-muted">
+          <WithRules text={announcement.body} />
+        </p>
         <div className="flex items-center justify-end gap-2">
           {children}
           <button

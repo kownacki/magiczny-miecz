@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Overlay } from "./overlay";
+import { WithRules } from "./rule-ref";
 
 /**
  * The one place this app asks "are you sure?".
@@ -58,7 +59,13 @@ export function ConfirmDialog({
         <h2 className="mb-1 font-[family-name:var(--font-display)] text-lg text-ink">
           {ask.title}
         </h2>
-        <p className="mb-4 text-[13px] leading-relaxed text-muted">{ask.body}</p>
+        {/* The rule it is about to enforce, followed rather than quoted at
+            you: this is the last screen before something irreversible, which
+            is the moment somebody most wants to check that the app has read
+            5.5 the way they have. */}
+        <p className="mb-4 text-[13px] leading-relaxed text-muted">
+          <WithRules text={ask.body} />
+        </p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}

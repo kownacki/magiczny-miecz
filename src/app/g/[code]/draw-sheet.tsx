@@ -4,6 +4,7 @@ import Image from "next/image";
 import { CardMark } from "./card-mark";
 import { Overlay } from "./overlay";
 import { ChromeButton } from "./chrome";
+import { WithRules } from "./rule-ref";
 
 /**
  * The sheet every one of the turn's questions is asked on: the picture on the
@@ -141,7 +142,9 @@ export function DrawSheet({
             and the reason was written on a card behind the sheet. */}
         {error && (
           <p className="shrink-0 rounded border border-vermilion/50 bg-vermilion/10 px-2 py-1 text-xs text-vermilion">
-            {error}
+            {/* A refusal that quotes a rule, like the ones in the corner: the
+                number is the whole reason it names one. */}
+            <WithRules text={error} />
           </p>
         )}
 
