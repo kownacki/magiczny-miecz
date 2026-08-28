@@ -100,6 +100,14 @@ const FIELD_NAMES = new Map(
  */
 const COMPANION_LINE = false;
 
+/**
+ * How close two presses of the console key have to be to count as one.
+ *
+ * See `lastTick`. Deliberately short: it is meant to swallow a stutter, not to
+ * make the key sluggish.
+ */
+const DOUBLE_TICK_MS = 350;
+
 export default function Table({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   /**
@@ -278,10 +286,26 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * except in a field somebody is typing into, which is why that is checked:
    * the console's own input is a field, and so is the card search.
    */
+  /**
+   * When the console key was last obeyed, so a doubled press is not two answers.
+   *
+   * The key toggles, which means the second of a quick pair undoes the first
+   * and leaves the console exactly where it started — the one outcome nobody
+   * pressing it twice was asking for. Two ways to arrive there and both are
+   * ordinary: holding the key down, and the double tap that a layout using `
+   * as a dead key trains into your fingers.
+   *
+   * A window rather than a lock, because pressing it twice *slowly* is a real
+   * thing to do — open the console, read a line, put it away. A third of a
+   * second is longer than a stutter and far shorter than a decision.
+   */
+  const lastTick = useRef(0);
   useEffect(() => {
     if (!TESTING_POSSIBLE) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // Holding a key is one press held, not a press per frame.
+      if (event.repeat) return;
       const typing =
         event.target instanceof HTMLElement &&
         (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA");
@@ -306,6 +330,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
          * nothing minimised `wakeConsole` does nothing and says so, and the
          * toggle behaves exactly as it did.
          */
+        const now = Date.now();
+        const doubled = now - lastTick.current < DOUBLE_TICK_MS;
+        lastTick.current = now;
+        if (doubled) return;
         const grew = wakeConsole();
         setConsoleOpen((was) => !was || grew);
       }
