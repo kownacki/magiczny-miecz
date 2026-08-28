@@ -64,12 +64,24 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
       active_seat: 1,
       turn_state: { phase: "roll" },
     });
-    expect(writes.journal?.at(-1)).toMatchObject({
+    // `at(0)`, not `at(-1)`: the opening roster follows the start line, one per
+    // seat that actually holds a Karta.
+    expect(writes.journal?.at(0)).toMatchObject({
       seatId: null,
       turn: 1,
       kind: "start",
       payload: { seats: 1 },
     });
+    // Seat A chose nothing and is not in the round, so it gets no line — which
+    // is the poczekalnia's rule about undecided players, carried into the log.
+    expect(writes.journal?.slice(1)).toEqual([
+      {
+        seatId: "seat-b",
+        turn: 1,
+        kind: "joined",
+        payload: { characterId: "goblin", opening: true },
+      },
+    ]);
   });
 
   it("takes the moment the table began off the clock port", () => {
@@ -120,7 +132,9 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     const { writes } = startGame(lobby([aSeat()]), { decks: noDeck() }, ports());
     expect(writes.holdings).toBeUndefined();
     expect(writes.seats).toBeUndefined();
-    expect(writes.journal?.map((line) => line.kind)).toEqual(["start"]);
+    // The start, then who is playing what — the Goblin's kit is empty but the
+    // Goblin is still at the table.
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["start", "joined"]);
   });
 
   /**

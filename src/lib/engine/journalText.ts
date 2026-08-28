@@ -618,7 +618,20 @@ export function describe(
      * twice: "Ola (AWANTURNIK) dosiada się do stołu jako AWANTURNIK".
      */
     case "joined":
-      return line(`${justPerson} dosiada się do stołu jako ${characterName(data.characterId)}.`);
+      /**
+       * Two arrivals, one kind, told apart by the payload — the same shape
+       * `left-table` uses for its three departures.
+       *
+       * "Dosiada się" is somebody sitting down at a game already running, which
+       * is what this line was written for. At the opening it would be wrong
+       * about every player at once: nobody is joining anything, the game has
+       * not started, and they are the reason it is about to.
+       */
+      return line(
+        data.opening === true
+          ? `${justPerson} siada do stołu jako ${characterName(data.characterId)}.`
+          : `${justPerson} dosiada się do stołu jako ${characterName(data.characterId)}.`,
+      );
     /**
      * Somebody arrived. Not the same event as `joined`, and usually minutes
      * earlier.
@@ -658,6 +671,21 @@ export function describe(
         data.taken === true
           ? `${nameIn(data)} przejmuje rolę gospodarza.`
           : `${nameIn(data)} zostaje gospodarzem.`,
+      );
+    /**
+     * The first line in every journal, and the only one nobody chose.
+     *
+     * A table with nothing in its Dziennik reads as a table where nothing
+     * works. Something did happen — somebody opened this — and the mode is
+     * worth saying once, because it is the one setting that cannot be changed
+     * afterwards and decides whether the app deals the cards or is told what
+     * the table dealt.
+     */
+    case "table-opened":
+      return line(
+        data.mode === "companion"
+          ? "Stół otwarty — sędzia przy planszy."
+          : "Stół otwarty — pełna symulacja.",
       );
     case "joined-table": {
       const who = typeof data.name === "string" && data.name ? data.name : "Ktoś";

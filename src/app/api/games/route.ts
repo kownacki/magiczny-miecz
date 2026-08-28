@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createGame } from "@/lib/game/store";
-import { listGames } from "@/lib/game/lobbyStore";
+import { createGame, seatsFor } from "@/lib/game/store";
+import { listGames, openTable } from "@/lib/game/lobbyStore";
 import { COMPANION_PARKED, type GameMode } from "@/lib/game/modes";
 import type { EqMode } from "@/lib/engine/slots";
 
@@ -47,5 +47,20 @@ export async function POST(request: Request) {
     undefined,
     endlessStock,
   );
+  /**
+   * The table says so in its own Dziennik, before anybody has done anything.
+   *
+   * After `createGame` and off the response path, exactly as the join route
+   * does it: the table is already made by the time this runs, and a journal
+   * that failed to write must not turn a made table into an error. The seat is
+   * looked up rather than returned, because `createGame` inserts it without
+   * selecting it back and this is the only caller that wants it.
+   */
+  try {
+    const seats = await seatsFor(game.id);
+    await openTable(game.id, name ?? "Gospodarz", seats[0]?.id ?? null);
+  } catch {
+    // A table with a silent first line is still a table.
+  }
   return NextResponse.json({ joinCode: game.join_code, token: hostToken });
 }

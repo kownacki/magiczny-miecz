@@ -157,7 +157,33 @@ export function startGame(
     );
 
   const started: Changeset = {
-    journal: [{ seatId: null, turn: FIRST_TURN, kind: "start", payload: { seats: chosen.length } }],
+    journal: [
+      { seatId: null, turn: FIRST_TURN, kind: "start", payload: { seats: chosen.length } },
+      /**
+       * Who is playing what, said once, here.
+       *
+       * Choosing in the poczekalnia writes nothing on purpose: a pick is not a
+       * decision until the game starts — it can be changed, handed to somebody
+       * else, or taken back — and a journal of everybody's second thoughts is a
+       * journal nobody reads. At the start they stop being reversible, which is
+       * the moment worth writing down.
+       *
+       * In seat order, which is turn order, so the opening lines read as the
+       * round about to be played rather than as the order people happened to
+       * make up their minds in.
+       */
+      ...[...chosen]
+        .sort((a, b) => a.seat_index - b.seat_index)
+        .map((seat) => ({
+          seatId: seat.id,
+          turn: FIRST_TURN,
+          kind: "joined" as const,
+          // `opening` is what makes the sentence "siada" rather than "dosiada
+          // się": nobody is joining a game in progress here, they are the
+          // reason it is about to be one.
+          payload: { characterId: seat.character_id, opening: true },
+        })),
+    ],
   };
 
   return {

@@ -393,7 +393,8 @@ create table if not exists magiczny_miecz.moves (
     'lost-card', 'move', 'moved-by-hand', 'nature-change', 'new-character',
     'override', 'paid-friend', 'points', 'reshuffle', 'roll', 'shielded', 'sold', 'spell',
     'start', 'starting-kit', 'stone', 'taken', 'test-card',
-    'test-card-field', 'test-fight-end', 'took-seat', 'trophies-traded', 'turn-end',
+    'table-opened', 'test-card-field', 'test-fight-end', 'took-seat',
+    'trophies-traded', 'turn-end',
     'turn-lost', 'used', 'victory'
   )),
   payload jsonb not null default '{}'::jsonb,

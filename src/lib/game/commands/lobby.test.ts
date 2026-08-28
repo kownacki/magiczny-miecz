@@ -12,6 +12,7 @@ import {
   needsSweep,
   nextHost,
   noteArrival,
+  openTable,
   promoteHost,
   renameUser,
   resumeAs,
@@ -993,3 +994,39 @@ describe("somebody arriving at the table", () => {
  * and said nothing at all. A name disappearing off the roster with no account
  * of why is exactly what the journal is opened to settle.
  */
+
+/**
+ * The two lines a table opens with.
+ *
+ * `createGame` writes its own rows — it has to mint a claim token — so nothing
+ * in that path was a command and the Dziennik stayed empty until somebody
+ * moved. "Jeszcze nic się nie wydarzyło" under a table you have just made
+ * yourself reads as a Dziennik that does not work.
+ */
+describe("opening a table", () => {
+  it("says the table was opened, and who opened it", () => {
+    const table = aTable({ seats: seated({}), users: here({}) });
+    const { writes } = openTable(table, { hostName: "Michał", hostSeatId: "seat-0" });
+
+    expect(writes.journal).toEqual([
+      { seatId: null, turn: 3, kind: "table-opened", payload: { mode: "simulation" } },
+      { seatId: "seat-0", turn: 3, kind: "joined-table", payload: { name: "Michał" } },
+    ]);
+  });
+
+  it("gives the host a line of their own rather than folding them into the first", () => {
+    // Two facts, and the second person to arrive gets a line for arriving — so
+    // a host with none would make the log start in the middle.
+    const table = aTable({ seats: seated({}), users: here({}) });
+    const kinds = openTable(table, { hostName: "Michał", hostSeatId: "seat-0" }).writes.journal?.map(
+      (line) => line.kind,
+    );
+    expect(kinds).toEqual(["table-opened", "joined-table"]);
+  });
+
+  it("takes a host with no chair, because a table can be opened by a watcher", () => {
+    const table = aTable({ seats: seated({}), users: here({}) });
+    const line = openTable(table, { hostName: "Michał", hostSeatId: null }).writes.journal?.at(1);
+    expect(line?.seatId).toBeNull();
+  });
+});

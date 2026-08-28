@@ -390,6 +390,47 @@ export function unseat(
  * copied into the payload for the reason `left-table` copies it: the row can be
  * deleted and the line has to survive it.
  */
+/**
+ * The two lines a brand-new table starts with.
+ *
+ * `createGame` writes its rows itself — the games row, the host's seat and the
+ * host — for the same reason `joinGame` does: it has to mint a claim token and
+ * hand it back, which a Changeset cannot do. So there is no command in the
+ * path, and the journal was empty until somebody moved. A Dziennik reading
+ * "Jeszcze nic się nie wydarzyło" under a table you have just made yourself
+ * reads as a Dziennik that does not work.
+ *
+ * Both lines rather than one. Opening the table and being its first player are
+ * two facts — the second person to arrive gets a line for arriving, and the
+ * host getting none would make the log start in the middle.
+ */
+export function openTable(
+  snapshot: Snapshot,
+  command: { hostName: string; hostSeatId: string | null },
+): Outcome<void> {
+  return {
+    writes: {
+      journal: [
+        {
+          seatId: null,
+          turn: snapshot.game.turn,
+          kind: "table-opened",
+          // The mode, because it is the one setting that cannot be changed
+          // afterwards.
+          payload: { mode: snapshot.game.mode },
+        },
+        {
+          seatId: command.hostSeatId,
+          turn: snapshot.game.turn,
+          kind: "joined-table",
+          payload: { name: command.hostName },
+        },
+      ],
+    },
+    result: undefined,
+  };
+}
+
 export function noteArrival(
   snapshot: Snapshot,
   command: { name: string; seatId: string | null },

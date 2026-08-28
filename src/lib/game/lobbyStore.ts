@@ -7,6 +7,7 @@ import {
   unseat as unseatOn,
   leaveTable as leaveTableOn,
   noteArrival as noteArrivalOn,
+  openTable as openTableOn,
   needsSweep,
   renameUser as renameUserOn,
   setReady as setReadyOn,
@@ -181,6 +182,21 @@ export async function leaveTable(
   byUser?: string,
 ): Promise<LeaveResult> {
   return change(gameId, leaveTableOn, { userId, kicked, byUser });
+}
+
+/**
+ * Writes the two lines a new table opens with.
+ *
+ * Called after `createGame` for the reason `noteArrival` is called after
+ * `joinGame`: both mint a claim token, so both write their own rows and neither
+ * can be a command. The table exists either way — this only says so.
+ */
+export async function openTable(
+  gameId: string,
+  hostName: string,
+  hostSeatId: string | null,
+): Promise<void> {
+  await change(gameId, openTableOn, { hostName, hostSeatId });
 }
 
 /**

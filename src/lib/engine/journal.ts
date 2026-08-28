@@ -61,6 +61,8 @@ export const JOURNAL_KINDS = [
    * Postać entering play — and the gap between the two is usually minutes.
    */
   "joined-table",
+  /** A table was opened. The first line in every journal, and the only one nobody chose. */
+  "table-opened",
   /** Somebody sat down in a chair. Not `joined` — no Postać is chosen yet. */
   "took-seat",
   /** Out of the chair, still in the room. Not `left-table`, which is the person going. */
