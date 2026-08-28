@@ -7,6 +7,7 @@ import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { Fold } from "./fold";
+import { Rules } from "./rule-ref";
 import { ItemSlot } from "./item-slot";
 import { CARD_NAMES, tileFor, type Held, type Seat } from "./table";
 import type { TileCard } from "./card-tile";
@@ -109,8 +110,16 @@ export function TrophySection({
     >
       {counting === 0 ? (
         <p className="p-1 text-[11px] leading-snug text-muted">
-          Nikogo jeszcze nie pokonałeś. Za każde {RATE} punktów Miecza pokonanych Wrogów
-          dostaniesz 1 punkt Miecza (1.4).
+          {/* The rule is a link here, and plain text in the button below.
+              This is the app explaining itself, which is where CLAUDE.md says a
+              citation belongs; a label is not, because `Rules` turns "(1.4)"
+              into a button and a button inside a button is not something HTML
+              allows. The `title` on the same control keeps it plain for the
+              duller reason that an attribute cannot hold one. */}
+          <Rules>
+            Nikogo jeszcze nie pokonałeś. Za każde {RATE} punktów Miecza pokonanych
+            Wrogów dostaniesz 1 punkt Miecza (1.4).
+          </Rules>
         </p>
       ) : (
         <div className="flex flex-col gap-2 p-1">
