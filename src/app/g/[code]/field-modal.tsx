@@ -1,11 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { fieldWithText } from "@/lib/view/fieldText";
-import { cardArtUrl, cardImageUrl } from "@/lib/view/cardImages";
-import { itemProfile } from "@/lib/engine/abilityText";
-import { CardFacts, hasFacts } from "./card-facts";
-import { useCardPreview } from "./card-preview";
+import { CardTile } from "./card-tile";
+import { useState } from "react";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { kindForCard } from "@/lib/engine/holdings";
@@ -149,10 +146,32 @@ export function FieldModal({
    */
   friend?: React.ReactNode;
   busy: boolean;
-  onTake: (fieldCardId: string) => void;
+  /** Awaited, so the tile can stay dimmed for exactly as long as the ask is out. */
+  onTake: (fieldCardId: string) => void | Promise<void>;
   onInspect: (cardId: CardId) => void;
   onClose: () => void;
 }) {
+  /**
+   * The card somebody has just asked for, dimmed until the server answers.
+   *
+   * The answer is not a foregone conclusion and the round trip is not instant:
+   * two characters can be standing on the same Obszar, and the one who presses
+   * second is told the card has gone. A tile that looks untouched in the
+   * meantime invites a second press, which is the same request again.
+   *
+   * Held here rather than read off `busy`, which is the whole table's flag and
+   * would dim every card on the field for anything anybody does.
+   */
+  const [taking, setTaking] = useState<string | null>(null);
+  const take = async (fieldCardId: string) => {
+    setTaking(fieldCardId);
+    try {
+      await onTake(fieldCardId);
+    } finally {
+      setTaking(null);
+    }
+  };
+
   const field = fieldWithText(fieldId);
 
   if (!field) return null;
@@ -199,68 +218,46 @@ export function FieldModal({
             {cards.length === 0 ? (
               <p className="text-xs text-muted/70">Nic — Obszar jest pusty.</p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              /* The same tiles as the Plecak and the Księga, for the same
+                 reason: a card is recognised by its picture, and a player who
+                 has learnt one shelf should not have to learn a second shape
+                 for the identical act. Everything the app knows about a card
+                 is one hover away on all three. */
+              <div className="flex flex-wrap gap-3">
                 {cards.map((lying) => {
                   const name = NAMES.get(lying.cardId) ?? lying.cardId;
-                  const text = TEXTS.get(lying.cardId);
-                  const art = cardArtUrl(lying.cardId) ?? cardImageUrl(lying.cardId);
                   // Only Przedmioty and Przyjaciele are picked up (12.1). A Wróg
                   // lying here is fought and a Spotkanie is read — and a card
                   // off the Wyposażenie sheet is always a Przedmiot.
                   const event = EVENT_BY_ID.get(lying.cardId as EventCard["id"]);
-                  // Only a card the app carries abilities for has any; a Wróg
-                  // and a Spotkanie have none, and `itemProfile` says so with
-                  // four empty lists rather than by refusing.
-                  const profile = itemProfile(lying.cardId, eqMode);
                   const takeable = event ? kindForCard(event) !== null : NAMES.has(lying.cardId);
                   return (
-                    <li
+                    <CardTile
                       key={lying.id}
-                      className="flex items-center gap-3 rounded border border-edge/60 bg-night/40 p-2"
+                      card={{
+                        cardId: lying.cardId,
+                        name,
+                        text: TEXTS.get(lying.cardId),
+                        holdable: takeable,
+                      }}
+                      eqMode={eqMode}
+                      nature={nature}
+                      dimmed={taking === lying.id}
+                      onClick={() => onInspect(lying.cardId)}
                     >
-                      <LyingThumb
-                        eqMode={eqMode}
-                        nature={nature}
-                        cardId={lying.cardId}
-                        name={name}
-                        text={text}
-                        art={art}
-                        onInspect={onInspect}
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        <p className="truncate text-sm text-ink">{name}</p>
-                        {/* What the app knows it does, not the first two lines
-                            of what is printed on it. The prose was clamped, so
-                            a Hełm ended mid-word — and the question here is
-                            whether this is worth ending a move on, which is
-                            what the formalised lines answer. The prose is still
-                            a hover away, on the Karta itself.
-
-                            Anything the app has no lines for — a Wróg, a
-                            Spotkanie, a Przedmiot nobody has transcribed —
-                            keeps the prose, because half a sentence beats
-                            nothing at all. */}
-                        {hasFacts(profile) ? (
-                          <CardFacts cardId={lying.cardId} profile={profile} nature={nature} />
-                        ) : (
-                          <p className="line-clamp-2 text-[11px] leading-snug text-muted">
-                            {text}
-                          </p>
-                        )}
-                      </div>
                       {takeable && standingHere && canAct && arrived && (
                         <button
                           disabled={busy}
-                          onClick={() => onTake(lying.id)}
-                          className="shrink-0 rounded border border-verdigris/50 px-2 py-1 text-[11px] text-ink transition hover:bg-verdigris/20 disabled:opacity-40"
+                          onClick={() => take(lying.id)}
+                          className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
                         >
-                          Weź
+                          weź
                         </button>
                       )}
-                    </li>
+                    </CardTile>
                   );
                 })}
-              </ul>
+              </div>
             )}
             {/* 13.1 and 12.1: things happen on the field your move ended on, so
                 a player reading about somewhere else is told why there is no
@@ -392,57 +389,5 @@ export function FieldModal({
         </div>
       </div>
     </Overlay>
-  );
-}
-
-/**
- * A card lying on the field, as a thumbnail with the whole card on hover.
- *
- * Its own component because the hover is a hook, and the list this sits in is a
- * map. Clicking still opens the full card — hover is the quick look, not the
- * only way in, and a touch screen has no hover at all.
- */
-function LyingThumb({
-  eqMode,
-  nature,
-  cardId,
-  name,
-  text,
-  art,
-  onInspect,
-}: {
-  eqMode: EqMode;
-  nature: Nature | null;
-  cardId: CardId;
-  name: string;
-  text: string | undefined;
-  art: string | null;
-  onInspect: (cardId: CardId) => void;
-}) {
-  const { handlers, preview } = useCardPreview({ cardId, name, text }, false, eqMode, nature);
-
-  return (
-    <>
-      <button
-        onClick={() => onInspect(cardId)}
-        {...handlers}
-        title="Pokaż całą Kartę"
-        className="shrink-0 overflow-hidden rounded border border-edge transition hover:border-ochre"
-      >
-        {art ? (
-          <Image
-            src={art}
-            alt={name}
-            width={74}
-            height={65}
-            className="h-auto w-[74px]"
-            unoptimized
-          />
-        ) : (
-          <span className="block w-[74px] p-2 text-[10px] text-muted">{name}</span>
-        )}
-      </button>
-      {preview}
-    </>
   );
 }
