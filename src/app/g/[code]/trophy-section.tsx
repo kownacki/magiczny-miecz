@@ -83,6 +83,16 @@ export function TrophySection({
 }) {
   /** Which trade is being looked at, by count. Null means "the most it buys". */
   const [wanted, setWanted] = useState<number | null>(null);
+  /**
+   * Open to start with, like the pack and the Zaklęcia it stands beside.
+   *
+   * `Fold` reads a missing `onToggle` as "this section does not fold", which is
+   * what this was: a heading with a triangle's worth of nothing beside it. The
+   * tally is what makes folding it cheap — „14 pkt · 2 punkty Miecza" stays on
+   * the bar when the row is shut, so what a player checks trofea for is legible
+   * without opening them.
+   */
+  const [showing, setShowing] = useState(true);
 
   const byPoints = mode === "points";
   const held = seat.holdings.filter((one) => one.kind === "trophy");
@@ -145,6 +155,8 @@ export function TrophySection({
           {counting} pkt{most ? ` · ${most.swords} ${plural(most.swords)}` : ""}
         </span>
       }
+      open={showing}
+      onToggle={() => setShowing(!showing)}
     >
       {shelf.length === 0 ? (
         <p className="p-1 text-[11px] leading-snug text-muted">
