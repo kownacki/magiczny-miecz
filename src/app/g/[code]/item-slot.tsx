@@ -77,7 +77,7 @@ export interface SlotOccupant {
 }
 
 /** How the place should look, which is mostly about what a moving card would do. */
-export type SlotTone = "empty" | "filled" | "accepts" | "rejects" | "candidate";
+export type SlotTone = "empty" | "filled" | "chosen" | "accepts" | "rejects" | "candidate";
 
 /**
  * Two questions, answered in two strengths.
@@ -107,6 +107,16 @@ const TONE: Record<SlotTone, string> = {
   rejects: "border-solid border-vermilion bg-vermilion/25",
   candidate: "border-dashed border-verdigris/60 bg-verdigris/10",
   filled: `border-solid ${ART_BORDER} bg-raised`,
+  /**
+   * Picked out of a row by something the player is deciding, not by the pointer.
+   *
+   * The full ochre the hover reserves, plus a wash — enough that a chosen card
+   * is found at a glance in a row of its own kind. It exists because the
+   * alternative was dimming everything else, and the trofea already spend
+   * dimming on „this one is gone": one fade cannot mean both "spent" and "not
+   * in this trade" in the same row, and the row is one row now.
+   */
+  chosen: "border-solid border-ochre bg-ochre/15",
   empty: "border-dashed border-edge/70 bg-night/40",
 };
 

@@ -172,21 +172,34 @@ export function TrophySection({
         </p>
       ) : (
         <div className="flex flex-col gap-2 p-1">
-          {/* Those still held, which are the only ones a trade can reach — the
-              same row in both variants, because both hold them. */}
+          {/* One row, in the order the shelf hands back: newest first, spent
+              pushed to the end. Nothing is arranged by hand here — see
+              `shelfFor` for why a shelf is not a pack. */}
           <div className="flex flex-wrap gap-2">
-            {shelf
-              .filter((one) => !one.gone)
-              .map((one, at) => (
-                <TrophyTile
-                  key={`${one.cardId}-${at}`}
-                  cardId={one.cardId}
-                  spent={takes(one.cardId)}
-                  choosing={offer !== null}
-                  onInspect={onInspect}
-                />
-              ))}
+            {shelf.map((one, at) => (
+              <TrophyTile
+                key={`${one.cardId}-${at}`}
+                cardId={one.cardId}
+                gone={one.gone}
+                inTrade={!one.gone && takes(one.cardId)}
+                onInspect={onInspect}
+              />
+            ))}
           </div>
+
+          {gone.length > 0 && (
+            <p className="text-[11px] leading-snug text-muted/70">
+              {/* Not "sprzedane". A trade is the usual way a trophy goes and not
+                  the only one — it can also be put down — and which of the two
+                  happened is recorded nowhere. So the sentence says what is
+                  certainly true and names the rule only for the half that has
+                  one. */}
+              <Rules>
+                Wyblakłe na końcu to pokonani, których już nie masz — oddanych za
+                punkty Miecza (1.4) albo odrzuconych.
+              </Rules>
+            </p>
+          )}
 
           {byPoints && (
             /* The whole of what this variant changes, and the only place the
@@ -256,38 +269,6 @@ export function TrophySection({
             </>
           )}
 
-          {gone.length > 0 && (
-            /* Last, and after the trade, because nothing here can be traded:
-               these Karty are on the stos zużytych and the row is a record. It
-               is a row of its own rather than the tail of the one above, so the
-               dimming reads as "gone" rather than as the trade's "not this
-               time" — the same fade meaning two things in one row is what the
-               caption and the gap are here to stop. */
-            <div className="flex flex-col gap-1 border-t border-edge/50 pt-2">
-              <p className="text-[11px] leading-snug text-muted/70">
-                {/* Not "sprzedane". A trade is the usual way a trophy leaves a
-                    hand and not the only one — a Karta can also be put down —
-                    and which of the two happened is not recorded anywhere. So
-                    the sentence says what is certainly true and names the rule
-                    only for the half that has one. */}
-                <Rules>
-                  Pokonani, których Kart już nie masz — oddanych za punkty Miecza
-                  (1.4) albo odrzuconych.
-                </Rules>
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {gone.map((one, at) => (
-                  <TrophyTile
-                    key={`gone-${one.cardId}-${at}`}
-                    cardId={one.cardId}
-                    spent={false}
-                    choosing
-                    onInspect={onInspect}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </Fold>
@@ -332,15 +313,15 @@ function Ledger({ offer, total }: { offer: Offer; total: number }) {
 /** One beaten Wróg, with what he is worth printed where a name goes. */
 function TrophyTile({
   cardId,
-  spent,
-  choosing,
+  gone,
+  inTrade,
   onInspect,
 }: {
   cardId: string;
-  /** This trade would hand him in. */
-  spent: boolean;
-  /** There is a trade on offer at all, so unlit means "stays behind". */
-  choosing: boolean;
+  /** Beaten, and no longer held: traded away (1.4) or put down. */
+  gone: boolean;
+  /** The trade being weighed would hand this one in. */
+  inTrade: boolean;
   onInspect: (card: TileCard) => void;
 }) {
   const worth = trophyValue(cardId);
@@ -357,20 +338,22 @@ function TrophyTile({
       // its Miecz is the currency, and the currency is what a choice is made on.
       label={`${name} · ${worth}`}
       eqMode="classic"
-      // Always `filled`. A trophy tile always has a Karta in it, and `empty` is
-      // the dashed outline of a *vacant place* — the look the body uses for a
-      // slot with nothing on it. Borrowing it to mean "not in this trade" said
-      // the wrong thing twice over: dashed reads as "something could go here",
-      // and every unpicked Wróg looked like a hole in the shelf.
-      //
-      // What is and is not being spent is the dimming's job, and it is enough:
-      // one signal, not two, and the one that does not collide with a meaning
-      // the rest of the card already has.
-      tone="filled"
-      marks={["trofeum"]}
-      // Dimmed only while a trade is being weighed, and only for the ones it
-      // would leave. With nothing on offer there is nothing to contrast with.
-      dimmed={choosing && !spent}
+      /**
+       * One fade, one meaning.
+       *
+       * Both halves live in one row now, so dimming had to stop being the
+       * answer to two different questions. It says „gone" and nothing else; the
+       * trade picks its own out with `chosen` instead of fading everything it
+       * is leaving. That also puts the emphasis the right way round — a trade
+       * is a handful of cards out of a shelf, so lighting a few beats dulling
+       * the rest.
+       */
+      tone={inTrade ? "chosen" : "filled"}
+      dimmed={gone}
+      // The cup is what says a Wróg can still be spent, so it goes with him
+      // when he is. Position and fade both say the same thing from across the
+      // row; this is the one that survives being looked at directly.
+      marks={gone ? [] : ["trofeum"]}
       onClick={() => onInspect(card)}
     />
   );

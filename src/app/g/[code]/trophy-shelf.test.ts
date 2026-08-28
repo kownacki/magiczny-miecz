@@ -12,18 +12,16 @@ describe("who is still in hand", () => {
   const names = (shelf: ReturnType<typeof shelfFor>) =>
     shelf.map((one) => `${one.cardId}${one.gone ? "*" : ""}`);
 
-  it("keeps everyone still held", () => {
+  /** Newest first: the shelf grows at one end and that end is what you read. */
+  it("keeps everyone still held, latest first", () => {
     expect(names(shelfFor(["cyklop", "nobbin"], ["cyklop", "nobbin"]))).toEqual([
-      "cyklop",
       "nobbin",
+      "cyklop",
     ]);
   });
 
   it("marks the ones whose Karty have left", () => {
-    expect(names(shelfFor(["cyklop", "nobbin"], ["nobbin"]))).toEqual([
-      "nobbin",
-      "cyklop*",
-    ]);
+    expect(names(shelfFor(["cyklop", "nobbin"], ["nobbin"]))).toEqual(["nobbin", "cyklop*"]);
   });
 
   /**
@@ -42,13 +40,16 @@ describe("who is still in hand", () => {
     expect(shelf.filter((one) => one.gone)).toEqual([]);
   });
 
-  /** Sorted last, whatever order they were beaten in. */
-  it("puts the departed after the living, each half in its own order", () => {
+  /**
+   * The whole arrangement in one case: spent pushed to the end, and both halves
+   * running latest to oldest so they read the same direction.
+   */
+  it("puts the spent last, each half latest first", () => {
     expect(names(shelfFor(["a", "b", "c", "d"], ["b", "d"]))).toEqual([
-      "b",
       "d",
-      "a*",
+      "b",
       "c*",
+      "a*",
     ]);
   });
 
@@ -57,12 +58,10 @@ describe("who is still in hand", () => {
    * The Karta is in the Plecak and on nobody's list, and dropping it would
    * empty a row the player can see.
    */
-  it("keeps a holding that never reached the shelf", () => {
+  it("keeps a holding that never reached the shelf, as the oldest thing there", () => {
     expect(names(shelfFor([], ["cyklop"]))).toEqual(["cyklop"]);
-    expect(names(shelfFor(["nobbin"], ["nobbin", "cyklop"]))).toEqual([
-      "nobbin",
-      "cyklop",
-    ]);
+    // NOBBIN has a date and CYKLOP predates the shelf, so CYKLOP sorts behind.
+    expect(names(shelfFor(["nobbin"], ["nobbin", "cyklop"]))).toEqual(["nobbin", "cyklop"]);
   });
 
   /**
@@ -75,7 +74,7 @@ describe("who is still in hand", () => {
    * and holds neither has spent both, whichever mode the table is playing.
    */
   it("calls them all gone when a seat holds none of them", () => {
-    expect(names(shelfFor(["cyklop", "nobbin"], []))).toEqual(["cyklop*", "nobbin*"]);
+    expect(names(shelfFor(["cyklop", "nobbin"], []))).toEqual(["nobbin*", "cyklop*"]);
   });
 
   it("is empty for somebody who has beaten nobody", () => {
