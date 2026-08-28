@@ -66,8 +66,12 @@ export function stockLeft(cardId: string, inPlay: number, endless = false): numb
  * calling them Wyposażenie is not wrong about the cardboard. The rulebook still
  * holds them apart: chapter 21 is titled "MAGICZNE MIECZE, TARCZE TOLIMANA I
  * KARTY WYPOSAŻENIA" — three things joined by *i* — and 21.1 refers back to
- * that title as a list. Which is why nothing a player reads calls this setting
- * "Wyposażenie": on the sheet they are exactly that, and a label saying so
- * would promise to cover them.
+ * that title as a list.
+ *
+ * Which is the distinction the copy leans on: *zwykłe* Wyposażenie is what this
+ * setting frees, and the two the chapter names separately are what it does not.
+ * "Przedmioty" would have been looser rather than safer — a Koń and an Eliksir
+ * Siły are Przedmioty too, and neither was ever finite, because neither is on
+ * this sheet.
  */
 export const RELICS: ReadonlySet<string> = new Set(["magiczny-miecz", "tarcza-tolimana"]);

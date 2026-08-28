@@ -45,9 +45,9 @@ export interface VariantChange {
  */
 export const ENDLESS_STOCK_CHANGE: VariantChange = {
   rules: ["21.2", "16.6"],
-  title: "Zwykłych Przedmiotów nie brakuje — poza dwoma",
+  title: "Zwykłego Wyposażenia nie brakuje — poza dwoma",
   book: "„Jeżeli zabraknie Kart jakiegoś Przedmiotu, oznacza to, że Przedmiot ten jest w danej chwili nieosiągalny.” Stos jest skończony: trzy Miecze, dwie Zbroje, dwa Hełmy.",
-  here: "Zwykłych Przedmiotów nigdy nie brakuje — trzy Miecze na pięć Postaci, które mają Miecz w Charakterystyce, to liczba wydrukowanych kartoników, a nie zasada gry. Wyjątkiem są Magiczne Miecze i Tarcze Tolimana: tych zostaje po cztery. Tu skończoność jest zamierzona — 16.6 każe wyciągnięty ze stosu Zdarzeń wymienić na kartę z Wyposażenia, żeby stosy się nie sumowały, a 11.9 i 14.7 stawiają na tych dwóch całą końcówkę gry.",
+  here: "Zwykłego Wyposażenia nigdy nie brakuje — trzy Miecze na pięć Postaci, które mają Miecz w Charakterystyce, to liczba wydrukowanych kartoników, a nie zasada gry. Wyjątkiem są Magiczne Miecze i Tarcze Tolimana: tych zostaje po cztery. Tu skończoność jest zamierzona — 16.6 każe wyciągnięty ze stosu Zdarzeń wymienić na kartę z Wyposażenia, żeby stosy się nie sumowały, a 11.9 i 14.7 stawiają na tych dwóch całą końcówkę gry.",
 };
 
 export const VARIANT_CHANGES: readonly VariantChange[] = [

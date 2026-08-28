@@ -1160,8 +1160,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                  */
                 onEndlessStock={() =>
                   setAsk({
-                    title: "Zwykłych Przedmiotów nie brakuje",
-                    body: "Miecza, Hełmu, Sztyletu, Zbroi i Tarczy przestanie brakować do końca tej gry. Jeden wyjątek zostaje: Magicznych Mieczy i Tarcz Tolimana dalej są po cztery na cały stół, bo bez nich nie ma wejścia na Most ani do Zamku. Tego się już nie cofa — do skończonego stosu wraca się tylko przy nowym stole.",
+                    title: "Zwykłego Wyposażenia nie brakuje",
+                    body: "Zwykłego Wyposażenia — Miecza, Hełmu, Sztyletu, Zbroi i Tarczy — przestanie brakować do końca tej gry. Jeden wyjątek zostaje: Magicznych Mieczy i Tarcz Tolimana dalej są po cztery na cały stół, bo bez nich nie ma wejścia na Most ani do Zamku. Tego się już nie cofa — do skończonego stosu wraca się tylko przy nowym stole.",
                     confirmLabel: "Włącz na stałe",
                     tone: "grave",
                     onConfirm: () => {

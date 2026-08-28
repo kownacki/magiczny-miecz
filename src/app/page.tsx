@@ -550,19 +550,19 @@ function CreateDialog({
               legend reading "Wyposażenie" beside a setting that deliberately
               spares those two would be read as covering them. */}
           <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
-            Zapas Przedmiotów
+            Zapas Wyposażenia
           </legend>
           <ModeChoice
             active={endlessStock}
             onPick={() => setEndlessStock(true)}
-            label="Zwykłego nigdy nie brakuje"
+            label="Zwykłego Wyposażenia nie brakuje"
             hint="Miecz, Hełm, Sztylet, Zbroja, Tarcza — bez limitu. Wyjątek: Magiczne Miecze i Tarcze Tolimana zostają po cztery, bo na nich stoi wejście na Most i do Zamku."
           />
           <ModeChoice
             active={!endlessStock}
             onPick={() => setEndlessStock(false)}
             label="Jak w pudełku"
-            hint="Cały stos jest skończony (21.2): trzy Miecze, a Postaci z Mieczem w Charakterystyce jest pięć."
+            hint="Cały stos Wyposażenia jest skończony (21.2): trzy Miecze, a Postaci z Mieczem w Charakterystyce jest pięć."
           />
         </fieldset>
 
