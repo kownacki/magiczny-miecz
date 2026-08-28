@@ -540,6 +540,13 @@ export function CardPreview({
           {/**
            * How to hold it still, and what holding it is for.
            *
+           * "Przypiąć", which is the word the code has used for this from the
+           * start — `pinnedPreview`, `pinned` — and now the word the reader
+           * sees. It names the state rather than one of the things the state is
+           * for: a panel that is pinned can be copied from *and* clicked, and a
+           * hint that promised only one of those would be wrong about the
+           * other.
+           *
            * Without this the feature does not exist for anybody who was not
            * told about it: a modifier key leaves no trace on screen, and the
            * panel it acts on is one that disappears the moment you look away
@@ -550,7 +557,7 @@ export function CardPreview({
            * something the card says.
            */}
           <p className="mt-auto pt-2 text-[10px] leading-none text-muted/50">
-            {pinned ? holdKeyName() + " trzymany — puść, żeby zamknąć" : holdKeyName() + " — przytrzymaj, żeby zaznaczyć"}
+            {pinned ? `przypięte — puść ${holdKeyName()}, żeby odpiąć` : `${holdKeyName()} — przytrzymaj, żeby przypiąć`}
           </p>
         </div>
       )}
