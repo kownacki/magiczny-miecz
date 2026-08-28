@@ -261,7 +261,7 @@ export type Command =
   | { kind: "sell"; name: string }
   | { kind: "heal"; points: number | null }
   | { kind: "cast"; name: string; who: string | null }
-  | { kind: "trade"; cards: string[] }
+  | { kind: "trade"; cards: string[]; swords: number | null }
   | { kind: "trophies"; mode: "points" | "cards" | null }
   /**
    * What a card asked, answered.
@@ -476,8 +476,8 @@ export const COMMANDS: CommandSpec[] = [
     name: "trade",
     aliases: [],
     when: PLAYING,
-    usage: "trade [CYKLOP, NOBBIN]",
-    summary: "cash beaten Wrogowie in at 7 points a Miecz (1.4) — all of them, or the ones you name",
+    usage: "trade [2|CYKLOP, NOBBIN]",
+    summary: "cash beaten Wrogowie in at 7 points a Miecz (1.4) — how many Miecze you want, the Karty you name, or all of them",
     needs: "play",
     group: "trade",
   },
@@ -1325,6 +1325,18 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return needs("trophies", "`points` (score them) or `cards` (keep the Karty, as printed)?");
   }
   if (word === "trade") {
+    /**
+     * A bare number is a count of Miecze, not a card.
+     *
+     * Unambiguous because no Karta is called "2", and it is the thing somebody
+     * actually wants: you know how much Miecz you are short, not which of your
+     * four Wrogowie add up to it. Working that out is `offerFor`'s.
+     */
+    if (tail && /^\d+$/.test(tail)) {
+      const swords = Number(tail);
+      if (swords < 1) return needs("trade", "How many Miecze — at least one?");
+      return { ok: { kind: "trade", cards: [], swords } };
+    }
     // Commas or spaces: "trade CYKLOP, NOBBIN" and "trade CYKLOP NOBBIN" are the
     // same list, because a player typing two card names will use either.
     const named = tail
@@ -1333,7 +1345,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
           .flatMap((part) => part.trim())
           .filter((part) => part.length > 0)
       : [];
-    return { ok: { kind: "trade", cards: named } };
+    return { ok: { kind: "trade", cards: named, swords: null } };
   }
   if (word === "heal") {
     if (!tail) return { ok: { kind: "heal", points: null } };

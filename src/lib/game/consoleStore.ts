@@ -17,7 +17,7 @@ import {
 import { cardName } from "@/lib/engine/polish";
 import { combatValueOf } from "@/lib/engine/cards";
 import { EVENTS } from "./decks";
-import { TROPHY_RATE } from "./commands/shop";
+import { TROPHY_RATE, offersFor } from "./commands/shop";
 import { carriesSpell, fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
 import { change } from "./change";
@@ -824,7 +824,10 @@ export async function runCommand(
         throw new Error(`No card called \`${name}\`.`);
       });
 
-      const gained = await tradeTrophies(gameId, seat.id, chosen.length ? chosen : undefined);
+      const gained = await tradeTrophies(gameId, seat.id, {
+        ...(command.swords !== null ? { swords: command.swords } : {}),
+        ...(chosen.length ? { cardIds: chosen } : {}),
+      });
       return gained > 0
         ? `${named(seat)} trades trophies for ${gained} Miecz${gained === 1 ? "" : "e"}.`
         : `${named(seat)} has nothing to trade.`;
@@ -1602,6 +1605,7 @@ export async function runCommand(
               `Trophies: ${trophies
                 .map((one) => `${cardName(one.card_id)} ${trophyPoints(one.card_id)}`)
                 .join(", ")}` + trophyLedger(trophies.map((one) => one.card_id)),
+              ...tradeMenu(trophies.map((one) => one.card_id)),
             ]
           : []),
         /**
@@ -1658,6 +1662,33 @@ function trophyLedger(cardIds: readonly string[]): string {
   const wasted = points - swords * TROPHY_RATE;
   if (swords < 1) return `  (${points} pkt — ${TROPHY_RATE} za Miecz)`;
   return `  (${points} pkt → ${swords} Miecz${swords === 1 ? "" : "e"}, ${wasted} przepadnie)`;
+}
+
+/**
+ * What each number of Miecze would actually cost, one row apiece.
+ *
+ * The line above says what an all-in trade comes to, which is the trade nobody
+ * should make: 1.4 lets you pick, and picking well is a subset-sum the engine
+ * already solves. Printing the answers turns "what do I hand in for two
+ * Miecze" from arithmetic on paper into a line you read and a number you type.
+ *
+ * Nothing when there is only the one way to do it — a hand that buys exactly
+ * one Miecz using everything it has needs no menu, and the line above already
+ * said so.
+ */
+function tradeMenu(cardIds: readonly string[]): string[] {
+  const offers = offersFor(cardIds.map((cardId) => ({ cardId, points: trophyPoints(cardId) })));
+  if (offers.length === 0) return [];
+  const only = offers.length === 1 && offers[0].cardIds.length === cardIds.length;
+  if (only) return [];
+  return offers.map((offer) => {
+    const cost =
+      offer.cardIds.length === cardIds.length
+        ? "wszystko"
+        : offer.cardIds.map((cardId) => cardName(cardId)).join(", ");
+    const burn = offer.wasted > 0 ? `, ${offer.wasted} przepadnie` : ", nic nie przepadnie";
+    return `  trade ${offer.swords} → ${cost} (${offer.points} pkt${burn})`;
+  });
 }
 
 /** The same arithmetic on a score rather than a hand, and nothing is wasted. */

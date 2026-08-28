@@ -12,11 +12,18 @@ import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } f
 import type { SeatRow } from "../store";
 import { asReturnable, putOnPile } from "./piles";
 import { takeCard, type Taken } from "./holdings";
-import { cardName } from "@/lib/engine/polish";
+import { cardName, plural } from "@/lib/engine/polish";
+import { TROPHY_RATE, offerFor, offersFor } from "@/lib/engine/trophies";
 import { seatById, trophyModeOf } from "./seat";
 
-/** 1.4: seven points of beaten Wróg buy one point of Miecz. */
-export const TROPHY_RATE = 7;
+/**
+ * 1.4's rate, and the search over a hand that spends it well.
+ *
+ * Both live in the engine — they are the rule, not this command's reading of
+ * it, and the browser needs the same answer to draw the same choice. Re-exported
+ * because everything above already reaches here for the rate.
+ */
+export { TROPHY_RATE, offerFor, offersFor };
 
 /**
  * What this Obszar offers of a given kind, counting the cards lying on it.
@@ -123,9 +130,44 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
   );
 }
 
+/**
+ * Refuses a count the hand cannot reach, saying what it can.
+ *
+ * "Nie da się" on its own leaves the player to work out the answer this
+ * function has already computed. Throws rather than returns, so the caller
+ * above reads as one expression.
+ */
+function refuseSwords(
+  held: readonly { card_id: string }[],
+  swords: number,
+): never {
+  const can = offersFor(held.map((one) => ({ cardId: one.card_id, points: trophyPointsOf(one.card_id) })));
+  if (can.length === 0) {
+    const points = held.reduce((sum, one) => sum + trophyPointsOf(one.card_id), 0);
+    throw new Error(
+      `Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4) — masz ${points}.`,
+    );
+  }
+  const most = can[can.length - 1].swords;
+  throw new Error(
+    swords > most
+      ? `Z tych trofeów kupisz najwyżej ${most} ${plural(most, "Miecz", "Miecze", "Mieczy")}.`
+      : `Ile Mieczy? Podaj liczbę całkowitą.`,
+  );
+}
+
 export function tradeTrophies(
   snapshot: Snapshot,
-  command: { seatId: string; cardIds?: readonly string[] },
+  /**
+   * Three ways to say what you want, in order of precedence.
+   *
+   * `cardIds` names the Karty outright. `swords` names an outcome and lets
+   * `offerFor` find the cheapest set that reaches it — the arithmetic 1.4
+   * leaves to the player, which is worth doing properly and is not worth doing
+   * on paper. Neither hands in everything, which is what a player cashing out
+   * usually means.
+   */
+  command: { seatId: string; swords?: number; cardIds?: readonly string[] },
 ): Outcome<number> {
   const seat = seatById(snapshot, command.seatId);
 
@@ -139,10 +181,21 @@ export function tradeTrophies(
    * be changing the game rather than the bookkeeping.
    */
   if (trophyModeOf(snapshot.game) === "points") {
-    const swords = Math.floor(seat.trophy_points / TROPHY_RATE);
-    if (swords < 1) {
+    const most = Math.floor(seat.trophy_points / TROPHY_RATE);
+    if (most < 1) {
       throw new Error(
         `Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4) — masz ${seat.trophy_points}.`,
+      );
+    }
+    // Asking for fewer than you can afford is allowed: the rest stays banked,
+    // which is the whole difference this mode has from the printed one.
+    const swords = command.swords ?? most;
+    if (!Number.isInteger(swords) || swords < 1) {
+      throw new Error("Ile Mieczy? Podaj liczbę całkowitą.");
+    }
+    if (swords > most) {
+      throw new Error(
+        `Za ${seat.trophy_points} pkt kupisz najwyżej ${most} ${plural(most, "Miecz", "Miecze", "Mieczy")}.`,
       );
     }
     const spent = swords * TROPHY_RATE;
@@ -172,11 +225,27 @@ export function tradeTrophies(
 
   const held = snapshot.holdings.filter((h) => h.seat_id === seat.id && h.kind === "trophy");
 
+  /**
+   * An asked-for number of Miecze becomes a list of Karty here, so there is one
+   * path below and not two: whatever the player said, by the time it is spent
+   * it is a set of holdings.
+   */
+  const named: readonly string[] | undefined =
+    command.cardIds ??
+    (command.swords === undefined
+      ? undefined
+      : (
+          offerFor(
+            held.map((one) => ({ cardId: one.card_id, points: trophyPointsOf(one.card_id) })),
+            command.swords,
+          ) ?? refuseSwords(held, command.swords)
+        ).cardIds);
+
   // Named cards are matched one holding each, so asking for two Cyklopy hands in
   // two rather than the same one twice.
   const left = [...held];
-  const trophies = command.cardIds
-    ? command.cardIds.map((cardId) => {
+  const trophies = named
+    ? named.map((cardId) => {
         const at = left.findIndex((h) => h.card_id === cardId);
         if (at === -1) throw new Error(`${cardName(cardId)} — nie masz takiego trofeum.`);
         return left.splice(at, 1)[0];

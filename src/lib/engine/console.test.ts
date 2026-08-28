@@ -607,6 +607,20 @@ suite("help", () => {
     ]);
   });
 
+  /**
+   * A bare number is a count of Miecze, not a card — no Karta is called "2",
+   * and knowing how much Miecz you are short is the thing a player knows.
+   */
+  it("reads a number after `trade` as how many Miecze to buy", () => {
+    expect(ok("trade 2")).toEqual({ kind: "trade", cards: [], swords: 2 });
+    expect(ok("trade CYKLOP, NOBBIN")).toEqual({
+      kind: "trade",
+      cards: ["CYKLOP", "NOBBIN"],
+      swords: null,
+    });
+    expect(err("trade 0")).toMatch(/at least one/);
+  });
+
   it("says there is no such command rather than explaining nothing", () => {
     expect(err("help przenies")).toMatch(/No command `przenies`/);
   });
@@ -813,7 +827,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   buy: { line: "buy MIECZ", becomes: { kind: "buy", name: "MIECZ" } },
   sell: { line: "sell MIECZ", becomes: { kind: "sell", name: "MIECZ" } },
   heal: { line: "heal", becomes: { kind: "heal", points: null } },
-  trade: { line: "trade", becomes: { kind: "trade", cards: [] } },
+  trade: { line: "trade", becomes: { kind: "trade", cards: [], swords: null } },
   trophies: { line: "trophies points", becomes: { kind: "trophies", mode: "points" } },
   cast: { line: "cast BŁYSKAWICA", becomes: { kind: "cast", name: "BŁYSKAWICA", who: null } },
   bridge: { line: "bridge", becomes: { kind: "bridge" } },

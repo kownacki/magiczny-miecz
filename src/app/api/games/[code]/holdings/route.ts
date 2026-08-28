@@ -158,14 +158,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "trade":
         return NextResponse.json({
-          gained: await tradeTrophies(
-            game.id,
-            String(body.seatId ?? seat.id),
+          gained: await tradeTrophies(game.id, String(body.seatId ?? seat.id), {
             // Naming nothing hands in everything, which is what the command
             // means by an absent list — so an empty array is not the same as no
             // array and must not be flattened into one.
-            Array.isArray(body.cardIds) ? body.cardIds.map(String) : undefined,
-          ),
+            ...(Array.isArray(body.cardIds) ? { cardIds: body.cardIds.map(String) } : {}),
+            ...(typeof body.swords === "number" ? { swords: body.swords } : {}),
+          }),
         });
       default:
         return NextResponse.json({ error: "Nieznana akcja." }, { status: 400 });

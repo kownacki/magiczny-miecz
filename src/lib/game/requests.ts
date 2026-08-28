@@ -49,6 +49,14 @@ export interface Requests {
      * is what a player cashing out is usually after — see `tradeTrophies`.
      */
     cardIds: string[];
+    /**
+     * `trade`: how many Miecze to buy, instead of naming the Karty.
+     *
+     * The engine picks the cheapest set that reaches it (`offersFor`), which is
+     * the arithmetic 1.4 leaves to the player and nobody wants to do on paper.
+     * Takes second place to `cardIds` — a named list is an explicit answer.
+     */
+    swords: number;
     slot: string | null;
     nature: string;
     note: string;

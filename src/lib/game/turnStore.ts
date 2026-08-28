@@ -738,9 +738,9 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
 export async function tradeTrophies(
   gameId: string,
   seatId: string,
-  cardIds?: readonly string[],
+  want: { swords?: number; cardIds?: readonly string[] } = {},
 ): Promise<number> {
-  return change(gameId, tradeTrophiesFor, { seatId, cardIds });
+  return change(gameId, tradeTrophiesFor, { seatId, ...want });
 }
 
 /**

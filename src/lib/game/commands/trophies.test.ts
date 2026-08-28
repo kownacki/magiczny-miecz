@@ -250,6 +250,55 @@ describe("cashing them in (1.4)", () => {
       ),
     });
 
+  /**
+   * Asking for an outcome instead of naming Karty.
+   *
+   * The engine finds the cheapest set (`offersFor`); this is the command
+   * spending what it found, and the case that matters is the one where the
+   * obvious choice is wrong.
+   */
+  describe("by how many Miecze you want", () => {
+    it("spends the set that wastes nothing, not the biggest cards", () => {
+      // 6, 5, 2 — one Miecz is 5+2 exactly. Taking the biggest first would
+      // spend 6+5 and burn four for the same sword.
+      const table = holding("cyklop", "smok", "nobbin");
+      const { writes, result } = tradeTrophies(table, { seatId: "seat-a", swords: 1 });
+      expect(result).toBe(1);
+      expect(writes.holdings?.delete).toHaveLength(2);
+      expect(writes.journal?.[0]).toMatchObject({
+        payload: { points: 7, gained: 1, lost: 0 },
+      });
+    });
+
+    it("spends everything when that is what the count needs", () => {
+      // 6, 5, 2, 2 — fifteen, so two Miecze take the lot and burn one.
+      const table = holding("cyklop", "smok", "nobbin", "nobbin");
+      expect(tradeTrophies(table, { seatId: "seat-a", swords: 1 }).writes.holdings?.delete)
+        .toHaveLength(2);
+      expect(tradeTrophies(table, { seatId: "seat-a", swords: 2 }).writes.holdings?.delete)
+        .toHaveLength(4);
+    });
+
+    it("says what the hand can buy rather than only that it cannot", () => {
+      const table = holding("cyklop", "smok", "nobbin", "nobbin");
+      expect(() => tradeTrophies(table, { seatId: "seat-a", swords: 3 })).toThrow(
+        /najwyżej 2/,
+      );
+    });
+
+    /** A named list is an explicit answer and outranks a computed one. */
+    it("prefers the Karty you name over the count", () => {
+      const table = holding("cyklop", "smok", "nobbin");
+      const { writes } = tradeTrophies(table, {
+        seatId: "seat-a",
+        swords: 1,
+        cardIds: ["cyklop", "smok"],
+      });
+      expect(writes.holdings?.delete).toHaveLength(2);
+      expect(writes.journal?.[0]).toMatchObject({ payload: { points: 11, lost: 4 } });
+    });
+  });
+
   it("refuses below the rate", () => {
     // A Cyklop is 6, and 1.4 wants seven.
     expect(() => tradeTrophies(holding("cyklop"), { seatId: "seat-a" })).toThrow(
