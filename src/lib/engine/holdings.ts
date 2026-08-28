@@ -7,7 +7,7 @@ import { ABILITIES } from "./abilities";
 import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
-import { isWearable } from "./slots";
+import { isWearable, slotsFor, type Slot } from "./slots";
 import type { Holding } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
@@ -298,4 +298,78 @@ export function visibleTo<T extends Holding>(
   }
   const cards = holdings.filter((holding) => holding.face !== "hidden");
   return { cards, hiddenCount: holdings.length - cards.length };
+}
+
+/* --------------------------------------------------------------------------
+ * Where a Przedmiot goes when it arrives.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * The place a card arriving now should land in, or null for the Plecak.
+ *
+ * # Why every route asks this and none of them decides it
+ *
+ * A Przedmiot reaches a character three ways — picked up (12.1, 21.1), dealt
+ * with the Postać (4.4 and setup), or conjured by the console — and all three
+ * used to answer this differently. The starting kit was worn, because
+ * `stowStartingKit` existed for exactly that; everything else went into the
+ * Plecak and stayed there until somebody typed `equip`. So the Rycerz began
+ * wearing his Miecz and the identical Miecz he picked up on turn three did
+ * nothing, which is not a rule anybody wrote down — it is two code paths.
+ *
+ * In slotowy that difference is the whole variant: only what is worn counts.
+ * A card in the pack is a card doing nothing.
+ *
+ * # What it will not do
+ *
+ * **It never displaces what is already worn.** A Miecz found while wearing a
+ * Miecz goes in the pack, and the player may swap them with `equip` if they
+ * want to. Arriving gear that quietly kicked off better gear would be a
+ * referee making a decision the player did not ask it to make, and the one
+ * thing worse than a card doing nothing is a card silently undoing something.
+ *
+ * Everything else that would refuse an `equip` refuses here too, quietly:
+ * a Natura that may not use it (5.3), a card with no place on the body, a kind
+ * that is not a Przedmiot at all. Quietly, because arriving is not the moment
+ * to argue — the card is still yours, it is simply in the bag.
+ *
+ * Klasyczny has no places, so the answer there is always the Plecak.
+ */
+export function slotOnArrival(arriving: {
+  cardId: string;
+  kind: string;
+  eqMode: EqMode;
+  nature: Nature | null;
+  /** What this seat is already wearing. Nulls — pack cards — are ignored. */
+  worn: readonly (Slot | null)[];
+}): Slot | null {
+  if (arriving.eqMode !== "slots") return null;
+  if (arriving.kind !== "item") return null;
+  if (forbiddenTo(arriving.cardId, arriving.nature)) return null;
+
+  const taken = new Set(arriving.worn.filter((one): one is Slot => one !== null));
+  // In the order the card names them, so a Przedmiot with two homes lands in
+  // the one it would rather have.
+  return slotsFor(arriving.cardId).find((slot) => !taken.has(slot)) ?? null;
+}
+
+/**
+ * The same question for several cards arriving together, which is a fold.
+ *
+ * Each one takes a place from what is left, so two Miecze dealt at once do not
+ * both claim the main hand. Replaces `stowStartingKit`, which answered this for
+ * the starting kit alone and knew nothing about what the seat already had —
+ * fine at setup, where the answer is always nothing, and wrong for a Postać
+ * taken mid-game (4.4).
+ */
+export function slotsOnArrival(
+  arriving: readonly { cardId: string; kind: string }[],
+  at: { eqMode: EqMode; nature: Nature | null; worn: readonly (Slot | null)[] },
+): (Slot | null)[] {
+  const worn = [...at.worn];
+  return arriving.map((one) => {
+    const slot = slotOnArrival({ ...one, ...at, worn });
+    if (slot !== null) worn.push(slot);
+    return slot;
+  });
 }

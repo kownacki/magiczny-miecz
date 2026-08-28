@@ -6,7 +6,9 @@ import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
 import { movementCap, moveMultiplier } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
 import { asCharacterId, startingKit, withoutItems } from "@/lib/engine/characters";
-import { stowStartingKit, type EqMode } from "@/lib/engine/slots";
+import { type EqMode, type Slot } from "@/lib/engine/slots";
+import { slotsOnArrival } from "@/lib/engine/holdings";
+import type { Nature } from "@/data/types";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import {
   afterMove,
@@ -235,10 +237,20 @@ function startingGear(
   // there is a Karta left to take.
   const dealt = (kit.items ?? []).filter((cardId) => onTheShelf(snapshot, cardId, taken));
 
-  // Worn from the start where there are places to wear them — see
-  // `stowStartingKit`. In klasyczny there is nowhere to put them and nothing to
-  // gain: a card counts wherever it lies.
-  const stowed = eqMode === "slots" ? stowStartingKit(dealt) : [];
+  // Worn from the start where there are places to wear them, through the same
+  // function every arriving Przedmiot goes through — see `slotOnArrival`. In
+  // klasyczny there is nowhere to put them and nothing to gain: a card counts
+  // wherever it lies.
+  const stowed = slotsOnArrival(
+    dealt.map((cardId) => ({ cardId, kind: "item" })),
+    {
+      eqMode,
+      nature: (seat.nature ?? null) as Nature | null,
+      worn: snapshot.holdings
+        .filter((one) => one.seat_id === seat.id)
+        .map((one) => one.slot as Slot | null),
+    },
+  );
   const items: Changeset = dealt.length
     ? {
         holdings: {

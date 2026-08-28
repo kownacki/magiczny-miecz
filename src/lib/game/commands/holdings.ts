@@ -16,7 +16,7 @@ import {
   carryLimit,
   mayHold,
 } from "@/lib/engine/derive";
-import { forbiddenSaid, forbiddenTo, kindForCard } from "@/lib/engine/holdings";
+import { forbiddenSaid, forbiddenTo, kindForCard, slotOnArrival } from "@/lib/engine/holdings";
 import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
@@ -300,13 +300,25 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     }
   }
 
+  /**
+   * Worn if it can be, in the pack if it cannot — the one answer every route
+   * to a Przedmiot asks for. See `slotOnArrival`.
+   *
+   * Decided before 5.4's limit is asked, because the limit is the pack's and a
+   * card going onto the body never touches it.
+   */
+  const worn = slotOnArrival({
+    cardId,
+    kind,
+    eqMode: eqModeOf(snapshot.game),
+    nature: (taker?.nature ?? null) as Nature | null,
+    worn: holdingsOf(snapshot, seatId).map((one) => one.slot as Slot | null),
+  });
+
   // Rule 5.4: four Przedmioty at a time unless the character has transport.
   // Friends and trophies are not Przedmioty and do not count (6.3 puts no limit
   // on Friends at all), and Sztuki Złota never count (3.5).
   if (kind === "item") {
-    // In slotowy the limit is on the pack alone — what a character is wearing
-    // hangs on the character. Picking a card up always puts it in the pack, so
-    // this is the pack's question either way.
     const mine = holdingsOf(snapshot, seatId);
 
     // 21.2: the Wyposażenie pile is finite. A Magiczny Miecz that four other
@@ -320,8 +332,16 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
       throw new Error(`${cardName(cardId)} — nie ma już ani jednej w Wyposażeniu (21.2).`);
     }
 
+    /**
+     * 5.4's four, asked only of what is actually going into the Plecak.
+     *
+     * In slotowy the limit is on the pack alone — what a character is wearing
+     * hangs on the character — so a full pack must not stop a Hełm reaching an
+     * empty head. It used to, because picking a card up always put it in the
+     * pack, and the variant's own claim is that wearing is not carrying.
+     */
     const variant = eqModeOf(snapshot.game);
-    if (carriedCount(mine, variant) >= carryLimit(mine, variant)) {
+    if (worn === null && carriedCount(mine, variant) >= carryLimit(mine, variant)) {
       throw new Error(
         `Postać może nieść najwyżej ${BASE_CARRY_LIMIT} Przedmioty (5.4). Odrzuć coś najpierw.`,
       );
@@ -393,7 +413,16 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   const kept: Changeset = mergeAll(
     {
       holdings: {
-        insert: [{ seat_id: seatId, card_id: cardId, kind, face: "open", granted }],
+        insert: [
+          {
+            seat_id: seatId,
+            card_id: cardId,
+            kind,
+            face: "open",
+            granted,
+            ...(worn !== null ? { slot: worn } : {}),
+          },
+        ],
       },
     },
     paid,
@@ -820,6 +849,28 @@ export function grantCard(
   if (kind === null) throw new Error(`Nie wiem, czym jest: ${cardId}`);
   if (kind === "trophy") throw new Error("Wroga trzeba pokonać, nie wziąć (16.2).");
 
+  /**
+   * Conjured gear arrives the same way found gear does.
+   *
+   * The console hands a card out by fiat and the rest of the game then treats
+   * it as an ordinary holding, so a Miecz given at the prompt that sat in the
+   * Plecak while a Miecz picked up off the board went onto the arm would be two
+   * different games depending on where the card came from. It is a test
+   * shortcut for putting a card *in play*, not for putting one in a bag.
+   *
+   * `slotOnArrival` still refuses what `equip` would refuse — a Natura that may
+   * not use it (5.3) among them — so this cannot conjure a state `equip` could
+   * not have reached.
+   */
+  const bearer = snapshot.seats.find((one) => one.id === seatId);
+  const worn = slotOnArrival({
+    cardId,
+    kind,
+    eqMode: eqModeOf(snapshot.game),
+    nature: (bearer?.nature ?? null) as Nature | null,
+    worn: holdingsOf(snapshot, seatId).map((one) => one.slot as Slot | null),
+  });
+
   return {
     writes: merge(escortFor(snapshot, seatId, cardId, true), {
       holdings: {
@@ -830,6 +881,7 @@ export function grantCard(
             kind,
             // 9.3 keeps a Zaklęcie face down even when it arrived by fiat.
             face: kind === "spell" ? "hidden" : "open",
+            ...(worn !== null ? { slot: worn } : {}),
             // Not a card from the box. The deck keeps its own copy and can
             // still deal it; this one belongs to no pile and joins none when it
             // goes.

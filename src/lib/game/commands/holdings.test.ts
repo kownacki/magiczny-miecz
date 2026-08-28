@@ -65,6 +65,71 @@ describe("taking a card", () => {
     });
   });
 
+  /**
+   * Slotowy: a Przedmiot is worn the moment it arrives, whichever way it came.
+   *
+   * The whole claim of the variant is that only what you wear counts, so a card
+   * that lands in the Plecak is a card doing nothing. See `slotOnArrival`.
+   */
+  describe("in slotowy", () => {
+    const slotted = (over: Parameters<typeof aTable>[0] = {}) =>
+      aTable({
+        game: { eq_mode: "slots" },
+        seats: [aSeat({ id: "seat-a", field_id: HERE })],
+        ...over,
+      });
+
+    it("puts it on rather than in the pack", () => {
+      const { writes } = takeCard(slotted(), { seatId: "seat-a", cardId: "helm" });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ card_id: "helm", slot: "head" });
+    });
+
+    /** Never displaces: the Miecz already worn stays worn. */
+    it("bags it when the place is taken", () => {
+      const table = slotted({
+        holdings: [aHolding({ id: "h1", seat_id: "seat-a", card_id: "miecz", slot: "main-hand" })],
+      });
+      const { writes } = takeCard(table, { seatId: "seat-a", cardId: "miecz" });
+      expect(writes.holdings?.insert?.[0]).not.toHaveProperty("slot");
+    });
+
+    it("bags what cannot be worn at all", () => {
+      const { writes } = takeCard(slotted(), { seatId: "seat-a", cardId: "lodz" });
+      expect(writes.holdings?.insert?.[0]).not.toHaveProperty("slot");
+    });
+
+    /**
+     * 5.4 caps the Plecak, and wearing is not carrying.
+     *
+     * A full pack used to refuse a Hełm outright, because picking a card up
+     * always put it in the pack. An empty head is somewhere to put it.
+     */
+    it("lets a full pack still put something on", () => {
+      // Four things that cannot be worn, so the pack is full and the body bare.
+      const full = slotted({
+        holdings: ["lodz", "latarnia", "kij-i-sznur", "kij-i-sznur"].map((cardId, at) =>
+          aHolding({ id: `p${at}`, seat_id: "seat-a", card_id: cardId, slot: null }),
+        ),
+      });
+      const { writes } = takeCard(full, { seatId: "seat-a", cardId: "helm" });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ slot: "head" });
+      // And still refuses one that would have to go in the pack.
+      expect(() => takeCard(full, { seatId: "seat-a", cardId: "kij-i-sznur" })).toThrow(/5\.4/);
+    });
+
+    /** The console conjures a card into play, not into a bag. */
+    it("dresses a conjured card the same way", () => {
+      const { writes } = grantCard(slotted(), { seatId: "seat-a", cardId: "helm" });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ card_id: "helm", slot: "head" });
+    });
+
+    it("leaves a conjured Zaklęcie alone, face down (9.3)", () => {
+      const { writes } = grantCard(slotted(), { seatId: "seat-a", cardId: "krag-plomieni" });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ face: "hidden" });
+      expect(writes.holdings?.insert?.[0]).not.toHaveProperty("slot");
+    });
+  });
+
   /** 1.4: a beaten Wróg is filed as a trophy, not as equipment that lends Miecz. */
   it("files a Wróg as a trophy", () => {
     expect(takeCard(table(), { seatId: "seat-a", cardId: "cyklop" }).result.kind).toBe("trophy");

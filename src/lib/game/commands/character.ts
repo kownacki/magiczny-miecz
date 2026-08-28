@@ -28,7 +28,8 @@ import type { SeatRow } from "../store";
 import { driverOf } from "./lobby";
 import type { OwedSpells } from "./movement";
 import { eqModeOf, seatById } from "./seat";
-import { stowStartingKit } from "@/lib/engine/slots";
+import type { Slot } from "@/lib/engine/slots";
+import { slotsOnArrival } from "@/lib/engine/holdings";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 
 /** The 27 Karty Postaci, read the same way `turnStore` reads them. */
@@ -543,7 +544,25 @@ export async function takeNewCharacter(
       snapshot.fieldCards.filter((card) => card.card_id === cardId).length;
     return stockLeft(cardId, inPlay, snapshot.game.endless_stock) > 0;
   });
-  const stowed = eqModeOf(snapshot.game) === "slots" ? stowStartingKit(supplied) : [];
+  /**
+   * The kit, worn where it can be — through the same function every other
+   * arriving Przedmiot goes through now (`slotsOnArrival`).
+   *
+   * `stowStartingKit` used to answer this and knew nothing about what the seat
+   * already had, which is right at setup, where the answer is always nothing,
+   * and wrong for a Postać taken mid-game (4.4): that seat may still be wearing
+   * the last one's gear.
+   */
+  const stowed = slotsOnArrival(
+    supplied.map((cardId) => ({ cardId, kind: "item" })),
+    {
+      eqMode: eqModeOf(snapshot.game),
+      nature: printedOn(character).nature as Nature | null,
+      worn: snapshot.holdings
+        .filter((one) => one.seat_id === seat.id)
+        .map((one) => one.slot as Slot | null),
+    },
+  );
 
   /**
    * One patch, where the old path wrote three.

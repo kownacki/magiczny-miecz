@@ -16,9 +16,9 @@ import { grantCard, startGame, takeNewCharacter } from "./turnStore";
 
 afterEach(() => resetStore());
 
-async function playing() {
+async function playing(eqMode: "slots" | "classic" = "slots") {
   const tables = emptyTables();
-  const { game } = await createGame("Kowi", "simulation", "slots", null, memoryHandle(tables));
+  const { game } = await createGame("Kowi", "simulation", eqMode, null, memoryHandle(tables));
   setStore(memoryStore(tables));
   const seat = tables.seats[0].id as string;
   const user = (tables.users[0] as { id: string }).id;
@@ -29,8 +29,16 @@ async function playing() {
 }
 
 describe("reading what a character is carrying", () => {
+  /**
+   * Klasyczny, where the pack holds everything.
+   *
+   * In slotowy these four would not be in it: a Przedmiot that can be worn is
+   * worn the moment it arrives (`slotOnArrival`), so a Hełm reaches the head
+   * and never the bag. The sort is the same code either way and this is the
+   * variant that puts four things in one list to sort.
+   */
   it("lists the pack in Polish alphabetical order, not the order it arrived", async () => {
-    const { gameId, actor, seat } = await playing();
+    const { gameId, actor, seat } = await playing("classic");
     // Deliberately out of order, and deliberately across the letter that a
     // default sort gets wrong.
     for (const card of ["zbroja", "helm", "lodz", "miecz"]) {
