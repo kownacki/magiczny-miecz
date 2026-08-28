@@ -27,6 +27,21 @@ describe("what a hand of trofea can buy", () => {
     expect(one.cardIds.length).toBe(2);
   });
 
+  /**
+   * The tie-break the seat card leans on: given the hand oldest first, two
+   * equally good answers resolve to the earlier Karty.
+   *
+   * 3, 3, 4 buys one Miecz two ways — either 3 with the 4 — and both spend two
+   * Karty and waste nothing. `reachable` keeps the first witness it finds at a
+   * given size and walks the hand in order, so the first 3 wins. The browser
+   * hands it the shelf oldest first, which turns that into "spend the Wróg you
+   * beat in turn two, not the one from turn nine".
+   */
+  it("breaks a tie towards the earlier Karty", () => {
+    const [offer] = offersFor(hand(3, 3, 4));
+    expect(offer.cardIds).toEqual(["c0", "c2"]);
+  });
+
   it("prefers fewer Karty when two sets waste the same", () => {
     // 7 alone and 3+4 both buy one Miecz and waste nothing. The single card
     // goes, keeping the small denominations back for the next exact seven.

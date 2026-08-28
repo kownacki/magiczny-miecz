@@ -133,6 +133,7 @@ export function ItemSlot({
   lifted = false,
   dimmed = false,
   marks = [],
+  struck = false,
   draggable = false,
   disabled = false,
   onClick,
@@ -171,6 +172,16 @@ export function ItemSlot({
   dimmed?: boolean;
   /** What is true of this card, drawn on the bottom-right of the picture. */
   marks?: readonly SlotMark[];
+  /**
+   * Struck through: this card is out of the game, and the tile is a record.
+   *
+   * A cross over the whole picture, in the colour nothing recoverable uses.
+   * Dimming alone was carrying it, and dimming is a *degree* — it says "less"
+   * where this has to say "not any more", and a row where some cards are faint
+   * because they are spent and others because they are merely unpicked asks
+   * the eye to measure opacity. A line through it is not a degree.
+   */
+  struck?: boolean;
   draggable?: boolean;
   disabled?: boolean;
   onClick?: (event: React.MouseEvent) => void;
@@ -418,6 +429,18 @@ export function ItemSlot({
               aria-hidden
               className="pointer-events-none absolute inset-0 bg-vermilion mix-blend-multiply"
             />
+          )}
+
+          {/* Drawn across the picture rather than over the whole square, so the
+              corner marks and the name below stay readable — this says the card
+              is gone, not that the tile is unreadable. Two lines rather than a
+              single strike: a bar across a picture reads as a redaction, and an
+              X is the mark somebody puts on a thing that is done with. */}
+          {struck && (
+            <span aria-hidden className="pointer-events-none absolute inset-0">
+              <span className="absolute left-1/2 top-1/2 h-px w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
+              <span className="absolute left-1/2 top-1/2 h-px w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
+            </span>
           )}
 
           {/* Bottom-right, together, because they answer the same question and

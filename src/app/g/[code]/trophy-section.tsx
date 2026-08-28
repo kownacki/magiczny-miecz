@@ -132,8 +132,21 @@ export function TrophySection({
    * pool. It holds trophies like the printed rule and differs only in where
    * the cardboard is, so the choice, the rate and the waste are all shared.
    */
+  /**
+   * The living trophies, oldest first — which is the row reversed.
+   *
+   * Both halves of the automatic choice read this order, and it is the whole
+   * of what makes „+1 Miecza" reach for the Wilkołak you beat in turn two
+   * rather than the one from turn nine. `offersFor` keeps the first witness it
+   * finds for a sum at a given size, and it walks the hand in the order it is
+   * given, so ties fall to whatever came earlier here. Where the arithmetic
+   * genuinely needs a particular Karta it still gets it: this decides nothing
+   * about waste, only about which of two equally good answers to give.
+   */
+  const oldestFirst = [...shelf.filter((one) => !one.gone)].reverse();
+
   const offers: Offer[] = offersFor(
-    held.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId) })),
+    oldestFirst.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId) })),
   );
   const most = offers[offers.length - 1] ?? null;
 
@@ -146,7 +159,10 @@ export function TrophySection({
    */
   const idsFor = (of: Offer | null): ReadonlySet<string> => {
     if (!of) return new Set();
-    const left = shelf.filter((one) => !one.gone);
+    // Oldest first here too. The offer names Karty, and two Wilkołaki are one
+    // name — so which tile lights up is decided here, and it should be the
+    // same one the solver was thinking of.
+    const left = [...oldestFirst];
     const out = new Set<string>();
     for (const cardId of of.cardIds) {
       const at = left.findIndex((one) => one.cardId === cardId);
@@ -266,13 +282,20 @@ export function TrophySection({
             /* The whole of what this variant changes, and the only place the
                seat card still needs to know which one is being played: the
                trophy is yours to spend either way, but its Karta went back to
-               the stos zużytych when he fell, so 9.5 can deal him to somebody
-               else while you are still holding him here. */
+               the stos zużytych when he fell, so he can be dealt to somebody
+               else while you are still holding him here.
+
+               No rule number, and „(1.4, 9.5)" was wrong twice. 9.5 is the
+               *Zaklęcia* pile — it is Karty Zaklęć that are reshuffled when the
+               stos runs out, and the Instrukcja has no equivalent sentence for
+               Zdarzenia anywhere. And 1.4 sends the Karta back when it is
+               *traded*; sending it back at the kill is this table's variant,
+               not the printed rule. A house rule is one of the things the
+               rulebook does not cover, and saying nothing beats a number that
+               reads as a promise and is not one. */
             <p className="text-[11px] leading-snug text-muted/70">
-              <Rules>
-                Karty pokonanych Wrogów wróciły na stos zużytych — trofea
-                zostają u ciebie (1.4, 9.5).
-              </Rules>
+              Karty pokonanych Wrogów wróciły na stos zużytych — trofea zostają
+              u ciebie.
             </p>
           )}
 
@@ -461,6 +484,7 @@ function TrophyTile({
        */
       tone={inTrade ? "chosen" : "filled"}
       dimmed={gone}
+      struck={gone}
       // The cup is what says a Wróg can still be spent, so it goes with him
       // when he is. Position and fade both say the same thing from across the
       // row; this is the one that survives being looked at directly.
