@@ -380,6 +380,36 @@ the engine gets wrong or does not have, not a missing feature.
       rather than enforced, because staying and drawing is a legal choice.
 - [x] **Przeprawa charges its toll.** Pay 1 Sz. Z. and carry on, or the whole
       move is undone and the turn ends where it began.
+- [x] **A Postać that started again could not play.** The last living
+      character dies, `killSeat` hands the turn on, `nextSeat` looks round a
+      table of one eliminated seat and comes back with nobody, so `active_seat`
+      goes null — and 4.4's new Karta seats a character, deals its kit and
+      leaves it null. Everything after that is refused for want of an active
+      seat: „To nie twoja tura (10.1)" for picking a Przedmiot up, and no dice.
+      Neither half was wrong; the state between them was nobody's. Both doors
+      back into play now start the table when it had stopped, and only then.
+      Found in the wild, in two of this project's own games.
+
+      Two neighbours came with it. A death now clears the seat's effects — an
+      effect is a row against the *seat*, and 4.4 puts a different Karta in that
+      chair, so a Zaklęcie cast on the one who died went on taking its point off
+      a Postać it had never been spoken over. And a table with nobody in it now
+      says so and offers the pass: `permission.ts` has allowed anybody to send
+      `end` in that state since it was written, and nothing in the interface
+      could send it.
+- [x] **SOBOWTÓR could not be fought.** The one Wróg in the box with no number
+      printed on him, because his number is somebody else's: „Posiada zawsze
+      tyle punktów Miecza, ile jego przeciwnik." `combatValueOf` had nothing to
+      read and called him not-a-Wróg, and his own card kept him where he was —
+      „Pozostanie tu, aż ktoś go pokona" — for the rest of the game. It now
+      takes who is opposite; asked without them it still answers that he fights,
+      which is what most callers want to know. His strength is asked for in four
+      places and answered the same way each time — the fight, a wyprawa, the
+      trophy banked at the win, and his Karta priced in a trade at its holder's
+      own Miecz.
+
+      Found by `npm run soak`, which is the second thing that script has caught
+      that no test would have: a refusal in the tail that was not the rules.
 - [x] **11.4/11.8's draw outcome.** The Lodowy Las is a fight and can be drawn,
       so it has three outcomes now. The Trzęsawiska cannot: the card is a
       threshold and "mniejszy lub równy" leaves no middle, so 11.4's mention of
@@ -837,12 +867,13 @@ would read as noise; on the other hand a table that starts with a Plecak
 nobody expected has nothing to point at. Left as it is because it is the peer's
 command and the asymmetry is cosmetic, not because it is right.
 
-### The host cannot withdraw a Postać from the board
+### ~~The host cannot withdraw a Postać from the board~~ — built
 
-`removeCharacter` exists, is tested, spills the holdings onto the Obszar (12.1)
-and refuses anybody who is not the host. The route exists. **Nothing in the
-interface calls it** — only the console's `remove`, which means the one person
-the rule is written for cannot reach it without turning test mode on.
+`removeCharacter` had the command, the tests and the route, and nothing in the
+interface called it. It does now: `WithdrawButton` in the roster, under any
+seat holding a living Postać, offering both the plain withdrawal and the hard
+one that bars the Karta from being picked again. Left written down because the
+note said the opposite for a while and a stale gap is worse than no note.
 
 Not the rulebook's, which says nothing about a player leaving. It is the
 poczekalnia's other half: `leaveTable` puts the *person* out and leaves the
