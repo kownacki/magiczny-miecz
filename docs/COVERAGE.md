@@ -204,7 +204,7 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 15.1 | cards that go to a named field resolve first and do not affect the drawer | ◐ | `poloz-karte` encodes the destination; the ordering is not applied |
+| 15.1 | cards that go to a named field resolve first and do not affect the drawer | ✅ | both halves. The ordering sits above 15.2's numerals in `resolutionOrder` — the Upiór is a Wróg and the Eremita a Spotkanie and neither waits its class — and is read off the script (`goesToAField`) rather than a list, so a fifth such card transcribed tomorrow is ordered without anybody remembering this rule. The immunity needs no code and never did: `poloz-karte` lifts the card out of `drawn` into `fieldCards`, so it stops being part of this turn as it resolves and waits for whoever ends a move there next |
 | 15.2 | the rest resolve in printed numeral order | ✅ | `resolutionOrder` |
 
 ## 16. Rodzaje Kart Zdarzeń

@@ -430,6 +430,25 @@ export function isConsumedOnResolve(cardId: string): boolean {
   return scriptFor(cardId)?.consumed === true;
 }
 
+/**
+ * Whether this card's instruction sends it to a named Obszar (15.1).
+ *
+ * "Karty, które zgodnie z ich instrukcją powinny zostać położone na konkretnym
+ * Obszarze, niezależnie od tego, gdzie zostały wyciągnięte" — four cards in the
+ * box: the Lewiatan, the Upiór and the Eremita, whose die tables send them to
+ * water, to the Osada and to the Bezdroża.
+ *
+ * Read off the script rather than listed, so a fifth transcribed tomorrow is
+ * ordered correctly without anybody remembering this rule exists. The whole
+ * script is searched, not just its top level, because all three reach
+ * `poloz-karte` through a `rzut` table.
+ */
+export function goesToAField(cardId: string): boolean {
+  const script = scriptFor(cardId);
+  if (!script) return false;
+  return JSON.stringify(script.effect).includes('"poloz-karte"');
+}
+
 export function scriptFor(cardId: string): CardScript | null {
   // The registry's *keys* are checked — a typo in one of the ~250 card names
   // above is a compile error, which is the whole point. The lookup itself takes

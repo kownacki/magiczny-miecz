@@ -3,6 +3,7 @@
 import { CARD_CLASS, type CardClass, type Nature } from "@/data/types";
 import type { Slot } from "./slots";
 import type { FieldId } from "./board";
+import { goesToAField } from "./cardScript";
 
 /**
  * One player's live state.
@@ -84,7 +85,21 @@ export interface TurnCard {
  * before the rest are looked at, which this ordering already produces.
  *
  * Ties keep draw order, which is why this is a stable sort by class alone.
+ *
+ * **15.1 sits above 15.2.** A card whose instruction sends it to a named Obszar
+ * is "rozpatrywana w pierwszej kolejności" whatever numeral it prints — the
+ * Upiór is a Wróg and the Eremita a Spotkanie, and both go before either class
+ * would put them. So the sort has two keys and this is the first of them.
+ *
+ * The other half of 15.1 — "nie mają wpływu na Postać, która je wyciągnęła" —
+ * needs nothing here and is not enforced anywhere either, because the shape
+ * already gives it: `poloz-karte` lifts the card out of `drawn` and inserts it
+ * into `fieldCards`, so it stops being part of this turn at the moment it is
+ * resolved and waits for whoever ends a move there next.
  */
 export function resolutionOrder(cards: readonly TurnCard[]): TurnCard[] {
-  return [...cards].sort((a, b) => CARD_CLASS[a.cardClass] - CARD_CLASS[b.cardClass]);
+  const placed = (card: TurnCard) => (goesToAField(card.cardId) ? 0 : 1);
+  return [...cards].sort(
+    (a, b) => placed(a) - placed(b) || CARD_CLASS[a.cardClass] - CARD_CLASS[b.cardClass],
+  );
 }
