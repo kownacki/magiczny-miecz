@@ -1659,9 +1659,10 @@ export async function runCommand(
         ...(trophies.length
           ? [
               `Trophies: ${trophies
-                .map((one) => `${cardName(one.card_id)} ${trophyPoints(one.card_id)}`)
-                .join(", ")}` + trophyLedger(trophies.map((one) => one.card_id)),
-              ...tradeMenu(trophies.map((one) => one.card_id)),
+                .map((one) => `${cardName(one.card_id)} ${trophyPoints(one.card_id, view.parametr)}`)
+                .join(", ")}` +
+                trophyLedger(trophies.map((one) => one.card_id), view.parametr),
+              ...tradeMenu(trophies.map((one) => one.card_id), view.parametr),
             ]
           : []),
         /**
@@ -1733,10 +1734,15 @@ function columns(names: readonly string[], perRow = 4): string[] {
   return rows;
 }
 
-/** What one beaten Wróg is worth towards 1.4's sevens. */
-function trophyPoints(cardId: string): number {
+/**
+ * What one beaten Wróg is worth towards 1.4's sevens.
+ *
+ * `mirror` is the holder's own Miecz, for the Sobowtór, who has no number of
+ * his own — see `combatValueOf`.
+ */
+function trophyPoints(cardId: string, mirror?: { miecz: number }): number {
   const card = EVENTS.find((one) => one.id === cardId);
-  return (card ? combatValueOf(card)?.total : 0) ?? 0;
+  return (card ? combatValueOf(card, mirror)?.total : 0) ?? 0;
 }
 
 /**
@@ -1747,8 +1753,8 @@ function trophyPoints(cardId: string): number {
  * with. Empty when there is nothing to say — a hand worth less than one Miecz
  * has no waste to warn about, only a total.
  */
-function trophyLedger(cardIds: readonly string[]): string {
-  const points = cardIds.reduce((sum, cardId) => sum + trophyPoints(cardId), 0);
+function trophyLedger(cardIds: readonly string[], mirror: { miecz: number }): string {
+  const points = cardIds.reduce((sum, cardId) => sum + trophyPoints(cardId, mirror), 0);
   const swords = Math.floor(points / TROPHY_RATE);
   const wasted = points - swords * TROPHY_RATE;
   if (swords < 1) return `  (${points} pkt — ${TROPHY_RATE} za Miecz)`;
@@ -1767,8 +1773,10 @@ function trophyLedger(cardIds: readonly string[]): string {
  * one Miecz using everything it has needs no menu, and the line above already
  * said so.
  */
-function tradeMenu(cardIds: readonly string[]): string[] {
-  const offers = offersFor(cardIds.map((cardId) => ({ cardId, points: trophyPoints(cardId) })));
+function tradeMenu(cardIds: readonly string[], mirror: { miecz: number }): string[] {
+  const offers = offersFor(
+    cardIds.map((cardId) => ({ cardId, points: trophyPoints(cardId, mirror) })),
+  );
   if (offers.length === 0) return [];
   const only = offers.length === 1 && offers[0].cardIds.length === cardIds.length;
   if (only) return [];

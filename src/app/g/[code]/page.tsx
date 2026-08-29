@@ -1017,6 +1017,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               (isTableScreen || game.turn_state.fight.opponentSeat === mySeatIndex)
             }
             ring={ringFields(active.field_id)}
+            /* 1.5's fight total, for the Sobowtór, whose Miecz is whoever is
+               opposite him and is therefore not on his Karta. */
+            mySword={active.sword_in_fight}
             busy={busy}
             error={error}
             onAction={(body) => post("turn", body)}

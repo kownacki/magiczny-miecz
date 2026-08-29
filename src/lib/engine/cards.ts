@@ -20,18 +20,52 @@ import type { CombatKind } from "./combat";
 export interface CombatValue {
   kind: CombatKind;
   total: number;
+  /**
+   * The total is not printed on the card — it is whoever is opposite.
+   *
+   * True only for the Sobowtór, and carried so that a caller drawing a number
+   * can say where it came from rather than showing a figure that looks printed.
+   */
+  mirrors?: boolean;
 }
+
+/**
+ * The one Wróg in the box with no number on him.
+ *
+ * "Sobowtór to monstrum, które tworzy sama Postać... Posiada zawsze tyle
+ * punktów Miecza, ile jego przeciwnik." So his strength is a question about
+ * somebody else, and every other creature's is a fact about itself.
+ *
+ * A set of one, rather than a flag on the card or a special case at the fight,
+ * because the shape is what matters: `combatValueOf` is asked *what does this
+ * fight with* everywhere in the app, and the honest answer for this card is
+ * "as much as you" — which it can only give if it is told who you are. The set
+ * is where a second such card would go if an expansion prints one.
+ */
+const MIRRORS_ITS_OPPONENT = new Set(["sobowtor"]);
 
 /**
  * What this card fights with, or null if it does not fight.
  *
  * Only a Wróg fights. Rule 16.3 makes a Demon fight magically, which the deck
  * marks by printing Magia instead of Miecz.
+ *
+ * `mirror` is whoever is standing opposite — their own Miecz, for the one card
+ * whose strength is theirs. Asked without it, that card still answers that it
+ * fights, which is the question most callers are really asking (12.1a's guard,
+ * "is this a Wróg at all", the raid's targets); the number is zero and says so
+ * with `mirrors`, so nothing prints a strength it has not been given.
  */
-export function combatValueOf(card: Pick<EventCard, "cardClass" | "miecz" | "magia">): CombatValue | null {
+export function combatValueOf(
+  card: Pick<EventCard, "cardClass" | "miecz" | "magia"> & { id?: string },
+  mirror?: { miecz: number },
+): CombatValue | null {
   if (card.cardClass !== "foe") return null;
   if (typeof card.magia === "number") return { kind: "magical", total: card.magia };
   if (typeof card.miecz === "number") return { kind: "ordinary", total: card.miecz };
+  if (card.id && MIRRORS_ITS_OPPONENT.has(card.id)) {
+    return { kind: "ordinary", total: Math.max(0, mirror?.miecz ?? 0), mirrors: true };
+  }
   return null;
 }
 

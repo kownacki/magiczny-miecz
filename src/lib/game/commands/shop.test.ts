@@ -67,6 +67,35 @@ describe("trading trophies (1.4)", () => {
     expect(() => tradeTrophies(table, { seatId: "seat-a" })).toThrow();
   });
 
+  /**
+   * „Posiada zawsze tyle punktów Miecza, ile jego przeciwnik."
+   *
+   * The Sobowtór's Karta carries no number, so what he is worth in a trade is
+   * the same question his fight asked: how strong is the character opposite.
+   * Held, that is the one holding him — he was made out of them.
+   */
+  it("prices the Sobowtór at his holder's own Miecz", () => {
+    const table = aTable({
+      seats: [aSeat({ id: "seat-a", sword_own: 7 })],
+      holdings: [aHolding({ id: "t0", card_id: "sobowtor", kind: "trophy" })],
+    });
+    const { writes, result } = tradeTrophies(table, { seatId: "seat-a" });
+    // Seven of his own buys exactly one Miecz and wastes nothing.
+    expect(result).toBe(1);
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "trophies-traded",
+      payload: { points: 7, gained: 1, lost: 0 },
+    });
+  });
+
+  it("refuses him when his holder is not worth the rate", () => {
+    const table = aTable({
+      seats: [aSeat({ id: "seat-a", sword_own: 3 })],
+      holdings: [aHolding({ id: "t0", card_id: "sobowtor", kind: "trophy" })],
+    });
+    expect(() => tradeTrophies(table, { seatId: "seat-a" })).toThrow(/masz 3/);
+  });
+
   it("pays one Miecz per seven points and loses the remainder", () => {
     const table = aTable({
       seats: [aSeat({ id: "seat-a", sword_own: 2 })],

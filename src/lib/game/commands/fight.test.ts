@@ -104,6 +104,51 @@ describe("otwarcie walki (17.4, 17.5)", () => {
     expect(fightIn(writes)).toMatchObject({ playerTotal: 4, enemyTotal: 6, kind: "ordinary" });
   });
 
+  /**
+   * „Sobowtór to monstrum, które tworzy sama Postać... Posiada zawsze tyle
+   * punktów Miecza, ile jego przeciwnik."
+   *
+   * The one Wróg in the box with no number printed on him, and until this he
+   * could not be fought at all — `combatValueOf` had nothing to read, so the
+   * fight was refused with „SOBOWTÓR nie jest Wrogiem" and his own card left
+   * him lying there („Pozostanie tu, aż ktoś go pokona") for the rest of the
+   * game. Found by the soak playing 145 turns.
+   */
+  it("gives the Sobowtór the Miecz of whoever is fighting him", async () => {
+    const mirror = table({ drawn: [{ cardId: "sobowtor", cardClass: "foe" }] });
+    const { writes } = beginFight(mirror, { cardIds: ["sobowtor"] });
+    // Both sides at the character's 2, so the fight is the two dice and
+    // nothing else, which is what the card is.
+    expect(fightIn(writes)).toMatchObject({
+      playerTotal: 2,
+      enemyTotal: 2,
+      kind: "ordinary",
+    });
+  });
+
+  /** 1.5's total, not the żetony: what he mirrors is what you bring. */
+  it("mirrors everything the character is carrying into the fight, not its own points", async () => {
+    const armed = table(
+      { drawn: [{ cardId: "sobowtor", cardClass: "foe" }] },
+      [aHolding({ id: "h-1", card_id: "miecz-chaosu" })],
+      "evil",
+    );
+    const { writes } = beginFight(armed, { cardIds: ["sobowtor"] });
+    expect(fightIn(writes)).toMatchObject({ playerTotal: 4, enemyTotal: 4 });
+  });
+
+  it("counts him among a pack at the strength of the one facing it (17.5)", async () => {
+    const both = table({
+      drawn: [
+        { cardId: "cyklop", cardClass: "foe" },
+        { cardId: "sobowtor", cardClass: "foe" },
+      ],
+    });
+    const { writes } = beginFight(both, { cardIds: ["cyklop", "sobowtor"] });
+    // The Cyklop's 6 and the Sobowtór's 2, summed as 17.5 sums them.
+    expect(fightIn(writes)).toMatchObject({ playerTotal: 2, enemyTotal: 8 });
+  });
+
   it("tells the table what it is fighting", async () => {
     const { writes } = beginFight(table(), { cardIds: ["cyklop"] });
     expect(writes.journal).toEqual([

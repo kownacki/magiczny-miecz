@@ -28,10 +28,14 @@ const EVENTS = events as EventCard[];
  * Zero for anything that is not a foe with a Miecz. Only those become trophies
  * at all — a Demon is fought magically, beaten and gone — so this should never
  * fire; it is here so a stray holding cannot silently inflate a total.
+ *
+ * `mirror` is the holder's own Miecz, for the Sobowtór, whose Karta carries no
+ * number: „posiada zawsze tyle punktów Miecza, ile jego przeciwnik", and the
+ * character holding him is the one who made him.
  */
-export function trophyValue(cardId: string): number {
+export function trophyValue(cardId: string, mirror?: { miecz: number }): number {
   const card = EVENTS.find((one) => one.id === cardId);
-  const worth = card ? combatValueOf(card) : null;
+  const worth = card ? combatValueOf(card, mirror) : null;
   return worth?.kind === "ordinary" ? worth.total : 0;
 }
 
@@ -116,10 +120,13 @@ export function TrophySection({
   const held = seat.holdings
     .filter((one) => one.kind === "trophy")
     .map((one) => ({ holdingId: one.id, cardId: one.cardId }));
+  // Who a Sobowtór's Karta is worth as much as — the seat's total outside a
+  // fight (1.5), which is what the server prices the same trade with.
+  const mirror = { miecz: seat.sword_total };
   /** Everyone beaten, and which of them are still held. */
   const shelf = shelfFor(seat.trophy_beaten ?? [], held);
   const gone = shelf.filter((one) => one.gone);
-  const counting = held.reduce((sum, one) => sum + trophyValue(one.cardId), 0);
+  const counting = held.reduce((sum, one) => sum + trophyValue(one.cardId, mirror), 0);
 
   /**
    * Every trade this hand can make, each by its cheapest set — the engine's
@@ -144,7 +151,7 @@ export function TrophySection({
   const oldestFirst = [...shelf.filter((one) => !one.gone)].reverse();
 
   const offers: Offer[] = offersFor(
-    oldestFirst.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId) })),
+    oldestFirst.map((one) => ({ cardId: one.cardId, points: trophyValue(one.cardId, mirror) })),
   );
   const most = offers[offers.length - 1] ?? null;
 
@@ -194,7 +201,7 @@ export function TrophySection({
    */
   const points = shelf
     .filter((one) => one.holdingId && chosen.has(one.holdingId))
-    .reduce((sum, one) => sum + trophyValue(one.cardId), 0);
+    .reduce((sum, one) => sum + trophyValue(one.cardId, mirror), 0);
   const swords = Math.floor(points / TROPHY_RATE);
   const wasted = points - swords * TROPHY_RATE;
   const cardIds = shelf
@@ -249,6 +256,7 @@ export function TrophySection({
             {shelf.map((one, at) => (
               <TrophyTile
                 key={one.holdingId ?? `${one.cardId}-${at}`}
+                worth={trophyValue(one.cardId, mirror)}
                 cardId={one.cardId}
                 gone={one.gone}
                 inTrade={!!one.holdingId && chosen.has(one.holdingId)}
@@ -447,11 +455,17 @@ function Ledger({
 /** One beaten Wróg, with what he is worth printed where a name goes. */
 function TrophyTile({
   cardId,
+  worth,
   gone,
   inTrade,
   onPick,
 }: {
   cardId: string;
+  /**
+   * What he counts for towards 1.4's sevens, worked out where the shelf is —
+   * the Sobowtór's is his holder's own Miecz, which a tile has no way to know.
+   */
+  worth: number;
   /** Beaten, and no longer held: traded away (1.4) or put down. */
   gone: boolean;
   /** The trade being weighed would hand this one in. */
@@ -467,7 +481,6 @@ function TrophyTile({
    */
   onPick?: () => void;
 }) {
-  const worth = trophyValue(cardId);
   const name = CARD_NAMES.get(cardId) ?? cardId;
   // `trophy_beaten` is a `text[]` off the wire, so it is narrowed here rather
   // than trusted — the one boundary this component has. An id the box does not

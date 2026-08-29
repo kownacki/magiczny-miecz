@@ -47,6 +47,7 @@ export function DrawnCard({
   resolved,
   fought,
   ring,
+  mySword,
   busy,
   onResolve,
   onFight,
@@ -64,6 +65,12 @@ export function DrawnCard({
   fought: string[];
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
+  /**
+   * What the character fights with (1.5), for the one Wróg who has no strength
+   * of his own: the Sobowtór „posiada zawsze tyle punktów Miecza, ile jego
+   * przeciwnik", so the button cannot say how strong he is without it.
+   */
+  mySword: number;
   busy: boolean;
   onResolve: (
     cardId: string,
@@ -121,7 +128,10 @@ export function DrawnCard({
 
   const art = cardImageUrl(known.id);
   const script = scriptFor(known.id);
-  const foe = combatValueOf(known);
+  // Whose Miecz the Sobowtór borrows — see `combatValueOf`. Harmless for every
+  // other creature, which carries its own number.
+  const mirror = { miecz: mySword };
+  const foe = combatValueOf(known, mirror);
 
   // 17.5: several creatures attacking at once are one opponent — their Miecze
   // added and one die thrown for the lot, which is the difference between hard
@@ -132,14 +142,14 @@ export function DrawnCard({
     .filter(
       (c): c is EventCard =>
         !!c &&
-        !!combatValueOf(c) &&
+        !!combatValueOf(c, mirror) &&
         !fought.includes(c.id) &&
         !resolved.includes(c.id),
     );
   // 17.5 asked once, of the engine, rather than restated here — the server
   // refuses a mixed fight against this same answer.
   const asOne =
-    standing.length > 1 ? attackAsOne(standing.map((c) => combatValueOf(c)!)) : null;
+    standing.length > 1 ? attackAsOne(standing.map((c) => combatValueOf(c, mirror)!)) : null;
   const together = asOne ? standing : null;
   const keep = kindForCard(known);
   const label = CARD_CLASS_LABEL[card.cardClass as CardClass] ?? card.cardClass;
@@ -209,7 +219,10 @@ export function DrawnCard({
               onClick={() => onFight([known.id])}
               className="rounded border border-vermilion/60 bg-vermilion/10 px-4 py-2 text-sm text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
             >
-              Walcz ({foe.kind === "magical" ? "Magia" : "Miecz"} {foe.total})
+              Walcz ({foe.kind === "magical" ? "Magia" : "Miecz"} {foe.total}
+              {/* Said, because a number that is your own is not a number you
+                  read off the card — and next turn it will be different. */}
+              {foe.mirrors ? " — tyle co ty" : ""})
             </button>
             {together && (
               <button

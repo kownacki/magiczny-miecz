@@ -153,13 +153,27 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
     throw new Error(`Walka z ${card?.name ?? again} już się w tej turze odbyła (17.4).`);
   }
 
+  /**
+   * What the character brings (1.5, 17.4), read before the creatures rather
+   * than after them.
+   *
+   * It used to be worked out below, once the opposition was known, which was
+   * fine while every Wróg carried his own number. The Sobowtór does not — "tyle
+   * punktów Miecza, ile jego przeciwnik" — so the question "how strong is he"
+   * cannot be answered until this one is.
+   *
+   * The list of foes is what `insteadAgainst` needs, and it is the command's,
+   * not the loop's.
+   */
+  const mine = againstThese(snapshot, seat.id, command.cardIds);
+
   const foes = command.cardIds.map((cardId) => {
     const card = EVENTS.find((c) => c.id === cardId);
     if (!card) throw new Error(`Nieznana karta: ${cardId}`);
     // Only a Wróg fights. The Miecz on Excalibur and the Magia on Pierścień
     // Mocy are bonuses to their holder (1.5, 2.5), not creatures to be rolled
     // against.
-    const foe = combatValueOf(card);
+    const foe = combatValueOf(card, { miecz: mine.miecz });
     if (!foe) throw new Error(`${card.name} nie jest Wrogiem.`);
     return { card, foe };
   });
@@ -231,14 +245,6 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
    */
   const harder = foeBonusAt(seat.field_id);
   const total = asOne.total + harder * foes.length;
-
-  // The character brings everything it has (1.5, 17.4), not just its own
-  // tokens: a Miecz card adds its point in the fight it was found for.
-  const mine = againstThese(
-    snapshot,
-    seat.id,
-    foes.map((f) => f.card.id),
-  );
 
   return {
     writes: {
@@ -960,7 +966,9 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
     throw new Error(`Zbyt daleko — wyprawa sięga ${RAID_RANGE} Obszary.`);
   }
   const card = EVENTS.find((one) => one.id === lying.card_id);
-  const foe = card ? combatValueOf(card) : null;
+  // The Przyjaciel sent out is who the Sobowtór would be facing, so his is the
+  // Miecz it mirrors — see `combatValueOf`.
+  const foe = card ? combatValueOf(card, { miecz: raider.miecz }) : null;
   if (!foe) throw new Error("Z tą Kartą się nie walczy.");
 
   return {
@@ -1543,7 +1551,15 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
   // only thing either mode wants from it, and `punkty` keeps nothing else.
   const won = (fight.fought ?? [fight.cardId]).flatMap((cardId) => {
     const card = EVENTS.find((one) => one.id === cardId);
-    const foe = card ? combatValueOf(card) : null;
+    /**
+     * `playerTotal` and not `enemyTotal`, for the one card that mirrors.
+     *
+     * The Sobowtór is worth what he fought at, and what he fought at is his
+     * opponent's Miecz — which is this, and stays this whether he came alone or
+     * in a pack under 17.5, where `enemyTotal` is the whole pack's sum and his
+     * share of it is not separable.
+     */
+    const foe = card ? combatValueOf(card, { miecz: fight.playerTotal }) : null;
     return foe && foe.kind === "ordinary" ? [{ cardId, points: foe.total }] : [];
   });
   if (won.length === 0) return {};

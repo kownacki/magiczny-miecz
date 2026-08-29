@@ -14,7 +14,7 @@ import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { takeCard, type Taken } from "./holdings";
 import { cardName, plural } from "@/lib/engine/polish";
 import { TROPHY_RATE, offerFor, offersFor } from "@/lib/engine/trophies";
-import { seatById } from "./seat";
+import { pointsOf, seatById } from "./seat";
 
 /**
  * 1.4's rate, and the search over a hand that spends it well.
@@ -79,10 +79,19 @@ export function standingShopper(snapshot: Snapshot, seatId: string): SeatRow {
  * Naming nothing still means everything, which is what a player asking to cash
  * out is usually after and what the console has always done.
  */
-/** What one beaten Wróg is worth towards 1.4's sevens. */
-export function trophyPointsOf(cardId: string): number {
+/**
+ * What one beaten Wróg is worth towards 1.4's sevens.
+ *
+ * `mirror` is the Miecz of whoever is holding him, for the one Karta with no
+ * number of its own: „Posiada zawsze tyle punktów Miecza, ile jego
+ * przeciwnik", and the character holding a Sobowtór's Karta is the one who
+ * made him. Every caller here has that seat in hand, which is why it is asked
+ * for rather than defaulted — a trophy priced at zero because nobody said is
+ * exactly the silent wrongness this avoids.
+ */
+export function trophyPointsOf(cardId: string, mirror?: { miecz: number }): number {
   const card = EVENTS.find((one) => one.id === cardId);
-  return (card ? combatValueOf(card)?.total : 0) ?? 0;
+  return (card ? combatValueOf(card, mirror)?.total : 0) ?? 0;
 }
 
 /**
@@ -104,7 +113,8 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
 
   const bySeat = new Map<string, number>();
   for (const one of held) {
-    bySeat.set(one.seat_id, (bySeat.get(one.seat_id) ?? 0) + trophyPointsOf(one.card_id));
+    const worth = trophyPointsOf(one.card_id, pointsOf(snapshot, one.seat_id, "parametr"));
+    bySeat.set(one.seat_id, (bySeat.get(one.seat_id) ?? 0) + worth);
   }
 
   /**
@@ -149,10 +159,13 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
 function refuseSwords(
   held: readonly { card_id: string }[],
   swords: number,
+  mirror: { miecz: number },
 ): never {
-  const can = offersFor(held.map((one) => ({ cardId: one.card_id, points: trophyPointsOf(one.card_id) })));
+  const can = offersFor(
+    held.map((one) => ({ cardId: one.card_id, points: trophyPointsOf(one.card_id, mirror) })),
+  );
   if (can.length === 0) {
-    const points = held.reduce((sum, one) => sum + trophyPointsOf(one.card_id), 0);
+    const points = held.reduce((sum, one) => sum + trophyPointsOf(one.card_id, mirror), 0);
     throw new Error(
       `Potrzeba ${TROPHY_RATE} punktów Miecza pokonanych Wrogów (1.4) — masz ${points}.`,
     );
@@ -181,6 +194,10 @@ export function tradeTrophies(
   const seat = seatById(snapshot, command.seatId);
 
   const held = snapshot.holdings.filter((h) => h.seat_id === seat.id && h.kind === "trophy");
+  // Who the Sobowtór's Karta is worth as much as — see `trophyPointsOf`. Own
+  // points and the cards' (1.5), not the fight's: this is a trade at a
+  // Targowisko, not a fight.
+  const mirror = pointsOf(snapshot, seat.id, "parametr");
 
   /**
    * An asked-for number of Miecze becomes a list of Karty here, so there is one
@@ -193,9 +210,9 @@ export function tradeTrophies(
       ? undefined
       : (
           offerFor(
-            held.map((one) => ({ cardId: one.card_id, points: trophyPointsOf(one.card_id) })),
+            held.map((one) => ({ cardId: one.card_id, points: trophyPointsOf(one.card_id, mirror) })),
             command.swords,
-          ) ?? refuseSwords(held, command.swords)
+          ) ?? refuseSwords(held, command.swords, mirror)
         ).cardIds);
 
   // Named cards are matched one holding each, so asking for two Cyklopy hands in
@@ -209,10 +226,10 @@ export function tradeTrophies(
       })
     : held;
 
-  const points = trophies.reduce((sum, t) => {
-    const card = EVENTS.find((c) => c.id === t.card_id);
-    return sum + (combatValueOf(card ?? { cardClass: "foe" })?.total ?? 0);
-  }, 0);
+  const points = trophies.reduce(
+    (sum, t) => sum + trophyPointsOf(t.card_id, mirror),
+    0,
+  );
   const gained = Math.floor(points / TROPHY_RATE);
   // The count is worth saying: a player refused at five points wants to know it
   // was five, not that seven is the rate. Especially now they choose what to
