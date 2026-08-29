@@ -212,6 +212,22 @@ export type Effect =
   | { op: "wyciagnij"; count: number }
   /** A creature attacks (usually from inside a die table). */
   | { op: "walka"; nazwa: string; miecz?: number; magia?: number }
+  /**
+   * A creature the caster conjures and sends at somebody else.
+   *
+   * The Golem (Miecz 3) and the Homunculus (Miecz 5), and the difference from
+   * `walka` is who is in danger. `walka` is a creature that attacks *you* — a
+   * die table's Duch, the Straż at a gate — and you fight it with everything
+   * you have. This one is a creature that attacks *them*: „atakuje wybraną
+   * Postać lub Wroga (w granicach Kręgu). Ofiara musi walczyć na zwykłych
+   * zasadach", and the caster stands out of it with nothing at stake — „jeśli
+   * zwycięży [ofiara] — nic się nie dzieje".
+   *
+   * Which is the wyprawa's shape exactly, and it is fought through the same
+   * path: a fighter that is not the character, at a distance the character
+   * never crosses. What it is not is a duel — neither side of it is the caster.
+   */
+  | { op: "przyzwij"; nazwa: string; miecz: number }
   | {
       op: "strata";
       co:

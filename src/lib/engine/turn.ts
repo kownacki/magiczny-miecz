@@ -119,7 +119,40 @@ export interface Fight {
    * usual point of Życie is never spent — which is a fact about how the fight
    * started, and by the time it is settled there is nothing else left to say so.
    */
-  raid?: { cardId: string };
+  raid?: {
+    cardId: string;
+    /**
+     * Conjured by a Zaklęcie rather than sent from a hand (GOLEM, HOMUNCULUS).
+     *
+     * The difference is what a loss costs. A wyprawa the Przyjaciel loses kills
+     * the Przyjaciel — „w przypadku porażki ty nie tracisz punktu Życia, ale
+     * twój Przyjaciel ginie" — and there is a Karta to lose. A summoned
+     * creature is nobody's card: „jeśli zwycięży [ofiara] — nic się nie
+     * dzieje", and the caster has nothing at stake at all.
+     */
+    summoned?: boolean;
+    /**
+     * The row on the board being attacked, when the target is a Karta and not a
+     * Postać.
+     *
+     * Carried because a fight this far from the character cannot be found again
+     * afterwards: a normal fight settles cards out of `drawn`, which is the
+     * stack in front of the seat, and a raider reaches Obszary the seat is not
+     * standing on. Without the row id a beaten Wróg stayed lying there — the
+     * Poszukiwacz killed him twice a turn, for ever.
+     */
+    fieldCardId?: string;
+  };
+  /**
+   * Where the turn goes when this is over, when the fight interrupted it.
+   *
+   * Every other fight in the game happens on the Obszar a move ended on, so it
+   * ends by going back to that Obszar — which is what `endFight` does. A
+   * summoned creature is the exception: the Golem and the Homunculus are spoken
+   * „przed wykonaniem ruchu", so the caster still owes their own turn, and
+   * dropping them into the field phase afterwards would quietly eat the move.
+   */
+  resume?: { phase: "roll" };
   /**
    * The die that decides the guardian's own strength, where the board makes it
    * a roll rather than a number: "1 - 5; 2 - 6; ... 6 - 10" at both bridge
@@ -379,8 +412,10 @@ export function startFight(
      * something to look up.
      */
     settles?: string[];
-    /** The Przyjaciel doing the fighting, when the character sent one out. */
-    raid?: { cardId: string };
+    /** Who is fighting instead of the character, and what they are sent at. */
+    raid?: Fight["raid"];
+    /** Where to hand the turn back, for a fight that interrupted it. */
+    resume?: Fight["resume"];
   },
   playerTotals: { miecz: number; magia: number },
 ): TurnPhase {
@@ -395,6 +430,7 @@ export function startFight(
       ...(card.granted ? { granted: true } : {}),
       ...(card.opponentSeat !== undefined ? { opponentSeat: card.opponentSeat } : {}),
       ...(card.raid ? { raid: card.raid } : {}),
+      ...(card.resume ? { resume: card.resume } : {}),
       kind,
       enemyTotal,
       playerTotal: kind === "magical" ? playerTotals.magia : playerTotals.miecz,
@@ -544,6 +580,8 @@ export function recordFightRoll(
  */
 export function endFight(phase: TurnPhase): TurnPhase {
   if (phase.phase !== "fight") return phase;
+  // A fight that interrupted the turn hands it back where it took it from.
+  if (phase.fight.resume) return phase.fight.resume;
   const { fieldId, draw, drawn, fought } = phase.fight;
   return { phase: "field", fieldId, from: null, draw, drawn, fought: fought ?? [] };
 }

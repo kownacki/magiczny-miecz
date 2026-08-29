@@ -14,6 +14,7 @@ import {
   castSpell,
   escape,
   fightRoll,
+  resolveFight,
   setFightPlayerTotal,
   shieldSaves,
 } from "./fight";
@@ -242,6 +243,88 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       ],
     });
 
+  /* ------------------------------------------------------------------------
+   * The two that conjure a fighter (GOLEM, HOMUNCULUS).
+   * --------------------------------------------------------------------- */
+
+  it("sends the Golem at the Postać it was aimed at, with its own three points", async () => {
+    const { writes } = await castSpell(
+      casting({ cardId: "golem", state: { phase: "roll" } }),
+      { seatId: "seat-a", holdingId: "s-1", target: { seatIndex: 1 } },
+      ports(),
+    );
+    // The caster is not in this fight: the attacking side is the Golem's Miecz
+    // and nothing of theirs — „ofiara musi walczyć na zwykłych zasadach".
+    expect(fightIn(writes)).toMatchObject({
+      playerTotal: 3,
+      opponentSeat: 1,
+      raid: { cardId: "GOLEM", summoned: true },
+    });
+  });
+
+  it("hands the turn back where it took it from — the move is still owed", async () => {
+    const { writes } = await castSpell(
+      casting({ cardId: "homunculus", state: { phase: "roll" } }),
+      { seatId: "seat-a", holdingId: "s-1", target: { seatIndex: 1 } },
+      ports(),
+    );
+    // „Przed wykonaniem ruchu": the caster has not moved and must not lose it.
+    expect(fightIn(writes)).toMatchObject({ playerTotal: 5, resume: { phase: "roll" } });
+  });
+
+  it("refuses a creature nobody was named for", async () => {
+    await expect(
+      castSpell(
+        casting({ cardId: "golem", state: { phase: "roll" } }),
+        { seatId: "seat-a", holdingId: "s-1" },
+        ports(),
+      ),
+    ).rejects.toThrow(/na siebie/);
+  });
+
+  it("refuses a target outside the Krąg", async () => {
+    const away = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        // The Zamek is on another ring, and 11.2 makes crossing a turn's work.
+        aSeat({ id: "seat-b", seat_index: 1, field_id: asFieldId("zamek") }),
+      ],
+      users: duellists(),
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "golem", kind: "spell", face: "hidden" }),
+      ],
+    });
+    await expect(
+      castSpell(away, { seatId: "seat-a", holdingId: "s-1", target: { seatIndex: 1 } }, ports()),
+    ).rejects.toThrow(/w granicach Kręgu/);
+  });
+
+  it("sends it at a Wróg lying on an Obszar in the ring", async () => {
+    const board = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
+      users: duellists(),
+      fieldCards: [
+        { id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false },
+      ],
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "golem", kind: "spell", face: "hidden" }),
+      ],
+    });
+    const { writes } = await castSpell(
+      board,
+      { seatId: "seat-a", holdingId: "s-1", target: { fieldCardId: "fc1" } },
+      ports(),
+    );
+    expect(fightIn(writes)).toMatchObject({
+      cardId: "cyklop",
+      enemyTotal: 6,
+      playerTotal: 3,
+      raid: { summoned: true, fieldCardId: "fc1" },
+    });
+  });
+
   it("puts the spoken card on the used pile (9.6)", async () => {
     const { writes } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(writes.holdings?.delete).toEqual(["s-1"]);
@@ -436,6 +519,71 @@ describe("kostki w walce (17.3, 17.4)", () => {
     );
     // 3 + 5 against 6 + 1.
     expect(fightIn(writes).result).toMatchObject({ outcome: "wygrana" });
+  });
+
+  /**
+   * „Jeśli zwycięży [ofiara] — nic się nie dzieje."
+   *
+   * A wyprawa the Przyjaciel loses kills the Przyjaciel; a summoned creature is
+   * nobody's card and the caster has nothing in it at all — no Życie, no
+   * osłona, no Karta.
+   */
+  it("costs the caster nothing when the summoned creature loses", async () => {
+    const summoned = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: walka({
+          cardId: "seat:1",
+          opponentSeat: 1,
+          enemyTotal: 9,
+          playerTotal: 3,
+          playerRoll: 1,
+          enemyRoll: 1,
+          result: { outcome: "przegrana", winner: "GOLEM", loser: "Michał", kind: "ordinary" },
+          raid: { cardId: "GOLEM", summoned: true },
+          resume: { phase: "roll" },
+        }),
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
+      users: duellists(),
+      // The one Przyjaciel a lost wyprawa kills — „ty nie tracisz punktu Życia,
+      // ale twój Przyjaciel ginie". A summoned creature is not his errand.
+      holdings: [
+        aHolding({ id: "f-1", seat_id: "seat-a", card_id: "poszukiwacz-przygod", kind: "friend" }),
+      ],
+    });
+    const { writes } = await resolveFight(summoned, undefined, ports());
+    // The Golem is beaten and nothing of the caster's moves — not the
+    // Poszukiwacz, who dies for his own wyprawa and not for a Zaklęcie.
+    expect(writes.seats ?? []).toEqual([]);
+    expect(writes.holdings ?? {}).toEqual({});
+    // And the turn is handed back, with the move still owed.
+    expect(writes.game?.turn_state).toEqual({ phase: "roll" });
+  });
+
+  /** „Wróg jest zdejmowany z planszy" — and to the pile, like everything else. */
+  it("takes a Wróg beaten where he lay off the board", async () => {
+    const board = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: walka({
+          cardId: "cyklop",
+          enemyTotal: 6,
+          playerTotal: 5,
+          playerRoll: 6,
+          enemyRoll: 1,
+          result: { outcome: "wygrana", winner: "HOMUNCULUS", loser: "CYKLOP", kind: "ordinary" },
+          raid: { cardId: "HOMUNCULUS", summoned: true, fieldCardId: "fc1" },
+        }),
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false }],
+    });
+    const { writes } = await resolveFight(board, undefined, ports());
+    expect(writes.fieldCards?.delete).toEqual(["fc1"]);
+    expect(pileIn(writes, "events").discard).toHaveLength(1);
+    // No trophy: the Karta was not beaten by the character (1.4).
+    expect(writes.holdings?.insert ?? []).toEqual([]);
   });
 
   it("waits while somebody holds the floor (17.3, 17.7)", async () => {

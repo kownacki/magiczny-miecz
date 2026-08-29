@@ -26,6 +26,9 @@ export function isSettled(effect: Effect): boolean {
     case "kamien":
     case "natura":
     case "walka":
+    // Whom it is sent at was named as the Zaklęcie was spoken, which is the
+    // only choice it holds — see `przyzwij`.
+    case "przyzwij":
     case "ruch-dodatkowy":
     case "wyciagnij":
     // What it does and how long it lasts are both written on the card.

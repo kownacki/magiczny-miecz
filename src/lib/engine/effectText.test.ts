@@ -135,6 +135,7 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   punkty: { op: "punkty", stat: "sword", delta: 2 },
   "tura-stracona": { op: "tura-stracona", turns: 1 },
   walka: { op: "walka", nazwa: "Miejscowy osiłek", miecz: 4 },
+  przyzwij: { op: "przyzwij", nazwa: "GOLEM", miecz: 3 },
   przenies: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
   zaklecie: { op: "zaklecie", count: 1 },
   kamien: { op: "kamien" },

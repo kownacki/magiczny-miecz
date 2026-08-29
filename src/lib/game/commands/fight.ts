@@ -18,6 +18,7 @@ import {
   asFieldId,
   foeBonusAt,
   KAMIENNY_MOST,
+  ringFields,
   ringOf,
   type FieldId,
 } from "@/lib/engine/board";
@@ -40,6 +41,7 @@ import {
   setFightTotal,
   startFight,
   type Fight,
+  type TurnPhase,
 } from "@/lib/engine/turn";
 import { EVENTS, SPELL_BY_ID } from "../decks";
 import { cardName, fieldName } from "@/lib/engine/polish";
@@ -332,6 +334,128 @@ export function beginNamedFight(
   };
 }
 
+/**
+ * A creature conjured by a Zaklęcie, sent at a Postać or a Wróg (GOLEM,
+ * HOMUNCULUS).
+ *
+ * The wyprawa's shape with a different fighter: „atakuje wybraną Postać lub
+ * Wroga (w granicach Kręgu). Ofiara musi walczyć na zwykłych zasadach." The
+ * caster is not in it — the Golem's Miecz is the whole of the attacking side —
+ * so the fight opens as a raid and everything a raid already knows follows:
+ * no osłona for a blow that never landed on anybody's character, no trophy for
+ * a kill that was not yours, and the Władca's errand not counted.
+ *
+ * Range is the Krąg, which is wider than the Poszukiwacz's three Obszary and
+ * narrower than the board: „w granicach Kręgu", and the rings are what
+ * `ringFields` knows. Crossing to another ring is a turn's work with a die
+ * behind it (11.2), so a summon cannot be sent across one any more than a
+ * Przyjaciel can.
+ */
+export function summonFighter(
+  snapshot: Snapshot,
+  command: {
+    name: string;
+    miecz: number;
+    /** The Zaklęcie that conjured it, for the journal and for `raid`. */
+    spellId: string;
+    targetSeatId?: string;
+    fieldCardId?: string;
+  },
+): Outcome<void> {
+  const seat = activeSeat(snapshot);
+  const state = snapshot.game.turn_state;
+  if (state.phase === "fight") throw new Error("Najpierw dokończcie tę walkę.");
+  if (seat.field_id === null) throw new Error("Twoja Postać nie stoi na planszy.");
+
+  /**
+   * A fight needs an Obszar to happen on and one to go back to, and both of
+   * those are the field phase's. Spoken „przed wykonaniem ruchu" there is no
+   * such phase yet — so one is made out of where the character is standing, and
+   * `resume` remembers that the turn has not been taken and must come back.
+   */
+  const from: TurnPhase =
+    state.phase === "field"
+      ? state
+      : {
+          phase: "field",
+          fieldId: seat.field_id as FieldId,
+          from: null,
+          draw: 0,
+          drawn: [],
+        };
+  const resume = state.phase === "field" ? undefined : ({ phase: "roll" } as const);
+  const ring = ringFields(seat.field_id as FieldId);
+  const inRing = (fieldId: FieldId | null): boolean =>
+    fieldId !== null && ring.includes(fieldId);
+
+  const mine = { miecz: command.miecz, magia: 0 };
+  const raid = { cardId: command.spellId, summoned: true } as const;
+
+  if (command.targetSeatId !== undefined) {
+    const target = snapshot.seats.find((one) => one.id === command.targetSeatId);
+    if (!target) throw new Error("Nieznane miejsce.");
+    if (target.id === seat.id) throw new Error("Nie możesz przyzwać go na siebie.");
+    if (target.eliminated) throw new Error("Ta Postać nie żyje.");
+    // 20.5, exactly as the wyprawa reads it: a creature sent at stone is still
+    // an attack, and stone is not attacked.
+    refuseAgainstStone(snapshot, target.id, "attack");
+    if (!inRing(asFieldId(target.field_id))) {
+      throw new Error(`${command.name} sięga tylko w granicach Kręgu.`);
+    }
+    const theirs = pointsOf(snapshot, target.id, "walka");
+    return {
+      writes: {
+        game: {
+          turn_state: startFight(
+            from,
+            {
+              cardId: `seat:${target.seat_index}`,
+              cardName: nameOfSeat(snapshot.users, target.seat_index),
+              miecz: theirs.miecz,
+              opponentSeat: target.seat_index,
+              raid,
+              ...(resume ? { resume } : {}),
+            },
+            mine,
+          ),
+        },
+      },
+      result: undefined,
+    };
+  }
+
+  const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
+  if (!lying) throw new Error("Wskaż Postać albo Kartę Wroga na planszy.");
+  if (!inRing(asFieldId(lying.field_id))) {
+    throw new Error(`${command.name} sięga tylko w granicach Kręgu.`);
+  }
+  const card = EVENTS.find((one) => one.id === lying.card_id);
+  // What he faces decides the Sobowtór's own strength, and here that is the
+  // conjured creature rather than the caster — see `combatValueOf`.
+  const foe = card ? combatValueOf(card, { miecz: command.miecz }) : null;
+  if (!foe) throw new Error("Z tą Kartą się nie walczy.");
+
+  return {
+    writes: {
+      game: {
+        turn_state: startFight(
+          from,
+          {
+            cardId: lying.card_id,
+            cardName: cardName(lying.card_id),
+            ...(foe.kind === "magical" ? { magia: foe.total } : { miecz: foe.total }),
+            granted: lying.granted,
+            raid: { ...raid, fieldCardId: lying.id },
+            ...(resume ? { resume } : {}),
+          },
+          mine,
+        ),
+      },
+    },
+    result: undefined,
+  };
+}
+
 /* --------------------------------------------------------------------------
  * Speaking into one.
  * ----------------------------------------------------------------------- */
@@ -587,6 +711,9 @@ export async function castSpell(
           // Where a Zaklęcie moves a card rather than destroying it, the caster
           // is who it moves to. Only the three that take one use this.
           toSeatId: caster.id,
+          // The other kind of answer to „na kogo": a Karta on the board rather
+          // than a Postać. Only `przyzwij` reads it — see `ApplyEffect`.
+          ...(target.fieldCardId !== undefined ? { fieldCardId: target.fieldCardId } : {}),
           effect: script.stosuje,
           reason: spell?.name ?? held.card_id,
           decided: command.decided,
@@ -987,7 +1114,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
             cardName: cardName(lying.card_id),
             ...(foe.kind === "magical" ? { magia: foe.total } : { miecz: foe.total }),
             granted: lying.granted,
-            raid: { cardId: raider.cardId },
+            raid: { cardId: raider.cardId, fieldCardId: lying.id },
           },
           { miecz: raider.miecz, magia: raider.magia },
         ),
@@ -1412,7 +1539,7 @@ export async function resolveFight(
        * `raiding` is what his `onlyWhenRaiding` was waiting for.
        */
       paid =
-        fight.result.outcome === "przegrana"
+        fight.result.outcome === "przegrana" && !fight.raid.summoned
           ? (await friendDiesInstead(apply(snapshot, cleared), { seatId: seat.id, raiding: true }, ports))
               .writes
           : {};
@@ -1464,9 +1591,10 @@ export async function resolveFight(
    */
   const upToNow = mergeAll(cleared, paid, errand);
   const stolen = stolenLife(apply(snapshot, upToNow), seat, fight);
+  const cleared_ = beatenOffTheBoard(apply(snapshot, mergeAll(upToNow, stolen)), fight);
 
   return {
-    writes: mergeAll(upToNow, stolen, trophiesFrom(snapshot, seat, fight), {
+    writes: mergeAll(upToNow, stolen, cleared_, trophiesFrom(snapshot, seat, fight), {
       game: { turn_state: endFight(state) },
       journal: [
         {
@@ -1479,6 +1607,30 @@ export async function resolveFight(
     }),
     result: undefined,
   };
+}
+
+/**
+ * A Wróg beaten where he lay, taken off the board (12.1, 16.8).
+ *
+ * Only a fight the character never stood in: a wyprawa or a summoned creature
+ * reaches an Obszar the seat is not on, so the Karta is a row on the board
+ * rather than a card in the stack in front of them, and nothing in the ordinary
+ * settle knows about it. Beaten and left lying, he could be killed again every
+ * turn by the same Przyjaciel — and the Golem's card says outright what happens
+ * instead: „Wróg jest zdejmowany z planszy".
+ *
+ * To the stos zużytych rather than out of the game, like everything else that
+ * leaves a hand or a field: `putOnPile` keeps a conjured card out of it and
+ * knows the Wyposażenie is a stock. No trophy — `trophiesFrom` already refuses
+ * a raid, because the Karta was not beaten by the character.
+ */
+function beatenOffTheBoard(snapshot: Snapshot, fight: Fight): Changeset {
+  const rowId = fight.raid?.fieldCardId;
+  if (!rowId || fight.result?.outcome !== "wygrana") return {};
+  const lying = snapshot.fieldCards.find((row) => row.id === rowId);
+  if (!lying) return {};
+  const lifted: Changeset = { fieldCards: { delete: [lying.id] } };
+  return merge(lifted, putOnPile(apply(snapshot, lifted), "events", [asReturnable(lying)]));
 }
 
 /**

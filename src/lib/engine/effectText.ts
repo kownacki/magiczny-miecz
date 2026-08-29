@@ -239,6 +239,11 @@ export function describeEffect(effect: Effect): string {
       return `walka: ${effect.nazwa}${strength ? ` (${strength})` : ""}`;
     }
 
+    // Whom he is sent at is the caster's to name, so the sentence stops at what
+    // is being sent — the target is said by the journal line that reports it.
+    case "przyzwij":
+      return `${effect.nazwa} (Miecz ${effect.miecz}) atakuje wskazaną Postać lub Wroga`;
+
     case "strata":
       return `${describeLoss(effect)}${forWhom(effect.target)}`;
 
@@ -307,6 +312,9 @@ export function summariseEffect(effect: Effect): string {
       return `walka: ${effect.nazwa} (${
         effect.magia !== undefined ? `Magia ${effect.magia}` : `Miecz ${effect.miecz}`
       })`;
+
+    case "przyzwij":
+      return `${effect.nazwa} (Miecz ${effect.miecz}) atakuje`;
 
     case "przenies":
       return effect.to.kind === "pole"

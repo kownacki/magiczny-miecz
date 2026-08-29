@@ -29,7 +29,7 @@ import type { SeatRow } from "../store";
 import { adjustSeat } from "./adjust";
 import { changeNature, pickBelow, placeSeat } from "./character";
 import { drawCard, drawSpell } from "./draw";
-import { beginNamedFight } from "./fight";
+import { beginNamedFight, summonFighter } from "./fight";
 import { nameOfSeat } from "./lobby";
 
 import { healSeat } from "./life";
@@ -86,6 +86,15 @@ export interface ApplyEffect {
    * somebody.
    */
   toSeatId?: string;
+  /**
+   * A Karta on the board the player pointed at as they spoke.
+   *
+   * Only `przyzwij` uses it, and only because that effect can be aimed at
+   * either a Postać or a Wróg: „atakuje wybraną Postać lub Wroga". The seat is
+   * carried by `seatId` as everywhere else; this is the other half of the same
+   * question, and absent when the answer was a Postać.
+   */
+  fieldCardId?: string;
   /**
    * The Karta being resolved, where the effect is about the card itself.
    *
@@ -993,6 +1002,30 @@ async function walk(
       return {
         writes: opened.writes,
         result: { did: [`walka: ${effect.nazwa}`], pending: null },
+      };
+    }
+
+    case "przyzwij": {
+      /**
+       * Sent at whoever was named as the Zaklęcie was spoken.
+       *
+       * `seatId` is the spell's target seat — `castSpell` puts the named Postać
+       * there — and `fieldCardId` is the other kind of answer. Aimed at neither
+       * it is a refusal rather than a creature turning on its caster: „wybraną
+       * Postać lub Wroga" means somebody was chosen, and defaulting to the
+       * caster is exactly how a Golem would end up eating its summoner.
+       */
+      const summoned = summonFighter(snapshot, {
+        name: effect.nazwa,
+        miecz: effect.miecz,
+        spellId: command.reason,
+        ...(command.fieldCardId !== undefined
+          ? { fieldCardId: command.fieldCardId }
+          : { targetSeatId: seatId }),
+      });
+      return {
+        writes: summoned.writes,
+        result: { did: [`${effect.nazwa} atakuje`], pending: null },
       };
     }
 

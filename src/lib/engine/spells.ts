@@ -468,27 +468,34 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     },
   },
   /**
-   * Announced, and the nearest of the fourteen to buildable.
+   * Applied, and it was the nearest of the fourteen to buildable.
    *
    * "Golem (Miecz 3) atakuje wybraną Postać lub Wroga (w granicach Kręgu)…
    * Ofiara musi walczyć na zwykłych zasadach" is a fight the caster is not in,
    * against a target at a distance, settled on the ordinary rules — which is
    * what the Poszukiwacz Przygód's raid already is (`raidsForYou`, `sendRaider`
-   * and `fight.raid`). What differs is that the attacker is conjured rather
-   * than held, and that a beaten Wróg is removed rather than kept (1.4).
+   * and `fight.raid`). What differed is that the attacker is conjured rather
+   * than held, and that a beaten Wróg is removed rather than kept (1.4); both
+   * are now `przyzwij` and `Fight.raid.summoned`.
+   *
+   * The rest of the card needs no encoding, because it is what a lost fight
+   * already costs: „Gdy przegra, Postać traci jedno Życie" is 17.4's own point,
+   * and „a Wróg jest zdejmowany z planszy" is `beatenOffTheBoard`.
    */
   golem: {
     timing: ["przed-ruchem"],
     target: "postac-lub-wrog",
     effect:
       "Golem (Miecz 3) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
+    stosuje: { op: "przyzwij", nazwa: "GOLEM", miecz: 3 },
   },
-  /** Announced. The Golem with Miecz 5, and blocked on the same one thing. */
+  /** The Golem with Miecz 5, and it was blocked on the same one thing. */
   homunculus: {
     timing: ["przed-ruchem"],
     target: "postac-lub-wrog",
     effect:
       "Homunculus (Miecz 5) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
+    stosuje: { op: "przyzwij", nazwa: "HOMUNCULUS", miecz: 5 },
   },
 };
 
