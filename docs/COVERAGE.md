@@ -262,9 +262,9 @@ loss on death are the same either way, so nothing above this line changes.
 |---|---|---|---|
 | 20.1 | three turns as stone | ✅ | `stone_until_turn` |
 | 20.2 | a stone character keeps no items, gold or friends | ✅ | `turnToStone` — items and gold to the field, friends to the used pile |
-| 20.3 | Miecz and Magia are kept but unusable | ◐ | kept; the ban is not enforced |
+| 20.3 | Miecz and Magia are kept but unusable | ✅ | kept, and never used: the only moment a statue would swing either is defending an attack, and 20.5 forbids the attack. Two rows, one guard — see below |
 | 20.4 | cannot move for three turns | ✅ | `nextSeat` |
-| 20.5 | cannot lose Życie, cannot be targeted; keeps its spells | ◐ | the spells are kept; the two prohibitions are not enforced |
+| 20.5 | cannot lose Życie, cannot be targeted; keeps its spells | ✅ | the spells are kept (20.2 takes everything else), and stone is not a legal target: `spendLife` takes nothing from it, so a Karta or an Obszar that sweeps the table passes it by, and `attackSeat`, a Poszukiwacz's raid and a Zaklęcie aimed at a Postać all refuse out loud (`refuseAgainstStone`) |
 
 ## 21. Magiczne Miecze, Tarcze Tolimana i Karty Wyposażenia
 

@@ -65,6 +65,7 @@ import {
   seatView,
   trophyModeOf,
 } from "./seat";
+import { refuseAgainstStone } from "./stone";
 import { floorOf } from "./spellFloor";
 import { afterFight, hasAttacked, missionOf } from "@/lib/engine/status";
 import { addEffect, keepOnly, statusesOf } from "./turn";
@@ -389,6 +390,8 @@ function applySpell(
     if (target.seatIndex === undefined) throw new Error("Wskaż Postać (9.6).");
     const victim = snapshot.seats.find((s) => s.seat_index === target.seatIndex);
     if (!victim) throw new Error("Nie ma takiej Postaci.");
+    // 20.5: "Na taką Postać nie można rzucać Zaklęć."
+    refuseAgainstStone(snapshot, victim.id, "spell");
 
     // The whole hand, "unicestwienie wszystkich posiadanych przez ofiarę
     // Zaklęć" — and then, in the card's own next breath, "należy odłożyć ich
@@ -936,6 +939,9 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
     if (!target) throw new Error("Nieznane miejsce.");
     if (target.id === seat.id) throw new Error("Postać nie walczy sama ze sobą.");
     if (target.eliminated) throw new Error("Ta Postać nie żyje.");
+    // Sent rather than thrown, and 20.5 does not care which: the Poszukiwacz
+    // cannot take a Życie off stone either.
+    refuseAgainstStone(snapshot, target.id, "attack");
     if (!within(asFieldId(target.field_id))) {
       throw new Error(`Zbyt daleko — wyprawa sięga ${RAID_RANGE} Obszary.`);
     }
@@ -1018,6 +1024,9 @@ export function attackSeat(
   if (!target) throw new Error("Nieznane miejsce.");
   if (target.id === attacker.id) throw new Error("Postać nie walczy sama ze sobą.");
   if (target.eliminated) throw new Error("Ta Postać nie żyje.");
+  // 20.5: a statue cannot be made to lose a point of Życie, so there is nothing
+  // a fight with one could settle.
+  refuseAgainstStone(snapshot, target.id, "attack");
   if (target.field_id !== attacker.field_id) {
     throw new Error("Spotkanie jest możliwe tylko na tym samym Obszarze (13.1).");
   }

@@ -18,6 +18,44 @@ export const STONE_TURNS = 3;
  * Zaklęcia stay: 20.5 is explicit that the character keeps them and may use
  * them once it is flesh again.
  */
+/**
+ * Whether this seat is stone right now (20.1).
+ *
+ * Read off the turn counter rather than a flag, because that is what 20.1
+ * measures in: "przez trzy tury", and a turn a character sits out is still a
+ * turn. `stone_until_turn` is the turn it becomes flesh again, so the
+ * comparison is strict.
+ */
+export function isStone(snapshot: Snapshot, seatId: string): boolean {
+  const seat = snapshot.seats.find((row) => row.id === seatId);
+  return seat?.stone_until_turn != null && seat.stone_until_turn > snapshot.game.turn;
+}
+
+/**
+ * 20.5's two prohibitions, which are one idea: stone is not a legal target.
+ *
+ * "Postaci Zamienionej w Kamień nie można odebrać punktu Życia. Na taką Postać
+ * nie można rzucać Zaklęć."
+ *
+ * And 20.3's is the same idea seen from inside — "nie może ich używać" of Miecz
+ * and Magia. The only moment a stone character would use either is defending an
+ * attack, and an attack on stone is one of the things forbidden here, so the
+ * ban never has to be enforced separately. That is why two rows of the coverage
+ * table close on one guard.
+ */
+export function refuseAgainstStone(
+  snapshot: Snapshot,
+  seatId: string,
+  what: "attack" | "spell",
+): void {
+  if (!isStone(snapshot, seatId)) return;
+  throw new Error(
+    what === "attack"
+      ? "Ta Postać jest Zamieniona w Kamień — nie można jej odebrać punktu Życia (20.5)."
+      : "Na Postać Zamienioną w Kamień nie można rzucać Zaklęć (20.5).",
+  );
+}
+
 export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Changeset {
   const seat = seatById(snapshot, command.seatId);
   const held = snapshot.holdings.filter((h) => h.seat_id === seat.id);

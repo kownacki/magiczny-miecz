@@ -4,6 +4,7 @@ import { HEAL_CEILING, heal } from "@/lib/engine/derive";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
+import { isStone } from "./stone";
 
 /**
  * Uzdrowienie, up to the starting level and never past it (4.7).
@@ -53,6 +54,23 @@ export function spendLife(
 ): Outcome<number> {
   const seat = snapshot.seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
+
+  /**
+   * 20.5: "Postaci Zamienionej w Kamień nie można odebrać punktu Życia."
+   *
+   * Here rather than at each caller, because this is the one door every loss
+   * comes through — a lost fight, a Karta, an Obszar, a fall off the Most —
+   * and a rule stated as "cannot be taken" is about the point leaving, not
+   * about who reached for it. The two places that *aim* at a character refuse
+   * out loud instead (`refuseAgainstStone`); a sweeping card that catches a
+   * stone character in passing simply does not move that seat, which is what
+   * the Zaraza should do to a statue.
+   *
+   * Nothing is written and nothing is said. `result` is the Życie the seat
+   * still has, which is what it had, so a caller reading it for a death check
+   * sees a living character and is right.
+   */
+  if (isStone(snapshot, seatId)) return { writes: {}, result: seat.life };
 
   const left = Math.max(0, seat.life - points);
   const spent: Changeset = { seats: [{ id: seat.id, patch: { life: left } }] };
