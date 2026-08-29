@@ -5,13 +5,35 @@ import { parseRollTable } from "@/lib/engine/rollTable";
 import { suggestActions } from "@/lib/engine/cardEffects";
 
 /**
- * A printed die table, rolled in place.
+ * A printed die table: rolled in place at a physical table, read-only in a
+ * simulation.
  *
- * Local state rather than server state on purpose: this is a lookup, not a move.
- * The rules that matter — Karczma's "tracisz 1 turę", Kurhan's Duch — still have
- * to be applied by the player through the ordinary controls, and the outcome
- * text says so. Recording the lookup as a game action would imply the referee
- * had applied it.
+ * Local state rather than server state on purpose — at a *physical* table this
+ * is a lookup and not a move. Somebody has thrown a real die and the app's job
+ * is to say what the face means; the rules that matter, Karczma's "tracisz 1
+ * turę" and Kurhan's Duch, are applied by the players. Recording the lookup as
+ * a game action would imply the referee had applied it.
+ *
+ * # Why the simulation gets none of that
+ *
+ * There, all of it was wrong twice over, and on ten Obszary at once — the
+ * Karczma, the Kurhan, the Krąg Mocy, the Studnia Wieczności, the Gród, the
+ * Twierdza, the Wieża Przeznaczenia, the Zamek, the Krypta Upiorów and the
+ * Wilczy Parów all have a scripted service *and* prose that parses as a die
+ * table, and the Pułapka and Cerber are bridge ordeals with the same.
+ *
+ * - **The die was the browser's.** `Math.random`, so it reached neither the
+ *   server nor the journal and no replay could reproduce it — while the button
+ *   next to it rolled the same Obszar on the server, properly. Two ways to
+ *   roll, one of them a rumour.
+ * - **The outcome was applied by hand.** `onSuggestion` posts to `/adjust`,
+ *   the manual override, which journals as a person overruling the referee.
+ *   "In simulation, nothing is entered by hand" is a settled decision, and this
+ *   was a way round it on a third of the board.
+ *
+ * So in a simulation the table stays and the buttons go. Reading what each face
+ * means is worth having — it is the Obszar's printed text — and it is the only
+ * half of this that is true in both modes.
  */
 export function RollTable({
   text,
@@ -45,12 +67,16 @@ export function RollTable({
         <span className="text-[11px] uppercase tracking-wide text-muted">
           {table.label || "Rzuć kostką"}
         </span>
-        <button
-          onClick={() => setRolled(1 + Math.floor(Math.random() * 6))}
-          className="rounded border border-edge px-2 py-1 text-xs text-ink transition hover:border-ochre"
-        >
-          Rzuć
-        </button>
+        {/* The die is the app's in a simulation, and it is thrown by the button
+            that resolves the Obszar — not by this one, which nothing records. */}
+        {typedRolls && (
+          <button
+            onClick={() => setRolled(1 + Math.floor(Math.random() * 6))}
+            className="rounded border border-edge px-2 py-1 text-xs text-ink transition hover:border-ochre"
+          >
+            Rzuć
+          </button>
+        )}
         {typedRolls &&
           [1, 2, 3, 4, 5, 6].map((face) => (
             <button
@@ -94,7 +120,7 @@ export function RollTable({
               instruction, so the same suggestion rules that read card text
               apply to it — and this is where the friction was: the table would
               say "wygrałeś 1 Sz. Z." and leave you to find the +/- yourself. */}
-          {onSuggestion && (
+          {onSuggestion && typedRolls && (
             <div className="mt-2 flex flex-wrap gap-2">
               {suggestActions({ text: table.outcomes[rolled] }).map((suggestion) => (
                 <button

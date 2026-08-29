@@ -300,9 +300,27 @@ because the app rolls, moves and computes everything.
       Fixed by giving the question one owner: `takesEverything` in `losses.ts`,
       an exhaustive switch that will not compile if a new `co` is added without
       somebody saying which of the two it is. Both callers ask it.
-- [ ] **Prose die tables still roll in the browser.** `RollTable` — the reader
-      for cards with no script — uses `Math.random` locally, so those rolls are
-      neither on the server nor in the journal. Scripted ones are.
+- [x] **Prose die tables no longer roll in the browser.** `RollTable` used
+      `Math.random` locally, so those rolls reached neither the server nor the
+      journal and no replay could reproduce them.
+
+      Worse than the note said, and on more of the board. It is the reader for
+      an *Obszar's* printed text, not only for cards, and twelve fields' prose
+      parses as a die table — ten of which have a scripted service as well
+      (Karczma, Kurhan, Krąg Mocy, Studnia Wieczności, Gród, Twierdza, Wieża
+      Przeznaczenia, Zamek, Krypta Upiorów, Wilczy Parów), with the Pułapka and
+      Cerber handled as Kamienny Most ordeals. So a simulation offered two ways
+      to roll the same Obszar, one of them a rumour. And the outcome buttons
+      posted to `/adjust` — the manual override, journalled as a person
+      overruling the referee — which is a way round "in simulation, nothing is
+      entered by hand" on a third of the board.
+
+      In simulation the table is now read-only: the six faces stay, because
+      that is the Obszar's printed text and worth reading, and every button
+      goes. Companion keeps all of it, where the die is real and the app is a
+      lookup. `src/lib/view/fieldRollTable.test.ts` holds the invariant that
+      makes it safe — every Obszar with a parseable table is one the server can
+      roll for itself — so a thirteenth cannot arrive unnoticed.
 - [ ] **17.9's spoils are still the players'.** The winner of a duel may take a
       Życie, a Przedmiot or a Sztuka Złota; only the Życie is applied.
 
