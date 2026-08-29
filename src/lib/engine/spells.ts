@@ -375,16 +375,22 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect: "Neguje działanie Zaklęcia rzuconego bezpośrednio przed nim — każdego, bez wyjątku.",
   },
   /**
-   * Announced. Half of it exists: the Siewca takes a Karta off the board
-   * through `applies: "zdejmuje-karte"`, and this one takes it off *and puts it
-   * down again* — so it needs a field to point at, which `CastSpell.target`
-   * does not carry. Same missing field as the Władca Gromu below.
+   * Applied. Half of it already existed — the Siewca takes a Karta off the
+   * board through `applies: "zdejmuje-karte"` — and this one takes it off *and
+   * puts it down again*, which wanted an Obszar to point at.
+   *
+   * That is the destination every card offering „dowolny Obszar w tym Kręgu"
+   * already asks for: the effect comes back owed, the interface asks, and the
+   * answer arrives as `Decisions.destination`. Both ends of it are the
+   * player's — which Karta, and which Obszar — which is why `przenies-karte` is
+   * never settled.
    */
   "wladca-zdarzen": {
     timing: ["poczatek-tury", "po-ruchu"],
     target: "karta-na-planszy",
     effect:
       "Przenieś odkrytą Kartę Zdarzeń na inny, nie zajęty Obszar w tym samym Kręgu.",
+    stosuje: { op: "przenies-karte" },
   },
   /**
    * Announced. Every status this game has is on a seat.

@@ -242,6 +242,19 @@ export type Effect =
    * it showed.
    */
   | { op: "podejrzyj"; count: number }
+  /**
+   * Moves a Karta that is already lying on the board to another Obszar.
+   *
+   * Władca Zdarzeń: „będzie ci wolno zdjąć z planszy odkrytą Kartę Zdarzeń i
+   * położyć ją na innym Obszarze w tym samym Kręgu. Nowy Obszar nie może być
+   * zajęty przez inną Postać."
+   *
+   * Not `poloz-karte`, which puts the card being *resolved* somewhere — the
+   * Upiór rolling for which Obszar he haunts. This one takes a card nobody is
+   * resolving, off a field the character is not standing on, and the player
+   * points at both ends of it: which Karta, and which Obszar.
+   */
+  | { op: "przenies-karte" }
   | {
       op: "strata";
       co:

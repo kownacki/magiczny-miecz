@@ -41,6 +41,7 @@ import { activeSeat, pointsOf, seatView } from "./seat";
 import { isSpared, skipsRollAt } from "@/lib/engine/abilities";
 import { addEffect } from "./turn";
 import { BY_REF, decksOf } from "../decks";
+import { asFieldId, ringFields } from "@/lib/engine/board";
 
 /**
  * What the player has already decided, in the order the effect asks.
@@ -191,6 +192,53 @@ async function walk(
     const said =
       done.result.did[0] === option.label ? done.result.did : [option.label, ...done.result.did];
     return { writes: done.writes, result: { did: said, pending: done.result.pending } };
+  }
+
+  /**
+   * The Władca Zdarzeń, whose two halves are both the player's to point at.
+   *
+   * Gated here beside `przenies` rather than inside the settled switch, for the
+   * same reason: the destination arrives as a decision, and until it does the
+   * effect is owed rather than done. Which Karta is the other half, and it came
+   * with the casting — a Zaklęcie names its target as it is spoken.
+   */
+  if (effect.op === "przenies-karte") {
+    const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
+    if (!lying) throw new Error("Wskaż odkrytą Kartę na planszy.");
+    const where = decided.destination;
+    if (!where) return owed();
+
+    const from = asFieldId(lying.field_id);
+    if (from === null) throw new Error("Ta Karta nie leży na Obszarze.");
+    if (where === from) throw new Error("Ta Karta już tam leży.");
+    // „na innym Obszarze w tym samym Kręgu" — the ring the Karta is on, not the
+    // one the caster is standing on: 9.6 lets a Zaklęcie reach anywhere, and
+    // what is being moved is the card.
+    if (!ringFields(from).includes(where)) {
+      throw new Error(`${fieldName(where)} jest w innym Kręgu (11.2).`);
+    }
+    // „Nowy Obszar nie może być zajęty przez inną Postać."
+    const standing = snapshot.seats.find(
+      (one) => !one.eliminated && one.field_id === where,
+    );
+    if (standing) throw new Error(`Na ${fieldName(where)} stoi Postać — wybierz inny Obszar.`);
+
+    return {
+      // Off one Obszar and onto the other, which is what the card describes —
+      // „zdjąć z planszy… i położyć" — and what a `fieldCards` changeset can
+      // say: rows come and go, they do not move. The mark travels with it, so a
+      // conjured Karta stays conjured wherever it is put down.
+      writes: {
+        fieldCards: {
+          delete: [lying.id],
+          insert: [{ field_id: where, card_id: lying.card_id, granted: lying.granted }],
+        },
+      },
+      result: {
+        did: [`${cardName(lying.card_id)} → ${fieldName(where)}`],
+        pending: null,
+      },
+    };
   }
 
   if (effect.op === "przenies" && effect.to.kind !== "pole") {

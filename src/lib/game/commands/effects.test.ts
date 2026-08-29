@@ -344,6 +344,67 @@ describe("losing what you carry (strata)", () => {
   });
 });
 
+/**
+ * The Władca Zdarzeń (9.6), whose two halves are both pointed at.
+ *
+ * „Zdjąć z planszy odkrytą Kartę Zdarzeń i położyć ją na innym Obszarze w tym
+ * samym Kręgu. Nowy Obszar nie może być zajęty przez inną Postać."
+ */
+describe("moving a Karta that is lying on the board", () => {
+  const board = (over: { seats?: ReturnType<typeof aSeat>[] } = {}) =>
+    aTable({
+      seats: over.seats ?? [aSeat({ id: "seat-a", seat_index: 0 })],
+      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false }],
+    });
+
+  const move = (table: ReturnType<typeof board>, destination?: string) =>
+    applyEffect(
+      table,
+      {
+        seatId: "seat-a",
+        effect: { op: "przenies-karte" },
+        reason: "WŁADCA ZDARZEŃ",
+        fieldCardId: "fc1",
+        decided: destination ? { destination: destination as never } : undefined,
+        shuffle: asIs,
+      },
+      ports(),
+    );
+
+  it("waits until somebody says where", async () => {
+    const { writes, result } = await move(board());
+    expect(writes).toEqual({});
+    expect(result.pending).toEqual({ op: "przenies-karte" });
+  });
+
+  it("takes it off one Obszar and puts it on the other", async () => {
+    const { writes, result } = await move(board(), "dolina-cienia");
+    expect(writes.fieldCards?.delete).toEqual(["fc1"]);
+    expect(writes.fieldCards?.insert).toEqual([
+      { field_id: "dolina-cienia", card_id: "cyklop", granted: false },
+    ]);
+    expect(result.did).toEqual(["CYKLOP → Dolina Cienia"]);
+  });
+
+  it("refuses an Obszar in another Krąg (11.2)", async () => {
+    await expect(move(board(), "zamek")).rejects.toThrow(/innym Kręgu/);
+  });
+
+  it("refuses the Obszar it is already on", async () => {
+    await expect(move(board(), "wrzosowiska")).rejects.toThrow(/już tam leży/);
+  });
+
+  it("refuses an Obszar a Postać is standing on", async () => {
+    const taken = board({
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1, field_id: "dolina-cienia" as never }),
+      ],
+    });
+    await expect(move(taken, "dolina-cienia")).rejects.toThrow(/stoi Postać/);
+  });
+});
+
 describe("the rest of the vocabulary", () => {
   it("heals up to the starting level, and says so when there is nothing to heal", async () => {
     const hurt = aTable({ seats: [aSeat({ id: "seat-a", life: 2 })] });

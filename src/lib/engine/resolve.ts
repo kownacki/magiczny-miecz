@@ -60,6 +60,10 @@ export function isSettled(effect: Effect): boolean {
     case "przenies":
       return effect.to.kind === "pole";
 
+    // Both ends of it are the player's: which Karta, and which Obszar.
+    case "przenies-karte":
+      return false;
+
     // Every step has to be settled for the whole to be.
     case "po-kolei":
       return effect.steps.every(isSettled);

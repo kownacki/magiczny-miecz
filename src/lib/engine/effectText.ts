@@ -247,6 +247,9 @@ export function describeEffect(effect: Effect): string {
     case "podejrzyj":
       return `zaglądasz na ${effect.count} pierwszych Kart stosu`;
 
+    case "przenies-karte":
+      return "przenosisz odkrytą Kartę na inny Obszar w tym Kręgu";
+
     case "strata":
       return `${describeLoss(effect)}${forWhom(effect.target)}`;
 
@@ -321,6 +324,9 @@ export function summariseEffect(effect: Effect): string {
 
     case "podejrzyj":
       return `zaglądasz na ${effect.count} Kart`;
+
+    case "przenies-karte":
+      return "przenosisz Kartę na inny Obszar";
 
     case "przenies":
       return effect.to.kind === "pole"
