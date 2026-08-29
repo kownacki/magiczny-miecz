@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
-import { aSeat, aTable } from "../fixture";
+import { aHolding, aSeat, aTable } from "../fixture";
 import { asFieldId } from "@/lib/engine/board";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { isStone, refuseAgainstStone, turnToStone, STONE_TURNS } from "./stone";
 import { spendLife } from "./life";
+import { refuseWhileBeastAwaits } from "./beast";
 import { attackSeat } from "./fight";
 
 /**
@@ -97,5 +98,51 @@ describe("a Postać Zamieniona w Kamień", () => {
     const after = apply(at, turnToStone(at, { seatId: "seat-b" }));
     expect(after.holdings.map((one) => one.kind)).toEqual(["spell"]);
     expect(after.seats[0].stone_until_turn).toBe(1 + STONE_TURNS);
+  });
+});
+
+/**
+ * 10.5 / 14.7 — the Zamek is not a square you may walk away from.
+ *
+ * The declaration 10.5 speaks of is not modelled and should not be: at a table
+ * it is a sentence somebody says out loud, and 14.7 states the same commitment
+ * in cardboard — "nie może z niej zrezygnować jeśli posiada Tarczę Tolimana".
+ */
+describe("standing in the Zamek Bestii", () => {
+  const atCastle = (cards: readonly string[], fieldId = "zamek-bestii") =>
+    aTable({
+      game: { turn: 1, active_seat: 0, turn_state: { phase: "roll" } as TurnPhase },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId(fieldId) })],
+      holdings: cards.map((cardId, at) =>
+        aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId, kind: "item" }),
+      ),
+    });
+
+  it("will not let a Postać with the Tarcza leave", () => {
+    expect(() => refuseWhileBeastAwaits(atCastle(["tarcza-tolimana"]), "seat-a")).toThrow(
+      /10\.5/,
+    );
+  });
+
+  /** The Tarcza Boga Tolimana opens the same door, and closes it the same way. */
+  it("treats the Tarcza Boga Tolimana as the same commitment", () => {
+    expect(() =>
+      refuseWhileBeastAwaits(atCastle(["tarcza-boga-tolimana"]), "seat-a"),
+    ).toThrow(/14\.7/);
+  });
+
+  /**
+   * Without it there is nothing to refuse. 14.7's parenthesis is the whole
+   * condition — a character with no Tarcza was never committed.
+   */
+  it("lets a Postać without one carry on", () => {
+    expect(() => refuseWhileBeastAwaits(atCastle(["miecz"]), "seat-a")).not.toThrow();
+    expect(() => refuseWhileBeastAwaits(atCastle([]), "seat-a")).not.toThrow();
+  });
+
+  it("says nothing anywhere else on the board", () => {
+    expect(() =>
+      refuseWhileBeastAwaits(atCastle(["tarcza-tolimana"], "mokradla-1"), "seat-a"),
+    ).not.toThrow();
   });
 });

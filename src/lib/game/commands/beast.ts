@@ -2,6 +2,7 @@
 
 import { beastCombatKind, beastStrength, compareCombat } from "@/lib/engine/combat";
 import { apply, merge, type Changeset, type CommandPorts, type Outcome, type Snapshot } from "../change";
+import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
 import { activeSeat, pointsOf } from "./seat";
 import { spendLife } from "./life";
 
@@ -13,6 +14,34 @@ import { spendLife } from "./life";
  * combatants. Nothing here reaches for a die itself; where the numbers come
  * from is the port's business and neither binding is visible from in here.
  */
+/**
+ * The Zamek is not a square you may walk away from (10.5, 14.7).
+ *
+ * "Postać, która zakomunikowała, że idzie walczyć z Bestią i dotarła do Zamku
+ * MUSI stoczyć walkę" (10.5), and 14.7 says the same thing in the form the app
+ * can actually check: "musi stoczyć walkę z Bestią (**nie może z niej
+ * zrezygnować jeśli posiada Tarczę Tolimana**)".
+ *
+ * The declaration is not modelled and should not be. At a table it is a
+ * sentence somebody says out loud, and 14.7 makes the Tarcza carry the same
+ * weight without anybody having to remember who announced what: holding it and
+ * standing here *is* the commitment. So the condition is the one the box states
+ * in cardboard rather than the one it states in etiquette.
+ *
+ * `opensTheWayTo(…, "zamek-bestii")` has been on both Tarcze since they were
+ * written and nothing has ever read it — the Most's half of the same ability is
+ * read in `movement.ts`, and this half was not.
+ */
+export function refuseWhileBeastAwaits(snapshot: Snapshot, seatId: string): void {
+  const seat = snapshot.seats.find((row) => row.id === seatId);
+  if (!seat || seat.field_id !== "zamek-bestii") return;
+  const mine = snapshot.holdings.filter((held) => held.seat_id === seatId);
+  if (!opensTheWayTo(heldAbilities(mine.map((held) => held.card_id)), "zamek-bestii")) return;
+  throw new Error(
+    "Masz Tarczę Tolimana i stoisz w Zamku — walki z Bestią nie można odmówić (10.5, 14.7).",
+  );
+}
+
 export async function fightBeast(
   snapshot: Snapshot,
   _command: void,

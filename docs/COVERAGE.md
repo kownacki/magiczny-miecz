@@ -153,7 +153,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 10.2 | one ring, either direction, chosen each turn | ✅ | `moveOptions` |
 | 10.3 | on the Most, one field per turn | ✅ | `bridgeOptions` |
 | 10.4 | you may turn round and leave the Most | ✅ | both neighbours offered |
-| 10.5 | having declared for the Bestia you must fight it | ◐ | the fight is offered, not compelled |
+| 10.5 | having declared for the Bestia you must fight it | ✅ | compelled by the condition 14.7 states in cardboard rather than the one 10.5 states in etiquette: "nie może z niej zrezygnować **jeśli posiada Tarczę Tolimana**". Standing in the Zamek holding either Tarcza, `refuseWhileBeastAwaits` closes the two doors of a turn — you cannot roll away and cannot pass. The spoken declaration is deliberately not modelled |
 
 ## 11. Przekraczanie granic Kręgów
 

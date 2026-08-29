@@ -28,6 +28,7 @@ import {
 } from "../change";
 import type { GameRow, SeatRow } from "../store";
 import { activeSeat, eqModeOf, refuseWhileOverLimit } from "./seat";
+import { refuseWhileBeastAwaits } from "./beast";
 import { driverOf, nameOfSeat } from "./lobby";
 
 /* --------------------------------------------------------------------------
@@ -348,6 +349,9 @@ export async function rollForMove(
   if (snapshot.game.turn_state.phase !== "roll") throw new Error("Nie czas na rzut.");
   // 5.6: "musi natychmiast odrzucić". The turn does not begin until it has.
   refuseWhileOverLimit(snapshot, seat.id);
+  // 10.5: and a character standing in the Zamek with the Tarcza is not going
+  // anywhere either — the fight is the only thing left to do.
+  refuseWhileBeastAwaits(snapshot, seat.id);
 
   const thrown = await ports.random.rollD6("ruch: rzut kostką");
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");

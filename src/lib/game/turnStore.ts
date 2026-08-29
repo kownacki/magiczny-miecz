@@ -110,6 +110,7 @@ import {
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
 import { setEndlessStock as setEndlessStockOn, refuseWhileOverLimit } from "./commands/seat";
+import { refuseWhileBeastAwaits } from "./commands/beast";
 import {
   removeCharacter as removeCharacterOn,
   reviveCharacter as reviveCharacterOn,
@@ -1142,6 +1143,7 @@ export async function finishTurn(gameId: string): Promise<void> {
        */
       const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
       if (seat) refuseWhileOverLimit(snapshot, seat.id);
+      if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
       return { writes: passTurn(snapshot), result: undefined };
     },
     undefined,
