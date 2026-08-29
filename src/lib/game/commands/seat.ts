@@ -293,22 +293,58 @@ export function overCarried(
 }
 
 /**
+ * How many Zaklęcia a seat holds above what its Magia allows, or null.
+ *
+ * "Jeżeli w jakimkolwiek momencie gry, Postać posiada więcej Zaklęć niż wynosi
+ * limit ustalony przez jej Magię, musi tę nadwyżkę natychmiast zlikwidować
+ * odkładając odpowiednią liczbę Zaklęć." (2.6)
+ *
+ * Unlike the pack, this one *is* positional, and 2.6's own worked example is
+ * the proof: "Gdy Mag trafi na Zaczarowane Wzgórza, gdzie nie będzie mógł
+ * liczyć na punkty Magii zyskane dzięki Przedmiotom Magicznym, jego Magia
+ * zmniejszy się do 5 punktów, co pozwoli mu na posiadanie tylko 2 Zaklęć. W
+ * związku z tym, będzie musiał natychmiast odrzucić 1 Zaklęcie." Walking onto
+ * an Obszar can put you over, and the spell you shed does not come back when
+ * you leave it — "to trzecie, rzecz jasna musi sobie znaleźć".
+ */
+export function overSpelled(
+  snapshot: Snapshot,
+  seatId: string,
+): { held: number; limit: number } | null {
+  const view = seatView(snapshot, seatId);
+  const held = view.holdings.filter((one) => one.kind === "spell").length;
+  return held > view.spellCapacity ? { held, limit: view.spellCapacity } : null;
+}
+
+/**
  * The refusal, worded the same wherever it is raised.
  *
- * 5.4 leaves the choice to the player — "Które z Przedmiotów Postać zachowa,
- * które zaś zostaną odrzucone, zależy wyłącznie od decyzji gracza" — so the app
- * does not pick. It stops the game instead and says how many have to go, which
- * makes the choice theirs and the timing the rule's.
+ * Both rules say "natychmiast" and neither says what goes: 5.4 leaves the
+ * Przedmiot to the player — "zależy wyłącznie od decyzji gracza" — and 2.6
+ * leaves the Zaklęcie the same way. So the app picks nothing. It stops the game
+ * and says how many have to go, which makes the choice theirs and the timing
+ * the rule's, and `dropCard` is the way out of both — it refuses to shed a
+ * Zaklęcie under 9.4 *unless* the hand is over this very limit.
  */
-export function refuseWhileOverCarried(snapshot: Snapshot, seatId: string): void {
-  const over = overCarried(snapshot, seatId);
-  if (!over) return;
-  const many = over.carried - over.limit;
-  throw new Error(
-    `Niesiesz ${over.carried} ${plural(over.carried, "Przedmiot", "Przedmioty", "Przedmiotów")}` +
-      ` przy limicie ${over.limit} — odrzuć ${many}, zanim zagrasz dalej (5.6).` +
-      ` Które, wybierasz ty (5.4).`,
-  );
+export function refuseWhileOverLimit(snapshot: Snapshot, seatId: string): void {
+  const pack = overCarried(snapshot, seatId);
+  if (pack) {
+    const many = pack.carried - pack.limit;
+    throw new Error(
+      `Niesiesz ${pack.carried} ${plural(pack.carried, "Przedmiot", "Przedmioty", "Przedmiotów")}` +
+        ` przy limicie ${pack.limit} — odrzuć ${many}, zanim zagrasz dalej (5.6).` +
+        ` Które, wybierasz ty (5.4).`,
+    );
+  }
+
+  const spells = overSpelled(snapshot, seatId);
+  if (spells) {
+    const many = spells.held - spells.limit;
+    throw new Error(
+      `Masz ${spells.held} ${plural(spells.held, "Zaklęcie", "Zaklęcia", "Zaklęć")}` +
+        ` przy limicie ${spells.limit} — odrzuć ${many}, zanim zagrasz dalej (2.6).`,
+    );
+  }
 }
 
 /**

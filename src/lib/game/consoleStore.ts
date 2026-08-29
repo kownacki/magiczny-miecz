@@ -1696,8 +1696,18 @@ export async function runCommand(
             ]
           : []),
         own
-          ? `Zaklęcia: ${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`
-          : `Zaklęcia: ${spells.length} (face down — 9.3)`,
+          /**
+           * With the limit, the way the pack carries its own.
+           *
+           * 2.6's is the limit that moves under you — the Zaczarowane Wzgórza
+           * suspend what a Pierścień lends and with it the right to a third
+           * Zaklęcie — so a hand that was legal a moment ago can be over
+           * without anything having been drawn. Without the number here, the
+           * refusal at the next roll is the first anybody hears of it.
+           */
+          ? `Zaklęcia ${spells.length}/${view.spellCapacity}: ` +
+            `${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`
+          : `Zaklęcia ${spells.length}/${view.spellCapacity} (face down — 9.3)`,
       ].join("\n");
     }
 

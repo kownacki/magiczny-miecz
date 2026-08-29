@@ -109,7 +109,7 @@ import {
   takeNewCharacter as takeNewCharacterOn,
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
-import { setEndlessStock as setEndlessStockOn, refuseWhileOverCarried } from "./commands/seat";
+import { setEndlessStock as setEndlessStockOn, refuseWhileOverLimit } from "./commands/seat";
 import {
   removeCharacter as removeCharacterOn,
   reviveCharacter as reviveCharacterOn,
@@ -1141,7 +1141,7 @@ export async function finishTurn(gameId: string): Promise<void> {
        * Most — and none of those is a player choosing to walk away from a rule.
        */
       const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
-      if (seat) refuseWhileOverCarried(snapshot, seat.id);
+      if (seat) refuseWhileOverLimit(snapshot, seat.id);
       return { writes: passTurn(snapshot), result: undefined };
     },
     undefined,

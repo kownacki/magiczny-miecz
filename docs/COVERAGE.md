@@ -71,7 +71,7 @@ loss on death are the same either way, so nothing above this line changes.
 | | rule | status | where |
 |---|---|---|---|
 | 2.1–2.5 | as 1.1–1.5, for Magia | ✅ | same |
-| 2.6 | spell limit from Magia; excess must be discarded at once | ◐ | limit computed, enforced and shown under the pack; **discarding the excess is not forced** |
+| 2.6 | spell limit from Magia; excess must be discarded at once | ✅ | the limit is computed and shown beside the hand (`Zaklęcia 3/2`), drawing past it is refused, and an excess that arises the other way stops the game until it is shed — `refuseWhileOverLimit`, at the two doors of a turn. Which Zaklęcie goes is the player's; 9.4 already lets one be dropped from a hand that is over this limit and no other. The limit moves under you, which is 2.6's own example: a Pierścień Mocy lends nothing on the Zaczarowane Wzgórza, so walking there can put you over |
 | 2.6 | Różdżka Zaklęć: at least one more than the setup hand, refilled on demand | ✅ | `spellAllowance` floors the limit; `drawSpellWithWand` is the refill |
 | 2.6 | Zaczarowane Wzgórza suspend the Miecz and Magia drawn from Przedmioty, and bar casting | ✅ | `suppressesItems`; the board's own text names every Przedmiot, not only the magical ones |
 
