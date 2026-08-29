@@ -427,6 +427,26 @@ the engine gets wrong or does not have, not a missing feature.
 
 ## Findings worth keeping
 
+- **A card never leaves the game.** Nineteen places in `commands/` delete a
+  holding and every one of them pairs the delete with a return — `putOnPile`,
+  `trophiesToPile`, or an insert onto the Obszar — because a deleted card has
+  not been „odłożona na stos zużytych": it is out of the box, and 9.5 can never
+  bring it back. The three that lift a card off the *board* are the same story.
+  Audited card by card; `piles.test.ts` holds the two deliberate exceptions,
+  which both live in `putOnPile` rather than at the call sites:
+
+  - a **granted** card joins no pile, because the deck never gave it up and its
+    own copy is still in the draw — returning one is how a table ends the
+    evening holding two Cyklopy;
+  - the **Wyposażenie** is a stock and not a deck (21.2), so a Hełm leaving a
+    hand goes back on the shop's shelf by `stockLeft`'s arithmetic. Eleven of
+    the twelve are *also* in the event deck, so pushing one onto the used pile
+    would hand the deck a thirteenth Hełm and the shop its own back at once.
+
+  Which settles what a death does with trofea: in „karty pokonanych" the hoarded
+  Karty go to the stos zużytych like everything else, and in „punkty" nothing
+  goes back because the Karta went back at the kill — only the points are lost.
+
 - **Dolny Krąg was stored counter-clockwise.** The cycle was right, so every
   distance and adjacency was right, but `destination` reads a rising index as
   "zgodnie ze wskazówkami zegara" — so the app named the two directions the
