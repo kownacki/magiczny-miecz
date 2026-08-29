@@ -103,7 +103,25 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
   const emptied: Changeset =
     mine.length > 0 ? { holdings: { delete: mine.map((h) => h.id) } } : {};
 
-  const put = mergeAll(dropped, emptied);
+  /**
+   * Whatever was true of it stops being true (4.4).
+   *
+   * An effect is a row against the *seat*, and the seat is about to be somebody
+   * else: 4.4's replacement writes a new Karta Postaci into the same chair, so
+   * a Zaklęcie cast on the character who died was still sitting there, taking a
+   * point of Miecz off a Postać it was never spoken over. The ones that end on
+   * their own would have ended eventually, which is a strange kind of
+   * inheritance either way.
+   *
+   * Cleared at the death rather than at the arrival, so it holds for both doors
+   * back — 4.4's new Karta and the console's `revive` — and for the chair
+   * standing empty in between, where nothing should be true of anybody.
+   */
+  const undone = snapshot.effects.filter((row) => row.seat_id === seatId);
+  const cleared: Changeset =
+    undone.length > 0 ? { effects: { delete: undone.map((row) => row.id) } } : {};
+
+  const put = mergeAll(dropped, emptied, cleared);
   // Chained rather than merged: both write `deck`, and a merge would let the
   // second overwrite the first's pile instead of adding to it.
   const spellsBack = putOnPile(apply(snapshot, put), "spells", spellCards.map(asReturnable));

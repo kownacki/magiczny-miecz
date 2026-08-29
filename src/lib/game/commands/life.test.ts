@@ -37,6 +37,29 @@ describe("spending Życie", () => {
     expect(spendLife(table, "seat-a", 3).result).toBe(0);
   });
 
+  /**
+   * An effect is a row against the seat, and 4.4 puts a different Postać in
+   * that chair — so a Zaklęcie cast on the one who died was still there,
+   * taking its point off somebody it was never spoken over.
+   */
+  it("takes away everything that was true of the character (4.4)", () => {
+    const table = aTable({
+      seats: [aSeat({ life: 1 })],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "klatwa",
+          label: "-1 Miecza",
+          modifier: { kind: "points", miecz: -1 },
+          ends: { kind: "turns", turns: 3 },
+        },
+      ],
+    });
+    const { writes } = spendLife(table, "seat-a", 1);
+    expect(writes.effects?.delete).toEqual(["eff-1"]);
+  });
+
   it("kills the seat when they run out", () => {
     const table = aTable({
       seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
