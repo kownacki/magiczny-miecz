@@ -211,16 +211,19 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
       "Postać nie traci punktu Życia; Przyjaciel lub Wróg nie ginie. Użyty w walce — remis.",
   },
   /**
-   * Announced. Needs an op that reaches back into the turn's own stack.
+   * Applied. It needed an op that reaches back into the turn's own stack, and
+   * `wymien-karte` is it: every other effect acts on a seat, a field or a pile.
    *
-   * "Odrzucenie jednej z wyciągniętych Kart i wyciągnięcie w zamian innej" acts
-   * on cards already drawn and sitting in `turn_state`, which no effect does —
-   * every one of them acts on a seat, a field or a pile.
+   * „Jednej z wyciągniętych" needs no picker, because 15.2 already put the
+   * drawn cards in an order and this may only be spoken „natychmiast po wzięciu
+   * Karty" — so the one it acts on is the one in front of the player, which is
+   * the one the sheet is showing.
    */
   "odmiana-losu": {
     timing: ["po-karcie"],
     target: "siebie",
     effect: "Odrzuć jedną z wyciągniętych Kart i wyciągnij w zamian inną.",
+    stosuje: { op: "wymien-karte" },
   },
   odrodzenie: {
     timing: ["dowolna-chwila"],

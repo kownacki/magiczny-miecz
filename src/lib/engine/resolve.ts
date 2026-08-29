@@ -31,6 +31,8 @@ export function isSettled(effect: Effect): boolean {
     case "przyzwij":
     // Nothing to choose: the pile has a top and the count is on the card.
     case "podejrzyj":
+    // 15.2 has already said which Karta is in front of you.
+    case "wymien-karte":
     case "ruch-dodatkowy":
     case "wyciagnij":
     // What it does and how long it lasts are both written on the card.

@@ -405,6 +405,66 @@ describe("moving a Karta that is lying on the board", () => {
   });
 });
 
+/**
+ * The Odmiana Losu (9.6), which reaches into the turn's own stack.
+ *
+ * „Odrzucenie jednej z wyciągniętych Kart i wyciągnięcie w zamian innej."
+ */
+describe("swapping the Karta in front of you", () => {
+  const drawn = (over: { drawn?: { cardId: string; cardClass: string }[]; resolved?: string[] } = {}) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      game: {
+        turn_state: {
+          phase: "field",
+          fieldId: "wrzosowiska",
+          from: null,
+          draw: 1,
+          drawn: over.drawn ?? [{ cardId: "cyklop", cardClass: "foe" }],
+          ...(over.resolved ? { resolved: over.resolved } : {}),
+        } as never,
+        deck: {
+          events: { draw: [EVENT_COPIES.get("wilkolak")![0]], discard: [] },
+          spells: { draw: [], discard: [] },
+        },
+      },
+    });
+
+  const swap = (table: ReturnType<typeof drawn>) =>
+    applyEffect(
+      table,
+      { seatId: "seat-a", effect: { op: "wymien-karte" }, reason: "ODMIANA LOSU", shuffle: asIs },
+      ports(),
+    );
+
+  it("puts the Karta back on the used pile and turns over the next", async () => {
+    const { writes, result } = await swap(drawn());
+    const state = (writes.game as { turn_state: { drawn: { cardId: string }[] } }).turn_state;
+    expect(state.drawn.map((one) => one.cardId)).toEqual(["wilkolak"]);
+    // Odrzucona, not gone: 15.5 draws on that pile when the deck runs out.
+    const deck = (writes.game as { deck: { events: { discard: string[] } } }).deck;
+    expect(deck.events.discard).toEqual([EVENT_COPIES.get("cyklop")![0]]);
+    expect(result.did[0]).toBe("CYKLOP odrzucona, w zamian: WILKOŁAK");
+  });
+
+  it("takes the one being dealt with, not one already settled (15.2)", async () => {
+    const table = drawn({
+      drawn: [
+        { cardId: "cyklop", cardClass: "foe" },
+        { cardId: "helm", cardClass: "item" },
+      ],
+      resolved: ["cyklop"],
+    });
+    const { writes } = await swap(table);
+    const state = (writes.game as { turn_state: { drawn: { cardId: string }[] } }).turn_state;
+    expect(state.drawn.map((one) => one.cardId)).toEqual(["cyklop", "wilkolak"]);
+  });
+
+  it("refuses when nothing has been drawn", async () => {
+    await expect(swap(drawn({ drawn: [] }))).rejects.toThrow(/do wymiany/);
+  });
+});
+
 describe("the rest of the vocabulary", () => {
   it("heals up to the starting level, and says so when there is nothing to heal", async () => {
     const hurt = aTable({ seats: [aSeat({ id: "seat-a", life: 2 })] });

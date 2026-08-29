@@ -255,6 +255,20 @@ export type Effect =
    * points at both ends of it: which Karta, and which Obszar.
    */
   | { op: "przenies-karte" }
+  /**
+   * Throws back the Karta in front of you and turns over another.
+   *
+   * Odmiana Losu: „Pozwala na odrzucenie jednej z wyciągniętych Kart i
+   * wyciągnięcie w zamian innej", spoken „natychmiast po wzięciu Karty
+   * Zdarzenia".
+   *
+   * „Jednej z wyciągniętych" is the card being dealt with, which 15.2 makes
+   * exactly one: cards drawn onto an Obszar are resolved in a fixed order, and
+   * the one at the head of that order is the one in front of the player when
+   * this may be spoken. So there is nothing to point at and no picker for a
+   * stack that already has an order.
+   */
+  | { op: "wymien-karte" }
   | {
       op: "strata";
       co:

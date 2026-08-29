@@ -1054,6 +1054,54 @@ async function walk(
       };
     }
 
+    case "wymien-karte": {
+      /**
+       * The Karta in front of the player goes back and another comes over.
+       *
+       * „Odrzucenie" is the used pile and not out of the game — `putOnPile`
+       * knows what a conjured Karta and a Wyposażenie are — and the card that
+       * replaces it is drawn by the same `drawCard` every other draw goes
+       * through, so 15.5's reshuffle happens here too and says so in the
+       * journal.
+       *
+       * Which Karta: the first one that has not been dealt with, which is what
+       * 15.2's order means by "the one in front of you" and what the sheet is
+       * showing when this may be spoken.
+       */
+      const state = snapshot.game.turn_state;
+      if (state.phase !== "field") throw new Error("Nie ma wyciągniętej Karty do wymiany.");
+      const settled = new Set([...(state.resolved ?? []), ...(state.fought ?? [])]);
+      const facing = state.drawn.find((entry) => !settled.has(entry.cardId));
+      if (!facing) throw new Error("Nie ma wyciągniętej Karty do wymiany.");
+
+      const taken: Changeset = {
+        game: {
+          turn_state: {
+            ...state,
+            drawn: state.drawn.filter((entry) => entry !== facing),
+          },
+        },
+      };
+      // Chained, not merged: the pile the discard writes is the same `game.deck`
+      // the draw below reads and writes again.
+      const back = putOnPile(apply(snapshot, taken), "events", [
+        { cardId: facing.cardId, granted: facing.granted },
+      ]);
+      const drew = drawCard(apply(snapshot, mergeAll(taken, back)), { named: null, shuffle });
+
+      return {
+        writes: mergeAll(taken, back, drew.writes),
+        result: {
+          did: [
+            `${cardName(facing.cardId)} odrzucona, w zamian: ${
+              drew.result.card?.name ?? "nowa Karta"
+            }`,
+          ],
+          pending: null,
+        },
+      };
+    }
+
     case "podejrzyj": {
       /**
        * The five that are actually next, off the same end `drawFrom` takes

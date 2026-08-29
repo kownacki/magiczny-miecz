@@ -138,6 +138,7 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   przyzwij: { op: "przyzwij", nazwa: "GOLEM", miecz: 3 },
   podejrzyj: { op: "podejrzyj", count: 5 },
   "przenies-karte": { op: "przenies-karte" },
+  "wymien-karte": { op: "wymien-karte" },
   przenies: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
   zaklecie: { op: "zaklecie", count: 1 },
   kamien: { op: "kamien" },
