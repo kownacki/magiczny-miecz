@@ -66,6 +66,7 @@ import {
   escape as escapeOn,
   fightRoll as fightRollOn,
   resolveFight as resolveFightOn,
+  type Spoils,
   setFightPlayerTotal as setFightPlayerTotalOn,
 } from "./commands/fight";
 import {
@@ -583,8 +584,8 @@ export async function fightRoll(
  * apply literally nothing. What the *winner* takes is a choice under 17.9 and
  * is left to the player rather than assumed.
  */
-export async function resolveFight(gameId: string): Promise<void> {
-  await change(gameId, resolveFightOn, undefined);
+export async function resolveFight(gameId: string, spoils?: Spoils): Promise<void> {
+  await change(gameId, resolveFightOn, spoils ? { spoils } : undefined);
 }
 
 /**

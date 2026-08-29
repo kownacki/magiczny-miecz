@@ -68,6 +68,9 @@ import {
   trophyModeOf,
 } from "./seat";
 import { refuseAgainstStone } from "./stone";
+import { slotOnArrival } from "@/lib/engine/holdings";
+import type { Nature } from "@/data/types";
+import type { Slot } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { afterFight, hasAttacked, missionOf } from "@/lib/engine/status";
 import { addEffect, keepOnly, statusesOf } from "./turn";
@@ -1462,9 +1465,30 @@ export function escape(
  * One die, and only sometimes: the Hełm/Tarcza/Zbroja save of 17.4, thrown
  * once against the widest of them rather than once per item.
  */
+/**
+ * What the winner of a duel takes (17.9).
+ *
+ * "Zwycięzca ma prawo zmusić pokonanego do utraty jednego punktu Życia (czemu
+ * może zapobiec użycie odpowiednich Przedmiotów lub Zaklęć) lub zabrać mu jeden
+ * Przedmiot (również Magiczny) albo Sztukę Złota."
+ *
+ * Three ways to end a duel and the app could only do one of them: it always
+ * took the Życie, so a winner who wanted the Magiczny Miecz off a beaten rival
+ * had no way to say so, and the referee was making the choice the rulebook
+ * gives the player — the same fault the trophies had before the subset ruling.
+ *
+ * Only a duel offers it. Against a Karta there is nobody to rob: a Wróg has no
+ * purse and no pack, and 1.4 already says what a beaten one is worth.
+ */
+export type Spoils =
+  | { take: "zycie" }
+  | { take: "zloto" }
+  /** Which Przedmiot, because "jeden Przedmiot" is one the winner points at. */
+  | { take: "przedmiot"; holdingId: string };
+
 export async function resolveFight(
   snapshot: Snapshot,
-  _command: void,
+  command: { spoils?: Spoils } | void,
   ports: CommandPorts,
 ): Promise<Outcome<void>> {
   const state = snapshot.game.turn_state;
@@ -1514,8 +1538,7 @@ export async function resolveFight(
   }
 
   // In a duel the loser may be either side; against a card only the character
-  // can lose. Rule 17.9 gives the winner a choice of spoils, so only the life
-  // is applied automatically and the rest is left to the players.
+  // can lose.
   const loser =
     fight.result.outcome === "przegrana"
       ? seat
@@ -1523,8 +1546,30 @@ export async function resolveFight(
         ? snapshot.seats.find((s) => s.seat_index === fight.opponentSeat)
         : undefined;
 
+  /**
+   * 17.9's other two spoils, which end the duel without a blow being struck.
+   *
+   * Taken here rather than after the life machinery because they replace it:
+   * "lub zabrać mu jeden Przedmiot albo Sztukę Złota" is an alternative to
+   * forcing the loss, so no osłona is rolled (17.4 is about a blow landing and
+   * none does), no Giermek dies in anybody's place, and Excalibur takes
+   * nothing — its own clause is about a point of Życie.
+   *
+   * Only where the winner is the one who asked. A duel the *drawer* lost is
+   * settled against them and there is nothing for them to choose.
+   */
+  const spoils = command && command.spoils ? command.spoils : null;
+  const robbing =
+    spoils !== null &&
+    spoils.take !== "zycie" &&
+    loser !== undefined &&
+    fight.opponentSeat !== undefined &&
+    fight.result.outcome === "wygrana";
+
   let paid: Changeset = {};
-  if (loser) {
+  if (robbing && loser && spoils) {
+    paid = takeSpoils(snapshot, seat, loser, spoils);
+  } else if (loser) {
     // Nothing is rolled for a raid: the character never stood in the fight, so
     // there is no blow for a Zbroja to turn (17.4).
     const save = fight.raid
@@ -1681,6 +1726,72 @@ function stolenLife(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset 
   if (!loser || loser.eliminated) return gained;
 
   return merge(gained, spendLife(apply(snapshot, gained), loser.id, points).writes);
+}
+
+/**
+ * 17.9's Przedmiot or Sztuka Złota, moved from the loser to the winner.
+ *
+ * A Przedmiot changes hands rather than being destroyed — "zabrać mu jeden
+ * Przedmiot" — so the holding is reseated and not deleted, which also keeps
+ * 21.2's stock right: the card never leaves play and no pile has to be told.
+ * It arrives the way anything else arrives, through `slotOnArrival`, so in
+ * slotowy a won Miecz goes onto the arm if the arm is free.
+ *
+ * The gold is a number on both seats (3.5) and moves as one.
+ */
+function takeSpoils(
+  snapshot: Snapshot,
+  winner: SeatRow,
+  loser: SeatRow,
+  spoils: Spoils,
+): Changeset {
+  const said = (what: string): Changeset => ({
+    journal: [
+      {
+        seatId: winner.id,
+        turn: snapshot.game.turn,
+        kind: "duel",
+        payload: { spoils: spoils.take, what, from: loser.seat_index },
+      },
+    ],
+  });
+
+  if (spoils.take === "zycie") return {};
+
+  if (spoils.take === "zloto") {
+    if (loser.gold < 1) throw new Error("Pokonany nie ma Sztuki Złota (17.9).");
+    return merge(
+      {
+        seats: [
+          { id: loser.id, patch: { gold: loser.gold - 1 } },
+          { id: winner.id, patch: { gold: winner.gold + 1 } },
+        ],
+      },
+      said("1 Sz. Z."),
+    );
+  }
+
+  const held = snapshot.holdings.find(
+    (one) => one.id === spoils.holdingId && one.seat_id === loser.id && one.kind === "item",
+  );
+  if (!held) throw new Error("Pokonany nie ma takiego Przedmiotu (17.9).");
+
+  const slot = slotOnArrival({
+    cardId: held.card_id,
+    kind: "item",
+    eqMode: eqModeOf(snapshot.game),
+    nature: (winner.nature ?? null) as Nature | null,
+    worn: holdingsOf(snapshot, winner.id).map((one) => one.slot as Slot | null),
+  });
+
+  return merge(
+    {
+      holdings: {
+        patch: [{ id: held.id, patch: { seat_id: winner.id, slot, ordinal: null } }],
+      },
+    },
+    said(cardName(held.card_id)),
+  );
 }
 
 /**

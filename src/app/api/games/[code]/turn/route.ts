@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { bodyOf } from "@/lib/game/requests";
+import { bodyOf, type Requests } from "@/lib/game/requests";
+import type { Spoils } from "@/lib/game/commands/fight";
 import { refused } from "@/app/api/refused";
 import { findGame, verifyActor } from "@/lib/game/store";
 import { mayAct } from "@/lib/game/permission";
@@ -53,6 +54,20 @@ function decisionsFrom(body: Record<string, unknown>): Decisions {
     ...(choices?.length ? { choices } : {}),
     ...(destination ? { destination } : {}),
   };
+}
+
+/**
+ * 17.9's choice, out of two request fields and into the shape the command takes.
+ *
+ * Anything unrecognised is the Życie, which is what the app always took — a
+ * misspelt spoil should end the duel the ordinary way rather than refuse it.
+ */
+function spoilsIn(body: Partial<Requests["turn"]>): Spoils | undefined {
+  if (body.spoils === "zloto") return { take: "zloto" };
+  if (body.spoils === "przedmiot" && typeof body.spoilsHoldingId === "string") {
+    return { take: "przedmiot", holdingId: body.spoilsHoldingId };
+  }
+  return undefined;
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -242,7 +257,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         await releaseSpellFloor(game.id, seat.id);
         break;
       case "fight-done":
-        await resolveFight(game.id);
+        // 17.9's choice, where the winner of a duel made one. Absent means the
+        // Życie, which is what every surface did before it could ask.
+        await resolveFight(game.id, spoilsIn(body));
         break;
       case "pole-tabela":
         // The app throws the die and applies the row. What comes back says

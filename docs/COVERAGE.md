@@ -236,7 +236,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 17.6 | the attacked character may try to slip away | ✅ | `escape` resolves the fleeing seat as the duel's `opponentSeat`, and refuses the attacker |
 | 17.7 | **both** characters may cast before the roll | ✅ | `claimFloor` gives any seat holding a castable spell an exclusive claim, and `fightRoll` refuses the dice while it stands — duels included |
 | 17.8 | attacker's Miecz worked out first | ✅ | |
-| 17.9 | the winner takes a Życie, an item, or a Sztuka Złota | ◐ | the Życie is applied; the choice is the players' |
+| 17.9 | the winner takes a Życie, an item, or a Sztuka Złota | ◐ | **all three now happen** — `resolveFight` takes a `Spoils`, the Przedmiot changes hands rather than being destroyed (so 21.2's stock holds) and arrives through `slotOnArrival` like anything else, and taking the Przedmiot or the Złoto skips the blow entirely: no osłona, no Giermek dying in anybody's place, no Excalibur. `POST turn { action: "fight-done", spoils, spoilsHoldingId }` carries it. Still ◐ because **no surface asks yet**: absent means the Życie, which is what every one of them did before the choice existed. The browser has the press to hang it on (`fight-done`); the console resolves a duel inside `fight` and needs a grammar decision first |
 | 17.10 | a draw costs nobody anything | ✅ | |
 
 ## 18. Walka magiczna

@@ -87,6 +87,14 @@ export interface Requests {
   start: Record<never, never>;
   turn: {
     action: string;
+    /**
+     * `fight-done`: what the winner of a duel takes (17.9) — "zycie", "zloto"
+     * or "przedmiot", with `spoilsHoldingId` naming the one they point at.
+     * Absent means the Życie, which is what every surface took before any of
+     * them could ask.
+     */
+    spoils: string;
+    spoilsHoldingId: string;
     beastRoll: number;
     cardClass: string;
     cardId: string;
