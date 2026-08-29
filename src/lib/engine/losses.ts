@@ -38,6 +38,44 @@ export interface Losable {
  * what the seat is actually holding. Rolling a fixed number instead would spend
  * dice on picks nobody makes, which a scripted port notices.
  */
+/**
+ * Losses that name what goes, so there is nothing for anybody to choose.
+ *
+ * Two places need this and each used to keep its own list, which is how they
+ * came to disagree: `chooseLosses` below knew that „wszystkie" is everything of
+ * a kind and never a question, and `isSettled` in `resolve.ts` named
+ * `wszystkie-przedmioty` and forgot `wszystkie-zaklecia`. So the Przesilenie —
+ * "wszystkie Karty Zaklęć, znajdujące się w posiadaniu Postaci" — was held at
+ * the gate as an unanswered choice and never reached the code that knew it was
+ * not one. It announced nothing and took nothing, on every table, since it was
+ * written.
+ *
+ * An exhaustive switch rather than a set, so a new `co` cannot be added without
+ * somebody saying which of the two it is.
+ */
+export function takesEverything(co: Loss["co"]): boolean {
+  switch (co) {
+    // Everything of a kind. The card has already decided.
+    case "wszystkie-przedmioty":
+    case "wszystkie-zaklecia":
+      return true;
+    // The same, minus the ones the card names — still the card deciding. Only
+    // the Zły Duch: "wszyscy dotychczasowi Przyjaciele (z wyjątkiem Południcy)".
+    case "wszyscy-przyjaciele-oprocz":
+      return true;
+    // A number on the seat rather than a card in the pack (3.5), so there is
+    // nothing to point at.
+    case "gold":
+      return true;
+    // The four that 5.6 leaves to the holder: "zależy wyłącznie od decyzji
+    // gracza". A die answers instead where the card says `wybor: "losowo"`.
+    case "przedmiot":
+    case "przyjaciel":
+    case "zaklecie":
+      return false;
+  }
+}
+
 export function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
   switch (loss) {
     case "przedmiot":
@@ -84,24 +122,19 @@ export function chooseLosses(
   const candidates = holdings.filter((held) => held.kind === kind);
   if (candidates.length === 0) return [];
 
-  // "Wszystkie" is not a count, it is everything of that kind — and it is not a
-  // choice either, so it never comes back as null asking which. The Przesilenie
-  // says it of a whole table at once ("wszystkie Karty Zaklęć, znajdujące się w
-  // posiadaniu Postaci") and the Władca Czarów of one victim.
-  if (loss.co === "wszystkie-przedmioty" || loss.co === "wszystkie-zaklecia") {
-    return candidates.map((held) => held.id);
-  }
-
   /**
-   * The same, minus the ones the card names. Only the Zły Duch: "wszyscy
-   * dotychczasowi Przyjaciele (z wyjątkiem Południcy)".
+   * "Wszystkie" is not a count, it is everything of that kind — and it is not a
+   * choice either, so it never comes back as null asking which. The Przesilenie
+   * says it of a whole table at once ("wszystkie Karty Zaklęć, znajdujące się w
+   * posiadaniu Postaci") and the Władca Czarów of one victim.
    *
-   * Still not a choice — everybody named goes and everybody spared stays — so
-   * it never comes back asking which, and a character whose only Przyjaciel is
+   * The Zły Duch spares the ones his card names and takes the rest, which is
+   * still the card deciding rather than the holder: "wszyscy dotychczasowi
+   * Przyjaciele (z wyjątkiem Południcy)". A character whose only Przyjaciel is
    * the Południca loses nobody.
    */
-  if (loss.co === "wszyscy-przyjaciele-oprocz") {
-    const spared = new Set(loss.oprocz ?? []);
+  if (takesEverything(loss.co)) {
+    const spared = new Set(loss.co === "wszyscy-przyjaciele-oprocz" ? (loss.oprocz ?? []) : []);
     return candidates.filter((held) => !spared.has(held.cardId)).map((held) => held.id);
   }
 

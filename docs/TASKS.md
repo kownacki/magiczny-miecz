@@ -280,9 +280,26 @@ because the app rolls, moves and computes everything.
       (`trophy_mode`, `trophy_points`, `trophy_beaten`), which is the argument
       for having it rather than against.
 
-- [ ] **Effects that reach other players are still `pending`.** `applyEffect`
-      writes one seat, so a `target` of "wszyscy" or "wszyscy-w-kregu" comes
-      back undone. The Danina and Przesilenie are the cards that want it.
+- [x] **Effects that reach other players.** This note was out of date and the
+      truth was narrower than it said. `applyEffect` does *not* write one seat:
+      all three ops that carry a `target` — `punkty`, `tura-stracona`, `strata`
+      — loop over `seatsTargeted` and chain through `apply`. The Zaraza takes a
+      Życie off everyone in the Krąg, and the Burza Siedmiu Słońc a turn off
+      everyone, and both were already tested.
+
+      One card really was stuck, for a different reason: **`isSettled` and
+      `chooseLosses` each kept their own list of the losses that are not a
+      choice, and disagreed about one value.** `chooseLosses` knew that
+      „wszystkie" is everything of a kind and never a question;
+      `resolve.ts` named `wszystkie-przedmioty`, `wszyscy-przyjaciele-oprocz`
+      and `gold`, and left out `wszystkie-zaklecia`. So the Przesilenie was held
+      at the gate as an unanswered choice and never reached the code that knew
+      better — it announced nothing and took nothing, on every table, since it
+      was written.
+
+      Fixed by giving the question one owner: `takesEverything` in `losses.ts`,
+      an exhaustive switch that will not compile if a new `co` is added without
+      somebody saying which of the two it is. Both callers ask it.
 - [ ] **Prose die tables still roll in the browser.** `RollTable` — the reader
       for cards with no script — uses `Math.random` locally, so those rolls are
       neither on the server nor in the journal. Scripted ones are.

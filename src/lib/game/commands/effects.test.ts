@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Effect } from "@/lib/engine/cardScript";
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
+import { apply } from "../change";
 import { applyEffect, resolveDrawnCard, resolveFieldOffer, spendHolding } from "./effects";
 import { EVENT_COPIES } from "../decks";
 import { asFieldId } from "@/lib/engine/board";
@@ -64,6 +65,52 @@ describe("a threshold on a character's points", () => {
       holdings: [aHolding({ id: "h0", seat_id: "seat-a", card_id: "excalibur", kind: "item" })],
     });
     expect((await run(sword as unknown as Effect, armed)).writes.seats).toBeDefined();
+  });
+});
+
+/**
+ * A loss that names what goes, across a whole table (Przesilenie).
+ *
+ * "Zaczyna się przesilenie. Wszystkie Karty Zaklęć, znajdujące się w posiadaniu
+ * Postaci, tracą swoją moc" — nobody chooses anything, so nothing should be
+ * asked. It was asked anyway: `isSettled` kept its own list of the losses that
+ * are not a choice and left `wszystkie-zaklecia` off it, so the card was held
+ * at the gate as an unanswered question and never reached `chooseLosses`, which
+ * knew. It announced nothing and took nothing.
+ */
+describe("a loss that names what goes", () => {
+  const table = () =>
+    aTable({
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
+      ],
+      holdings: [
+        aHolding({ id: "s1", seat_id: "seat-a", card_id: "fatum", kind: "spell" }),
+        aHolding({ id: "s2", seat_id: "seat-b", card_id: "golem", kind: "spell" }),
+        aHolding({ id: "i1", seat_id: "seat-a", card_id: "helm", kind: "item" }),
+      ],
+    });
+
+  it("takes every Zaklęcie at the table without asking", async () => {
+    const at = table();
+    const { writes, result } = await run(
+      { op: "strata", co: "wszystkie-zaklecia", target: "wszyscy" } as Effect,
+      at,
+    );
+    expect(result.pending).toBeNull();
+    const after = apply(at, writes);
+    expect(after.holdings.filter((one) => one.kind === "spell")).toEqual([]);
+    // And nothing else: the Hełm is not a Zaklęcie.
+    expect(after.holdings.map((one) => one.id)).toEqual(["i1"]);
+  });
+
+  it("says whose they were, rather than announcing nothing", async () => {
+    const { result } = await run(
+      { op: "strata", co: "wszystkie-zaklecia", target: "wszyscy" } as Effect,
+      table(),
+    );
+    expect(result.did.join(" ")).toMatch(/FATUM|GOLEM/);
   });
 });
 

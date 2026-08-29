@@ -1,5 +1,6 @@
 /** Which effects the app can carry out on its own, and which are genuinely the player's to decide. */
 
+import { takesEverything } from "./losses";
 import type { Effect } from "./cardScript";
 
 /**
@@ -80,11 +81,11 @@ export function isSettled(effect: Effect): boolean {
      * supposed to be free of.
      */
     case "strata":
-      if (effect.co === "wszystkie-przedmioty" || effect.co === "gold") return true;
-      // Everything of a kind but the ones the card names is not a choice
-      // either: the Zły Duch decides who goes, and he says all of them bar the
-      // Południca.
-      if (effect.co === "wszyscy-przyjaciele-oprocz") return true;
+      // Which losses name what goes is `takesEverything`'s, not this file's.
+      // Both used to keep the list and they disagreed about one value, so the
+      // Przesilenie was held here as an unanswered choice and never reached
+      // `chooseLosses`, which knew perfectly well it was not one.
+      if (takesEverything(effect.co)) return true;
       return effect.wybor === "losowo";
 
     // A die table is settled only if every face it can land on is. Rolled
