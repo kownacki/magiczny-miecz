@@ -244,6 +244,9 @@ export function describeEffect(effect: Effect): string {
     case "przyzwij":
       return `${effect.nazwa} (Miecz ${effect.miecz}) atakuje wskazaną Postać lub Wroga`;
 
+    case "podejrzyj":
+      return `zaglądasz na ${effect.count} pierwszych Kart stosu`;
+
     case "strata":
       return `${describeLoss(effect)}${forWhom(effect.target)}`;
 
@@ -315,6 +318,9 @@ export function summariseEffect(effect: Effect): string {
 
     case "przyzwij":
       return `${effect.nazwa} (Miecz ${effect.miecz}) atakuje`;
+
+    case "podejrzyj":
+      return `zaglądasz na ${effect.count} Kart`;
 
     case "przenies":
       return effect.to.kind === "pole"

@@ -231,17 +231,21 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     stosuje: { op: "uzdrow", upTo: 4 },
   },
   /**
-   * Announced. Wants a secret this envelope has no shape for.
+   * Applied, and „w tajemnicy" is kept by where the answer goes.
    *
-   * "Obejrzeć w tajemnicy 5 pierwszych Kart Zdarzeń" is a private view of the
-   * draw pile, and the pile deliberately never leaves the server — shipping it
-   * was a real bug once. So it needs a per-seat secret in the envelope, the
-   * same shape a hidden hand has under 9.3, rather than an effect.
+   * The note here used to say this wanted a per-seat secret in the envelope,
+   * because the draw pile deliberately never leaves the server — shipping it
+   * was a real bug once. That was looking at the wrong channel. The envelope is
+   * what every device polls and can hold no secrets; what a *command* returns
+   * is the response to the one device that asked, which is exactly one seat.
+   * So the five cards come back in `Cast.did`, the journal line says only which
+   * Zaklęcie was spoken, and nothing is written to the game at all.
    */
   olsnienie: {
     timing: ["przed-ruchem"],
     target: "siebie",
     effect: "Obejrzyj w tajemnicy 5 pierwszych Kart Zdarzeń ze stosu.",
+    stosuje: { op: "podejrzyj", count: 5 },
   },
   "pan-bogactwa": {
     timing: ["dowolna-chwila"],

@@ -29,6 +29,8 @@ export function isSettled(effect: Effect): boolean {
     // Whom it is sent at was named as the Zaklęcie was spoken, which is the
     // only choice it holds — see `przyzwij`.
     case "przyzwij":
+    // Nothing to choose: the pile has a top and the count is on the card.
+    case "podejrzyj":
     case "ruch-dodatkowy":
     case "wyciagnij":
     // What it does and how long it lasts are both written on the card.

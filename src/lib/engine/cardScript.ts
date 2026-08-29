@@ -228,6 +228,20 @@ export type Effect =
    * never crosses. What it is not is a duel — neither side of it is the caster.
    */
   | { op: "przyzwij"; nazwa: string; miecz: number }
+  /**
+   * A look at the top of a pile, for the caster's eyes only.
+   *
+   * Olśnienie: „Pozwoli Postaci obejrzeć w tajemnicy 5 pierwszych Kart Zdarzeń
+   * ze stosu." Nothing about the game changes — the cards are not drawn, not
+   * reordered and not spent — so this is the one effect that writes nothing at
+   * all and whose whole product is what it says back.
+   *
+   * „W tajemnicy" is kept by where the answer goes rather than by any rule
+   * here: what a command returns is the response to the device that asked, and
+   * the journal line for a Zaklęcie says which card was spoken and never what
+   * it showed.
+   */
+  | { op: "podejrzyj"; count: number }
   | {
       op: "strata";
       co:

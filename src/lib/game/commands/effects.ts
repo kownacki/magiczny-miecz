@@ -40,6 +40,7 @@ import { turnToStone } from "./stone";
 import { activeSeat, pointsOf, seatView } from "./seat";
 import { isSpared, skipsRollAt } from "@/lib/engine/abilities";
 import { addEffect } from "./turn";
+import { BY_REF, decksOf } from "../decks";
 
 /**
  * What the player has already decided, in the order the effect asks.
@@ -1002,6 +1003,28 @@ async function walk(
       return {
         writes: opened.writes,
         result: { did: [`walka: ${effect.nazwa}`], pending: null },
+      };
+    }
+
+    case "podejrzyj": {
+      /**
+       * The five that are actually next, off the same end `drawFrom` takes
+       * from — a peek that showed a different five would be worse than none.
+       *
+       * Nothing is written: the cards stay where they are, in that order, and
+       * the pile is not reshuffled to fill the count. A short pile shows what
+       * it has, which is itself worth knowing at the table.
+       */
+      const deck = decksOf(snapshot.game).events;
+      const top = deck.draw
+        .slice(0, effect.count)
+        .map((ref) => BY_REF.get(ref)?.name ?? ref);
+      return {
+        writes: {},
+        result: {
+          did: top.length > 0 ? [`na wierzchu: ${top.join(", ")}`] : ["stos jest pusty"],
+          pending: null,
+        },
       };
     }
 

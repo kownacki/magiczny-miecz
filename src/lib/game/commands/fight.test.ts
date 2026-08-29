@@ -3,6 +3,7 @@ import { asFieldId } from "@/lib/engine/board";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Fight, TurnPhase } from "@/lib/engine/turn";
 import type { DeckState } from "@/lib/engine/deck";
+import { EVENT_COPIES } from "../decks";
 import { aHolding, aSeat, aTable, aUser, NOW, ports } from "../fixture";
 import { pointsOf } from "./seat";
 import { hasAttacked } from "@/lib/engine/status";
@@ -323,6 +324,41 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       playerTotal: 3,
       raid: { summoned: true, fieldCardId: "fc1" },
     });
+  });
+
+  /**
+   * „Obejrzyj w tajemnicy 5 pierwszych Kart Zdarzeń ze stosu."
+   *
+   * The secret is kept by the channel: what a command returns goes back to the
+   * device that asked and nowhere else, and the journal says which Zaklęcie was
+   * spoken and never what it showed.
+   */
+  it("shows the caster the top of the pile and writes nothing about it", async () => {
+    const seeing = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: { phase: "roll" },
+        deck: {
+          events: { draw: [EVENT_COPIES.get("cyklop")![0], EVENT_COPIES.get("wilkolak")![0]], discard: [] },
+          spells: { draw: [], discard: [] },
+        },
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "olsnienie", kind: "spell", face: "hidden" }),
+      ],
+    });
+    const { writes, result } = await castSpell(
+      seeing,
+      { seatId: "seat-a", holdingId: "s-1" },
+      ports(),
+    );
+    expect(result.did?.[0]).toBe("na wierzchu: CYKLOP, WILKOŁAK");
+    // The pile is untouched: not drawn, not reordered, not reshuffled — the
+    // only `game` write is the spent card going onto the spells' own pile.
+    expect(pileIn(writes, "events").draw).toHaveLength(2);
+    // And the table is told the Zaklęcie was spoken, not what it saw.
+    expect(JSON.stringify(writes.journal)).not.toContain("CYKLOP");
   });
 
   it("puts the spoken card on the used pile (9.6)", async () => {
