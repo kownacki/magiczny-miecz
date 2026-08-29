@@ -30,6 +30,7 @@ import type { OwedSpells } from "./movement";
 import { eqModeOf, seatById } from "./seat";
 import type { Slot } from "@/lib/engine/slots";
 import { slotsOnArrival } from "@/lib/engine/holdings";
+import { startTurn } from "@/lib/engine/turn";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 
 /** The 27 Karty Postaci, read the same way `turnStore` reads them. */
@@ -626,11 +627,31 @@ export async function takeNewCharacter(
         }
       : {};
 
+  /**
+   * A table that had stopped starts again with whoever just arrived.
+   *
+   * `active_seat` is null when the last pass found nobody who could play —
+   * which is exactly what a sole player's death does: `killSeat` passes the
+   * turn, `nextSeat` looks round a table of one eliminated seat and comes back
+   * with nobody. Every way of moving the game on needs an active seat to press
+   * it, 4.4's included, so the game sat there afterwards: the new Postać was
+   * on its MGR with its kit, and nothing it did was its turn to do. „To nie
+   * twoja tura (10.1)" for taking a Przedmiot, and no dice.
+   *
+   * Only from null, and only for the seat arriving. If somebody else is
+   * playing, this one waits its turn like anybody else — and the turn it waits
+   * for is the one the queue already shows.
+   */
+  const resumed: Changeset =
+    snapshot.game.active_seat === null
+      ? { game: { active_seat: seat.seat_index, turn_state: startTurn() } }
+      : {};
+
   // Plainly merged, not chained: nothing here reads a column another part of
   // it writes. The deck is the one that would have needed `apply`, and the
   // draw that touches it is the caller's.
   return {
-    writes: mergeAll(seated, dealt, {
+    writes: mergeAll(seated, dealt, resumed, {
       journal: [
         {
           seatId: seat.id,

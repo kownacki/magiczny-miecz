@@ -252,6 +252,30 @@ describe("przywrócenie Postaci (konsola)", () => {
     expect(() => reviveCharacter(table(), { seatId: "seat-a" })).toThrow("żyje");
   });
 
+  /**
+   * A table with nobody in it to play is what the last death leaves behind:
+   * `passTurn` looks round, finds no living seat and sets `active_seat` to
+   * null. Standing a Postać up in a game where no turn can be taken is not
+   * standing it up.
+   */
+  it("starts the table again when the pass had found nobody", () => {
+    const stopped = aTable({
+      game: { status: "playing", active_seat: null, characters_out: ["goblin"] },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, character_id: asSeatCharacter("goblin"), eliminated: true }),
+      ],
+    });
+    const { writes } = reviveCharacter(stopped, { seatId: "seat-a" });
+    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: { phase: "roll" } });
+    // And the Karta is still taken off the out list, which shares the column.
+    expect(writes.game?.characters_out).toEqual([]);
+  });
+
+  it("leaves the turn where it is when somebody is playing", () => {
+    const { writes } = reviveCharacter(dead(), { seatId: "seat-a" });
+    expect(writes.game?.active_seat).toBeUndefined();
+  });
+
   it("writes it down as the override it is", () => {
     const { writes } = reviveCharacter(dead(), { seatId: "seat-a" });
     expect(writes.journal?.[0]).toMatchObject({

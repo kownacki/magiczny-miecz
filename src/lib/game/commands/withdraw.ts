@@ -4,6 +4,7 @@ import { HEAL_CEILING } from "@/lib/engine/derive";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
+import { startTurn } from "@/lib/engine/turn";
 
 /**
  * The two things 4.4 does not have a word for.
@@ -260,10 +261,29 @@ export function reviveCharacter(
           },
         },
       ],
-      // Off the list death put it on, or the Karta it is holding is one this
-      // game says is not in it.
-      ...(out.includes(character)
-        ? { game: { characters_out: out.filter((id) => id !== character) } }
+      /**
+       * Off the list death put it on, and back on its feet in the order.
+       *
+       * Two things about one column, written together because `merge` resolves
+       * two writes to `game` as later-wins: the Karta stops being one this game
+       * says is out, and a table that had stopped starts again. `active_seat`
+       * is null when the last pass found nobody who could play, which is what
+       * the death of the only living Postać does — and every way of moving the
+       * game on needs an active seat to press it, this one included. Standing
+       * a character up in a game nobody can take a turn in is not standing it
+       * up. Only from null: if somebody is playing, they keep the turn.
+       */
+      ...(out.includes(character) || snapshot.game.active_seat === null
+        ? {
+            game: {
+              ...(out.includes(character)
+                ? { characters_out: out.filter((id) => id !== character) }
+                : {}),
+              ...(snapshot.game.active_seat === null
+                ? { active_seat: seat.seat_index, turn_state: startTurn() }
+                : {}),
+            },
+          }
         : {}),
       journal: [
         {

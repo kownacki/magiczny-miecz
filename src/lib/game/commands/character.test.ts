@@ -443,6 +443,40 @@ describe("nowa Postać po śmierci (4.4)", () => {
     expect(result).toEqual({ seatId: "seat-a", spells: 0 });
   });
 
+  /**
+   * The sole player's death, which stops the table outright.
+   *
+   * `killSeat` passes the turn, `nextSeat` looks round a table of one
+   * eliminated seat and finds nobody, and `active_seat` goes null — after
+   * which every way of moving the game on is refused for want of an active
+   * seat, 4.4's own new Postać included.
+   */
+  it("starts the table again when nobody was left to play", async () => {
+    const table = aTable({
+      game: { active_seat: null, turn_state: { phase: "roll" } },
+      seats: [dead()],
+    });
+    const { writes } = await takeNewCharacter(
+      table,
+      { seatId: "seat-a", characterId: "zdobywca", bySeat: "seat-a" },
+      ports(),
+    );
+    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: { phase: "roll" } });
+  });
+
+  it("does not take the turn from whoever is playing", async () => {
+    const table = aTable({
+      game: { active_seat: 1 },
+      seats: [dead(), aSeat({ id: "seat-b", seat_index: 1, character_id: "kaplanka" })],
+    });
+    const { writes } = await takeNewCharacter(
+      table,
+      { seatId: "seat-a", characterId: "zdobywca", bySeat: "seat-a" },
+      ports(),
+    );
+    expect(writes.game?.active_seat).toBeUndefined();
+  });
+
   it("refuses to swap a Postać that is still alive", async () => {
     const table = aTable({ seats: [aSeat({ eliminated: false })] });
     await expect(
