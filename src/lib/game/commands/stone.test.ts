@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aSeat, aTable } from "../fixture";
+import { asFieldId } from "@/lib/engine/board";
+import type { TurnPhase } from "@/lib/engine/turn";
 import { isStone, refuseAgainstStone, turnToStone, STONE_TURNS } from "./stone";
 import { spendLife } from "./life";
 import { attackSeat } from "./fight";
@@ -16,7 +18,17 @@ import { attackSeat } from "./fight";
  */
 const table = (over: { stoneUntil?: number | null; turn?: number } = {}) =>
   aTable({
-    game: { turn: over.turn ?? 1, active_seat: 0, turn_state: { phase: "field" } },
+    game: {
+      turn: over.turn ?? 1,
+      active_seat: 0,
+      turn_state: {
+        phase: "field",
+        fieldId: asFieldId("mokradla-1"),
+        from: null,
+        draw: 0,
+        drawn: [],
+      } as TurnPhase,
+    },
     seats: [
       aSeat({ id: "seat-a", seat_index: 0, field_id: "mokradla-1" }),
       aSeat({

@@ -146,7 +146,20 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     // — the Lichwiarz's own trade, at the Lichwiarz's own rate.
     stosuje: { op: "sprzedaj", cena: 1 },
   },
-  "krag-plomieni": {
+    /**
+   * Announced. `frozen` exists and nothing enforces it.
+   *
+   * "Nie może zrobić nic poza użyciem Władcy Zaklęć" is a `frozen` modifier
+   * ending `dispelled`, and both words are already in `status.ts` — but
+   * `frozen()` is read by no command, so setting it would change nothing. The
+   * work is making it real at the doors an action comes through, which is the
+   * same shape as `refuseWhileOverLimit`, not the spell.
+   *
+   * The other half is done: "ofiary nie można zaatakować" is exactly what
+   * `refuseAgainstStone` does for 20.5, and wants generalising rather than
+   * writing again.
+   */
+"krag-plomieni": {
     timing: ["dowolna-chwila"],
     target: "postac-lub-wrog",
     effect:
@@ -177,12 +190,33 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     // Kręgu". The bar on using it on the Kamienny Most is `timing`'s, not this.
     stosuje: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
   },
+  /**
+   * Announced, and it is three cards in one.
+   *
+   * "Dla Postaci oznacza ocalenie przed stratą punktu Życia" is a status
+   * consumed at `spendLife`, which is a single door and would be easy. "Dla
+   * innych — ocalenie przed śmiercią" spares a Przyjaciel or a Wróg instead,
+   * and "użyty w walce sprawia, że rezultat starcia pozostanie
+   * nierozstrzygnięty" forces a draw. Three mechanisms, one card.
+   *
+   * Deliberately not part-built. `coverageOf` reports whether a card has a
+   * script and not whether the script does what the card says, so applying
+   * only the first third would make this read `pelne` while two thirds of it
+   * sat on the table — which is the Eremita's mistake with a bigger card.
+   */
   ocalony: {
     timing: ["dowolna-chwila", "w-walce"],
     target: "postac-lub-wrog",
     effect:
       "Postać nie traci punktu Życia; Przyjaciel lub Wróg nie ginie. Użyty w walce — remis.",
   },
+  /**
+   * Announced. Needs an op that reaches back into the turn's own stack.
+   *
+   * "Odrzucenie jednej z wyciągniętych Kart i wyciągnięcie w zamian innej" acts
+   * on cards already drawn and sitting in `turn_state`, which no effect does —
+   * every one of them acts on a seat, a field or a pile.
+   */
   "odmiana-losu": {
     timing: ["po-karcie"],
     target: "siebie",
@@ -196,6 +230,14 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     // states the number the rulebook's 4.7 would have given anyway.
     stosuje: { op: "uzdrow", upTo: 4 },
   },
+  /**
+   * Announced. Wants a secret this envelope has no shape for.
+   *
+   * "Obejrzeć w tajemnicy 5 pierwszych Kart Zdarzeń" is a private view of the
+   * draw pile, and the pile deliberately never leaves the server — shipping it
+   * was a real bug once. So it needs a per-seat secret in the envelope, the
+   * same shape a hidden hand has under 9.3, rather than an effect.
+   */
   olsnienie: {
     timing: ["przed-ruchem"],
     target: "siebie",
@@ -218,6 +260,14 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     // `strata`.
     stosuje: { op: "zabierz", co: "przyjaciel" },
   },
+  /**
+   * Announced for the reason 11.2 is ◐: crossing anywhere is not wired.
+   *
+   * "Przebyć w dowolnym miejscu Trzęsawiska" is the card half of "except by
+   * Łódź, or by field and card effects". The Łódź is encoded as an ability and
+   * the crossing points are the board's; a crossing from an arbitrary square is
+   * the missing piece, and it is the same piece the Władca Lodu wants.
+   */
   "pan-trzesawisk": {
     timing: ["zamiast-ruchu"],
     target: "siebie-lub-postac",
@@ -300,29 +350,59 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * on the board.
      */
   },
+  /** Announced, and blocked on exactly what the Pan Trzęsawisk is — 11.6's half of it. */
   "wladca-lodu": {
     timing: ["zamiast-ruchu"],
     target: "siebie-lub-postac",
     effect: "Przebądź Lodowy Las w dowolnym miejscu, w obie strony.",
   },
+  /**
+   * Announced. There is no moment for it to happen in.
+   *
+   * "Neguje działanie każdego innego Zaklęcia, rzuconego bezpośrednio przed
+   * nim" is a reaction, and a cast resolves in one commit — there is no window
+   * in which another player is asked whether they answer. That window is the
+   * work, and the Zwierciadło wants the same one.
+   */
   "wladca-zaklec": {
     timing: ["dowolna-chwila"],
     target: "zaklecie",
     reactive: true,
     effect: "Neguje działanie Zaklęcia rzuconego bezpośrednio przed nim — każdego, bez wyjątku.",
   },
+  /**
+   * Announced. Half of it exists: the Siewca takes a Karta off the board
+   * through `applies: "zdejmuje-karte"`, and this one takes it off *and puts it
+   * down again* — so it needs a field to point at, which `CastSpell.target`
+   * does not carry. Same missing field as the Władca Gromu below.
+   */
   "wladca-zdarzen": {
     timing: ["poczatek-tury", "po-ruchu"],
     target: "karta-na-planszy",
     effect:
       "Przenieś odkrytą Kartę Zdarzeń na inny, nie zajęty Obszar w tym samym Kręgu.",
   },
+  /**
+   * Announced. Every status this game has is on a seat.
+   *
+   * "Żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i Magicznych
+   * Przedmiotów" is a fact about the table for a while, and `seat_effects` has
+   * nowhere to put one. Writing it onto all six seats would be six rows to
+   * expire separately and a seventh player joining mid-spell would miss it.
+   */
   "wojna-zywiolow": {
     timing: ["przed-ruchem"],
     target: "brak",
     effect:
       "Nikt, łącznie z tobą, nie używa Zaklęć ani Magicznych Przedmiotów do początku twojej następnej tury.",
   },
+  /**
+   * Announced. Wants the Władca Zaklęć's reaction window, and then some.
+   *
+   * "Odbije ono każde inne Zaklęcie rzucone na Postać na tego, kto je rzucił" —
+   * so besides the window it has to re-aim a spell that has already chosen its
+   * target, which nothing here can do.
+   */
   zwierciadlo: {
     timing: ["dowolna-chwila"],
     target: "zaklecie",
@@ -358,6 +438,13 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
       },
     },
   },
+  /**
+   * Announced. The turn order has no word for taking one twice.
+   *
+   * "Wykorzystanie 3 kolejnych tur zamiast jednej" needs `nextSeat` to come
+   * back to the same seat, and every rule about turns here is written as
+   * *losing* them — `turns_lost` counts down, and there is no counting up.
+   */
   "formula-czasu": {
     timing: ["przed-ruchem"],
     target: "siebie",
@@ -380,12 +467,23 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
       ends: { kind: "turns", turns: 1 },
     },
   },
+  /**
+   * Announced, and the nearest of the fourteen to buildable.
+   *
+   * "Golem (Miecz 3) atakuje wybraną Postać lub Wroga (w granicach Kręgu)…
+   * Ofiara musi walczyć na zwykłych zasadach" is a fight the caster is not in,
+   * against a target at a distance, settled on the ordinary rules — which is
+   * what the Poszukiwacz Przygód's raid already is (`raidsForYou`, `sendRaider`
+   * and `fight.raid`). What differs is that the attacker is conjured rather
+   * than held, and that a beaten Wróg is removed rather than kept (1.4).
+   */
   golem: {
     timing: ["przed-ruchem"],
     target: "postac-lub-wrog",
     effect:
       "Golem (Miecz 3) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
   },
+  /** Announced. The Golem with Miecz 5, and blocked on the same one thing. */
   homunculus: {
     timing: ["przed-ruchem"],
     target: "postac-lub-wrog",

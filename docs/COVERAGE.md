@@ -137,7 +137,7 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 9.1 | a spell's effect is on its card | ◐ | every spell's timing, target and effect are typed; **thirteen of twenty-seven are carried out** (`SpellScript.stosuje`), the rest are stated |
+| 9.1 | a spell's effect is on its card | ◐ | every spell's timing, target and effect are typed; **thirteen of twenty-seven are carried out** — eleven through `SpellScript.stosuje` and two through `applies` — and each of the fourteen left now says in `spells.ts` what blocks it, rather than only that it is announced. They are not one problem: two want a field on `CastSpell.target`, two want a reaction window, two want a crossing from an arbitrary square (11.2, 11.6), one wants `frozen` actually enforced, one a table-wide status, one a repeated turn, one a private view of the pile, one an op that reaches into the turn's own drawn stack, and the Golem and Homunculus want the Poszukiwacz's raid pointed at a conjured attacker — which makes those two the nearest to buildable |
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side |
 | 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |
