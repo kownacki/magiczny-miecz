@@ -465,3 +465,67 @@ grant usage on schema magiczny_miecz to anon, authenticated, service_role;
 grant select, insert, update, delete on all tables in schema magiczny_miecz
   to anon, authenticated;
 grant all on all tables in schema magiczny_miecz to service_role;
+
+-- ---------------------------------------------------------------------------
+-- What the database says it is, so this file can be checked against it.
+--
+-- This file is applied by hand and had already fallen behind: `games.turn_state`,
+-- `games.deck` and three columns of `seats` were live and unmentioned, so
+-- rebuilding from the file would have thrown away the state of every turn. The
+-- grants below were missing for a while too, which makes a table invisible to
+-- PostgREST rather than forbidden. `npm run schema:check` compares the two and
+-- fails out loud; this is the half it reads.
+--
+-- A function because PostgREST does not expose `pg_catalog`, and the check
+-- reaches the database the way the app does. Read-only, `security invoker`, and
+-- it names this schema and no other — the same Postgres instance also holds
+-- finalbid and wheatbid, and nothing here may look at them.
+create or replace function magiczny_miecz.schema_shape()
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = pg_catalog, pg_temp
+as $$
+  select jsonb_build_object(
+    -- Every table, with the columns it has. Names only: types and defaults are
+    -- deliberately not compared — see the note in scripts/check-schema.ts.
+    'tables', (
+      select coalesce(jsonb_object_agg(c.relname, cols.names), '{}'::jsonb)
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      cross join lateral (
+        select coalesce(jsonb_agg(a.attname order by a.attname), '[]'::jsonb) as names
+        from pg_attribute a
+        where a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
+      ) cols
+      where n.nspname = 'magiczny_miecz' and c.relkind = 'r'
+    ),
+    -- The security model is RLS on with zero policies. Both halves are checked,
+    -- because either one alone lets the anon key read a game.
+    'rls_off', (
+      select coalesce(jsonb_agg(c.relname order by c.relname), '[]'::jsonb)
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'magiczny_miecz' and c.relkind = 'r' and not c.relrowsecurity
+    ),
+    'policies', (
+      select coalesce(jsonb_agg(p.polname order by p.polname), '[]'::jsonb)
+      from pg_policy p
+      join pg_class c on c.oid = p.polrelid
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'magiczny_miecz'
+    ),
+    -- A table one of the three roles cannot select from is invisible to
+    -- PostgREST, which answers 401 and reads exactly like a missing table.
+    'ungranted', (
+      select coalesce(jsonb_agg(distinct c.relname order by c.relname), '[]'::jsonb)
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      cross join unnest(array['anon', 'authenticated', 'service_role']) as role(name)
+      where n.nspname = 'magiczny_miecz' and c.relkind = 'r'
+        and not has_table_privilege(role.name, c.oid, 'SELECT')
+    )
+  );
+$$;
+
+grant execute on function magiczny_miecz.schema_shape() to service_role;

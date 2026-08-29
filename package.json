@@ -14,7 +14,8 @@
     "music": "node scripts/export-music.mjs",
     "data": "node scripts/build-data.mjs && node scripts/build-fields.mjs",
     "mm": "tsx src/cli/mm.ts",
-    "soak": "tsx scripts/soak.ts"
+    "soak": "tsx scripts/soak.ts",
+    "schema:check": "tsx --env-file=.env.local scripts/check-schema.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

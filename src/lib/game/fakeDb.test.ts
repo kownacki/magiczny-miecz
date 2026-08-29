@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULTS, STAMPED, type Tables } from "./fakeDb";
+import { columnsOf as columnsInFile, filledInBy as defaultedInFile } from "./schemaFile";
 
 /**
  * The fake against the schema it is standing in for.
@@ -14,51 +15,10 @@ import { DEFAULTS, STAMPED, type Tables } from "./fakeDb";
  * running backwards.
  */
 
-/** The columns each table really has, read off db/schema.sql rather than remembered. */
-function columnsOf(table: string): Set<string> {
-  const sql = readFileSync("db/schema.sql", "utf8");
-  const at = sql.search(new RegExp(`create table[^(]*?\\b${table}\\s*\\(`));
-  if (at === -1) throw new Error(`no such table in db/schema.sql: ${table}`);
-  let i = sql.indexOf("(", at) + 1;
-  let depth = 1;
-  const start = i;
-  while (depth > 0) {
-    if (sql[i] === "(") depth++;
-    else if (sql[i] === ")") depth--;
-    i++;
-  }
-  const found = new Set<string>();
-  for (const line of sql.slice(start, i - 1).split("\n")) {
-    const name = /^([a-z_]+)\s+\S/.exec(line.trim());
-    if (name) found.add(name[1]);
-  }
-  return found;
-}
-
-/**
- * Columns Postgres would fill in by itself: `not null default …`.
- *
- * Read off the same lines rather than listed here, so a column added to the
- * schema is a column this test knows about on the next run.
- */
-function filledInBy(table: string): Set<string> {
-  const sql = readFileSync("db/schema.sql", "utf8");
-  const at = sql.search(new RegExp(`create table[^(]*?\\b${table}\\s*\\(`));
-  let i = sql.indexOf("(", at) + 1;
-  let depth = 1;
-  const start = i;
-  while (depth > 0) {
-    if (sql[i] === "(") depth++;
-    else if (sql[i] === ")") depth--;
-    i++;
-  }
-  const found = new Set<string>();
-  for (const line of sql.slice(start, i - 1).split("\n")) {
-    const name = /^([a-z_]+)\s+\S/.exec(line.trim());
-    if (name && /not null/.test(line) && /\bdefault\b/.test(line)) found.add(name[1]);
-  }
-  return found;
-}
+/** Read once: the file is the authority and both directions are checked against it. */
+const SCHEMA = readFileSync("db/schema.sql", "utf8");
+const columnsOf = (table: string) => columnsInFile(SCHEMA, table);
+const filledInBy = (table: string) => defaultedInFile(SCHEMA, table);
 
 describe("the in-memory database, against the real one", () => {
   it("defaults only columns that exist", () => {
