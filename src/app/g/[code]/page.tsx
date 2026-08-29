@@ -1627,6 +1627,54 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   }}
                 />
               )}
+              {/**
+               * Nobody is playing, and the way out of that.
+               *
+               * `active_seat` is null when the last pass found no seat that
+               * could take a turn — every remaining character owing one under
+               * 16.1 does it, and the Burza Siedmiu Słońc causes it outright by
+               * costing the whole Krąg a turn at once. Nothing on screen said
+               * so: the box that names whose turn it is simply was not drawn,
+               * and every control is gated on being the active seat, so the
+               * table looked finished.
+               *
+               * `permission.ts` has allowed anybody to send `end` in this state
+               * since it was written — this is the control that sends it. One
+               * pass spends a turn from everybody it skips, so pressing it
+               * enough times always reaches somebody; Kamień comes back on its
+               * own as the counter moves (20.1), which is why the line names
+               * both.
+               *
+               * Offered to a player and not to a watcher, because the route
+               * refuses a seatless actor a line above `mayAct` — a button that
+               * always answers „Nie prowadzisz żadnej Postaci" is worse than no
+               * button.
+               */}
+              {!active && mySeatIndex !== null && (
+                // The NowBox's own box, at its own size: this stands exactly
+                // where whose-turn-it-is would, and a narrower one would move
+                // the queue beside it every time the table stopped.
+                <section className="flex min-h-[180px] w-[270px] shrink-0 flex-col justify-center gap-2 rounded-lg border border-edge bg-panel p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-muted">Teraz</p>
+                  <p className="text-sm text-ink">
+                    {/* „Zwykle", because the box cannot see which of the two it
+                        is — and because the honest reading of a table with
+                        nobody in it is that something has gone quiet, not that
+                        a particular rule fired. */}
+                    <Rules>
+                      Nikt nie ma teraz tury — zwykle dlatego, że wszyscy tracą turę albo
+                      są w Kamieniu (16.1, 20.1).
+                    </Rules>
+                  </p>
+                  <button
+                    disabled={busy}
+                    onClick={() => void post("turn", { action: "end" })}
+                    className="self-start rounded border border-ochre px-3 py-1 text-[13px] text-ochre transition hover:bg-ochre/10 disabled:opacity-40"
+                  >
+                    Przekaż turę dalej
+                  </button>
+                </section>
+              )}
               <TurnQueue
                 seats={seats.map((seat) => ({
                   seatIndex: seat.seat_index,
