@@ -109,7 +109,7 @@ import {
   takeNewCharacter as takeNewCharacterOn,
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
-import { setEndlessStock as setEndlessStockOn } from "./commands/seat";
+import { setEndlessStock as setEndlessStockOn, refuseWhileOverCarried } from "./commands/seat";
 import {
   removeCharacter as removeCharacterOn,
   reviveCharacter as reviveCharacterOn,
@@ -1126,7 +1126,24 @@ export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
 export async function finishTurn(gameId: string): Promise<void> {
   await change(
     gameId,
-    (snapshot) => ({ writes: passTurn(snapshot), result: undefined }),
+    (snapshot) => {
+      /**
+       * 5.6, at the other end of the turn.
+       *
+       * Guarded here and in `rollForMove` rather than everywhere, because those
+       * are the two doors: you cannot begin a turn owing the rule, and you
+       * cannot hand one on. An overflow that happens mid-turn — the Bagna
+       * taking your Koń — is therefore settled before play moves, which is as
+       * close to "natychmiast" as a turn-based referee can honestly get.
+       *
+       * `passTurn` itself is left alone. Half the game passes the turn as a
+       * consequence of something else — a death, a lost turn, a fall off the
+       * Most — and none of those is a player choosing to walk away from a rule.
+       */
+      const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
+      if (seat) refuseWhileOverCarried(snapshot, seat.id);
+      return { writes: passTurn(snapshot), result: undefined };
+    },
     undefined,
   );
 }

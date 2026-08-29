@@ -1,5 +1,6 @@
 /** One seat, read off a snapshot: everything a rule asks about a character, worked out once. */
 
+import { plural } from "@/lib/engine/polish";
 import { abilitiesOfCharacter, asCharacterId, startingKit } from "@/lib/engine/characters";
 import {
   addsMagiaToMiecz,
@@ -261,6 +262,53 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
 /** The active seat, as a view. */
 export function activeView(snapshot: Snapshot): SeatView {
   return seatView(snapshot, activeSeat(snapshot).id);
+}
+
+/**
+ * How far a seat is over 5.4's limit, or null when it is not.
+ *
+ * "Postać, która zdobyła więcej niż 4 Przedmioty i nie dysponuje żadnym
+ * środkiem transportu (5.4.) musi natychmiast odrzucić Przedmioty, których nie
+ * jest w stanie unieść." (5.6)
+ *
+ * Taking a fifth is already refused, so the limit holds at the moment it would
+ * be broken. This is the other direction, which nothing watched: lose the
+ * transport and the limit falls under what you are already carrying. The
+ * Awanturnik takes your Koń at the Bagna, the Pułapka shakes it loose off the
+ * Most, or you simply put it down — and the pack reads 5/4 while play goes on.
+ *
+ * Not positional: `carryLimit` reads the cards themselves rather than what they
+ * lend, so the Zaczarowane Wzgórza suspend a Koń's *points* and never its
+ * carrying. An overflow is a fact about a hand, not about where it is standing,
+ * which is what makes it something a player can be asked to fix.
+ */
+export function overCarried(
+  snapshot: Snapshot,
+  seatId: string,
+): { carried: number; limit: number } | null {
+  const view = seatView(snapshot, seatId);
+  return view.carried > view.carryLimit
+    ? { carried: view.carried, limit: view.carryLimit }
+    : null;
+}
+
+/**
+ * The refusal, worded the same wherever it is raised.
+ *
+ * 5.4 leaves the choice to the player — "Które z Przedmiotów Postać zachowa,
+ * które zaś zostaną odrzucone, zależy wyłącznie od decyzji gracza" — so the app
+ * does not pick. It stops the game instead and says how many have to go, which
+ * makes the choice theirs and the timing the rule's.
+ */
+export function refuseWhileOverCarried(snapshot: Snapshot, seatId: string): void {
+  const over = overCarried(snapshot, seatId);
+  if (!over) return;
+  const many = over.carried - over.limit;
+  throw new Error(
+    `Niesiesz ${over.carried} ${plural(over.carried, "Przedmiot", "Przedmioty", "Przedmiotów")}` +
+      ` przy limicie ${over.limit} — odrzuć ${many}, zanim zagrasz dalej (5.6).` +
+      ` Które, wybierasz ty (5.4).`,
+  );
 }
 
 /**

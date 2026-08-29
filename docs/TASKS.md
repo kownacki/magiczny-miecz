@@ -800,7 +800,7 @@ Two rules the app carries only halfway, both looked at and both deliberately
 not finished. Written down so the next person meets them here rather than in a
 game.
 
-### 5.6 — an existing excess is not forced out
+### 5.6 — done: an existing excess now stops the game
 
 Taking a fifth Przedmiot is refused, so the limit is kept at the moment it
 would be broken. What is missing is the other direction: **lose the transport
@@ -809,13 +809,20 @@ Przedmioty i nie dysponuje żadnym środkiem transportu (5.4.) musi natychmiast
 odrzucić Przedmioty, których nie jest w stanie unieść." The Awanturnik takes a
 Koń, and its owner keeps carrying six.
 
-It is the same shape as the 5.3 spill that landed this session, with one
-difference that is the whole of the work: 5.4 leaves the choice to the player —
-"Które z Przedmiotów Postać zachowa, które zaś zostaną odrzucone, zależy
-wyłącznie od decyzji gracza" — so it wants a prompt, not an automatic drop. The
-seat cannot simply be allowed to act until it has answered.
+The difference from the 5.3 spill was the whole of the work: 5.4 leaves the
+choice to the player — "Które z Przedmiotów Postać zachowa, które zaś zostaną
+odrzucone, zależy wyłącznie od decyzji gracza" — so the app must not pick.
 
-`docs/COVERAGE.md` marks 5.6 ◐ and says the same in one line.
+Settled without building a prompt. `refuseWhileOverCarried` stops the game and
+says how many have to go; the player drops what they choose with the verb they
+already have. Guarded at the two doors of a turn — `rollForMove` and
+`finishTurn` — so you cannot begin a turn owing the rule and cannot hand one on,
+which bounds an overflow that arises mid-turn to the turn it happened in. That
+is as close to "natychmiast" as a turn-based referee honestly gets.
+
+`passTurn` itself is deliberately not guarded: half the game passes the turn as
+a consequence of something else — a death, a lost turn, a fall off the Most —
+and none of those is a player walking away from a rule.
 
 ### One house rule journals itself, the other does not
 

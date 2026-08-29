@@ -27,7 +27,7 @@ import {
   type Snapshot,
 } from "../change";
 import type { GameRow, SeatRow } from "../store";
-import { activeSeat, eqModeOf } from "./seat";
+import { activeSeat, eqModeOf, refuseWhileOverCarried } from "./seat";
 import { driverOf, nameOfSeat } from "./lobby";
 
 /* --------------------------------------------------------------------------
@@ -346,6 +346,8 @@ export async function rollForMove(
 ): Promise<Outcome<number>> {
   const seat = activeSeat(snapshot);
   if (snapshot.game.turn_state.phase !== "roll") throw new Error("Nie czas na rzut.");
+  // 5.6: "musi natychmiast odrzucić". The turn does not begin until it has.
+  refuseWhileOverCarried(snapshot, seat.id);
 
   const thrown = await ports.random.rollD6("ruch: rzut kostką");
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");

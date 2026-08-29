@@ -109,7 +109,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 5.3 | …and one already held, after the Natura moved under it | ✅ | in klasyczny it is put down at once — see 7.4, which is where the two modes part company. In both, `inEffect` lends nothing off it and the slot is drawn red |
 | 5.4 | four at a time unless carrying transport | ✅ | `carryLimit` |
 | 5.5 | may be dropped at any moment, **onto the current field** | ✅ | `dropCard` inserts it into `field_cards` where the character stands |
-| 5.6 | must drop down to the limit at once | ◐ | taking beyond the limit is refused; an existing excess is not forced out |
+| 5.6 | must drop down to the limit at once | ✅ | taking beyond the limit is refused, and an excess that arises the other way — the Koń lost, the limit falling under the pack — stops the game until it is dropped. `refuseWhileOverCarried` guards the two doors of a turn: you cannot begin one owing the rule and cannot hand one on. Which Przedmiot goes is not chosen for you, because 5.4 says it is yours |
 
 ## 6. Przyjaciele
 
