@@ -52,12 +52,21 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // no referee at all.
   "czarodziejska-kosc":
     "W Pułapce i Magicznej Pułapce daje zamiast tego 1 punkt Miecza lub Magii.",
-  lodz: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
-  latarnia: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
-  kon: "Tracąc Konia, zostawiasz na Obszarze wszystko, czego sam nie uniesiesz.",
-  mul: "Tracąc Muła, zostawiasz na Obszarze niesione przez niego Przedmioty.",
-  zaprzeg: "Tracąc Zaprzęg, zostawiasz na Obszarze to, czego sam nie uniesiesz.",
-  "magiczna-sakwa": "Utrata Sakwy to utrata wszystkiego, co w niej niesiono.",
+  // The KOŃ, the MUŁ and the ZAPRZĘG were here for "Przedmioty te pozostaną na
+  // Obszarze, na którym utraciłeś Konia", and all three were stale. Losing the
+  // transport drops `carryLimit`, `refuseWhileOverLimit` stops the turn at its
+  // next door until the excess is shed (5.6), and `dropCard` lays what goes
+  // down face up on the Obszar the character is standing on (5.5). What the app
+  // declines to do is *choose* which Przedmioty go, and that is 5.4's answer,
+  // not a gap. Pinned in `carrying.test.ts`.
+  //
+  // The ŁÓDŹ and the LATARNIA keep a note, but a narrower one than they had:
+  // "przeprawa dopiero w następnej turze" is `ends: { turns: 1 }` and "potem
+  // odłóż Kartę" is `disposition: odloz` with `consumed: true`, both applied on
+  // the way in. Only the destination is still the table's.
+  lodz: "Przeprawa wysadza na Obszarze, na który wychodzi przeprawa — jeśli chcecie sąsiadującego z tym, z którego wszedłeś, przestawcie figurę sami.",
+  latarnia: "Przeprawa wysadza na Obszarze, na który wychodzi przeprawa — jeśli chcecie sąsiadującego z tym, z którego wszedłeś, przestawcie figurę sami.",
+  "magiczna-sakwa": "Utrata Sakwy to utrata wszystkiego, co w niej niesiono — aplikacja zostawia nadmiar na Obszarze, a Karta mówi, że przepada.",
 
   // --- friends --------------------------------------------------------------
   // The ALCHEMIK was here for "zamiana jest nieodwracalna", which is not
@@ -65,7 +74,8 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // `putOnPile` sends the Karta back, so the app *is* the irreversibility. The
   // Lichwiarz makes the identical trade with no note against his name, and one
   // of the two had to be wrong. A warning about a click belongs on the click.
-  tragarz: "Tracąc go, tracisz też niesione przez niego Przedmioty — aplikacja nie wie, które to.",
+  tragarz:
+    "Tracąc go, tracisz też niesione przez niego Przedmioty — aplikacja nie wie, które to, i zostawia nadmiar na Obszarze zamiast go stracić.",
 
   // --- cards whose disposition is handled but whose body is not -------------
 
