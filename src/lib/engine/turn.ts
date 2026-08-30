@@ -231,28 +231,52 @@ export function startTurn(): TurnPhase {
  * beyond onward or back — 10.4 lets a character turn around and leave at any
  * time, which is why both neighbours are offered.
  */
-export function bridgeOptions(fieldId: FieldId): TurnMoveOption[] {
+export function bridgeOptions(
+  fieldId: FieldId,
+  /**
+   * Whether the Zamek is a square this character may stop on.
+   *
+   * "Postać, która wejdzie na Most nie posiadając tej Tarczy, musi ominąć Zamek
+   * (potraktować to pole tak, jakby go nie było)." Without a Tarcza Tolimana
+   * the Zamek is not a place you decline to enter — it is not there, so the
+   * step goes over it to the field beyond, in whichever direction you were
+   * walking. It sits dead centre of the nine, so both directions cross it.
+   *
+   * A fact about the seat rather than the board, so it arrives decided, the
+   * same way `bridgeOffered` does.
+   */
+  mayEnterCastle = true,
+): TurnMoveOption[] {
   const at = KAMIENNY_MOST.findIndex((field) => field.id === fieldId);
   if (at === -1) return [];
 
+  /** One step that way, and one further where the Zamek is not there. */
+  const step = (from: number, by: 1 | -1) => {
+    const next = KAMIENNY_MOST[from + by];
+    if (!next) return null;
+    if (next.id !== "zamek-bestii" || mayEnterCastle) return { field: next, over: [] as FieldId[] };
+    const beyond = KAMIENNY_MOST[from + by + by];
+    return beyond ? { field: beyond, over: [next.id] } : null;
+  };
+
   const options: TurnMoveOption[] = [];
-  const onward = KAMIENNY_MOST[at + 1];
-  const back = KAMIENNY_MOST[at - 1];
+  const onward = step(at, 1);
+  const back = step(at, -1);
   // The bridge is a line, not a ring, so an entrance has only one neighbour.
   if (onward) {
     options.push({
       direction: "clockwise",
-      fieldId: onward.id,
-      fieldName: onward.name,
-      through: [],
+      fieldId: onward.field.id,
+      fieldName: onward.field.name,
+      through: onward.over,
     });
   }
   if (back) {
     options.push({
       direction: "widdershins",
-      fieldId: back.id,
-      fieldName: back.name,
-      through: [],
+      fieldId: back.field.id,
+      fieldName: back.field.name,
+      through: back.over,
     });
   }
   return options;
@@ -276,8 +300,11 @@ export function afterRoll(
   {
     bridgeOffered = false,
     cap = null,
+    mayEnterCastle = true,
   }: {
     bridgeOffered?: boolean;
+    /** Whether the Zamek exists for this character — see `bridgeOptions`. */
+    mayEnterCastle?: boolean;
     /**
      * The furthest this character may walk whatever the die says — Mgła, and
      * nothing else in the base game (`move-max`).
@@ -293,7 +320,7 @@ export function afterRoll(
   // On the bridge the roll is ignored entirely (10.3) — one field per turn,
   // either onward or back the way you came.
   if (ringOf(fieldId) === KAMIENNY_MOST) {
-    return { phase: "move", roll, options: bridgeOptions(fieldId) };
+    return { phase: "move", roll, options: bridgeOptions(fieldId, mayEnterCastle) };
   }
   const ring = ringOf(fieldId) ?? DOLNY_KRAG;
   const walks = moveOptions(ring, fieldId, cap === null ? roll : Math.min(roll, cap));

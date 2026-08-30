@@ -198,7 +198,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 14.4 | no spells and no escape on the Most | ◐ | escape is blocked (19.3); a spell is refused where 9.7 says so, but a spell the app does not apply cannot be stopped from doing what it does not do |
 | 14.5 | Pułapka / Magiczna Pułapka: 3 dice less Miecz or Magia, then a roll per item | ✅ | `bridge.ts`, `resolveBridgeOrdeal` |
 | 14.6 | Demon Zagłady / Monstrum: roll for its strength, fight until beaten | ✅ | two dice, then the ordinary fight machinery |
-| 14.7 | Zamek Bestii: roll the kind of fight, roll the Bestia at 10–15, win = win the game | ✅ | `fightBeast` |
+| 14.7 | Zamek Bestii: roll the kind of fight, roll the Bestia at 10–15, win = win the game | ✅ | `fightBeast`, and both halves of its parenthesis. Without a Tarcza the Zamek is not a square at all — "musi ominąć Zamek, potraktować to pole tak, jakby go nie było" — so `bridgeOptions` steps over it in either direction and records it in `through`; with one, the fight cannot be declined (10.5) |
 
 ## 15. Karty Zdarzeń
 

@@ -392,6 +392,19 @@ export async function rollForMove(
         turn_state: afterRoll(seat.field_id, roll, {
           bridgeOffered: hasSword && !blocked,
           cap,
+          /**
+           * 14.7's other half. "Postać, która wejdzie na Most nie posiadając
+           * tej Tarczy, musi ominąć Zamek" — so without one the Zamek is not a
+           * square this character can be offered, and the step goes over it.
+           *
+           * The same ability that closes the door once you are inside (10.5)
+           * is the one that opens it: `opensTheWayTo(…, "zamek-bestii")`, which
+           * had never been read anywhere until this week.
+           */
+          mayEnterCastle: opensTheWayTo(
+            heldAbilities(mine.map((held) => held.card_id)),
+            "zamek-bestii",
+          ),
         }),
       },
       journal: [
