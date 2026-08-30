@@ -302,3 +302,58 @@ describe("the deck, which never travels", () => {
     });
   });
 });
+
+/**
+ * The Zaklęcie in the air, which is everybody's business.
+ *
+ * 12.5: „cały stół dowiaduje się, co zostało wypowiedziane" — so unlike the
+ * hand it came out of, this travels to every device. It has to: the window it
+ * waits in closes on a clock, and answering it belongs to whoever is holding
+ * one of the two Karty that can, which is nobody's turn in particular.
+ */
+describe("a Zaklęcie waiting to be answered (9.6)", () => {
+  const spoken = (until: number) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
+      users: [
+        aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+        aUser({ id: "usrb", name: "Ola", seat_index: 1, is_host: false }),
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "SZALEŃSTWO",
+          label: "SZALEŃSTWO — w powietrzu",
+          modifier: { kind: "spoken", spell: "szalenstwo", until, target: { seatIndex: 1 } },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+
+  it("tells every device what was said, by whom and at whom", () => {
+    for (const who of ["usra", "usrb", null]) {
+      const envelope = envelopeFor(spoken(NOW + 20_000), who, NOW);
+      expect(envelope.spoken, String(who)).toEqual({
+        spell: "szalenstwo",
+        name: "SZALEŃSTWO",
+        by: 0,
+        at: 1,
+        until: NOW + 20_000,
+      });
+    }
+  });
+
+  /**
+   * The clock is read here rather than in the browser, for the same reason
+   * `away` is: six devices with six slightly different clocks would otherwise
+   * disagree about whether the window is still open.
+   */
+  it("says nothing once the window has closed", () => {
+    expect(envelopeFor(spoken(NOW - 1), "usra", NOW).spoken).toBeNull();
+  });
+
+  it("is null when nothing has been spoken", () => {
+    expect(envelopeFor(twoHands(), "usra", NOW).spoken).toBeNull();
+  });
+});

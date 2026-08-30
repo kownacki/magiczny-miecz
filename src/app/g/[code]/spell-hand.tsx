@@ -55,6 +55,7 @@ export function SpellHand({
   frame = "panel",
   opponents,
   boardCards = [],
+  ring = [],
   busy,
   onCast,
   onInspect,
@@ -87,8 +88,32 @@ export function SpellHand({
   opponents: { seatIndex: number; name: string }[];
   busy: boolean;
   /** Boards cards this spell could be aimed at, when its own says so. */
-  boardCards?: { id: string; name: string; where: string }[];
-  onCast: (holdingId: string, target: { seatIndex?: number; fieldCardId?: string }) => void;
+  boardCards?: {
+    id: string;
+    name: string;
+    where: string;
+    /** Where this Karta could be put down, for the Zaklęcie that moves one. */
+    moveTo?: { fieldId: string; name: string }[];
+  }[];
+  /**
+   * The Obszary of the Krąg the caster is walking, for the one Zaklęcie thrown
+   * at a square rather than at somebody.
+   *
+   * The caster's ring and not the active player's: the Władca Gromu says „w
+   * Kręgu, po którym wędrujesz", and whoever is holding it may speak it in
+   * somebody else's turn.
+   */
+  ring?: { fieldId: string; name: string }[];
+  onCast: (
+    holdingId: string,
+    target: {
+      seatIndex?: number;
+      fieldCardId?: string;
+      fieldId?: string;
+      /** Where the Karta goes, for the one Zaklęcie that moves one. */
+      destination?: string;
+    },
+  ) => void;
   onInspect: (card: TileCard) => void;
   /**
    * Absent where the hand cannot be arranged — the fight sheet, and anybody
@@ -98,6 +123,15 @@ export function SpellHand({
   onReorder?: (holdingIds: string[]) => void;
 }) {
   const [aiming, setAiming] = useState<string | null>(null);
+  /**
+   * The Karta already pointed at, while the card asks its second question.
+   *
+   * Only one Zaklęcie in the box asks two — the Władca Zdarzeń picks a Karta up
+   * and then names where to put it down — and the server refuses the cast
+   * outright until both are answered, so the picker has to ask both before it
+   * sends anything.
+   */
+  const [moving, setMoving] = useState<{ holdingId: string; fieldCardId: string } | null>(null);
   /**
    * The card in the air, which for a hand of Zaklęcia never leaves the hand.
    *
@@ -291,24 +325,71 @@ export function SpellHand({
           const card = SPELL_BY_ID.get(entry.cardId);
           const script = spellScript(entry.cardId);
           const now = script ? castableNow(script, moment) : true;
-          const needsVictim =
-            script?.target === "postac" || script?.target === "siebie-lub-postac";
-          // Only the one the app actually carries out. The Władca Zdarzeń names
-          // a board card too, but it *moves* one and stays announced — offering
-          // a picker there would ask for something nothing reads.
-          const needsCard = script?.applies === "zdejmuje-karte";
-          const aims = needsCard
-            ? boardCards.map((entry) => ({
-                key: entry.id,
-                label: `${entry.name} — ${entry.where}`,
-                target: { fieldCardId: entry.id },
-              }))
-            : opponents.map((seat) => ({
-                key: String(seat.seatIndex),
-                label: seat.name,
-                target: { seatIndex: seat.seatIndex },
-              }));
-          const mustAim = (needsVictim || needsCard) && aims.length > 0;
+          /**
+           * What this Zaklęcie is aimed at, and therefore what it asks for.
+           *
+           * Read off the card's own target rather than off what the app does
+           * with it. The list used to be „a seat, unless the spell takes a
+           * Karta off the board", which left three whole targets with no picker
+           * at all: the Władca Gromu names an Obszar, the Władca Zdarzeń names
+           * a Karta lying on one, and „na inną Postać lub Wroga" is both a seat
+           * and a Karta — and each of those cast with no aim and was refused by
+           * the server for not naming one.
+           */
+          const wants = script?.target ?? "brak";
+          const atSeats =
+            wants === "postac" || wants === "siebie-lub-postac" || wants === "postac-lub-wrog";
+          const atCards =
+            wants === "karta-na-planszy" || wants === "postac-lub-wrog" || wants === "wrog";
+          const atFields = wants === "obszar";
+          const aims: {
+            key: string;
+            label: string;
+            target: { seatIndex?: number; fieldCardId?: string; fieldId?: string };
+          }[] = [
+            // „Na siebie lub inną Postać" is a choice, and the caster is one of
+            // the answers — offered first, because it is the one the picker
+            // used to make unreachable.
+            ...(wants === "siebie-lub-postac"
+              ? [{ key: "siebie", label: "na siebie", target: {} }]
+              : []),
+            ...(atSeats
+              ? opponents.map((seat) => ({
+                  key: `seat-${seat.seatIndex}`,
+                  label: seat.name,
+                  target: { seatIndex: seat.seatIndex },
+                }))
+              : []),
+            ...(atCards
+              ? boardCards.map((lying) => ({
+                  key: `card-${lying.id}`,
+                  label: `${lying.name} — ${lying.where}`,
+                  target: { fieldCardId: lying.id },
+                }))
+              : []),
+            // „Na Obszar w Kręgu, po którym wędrujesz" — the caster's own ring,
+            // which is the card's range and not 9.6's.
+            ...(atFields
+              ? ring.map((place) => ({
+                  key: `field-${place.fieldId}`,
+                  label: place.name,
+                  target: { fieldId: place.fieldId },
+                }))
+              : []),
+          ];
+          /**
+           * The one card that asks where, as well as what.
+           *
+           * „Zdjąć z planszy jedną odkrytą Kartę Zdarzeń i położyć ją na innym
+           * Obszarze w tym samym Kręgu" — so the Obszary offered are the ones
+           * around the Karta, which the caller works out because it is the one
+           * that knows where every Karta and every Postać is standing.
+           */
+          const moves = script?.stosuje?.op === "przenies-karte";
+          const needsAim = atSeats || atCards || atFields;
+          const mustAim = needsAim && aims.length > 0;
+          /** Aimed at something, with nothing of that kind on the board. */
+          const nowhere = needsAim && aims.length === 0;
           const name = card?.name ?? entry.cardId;
 
           return (
@@ -409,7 +490,46 @@ export function SpellHand({
                 </div>
               )}
 
-              {aiming === entry.holdingId && mustAim ? (
+              {moving?.holdingId === entry.holdingId ? (
+                /* The second question, in the same square as the first: the
+                   Karta is chosen, and this is where it goes. */
+                <div
+                  className="flex flex-wrap justify-center gap-1"
+                  style={{ width: SLOT_WIDTH }}
+                >
+                  <p className="w-full text-center text-[9px] text-muted">dokąd?</p>
+                  {(boardCards.find((lying) => lying.id === moving.fieldCardId)?.moveTo ?? []).map(
+                    (place) => (
+                      <button
+                        key={place.fieldId}
+                        disabled={busy || blocked !== null}
+                        onClick={() => {
+                          onCast(entry.holdingId, {
+                            fieldCardId: moving.fieldCardId,
+                            destination: place.fieldId,
+                          });
+                          setMoving(null);
+                        }}
+                        className="rounded border border-magia/50 px-1.5 py-0.5 text-[10px] text-ink transition hover:bg-magia/20 disabled:opacity-50"
+                      >
+                        {place.name}
+                      </button>
+                    ),
+                  )}
+                  {(boardCards.find((lying) => lying.id === moving.fieldCardId)?.moveTo ?? [])
+                    .length === 0 && (
+                    <p className="w-full text-center text-[9px] text-vermilion/90">
+                      nie ma dokąd — każdy inny Obszar w tym Kręgu jest zajęty
+                    </p>
+                  )}
+                  <button
+                    onClick={() => setMoving(null)}
+                    className="text-[9px] text-muted underline hover:text-ink"
+                  >
+                    anuluj
+                  </button>
+                </div>
+              ) : aiming === entry.holdingId && mustAim ? (
                 <div
                   className="flex flex-wrap justify-center gap-1"
                   style={{ width: SLOT_WIDTH }}
@@ -419,8 +539,17 @@ export function SpellHand({
                       key={aim.key}
                       disabled={busy || blocked !== null}
                       onClick={() => {
-                        onCast(entry.holdingId, aim.target);
                         setAiming(null);
+                        // A card that has somewhere to put its target down asks
+                        // where before it sends anything.
+                        if (moves && aim.target.fieldCardId !== undefined) {
+                          setMoving({
+                            holdingId: entry.holdingId,
+                            fieldCardId: aim.target.fieldCardId,
+                          });
+                          return;
+                        }
+                        onCast(entry.holdingId, aim.target);
                       }}
                       className="rounded border border-magia/50 px-1.5 py-0.5 text-[10px] text-ink transition hover:bg-magia/20 disabled:opacity-50"
                     >
@@ -436,7 +565,7 @@ export function SpellHand({
                 </div>
               ) : (
                 <button
-                  disabled={busy || !now || blocked !== null || (needsCard && aims.length === 0)}
+                  disabled={busy || !now || blocked !== null || nowhere}
                   onClick={() => (mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {}))}
                   title={
                     now
@@ -446,7 +575,15 @@ export function SpellHand({
                   style={{ width: SLOT_WIDTH }}
                   className="rounded border border-magia/50 px-2 py-1 text-[11px] text-ink transition hover:bg-magia/20 disabled:opacity-40"
                 >
-                  {needsCard && aims.length === 0 ? "brak Kart" : now ? "Rzuć" : "nie teraz"}
+                  {nowhere
+                    ? atFields
+                      ? "brak Obszarów"
+                      : atCards && !atSeats
+                        ? "brak Kart"
+                        : "brak celów"
+                    : now
+                      ? "Rzuć"
+                      : "nie teraz"}
                 </button>
               )}
             </ItemSlot>

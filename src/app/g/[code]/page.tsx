@@ -3,10 +3,11 @@
 import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
-import { FIELDS, ringFields, type FieldId } from "@/lib/engine/board";
+import { FIELDS, asFieldId, ringFields, type FieldId } from "@/lib/engine/board";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
+import { SpokenSpell } from "./spoken-spell";
 import { CardDetail, type TileCard } from "./card-tile";
 import { plural } from "@/lib/engine/polish";
 import { SeatCard } from "./seat-card";
@@ -89,6 +90,18 @@ const FIELD_NAMES = new Map(
   [...FIELDS.values()].map((field) => [field.id, field.name]),
 );
 
+/**
+ * What an Obszar is called, from an id that has not been narrowed yet.
+ *
+ * A picker hands its answer back as a plain string — that is what a DOM value
+ * is — and the guard belongs here rather than at every place that reads one.
+ * Unknown ids print themselves, which is what every other name lookup here does.
+ */
+function fieldNamed(fieldId: string): string {
+  const known = asFieldId(fieldId);
+  return (known === null ? undefined : FIELD_NAMES.get(known)) ?? fieldId;
+}
+
 /** The shared table screen: the whole game state everyone is allowed to see. */
 /**
  * Whether companion's own status line is drawn at all.
@@ -122,6 +135,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     seats,
     fieldCards,
     stock,
+    spoken,
     users,
     me,
     mySeatIndex,
@@ -560,7 +574,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   function askToCast(
     holdingId: string,
     cardId: string,
-    target: { seatIndex?: number; fieldCardId?: string } = {},
+    target: {
+      seatIndex?: number;
+      fieldCardId?: string;
+      fieldId?: string;
+      /** Where the Karta goes, for the one Zaklęcie that moves one. */
+      destination?: string;
+    } = {},
   ) {
     const name = CARD_NAMES.get(cardId) ?? cardId;
     const lying = fieldCards.find((row) => row.id === target.fieldCardId);
@@ -568,8 +588,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       target.seatIndex !== undefined
         ? ` na: ${seats.find((seat) => seat.seat_index === target.seatIndex)?.player_name ?? `Miejsce ${target.seatIndex + 1}`}`
         : lying
-          ? ` na: ${CARD_NAMES.get(lying.cardId) ?? lying.cardId}`
-          : "";
+          ? ` na: ${CARD_NAMES.get(lying.cardId) ?? lying.cardId}` +
+            (target.destination ? ` → ${fieldNamed(target.destination)}` : "")
+          : target.fieldId
+            ? ` na: ${fieldNamed(target.fieldId)}`
+            : "";
     // Two of them the app carries out, and both of those take cards away for
     // good — so the question says what will actually happen rather than the
     // usual "rozpatrzcie sami", which would be untrue here and is the only
@@ -596,6 +619,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           holdingId,
           ...(target.seatIndex !== undefined ? { targetSeat: target.seatIndex } : {}),
           ...(target.fieldCardId !== undefined ? { fieldCardId: target.fieldCardId } : {}),
+          ...(target.fieldId !== undefined ? { fieldId: target.fieldId } : {}),
+          ...(target.destination !== undefined ? { destination: target.destination } : {}),
         });
       },
     });
@@ -720,6 +745,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       }
     : mySeat;
   const others = seats.filter((seat) => seat.id !== mine?.id && seat.character_id);
+  /**
+   * Every Karta lying face up on the board, and where each could be moved to.
+   *
+   * What a Zaklęcie aimed at a Karta may be aimed at — the Siewca takes one off
+   * the board and the Władca Zdarzeń picks one up and puts it down somewhere
+   * else, and both of them need this list rather than the drawn cards of a
+   * turn. Read once here, because two hands are given it: the seat card's and
+   * the fight sheet's.
+   */
+  const boardCards = fieldCards.map((row) => ({
+    id: row.id,
+    name: CARD_NAMES.get(row.cardId) ?? row.cardId,
+    where: FIELD_NAMES.get(row.fieldId) ?? row.fieldId,
+    /* Where the Władca Zdarzeń could put this Karta down: „na innym Obszarze w
+       tym samym Kręgu", and „nowy Obszar nie może być zajęty przez inną
+       Postać". Worked out here because this is what knows where everybody
+       stands — the hand only draws the answer. The engine checks all three
+       again; this is so the offer is not a list of refusals. */
+    moveTo: ringFields(row.fieldId as FieldId)
+      .filter(
+        (fieldId) =>
+          fieldId !== row.fieldId &&
+          !seats.some((seat) => !seat.eliminated && seat.field_id === fieldId),
+      )
+      .map((fieldId) => ({ fieldId, name: FIELD_NAMES.get(fieldId) ?? fieldId })),
+  }));
 
   /**
    * What this turn is offering, as a short list of windows.
@@ -1004,7 +1055,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 holdingId,
                 ...(target.seatIndex === undefined ? {} : { targetSeat: target.seatIndex }),
                 ...(target.fieldCardId === undefined ? {} : { fieldCardId: target.fieldCardId }),
+                ...(target.fieldId === undefined ? {} : { fieldId: target.fieldId }),
+                ...(target.destination === undefined ? {} : { destination: target.destination }),
               })
+            }
+            /* The same two lists the seat card's hand is given, because the
+               same Zaklęcia are in it: „w dowolnej chwili" is most of the
+               deck, and a fight is one of those chwile. */
+            boardCards={boardCards}
+            spellRing={
+              mine?.field_id
+                ? ringFields(mine.field_id).map((fieldId) => ({
+                    fieldId,
+                    name: FIELD_NAMES.get(fieldId) ?? fieldId,
+                  }))
+                : []
             }
             onInspect={setInspectingCard}
             /* 17.6: in a duel the escape is the attacked character's, so the
@@ -1580,6 +1645,29 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         }
         right={
           <div className="flex flex-col gap-3">
+            {/* Above even the NowBox, because it is the one thing at this table
+                that is on a clock everybody shares: a Zaklęcie has been spoken
+                and has not landed yet, and until it does nothing else at the
+                table has moved. */}
+            {spoken && (
+              <SpokenSpell
+                spoken={spoken}
+                mySeatIndex={mySeatIndex}
+                seatName={(index) =>
+                  seats.find((seat) => seat.seat_index === index)?.player_name ??
+                  `Miejsce ${index + 1}`
+                }
+                /* Whether this device holds one of the two Karty that answer a
+                   Zaklęcie. Asked of my own hand only — 9.3 conceals everybody
+                   else's, and this is the one place the answer is useful. */
+                canAnswer={(mine?.holdings ?? []).some(
+                  (held) => held.kind === "spell" && spellScript(held.cardId)?.reactive === true,
+                )}
+                canSettle={mySeatIndex !== null}
+                busy={busy}
+                onSettle={() => post("holdings", { action: "settle-spell" })}
+              />
+            )}
             {/* First thing in the column, above everything a player acts on.
                 Two questions side by side: "now" on the left, in a box that
                 never changes size, and "when" to the right of it — the queue
@@ -1861,11 +1949,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     }))}
                     busy={busy}
                     onInspect={setInspectingCard}
-                    boardCards={fieldCards.map((row) => ({
-                      id: row.id,
-                      name: CARD_NAMES.get(row.cardId) ?? row.cardId,
-                      where: FIELD_NAMES.get(row.fieldId) ?? row.fieldId,
-                    }))}
+                    boardCards={boardCards}
+                    /* „Na Obszar w Kręgu, po którym wędrujesz" — the caster's
+                       own ring, which is this seat's and not the active one's. */
+                    ring={
+                      mine.field_id
+                        ? ringFields(mine.field_id).map((fieldId) => ({
+                            fieldId,
+                            name: FIELD_NAMES.get(fieldId) ?? fieldId,
+                          }))
+                        : []
+                    }
                     onCast={(holdingId, target) => {
                       const held = mine.holdings.find((card) => card.id === holdingId);
                       if (held) askToCast(holdingId, held.cardId, target);

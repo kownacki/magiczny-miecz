@@ -46,6 +46,8 @@ export function FightSheet({
   onClaimFloor,
   onReleaseFloor,
   onCastSpell,
+  boardCards = [],
+  spellRing = [],
   onInspect,
 }: {
   who: string;
@@ -80,8 +82,22 @@ export function FightSheet({
   onReleaseFloor: () => void;
   onCastSpell: (
     holdingId: string,
-    target: { seatIndex?: number; fieldCardId?: string },
+    target: {
+      seatIndex?: number;
+      fieldCardId?: string;
+      fieldId?: string;
+      destination?: string;
+    },
   ) => void;
+  /**
+   * What a Zaklęcie aimed at a Karta or an Obszar may be aimed at.
+   *
+   * `spellRing` and not `ring`: the Krąg a spell may be thrown into is the
+   * caster's, and the caster is whoever is holding the card rather than
+   * whoever is moving.
+   */
+  boardCards?: React.ComponentProps<typeof SpellHand>["boardCards"];
+  spellRing?: React.ComponentProps<typeof SpellHand>["ring"];
   onInspect: (card: TileCard) => void;
 }) {
   /**
@@ -216,6 +232,8 @@ export function FightSheet({
                   : `Teraz rzuca ${seatName(held.seat)}.`
             }
             opponents={opponents}
+            boardCards={boardCards}
+            ring={spellRing}
             busy={busy}
             onCast={onCastSpell}
             onInspect={onInspect}

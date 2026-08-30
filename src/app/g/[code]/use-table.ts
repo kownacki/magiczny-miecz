@@ -118,8 +118,25 @@ export interface Person {
   away: boolean;
 }
 
+/**
+ * A Zaklęcie spoken and hanging in the air, waiting to be answered (9.6).
+ *
+ * The window is a clock, so `until` is what the browser counts down against —
+ * and it belongs to the table rather than to a seat, because answering one is
+ * anybody's to do.
+ */
+export interface Spoken {
+  spell: string;
+  name: string;
+  by: number | null;
+  at: number | null;
+  until: number;
+}
+
 export interface Table {
   game: Game | null;
+  /** The Zaklęcie in the air, if one is. */
+  spoken: Spoken | null;
   seats: Seat[];
   fieldCards: FieldCard[];
   stock: Record<string, number>;
@@ -181,6 +198,7 @@ export function useTable(code: string): Table {
   const [fieldCards, setFieldCards] = useState<FieldCard[]>([]);
   /** What the Wyposażenie pile still holds (21.2), so a shop offers only what it has. */
   const [stock, setStock] = useState<Record<string, number>>({});
+  const [spoken, setSpoken] = useState<Spoken | null>(null);
   /** What the app just decided by itself, shown until the next action. */
   const [notice, setNotice] = useState<string | null>(null);
   /** The last thing that broke, as opposed to the last thing that was refused. */
@@ -353,6 +371,7 @@ async function saidWrong(response: Response): Promise<string> {
     setMoved((current) => standingMoves(current, data.seats as Seat[], movedAt.current, now));
     setFieldCards(data.fieldCards ?? []);
     setStock(data.stock ?? {});
+    setSpoken((data.spoken as Spoken | null) ?? null);
     setUsers(data.users ?? []);
     setMe(data.me ?? null);
     setMySeatIndex(data.mySeatIndex);
@@ -916,6 +935,7 @@ async function saidWrong(response: Response): Promise<string> {
     seats,
     fieldCards,
     stock,
+    spoken,
     users,
     me,
     mySeatIndex,

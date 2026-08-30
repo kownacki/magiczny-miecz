@@ -2,7 +2,8 @@
 
 import { visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou, heldAbilities } from "@/lib/engine/abilities";
-import { markOf } from "@/lib/engine/status";
+import { markOf, spokenSpell } from "@/lib/engine/status";
+import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
 import { seatView } from "./commands/seat";
@@ -80,6 +81,22 @@ export interface EnvelopeUser {
 
 export interface Envelope {
   game: Record<string, unknown>;
+  /**
+   * A Zaklęcie spoken and waiting to be answered (9.6), or null.
+   *
+   * Every device gets it, because answering it is anybody's to do and the
+   * window closes on a clock: the browser has to be able to show what is
+   * waiting and how long is left.
+   */
+  spoken: {
+    spell: string;
+    name: string;
+    /** The seat that spoke it. */
+    by: number | null;
+    /** The seat it was aimed at, where it was aimed at one. */
+    at: number | null;
+    until: number;
+  } | null;
   /**
    * Who this device is, as far as the table is concerned — and null when the
    * table has never heard of it.
@@ -215,8 +232,32 @@ export function envelopeFor(
     away: one.seen_at !== null && now - Date.parse(one.seen_at) > AWAY_AFTER_MS,
   });
 
+  /**
+   * The Zaklęcie in the air, if one is.
+   *
+   * A table-level fact and not a mark on a seat: what everybody needs to know
+   * is that something was spoken, by whom, and how long is left to answer it —
+   * and 12.5 makes it public anyway („cały stół dowiaduje się, co zostało
+   * wypowiedziane"), so there is nothing here 9.3 would hide.
+   *
+   * Read off the same status the engine settles, so the banner and the command
+   * cannot disagree about whether anything is waiting.
+   */
+  const spoken = table.effects
+    .map((row) => ({ row, said: spokenSpell([row]) }))
+    .find((one) => one.said !== null && one.said.until > now);
+
   return {
     game: withoutDeck(game),
+    spoken: spoken?.said
+      ? {
+          spell: spoken.said.spell,
+          name: cardName(spoken.said.spell),
+          by: seats.find((seat) => seat.id === spoken.row.seat_id)?.seat_index ?? null,
+          at: spoken.said.target?.seatIndex ?? null,
+          until: spoken.said.until,
+        }
+      : null,
     me: me ? seenOf(me) : null,
     users: users.map(seenOf),
     mySeatIndex: mine?.seat_index ?? null,
