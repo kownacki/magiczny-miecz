@@ -82,6 +82,11 @@ function normaliseEvent(card) {
   };
   if (typeof card.miecz === "number") out.miecz = card.miecz;
   if (typeof card.magia === "number") out.magia = card.magia;
+  // "Przedmiot V Magiczny" against "Przedmiot V Przedmiot" — the class name is
+  // split around the numeral in the header band, and the right-hand half is the
+  // whole of the distinction. Carried through from the transcription because
+  // three rules turn on it and none of them can read a picture.
+  if (card.magical === true) out.magical = true;
   return out;
 }
 

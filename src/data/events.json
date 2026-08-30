@@ -1218,7 +1218,8 @@
       "index": 8
     },
     "text": "Miecz Lancelota użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce z Wilkłakiem - 2 punkty Miecza.",
-    "miecz": 1
+    "miecz": 1,
+    "magical": true
   },
   {
     "id": "czarodziejska-kosc",
@@ -1229,7 +1230,8 @@
       "sheet": "zdarzenia-6",
       "index": 9
     },
-    "text": "Właściciel Kości ma prawo dodać sobie 1 punkt Miecza lub Magii w Pułapce albo Magicznej Pułapce. Może również dodać 1 do każdego wyniku rzutu w pozostałych Obszarach na Kamiennym Moście."
+    "text": "Właściciel Kości ma prawo dodać sobie 1 punkt Miecza lub Magii w Pułapce albo Magicznej Pułapce. Może również dodać 1 do każdego wyniku rzutu w pozostałych Obszarach na Kamiennym Moście.",
+    "magical": true
   },
   {
     "id": "eliksir-sily",
@@ -1241,7 +1243,8 @@
       "index": 10
     },
     "text": "Po wypiciu Eliksiru, Postać zyskuje na 1 turę dodatkowe 2 punkty Miecza. Po użyciu Kartę należy odłożyć.",
-    "miecz": 2
+    "miecz": 2,
+    "magical": true
   },
   {
     "id": "excalibur",
@@ -1253,7 +1256,8 @@
       "index": 11
     },
     "text": "Miecz króla Artura użyty w walce dodaje swojemu właścicielowi 1 punkt Miecza. Po każdej zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając ten punkt pokonanemu przeciwnikowi).",
-    "miecz": 1
+    "miecz": 1,
+    "magical": true
   },
   {
     "id": "jablko-natchnienia",
@@ -1264,7 +1268,8 @@
       "sheet": "zdarzenia-6",
       "index": 12
     },
-    "text": "Karta Jabłka może być wykorzystana tylko raz - następnie należy ją odłożyć. Zjedzenie jabłka przed wykonaniem rzutu kostkami w Świątyni Nemed lub Świątyni Tolimana pozwala odjąć lub dodać 1 do wyniku (jeśli taka jest wola gracza)."
+    "text": "Karta Jabłka może być wykorzystana tylko raz - następnie należy ją odłożyć. Zjedzenie jabłka przed wykonaniem rzutu kostkami w Świątyni Nemed lub Świątyni Tolimana pozwala odjąć lub dodać 1 do wyniku (jeśli taka jest wola gracza).",
+    "magical": true
   },
   {
     "id": "krysztal-losu",
@@ -1275,7 +1280,8 @@
       "sheet": "zdarzenia-6",
       "index": 13
     },
-    "text": "Jeśli chcesz użyć go w walce, rzuć kostką: 1. Kryształ staje w płomieniach i zamienia cię w popiół - tracisz 1 Życie, 2. Kryształ ulega zniszczeniu, 3. Nic się nie dzieje, 4. Dodaj 1 do wyniku rzutu kostką (w tej walce), 5. Dodaj 2 do wyniku rzutu (w tej walce), 6. Dodaj 3 do wyniku (w tej walce)."
+    "text": "Jeśli chcesz użyć go w walce, rzuć kostką: 1. Kryształ staje w płomieniach i zamienia cię w popiół - tracisz 1 Życie, 2. Kryształ ulega zniszczeniu, 3. Nic się nie dzieje, 4. Dodaj 1 do wyniku rzutu kostką (w tej walce), 5. Dodaj 2 do wyniku rzutu (w tej walce), 6. Dodaj 3 do wyniku (w tej walce).",
+    "magical": true
   },
   {
     "id": "krysztal-magow",
@@ -1286,7 +1292,8 @@
       "sheet": "zdarzenia-6",
       "index": 14
     },
-    "text": "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może walcząc z nim użyć Zaklęcia Odrodzenie."
+    "text": "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może walcząc z nim użyć Zaklęcia Odrodzenie.",
+    "magical": true
   },
   {
     "id": "magiczna-sakwa",
@@ -1297,7 +1304,8 @@
       "sheet": "zdarzenia-6",
       "index": 15
     },
-    "text": "Sakwa pozwala nieść Postaci do 5 Przedmiotów ponad jej zwykłe możliwości (sama Sakwa nie jest liczona jako Przedmiot). Utrata Sakwy oznacza jednocześnie utratę wszystkich niesionych w niej Przedmiotów."
+    "text": "Sakwa pozwala nieść Postaci do 5 Przedmiotów ponad jej zwykłe możliwości (sama Sakwa nie jest liczona jako Przedmiot). Utrata Sakwy oznacza jednocześnie utratę wszystkich niesionych w niej Przedmiotów.",
+    "magical": true
   },
   {
     "id": "magiczny-miecz",
@@ -1308,7 +1316,8 @@
       "sheet": "zdarzenia-6",
       "index": 16
     },
-    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart."
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart.",
+    "magical": true
   },
   {
     "id": "magiczny-miecz",
@@ -1319,7 +1328,8 @@
       "sheet": "zdarzenia-6",
       "index": 17
     },
-    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart."
+    "text": "Musisz mieć Miecz, żeby wejść na Kamienny Most. Miecza nie można otrzymać w Krainie Dolnego Kręgu – jeśli któraś z Postaci wyciągnie tam Kartę tego Miecza, musi ją ponownie dołączyć do stosu Kart.",
+    "magical": true
   },
   {
     "id": "miecz-chaosu",
@@ -1331,7 +1341,8 @@
       "index": 18
     },
     "text": "Miecza Chaosu nie może posiadać Dobra Postać. Użyty w walce dodaje właścicielowi 2 punkty Miecza.",
-    "miecz": 2
+    "miecz": 2,
+    "magical": true
   },
   {
     "id": "owoc-jarzebiny-wiedzy",
@@ -1342,7 +1353,8 @@
       "sheet": "zdarzenia-6",
       "index": 19
     },
-    "text": "Karta Jarzębiny może być wykorzystana tylko raz - potem należy ją odłożyć. Zjedzenie owocu przed ciągnięciem nowych Kart Zdarzeń, pozwala wziąć jedną Kartę więcej i odrzucić tę, która graczowi najmniej odpowiada."
+    "text": "Karta Jarzębiny może być wykorzystana tylko raz - potem należy ją odłożyć. Zjedzenie owocu przed ciągnięciem nowych Kart Zdarzeń, pozwala wziąć jedną Kartę więcej i odrzucić tę, która graczowi najmniej odpowiada.",
+    "magical": true
   },
   {
     "id": "pierscien-mocy",
@@ -1354,7 +1366,8 @@
       "index": 20
     },
     "text": "Pierścień dodaje właścicielowi 2 punkty Magii.",
-    "magia": 2
+    "magia": 2,
+    "magical": true
   },
   {
     "id": "relikwiarz",
@@ -1365,7 +1378,8 @@
       "sheet": "zdarzenia-7",
       "index": 1
     },
-    "text": "Jeżeli właściciel Relikwiarza jest Dobry, nie traci punktu Życia w Czarcim Młynie, jeśli jest Zły - nie traci punktu Życia przy Studni Wieczności. Postać mająca Relikwiarz pokonuje wszystkie Demony, bez konieczności walki z nimi."
+    "text": "Jeżeli właściciel Relikwiarza jest Dobry, nie traci punktu Życia w Czarcim Młynie, jeśli jest Zły - nie traci punktu Życia przy Studni Wieczności. Postać mająca Relikwiarz pokonuje wszystkie Demony, bez konieczności walki z nimi.",
+    "magical": true
   },
   {
     "id": "rozdzka-przeznaczenia",
@@ -1376,7 +1390,8 @@
       "sheet": "zdarzenia-7",
       "index": 2
     },
-    "text": "Z pomocą Różdżki można zyskać władzę nad jednym z napotkanych Wrogów. Poddany jego mocy Wróg staje się Przyjacielem i podczas jednej, najbliższej walki dodaje swoje punkty Miecza lub Magii do punktów Postaci. Po walce Wróg uwalnia się (Kartę Różdżki należy odłożyć)."
+    "text": "Z pomocą Różdżki można zyskać władzę nad jednym z napotkanych Wrogów. Poddany jego mocy Wróg staje się Przyjacielem i podczas jednej, najbliższej walki dodaje swoje punkty Miecza lub Magii do punktów Postaci. Po walce Wróg uwalnia się (Kartę Różdżki należy odłożyć).",
+    "magical": true
   },
   {
     "id": "rozdzka-zaklec",
@@ -1387,7 +1402,8 @@
       "sheet": "zdarzenia-7",
       "index": 3
     },
-    "text": "Właściciel Różdżki może posiadać conajmniej 1 Zaklęcie więcej, niż liczba Zaklęć, z jaką rozpoczął grę (może wziąć nowe Zaklęcie, gdy ma tyle Zaklęć, ile na początku gry lub mniej)."
+    "text": "Właściciel Różdżki może posiadać conajmniej 1 Zaklęcie więcej, niż liczba Zaklęć, z jaką rozpoczął grę (może wziąć nowe Zaklęcie, gdy ma tyle Zaklęć, ile na początku gry lub mniej).",
+    "magical": true
   },
   {
     "id": "srebrna-strzala",
@@ -1398,7 +1414,8 @@
       "sheet": "zdarzenia-7",
       "index": 4
     },
-    "text": "Strzała dodaje właścicielowi 1 punkt Miecza i 1 punkt Magii."
+    "text": "Strzała dodaje właścicielowi 1 punkt Miecza i 1 punkt Magii.",
+    "magical": true
   },
   {
     "id": "swiety-graal",
@@ -1409,7 +1426,8 @@
       "sheet": "zdarzenia-7",
       "index": 5
     },
-    "text": "Graala nie może posiadać Zła Postać. Jego właściciel zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały."
+    "text": "Graala nie może posiadać Zła Postać. Jego właściciel zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały.",
+    "magical": true
   },
   {
     "id": "swieta-wlocznia",
@@ -1420,7 +1438,8 @@
       "sheet": "zdarzenia-7",
       "index": 6
     },
-    "text": "Włóczni nie mogą posiadać Złe Postacie. Użyta w walce dodaje właścicielowi 1 punkt Miecza."
+    "text": "Włóczni nie mogą posiadać Złe Postacie. Użyta w walce dodaje właścicielowi 1 punkt Miecza.",
+    "magical": true
   },
   {
     "id": "talizman-ognia",
@@ -1431,7 +1450,8 @@
       "sheet": "zdarzenia-7",
       "index": 7
     },
-    "text": "Talizman Ognia pozwala dodać 1 do wyniku rzutu kostką podczas walki (lecz nie magicznej). Właściciel Talizmanu jest odporny na działanie Zaklęcia Krąg Płomieni."
+    "text": "Talizman Ognia pozwala dodać 1 do wyniku rzutu kostką podczas walki (lecz nie magicznej). Właściciel Talizmanu jest odporny na działanie Zaklęcia Krąg Płomieni.",
+    "magical": true
   },
   {
     "id": "talizman-powietrza",
@@ -1442,7 +1462,8 @@
       "sheet": "zdarzenia-7",
       "index": 8
     },
-    "text": "Talizman Powietrza pozwala dodać 1 do wyniku rzutu kostką podczas walki magicznej. Właściciel Talizmanu jest odporny na działanie Zaklęć: Siedem Wichrów i Władca Gromu."
+    "text": "Talizman Powietrza pozwala dodać 1 do wyniku rzutu kostką podczas walki magicznej. Właściciel Talizmanu jest odporny na działanie Zaklęć: Siedem Wichrów i Władca Gromu.",
+    "magical": true
   },
   {
     "id": "tarcza-boga-tolimana",
@@ -1453,7 +1474,8 @@
       "sheet": "zdarzenia-7",
       "index": 9
     },
-    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii.",
+    "magical": true
   },
   {
     "id": "tarcza-boga-tolimana",
@@ -1464,7 +1486,8 @@
       "sheet": "zdarzenia-7",
       "index": 10
     },
-    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii."
+    "text": "Musisz mieć Tarczę Tolimana, żeby dostać się do Zamku Bestii.",
+    "magical": true
   },
   {
     "id": "topor-swiatla-i-ciemnosci",
@@ -1475,7 +1498,8 @@
       "sheet": "zdarzenia-7",
       "index": 11
     },
-    "text": "Topór Światła i Ciemności nie może być w posiadaniu Chaotycznych Postaci. Użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce z Wilkołakiem - 2 punkty Miecza."
+    "text": "Topór Światła i Ciemności nie może być w posiadaniu Chaotycznych Postaci. Użyty w walce dodaje właścicielowi 1 punkt Miecza, a w walce z Wilkołakiem - 2 punkty Miecza.",
+    "magical": true
   },
   {
     "id": "zwierciadlo-zniszczenia",
@@ -1486,7 +1510,8 @@
       "sheet": "zdarzenia-7",
       "index": 12
     },
-    "text": "Zwierciadło użyte przeciw innej Postaci pozbawi ją 2 punktów Magii lub Miecza, albo 1 punktu Magii i 1 punktu Miecza (oprócz tych z którymi rozpoczął on grę i uzyskanych dzięki Przedmiotom i Przyjaciołom). Zwierciadła można użyć tylko raz - następnie należy odłożyć jego Kartę."
+    "text": "Zwierciadło użyte przeciw innej Postaci pozbawi ją 2 punktów Magii lub Miecza, albo 1 punktu Magii i 1 punktu Miecza (oprócz tych z którymi rozpoczął on grę i uzyskanych dzięki Przedmiotom i Przyjaciołom). Zwierciadła można użyć tylko raz - następnie należy odłożyć jego Kartę.",
+    "magical": true
   },
   {
     "id": "alchemik",
