@@ -130,6 +130,15 @@ export type Modifier =
    * anybody else's hand there is nothing to wait for, and the spell simply
    * happens — which is almost every cast in almost every game.
    */
+  /**
+   * The next point of Życie that would be lost, is not (OCALONY).
+   *
+   * „Dla Postaci oznacza ocalenie przed stratą punktu Życia jeżeli taka strata
+   * ma nastąpić." Spent by being used, which is what `dispelled` means for a
+   * status nothing else lifts: it waits until a loss is about to happen and
+   * takes it instead.
+   */
+  | { kind: "ocalenie" }
   | {
       kind: "spoken";
       spell: string;
@@ -364,6 +373,18 @@ export function hasAttacked(statuses: readonly Status[]): boolean {
 /** Whether a status folds Magia into Miecz for a fight (Magia i Miecz). */
 export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
   return statuses.some((status) => status.modifier.kind === "magia-as-miecz");
+}
+
+/**
+ * The thing standing between this character and the next point they would lose.
+ *
+ * Read at the one door every loss comes through, so an Ocalony spoken in
+ * advance answers whatever the loss turns out to be — a lost fight, a Karta, an
+ * Obszar, a fall off the Most.
+ */
+export function savedFromLoss(statuses: readonly Status[]): { id: string; label: string } | null {
+  const held = statuses.find((status) => status.modifier.kind === "ocalenie");
+  return held ? { id: held.id, label: held.label } : null;
 }
 
 /**
@@ -603,6 +624,9 @@ export function markOf(status: Status): Mark {
     case "znowu":
       return { glyph: "↻", tone: "dobry", title };
     // Nothing has happened yet — that is the whole of what this one says.
+    // A point of Życie held back rather than a weight carried.
+    case "ocalenie":
+      return { glyph: "✚", tone: "dobry", title };
     case "spoken":
       return { glyph: "…", tone: "obojetny", title };
     case "move-max":

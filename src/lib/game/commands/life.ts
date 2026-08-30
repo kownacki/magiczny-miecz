@@ -2,6 +2,7 @@
 
 import { HEAL_CEILING, heal } from "@/lib/engine/derive";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
+import { savedFromLoss } from "@/lib/engine/status";
 import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
 import { isStone } from "./stone";
@@ -71,6 +72,45 @@ export function spendLife(
    * sees a living character and is right.
    */
   if (isStone(snapshot, seatId)) return { writes: {}, result: seat.life };
+
+  /**
+   * The Ocalony, spent by being needed.
+   *
+   * „Ocalenie przed stratą punktu Życia jeżeli taka strata ma nastąpić" — so it
+   * waits, and this is the door every loss comes through, which is what lets
+   * one spoken in advance answer whatever the loss turns out to be.
+   *
+   * The whole loss and not one point of it: nothing in the box takes two at
+   * once except the Bestia, and „ocalenie przed stratą" reads as the loss not
+   * happening rather than as it happening by less.
+   */
+  const saved = savedFromLoss(
+    snapshot.effects
+      .filter((row) => row.seat_id === seatId)
+      .map((row) => ({
+        id: row.id,
+        source: row.source,
+        label: row.label,
+        modifier: row.modifier,
+        ends: row.ends,
+      })),
+  );
+  if (saved) {
+    return {
+      writes: {
+        effects: { delete: [saved.id] },
+        journal: [
+          {
+            seatId: seat.id,
+            turn: snapshot.game.turn,
+            kind: "healed",
+            payload: { saved: saved.label, points },
+          },
+        ],
+      },
+      result: seat.life,
+    };
+  }
 
   const left = Math.max(0, seat.life - points);
   const spent: Changeset = { seats: [{ id: seat.id, patch: { life: left } }] };

@@ -571,6 +571,14 @@ function applySpell(
 /**
  * The Zaklęcie in the air right now, whoever spoke it.
  *
+ * NOTE, for whoever builds the resolution stack: this is the `cast` frame of
+ * docs/STACK.md's law 4, done in the small. A spoken spell has to wait
+ * *somewhere* for an answer, and with one frame of turn state and no stack the
+ * only place that survives a phase change is a status on the seat. When the
+ * stack lands, a cast becomes a frame pushed above whatever it was spoken into
+ * and this status should go with the old mechanism — the behaviour is the same
+ * and the tests below are the specification of it.
+ *
  * Read across the table rather than off one seat: the answer comes from
  * somebody else, and „rzuconego bezpośrednio przed nim" is about the last thing
  * said at the table, not about the answerer's own history. Past its window it

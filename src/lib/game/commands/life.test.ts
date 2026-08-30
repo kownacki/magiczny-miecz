@@ -60,6 +60,54 @@ describe("spending Życie", () => {
     expect(writes.effects?.delete).toEqual(["eff-1"]);
   });
 
+  /**
+   * OCALONY: „ocalenie przed stratą punktu Życia jeżeli taka strata ma
+   * nastąpić" — spoken in advance and spent by being needed, at the one door
+   * every loss in the game comes through.
+   */
+  it("takes the loss instead of the character, once", () => {
+    const saved = aTable({
+      seats: [aSeat({ id: "seat-a", life: 3 })],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "OCALONY",
+          label: "Ocalony",
+          modifier: { kind: "ocalenie" },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes, result } = spendLife(saved, "seat-a", 1);
+    expect(result).toBe(3);
+    expect(writes.seats).toBeUndefined();
+    // Spent: the next loss is the character's own.
+    expect(writes.effects?.delete).toEqual(["eff-1"]);
+    expect(writes.journal?.[0]).toMatchObject({ kind: "healed", payload: { saved: "Ocalony" } });
+  });
+
+  it("saves from the whole loss, not one point of it", () => {
+    const saved = aTable({
+      seats: [aSeat({ id: "seat-a", life: 1 })],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "OCALONY",
+          label: "Ocalony",
+          modifier: { kind: "ocalenie" },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    // The Bestia takes two, and „ocalenie przed stratą" is the loss not
+    // happening rather than it happening by less — so nobody dies here.
+    const { writes, result } = spendLife(saved, "seat-a", 2);
+    expect(result).toBe(1);
+    expect(writes.seats).toBeUndefined();
+  });
+
   it("kills the seat when they run out", () => {
     const table = aTable({
       seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],

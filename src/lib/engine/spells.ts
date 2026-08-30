@@ -203,24 +203,39 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     stosuje: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
   },
   /**
-   * Announced, and it is three cards in one.
+   * Applied for a Postać, and said out loud for the rest.
    *
-   * "Dla Postaci oznacza ocalenie przed stratą punktu Życia" is a status
-   * consumed at `spendLife`, which is a single door and would be easy. "Dla
-   * innych — ocalenie przed śmiercią" spares a Przyjaciel or a Wróg instead,
-   * and "użyty w walce sprawia, że rezultat starcia pozostanie
-   * nierozstrzygnięty" forces a draw. Three mechanisms, one card.
+   * „Dla Postaci oznacza ocalenie przed stratą punktu Życia jeżeli taka strata
+   * ma nastąpić. Dla innych — ocalenie przed śmiercią. Użyty w walce sprawia,
+   * że rezultat starcia pozostanie nierozstrzygnięty."
    *
-   * Deliberately not part-built. `coverageOf` reports whether a card has a
-   * script and not whether the script does what the card says, so applying
-   * only the first third would make this read `pelne` while two thirds of it
-   * sat on the table — which is the Eremita's mistake with a bigger card.
+   * The first third is a status spent at `spendLife`, which is the one door
+   * every loss in the game comes through — so an Ocalony spoken „w dowolnej
+   * chwili" answers whatever the loss turns out to be, a lost fight or a Karta
+   * or a fall off the Most, without knowing in advance which.
+   *
+   * The note here used to argue against building that third, because
+   * `coverageOf` reports whether a card has a script and not whether the script
+   * does what the card says — so a third of a card would have read `pelne` with
+   * two thirds still on the table. That was right about the danger and wrong
+   * about the remedy: `MANUAL` exists for exactly this, marks the card
+   * `czesciowe`, and prints the rest where a player reads the card.
+   *
+   * The two thirds it does not do: a Przyjaciel or a Wróg saved from death
+   * wants a state on something that is not a seat, and the fight's „remis"
+   * wants the settle to change a result the dice have already given.
    */
   ocalony: {
     timing: ["dowolna-chwila", "w-walce"],
     target: "postac-lub-wrog",
     effect:
       "Postać nie traci punktu Życia; Przyjaciel lub Wróg nie ginie. Użyty w walce — remis.",
+    stosuje: {
+      op: "efekt",
+      label: "Ocalony",
+      modifier: { kind: "ocalenie" },
+      ends: { kind: "dispelled" },
+    },
   },
   /**
    * Applied. It needed an op that reaches back into the turn's own stack, and

@@ -68,6 +68,20 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
 
   // --- cards whose disposition is handled but whose body is not -------------
 
+  // --- Zaklęcia the app carries out in part ---------------------------------
+  //
+  // Each of these applies the half that has a seat to land on. What is left is
+  // what the model has nowhere to put: a state on a Karta lying on an Obszar,
+  // or a distinction the deck does not record.
+  "krag-plomieni":
+    "Rzucony na Wroga: to wy pilnujecie, że nie wolno go atakować i że nic nie robi.",
+  "wojna-zywiolow":
+    "Magiczne Przedmioty: aplikacja nie wie, które nimi są — nie liczcie z nich nic do końca tury rzucającego.",
+  "wladca-gromu":
+    "Wrogowie i inne istoty na tym Obszarze też są sparaliżowane — nie wolno ich atakować.",
+  ocalony:
+    "Rzucony na Przyjaciela lub Wroga ratuje go od śmierci; użyty w walce czyni jej wynik nierozstrzygniętym.",
+
   "kapliczka-nemed": "Rozpatrzcie modlitwę tak jak w Świątyni Bogini Nemed.",
   "kapliczka-tolimana": "Rozpatrzcie modlitwę tak jak w Świątyni Tolimana.",
   lewiatan: "Połóż Kartę na wolnym Obszarze. Jeśli żaden nie jest wolny, odłóż ją.",
