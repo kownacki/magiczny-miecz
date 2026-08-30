@@ -289,6 +289,22 @@ character. Then `node scripts/export-card-images.mjs` writes the
 web-sized JPEGs into `public/cards/` — those *are* committed, so a fresh
 checkout has the pictures without needing the scans.
 
+`python3 scripts/set-missing-card-titles.py` runs **after** that one and
+overwrites fourteen of its files. The box went to print with the template's
+own words in the title band of ten cards on the *Wyposażenie i Zaklęcia*
+sheet and four on the *Wyposażenie* one — **NAZWA KARTY**, corner labels
+still reading "Wyposażenie / Wyposażenie" — so the scans say it and
+`src/data/raw/` records it verbatim, because a transcription that quietly
+corrected the paper is one you cannot check against the paper. Thirteen of
+the fourteen never surfaced: every other Wyposażenie card is also in the
+event deck under the same id and `cardImages.ts` walks that deck first. The
+Tarcza Tolimana is the exception, its twin being filed as TARCZA BOGA
+TOLIMANA, so it was the one card in the game whose picture said NAZWA KARTY.
+The name is *set* rather than lifted off the event card, which would carry
+that other title across; Times New Roman condensed to the measured 0.92,
+scaled by cap height and placed on the printed baseline. Needs Pillow, like
+`make-random-card.py` and for the same reason.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
