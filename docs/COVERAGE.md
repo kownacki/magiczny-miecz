@@ -137,12 +137,12 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 9.1 | a spell's effect is on its card | ◐ | every spell's timing, target and effect are typed; **thirteen of twenty-seven are carried out** — eleven through `SpellScript.stosuje` and two through `applies` — and each of the fourteen left now says in `spells.ts` what blocks it, rather than only that it is announced. They are not one problem: two want a field on `CastSpell.target`, two want a reaction window, two want a crossing from an arbitrary square (11.2, 11.6), one wants `frozen` actually enforced, one a table-wide status, one a repeated turn, one a private view of the pile, one an op that reaches into the turn's own drawn stack, and the Golem and Homunculus want the Poszukiwacz's raid pointed at a conjured attacker — which makes those two the nearest to buildable |
+| 9.1 | a spell's effect is on its card | ✅ | every spell's timing, target and effect are typed, and **all twenty-seven are carried out** — through `SpellScript.stosuje`, `applies` or `reactive`. Four are carried in part and say which part in `MANUAL` (`coverage.ts`), so they read `czesciowe` and print the rest where a player reads the card: KRĄG PŁOMIENI and WŁADCA GROMU cannot hold a status on a Karta lying on an Obszar, WOJNA ŻYWIOŁÓW cannot know which Przedmioty are *Magiczne* because the word was never transcribed, and OCALONY's Przyjaciel and „remis" thirds are the table's |
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side |
 | 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |
 | 9.5 | drawn from the top; the pile is reshuffled when empty; some characters start holding one | ✅ | `drawSpell`, `STARTING_KIT`; the reshuffle is journalled and both piles are counted in the top bar |
-| 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ◐ | `castSpell` — the window is enforced, the card reaches the used pile and the table is told. Thirteen spells are then applied; the fourteen left are the ones the model cannot hold, and each says so in its own entry |
+| 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ✅ | `castSpell` — the window is enforced, the card reaches the used pile and the table is told (12.5). A cast anybody could answer waits as a `spoken` status while they decide, and the two answering Karty turn or negate it; the browser counts the window down and closes it. The one card that asks a second question — WŁADCA ZDARZEŃ, „na inny, nie zajęty Obszar" — is refused rather than spent until it is answered |
 | 9.7 | no spell works on the Most or the Bestia | ✅ | refused in `castSpell` |
 
 ## 10. Tury

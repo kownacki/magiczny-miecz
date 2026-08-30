@@ -844,6 +844,55 @@ A second round went in for the carried Zaklęcia: `carried` added to
 `JOURNAL_KINDS` the same way. Applied and read back, `magiczny_miecz` only. The
 schema and the code are in step; nothing is owed.
 
+## Zaklęcia, finished — engine, console, browser
+
+All twenty-seven Zaklęcia in the box are now carried out rather than read
+aloud: through `SpellScript.stosuje`, through `applies` for the two that take
+cards out of play, or through `reactive` for the two that answer another
+spell. Four are carried *in part*, and the part left says so in `MANUAL`
+(`coverage.ts`) so it reads `czesciowe` and prints where a player reads the
+card. The register is the answer to the danger the old notes named: a spell
+that half works and does not say so.
+
+Three pieces made the difference, and each of them is somewhere the model had
+no shape at all before:
+
+- **A spell can be pending.** `castSpell` used to decide and commit in one
+  breath, which made WŁADCA ZAKLĘĆ („neguje działanie każdego innego (bez
+  wyjątku) Zaklęcia, rzuconego bezpośrednio przed nim") and ZWIERCIADŁO
+  („odbije… na tego, kto je rzucił") unbuildable: both need the spell they
+  answer to be *in the air*. So a cast anybody could answer leaves a `spoken`
+  status carrying the whole cast — the target, and anything the caster had
+  already decided — and lands when the window closes or when somebody answers.
+  Only when they could: with no reactive Karta in another hand there is nothing
+  to wait for, which is almost every cast in almost every game.
+
+- **A spell can ask a question.** WŁADCA ZDARZEŃ names a Karta *and* an
+  Obszar. `applyEffect` hands back what it could not carry out, `landSpell`
+  used to drop that, and the changeset committed with the card spent and the
+  Karta where it was. Now the cast throws, which writes nothing — and
+  `decided` travels on the `spoken` status so the answer survives the window.
+
+- **A spell is aimed at what its Karta names.** The picker reads
+  `SpellScript.target` rather than guessing: seats, „na siebie", the Karty
+  lying face up, or the Obszary of the Krąg the caster is walking. Three of the
+  eight targets had no picker at all before and were refused by the server for
+  naming nothing.
+
+Order was the same as everywhere here — engine, then the console, then the
+browser. `cast X at Y to Z` and `endcast` are the console's whole vocabulary
+for it; the browser adds the aim pickers and the box above the NowBox that
+counts the window down, tells the one player holding an answer that they hold
+one, and closes it when it lapses.
+
+**What is deliberately not built.** The four partial ones need things that are
+not about spells: a status that can sit on a Karta lying on an Obszar (KRĄG
+PŁOMIENI, WŁADCA GROMU thrown at a Wróg), the *Magiczny* flag on the 63
+Przedmiot cards, which is printed on them and was never transcribed (WOJNA
+ŻYWIOŁÓW), and OCALONY's Przyjaciel and „remis" thirds. And the `spoken`
+status is the resolution stack's `cast` frame wearing a different hat — see
+docs/STACK.md law 4, which supersedes it when step 2 lands.
+
 ## Known gaps, left open on purpose
 
 Two rules the app carries only halfway, both looked at and both deliberately
