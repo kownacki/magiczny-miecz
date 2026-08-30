@@ -180,7 +180,13 @@ have made "zero behaviour change" unprovable. The frame discriminant also
 stays `phase` (not the doc's sketched `kind`) — one rename fewer, same union.
 
 **Go/no-go after step 2**, before anything in step 3 deletes a MANUAL entry.
-Step 1 is reversible; step 2 is the point of no return.
+Not "point of no return" — git reverts anything — but the **last cheap exit**,
+and Michał called the overstatement out. Step 1 changed no behaviour, so
+reverting it loses only the reshaping. Reverting step 2 gets dearer with
+everything stacked on it: rows holding frame kinds the old code never heard of,
+a wire the browser has learned, and every card step 3 authors against the
+frames. After step 3 a revert is not a rollback to equivalence, it is removing
+features.
 
 **Freeze during step 1:** nobody but this session edits `turn.ts`,
 `effects.ts`, `fight.ts`. It touches 235 sites and a concurrent change in any of
