@@ -221,6 +221,8 @@ export type Command =
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
+  /** Closes the window on a Zaklęcie nobody answered, so it happens now. */
+  | { kind: "endcast" }
   /** 17.9's choice: null takes the Życie, "zloto" the coin, a name the Przedmiot. */
   | { kind: "spoils"; take: "zycie" | "zloto"; card: string | null }
   | { kind: "endturn" }
@@ -882,6 +884,19 @@ export const COMMANDS: CommandSpec[] = [
     group: "fight",
   },
   {
+    // The other end of the pause a cast opens (9.6): a Zaklęcie waits while
+    // anybody could answer it, and this is the table saying nobody will. It
+    // also happens on its own when the window closes, so this is the shortcut
+    // rather than the only way.
+    name: "endcast",
+    aliases: [],
+    when: PLAYING,
+    usage: "endcast",
+    summary: "let the Zaklęcie in the air take effect now (9.6)",
+    needs: "play",
+    group: "carrying",
+  },
+  {
     name: "endfight",
     aliases: [],
     usage: "endfight",
@@ -1438,6 +1453,8 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "cast", name: named.trim(), who: at?.trim() || null } };
   }
 
+  if (word === "endcast") return { ok: { kind: "endcast" } };
+
   if (word === "beast") return { ok: { kind: "beast" } };
   if (word === "bridge" || word === "most") return { ok: { kind: "bridge" } };
   if (word === "cross") return { ok: { kind: "cross" } };
@@ -1942,6 +1959,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   settle: "testmode",
   endgame: "testmode",
   endfight: "testmode",
+  endcast: "play",
   spoils: "play",
   // Both sides call `drawSpell`. 9.5 deals them; this is that.
   spell: "play",

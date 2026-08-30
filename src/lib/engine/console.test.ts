@@ -856,7 +856,7 @@ suite("finishing a half-typed line", () => {
     expect(tab("help pl").line).toBe("help place ");
     expect(tab("help end")).toEqual({
       line: "help end",
-      options: ["endfight", "endgame", "endturn"],
+      options: ["endcast", "endfight", "endgame", "endturn"],
     });
   });
 
@@ -951,6 +951,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   summon: { line: "summon WILKOŁAK", becomes: { kind: "summon", cardId: "wilkolak" } },
   settle: { line: "settle won", becomes: { kind: "settle", outcome: "wygrana" } },
   endgame: { line: "endgame won", becomes: { kind: "endgame", won: true } },
+  endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
   endturn: { line: "endturn", becomes: { kind: "endturn" } },
   spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola", wand: false } },

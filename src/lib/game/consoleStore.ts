@@ -5,7 +5,8 @@ import { ruleLines } from "@/lib/engine/ruleLines";
 import { cardIdNamed, describeCard } from "@/lib/engine/lookup";
 
 import type { Character } from "@/data/types";
-import { asFieldId, FIELDS, type FieldId } from "@/lib/engine/board";
+import { asFieldId, FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
+import { spellScript } from "@/lib/engine/spells";
 import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 import {
   helpLines,
@@ -77,6 +78,7 @@ import {
   removeCharacter,
   resolveFight,
   reviveCharacter,
+  settleSpell,
   spendHolding,
   takeCard,
   takeFromField,
@@ -231,6 +233,39 @@ function idNamed(said: string): string {
 /** Whether a card id is the card somebody just named. */
 function sameName(cardId: string, said: string): boolean {
   return fold(cardName(cardId)) === fold(said.trim());
+}
+
+/**
+ * An Obszar by the name printed on the board, for a Zaklęcie thrown at one.
+ *
+ * The `place` verb resolves its field in the parser, where the grammar knows
+ * it is a field. `cast` cannot: what the word after `at` names depends on the
+ * card, and the card is not known until the hand has been looked in.
+ */
+function fieldNamed(said: string): FieldId {
+  const want = fold(said.trim());
+  for (const field of FIELDS.values()) {
+    if (fold(field.name) === want || field.id === said.trim()) return field.id;
+  }
+  const near = [...FIELDS.values()].filter((field) => fold(field.name).startsWith(want));
+  if (near.length > 0) {
+    throw new Error(`Which one — ${near.map((field) => field.name).join(", ")}?`);
+  }
+  throw new Error(`No Obszar called \`${said}\`.`);
+}
+
+/** A Karta lying face up on the board, by name (16.8). */
+async function fieldCardNamed(gameId: string, said: string) {
+  const snapshot = await activeStore().load(gameId);
+  const hit = snapshot.fieldCards.find((row) => sameName(row.card_id, said));
+  if (hit) return hit;
+  const near = snapshot.fieldCards.filter((row) =>
+    fold(cardName(row.card_id)).startsWith(fold(said.trim())),
+  );
+  if (near.length > 0) {
+    throw new Error(`Which one — ${near.map((row) => cardName(row.card_id)).join(", ")}?`);
+  }
+  throw new Error(`No Karta called \`${said}\` is lying on the board.`);
 }
 
 /**
@@ -828,9 +863,30 @@ export async function runCommand(
     case "cast": {
       const seat = seatOf(null);
       const held = await holdingNamed(gameId, seat.id, command.name);
-      const at = command.who ? seatOf(command.who) : null;
+      /**
+       * What comes after `at` is whatever the Zaklęcie is aimed at.
+       *
+       * Three kinds, and the card says which: a Postać for most of them, an
+       * Obszar for the Władca Gromu, a Karta lying on the board for the Siewca
+       * Spustoszenia and the Władca Zdarzeń. Read off the spell rather than
+       * guessed from the word, so `cast WŁADCA GROMU at Karczma` and `cast
+       * SIEWCA at CYKLOP` both mean what they say.
+       */
+      const aim = spellScript(held.card_id)?.target;
+      const at =
+        command.who && aim !== "obszar" && aim !== "karta-na-planszy"
+          ? seatOf(command.who)
+          : null;
+      const onField =
+        command.who && aim === "obszar" ? requireFieldId(fieldNamed(command.who)) : null;
+      const onCard =
+        command.who && aim === "karta-na-planszy"
+          ? await fieldCardNamed(gameId, command.who)
+          : null;
       const done = await castSpell(gameId, seat.id, held.id, {
         ...(at ? { seatIndex: at.seat_index } : {}),
+        ...(onField ? { fieldId: onField } : {}),
+        ...(onCard ? { fieldCardId: onCard.id } : {}),
       });
       /**
        * What happened where the app carried the Zaklęcie out, and the card's
@@ -841,10 +897,30 @@ export async function runCommand(
        * instruction to the table whether or not the die has already been
        * thrown, and thirteen of them have now.
        */
+      const aimed = at
+        ? ` at ${named(at)}`
+        : onField
+          ? ` at ${fieldName(onField)}`
+          : onCard
+            ? ` at ${cardName(onCard.card_id)}`
+            : "";
       return [
-        `${named(seat)} casts ${done.spell}${at ? ` at ${named(at)}` : ""}.`,
+        `${named(seat)} casts ${done.spell}${aimed}.`,
         ...(done.did && done.did.length > 0 ? done.did : done.effect ? [done.effect] : []),
       ].join("\n");
+    }
+
+    /**
+     * The other end of the pause a cast opens.
+     *
+     * A Zaklęcie waits while anybody at the table could answer it, and this is
+     * the table saying nobody will — the same shortcut `release` gives a claim
+     * on the floor. It also happens on its own when the window closes, so with
+     * nothing waiting this is not an error, it is nothing to do.
+     */
+    case "endcast": {
+      const done = await settleSpell(gameId, true);
+      return done ? [`${done.spell} takes effect.`, ...(done.did ?? [])].join("\n") : "Nothing is in the air.";
     }
 
     case "trade": {
