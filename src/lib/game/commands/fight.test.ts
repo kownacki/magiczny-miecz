@@ -441,6 +441,48 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     expect(writes.holdings?.delete).toEqual(["s-1"]);
   });
 
+  /* ------------------------------------------------------------------------
+   * The Wojna Żywiołów (9.6): everybody, including the one who spoke it.
+   * --------------------------------------------------------------------- */
+
+  it("hushes every seat at the table, the caster among them", async () => {
+    const { writes } = await castSpell(
+      casting({ cardId: "wojna-zywiolow", state: { phase: "roll" } }),
+      { seatId: "seat-a", holdingId: "s-1" },
+      ports(),
+    );
+    expect(writes.effects?.insert).toEqual([
+      expect.objectContaining({ seat_id: "seat-a", modifier: { kind: "no-spells" } }),
+      expect.objectContaining({ seat_id: "seat-b", modifier: { kind: "no-spells" } }),
+    ]);
+    // „Do początku twojej następnej tury": one turn of each holder's own, which
+    // for the caster is the rest of the turn they spoke it in.
+    expect(writes.effects?.insert?.[0]).toMatchObject({ ends: { kind: "turns", turns: 1 } });
+  });
+
+  it("refuses the next Zaklęcie while it holds", async () => {
+    const hushed = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "wojna-zywiolow",
+          label: "Wojna Żywiołów",
+          modifier: { kind: "no-spells" },
+          ends: { kind: "turns", turns: 1 },
+        },
+      ],
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "olsnienie", kind: "spell", face: "hidden" }),
+      ],
+    });
+    await expect(
+      castSpell(hushed, { seatId: "seat-a", holdingId: "s-1" }, ports()),
+    ).rejects.toThrow(/Wojna Żywiołów/);
+  });
+
   it("puts the spoken card on the used pile (9.6)", async () => {
     const { writes } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(writes.holdings?.delete).toEqual(["s-1"]);

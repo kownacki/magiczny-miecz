@@ -67,6 +67,21 @@ export type Modifier =
    * somewhere that has to remember it.
    */
   | { kind: "frozen"; oprocz?: readonly string[] }
+  /**
+   * No Zaklęcia may be spoken while this holds — the Wojna Żywiołów.
+   *
+   * „Żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i Magicznych
+   * Przedmiotów ani ciągnąć z nich żadnych korzyści." Only the first half is
+   * enforced, and the reason is in the data rather than here: the deck does not
+   * say which Przedmioty are *Magiczne*. The word is printed on the card and
+   * was never transcribed, so „item" covers a Miecz and a Pierścień Mocy alike
+   * — and suppressing every Przedmiot would be a harder rule than the one on
+   * the card. The other half stays on the card's sentence for the table.
+   *
+   * The Obszary that forbid spells do it by field id (`NO_SPELLS`); this is the
+   * same prohibition arriving as a status, so both are asked at one door.
+   */
+  | { kind: "no-spells" }
   /** Natura is forced to something while this lasts. */
   | { kind: "nature"; to: Nature }
   /**
@@ -212,6 +227,12 @@ export function untouchable(statuses: readonly Status[]): string | null {
   const held = statuses.find(
     (status) => status.modifier.kind === "frozen" && status.source !== "tura-stracona",
   );
+  return held ? held.label : null;
+}
+
+/** Whether anything is stopping the holder speaking a Zaklęcie (9.6). */
+export function spellsHushed(statuses: readonly Status[]): string | null {
+  const held = statuses.find((status) => status.modifier.kind === "no-spells");
   return held ? held.label : null;
 }
 
@@ -455,6 +476,10 @@ export function markOf(status: Status): Mark {
     }
     case "frozen":
       return { glyph: "\u25A0", tone: "zly", title };
+    // A door closed on one kind of card, like `barred` on one place: nothing is
+    // worse about the character, there is simply something they may not speak.
+    case "no-spells":
+      return { glyph: "⊘", tone: "zly", title };
     case "move-max":
       return { glyph: "\u25B8", tone: "zly", title };
     case "nature":

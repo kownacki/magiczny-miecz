@@ -351,7 +351,21 @@ export type Effect =
    * tu, dopóki nie wyrzucisz 1, 2 lub 3 oczka" is a cap of nought on how far
    * you may walk, held until something lifts it.
    */
-  | { op: "efekt"; label: string; modifier: Modifier; ends: Ends }
+  | {
+      op: "efekt";
+      label: string;
+      modifier: Modifier;
+      ends: Ends;
+      /**
+       * Who it lands on, where it is not only the one it happened to.
+       *
+       * The Wojna Żywiołów is the first: „żaden gracz, łącznie z tobą" is
+       * `wszyscy`, and the same three words `punkty`, `strata` and
+       * `tura-stracona` have carried since the Burza. Absent, it lands on the
+       * seat the effect is being applied to, which is every other card.
+       */
+      target?: Target;
+    }
   /**
    * One die per card of a kind, each thrown for that card alone.
    *

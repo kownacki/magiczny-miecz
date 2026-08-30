@@ -431,16 +431,39 @@ async function walk(
      * written into own points, or it would outlive its own expiry.
      */
     case "efekt": {
-      const put = addEffect(snapshot, {
-        seatId,
-        effect: {
-          source: reason,
-          label: effect.label,
-          modifier: effect.modifier,
-          ends: effect.ends,
-        },
-      });
-      return { writes: put, result: { did: [effect.label], pending: null } };
+      /**
+       * One seat, or everybody the card names.
+       *
+       * The same loop `punkty` and `tura-stracona` run, and for the same
+       * reason: „żaden gracz, łącznie z tobą" is a fact about the table rather
+       * than about whoever spoke it. Chained through `apply` so two seats
+       * cannot be given the same row id.
+       */
+      const hit = effect.target ? targeted(snapshot, seatId, effect.target, undefined) : null;
+      const seats = hit
+        ? hit
+            .map(
+              (one) =>
+                snapshot.seats.find((row) => row.seat_index === one.seatIndex)?.id ?? null,
+            )
+            .filter((id): id is string => id !== null)
+        : [seatId];
+      let writes: Changeset = {};
+      for (const id of seats) {
+        writes = merge(
+          writes,
+          addEffect(apply(snapshot, writes), {
+            seatId: id,
+            effect: {
+              source: reason,
+              label: effect.label,
+              modifier: effect.modifier,
+              ends: effect.ends,
+            },
+          }),
+        );
+      }
+      return { writes, result: { did: [effect.label], pending: null } };
     }
 
     /**

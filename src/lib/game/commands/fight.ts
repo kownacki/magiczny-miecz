@@ -73,7 +73,7 @@ import { slotOnArrival } from "@/lib/engine/holdings";
 import type { Nature } from "@/data/types";
 import type { Slot } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
-import { afterFight, hasAttacked, missionOf } from "@/lib/engine/status";
+import { afterFight, hasAttacked, missionOf, spellsHushed } from "@/lib/engine/status";
 import { addEffect, keepOnly, statusesOf } from "./turn";
 import type { SeatRow } from "../store";
 import { settleBridge, settleCrossing } from "./bridge";
@@ -602,6 +602,16 @@ export async function castSpell(
   if (suppressesSpells(caster.field_id)) {
     throw new Error(`${fieldName(caster.field_id as FieldId)}: tu nie rzuca się Zaklęć.`);
   }
+
+  /**
+   * The same prohibition arriving as a status rather than as an Obszar.
+   *
+   * „Żaden gracz, łącznie z tobą" — the Wojna Żywiołów puts it on every seat at
+   * once, so the caster who spoke it is refused by their own spell for the rest
+   * of their turn, which is what „łącznie z tobą" says.
+   */
+  const hushed = spellsHushed(statusesOf(snapshot, caster.id));
+  if (hushed) throw new Error(`${hushed} — nikt teraz nie rzuca Zaklęć.`);
 
   /**
    * "Właściciel Kryształu nie może rzucać ani używać Zaklęć."

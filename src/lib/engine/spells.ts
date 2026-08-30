@@ -408,18 +408,37 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     stosuje: { op: "przenies-karte" },
   },
   /**
-   * Announced. Every status this game has is on a seat.
+   * Applied by half, and the half is the one the app can hold.
    *
-   * "Żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i Magicznych
-   * Przedmiotów" is a fact about the table for a while, and `seat_effects` has
-   * nowhere to put one. Writing it onto all six seats would be six rows to
-   * expire separately and a seventh player joining mid-spell would miss it.
+   * „Żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i Magicznych
+   * Przedmiotów ani ciągnąć z nich żadnych korzyści, aż do początku twojej
+   * następnej tury."
+   *
+   * The spells are refused. Six rows and not one, because `seat_effects` is
+   * where a status lives — and six turned out to be right rather than a
+   * compromise: `{ turns: 1 }` is measured in the *holder's* own turns, so each
+   * seat wears it through exactly one turn of theirs and the caster's own
+   * expires at the end of the turn they spoke it in. That is „do początku
+   * twojej następnej tury", to the letter, without a clock.
+   *
+   * The Magiczne Przedmioty are not, and the reason is the data: the deck does
+   * not record which Przedmioty are Magiczne. The word is printed on the card
+   * and was never transcribed, so „item" covers a Miecz and a Pierścień Mocy
+   * alike — and suppressing every Przedmiot would enforce a harder rule than
+   * the one on the card. That half stays in the sentence the table reads.
    */
   "wojna-zywiolow": {
     timing: ["przed-ruchem"],
     target: "brak",
     effect:
       "Nikt, łącznie z tobą, nie używa Zaklęć ani Magicznych Przedmiotów do początku twojej następnej tury.",
+    stosuje: {
+      op: "efekt",
+      label: "Wojna Żywiołów",
+      modifier: { kind: "no-spells" },
+      ends: { kind: "turns", turns: 1 },
+      target: "wszyscy",
+    },
   },
   /**
    * Announced. Wants the Władca Zaklęć's reaction window, and then some.
