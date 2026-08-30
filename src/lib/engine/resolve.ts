@@ -1,6 +1,7 @@
 /** Which effects the app can carry out on its own, and which are genuinely the player's to decide. */
 
 import { takesEverything } from "./losses";
+import { FIELD_SCRIPTS } from "./fieldScript";
 import type { Effect } from "./cardScript";
 
 /**
@@ -122,10 +123,28 @@ export function isSettled(effect: Effect): boolean {
     // waiting on a question nobody had been asked.
     case "kup":
     case "sprzedaj":
-    case "jak-pole":
     case "zaklecia-do-limitu":
     case "zamien-punkty":
       return false;
+
+    /**
+     * A borrowed table is exactly as settled as the table it borrows.
+     *
+     * It used to sit above with the shops, on the reading that "dzieje się to,
+     * co na Obszarze" is an interaction rather than an outcome. That made the
+     * two Kapliczki permanently unsettled, which is worse than it sounds: an
+     * unsettled effect is `pendingIn`'s answer, and the sheet hides the
+     * "Rozpatrz" button whenever something is being asked — so the one thing a
+     * player could do with a Kapliczka was leave it for later, for ever.
+     *
+     * Both Świątynie's prayers are a `rzut` whose every face is settled, so
+     * both Kapliczki are settled, and the recursion says so for the right
+     * reason rather than by assertion.
+     */
+    case "jak-pole": {
+      const borrowed = FIELD_SCRIPTS[effect.fieldId]?.offers[0];
+      return borrowed ? isSettled(borrowed.effect) : false;
+    }
   }
 }
 
@@ -226,6 +245,15 @@ function owedIn(effect: Effect, queue: number[]): Effect | null {
   // Divergence two: a die table is not a question — the app rolls it — so what
   // it lands on is asked about after the roll, from the server's answer.
   if (effect.op === "rzut") return null;
+
+  // A borrowed table is the table it borrows, and both of them are dice. The
+  // node itself is never the question — reported as one, it was a question the
+  // sheet had no control for, which is how the two Kapliczki became cards a
+  // player could only ever leave for later.
+  if (effect.op === "jak-pole") {
+    const borrowed = FIELD_SCRIPTS[effect.fieldId]?.offers[0];
+    return borrowed ? owedIn(borrowed.effect, queue) : null;
+  }
 
   /**
    * A loss the holder chooses from takes one answer per card it will cost, the

@@ -98,8 +98,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   ocalony:
     "Rzucony na Przyjaciela lub Wroga ratuje go od śmierci; użyty w walce czyni jej wynik nierozstrzygniętym.",
 
-  "kapliczka-nemed": "Rozpatrzcie modlitwę tak jak w Świątyni Bogini Nemed.",
-  "kapliczka-tolimana": "Rozpatrzcie modlitwę tak jak w Świątyni Tolimana.",
   lewiatan: "Połóż Kartę na wolnym Obszarze. Jeśli żaden nie jest wolny, odłóż ją.",
   zloczynca: "Płaci tylko ta Postać, która przegrała walkę.",
 };

@@ -30,6 +30,7 @@ import type { SeatRow } from "../store";
 import { adjustSeat } from "./adjust";
 import { changeNature, pickBelow, placeSeat } from "./character";
 import { drawCard, drawSpell, peekDue, peekSpells } from "./draw";
+import { FIELD_SCRIPTS } from "@/lib/engine/fieldScript";
 import { summonFighter } from "./fight";
 import { nameOfSeat } from "./lobby";
 
@@ -695,6 +696,46 @@ async function walk(
           following ? follow.slice(1) : null,
         )
       : nothing(["warunek niespełniony — nic się nie dzieje"]);
+  }
+
+  /**
+   * A Karta that borrows an Obszar's own table.
+   *
+   * "Możesz modlić się na takich samych zasadach, jak w Świątyni Bogini Nemed"
+   * — the two Kapliczki, and nothing else in the box. The table is already
+   * encoded, two dice and eleven faces of it, so the card runs *that* rather
+   * than a second copy: a Kapliczka whose prayer had drifted from the
+   * Świątynia's would be the worse of the two bugs available here.
+   *
+   * Handled up here beside `rzut` and `gdy`, and for the same reason they are:
+   * the gate below asks `isSettled` of the whole effect, and both Świątynie's
+   * prayers hold a `wybor` on one face or another — so a borrowed table is
+   * never "settled" and would be owed back as a question the moment it was
+   * asked for. What it actually is is a die table, which the app rolls.
+   *
+   * The offer is taken by position because a borrowed table has one: both
+   * Świątynie offer exactly "Modlitwa", and a card that borrowed a field with
+   * several would have to name which, which is a question no card asks.
+   */
+  if (effect.op === "jak-pole") {
+    const borrowed = FIELD_SCRIPTS[effect.fieldId]?.offers[0];
+    if (!borrowed) throw new Error(`${fieldName(effect.fieldId)} nie ma tabeli do pożyczenia.`);
+    const done = await walk(
+      snapshot,
+      command,
+      borrowed.effect,
+      `${reason}: ${fieldName(effect.fieldId)}`,
+      ports,
+      [...path, 0],
+      follow !== null && follow.length > 0 ? follow.slice(1) : follow,
+    );
+    return {
+      writes: done.writes,
+      result: {
+        ...done.result,
+        did: [`jak ${fieldName(effect.fieldId)}: ${borrowed.name}`, ...done.result.did],
+      },
+    };
   }
 
   const holderPicks =
