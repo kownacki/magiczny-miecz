@@ -26,7 +26,7 @@ import {
 import type { Shuffle } from "@/lib/engine/deck";
 import { RAID_RANGE, withinRaid } from "@/lib/engine/raid";
 import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
-import { combatValueOf, roundsOf } from "@/lib/engine/cards";
+import { combatValueOf, isArms, refusesArms, roundsOf } from "@/lib/engine/cards";
 import {
   advanceLoop,
   closeLoopFrame,
@@ -84,6 +84,7 @@ import {
 } from "./seat";
 import { refuseAgainstStone } from "./stone";
 import { slotOnArrival } from "@/lib/engine/holdings";
+import { slotsFor } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { Slot } from "@/lib/engine/slots";
 import { FLOOR_MS, floorOf } from "./spellFloor";
@@ -141,14 +142,43 @@ function againstThese(
   const view = seatView(snapshot, seatId);
   const mode = eqModeOf(snapshot.game);
   const inPlay = inEffect(view.holdings, mode, view.nature);
+
+  /**
+   * The Przybysz z Krainy Cieni, who refuses most of what you are holding.
+   *
+   * "Przeciw Przybyszowi nie można używać Zaklęć, Magicznych Przedmiotów ani
+   * Broni." Two of the three are cards in the sum and come out of it here; the
+   * Zaklęcia are refused where they are spoken, in `castSpell`, because a
+   * Zaklęcie is not a number in this total.
+   *
+   * What is left is the character's own Miecz and the things that are neither
+   * — a Tarcza, a Hełm, a Zbroja, a Przyjaciel — which is what the card leaves
+   * you and rather more than "walczy się samym Mieczem" would have.
+   */
+  const bare = refusesArms(foeIds);
+  const barred = bare
+    ? inPlay.filter((held) => held.kind === "item" && isArms(held.cardId, slotsFor(held.cardId)))
+    : [];
+
   const swapped = insteadAgainst(
     inPlay.map((held) => held.cardId),
     foeIds,
   );
-  if (swapped.length === 0) return total;
+  if (swapped.length === 0 && barred.length === 0) return total;
 
   let { miecz, magia } = total;
+  for (const held of barred) {
+    const lent = bonusFromHoldings([held], mode, "walka", view.fieldId, view.nature);
+    miecz -= lent.miecz;
+    magia -= lent.magia;
+  }
+  const gone = new Set(barred.map((held) => held.cardId));
   for (const swap of swapped) {
+    // A card the creature refuses is worth nothing against it, including its
+    // other figure. The two cannot meet today — only a Wilkołak swaps and only
+    // the Przybysz refuses — but a card counted out and then swapped back in
+    // would be worth *more* against the one Wróg that allows it least.
+    if (gone.has(swap.cardId)) continue;
     const one = inPlay.filter((held) => held.cardId === swap.cardId).slice(0, 1);
     const ordinarily = bonusFromHoldings(one, mode, "walka", view.fieldId, view.nature);
     miecz += swap.miecz - ordinarily.miecz;
@@ -1048,6 +1078,19 @@ export async function castSpell(
    */
   const state = top(snapshot.game.turn_state);
   const inAFight = state.phase === "fight";
+
+  /**
+   * "Przeciw Przybyszowi nie można używać Zaklęć" — the third of his three
+   * refusals, and the one that is not a number in anybody's total.
+   *
+   * Refused where the Zaklęcie is spoken rather than where it lands, because
+   * what the card bars is the *using*: a spell spoken into his fight is barred
+   * whatever it would have done, and 9.6 would otherwise have spent the Karta
+   * on the way to doing nothing.
+   */
+  if (state.phase === "fight" && refusesArms(state.fight.fought ?? [state.fight.cardId])) {
+    throw new Error(`${state.fight.cardName}: nie można tu używać Zaklęć.`);
+  }
 
   // 9.1: a Zaklęcie has a moment it may be spoken in. The interface greys the
   // card out, which stops an honest player and nobody else — a request that

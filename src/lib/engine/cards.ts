@@ -96,6 +96,34 @@ export function isMagicalItem(cardId: string): boolean {
 }
 
 /**
+ * The one Wróg you may bring almost nothing to.
+ *
+ * "Przeciw Przybyszowi nie można używać Zaklęć, Magicznych Przedmiotów ani
+ * Broni." A set of one, beside `MIRRORS_ITS_OPPONENT` and `FIGHTS_IN_ROUNDS`
+ * and for the same reason: "what is different about fighting this creature" is
+ * a question about the card, asked in one place.
+ */
+const REFUSES_ARMS = new Set(["przybysz-z-krainy-cieni"]);
+
+export function refusesArms(cardIds: readonly string[]): boolean {
+  return cardIds.some((cardId) => REFUSES_ARMS.has(cardId));
+}
+
+/**
+ * Whether this Karta is one of the two things that Wróg refuses.
+ *
+ * Magiczny is the printed class. Broń is the main hand — and the two sets
+ * together are exactly what the card bars, which is worth checking rather than
+ * asserting: the only main-hand Przedmioty that are *not* Magiczne are the
+ * Miecz and the Sztylet, both plainly Broń, and the only main-hand cards that
+ * are not Broń are the two Różdżki, both Magiczne. So the union is right at
+ * both edges, and neither half of it reaches a Tarcza, a Hełm or a Przyjaciel.
+ */
+export function isArms(cardId: string, wornIn: readonly string[]): boolean {
+  return isMagicalItem(cardId) || wornIn.includes("main-hand");
+}
+
+/**
  * What this card fights with, or null if it does not fight.
  *
  * Only a Wróg fights. Rule 16.3 makes a Demon fight magically, which the deck

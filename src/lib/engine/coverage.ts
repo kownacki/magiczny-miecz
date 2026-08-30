@@ -37,9 +37,6 @@ export type Coverage = "pelne" | "czesciowe" | "brak";
  * them, which is the same wasted vigilance as no referee at all.
  */
 const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
-  // --- creatures whose fight has a clause the fight machinery cannot carry ---
-  "przybysz-z-krainy-cieni":
-    "Przeciw Przybyszowi nie wolno użyć Zaklęć, Magicznych Przedmiotów ani Broni — walczy się samym Mieczem Postaci.",
   // --- equipment and magic items -------------------------------------------
   //
   // ARONDIGHT, the TOPÓR and the RELIKWIARZ were here, and all three were
