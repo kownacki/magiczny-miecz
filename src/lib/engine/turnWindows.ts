@@ -203,7 +203,9 @@ export function turnSteps(phase: string): TurnStep[] {
   if (phase === "fight") return [{ label: "Walka", state: "teraz" }];
 
   const order = ["roll", "move", "field"];
-  const at = phase === "end" ? order.length : order.indexOf(phase);
+  // A suspended card is the Obszar being dealt with, mid-sentence: the bar
+  // stays on the step the player is actually in rather than going blank.
+  const at = phase === "end" ? order.length : order.indexOf(phase === "script" ? "field" : phase);
   if (at < 0) return [];
 
   return [

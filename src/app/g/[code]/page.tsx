@@ -1,5 +1,6 @@
 "use client";
 
+import { ScriptFramePanel } from "./script-frame";
 import { top } from "@/lib/engine/stack";
 import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
@@ -1113,6 +1114,26 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onLeave={(cardId) => setWaved((current) => [...current, cardId])}
           />
         )}
+
+      {/* The card the turn is suspended on — a question left over after a
+          mid-card fight, or a decision the resolve was sent without. Everybody
+          sees it; the frame says whose answer it is (docs/STACK.md, law 5). */}
+      {active && turnState.phase === "script" && (
+        <ScriptFramePanel
+          frame={turnState}
+          who={
+            seats.find((seat) => seat.id === turnState.seatId)?.player_name ??
+            "gracz"
+          }
+          canAct={mine?.id === turnState.seatId || isTableScreen}
+          ring={ringFields(active.field_id).map((fieldId) => ({
+            fieldId,
+            name: FIELD_NAMES.get(fieldId) ?? fieldId,
+          }))}
+          busy={busy}
+          onAnswer={(decided) => post("turn", { action: "answer", ...decided })}
+        />
+      )}
 
       {/* Tapping a field opens it, rather than filling in a panel off to the
           side where nobody looked. */}

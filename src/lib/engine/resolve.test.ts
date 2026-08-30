@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSettled, pendingIn } from "./resolve";
+import { nodeAt, isSettled, pendingIn } from "./resolve";
 import { FIELD_SCRIPTS } from "./fieldScript";
 import { SCRIPTS } from "./cardScript";
 import type { Effect } from "./cardScript";
@@ -239,5 +239,42 @@ describe("what an effect is still waiting on", () => {
         expect(pendingIn(offer.effect, []), `${fieldId}/${offer.name}`).toBeNull();
       }
     }
+  });
+});
+
+describe("nodeAt — the node a script frame's cursor stands on", () => {
+  const card: Effect = {
+    op: "po-kolei",
+    steps: [
+      { op: "punkty", stat: "sword", delta: 1, target: "ty" },
+      {
+        op: "rzut",
+        faces: {
+          3: {
+            op: "gdy",
+            warunek: { is: "ma-zloto" },
+            to: {
+              op: "wybor",
+              options: [{ label: "A", effect: { op: "nic" } }],
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  it("follows steps, faces, branches and picks by plain indexing", () => {
+    expect(nodeAt(card, [])).toBe(card);
+    expect(nodeAt(card, [0])).toMatchObject({ op: "punkty" });
+    expect(nodeAt(card, [1, 3, 0])).toMatchObject({ op: "wybor" });
+    expect(nodeAt(card, [1, 3, 0, 0])).toMatchObject({ op: "nic" });
+  });
+
+  /** A path the effect does not have is nothing, not the wrong question. */
+  it("answers null off the edge of the tree", () => {
+    expect(nodeAt(card, [7])).toBeNull();
+    expect(nodeAt(card, [1, 5])).toBeNull();
+    expect(nodeAt(card, [1, 3, 1])).toBeNull();
+    expect(nodeAt(card, [0, 0])).toBeNull();
   });
 });

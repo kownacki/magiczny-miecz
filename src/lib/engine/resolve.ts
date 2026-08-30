@@ -153,6 +153,46 @@ export function pendingIn(effect: Effect, choices: readonly number[]): Effect | 
   return owedIn(effect, [...choices]);
 }
 
+/**
+ * The node a `script` frame's cursor stands on (docs/STACK.md).
+ *
+ * Not `pendingIn`: that walks by *choices*, skipping every node that asks
+ * nothing. A cursor records the whole path — a `po-kolei` step, a `wybor`
+ * pick, a `rzut` face as rolled, a `gdy` branch as taken — so following it is
+ * plain indexing, and what it lands on is the question the frame is suspended
+ * over. Null for a path the effect does not have, which is a frame written by
+ * different code than is reading it and worth showing as nothing rather than
+ * as the wrong question.
+ */
+export function nodeAt(effect: Effect, cursor: readonly number[]): Effect | null {
+  let at: Effect = effect;
+  for (const index of cursor) {
+    switch (at.op) {
+      case "po-kolei":
+        if (!at.steps[index]) return null;
+        at = at.steps[index];
+        break;
+      case "wybor":
+        if (!at.options[index]) return null;
+        at = at.options[index].effect;
+        break;
+      case "rzut":
+        if (!at.faces[index]) return null;
+        at = at.faces[index];
+        break;
+      case "gdy": {
+        const branch = index === 0 ? at.to : at.inaczej;
+        if (!branch) return null;
+        at = branch;
+        break;
+      }
+      default:
+        return null;
+    }
+  }
+  return at;
+}
+
 function owedIn(effect: Effect, queue: number[]): Effect | null {
   if (effect.op === "wybor") {
     const pick = queue.shift();
