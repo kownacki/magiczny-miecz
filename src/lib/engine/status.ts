@@ -82,6 +82,21 @@ export type Modifier =
    * same prohibition arriving as a status, so both are asked at one door.
    */
   | { kind: "no-spells" }
+  /**
+   * A crossing granted, to be taken instead of a move (Pan Trzęsawisk, Władca
+   * Lodu).
+   *
+   * „Będzie można (zamiast zwykłego ruchu) przebyć w dowolnym miejscu
+   * Trzęsawiska, przechodząc z Krainy Dolnego Kręgu do Krainy Środkowego Kręgu
+   * lub odwrotnie." Two things at once: the crossing may be made from anywhere
+   * rather than only at the one Obszar the board prints it on, and it is simply
+   * walked — 11.3's dice belong to the Uroczysko's own card, and this crosses
+   * somewhere else.
+   *
+   * Ends on the crossing itself, which `Ends` has named since it was written
+   * and `settleCrossing` already sheds.
+   */
+  | { kind: "przeprawa"; przez: "trzesawiska" | "lodowy-las" }
   /** Natura is forced to something while this lasts. */
   | { kind: "nature"; to: Nature }
   /**
@@ -228,6 +243,23 @@ export function untouchable(statuses: readonly Status[]): string | null {
     (status) => status.modifier.kind === "frozen" && status.source !== "tura-stracona",
   );
   return held ? held.label : null;
+}
+
+/**
+ * The obstacle this character may walk through wherever they stand, if any.
+ *
+ * One at a time is all the box can give: the two spells that grant it name
+ * different obstacles, and a character holding both would be told about the
+ * first — which is the one they cast first, and no worse an answer than asking
+ * them.
+ */
+export function grantedCrossing(
+  statuses: readonly Status[],
+): { przez: "trzesawiska" | "lodowy-las"; label: string } | null {
+  const held = statuses.find((status) => status.modifier.kind === "przeprawa");
+  if (!held) return null;
+  const modifier = held.modifier as { kind: "przeprawa"; przez: "trzesawiska" | "lodowy-las" };
+  return { przez: modifier.przez, label: held.label };
 }
 
 /** Whether anything is stopping the holder speaking a Zaklęcie (9.6). */
@@ -480,6 +512,10 @@ export function markOf(status: Status): Mark {
     // worse about the character, there is simply something they may not speak.
     case "no-spells":
       return { glyph: "⊘", tone: "zly", title };
+    // A way opened rather than a weight carried: the one mark here that is
+    // something a character *may* do.
+    case "przeprawa":
+      return { glyph: "⇥", tone: "dobry", title };
     case "move-max":
       return { glyph: "\u25B8", tone: "zly", title };
     case "nature":

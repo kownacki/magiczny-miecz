@@ -280,17 +280,33 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     stosuje: { op: "zabierz", co: "przyjaciel" },
   },
   /**
-   * Announced for the reason 11.2 is ◐: crossing anywhere is not wired.
+   * Applied. It was the card half of 11.2's „except by Łódź, or by field and
+   * card effects", and what was missing was a crossing from an arbitrary
+   * square.
    *
-   * "Przebyć w dowolnym miejscu Trzęsawiska" is the card half of "except by
-   * Łódź, or by field and card effects". The Łódź is encoded as an ability and
-   * the crossing points are the board's; a crossing from an arbitrary square is
-   * the missing piece, and it is the same piece the Władca Lodu wants.
+   * That arrives as a status the crossing door reads, which is the shape the
+   * rest of the sentence already had: the Łódź is an ability, the two crossing
+   * points are the board's, and this is a Zaklęcie's. The obstacle is then
+   * simply walked — 11.3's two dice are the Uroczysko's own card and this
+   * crosses somewhere else — and where they land is the far side of the
+   * crossing leading out of the Kraina they are in, since each obstacle has one
+   * in each direction.
+   *
+   * `ends: crossing` was waiting for exactly this. The Ends union has named the
+   * event since it was written and only the Południca raised it; a granted
+   * crossing is spent by being taken, and `settleCrossing` already sheds
+   * anything ending that way.
    */
   "pan-trzesawisk": {
     timing: ["zamiast-ruchu"],
     target: "siebie-lub-postac",
     effect: "Przebądź Trzęsawiska w dowolnym miejscu, w obie strony.",
+    stosuje: {
+      op: "efekt",
+      label: "Pan Trzęsawisk",
+      modifier: { kind: "przeprawa", przez: "trzesawiska" },
+      ends: { kind: "event", what: "crossing" },
+    },
   },
   "powiew-smierci": {
     timing: ["spotkanie"],
@@ -369,11 +385,17 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * on the board.
      */
   },
-  /** Announced, and blocked on exactly what the Pan Trzęsawisk is — 11.6's half of it. */
+  /** Applied, by exactly what unblocked the Pan Trzęsawisk — 11.6's half of it. */
   "wladca-lodu": {
     timing: ["zamiast-ruchu"],
     target: "siebie-lub-postac",
     effect: "Przebądź Lodowy Las w dowolnym miejscu, w obie strony.",
+    stosuje: {
+      op: "efekt",
+      label: "Władca Lodu",
+      modifier: { kind: "przeprawa", przez: "lodowy-las" },
+      ends: { kind: "event", what: "crossing" },
+    },
   },
   /**
    * Announced. There is no moment for it to happen in.

@@ -120,6 +120,68 @@ describe("przeprawa między Kręgami (11.4, 11.8)", () => {
     });
   });
 
+  /**
+   * The Pan Trzęsawisk and the Władca Lodu: „przebyć w dowolnym miejscu".
+   *
+   * The board prints two crossing points and this is neither of them — the
+   * Zaklęcie opens the obstacle wherever the character is standing, and the
+   * obstacle is walked rather than tested.
+   */
+  describe("a crossing a Zaklęcie opened", () => {
+    const withSpell = (fieldId: string, przez: "trzesawiska" | "lodowy-las") =>
+      aTable({
+        game: {
+          turn: 3,
+          active_seat: 0,
+          turn_state: { phase: "roll" } as never,
+        },
+        seats: [aSeat({ seat_index: 0, field_id: fieldId as never })],
+        effects: [
+          {
+            id: "eff-1",
+            seat_id: "seat-a",
+            source: "PAN TRZĘSAWISK",
+            label: przez === "trzesawiska" ? "Pan Trzęsawisk" : "Władca Lodu",
+            modifier: { kind: "przeprawa", przez },
+            ends: { kind: "event", what: "crossing" },
+          },
+        ],
+      });
+
+    it("crosses from an Obszar the board has no crossing on", async () => {
+      const { writes, result } = await crossRing(
+        withSpell("karczma", "trzesawiska"),
+        {},
+        ports(),
+      );
+      // Out of the Kraina they are in, by the crossing that leads that way.
+      expect(result.to).toBe("las-blednych-ogni");
+      expect(result.outcome).toBe("udana");
+      expect(writes.journal?.[0]).toMatchObject({
+        kind: "crossing",
+        payload: { from: "karczma", to: "las-blednych-ogni" },
+      });
+    });
+
+    it("is spent by being taken", async () => {
+      const { writes } = await crossRing(withSpell("karczma", "trzesawiska"), {}, ports());
+      expect(writes.effects?.delete).toEqual(["eff-1"]);
+    });
+
+    it("throws no dice: 11.3's test belongs to the Uroczysko's own card", async () => {
+      const { result } = await crossRing(withSpell("karczma", "trzesawiska"), {}, ports());
+      expect(result.dice).toBeUndefined();
+    });
+
+    it("refuses a Kraina the obstacle does not touch", async () => {
+      // The Lodowy Las lies between the middle ring and the upper one; the
+      // Karczma is on the lower.
+      await expect(
+        crossRing(withSpell("karczma", "lodowy-las"), {}, ports()),
+      ).rejects.toThrow(/nie z tej Krainy/);
+    });
+  });
+
   it("costs a point of Życie and leaves the character where it was", () => {
     const { writes, result } = settleCrossing(at("uroczysko", { life: 4 }), TRZESAWISKA, "przegrana");
     expect(result).toEqual({ to: null });

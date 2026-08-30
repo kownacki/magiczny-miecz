@@ -7,7 +7,7 @@ import {
   isFerry,
   type BridgeEntrance,
 } from "@/lib/engine/board";
-import { crossingFrom, trzesawiskaOutcome, type Crossing } from "@/lib/engine/rings";
+import { CROSSINGS, crossingFrom, trzesawiskaOutcome, type Crossing } from "@/lib/engine/rings";
 import {
   BRIDGE_GUARDIAN,
   BRIDGE_ORDEAL,
@@ -42,7 +42,7 @@ import {
 
 import { asReturnable, putOnPile } from "./piles";
 import { keepOnly, statusesOf } from "./turn";
-import { afterEvent } from "@/lib/engine/status";
+import { afterEvent, grantedCrossing } from "@/lib/engine/status";
 import { spendLife } from "./life";
 import { activeSeat, pointsOf, seatView } from "./seat";
 
@@ -481,9 +481,38 @@ export async function crossRing(
   const seat = activeSeat(snapshot);
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
 
-  const crossing = crossingFrom(seat.field_id);
+  /**
+   * A crossing a Zaklęcie opened, taken from wherever the character stands.
+   *
+   * „Przebyć w dowolnym miejscu Trzęsawiska" — so the board's two crossing
+   * points stop being the only way through, and the obstacle is simply walked:
+   * 11.3's two dice are the Uroczysko's own card, and this crosses somewhere
+   * else. Preferred over the printed crossing when both are available, because
+   * a character standing at the Uroczysko with the spell in hand has been given
+   * exactly that.
+   *
+   * Which way: the crossing for that obstacle that leads *out* of the Kraina
+   * the character is in. Each obstacle has one in each direction, so where they
+   * land is the far side of the one they are taking rather than a choice.
+   */
+  const granted = grantedCrossing(statusesOf(snapshot, seat.id));
+  const here = FIELDS.get(seat.field_id);
+  const opened = granted
+    ? CROSSINGS.find(
+        (one) =>
+          one.obstacle === granted.przez &&
+          FIELDS.get(one.from)?.region === here?.region,
+      )
+    : undefined;
+  const crossing: Crossing | undefined = opened
+    ? { from: seat.field_id, to: opened.to, obstacle: opened.obstacle }
+    : crossingFrom(seat.field_id);
   if (!crossing) {
-    throw new Error("Z tego Obszaru nie można przejść do innego Kręgu (11.1, 11.5).");
+    throw new Error(
+      granted
+        ? `${granted.label} otwiera przeprawę, ale nie z tej Krainy.`
+        : "Z tego Obszaru nie można przejść do innego Kręgu (11.1, 11.5).",
+    );
   }
 
   let outcome: CrossOutcome = "udana";
