@@ -113,6 +113,15 @@ export type Modifier =
    */
   | { kind: "znowu" }
   /**
+   * The next point of Życie that would be lost, is not (OCALONY).
+   *
+   * „Dla Postaci oznacza ocalenie przed stratą punktu Życia jeżeli taka strata
+   * ma nastąpić." Spent by being used, which is what `dispelled` means for a
+   * status nothing else lifts: it waits until a loss is about to happen and
+   * takes it instead.
+   */
+  | { kind: "ocalenie" }
+  /**
    * A Zaklęcie spoken and not yet in effect, waiting to be answered.
    *
    * The three cards that answer one — WŁADCA ZAKLĘĆ „neguje działanie każdego
@@ -130,15 +139,6 @@ export type Modifier =
    * anybody else's hand there is nothing to wait for, and the spell simply
    * happens — which is almost every cast in almost every game.
    */
-  /**
-   * The next point of Życie that would be lost, is not (OCALONY).
-   *
-   * „Dla Postaci oznacza ocalenie przed stratą punktu Życia jeżeli taka strata
-   * ma nastąpić." Spent by being used, which is what `dispelled` means for a
-   * status nothing else lifts: it waits until a loss is about to happen and
-   * takes it instead.
-   */
-  | { kind: "ocalenie" }
   | {
       kind: "spoken";
       spell: string;
@@ -151,6 +151,15 @@ export type Modifier =
         fieldCardId?: string;
         note?: string;
       };
+      /**
+       * What the caster had already answered, kept for when it lands.
+       *
+       * The Władca Zdarzeń asks where the Karta goes, and the answer arrives
+       * with the cast. Dropped here, the spell would settle half an hour later
+       * with the question unanswered — and settle silently, because a cast that
+       * pends writes nothing and says nothing.
+       */
+      decided?: { choices?: number[]; destination?: string };
     }
   /** Natura is forced to something while this lasts. */
   | { kind: "nature"; to: Nature }
@@ -405,11 +414,18 @@ export function spokenSpell(
     fieldCardId?: string;
     note?: string;
   };
+  decided?: { choices?: number[]; destination?: string };
 } | null {
   const held = statuses.find((status) => status.modifier.kind === "spoken");
   if (!held) return null;
   const modifier = held.modifier as Extract<Modifier, { kind: "spoken" }>;
-  return { id: held.id, spell: modifier.spell, until: modifier.until, target: modifier.target };
+  return {
+    id: held.id,
+    spell: modifier.spell,
+    until: modifier.until,
+    target: modifier.target,
+    decided: modifier.decided,
+  };
 }
 
 /**

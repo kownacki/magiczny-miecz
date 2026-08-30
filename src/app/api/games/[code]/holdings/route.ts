@@ -119,6 +119,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
               ...(body.fieldId ? { fieldId: requireFieldId(String(body.fieldId)) } : {}),
               ...(body.note ? { note: String(body.note) } : {}),
             },
+            // The one answer a Zaklęcie asks for: where the Karta it moves is
+            // to go. Narrowed here, at the door, like every other field id.
+            body.destination
+              ? { destination: requireFieldId(String(body.destination)) }
+              : {},
           ),
         );
       /**

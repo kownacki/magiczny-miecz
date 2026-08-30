@@ -57,6 +57,8 @@ import {
 } from "../change";
 import { liftOffField } from "./holdings";
 import { applyEffect, type Decisions } from "./effects";
+import type { Effect } from "@/lib/engine/cardScript";
+import { summariseEffect } from "@/lib/engine/effectText";
 import { asReturnable, putOnPile } from "./piles";
 import {
   activeSeat,
@@ -593,6 +595,7 @@ function standingSpell(
   spell: string;
   until: number;
   target: NonNullable<CastSpell["target"]>;
+  decided: Decisions | undefined;
 } | null {
   for (const row of snapshot.effects) {
     const modifier = row.modifier as { kind: string } & Record<string, unknown>;
@@ -604,6 +607,7 @@ function standingSpell(
       spell: modifier.spell as string,
       until: modifier.until as number,
       target: (modifier.target ?? {}) as NonNullable<CastSpell["target"]>,
+      decided: modifier.decided as Decisions | undefined,
     };
   }
   return null;
@@ -679,6 +683,7 @@ async function answerSpell(
         // Turned round: it lands on the one who spoke it, and what it takes is
         // taken for the one who held the mirror.
         target: { ...waiting.target, seatIndex: back.seat_index },
+        ...(waiting.decided ? { decided: waiting.decided } : {}),
         toSeatId: caster.id,
         shuffle: input.shuffle,
       },
@@ -745,7 +750,7 @@ async function landSpell(
     toSeatId?: string;
   },
   ports: CommandPorts,
-): Promise<{ writes: Changeset; did: string[]; took?: string[] }> {
+): Promise<{ writes: Changeset; did: string[]; took?: string[]; pending?: Effect }> {
   const { target } = input;
   const caster = snapshot.seats.find((one) => one.id === input.casterId);
   if (!caster) throw new Error("Nie ma takiego gracza.");
@@ -805,6 +810,9 @@ async function landSpell(
     writes: mergeAll(applied?.writes ?? {}, worked?.writes ?? {}),
     did: worked?.result.did ?? [],
     ...(applied ? { took: applied.took } : {}),
+    // What the effect still wants answered. The caller decides what to do with
+    // it, and for a cast the answer is "nothing yet" — see `castSpell`.
+    ...(worked?.result.pending ? { pending: worked.result.pending } : {}),
   };
 }
 
@@ -1035,6 +1043,9 @@ export async function castSpell(
               spell: held.card_id,
               until: ports.now() + FLOOR_MS,
               ...(Object.keys(target).length > 0 ? { target } : {}),
+              // Everything the caster has already answered travels with it —
+              // see the modifier's own note.
+              ...(command.decided ? { decided: command.decided } : {}),
             },
             ends: { kind: "dispelled" },
           },
@@ -1079,6 +1090,22 @@ export async function castSpell(
     },
     ports,
   );
+  /**
+   * An answer the card still wants, and the card not yet spent.
+   *
+   * `applyEffect` hands back what it could not carry out — the Władca Zdarzeń
+   * asks where the Karta goes — and `landSpell` used to drop it on the floor:
+   * the changeset would commit with the Zaklęcie on the used pile and nothing
+   * having happened. Throwing writes nothing at all, which is the one property
+   * of a Command that makes this safe to get wrong: the hand is untouched and
+   * the caster casts again with the answer.
+   */
+  if (landed.pending) {
+    throw new Error(
+      `${spell?.name ?? held.card_id} — ${summariseEffect(landed.pending)}: wskaż to i rzuć jeszcze raz.`,
+    );
+  }
+
   const applied = landed.took !== undefined ? { took: landed.took } : null;
   const worked = landed.did.length > 0 ? { result: { did: landed.did } } : null;
 
@@ -1187,7 +1214,12 @@ export async function settleSpell(
   const dropped: Changeset = { effects: { delete: [waiting.id] } };
   const landed = await landSpell(
     apply(snapshot, dropped),
-    { casterId: waiting.seatId, cardId: waiting.spell, target: waiting.target },
+    {
+      casterId: waiting.seatId,
+      cardId: waiting.spell,
+      target: waiting.target,
+      ...(waiting.decided ? { decided: waiting.decided } : {}),
+    },
     ports,
   );
   const spell = SPELL_BY_ID.get(waiting.spell);

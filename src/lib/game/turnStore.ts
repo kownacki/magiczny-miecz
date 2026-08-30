@@ -564,8 +564,16 @@ export async function castSpell(
     fieldCardId?: string;
     fieldId?: FieldId;
   } = {},
+  /**
+   * What the caster has already answered of the spell's own effect.
+   *
+   * One card asks anything at all — the Władca Zdarzeń, „na inny Obszar w tym
+   * samym Kręgu" — and a cast that arrives without it is refused rather than
+   * spent, so this is how the second attempt carries the answer.
+   */
+  decided: Decisions = {},
 ): Promise<Cast> {
-  return change(gameId, castSpellOn, { seatId, holdingId, target });
+  return change(gameId, castSpellOn, { seatId, holdingId, target, decided });
 }
 
 /**

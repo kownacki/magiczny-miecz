@@ -71,6 +71,15 @@ export interface Requests {
      */
     fieldId: string;
     /**
+     * `cast`: where the Karta a Zaklęcie moves is to be put down.
+     *
+     * „Na inny Obszar w tym samym Kręgu" — the Władca Zdarzeń, and the only
+     * question any Zaklęcie in the box asks its caster. A cast that arrives
+     * without it is refused rather than spent, so this is what the second
+     * attempt carries.
+     */
+    destination: string;
+    /**
      * `settle-spell`: nobody is going to answer, so let it happen now.
      *
      * A Zaklęcie waits in the air while somebody could answer it (9.6), and the

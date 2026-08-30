@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
-import { castSpell } from "./fight";
+import { castSpell, settleSpell } from "./fight";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS } from "@/lib/engine/spells";
 import { manualNote } from "@/lib/engine/coverage";
@@ -184,5 +184,111 @@ describe("every Zaklęcie is carried out, and the halves that are not are named"
     for (const [id, script] of Object.entries(SPELLS as Record<string, { effect: string }>)) {
       expect(script.effect.length, id).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * The one Zaklęcie that asks its caster a question.
+ *
+ * „Przenieś odkrytą Kartę Zdarzeń na inny, nie zajęty Obszar w tym samym
+ * Kręgu" — which Karta *and* where to. Everything else in the deck is answered
+ * by naming a target; this one needs a second answer, and the engine used to
+ * throw it away: `applyEffect` handed back what it could not carry out and
+ * `landSpell` dropped it, so the changeset committed with the card on the used
+ * pile and the Karta exactly where it had been.
+ */
+describe("Władca Zdarzeń, and the answer it waits for", () => {
+  const HERE = "wrzosowiska";
+  const lying = { id: "fc1", field_id: HERE, card_id: "cyklop", granted: false };
+
+  const table = (over: { seats?: unknown[] } = {}) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          phase: "field", fieldId: HERE, from: null, draw: 0, drawn: [], resolved: [],
+        } as TurnPhase,
+      },
+      seats: (over.seats as never) ?? [
+        aSeat({
+          id: "seat-a", seat_index: 0, character_id: asSeatCharacter("awanturnik"),
+          field_id: "krag-mocy", life: 2, sword_own: 3, magic_own: 3,
+        }),
+      ],
+      holdings: [
+        aHolding({ id: "s1", seat_id: "seat-a", card_id: "wladca-zdarzen", kind: "spell" }),
+      ],
+      fieldCards: [lying],
+    });
+
+  const speak = (t: ReturnType<typeof aTable>, decided?: { destination: string }) =>
+    castSpell(
+      t,
+      {
+        seatId: "seat-a",
+        holdingId: "s1",
+        target: { fieldCardId: "fc1" },
+        ...(decided ? { decided: decided as never } : {}),
+      },
+      ports({ random: scriptedRandom([]) }),
+    );
+
+  /**
+   * Refused rather than spent. A Command writes all of its changeset or none of
+   * it, so throwing is what keeps the hand intact — the caster names an Obszar
+   * and casts again.
+   */
+  it("refuses a cast that has not said where, and spends nothing", async () => {
+    const t = table();
+    await expect(speak(t)).rejects.toThrow(/WŁADCA ZDARZEŃ/i);
+    expect(t.holdings.map((h) => h.id)).toEqual(["s1"]);
+    expect(t.fieldCards[0].field_id).toBe(HERE);
+  });
+
+  it("moves the Karta once it has", async () => {
+    const t = table();
+    const out = await speak(t, { destination: "mroczna-polana" });
+    const after = apply(t, out.writes);
+    expect(after.fieldCards.map((row) => [row.card_id, row.field_id])).toEqual([
+      ["cyklop", "mroczna-polana"],
+    ]);
+    // 9.6 spends the card whatever comes of it.
+    expect(after.holdings.some((h) => h.id === "s1")).toBe(false);
+  });
+
+  /**
+   * The answer has to survive the wait.
+   *
+   * With somebody holding a Zwierciadło the cast hangs in the air for half a
+   * minute, and what settles it later is a different call with a different
+   * snapshot. The destination is the caster's and was given at the cast, so it
+   * travels on the status — without it the spell settles silently, having asked
+   * a question nobody is there to answer.
+   */
+  it("remembers where, across the window somebody could answer in", async () => {
+    const t = table({
+      seats: [
+        aSeat({
+          id: "seat-a", seat_index: 0, character_id: asSeatCharacter("awanturnik"),
+          field_id: "krag-mocy", life: 2, sword_own: 3, magic_own: 3,
+        }),
+        aSeat({
+          id: "seat-b", seat_index: 1, character_id: asSeatCharacter("elf"),
+          field_id: "kurhan", life: 3,
+        }),
+      ],
+    });
+    t.holdings.push(
+      aHolding({ id: "s2", seat_id: "seat-b", card_id: "zwierciadlo", kind: "spell" }),
+    );
+
+    const spoken = await speak(t, { destination: "mroczna-polana" });
+    const waiting = apply(t, spoken.writes);
+    // Nothing has happened yet: the Karta is where it was.
+    expect(waiting.fieldCards[0].field_id).toBe(HERE);
+
+    const settled = await settleSpell(waiting, { force: true }, ports({ random: scriptedRandom([]) }));
+    const after = apply(waiting, settled.writes);
+    expect(after.fieldCards.map((row) => row.field_id)).toEqual(["mroczna-polana"]);
   });
 });
