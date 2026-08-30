@@ -185,6 +185,21 @@ export type Ability =
    * the caster.
    */
   | { kind: "odporny-na-zaklecie"; zaklecia: readonly string[] }
+  /**
+   * Points at named Obszary, on whichever parameter the Obszar reads.
+   *
+   * "Właściciel Kości ma prawo dodać sobie 1 punkt Miecza lub Magii w Pułapce
+   * albo Magicznej Pułapce." The "lub" is the holder's choice and it is moot
+   * where it lands: each Pułapka compares exactly one of the two — the Pułapka
+   * Miecz and the Magiczna Pułapka Magia (14.5, `BRIDGE_SIDE`) — so the point
+   * goes on the one being read whichever the holder would have named.
+   *
+   * Distinct from `modyfikator-rzutu`, which moves the *dice*. Against three
+   * dice and a threshold the two are arithmetically the same, and they are not
+   * the same rule: this card says "punkt Miecza", and a rule written as a die
+   * shift would be wrong the moment anything else read the number.
+   */
+  | { kind: "punkty-na-polach"; fields: readonly FieldId[]; punkty: number }
   /** Rusałka: one die at the Trzęsawiska instead of the usual two. */
   | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
   /**
@@ -340,7 +355,6 @@ export type Ability =
  * read what they are holding.
  */
 export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = {
-  "czarodziejska-kosc": ["+1 Miecza lub Magii w Pułapce i Magicznej Pułapce — wybierasz"],
   "poszukiwacz-przygod": ["atakuje Postać lub Wroga do 3 Obszarów stąd, po twoim ruchu"],
   "diament-krolow": [
     "sprzedasz w Zamku za 5 Sz. Z.",
@@ -488,10 +502,11 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
       delta: -2,
     },
   ],
-  // Only the second half of the Kość fits a kind. Its first half — a point of
-  // Miecza or Magii in the two Pułapki, chosen by the player — is written out
-  // in CARD_NOTES instead of being left on the card.
+  // Both halves of the Kość, and they are two different rules: a point of
+  // Miecza or Magii inside the two Pułapki, and a shift of the die everywhere
+  // else on the Most.
   "czarodziejska-kosc": [
+    { kind: "punkty-na-polach", fields: ["pulapka", "magiczna-pulapka"], punkty: 1 },
     {
       kind: "modyfikator-rzutu",
       gdzie: {
@@ -800,6 +815,24 @@ export function immuneToSpell(abilities: readonly Ability[], spellId: string): b
  * stos. `spellsOverLimit` adds because two wands really do raise the ceiling
  * twice; this is a look, and the wider look contains the narrower.
  */
+/**
+ * What a held card adds to the parameter this Obszar reads, standing here.
+ *
+ * Only the Czarodziejska Kość, and only in the two Pułapki. Summed rather than
+ * maxed, because two such cards really would be two points — unlike a *look*
+ * at a pile, where the wider contains the narrower.
+ */
+export function pointsAt(abilities: readonly Ability[], fieldId: FieldId | null): number {
+  if (fieldId === null) return 0;
+  return abilities.reduce(
+    (points, ability) =>
+      ability.kind === "punkty-na-polach" && ability.fields.includes(fieldId)
+        ? points + ability.punkty
+        : points,
+    0,
+  );
+}
+
 export function spellsPeeked(abilities: readonly Ability[]): number {
   return abilities.reduce(
     (widest, ability) =>

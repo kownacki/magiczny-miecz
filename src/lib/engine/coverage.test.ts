@@ -67,8 +67,11 @@ describe("what the app claims about itself", () => {
     expect(coverageOf("wampir")).toBe("brak");
     expect(coverageOf("jednorozec")).toBe("pelne");
     // Excalibur was the example here until its Życie-stealing clause was
-    // encoded; Czarodziejska Kość still carries a note nothing acts on.
-    expect(coverageOf("czarodziejska-kosc")).toBe("czesciowe");
+    // encoded, and the Czarodziejska Kość until its point in the two Pułapki
+    // was. The Łódź is the current one: the turn's delay and the discard are
+    // carried, and where the crossing puts you down is still the table's,
+    // because cross-ring adjacency is nowhere in this repo.
+    expect(coverageOf("lodz")).toBe("czesciowe");
   });
 
   it("does not disclaim a card it carries in one of the other two registries", () => {

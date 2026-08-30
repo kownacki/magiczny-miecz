@@ -50,8 +50,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // `modifiers.test.ts` the whole time. A note that tells a table to watch
   // something the referee is already watching is the same wasted vigilance as
   // no referee at all.
-  "czarodziejska-kosc":
-    "W Pułapce i Magicznej Pułapce daje zamiast tego 1 punkt Miecza lub Magii.",
   // The KOŃ, the MUŁ and the ZAPRZĘG were here for "Przedmioty te pozostaną na
   // Obszarze, na którym utraciłeś Konia", and all three were stale. Losing the
   // transport drops `carryLimit`, `refuseWhileOverLimit` stops the turn at its

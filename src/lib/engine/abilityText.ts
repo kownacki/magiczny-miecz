@@ -390,6 +390,8 @@ export function describeAbility(ability: Ability): string {
       return `+${ability.count} Zaklęcie ponad limit (2.6)`;
     case "podglad-zaklec":
       return `biorąc Zaklęcie, oglądasz ${ability.count} pierwsze Karty i wybierasz jedną`;
+    case "punkty-na-polach":
+      return `+${ability.punkty} Miecza lub Magii: ${fieldNames(ability.fields)}`;
     case "odporny-na-zaklecie":
       return `odporność na: ${ability.zaklecia.map((id) => cardName(id)).join(", ")}`;
   }

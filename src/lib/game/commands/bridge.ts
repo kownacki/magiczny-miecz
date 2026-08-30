@@ -19,7 +19,7 @@ import {
   rollDice,
   trapOutcome,
 } from "@/lib/engine/bridge";
-import { crossingDice, tollIsWaived } from "@/lib/engine/abilities";
+import { crossingDice, pointsAt, tollIsWaived } from "@/lib/engine/abilities";
 import type { CombatResult } from "@/lib/engine/combat";
 import {
   afterMove,
@@ -627,8 +627,17 @@ export async function resolveBridgeOrdeal(
     // traps, so it has one — but the table says so rather than the code
     // assuming it.
     const side = BRIDGE_SIDE[here] ?? "sword";
+    /**
+     * The Czarodziejska Kość, which is worth a point here and nowhere else.
+     *
+     * "Właściciel Kości ma prawo dodać sobie 1 punkt Miecza lub Magii w
+     * Pułapce albo Magicznej Pułapce." The "lub" is the holder's choice and it
+     * is moot: each trap compares exactly one of the two, so the point lands on
+     * the one being read whichever they would have named.
+     */
+    const boost = pointsAt(seatView(snapshot, seat.id).abilities, here);
     const dice = await rollDice(ports.random, 3, "pulapka");
-    const fall = trapOutcome(dice, side === "magic" ? totals.magia : totals.miecz, side);
+    const fall = trapOutcome(dice, (side === "magic" ? totals.magia : totals.miecz) + boost, side);
 
     if (!fall.fell) {
       return {
