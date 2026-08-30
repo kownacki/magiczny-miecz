@@ -18,7 +18,7 @@ import {
 } from "@/lib/engine/console";
 import { cardName } from "@/lib/engine/polish";
 import { combatValueOf } from "@/lib/engine/cards";
-import { EVENTS } from "./decks";
+import { EVENTS, SPELL_BY_REF } from "./decks";
 import { TROPHY_RATE, offersFor } from "./commands/shop";
 import { carriesSpell, fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
@@ -88,12 +88,15 @@ import {
   stageFight,
   takeNewCharacter,
   turnToStone,
+  answerAsk,
   answerScript,
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { only, replaceTop, top } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
+import { askOnTop } from "@/lib/engine/ask";
+import type { Snapshot } from "./change";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
 import { GIVEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
@@ -203,6 +206,29 @@ function frameLabel(frame: TurnPhase): string {
     return `${frame.of.cardName}: ${frame.round} ${frame.done + 1} z ${frame.times}`;
   }
   return PHASE[frame.phase] ?? frame.phase;
+}
+
+/**
+ * The `ask` frame written out, with its options numbered for `answer <n>`.
+ *
+ * Shown only to the seat it is waiting on. The two Karty are off the top of a
+ * pile nobody may see (9.3, and `withoutDeck`), so a console driving another
+ * seat is told that somebody is choosing and not what they are choosing
+ * between — the same line every other device gets.
+ */
+function askLines(snapshot: Snapshot, forSeatId: string | null): string[] {
+  const frame = askOnTop(snapshot.game.turn_state);
+  if (!frame) return [];
+  const who = snapshot.seats.find((one) => one.id === frame.seatId);
+  const whose = who ? nameOfSeat(snapshot.users, who.seat_index) : "somebody";
+  if (forSeatId !== frame.seatId) return [`${whose} is choosing a Zaklęcie (9.3 — not yours to see).`];
+  return [
+    `${frame.reason}: pick one — \`answer <n>\``,
+    ...frame.question.refs.map((ref, at) => {
+      const spell = SPELL_BY_REF.get(ref);
+      return `  ${at} — ${spell ? cardName(spell.id) : ref}`;
+    }),
+  ];
 }
 
 /** The question the turn is stuck on, for `look`. */
@@ -1601,8 +1627,20 @@ export async function runCommand(
      */
     case "answer": {
       const snapshot = await activeStore().load(gameId);
-      // A suspended card outranks everything: the frame is what the turn is
-      // stuck on, and the answer goes to it.
+      // A question owed to a Charakterystyka outranks even a suspended card,
+      // because it is what is literally on screen — a `zaklecie` step that
+      // asked put this above its own frame.
+      const asked = askOnTop(snapshot.game.turn_state);
+      if (asked) {
+        const pick = command.choices?.[0];
+        if (pick === undefined) {
+          throw new Error(askLines(snapshot, asked.seatId).join("\n"));
+        }
+        const took = await answerAsk(gameId, asked.seatId, pick);
+        return `${cardName(took)} taken.`;
+      }
+      // A suspended card outranks everything else: the frame is what the turn
+      // is stuck on, and the answer goes to it.
       if (top(snapshot.game.turn_state).phase === "script") {
         const done = await answerScript(gameId, { choices: command.choices });
         return said(done.did, done.pending !== null);
@@ -1955,6 +1993,10 @@ export async function runCommand(
       const spellId = command.wand
         ? await drawSpellWithWand(gameId, seat.id)
         : await drawSpell(gameId, seat.id);
+      // Null is the Chochlik: nothing was dealt, a question is on screen
+      // instead. Read back rather than guessed at, so the console names the
+      // Karty the server actually lifted — and only for the seat they are for.
+      if (spellId === null) return askLines(await activeStore().load(gameId), seat.id).join("\n");
       return `${named(seat)} draws ${cardName(spellId)}.`;
     }
   }

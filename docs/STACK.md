@@ -1,9 +1,10 @@
 # The resolution stack
 
-**Status: step 3 open, first card in** (2026-08-31). The Trójgłowy Smok is the
+**Status: step 3 open, two cards in** (2026-08-31). The Trójgłowy Smok is the
 `loop` frame's first occupant — three heads, one at a time, regrown on
-anything but a win — and his MANUAL entry is deleted. What that took, and the
-narrowings it settled, is below the steps table.
+anything but a win — and the CHOCHLIK is the `ask` frame's, the first question
+in the box that belongs to no card script. Both MANUAL entries are deleted.
+What each took, and the narrowings they settled, is below the steps table.
 
 **Status: step 2 built** (2026-08-30). The walker suspends into `script` frames
 with a cursor and resumes through `continueTopScript`; the all-or-nothing gate
@@ -235,6 +236,32 @@ entry is gone.
 - **No new journal kind.** A round is still 17.4 and still a fight ending, so
   it is a `fight-end` line carrying which head it was — a new kind would have
   cost a migration for a sentence that already had a home.
+
+**Step 3's second card: the CHOCHLIK and the standalone `ask`** (2026-08-31).
+Step 2 recorded that the `ask` kind had no occupant until this card, "whose
+question belongs to no card script". It does now, and it brought four
+decisions with it:
+
+- **`question` is its own union, not an `Effect`.** The sketch had
+  `question: Effect`, and the first occupant cannot use it: "which of these two
+  Zaklęcia" is about two refs off a pile, and writing it as an `Effect` would
+  mean inventing an op no authored card contains. A `Question` union of one
+  sits on the frame instead, shaped so a second member is a member and not a
+  special case.
+- **The Karty are lifted, not pointed at.** The two come off the pile when the
+  question opens and wait on the frame. That is what makes the offer honest —
+  nothing drawn in between can change what was offered — and it is the reason
+  the frame needs redacting, which a "top two of the pile" pointer would not.
+- **`envelopeFor` is now the third door the deck's secret could walk through**,
+  after `deck` and `seed`. `asSeenBy` empties the refs for every device but the
+  one seat's and sends `count` in their place: the table may see two cards held
+  up (9.3), and no more. The browser draws backs from the count.
+- **`suspended.opens` became a union.** A `zaklecie` step inside a `po-kolei`
+  suspends the same way a `walka` does, and `framed` opens whichever kind was
+  asked for — so the card carries on after the answer instead of losing its
+  tail. Only for `count: 1`, which is every `zaklecie` in the box; the
+  Nieznajomy's price is charged before the question, because the coin buys the
+  draw and the draw has happened by the time anything is on screen.
 
 **Go/no-go after step 2**, before anything in step 3 deletes a MANUAL entry.
 Not "point of no return" — git reverts anything — but the **last cheap exit**,

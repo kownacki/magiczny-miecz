@@ -17,6 +17,7 @@ import { resolutionOrder, type TurnCard } from "./state";
 import type { Crossing } from "./rings";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 import type { Effect } from "./cardScript";
+import type { CardRef } from "./deck";
 
 /**
  * A turn is rule 10.1's two steps — move, then deal with where you landed —
@@ -164,7 +165,65 @@ export type TurnPhase =
        */
       settles: string[];
     }
+  /**
+   * A question owed to a seat that no card script is asking (docs/STACK.md,
+   * the shape).
+   *
+   * Most questions in this game are a `wybor` inside a Karta's own effect, and
+   * a `script` frame standing on one *is* the ask — seat, question and all.
+   * This frame is for the ones printed on a Charakterystyka instead, where
+   * there is no script and no cursor: the Chochlik's "pozwoli ci obejrzeć
+   * pierwsze 2 Karty ze stosu i wybrać tę, która najbardziej ci odpowiada".
+   *
+   * The cards being chosen between are **off the pile and held here**, not
+   * merely pointed at. That is what makes the choice honest: the two are
+   * committed to the moment the question is asked, so nothing drawn between
+   * the asking and the answering can change what was offered. It is also why
+   * `envelopeFor` redacts them for every device but the one seat's — the
+   * stored `deck` never travels (see `withoutDeck`), and two cards lifted off
+   * the top of it are exactly the secret that rule keeps.
+   */
+  | {
+      phase: "ask";
+      /** Law 5: whose answer this is. */
+      seatId: string;
+      /** The Karta whose Charakterystyka is asking, for the journal and the panel. */
+      cardId: string | null;
+      /** What to call this on screen — "CHOCHLIK". */
+      reason: string;
+      question: Question;
+    }
   | { phase: "end" };
+
+/**
+ * What an `ask` frame is waiting to be told.
+ *
+ * A union of one, and shaped so the second member is a shape rather than a
+ * special case. The sketch in docs/STACK.md had `question: Effect`, which the
+ * first occupant cannot use: "which of these two Zaklęcia" is about two refs
+ * off a pile, and writing it as an `Effect` would mean inventing an op no
+ * authored card contains. So the frame carries the question itself.
+ */
+export type Question = {
+  kind: "ktore-zaklecie";
+  /**
+   * How many Karty are being looked at.
+   *
+   * Public, and separate from `refs` for exactly that reason: a table can see
+   * somebody holding two cards up, so every device is told there are two. Which
+   * two is the part 9.3 keeps.
+   */
+  count: number;
+  /**
+   * The Karty lifted off the pile, in the order they came off.
+   *
+   * Refs and not ids, because the pile deals in copies: the box holds two of
+   * some Zaklęcia and putting the rejected one back has to put back *that*
+   * one. Secret — emptied by `envelopeFor` on the way out to every device but
+   * the one seat's, which is why `count` exists to be read instead.
+   */
+  refs: CardRef[];
+};
 
 /**
  * A fight in progress, kept in the turn state so every device at the table

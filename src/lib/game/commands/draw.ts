@@ -3,8 +3,10 @@
 import type { CardClass, EventCard } from "@/data/types";
 import type { EventId } from "@/data/ids";
 import { spellsAtSetup } from "@/lib/engine/characters";
-import { drawFrom, type Shuffle } from "@/lib/engine/deck";
-import { plural } from "@/lib/engine/polish";
+import { heldAbilities, spellsPeeked } from "@/lib/engine/abilities";
+import { openAsk, type AskFrame } from "@/lib/engine/ask";
+import { drawFrom, remaining, type Shuffle } from "@/lib/engine/deck";
+import { cardName, plural } from "@/lib/engine/polish";
 import { wandRefills } from "@/lib/engine/derive";
 import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { afterDraw } from "@/lib/engine/turn";
@@ -174,6 +176,15 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
 
 export interface DrawSpell extends FromThePile {
   seatId: string;
+  /**
+   * Set false to deal straight off the pile, past any Charakterystyka that
+   * would turn the deal into a question.
+   *
+   * For the two places where there is nobody to ask: the setup deal, which
+   * happens before anybody holds a Chochlik, and `answerAsk`, which is the
+   * answer and must not ask again.
+   */
+  peek?: boolean;
 }
 
 /**
@@ -187,7 +198,78 @@ export interface DrawSpell extends FromThePile {
  * other players may not see — and 9.5 is why an exhausted pile is not the end
  * of it.
  */
-export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<string> {
+/**
+ * Whether taking a Zaklęcie is a question rather than a deal, for this seat.
+ *
+ * Asked in two places — here, and by the `zaklecie` step deciding whether to
+ * suspend — so it is one predicate rather than two readings that have to agree.
+ * Exact rather than approximate: `remaining` counts both piles, and 9.5 turns
+ * the used one over, so a draw pile of one and a used pile of five can still
+ * show two cards.
+ *
+ * One card is not a choice, which is why two is the floor on both halves.
+ */
+export function peekDue(snapshot: Snapshot, seatId: string): boolean {
+  const peek = spellsPeeked(seatView(snapshot, seatId).abilities);
+  return peek >= 2 && remaining(decksOf(snapshot.game).spells) >= 2;
+}
+
+/**
+ * The Chochlik's look, which turns a deal into a question (9.2).
+ *
+ * "gdy będziesz chciał wziąć Zaklęcie, Przyjaciel pozwoli ci obejrzeć pierwsze
+ * 2 Karty ze stosu i wybrać tę, która najbardziej ci odpowiada."
+ *
+ * The cards come off the pile **now** rather than being pointed at, and wait on
+ * the frame until one is chosen. That is what makes the offer honest: nothing
+ * drawn between the looking and the choosing can change what was offered, and
+ * the pile is never in two states at once. It is also why the frame's refs are
+ * redacted on the way out to every device but this seat's — see `envelopeFor`.
+ *
+ * Null when no look is due: no Charakterystyka grants one, or the pile cannot
+ * show a second card, and one card is not a choice. The frame is built but not
+ * pushed, because where it goes depends on who is asking — straight onto the
+ * stack for a plain draw, above the `script` frame when a card was mid-sentence.
+ */
+export function peekSpells(
+  snapshot: Snapshot,
+  seatId: string,
+  shuffle: Shuffle,
+): { writes: Changeset; frame: AskFrame } | null {
+  if (!peekDue(snapshot, seatId)) return null;
+
+  const view = seatView(snapshot, seatId);
+  const decks = decksOf(snapshot.game);
+  const looked = drawFrom(decks.spells, spellsPeeked(view.abilities), shuffle);
+
+  // Which Karta is doing the offering, asked of the same abilities the number
+  // came from rather than named here — the Chochlik is the only one today, and
+  // this is where a second one would arrive without an edit.
+  const by =
+    view.holdings.find((one) => spellsPeeked(heldAbilities([one.cardId])) > 0)?.cardId ?? null;
+
+  return {
+    writes: {
+      game: { deck: { ...decks, spells: looked.deck } },
+      // No line for the looking. The frame is on screen and the whole table
+      // can see somebody choosing; what is worth writing down is the Zaklęcie
+      // that lands, and `answerAsk` writes that with the ordinary `spell` line
+      // — which is also the one line 9.3 keeps to a single seat.
+      journal: looked.recycled
+        ? [{ seatId: null, turn: snapshot.game.turn, kind: "reshuffle", payload: { pile: "zaklecia" } }]
+        : [],
+    },
+    frame: {
+      phase: "ask",
+      seatId,
+      cardId: by,
+      reason: by ? cardName(by) : "Zaklęcie",
+      question: { kind: "ktore-zaklecie", count: looked.drawn.length, refs: looked.drawn },
+    },
+  };
+}
+
+export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<string | null> {
   const seat = seatById(snapshot, command.seatId);
   const mine = holdingsOf(snapshot, seat.id);
   const held = mine.filter((h) => h.kind === "spell").length;
@@ -215,6 +297,39 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
   }
 
   const decks = decksOf(snapshot.game);
+
+  /**
+   * The Chochlik's look, which turns a deal into a question (9.2).
+   *
+   * "gdy będziesz chciał wziąć Zaklęcie, Przyjaciel pozwoli ci obejrzeć
+   * pierwsze 2 Karty ze stosu i wybrać tę, która najbardziej ci odpowiada."
+   *
+   * The cards come off the pile *now* rather than being pointed at, and wait on
+   * the frame until one is chosen — so what was offered cannot change between
+   * the looking and the choosing, and the pile is never in two states at once.
+   * `askedFor` is what the caller wanted this draw for, carried so the answer
+   * knows whether anything is waiting underneath.
+   *
+   * Skipped when the pile cannot show a second card: one card is not a choice,
+   * and 9.5's reshuffle has already been given its chance by `drawFrom` below.
+   */
+  if (command.peek !== false) {
+    const looked = peekSpells(snapshot, seat.id, command.shuffle);
+    if (looked) {
+      return {
+        writes: {
+          ...looked.writes,
+          game: {
+            ...looked.writes.game,
+            turn_state: openAsk(snapshot.game.turn_state, looked.frame),
+          },
+        },
+        // Nothing dealt yet: the seat has been asked, not given.
+        result: null,
+      };
+    }
+  }
+
   const { deck: after, drawn, recycled } = drawFrom(decks.spells, 1, command.shuffle);
   if (drawn.length === 0) throw new Error("Stos Kart Zaklęć jest pusty.");
   const spell = SPELL_BY_REF.get(drawn[0]);
@@ -276,7 +391,7 @@ const ROZDZKA_ZAKLEC: EventId = "rozdzka-zaklec";
  * not "raz". What bounds it is the setup hand — cast down to it, refill, and
  * that is as often as the wand can be asked.
  */
-export function drawSpellWithWand(snapshot: Snapshot, command: DrawSpell): Outcome<string> {
+export function drawSpellWithWand(snapshot: Snapshot, command: DrawSpell): Outcome<string | null> {
   const seat = seatById(snapshot, command.seatId);
   const mine = holdingsOf(snapshot, seat.id);
 

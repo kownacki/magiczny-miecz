@@ -102,6 +102,24 @@ export function stackOnTop(deck: DeckState, ref: CardRef): DeckState | null {
   return { draw: [ref, ...deck.draw], discard };
 }
 
+/**
+ * Puts cards back on the top of the draw pile, front first.
+ *
+ * For a card taken off the pile and not kept: the Chochlik lets you look at the
+ * first two and choose, and the one you did not choose is still the next card
+ * off the stos. Distinct from `stackOnTop`, which *moves* a ref already in a
+ * pile — this puts back one that is currently in neither, which is the only
+ * shape in which adding a ref does not mint a copy the box never had.
+ *
+ * A ref either pile already accounts for is dropped rather than doubled, so
+ * calling this twice by mistake cannot deal the same Zaklęcie to two people.
+ */
+export function putBackOnTop(deck: DeckState, refs: readonly CardRef[]): DeckState {
+  const accounted = new Set([...deck.draw, ...deck.discard]);
+  const back = refs.filter((ref) => !accounted.has(ref));
+  return { draw: [...back, ...deck.draw], discard: deck.discard };
+}
+
 /** Sets resolved cards aside. */
 export function discardTo(deck: DeckState, refs: readonly CardRef[]): DeckState {
   return { draw: deck.draw, discard: [...deck.discard, ...refs] };

@@ -388,5 +388,7 @@ export function describeAbility(ability: Ability): string {
       return "pokonujesz wszystkie Demony bez walki";
     case "zaklecia-ponad-limit":
       return `+${ability.count} Zaklęcie ponad limit (2.6)`;
+    case "podglad-zaklec":
+      return `biorąc Zaklęcie, oglądasz ${ability.count} pierwsze Karty i wybierasz jedną`;
   }
 }

@@ -34,6 +34,7 @@ import {
   claimSpellFloor,
   releaseSpellFloor,
   answerScript,
+  answerAsk,
 } from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
 import type { Decisions } from "@/lib/game/turnStore";
@@ -284,10 +285,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             decisionsFrom(body),
           ),
         );
-      case "answer":
-        // The suspended card on top of the stack, continued with what the
-        // player decided. Everything else about it lives on the frame.
+      case "answer": {
+        /**
+         * Two frames can be waiting, and the body says which by what it names.
+         *
+         * A `choice` is an `ask` — a question printed on a Charakterystyka,
+         * with the Karty it is offering held on the frame. Anything else is
+         * the suspended card, continued with what the player decided.
+         *
+         * The seat is not taken from the body: the frame names whose answer it
+         * is (law 5), and the command refuses anybody else. Passing the caller
+         * would let a device answer somebody's hidden hand for them.
+         */
+        const { choice } = body;
+        if (typeof choice === "number") {
+          return NextResponse.json({ spellId: await answerAsk(game.id, seat?.id ?? null, choice) });
+        }
         return NextResponse.json(await answerScript(game.id, decisionsFrom(body)));
+      }
       case "end":
         await finishTurn(game.id);
         break;

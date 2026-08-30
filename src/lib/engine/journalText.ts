@@ -794,7 +794,18 @@ export function describe(
      */
     case "spell": {
       const cast = typeof data.cardId === "string" || typeof data.name === "string";
-      if (!cast) return line(`${who} dobiera Zaklęcie.`);
+      // A Zaklęcie taken rather than spoken. The Karta that made it a choice is
+      // named when there was one — the Chochlik lets a player pick which of two
+      // they take, and a hand that improved for a reason should say the reason.
+      // Which Zaklęcie it was stays out of it: 9.3 keeps that to one seat, and
+      // the journal is read by the whole table.
+      if (!cast) {
+        return line(
+          typeof data.via === "string"
+            ? `${who} dobiera Zaklęcie — wybiera je dzięki: ${card(data.via)}.`
+            : `${who} dobiera Zaklęcie.`,
+        );
+      }
       const named = typeof data.name === "string" ? data.name : card(data.cardId);
       const at = typeof data.target === "string" ? ` na: ${data.target}` : "";
       return line(`${who} wypowiada Zaklęcie: ${named}${at}.`);

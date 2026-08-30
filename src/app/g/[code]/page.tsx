@@ -1,6 +1,7 @@
 "use client";
 
 import { ScriptFramePanel } from "./script-frame";
+import { AskFramePanel } from "./ask-frame";
 import { top } from "@/lib/engine/stack";
 import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
@@ -1132,6 +1133,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           }))}
           busy={busy}
           onAnswer={(decided) => post("turn", { action: "answer", ...decided })}
+        />
+      )}
+
+      {/* A question owed to a Charakterystyka rather than to a Karta — the
+          Chochlik's two Zaklęcia. Above the card that asked it, so this is
+          what is on screen; the two names reached only one device (9.3). */}
+      {turnState.phase === "ask" && (
+        <AskFramePanel
+          frame={turnState}
+          who={
+            seats.find((seat) => seat.id === turnState.seatId)?.player_name ?? "gracz"
+          }
+          canAct={mine?.id === turnState.seatId || isTableScreen}
+          busy={busy}
+          onAnswer={(choice) => post("turn", { action: "answer", choice })}
         />
       )}
 

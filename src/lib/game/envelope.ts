@@ -1,5 +1,6 @@
 /** What one device is sent, and everything the others are not. */
 
+import type { TurnState } from "@/lib/engine/stack";
 import { visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou, heldAbilities } from "@/lib/engine/abilities";
 import { markOf, spokenSpell } from "@/lib/engine/status";
@@ -115,6 +116,28 @@ export interface Envelope {
   fieldCards: { id: string; fieldId: string | null; cardId: string }[];
   stock: Record<string, number>;
   seats: EnvelopeSeat[];
+}
+
+/**
+ * The turn state with anything one seat alone may see taken out of it.
+ *
+ * The third door the deck's secret could walk through, after `deck` and
+ * `seed`. An `ask` frame holds the Karty it lifted off the Zaklęcia — that is
+ * what makes the offer honest, since nothing drawn in between can change what
+ * was offered — and those cards are the top of a pile 9.3 and `withoutDeck`
+ * both keep. So the refs are emptied for everybody but the seat being asked,
+ * and `count` travels in their place: the table can see two cards held up, and
+ * that is all it may see.
+ *
+ * Everything else passes through. A `fight`, a `loop`, a suspended `script`
+ * are all public — they are what is happening on the board.
+ */
+export function asSeenBy(state: TurnState, mySeatId: string | null): TurnState {
+  const at = state.stack.length - 1;
+  const frame = state.stack[at];
+  if (!frame || frame.phase !== "ask" || frame.seatId === mySeatId) return state;
+  const shut = { ...frame, question: { ...frame.question, refs: [] } };
+  return { stack: [...state.stack.slice(0, at), shut] };
 }
 
 /**
@@ -248,7 +271,7 @@ export function envelopeFor(
     .find((one) => one.said !== null && one.said.until > now);
 
   return {
-    game: withoutDeck(game),
+    game: { ...withoutDeck(game), turn_state: asSeenBy(game.turn_state, mine?.id ?? null) },
     spoken: spoken?.said
       ? {
           spell: spoken.said.spell,

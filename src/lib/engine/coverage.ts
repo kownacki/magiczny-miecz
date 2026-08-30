@@ -56,7 +56,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   "magiczna-sakwa": "Utrata Sakwy to utrata wszystkiego, co w niej niesiono.",
 
   // --- friends --------------------------------------------------------------
-  chochlik: "Przy braniu Zaklęcia pozwala obejrzeć 2 Karty i wybrać jedną.",
   // The ALCHEMIK was here for "zamiana jest nieodwracalna", which is not
   // something the table has to do — `sellHolding` deletes the holding and
   // `putOnPile` sends the Karta back, so the app *is* the irreversibility. The

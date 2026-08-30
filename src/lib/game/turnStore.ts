@@ -15,6 +15,7 @@ import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
 import { only, top } from "@/lib/engine/stack";
 import { settleExposedLoop } from "@/lib/engine/loop";
+import { answerAsk as answerAskOn } from "./commands/ask";
 import {
   afterFight,
   type Ends,
@@ -312,11 +313,11 @@ export async function drawCard(
  * not "raz". What bounds it is the setup hand — cast down to it, refill, and
  * that is as often as the wand can be asked.
  */
-export async function drawSpellWithWand(gameId: string, seatId: string): Promise<string> {
+export async function drawSpellWithWand(gameId: string, seatId: string): Promise<string | null> {
   return change(gameId, drawSpellWithWandOn, (of) => ({ seatId, shuffle: shuffleFor(of.game) }));
 }
 
-export async function drawSpell(gameId: string, seatId: string): Promise<string> {
+export async function drawSpell(gameId: string, seatId: string): Promise<string | null> {
   return change(gameId, drawSpellOn, (of) => ({ seatId, shuffle: shuffleFor(of.game) }));
 }
 
@@ -570,6 +571,27 @@ export async function answerScript(gameId: string, decided: Decisions): Promise<
     (snapshot, command, ports) =>
       continueTopScript(snapshot, { decided: command, shuffle: shuffleFor(snapshot.game) }, ports),
     decided,
+  );
+}
+
+/**
+ * Answers the `ask` frame on top of the stack (docs/STACK.md).
+ *
+ * The other door, for a question printed on a Charakterystyka rather than on a
+ * card being resolved. Chained the same way a fight's close is: a `zaklecie`
+ * step that suspended into this is a card mid-sentence, and answering puts the
+ * Zaklęcie in the hand and lets the card carry on in the same commit.
+ */
+export async function answerAsk(
+  gameId: string,
+  seatId: string | null,
+  choice: number,
+): Promise<string> {
+  return change(
+    gameId,
+    async (snapshot, command, ports) =>
+      withScriptContinued(snapshot, answerAskOn(snapshot, command), ports),
+    { ...(seatId ? { seatId } : {}), choice },
   );
 }
 

@@ -161,6 +161,16 @@ export type Ability =
    * the item limit of 5.4. Only the Różdżka Zaklęć does it.
    */
   | { kind: "zaklecia-ponad-limit"; count: number }
+  /**
+   * Look at the first N Karty of the Zaklęcia and take the one you like.
+   *
+   * Only the Chochlik: "gdy będziesz chciał wziąć Zaklęcie, Przyjaciel pozwoli
+   * ci obejrzeć pierwsze 2 Karty ze stosu i wybrać tę, która najbardziej ci
+   * odpowiada." A number rather than a flag, because what the card grants is
+   * how wide the look is, and a second such Przyjaciel would differ in exactly
+   * that.
+   */
+  | { kind: "podglad-zaklec"; count: number }
   /** Rusałka: one die at the Trzęsawiska instead of the usual two. */
   | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
   /**
@@ -525,6 +535,9 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   chochlik: [
     { kind: "cena-przyjecia", zycie: 1, bezZaplaty: "zostaje" },
     { kind: "punkty", magia: 2 },
+    // "pozwoli ci obejrzeć pierwsze 2 Karty ze stosu i wybrać tę, która
+    // najbardziej ci odpowiada" — the third of his three clauses.
+    { kind: "podglad-zaklec", count: 2 },
   ],
   giermek: [
     // "będzie dodawał ci 2 punkty Miecza podczas każdej walki".
@@ -746,6 +759,22 @@ export function spellsOverLimit(abilities: readonly Ability[]): number {
   return abilities.reduce(
     (extra, ability) =>
       ability.kind === "zaklecia-ponad-limit" ? extra + ability.count : extra,
+    0,
+  );
+}
+
+/**
+ * How many Karty Zaklęć may be looked at before one is taken, or 0 for none.
+ *
+ * The widest on offer rather than a sum: two Chochliki do not let you see four,
+ * because each of them says the same thing about the same top of the same
+ * stos. `spellsOverLimit` adds because two wands really do raise the ceiling
+ * twice; this is a look, and the wider look contains the narrower.
+ */
+export function spellsPeeked(abilities: readonly Ability[]): number {
+  return abilities.reduce(
+    (widest, ability) =>
+      ability.kind === "podglad-zaklec" ? Math.max(widest, ability.count) : widest,
     0,
   );
 }

@@ -29,7 +29,7 @@ import {
 import type { SeatRow } from "../store";
 import { adjustSeat } from "./adjust";
 import { changeNature, pickBelow, placeSeat } from "./character";
-import { drawCard, drawSpell } from "./draw";
+import { drawCard, drawSpell, peekDue, peekSpells } from "./draw";
 import { summonFighter } from "./fight";
 import { nameOfSeat } from "./lobby";
 
@@ -70,13 +70,26 @@ export interface Resolution {
   /**
    * Set when the walk stopped short of the end and a `script` frame carries
    * the rest — see docs/STACK.md. `cursor` is the path to the node it stopped
-   * at; `opens` is the fight a `walka` step wants above the frame.
+   * at; `opens` is what the step wants standing above the frame.
    */
   suspended?: {
     cursor: number[];
-    opens?: { nazwa: string; miecz?: number; magia?: number };
+    opens?: Opens;
   };
 }
+
+/**
+ * What a suspending step wants opened above its `script` frame.
+ *
+ * Two kinds, because two things can stop a card mid-sentence and neither of
+ * them can be done inside the walk: a fight has dice, spells and other seats
+ * in it, and a question owed to a Charakterystyka rather than to the card has
+ * cards to lift off a pile first. Both are built by `framed`, after the script
+ * frame is pushed, so that what opens sits above the card it interrupted.
+ */
+export type Opens =
+  | { kind: "walka"; nazwa: string; miecz?: number; magia?: number }
+  | { kind: "ask" };
 
 export interface ApplyEffect {
   seatId: string;
@@ -222,17 +235,43 @@ function framed(
     ...(command.mark ? { mark: command.mark } : {}),
     ...(command.keep ? { keep: true } : {}),
   };
-  let state = push(after.game.turn_state, frame);
-  let opened: Changeset = {};
-  if (sus.opens) {
-    const fight = fightOver(state, after, command.seatId, sus.opens);
-    state = push(state, fight.phase);
-    opened = fight.said;
-  }
+  const opened = openOver(
+    push(after.game.turn_state, frame),
+    after,
+    command,
+    sus.opens,
+  );
   return {
-    writes: mergeAll(done.writes, opened, { game: { turn_state: state } }),
+    writes: mergeAll(done.writes, opened.said, { game: { turn_state: opened.state } }),
     result: done.result,
   };
+}
+
+/**
+ * Puts what the step asked for on top of the script frame, whatever it was.
+ *
+ * One place rather than two, because `framed` and `continueTopScript` both
+ * suspend and both have to open the same things the same way — the second and
+ * third `walka` in a card go through the resume path, not the first one's.
+ */
+function openOver(
+  state: TurnState,
+  after: Snapshot,
+  command: { seatId: string; shuffle: Shuffle },
+  opens: Opens | undefined,
+): { state: TurnState; said: Changeset } {
+  if (!opens) return { state, said: {} };
+  if (opens.kind === "walka") {
+    const fight = fightOver(state, after, command.seatId, opens);
+    return { state: push(state, fight.phase), said: fight.said };
+  }
+  // The cards come off the pile here and wait on the frame — see `peekSpells`.
+  // Null would mean the pile emptied between the step deciding to ask and this
+  // running, which cannot happen inside one commit; the card simply carries on
+  // rather than standing on a question nobody can answer.
+  const looked = peekSpells(after, command.seatId, command.shuffle);
+  if (!looked) return { state, said: {} };
+  return { state: push(state, looked.frame), said: looked.writes };
 }
 
 /**
@@ -313,15 +352,14 @@ export async function continueTopScript(
     // Still not finished: the frame stays, with the new cursor — and a second
     // `walka` opens its fight above it, the same way the first did.
     const after = apply(snapshot, done.writes);
-    let moved = replaceTop(after.game.turn_state, { ...frame, cursor: sus.cursor });
-    let opened: Changeset = {};
-    if (sus.opens) {
-      const fight = fightOver(moved, after, frame.seatId, sus.opens);
-      moved = push(moved, fight.phase);
-      opened = fight.said;
-    }
+    const opened = openOver(
+      replaceTop(after.game.turn_state, { ...frame, cursor: sus.cursor }),
+      after,
+      { seatId: frame.seatId, shuffle: command.shuffle },
+      sus.opens,
+    );
     return {
-      writes: mergeAll(done.writes, opened, { game: { turn_state: moved } }),
+      writes: mergeAll(done.writes, opened.said, { game: { turn_state: opened.state } }),
       result: done.result,
     };
   }
@@ -383,7 +421,11 @@ async function walk(
   // A fight was settled outside the card (that is what the frame above was
   // for), so it counts as done here; anything else is a question whose answer
   // has just arrived and runs through the ordinary branches below.
-  if (follow !== null && follow.length === 0 && effect.op === "walka") {
+  if (
+    follow !== null &&
+    follow.length === 0 &&
+    (effect.op === "walka" || effect.op === "zaklecie")
+  ) {
     return nothing([]);
   }
 
@@ -1249,11 +1291,43 @@ async function walk(
        * those up, and putting them back would need a second write nothing asked
        * for.
        */
+      /**
+       * The Chochlik turns this step into a question, so the card stops here.
+       *
+       * The draw is not made: the walk suspends and `framed` opens the `ask`
+       * *above* the script frame, which is the only order that lets the card
+       * carry on afterwards. Answering deals the chosen Zaklęcie and pops back
+       * to this cursor, where the node counts as done.
+       *
+       * The price is paid before the suspension rather than after the answer.
+       * A Nieznajomy selling a Zaklęcie for a Sztuka Złota is the one card with
+       * both, and the coin buys the draw — which has happened by the time the
+       * question is on screen, since the cards are already off the pile.
+       *
+       * Only for a single Zaklęcie. Every `zaklecie` in the box asks for one,
+       * and a suspension part-way through a run of them would owe a second
+       * question this frame has nowhere to remember.
+       */
+      if (effect.count === 1 && peekDue(snapshot, seatId)) {
+        const paidUp: Changeset =
+          effect.cena && buyer
+            ? { seats: [{ id: buyer.id, patch: { gold: buyer.gold - effect.cena } }] }
+            : {};
+        return {
+          writes: paidUp,
+          result: {
+            did: ["Zaklęcie: wybierasz jedną z dwóch"],
+            pending: null,
+            suspended: { cursor: path, opens: { kind: "ask" } },
+          },
+        };
+      }
+
       for (let i = 0; i < effect.count; i++) {
         try {
-          const done = drawSpell(apply(snapshot, writes), { seatId, shuffle });
+          const done = drawSpell(apply(snapshot, writes), { seatId, shuffle, peek: false });
           writes = merge(writes, done.writes);
-          names.push(done.result);
+          if (done.result !== null) names.push(done.result);
         } catch (refused) {
           const said = (refused as Error).message;
           return {
@@ -1336,7 +1410,7 @@ async function walk(
           pending: null,
           suspended: {
             cursor: path,
-            opens: { nazwa: effect.nazwa, miecz: effect.miecz, magia: effect.magia },
+            opens: { kind: "walka", nazwa: effect.nazwa, miecz: effect.miecz, magia: effect.magia },
           },
         },
       };

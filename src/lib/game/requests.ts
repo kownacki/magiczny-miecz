@@ -125,6 +125,14 @@ export interface Requests {
     cardId: string;
     cardIds: string[];
     choices: unknown;
+    /**
+     * `answer`: which option of an `ask` frame, by position.
+     *
+     * What tells the two answerable frames apart — a number here is the
+     * question printed on a Charakterystyka (the Chochlik's two Zaklęcia),
+     * anything else is the suspended Karta's own `choices`.
+     */
+    choice: number;
     destination: string;
     dice: number[];
     fieldId: string;
