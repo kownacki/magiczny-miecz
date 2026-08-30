@@ -1,9 +1,14 @@
 # The resolution stack
 
-**Status: step 1 built** (2026-08-30) — `turn_state` is a stack, every read and
-write goes through `stack.ts`, `Fight.resume` is gone and a summoned fight
-pushes. Zero observable change; see the narrowing recorded under the steps.
-Steps 2–4 are still to come. The laws below were decided before any code.
+**Status: step 2 built** (2026-08-30). The walker suspends into `script` frames
+with a cursor and resumes through `continueTopScript`; the all-or-nothing gate
+is gone; every ordinary fight pushes over the field and `closeFightFrame` is
+the one close; the stores chain a fight's close into the revealed card's
+continuation; `answer` reaches a frame from the route and the console; the
+browser renders a suspended frame's question. Proven live: Kurhan's face 6
+suspended `[field, script, fight]` over the wire, the Duch was fought and
+lost, and the mark landed on the field two commits after the suspension.
+Steps 3–4 are still to come. The laws below were decided before any code.
 
 The engine keeps one frame of turn state and forgets where it was whenever
 something opens on top of it. This page is the specification for replacing
@@ -170,6 +175,21 @@ subscription.
 **Order within each step: engine, then the console (terminal and browser
 `>_`), then the GUI.** The console is the cheapest surface and the one that
 prints the stack raw; if it cannot show a frame, the GUI has nothing to draw.
+
+**Step 2's own narrowings, recorded here** (2026-08-30):
+
+- **No standalone `ask` frame yet.** A `script` frame whose cursor stands on a
+  decision *is* the ask — `seatId`, question and all — so the separate kind in
+  the sketch above has no occupant until step 3's CHOCHLIK, whose question
+  belongs to no card script. It arrives with him.
+- **Guardian fights stay replacements.** The bridge and crossing guardians
+  resolve into `endTurn()` and resume nothing beneath; pushing them would be
+  depth with no reader.
+- **The browser's batching stays.** An ordinary own-`wybor` still resolves in
+  one commit with the choices batched in; frames appear only where the atomic
+  walk genuinely cannot finish. The acceptance test's card moments (the Smok
+  loop, bystander casts) close with step 3, which authors the cards; the
+  mechanisms behind them are pinned by `scriptFrames.test.ts`.
 
 **A narrowing taken in step 1, recorded here** (2026-08-30): ordinary fights
 still *replace* the field frame at depth 1, exactly as before — `endFight`
