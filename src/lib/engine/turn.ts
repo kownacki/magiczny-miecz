@@ -16,6 +16,7 @@ import {
 import { resolutionOrder, type TurnCard } from "./state";
 import type { Crossing } from "./rings";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
+import type { Effect } from "./cardScript";
 
 /**
  * A turn is rule 10.1's two steps — move, then deal with where you landed —
@@ -77,6 +78,45 @@ export type TurnPhase =
   | { phase: "fight"; fight: Fight }
   /** Standing at a bridge entrance with its guardian in the way (11.9-11.11). */
   | { phase: "bridge"; bridge: BridgeEntrance }
+  /**
+   * A card mid-resolution, suspended where it could not go on by itself.
+   *
+   * Most cards never appear here: a settled effect resolves in one commit, and
+   * even a card full of choices resolves in one commit when the player sent
+   * the answers along (the browser walks the public script and batches them —
+   * see `pendingIn`). A frame is written only where the atomic walk genuinely
+   * cannot finish: a `walka` step that opens a fight above this frame, or a
+   * decision owed to a seat that is not the one resolving.
+   *
+   * `cursor` is the path taken through the effect tree to the suspension
+   * point, one index per branching node — a `po-kolei` step, a `wybor` pick, a
+   * `rzut` face as rolled, a `gdy` branch as taken. Recording the rolled face
+   * and the taken branch is what makes the resume deterministic: the walk back
+   * down follows the cursor instead of re-rolling or re-judging, and continues
+   * from the node after it.
+   *
+   * `seatId` is law 5 (docs/STACK.md): the frame says whose answer or whose
+   * fight it is waiting on, so nothing has to guess.
+   */
+  | {
+      phase: "script";
+      seatId: string;
+      /** The Karta being resolved, or null for an Obszar's own table. */
+      cardId: string | null;
+      /** What the journal calls this resolution — "GROTA (5)", "Urwisko". */
+      reason: string;
+      /** The root effect, as authored. The cursor points into it. */
+      effect: Effect;
+      cursor: number[];
+      /**
+       * The card's debts, paid when the frame pops: what to cross off the
+       * field's resolved list, and whether the card stays as a Przyjaciel
+       * ("musisz ją zabrać"). Carried on the frame because completion may be
+       * commits away from the resolve that started it.
+       */
+      mark?: string;
+      keep?: boolean;
+    }
   | { phase: "end" };
 
 /**

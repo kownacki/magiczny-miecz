@@ -14,6 +14,7 @@ import { chooseLosses, goldLost, lossTaken, reachableBy } from "@/lib/engine/los
 import { endTurn } from "@/lib/engine/turn";
 import { cardName, fieldName, NATURE_LABEL, plural } from "@/lib/engine/polish";
 import type { Effect } from "@/lib/engine/cardScript";
+import { startFight, type TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import type { Nature } from "@/data/types";
 import {
@@ -29,12 +30,12 @@ import type { SeatRow } from "../store";
 import { adjustSeat } from "./adjust";
 import { changeNature, pickBelow, placeSeat } from "./character";
 import { drawCard, drawSpell } from "./draw";
-import { beginNamedFight, summonFighter } from "./fight";
+import { summonFighter } from "./fight";
 import { nameOfSeat } from "./lobby";
 
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
-import { only, replaceTop, top } from "@/lib/engine/stack";
+import { only, pop, push, replaceTop, top, type TurnState } from "@/lib/engine/stack";
 import { keepOnly, statusesOf } from "./turn";
 import { hasAttacked } from "@/lib/engine/status";
 import { turnToStone } from "./stone";
@@ -62,9 +63,19 @@ export interface Resolution {
   did: string[];
   /**
    * The part still owed to a player's decision, if any. Null when the whole
-   * effect has been carried out.
+   * effect has been carried out — and null too when the walk suspended on a
+   * `walka`, which asks nobody anything: it opens a fight.
    */
   pending: Effect | null;
+  /**
+   * Set when the walk stopped short of the end and a `script` frame carries
+   * the rest — see docs/STACK.md. `cursor` is the path to the node it stopped
+   * at; `opens` is the fight a `walka` step wants above the frame.
+   */
+  suspended?: {
+    cursor: number[];
+    opens?: { nazwa: string; miecz?: number; magia?: number };
+  };
 }
 
 export interface ApplyEffect {
@@ -72,6 +83,14 @@ export interface ApplyEffect {
   effect: Effect;
   reason: string;
   decided?: Decisions;
+  /**
+   * What to mark resolved on the field when the effect finally completes —
+   * a card id or an offer key. Travels on the frame across suspensions, so a
+   * card finished three commits later is still crossed off (15.2).
+   */
+  mark?: string;
+  /** "Musisz ją zabrać jako Przyjaciela" — taken only once the card completes. */
+  keep?: boolean;
   /**
    * The order a pile comes back in when a card makes somebody draw.
    *
@@ -171,7 +190,167 @@ export async function applyEffect(
   command: ApplyEffect,
   ports: CommandPorts,
 ): Promise<Outcome<Resolution>> {
-  return walk(snapshot, command, command.effect, command.reason, ports);
+  const done = await walk(snapshot, command, command.effect, command.reason, ports, [], null);
+  if (!done.result.suspended) return done;
+  return framed(snapshot, command, done);
+}
+
+/**
+ * Writes the suspension down: a `script` frame with the cursor, and the fight
+ * above it when a `walka` is what stopped the walk.
+ *
+ * This is where the stack earns its keep (docs/STACK.md, law 3): everything
+ * the walk did before the stop has already landed in `done.writes`, the frame
+ * remembers where it stood, and whatever finishes the frame above — the dice,
+ * an answer — resumes it through `continueTopScript`.
+ */
+function framed(
+  snapshot: Snapshot,
+  command: ApplyEffect,
+  done: Outcome<Resolution>,
+): Outcome<Resolution> {
+  const sus = done.result.suspended;
+  if (!sus) return done;
+  const after = apply(snapshot, done.writes);
+  const frame: TurnPhase = {
+    phase: "script",
+    seatId: command.seatId,
+    cardId: command.cardId ?? null,
+    reason: command.reason,
+    effect: command.effect,
+    cursor: sus.cursor,
+    ...(command.mark ? { mark: command.mark } : {}),
+    ...(command.keep ? { keep: true } : {}),
+  };
+  let state = push(after.game.turn_state, frame);
+  let opened: Changeset = {};
+  if (sus.opens) {
+    const fight = fightOver(state, after, command.seatId, sus.opens);
+    state = push(state, fight.phase);
+    opened = fight.said;
+  }
+  return {
+    writes: mergeAll(done.writes, opened, { game: { turn_state: state } }),
+    result: done.result,
+  };
+}
+
+/**
+ * The fight a `walka` step opens, built the way `beginNamedFight` builds one —
+ * same shape, same journal line — off the field frame beneath the script, so
+ * that closing it pops back to the card mid-sentence.
+ */
+function fightOver(
+  state: TurnState,
+  after: Snapshot,
+  seatId: string,
+  opens: { nazwa: string; miecz?: number; magia?: number },
+): { phase: TurnPhase; said: Changeset } {
+  const field = [...state.stack].reverse().find((one) => one.phase === "field");
+  if (!field || field.phase !== "field") throw new Error("Walka poza Obszarem.");
+  return {
+    phase: startFight(
+      field,
+      {
+        cardId: `pole:${opens.nazwa}`,
+        cardName: opens.nazwa,
+        ...(opens.magia !== undefined ? { magia: opens.magia } : { miecz: opens.miecz }),
+        settles: [],
+      },
+      pointsOf(after, seatId, "walka"),
+    ),
+    said: {
+      journal: [
+        {
+          seatId,
+          turn: after.game.turn,
+          kind: "fight-start",
+          payload: { nazwa: opens.nazwa, enemyTotal: opens.miecz ?? opens.magia },
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * Resumes the `script` frame on top of the stack.
+ *
+ * The walk goes back down the cursor without executing anything — a `rzut`
+ * face is read off the cursor rather than rolled again, a `gdy` takes the
+ * branch it took, a `po-kolei` skips the steps whose writes already landed —
+ * and picks up at the node it stopped at: a settled `walka` counts as done and
+ * the steps after it run; a question runs now against `decided`.
+ *
+ * Completion pops the frame and pays the card's debts — `mark` onto the field
+ * frame's resolved list, `keep` for the two Spotkania that stay as Przyjaciele
+ * — exactly what `resolveDrawnCard` does for a card that never suspended. A
+ * second suspension replaces the cursor and, for a second `walka`, opens the
+ * next fight.
+ */
+export async function continueTopScript(
+  snapshot: Snapshot,
+  command: { decided?: Decisions; shuffle: Shuffle },
+  ports: CommandPorts,
+): Promise<Outcome<Resolution>> {
+  const state = snapshot.game.turn_state;
+  const frame = top(state);
+  if (frame.phase !== "script") throw new Error("Nic tu nie czeka na dokończenie.");
+
+  const carried: ApplyEffect = {
+    seatId: frame.seatId,
+    effect: frame.effect,
+    reason: frame.reason,
+    decided: command.decided,
+    shuffle: command.shuffle,
+    ...(frame.cardId ? { cardId: frame.cardId } : {}),
+    ...(frame.mark ? { mark: frame.mark } : {}),
+    ...(frame.keep ? { keep: true } : {}),
+  };
+  const done = await walk(snapshot, carried, frame.effect, frame.reason, ports, [], frame.cursor);
+
+  const sus = done.result.suspended;
+  if (sus) {
+    // Still not finished: the frame stays, with the new cursor — and a second
+    // `walka` opens its fight above it, the same way the first did.
+    const after = apply(snapshot, done.writes);
+    let moved = replaceTop(after.game.turn_state, { ...frame, cursor: sus.cursor });
+    let opened: Changeset = {};
+    if (sus.opens) {
+      const fight = fightOver(moved, after, frame.seatId, sus.opens);
+      moved = push(moved, fight.phase);
+      opened = fight.said;
+    }
+    return {
+      writes: mergeAll(done.writes, opened, { game: { turn_state: moved } }),
+      result: done.result,
+    };
+  }
+
+  // Complete: the frame comes off, and the card's debts are paid on what is
+  // revealed beneath.
+  const popped = pop(apply(snapshot, done.writes).game.turn_state);
+  const settled = merge(done.writes, { game: { turn_state: popped } });
+  const after = apply(snapshot, settled);
+  const noted = frame.mark ? markResolved(after, frame.mark) : {};
+  const kept: Changeset =
+    frame.keep && frame.cardId
+      ? {
+          holdings: {
+            insert: [
+              {
+                seat_id: frame.seatId,
+                card_id: frame.cardId,
+                kind: "friend" as const,
+                face: "open" as const,
+              },
+            ],
+          },
+        }
+      : {};
+  return {
+    writes: mergeAll(settled, noted, kept),
+    result: { did: done.result.did, pending: null },
+  };
 }
 
 async function walk(
@@ -180,6 +359,14 @@ async function walk(
   effect: Effect,
   reason: string,
   ports: CommandPorts,
+  /** The path taken to this node — one index per branching ancestor. */
+  path: number[],
+  /**
+   * Resume mode: the remaining cursor to follow down without executing.
+   * Null is the ordinary walk. An empty array means *this* node is the one the
+   * walk stopped at — a settled `walka` counts as done, a question runs now.
+   */
+  follow: number[] | null,
 ): Promise<Outcome<Resolution>> {
   const { seatId, shuffle } = command;
   const decided = command.decided ?? {};
@@ -187,16 +374,35 @@ async function walk(
     writes: {},
     result: { did, pending: null },
   });
-  const owed = (): Outcome<Resolution> => ({ writes: {}, result: { did: [], pending: effect } });
+  const owed = (): Outcome<Resolution> => ({
+    writes: {},
+    result: { did: [], pending: effect, suspended: { cursor: path } },
+  });
+
+  // The node the walk stopped at last time, met again on the way back down.
+  // A fight was settled outside the card (that is what the frame above was
+  // for), so it counts as done here; anything else is a question whose answer
+  // has just arrived and runs through the ordinary branches below.
+  if (follow !== null && follow.length === 0 && effect.op === "walka") {
+    return nothing([]);
+  }
 
   // A decision the player has already made turns an unsettled effect into a
   // settled one, so this is asked after the choices have been consumed rather
   // than before.
   if (effect.op === "wybor") {
-    const pick = decided.choices?.shift();
+    const pick = follow !== null && follow.length > 0 ? follow[0] : decided.choices?.shift();
     const option = pick === undefined ? undefined : effect.options[pick];
-    if (!option) return owed();
-    const done = await walk(snapshot, command, option.effect, `${reason}: ${option.label}`, ports);
+    if (!option || pick === undefined) return owed();
+    const done = await walk(
+      snapshot,
+      command,
+      option.effect,
+      `${reason}: ${option.label}`,
+      ports,
+      [...path, pick],
+      follow !== null && follow.length > 0 ? follow.slice(1) : null,
+    );
     // The label only when it adds something. An option called "+1 Magii" whose
     // effect reports "+1 Magii" would otherwise be written down twice.
     const said =
@@ -290,23 +496,35 @@ async function walk(
    */
   if (effect.op === "po-kolei") {
     /**
-     * All or nothing while nobody has answered.
-     *
-     * A sequence with an undecided step stops at the door rather than half-way
-     * down it: the first step's point of Miecz must not be written for a card
-     * whose second step is still a question. `owedIn` hands the browser that
-     * question, the answer comes back with the next attempt, and *then* the
-     * sequence runs — which is the case below.
+     * Steps run in order and each one's writes land as it finishes — the
+     * all-or-nothing gate that used to stand here died with the stack. A step
+     * that suspends stops the sequence where it stands: what came before is
+     * written, the cursor remembers the step, and the resume continues from
+     * the step after it (or into it, for a question just answered).
      */
-    if (!isSettled(effect) && (decided.choices?.length ?? 0) === 0) return owed();
-
+    const start = follow !== null && follow.length > 0 ? follow[0] : 0;
     const did: string[] = [];
     let writes: Changeset = {};
-    for (const step of effect.steps) {
-      // Each step reads what the ones before it wrote.
-      const done = await walk(apply(snapshot, writes), command, step, reason, ports);
+    for (let at = start; at < effect.steps.length; at += 1) {
+      // Each step reads what the ones before it wrote — including, on a
+      // resume, everything the suspended walk wrote in earlier commits, which
+      // is already in the snapshot itself.
+      const done = await walk(
+        apply(snapshot, writes),
+        command,
+        effect.steps[at],
+        reason,
+        ports,
+        [...path, at],
+        at === start && follow !== null && follow.length > 0 ? follow.slice(1) : null,
+      );
       writes = merge(writes, done.writes);
-      if (done.result.pending) return { writes, result: { did, pending: done.result.pending } };
+      if (done.result.suspended) {
+        return {
+          writes,
+          result: { did, pending: done.result.pending, suspended: done.result.suspended },
+        };
+      }
       did.push(...done.result.did);
     }
     return { writes, result: { did, pending: null } };
@@ -328,29 +546,48 @@ async function walk(
    * can check.
    */
   if (effect.op === "rzut") {
+    // On a resume the face is read off the cursor, not rolled again: the die
+    // was thrown and journalled in the commit that suspended, and a table that
+    // rolled twice for one visit would be a different table.
+    const following = follow !== null && follow.length > 0;
     // Two dice are two throws and a sum, not one throw of a bigger die: the
     // distribution is the whole point of a 2-12 table.
-    const face =
-      effect.kostki === 2
+    const face = following
+      ? follow[0]
+      : effect.kostki === 2
         ? (await ports.random.rollD6(`${reason}: tabela (1)`)) +
           (await ports.random.rollD6(`${reason}: tabela (2)`))
         : await ports.random.rollD6(`${reason}: tabela`);
-    const rolled: Changeset = {
-      journal: [
-        {
-          seatId,
-          turn: snapshot.game.turn,
-          kind: "field-table",
-          payload: { offer: reason, face },
-        },
-      ],
-    };
+    const rolled: Changeset = following
+      ? {}
+      : {
+          journal: [
+            {
+              seatId,
+              turn: snapshot.game.turn,
+              kind: "field-table",
+              payload: { offer: reason, face },
+            },
+          ],
+        };
     const landed = effect.faces[face];
     if (!landed) return { writes: rolled, result: { did: [`${face}: nic`], pending: null } };
-    const done = await walk(apply(snapshot, rolled), command, landed, `${reason} (${face})`, ports);
+    const done = await walk(
+      apply(snapshot, rolled),
+      command,
+      landed,
+      `${reason} (${face})`,
+      ports,
+      [...path, face],
+      following ? follow.slice(1) : null,
+    );
     return {
       writes: merge(rolled, done.writes),
-      result: { did: done.result.did, pending: done.result.pending },
+      result: {
+        did: done.result.did,
+        pending: done.result.pending,
+        ...(done.result.suspended ? { suspended: done.result.suspended } : {}),
+      },
     };
   }
 
@@ -400,9 +637,21 @@ async function walk(
               (effect.warunek.stat === "sword"
                 ? pointsOf(snapshot, seat.id, "parametr").miecz
                 : pointsOf(snapshot, seat.id, "parametr").magia) < effect.warunek.ponizej;
-    const branch = holds ? effect.to : effect.inaczej;
+    // On a resume the branch is the one taken, off the cursor: the fight the
+    // suspension was for may itself have changed what the condition reads.
+    const following = follow !== null && follow.length > 0;
+    const taken = following ? follow[0] === 0 : holds;
+    const branch = taken ? effect.to : effect.inaczej;
     return branch
-      ? walk(snapshot, command, branch, reason, ports)
+      ? walk(
+          snapshot,
+          command,
+          branch,
+          reason,
+          ports,
+          [...path, taken ? 0 : 1],
+          following ? follow.slice(1) : null,
+        )
       : nothing(["warunek niespełniony — nic się nie dzieje"]);
   }
 
@@ -1076,16 +1325,20 @@ async function walk(
     }
 
     case "walka": {
-      // A creature the card conjures rather than a card on the field, so the
-      // fight is opened directly with its printed strength.
-      const opened = beginNamedFight(snapshot, {
-        name: effect.nazwa,
-        miecz: effect.miecz,
-        magia: effect.magia,
-      });
+      // A creature the card conjures rather than a card on the field. The walk
+      // cannot fight — dice, spells and other seats live above it — so it
+      // suspends here and `framed` opens the fight over the script frame.
+      // Coming back down the cursor, the fight is done and this node with it.
       return {
-        writes: opened.writes,
-        result: { did: [`walka: ${effect.nazwa}`], pending: null },
+        writes: {},
+        result: {
+          did: [`walka: ${effect.nazwa}`],
+          pending: null,
+          suspended: {
+            cursor: path,
+            opens: { nazwa: effect.nazwa, miecz: effect.miecz, magia: effect.magia },
+          },
+        },
       };
     }
 
@@ -1442,14 +1695,16 @@ export async function resolveFieldOffer(
       reason: face !== undefined ? `${offer.name} (${face})` : offer.name,
       decided: command.decided,
       shuffle: command.shuffle,
+      mark: offerKey(offer.name),
     },
     ports,
   );
 
   const soFar = merge(rolled, done.writes);
-  const noted = done.result.pending
-    ? {}
-    : markResolved(apply(snapshot, soFar), offerKey(offer.name));
+  const noted =
+    done.result.pending || done.result.suspended
+      ? {}
+      : markResolved(apply(snapshot, soFar), offerKey(offer.name));
 
   return {
     writes: merge(soFar, noted),
@@ -1504,6 +1759,10 @@ export async function resolveDrawnCard(
       // The card is its own subject for `poloz-karte`: three Karty roll for
       // where they settle, and the effect has to know which card it is.
       cardId: command.cardId,
+      // The debts a suspension carries across commits: crossing the card off
+      // when it finally completes, and keeping the two Spotkania that stay.
+      mark: command.cardId,
+      ...(script.disposition.kind === "bierzesz" ? { keep: true } : {}),
       reason:
         face !== undefined ? `${cardName(command.cardId)} (${face})` : cardName(command.cardId),
       decided: command.decided,
@@ -1527,7 +1786,7 @@ export async function resolveDrawnCard(
    * Zły Duch's own text has to name the Południca as the exception it spares.
    */
   const kept =
-    script.disposition.kind === "bierzesz" && !done.result.pending
+    script.disposition.kind === "bierzesz" && !done.result.pending && !done.result.suspended
       ? ({
           holdings: {
             insert: [
@@ -1543,7 +1802,10 @@ export async function resolveDrawnCard(
       : {};
 
   const soFar = mergeAll(rolled, done.writes, kept);
-  const noted = done.result.pending ? {} : markResolved(apply(snapshot, soFar), command.cardId);
+  const noted =
+    done.result.pending || done.result.suspended
+      ? {}
+      : markResolved(apply(snapshot, soFar), command.cardId);
 
   return {
     writes: merge(soFar, noted),

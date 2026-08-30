@@ -13,7 +13,8 @@ import {
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
-import { only, replaceTop, top } from "@/lib/engine/stack";
+import { continueTopScript } from "./commands/effects";
+import { only, pop, replaceTop, top } from "@/lib/engine/stack";
 import {
   afterFight,
   type Ends,
@@ -26,11 +27,7 @@ import {
   shuffleFor,
   type Decks,
 } from "./decks";
-import {
-  change,
-  effectRowsFor,
-  type EffectRow,
-} from "./change";
+import { apply, change, effectRowsFor, merge, type Changeset, type CommandPorts, type EffectRow, type Snapshot } from "./change";
 import { appRandom, supplied } from "./random";
 import {
   addEffect as addEffectTo,
@@ -490,21 +487,53 @@ export async function stageFight(
  * broken off rather than fled — because a row that read like 19.1 would make
  * the test hatch indistinguishable from the thing it exists to test.
  */
+/**
+ * Runs the card the closed frame was sitting on, in the same commit.
+ *
+ * A fight opened by a `walka` step sits above a `script` frame, and closing it
+ * reveals a card mid-sentence. The player already pressed the only button
+ * there was — the fight's — so the card continues by itself: one call, because
+ * one is all it can take. A completion pops the frame; a second `walka` opens
+ * the next fight and the top is a fight again; an unanswered question leaves
+ * the frame waiting for `answerScript`. None of those wants a second call.
+ */
+async function withScriptContinued<T>(
+  snapshot: Snapshot,
+  done: { writes: Changeset; result: T },
+  ports: CommandPorts,
+): Promise<{ writes: Changeset; result: T }> {
+  const after = apply(snapshot, done.writes);
+  if (top(after.game.turn_state).phase !== "script") return done;
+  const more = await continueTopScript(
+    after,
+    { shuffle: shuffleFor(snapshot.game) },
+    ports,
+  );
+  return { writes: merge(done.writes, more.writes), result: done.result };
+}
+
 export async function abandonFight(gameId: string): Promise<void> {
   await change(
     gameId,
-    (snapshot) => {
+    async (snapshot, _command, ports) => {
       const state = top(snapshot.game.turn_state);
       if (state.phase !== "fight") throw new Error("Nie ma walki.");
       const seat = snapshot.seats.find((s) => s.seat_index === snapshot.game.active_seat);
       const { cardName } = state.fight;
-      return {
+      return withScriptContinued(snapshot, {
         // `endFight` puts the character back on its field with the fight's
         // creatures already in `fought` — startFight settles them the moment it
         // opens — so the field resumes with nothing outstanding rather than
-        // offering the same creature again the moment the modal closes.
+        // offering the same creature again the moment the modal closes. A
+        // *pushed* fight — a `walka` step's, a summon's — pops instead, and the
+        // frame beneath takes it from there.
         writes: {
-          game: { turn_state: replaceTop(snapshot.game.turn_state, endFight(state)) },
+          game: {
+            turn_state:
+              snapshot.game.turn_state.stack.length > 1
+                ? pop(snapshot.game.turn_state)
+                : replaceTop(snapshot.game.turn_state, endFight(state)),
+          },
           ...(seat
             ? {
                 journal: [
@@ -520,9 +549,25 @@ export async function abandonFight(gameId: string): Promise<void> {
             : {}),
         },
         result: undefined,
-      };
+      }, ports);
     },
     undefined,
+  );
+}
+
+/**
+ * Answers the `script` frame on top of the stack (docs/STACK.md).
+ *
+ * The one door back into a suspended card: the choices walk down the frame's
+ * cursor on the server, against the card the server holds, so a card still
+ * cannot be talked into doing something it does not say.
+ */
+export async function answerScript(gameId: string, decided: Decisions): Promise<Resolution> {
+  return change(
+    gameId,
+    (snapshot, command, ports) =>
+      continueTopScript(snapshot, { decided: command, shuffle: shuffleFor(snapshot.game) }, ports),
+    decided,
   );
 }
 
@@ -615,7 +660,12 @@ export async function fightRoll(
  * is left to the player rather than assumed.
  */
 export async function resolveFight(gameId: string, spoils?: Spoils): Promise<void> {
-  await change(gameId, resolveFightOn, spoils ? { spoils } : undefined);
+  await change(
+    gameId,
+    async (snapshot, command, ports) =>
+      withScriptContinued(snapshot, await resolveFightOn(snapshot, command, ports), ports),
+    spoils ? { spoils } : undefined,
+  );
 }
 
 /**
@@ -1100,7 +1150,12 @@ export async function escape(
   reported: boolean | null,
   actorSeatId: string | null = null,
 ): Promise<{ succeeded: boolean; onBridge: boolean }> {
-  return change(gameId, escapeOn, { reported, actorSeatId });
+  return change(
+    gameId,
+    async (snapshot, command, ports) =>
+      withScriptContinued(snapshot, escapeOn(snapshot, command), ports),
+    { reported, actorSeatId },
+  );
 }
 
 /**

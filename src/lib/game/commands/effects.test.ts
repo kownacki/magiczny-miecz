@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Effect } from "@/lib/engine/cardScript";
 import { only, top, type TurnState } from "@/lib/engine/stack";
+import type { TurnPhase } from "@/lib/engine/turn";
+
+/**
+ * The `script` frame a suspension writes — docs/STACK.md. What used to be
+ * "wait with empty writes and hand the whole effect back" is now "write what
+ * happened, and a frame that remembers where the walk stopped".
+ */
+const frameIn = (writes: { game?: { turn_state?: TurnState } }) =>
+  top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "script" }>;
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply } from "../change";
 import { applyEffect, resolveDrawnCard, resolveFieldOffer, spendHolding } from "./effects";
@@ -176,8 +185,11 @@ describe("carrying out what a Karta says", () => {
       ],
     };
     const { writes, result } = await run(undecided);
-    expect(writes).toEqual({});
-    expect(result).toEqual({ did: [], pending: undecided });
+    // The settled first step lands — the all-or-nothing gate died with the
+    // stack — and the frame's cursor stands on the undecided second.
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { sword_own: 3 } }]);
+    expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [1] });
+    expect(result.pending).toMatchObject({ op: "wybor" });
   });
 });
 
@@ -190,9 +202,9 @@ describe("a choice the player makes", () => {
     ],
   };
 
-  it("waits when nobody has picked", async () => {
+  it("waits when nobody has picked — as a frame, not as silence", async () => {
     const { writes, result } = await run(choice);
-    expect(writes).toEqual({});
+    expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [] });
     expect(result.pending).toBe(choice);
   });
 
@@ -324,7 +336,7 @@ describe("losing what you carry (strata)", () => {
       { op: "strata", co: "przedmiot", count: 1, wybor: "ty", target: "ty" },
       carrying(),
     );
-    expect(writes).toEqual({});
+    expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [] });
     expect(result.pending).toMatchObject({ op: "strata" });
   });
 
@@ -372,9 +384,9 @@ describe("moving a Karta that is lying on the board", () => {
       ports(),
     );
 
-  it("waits until somebody says where", async () => {
+  it("waits until somebody says where — as a frame", async () => {
     const { writes, result } = await move(board());
-    expect(writes).toEqual({});
+    expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [] });
     expect(result.pending).toEqual({ op: "przenies-karte" });
   });
 
@@ -504,7 +516,7 @@ describe("the rest of the vocabulary", () => {
   it("waits for a destination when the card leaves it open", async () => {
     const open: Effect = { op: "przenies", to: { kind: "dowolne-w-kregu" } };
     const { writes, result } = await run(open);
-    expect(writes).toEqual({});
+    expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [] });
     expect(result.pending).toBe(open);
   });
 

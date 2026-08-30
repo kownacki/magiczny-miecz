@@ -33,6 +33,7 @@ import {
   resolveFieldOffer,
   claimSpellFloor,
   releaseSpellFloor,
+  answerScript,
 } from "@/lib/game/turnStore";
 import type { CardClass } from "@/data/types";
 import type { Decisions } from "@/lib/game/turnStore";
@@ -283,6 +284,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             decisionsFrom(body),
           ),
         );
+      case "answer":
+        // The suspended card on top of the stack, continued with what the
+        // player decided. Everything else about it lives on the frame.
+        return NextResponse.json(await answerScript(game.id, decisionsFrom(body)));
       case "end":
         await finishTurn(game.id);
         break;

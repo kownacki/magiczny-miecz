@@ -201,6 +201,13 @@ export function passTurn(snapshot: Snapshot): Changeset {
   const expired = seat ? tickEffects(snapshot, seat.id) : {};
 
   const state = top(game.turn_state);
+  // A turn cannot be put down mid-sentence: a running fight or a Karta
+  // suspended half-resolved is the turn's own unfinished business, and passing
+  // over it would strand a frame no future turn owns.
+  if (state.phase === "fight") throw new Error("Najpierw dokończcie walkę (17.4).");
+  if (state.phase === "script") {
+    throw new Error(`Najpierw dokończ: ${state.reason} — Karta jest w trakcie rozpatrywania.`);
+  }
   const left =
     state.phase === "field" && state.drawn.length > 0
       ? leaveCardsBehind(apply(snapshot, expired), {

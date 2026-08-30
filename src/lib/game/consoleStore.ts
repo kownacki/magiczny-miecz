@@ -85,6 +85,7 @@ import {
   stageFight,
   takeNewCharacter,
   turnToStone,
+  answerScript,
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
@@ -180,6 +181,7 @@ const PHASE: Record<string, string> = {
   field: "the Obszar",
   fight: "fight",
   bridge: "the Most",
+  script: "a Karta mid-resolution",
   end: "end of turn",
 };
 
@@ -1535,6 +1537,12 @@ export async function runCommand(
      */
     case "answer": {
       const snapshot = await activeStore().load(gameId);
+      // A suspended card outranks everything: the frame is what the turn is
+      // stuck on, and the answer goes to it.
+      if (top(snapshot.game.turn_state).phase === "script") {
+        const done = await answerScript(gameId, { choices: command.choices });
+        return said(done.did, done.pending !== null);
+      }
       const state = top(snapshot.game.turn_state) as {
         phase?: string;
         fieldId?: FieldId;
