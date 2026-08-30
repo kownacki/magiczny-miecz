@@ -97,6 +97,21 @@ export type Modifier =
    * and `settleCrossing` already sheds.
    */
   | { kind: "przeprawa"; przez: "trzesawiska" | "lodowy-las" }
+  /**
+   * The turn comes back to this character instead of moving on.
+   *
+   * Formuła Czasu: „Pozwala postaci na wykorzystanie 3 kolejnych tur zamiast
+   * jednej." Every other rule about turns in this box is written as *losing*
+   * them — `turns_lost` counts down and there was no counting up — so the extra
+   * turns are held the same way everything else with a duration is: a status
+   * whose `turns` are how many more times the turn comes back.
+   *
+   * „Inne Postacie nie mogą w tym czasie podjąć żadnych działań oprócz walki
+   * jeżeli zostały zaatakowane" needs nothing of its own: a player whose turn
+   * never comes cannot act, and being attacked is the one thing that happens on
+   * somebody else's turn anyway.
+   */
+  | { kind: "znowu" }
   /** Natura is forced to something while this lasts. */
   | { kind: "nature"; to: Nature }
   /**
@@ -320,6 +335,17 @@ export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
   return statuses.some((status) => status.modifier.kind === "magia-as-miecz");
 }
 
+/**
+ * Whether the turn comes back to this character rather than moving on.
+ *
+ * Read at the pass, which is the only place a turn changes hands. The status
+ * ticking down is what counts the turns out: three in a row is this turn and
+ * two more, so the Zaklęcie is written as two.
+ */
+export function playsAgain(statuses: readonly Status[]): boolean {
+  return statuses.some((status) => status.modifier.kind === "znowu");
+}
+
 /** How much the movement roll is multiplied by (Formuła Przestrzeni). */
 export function moveMultiplier(statuses: readonly Status[]): number {
   return statuses.some((status) => status.modifier.kind === "move-x2") ? 2 : 1;
@@ -516,6 +542,10 @@ export function markOf(status: Status): Mark {
     // something a character *may* do.
     case "przeprawa":
       return { glyph: "⇥", tone: "dobry", title };
+    // Turns coming back rather than being taken away, which is the other thing
+    // this app's marks have never had to say.
+    case "znowu":
+      return { glyph: "↻", tone: "dobry", title };
     case "move-max":
       return { glyph: "\u25B8", tone: "zly", title };
     case "nature":

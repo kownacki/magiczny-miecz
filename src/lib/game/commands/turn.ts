@@ -1,7 +1,7 @@
 /** Passing the turn on: what expires, what is left lying on the Obszar, and whose turn is next (10.1, 16.8). */
 
 import { nextSeat, startTurn } from "@/lib/engine/turn";
-import { afterTurn, type Status } from "@/lib/engine/status";
+import { afterTurn, playsAgain, type Status } from "@/lib/engine/status";
 import { scriptFor } from "@/lib/engine/cardScript";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
@@ -185,6 +185,18 @@ export function passTurn(snapshot: Snapshot): Changeset {
   const game = snapshot.game;
   const seat = snapshot.seats.find((row) => row.seat_index === game.active_seat) ?? null;
 
+  /**
+   * The turn coming back to the same seat, before anything else is decided.
+   *
+   * Formuła Czasu: „wykorzystanie 3 kolejnych tur zamiast jednej". Read before
+   * the tick, so the status counts the extra turns out — two of them for three
+   * turns in a row, since the turn it was spoken in is the first.
+   *
+   * Everything else the pass does still happens: what expires expires, and what
+   * was left on the Obszar is left. What does not happen is the seat changing,
+   * so 16.8's cards are cleared away and the same player begins again.
+   */
+  const again = seat ? playsAgain(statusesOf(snapshot, seat.id)) : false;
   const expired = seat ? tickEffects(snapshot, seat.id) : {};
 
   const left =
@@ -271,11 +283,11 @@ export function passTurn(snapshot: Snapshot): Changeset {
 
   // The turn counter advances when play comes back round to or past the first
   // seat, which is what the three-turn Stone timer in 20.1 counts.
-  const wrapped = next !== null && next <= (game.active_seat ?? 0);
+  const wrapped = !again && next !== null && next <= (game.active_seat ?? 0);
 
   return mergeAll(expired, left, spentTurns, {
     game: {
-      active_seat: next,
+      active_seat: again ? game.active_seat : next,
       turn: wrapped ? game.turn + 1 : game.turn,
       turn_state: startTurn(),
     },
@@ -290,10 +302,13 @@ export function passTurn(snapshot: Snapshot): Changeset {
         turn: game.turn,
         kind: "turn-end",
         payload: {
-          next,
+          next: again ? game.active_seat : next,
           skipped,
           wrapped,
           turnAfter: wrapped ? game.turn + 1 : game.turn,
+          // Said, because a turn that does not move is the sort of thing a
+          // table argues about two turns later.
+          ...(again ? { again: true } : {}),
         },
       },
     ],

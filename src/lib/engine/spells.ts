@@ -531,17 +531,34 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     },
   },
   /**
-   * Announced. The turn order has no word for taking one twice.
+   * Applied. The turn order had no word for taking one twice, and now it has.
    *
-   * "Wykorzystanie 3 kolejnych tur zamiast jednej" needs `nextSeat` to come
-   * back to the same seat, and every rule about turns here is written as
-   * *losing* them — `turns_lost` counts down, and there is no counting up.
+   * „Wykorzystanie 3 kolejnych tur zamiast jednej" needed `nextSeat` to come
+   * back to the same seat, and every rule about turns in this box is written as
+   * *losing* them — `turns_lost` counts down and there was no counting up. So
+   * the extra turns are held the way everything else with a duration is: a
+   * status, ticking at the pass, that says the turn does not move.
+   *
+   * Two, not three: the turn it is spoken in is the first of the three, so what
+   * is granted is two more. The counting is `Ends` doing what it always does,
+   * which is why nothing new counts.
+   *
+   * „Inne Postacie nie mogą w tym czasie podjąć żadnych działań oprócz walki
+   * jeżeli zostały zaatakowane" needs nothing of its own: a player whose turn
+   * never comes cannot act, and being attacked is the one thing that happens on
+   * somebody else's turn anyway.
    */
   "formula-czasu": {
     timing: ["przed-ruchem"],
     target: "siebie",
     effect:
       "Wykorzystujesz 3 kolejne tury zamiast jednej. Inni mogą tylko walczyć, jeśli ich zaatakujesz.",
+    stosuje: {
+      op: "efekt",
+      label: "Formuła Czasu",
+      modifier: { kind: "znowu" },
+      ends: { kind: "turns", turns: 2 },
+    },
   },
   "formula-przestrzeni": {
     timing: ["dowolna-chwila"],

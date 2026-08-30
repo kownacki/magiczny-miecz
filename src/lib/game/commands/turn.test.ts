@@ -29,6 +29,51 @@ describe("passing the turn (10.1)", () => {
     });
   });
 
+  /**
+   * Formuła Czasu: „wykorzystanie 3 kolejnych tur zamiast jednej."
+   *
+   * The turn does not move, and everything else the pass does still happens —
+   * which is what makes it a turn rather than a longer one.
+   */
+  it("hands the turn back to the same seat while the Formuła holds", () => {
+    const again = two({
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "FORMUŁA CZASU",
+          label: "Formuła Czasu",
+          modifier: { kind: "znowu" },
+          ends: { kind: "turns", turns: 2 },
+        },
+      ],
+    });
+    const writes = passTurn(again);
+    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: { phase: "roll" } });
+    // The status counts the extra turns out, so the third pass moves on.
+    expect(writes.effects?.patch).toEqual([{ id: "eff-1", patch: { ends: { kind: "turns", turns: 1 } } }]);
+    expect(writes.journal?.[0]).toMatchObject({ payload: { next: 0, again: true } });
+  });
+
+  it("does not advance the round while the turn stays where it is", () => {
+    const again = two({
+      game: { active_seat: 1, turn: 3 },
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-b",
+          source: "FORMUŁA CZASU",
+          label: "Formuła Czasu",
+          modifier: { kind: "znowu" },
+          ends: { kind: "turns", turns: 2 },
+        },
+      ],
+    });
+    const writes = passTurn(again);
+    // 20.1 counts rounds, and a seat taking three turns has not been round.
+    expect(writes.game).toMatchObject({ active_seat: 1, turn: 3 });
+  });
+
   it("skips a seat that owes a turn, and spends one of what it owes", () => {
     const writes = passTurn(
       two({
