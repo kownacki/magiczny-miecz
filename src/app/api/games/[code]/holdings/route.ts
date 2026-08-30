@@ -3,6 +3,7 @@ import { bodyOf } from "@/lib/game/requests";
 import { refused } from "@/app/api/refused";
 import { findGame, verifyActor } from "@/lib/game/store";
 import type { Slot } from "@/lib/engine/slots";
+import { requireFieldId } from "@/lib/engine/board";
 import {
   endlessStock,
   buyGoods,
@@ -16,6 +17,7 @@ import {
   payHealer,
   reorderPack,
   sellHolding,
+  settleSpell,
   takeCard,
   takeFromField,
   tradeTrophies,
@@ -113,10 +115,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
               // The Siewca Spustoszenia names a Karta lying on the board, which
               // is a row id rather than a seat — see `applySpell`.
               ...(body.fieldCardId ? { fieldCardId: String(body.fieldCardId) } : {}),
+              // And the Obszar itself, for the Zaklęcie thrown at a square.
+              ...(body.fieldId ? { fieldId: requireFieldId(String(body.fieldId)) } : {}),
               ...(body.note ? { note: String(body.note) } : {}),
             },
           ),
         );
+      /**
+       * The Zaklęcie left in the air, taking effect.
+       *
+       * Any seat may send it, which is the point: the window belongs to the
+       * table rather than to the caster, and whoever is watching the clock can
+       * close it. With nothing waiting it writes nothing.
+       */
+      case "settle-spell":
+        return NextResponse.json({
+          settled: await settleSpell(game.id, body.force === true),
+        });
       case "spell":
         return NextResponse.json({
           spellId: await drawSpell(game.id, String(body.seatId ?? seat.id)),

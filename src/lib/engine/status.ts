@@ -112,6 +112,37 @@ export type Modifier =
    * somebody else's turn anyway.
    */
   | { kind: "znowu" }
+  /**
+   * A Zaklęcie spoken and not yet in effect, waiting to be answered.
+   *
+   * The three cards that answer one — WŁADCA ZAKLĘĆ „neguje działanie każdego
+   * innego (bez wyjątku) Zaklęcia, rzuconego bezpośrednio przed nim",
+   * ZWIERCIADŁO „odbije każde inne Zaklęcie rzucone na Postać na tego, kto je
+   * rzucił" — need the spell to be *pending* rather than done, and nothing in
+   * this engine was pending: a command decides and commits in one breath.
+   *
+   * So a spoken spell waits here, on the seat that spoke it, which is a thing
+   * that is true of that character for a moment. It carries what the cast
+   * named, because settling it later has to do exactly what settling it then
+   * would have done.
+   *
+   * Only when somebody could actually answer. With no reactive Zaklęcie in
+   * anybody else's hand there is nothing to wait for, and the spell simply
+   * happens — which is almost every cast in almost every game.
+   */
+  | {
+      kind: "spoken";
+      spell: string;
+      /** When the window closes and it takes effect on its own. */
+      until: number;
+      /** Whom or what it was aimed at, exactly as the caster said it. */
+      target?: {
+        seatIndex?: number;
+        fieldId?: string;
+        fieldCardId?: string;
+        note?: string;
+      };
+    }
   /** Natura is forced to something while this lasts. */
   | { kind: "nature"; to: Nature }
   /**
@@ -336,6 +367,31 @@ export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
 }
 
 /**
+ * The Zaklęcie this character has spoken and not yet had take effect.
+ *
+ * Read with the clock, because the window is a clock: past it, the spell is
+ * nobody's to answer any more and settles on its own.
+ */
+export function spokenSpell(
+  statuses: readonly Status[],
+): {
+  id: string;
+  spell: string;
+  until: number;
+  target?: {
+    seatIndex?: number;
+    fieldId?: string;
+    fieldCardId?: string;
+    note?: string;
+  };
+} | null {
+  const held = statuses.find((status) => status.modifier.kind === "spoken");
+  if (!held) return null;
+  const modifier = held.modifier as Extract<Modifier, { kind: "spoken" }>;
+  return { id: held.id, spell: modifier.spell, until: modifier.until, target: modifier.target };
+}
+
+/**
  * Whether the turn comes back to this character rather than moving on.
  *
  * Read at the pass, which is the only place a turn changes hands. The status
@@ -546,6 +602,9 @@ export function markOf(status: Status): Mark {
     // this app's marks have never had to say.
     case "znowu":
       return { glyph: "↻", tone: "dobry", title };
+    // Nothing has happened yet — that is the whole of what this one says.
+    case "spoken":
+      return { glyph: "…", tone: "obojetny", title };
     case "move-max":
       return { glyph: "\u25B8", tone: "zly", title };
     case "nature":

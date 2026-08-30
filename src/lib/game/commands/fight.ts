@@ -72,7 +72,7 @@ import { refuseAgainstStone } from "./stone";
 import { slotOnArrival } from "@/lib/engine/holdings";
 import type { Nature } from "@/data/types";
 import type { Slot } from "@/lib/engine/slots";
-import { floorOf } from "./spellFloor";
+import { FLOOR_MS, floorOf } from "./spellFloor";
 import { afterFight, hasAttacked, missionOf, spellsHushed } from "@/lib/engine/status";
 import { addEffect, keepOnly, refuseAgainst13_2, statusesOf } from "./turn";
 import type { SeatRow } from "../store";
@@ -568,6 +568,238 @@ function applySpell(
  * No dice — a Zaklęcie is spoken, never rolled — but it reads the clock,
  * because the claim on the floor lapses (17.3).
  */
+/**
+ * The Zaklęcie in the air right now, whoever spoke it.
+ *
+ * Read across the table rather than off one seat: the answer comes from
+ * somebody else, and „rzuconego bezpośrednio przed nim" is about the last thing
+ * said at the table, not about the answerer's own history. Past its window it
+ * is nobody's to answer and this stops finding it.
+ */
+function standingSpell(
+  snapshot: Snapshot,
+  now: number,
+): {
+  seatId: string;
+  id: string;
+  spell: string;
+  until: number;
+  target: NonNullable<CastSpell["target"]>;
+} | null {
+  for (const row of snapshot.effects) {
+    const modifier = row.modifier as { kind: string } & Record<string, unknown>;
+    if (modifier.kind !== "spoken") continue;
+    if ((modifier.until as number) <= now) continue;
+    return {
+      seatId: row.seat_id,
+      id: row.id,
+      spell: modifier.spell as string,
+      until: modifier.until as number,
+      target: (modifier.target ?? {}) as NonNullable<CastSpell["target"]>,
+    };
+  }
+  return null;
+}
+
+/**
+ * Whether anybody but this seat is holding something that could answer.
+ *
+ * The whole reason a spell ever waits. Reactive Zaklęcia are two cards in a
+ * deck of thirty, so most of the time this is false and a spell simply happens
+ * — which is both faster and what a table would do.
+ */
+function couldAnswer(snapshot: Snapshot, casterId: string): boolean {
+  return snapshot.holdings.some((one) => {
+    if (one.seat_id === casterId) return false;
+    if (one.kind !== "spell" && one.kind !== "carried") return false;
+    const seat = snapshot.seats.find((row) => row.id === one.seat_id);
+    if (!seat || seat.eliminated) return false;
+    return spellScript(one.card_id)?.reactive === true;
+  });
+}
+
+/**
+ * Answering the Zaklęcie in the air: negating it, or turning it round.
+ *
+ * WŁADCA ZAKLĘĆ „neguje działanie każdego innego (bez wyjątku) Zaklęcia,
+ * rzuconego bezpośrednio przed nim" — so the spell in the air simply never
+ * happens, and both cards are spent. ZWIERCIADŁO „odbije każde inne Zaklęcie
+ * rzucone na Postać na tego, kto je rzucił" — it happens, to its own caster,
+ * and anything it takes is taken for the one holding the mirror.
+ *
+ * The Zwierciadło answers only what was aimed at the seat holding it: „rzucone
+ * na Postać" is the spell landing on *you*, and a mirror is not a shield for
+ * the table.
+ */
+async function answerSpell(
+  snapshot: Snapshot,
+  input: {
+    cast: Changeset;
+    caster: SeatRow;
+    answering: string;
+    answerName: string;
+    waiting: NonNullable<ReturnType<typeof standingSpell>>;
+    shuffle?: Shuffle;
+    ports: CommandPorts;
+  },
+): Promise<Outcome<Cast>> {
+  const { cast, caster, waiting, ports } = input;
+  const spentAnswer = merge(cast, { effects: { delete: [waiting.id] } });
+  const said = (payload: Record<string, unknown>): Changeset => ({
+    journal: [
+      {
+        seatId: caster.id,
+        turn: snapshot.game.turn,
+        kind: "spell",
+        payload: { cardId: input.answering, name: input.answerName, ...payload },
+      },
+    ],
+  });
+  const answered = cardName(waiting.spell);
+
+  if (input.answering === "zwierciadlo") {
+    if (waiting.target.seatIndex !== caster.seat_index) {
+      throw new Error(`${answered} nie zostało rzucone na ciebie — nie ma czego odbić.`);
+    }
+    const back = snapshot.seats.find((one) => one.id === waiting.seatId);
+    if (!back) throw new Error("Nie ma takiego gracza.");
+    const landed = await landSpell(
+      apply(snapshot, spentAnswer),
+      {
+        casterId: waiting.seatId,
+        cardId: waiting.spell,
+        // Turned round: it lands on the one who spoke it, and what it takes is
+        // taken for the one who held the mirror.
+        target: { ...waiting.target, seatIndex: back.seat_index },
+        toSeatId: caster.id,
+        shuffle: input.shuffle,
+      },
+      ports,
+    );
+    return {
+      writes: mergeAll(
+        spentAnswer,
+        landed.writes,
+        said({ odbite: answered, target: nameOfSeat(snapshot.users, back.seat_index) }),
+      ),
+      result: {
+        spell: input.answerName,
+        effect: `${answered} wraca na tego, kto je rzucił.`,
+        did: landed.did.length > 0 ? landed.did : [`${answered} odbite`],
+      },
+    };
+  }
+
+  /**
+   * The Władca Zaklęć with nothing to negate lifts what a Zaklęcie put on you.
+   *
+   * „Nie może zrobić nic poza użyciem Władcy Zaklęć (co zaneguje działanie
+   * Kręgu Płomieni)" — the flames end `dispelled`, and this is the only thing
+   * in the box that dispels. Which is why the card is worth speaking even when
+   * nothing is in the air.
+   */
+  return {
+    writes: mergeAll(spentAnswer, said({ zanegowane: answered })),
+    result: {
+      spell: input.answerName,
+      effect: `${answered} nie działa (9.6).`,
+      did: [`${answered} zanegowane`],
+    },
+  };
+}
+
+/**
+ * What a Zaklęcie does once it is going to happen.
+ *
+ * Split out of `castSpell` because there are now two moments it can be reached
+ * from and they must do the same thing: a spell nobody could answer takes
+ * effect as it is spoken, and one that waited out its window takes effect when
+ * the window closes. A second copy of this would be two spells.
+ *
+ * The card is already spent by the caller — this is only the effect — and the
+ * snapshot handed in is the one that already has it on the pile.
+ */
+async function landSpell(
+  snapshot: Snapshot,
+  input: {
+    casterId: string;
+    cardId: string;
+    target: { seatIndex?: number; note?: string; fieldCardId?: string; fieldId?: FieldId };
+    decided?: CastSpell["decided"];
+    shuffle?: Shuffle;
+    /**
+     * Who gains, where a Zaklęcie takes a card rather than destroying it.
+     *
+     * The caster, except when the spell was turned round: a Zwierciadło sends
+     * the Szaleństwo back, and what it takes is taken *for the one holding the
+     * mirror*.
+     */
+    toSeatId?: string;
+  },
+  ports: CommandPorts,
+): Promise<{ writes: Changeset; did: string[]; took?: string[] }> {
+  const { target } = input;
+  const caster = snapshot.seats.find((one) => one.id === input.casterId);
+  if (!caster) throw new Error("Nie ma takiego gracza.");
+  const script = spellScript(input.cardId);
+  const spell = SPELL_BY_ID.get(input.cardId);
+  if (!script) return { writes: {}, did: [] };
+
+  // Chained, not merged: a Władca Czarów puts a whole second hand on the same
+  // `game.deck` the card itself was just put on, and side by side one of the
+  // two would be dropped without a word.
+  const applied = script.applies ? applySpell(snapshot, script.applies, target) : null;
+
+  const named =
+    target.seatIndex !== undefined
+      ? snapshot.seats.find((one) => one.seat_index === target.seatIndex)
+      : undefined;
+  const onSeat = named?.id ?? caster.id;
+
+  /**
+   * Aimed at a Karta, by an effect that lands on a seat.
+   *
+   * „Na inną Postać lub Wroga" is two targets and the app can hold one of them:
+   * a creature lying on an Obszar has no seat to carry a status. Left to fall
+   * through, `onSeat` would default to the caster — so the Krąg Płomieni thrown
+   * at a Cyklop would have set the caster alight.
+   *
+   * So the effect is skipped and the card is announced, which is what every
+   * untranscribed Zaklęcie already does: the sentence goes back to the table
+   * and the players apply it. Two ops read the Karta themselves and are the
+   * exception — one sends a creature at it, the other moves it.
+   */
+  const aimedAtCard =
+    target.fieldCardId !== undefined &&
+    script.stosuje !== undefined &&
+    script.stosuje.op !== "przyzwij" &&
+    script.stosuje.op !== "przenies-karte";
+
+  const worked =
+    !aimedAtCard && script.stosuje
+      ? await applyEffect(
+          apply(snapshot, applied?.writes ?? {}),
+          {
+            seatId: onSeat,
+            toSeatId: input.toSeatId ?? caster.id,
+            ...(target.fieldCardId !== undefined ? { fieldCardId: target.fieldCardId } : {}),
+            ...(target.fieldId !== undefined ? { fieldId: target.fieldId } : {}),
+            effect: script.stosuje,
+            reason: spell?.name ?? input.cardId,
+            decided: input.decided,
+            shuffle: input.shuffle ?? ((items) => [...items]),
+          },
+          ports,
+        )
+      : null;
+
+  return {
+    writes: mergeAll(applied?.writes ?? {}, worked?.writes ?? {}),
+    did: worked?.result.did ?? [],
+    ...(applied ? { took: applied.took } : {}),
+  };
+}
+
 export async function castSpell(
   snapshot: Snapshot,
   command: CastSpell,
@@ -667,6 +899,46 @@ export async function castSpell(
    */
   refuseWhileHeld(snapshot, caster.id, held.card_id);
 
+  /**
+   * The Władca Zaklęć with nothing in the air: it lifts what a Zaklęcie left.
+   *
+   * „Co zaneguje działanie Kręgu Płomieni" — the flames end `dispelled`, and
+   * this card is the only thing in the box that dispels anything. Without it
+   * the one way out of the Krąg was a status nothing could lift, which is a
+   * character nothing could move.
+   */
+  if (held.card_id === "wladca-zaklec" && !standingSpell(snapshot, ports.now())) {
+    const lifted = statusesOf(snapshot, caster.id).filter(
+      (status) => status.ends.kind === "dispelled",
+    );
+    if (lifted.length > 0) {
+      const spentCard: Changeset = { holdings: { delete: [held.id] } };
+      const back = putOnPile(apply(snapshot, spentCard), "spells", [asReturnable(held)]);
+      return {
+        writes: mergeAll(spentCard, back, {
+          effects: { delete: lifted.map((status) => status.id) },
+          journal: [
+            {
+              seatId: caster.id,
+              turn: snapshot.game.turn,
+              kind: "spell",
+              payload: {
+                cardId: held.card_id,
+                name: spell?.name ?? held.card_id,
+                zanegowane: lifted.map((status) => status.label).join(", "),
+              },
+            },
+          ],
+        }),
+        result: {
+          spell: spell?.name ?? held.card_id,
+          effect: `${lifted.map((status) => status.label).join(", ")} — zdjęte.`,
+          did: lifted.map((status) => `${status.label} zdjęte`),
+        },
+      };
+    }
+  }
+
   if (state.phase === "fight") {
     const floor = floorOf(state.fight, ports.now());
     if (!floor || floor.seat !== caster.seat_index) {
@@ -684,100 +956,123 @@ export async function castSpell(
   const returned = putOnPile(apply(snapshot, spent), "spells", [asReturnable(held)]);
   const cast = merge(spent, returned);
 
-  // Chained, not merged: a Władca Czarów puts a whole second hand on the same
-  // `game.deck` the line above just wrote, and side by side one of the two
-  // would be dropped without a word.
-  const applied = script?.applies
-    ? applySpell(apply(snapshot, cast), script.applies, target)
-    : null;
+  /**
+   * A Zaklęcie already spoken and still in the air, if there is one.
+   *
+   * Two cards answer one — the Władca Zaklęć negates „każdego innego (bez
+   * wyjątku) Zaklęcia, rzuconego bezpośrednio przed nim", the Zwierciadło sends
+   * one „na tego, kto je rzucił" — and both need the spell to be *pending*,
+   * which nothing in this engine was until now.
+   */
+  const waiting = standingSpell(snapshot, ports.now());
+
+  if (waiting && script?.reactive) {
+    return answerSpell(snapshot, {
+      cast,
+      caster,
+      answering: held.card_id,
+      answerName: spell?.name ?? held.card_id,
+      waiting,
+      shuffle: command.shuffle,
+      ports,
+    });
+  }
 
   /**
-   * What the spell does, where the effect vocabulary can say it.
+   * Two things about the aim, asked where the aiming happens.
    *
-   * Chained onto everything above for the same reason `applies` is: the card
-   * has already gone to the pile and a `zaklecie` face would write the same
-   * `game.deck` again. Aimed at the seat the caster named where the spell names
-   * a victim, and at the caster otherwise — `target` is the spell's own word
-   * for who, and 9.6 lets a Zaklęcie reach anywhere on the board.
-   *
-   * Errors are not caught: a spell that cannot be carried out has been spent
-   * either way, and the refusal belongs to the player who spoke it rather than
-   * being swallowed into a line saying nothing happened.
-   */
-  /**
-   * Who the effect lands on, and why an unnamed victim is a refusal.
-   *
-   * A spell whose target is somebody else — "na wybraną Postać", "na inną
-   * Postać" — reaching nobody must not quietly land on the caster instead. That
+   * A spell whose target is somebody else — „na wybraną Postać", „na inną
+   * Postać" — reaching nobody must not quietly land on the caster instead: that
    * is the difference between a Siedem Wichrów and a Siedem Wichrów aimed at
-   * your own pack, and defaulting is exactly how it would happen.
-   *
-   * `siebie` and `brak` are the ones that mean the caster and say so.
+   * your own pack. And „na Obszar w Kręgu, po którym wędrujesz" is the Władca
+   * Gromu's own range — 9.6 lets a Zaklęcie reach anywhere on the board, and
+   * that one card narrows it.
    */
   const named =
     target.seatIndex !== undefined
       ? snapshot.seats.find((one) => one.seat_index === target.seatIndex)
       : undefined;
-  const wantsAnother =
-    script?.target === "postac" ||
-    script?.target === "postac-lub-wrog" ||
-    script?.target === "siebie-lub-postac";
-  if (script?.stosuje && wantsAnother && !named && script.target === "postac") {
+  if (script?.stosuje && !named && script.target === "postac") {
     throw new Error(`${spell?.name ?? held.card_id} — wskaż Postać, na którą rzucasz.`);
   }
-  /**
-   * „Na Obszar w Kręgu, po którym wędrujesz" — the Władca Gromu's own range.
-   *
-   * Checked here rather than inside the effect because it is a fact about the
-   * *casting*: 9.6 lets a Zaklęcie reach anywhere on the board, and this one
-   * card narrows it to the ring the caster is walking.
-   */
   if (target.fieldId !== undefined) {
     if (!ringFields(caster.field_id as FieldId).includes(target.fieldId)) {
       throw new Error(`${fieldName(target.fieldId)} jest poza twoim Kręgiem.`);
     }
   }
 
-  const onSeat = named?.id ?? caster.id;
   /**
-   * Aimed at a Karta, by an effect that lands on a seat.
+   * Spoken, and left in the air for as long as anybody can answer it.
    *
-   * „Na inną Postać lub Wroga" is two targets and the app can hold one of them:
-   * a creature lying on an Obszar has no seat to carry a status. Left to fall
-   * through, `onSeat` would default to the caster — so the Krąg Płomieni thrown
-   * at a Cyklop would have set the caster alight.
+   * Only when they can: with no reactive Zaklęcie in another hand there is
+   * nothing to wait for, and holding every cast for half a minute would make
+   * the common case — which is almost every cast in almost every game — worse
+   * for nothing. The window is the fight floor's, because it is the same
+   * question asked at a different moment: how long is long enough to read a
+   * hand and decide.
    *
-   * So the effect is skipped and the card is announced, which is what every
-   * untranscribed Zaklęcie already does: the sentence goes back to the table
-   * and the players apply it. Two ops read the Karta themselves and are the
-   * exception — one sends a creature at it, the other moves it.
+   * The card is spent either way. 9.6 puts it on the used pile as it is spoken,
+   * and a Zaklęcie negated is still a Zaklęcie you no longer have.
    */
-  const aimedAtCard =
-    target.fieldCardId !== undefined &&
-    script?.stosuje !== undefined &&
-    script.stosuje.op !== "przyzwij" &&
-    script.stosuje.op !== "przenies-karte";
-  const worked = !aimedAtCard && script?.stosuje
-    ? await applyEffect(
-        apply(snapshot, mergeAll(cast, applied?.writes ?? {})),
-        {
-          seatId: onSeat,
-          // Where a Zaklęcie moves a card rather than destroying it, the caster
-          // is who it moves to. Only the three that take one use this.
-          toSeatId: caster.id,
-          // The other kind of answer to „na kogo": a Karta on the board rather
-          // than a Postać. Only `przyzwij` reads it — see `ApplyEffect`.
-          ...(target.fieldCardId !== undefined ? { fieldCardId: target.fieldCardId } : {}),
-          // And the Obszar, for the one card that is aimed at a square.
-          ...(target.fieldId !== undefined ? { fieldId: target.fieldId } : {}),
-          effect: script.stosuje,
-          reason: spell?.name ?? held.card_id,
-          decided: command.decided,
-          shuffle: command.shuffle ?? ((items) => [...items]),
-        },
-        ports,
-      )
-    : null;
+  if (!script?.reactive && couldAnswer(snapshot, caster.id)) {
+    const heldBack: Changeset = {
+      effects: {
+        insert: [
+          {
+            seat_id: caster.id,
+            source: spell?.name ?? held.card_id,
+            label: `${spell?.name ?? held.card_id} — w powietrzu`,
+            modifier: {
+              kind: "spoken",
+              spell: held.card_id,
+              until: ports.now() + FLOOR_MS,
+              ...(Object.keys(target).length > 0 ? { target } : {}),
+            },
+            ends: { kind: "dispelled" },
+          },
+        ],
+      },
+    };
+    return {
+      writes: mergeAll(cast, heldBack, {
+        journal: [
+          {
+            seatId: caster.id,
+            turn: snapshot.game.turn,
+            kind: "spell",
+            payload: {
+              cardId: held.card_id,
+              name: spell?.name ?? held.card_id,
+              ...(target.seatIndex !== undefined
+                ? { target: nameOfSeat(snapshot.users, target.seatIndex) }
+                : {}),
+              ...(target.note ? { note: target.note } : {}),
+              pending: true,
+            },
+          },
+        ],
+      }),
+      result: {
+        spell: spell?.name ?? held.card_id,
+        effect: script?.effect ?? spell?.text ?? "",
+        did: ["wypowiedziane — czekamy, czy ktoś odpowie"],
+      },
+    };
+  }
+
+  const landed = await landSpell(
+    apply(snapshot, cast),
+    {
+      casterId: caster.id,
+      cardId: held.card_id,
+      target,
+      decided: command.decided,
+      shuffle: command.shuffle,
+    },
+    ports,
+  );
+  const applied = landed.took !== undefined ? { took: landed.took } : null;
+  const worked = landed.did.length > 0 ? { result: { did: landed.did } } : null;
 
   const victim =
     target.seatIndex !== undefined
@@ -801,7 +1096,7 @@ export async function castSpell(
     ],
   };
 
-  const soFar = mergeAll(cast, applied?.writes ?? {}, worked?.writes ?? {}, said);
+  const soFar = mergeAll(cast, landed.writes, said);
 
   /**
    * A spell spoken puts the fight back where it started, and hands the floor
@@ -845,6 +1140,70 @@ export async function castSpell(
       spell: spell?.name ?? held.card_id,
       ...(worked && worked.result.did.length > 0 ? { did: worked.result.did } : {}),
       effect: script?.effect ?? spell?.text ?? "",
+    },
+  };
+}
+
+/**
+ * A Zaklęcie nobody answered, taking effect.
+ *
+ * The other end of the window: `castSpell` leaves a spell in the air when
+ * somebody at the table is holding something that could answer it, and this is
+ * what happens when nobody does. Called by whoever is watching the clock — the
+ * table's own device, or any player's — because a spell that waits for ever is
+ * worse than one that lands too soon.
+ *
+ * Nothing before the window closes: answering is the whole point of the pause,
+ * and settling early would take the answer away. `force` is the table saying
+ * out loud that nobody is going to — the same shortcut `releaseFloor` is for a
+ * claim nobody wants any more.
+ */
+export async function settleSpell(
+  snapshot: Snapshot,
+  command: { force?: boolean } = {},
+  ports: CommandPorts,
+): Promise<Outcome<Cast | null>> {
+  // Found whatever the clock says, and *then* asked about the clock: a spell
+  // whose window has closed is exactly the one this is here to settle, and
+  // `standingSpell` hides those from the answering path on purpose.
+  const waiting = standingSpell(snapshot, -Infinity);
+  if (!waiting) {
+    // Nothing in the air is not an error: two devices watching one clock will
+    // both call this, and the second one has nothing to do.
+    return { writes: {}, result: null };
+  }
+  if (!command.force && waiting.until > ports.now()) {
+    return { writes: {}, result: null };
+  }
+
+  const dropped: Changeset = { effects: { delete: [waiting.id] } };
+  const landed = await landSpell(
+    apply(snapshot, dropped),
+    { casterId: waiting.seatId, cardId: waiting.spell, target: waiting.target },
+    ports,
+  );
+  const spell = SPELL_BY_ID.get(waiting.spell);
+  return {
+    writes: mergeAll(dropped, landed.writes, {
+      journal: [
+        {
+          seatId: waiting.seatId,
+          turn: snapshot.game.turn,
+          kind: "spell",
+          payload: {
+            cardId: waiting.spell,
+            name: spell?.name ?? waiting.spell,
+            // Told apart from the line written when it was spoken: one says it
+            // was said, this says it happened.
+            settled: true,
+          },
+        },
+      ],
+    }),
+    result: {
+      spell: spell?.name ?? waiting.spell,
+      effect: spellScript(waiting.spell)?.effect ?? spell?.text ?? "",
+      ...(landed.did.length > 0 ? { did: landed.did } : {}),
     },
   };
 }

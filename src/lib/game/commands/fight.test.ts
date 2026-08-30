@@ -16,6 +16,7 @@ import {
   escape,
   fightRoll,
   resolveFight,
+  settleSpell,
   setFightPlayerTotal,
   shieldSaves,
 } from "./fight";
@@ -527,6 +528,199 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     await expect(
       castSpell(far, { seatId: "seat-a", holdingId: "s-1", target: { fieldId: asFieldId("zamek")! } }, ports()),
     ).rejects.toThrow(/poza twoim Kręgiem/);
+  });
+
+  /* ------------------------------------------------------------------------
+   * The window a Zaklęcie waits in, and the two cards that answer it.
+   * --------------------------------------------------------------------- */
+
+  /** Somebody else holding a Zwierciadło is what makes a spell wait at all. */
+  const withMirror = (over: { cardId?: string; target?: Record<string, unknown> } = {}) =>
+    aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
+      ],
+      users: duellists(),
+      holdings: [
+        aHolding({
+          id: "s-1",
+          seat_id: "seat-a",
+          card_id: over.cardId ?? "odrodzenie",
+          kind: "spell",
+          face: "hidden",
+        }),
+        aHolding({ id: "s-2", seat_id: "seat-b", card_id: "zwierciadlo", kind: "spell", face: "hidden" }),
+      ],
+    });
+
+  it("leaves a spell in the air while somebody could answer it", async () => {
+    const { writes, result } = await castSpell(
+      withMirror(),
+      { seatId: "seat-a", holdingId: "s-1", target: { seatIndex: 1 } },
+      ports(),
+    );
+    // Spent as it is spoken (9.6), and nothing of what it does has happened.
+    expect(writes.holdings?.delete).toEqual(["s-1"]);
+    expect(writes.seats).toBeUndefined();
+    expect(writes.effects?.insert?.[0]).toMatchObject({
+      seat_id: "seat-a",
+      modifier: { kind: "spoken", spell: "odrodzenie", target: { seatIndex: 1 } },
+    });
+    expect(result.did).toEqual(["wypowiedziane — czekamy, czy ktoś odpowie"]);
+  });
+
+  it("lands at once when nobody is holding an answer", async () => {
+    const alone = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, life: 2 })],
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "odrodzenie", kind: "spell", face: "hidden" }),
+      ],
+    });
+    const { writes } = await castSpell(alone, { seatId: "seat-a", holdingId: "s-1" }, ports());
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 4 } }]);
+    expect(writes.effects).toBeUndefined();
+  });
+
+  it("takes effect when the window has closed and nobody answered", async () => {
+    const inTheAir = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, life: 2 })],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "ODRODZENIE",
+          label: "ODRODZENIE — w powietrzu",
+          modifier: { kind: "spoken", spell: "odrodzenie", until: NOW - 1 },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes, result } = await settleSpell(inTheAir, {}, ports());
+    expect(writes.effects?.delete).toEqual(["eff-1"]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 4 } }]);
+    expect(result?.spell).toBe("ODRODZENIE");
+  });
+
+  it("does nothing while the window is still open", async () => {
+    const waiting = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, life: 2 })],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "ODRODZENIE",
+          label: "ODRODZENIE — w powietrzu",
+          modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000 },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes, result } = await settleSpell(waiting, {}, ports());
+    expect(writes).toEqual({});
+    expect(result).toBeNull();
+  });
+
+  it("negates it outright — Władca Zaklęć", async () => {
+    const answering = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1, life: 2 }),
+      ],
+      users: duellists(),
+      holdings: [
+        aHolding({ id: "s-2", seat_id: "seat-b", card_id: "wladca-zaklec", kind: "spell", face: "hidden" }),
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "ODRODZENIE",
+          label: "ODRODZENIE — w powietrzu",
+          modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000, target: { seatIndex: 1 } },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes, result } = await castSpell(
+      answering,
+      { seatId: "seat-b", holdingId: "s-2" },
+      ports(),
+    );
+    // The spell in the air is gone and never happened.
+    expect(writes.effects?.delete).toEqual(["eff-1"]);
+    expect(writes.seats).toBeUndefined();
+    expect(result.did).toEqual(["ODRODZENIE zanegowane"]);
+  });
+
+  it("turns it round on the one who spoke it — Zwierciadło", async () => {
+    const mirrored = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, life: 1 }),
+        aSeat({ id: "seat-b", seat_index: 1, life: 2 }),
+      ],
+      users: duellists(),
+      holdings: [
+        aHolding({ id: "s-2", seat_id: "seat-b", card_id: "zwierciadlo", kind: "spell", face: "hidden" }),
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "ODRODZENIE",
+          label: "ODRODZENIE — w powietrzu",
+          modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000, target: { seatIndex: 1 } },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes } = await castSpell(mirrored, { seatId: "seat-b", holdingId: "s-2" }, ports());
+    // „Na tego, kto je rzucił": the healing lands on seat-a, who spoke it.
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 4 } }]);
+  });
+
+  it("reflects only what was aimed at the one holding the mirror", async () => {
+    const elsewhere = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
+      ],
+      users: duellists(),
+      holdings: [
+        aHolding({ id: "s-2", seat_id: "seat-b", card_id: "zwierciadlo", kind: "spell", face: "hidden" }),
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "ODRODZENIE",
+          label: "ODRODZENIE — w powietrzu",
+          modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000 },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    await expect(
+      castSpell(elsewhere, { seatId: "seat-b", holdingId: "s-2" }, ports()),
+    ).rejects.toThrow(/nie ma czego odbić/);
+  });
+
+  /** „Co zaneguje działanie Kręgu Płomieni" — the only thing that dispels. */
+  it("lifts what a Zaklęcie left, when there is nothing in the air", async () => {
+    const { writes, result } = await castSpell(
+      inFlames({ cardId: "wladca-zaklec" }),
+      { seatId: "seat-a", holdingId: "s-1" },
+      ports(),
+    );
+    expect(writes.effects?.delete).toEqual(["eff-1"]);
+    expect(result.did).toEqual(["Krąg Płomieni zdjęte"]);
   });
 
   it("puts the spoken card on the used pile (9.6)", async () => {

@@ -424,12 +424,23 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     },
   },
   /**
-   * Announced. There is no moment for it to happen in.
+   * Applied, and it is the card the response window was built for.
    *
-   * "Neguje działanie każdego innego Zaklęcia, rzuconego bezpośrednio przed
-   * nim" is a reaction, and a cast resolves in one commit — there is no window
-   * in which another player is asked whether they answer. That window is the
-   * work, and the Zwierciadło wants the same one.
+   * „Neguje działanie każdego innego (bez wyjątku) Zaklęcia, rzuconego
+   * bezpośrednio przed nim." Nothing in this engine was ever *pending* — a
+   * command decides and commits in one breath — so there was nothing for this
+   * to negate. A Zaklęcie now waits in the air while anybody at the table holds
+   * something that could answer it (`spoken`, and `couldAnswer`), and this is
+   * one of the two things that answer.
+   *
+   * With nothing in the air it does the other half of its job: it lifts what a
+   * Zaklęcie left on you. „Co zaneguje działanie Kręgu Płomieni" — the flames
+   * end `dispelled`, and this card is the only thing in the box that dispels,
+   * so without it the one way out of the Krąg was a status nothing could lift.
+   *
+   * No `stosuje`: what it does is not an effect on anybody, it is what happens
+   * to another Zaklęcie. That lives in `castSpell` because it is about the
+   * casting itself.
    */
   "wladca-zaklec": {
     timing: ["dowolna-chwila"],
@@ -489,11 +500,15 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     },
   },
   /**
-   * Announced. Wants the Władca Zaklęć's reaction window, and then some.
+   * Applied, by the same window the Władca Zaklęć waits in.
    *
-   * "Odbije ono każde inne Zaklęcie rzucone na Postać na tego, kto je rzucił" —
-   * so besides the window it has to re-aim a spell that has already chosen its
-   * target, which nothing here can do.
+   * „Odbije ono każde inne Zaklęcie rzucone na Postać na tego, kto je rzucił."
+   * The spell in the air is turned round: it lands on whoever spoke it, and
+   * anything it *takes* is taken for the one holding the mirror — a Szaleństwo
+   * reflected steals a Zaklęcie from its own caster, for you.
+   *
+   * Only what was aimed at the seat holding it. „Rzucone na Postać" is the
+   * spell landing on *you*; a mirror is not a shield for the table.
    */
   zwierciadlo: {
     timing: ["dowolna-chwila"],

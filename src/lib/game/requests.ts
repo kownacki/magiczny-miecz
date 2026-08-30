@@ -62,6 +62,22 @@ export interface Requests {
     note: string;
     points: number;
     targetSeat: number;
+    /**
+     * `cast`: the Obszar a Zaklęcie is thrown at, for the one card that is.
+     *
+     * „Na Obszar w Kręgu, po którym wędrujesz" — the Władca Gromu. Distinct
+     * from `fieldCardId`, which names a Karta lying on a square rather than the
+     * square itself.
+     */
+    fieldId: string;
+    /**
+     * `settle-spell`: nobody is going to answer, so let it happen now.
+     *
+     * A Zaklęcie waits in the air while somebody could answer it (9.6), and the
+     * window closes on a clock. This is the table saying so out loud instead of
+     * waiting the clock out.
+     */
+    force: boolean;
     /** `endless-stock`: which way. Only `true` is accepted — see the command. */
     on: boolean;
   };

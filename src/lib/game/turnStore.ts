@@ -62,6 +62,7 @@ import {
   sendRaider as sendRaiderOn,
   beginFight as beginFightOn,
   castSpell as castSpellOn,
+  settleSpell as settleSpellOn,
   type Cast,
   escape as escapeOn,
   fightRoll as fightRollOn,
@@ -557,9 +558,29 @@ export async function castSpell(
   gameId: string,
   seatId: string,
   holdingId: string,
-  target: { seatIndex?: number; note?: string; fieldCardId?: string } = {},
+  target: {
+    seatIndex?: number;
+    note?: string;
+    fieldCardId?: string;
+    fieldId?: FieldId;
+  } = {},
 ): Promise<Cast> {
   return change(gameId, castSpellOn, { seatId, holdingId, target });
+}
+
+/**
+ * The Zaklęcie left in the air, taking effect.
+ *
+ * A spell waits while anybody at the table holds something that could answer
+ * it (`castSpell`), and somebody has to be watching the clock — so this is the
+ * other end of that window, safe to call at any time by anybody: with nothing
+ * waiting, or with a window still open, it writes nothing and says so.
+ *
+ * `force` is the table saying out loud that nobody is going to answer, which is
+ * the same shortcut `releaseFloor` gives a claim nobody wants any more.
+ */
+export async function settleSpell(gameId: string, force = false): Promise<Cast | null> {
+  return change(gameId, settleSpellOn, { force });
 }
 
 export async function setFightPlayerTotal(gameId: string, total: number): Promise<void> {
