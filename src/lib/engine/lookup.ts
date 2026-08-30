@@ -39,6 +39,40 @@ const CARDS: Named[] = [
   ...(spellCards as Named[]),
 ];
 
+/**
+ * A name is not an identity, and this file is where that will bite first.
+ *
+ * Two of the box's names are carried by two different cards each: **DEMON** is
+ * a Wróg („W okolicy pojawił się potężny Demon") and a Karta Postaci, and
+ * **CZARODZIEJ** is a Nieznajomy („Ten Obszar do końca rozgrywki będzie
+ * siedzibą dobrego Czarodzieja") and a Karta Postaci. `describeCard` asks
+ * `PEOPLE` first, so in both cases the Postać wins and the Karta Zdarzeń
+ * cannot be read through `card` at all. In base that is two cards out of 165
+ * and it has been left as it is.
+ *
+ * **It does not stay that small.** Across the five expansions — surveyed
+ * against their transcriptions, see docs/EXPANSIONS.md — twenty names are
+ * carried by more than one card, and seven of those are two genuinely
+ * different cards *printed on the same sheet*, where namespacing by set would
+ * not separate them either:
+ *
+ * - PRZEWODNIK KRYPTY — Nieznajomy IV twice, Przyjaciel V once, three
+ *   printings and two different rules (Magia, Karty Krypty)
+ * - KAŻDEMU PO RÓWNO — word for word identical but for „Miecza" / „Magii"
+ * - STRAŻ — MIECZ 8 and MIECZ 5, same sentence (Gród)
+ * - SAKIEWKA — 6 Sz.Z. safe on 1–2, and 4 Sz.Z. safe on 1–3 (Magia)
+ * - KSIĄŻĘCY PRZYWILEJ — a stay in the Wieża, and a Kredyt without interest
+ * - ŁUK — „na odległość do 3 Obszarów" and „na sąsiednim polu" (Jaskinia)
+ * - ŻEBRAK — a Wróg II and a Nieznajomy IV (Gród)
+ *
+ * So the moment an expansion is transcribed, every lookup in this file that
+ * answers a name with *one* card stops being correct — `describeCard` picks
+ * whichever it meets first, and `everyCardName` folds the two into one entry
+ * because it dedupes by name. The fix is not an ordering: it is that a name
+ * resolves to a *list*, and that what identifies a card is `source` — the
+ * sheet and the square it was cut from — which is the only unique handle in
+ * this data. Do that here before adding a second set, not after.
+ */
 const PEOPLE = characters as Character[];
 
 /**
@@ -85,6 +119,8 @@ export function describeCard(
   const wanted = fold(name.trim());
   if (wanted === "") return { missing: name };
 
+  // Postacie first, which shadows the two Karty Zdarzeń that share a name with
+  // one — see the note above `PEOPLE`, and read it before adding an expansion.
   const person = PEOPLE.find((one) => fold(one.name) === wanted);
   if (person) {
     return {
