@@ -225,8 +225,16 @@ export type Command =
   | { kind: "endcast" }
   /** 17.9's choice: null takes the Życie, "zloto" the coin, a name the Przedmiot. */
   | { kind: "spoils"; take: "zycie" | "zloto"; card: string | null }
-  /** Test mode: the named Karta on top of its pile, so `draw` finds it. */
-  | { kind: "stack"; cardId: string }
+  /**
+   * Test mode: a Karta on top of its pile, so `draw` finds it.
+   *
+   * By name, or by where it lies in the draw order — which is what `pile`
+   * prints, numbered from the top, so the two read as one another's halves.
+   */
+  | { kind: "stack"; cardId: string; pile: null; at: null }
+  | { kind: "stack"; cardId: null; pile: "events" | "spells"; at: number }
+  /** Test mode: what is left in a pile, and what has been used (9.5, 16.8). */
+  | { kind: "pile"; pile: "events" | "spells" | null }
   | { kind: "endturn" }
   /* Playing. These are the game as printed: you roll, you walk it out, you meet
      what is on the Obszar, you hand the turn on. */
@@ -845,6 +853,18 @@ export const COMMANDS: CommandSpec[] = [
     group: "override",
   },
   {
+    // The half `stack` needs to be usable by position: you cannot ask for the
+    // tenth card without seeing the list. Also the only way to answer "is the
+    // Smok still in there, or has somebody had him?" — which the used pile
+    // answers and nothing else does.
+    name: "pile",
+    aliases: ["deck"],
+    usage: "pile [events|spells]",
+    summary: "look through a pile, top first — bare, both of them in brief",
+    needs: "testmode",
+    group: "override",
+  },
+  {
     name: "place",
     // `drop` was an alias here and is not any more: it is the lawful "put a
     // Przedmiot down", and a word cannot mean both that and a card conjured
@@ -1397,10 +1417,33 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
 
   if (word === "stack") {
+    /**
+     * A number is a position in the draw order, not a name.
+     *
+     * No card in the box is called a number, so the two forms cannot collide.
+     * A bare number means the Karty Zdarzeń: they are *the* deck, and the
+     * Zaklęcia are always called by their own name.
+     */
+    const spot = /^(?:(events|spells|zdarzenia|zaklecia|zaklęcia)\s+)?(\d+)$/i.exec(tail.trim());
+    if (spot) {
+      const said = (spot[1] ?? "events").toLowerCase();
+      const pile = said.startsWith("s") || said.startsWith("zak") ? "spells" : "events";
+      return { ok: { kind: "stack", cardId: null, pile, at: Number(spot[2]) } };
+    }
     return name(STACKABLE, (card) => card.name, tail, "card", (card) => ({
       kind: "stack",
       cardId: card.id,
+      pile: null,
+      at: null,
     }), "stack");
+  }
+
+  if (word === "pile" || word === "deck") {
+    const said = tail.trim().toLowerCase();
+    if (said === "") return { ok: { kind: "pile", pile: null } };
+    if (said.startsWith("e") || said.startsWith("zd")) return { ok: { kind: "pile", pile: "events" } };
+    if (said.startsWith("s") || said.startsWith("zak")) return { ok: { kind: "pile", pile: "spells" } };
+    return { error: "Which pile — `events` or `spells`?" };
   }
 
   if (word === "summon") {
@@ -1846,6 +1889,7 @@ export function complete(
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
     if (verb === "stack") return { pool: STACKABLE.map((c) => c.name), at: 1 };
+    if (verb === "pile" || verb === "deck") return { pool: ["events", "spells"], at: 1 };
     if (verb === "summon" || verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "card" || verb === "read" || verb === "x") {
       // Everything readable, which is every Karta in the box: a Wróg cannot be
@@ -2021,6 +2065,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   endgame: "testmode",
   endfight: "testmode",
   stack: "testmode",
+  pile: "testmode",
   endcast: "play",
   spoils: "play",
   // Both sides call `drawSpell`. 9.5 deals them; this is that.

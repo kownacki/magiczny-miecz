@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DeckState } from "@/lib/engine/deck";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { aTable } from "../fixture";
-import { putOnPile, stackForDraw, trophiesToPile } from "./piles";
+import { putOnPile, stackAt, stackForDraw, trophiesToPile } from "./piles";
 
 /**
  * The one door every card leaves a hand through, and the two things it keeps out.
@@ -170,5 +170,47 @@ describe("stacking a card for the next draw", () => {
     expect(out.writes.journal).toEqual([
       { seatId, turn: 3, kind: "test-stack", payload: { cardId: "cyklop" }, manual: true },
     ]);
+  });
+});
+
+/**
+ * The same, by where the card lies rather than by what it is called.
+ *
+ * The half `pile` needs to be worth printing: having read the draw order
+ * numbered from the top, `stack 10` is how you say "that one".
+ */
+describe("stacking by position", () => {
+  const seatId = "seat-a";
+  const three = pile([eventRef("smok"), eventRef("cyklop"), eventRef("wilkolak")]);
+  const at = (n: number, which: "events" | "spells" = "events") =>
+    stackAt(table({ game: { deck: { events: three, spells: pile([spellRef("ocalony")]) } } }), {
+      seatId,
+      pile: which,
+      at: n,
+    });
+
+  it("counts from the top, one-based, like the list it answers", () => {
+    expect(at(2).result).toBe("cyklop");
+    expect(after(at(2).writes).events.draw[0]).toBe(eventRef("cyklop"));
+  });
+
+  /** Already on top is what was asked for, so it is a no-op and not an error. */
+  it("takes the first without complaining", () => {
+    expect(at(1).result).toBe("smok");
+    expect(after(at(1).writes).events.draw).toEqual(three.draw);
+  });
+
+  it("says how many there are rather than just refusing", () => {
+    expect(() => at(4)).toThrow(/3 Kart/);
+    expect(() => at(0)).toThrow(/3 Kart/);
+  });
+
+  it("counts down the pile it was pointed at", () => {
+    expect(at(1, "spells").result).toBe("ocalony");
+  });
+
+  it("has nothing to offer from an empty pile", () => {
+    const bare = table({ game: { deck: { events: pile(), spells: pile() } } });
+    expect(() => stackAt(bare, { seatId, pile: "events", at: 1 })).toThrow(/pusta/);
   });
 });

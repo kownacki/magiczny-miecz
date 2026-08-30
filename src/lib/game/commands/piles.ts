@@ -2,7 +2,7 @@
 
 import { discardTo, returningRef, stackOnTop } from "@/lib/engine/deck";
 import { fromTheShop } from "@/lib/engine/stock";
-import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
+import { BY_REF, EVENT_COPIES, SPELL_BY_REF, SPELL_COPIES, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
 import { trophyModeOf } from "./seat";
 
@@ -122,34 +122,78 @@ export function stackForDraw(
   command: { seatId: string; cardId: string },
 ): Outcome<"events" | "spells"> {
   const { seatId, cardId } = command;
-  if (snapshot.game.mode !== "simulation") {
-    throw new Error("Talia jest na stole, nie w aplikacji.");
-  }
-
   const pile = EVENT_COPIES.has(cardId) ? "events" : SPELL_COPIES.has(cardId) ? "spells" : null;
   if (!pile) throw new Error("Ta Karta nie jest w żadnej talii.");
 
-  const decks = decksOf(snapshot.game);
+  const decks = simulatedDecks(snapshot);
   for (const ref of (pile === "events" ? EVENT_COPIES : SPELL_COPIES).get(cardId) ?? []) {
     const after = stackOnTop(decks[pile], ref);
-    if (!after) continue;
-    return {
-      writes: {
-        game: { deck: { ...decks, [pile]: after } },
-        journal: [
-          {
-            seatId,
-            turn: snapshot.game.turn,
-            kind: "test-stack",
-            payload: { cardId },
-            manual: true,
-          },
-        ],
-      },
-      result: pile,
-    };
+    if (after) return wroteStack(snapshot, seatId, pile, decks, after, cardId);
   }
   throw new Error("Każdy egzemplarz tej Karty jest w grze — nie ma czego położyć na wierzchu.");
+}
+
+/**
+ * The same, for a card picked off the pile by where it lies rather than by name.
+ *
+ * The other half of `pile`, which prints the draw order numbered from the top:
+ * having read the list, `stack 10` is how you say "that one". By position it
+ * can only ever name a card that is *in* the pile, so the refusal `stackForDraw`
+ * needs — every copy already in play — cannot arise here.
+ *
+ * One-based, because the list it answers is one-based. `stack 1` is a no-op
+ * rather than an error: the card is already on top, which is what was asked
+ * for.
+ */
+export function stackAt(
+  snapshot: Snapshot,
+  command: { seatId: string; pile: "events" | "spells"; at: number },
+): Outcome<string> {
+  const { seatId, pile, at } = command;
+  const decks = simulatedDecks(snapshot);
+  const draw = decks[pile].draw;
+  if (!Number.isInteger(at) || at < 1 || at > draw.length) {
+    throw new Error(
+      draw.length === 0
+        ? "Ta talia jest pusta."
+        : `W tej talii jest ${draw.length} Kart — wybierz od 1 do ${draw.length}.`,
+    );
+  }
+  const ref = draw[at - 1];
+  const after = stackOnTop(decks[pile], ref);
+  // `ref` came off this very pile, so `stackOnTop` cannot fail to find it.
+  if (!after) throw new Error("Nie ma tej Karty w talii.");
+  const card = pile === "events" ? BY_REF.get(ref) : SPELL_BY_REF.get(ref);
+  const cardId = card?.id ?? ref;
+  return { ...wroteStack(snapshot, seatId, pile, decks, after, cardId), result: cardId };
+}
+
+/** The decks, or the reason there are none to arrange. */
+function simulatedDecks(snapshot: Snapshot) {
+  if (snapshot.game.mode !== "simulation") {
+    throw new Error("Talia jest na stole, nie w aplikacji.");
+  }
+  return decksOf(snapshot.game);
+}
+
+/** The one write both forms make, so the journal line cannot come out twice-shaped. */
+function wroteStack(
+  snapshot: Snapshot,
+  seatId: string,
+  pile: "events" | "spells",
+  decks: ReturnType<typeof decksOf>,
+  after: ReturnType<typeof stackOnTop>,
+  cardId: string,
+): Outcome<"events" | "spells"> {
+  return {
+    writes: {
+      game: { deck: { ...decks, [pile]: after } },
+      journal: [
+        { seatId, turn: snapshot.game.turn, kind: "test-stack", payload: { cardId }, manual: true },
+      ],
+    },
+    result: pile,
+  };
 }
 
 /**

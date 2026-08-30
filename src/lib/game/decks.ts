@@ -100,3 +100,30 @@ export function decksOf(game: { deck: unknown; seed?: string | null; revision?: 
     spells: stored.spells ?? buildDeck(SPELLS.map((c) => cardRef(c.source)), shuffle),
   };
 }
+
+/**
+ * What is in a pile, top first, as names rather than slice refs.
+ *
+ * For the console's `pile`, and deliberately nowhere near a browser: the draw
+ * order is the one thing in a simulated game that must not leak, for the same
+ * reason `games.seed` must not. Knowing the next four Karty Zdarzeń is knowing
+ * whether to explore, and a referee that tells you is not refereeing.
+ *
+ * Refs rather than ids in the piles because the box has genuine duplicates —
+ * four Magiczne Miecze, fifteen 1 SZTUKA ZŁOTA — so the same name appears as
+ * many times in this list as there are copies left, which is the truth about
+ * the pile and not a bug in the listing.
+ */
+export function pileContents(
+  game: { deck: unknown; seed?: string | null; revision?: number },
+  pile: "events" | "spells",
+): { draw: { id: string; name: string }[]; discard: { id: string; name: string }[] } {
+  const byRef = pile === "events" ? BY_REF : SPELL_BY_REF;
+  const named = (refs: readonly string[]) =>
+    refs.map((ref) => {
+      const card = byRef.get(ref);
+      return { id: card?.id ?? ref, name: card?.name ?? ref };
+    });
+  const deck = decksOf(game)[pile];
+  return { draw: named(deck.draw), discard: named(deck.discard) };
+}

@@ -7,6 +7,7 @@ import { cardIdNamed, describeCard } from "@/lib/engine/lookup";
 import type { Character } from "@/data/types";
 import { asFieldId, FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { spellScript } from "@/lib/engine/spells";
+import { pileContents } from "./decks";
 import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 import {
   helpLines,
@@ -81,6 +82,7 @@ import {
   settleSpell,
   spendHolding,
   stackCard,
+  stackNth,
   takeCard,
   takeFromField,
   stageFight,
@@ -91,6 +93,7 @@ import {
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { only, replaceTop, top } from "@/lib/engine/stack";
+import type { TurnPhase } from "@/lib/engine/turn";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
 import { GIVEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
@@ -183,8 +186,24 @@ const PHASE: Record<string, string> = {
   fight: "fight",
   bridge: "the Most",
   script: "a Karta mid-resolution",
+  loop: "a Wróg fought in rounds",
   end: "end of turn",
 };
+
+/**
+ * One frame, named for the `Stack:` line.
+ *
+ * A loop is the one frame whose kind is not the interesting part: three heads
+ * with one cut is a different position from three with two, and "a Wróg fought
+ * in rounds" says neither. It is also the one frame never on top, so this line
+ * is the only place it is ever seen.
+ */
+function frameLabel(frame: TurnPhase): string {
+  if (frame.phase === "loop") {
+    return `${frame.of.cardName}: ${frame.round} ${frame.done + 1} z ${frame.times}`;
+  }
+  return PHASE[frame.phase] ?? frame.phase;
+}
 
 /** The question the turn is stuck on, for `look`. */
 function waitingOn(turnState: unknown): string[] {
@@ -1319,10 +1338,40 @@ export async function runCommand(
      */
     case "stack": {
       const seat = seatOf(null);
-      const pile = await stackCard(gameId, seat.id, command.cardId);
-      return pile === "spells"
-        ? `${cardName(command.cardId)} is on top of the Zaklęcia — next \`spell\` takes it.`
-        : `${cardName(command.cardId)} is on top of the Karty Zdarzeń — next \`draw\` takes it.`;
+      const put =
+        command.cardId !== null
+          ? { pile: await stackCard(gameId, seat.id, command.cardId), cardId: command.cardId }
+          : await stackNth(gameId, seat.id, command.pile, command.at);
+      const where =
+        put.pile === "spells"
+          ? "on top of the Zaklęcia — next `spell` takes it"
+          : "on top of the Karty Zdarzeń — next `draw` takes it";
+      return `${cardName(put.cardId)} is ${where}.`;
+    }
+
+    /**
+     * What is left to deal, and what has been dealt.
+     *
+     * Numbered from the top, because that is the number `stack 10` takes — the
+     * two are one another's halves. The used pile is counted rather than
+     * listed: what matters about it is 9.5, that it is what comes back when the
+     * draw runs out, and sixty names would bury the twenty that are still live.
+     */
+    case "pile": {
+      const snapshot = await activeStore().load(gameId);
+      const one = (pile: "events" | "spells", title: string) => {
+        const { draw, discard } = pileContents(snapshot.game, pile);
+        const head =
+          `${title}: ${draw.length} left, ${discard.length} used` +
+          (discard.length > 0 ? " (9.5 turns these over when the draw runs out)" : "");
+        if (command.pile === null) {
+          return [head, ...(draw.length > 0 ? [`  top: ${draw.slice(0, 5).map((c) => c.name).join(", ")}`] : [])];
+        }
+        return [head, ...draw.map((card, at) => `  ${String(at + 1).padStart(3)}  ${card.name}`)];
+      };
+      if (command.pile === "events") return one("events", "Karty Zdarzeń").join("\n");
+      if (command.pile === "spells") return one("spells", "Zaklęcia").join("\n");
+      return [...one("events", "Karty Zdarzeń"), "", ...one("spells", "Zaklęcia")].join("\n");
     }
 
     case "summon": {
@@ -1705,9 +1754,7 @@ export async function runCommand(
         // every ordinary turn.
         ...(game.turn_state.stack.length > 1
           ? [
-              `Stack: ${game.turn_state.stack
-                .map((frame) => PHASE[frame.phase] ?? frame.phase)
-                .join(" › ")}`,
+              `Stack: ${game.turn_state.stack.map(frameLabel).join(" › ")}`,
             ]
           : []),
         ...(state.options?.length

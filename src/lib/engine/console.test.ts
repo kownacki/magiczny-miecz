@@ -237,6 +237,31 @@ suite("naming a card, a field or a creature", () => {
     expect(ok("teleport Karczma")).toEqual({ kind: "teleport", fieldId: "karczma" });
   });
 
+  /**
+   * Two forms, and they cannot collide: no card in the box is called a number.
+   * A bare number is the Karty Zdarzeń, which are *the* deck — the Zaklęcia are
+   * always asked for by their own name.
+   */
+  it("stacks by name or by position", () => {
+    expect(ok("stack WILKOŁAK")).toEqual({
+      kind: "stack",
+      cardId: "wilkolak",
+      pile: null,
+      at: null,
+    });
+    expect(ok("stack 10")).toEqual({ kind: "stack", cardId: null, pile: "events", at: 10 });
+    expect(ok("stack spells 3")).toEqual({ kind: "stack", cardId: null, pile: "spells", at: 3 });
+    // Polish for the two piles, since that is what they are called on screen.
+    expect(ok("stack zaklęcia 3")).toEqual({ kind: "stack", cardId: null, pile: "spells", at: 3 });
+  });
+
+  it("looks through either pile, or both", () => {
+    expect(ok("pile")).toEqual({ kind: "pile", pile: null });
+    expect(ok("pile events")).toEqual({ kind: "pile", pile: "events" });
+    expect(ok("deck spells")).toEqual({ kind: "pile", pile: "spells" });
+    expect(err("pile trophies")).toMatch(/Which pile/);
+  });
+
   it("fights only a Wróg", () => {
     expect(ok("summon WILKOŁAK")).toEqual({ kind: "summon", cardId: "wilkolak" });
     // A Przedmiot is not a creature, so it is not there to be found.
@@ -975,7 +1000,11 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   summon: { line: "summon WILKOŁAK", becomes: { kind: "summon", cardId: "wilkolak" } },
   settle: { line: "settle won", becomes: { kind: "settle", outcome: "wygrana" } },
   endgame: { line: "endgame won", becomes: { kind: "endgame", won: true } },
-  stack: { line: "stack WILKOŁAK", becomes: { kind: "stack", cardId: "wilkolak" } },
+  stack: {
+    line: "stack WILKOŁAK",
+    becomes: { kind: "stack", cardId: "wilkolak", pile: null, at: null },
+  },
+  pile: { line: "pile events", becomes: { kind: "pile", pile: "events" } },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
   endturn: { line: "endturn", becomes: { kind: "endturn" } },

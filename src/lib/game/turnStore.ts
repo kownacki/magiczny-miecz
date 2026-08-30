@@ -14,6 +14,7 @@ import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
 import { only, top } from "@/lib/engine/stack";
+import { settleExposedLoop } from "@/lib/engine/loop";
 import {
   afterFight,
   type Ends,
@@ -81,7 +82,7 @@ import {
 } from "./commands/bridge";
 import { claimFloor, releaseFloor } from "./commands/spellFloor";
 import { adjustSeat, type Adjustable, type Adjusted } from "./commands/adjust";
-import { stackForDraw as stackForDrawOn } from "./commands/piles";
+import { stackAt as stackAtOn, stackForDraw as stackForDrawOn } from "./commands/piles";
 import type { JournalKind } from "@/lib/engine/journal";
 import {
   dropCard as dropCardOn,
@@ -530,7 +531,10 @@ export async function abandonFight(gameId: string): Promise<void> {
         // frame beneath takes it from there.
         writes: {
           game: {
-            turn_state: closeFightFrame(snapshot.game.turn_state, state),
+            // A round of a looping fight leaves the loop on top when it pops,
+            // and a loop is never on screen by itself — walking out of the
+            // second head is walking out of the creature.
+            turn_state: settleExposedLoop(closeFightFrame(snapshot.game.turn_state, state)),
           },
           ...(seat
             ? {
@@ -1480,6 +1484,22 @@ export async function stackCard(
   cardId: string,
 ): Promise<"events" | "spells"> {
   return change(gameId, stackForDrawOn, { seatId, cardId });
+}
+
+/**
+ * The same, for a card picked off the pile by position rather than by name.
+ *
+ * Hands back which card it turned out to be, since the caller asked for "the
+ * tenth" and wants to be told what that was.
+ */
+export async function stackNth(
+  gameId: string,
+  seatId: string,
+  pile: "events" | "spells",
+  at: number,
+): Promise<{ pile: "events" | "spells"; cardId: string }> {
+  const cardId = await change(gameId, stackAtOn, { seatId, pile, at });
+  return { pile, cardId };
 }
 
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {
