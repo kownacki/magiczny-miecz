@@ -286,7 +286,7 @@ elsewhere. Every card is in the box.
 |---|---|---|---|
 | 1 | Ania rolls 4, moves to Płaskowyż Mgieł | `field(plaskowyz, draw 3)` | — |
 | 2 | draws Zaklęta Ścieżka (I), Trójgłowy Smok (II), Grota (III) | `field{drawn:3}` | 1 |
-| 3 | **Bartek** casts Odmiana Losu "natychmiast po wzięciu": discards Ścieżka, draws Koszmar | `field`, `cast(seat B)` → pops → `field{drawn: Koszmar, Smok, Grota}` — order re-derived after the pop | 4, 5 |
+| 3 | **Bartek** casts Odmiana Losu "natychmiast po wzięciu": discards Ścieżka, draws Koszmar | `field`, `cast(seat B)` → pops → `field{drawn: Smok, Koszmar, Grota}` — order re-derived after the pop | 4, 5 |
 | 4 | Koszmar: Ania is Chaotyczna; the wish is not hers; card stays | `field{resolved: koszmar}` | 1 |
 | 5 | Smok: 16.4, cannot be walked past. Loop of three heads, 2 Miecz each | `field`, `loop(smok, 3)`, `fight(head 1)` | 3 |
 | 6 | head 1: 5+5 vs 2+3, win | `field`, `loop{done:1}`, `fight(head 2)` | 3 |
@@ -294,6 +294,15 @@ elsewhere. Every card is in the box.
 | 8 | Ania has no Władca; the Krąg holds; the fight beneath cannot proceed; loop stops, heads reset | `field{fought: smok}` | 3, 4 |
 | 9 | Grota is III and unreachable behind the Smok; settles as a fixture | `field` → `end` | 1 |
 | 10 | next turn Celina arrives, 15.1 draws zero, faces Koszmar; she is Zła; wish = "przeniesienie do dowolnego Obszaru w tym Kręgu" | `field(plaskowyz)`, `script(koszmar)`, `ask(seat C)` → **cut** → `field(chosen, draw 0)` | 2, 5 |
+
+**Corrected 2026-08-31, by the test finally running it.** Row 3 said the order
+after the swap was `Koszmar, Smok, Grota`. It is `Smok, Koszmar, Grota`: the
+Koszmar is a **Nieznajomy**, and the classes are the numerals printed on the
+cards — Spotkanie I, Wróg II, Nieznajomy IV (`CARD_CLASS`, checked against the
+headers). So 15.2 puts him behind the Smok rather than in front of the Ścieżka
+he replaced, and moment 4 is the Nieznajomy dealt with *after* the Wróg. This
+is what a scenario written before the code is for, and what it costs to leave
+one unexecuted for three steps.
 
 Assertions worth stating outright:
 
@@ -306,7 +315,13 @@ Assertions worth stating outright:
   Grota beside it — the cut kept the field's cards and dropped only her frames.
 - At no point are two `ask` frames on the stack at once.
 
-Written as `src/lib/game/commands/stack.test.ts`, `describe.skip` until step 2.
+Written as `src/lib/game/commands/stack.test.ts`. It ran as eleven `it.todo`s
+under a `describe.skip` through steps 0–2; **nine of the eleven run now**, and
+the two that do not name what they wait on — moment 7 wants the `cast` frame
+(law 4), moment 10 wants a second turn in the harness. Moment 8 is checked for
+what law 3 owes (the attempt ends, the heads regrow, 17.4 settles the Smok for
+the turn) reached by the dice rather than by the Krąg, so nothing is asserted
+about a mechanism nobody has written.
 
 ## Handoff
 
