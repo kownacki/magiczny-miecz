@@ -301,6 +301,31 @@ export function TestConsole({
   useEffect(() => {
     const box = tail.current;
     if (!box) return;
+    /**
+     * Except when nothing has been said, where the bottom is right after all.
+     *
+     * Opening is not asking a question. The transcript is the one restored from
+     * the last visit, so the last anchor in it belongs to a command answered
+     * long ago — pinning that to the top showed the *start* of an old answer and
+     * left everything since below the fold, on a console somebody opened to see
+     * where the game had got to. It read as not having scrolled at all.
+     *
+     * `printed` answers it exactly, and is the reason it is a counter rather
+     * than `log.length`: it counts what *this* console has said, so zero means
+     * the whole box is history and there is no answer in it to read from the
+     * top. One line said and the anchor takes over for the rest of the session.
+     *
+     * A pure function of state, deliberately, rather than a ref remembering
+     * whether it has run. Two attempts at that both failed the same way: in
+     * development StrictMode invokes every effect twice against a ref that
+     * survives between the two passes, so the second pass took the other branch
+     * and undid the first — bottom then anchor, or anchor then bottom,
+     * depending which way the flag was read. Both passes agree on this.
+     */
+    if (printed.current === 0) {
+      box.scrollTo({ top: box.scrollHeight });
+      return;
+    }
     const anchors = box.querySelectorAll<HTMLElement>("[data-echo],[data-anchor]");
     const last = anchors[anchors.length - 1];
     const top = last
