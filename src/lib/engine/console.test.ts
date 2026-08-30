@@ -392,9 +392,30 @@ suite("playing the game, and overruling it", () => {
       kind: "cast",
       name: "BŁYSKAWICA",
       who: "Ola",
+      to: null,
     });
-    expect(ok("cast BŁYSKAWICA")).toEqual({ kind: "cast", name: "BŁYSKAWICA", who: null });
+    expect(ok("cast BŁYSKAWICA")).toEqual({
+      kind: "cast",
+      name: "BŁYSKAWICA",
+      who: null,
+      to: null,
+    });
     expect(err("cast")).toContain("cast BŁYSKAWICA");
+  });
+
+  /**
+   * The one Zaklęcie that names two places: which Karta, and where it goes.
+   * „Przenieś odkrytą Kartę Zdarzeń na inny, nie zajęty Obszar w tym samym
+   * Kręgu" — and the cast is refused until both are said, so `to` is the other
+   * half of the card rather than a convenience.
+   */
+  it("takes the Władca Zdarzeń's second place with `to`", () => {
+    expect(ok("cast WŁADCA ZDARZEŃ at CYKLOP to Mroczna Polana")).toEqual({
+      kind: "cast",
+      name: "WŁADCA ZDARZEŃ",
+      who: "CYKLOP",
+      to: "Mroczna Polana",
+    });
   });
 
   it("takes the Różdżka's refill as a flag on the same draw", () => {
@@ -898,7 +919,10 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   // 17.9: bare is the Życie, which is what the app always took.
   spoils: { line: "spoils", becomes: { kind: "spoils", take: "zycie", card: null } },
   trophies: { line: "trophies points", becomes: { kind: "trophies", mode: "points" } },
-  cast: { line: "cast BŁYSKAWICA", becomes: { kind: "cast", name: "BŁYSKAWICA", who: null } },
+  cast: {
+    line: "cast BŁYSKAWICA",
+    becomes: { kind: "cast", name: "BŁYSKAWICA", who: null, to: null },
+  },
   bridge: { line: "bridge", becomes: { kind: "bridge" } },
   cross: { line: "cross", becomes: { kind: "cross" } },
   guardian: { line: "guardian", becomes: { kind: "guardian" } },

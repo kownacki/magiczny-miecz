@@ -883,11 +883,25 @@ export async function runCommand(
         command.who && aim === "karta-na-planszy"
           ? await fieldCardNamed(gameId, command.who)
           : null;
-      const done = await castSpell(gameId, seat.id, held.id, {
-        ...(at ? { seatIndex: at.seat_index } : {}),
-        ...(onField ? { fieldId: onField } : {}),
-        ...(onCard ? { fieldCardId: onCard.id } : {}),
-      });
+      /**
+       * And where it goes, for the card that puts down what it picks up.
+       *
+       * The Władca Zdarzeń is the only Zaklęcie that asks a second question,
+       * and the cast is refused until it is answered — so `to` is not a
+       * convenience here, it is the other half of the card.
+       */
+      const goesTo = command.to ? requireFieldId(fieldNamed(command.to)) : null;
+      const done = await castSpell(
+        gameId,
+        seat.id,
+        held.id,
+        {
+          ...(at ? { seatIndex: at.seat_index } : {}),
+          ...(onField ? { fieldId: onField } : {}),
+          ...(onCard ? { fieldCardId: onCard.id } : {}),
+        },
+        goesTo ? { destination: goesTo } : {},
+      );
       /**
        * What happened where the app carried the Zaklęcie out, and the card's
        * own sentence where it did not.
@@ -897,13 +911,14 @@ export async function runCommand(
        * instruction to the table whether or not the die has already been
        * thrown, and thirteen of them have now.
        */
-      const aimed = at
-        ? ` at ${named(at)}`
-        : onField
-          ? ` at ${fieldName(onField)}`
-          : onCard
-            ? ` at ${cardName(onCard.card_id)}`
-            : "";
+      const aimed =
+        (at
+          ? ` at ${named(at)}`
+          : onField
+            ? ` at ${fieldName(onField)}`
+            : onCard
+              ? ` at ${cardName(onCard.card_id)}`
+              : "") + (goesTo ? ` to ${fieldName(goesTo)}` : "");
       return [
         `${named(seat)} casts ${done.spell}${aimed}.`,
         ...(done.did && done.did.length > 0 ? done.did : done.effect ? [done.effect] : []),

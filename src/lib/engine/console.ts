@@ -266,7 +266,13 @@ export type Command =
   | { kind: "buy"; name: string }
   | { kind: "sell"; name: string }
   | { kind: "heal"; points: number | null }
-  | { kind: "cast"; name: string; who: string | null }
+  | {
+      kind: "cast";
+      name: string;
+      who: string | null;
+      /** Where the Karta goes, for the one Zaklęcie that moves one. */
+      to: string | null;
+    }
   | { kind: "trade"; cards: string[]; swords: number | null }
   | { kind: "trophies"; mode: "points" | "cards" | null }
   /**
@@ -457,7 +463,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "cast",
     aliases: [],
     when: PLAYING,
-    usage: "cast BŁYSKAWICA [at Ola]",
+    usage: "cast BŁYSKAWICA [at Ola] [to Mroczna Polana]",
     summary: "cast a Zaklęcie you are holding (9.6)",
     needs: "play",
     group: "carrying",
@@ -1044,6 +1050,15 @@ const PLACES = [...FIELDS.values()];
 const AT = /\s+at\s+/i;
 
 /**
+ * And `to`, for the one Zaklęcie that names two places.
+ *
+ * „Przenieś odkrytą Kartę Zdarzeń na inny, nie zajęty Obszar w tym samym
+ * Kręgu" — `cast WŁADCA ZDARZEŃ at CYKLOP to Mroczna Polana`, which is the
+ * whole card in one line.
+ */
+const TO = /\s+to\s+/i;
+
+/**
  * And `as`, which does the same for `revive Ola as MAGOG`.
  *
  * Allowed at the very start as well, because the player is optional: `revive as
@@ -1447,10 +1462,19 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
   if (word === "cast") {
     if (!tail) return needs("cast", "Cast what?");
-    // `at` joins the two names, the way `place MIECZ at Karczma` does.
-    const [named, at] = tail.split(AT);
+    // `at` joins the two names, the way `place MIECZ at Karczma` does, and
+    // `to` adds the third for the card that moves what it points at.
+    const [named, rest] = tail.split(AT);
     if (!named?.trim()) return needs("cast", "Cast what?");
-    return { ok: { kind: "cast", name: named.trim(), who: at?.trim() || null } };
+    const [at, to] = (rest ?? "").split(TO);
+    return {
+      ok: {
+        kind: "cast",
+        name: named.trim(),
+        who: at?.trim() || null,
+        to: to?.trim() || null,
+      },
+    };
   }
 
   if (word === "endcast") return { ok: { kind: "endcast" } };
