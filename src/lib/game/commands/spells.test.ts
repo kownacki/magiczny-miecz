@@ -5,6 +5,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { castSpell } from "./fight";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS } from "@/lib/engine/spells";
+import { manualNote } from "@/lib/engine/coverage";
 import type { TurnPhase } from "@/lib/engine/turn";
 
 /**
@@ -141,15 +142,41 @@ describe("Zaklęcia that leave something behind", () => {
   });
 });
 
-describe("what is still announced, and why it is written down", () => {
+describe("every Zaklęcie is carried out, and the halves that are not are named", () => {
   /**
-   * The reactive ones need a spell to be *pending* rather than resolved, and
-   * nothing here is. Marking that in the data beats half-applying them.
+   * The two that answer another spell do it in `castSpell` rather than through
+   * an effect: what they do is not something that happens to anybody, it is
+   * what happens to another Zaklęcie. `reactive` is how the casting knows.
    */
-  it("leaves the spells that answer other spells alone", () => {
-    for (const id of ["zwierciadlo", "wladca-zaklec", "ocalony"]) {
-      const script = (SPELLS as Record<string, { stosuje?: unknown }>)[id];
+  it("answers a spell rather than applying one", () => {
+    for (const id of ["zwierciadlo", "wladca-zaklec"]) {
+      const script = (SPELLS as Record<string, { stosuje?: unknown; reactive?: boolean }>)[id];
       expect(script.stosuje, id).toBeUndefined();
+      expect(script.reactive, id).toBe(true);
+    }
+  });
+
+  /**
+   * Nothing is left entirely to the table any more. What a card does only in
+   * part says so in `MANUAL`, which marks it `czesciowe` and prints the rest
+   * where a player reads the card — the danger the Ocalony's old note named,
+   * answered by the register that exists for it.
+   */
+  it("applies every one of them, in whole or in part", () => {
+    for (const [id, script] of Object.entries(
+      SPELLS as Record<string, { stosuje?: unknown; applies?: string; reactive?: boolean }>,
+    )) {
+      const carried = Boolean(script.stosuje ?? script.applies ?? script.reactive);
+      expect(carried, id).toBe(true);
+    }
+  });
+
+  it("names what the table still does, for the four it only half carries", () => {
+    const partial = ["krag-plomieni", "wojna-zywiolow", "wladca-gromu", "ocalony"];
+    for (const id of partial) expect(manualNote(id), id).toBeTruthy();
+    for (const id of Object.keys(SPELLS)) {
+      if (partial.includes(id)) continue;
+      expect(manualNote(id), id).toBeNull();
     }
   });
 
