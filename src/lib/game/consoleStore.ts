@@ -238,12 +238,22 @@ function waitingOn(turnState: unknown): string[] {
     fieldId?: FieldId;
     drawn?: { cardId: string }[];
     resolved?: string[];
+    fought?: string[];
   };
   if (state.phase !== "field") return [];
   const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);
-  const waiting = (state.drawn ?? []).filter(
-    (one) => !(state.resolved ?? []).includes(one.cardId),
-  );
+  /**
+   * Fought counts as dealt with, not just resolved.
+   *
+   * 17.4 settles a Wróg the moment the dice are compared, and `beginFight`
+   * refuses a rematch on that same list — so a creature in `fought` is one this
+   * turn can do nothing more about, whether it was beaten or walked away from.
+   * Reading only `resolved` had the console announce a Smok as still waiting
+   * after he had been killed and picked up as a trophy, which is the referee
+   * telling the table to deal with something it has already dealt with.
+   */
+  const settled = new Set([...(state.resolved ?? []), ...(state.fought ?? [])]);
+  const waiting = (state.drawn ?? []).filter((one) => !settled.has(one.cardId));
   return [
     ...(offer ? [`The Obszar asks: ${offer.name} — \`answer\` or \`answer <n>\``] : []),
     ...(waiting.length

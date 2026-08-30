@@ -77,8 +77,18 @@ export function AskFramePanel({
             ))}
           </div>
         ) : (
-          // Backs, and as many of them as are being looked at. Nothing here is
-          // hidden in the browser — the names never arrived.
+          /**
+           * The fanned stack, exactly as a concealed hand is drawn.
+           *
+           * Tried as `count` separate backs first, so the two would read as two
+           * — and it came out worse, because each one captions itself and the
+           * panel then said "×1 Zaklęcie ×1 Zaklęcie". One stack captions
+           * itself "×2", the sentence above has already said *jedno z 2*, and
+           * this is the picture a player has learned means concealed Zaklęcia
+           * everywhere else on the page.
+           *
+           * Nothing here is hidden in the browser. The names never arrived.
+           */
           <div className="mt-3">
             <CardBack count={count} />
           </div>

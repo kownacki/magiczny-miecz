@@ -1,6 +1,6 @@
 # The resolution stack
 
-**Status: step 3 open, two cards in and law 4 waiting on Michał** (2026-08-31).
+**Status: step 3's two cards proven live; law 4 waiting on Michał** (2026-08-31).
 The Trójgłowy Smok is the `loop` frame's first occupant — three heads, one at a
 time, regrown on anything but a win — and the CHOCHLIK is the `ask` frame's,
 the first question in the box that belongs to no card script. Both MANUAL
@@ -8,6 +8,26 @@ entries are deleted, and nine of the acceptance test's eleven moments now run.
 What each took, and the narrowings they settled, is below the steps table.
 Law 4 is not started and should not be until the question in "Law 4 is blocked
 on a question" is answered.
+
+**Proven live on table PHK2P**, two devices and a spectator against a running
+server, which is step 4's gate for the parts step 3 built:
+
+- The Smok opened as `[field, loop, fight]` from `summon`, cut a head at a
+  time, and paid out **exactly once** — no trophy after heads 1 and 2, one
+  trophy after head 3, Życie untouched. Lost on the second head instead and the
+  attempt ended with `fought: [trogglowy-smok]`, one point of Życie gone, no
+  trophy, the loop frame away. The journal said it in its own words: *"przegrywa
+  walkę z: TRÓGGŁOWY SMOK (głowa 2 z 3). Odcięte odrastają (1)."*
+- `look` printed the loop through `frameLabel` — `Stack: the Obszar › TRÓGGŁOWY
+  SMOK: głowa 1 z 3 › fight` — which was the one piece with no unit test.
+- **The redaction holds over the wire.** The seat being asked received
+  `refs: ["zaklecia#2", "wyposazenie-zaklecia#11"]`; another seat and a
+  spectator both received `refs: [], count: 2`. On screen that is two named
+  Karty with their text on one device and two face-down backs plus *"Ania
+  wybiera jedno z 2 Zaklęć — zakryte dla reszty stołu (9.3)"* on the other.
+- The button was pressed in a browser, not posted: the panel closed, the
+  Zaklęcie arrived face down, and the Karta not chosen was back on top of the
+  stos. Another seat pressing it is refused.
 
 **Status: step 2 built** (2026-08-30). The walker suspends into `script` frames
 with a cursor and resumes through `continueTopScript`; the all-or-nothing gate
