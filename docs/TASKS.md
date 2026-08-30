@@ -321,18 +321,34 @@ because the app rolls, moves and computes everything.
       lookup. `src/lib/view/fieldRollTable.test.ts` holds the invariant that
       makes it safe — every Obszar with a parseable table is one the server can
       roll for itself — so a thirteenth cannot arrive unnoticed.
-- [ ] **17.9's spoils are still the players'.** The winner of a duel may take a
-      Życie, a Przedmiot or a Sztuka Złota; only the Życie is applied.
+- [x] **17.9's spoils.** The winner of a duel may take a Życie, a Przedmiot or a
+      Sztuka Złota, and all three now happen. `resolveFight` takes a `Spoils`;
+      the Przedmiot changes hands rather than being destroyed, so 21.2's stock
+      holds, and it arrives through `slotOnArrival` like any other gear. Taking
+      it or the Złoto skips the blow entirely — no osłona, no Giermek dying in
+      anybody's place, no Excalibur.
 
-- [ ] **The last 16 cards.** 122 of 138 distinct event cards are encoded. What
-      remains is individually irregular rather than merely unwritten, and the
-      app says so on screen rather than staying quiet — see `coverage.ts`.
-      The recurring reasons: an enemy whose strength is its opponent's
-      (Sobowtór) or grows as it wins (Wampir); a consumable spent at a moment of
-      the holder's choosing (Eliksir Siły); cards that reach other cards on the
-      board (Kometa, Zwierciadło Zniszczenia); friends that impose an ongoing
-      restriction rather than a bonus (Południca's one field a turn, the Zły
-      Duch barring new friends until the Pustelnia).
+      A won duel is the one fight that does not settle itself: `fight` says who
+      won and `spoils` takes it. The console asks; the browser does not yet, and
+      that is all that is left — the press exists (`fight-done`) and the route
+      reads `spoils` / `spoilsHoldingId`, so it is a picker on a button that is
+      already there.
+
+- [ ] **The last 6 cards.** 132 of 138 distinct event cards have a script — 112
+      `pelne` and 20 `czesciowe`. What remains is individually irregular rather
+      than merely unwritten, and the app says so on screen rather than staying
+      quiet — see `coverage.ts`.
+
+      The six with nothing at all: **Sobowtór**, whose strength is its
+      opponent's, and **Wampir**, whose grows as it wins; **Kometa**, which
+      reaches other cards lying on the board; **Turniej Rycerski**; **Diament
+      Królów**; **Tajemna Sakwa**.
+
+      Three reasons listed here have since gone. A consumable spent at a moment
+      of the holder's choosing is `uses.ts`; a friend that imposes an ongoing
+      restriction rather than a bonus is a `Modifier` (the Południca's one field
+      a turn, the Zły Duch barring new friends until the Pustelnia); and the
+      Zwierciadło Zniszczenia is scripted.
 
       Eleven have come off the list. Five earlier: the Wędrowiec, Godzina
       Duchów, the Kryształ Magów, the Przybysz z Krainy Cieni and the Trójgłowy
@@ -343,13 +359,11 @@ because the app rolls, moves and computes everything.
       by Krąg, which used to be listed here as a reason a card could not be
       encoded, is now `Target`.
 
-      The recurring blocker among what is left is **a bonus that lasts one
-      turn**: the Eliksir Siły, the Najemnik, the Kryształ Losu and both fruits
-      all want it and nothing in the engine has it. It needs somewhere to live
-      that outlasts a turn, which means a column on `seats` — the only item on
-      this list that touches the schema, and the reason it is still here. One
-      piece of vocabulary, not five special cases, and the next thing worth
-      building.
+      The blocker this bullet used to name — **a bonus that lasts one turn**,
+      wanted by the Eliksir Siły, the Najemnik, the Kryształ Losu and both
+      fruits — is built. It went where the note predicted, into one piece of
+      vocabulary rather than five special cases: a `Modifier` with an `Ends`,
+      kept in `seat_effects`. `{ kind: "turns", turns: 1 }` is exactly it.
 - [x] **One-shot and fixture cards have a vocabulary** — `cardScript.ts`, with
       disposition as a field of its own (odłóż / zostaje na Obszarze / zostaje z
       pulą punktów / do pierwszej Postaci / po N turach / wraca do stosu). About

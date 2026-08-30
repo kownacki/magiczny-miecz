@@ -19,9 +19,10 @@ A card-by-card equivalent of this table is enforced in code rather than written
 down: see `src/lib/engine/coverage.ts`, which puts the same three states on
 screen next to every drawn card.
 
-**Where it stands.** 117 rules ✅, 20 ◐, none ❌. Of the 138 Karty Zdarzeń, 109
-are `pelne` and 6 `brak` — all 17 Nieznajomi are done; of the 27 Zaklęcia, 13
-are carried out and 14 announced; and all 57 Obszary do what is printed on them.
+**Where it stands.** 126 rules ✅, 10 ◐, none ❌. Of the 138 Karty Zdarzeń, 112
+are `pelne`, 20 `czesciowe` and 6 `brak` — all 17 Nieznajomi are done; all 27
+Zaklęcia are carried out, 23 of them fully; and all 57 Obszary do what is
+printed on them.
 The counts move, so trust the code over this paragraph — `coverage.ts` and
 `fieldScript.ts` are where the truth is, and both are checked by tests.
 
