@@ -41,11 +41,17 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   "przybysz-z-krainy-cieni":
     "Przeciw Przybyszowi nie wolno użyć Zaklęć, Magicznych Przedmiotów ani Broni — walczy się samym Mieczem Postaci.",
   // --- equipment and magic items -------------------------------------------
-  arondight: "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
-  "topor-swiatla-i-ciemnosci": "Przeciw Wilkołakowi dodaje 2 punkty Miecza, nie 1.",
+  //
+  // ARONDIGHT, the TOPÓR and the RELIKWIARZ were here, and all three were
+  // stale — the same fault the ALCHEMIK's note had. The two blades' "a w walce
+  // z Wilkołakiem 2 punkty" is `przeciw`, applied through `insteadAgainst` in
+  // `againstThese`; the Relikwiarz's "pokonuje wszystkie Demony bez walki" is
+  // `pokonuje-bez-walki`, applied in `beginFight`. All three have had tests in
+  // `modifiers.test.ts` the whole time. A note that tells a table to watch
+  // something the referee is already watching is the same wasted vigilance as
+  // no referee at all.
   "czarodziejska-kosc":
     "W Pułapce i Magicznej Pułapce daje zamiast tego 1 punkt Miecza lub Magii.",
-  relikwiarz: "Pokonuje wszystkie Demony bez walki.",
   lodz: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
   latarnia: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
   kon: "Tracąc Konia, zostawiasz na Obszarze wszystko, czego sam nie uniesiesz.",
