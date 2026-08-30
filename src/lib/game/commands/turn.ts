@@ -8,6 +8,46 @@ import type { TurnCard } from "@/lib/engine/state";
 import { apply, merge, mergeAll, type Changeset, type Snapshot } from "../change";
 import { putOnPile } from "./piles";
 
+/**
+ * 13.2's fork: a turn is spent meeting somebody, or exploring the Obszar.
+ *
+ * "Postać musi dokonać wyboru między spotkaniem z inną Postacią znajdującą się
+ * na tym samym Obszarze, a badaniem samego Obszaru." It is a choice the player
+ * makes, and the app's job is only to stop them making it twice — which it did
+ * not, so a character could attack a rival and then work through the square's
+ * own instruction as well.
+ *
+ * What counts as exploring is 13.5's list, and the two entries that leave a
+ * trace are enough to see it: a Karta drawn, or the Obszar's own offer
+ * resolved. Nothing here needs to know about gold or Przyjaciele, because you
+ * cannot reach either without first doing one of those two.
+ */
+export function hasExplored(snapshot: Snapshot): boolean {
+  const state = snapshot.game.turn_state;
+  if (state.phase !== "field") return false;
+  return state.drawn.length > 0 || (state.resolved?.length ?? 0) > 0;
+}
+
+/** Whether this turn has already been spent on a meeting (13.2). */
+export function hasMet(snapshot: Snapshot): boolean {
+  const state = snapshot.game.turn_state;
+  return state.phase === "field" && state.met === true;
+}
+
+/** Refuses the half of 13.2 that has not been chosen. */
+export function refuseAgainst13_2(snapshot: Snapshot, doing: "meet" | "explore"): void {
+  if (doing === "meet" && hasExplored(snapshot)) {
+    throw new Error(
+      "Ten Obszar jest już zbadany — spotkanie albo badanie, nie oboje (13.2).",
+    );
+  }
+  if (doing === "explore" && hasMet(snapshot)) {
+    throw new Error(
+      "Ta tura poszła na spotkanie — spotkanie albo badanie, nie oboje (13.2).",
+    );
+  }
+}
+
 /** What one seat is under, in the shape the engine reasons about. */
 export function statusesOf(snapshot: Snapshot, seatId: string): Status[] {
   return snapshot.effects

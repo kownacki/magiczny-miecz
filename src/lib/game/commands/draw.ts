@@ -11,6 +11,7 @@ import { afterDraw } from "@/lib/engine/turn";
 import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
 import { activeSeat, holdingsOf, seatById, seatView } from "./seat";
+import { refuseAgainst13_2 } from "./turn";
 
 /* --------------------------------------------------------------------------
  * Where the reshuffle's order comes from.
@@ -91,6 +92,8 @@ export interface Drawn {
  */
 export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> {
   const seat = activeSeat(snapshot);
+  // 13.2: a turn spent meeting somebody is not also spent exploring.
+  refuseAgainst13_2(snapshot, "explore");
   if (snapshot.game.turn_state.phase !== "field") {
     throw new Error("Nie czas na ciągnięcie kart (13.4).");
   }

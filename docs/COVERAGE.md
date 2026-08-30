@@ -183,7 +183,7 @@ loss on death are the same either way, so nothing above this line changes.
 | | rule | status | where |
 |---|---|---|---|
 | 13.1 | only on the field your move ended on | ✅ | |
-| 13.2 | meet another character *or* explore, not both | ◐ | both are offered; the choice is the players' |
+| 13.2 | meet another character *or* explore, not both | ✅ | the choice stays the player's and only the "not both" is enforced: attacking is refused once a Karta has been drawn or the Obszar's offer resolved, and drawing is refused once the turn has been spent meeting. The mark rides through the fight and back out (`endFight`), because a settled duel leaves nothing behind saying it happened — and a fight with a Wróg is not a meeting and does not spend the turn |
 | 13.3 | attack, or use an ability on them | ◐ | attacking works; abilities do not exist (8.1) |
 | 13.4 | draw only enough to bring the field up to its printed count | ✅ | `afterMove(field, from, waiting)` |
 | 13.5 | obey the field's instruction; beat or flee Wrogowie first | ◐ | text and die tables shown; ordering is the players' |

@@ -59,6 +59,20 @@ export type TurnPhase =
        * that fight settles all of them.
        */
       fought?: string[];
+      /**
+       * This turn was spent meeting somebody rather than exploring (13.2).
+       *
+       * "Postać musi dokonać wyboru między spotkaniem z inną Postacią
+       * znajdującą się na tym samym Obszarze, a badaniem samego Obszaru." One
+       * or the other, and the app offered both — you could attack a rival and
+       * then go through the Obszar's own instruction on the same turn, which is
+       * two turns' worth of a square.
+       *
+       * A mark rather than a lookup, because the fight is gone from the turn
+       * state by the time it matters: a duel that has been settled leaves
+       * nothing behind saying it happened.
+       */
+      met?: true;
     }
   | { phase: "fight"; fight: Fight }
   /** Standing at a bridge entrance with its guardian in the way (11.9-11.11). */
@@ -98,6 +112,8 @@ export interface Fight {
    * through the fight so that ending it cannot lose the list.
    */
   fought?: string[];
+  /** 13.2's mark, carried through the fight so the field phase gets it back. */
+  met?: true;
   /**
    * Set when this is not a fight with a drawn card but with something standing
    * in a doorway — a bridge guardian or the Rycerz in the Lodowy Las.
@@ -467,6 +483,14 @@ export function startFight(
       fieldId: phase.fieldId,
       draw: phase.draw,
       drawn: phase.drawn,
+      /**
+       * 13.2's mark, set here because a duel *is* the meeting.
+       *
+       * Carried through the fight the way `drawn` and `fought` are, so it is
+       * still there when `endFight` lays the field phase back out — by then the
+       * duel is over and nothing else would remember it happened.
+       */
+      ...(card.opponentSeat !== undefined || phase.met ? { met: true as const } : {}),
       fought: [
         ...(phase.fought ?? []),
         // A duel settles no card: the other character is still there, and 17.9
@@ -609,8 +633,16 @@ export function endFight(phase: TurnPhase): TurnPhase {
   if (phase.phase !== "fight") return phase;
   // A fight that interrupted the turn hands it back where it took it from.
   if (phase.fight.resume) return phase.fight.resume;
-  const { fieldId, draw, drawn, fought } = phase.fight;
-  return { phase: "field", fieldId, from: null, draw, drawn, fought: fought ?? [] };
+  const { fieldId, draw, drawn, fought, met } = phase.fight;
+  return {
+    phase: "field",
+    fieldId,
+    from: null,
+    draw,
+    drawn,
+    fought: fought ?? [],
+    ...(met ? { met: true as const } : {}),
+  };
 }
 
 /**

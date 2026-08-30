@@ -74,7 +74,7 @@ import type { Nature } from "@/data/types";
 import type { Slot } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { afterFight, hasAttacked, missionOf, spellsHushed } from "@/lib/engine/status";
-import { addEffect, keepOnly, statusesOf } from "./turn";
+import { addEffect, keepOnly, refuseAgainst13_2, statusesOf } from "./turn";
 import type { SeatRow } from "../store";
 import { settleBridge, settleCrossing } from "./bridge";
 import { spendLife } from "./life";
@@ -1200,6 +1200,8 @@ export function attackSeat(
   }
   const state = snapshot.game.turn_state;
   if (state.phase !== "field") throw new Error("Nie czas na spotkanie.");
+  // 13.2: "musi dokonać wyboru" — and this turn has already made it.
+  refuseAgainst13_2(snapshot, "meet");
 
   // 14.1: on the Kamienny Most characters meet at the two Wejścia and nowhere
   // else. The bridge is a single-file line above a valley — there is no room to
