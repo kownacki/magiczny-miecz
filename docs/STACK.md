@@ -1,5 +1,10 @@
 # The resolution stack
 
+**Status: step 3 open, first card in** (2026-08-31). The Trójgłowy Smok is the
+`loop` frame's first occupant — three heads, one at a time, regrown on
+anything but a win — and his MANUAL entry is deleted. What that took, and the
+narrowings it settled, is below the steps table.
+
 **Status: step 2 built** (2026-08-30). The walker suspends into `script` frames
 with a cursor and resumes through `continueTopScript`; the all-or-nothing gate
 is gone; every ordinary fight pushes over the field and `closeFightFrame` is
@@ -198,6 +203,38 @@ fight genuinely pushes. Moving fights to push-over-field is step 2's work,
 where the frame beneath becomes the source of truth; doing it in step 1 would
 have made "zero behaviour change" unprovable. The frame discriminant also
 stays `phase` (not the doc's sketched `kind`) — one rename fewer, same union.
+
+**Step 3's first card, and the narrowings it took** (2026-08-31). Michał gave
+the go; the Trójgłowy Smok is built, engine → console → GUI, and his MANUAL
+entry is gone.
+
+- **`of` is a `Fight`, not a `Frame`.** Law 3 says outright that a loop is N
+  fights, and nothing else in 677 cards loops, so the template is typed as the
+  thing it is. Widening it is a small change the day an expansion needs one.
+- **No `onLoss`.** The sketch had `"reset" | "stop"`, and `"stop"` has no
+  occupant *and* no meaning: `done` lives on the frame and the frame does not
+  outlive the turn, so "keep what you cut" is a promise nothing here can keep.
+  A round lost ends the attempt with the heads regrown, which is the card's own
+  sentence.
+- **A draw ends it the same way** (17.10 costs nothing, 17.4 still ends the
+  fight). The card only says what a *loss* regrows, so this is a reading rather
+  than a quotation — the honest one available, for the reason above. **Worth
+  Michał's word**; the alternative is somewhere durable to keep a half-cut Smok
+  between turns, which is a different change.
+- **A loop is never the top of the stack at rest.** It opens with its first
+  round above it and either pushes the next or closes, in the same commit. So
+  every path that closes a fight asks `settleExposedLoop` — the escape (19.1)
+  and the test hatch both do.
+- **A head pays out nothing.** No trophy (1.4), no Władca errand, no Excalibur
+  point; only the last winning round is the kill. The point of Życie a loss
+  costs is *not* on that list, because 17.4 charges it for losing a fight and a
+  head is a fight.
+- **The pack is refused, not flattened.** 17.5 sums Miecze and rolls once; the
+  Smok asks for three comparisons. `beginFight` throws and the browser does not
+  offer "walcz ze wszystkimi naraz" when one of them fights in rounds.
+- **No new journal kind.** A round is still 17.4 and still a fight ending, so
+  it is a `fight-end` line carrying which head it was — a new kind would have
+  cost a migration for a sentence that already had a home.
 
 **Go/no-go after step 2**, before anything in step 3 deletes a MANUAL entry.
 Not "point of no return" — git reverts anything — but the **last cheap exit**,

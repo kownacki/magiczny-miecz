@@ -44,6 +44,34 @@ export interface CombatValue {
  */
 const MIRRORS_ITS_OPPONENT = new Set(["sobowtor"]);
 
+/** How many fights a creature is, and what one of them is called. */
+export interface FightRounds {
+  times: number;
+  /** The word for one round, so a round can be named: "głowa 2 z 3". */
+  round: string;
+}
+
+/**
+ * The one Wróg in the box you have to beat more than once.
+ *
+ * "Postać, która podejmie z nim walkę, będzie musiała pokonać jego trzy głowy
+ * (każda głowa ma 2 punkty Miecza)." The 2 is what the card prints and what
+ * `combatValueOf` reads, so nothing here touches the number — the head is an
+ * ordinary Wróg of Miecz 2. What is not ordinary is that there are three of
+ * them, one after another, and 17.4 ends a fight after one comparison.
+ *
+ * A map beside `MIRRORS_ITS_OPPONENT` and for the same reason: the shape is
+ * the point. "How many fights is this creature" is a question about the card,
+ * asked in one place, and the map is where a second such creature would go.
+ */
+const FIGHTS_IN_ROUNDS: ReadonlyMap<string, FightRounds> = new Map([
+  ["trogglowy-smok", { times: 3, round: "głowa" }],
+]);
+
+export function roundsOf(cardId: string): FightRounds | null {
+  return FIGHTS_IN_ROUNDS.get(cardId) ?? null;
+}
+
 /**
  * What this card fights with, or null if it does not fight.
  *

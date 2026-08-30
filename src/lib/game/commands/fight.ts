@@ -25,7 +25,16 @@ import {
 import type { Shuffle } from "@/lib/engine/deck";
 import { RAID_RANGE, withinRaid } from "@/lib/engine/raid";
 import { BRIDGE_ORDEAL, BRIDGE_SIDE } from "@/lib/engine/bridge";
-import { combatValueOf } from "@/lib/engine/cards";
+import { combatValueOf, roundsOf } from "@/lib/engine/cards";
+import {
+  advanceLoop,
+  closeLoopFrame,
+  loopBeneath,
+  openLoop,
+  roundFinishes,
+  roundOf,
+  settleExposedLoop,
+} from "@/lib/engine/loop";
 import { attackAsOne, type CombatKind } from "@/lib/engine/combat";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { bonusFromHoldings, inEffect, suppressesSpells } from "@/lib/engine/holdings";
@@ -278,27 +287,62 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
   const harder = foeBonusAt(seat.field_id);
   const total = asOne.total + harder * foes.length;
 
+  /**
+   * A creature that is several fights rather than one (law 3, docs/STACK.md).
+   *
+   * Only when it is fought alone. 17.5 sums the Miecze of everything attacking
+   * at once and rolls one die against the sum, and there is no reading of the
+   * Smok in which his three heads are added to a Wilk and beaten in a single
+   * comparison — his card asks for three fights, and 17.5 offers one. So the
+   * pack is refused rather than quietly flattened into an ordinary fight,
+   * which would be the app dropping a rule while looking like it applied one.
+   */
+  const rounds = foes.length === 1 ? roundsOf(foes[0].card.id) : null;
+  if (!rounds) {
+    const looper = foes.find((f) => roundsOf(f.card.id));
+    if (looper) {
+      throw new Error(
+        `${looper.card.name} walczy po kolei, jedną istotą naraz — nie da się go pokonać w grupie (17.5).`,
+      );
+    }
+  }
+
+  const opened = startFight(
+    state,
+    {
+      cardId: foes.map((f) => f.card.id).join("+"),
+      cardName: foes.map((f) => f.card.name).join(" + "),
+      settles: foes.map((f) => f.card.id),
+      // Carried through from the stack: a fight staged by a test is one
+      // the deck never dealt, and the sheet says so over the card's own
+      // picture.
+      ...(state.drawn.some((entry) => command.cardIds.includes(entry.cardId) && entry.granted)
+        ? { granted: true }
+        : {}),
+      ...(kind === "magical" ? { magia: total } : { miecz: total }),
+    },
+    mine,
+  );
+  if (opened.phase !== "fight") throw new Error("Nie czas na walkę.");
+
   return {
     writes: {
       game: {
-        turn_state: push(snapshot.game.turn_state, startFight(
-          state,
-          {
-            cardId: foes.map((f) => f.card.id).join("+"),
-            cardName: foes.map((f) => f.card.name).join(" + "),
-            settles: foes.map((f) => f.card.id),
-            // Carried through from the stack: a fight staged by a test is one
-            // the deck never dealt, and the sheet says so over the card's own
-            // picture.
-            ...(state.drawn.some(
-              (entry) => command.cardIds.includes(entry.cardId) && entry.granted,
-            )
-              ? { granted: true }
-              : {}),
-            ...(kind === "magical" ? { magia: total } : { miecz: total }),
-          },
-          mine,
-        )),
+        turn_state: rounds
+          ? openLoop(snapshot.game.turn_state, {
+              phase: "loop",
+              seatId: seat.id,
+              // The head, with the strength the card prints for one of them —
+              // `startFight` has already read it and added whatever the ground
+              // adds (the Kamienny Las makes every head harder, not the Smok
+              // once).
+              of: opened.fight,
+              times: rounds.times,
+              done: 0,
+              round: rounds.round,
+              settles: [foes[0].card.id],
+            })
+          : push(snapshot.game.turn_state, opened),
       },
       journal: [
         {
@@ -309,6 +353,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
             cardIds: [...command.cardIds],
             enemyTotal: total,
             together: command.cardIds.length > 1,
+            ...(rounds ? { times: rounds.times, round: rounds.round } : {}),
           },
         },
       ],
@@ -1891,7 +1936,10 @@ export function escape(
     // Close the frame first; the ability's sweep then lands on whatever field
     // the close revealed. Over a script frame there is no field on top and the
     // sweep waits — the drawn Wrogowie belong to a frame deeper down.
-    let shut = closeFightFrame(beforeState, before);
+    // 19.1 out of a round of a looping fight is out of the whole creature:
+    // there is nobody left swinging at the next head, and a loop frame is
+    // never left on screen. Nothing cut is kept — see the frame's own note.
+    let shut = settleExposedLoop(closeFightFrame(beforeState, before));
     const revealed = top(shut);
     if (sweep.length > 0 && revealed.phase === "field") {
       shut = replaceTop(shut, {
@@ -1993,6 +2041,18 @@ export async function resolveFight(
   const seat = activeSeat(snapshot);
   const { fight } = state;
   if (!fight.result) throw new Error("Walka nie jest rozstrzygnięta.");
+
+  /**
+   * Whether this fight was a round of something bigger, and whether settling
+   * it settles the creature (law 3, docs/STACK.md).
+   *
+   * Everything a kill pays out — the trophy (1.4), the Władca's errand,
+   * Excalibur's stolen point — is owed for beating the Wróg, and a head is not
+   * the Wróg. What a round does cost is the ordinary one: 17.4 takes a point
+   * of Życie for losing a fight, and a head is a fight.
+   */
+  const inLoop = loopBeneath(snapshot.game.turn_state);
+  const kill = inLoop === null || roundFinishes(inLoop, fight.result.outcome);
 
   // 17.4 ends a fight the moment the dice are compared — win, lose or draw —
   // so anything that lasts "one fight" is spent whichever way it went.
@@ -2120,7 +2180,7 @@ export async function resolveFight(
    * it is his three points against them — and the Władca asked *you* to beat
    * somebody.
    */
-  const errand = fight.raid ? {} : missionDone(snapshot, seat, fight);
+  const errand = fight.raid || !kill ? {} : missionDone(snapshot, seat, fight);
 
   /**
    * Excalibur's point of Życie, taken after everything the loss already cost.
@@ -2131,20 +2191,64 @@ export async function resolveFight(
    * wins rather than as a sum.
    */
   const upToNow = mergeAll(cleared, paid, errand);
-  const stolen = stolenLife(apply(snapshot, upToNow), seat, fight);
+  const stolen = kill ? stolenLife(apply(snapshot, upToNow), seat, fight) : {};
   const cleared_ = beatenOffTheBoard(apply(snapshot, mergeAll(upToNow, stolen)), fight);
 
+  /**
+   * What the stack does with a settled round.
+   *
+   * The fight pops either way; what is underneath decides the rest. Under a
+   * loop, a win that is not the last one puts the next head up in this same
+   * commit — the player pressed the only button there was, and a loop frame is
+   * never left on screen by itself — and anything else closes the attempt.
+   *
+   * The next head's `playerTotal` is read again rather than copied, because
+   * `keepOnly(afterFight(...))` has just spent everything that lasted one
+   * fight: a Zaklęcie that made the first head easy is gone by the second, and
+   * carrying the old figure forward would fight three heads with one card.
+   */
+  const closed = ((): { state: TurnState; said: Record<string, unknown> } => {
+    const popped = closeFightFrame(snapshot.game.turn_state, state);
+    if (!inLoop) return { state: popped, said: {} };
+
+    // Which round this was, for a line that says "głowa 2 z 3" rather than
+    // reporting the whole creature beaten or lost three times over.
+    const which = { creature: inLoop.round, round: inLoop.done + 1, times: inLoop.times };
+    const step = advanceLoop(inLoop, fight.result.outcome);
+    if (step.go === "again") {
+      const fresh = againstThese(apply(snapshot, mergeAll(upToNow, stolen)), seat.id, [
+        inLoop.of.cardId,
+      ]);
+      const next = roundOf(step.loop);
+      return {
+        state: push(replaceTop(popped, step.loop), {
+          ...next,
+          fight: {
+            ...next.fight,
+            playerTotal: inLoop.of.kind === "magical" ? fresh.magia : fresh.miecz,
+          },
+        }),
+        said: which,
+      };
+    }
+    return {
+      state: closeLoopFrame(popped, inLoop),
+      // A win on the last round is the creature dead, and the line says so
+      // with no talk of heads. Anything else is the attempt ending, and what
+      // it cost is the heads that grew back.
+      said: step.go === "won" ? {} : { ...which, regrown: step.regrown },
+    };
+  })();
+
   return {
-    writes: mergeAll(upToNow, stolen, cleared_, trophiesFrom(snapshot, seat, fight), {
-      game: {
-        turn_state: closeFightFrame(snapshot.game.turn_state, state),
-      },
+    writes: mergeAll(upToNow, stolen, cleared_, kill ? trophiesFrom(snapshot, seat, fight) : {}, {
+      game: { turn_state: closed.state },
       journal: [
         {
           seatId: seat.id,
           turn: snapshot.game.turn,
           kind: "fight-end",
-          payload: { cardId: fight.cardId, outcome: fight.result.outcome },
+          payload: { cardId: fight.cardId, outcome: fight.result.outcome, ...closed.said },
         },
       ],
     }),

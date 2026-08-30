@@ -117,6 +117,53 @@ export type TurnPhase =
       mark?: string;
       keep?: boolean;
     }
+  /**
+   * One Wróg, fought in rounds (law 3, docs/STACK.md).
+   *
+   * 17.4 makes a fight exactly one comparison — "na tym walka się kończy" — so
+   * a creature that has to be beaten more than once is not one fight with a
+   * bigger number, it is several fights with a rule about the sequence. The
+   * Trójgłowy Smok is the only one in the box: "będzie musiała pokonać jego
+   * trzy głowy (każda głowa ma 2 punkty Miecza). Jeśli przegra, głowy, które
+   * odcięła odrastają."
+   *
+   * This frame owns the count. Each round is an ordinary `fight` frame pushed
+   * on top of it, settled by the ordinary machinery, and popped — which is why
+   * the dice, the Zaklęcia, 19.1's escape and 17.4's point of Życie all work
+   * on a head without knowing there are three of them.
+   *
+   * **A loop is never the top of the stack at rest.** It opens with its first
+   * round already above it and either pushes the next round or closes in the
+   * same commit, so nothing has to render a frame that is only bookkeeping.
+   *
+   * There is no "keep what you cut". A round lost *or drawn* ends the attempt
+   * and the rounds already won go with it: the loss case is the card's own
+   * sentence, and the draw case is the only honest answer available, because
+   * `done` lives on this frame and this frame does not outlive the turn.
+   * Claiming a half-cut Smok persists would be a promise nothing here can
+   * keep — see docs/STACK.md.
+   */
+  | {
+      phase: "loop";
+      /** Law 5: whose rounds these are. */
+      seatId: string;
+      /** The round, as authored — one head, with its own printed strength. */
+      of: Fight;
+      times: number;
+      /** Rounds won so far, and so the index of the one being fought. */
+      done: number;
+      /** The word for one round, so a round can be named: "głowa 2 z 3". */
+      round: string;
+      /**
+       * What the field beneath is told was fought once this closes (17.4).
+       *
+       * Carried here rather than on each round's fight because a round's frame
+       * pops onto *this* one, never onto the field: the field learns what
+       * happened only when the whole attempt is over, and it learns it whether
+       * the Smok was beaten or walked away from.
+       */
+      settles: string[];
+    }
   | { phase: "end" };
 
 /**

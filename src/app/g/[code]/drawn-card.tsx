@@ -6,7 +6,7 @@ import { dismissableOpen } from "./overlay";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
-import { combatValueOf } from "@/lib/engine/cards";
+import { combatValueOf, roundsOf } from "@/lib/engine/cards";
 import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
@@ -147,9 +147,14 @@ export function DrawnCard({
         !resolved.includes(c.id),
     );
   // 17.5 asked once, of the engine, rather than restated here — the server
-  // refuses a mixed fight against this same answer.
+  // refuses a mixed fight against this same answer. A creature that is several
+  // fights rather than one cannot be in the pack either: his card asks for
+  // three comparisons and 17.5 offers one, so the button is not shown rather
+  // than shown and refused.
   const asOne =
-    standing.length > 1 ? attackAsOne(standing.map((c) => combatValueOf(c, mirror)!)) : null;
+    standing.length > 1 && !standing.some((c) => roundsOf(c.id))
+      ? attackAsOne(standing.map((c) => combatValueOf(c, mirror)!))
+      : null;
   const together = asOne ? standing : null;
   const keep = kindForCard(known);
   const label = CARD_CLASS_LABEL[card.cardClass as CardClass] ?? card.cardClass;

@@ -234,6 +234,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 17.4 | an item or spell may prevent that loss | ✅ | `bestShield`, rolled in `shieldSaves` |
 | 17.4 | "na tym walka się kończy" — one roll per enemy per turn | ✅ | `endFight` records `fought`; `beginFight` refuses a rematch |
 | 17.5 | several enemies at once add their Miecze together | ✅ | `beginFight` takes a list; `combinedEnemyTotal` |
+| 17.4/17.5 | one creature that is several fights — the Trójgłowy Smok's three heads, regrown on a loss | ✅ | the `loop` frame (docs/STACK.md law 3): `roundsOf` says how many, `beginFight` opens the count under the first head, `resolveFight` puts the next head up or closes the attempt. A head pays out nothing — no trophy, no errand, no Excalibur — and the pack is refused, because 17.5 offers one comparison and the card asks for three |
 | 17.6 | the attacked character may try to slip away | ✅ | `escape` resolves the fleeing seat as the duel's `opponentSeat`, and refuses the attacker |
 | 17.7 | **both** characters may cast before the roll | ✅ | `claimFloor` gives any seat holding a castable spell an exclusive claim, and `fightRoll` refuses the dice while it stands — duels included |
 | 17.8 | attacker's Miecz worked out first | ✅ | |

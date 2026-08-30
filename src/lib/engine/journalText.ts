@@ -399,7 +399,26 @@ export function describe(
           : data.outcome === "remis"
             ? "remisuje"
             : "przegrywa";
-      return line(`${who} ${how} walkę z: ${foes || "przeciwnikiem"}.`);
+      /**
+       * One round of a creature that is several fights (law 3, docs/STACK.md).
+       *
+       * Still 17.4 and still a fight ending, which is why it is this line
+       * rather than a kind of its own — what changes is that the thing beaten
+       * was a head and not the Smok. The line has to say which, or a log of
+       * three wins reads as three dead dragons.
+       *
+       * `regrown` is the card's own sentence as a number: "głowy, które
+       * odcięła odrastają". Zero of them is not worth saying.
+       */
+      const part =
+        typeof data.creature === "string" && data.round !== undefined
+          ? ` (${data.creature} ${num(data.round)} z ${num(data.times)})`
+          : "";
+      const regrown = num(data.regrown, 0);
+      return line(
+        `${who} ${how} walkę z: ${foes || "przeciwnikiem"}${part}.` +
+          (regrown > 0 ? ` Odcięte odrastają (${regrown}).` : ""),
+      );
     }
     case "duel": {
       const target = seats.find((candidate) => candidate.seatIndex === num(data.target, -1));
