@@ -31,6 +31,9 @@ anything.
 - **[docs/TERMINAL.md](docs/TERMINAL.md)** — the terminal-first engine: the
   store port, save files, and the one console vocabulary both surfaces share
 - **[docs/LOBBY.md](docs/LOBBY.md)** — host, players, presence: the part that is not Magiczny Miecz
+- **[docs/STACK.md](docs/STACK.md)** — the resolution stack: why one frame of turn
+  state is not enough, the five laws, and the plan. Read before touching
+  `turn.ts`, `effects.ts` or `fight.ts`
 - **[docs/RULES.md](docs/RULES.md)** — the rulebook transcribed
 - **[docs/EXPANSIONS.md](docs/EXPANSIONS.md)** — what is in the five boxes that
   are out of scope, and which parts of the model they would break
