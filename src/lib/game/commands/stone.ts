@@ -3,6 +3,7 @@
 import { apply, mergeAll, type Changeset, type Snapshot } from "../change";
 import { asReturnable, putOnPile } from "./piles";
 import { seatById } from "./seat";
+import { untouchable } from "@/lib/engine/status";
 
 /** 20.1 measures it in turn numbers, so a skipped turn cannot make it drift. */
 export const STONE_TURNS = 3;
@@ -48,12 +49,40 @@ export function refuseAgainstStone(
   seatId: string,
   what: "attack" | "spell",
 ): void {
-  if (!isStone(snapshot, seatId)) return;
-  throw new Error(
-    what === "attack"
-      ? "Ta Postać jest Zamieniona w Kamień — nie można jej odebrać punktu Życia (20.5)."
-      : "Na Postać Zamienioną w Kamień nie można rzucać Zaklęć (20.5).",
+  if (isStone(snapshot, seatId)) {
+    throw new Error(
+      what === "attack"
+        ? "Ta Postać jest Zamieniona w Kamień — nie można jej odebrać punktu Życia (20.5)."
+        : "Na Postać Zamienioną w Kamień nie można rzucać Zaklęć (20.5).",
+    );
+  }
+
+  /**
+   * The Krąg Płomieni says the same of an attack, and only of an attack.
+   *
+   * „Ofiary nie można zaatakować, jednak można się jej wymknąć" — so the
+   * prohibition is narrower than 20.5's, which also bars Zaklęcia: a Postać in
+   * the flames can be spoken at, and had better be, since the Władca Zaklęć is
+   * how anybody gets them out.
+   *
+   * Read off the status rather than named here, so a second thing that puts a
+   * character out of reach lands in one place. `tura-stracona` is left out by
+   * `untouchable` for the obvious reason — somebody skipping a turn is standing
+   * on the board like anybody else.
+   */
+  if (what !== "attack") return;
+  const beyond = untouchable(
+    snapshot.effects
+      .filter((row) => row.seat_id === seatId)
+      .map((row) => ({
+        id: row.id,
+        source: row.source,
+        label: row.label,
+        modifier: row.modifier,
+        ends: row.ends,
+      })),
   );
+  if (beyond) throw new Error(`${beyond} — tej Postaci nie można zaatakować.`);
 }
 
 export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Changeset {

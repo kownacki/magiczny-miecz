@@ -210,6 +210,31 @@ describe("rzut na ruch (10.2)", () => {
     expect(options.map((option) => option.fieldId)).toEqual(["pustelnia", "plaskowyz-mgiel"]);
   });
 
+  /**
+   * The Krąg Płomieni, at the door every turn opens through.
+   *
+   * „Nie może zrobić nic poza użyciem Władcy Zaklęć" — and everything else in a
+   * turn hangs off having rolled, so refusing the roll is refusing the turn
+   * without jamming it: the seat can still hand the turn on.
+   */
+  it("refuses the roll to a character held where they stand", async () => {
+    const held = aTable({
+      game: { active_seat: 0, turn: 3, turn_state: { phase: "roll" } },
+      seats: [aSeat({ seat_index: 0, field_id: asFieldId("zaczarowane-wzgorza") })],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "krag-plomieni",
+          label: "Krąg Płomieni",
+          modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    await expect(rollForMove(held, {}, die(2))).rejects.toThrow(/WŁADCA ZAKLĘĆ/);
+  });
+
   it("asks for exactly one die", async () => {
     const random = scriptedRandom([2]);
     await rollForMove(rolling(), {}, ports({ random }));

@@ -146,24 +146,36 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     // — the Lichwiarz's own trade, at the Lichwiarz's own rate.
     stosuje: { op: "sprzedaj", cena: 1 },
   },
-    /**
-   * Announced. `frozen` exists and nothing enforces it.
+  /**
+   * Applied — for a Postać. Half of the card, and the half the app can hold.
    *
-   * "Nie może zrobić nic poza użyciem Władcy Zaklęć" is a `frozen` modifier
-   * ending `dispelled`, and both words are already in `status.ts` — but
-   * `frozen()` is read by no command, so setting it would change nothing. The
-   * work is making it real at the doors an action comes through, which is the
-   * same shape as `refuseWhileOverLimit`, not the spell.
+   * „Ofiara zostaje otoczona płomieniami, i nie może zrobić nic poza użyciem
+   * Władcy Zaklęć (co zaneguje działanie Kręgu Płomieni). Ofiary nie można
+   * zaatakować, jednak można się jej wymknąć."
    *
-   * The other half is done: "ofiary nie można zaatakować" is exactly what
-   * `refuseAgainstStone` does for 20.5, and wants generalising rather than
-   * writing again.
+   * Both halves are now real. `frozen` existed and was read by nothing, so it
+   * described the two things the turn order already handled — Kamień and a lost
+   * turn — and could not have stopped anybody: `refuseWhileHeld` is the door it
+   * was waiting for, and `oprocz` carries the one key the card prints. The
+   * other half is 20.5's own guard, widened by `untouchable` to the narrower
+   * prohibition this card states: an attack, and not a Zaklęcie, because a
+   * Zaklęcie is how the victim gets out.
+   *
+   * Cast at a Wróg it stays announced. A creature lying on an Obszar has no
+   * seat to hold a status, and „nie można zaatakować" of a Wróg wants a state
+   * on a field card, which is the same gap the Władca Gromu waits on.
    */
-"krag-plomieni": {
+  "krag-plomieni": {
     timing: ["dowolna-chwila"],
     target: "postac-lub-wrog",
     effect:
-      "Ofiara nie może nic zrobić poza Władcą Zaklęć. Nie można jej atakować, można się jej wymknąć.",
+      "Ofiara nie może nic robić poza rzuceniem Władcy Zaklęć; nie można jej zaatakować.",
+    stosuje: {
+      op: "efekt",
+      label: "Krąg Płomieni",
+      modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
+      ends: { kind: "dispelled" },
+    },
   },
   "magia-i-miecz": {
     timing: ["przed-walka"],

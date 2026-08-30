@@ -146,3 +146,52 @@ describe("standing in the Zamek Bestii", () => {
     ).not.toThrow();
   });
 });
+
+/**
+ * The Krąg Płomieni's other half, which is 20.5's prohibition narrowed.
+ *
+ * „Ofiary nie można zaatakować, jednak można się jej wymknąć" — an attack and
+ * only an attack. A Zaklęcie must still reach them, because the Władca Zaklęć
+ * is how anybody gets out of the flames.
+ */
+describe("a Postać in the Krąg Płomieni", () => {
+  const inFlames = () =>
+    aTable({
+      game: {
+        turn: 1,
+        active_seat: 0,
+        turn_state: {
+          phase: "field",
+          fieldId: asFieldId("mokradla-1"),
+          from: null,
+          draw: 0,
+          drawn: [],
+        } as TurnPhase,
+      },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, field_id: "mokradla-1" }),
+        aSeat({ id: "seat-b", seat_index: 1, field_id: "mokradla-1", life: 4 }),
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-b",
+          source: "krag-plomieni",
+          label: "Krąg Płomieni",
+          modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+
+  it("cannot be attacked", () => {
+    expect(() => attackSeat(inFlames(), { targetSeatId: "seat-b" })).toThrow(
+      /nie można zaatakować/,
+    );
+  });
+
+  it("can still be spoken at, which is the way out", () => {
+    expect(() => refuseAgainstStone(inFlames(), "seat-b", "spell")).not.toThrow();
+  });
+});
+

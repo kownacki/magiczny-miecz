@@ -361,6 +361,86 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     expect(JSON.stringify(writes.journal)).not.toContain("CYKLOP");
   });
 
+  /* ------------------------------------------------------------------------
+   * The Krąg Płomieni (9.6), and the door it was waiting for.
+   * --------------------------------------------------------------------- */
+
+  const inFlames = (over: { seats?: ReturnType<typeof aSeat>[]; cardId?: string } = {}) =>
+    aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: over.seats ?? [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
+      ],
+      users: duellists(),
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: "seat-a",
+          source: "krag-plomieni",
+          label: "Krąg Płomieni",
+          modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
+          ends: { kind: "dispelled" },
+        },
+      ],
+      holdings: [
+        aHolding({
+          id: "s-1",
+          seat_id: "seat-a",
+          card_id: over.cardId ?? "olsnienie",
+          kind: "spell",
+          face: "hidden",
+        }),
+      ],
+    });
+
+  it("surrounds the named Postać with flames, until something lifts it", async () => {
+    const { writes } = await castSpell(
+      casting({ cardId: "krag-plomieni", state: { phase: "roll" } }),
+      { seatId: "seat-a", holdingId: "s-1", target: { seatIndex: 1 } },
+      ports(),
+    );
+    expect(writes.effects?.insert?.[0]).toMatchObject({
+      seat_id: "seat-b",
+      modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
+      ends: { kind: "dispelled" },
+    });
+  });
+
+  it("does not set the caster alight when it is thrown at a Wróg", async () => {
+    const atACard = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false }],
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "krag-plomieni", kind: "spell", face: "hidden" }),
+      ],
+    });
+    const { writes } = await castSpell(
+      atACard,
+      { seatId: "seat-a", holdingId: "s-1", target: { fieldCardId: "fc1" } },
+      ports(),
+    );
+    // Announced, like every Zaklęcie the app cannot carry out — and above all
+    // not applied to whoever spoke it.
+    expect(writes.effects).toBeUndefined();
+  });
+
+  it("refuses every Zaklęcie but the one the card names", async () => {
+    await expect(
+      castSpell(inFlames(), { seatId: "seat-a", holdingId: "s-1" }, ports()),
+    ).rejects.toThrow(/Krąg Płomieni/);
+  });
+
+  it("lets the Władca Zaklęć through", async () => {
+    const { writes } = await castSpell(
+      inFlames({ cardId: "wladca-zaklec" }),
+      { seatId: "seat-a", holdingId: "s-1" },
+      ports(),
+    );
+    expect(writes.holdings?.delete).toEqual(["s-1"]);
+  });
+
   it("puts the spoken card on the used pile (9.6)", async () => {
     const { writes } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(writes.holdings?.delete).toEqual(["s-1"]);

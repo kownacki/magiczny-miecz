@@ -63,6 +63,7 @@ import {
   eqModeOf,
   holdingsOf,
   pointsOf,
+  refuseWhileHeld,
   seatById,
   seatView,
   trophyModeOf,
@@ -647,6 +648,15 @@ export async function castSpell(
     throw new Error("Nie ta chwila na to Zaklęcie (9.1).");
   }
 
+  /**
+   * Held, and speaking the one thing that lets you out.
+   *
+   * „Nie może zrobić nic poza użyciem Władcy Zaklęć (co zaneguje działanie
+   * Kręgu Płomieni)" — so this door takes the card being spoken and the status
+   * decides, rather than a branch here knowing which Zaklęcie is the key.
+   */
+  refuseWhileHeld(snapshot, caster.id, held.card_id);
+
   if (state.phase === "fight") {
     const floor = floorOf(state.fight, ports.now());
     if (!floor || floor.seat !== caster.seat_index) {
@@ -706,7 +716,25 @@ export async function castSpell(
     throw new Error(`${spell?.name ?? held.card_id} — wskaż Postać, na którą rzucasz.`);
   }
   const onSeat = named?.id ?? caster.id;
-  const worked = script?.stosuje
+  /**
+   * Aimed at a Karta, by an effect that lands on a seat.
+   *
+   * „Na inną Postać lub Wroga" is two targets and the app can hold one of them:
+   * a creature lying on an Obszar has no seat to carry a status. Left to fall
+   * through, `onSeat` would default to the caster — so the Krąg Płomieni thrown
+   * at a Cyklop would have set the caster alight.
+   *
+   * So the effect is skipped and the card is announced, which is what every
+   * untranscribed Zaklęcie already does: the sentence goes back to the table
+   * and the players apply it. Two ops read the Karta themselves and are the
+   * exception — one sends a creature at it, the other moves it.
+   */
+  const aimedAtCard =
+    target.fieldCardId !== undefined &&
+    script?.stosuje !== undefined &&
+    script.stosuje.op !== "przyzwij" &&
+    script.stosuje.op !== "przenies-karte";
+  const worked = !aimedAtCard && script?.stosuje
     ? await applyEffect(
         apply(snapshot, mergeAll(cast, applied?.writes ?? {})),
         {

@@ -56,8 +56,17 @@ export type Modifier =
   | { kind: "points"; miecz?: number; magia?: number }
   /** A hard cap on how far the holder may move, whatever the die says. Mgła. */
   | { kind: "move-max"; fields: number }
-  /** Cannot act at all: Kamień, and the turn a Zaklinacz Czasu takes. */
-  | { kind: "frozen" }
+  /**
+   * Cannot act at all: Kamień, the turn a Zaklinacz Czasu takes, and the Krąg
+   * Płomieni.
+   *
+   * `oprocz` is the one way out, by the id of the Zaklęcie that is it. „Nie
+   * może zrobić nic poza użyciem Władcy Zaklęć (co zaneguje działanie Kręgu
+   * Płomieni)" — the card names its own antidote, and an exemption a card
+   * prints belongs on the status the card causes rather than in a branch
+   * somewhere that has to remember it.
+   */
+  | { kind: "frozen"; oprocz?: readonly string[] }
   /** Natura is forced to something while this lasts. */
   | { kind: "nature"; to: Nature }
   /**
@@ -171,6 +180,39 @@ export function movementCap(statuses: readonly Status[]): number | null {
 /** Whether anything is stopping the holder acting at all. */
 export function frozen(statuses: readonly Status[]): boolean {
   return statuses.some((status) => status.modifier.kind === "frozen");
+}
+
+/**
+ * What is stopping them, for a refusal that can name it — and what it lets
+ * through anyway.
+ *
+ * Whichever is found first: two things freezing one character both stop it, and
+ * the message wants one reason rather than a list. A Zaklęcie the status
+ * exempts is castable while every other action is refused, which is the Krąg
+ * Płomieni's whole shape — a prison with one key printed on it.
+ */
+export function frozenBy(
+  statuses: readonly Status[],
+): { label: string; oprocz: readonly string[] } | null {
+  const held = statuses.find((status) => status.modifier.kind === "frozen");
+  if (!held) return null;
+  const modifier = held.modifier as { kind: "frozen"; oprocz?: readonly string[] };
+  return { label: held.label, oprocz: modifier.oprocz ?? [] };
+}
+
+/**
+ * Whether the holder is out of everybody's reach (20.5, Krąg Płomieni).
+ *
+ * „Ofiary nie można zaatakować, jednak można się jej wymknąć" says the same of
+ * the Krąg as 20.5 does of Kamień, and both are the same question asked at the
+ * same door — so a status says it rather than each command knowing which
+ * conditions put somebody out of reach.
+ */
+export function untouchable(statuses: readonly Status[]): string | null {
+  const held = statuses.find(
+    (status) => status.modifier.kind === "frozen" && status.source !== "tura-stracona",
+  );
+  return held ? held.label : null;
 }
 
 /** The Natura being forced on the holder, if any. */

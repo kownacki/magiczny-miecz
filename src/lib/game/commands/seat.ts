@@ -1,6 +1,6 @@
 /** One seat, read off a snapshot: everything a rule asks about a character, worked out once. */
 
-import { plural } from "@/lib/engine/polish";
+import { cardName, plural } from "@/lib/engine/polish";
 import { abilitiesOfCharacter, asCharacterId, startingKit } from "@/lib/engine/characters";
 import {
   addsMagiaToMiecz,
@@ -13,6 +13,7 @@ import { carriedCount, carryLimit, spellAllowance } from "@/lib/engine/derive";
 import {
   allStatuses,
   bonusFrom,
+  frozenBy,
   magiaCountsAsMiecz,
   type Status,
 } from "@/lib/engine/status";
@@ -345,6 +346,53 @@ export function refuseWhileOverLimit(snapshot: Snapshot, seatId: string): void {
         ` przy limicie ${spells.limit} — odrzuć ${many}, zanim zagrasz dalej (2.6).`,
     );
   }
+}
+
+/**
+ * Held where you stand, and unable to do anything about it.
+ *
+ * The Krąg Płomieni is the first thing in the box that stops a character
+ * without stopping their turn: „ofiara… nie może zrobić nic poza użyciem
+ * Władcy Zaklęć". Kamień and a lost turn are the other two `frozen` statuses
+ * and they are settled by the turn order — `nextSeat` passes those seats over —
+ * so nothing had ever asked this question at an action's door.
+ *
+ * Asked at the doors the turn actually opens through rather than at all forty
+ * of them: you cannot roll, and you cannot speak anything but the one Zaklęcie
+ * the card names. Everything else in a turn hangs off having rolled, so a
+ * character who cannot roll can do nothing but end the turn — which is left
+ * possible on purpose, since a prison nobody can leave and the game cannot pass
+ * is a jammed table rather than a rule.
+ *
+ * `casting` is the Zaklęcie being spoken, when the door is `castSpell`. The
+ * card names its own antidote and `oprocz` carries it, so nothing here has to
+ * know which spell that is.
+ */
+export function refuseWhileHeld(
+  snapshot: Snapshot,
+  seatId: string,
+  casting?: string,
+): void {
+  const held = frozenBy(
+    snapshot.effects
+      .filter((row) => row.seat_id === seatId)
+      .map((row) => ({
+        id: row.id,
+        source: row.source,
+        label: row.label,
+        modifier: row.modifier,
+        ends: row.ends,
+      })),
+  );
+  if (!held) return;
+  if (casting !== undefined && held.oprocz.includes(casting)) return;
+  throw new Error(
+    held.oprocz.length > 0
+      ? `${held.label} — nie możesz zrobić nic poza rzuceniem: ${held.oprocz
+          .map((id) => cardName(id))
+          .join(", ")}.`
+      : `${held.label} — nie możesz nic zrobić.`,
+  );
 }
 
 /**
