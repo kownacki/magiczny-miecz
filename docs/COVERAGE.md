@@ -19,12 +19,37 @@ A card-by-card equivalent of this table is enforced in code rather than written
 down: see `src/lib/engine/coverage.ts`, which puts the same three states on
 screen next to every drawn card.
 
-**Where it stands.** 126 rules ✅, 10 ◐, none ❌. Of the 138 Karty Zdarzeń, 112
-are `pelne`, 20 `czesciowe` and 6 `brak` — all 17 Nieznajomi are done; all 27
-Zaklęcia are carried out, 23 of them fully; and all 57 Obszary do what is
+**Where it stands.** 127 rules ✅, 9 ◐, none ❌. Of the 138 Karty Zdarzeń, 128
+are `pelne`, 4 `czesciowe` and 6 `brak` — all 17 Nieznajomi are done; all 27
+Zaklęcia are carried out, 24 of them fully; and all 57 Obszary do what is
 printed on them.
 The counts move, so trust the code over this paragraph — `coverage.ts` and
 `fieldScript.ts` are where the truth is, and both are checked by tests.
+
+**The seven clauses still left to the table**, and they are three problems
+rather than seven (2026-08-31, down from twenty-two that morning):
+
+- **A status has nowhere to sit on a Karta lying on an Obszar.**
+  `seat_effects.seat_id` is `not null`, so the Krąg Płomieni's burning Wróg,
+  the Władca Gromu's paralysed creatures and the Ocalony's rescued Przyjaciel
+  all stop at the same wall. One migration clears all three, and it is a
+  migration on a database three other projects share.
+- **Nothing records which Przedmioty are inside a container.** The Magiczna
+  Sakwa and the Tragarz both destroy what they were carrying, and the app can
+  only shed the overflow onto the Obszar — wrong in the player's favour. The
+  mechanism to generalise already exists (`carried_by`, which a Krzyżowiec's
+  Zaklęcie uses), but putting a Przedmiot *into* a Sakwa is a thing a player
+  has to be able to do, and that is a feature rather than a fix.
+- **Cross-obstacle adjacency is not on the board.** The Łódź and the Latarnia
+  land you at the crossing's printed exit rather than "na Obszarze
+  sąsiadującym", because the three rings are 14, 16 and 18 fields and do not
+  line up. Everything else about both cards — the turn's delay, the discard —
+  is carried.
+
+The Ocalony has a fourth thing of its own: "użyty w walce sprawia, że rezultat
+starcia pozostanie nierozstrzygnięty" wants a card that can rewrite a settled
+fight, which is the same door the Złoczyńca's toll went through and the
+opposite direction.
 
 One caveat on that first number, learned the hard way on the Eremita:
 `coverageOf` reports whether a card has a *script*, not whether the script can
