@@ -171,6 +171,20 @@ export type Ability =
    * that.
    */
   | { kind: "podglad-zaklec"; count: number }
+  /**
+   * Named Zaklęcia do nothing to the holder.
+   *
+   * The two Talizmany, and they name their spells rather than a kind of magic:
+   * "Talizman Ognia daje odporność na Zaklęcie Krąg Płomieni", "Talizman
+   * Powietrza — na Siedem Wichrów i Władcę Gromu". A list of ids, because that
+   * is what the cards print, and because guessing at a category would make the
+   * Talizman Ognia proof against the Władca Lodu on a theory nobody wrote down.
+   *
+   * The immunity is the *victim's*, which is what makes it worth having as an
+   * ability at all: it is read off whoever the Zaklęcie was aimed at, never off
+   * the caster.
+   */
+  | { kind: "odporny-na-zaklecie"; zaklecia: readonly string[] }
   /** Rusałka: one die at the Trzęsawiska instead of the usual two. */
   | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
   /**
@@ -495,13 +509,15 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
       delta: 1,
     },
   ],
-  /** The immunity to Krąg Płomieni is a spell rule, and stays on the card. */
   "talizman-ognia": [
     { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "ordinary" }, delta: 1 },
+    // "daje odporność na Zaklęcie Krąg Płomieni" — carried now that the Krąg is
+    // a state the app applies rather than a sentence it reads out.
+    { kind: "odporny-na-zaklecie", zaklecia: ["krag-plomieni"] },
   ],
-  /** Likewise its immunity to Siedem Wichrów and Władca Gromu. */
   "talizman-powietrza": [
     { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "magical" }, delta: 1 },
+    { kind: "odporny-na-zaklecie", zaklecia: ["siedem-wichrow", "wladca-gromu"] },
   ],
   "jablko-natchnienia": [
     {
@@ -760,6 +776,19 @@ export function spellsOverLimit(abilities: readonly Ability[]): number {
     (extra, ability) =>
       ability.kind === "zaklecia-ponad-limit" ? extra + ability.count : extra,
     0,
+  );
+}
+
+/**
+ * Whether a named Zaklęcie does nothing to whoever holds these cards.
+ *
+ * Asked of the victim, so the caster's own Talizman is no defence against
+ * their own spell — which is right, and the only reading of "daje odporność"
+ * that means anything.
+ */
+export function immuneToSpell(abilities: readonly Ability[], spellId: string): boolean {
+  return abilities.some(
+    (ability) => ability.kind === "odporny-na-zaklecie" && ability.zaklecia.includes(spellId),
   );
 }
 

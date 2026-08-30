@@ -117,6 +117,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
               ...(body.fieldCardId ? { fieldCardId: String(body.fieldCardId) } : {}),
               // And the Obszar itself, for the Zaklęcie thrown at a square.
               ...(body.fieldId ? { fieldId: requireFieldId(String(body.fieldId)) } : {}),
+              // The creature standing opposite in the fight on screen, which is
+              // a frame rather than a row — see `CastSpell.target`.
+              ...(body.foeInFight === true ? { foeInFight: true as const } : {}),
               ...(body.note ? { note: String(body.note) } : {}),
             },
             // The one answer a Zaklęcie asks for: where the Karta it moves is

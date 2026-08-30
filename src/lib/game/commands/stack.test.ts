@@ -8,6 +8,7 @@ import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
 import { drawCard } from "./draw";
 import { castSpell, beginFight, fightRoll, resolveFight } from "./fight";
+import { claimFloor } from "./spellFloor";
 import { resolveDrawnCard } from "./effects";
 import { moveTo, rollForMove } from "./movement";
 
@@ -223,32 +224,46 @@ describe("the resolution stack (docs/STACK.md)", () => {
     expect(at.holdings.filter((one) => one.seat_id === "seat-a")).toHaveLength(0);
   });
 
-  it.todo(
-    "7. Bartek takes the floor, casts Krąg Płomieni → [field, loop, fight, cast(B), ask(A)] — four deep (laws 4, 5) — waits on the `cast` frame",
-  );
-
   /**
-   * Moment 8's *outcome*, reached by the dice rather than by the Krąg.
+   * 7 and 8, run together, because under the narrowing Michał took on law 4
+   * they are one commit rather than two frames.
    *
-   * The scenario stops the second head with a Zaklęcie, which is law 4 and not
-   * built. What law 3 owes is the same either way — the attempt ends, the heads
-   * grow back, and 17.4 settles the Smok for the turn — so that half is checked
-   * here and the Krąg's half stays todo above rather than being asserted about
-   * a mechanism nobody has written.
+   * The page asked for `[field, loop, fight, cast(B), ask(A)]` — four deep, with
+   * a frame asking Ania whether she wants to use a Władca Zaklęć. That `ask` is
+   * the thing the spell floor was designed not to do: naming who might answer
+   * announces who is holding one, every fight, which is 9.3. So the cast stays
+   * the `spoken` status it already was, anybody may answer it by casting, and
+   * what step 3 built is the half no card could do — a Zaklęcie that reaches
+   * *down* and ends the fight beneath it. See "Law 4" in docs/STACK.md.
+   *
+   * What the moments actually assert is unchanged: Bartek speaks into somebody
+   * else's fight, and the Smok's attempt ends with the heads regrown.
    */
-  it("8. the attempt ends with the heads reset and the Smok fought this turn (law 3, 17.4)", async () => {
+  it("7-8. Bartek's Krąg Płomieni stops the head, and the loop goes with it (laws 3, 4, 5)", async () => {
     const drawn = await throughTheDraw();
     let at = apply(drawn, beginFight(drawn, { cardIds: [SMOK] }).writes);
     at = await head(at, 6, 1);
-    at = await head(at, 1, 6);
+    expect(phases(at.game.turn_state)).toEqual(["field", "loop", "fight"]);
+    expect(at.game.turn_state.stack[1]).toMatchObject({ done: 1 });
+
+    // 17.3: the floor is claimed and not polled — which is the whole reason
+    // there is no `ask(A)` frame above this.
+    at = apply(at, claimFloor(at, { seatId: "seat-b" }, ports()).writes);
+    const cast = await castSpell(
+      at,
+      { seatId: "seat-b", holdingId: "h-krag", target: { foeInFight: true }, shuffle: asIs },
+      ports(),
+    );
+    at = apply(at, cast.writes);
 
     expect(phases(at.game.turn_state)).toEqual(["field"]);
     const field = fieldOn(at.game.turn_state);
     // Fought (17.4), still lying on the Obszar for whoever comes next (16.8),
-    // and with nothing cut: no trophy, and the loop frame is gone entirely.
+    // and with nothing cut: no trophy, no point of Życie, and the loop gone.
     expect(field.fought).toEqual([SMOK]);
     expect(field.drawn.map((one) => one.cardId)).toContain(SMOK);
     expect(at.holdings.filter((one) => one.seat_id === "seat-a")).toHaveLength(0);
+    expect(at.seats[0].life).toBe(drawn.seats[0].life);
   });
 
   it("9. the Grota is still waiting behind the Smok, unresolved (15.2, 16.4)", async () => {

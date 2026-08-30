@@ -55,6 +55,7 @@ export function SpellHand({
   frame = "panel",
   opponents,
   boardCards = [],
+  foeInFight = null,
   ring = [],
   busy,
   onCast,
@@ -104,12 +105,22 @@ export function SpellHand({
    * somebody else's turn.
    */
   ring?: { fieldId: string; name: string }[];
+  /**
+   * The creature standing opposite in the fight on screen, when there is one.
+   *
+   * "Na inną Postać lub Wroga" reaches it, and it is not in `boardCards`: the
+   * Wróg in a fight may be a creature a Karta conjured, or 17.5's pack fighting
+   * as one, and neither is a row on the board. Null everywhere but a fight.
+   */
+  foeInFight?: { name: string } | null;
   onCast: (
     holdingId: string,
     target: {
       seatIndex?: number;
       fieldCardId?: string;
       fieldId?: string;
+      /** The creature in the fight in progress — see `foeInFight`. */
+      foeInFight?: true;
       /** Where the Karta goes, for the one Zaklęcie that moves one. */
       destination?: string;
     },
@@ -345,7 +356,12 @@ export function SpellHand({
           const aims: {
             key: string;
             label: string;
-            target: { seatIndex?: number; fieldCardId?: string; fieldId?: string };
+            target: {
+              seatIndex?: number;
+              fieldCardId?: string;
+              fieldId?: string;
+              foeInFight?: true;
+            };
           }[] = [
             // „Na siebie lub inną Postać" is a choice, and the caster is one of
             // the answers — offered first, because it is the one the picker
@@ -359,6 +375,21 @@ export function SpellHand({
                   label: seat.name,
                   target: { seatIndex: seat.seatIndex },
                 }))
+              : []),
+            /**
+             * The one you are actually fighting, offered first.
+             *
+             * A Zaklęcie spoken into a fight is almost always meant for the
+             * creature in it, and before this the only Wrogowie on offer were
+             * the ones lying on Obszary — so the Krąg Płomieni could be thrown
+             * at every monster on the board except the one swinging at you.
+             */
+            ...(atCards && foeInFight
+              ? [{
+                  key: "foe-in-fight",
+                  label: `${foeInFight.name} — w tej walce`,
+                  target: { foeInFight: true as const },
+                }]
               : []),
             ...(atCards
               ? boardCards.map((lying) => ({

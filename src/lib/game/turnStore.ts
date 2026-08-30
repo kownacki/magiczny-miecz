@@ -57,6 +57,7 @@ import {
   speakCarriedSpell as speakCarriedSpellOn,
 } from "./commands/friends";
 import {
+  type CastSpell,
   closeFightFrame,
   attackSeat as attackSeatOn,
   sendRaider as sendRaiderOn,
@@ -628,12 +629,7 @@ export async function castSpell(
   gameId: string,
   seatId: string,
   holdingId: string,
-  target: {
-    seatIndex?: number;
-    note?: string;
-    fieldCardId?: string;
-    fieldId?: FieldId;
-  } = {},
+  target: NonNullable<CastSpell["target"]> = {},
   /**
    * What the caster has already answered of the spell's own effect.
    *

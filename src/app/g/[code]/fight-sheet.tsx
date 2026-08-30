@@ -233,6 +233,10 @@ export function FightSheet({
             }
             opponents={opponents}
             boardCards={boardCards}
+            /* The creature this fight is against, so a Zaklęcie aimed at a
+               Wróg can reach the one actually swinging (law 4). A duel has a
+               Postać opposite instead, and `opponents` already names them. */
+            foeInFight={fight.opponentSeat === undefined ? { name: fight.cardName } : null}
             ring={spellRing}
             busy={busy}
             onCast={onCastSpell}

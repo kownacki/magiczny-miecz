@@ -10,6 +10,7 @@ import {
   insteadAgainst,
   beatsWithoutFighting,
   cannotUseSpells,
+  immuneToSpell,
   raidsForYou,
   type EscapeTarget,
   stealsLife,
@@ -42,6 +43,7 @@ import {
   castableNow,
   momentsIn,
   spellScript,
+  unattackableAfter,
   type SpellScript,
 } from "@/lib/engine/spells";
 import {
@@ -544,7 +546,21 @@ export function summonFighter(
 export interface CastSpell {
   seatId: string;
   holdingId: string;
-  target?: { seatIndex?: number; note?: string; fieldCardId?: string; fieldId?: FieldId };
+  target?: {
+    seatIndex?: number;
+    note?: string;
+    fieldCardId?: string;
+    fieldId?: FieldId;
+    /**
+     * The creature in the fight in progress — "na inną Postać lub Wroga", when
+     * the Wróg is the one standing opposite rather than one lying on an Obszar.
+     *
+     * A flag rather than a card id, because that Wróg may be no row on the
+     * board at all: a creature a Karta conjured, or 17.5's pack fighting as
+     * one. What identifies it is the frame, and the frame is on the stack.
+     */
+    foeInFight?: true;
+  };
   /** Answers a spell's own effect asks for, where it has one (`SpellScript.stosuje`). */
   decided?: Decisions;
   /** How a pile is shuffled, for the spells that draw. */
@@ -812,7 +828,7 @@ async function landSpell(
   input: {
     casterId: string;
     cardId: string;
-    target: { seatIndex?: number; note?: string; fieldCardId?: string; fieldId?: FieldId };
+    target: NonNullable<CastSpell["target"]>;
     decided?: CastSpell["decided"];
     shuffle?: Shuffle;
     /**
@@ -825,7 +841,7 @@ async function landSpell(
     toSeatId?: string;
   },
   ports: CommandPorts,
-): Promise<{ writes: Changeset; did: string[]; took?: string[]; pending?: Effect }> {
+): Promise<{ writes: Changeset; did: string[]; took?: string[]; pending?: Effect; stopped?: true }> {
   const { target } = input;
   const caster = snapshot.seats.find((one) => one.id === input.casterId);
   if (!caster) throw new Error("Nie ma takiego gracza.");
@@ -863,6 +879,30 @@ async function landSpell(
     script.stosuje.op !== "przyzwij" &&
     script.stosuje.op !== "przenies-karte";
 
+  /**
+   * A victim the Zaklęcie does nothing to (the two Talizmany).
+   *
+   * "Talizman Ognia daje odporność na Zaklęcie Krąg Płomieni", and the Talizman
+   * Powietrza says the same of the Siedem Wichrów and the Władca Gromu. Read
+   * off the *victim* — the caster's own Talizman is no defence against their
+   * own spell, which is the only reading of "daje odporność" that means
+   * anything.
+   *
+   * The card is still spent. 9.6 puts it on the used pile as it is spoken, and
+   * a Zaklęcie that bounced is still a Zaklęcie you no longer have — the same
+   * bargain a negated one makes.
+   */
+  const shielded =
+    named !== undefined &&
+    immuneToSpell(seatView(snapshot, named.id).abilities, input.cardId);
+  if (shielded) {
+    return {
+      writes: applied?.writes ?? {},
+      did: [`${nameOfSeat(snapshot.users, named.seat_index)}: odporność — Zaklęcie nie działa.`],
+      ...(applied ? { took: applied.took } : {}),
+    };
+  }
+
   const worked =
     !aimedAtCard && script.stosuje
       ? await applyEffect(
@@ -881,10 +921,49 @@ async function landSpell(
         )
       : null;
 
+  /**
+   * A Zaklęcie that ends the fight it was spoken into (law 4, docs/STACK.md).
+   *
+   * "Ofiary nie można zaatakować, jednak można się jej wymknąć" — so a fight
+   * against somebody the Krąg has just closed round cannot go on, and the
+   * comparison 17.4 is waiting for will never happen. Either side counts: the
+   * victim may be the creature standing opposite or the character fighting it,
+   * and a fight one of whose two sides cannot be attacked is over either way.
+   *
+   * What it leaves behind is what walking away leaves behind. The frame pops
+   * and `endFight` writes the creature into the field's `fought`, so this turn
+   * is done with it (17.4) and it is still lying there for whoever comes next
+   * (16.8) — no dice, no point of Życie, no trophy. A `loop` beneath closes
+   * with it and its heads grow back, which is law 3 meeting law 4, and is
+   * moment 8 of the acceptance test.
+   *
+   * Here rather than in `castSpell` for the reason at the top of this function:
+   * a spell nobody could answer lands as it is spoken and one that waited out
+   * its window lands through `settleSpell`, and a second copy of this rule
+   * would be two Kręgi Płomieni.
+   */
+  const running = apply(snapshot, mergeAll(applied?.writes ?? {}, worked?.writes ?? {}));
+  const frame = top(running.game.turn_state);
+  const stopped =
+    frame.phase === "fight" &&
+    unattackableAfter(script) &&
+    (target.foeInFight === true ||
+      (named !== undefined &&
+        (named.seat_index === frame.fight.opponentSeat ||
+          named.seat_index === snapshot.game.active_seat)));
+
+  const broke: Changeset = stopped
+    ? { game: { turn_state: settleExposedLoop(closeFightFrame(running.game.turn_state, frame)) } }
+    : {};
+
   return {
-    writes: mergeAll(applied?.writes ?? {}, worked?.writes ?? {}),
-    did: worked?.result.did ?? [],
+    writes: mergeAll(applied?.writes ?? {}, worked?.writes ?? {}, broke),
+    did: [
+      ...(worked?.result.did ?? []),
+      ...(stopped ? [`walka przerwana — ${frame.fight.cardName} nie da się zaatakować (19.1)`] : []),
+    ],
     ...(applied ? { took: applied.took } : {}),
+    ...(stopped ? { stopped: true as const } : {}),
     // What the effect still wants answered. The caller decides what to do with
     // it, and for a cast the answer is "nothing yet" — see `castSpell`.
     ...(worked?.result.pending ? { pending: worked.result.pending } : {}),
@@ -1227,8 +1306,15 @@ export async function castSpell(
    */
   const afterState = apply(snapshot, soFar).game.turn_state;
   const after = top(afterState);
+
+  /**
+   * A fight spoken into goes back to before the dice, and the floor is handed
+   * back to the table — unless the Zaklęcie ended the fight outright, in which
+   * case `landSpell` has already popped the frame and there is nothing here to
+   * put back. See its note on why that decision lives there.
+   */
   const cleared: Changeset =
-    inAFight && after.phase === "fight"
+    inAFight && !landed.stopped && after.phase === "fight"
       ? {
           game: {
             turn_state: replaceTop(afterState, {

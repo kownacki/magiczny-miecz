@@ -932,14 +932,28 @@ export async function runCommand(
        * SIEWCA at CYKLOP` both mean what they say.
        */
       const aim = spellScript(held.card_id)?.target;
+      /**
+       * The creature standing opposite, which is not a Karta on the board.
+       *
+       * A Wróg in a fight may be one a Karta conjured or 17.5's pack fighting
+       * as one, so `fieldCardNamed` cannot find him and `seatOf` would go
+       * looking for a player of that name. Matched off the frame instead —
+       * which is also the only handle the server has for him (law 4).
+       */
+      const inFight = top((await activeStore().load(gameId)).game.turn_state);
+      const atTheFoe =
+        command.who !== null &&
+        inFight.phase === "fight" &&
+        inFight.fight.cardName.toLowerCase().startsWith(command.who.toLowerCase());
+
       const at =
-        command.who && aim !== "obszar" && aim !== "karta-na-planszy"
+        command.who && !atTheFoe && aim !== "obszar" && aim !== "karta-na-planszy"
           ? seatOf(command.who)
           : null;
       const onField =
         command.who && aim === "obszar" ? requireFieldId(fieldNamed(command.who)) : null;
       const onCard =
-        command.who && aim === "karta-na-planszy"
+        command.who && !atTheFoe && aim === "karta-na-planszy"
           ? await fieldCardNamed(gameId, command.who)
           : null;
       /**
@@ -958,6 +972,7 @@ export async function runCommand(
           ...(at ? { seatIndex: at.seat_index } : {}),
           ...(onField ? { fieldId: onField } : {}),
           ...(onCard ? { fieldCardId: onCard.id } : {}),
+          ...(atTheFoe ? { foeInFight: true as const } : {}),
         },
         goesTo ? { destination: goesTo } : {},
       );
@@ -971,7 +986,9 @@ export async function runCommand(
        * thrown, and thirteen of them have now.
        */
       const aimed =
-        (at
+        (atTheFoe && inFight.phase === "fight"
+          ? ` at ${inFight.fight.cardName}`
+          : at
           ? ` at ${named(at)}`
           : onField
             ? ` at ${fieldName(onField)}`

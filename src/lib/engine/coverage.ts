@@ -46,8 +46,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   "czarodziejska-kosc":
     "W Pułapce i Magicznej Pułapce daje zamiast tego 1 punkt Miecza lub Magii.",
   relikwiarz: "Pokonuje wszystkie Demony bez walki.",
-  "talizman-ognia": "Daje odporność na Zaklęcie Krąg Płomieni.",
-  "talizman-powietrza": "Daje odporność na Siedem Wichrów i Władcę Gromu.",
   lodz: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
   latarnia: "Przeprawa dopiero w następnej turze, na Obszar sąsiadujący. Potem odłóż Kartę.",
   kon: "Tracąc Konia, zostawiasz na Obszarze wszystko, czego sam nie uniesiesz.",
@@ -70,8 +68,13 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // Each of these applies the half that has a seat to land on. What is left is
   // what the model has nowhere to put: a state on a Karta lying on an Obszar,
   // or a distinction the deck does not record.
+  // The fight is the app's now: a Krąg spoken into one ends it, whichever side
+  // it was aimed at, and the loop beneath goes with it. What is left is the
+  // creature *afterwards* — `seat_effects.seat_id` is `not null`, so a Karta
+  // lying on an Obszar has nowhere to carry a status, and until it does the
+  // table has to remember the flames are still round him.
   "krag-plomieni":
-    "Rzucony na Wroga: to wy pilnujecie, że nie wolno go atakować i że nic nie robi.",
+    "Wróg zostaje w płomieniach na Obszarze: dopóki ktoś nie zdejmie Kręgu, nie wolno go atakować i nic nie robi.",
   "wojna-zywiolow":
     "Magiczne Przedmioty: aplikacja nie wie, które nimi są — nie liczcie z nich nic do końca tury rzucającego.",
   "wladca-gromu":

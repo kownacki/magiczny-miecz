@@ -60,6 +60,14 @@ export interface Requests {
     slot: string | null;
     nature: string;
     note: string;
+    /**
+     * `cast`: aimed at the creature in the fight in progress.
+     *
+     * "Na inną Postać lub Wroga", where the Wróg is the one standing opposite
+     * rather than one lying on an Obszar — which may be no row on the board at
+     * all. The frame identifies it; see `CastSpell.target`.
+     */
+    foeInFight: boolean;
     points: number;
     targetSeat: number;
     /**

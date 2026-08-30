@@ -378,11 +378,21 @@ So there are two readings of law 4 and they want different code:
    fight beneath it. That is the cash-in law 4 was written for (Krąg Płomieni
    on a Wróg mid-fight), and it is the half no card can do today.
 
-Reading 2 is the smaller and, on the evidence above, probably the truer one —
-but law 4 is a law, and it is Michał's to narrow, the way he narrowed the go/
-no-go. **Nothing was written either way.** The Krąg Płomieni also wants a state
-on a Karta lying on an Obszar, which the model has nowhere to put — see its
-`MANUAL` note — so reading 2 is not free either.
+**Narrowed to reading 2** (Michał, 2026-08-31, on the recommendation above).
+The cast stays the `spoken` status it already was; what step 3 built is the
+vocabulary — `unattackableAfter` reads off a Zaklęcie whether it leaves its
+victim impossible to attack, and `landSpell` ends the fight beneath when it
+does. Moment 7's `ask(A)` frame is deliberately **not** built, for the reason
+in this section, and moments 7 and 8 of the acceptance test now run as one.
+
+The `cast` frame is therefore unoccupied and unbuilt. If a card ever needs a
+cast that is genuinely *suspended* — something asked of the caster part-way
+through their own spell — this is where it goes; nothing today does.
+
+Still not built, and both for want of somewhere to put the state rather than
+for want of a rule: the creature left burning on an Obszar after the Krąg
+(`seat_effects.seat_id` is `not null`, so a Karta on the board carries no
+status), and the Władca Gromu's paralysed Wrogowie, which is the same gap.
 
 ## Handoff
 

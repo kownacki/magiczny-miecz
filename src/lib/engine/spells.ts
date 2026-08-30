@@ -643,6 +643,25 @@ export function spellScript(cardId: string): SpellScript | null {
 }
 
 /**
+ * Whether speaking this Zaklęcie leaves its victim impossible to attack.
+ *
+ * "Ofiara zostaje otoczona płomieniami... Ofiary nie można zaatakować, jednak
+ * można się jej wymknąć", and 19.1 quotes the same state from the other side —
+ * "jednej (unieruchomionej w Kręgu Płomieni) istocie". So a fight against the
+ * victim cannot go on, which is law 4's cash-in: a cast that reaches down and
+ * ends the fight beneath it (docs/STACK.md).
+ *
+ * Read off what the spell already declares rather than declared a second time.
+ * The rule is about the *state* the victim is left in, not about which card put
+ * them there — so a second freezing Zaklęcie gets this without an edit, and a
+ * Władca Zaklęć that lifts the state means the right thing by the same token.
+ */
+export function unattackableAfter(script: SpellScript | null | undefined): boolean {
+  const stosuje = script?.stosuje;
+  return stosuje?.op === "efekt" && stosuje.modifier.kind === "frozen";
+}
+
+/**
  * Whether a spell may be spoken in the situation the turn is currently in.
  *
  * "dowolna chwila" is deliberately permissive — a third of the pile says it,

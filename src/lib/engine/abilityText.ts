@@ -6,7 +6,7 @@ import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
 import { describeDisposition, scriptFor } from "./cardScript";
 import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
-import { NATURE_LABEL, fieldName, plural } from "./polish";
+import { NATURE_LABEL, cardName, fieldName, plural } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
 function fieldNames(fieldIds: readonly FieldId[]): string {
@@ -390,5 +390,7 @@ export function describeAbility(ability: Ability): string {
       return `+${ability.count} Zaklęcie ponad limit (2.6)`;
     case "podglad-zaklec":
       return `biorąc Zaklęcie, oglądasz ${ability.count} pierwsze Karty i wybierasz jedną`;
+    case "odporny-na-zaklecie":
+      return `odporność na: ${ability.zaklecia.map((id) => cardName(id)).join(", ")}`;
   }
 }
