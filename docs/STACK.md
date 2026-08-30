@@ -246,5 +246,48 @@ Written as `src/lib/game/commands/stack.test.ts`, `describe.skip` until step 2.
 
 ## Handoff
 
-All of it — engine, console, GUI — is this session's (Michał, 2026-08-30).
-The other two sessions keep off the three files above for the length of step 1.
+Written 2026-08-30 at a session restart, with steps 0–2 committed
+(`1a44c95` … `a357761`) and every gate green: tsc 0, 2,356 tests + 11 todos,
+production build, and the whole lifecycle proven live on table KAYZQ — Kurhan's
+face 6 suspended `[field, script, fight]`, the Duch was fought and lost, the
+chain finished the card, and `pole:Kurhan` resolved two commits after the
+suspension began.
+
+**The standing order, from Michał: every mechanism lands engine-first.**
+(1) pure types and operations in `src/lib/engine/`, with tests; (2) the
+command layer behind ports; (3) the console — terminal and the browser `>_` —
+able to show and drive it; (4) the GUI. Do not start a layer before the one
+beneath is green. Effectful code stays in commands; that is not a violation.
+
+**Where the pieces live now:** frames and the four operations in
+`engine/stack.ts` and `engine/turn.ts`; the cursor reader `nodeAt` in
+`engine/resolve.ts`; the suspending walker, `framed`, `continueTopScript` and
+`closeFightFrame` in `commands/effects.ts` / `commands/fight.ts`; the chaining
+in `turnStore.ts`; the `answer` door in the turn route and the console; the
+panel in `script-frame.tsx`. The lifecycle spec is `commands/
+scriptFrames.test.ts`; the acceptance scenario is `commands/stack.test.ts`,
+still eleven todos under `describe.skip` on purpose.
+
+**Next is step 3, and it has no go yet.** Michał checkpointed at the gate and
+restarted; confirm the go before deleting any MANUAL entry. Then open with the
+two new mechanisms before the card-by-card tail: the `loop` frame (Trójgłowy
+Smok's three heads, reset on loss — law 3) and the vocabulary for a cast
+acting on the fight beneath it (the 18 anytime spells, the Talizmany). Each
+card is one commit, engine → console → GUI, tests first, its MANUAL entry
+deleted last.
+
+**Open threads awaiting Michał's word, not code:** the ×25 Zaklęcie-stack
+spacing complaint was never located ("not this window" — which window was
+never answered); the beaten-minus-held subtraction is duplicated between
+`trophy-shelf.ts` and `consoleStore.ts` and consolidating means touching the
+console; KAYZQ carries test debris (a granted Cyklop, a stray PRZEWOŹNIK in
+the drawn pile, Życie 3) and is disposable; the spent-trophy red cross has
+never been seen rendered.
+
+**Standing rulings, so nobody re-asks:** teleport is a cut; a bystander's
+spell resolves before the dice, never between them; live tables are
+disposable and the schema default deliberately stays the old shape behind
+`asTurnState`; the frame discriminant stays `phase`; the other two sessions
+were stopped for the freeze — check whether that still holds before sweeping
+`turn.ts`, `effects.ts` or `fight.ts`. The tree also holds ~170 unpushed
+commits; pushing is Michał's call.
