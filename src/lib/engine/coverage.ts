@@ -91,7 +91,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   ocalony:
     "Rzucony na Przyjaciela lub Wroga ratuje go od śmierci; użyty w walce czyni jej wynik nierozstrzygniętym.",
 
-  zloczynca: "Płaci tylko ta Postać, która przegrała walkę.",
 };
 
 export function coverageOf(cardId: string): Coverage {

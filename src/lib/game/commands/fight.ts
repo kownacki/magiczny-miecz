@@ -68,6 +68,7 @@ import {
 } from "../change";
 import { liftOffField } from "./holdings";
 import { applyEffect, type Decisions } from "./effects";
+import { scriptFor } from "@/lib/engine/cardScript";
 import type { Effect } from "@/lib/engine/cardScript";
 import { summariseEffect } from "@/lib/engine/effectText";
 import { asReturnable, putOnPile } from "./piles";
@@ -2369,7 +2370,33 @@ export async function resolveFight(
     };
   })();
 
+  /**
+   * What the creature's own card takes off whoever it beat.
+   *
+   * Exactly one Wróg in the box has this — "Każdej pokonanej Postaci,
+   * Złoczyńca zabiera do wyboru: 1 Sztukę Złota lub jeden Przedmiot" — and it
+   * is on top of 17.4's point of Życie rather than instead of it.
+   *
+   * Run after the frame has closed, against the state that close produced, so
+   * the toll's own question suspends onto the field the fight was interrupting
+   * rather than onto the fight itself. A duel has no card to consult, and a
+   * raid was not the character's own fight to lose.
+   */
+  const beaten = mergeAll(upToNow, stolen, cleared_, {
+    game: { turn_state: closed.state },
+  });
+  const toll =
+    fight.result.outcome === "przegrana" &&
+    fight.opponentSeat === undefined &&
+    fight.raid === undefined
+      ? await tollFor(apply(snapshot, beaten), seat.id, fight, ports)
+      : {};
+
   return {
+    // `toll` comes last of all, and has to: `merge` resolves two writes to one
+    // column as later-wins, and the toll's own question is a frame pushed onto
+    // the state the close produced. Merged before it, the close would put the
+    // state back and the question would be gone.
     writes: mergeAll(upToNow, stolen, cleared_, kill ? trophiesFrom(snapshot, seat, fight) : {}, {
       game: { turn_state: closed.state },
       journal: [
@@ -2380,9 +2407,46 @@ export async function resolveFight(
           payload: { cardId: fight.cardId, outcome: fight.result.outcome, ...closed.said },
         },
       ],
-    }),
+    }, toll),
     result: undefined,
   };
+}
+
+/**
+ * The toll a creature's card charges whoever it beat, if its card charges one.
+ *
+ * `fought` rather than `cardId`, because 17.5 packs several creatures into one
+ * fight and joins their ids with a "+": what beat you may be three cards, and
+ * each of them may have something to say about it.
+ *
+ * Whatever the toll asks is asked through the ordinary suspension machinery —
+ * a `wybor` becomes a `script` frame above the field the fight was
+ * interrupting, answered by `answerScript` like every other card's question.
+ */
+async function tollFor(
+  snapshot: Snapshot,
+  seatId: string,
+  fight: Fight,
+  ports: CommandPorts,
+): Promise<Changeset> {
+  let writes: Changeset = {};
+  for (const cardId of fight.fought ?? [fight.cardId]) {
+    const owed = scriptFor(cardId)?.przegrana;
+    if (!owed) continue;
+    const done = await applyEffect(
+      apply(snapshot, writes),
+      {
+        seatId,
+        effect: owed,
+        reason: EVENTS.find((one) => one.id === cardId)?.name ?? cardId,
+        cardId,
+        shuffle: (items) => [...items],
+      },
+      ports,
+    );
+    writes = merge(writes, done.writes);
+  }
+  return writes;
 }
 
 /**

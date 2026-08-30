@@ -29,6 +29,25 @@ import type { CardId } from "@/data/ids";
 export interface CardScript {
   /** What resolving the card does. */
   effect: Effect;
+  /**
+   * What losing a fight to this creature costs, on top of 17.4's point of Życie.
+   *
+   * A Wróg is not *resolved* the way a Spotkanie is — you fight it — so its
+   * `effect` is whatever the card does when you turn it over, and for most of
+   * them that is nothing at all. This is the other thing a creature's card can
+   * say, and exactly one in the box says it: "Każdej pokonanej Postaci,
+   * Złoczyńca zabiera do wyboru: 1 Sztukę Złota lub jeden Przedmiot."
+   *
+   * Its own field rather than a reading of `effect`, because the two are not
+   * the same thing and one card proves it: the Wędrowiec's `effect` is a die
+   * that decides whether the fight happens at all, and running that on a loss
+   * would open a second fight with the creature that just beat you.
+   *
+   * "On top of" and not "instead of": the card says what the Złoczyńca takes
+   * and says nothing about the point of Życie, and 17.4 is the general rule
+   * that governs every fight.
+   */
+  przegrana?: Effect;
   /** Where the card goes once it has been resolved. */
   disposition: Disposition;
   /**

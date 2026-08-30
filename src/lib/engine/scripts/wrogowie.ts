@@ -73,7 +73,22 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
   // Beating him is not the only thing that matters: every Postać he beats pays
   // a Sztuka Złota or a Przedmiot on top of the usual point of Życie.
   zloczynca: {
-    effect: {
+    // Turning him over does nothing; he is a Wróg and the card is the fight.
+    effect: { op: "nic" },
+    /**
+     * "Każdej pokonanej Postaci, Złoczyńca zabiera do wyboru: 1 Sztukę Złota
+     * lub jeden Przedmiot (należy odłożyć żeton lub Kartę Przedmiotu)."
+     *
+     * This used to be the card's `effect`, which put it on the drawn-card
+     * sheet as a free-standing choice: "Walcz (Miecz 3)" and "Oddaj 1 Sztukę
+     * Złota" side by side, offered to a player who had not fought him and
+     * declinable by one who had lost. It is neither — it is what a loss costs,
+     * and now it says so.
+     *
+     * "Do wyboru" is the loser's, which is also how 5.6 reads every other
+     * loss: which Przedmiot goes is theirs to pick.
+     */
+    przegrana: {
       op: "wybor",
       options: [
         { label: "Oddaj 1 Sztukę Złota", effect: { op: "punkty", stat: "gold", delta: -1 } },
