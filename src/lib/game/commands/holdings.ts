@@ -228,7 +228,9 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
             seatId,
             turn: snapshot.game.turn,
             kind: "taken",
-            payload: { cardId, kind: "gold" },
+            // The card's own kind, not the Sztuka Złota's. Three cards are
+            // consumed on the way in now and only one of them is money.
+            payload: { cardId, kind },
           },
         ],
       }),

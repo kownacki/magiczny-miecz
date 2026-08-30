@@ -94,7 +94,10 @@ describe("taking a card", () => {
     });
 
     it("bags what cannot be worn at all", () => {
-      const { writes } = takeCard(slotted(), { seatId: "seat-a", cardId: "lodz" });
+      // Kij i Sznur rather than the Łódź: the boat is no longer bagged at all,
+      // because you cannot carry one (11.2). This is about a Przedmiot that is
+      // kept and simply has nowhere on the body to go.
+      const { writes } = takeCard(slotted(), { seatId: "seat-a", cardId: "kij-i-sznur" });
       expect(writes.holdings?.insert?.[0]).not.toHaveProperty("slot");
     });
 
@@ -155,7 +158,10 @@ describe("taking a card", () => {
     expect(writes.holdings?.insert ?? []).toEqual([]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "taken",
-      payload: { cardId: "1-sztuka-zlota", kind: "gold" },
+      // The card's own kind. It said "gold" for every consumed card, which was
+      // true while the only two were money; the Łódź is the third and is not.
+      // That the coin *became* gold is the `points` line the effect then writes.
+      payload: { cardId: "1-sztuka-zlota", kind: "item" },
     });
   });
 
