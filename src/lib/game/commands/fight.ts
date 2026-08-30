@@ -60,7 +60,7 @@ import { applyEffect, type Decisions } from "./effects";
 import type { Effect } from "@/lib/engine/cardScript";
 import { summariseEffect } from "@/lib/engine/effectText";
 import { asReturnable, putOnPile } from "./piles";
-import { only, pop, push, replaceTop, top } from "@/lib/engine/stack";
+import { only, pop, push, replaceTop, top, type TurnState } from "@/lib/engine/stack";
 import {
   activeSeat,
   eqModeOf,
@@ -144,6 +144,28 @@ function againstThese(
     magia += swap.magia - ordinarily.magia;
   }
   return { miecz, magia };
+}
+
+/**
+ * Closes a fight frame, whatever it stood on.
+ *
+ * Over a field frame — every ordinary fight since fights became pushes — the
+ * pop reveals the field as it was when the fight opened, and `endFight` merges
+ * in what the fight settled: the creatures fought this turn (17.4), a meeting
+ * spent (13.2). Over anything else — a summon's roll, a `walka` step's script
+ * frame — the pop alone is the whole of it: nothing beneath needs telling.
+ *
+ * A one-frame stack is a row written before fights were pushes, still readable
+ * for one release, and closes the way it always did: by rebuilding the field
+ * from the Fight's own copies.
+ */
+export function closeFightFrame(
+  state: TurnState,
+  fight: Extract<TurnPhase, { phase: "fight" }>,
+): TurnState {
+  if (state.stack.length < 2) return only(endFight(fight));
+  const below = state.stack[state.stack.length - 2];
+  return below.phase === "field" ? replaceTop(pop(state), endFight(fight)) : pop(state);
 }
 
 export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<void> {
@@ -259,7 +281,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
   return {
     writes: {
       game: {
-        turn_state: replaceTop(snapshot.game.turn_state, startFight(
+        turn_state: push(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: foes.map((f) => f.card.id).join("+"),
@@ -317,7 +339,7 @@ export function beginNamedFight(
   return {
     writes: {
       game: {
-        turn_state: replaceTop(snapshot.game.turn_state, startFight(
+        turn_state: push(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: `pole:${name}`,
@@ -1547,7 +1569,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
     return {
       writes: {
         game: {
-          turn_state: replaceTop(snapshot.game.turn_state, startFight(
+          turn_state: push(snapshot.game.turn_state, startFight(
             state,
             {
               cardId: `seat:${target.seat_index}`,
@@ -1578,7 +1600,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
   return {
     writes: {
       game: {
-        turn_state: replaceTop(snapshot.game.turn_state, startFight(
+        turn_state: push(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: lying.card_id,
@@ -1674,7 +1696,7 @@ export function attackSeat(
   return {
     writes: mergeAll(marked, {
       game: {
-        turn_state: replaceTop(snapshot.game.turn_state, startFight(
+        turn_state: push(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: `seat:${target.seat_index}`,
@@ -1860,27 +1882,24 @@ export function escape(
   const before = top(beforeState);
   let left: Changeset = {};
   if (succeeded && before.phase === "fight") {
-    // A pushed fight — a summoned creature over the turn it interrupted — is
-    // closed by popping it; a fight that replaced the field frame rebuilds it.
-    const next = endFight(before);
     const sweep =
       byAbility && przed === "wrog"
         ? before.fight.drawn
             .filter((entry) => entry.cardClass === "foe")
             .map((entry) => entry.cardId)
         : [];
-    left = {
-      game: {
-        turn_state:
-          beforeState.stack.length > 1
-            ? pop(beforeState)
-            : only(
-                next.phase === "field" && sweep.length > 0
-                  ? { ...next, fought: [...new Set([...(next.fought ?? []), ...sweep])] }
-                  : next,
-              ),
-      },
-    };
+    // Close the frame first; the ability's sweep then lands on whatever field
+    // the close revealed. Over a script frame there is no field on top and the
+    // sweep waits — the drawn Wrogowie belong to a frame deeper down.
+    let shut = closeFightFrame(beforeState, before);
+    const revealed = top(shut);
+    if (sweep.length > 0 && revealed.phase === "field") {
+      shut = replaceTop(shut, {
+        ...revealed,
+        fought: [...new Set([...(revealed.fought ?? []), ...sweep])],
+      });
+    }
+    left = { game: { turn_state: shut } };
   } else if (succeeded && before.phase === "field") {
     /**
      * Slipping past what is lying here, before any fight began.
@@ -2118,12 +2137,7 @@ export async function resolveFight(
   return {
     writes: mergeAll(upToNow, stolen, cleared_, trophiesFrom(snapshot, seat, fight), {
       game: {
-        // Pushed fights pop back to the frame they interrupted; the rest
-        // rebuild the field they replaced (see endFight).
-        turn_state:
-          snapshot.game.turn_state.stack.length > 1
-            ? pop(snapshot.game.turn_state)
-            : only(endFight(state)),
+        turn_state: closeFightFrame(snapshot.game.turn_state, state),
       },
       journal: [
         {

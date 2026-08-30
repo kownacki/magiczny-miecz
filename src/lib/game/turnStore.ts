@@ -8,13 +8,12 @@ import {
   type FieldId,
 } from "@/lib/engine/board";
 import {
-  endFight,
 } from "@/lib/engine/turn";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
-import { only, pop, replaceTop, top } from "@/lib/engine/stack";
+import { only, top } from "@/lib/engine/stack";
 import {
   afterFight,
   type Ends,
@@ -56,6 +55,7 @@ import {
   speakCarriedSpell as speakCarriedSpellOn,
 } from "./commands/friends";
 import {
+  closeFightFrame,
   attackSeat as attackSeatOn,
   sendRaider as sendRaiderOn,
   beginFight as beginFightOn,
@@ -529,10 +529,7 @@ export async function abandonFight(gameId: string): Promise<void> {
         // frame beneath takes it from there.
         writes: {
           game: {
-            turn_state:
-              snapshot.game.turn_state.stack.length > 1
-                ? pop(snapshot.game.turn_state)
-                : replaceTop(snapshot.game.turn_state, endFight(state)),
+            turn_state: closeFightFrame(snapshot.game.turn_state, state),
           },
           ...(seat
             ? {
