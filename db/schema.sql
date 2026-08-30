@@ -430,7 +430,8 @@ create table if not exists magiczny_miecz.moves (
     'lost-card', 'move', 'moved-by-hand', 'nature-change', 'new-character',
     'override', 'paid-friend', 'points', 'reshuffle', 'roll', 'shielded', 'sold', 'spell',
     'start', 'starting-kit', 'stone', 'taken', 'test-card',
-    'table-opened', 'test-card-field', 'test-fight-end', 'took-seat',
+    'table-opened', 'test-card-field', 'test-fight-end', 'test-stack',
+    'took-seat',
     'trophies-traded', 'turn-end',
     'turn-lost', 'used', 'victory'
   )),

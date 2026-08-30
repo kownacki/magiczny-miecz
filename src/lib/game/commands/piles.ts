@@ -1,9 +1,9 @@
 /** Putting cards back where they came from — "stos zużytych Kart Zdarzeń", and the spells' own (9.5, 9.6, 4.4, 1.4, 6.4, 16.6, 20.2). */
 
-import { discardTo, returningRef } from "@/lib/engine/deck";
+import { discardTo, returningRef, stackOnTop } from "@/lib/engine/deck";
 import { fromTheShop } from "@/lib/engine/stock";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
-import type { Changeset, Snapshot } from "../change";
+import type { Changeset, Outcome, Snapshot } from "../change";
 import { trophyModeOf } from "./seat";
 
 /**
@@ -99,6 +99,57 @@ export function pushOntoPile(
 
   if (!any) return {};
   return { game: { deck: { ...decks, [pile]: deck } } };
+}
+
+/**
+ * Puts a named card on top of its pile, so the next lawful draw is that card.
+ *
+ * Test mode's answer to "I want to see what this Karta does". The three doors
+ * that already conjure a card all step round the machinery that makes a card
+ * interesting: `give` puts it straight in a hand, `place` lays it face up on an
+ * Obszar and `summon` opens a fight with a Wróg. None of them runs 15.2's
+ * ordering, the card's own `disposition`, or the journal line that says where
+ * it went — so a script could be wrong in exactly the way a test table exists
+ * to catch. This puts the card back in the deck's own path and lets `draw` find
+ * it, which means what happens next is what would have happened anyway.
+ *
+ * A move rather than an insertion, so the box keeps the number of copies it was
+ * printed with — and a card in a hand or lying on a field is not in a pile to
+ * be moved, which is a refusal and not a second copy.
+ */
+export function stackForDraw(
+  snapshot: Snapshot,
+  command: { seatId: string; cardId: string },
+): Outcome<"events" | "spells"> {
+  const { seatId, cardId } = command;
+  if (snapshot.game.mode !== "simulation") {
+    throw new Error("Talia jest na stole, nie w aplikacji.");
+  }
+
+  const pile = EVENT_COPIES.has(cardId) ? "events" : SPELL_COPIES.has(cardId) ? "spells" : null;
+  if (!pile) throw new Error("Ta Karta nie jest w żadnej talii.");
+
+  const decks = decksOf(snapshot.game);
+  for (const ref of (pile === "events" ? EVENT_COPIES : SPELL_COPIES).get(cardId) ?? []) {
+    const after = stackOnTop(decks[pile], ref);
+    if (!after) continue;
+    return {
+      writes: {
+        game: { deck: { ...decks, [pile]: after } },
+        journal: [
+          {
+            seatId,
+            turn: snapshot.game.turn,
+            kind: "test-stack",
+            payload: { cardId },
+            manual: true,
+          },
+        ],
+      },
+      result: pile,
+    };
+  }
+  throw new Error("Każdy egzemplarz tej Karty jest w grze — nie ma czego położyć na wierzchu.");
 }
 
 /**

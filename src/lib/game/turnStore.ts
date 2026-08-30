@@ -81,6 +81,7 @@ import {
 } from "./commands/bridge";
 import { claimFloor, releaseFloor } from "./commands/spellFloor";
 import { adjustSeat, type Adjustable, type Adjusted } from "./commands/adjust";
+import { stackForDraw as stackForDrawOn } from "./commands/piles";
 import type { JournalKind } from "@/lib/engine/journal";
 import {
   dropCard as dropCardOn,
@@ -1463,6 +1464,22 @@ export async function placeCard(
   target: FieldId | null,
 ): Promise<FieldId> {
   return change(gameId, placeCardOn, { seatId, cardId, target });
+}
+
+/**
+ * Puts a named Karta on top of its pile, so the next `draw` is that card.
+ *
+ * The test shortcut that does not step round anything: `give`, `place` and
+ * `summon` all put a card in play by fiat, and this one puts it back in the
+ * deck's own path so that what follows is the ordinary draw with the ordinary
+ * 15.2 ordering and the card's own disposition.
+ */
+export async function stackCard(
+  gameId: string,
+  seatId: string,
+  cardId: string,
+): Promise<"events" | "spells"> {
+  return change(gameId, stackForDrawOn, { seatId, cardId });
 }
 
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {

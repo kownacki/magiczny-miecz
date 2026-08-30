@@ -225,6 +225,8 @@ export type Command =
   | { kind: "endcast" }
   /** 17.9's choice: null takes the Życie, "zloto" the coin, a name the Przedmiot. */
   | { kind: "spoils"; take: "zycie" | "zloto"; card: string | null }
+  /** Test mode: the named Karta on top of its pile, so `draw` finds it. */
+  | { kind: "stack"; cardId: string }
   | { kind: "endturn" }
   /* Playing. These are the game as printed: you roll, you walk it out, you meet
      what is on the Obszar, you hand the turn on. */
@@ -830,6 +832,19 @@ export const COMMANDS: CommandSpec[] = [
     group: "override",
   },
   {
+    // The one test shortcut that does not step round the game. `give`, `place`
+    // and `summon` each put a card in play by fiat; this puts it back on the
+    // deck so the ordinary `draw` finds it, which is the only way to watch a
+    // Karta do what it actually does — 15.2's ordering, its own disposition,
+    // and the journal line that says where it went.
+    name: "stack",
+    aliases: [],
+    usage: "stack WILKOŁAK",
+    summary: "put a Karta on top of its pile, so the next draw is that one",
+    needs: "testmode",
+    group: "override",
+  },
+  {
     name: "place",
     // `drop` was an alias here and is not any more: it is the lawful "put a
     // Przedmiot down", and a word cannot mean both that and a card conjured
@@ -1006,6 +1021,20 @@ function byName(cards: readonly { id: string; name: string }[]): { id: string; n
   for (const card of cards) if (!seen.has(card.id)) seen.set(card.id, { id: card.id, name: card.name });
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, "pl"));
 }
+
+/**
+ * What can be put on top of a pile, which is exactly what is *in* one.
+ *
+ * The 165 Karty Zdarzeń and the 27 Zaklęcia, and nothing else. The Wyposażenie
+ * is a stock and not a deck (21.2), so a Hełm has no pile to sit on top of and
+ * offering one would be a name the next line rejects — the same failure the
+ * note above `GIVEABLE` describes. Deduped by id, because you name a card and
+ * not one of its four copies.
+ */
+const STACKABLE: { id: string; name: string }[] = byName([
+  ...(events as EventCard[]),
+  ...(spells as Spell[]),
+]);
 
 /** The same, flat, in group order — what `give` matches a name against. */
 const HOLDABLE: { id: string; name: string }[] = GIVEABLE.flatMap((group) => [...group.cards]);
@@ -1365,6 +1394,13 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     const effect = EFFECTS[(said ?? "").toLowerCase()];
     if (!effect) return { error: `Which effect — ${Object.keys(EFFECTS).join(", ")}?` };
     return { ok: { kind: "effect", effect, who: who.join(" ") || null } };
+  }
+
+  if (word === "stack") {
+    return name(STACKABLE, (card) => card.name, tail, "card", (card) => ({
+      kind: "stack",
+      cardId: card.id,
+    }), "stack");
   }
 
   if (word === "summon") {
@@ -1809,6 +1845,7 @@ export function complete(
         ? { pool: CARDS.map((c) => c.name), at: 1 }
         : { pool: PLACES.map((f) => f.name), at: said + 1 };
     }
+    if (verb === "stack") return { pool: STACKABLE.map((c) => c.name), at: 1 };
     if (verb === "summon" || verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "card" || verb === "read" || verb === "x") {
       // Everything readable, which is every Karta in the box: a Wróg cannot be
@@ -1983,6 +2020,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   settle: "testmode",
   endgame: "testmode",
   endfight: "testmode",
+  stack: "testmode",
   endcast: "play",
   spoils: "play",
   // Both sides call `drawSpell`. 9.5 deals them; this is that.

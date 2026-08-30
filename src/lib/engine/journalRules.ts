@@ -46,6 +46,7 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   "moved-by-hand": null,
   "test-card": null,
   "test-card-field": null,
+  "test-stack": null,
   "test-fight-end": null,
   /** Bookkeeping rows the reader never sees as prose. */
   card: null,

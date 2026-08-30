@@ -440,6 +440,11 @@ export function describe(
     // twice would be the only difference the table cannot check.
     case "test-card-field":
       return line(`${who} kładzie na polu ${field(data.fieldId)}: ${card(data.cardId)}.`);
+    // The pile arranged so a named Karta comes up next. Worth a row of its own
+    // rather than leaving the `draw` that follows to look ordinary: every other
+    // draw in the journal is the deck's word, and this is the one that is not.
+    case "test-stack":
+      return line(`${who} kładzie na wierzchu talii: ${card(data.cardId)}.`);
     // Deliberately not worded as an ucieczka. 19.1 is a rule with conditions
     // and this is a switch that ignores them, so the journal keeps the two
     // apart — a test row that read "ucieka z walki" would be the one row you

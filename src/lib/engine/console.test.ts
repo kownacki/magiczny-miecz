@@ -975,6 +975,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   summon: { line: "summon WILKOŁAK", becomes: { kind: "summon", cardId: "wilkolak" } },
   settle: { line: "settle won", becomes: { kind: "settle", outcome: "wygrana" } },
   endgame: { line: "endgame won", becomes: { kind: "endgame", won: true } },
+  stack: { line: "stack WILKOŁAK", becomes: { kind: "stack", cardId: "wilkolak" } },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
   endturn: { line: "endturn", becomes: { kind: "endturn" } },

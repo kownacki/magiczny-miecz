@@ -80,6 +80,7 @@ import {
   reviveCharacter,
   settleSpell,
   spendHolding,
+  stackCard,
   takeCard,
   takeFromField,
   stageFight,
@@ -1308,6 +1309,20 @@ export async function runCommand(
       if (!lying) throw new Error(`No Postać or Wróg called \`${command.who}\`.`);
       await sendRaider(gameId, { fieldCardId: lying.id });
       return `${named(me)} sends a Przyjaciel against ${cardName(lying.card_id)}.`;
+    }
+
+    /**
+     * The deck arranged so the next `draw` is a card somebody named.
+     *
+     * Says which pile, because the two are drawn by different verbs — a
+     * Zaklęcie stacked and then hunted for with `draw` would look broken.
+     */
+    case "stack": {
+      const seat = seatOf(null);
+      const pile = await stackCard(gameId, seat.id, command.cardId);
+      return pile === "spells"
+        ? `${cardName(command.cardId)} is on top of the Zaklęcia — next \`spell\` takes it.`
+        : `${cardName(command.cardId)} is on top of the Karty Zdarzeń — next \`draw\` takes it.`;
     }
 
     case "summon": {

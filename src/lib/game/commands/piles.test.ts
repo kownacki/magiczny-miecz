@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DeckState } from "@/lib/engine/deck";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { aTable } from "../fixture";
-import { putOnPile, trophiesToPile } from "./piles";
+import { putOnPile, stackForDraw, trophiesToPile } from "./piles";
 
 /**
  * The one door every card leaves a hand through, and the two things it keeps out.
@@ -91,5 +91,84 @@ describe("trofea going back (1.4, 4.4)", () => {
   it("sends nothing back in the mode where the deck already has it", () => {
     const writes = trophiesToPile(table({ game: { trophy_mode: "points" } }), beaten);
     expect(writes).toEqual({});
+  });
+});
+
+/**
+ * Arranging the pile so a named Karta comes up next.
+ *
+ * The point of it is what it *doesn't* do: `give`, `place` and `summon` all put
+ * a card in play by fiat and skip 15.2's ordering, the card's own disposition
+ * and the journal line saying where it went. This puts the card back on the
+ * deck's own path, so a test table watching a script run watches the same thing
+ * a game would.
+ */
+describe("stacking a card for the next draw", () => {
+  const seatId = "seat-a";
+  const stacked = (over: Parameters<typeof aTable>[0], cardId: string) =>
+    stackForDraw(table(over), { seatId, cardId });
+
+  it("brings a card up from the middle of the draw pile", () => {
+    const events = pile([eventRef("smok"), eventRef("cyklop"), eventRef("wilkolak")]);
+    const out = stacked({ game: { deck: { events, spells: pile() } } }, "cyklop");
+    expect(after(out.writes).events.draw).toEqual([
+      eventRef("cyklop"),
+      eventRef("smok"),
+      eventRef("wilkolak"),
+    ]);
+  });
+
+  /** 9.5's used pile is a pile, and a card already spent can be asked for again. */
+  it("takes one back off the stos zużytych", () => {
+    const events = pile([eventRef("smok")], [eventRef("cyklop")]);
+    const out = stacked({ game: { deck: { events, spells: pile() } } }, "cyklop");
+    expect(after(out.writes).events.draw).toEqual([eventRef("cyklop"), eventRef("smok")]);
+    expect(after(out.writes).events.discard).toEqual([]);
+  });
+
+  /** A move, not an insertion — the box keeps the copies it was printed with. */
+  it("does not conjure a second copy", () => {
+    const events = pile([eventRef("smok"), eventRef("cyklop")]);
+    const out = stacked({ game: { deck: { events, spells: pile() } } }, "cyklop");
+    const { draw, discard } = after(out.writes).events;
+    expect([...draw, ...discard].length).toBe(2);
+  });
+
+  it("knows a Zaklęcie from a Karta Zdarzeń, and says which", () => {
+    const spells = pile([spellRef("magia-i-miecz"), spellRef("ocalony")]);
+    const out = stacked({ game: { deck: { events: pile(), spells } } }, "ocalony");
+    expect(out.result).toBe("spells");
+    expect(after(out.writes).spells.draw[0]).toBe(spellRef("ocalony"));
+  });
+
+  /**
+   * Every copy in play is a refusal.
+   *
+   * The alternative is a second Cyklop on top of a deck that only ever held
+   * one, which is the failure `returningRef` exists to prevent going the other
+   * way — and a test table that quietly gains cards is worse than one that says
+   * no.
+   */
+  it("refuses when no copy is in a pile", () => {
+    expect(() => stacked({ game: { deck: { events: pile(), spells: pile() } } }, "cyklop")).toThrow(
+      /w grze/,
+    );
+  });
+
+  it("refuses a card that belongs to no deck at all (21.2)", () => {
+    // Eleven of the twelve Wyposażenie cards are also in the event deck; the
+    // TARCZA TOLIMANA is the one that is only ever bought, so it is the only
+    // card in the box with no pile to sit on top of. `STACKABLE` does not offer
+    // it either, so this is the door held shut behind the list.
+    expect(() => stacked({}, "tarcza-tolimana")).toThrow(/talii/);
+  });
+
+  /** Marked manual, like every other thing the console conjures. */
+  it("writes it down", () => {
+    const events = pile([eventRef("cyklop")]);
+    const out = stacked({ game: { deck: { events, spells: pile() } } }, "cyklop");
+    expect(out.writes.journal).toEqual([
+      { seatId, turn: 3, kind: "test-stack", payload: { cardId: "cyklop" }, manual: true },
+    ]);
   });
 });

@@ -79,6 +79,29 @@ export function drawFrom(deck: DeckState, count: number, shuffle: Shuffle): Draw
   return { deck: { draw: draw.slice(drawn.length), discard }, drawn, recycled };
 }
 
+/**
+ * Puts one copy on the front of the draw pile, wherever it was.
+ *
+ * For a test table that needs a named card to come up next. It is a move and
+ * not an insertion: the ref is taken out of whichever pile holds it first, so
+ * the box still has exactly as many Wilkołaki as it was printed with. A ref in
+ * neither pile is in somebody's hand or lying on a field, and the answer is
+ * null rather than a second copy conjured onto the top.
+ */
+export function stackOnTop(deck: DeckState, ref: CardRef): DeckState | null {
+  const inDraw = deck.draw.indexOf(ref);
+  if (inDraw !== -1) {
+    const draw = [...deck.draw];
+    draw.splice(inDraw, 1);
+    return { draw: [ref, ...draw], discard: deck.discard };
+  }
+  const inDiscard = deck.discard.indexOf(ref);
+  if (inDiscard === -1) return null;
+  const discard = [...deck.discard];
+  discard.splice(inDiscard, 1);
+  return { draw: [ref, ...deck.draw], discard };
+}
+
 /** Sets resolved cards aside. */
 export function discardTo(deck: DeckState, refs: readonly CardRef[]): DeckState {
   return { draw: deck.draw, discard: [...deck.discard, ...refs] };
