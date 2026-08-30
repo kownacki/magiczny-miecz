@@ -1152,6 +1152,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           canEnd={
             !!active &&
             turnState.phase !== "fight" &&
+            // A suspended card is the turn's own unfinished business —
+            // passTurn refuses it server-side; the button should know too.
+            turnState.phase !== "script" &&
             mayEndTurn({ fieldId: active.field_id, done: [], phase: turnState.phase })
           }
           whyNotEnd={
