@@ -371,19 +371,45 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect:
       "Wszystkie istoty na Obszarze sparaliżowane: nie wolno ich atakować, można się wymknąć. Postacie tracą następną turę.",
     /**
-     * Announced, and the target is why.
+     * Applied to the Postacie standing there, which is the half with seats.
      *
-     * "Wszystkie istoty w tym Obszarze (także Postacie) tracą następną turę" is
-     * expressible — `wszyscy-tutaj` was added for it — but the Obszar is one
-     * the caster points at, "w Kręgu, po którym wędrujesz", and a cast carries
-     * no field to point with. Resolved against the caster's own square it would
-     * reliably cost them the turn they were trying to take from somebody else,
-     * which is worse than leaving the sentence to the table.
+     * „Możesz wypowiedzieć to Zaklęcie w dowolnej chwili na Obszar w Kręgu, po
+     * którym wędrujesz. Wszystkie istoty w tym Obszarze (także Postacie)
+     * zostaną sparaliżowane lękiem. Istot tych nie wolno atakować, lecz można
+     * im się wymknąć. Postacie tracą następną turę."
      *
-     * It wants a field on `CastSpell.target`, which is the browser's question
-     * as much as the engine's — the same shape as a Zaklęcie aimed at a Karta
-     * on the board.
+     * The note here used to say the target was why this could not be built:
+     * `wszyscy-tutaj` existed and resolved against the *caster's* own square,
+     * so a spell thrown at somebody else's Obszar would reliably have cost the
+     * caster the turn they were taking from them. A cast now carries the Obszar
+     * it names — 9.6 lets a Zaklęcie reach anywhere, and this card narrows it
+     * to the ring being walked, which is checked where the casting happens.
+     *
+     * Two steps, because the card says two things and the engine keeps them in
+     * different places. „Tracą następną turę" is the turn order's, and reaches
+     * it through the column `nextSeat` reads. „Nie wolno ich atakować" is a
+     * status, and it is the same `frozen` the Krąg Płomieni wears — which is
+     * what `untouchable` is asked at every attack. Written as one effect they
+     * would have had to be one thing, and they are not.
+     *
+     * The creatures are not covered. „Wszystkie istoty" includes the Wrogowie
+     * lying on that Obszar, and a Karta on the board has nowhere to carry a
+     * state — the same gap the Krąg Płomieni meets when it is thrown at a Wróg.
+     * That half stays in the sentence the table reads.
      */
+    stosuje: {
+      op: "po-kolei",
+      steps: [
+        { op: "tura-stracona", turns: 1, target: "wszyscy-tutaj" },
+        {
+          op: "efekt",
+          label: "Władca Gromu",
+          modifier: { kind: "frozen" },
+          ends: { kind: "turns", turns: 1 },
+          target: "wszyscy-tutaj",
+        },
+      ],
+    },
   },
   /** Applied, by exactly what unblocked the Pan Trzęsawisk — 11.6's half of it. */
   "wladca-lodu": {

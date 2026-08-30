@@ -89,6 +89,15 @@ export interface ApplyEffect {
    */
   toSeatId?: string;
   /**
+   * An Obszar the player pointed at as they spoke.
+   *
+   * Only the Władca Gromu: „na Obszar w Kręgu, po którym wędrujesz. Wszystkie
+   * istoty w tym Obszarze…" — so `wszyscy-tutaj` has to mean *there* rather
+   * than where the caster is standing, which is the difference between taking a
+   * turn from your rivals and taking one from yourself.
+   */
+  fieldId?: FieldId;
+  /**
    * A Karta on the board the player pointed at as they spoke.
    *
    * Only `przyzwij` uses it, and only because that effect can be aimed at
@@ -439,7 +448,9 @@ async function walk(
        * than about whoever spoke it. Chained through `apply` so two seats
        * cannot be given the same row id.
        */
-      const hit = effect.target ? targeted(snapshot, seatId, effect.target, undefined) : null;
+      const hit = effect.target
+        ? targeted(snapshot, seatId, effect.target, undefined, command.fieldId)
+        : null;
       const seats = hit
         ? hit
             .map(
@@ -684,7 +695,7 @@ async function walk(
     }
 
     case "punkty": {
-      const hit = targeted(snapshot, seatId, effect.target, []);
+      const hit = targeted(snapshot, seatId, effect.target, [], command.fieldId);
       // Waits for somebody to arrive, or for the holder to choose.
       if (hit === null) return owed();
       if (hit.length === 0) return nothing(["nikogo to nie dotyczy"]);
@@ -748,7 +759,7 @@ async function walk(
     }
 
     case "tura-stracona": {
-      const hit = targeted(snapshot, seatId, effect.target, effect.oprocz ?? []);
+      const hit = targeted(snapshot, seatId, effect.target, effect.oprocz ?? [], command.fieldId);
       if (hit === null) return owed();
       if (hit.length === 0) return nothing(["nikogo to nie dotyczy"]);
 
@@ -813,7 +824,7 @@ async function walk(
     }
 
     case "strata": {
-      const hit = targeted(snapshot, seatId, effect.target, []);
+      const hit = targeted(snapshot, seatId, effect.target, [], command.fieldId);
       if (hit === null) return owed();
 
       let writes: Changeset = {};
@@ -1196,12 +1207,17 @@ function targeted(
   seatId: string,
   target: Parameters<typeof seatsTargeted>[0],
   oprocz: Parameters<typeof seatsTargeted>[3],
+  /** The Obszar the player pointed at, where the card lets them point at one. */
+  at?: FieldId,
 ): TargetSeat[] | null {
   const actor = snapshot.seats.find((row) => row.id === seatId);
+  const from = actor ? seatView(snapshot, actor.id).asTarget : undefined;
   return seatsTargeted(
     target,
     snapshot.seats.map((row) => seatView(snapshot, row.id).asTarget),
-    actor ? seatView(snapshot, actor.id).asTarget : undefined,
+    // „Tutaj" is the Obszar the effect was aimed at when one was named, and the
+    // actor's own square otherwise — which is every other card that says it.
+    from && at !== undefined ? { ...from, fieldId: at } : from,
     oprocz,
   );
 }

@@ -467,7 +467,7 @@ export function summonFighter(
 export interface CastSpell {
   seatId: string;
   holdingId: string;
-  target?: { seatIndex?: number; note?: string; fieldCardId?: string };
+  target?: { seatIndex?: number; note?: string; fieldCardId?: string; fieldId?: FieldId };
   /** Answers a spell's own effect asks for, where it has one (`SpellScript.stosuje`). */
   decided?: Decisions;
   /** How a pile is shuffled, for the spells that draw. */
@@ -725,6 +725,19 @@ export async function castSpell(
   if (script?.stosuje && wantsAnother && !named && script.target === "postac") {
     throw new Error(`${spell?.name ?? held.card_id} — wskaż Postać, na którą rzucasz.`);
   }
+  /**
+   * „Na Obszar w Kręgu, po którym wędrujesz" — the Władca Gromu's own range.
+   *
+   * Checked here rather than inside the effect because it is a fact about the
+   * *casting*: 9.6 lets a Zaklęcie reach anywhere on the board, and this one
+   * card narrows it to the ring the caster is walking.
+   */
+  if (target.fieldId !== undefined) {
+    if (!ringFields(caster.field_id as FieldId).includes(target.fieldId)) {
+      throw new Error(`${fieldName(target.fieldId)} jest poza twoim Kręgiem.`);
+    }
+  }
+
   const onSeat = named?.id ?? caster.id;
   /**
    * Aimed at a Karta, by an effect that lands on a seat.
@@ -755,6 +768,8 @@ export async function castSpell(
           // The other kind of answer to „na kogo": a Karta on the board rather
           // than a Postać. Only `przyzwij` reads it — see `ApplyEffect`.
           ...(target.fieldCardId !== undefined ? { fieldCardId: target.fieldCardId } : {}),
+          // And the Obszar, for the one card that is aimed at a square.
+          ...(target.fieldId !== undefined ? { fieldId: target.fieldId } : {}),
           effect: script.stosuje,
           reason: spell?.name ?? held.card_id,
           decided: command.decided,

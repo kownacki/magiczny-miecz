@@ -237,7 +237,10 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         aHolding({
           id: "s-1",
           seat_id: "seat-a",
-          card_id: over.cardId ?? "wladca-gromu",
+          // A Zaklęcie the app only announces, so these tests are about the
+          // plumbing of speaking one — the card leaving the hand, the pile, the
+          // journal, the floor — and not about anything an effect does.
+          card_id: over.cardId ?? "zwierciadlo",
           kind: "spell",
           face: "hidden",
         }),
@@ -483,6 +486,49 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     ).rejects.toThrow(/Wojna Żywiołów/);
   });
 
+  /* ------------------------------------------------------------------------
+   * The Władca Gromu (9.6), aimed at an Obszar rather than at anybody.
+   * --------------------------------------------------------------------- */
+
+  it("paralyses everybody standing on the Obszar it names", async () => {
+    const storm = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") }),
+        aSeat({ id: "seat-b", seat_index: 1, field_id: asFieldId("dolina-cienia") }),
+      ],
+      users: duellists(),
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "wladca-gromu", kind: "spell", face: "hidden" }),
+      ],
+    });
+    const { writes } = await castSpell(
+      storm,
+      { seatId: "seat-a", holdingId: "s-1", target: { fieldId: asFieldId("dolina-cienia")! } },
+      ports(),
+    );
+    // „Tracą następną turę" is the turn order's, and it lands on the seat
+    // standing there — not on the caster, which is what „tutaj" used to mean.
+    expect(writes.seats).toEqual([{ id: "seat-b", patch: { turns_lost: 1 } }]);
+    // And „nie wolno ich atakować" is the status every attack is asked about.
+    expect(writes.effects?.insert).toEqual([
+      expect.objectContaining({ seat_id: "seat-b", modifier: { kind: "frozen" } }),
+    ]);
+  });
+
+  it("reaches only the Krąg the caster is walking", async () => {
+    const far = aTable({
+      game: { active_seat: 0, turn_state: { phase: "roll" } },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") })],
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "wladca-gromu", kind: "spell", face: "hidden" }),
+      ],
+    });
+    await expect(
+      castSpell(far, { seatId: "seat-a", holdingId: "s-1", target: { fieldId: asFieldId("zamek")! } }, ports()),
+    ).rejects.toThrow(/poza twoim Kręgiem/);
+  });
+
   it("puts the spoken card on the used pile (9.6)", async () => {
     const { writes } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
     expect(writes.holdings?.delete).toEqual(["s-1"]);
@@ -491,8 +537,8 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
 
   it("says what was cast, and what the table now has to do", async () => {
     const { result } = await castSpell(casting(), { seatId: "seat-a", holdingId: "s-1" }, ports());
-    expect(result.spell).toBe("WŁADCA GROMU");
-    expect(result.effect).toMatch(/sparaliżowane/);
+    expect(result.spell).toBe("ZWIERCIADŁO");
+    expect(result.effect).toMatch(/Odbija/i);
   });
 
   it("journals the card, whom it was aimed at and what was said", async () => {
@@ -503,7 +549,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     );
     expect(writes.journal?.[0]).toMatchObject({
       kind: "spell",
-      payload: { cardId: "wladca-gromu", name: "WŁADCA GROMU", target: "Ala", note: "na Cyklopa" },
+      payload: { cardId: "zwierciadlo", name: "ZWIERCIADŁO", target: "Ala", note: "na Cyklopa" },
     });
   });
 
