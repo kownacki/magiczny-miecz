@@ -34,7 +34,7 @@ import {
   takeSeat,
   unseat,
 } from "./lobbyStore";
-import { gameById, seatsFor, usersFor, type SeatRow, type UserRow } from "./store";
+import { gameById, holdingsFor, seatsFor, usersFor, type SeatRow, type UserRow } from "./store";
 import {
   abandonFight,
   addEffect,
@@ -1111,6 +1111,8 @@ export async function runCommand(
           enemyRoll: number | null;
           /** An object, not a string — `CombatResult` carries who won as well. */
           result: { outcome: "wygrana" | "przegrana" | "remis" } | null;
+          /** Set only in a duel, which is the one fight 17.9 pays out for. */
+          opponentSeat?: number;
         };
       };
       const fight = after.fight;
@@ -1121,10 +1123,27 @@ export async function runCommand(
         `${named(seat)} ${mine} (${fight.playerTotal}+${fight.playerRoll ?? 0})` +
         ` vs ${fight.cardName} ${theirs} (${fight.enemyTotal}+${fight.enemyRoll ?? 0})`;
 
-      await resolveFight(gameId);
-      const ended = (await activeStore().load(gameId)).game.turn_state as { phase?: string };
       const OUTCOME = { wygrana: "won", przegrana: "lost", remis: "drawn" } as const;
       const outcome = fight.result ? OUTCOME[fight.result.outcome] : "unsettled";
+
+      /**
+       * A won duel stops here and waits, because 17.9 gives the winner a choice
+       * and the winner cannot make it before they have won.
+       *
+       * "Zwycięzca ma prawo zmusić pokonanego do utraty jednego punktu Życia …
+       * lub zabrać mu jeden Przedmiot albo Sztukę Złota." Every other fight
+       * settles itself: there is nothing to choose against a Karta, because a
+       * Wróg has no purse and no pack and 1.4 already says what a beaten one is
+       * worth. So this is the only fight that takes two presses, which is also
+       * the shape the browser has had all along — `fight-done` is its own
+       * button there.
+       */
+      if (fight.opponentSeat !== undefined && fight.result?.outcome === "wygrana") {
+        return `${said} — ${outcome}. \`spoils\` to take it: bare for the Życie, \`zloto\`, or a Przedmiot by name (17.9).`;
+      }
+
+      await resolveFight(gameId);
+      const ended = (await activeStore().load(gameId)).game.turn_state as { phase?: string };
       return `${said} — ${outcome}.${ended.phase === "fight" ? " Still fighting." : ""}`;
     }
 
@@ -1318,6 +1337,53 @@ export async function runCommand(
       return after?.eliminated
         ? `${named(seat)} loses to the Bestia and dies (14.7, 4.4).`
         : `${named(seat)} loses to the Bestia — 2 Życia (14.7).`;
+    }
+
+    /**
+     * 17.9's payout, which only a won duel owes.
+     *
+     * Bare is the Życie — the one the app always took, and still the ordinary
+     * answer. `zloto` takes a Sztuka Złota. A name takes that Przedmiot,
+     * matched against what the loser is actually holding, so "MIECZ" points at
+     * their Miecz and not at the idea of one.
+     */
+    case "spoils": {
+      const seat = seatOf(null);
+      const state = (await activeStore().load(gameId)).game.turn_state as {
+        phase?: string;
+        fight?: { opponentSeat?: number; result?: { outcome: string } | null };
+      };
+      const fight = state.fight;
+      if (state.phase !== "fight" || !fight) throw new Error("Nie ma walki.");
+      if (fight.opponentSeat === undefined) {
+        throw new Error("Tylko pojedynek z Postacią coś daje zwycięzcy (17.9).");
+      }
+      if (fight.result?.outcome !== "wygrana") throw new Error("Najpierw trzeba wygrać (17.9).");
+
+      if (command.card === null) {
+        await resolveFight(gameId, command.take === "zloto" ? { take: "zloto" } : undefined);
+        return command.take === "zloto"
+          ? `${named(seat)} takes a Sztuka Złota (17.9).`
+          : `${named(seat)} takes a point of Życia (17.9).`;
+      }
+
+      const loser = (await seatsFor(gameId)).find((one) => one.seat_index === fight.opponentSeat);
+      if (!loser) throw new Error("Nieznane miejsce.");
+      const found = cardIdNamed(command.card);
+      if (!("id" in found)) {
+        throw new Error(
+          "candidates" in found
+            ? `Which one — ${found.candidates.join(", ")}?`
+            : `No card called \`${command.card}\`.`,
+        );
+      }
+      const theirs = (await holdingsFor(gameId)).find(
+        (one) => one.seat_id === loser.id && one.card_id === found.id && one.kind === "item",
+      );
+      if (!theirs) throw new Error(`${cardName(found.id)} — pokonany tego nie ma (17.9).`);
+
+      await resolveFight(gameId, { take: "przedmiot", holdingId: theirs.id });
+      return `${named(seat)} takes ${cardName(found.id)} (17.9).`;
     }
 
     case "endfight":

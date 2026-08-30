@@ -221,6 +221,8 @@ export type Command =
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
+  /** 17.9's choice: null takes the Życie, "zloto" the coin, a name the Przedmiot. */
+  | { kind: "spoils"; take: "zycie" | "zloto"; card: string | null }
   | { kind: "endturn" }
   /* Playing. These are the game as printed: you roll, you walk it out, you meet
      what is on the Obszar, you hand the turn on. */
@@ -869,6 +871,17 @@ export const COMMANDS: CommandSpec[] = [
     group: "override",
   },
   {
+    // Only a duel offers it, and only to the winner — there is nothing to take
+    // off a Karta. Grouped with fighting because that is where it happens.
+    name: "spoils",
+    aliases: [],
+    when: ["fight"],
+    usage: "spoils [zloto|MIECZ]",
+    summary: "settle a won duel: the Życie, their Sztuka Złota, or a Przedmiot you name (17.9)",
+    needs: "play",
+    group: "fight",
+  },
+  {
     name: "endfight",
     aliases: [],
     usage: "endfight",
@@ -1136,6 +1149,15 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
       return needs("endgame", `Won or lost — \`${said || "?"}\`?`);
     }
     return { ok: { kind: "endgame", won: said === "won" } };
+  }
+  if (word === "spoils") {
+    const said = tail.trim();
+    if (said === "") return { ok: { kind: "spoils", take: "zycie", card: null } };
+    if (said.toLowerCase() === "zloto" || said.toLowerCase() === "złoto") {
+      return { ok: { kind: "spoils", take: "zloto", card: null } };
+    }
+    // Anything else is a Przedmiot by name, matched the way every card name is.
+    return { ok: { kind: "spoils", take: "zycie", card: said } };
   }
   if (word === "endfight") return { ok: { kind: "endfight" } };
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
@@ -1920,6 +1942,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   settle: "testmode",
   endgame: "testmode",
   endfight: "testmode",
+  spoils: "play",
   // Both sides call `drawSpell`. 9.5 deals them; this is that.
   spell: "play",
 };

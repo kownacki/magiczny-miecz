@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { runCommand } from "./consoleStore";
+import { parseCommand } from "@/lib/engine/console";
 import { emptyTables, memoryHandle, memoryStore, resetStore, setStore } from "./gameStore";
 import { createGame } from "./store";
 import { setReady } from "./lobbyStore";
@@ -75,5 +76,46 @@ describe("reading what a character is carrying", () => {
     const said = await runCommand(gameId, actor, { kind: "me", who: null });
     // The number is the useful half; the mode explains where it came from.
     expect(said).toMatch(/Pack \d+\/\d+ \((slots|classic)\)/);
+  });
+});
+
+/**
+ * 17.9's payout at the prompt.
+ *
+ * A won duel is the one fight that does not settle itself, because the winner
+ * chooses what to take and cannot choose before winning. Every other fight
+ * still resolves inside `fight`: there is nothing to take off a Karta, since a
+ * Wróg has no purse and no pack and 1.4 already says what a beaten one is
+ * worth. The payout itself is proved in `spoils.test.ts`; this is the wiring
+ * and the three ways of asking for it at the wrong moment.
+ */
+describe("taking what a won duel owes", () => {
+  it("refuses when there is no fight at all", async () => {
+    const { gameId, actor } = await playing();
+    await expect(
+      runCommand(gameId, actor, { kind: "spoils", take: "zycie", card: null }),
+    ).rejects.toThrow(/Nie ma walki/);
+  });
+
+  it("reads a bare `spoils` as the Życie, which is what the app always took", () => {
+    expect(parseCommand("spoils")).toEqual({
+      ok: { kind: "spoils", take: "zycie", card: null },
+    });
+  });
+
+  it("reads the coin, spelt either way", () => {
+    expect(parseCommand("spoils zloto")).toEqual({
+      ok: { kind: "spoils", take: "zloto", card: null },
+    });
+    expect(parseCommand("spoils złoto")).toEqual({
+      ok: { kind: "spoils", take: "zloto", card: null },
+    });
+  });
+
+  /** Anything else is a Przedmiot, matched against what the loser is holding. */
+  it("reads anything else as a Przedmiot by name", () => {
+    expect(parseCommand("spoils MIECZ")).toEqual({
+      ok: { kind: "spoils", take: "zycie", card: "MIECZ" },
+    });
   });
 });
