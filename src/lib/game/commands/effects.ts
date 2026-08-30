@@ -34,6 +34,7 @@ import { nameOfSeat } from "./lobby";
 
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
+import { only, replaceTop, top } from "@/lib/engine/stack";
 import { keepOnly, statusesOf } from "./turn";
 import { hasAttacked } from "@/lib/engine/status";
 import { turnToStone } from "./stone";
@@ -639,15 +640,15 @@ async function walk(
       if (!command.cardId) return nothing(["nie wiadomo, którą Kartę położyć"]);
       if (effect.gdzie.kind !== "pole") return owed();
 
-      const state = snapshot.game.turn_state;
+      const state = top(snapshot.game.turn_state);
       const lifted: Changeset =
         state.phase === "field"
           ? {
               game: {
-                turn_state: {
+                turn_state: replaceTop(snapshot.game.turn_state, {
                   ...state,
                   drawn: state.drawn.filter((entry) => entry.cardId !== command.cardId),
-                },
+                }),
               },
             }
           : {};
@@ -814,7 +815,7 @@ async function walk(
         writes: {
           seats,
           journal: lines,
-          ...(stops ? { game: { turn_state: endTurn() } } : {}),
+          ...(stops ? { game: { turn_state: only(endTurn()) } } : {}),
         },
         result: {
           did: [onlyMe ? `tracisz ${effect.turns} turę` : `tracą turę: ${names.join(", ")}`],
@@ -1102,7 +1103,7 @@ async function walk(
        * 15.2's order means by "the one in front of you" and what the sheet is
        * showing when this may be spoken.
        */
-      const state = snapshot.game.turn_state;
+      const state = top(snapshot.game.turn_state);
       if (state.phase !== "field") throw new Error("Nie ma wyciągniętej Karty do wymiany.");
       const settled = new Set([...(state.resolved ?? []), ...(state.fought ?? [])]);
       const facing = state.drawn.find((entry) => !settled.has(entry.cardId));
@@ -1110,10 +1111,10 @@ async function walk(
 
       const taken: Changeset = {
         game: {
-          turn_state: {
+          turn_state: replaceTop(snapshot.game.turn_state, {
             ...state,
             drawn: state.drawn.filter((entry) => entry !== facing),
-          },
+          }),
         },
       };
       // Chained, not merged: the pile the discard writes is the same `game.deck`
@@ -1228,11 +1229,11 @@ function targeted(
 
 /** Notes a card or an offer as dealt with, so the turn stops asking about it. */
 function markResolved(snapshot: Snapshot, key: string): Changeset {
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") return {};
   const already = state.resolved ?? [];
   if (already.includes(key)) return {};
-  return { game: { turn_state: { ...state, resolved: [...already, key] } } };
+  return { game: { turn_state: replaceTop(snapshot.game.turn_state, { ...state, resolved: [...already, key] }) } };
 }
 
 export interface UseResult {
@@ -1350,7 +1351,7 @@ export async function resolveFieldOffer(
 ): Promise<Outcome<{ offer: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
   if (!seat.field_id) throw new Error("Postać nie stoi na Obszarze.");
-  if (snapshot.game.turn_state.phase !== "field") {
+  if (top(snapshot.game.turn_state).phase !== "field") {
     throw new Error("To rozpatruje się po wejściu na Obszar.");
   }
 
@@ -1467,7 +1468,7 @@ export async function resolveDrawnCard(
   ports: CommandPorts,
 ): Promise<Outcome<{ card: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") throw new Error("Nie ma czego rozpatrywać.");
   if (!state.drawn.some((entry) => entry.cardId === command.cardId)) {
     throw new Error("Tej Karty tu nie ma.");

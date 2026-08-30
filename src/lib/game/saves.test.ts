@@ -1,3 +1,4 @@
+import { top } from "@/lib/engine/stack";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, rm, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -47,7 +48,7 @@ describe("a game kept in a file", () => {
     const again = await openSave(code);
     const snapshot = await again.store.load(gameId);
     expect(snapshot.game.status).toBe("playing");
-    expect((snapshot.game.turn_state as { phase: string }).phase).toBe("move");
+    expect(top(snapshot.game.turn_state).phase).toBe("move");
     expect(snapshot.seats[0].character_id).toBe("goblin");
     // The journal survived with it, which is what makes a save a record rather
     // than a position.

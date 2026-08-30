@@ -1,3 +1,4 @@
+import { top } from "@/lib/engine/stack";
 import { afterEach, describe, expect, it } from "vitest";
 import { noteRolls, startRecording, stopRecording } from "./record";
 import { emptyTables, memoryStore, resetStore, setStore } from "./gameStore";
@@ -65,7 +66,7 @@ describe("what a replay would need", () => {
     expect(rolls[0]).toBeGreaterThanOrEqual(1);
     expect(rolls[0]).toBeLessThanOrEqual(6);
     // And it is the die the game actually used, not another one thrown beside it.
-    const state = (await activeStore().load(game.id)).game.turn_state as { roll?: number };
+    const state = top((await activeStore().load(game.id)).game.turn_state) as { roll?: number };
     expect(state.roll).toBe(rolls[0]);
   });
 });

@@ -1,3 +1,4 @@
+import { only } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
@@ -118,9 +119,9 @@ describe("the Zły Duch, who empties the room", () => {
     const atPustelnia = apply(haunted, {
       seats: [{ id: "seat-a", patch: { field_id: "pustelnia" } }],
       game: {
-        turn_state: {
+        turn_state: only({
           phase: "field", fieldId: "pustelnia", from: null, draw: 0, drawn: [], resolved: [],
-        } as TurnPhase,
+        } as TurnPhase),
       },
     });
     const freed = apply(

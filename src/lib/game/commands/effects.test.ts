@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Effect } from "@/lib/engine/cardScript";
+import { only, top, type TurnState } from "@/lib/engine/stack";
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply } from "../change";
 import { applyEffect, resolveDrawnCard, resolveFieldOffer, spendHolding } from "./effects";
@@ -262,7 +263,7 @@ describe("losing a turn (16.1)", () => {
   it("spends the turn in progress on the character who drew it", async () => {
     const { writes, result } = await run({ op: "tura-stracona", turns: 1, target: "ty" }, table());
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { turns_lost: 0 } }]);
-    expect(writes.game?.turn_state).toEqual({ phase: "end" });
+    expect(writes.game?.turn_state).toEqual(only({ phase: "end" }));
     expect(result.did).toEqual(["tracisz 1 turę"]);
   });
 
@@ -439,7 +440,9 @@ describe("swapping the Karta in front of you", () => {
 
   it("puts the Karta back on the used pile and turns over the next", async () => {
     const { writes, result } = await swap(drawn());
-    const state = (writes.game as { turn_state: { drawn: { cardId: string }[] } }).turn_state;
+    const state = top((writes.game as { turn_state: TurnState }).turn_state) as {
+      drawn: { cardId: string }[];
+    };
     expect(state.drawn.map((one) => one.cardId)).toEqual(["wilkolak"]);
     // Odrzucona, not gone: 15.5 draws on that pile when the deck runs out.
     const deck = (writes.game as { deck: { events: { discard: string[] } } }).deck;
@@ -456,7 +459,9 @@ describe("swapping the Karta in front of you", () => {
       resolved: ["cyklop"],
     });
     const { writes } = await swap(table);
-    const state = (writes.game as { turn_state: { drawn: { cardId: string }[] } }).turn_state;
+    const state = top((writes.game as { turn_state: TurnState }).turn_state) as {
+      drawn: { cardId: string }[];
+    };
     expect(state.drawn.map((one) => one.cardId)).toEqual(["cyklop", "wilkolak"]);
   });
 
@@ -516,7 +521,7 @@ describe("the rest of the vocabulary", () => {
       arrived,
     );
     expect(result.did).toEqual(["walka: miejscowy osiłek"]);
-    expect((writes.game?.turn_state as { phase: string }).phase).toBe("fight");
+    expect(top(writes.game!.turn_state!).phase).toBe("fight");
   });
 
   it("hands an extra move back to the turn rather than taking it itself", async () => {
@@ -649,7 +654,7 @@ describe("an Obszar's own table (15.1)", () => {
     expect(result.offer).toBe("Karczma");
     expect(result.face).toBe(1);
     expect(writes.journal?.[0]).toMatchObject({ kind: "field-table", payload: { face: 1 } });
-    const state = writes.game?.turn_state as { resolved?: string[] };
+    const state = top(writes.game!.turn_state!) as { resolved?: string[] };
     expect(state.resolved).toContain("pole:Karczma");
   });
 
@@ -708,7 +713,7 @@ describe("a Karta drawn onto the Obszar (16.1)", () => {
     );
     expect(result.card).toBe("ZARAZA");
     expect(result.pending).toBeNull();
-    const state = writes.game?.turn_state as { resolved?: string[] };
+    const state = top(writes.game!.turn_state!) as { resolved?: string[] };
     expect(state.resolved).toContain("zaraza");
   });
 });

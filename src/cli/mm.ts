@@ -10,6 +10,7 @@ import { paintFor } from "./paint";
 import type { EqMode } from "@/lib/engine/slots";
 import type { CommandSpec } from "@/lib/engine/console";
 import { stageOf, type Stage } from "@/lib/engine/console";
+import { top } from "@/lib/engine/stack";
 import { cardLines, runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
 import { deleteSave, homeDir, listSaves, newSave, openSave, writeSave } from "@/lib/game/saves";
@@ -242,7 +243,7 @@ async function knowTable(): Promise<void> {
     .map((one) => one.name)
     .filter((one): one is string => !!one);
   const game = (await activeStore().load(table.gameId)).game;
-  stage = stageOf(game.status, (game.turn_state as { phase?: string }).phase);
+  stage = stageOf(game.status, top(game.turn_state).phase);
 }
 
 async function openTable(code: string): Promise<void> {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BRIDGE_ENTRANCES } from "@/lib/engine/board";
 import { CROSSINGS } from "@/lib/engine/rings";
 import { recordGuardianStrength, startGuardianFight, type TurnPhase } from "@/lib/engine/turn";
+import { top } from "@/lib/engine/stack";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import {
@@ -42,7 +43,7 @@ describe("wejście na Most (11.9-11.11)", () => {
     const { writes, result } = settleBridge(standing(), RUINY, "wygrana");
     expect(result).toEqual({ at: "wejscie-na-most-a" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "wejscie-na-most-a" } }]);
-    expect(writes.game?.turn_state).toEqual({ phase: "end" });
+    expect(top(writes.game!.turn_state!)).toEqual({ phase: "end" });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "bridge-entry",
       payload: { from: "ruiny-twierdzy", guardian: RUINY.guardian },
@@ -109,7 +110,7 @@ describe("przeprawa między Kręgami (11.4, 11.8)", () => {
     const { writes, result } = settleCrossing(at("uroczysko"), TRZESAWISKA, "wygrana");
     expect(result).toEqual({ to: "las-blednych-ogni" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "las-blednych-ogni" } }]);
-    expect(writes.game?.turn_state).toMatchObject({
+    expect(top(writes.game!.turn_state!)).toMatchObject({
       phase: "field",
       fieldId: "las-blednych-ogni",
       from: "uroczysko",
@@ -242,7 +243,7 @@ describe("stawanie do walki ze strażnikiem", () => {
       seats: [aSeat({ field_id: "ruiny-twierdzy", sword_own: 6 })],
     });
     const { writes } = fightGuardian(table);
-    const phase = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
+    const phase = top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "fight" }>;
     expect(phase.phase).toBe("fight");
     expect(phase.fight.guardian).toEqual({ kind: "bridge", entrance: RUINY });
     expect(phase.fight.playerTotal).toBe(6);
@@ -259,7 +260,7 @@ describe("stawanie do walki ze strażnikiem", () => {
   it("opens the fight with the Rycerz Wiecznych Śniegów at the Lodowy Las", () => {
     const table = aTable({ seats: [aSeat({ field_id: "przelecz-wichrow", sword_own: 4 })] });
     const { writes } = fightGuardian(table);
-    const phase = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
+    const phase = top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "fight" }>;
     expect(phase.fight.enemyTotal).toBe(10);
     expect(phase.fight.strengthRoll).toBeUndefined();
     expect(writes.journal?.[0].payload).toEqual({ guardian: "Rycerz Wiecznych Śniegów" });
@@ -297,7 +298,7 @@ describe("siła strażnika Wejścia na Most", () => {
   it("is the die plus four", async () => {
     const { writes, result } = await rollGuardianStrength(fighting(), {}, dice(3));
     expect(result).toEqual({ strength: 7 });
-    const phase = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
+    const phase = top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "fight" }>;
     expect(phase.fight.strengthRoll).toBe(3);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "guardian-strength",
@@ -416,7 +417,7 @@ describe("przewoźnik", () => {
     const { writes, result } = payFerry(onTheRiver({ gold: 3 }), { pay: false });
     expect(result).toEqual({ at: "dolina-cienia" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "dolina-cienia" } }]);
-    expect(writes.game?.turn_state).toEqual({ phase: "end" });
+    expect(top(writes.game!.turn_state!)).toEqual({ phase: "end" });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "ferry-refused",
       payload: { field: "przeprawa-1", back: "dolina-cienia" },
@@ -533,7 +534,7 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
     );
     expect(result).toEqual({ field: "pulapka", kind: "pulapka", dice: [1, 1, 1], outcome: "uniknieta" });
     expect(writes.seats).toBeUndefined();
-    expect(writes.game?.turn_state).toEqual({ phase: "end" });
+    expect(top(writes.game!.turn_state!)).toEqual({ phase: "end" });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "bridge-trap",
       payload: { dice: [1, 1, 1], result: 0 },
@@ -565,7 +566,7 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
       kind: "bridge-trap",
       payload: { dice: [2, 2, 2], result: 4, to: "twierdza-strzegaca-drog", lost: ["rusalka"] },
     });
-    expect(writes.game?.turn_state).toEqual({ phase: "end" });
+    expect(top(writes.game!.turn_state!)).toEqual({ phase: "end" });
   });
 
   /** The mirror table on the Wymarłe Miasto side is read against Magia. */
@@ -685,7 +686,7 @@ describe("Gra ze Śmiercią", () => {
     ]);
     expect(writes.game?.active_seat).toBe(0);
     // The pass wins the column, which is the whole point of merging it second.
-    expect(writes.game?.turn_state).toEqual({ phase: "roll" });
+    expect(top(writes.game!.turn_state!)).toEqual({ phase: "roll" });
   });
 
   /**
@@ -779,7 +780,7 @@ describe("Demon Zagłady i Monstrum (14.6)", () => {
       enemyTotal: 7,
       outcome: "Demon Zagłady",
     });
-    const phase = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
+    const phase = top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "fight" }>;
     expect(phase.phase).toBe("fight");
     expect(phase.fight.kind).toBe("magical");
     expect(phase.fight.enemyTotal).toBe(7);
@@ -802,7 +803,7 @@ describe("Demon Zagłady i Monstrum (14.6)", () => {
     });
     const { writes, result } = await resolveBridgeOrdeal(table, undefined, dice(6, 6));
     expect(result).toMatchObject({ enemyTotal: 12, outcome: "Monstrum" });
-    const phase = writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>;
+    const phase = top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "fight" }>;
     expect(phase.fight.kind).toBe("ordinary");
     expect(phase.fight.playerTotal).toBe(8);
   });
@@ -811,7 +812,7 @@ describe("Demon Zagłady i Monstrum (14.6)", () => {
   it("leaves the turn open", async () => {
     const table = aTable({ seats: [aSeat({ field_id: "monstrum" })] });
     const { writes } = await resolveBridgeOrdeal(table, undefined, dice(1, 1));
-    expect((writes.game?.turn_state as TurnPhase).phase).toBe("fight");
+    expect(top(writes.game!.turn_state!).phase).toBe("fight");
   });
 });
 

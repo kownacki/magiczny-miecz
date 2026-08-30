@@ -4,6 +4,7 @@ import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { buildDeck, type DeckState } from "@/lib/engine/deck";
 import type { TurnPhase } from "@/lib/engine/turn";
+import { asTurnState, type TurnState } from "@/lib/engine/stack";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { CommandPorts, Snapshot } from "./change";
 import type { GameRow, HoldingRow, SeatRow, UserRow } from "./store";
@@ -89,12 +90,20 @@ export function noDeck(): { events: DeckState; spells: DeckState } {
 }
 
 /** A game row given piecemeal, because a test only ever cares about a column or two. */
+/**
+ * A fixture still says `turn_state: { phase: "fight", ... }` — a bare phase —
+ * and `aTable` wraps it into a one-frame stack. Deliberate: several hundred
+ * tests write turn state as the phase they mean, and the phase *is* what they
+ * mean; the stack around it is plumbing. A test about depth passes a
+ * `TurnState` instead and is taken as given.
+ */
 type TableOver = Partial<Omit<Snapshot, "game">> & {
-  game?: Partial<GameRow & { turn_state: TurnPhase }>;
+  game?: Partial<Omit<GameRow, "turn_state">> & { turn_state?: TurnPhase | TurnState };
 };
 
 export function aTable(over: TableOver = {}): Snapshot {
-  const game: GameRow & { turn_state: TurnPhase } = {
+  const { turn_state: overState, ...overGame } = over.game ?? {};
+  const game: GameRow & { turn_state: TurnState } = {
     id: "game-1",
     join_code: "ABCD",
     mode: "simulation",
@@ -110,13 +119,13 @@ export function aTable(over: TableOver = {}): Snapshot {
     turn: 3,
     revision: 7,
     journal_seq: 12,
-    turn_state: { phase: "roll" },
+    turn_state: asTurnState(overState ?? { phase: "roll" }),
     deck: noDeck(),
     /** 4.4's list, empty until somebody dies. */
     characters_out: [],
     /** Fixed, so a test that shuffles gets the same order every run. */
     seed: "test-seed",
-    ...(over.game ?? {}),
+    ...overGame,
   };
   const seats = over.seats ?? [aSeat()];
   return {

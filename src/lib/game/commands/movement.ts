@@ -18,6 +18,7 @@ import {
   startTurn,
 } from "@/lib/engine/turn";
 import type { TurnCard } from "@/lib/engine/state";
+import { only, replaceTop, top } from "@/lib/engine/stack";
 import { EVENTS, type Decks } from "../decks";
 import {
   mergeAll,
@@ -122,7 +123,7 @@ export function startGame(
       status: "playing",
       turn: 1,
       active_seat: chosen[0].seat_index,
-      turn_state: startTurn(),
+      turn_state: only(startTurn()),
       // Only a simulation needs a deck. In companion mode the deck is the
       // physical one on the table and the app must not pretend to own it.
       deck: snapshot.game.mode === "simulation" ? command.decks : null,
@@ -216,8 +217,8 @@ const FIRST_TURN = 1;
  * changeset's `game` patch is typed by. Said out loud here rather than widening
  * a read list for a column no read wants.
  */
-function startedAt(now: number): Partial<GameRow> {
-  return { started_at: new Date(now).toISOString() } as Partial<GameRow>;
+function startedAt(now: number): Partial<Omit<GameRow, "turn_state">> {
+  return { started_at: new Date(now).toISOString() } as Partial<Omit<GameRow, "turn_state">>;
 }
 
 /** What one character owns before anybody rolls, minus the Zaklęcia. */
@@ -346,7 +347,7 @@ export async function rollForMove(
   ports: CommandPorts,
 ): Promise<Outcome<number>> {
   const seat = activeSeat(snapshot);
-  if (snapshot.game.turn_state.phase !== "roll") throw new Error("Nie czas na rzut.");
+  if (top(snapshot.game.turn_state).phase !== "roll") throw new Error("Nie czas na rzut.");
   // 5.6: "musi natychmiast odrzucić". The turn does not begin until it has.
   refuseWhileOverLimit(snapshot, seat.id);
   // Held where they stand — the Krąg Płomieni. Everything else in a turn hangs
@@ -389,23 +390,27 @@ export async function rollForMove(
   return {
     writes: {
       game: {
-        turn_state: afterRoll(seat.field_id, roll, {
-          bridgeOffered: hasSword && !blocked,
-          cap,
-          /**
-           * 14.7's other half. "Postać, która wejdzie na Most nie posiadając
-           * tej Tarczy, musi ominąć Zamek" — so without one the Zamek is not a
-           * square this character can be offered, and the step goes over it.
-           *
-           * The same ability that closes the door once you are inside (10.5)
-           * is the one that opens it: `opensTheWayTo(…, "zamek-bestii")`, which
-           * had never been read anywhere until this week.
-           */
-          mayEnterCastle: opensTheWayTo(
-            heldAbilities(mine.map((held) => held.card_id)),
-            "zamek-bestii",
-          ),
-        }),
+        // replaceTop: the roll frame advancing into the move, mid-turn.
+        turn_state: replaceTop(
+          snapshot.game.turn_state,
+          afterRoll(seat.field_id, roll, {
+            bridgeOffered: hasSword && !blocked,
+            cap,
+            /**
+             * 14.7's other half. "Postać, która wejdzie na Most nie posiadając
+             * tej Tarczy, musi ominąć Zamek" — so without one the Zamek is not a
+             * square this character can be offered, and the step goes over it.
+             *
+             * The same ability that closes the door once you are inside (10.5)
+             * is the one that opens it: `opensTheWayTo(…, "zamek-bestii")`, which
+             * had never been read anywhere until this week.
+             */
+            mayEnterCastle: opensTheWayTo(
+              heldAbilities(mine.map((held) => held.card_id)),
+              "zamek-bestii",
+            ),
+          }),
+        ),
       },
       journal: [
         {
@@ -450,7 +455,7 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
   const fieldId = requireFieldId(command.destination, "Ruch");
   const viaBridge = command.viaBridge ?? false;
   const seat = activeSeat(snapshot);
-  const phase = snapshot.game.turn_state;
+  const phase = top(snapshot.game.turn_state);
   if (phase.phase !== "move") throw new Error("Nie czas na ruch.");
 
   // Only the squares the roll actually reaches are accepted, so a stale page
@@ -472,9 +477,14 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
     writes: mergeAll(lifted?.writes ?? {}, {
       seats: [{ id: seat.id, patch: { field_id: fieldId } }],
       game: {
-        turn_state: chosen.bridge
-          ? atBridge(chosen.bridge)
-          : afterMove(field, seat.field_id, lifted?.cards ?? []),
+        // replaceTop: the move frame advancing into the field (or the bridge
+        // attempt), mid-turn.
+        turn_state: replaceTop(
+          snapshot.game.turn_state,
+          chosen.bridge
+            ? atBridge(chosen.bridge)
+            : afterMove(field, seat.field_id, lifted?.cards ?? []),
+        ),
       },
       journal: [
         {

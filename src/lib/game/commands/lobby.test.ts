@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { only } from "@/lib/engine/stack";
 import {
   AWAY_AFTER_MS,
   GOODBYE_GRACE_MS,
@@ -341,7 +342,7 @@ describe("out of the chair, still at the table", () => {
   it("moves the turn on when it was theirs", () => {
     // Play does not wait on somebody who has gone.
     const { writes, result } = unseat(playing([{}, {}, {}], 3, 0), { userId: "usr-0" });
-    expect(writes.game).toEqual({ active_seat: 1, turn_state: { phase: "roll" } });
+    expect(writes.game).toEqual({ active_seat: 1, turn_state: only({ phase: "roll" }) });
     expect(result.passedTo).toBe(1);
   });
 
@@ -451,7 +452,7 @@ describe("off the table altogether", () => {
       users: here({}, {}),
     });
     const { writes, result } = leaveTable(playing, { userId: "usr-0" });
-    expect(writes.game).toEqual({ active_seat: 1, turn_state: { phase: "roll" } });
+    expect(writes.game).toEqual({ active_seat: 1, turn_state: only({ phase: "roll" }) });
     expect(result.passedTo).toBe(1);
   });
 

@@ -1,3 +1,4 @@
+import { only } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aSeat, aTable, ports } from "../fixture";
@@ -107,9 +108,9 @@ describe("the Dobre Bóstwo, which judges what you did", () => {
     const table = meeting("dobre-bostwo", 3);
     const duelling = apply(table, {
       game: {
-        turn_state: {
+        turn_state: only({
           phase: "field", fieldId: "wrzosowiska", from: null, draw: 0, drawn: [], resolved: [],
-        } as TurnPhase,
+        } as TurnPhase),
       },
     });
     // Only the mark, not the fight the attack also opens.

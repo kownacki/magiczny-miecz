@@ -1,3 +1,4 @@
+import { top } from "@/lib/engine/stack";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -90,7 +91,7 @@ async function someTurns(turns: number): Promise<string[]> {
   const lines = ["pick GOBLIN", "ready", "pick WIEDŹMA", "ready", "start"];
   const { gameId, log, keep } = await played(lines);
   for (let n = 0; n < turns; n++) {
-    const state = (await activeStore().load(gameId)).game.turn_state as {
+    const state = top((await activeStore().load(gameId)).game.turn_state) as {
       options?: { fieldName: string }[];
     };
     const next: string[] = ["roll"];

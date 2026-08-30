@@ -120,7 +120,9 @@ moment, which is the whole reason they are ports.
 
 - "state" meant the whole table, the `turn_state` column, and React's `useState`
   in three neighbouring files — resolved: the table is a **Snapshot**,
-  `turn_state` keeps its column name and is a `TurnPhase`, and React's is React's.
+  `turn_state` keeps its column name and holds a **TurnState** — a stack of
+  `TurnPhase` frames, of which `top()` is the one on screen (docs/STACK.md) —
+  and React's is React's.
 - "port" was claimed for `DeckPort`, `ChoicePort` and `EnginePorts`, none of
   which ever had a **Binding** or a caller — resolved: they are gone. The die is
   the only effect a rule cannot work out for itself. Which card comes up is

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
+import { only } from "@/lib/engine/stack";
 import { aSeat, aTable } from "../fixture";
 import { leaveCardsBehind, passTurn, tickEffects } from "./turn";
 
@@ -16,7 +17,7 @@ const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
 describe("passing the turn (10.1)", () => {
   it("hands play to the next seat and starts them at the roll", () => {
     const writes = passTurn(two());
-    expect(writes.game).toMatchObject({ active_seat: 1, turn: 3, turn_state: { phase: "roll" } });
+    expect(writes.game).toMatchObject({ active_seat: 1, turn: 3, turn_state: only({ phase: "roll" }) });
   });
 
   /** 20.1 counts the round, so it has to advance when play comes back round. */
@@ -49,7 +50,7 @@ describe("passing the turn (10.1)", () => {
       ],
     });
     const writes = passTurn(again);
-    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: { phase: "roll" } });
+    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: only({ phase: "roll" }) });
     // The status counts the extra turns out, so the third pass moves on.
     expect(writes.effects?.patch).toEqual([{ id: "eff-1", patch: { ends: { kind: "turns", turns: 1 } } }]);
     expect(writes.journal?.[0]).toMatchObject({ payload: { next: 0, again: true } });

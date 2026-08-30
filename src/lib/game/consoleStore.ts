@@ -88,6 +88,7 @@ import {
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { only, replaceTop, top } from "@/lib/engine/stack";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
 import { GIVEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
@@ -1028,7 +1029,7 @@ export async function runCommand(
      */
     case "bridge": {
       const seat = seatOf(null);
-      const state = (await activeStore().load(gameId)).game.turn_state as {
+      const state = top((await activeStore().load(gameId)).game.turn_state) as {
         options?: { fieldId: string; fieldName: string; bridge?: unknown }[];
       };
       const offered = (state.options ?? []).find((one) => one.bridge !== undefined);
@@ -1076,7 +1077,7 @@ export async function runCommand(
     case "take": {
       const seat = seatOf(null);
       const snapshot = await activeStore().load(gameId);
-      const state = snapshot.game.turn_state as {
+      const state = top(snapshot.game.turn_state) as {
         drawn?: { cardId: string }[];
         resolved?: string[];
       };
@@ -1152,7 +1153,7 @@ export async function runCommand(
     case "fight": {
       const seat = seatOf(null);
       const snapshot = await activeStore().load(gameId);
-      const state = snapshot.game.turn_state as {
+      const state = top(snapshot.game.turn_state) as {
         phase?: string;
         drawn?: { cardId: string; cardClass: string }[];
         resolved?: string[];
@@ -1184,7 +1185,7 @@ export async function runCommand(
        * is asked for here rather than by the verb that starts the fight: every
        * fight comes through this line, and only some of them owe it.
        */
-      const owed = (await activeStore().load(gameId)).game.turn_state as {
+      const owed = top((await activeStore().load(gameId)).game.turn_state) as {
         fight?: { strengthRoll?: number | null };
       };
       if (owed.fight?.strengthRoll === null) await rollGuardianStrength(gameId, null);
@@ -1193,7 +1194,7 @@ export async function runCommand(
       await fightRoll(gameId, "player", null);
       await fightRoll(gameId, "enemy", null);
 
-      const after = (await activeStore().load(gameId)).game.turn_state as {
+      const after = top((await activeStore().load(gameId)).game.turn_state) as {
         fight?: {
           cardName: string;
           playerTotal: number;
@@ -1234,7 +1235,7 @@ export async function runCommand(
       }
 
       await resolveFight(gameId);
-      const ended = (await activeStore().load(gameId)).game.turn_state as { phase?: string };
+      const ended = top((await activeStore().load(gameId)).game.turn_state) as { phase?: string };
       return `${said} — ${outcome}.${ended.phase === "fight" ? " Still fighting." : ""}`;
     }
 
@@ -1328,7 +1329,7 @@ export async function runCommand(
       const fightName = await change(
         gameId,
         (snapshot) => {
-          const state = snapshot.game.turn_state;
+          const state = top(snapshot.game.turn_state);
           if (state.phase !== "fight") throw new Error("No fight is happening.");
           const fight = state.fight;
           const settled =
@@ -1343,7 +1344,7 @@ export async function runCommand(
           return {
             writes: {
               game: {
-                turn_state: {
+                turn_state: replaceTop(snapshot.game.turn_state, {
                   ...state,
                   // The dice are filled in as well, because everything
                   // downstream reads a settled fight as one that was rolled.
@@ -1353,7 +1354,7 @@ export async function runCommand(
                     enemyRoll: fight.enemyRoll ?? 0,
                     result: settled,
                   },
-                },
+                }),
               },
             },
             result: fight.cardName,
@@ -1390,7 +1391,7 @@ export async function runCommand(
           gameId,
           (snapshot) => ({
             writes: {
-              game: { status: "finished", turn_state: { phase: "end" as const } },
+              game: { status: "finished", turn_state: only({ phase: "end" }) },
               journal: [
                 {
                   seatId: seat.id,
@@ -1440,7 +1441,7 @@ export async function runCommand(
      */
     case "spoils": {
       const seat = seatOf(null);
-      const state = (await activeStore().load(gameId)).game.turn_state as {
+      const state = top((await activeStore().load(gameId)).game.turn_state) as {
         phase?: string;
         fight?: { opponentSeat?: number; result?: { outcome: string } | null };
       };
@@ -1504,7 +1505,7 @@ export async function runCommand(
       // Null, not a number: the app throws it. A typed die is companion mode's,
       // and "in simulation, nothing is entered by hand".
       await rollForMove(gameId, null);
-      const state = (await activeStore().load(gameId)).game.turn_state as {
+      const state = top((await activeStore().load(gameId)).game.turn_state) as {
         roll?: number;
         options?: { fieldId: string; fieldName: string }[];
       };
@@ -1534,7 +1535,7 @@ export async function runCommand(
      */
     case "answer": {
       const snapshot = await activeStore().load(gameId);
-      const state = snapshot.game.turn_state as {
+      const state = top(snapshot.game.turn_state) as {
         phase?: string;
         fieldId?: FieldId;
         drawn?: { cardId: string }[];
@@ -1660,7 +1661,7 @@ export async function runCommand(
         ].join("\n");
       }
 
-      const state = game.turn_state as {
+      const state = top(game.turn_state) as {
         phase?: string;
         roll?: number;
         options?: { fieldId: string; fieldName: string }[];
@@ -1675,13 +1676,24 @@ export async function runCommand(
         `Turn ${game.turn} — ${active ? named(active) : "nobody"}`,
         `Obszar: ${fieldName(active?.field_id ?? null)}`,
         `Phase: ${PHASE[phase] ?? phase}${state.roll ? ` (rolled ${state.roll})` : ""}`,
+        // The pile under the running frame, when there is one — a summoned
+        // fight over the roll it interrupted. Printed bottom-up so it reads in
+        // the order it will resolve back down. Silent at depth 1, which is
+        // every ordinary turn.
+        ...(game.turn_state.stack.length > 1
+          ? [
+              `Stack: ${game.turn_state.stack
+                .map((frame) => PHASE[frame.phase] ?? frame.phase)
+                .join(" › ")}`,
+            ]
+          : []),
         ...(state.options?.length
           ? [`Reaches: ${state.options.map((one) => one.fieldName).join(", ")}`]
           : []),
         ...(here.length
           ? [`On the Obszar: ${here.map((one) => cardName(one.card_id)).join(", ")}`]
           : []),
-        ...waitingOn(game.turn_state),
+        ...waitingOn(top(game.turn_state)),
         ...(standing.length > 1
           ? [`Also here: ${standing.map((one) => named(one)).join(", ")}`]
           : []),

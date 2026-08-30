@@ -5,6 +5,7 @@ import { asSeatCharacter } from "@/lib/engine/characters";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { FIELDS, asFieldId } from "@/lib/engine/board";
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
+import { only, top } from "@/lib/engine/stack";
 import {
   changeNature,
   chooseCharacter,
@@ -283,21 +284,23 @@ describe("przestawienie figury", () => {
       },
     });
     const { writes } = placeSeat(mid, { seatId: "seat-a", target: "grod", reason: null });
-    expect(writes.game?.turn_state).toEqual({
-      phase: "field",
-      fieldId: "grod",
-      from: null,
-      draw: 0,
-      drawn: [],
-      fought: [],
-    });
+    expect(writes.game?.turn_state).toEqual(
+      only({
+        phase: "field",
+        fieldId: "grod",
+        from: null,
+        draw: 0,
+        drawn: [],
+        fought: [],
+      }),
+    );
   });
 
   /** The commonest reason to reach for this is a table stuck mid-something. */
   it("drags a turn stuck past the roll onto the new Obszar too", () => {
     const stuck = table({ game: { turn_state: { phase: "move", roll: 4, options: [] } } });
     const { writes } = placeSeat(stuck, { seatId: "seat-a", target: "grod", reason: null });
-    expect(writes.game?.turn_state).toMatchObject({ phase: "field", fieldId: "grod" });
+    expect(top(writes.game!.turn_state!)).toMatchObject({ phase: "field", fieldId: "grod" });
   });
 
   it("does not restage anybody else's turn", () => {
@@ -461,7 +464,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
       { seatId: "seat-a", characterId: "zdobywca", bySeat: "seat-a" },
       ports(),
     );
-    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: { phase: "roll" } });
+    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: only({ phase: "roll" }) });
   });
 
   it("does not take the turn from whoever is playing", async () => {

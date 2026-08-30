@@ -160,16 +160,6 @@ export interface Fight {
     fieldCardId?: string;
   };
   /**
-   * Where the turn goes when this is over, when the fight interrupted it.
-   *
-   * Every other fight in the game happens on the Obszar a move ended on, so it
-   * ends by going back to that Obszar — which is what `endFight` does. A
-   * summoned creature is the exception: the Golem and the Homunculus are spoken
-   * „przed wykonaniem ruchu", so the caster still owes their own turn, and
-   * dropping them into the field phase afterwards would quietly eat the move.
-   */
-  resume?: { phase: "roll" };
-  /**
    * The die that decides the guardian's own strength, where the board makes it
    * a roll rather than a number: "1 - 5; 2 - 6; ... 6 - 10" at both bridge
    * entrances. Null while it is still owed. Absent when the creature has a
@@ -457,8 +447,6 @@ export function startFight(
     settles?: string[];
     /** Who is fighting instead of the character, and what they are sent at. */
     raid?: Fight["raid"];
-    /** Where to hand the turn back, for a fight that interrupted it. */
-    resume?: Fight["resume"];
   },
   playerTotals: { miecz: number; magia: number },
 ): TurnPhase {
@@ -473,7 +461,6 @@ export function startFight(
       ...(card.granted ? { granted: true } : {}),
       ...(card.opponentSeat !== undefined ? { opponentSeat: card.opponentSeat } : {}),
       ...(card.raid ? { raid: card.raid } : {}),
-      ...(card.resume ? { resume: card.resume } : {}),
       kind,
       enemyTotal,
       playerTotal: kind === "magical" ? playerTotals.magia : playerTotals.miecz,
@@ -631,8 +618,9 @@ export function recordFightRoll(
  */
 export function endFight(phase: TurnPhase): TurnPhase {
   if (phase.phase !== "fight") return phase;
-  // A fight that interrupted the turn hands it back where it took it from.
-  if (phase.fight.resume) return phase.fight.resume;
+  // A fight that interrupted the turn is not this function's to close: it was
+  // *pushed*, and popping it reveals the frame it interrupted. `resume` used to
+  // live on the Fight for exactly that case and is gone — see docs/STACK.md.
   const { fieldId, draw, drawn, fought, met } = phase.fight;
   return {
     phase: "field",

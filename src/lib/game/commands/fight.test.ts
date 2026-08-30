@@ -4,6 +4,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import type { Fight, TurnPhase } from "@/lib/engine/turn";
 import type { DeckState } from "@/lib/engine/deck";
 import { EVENT_COPIES } from "../decks";
+import { only, top, type TurnState } from "@/lib/engine/stack";
 import { aHolding, aSeat, aTable, aUser, NOW, ports } from "../fixture";
 import { pointsOf } from "./seat";
 import { hasAttacked } from "@/lib/engine/status";
@@ -64,10 +65,10 @@ const walka = (over: Partial<Fight> = {}): TurnPhase => ({
 });
 
 const fightIn = (writes: { game?: { turn_state?: unknown } }) =>
-  (writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>).fight;
+  (top(writes.game?.turn_state as TurnState) as Extract<TurnPhase, { phase: "fight" }>).fight;
 
 const fieldIn = (writes: { game?: { turn_state?: unknown } }) =>
-  writes.game?.turn_state as Extract<TurnPhase, { phase: "field" }>;
+  top(writes.game?.turn_state as TurnState) as Extract<TurnPhase, { phase: "field" }>;
 
 const pileIn = (writes: { game?: { deck?: unknown } }, which: "events" | "spells") =>
   (writes.game?.deck as Record<"events" | "spells", DeckState>)[which];
@@ -274,7 +275,11 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       ports(),
     );
     // „Przed wykonaniem ruchu": the caster has not moved and must not lose it.
-    expect(fightIn(writes)).toMatchObject({ playerTotal: 5, resume: { phase: "roll" } });
+    // The fight is *pushed* above the roll, so ending it pops back there.
+    expect(fightIn(writes)).toMatchObject({ playerTotal: 5 });
+    const state = writes.game?.turn_state as TurnState;
+    expect(state.stack).toHaveLength(2);
+    expect(state.stack[0]).toEqual({ phase: "roll" });
   });
 
   it("refuses a creature nobody was named for", async () => {
@@ -930,17 +935,22 @@ describe("kostki w walce (17.3, 17.4)", () => {
     const summoned = aTable({
       game: {
         active_seat: 0,
-        turn_state: walka({
-          cardId: "seat:1",
-          opponentSeat: 1,
-          enemyTotal: 9,
-          playerTotal: 3,
-          playerRoll: 1,
-          enemyRoll: 1,
-          result: { outcome: "przegrana", winner: "GOLEM", loser: "Michał", kind: "ordinary" },
-          raid: { cardId: "GOLEM", summoned: true },
-          resume: { phase: "roll" },
-        }),
+        // A summoned fight sits *above* the roll it interrupted.
+        turn_state: {
+          stack: [
+            { phase: "roll" as const },
+            walka({
+              cardId: "seat:1",
+              opponentSeat: 1,
+              enemyTotal: 9,
+              playerTotal: 3,
+              playerRoll: 1,
+              enemyRoll: 1,
+              result: { outcome: "przegrana", winner: "GOLEM", loser: "Michał", kind: "ordinary" },
+              raid: { cardId: "GOLEM", summoned: true },
+            }),
+          ],
+        },
       },
       seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
       users: duellists(),
@@ -955,8 +965,8 @@ describe("kostki w walce (17.3, 17.4)", () => {
     // Poszukiwacz, who dies for his own wyprawa and not for a Zaklęcie.
     expect(writes.seats ?? []).toEqual([]);
     expect(writes.holdings ?? {}).toEqual({});
-    // And the turn is handed back, with the move still owed.
-    expect(writes.game?.turn_state).toEqual({ phase: "roll" });
+    // And the turn is handed back, with the move still owed: the pop.
+    expect(writes.game?.turn_state).toEqual(only({ phase: "roll" }));
   });
 
   /** „Wróg jest zdejmowany z planszy" — and to the pile, like everything else. */

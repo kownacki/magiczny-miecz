@@ -60,6 +60,7 @@ import { applyEffect, type Decisions } from "./effects";
 import type { Effect } from "@/lib/engine/cardScript";
 import { summariseEffect } from "@/lib/engine/effectText";
 import { asReturnable, putOnPile } from "./piles";
+import { only, pop, push, replaceTop, top } from "@/lib/engine/stack";
 import {
   activeSeat,
   eqModeOf,
@@ -147,7 +148,7 @@ function againstThese(
 
 export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<void> {
   const seat = activeSeat(snapshot);
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") throw new Error("Nie czas na walkę.");
   if (command.cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
 
@@ -258,7 +259,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
   return {
     writes: {
       game: {
-        turn_state: startFight(
+        turn_state: replaceTop(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: foes.map((f) => f.card.id).join("+"),
@@ -275,7 +276,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
             ...(kind === "magical" ? { magia: total } : { miecz: total }),
           },
           mine,
-        ),
+        )),
       },
       journal: [
         {
@@ -309,14 +310,14 @@ export function beginNamedFight(
   command: { name: string; miecz?: number; magia?: number },
 ): Outcome<void> {
   const seat = activeSeat(snapshot);
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") throw new Error("Nie czas na walkę.");
 
   const { name, miecz, magia } = command;
   return {
     writes: {
       game: {
-        turn_state: startFight(
+        turn_state: replaceTop(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: `pole:${name}`,
@@ -325,7 +326,7 @@ export function beginNamedFight(
             settles: [],
           },
           pointsOf(snapshot, seat.id, "walka"),
-        ),
+        )),
       },
       journal: [
         {
@@ -369,15 +370,17 @@ export function summonFighter(
   },
 ): Outcome<void> {
   const seat = activeSeat(snapshot);
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase === "fight") throw new Error("Najpierw dokończcie tę walkę.");
   if (seat.field_id === null) throw new Error("Twoja Postać nie stoi na planszy.");
 
   /**
-   * A fight needs an Obszar to happen on and one to go back to, and both of
-   * those are the field phase's. Spoken „przed wykonaniem ruchu" there is no
-   * such phase yet — so one is made out of where the character is standing, and
-   * `resume` remembers that the turn has not been taken and must come back.
+   * A fight needs an Obszar to happen on, and that is the field phase's.
+   * Spoken „przed wykonaniem ruchu" there is no such phase yet — so one is
+   * made out of where the character is standing, to seed the Fight, and the
+   * fight is *pushed* above the running frame: the caster still owes their
+   * move, and ending the fight pops back to the roll it interrupted. `resume`
+   * used to carry this and is gone — docs/STACK.md.
    */
   const from: TurnPhase =
     state.phase === "field"
@@ -389,7 +392,10 @@ export function summonFighter(
           draw: 0,
           drawn: [],
         };
-  const resume = state.phase === "field" ? undefined : ({ phase: "roll" } as const);
+  const opened = (fight: TurnPhase) =>
+    state.phase === "field"
+      ? replaceTop(snapshot.game.turn_state, fight)
+      : push(snapshot.game.turn_state, fight);
   const ring = ringFields(seat.field_id as FieldId);
   const inRing = (fieldId: FieldId | null): boolean =>
     fieldId !== null && ring.includes(fieldId);
@@ -412,17 +418,18 @@ export function summonFighter(
     return {
       writes: {
         game: {
-          turn_state: startFight(
-            from,
-            {
-              cardId: `seat:${target.seat_index}`,
-              cardName: nameOfSeat(snapshot.users, target.seat_index),
-              miecz: theirs.miecz,
-              opponentSeat: target.seat_index,
-              raid,
-              ...(resume ? { resume } : {}),
-            },
-            mine,
+          turn_state: opened(
+            startFight(
+              from,
+              {
+                cardId: `seat:${target.seat_index}`,
+                cardName: nameOfSeat(snapshot.users, target.seat_index),
+                miecz: theirs.miecz,
+                opponentSeat: target.seat_index,
+                raid,
+              },
+              mine,
+            ),
           ),
         },
       },
@@ -444,17 +451,18 @@ export function summonFighter(
   return {
     writes: {
       game: {
-        turn_state: startFight(
-          from,
-          {
-            cardId: lying.card_id,
-            cardName: cardName(lying.card_id),
-            ...(foe.kind === "magical" ? { magia: foe.total } : { miecz: foe.total }),
-            granted: lying.granted,
-            raid: { ...raid, fieldCardId: lying.id },
-            ...(resume ? { resume } : {}),
-          },
-          mine,
+        turn_state: opened(
+          startFight(
+            from,
+            {
+              cardId: lying.card_id,
+              cardName: cardName(lying.card_id),
+              ...(foe.kind === "magical" ? { magia: foe.total } : { miecz: foe.total }),
+              granted: lying.granted,
+              raid: { ...raid, fieldCardId: lying.id },
+            },
+            mine,
+          ),
         ),
       },
     },
@@ -892,7 +900,7 @@ export async function castSpell(
    * back at whoever spoke it, so an answer to an answer has to be possible, and
    * a single window before the dice could never hold that.
    */
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   const inAFight = state.phase === "fight";
 
   // 9.1: a Zaklęcie has a moment it may be spoken in. The interface greys the
@@ -1150,12 +1158,13 @@ export async function castSpell(
    * different keys of one `game` patch, so the second read collapses into
    * `apply` and the whole command is decided against a single snapshot.
    */
-  const after = apply(snapshot, soFar).game.turn_state;
+  const afterState = apply(snapshot, soFar).game.turn_state;
+  const after = top(afterState);
   const cleared: Changeset =
     inAFight && after.phase === "fight"
       ? {
           game: {
-            turn_state: {
+            turn_state: replaceTop(afterState, {
               ...after,
               fight: {
                 ...after.fight,
@@ -1164,7 +1173,7 @@ export async function castSpell(
                 enemyRoll: null,
                 result: null,
               },
-            },
+            }),
           },
         }
       : {};
@@ -1268,7 +1277,14 @@ export function setFightPlayerTotal(
   command: { total: number },
 ): Outcome<void> {
   return {
-    writes: { game: { turn_state: setFightTotal(snapshot.game.turn_state, command.total) } },
+    writes: {
+      game: {
+        turn_state: replaceTop(
+          snapshot.game.turn_state,
+          setFightTotal(top(snapshot.game.turn_state), command.total),
+        ),
+      },
+    },
     result: undefined,
   };
 }
@@ -1298,7 +1314,7 @@ export async function fightRoll(
   ports: CommandPorts,
 ): Promise<Outcome<void>> {
   const seat = activeSeat(snapshot);
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "fight") throw new Error("Nie ma walki.");
 
   // 17.3 puts the spells before the dice, so the dice wait — but only while
@@ -1336,7 +1352,7 @@ export async function fightRoll(
 
   return {
     writes: {
-      game: { turn_state: recordFightRoll(state, command.side, roll) },
+      game: { turn_state: replaceTop(snapshot.game.turn_state, recordFightRoll(state, command.side, roll)) },
       journal: [
         {
           seatId: seat.id,
@@ -1503,7 +1519,7 @@ export interface SendRaider {
  */
 export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<void> {
   const seat = activeSeat(snapshot);
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   // "Po zakończeniu ruchu" — the friend is sent from where the move ended.
   if (state.phase !== "field") throw new Error("Wyprawę zleca się po ruchu (16.1).");
 
@@ -1531,7 +1547,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
     return {
       writes: {
         game: {
-          turn_state: startFight(
+          turn_state: replaceTop(snapshot.game.turn_state, startFight(
             state,
             {
               cardId: `seat:${target.seat_index}`,
@@ -1541,7 +1557,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
               raid: { cardId: raider.cardId },
             },
             { miecz: raider.miecz, magia: raider.magia },
-          ),
+          )),
         },
       },
       result: undefined,
@@ -1562,7 +1578,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
   return {
     writes: {
       game: {
-        turn_state: startFight(
+        turn_state: replaceTop(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: lying.card_id,
@@ -1572,7 +1588,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
             raid: { cardId: raider.cardId, fieldCardId: lying.id },
           },
           { miecz: raider.miecz, magia: raider.magia },
-        ),
+        )),
       },
     },
     result: undefined,
@@ -1612,7 +1628,7 @@ export function attackSeat(
   if (target.field_id !== attacker.field_id) {
     throw new Error("Spotkanie jest możliwe tylko na tym samym Obszarze (13.1).");
   }
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") throw new Error("Nie czas na spotkanie.");
   // 13.2: "musi dokonać wyboru" — and this turn has already made it.
   refuseAgainst13_2(snapshot, "meet");
@@ -1658,7 +1674,7 @@ export function attackSeat(
   return {
     writes: mergeAll(marked, {
       game: {
-        turn_state: startFight(
+        turn_state: replaceTop(snapshot.game.turn_state, startFight(
           state,
           {
             cardId: `seat:${target.seat_index}`,
@@ -1667,7 +1683,7 @@ export function attackSeat(
             opponentSeat: target.seat_index,
           },
           mine,
-        ),
+        )),
       },
       journal: [
         {
@@ -1736,7 +1752,7 @@ export function escape(
 ): Outcome<{ succeeded: boolean; onBridge: boolean }> {
   const { reported } = command;
   const actorSeatId = command.actorSeatId ?? null;
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
 
   if (state.phase !== "fight" && state.phase !== "field") {
     throw new Error("Nie ma przed czym uciekać.");
@@ -1840,9 +1856,12 @@ export function escape(
    */
   // Chained: `spoken` has already written `game.deck`, and the turn state is
   // decided against a table that knows the card is spent.
-  const before = apply(snapshot, spoken).game.turn_state;
+  const beforeState = apply(snapshot, spoken).game.turn_state;
+  const before = top(beforeState);
   let left: Changeset = {};
   if (succeeded && before.phase === "fight") {
+    // A pushed fight — a summoned creature over the turn it interrupted — is
+    // closed by popping it; a fight that replaced the field frame rebuilds it.
     const next = endFight(before);
     const sweep =
       byAbility && przed === "wrog"
@@ -1853,9 +1872,13 @@ export function escape(
     left = {
       game: {
         turn_state:
-          next.phase === "field" && sweep.length > 0
-            ? { ...next, fought: [...new Set([...(next.fought ?? []), ...sweep])] }
-            : next,
+          beforeState.stack.length > 1
+            ? pop(beforeState)
+            : only(
+                next.phase === "field" && sweep.length > 0
+                  ? { ...next, fought: [...new Set([...(next.fought ?? []), ...sweep])] }
+                  : next,
+              ),
       },
     };
   } else if (succeeded && before.phase === "field") {
@@ -1872,10 +1895,10 @@ export function escape(
     if (fled.length > 0) {
       left = {
         game: {
-          turn_state: {
+          turn_state: replaceTop(beforeState, {
             ...before,
             fought: [...new Set([...(before.fought ?? []), ...fled])],
-          },
+          }),
         },
       };
     }
@@ -1945,7 +1968,7 @@ export async function resolveFight(
   command: { spoils?: Spoils } | void,
   ports: CommandPorts,
 ): Promise<Outcome<void>> {
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "fight") throw new Error("Nie ma walki.");
 
   const seat = activeSeat(snapshot);
@@ -2094,7 +2117,14 @@ export async function resolveFight(
 
   return {
     writes: mergeAll(upToNow, stolen, cleared_, trophiesFrom(snapshot, seat, fight), {
-      game: { turn_state: endFight(state) },
+      game: {
+        // Pushed fights pop back to the frame they interrupted; the rest
+        // rebuild the field they replaced (see endFight).
+        turn_state:
+          snapshot.game.turn_state.stack.length > 1
+            ? pop(snapshot.game.turn_state)
+            : only(endFight(state)),
+      },
       journal: [
         {
           seatId: seat.id,

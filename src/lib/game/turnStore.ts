@@ -13,6 +13,7 @@ import {
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
+import { only, replaceTop, top } from "@/lib/engine/stack";
 import {
   afterFight,
   type Ends,
@@ -451,7 +452,7 @@ export async function stageFight(
         // the draw: nothing leaves the deck, so a staged fight does not thin it.
         writes: {
           game: {
-            turn_state: {
+            turn_state: only({
               phase: "field" as const,
               fieldId: seat.field_id,
               from: null,
@@ -461,7 +462,7 @@ export async function stageFight(
               // draws the card from here on says so.
               drawn: [{ cardId: card.id, cardClass: card.cardClass, granted: true }],
               fought: [],
-            },
+            }),
           },
         },
         result: undefined,
@@ -493,7 +494,7 @@ export async function abandonFight(gameId: string): Promise<void> {
   await change(
     gameId,
     (snapshot) => {
-      const state = snapshot.game.turn_state;
+      const state = top(snapshot.game.turn_state);
       if (state.phase !== "fight") throw new Error("Nie ma walki.");
       const seat = snapshot.seats.find((s) => s.seat_index === snapshot.game.active_seat);
       const { cardName } = state.fight;
@@ -503,7 +504,7 @@ export async function abandonFight(gameId: string): Promise<void> {
         // opens — so the field resumes with nothing outstanding rather than
         // offering the same creature again the moment the modal closes.
         writes: {
-          game: { turn_state: endFight(state) },
+          game: { turn_state: replaceTop(snapshot.game.turn_state, endFight(state)) },
           ...(seat
             ? {
                 journal: [

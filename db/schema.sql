@@ -75,6 +75,11 @@ create table if not exists magiczny_miecz.games (
   -- Where the active seat is in its turn: the phase and whatever that phase is
   -- carrying — the roll, the options, the cards drawn, the fight. Written as
   -- one value so a turn cannot be half-changed.
+  -- Since the resolution stack (docs/STACK.md) the column holds
+  -- {"stack": [TurnPhase, ...]}. The default deliberately stays the old
+  -- one-frame shape: asTurnState() reads it as a one-frame stack, so no DDL and
+  -- no migration — Michał ruled the live tables disposable. Move the default
+  -- when the tolerant read is retired.
   turn_state jsonb not null default '{"phase": "roll"}'::jsonb,
   -- The three piles, in simulation: what is left to deal and what has been
   -- used. Null in companion mode, where the cards are on the table.

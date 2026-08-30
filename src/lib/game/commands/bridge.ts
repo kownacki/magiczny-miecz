@@ -29,6 +29,7 @@ import {
   startGuardianFight,
   strengthPending,
 } from "@/lib/engine/turn";
+import { only, replaceTop, top } from "@/lib/engine/stack";
 import {
   apply,
   merge,
@@ -105,7 +106,7 @@ export function settleBridge(
         // 11.10: "Jeżeli próba wkroczenia na Most jest udana, tura Postaci
         // kończy się na Wejściu na Most" — the square is reached but not
         // resolved.
-        game: { turn_state: endTurn() },
+        game: { turn_state: only(endTurn()) },
         journal: [
           {
             seatId: seat.id,
@@ -144,7 +145,7 @@ export function settleBridge(
   return {
     writes: {
       seats: [{ id: seat.id, patch }],
-      game: { turn_state: endTurn() },
+      game: { turn_state: only(endTurn()) },
       journal: [
         {
           seatId: seat.id,
@@ -234,7 +235,7 @@ export function settleCrossing(
   return {
     writes: mergeAll(shedding, {
       seats: [{ id: seat.id, patch: { field_id: crossing.to } }],
-      game: { turn_state: afterMove(field, crossing.from) },
+      game: { turn_state: replaceTop(snapshot.game.turn_state, afterMove(field, crossing.from)) },
       journal: [
         {
           seatId: seat.id,
@@ -268,13 +269,17 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
 
   const totals = pointsOf(snapshot, seat.id, "walka");
+  const state = top(snapshot.game.turn_state);
 
-  if (snapshot.game.turn_state.phase === "bridge") {
-    const entrance = snapshot.game.turn_state.bridge;
+  if (state.phase === "bridge") {
+    const entrance = state.bridge;
     return {
       writes: {
         game: {
-          turn_state: startGuardianFight({ kind: "bridge", entrance }, totals, seat.field_id),
+          turn_state: replaceTop(
+            snapshot.game.turn_state,
+            startGuardianFight({ kind: "bridge", entrance }, totals, seat.field_id),
+          ),
         },
         journal: [
           {
@@ -296,7 +301,10 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
   return {
     writes: {
       game: {
-        turn_state: startGuardianFight({ kind: "crossing", crossing }, totals, seat.field_id),
+        turn_state: replaceTop(
+          snapshot.game.turn_state,
+          startGuardianFight({ kind: "crossing", crossing }, totals, seat.field_id),
+        ),
       },
       journal: [
         {
@@ -328,7 +336,7 @@ export async function rollGuardianStrength(
   ports: CommandPorts,
 ): Promise<Outcome<{ strength: number }>> {
   const seat = activeSeat(snapshot);
-  const phase = snapshot.game.turn_state;
+  const phase = top(snapshot.game.turn_state);
   if (phase.phase !== "fight") throw new Error("Nie ma walki.");
   if (!strengthPending(phase.fight)) {
     throw new Error("Siła przeciwnika jest już znana.");
@@ -340,7 +348,7 @@ export async function rollGuardianStrength(
 
   return {
     writes: {
-      game: { turn_state: next },
+      game: { turn_state: replaceTop(snapshot.game.turn_state, next) },
       journal: [
         {
           seatId: seat.id,
@@ -366,12 +374,13 @@ export function enterBridge(
   snapshot: Snapshot,
   command: { outcome: BridgeOutcome },
 ): Outcome<{ at: string | null }> {
-  if (snapshot.game.turn_state.phase !== "bridge") {
+  const state = top(snapshot.game.turn_state);
+  if (state.phase !== "bridge") {
     throw new Error("Nie ma teraz próby wejścia na Most.");
   }
   return settleBridge(
     snapshot,
-    snapshot.game.turn_state.bridge,
+    state.bridge,
     command.outcome === "porazka" ? "przegrana" : command.outcome,
   );
 }
@@ -398,7 +407,7 @@ export function payFerry(
   command: { pay: boolean },
 ): Outcome<{ at: string }> {
   const seat = activeSeat(snapshot);
-  const phase = snapshot.game.turn_state;
+  const phase = top(snapshot.game.turn_state);
   if (phase.phase !== "field" || !isFerry(phase.fieldId)) {
     throw new Error("Nie stoisz na Przeprawie.");
   }
@@ -439,7 +448,7 @@ export function payFerry(
   return {
     writes: {
       seats: [{ id: seat.id, patch: { field_id: back } }],
-      game: { turn_state: endTurn() },
+      game: { turn_state: only(endTurn()) },
       journal: [
         {
           seatId: seat.id,
@@ -610,7 +619,7 @@ export async function resolveBridgeOrdeal(
   // Miecz and Magia, which is what `startGuardianFight` expects.
   const totals = pointsOf(snapshot, seat.id, "parametr");
   /** Every ordeal but the two creatures' ends the turn where it stands. */
-  const closed: Changeset = { game: { turn_state: endTurn() } };
+  const closed: Changeset = { game: { turn_state: only(endTurn()) } };
 
   // --- Pułapka / Magiczna Pułapka (14.5)
   if (here === "pulapka" || here === "magiczna-pulapka") {
@@ -766,7 +775,7 @@ export async function resolveBridgeOrdeal(
   return {
     writes: {
       // The turn does not end: the fight is the turn, and it is still open.
-      game: { turn_state: phase },
+      game: { turn_state: replaceTop(snapshot.game.turn_state, phase) },
       journal: [
         {
           seatId: seat.id,

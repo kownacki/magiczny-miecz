@@ -1,3 +1,4 @@
+import { asTurnState } from "@/lib/engine/stack";
 import { NextResponse } from "next/server";
 import { refused } from "@/app/api/refused";
 import {
@@ -13,8 +14,6 @@ import {
 import { AWAY_AFTER_MS } from "@/lib/game/commands/lobby";
 import { sweepLobby } from "@/lib/game/lobbyStore";
 import { envelopeFor } from "@/lib/game/envelope";
-import type { GameRow } from "@/lib/game/store";
-import type { TurnPhase } from "@/lib/engine/turn";
 import { effectsFor } from "@/lib/game/turnStore";
 
 /**
@@ -66,7 +65,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   // above, and this request is the busiest in the app. `journalSeq` is nothing
   // to a reader, which is why it is the only field made up.
   const table = {
-    game: game as GameRow & { turn_state: TurnPhase },
+    // The third door a stored turn walks through — this one on its way OUT to
+    // every device. Old rows leave as a one-frame stack; see `asTurnState`.
+    game: { ...game, turn_state: asTurnState(game.turn_state) },
     seats,
     users,
     holdings,

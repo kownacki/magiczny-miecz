@@ -11,7 +11,7 @@ import { isQuiet } from "./commands/lobby";
 import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
 import { Failure } from "./failure";
-import type { TurnPhase } from "@/lib/engine/turn";
+import { asTurnState, type TurnState } from "@/lib/engine/stack";
 
 /**
  * A place at the table and the Postać standing in it — and nobody's name.
@@ -312,14 +312,17 @@ export async function findGame(joinCode: string): Promise<GameRow | null> {
  */
 export async function gameById(
   gameId: string,
-): Promise<GameRow & { turn_state: TurnPhase }> {
+): Promise<GameRow & { turn_state: TurnState }> {
   const { data, error } = await db
     .from("games")
     .select(GAME_COLUMNS)
     .eq("id", gameId)
     .single();
   if (error) throw new Failure(`gameById: ${error.message}`);
-  return data as GameRow & { turn_state: TurnPhase };
+  // The second of the two doors a stored turn walks through (see `loadGame`
+  // in change.ts): rows from before the stack arrive as a one-frame stack.
+  const row = data as GameRow;
+  return { ...row, turn_state: asTurnState(row.turn_state) };
 }
 
 /**

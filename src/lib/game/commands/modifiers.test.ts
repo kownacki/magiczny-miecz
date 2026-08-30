@@ -1,3 +1,4 @@
+import { top, type TurnState } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
@@ -63,7 +64,8 @@ const rolled = async (table: ReturnType<typeof inFight>, side: "player" | "enemy
 };
 
 const totalIn = (writes: { game?: { turn_state?: unknown } }) =>
-  (writes.game?.turn_state as { fight: { playerTotal: number } }).fight.playerTotal;
+  (top(writes.game?.turn_state as TurnState) as { fight: { playerTotal: number } }).fight
+    .playerTotal;
 
 describe("the Talizmany, which shift the die and not the total", () => {
   /** "pozwala dodać 1 do wyniku rzutu kostką podczas walki (lecz nie magicznej)" */
@@ -112,7 +114,7 @@ describe("the Relikwiarz, which beats Demons without fighting them", () => {
     const out = beginFight(table, { cardIds: ["demon"] });
     const after = apply(table, out.writes);
 
-    expect((out.writes.game?.turn_state as { phase?: string } | undefined)?.phase).not.toBe("fight");
+    expect(out.writes.game?.turn_state && top(out.writes.game.turn_state).phase).not.toBe("fight");
     expect(after.holdings.some((h) => h.kind === "trophy" && h.card_id === "demon")).toBe(true);
   });
 
@@ -120,10 +122,10 @@ describe("the Relikwiarz, which beats Demons without fighting them", () => {
     const ksiaze = beginFight(facing("ksiaze-demonow", ["relikwiarz"]), {
       cardIds: ["ksiaze-demonow"],
     });
-    expect((ksiaze.writes.game?.turn_state as { phase?: string } | undefined)?.phase).not.toBe("fight");
+    expect(ksiaze.writes.game?.turn_state && top(ksiaze.writes.game.turn_state).phase).not.toBe("fight");
 
     const cyklop = beginFight(facing("cyklop", ["relikwiarz"]), { cardIds: ["cyklop"] });
-    expect((cyklop.writes.game?.turn_state as { phase?: string }).phase).toBe("fight");
+    expect(top(cyklop.writes.game!.turn_state!).phase).toBe("fight");
   });
 });
 

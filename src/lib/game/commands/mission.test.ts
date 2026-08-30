@@ -1,3 +1,4 @@
+import { only } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aSeat, aTable, ports } from "../fixture";
@@ -60,7 +61,7 @@ const havingWon = (table: ReturnType<typeof standing>, foe: string, opponentSeat
   apply(table, {
     seats: [{ id: "seat-a", patch: { field_id: "wrzosowiska" } }],
     game: {
-      turn_state: {
+      turn_state: only({
         phase: "fight",
         fight: {
           cardId: foe,
@@ -77,7 +78,7 @@ const havingWon = (table: ReturnType<typeof standing>, foe: string, opponentSeat
           fought: [foe],
           ...(opponentSeat !== undefined ? { opponentSeat } : {}),
         },
-      } as unknown as TurnPhase,
+      } as unknown as TurnPhase),
     },
   });
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { aSeat, aTable, ports } from "../fixture";
 import { fightBeast } from "./beast";
+import { only } from "@/lib/engine/stack";
 
 /** The four dice, in the order the command asks for them. */
 const dice = (kind: number, strength: number, mine: number, its: number) =>
@@ -13,7 +14,7 @@ const table = (over: Parameters<typeof aSeat>[0] = {}) =>
 describe("Bestia (14.7, 22)", () => {
   it("ends the game when the character wins", async () => {
     const { writes } = await fightBeast(table({ sword_own: 15 }), undefined, dice(1, 1, 6, 1));
-    expect(writes.game).toMatchObject({ status: "finished", turn_state: { phase: "end" } });
+    expect(writes.game).toMatchObject({ status: "finished", turn_state: only({ phase: "end" }) });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "victory",
       payload: { kind: "ordinary", beastTotal: 10, rolls: { kindDie: 1, strengthDie: 1 } },

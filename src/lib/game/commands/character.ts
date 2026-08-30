@@ -31,6 +31,7 @@ import { eqModeOf, seatById } from "./seat";
 import type { Slot } from "@/lib/engine/slots";
 import { slotsOnArrival } from "@/lib/engine/holdings";
 import { startTurn } from "@/lib/engine/turn";
+import { only, top } from "@/lib/engine/stack";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 
 /** The 27 Karty Postaci, read the same way `turnStore` reads them. */
@@ -294,7 +295,7 @@ export function placeSeat(
    * stands somewhere else is the desync, not a lesser version of it. `rzut` is
    * left alone because the character has not moved yet this turn.
    */
-  const phase = snapshot.game.turn_state.phase;
+  const phase = top(snapshot.game.turn_state).phase;
   const restage: Changeset =
     seat.seat_index === snapshot.game.active_seat &&
     phase !== "roll" &&
@@ -306,14 +307,14 @@ export function placeSeat(
             // than the field's printed count, because a figure put here by hand
             // did not walk here, and 15.1 makes drawing a consequence of
             // arriving.
-            turn_state: {
+            turn_state: only({
               phase: "field",
               fieldId,
               from: null,
               draw: 0,
               drawn: [],
               fought: [],
-            },
+            }),
           },
         }
       : {};
@@ -644,7 +645,7 @@ export async function takeNewCharacter(
    */
   const resumed: Changeset =
     snapshot.game.active_seat === null
-      ? { game: { active_seat: seat.seat_index, turn_state: startTurn() } }
+      ? { game: { active_seat: seat.seat_index, turn_state: only(startTurn()) } }
       : {};
 
   // Plainly merged, not chained: nothing here reads a column another part of

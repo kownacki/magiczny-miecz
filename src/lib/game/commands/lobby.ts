@@ -1,6 +1,7 @@
 /** The poczekalnia: seats arriving, going quiet, being taken over, and going away. */
 
 import type { EqMode } from "@/lib/engine/slots";
+import { only } from "@/lib/engine/stack";
 import {
   apply,
   merge,
@@ -347,7 +348,7 @@ export function unseat(
   }
   return {
     writes: merge(released, {
-      game: { active_seat: next, turn_state: { phase: "roll" } },
+      game: { active_seat: next, turn_state: only({ phase: "roll" }) },
     }),
     result: { removed: false, passedTo: next, gameFinished: false },
   };

@@ -16,7 +16,7 @@ import {
   type SeatRow,
   type UserRow,
 } from "./store";
-import type { TurnPhase } from "@/lib/engine/turn";
+import { asTurnState, type TurnState } from "@/lib/engine/stack";
 import type { Ends, Modifier } from "@/lib/engine/status";
 import type { RandomPort } from "@/lib/engine/ports";
 import type { JournalKind } from "@/lib/engine/journal";
@@ -53,7 +53,7 @@ export interface EffectRow {
  * one round of small queries rather than a cost worth avoiding.
  */
 export interface Snapshot {
-  game: GameRow & { turn_state: TurnPhase };
+  game: GameRow & { turn_state: TurnState };
   seats: SeatRow[];
   /** Everybody at the table, seated or watching. */
   users: UserRow[];
@@ -164,7 +164,14 @@ export interface JournalWrite {
  * cascades into another folds their changesets together and commits once.
  */
 export interface Changeset {
-  game?: Partial<GameRow>;
+  /**
+   * `turn_state` is retyped here because `GameRow` leaves it `unknown` — the
+   * row type mirrors the database, which holds JSON. `unknown` accepts
+   * anything, so with `Partial<GameRow>` alone a writer could hand back the
+   * pre-stack shape and the compiler would wave it through. Every writer goes
+   * through this interface, so this is where the shape is enforced.
+   */
+  game?: Partial<Omit<GameRow, "turn_state">> & { turn_state?: TurnState };
   seats?: SeatPatch[];
   /**
    * Seat rows to remove, by id — and deliberately not `seats: { delete }`.
@@ -458,7 +465,13 @@ async function gameRow(gameId: string, on: DbHandle = handleNow()): Promise<Snap
     .eq("id", gameId)
     .single();
   if (error) throw new Failure(`loadGame: ${error.message}`);
-  return data as Snapshot["game"];
+  /**
+   * The one door a stored turn walks through on its way in, so the tolerant
+   * read happens exactly once. Rows written before the stack — including the
+   * column's own default — arrive as a one-frame stack; see `asTurnState`.
+   */
+  const row = data as GameRow;
+  return { ...row, turn_state: asTurnState(row.turn_state) };
 }
 
 export async function loadSnapshot(gameId: string, on: DbHandle = handleNow()): Promise<Snapshot> {

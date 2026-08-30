@@ -5,6 +5,7 @@ import { apply, merge, type Changeset, type CommandPorts, type Outcome, type Sna
 import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
 import { activeSeat, pointsOf } from "./seat";
 import { spendLife } from "./life";
+import { only } from "@/lib/engine/stack";
 
 /**
  * Fights the Bestia.
@@ -69,7 +70,7 @@ export async function fightBeast(
   if (result.outcome === "wygrana") {
     return {
       writes: {
-        game: { status: "finished", turn_state: { phase: "end" } },
+        game: { status: "finished", turn_state: only({ phase: "end" }) },
         journal: [
           {
             seatId: seat.id,

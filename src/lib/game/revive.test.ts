@@ -1,3 +1,4 @@
+import { asTurnState, top } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { memoryStore, resetStore, setStore } from "./gameStore";
 import type { Tables } from "./fakeDb";
@@ -86,7 +87,7 @@ describe("the only Postać dies and its player takes another (4.4)", () => {
     // Standing on its MGR *and* able to play: it is turn one of the rest of
     // the game, not a figure on a board nobody may touch.
     expect(game(tables).active_seat).toBe(0);
-    expect(game(tables).turn_state).toMatchObject({ phase: "roll" });
+    expect(top(asTurnState(game(tables).turn_state))).toMatchObject({ phase: "roll" });
     // The dead Karta stays out of the game (4.4), which is what stops it being
     // picked again by the very seat that overwrote it.
     expect(game(tables).characters_out).toEqual(["goblin"]);

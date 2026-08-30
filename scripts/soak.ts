@@ -26,6 +26,7 @@ process.env.MM_HOME = mkdtempSync(join(tmpdir(), "mm-play-"));
 import { parseCommand } from "@/lib/engine/console";
 import { runCommand } from "@/lib/game/consoleStore";
 import { activeStore, setStore } from "@/lib/game/gameStore";
+import { top } from "@/lib/engine/stack";
 import { newSave } from "@/lib/game/saves";
 import { seatsFor, usersFor } from "@/lib/game/store";
 import events from "@/data/events.json";
@@ -85,14 +86,14 @@ for (let turn = 0; turn < TURNS; turn++) {
     }
   }
   await run("roll");
-  const state = (await activeStore().load(gameId)).game.turn_state as {
+  const state = top((await activeStore().load(gameId)).game.turn_state) as {
     phase?: string; options?: { fieldName: string }[];
   };
   if (state.options?.length) await run(`move ${state.options[0].fieldName}`);
 
   // Whatever the Obszar turned out to want, tried in a plausible order.
   for (let step = 0; step < 6; step++) {
-    const now = (await activeStore().load(gameId)).game.turn_state as {
+    const now = top((await activeStore().load(gameId)).game.turn_state) as {
       phase?: string; drawn?: { cardId: string; cardClass: string }[]; resolved?: string[];
     };
     if (now.phase === "fight") { await run("fight"); continue; }

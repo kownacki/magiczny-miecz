@@ -1,3 +1,4 @@
+import { top, type TurnState } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
@@ -263,7 +264,7 @@ const twoSeats = (theirField: FieldId, cards: string[] = ["poszukiwacz-przygod"]
   });
 
 const fightOf = (writes: { game?: { turn_state?: unknown } }) =>
-  (writes.game?.turn_state as Extract<TurnPhase, { phase: "fight" }>).fight;
+  (top(writes.game?.turn_state as TurnState) as Extract<TurnPhase, { phase: "fight" }>).fight;
 
 describe("sending a Przyjaciel out (Poszukiwacz Przygód)", () => {
   it("fights with the friend's three points, not the character's five", () => {

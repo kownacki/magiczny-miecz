@@ -5,6 +5,7 @@ import { afterTurn, playsAgain, type Status } from "@/lib/engine/status";
 import { scriptFor } from "@/lib/engine/cardScript";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
+import { only, top } from "@/lib/engine/stack";
 import { apply, merge, mergeAll, type Changeset, type Snapshot } from "../change";
 import { putOnPile } from "./piles";
 
@@ -23,14 +24,14 @@ import { putOnPile } from "./piles";
  * cannot reach either without first doing one of those two.
  */
 export function hasExplored(snapshot: Snapshot): boolean {
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") return false;
   return state.drawn.length > 0 || (state.resolved?.length ?? 0) > 0;
 }
 
 /** Whether this turn has already been spent on a meeting (13.2). */
 export function hasMet(snapshot: Snapshot): boolean {
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   return state.phase === "field" && state.met === true;
 }
 
@@ -199,11 +200,12 @@ export function passTurn(snapshot: Snapshot): Changeset {
   const again = seat ? playsAgain(statusesOf(snapshot, seat.id)) : false;
   const expired = seat ? tickEffects(snapshot, seat.id) : {};
 
+  const state = top(game.turn_state);
   const left =
-    game.turn_state.phase === "field" && game.turn_state.drawn.length > 0
+    state.phase === "field" && state.drawn.length > 0
       ? leaveCardsBehind(apply(snapshot, expired), {
-          fieldId: game.turn_state.fieldId,
-          remaining: game.turn_state.drawn,
+          fieldId: state.fieldId,
+          remaining: state.drawn,
           seatId: seat?.id ?? null,
           turn: game.turn,
         })
@@ -289,7 +291,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
     game: {
       active_seat: again ? game.active_seat : next,
       turn: wrapped ? game.turn + 1 : game.turn,
-      turn_state: startTurn(),
+      turn_state: only(startTurn()),
     },
     // `wrapped` and the number it wrapped to, because the round counter is not
     // derivable from the row: the journal reads entries in order and has no way

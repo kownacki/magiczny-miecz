@@ -1,3 +1,4 @@
+import { asTurnState, top } from "@/lib/engine/stack";
 import { afterEach, describe, expect, it } from "vitest";
 import { Conflict, apply } from "./change";
 import { activeStore, memoryStore, resetStore, setStore } from "./gameStore";
@@ -79,7 +80,7 @@ describe("a game kept somewhere that is not Postgres", () => {
 
     const game = tables.games[0] as Record<string, unknown>;
     expect(game.revision).toBe(8);
-    expect((game.turn_state as { phase: string }).phase).toBe("move");
+    expect(top(asTurnState(game.turn_state)).phase).toBe("move");
     // The roll was recorded, numbered from where the snapshot found the mark.
     expect(tables.moves.map((row) => row.seq)).toEqual([12, 13]);
     expect(tables.moves[1]).toMatchObject({ kind: "roll", payload: { roll: 4, manual: true } });

@@ -1,3 +1,4 @@
+import { top } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { aSeat, aTable } from "../fixture";
 import { asFieldId } from "@/lib/engine/board";
@@ -68,7 +69,7 @@ describe("meeting or exploring, not both (13.2)", () => {
    */
   it("keeps the mark through the fight and back out again", () => {
     const started = startFight(
-      onField().game.turn_state,
+      top(onField().game.turn_state),
       { cardId: "seat:1", cardName: "Ola", miecz: 2, opponentSeat: 1 },
       { miecz: 9, magia: 1 },
     );
@@ -80,7 +81,7 @@ describe("meeting or exploring, not both (13.2)", () => {
   /** A fight with a Karta is not a meeting, and must not spend the turn. */
   it("does not mark a fight with a Wróg", () => {
     const started = startFight(
-      onField().game.turn_state,
+      top(onField().game.turn_state),
       { cardId: "cyklop", cardName: "CYKLOP", miecz: 6 },
       { miecz: 9, magia: 1 },
     );

@@ -5,6 +5,7 @@ import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } f
 import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
 import { startTurn } from "@/lib/engine/turn";
+import { only } from "@/lib/engine/stack";
 
 /**
  * The two things 4.4 does not have a word for.
@@ -280,7 +281,7 @@ export function reviveCharacter(
                 ? { characters_out: out.filter((id) => id !== character) }
                 : {}),
               ...(snapshot.game.active_seat === null
-                ? { active_seat: seat.seat_index, turn_state: startTurn() }
+                ? { active_seat: seat.seat_index, turn_state: only(startTurn()) }
                 : {}),
             },
           }

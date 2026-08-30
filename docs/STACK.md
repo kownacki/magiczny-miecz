@@ -1,6 +1,9 @@
 # The resolution stack
 
-**Status: step 0 — the laws and the plan. No code yet.** Decided 2026-08-30.
+**Status: step 1 built** (2026-08-30) — `turn_state` is a stack, every read and
+write goes through `stack.ts`, `Fight.resume` is gone and a summoned fight
+pushes. Zero observable change; see the narrowing recorded under the steps.
+Steps 2–4 are still to come. The laws below were decided before any code.
 
 The engine keeps one frame of turn state and forgets where it was whenever
 something opens on top of it. This page is the specification for replacing
@@ -159,7 +162,7 @@ subscription.
 | step | what | gate |
 |---|---|---|
 | **0** | this page; the acceptance test below written as a test | the test exists and is skipped |
-| **1** | `turn_state = { stack }`; `top()`; the ~235 `turn_state.phase` reads become `top(stack).kind`; `endFight` pops; `placeSeat` cuts; `Fight.resume` deleted | every existing test passes unchanged; console `state` prints the stack |
+| **1** | `turn_state = { stack }`; `top()`; every read goes through `top()`, every write through `only`/`replaceTop`/`push`/`pop`; `Fight.resume` deleted — a summoned fight **pushes** over the frame it interrupted and closing it pops | suite green; console `state` prints the stack when it is deeper than one |
 | **2** | `script` frames with a cursor; `ask` replaces `pending` re-walk; `walka` inside a script pushes; `cast` above `fight` | acceptance test passes; `po-kolei`'s all-or-nothing branch is gone |
 | **3** | cash in: Trójgłowy Smok (`loop`), CHOCHLIK (`ask` outside a script), Odmiana Losu by a bystander, the 18 anytime spells acting on the fight beneath | one commit per card; its MANUAL entry deleted; `coverage.ts` shrinks |
 | **4** | browser: draw sheet and fight sheet render `top(stack)`; "waiting for X" drawn from the frame's `seatId` | the scenario clicked through on a real table |
@@ -167,6 +170,14 @@ subscription.
 **Order within each step: engine, then the console (terminal and browser
 `>_`), then the GUI.** The console is the cheapest surface and the one that
 prints the stack raw; if it cannot show a frame, the GUI has nothing to draw.
+
+**A narrowing taken in step 1, recorded here** (2026-08-30): ordinary fights
+still *replace* the field frame at depth 1, exactly as before — `endFight`
+keeps rebuilding the field from the Fight's own copies, and only the summoned
+fight genuinely pushes. Moving fights to push-over-field is step 2's work,
+where the frame beneath becomes the source of truth; doing it in step 1 would
+have made "zero behaviour change" unprovable. The frame discriminant also
+stays `phase` (not the doc's sketched `kind`) — one rename fewer, same union.
 
 **Go/no-go after step 2**, before anything in step 3 deletes a MANUAL entry.
 Step 1 is reversible; step 2 is the point of no return.

@@ -4,6 +4,7 @@ import { asSeatCharacter } from "@/lib/engine/characters";
 import type { DeckState, Shuffle } from "@/lib/engine/deck";
 import { PRINTED_STOCK } from "@/lib/engine/stock";
 import type { TurnPhase } from "@/lib/engine/turn";
+import { top } from "@/lib/engine/stack";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { drawCard, drawSpell, drawSpellWithWand, shopStock } from "./draw";
@@ -93,7 +94,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
 
   it("puts the card into the turn with the slice it came off", () => {
     const { writes } = drawCard(table(), { named: null, shuffle: never });
-    expect(writes.game?.turn_state).toMatchObject({
+    expect(top(writes.game!.turn_state!)).toMatchObject({
       phase: "field",
       drawn: [{ cardId: "cyklop", cardClass: "foe", ref: eventRef("cyklop") }],
     });
@@ -135,7 +136,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
     });
     const { writes } = drawCard(holding, { named: null, shuffle: never });
     expect(
-      (writes.game?.turn_state as Extract<TurnPhase, { phase: "field" }>).drawn.map(
+      (top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "field" }>).drawn.map(
         (card) => card.cardId,
       ),
     ).toEqual(["cyklop", "helm"]);

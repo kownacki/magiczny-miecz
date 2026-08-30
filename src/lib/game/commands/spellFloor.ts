@@ -5,6 +5,7 @@ import type { SpellFloor } from "@/lib/engine/turn";
 import type { Changeset, CommandPorts, Outcome, Snapshot } from "../change";
 import { seatById } from "./seat";
 import { nameOfSeat } from "./lobby";
+import { replaceTop, top } from "@/lib/engine/stack";
 
 /**
  * How long a claim lasts before it lapses.
@@ -36,7 +37,7 @@ export function claimFloor(
   command: { seatId: string },
   ports: CommandPorts,
 ): Outcome<void> {
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   if (state.phase !== "fight") throw new Error("Nie ma walki.");
 
   const seat = seatById(snapshot, command.seatId);
@@ -63,13 +64,13 @@ export function claimFloor(
   return {
     writes: {
       game: {
-        turn_state: {
+        turn_state: replaceTop(snapshot.game.turn_state, {
           ...state,
           fight: {
             ...state.fight,
             caster: { seat: seat.seat_index, until: ports.now() + FLOOR_MS },
           },
-        },
+        }),
       },
     },
     result: undefined,
@@ -82,7 +83,7 @@ export function releaseFloor(
   command: { seatId: string },
   ports: CommandPorts,
 ): Outcome<void> {
-  const state = snapshot.game.turn_state;
+  const state = top(snapshot.game.turn_state);
   const nothing: Changeset = {};
   if (state.phase !== "fight") return { writes: nothing, result: undefined };
 
@@ -93,7 +94,12 @@ export function releaseFloor(
 
   return {
     writes: {
-      game: { turn_state: { ...state, fight: { ...state.fight, caster: null } } },
+      game: {
+        turn_state: replaceTop(snapshot.game.turn_state, {
+          ...state,
+          fight: { ...state.fight, caster: null },
+        }),
+      },
     },
     result: undefined,
   };

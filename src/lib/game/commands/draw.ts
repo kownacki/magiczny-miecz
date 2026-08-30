@@ -8,6 +8,7 @@ import { plural } from "@/lib/engine/polish";
 import { wandRefills } from "@/lib/engine/derive";
 import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { afterDraw } from "@/lib/engine/turn";
+import { replaceTop, top } from "@/lib/engine/stack";
 import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
 import { activeSeat, holdingsOf, seatById, seatView } from "./seat";
@@ -94,7 +95,8 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   const seat = activeSeat(snapshot);
   // 13.2: a turn spent meeting somebody is not also spent exploring.
   refuseAgainst13_2(snapshot, "explore");
-  if (snapshot.game.turn_state.phase !== "field") {
+  const state = top(snapshot.game.turn_state);
+  if (state.phase !== "field") {
     throw new Error("Nie czas na ciągnięcie kart (13.4).");
   }
 
@@ -103,7 +105,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
     if (!named) throw new Error("Podaj nazwę wyciągniętej karty.");
     return {
       writes: {
-        game: { turn_state: afterDraw(snapshot.game.turn_state, named) },
+        game: { turn_state: replaceTop(snapshot.game.turn_state, afterDraw(state, named)) },
         journal: [
           {
             seatId: seat.id,
@@ -126,8 +128,8 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   const card = BY_REF.get(drawn[0]);
   if (!card) throw new Error(`Nieznana karta w talii: ${drawn[0]}`);
 
-  // Plainly built, not chained: the turn state is derived from the phase the
-  // snapshot was read at and the deck from the pile it was read with, so
+  // Plainly built, not chained: the turn state advances the top frame the
+  // snapshot was read at and the deck comes from the pile it was read with, so
   // neither half of this `game` patch reads what the other writes.
   const recycledLine: Changeset["journal"] = recycled
     ? [
@@ -142,11 +144,14 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   return {
     writes: {
       game: {
-        turn_state: afterDraw(snapshot.game.turn_state, {
-          cardId: card.id,
-          cardClass: card.cardClass,
-          ref: drawn[0],
-        }),
+        turn_state: replaceTop(
+          snapshot.game.turn_state,
+          afterDraw(state, {
+            cardId: card.id,
+            cardClass: card.cardClass,
+            ref: drawn[0],
+          }),
+        ),
         deck: { ...decks, events: after },
       },
       journal: [

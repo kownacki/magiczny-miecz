@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { asFieldId, requireFieldId } from "@/lib/engine/board";
 import { afterRoll } from "@/lib/engine/turn";
+import { only, top, type TurnState } from "@/lib/engine/stack";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { HoldingRow } from "../store";
 import { NOW, aHolding, aSeat, aTable, aUser, noDeck, ports } from "../fixture";
@@ -62,7 +63,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
       status: "playing",
       turn: 1,
       active_seat: 1,
-      turn_state: { phase: "roll" },
+      turn_state: only({ phase: "roll" }),
     });
     // `at(0)`, not `at(-1)`: the opening roster follows the start line, one per
     // seat that actually holds a Karta.
@@ -205,8 +206,8 @@ describe("rzut na ruch (10.2)", () => {
   it("throws one die and offers both ways round the ring", async () => {
     const { writes, result } = await rollForMove(rolling(), {}, die(2));
     expect(result).toBe(2);
-    expect(writes.game?.turn_state).toMatchObject({ phase: "move", roll: 2 });
-    const options = (writes.game?.turn_state as { options: { fieldId: string }[] }).options;
+    expect(top(writes.game!.turn_state!)).toMatchObject({ phase: "move", roll: 2 });
+    const options = (top(writes.game!.turn_state!) as { options: { fieldId: string }[] }).options;
     expect(options.map((option) => option.fieldId)).toEqual(["pustelnia", "plaskowyz-mgiel"]);
   });
 
@@ -272,8 +273,8 @@ describe("rzut na ruch (10.2)", () => {
     const { writes, result } = await rollForMove(fogged, {}, die(5));
     expect(result).toBe(5);
     // The throw is untouched, on the record and on the screen.
-    expect(writes.game?.turn_state).toMatchObject({ roll: 5 });
-    const options = (writes.game?.turn_state as { options: { fieldId: string }[] }).options;
+    expect(top(writes.game!.turn_state!)).toMatchObject({ roll: 5 });
+    const options = (top(writes.game!.turn_state!) as { options: { fieldId: string }[] }).options;
     // One field either way, which is a 1 rather than the 5 that was thrown.
     const atOne = afterRoll(requireFieldId("zaczarowane-wzgorza"), 1);
     expect(options.map((o) => o.fieldId)).toEqual(
@@ -312,8 +313,8 @@ describe("rzut na ruch (10.2)", () => {
     const atUrwisko = (seat: Parameters<typeof aSeat>[0] = {}, holdings: HoldingRow[] = []) =>
       rolling({ field_id: "urwisko-1", ...seat }, holdings);
 
-    const bridges = (writes: { game?: { turn_state?: unknown } }) =>
-      (writes.game?.turn_state as { options: { bridge?: { from: string } }[] }).options.filter(
+    const bridges = (writes: { game?: { turn_state?: TurnState } }) =>
+      (top(writes.game!.turn_state!) as { options: { bridge?: { from: string } }[] }).options.filter(
         (option) => option.bridge,
       );
 
@@ -359,7 +360,7 @@ describe("ruch (10.2, 13.4)", () => {
   it("moves the figure and opens the field it landed on", () => {
     const { writes } = moveTo(walking("zaczarowane-wzgorza"), { destination: "pustelnia" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "pustelnia" } }]);
-    expect(writes.game?.turn_state).toEqual({
+    expect(top(writes.game!.turn_state!)).toEqual({
       phase: "field",
       fieldId: "pustelnia",
       from: "zaczarowane-wzgorza",
@@ -380,7 +381,7 @@ describe("ruch (10.2, 13.4)", () => {
   it("carries the field's printed draw (13.4)", () => {
     const { writes } = moveTo(walking("zaczarowane-wzgorza"), { destination: "plaskowyz-mgiel" });
     // "WYCIĄGNIJ 3 KARTY", walked anticlockwise.
-    expect(writes.game?.turn_state).toMatchObject({ draw: 3 });
+    expect(top(writes.game!.turn_state!)).toMatchObject({ draw: 3 });
     expect(writes.journal?.[0]).toMatchObject({ payload: { direction: "widdershins" } });
   });
 
@@ -420,7 +421,7 @@ describe("ruch (10.2, 13.4)", () => {
 
     // Only this field's card leaves the board; the one two squares away stays.
     expect(writes.fieldCards).toEqual({ delete: ["fc-1"] });
-    expect(writes.game?.turn_state).toMatchObject({
+    expect(top(writes.game!.turn_state!)).toMatchObject({
       draw: 3,
       drawn: [{ cardId: "helm", cardClass: "item" }],
     });
@@ -437,7 +438,7 @@ describe("ruch (10.2, 13.4)", () => {
     it("stops at the entrance with the guardian still to be faced", () => {
       const { writes } = moveTo(table(), { destination: "ruiny-twierdzy", viaBridge: true });
       expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "ruiny-twierdzy" } }]);
-      expect(writes.game?.turn_state).toEqual({
+      expect(top(writes.game!.turn_state!)).toEqual({
         phase: "bridge",
         bridge: {
           from: "ruiny-twierdzy",

@@ -4,6 +4,7 @@ import { asSeatCharacter } from "@/lib/engine/characters";
 import { removeCharacter, reviveCharacter } from "./withdraw";
 import { aHolding, aSeat, aTable, aUser } from "../fixture";
 import { apply } from "../change";
+import { only } from "@/lib/engine/stack";
 
 /**
  * The two things 4.4 does not have a word for.
@@ -266,7 +267,7 @@ describe("przywrócenie Postaci (konsola)", () => {
       ],
     });
     const { writes } = reviveCharacter(stopped, { seatId: "seat-a" });
-    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: { phase: "roll" } });
+    expect(writes.game).toMatchObject({ active_seat: 0, turn_state: only({ phase: "roll" }) });
     // And the Karta is still taken off the out list, which shares the column.
     expect(writes.game?.characters_out).toEqual([]);
   });

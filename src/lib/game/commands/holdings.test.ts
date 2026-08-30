@@ -5,6 +5,7 @@ import { PRINTED_STOCK } from "@/lib/engine/stock";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { apply, type Snapshot } from "../change";
 import { aHolding, aSeat, aTable } from "../fixture";
+import { top } from "@/lib/engine/stack";
 import {
   dropCard,
   equipCard,
@@ -309,7 +310,7 @@ describe("taking a card", () => {
       },
     });
     const { writes } = takeCard(drawn, { seatId: "seat-a", cardId: "helm" });
-    const after = apply(drawn, writes).game.turn_state;
+    const after = top(apply(drawn, writes).game.turn_state);
     expect(after.phase === "field" && after.drawn.map((c) => c.cardId)).toEqual(["tarcza"]);
   });
 });

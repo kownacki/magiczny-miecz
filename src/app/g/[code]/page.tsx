@@ -1,5 +1,6 @@
 "use client";
 
+import { top } from "@/lib/engine/stack";
 import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
@@ -734,7 +735,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   // The same reading the server refuses a cast against (9.1), not a second one
   // that agrees with it most of the time.
-  const now = game ? momentsIn(game.turn_state) : ["dowolna-chwila" as const];
+  const now = game ? momentsIn(top(game.turn_state)) : ["dowolna-chwila" as const];
 
   const mine = mySeat
     ? {
@@ -779,7 +780,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * these are not offers at all. What is left here is turning the turn state
    * into the plain facts it asks about.
    */
-  const turnState = game.turn_state;
+  /**
+   * The frame on screen, bound once. Everything below reads the top of the
+   * stack through this one name — the narrowing needs a single binding, and a
+   * page that asked `top()` at every use would be that many chances to mix
+   * frames after a poll.
+   */
+  const turnState = top(game.turn_state);
   const turnWindows = active ? windowsFor(factsIn(turnState, active.field_id)) : [];
 
   /**
@@ -843,7 +850,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           players={seats
             .filter((seat) => seat.character_id)
             .map((seat) => seat.player_name ?? `Miejsce ${seat.seat_index + 1}`)}
-          stage={stageOf(game.status, game.turn_state.phase)}
+          stage={stageOf(game.status, turnState.phase)}
           onClose={() => {
             setConsoleOpen(false);
             setFailure(null);
@@ -957,7 +964,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           seatIndex={active.seat_index}
           owed={owedLabel(
             turnWindows,
-            game.turn_state.phase === "fight" ? game.turn_state.fight.cardName : null,
+            turnState.phase === "fight" ? turnState.fight.cardName : null,
           )}
           onOpen={() => {
             // Back to whatever the turn is on: the sheet if it is a fight or a
@@ -982,25 +989,25 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             canAct={mySeatIndex === active.seat_index || isTableScreen}
             minimized={folded}
             onMinimize={() => setFolded(true)}
-            cards={game.turn_state.phase === "field" ? game.turn_state.drawn : []}
+            cards={turnState.phase === "field" ? turnState.drawn : []}
             resolved={
-              game.turn_state.phase === "field"
-                ? [...(game.turn_state.resolved ?? []), ...waved]
+              turnState.phase === "field"
+                ? [...(turnState.resolved ?? []), ...waved]
                 : []
             }
-            fought={game.turn_state.phase === "field" ? (game.turn_state.fought ?? []) : []}
-            fight={game.turn_state.phase === "fight" ? game.turn_state.fight : null}
+            fought={turnState.phase === "field" ? (turnState.fought ?? []) : []}
+            fight={turnState.phase === "fight" ? turnState.fight : null}
             // The direction choice, which used to be a panel of its own below
             // the queue. It is the same shape as everything else in here: one
             // thing you are asked to do, with the table watching.
             move={
-              game.turn_state.phase === "move"
-                ? { roll: game.turn_state.roll, options: game.turn_state.options }
+              turnState.phase === "move"
+                ? { roll: turnState.roll, options: turnState.options }
                 : null
             }
-            bridge={game.turn_state.phase === "bridge" ? game.turn_state.bridge : null}
+            bridge={turnState.phase === "bridge" ? turnState.bridge : null}
             fieldOffer={
-              game.turn_state.phase === "field" ? compulsoryOffer(active.field_id, game.turn_state.resolved ?? []) : null
+              turnState.phase === "field" ? compulsoryOffer(active.field_id, turnState.resolved ?? []) : null
             }
             simulated={game.mode === "simulation"}
             /**
@@ -1027,8 +1034,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,
             }))}
             floor={
-              game.turn_state.phase === "fight"
-                ? (game.turn_state.fight.caster ?? null)
+              turnState.phase === "fight"
+                ? (turnState.fight.caster ?? null)
                 : null
             }
             mySeatIndex={mySeatIndex}
@@ -1077,9 +1084,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                shared screen keeps it too, since in companion mode it is the
                device the whole table is pressing. */
             myEscape={
-              game.turn_state.phase === "fight" &&
-              game.turn_state.fight.opponentSeat !== undefined &&
-              (isTableScreen || game.turn_state.fight.opponentSeat === mySeatIndex)
+              turnState.phase === "fight" &&
+              turnState.fight.opponentSeat !== undefined &&
+              (isTableScreen || turnState.fight.opponentSeat === mySeatIndex)
             }
             ring={ringFields(active.field_id)}
             /* 1.5's fight total, for the Sobowtór, whose Miecz is whoever is
@@ -1094,7 +1101,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             onResolveField={(choices) => {
               const offer = compulsoryOffer(
                 active.field_id,
-                game.turn_state.phase === "field" ? (game.turn_state.resolved ?? []) : [],
+                turnState.phase === "field" ? (turnState.resolved ?? []) : [],
               );
               if (offer) post("turn", { action: "pole-tabela", offer: offer.name, choices });
             }}
@@ -1123,8 +1130,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           // corner: a turn is read in one place and should be finished there.
           canEnd={
             !!active &&
-            game.turn_state.phase !== "fight" &&
-            mayEndTurn({ fieldId: active.field_id, done: [], phase: game.turn_state.phase })
+            turnState.phase !== "fight" &&
+            mayEndTurn({ fieldId: active.field_id, done: [], phase: turnState.phase })
           }
           whyNotEnd={
             active
@@ -1132,7 +1139,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   dutiesBeforeEnding({
                     fieldId: active.field_id,
                     done: [],
-                    phase: game.turn_state.phase,
+                    phase: turnState.phase,
                   }),
                 )
               : null
@@ -1629,8 +1636,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               return byField;
             }, {})}
             highlight={
-              game.turn_state.phase === "move"
-                ? game.turn_state.options.map((option) => option.fieldId)
+              turnState.phase === "move"
+                ? turnState.options.map((option) => option.fieldId)
                 : []
             }
             onPick={(fieldId) => setInspecting(fieldId)}
@@ -1698,7 +1705,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   // "since when" already: everything that happens bumps it.
                   away={active.away}
                   since={game.revision}
-                  canRoll={game.turn_state.phase === "roll"}
+                  canRoll={turnState.phase === "roll"}
                   onRoll={() => post("turn", { action: "roll" })}
                   // 13.4: what is already lying here counts against the number
                   // the field asks for, which is why a silted-up Obszar draws

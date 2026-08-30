@@ -1,3 +1,4 @@
+import { top } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
@@ -563,7 +564,7 @@ const meeting = (field: FieldId, foes: string[]) =>
 
 const strengthAt = (field: FieldId, foes: string[]) =>
   (
-    beginFight(meeting(field, foes), { cardIds: foes }).writes.game?.turn_state as {
+    top(beginFight(meeting(field, foes), { cardIds: foes }).writes.game!.turn_state!) as {
       fight: { enemyTotal: number };
     }
   ).fight.enemyTotal;

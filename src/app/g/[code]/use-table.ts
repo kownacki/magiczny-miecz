@@ -16,7 +16,7 @@ import { watchRevision } from "@/lib/game/liveRevision";
 import type { CardId } from "@/data/ids";
 import type { FieldId } from "@/lib/engine/board";
 import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter } from "@/lib/engine/characters";
-import type { TurnPhase } from "@/lib/engine/turn";
+import type { TurnState } from "@/lib/engine/stack";
 import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
@@ -86,7 +86,7 @@ export interface Game {
   turn: number;
   revision: number;
   die_source: string;
-  turn_state: TurnPhase;
+  turn_state: TurnState;
   /**
    * What is left in each pile, and what has come back to it.
    *
