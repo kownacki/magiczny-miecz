@@ -91,8 +91,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // table has to remember the flames are still round him.
   "krag-plomieni":
     "Wróg zostaje w płomieniach na Obszarze: dopóki ktoś nie zdejmie Kręgu, nie wolno go atakować i nic nie robi.",
-  "wojna-zywiolow":
-    "Magiczne Przedmioty: aplikacja nie wie, które nimi są — nie liczcie z nich nic do końca tury rzucającego.",
   "wladca-gromu":
     "Wrogowie i inne istoty na tym Obszarze też są sparaliżowane — nie wolno ich atakować.",
   ocalony:

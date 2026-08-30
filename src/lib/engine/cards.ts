@@ -73,6 +73,29 @@ export function roundsOf(cardId: string): FightRounds | null {
 }
 
 /**
+ * The Przedmioty printed "Przedmiot V Magiczny" rather than "Przedmiot V
+ * Przedmiot".
+ *
+ * A printed class and not an adjective in a name: MAGICZNY MANUSKRYPT is
+ * titled Magiczny and classed Przedmiot, which is exactly the card reading the
+ * names would get wrong. Transcribed off the header band — see
+ * `src/data/magical.test.ts`, which is that transcription's own record.
+ *
+ * Three rules ask this. The Wojna Żywiołów suspends them, the Przybysz z
+ * Krainy Cieni refuses them, and the Kryształ Magów's bargain is written in
+ * terms of them.
+ */
+const MAGICAL = new Set(
+  (events as { id: string; magical?: boolean }[])
+    .filter((card) => card.magical === true)
+    .map((card) => card.id),
+);
+
+export function isMagicalItem(cardId: string): boolean {
+  return MAGICAL.has(cardId);
+}
+
+/**
  * What this card fights with, or null if it does not fight.
  *
  * Only a Wróg fights. Rule 16.3 makes a Demon fight magically, which the deck

@@ -171,8 +171,11 @@ describe("every Zaklęcie is carried out, and the halves that are not are named"
     }
   });
 
-  it("names what the table still does, for the four it only half carries", () => {
-    const partial = ["krag-plomieni", "wojna-zywiolow", "wladca-gromu", "ocalony"];
+  it("names what the table still does, for the three it only half carries", () => {
+    // The WOJNA ŻYWIOŁÓW was a fourth until the cards' own class band was
+    // transcribed: its note said "aplikacja nie wie, które Przedmioty są
+    // Magiczne", and it does now, so both halves of the card are carried.
+    const partial = ["krag-plomieni", "wladca-gromu", "ocalony"];
     for (const id of partial) expect(manualNote(id), id).toBeTruthy();
     for (const id of Object.keys(SPELLS)) {
       if (partial.includes(id)) continue;

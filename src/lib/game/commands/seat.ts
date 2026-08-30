@@ -15,6 +15,7 @@ import {
   bonusFrom,
   frozenBy,
   magiaCountsAsMiecz,
+  spellsHushed,
   type Status,
 } from "@/lib/engine/status";
 import type { TargetSeat } from "@/lib/engine/targets";
@@ -177,8 +178,6 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
   // And so can who they are: 5.3 forbids a Natura certain cards, and a card a
   // character may not hold lends nothing while they hold it (see `inEffect`).
   const nature = natureOf(row);
-  const parametr = bonusFromHoldings(holdings, mode, "parametr", row.field_id, nature);
-  const walka = bonusFromHoldings(holdings, mode, "walka", row.field_id, nature);
   const fromCards = heldAbilities(
     holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId),
   );
@@ -201,6 +200,19 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     },
     snapshot.game.turn,
   );
+
+  /**
+   * What the cards lend, read after the statuses because one of them changes it.
+   *
+   * The Wojna Żywiołów suspends Zaklęcia *and* Magiczne Przedmioty — "ani
+   * ciągnąć z nich żadnych korzyści" — so the same status that hushes the
+   * spells also takes the Excalibur out of the sum, and leaves the plain Miecz
+   * in it. Narrower than the Zaczarowane Wzgórza, which suspend every Przedmiot
+   * by the board's own words.
+   */
+  const noMagical = spellsHushed(statuses) !== null;
+  const parametr = bonusFromHoldings(holdings, mode, "parametr", row.field_id, nature, noMagical);
+  const walka = bonusFromHoldings(holdings, mode, "walka", row.field_id, nature, noMagical);
 
   /**
    * Points a character is under rather than points its cards lend (1.2, 2.2).

@@ -2,7 +2,7 @@
 
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
-import { bonusOf } from "./cards";
+import { bonusOf, isMagicalItem } from "./cards";
 import { ABILITIES } from "./abilities";
 import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
@@ -263,6 +263,15 @@ export function bonusFromHoldings(
   standingOn: FieldId | null = null,
   /** Whose they are, since 5.3 makes some of them inert on some Natury. */
   nature: Nature | null = null,
+  /**
+   * The Wojna Żywiołów, which suspends Magiczne Przedmioty and nothing else.
+   *
+   * "Żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i **Magicznych
+   * Przedmiotów** ani ciągnąć z nich żadnych korzyści." Narrower than the
+   * Zaczarowane Wzgórza above, which suspend every Przedmiot by the board's own
+   * words — a Miecz still cuts under the Wojna, and an Excalibur does not.
+   */
+  noMagical = false,
 ): HeldTotals {
   const noItems = suppressesItems(standingOn);
   let miecz = 0;
@@ -270,6 +279,7 @@ export function bonusFromHoldings(
   for (const holding of inEffect(holdings, eqMode, nature)) {
     if (holding.kind !== "item" && holding.kind !== "friend") continue;
     if (noItems && holding.kind === "item") continue;
+    if (noMagical && isMagicalItem(holding.cardId)) continue;
     const bonus = BONUS_BY_ID.get(holding.cardId);
     if (!bonus) continue;
     miecz += bonus[as].miecz;
