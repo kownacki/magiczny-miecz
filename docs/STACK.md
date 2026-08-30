@@ -1,10 +1,13 @@
 # The resolution stack
 
-**Status: step 3 open, two cards in** (2026-08-31). The Trójgłowy Smok is the
-`loop` frame's first occupant — three heads, one at a time, regrown on
-anything but a win — and the CHOCHLIK is the `ask` frame's, the first question
-in the box that belongs to no card script. Both MANUAL entries are deleted.
+**Status: step 3 open, two cards in and law 4 waiting on Michał** (2026-08-31).
+The Trójgłowy Smok is the `loop` frame's first occupant — three heads, one at a
+time, regrown on anything but a win — and the CHOCHLIK is the `ask` frame's,
+the first question in the box that belongs to no card script. Both MANUAL
+entries are deleted, and nine of the acceptance test's eleven moments now run.
 What each took, and the narrowings they settled, is below the steps table.
+Law 4 is not started and should not be until the question in "Law 4 is blocked
+on a question" is answered.
 
 **Status: step 2 built** (2026-08-30). The walker suspends into `script` frames
 with a cursor and resumes through `continueTopScript`; the all-or-nothing gate
@@ -323,6 +326,44 @@ what law 3 owes (the attempt ends, the heads regrow, 17.4 settles the Smok for
 the turn) reached by the dice rather than by the Krąg, so nothing is asserted
 about a mechanism nobody has written.
 
+## Law 4 is blocked on a question, not on work
+
+**Raised 2026-08-31, before writing any of it.** Law 4 says the cast becomes a
+`cast` frame above the fight, and the acceptance test's moment 7 spells out the
+stack it wants: `[field, loop, fight, cast(B), ask(A: use Władca Zaklęć?)]`.
+
+That last frame contradicts a decision already taken and already in the code.
+`Fight.caster`'s own note says why the floor is a claim rather than a poll:
+
+> Nobody is polled and nobody is named in advance, which also keeps 9.3: a
+> window that opened only for the people holding a castable spell announced who
+> was holding one, every fight, before anyone had decided anything. Reaching for
+> a card is a tell you make yourself.
+
+An `ask(A: use Władca Zaklęć?)` is exactly the thing that reasoning rejects. Ask
+it only when Ania holds one and the table learns she holds one; ask it of
+everybody every time and it is the poll the floor was designed not to be. The
+present machinery answers this differently and well: a spoken Zaklęcie waits in
+the air on a clock as a `spoken` status, and *anyone* may answer it by casting,
+which is how the Władca Zaklęć and the Zwierciadło already work.
+
+So there are two readings of law 4 and they want different code:
+
+1. **The frame replaces the status.** Faithful to the sketch. It reworks a
+   subtle, tested subsystem — the floor, the clock, the reactive answers — and
+   still needs an answer to the `ask(A)` problem above.
+2. **The frame is not built; the vocabulary is.** Keep the `spoken` status as
+   the in-the-air representation, and spend step 3 on what the cards actually
+   need: a spell effect that reaches *down* the stack and alters or ends the
+   fight beneath it. That is the cash-in law 4 was written for (Krąg Płomieni
+   on a Wróg mid-fight), and it is the half no card can do today.
+
+Reading 2 is the smaller and, on the evidence above, probably the truer one —
+but law 4 is a law, and it is Michał's to narrow, the way he narrowed the go/
+no-go. **Nothing was written either way.** The Krąg Płomieni also wants a state
+on a Karta lying on an Obszar, which the model has nowhere to put — see its
+`MANUAL` note — so reading 2 is not free either.
+
 ## Handoff
 
 Written 2026-08-30 at a session restart, with steps 0–2 committed
@@ -345,15 +386,26 @@ beneath is green. Effectful code stays in commands; that is not a violation.
 in `turnStore.ts`; the `answer` door in the turn route and the console; the
 panel in `script-frame.tsx`. The lifecycle spec is `commands/
 scriptFrames.test.ts`; the acceptance scenario is `commands/stack.test.ts`,
-still eleven todos under `describe.skip` on purpose.
+nine of eleven moments running since `50cbc08`. Step 3 added `engine/loop.ts`
+and `engine/ask.ts` beside them, with `commands/ask.ts` for the one answering
+door, `rounds.test.ts` and `peek.test.ts` for the two cards, and the panel in
+`ask-frame.tsx`. `envelopeFor` is now the third place a deck secret could
+escape — `asSeenBy` redacts the `ask` frame the way `withoutDeck` redacts the
+pile.
 
-**Next is step 3, and it has no go yet.** Michał checkpointed at the gate and
-restarted; confirm the go before deleting any MANUAL entry. Then open with the
-two new mechanisms before the card-by-card tail: the `loop` frame (Trójgłowy
-Smok's three heads, reset on loss — law 3) and the vocabulary for a cast
-acting on the fight beneath it (the 18 anytime spells, the Talizmany). Each
-card is one commit, engine → console → GUI, tests first, its MANUAL entry
-deleted last.
+**Step 3 has the go** (Michał, 2026-08-31) and three commits of it are in.
+`6c9ee4d` is the `loop` frame and the Trójgłowy Smok; `3d4bef4` is the `ask`
+frame and the CHOCHLIK; `50cbc08` runs nine of the acceptance test's eleven
+moments and corrects row 3 of its own table. Both MANUAL entries are deleted
+and `coverage.ts` is two cards shorter.
+
+**What is left of step 3 is law 4, and it is blocked on a question** — see the
+section above this one. Nothing has been written for it in either direction.
+Behind that decision sit the 18 anytime spells and the Talizmany, and moment 7
+of the acceptance test.
+
+Each card is still one commit, engine → console → GUI, tests first, its MANUAL
+entry deleted last.
 
 **Open threads awaiting Michał's word, not code:** the ×25 Zaklęcie-stack
 spacing complaint was never located ("not this window" — which window was
