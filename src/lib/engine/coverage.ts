@@ -91,7 +91,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   ocalony:
     "Rzucony na Przyjaciela lub Wroga ratuje go od śmierci; użyty w walce czyni jej wynik nierozstrzygniętym.",
 
-  lewiatan: "Połóż Kartę na wolnym Obszarze. Jeśli żaden nie jest wolny, odłóż ją.",
   zloczynca: "Płaci tylko ta Postać, która przegrała walkę.",
 };
 

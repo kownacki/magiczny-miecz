@@ -514,6 +514,68 @@ async function walk(
   }
 
   /**
+   * Where a Karta settles, when the card names a list rather than one Obszar.
+   *
+   * "Lewiatan może pojawić się na Mokradłach, przy Przeprawie lub na Bagnach —
+   * połóż jego Kartę na którymś z tych Obszarów, **nie zajętym przez inną
+   * Postać** (jeśli nie ma takiego Obszaru, odłóż Kartę)."
+   *
+   * All three sentences are here: the list is the card's, the occupied Obszary
+   * are struck off it, and an empty list is the Karta going to the used pile
+   * rather than the monster appearing on somebody's head. One Obszar left is
+   * not a choice and nobody is asked.
+   *
+   * Above the gate for the same reason `przenies` is: pointing at the board is
+   * what makes this unsettled, and the gate would hand it back as a question
+   * even once it had been answered. The chosen Obszar is written back into the
+   * node as a `pole`, so the settled form below does the work and there is one
+   * place a Karta is laid down.
+   */
+  if (effect.op === "poloz-karte" && effect.gdzie.kind === "jedno-z" && command.cardId) {
+    const free = effect.gdzie.fieldIds.filter(
+      (fieldId) => !snapshot.seats.some((one) => !one.eliminated && one.field_id === fieldId),
+    );
+    if (free.length === 0) {
+      const shelf = top(snapshot.game.turn_state);
+      const off: Changeset =
+        shelf.phase === "field"
+          ? {
+              game: {
+                turn_state: replaceTop(snapshot.game.turn_state, {
+                  ...shelf,
+                  drawn: shelf.drawn.filter((entry) => entry.cardId !== command.cardId),
+                }),
+              },
+            }
+          : {};
+      const back = putOnPile(apply(snapshot, off), "events", [{ cardId: command.cardId }]);
+      return {
+        writes: merge(off, back),
+        result: {
+          did: [`${cardName(command.cardId)}: nie ma wolnego Obszaru — Karta wraca na stos`],
+          pending: null,
+        },
+      };
+    }
+    const where =
+      decided.destination && free.includes(decided.destination)
+        ? decided.destination
+        : free.length === 1
+          ? free[0]
+          : null;
+    if (where === null) return owed();
+    return walk(
+      snapshot,
+      command,
+      { ...effect, gdzie: { kind: "pole", fieldId: where } },
+      reason,
+      ports,
+      path,
+      follow,
+    );
+  }
+
+  /**
    * A loss the holder must choose from is unsettled until they have chosen —
    * and an answer waiting in the queue is them having chosen. 5.6 makes which
    * card goes their decision, so it arrives the same way every other decision
@@ -970,7 +1032,10 @@ async function walk(
      */
     case "poloz-karte": {
       if (!command.cardId) return nothing(["nie wiadomo, którą Kartę położyć"]);
+      // A list of Obszary is answered before the gate above and arrives here as
+      // the one that was chosen — see the `jedno-z` block there.
       if (effect.gdzie.kind !== "pole") return owed();
+      const chosen = effect.gdzie.fieldId;
 
       const state = top(snapshot.game.turn_state);
       const lifted: Changeset =
@@ -991,21 +1056,19 @@ async function walk(
       return {
         writes: merge(lifted, {
           fieldCards: {
-            insert: [
-              { field_id: effect.gdzie.fieldId, card_id: command.cardId, granted },
-            ],
+            insert: [{ field_id: chosen, card_id: command.cardId, granted }],
           },
           journal: [
             {
               seatId,
               turn: snapshot.game.turn,
               kind: "left-behind",
-              payload: { cardId: command.cardId, field: effect.gdzie.fieldId },
+              payload: { cardId: command.cardId, field: chosen },
             },
           ],
         }),
         result: {
-          did: [`${cardName(command.cardId)} osiada na: ${fieldName(effect.gdzie.fieldId)}`],
+          did: [`${cardName(command.cardId)} osiada na: ${fieldName(chosen)}`],
           pending: null,
         },
       };

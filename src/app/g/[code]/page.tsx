@@ -1091,6 +1091,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               (isTableScreen || turnState.fight.opponentSeat === mySeatIndex)
             }
             ring={ringFields(active.field_id)}
+            /* „nie zajętym przez inną Postać" — the Lewiatan may not be put
+               down on a square somebody is standing on. */
+            occupied={seats
+              .filter((seat) => !seat.eliminated && seat.field_id)
+              .map((seat) => seat.field_id as FieldId)}
             /* 1.5's fight total, for the Sobowtór, whose Miecz is whoever is
                opposite him and is therefore not on his Karta. */
             mySword={active.sword_in_fight}

@@ -58,6 +58,7 @@ export function DrawModal({
   simulated,
   myEscape,
   ring,
+  occupied,
   mySword,
   busy,
   onAction,
@@ -136,6 +137,8 @@ export function DrawModal({
   myEscape: boolean;
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
+  /** Where the other Postacie stand, for the Karta that may not land on one. */
+  occupied?: FieldId[];
   /** What the character fights with (1.5) — the Sobowtór's own strength. */
   mySword: number;
   busy: boolean;
@@ -234,6 +237,7 @@ export function DrawModal({
       resolved={resolved}
       fought={fought}
       ring={ring}
+      occupied={occupied}
       mySword={mySword}
       busy={busy}
       onResolve={onResolve}

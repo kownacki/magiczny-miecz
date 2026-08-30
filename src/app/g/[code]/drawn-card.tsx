@@ -47,6 +47,7 @@ export function DrawnCard({
   resolved,
   fought,
   ring,
+  occupied = [],
   mySword,
   busy,
   onResolve,
@@ -65,6 +66,15 @@ export function DrawnCard({
   fought: string[];
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
+  /**
+   * Where the other Postacie are standing, for the one Karta that may not be
+   * put down on top of one — „nie zajętym przez inną Postać" (Lewiatan).
+   *
+   * Filtered here as well as on the server so that a player is not offered an
+   * answer that will be refused, which is the same courtesy the move options
+   * get.
+   */
+  occupied?: FieldId[];
   /**
    * What the character fights with (1.5), for the one Wróg who has no strength
    * of his own: the Sobowtór „posiada zawsze tyle punktów Miecza, ile jego
@@ -317,6 +327,36 @@ export function DrawnCard({
               className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
             >
               Przenieś się
+            </button>
+          </div>
+        )}
+
+        {/* "połóż jego Kartę na którymś z tych Obszarów, nie zajętym przez
+            inną Postać" — the card names the list, and the ones somebody is
+            standing on are struck off it here as well as on the server, so a
+            player is not offered an answer that will be refused. */}
+        {canAct && asking?.op === "poloz-karte" && asking.gdzie.kind === "jedno-z" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={going}
+              onChange={(event) => setGoing(event.target.value as FieldId)}
+              className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink"
+            >
+              <option value="">— wybierz Obszar —</option>
+              {asking.gdzie.fieldIds
+                .filter((fieldId) => !occupied.includes(fieldId))
+                .map((fieldId) => (
+                  <option key={fieldId} value={fieldId}>
+                    {FIELDS.get(fieldId)?.name ?? fieldId}
+                  </option>
+                ))}
+            </select>
+            <button
+              disabled={busy || !going}
+              onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
+              className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
+            >
+              Połóż tutaj
             </button>
           </div>
         )}

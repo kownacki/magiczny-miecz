@@ -40,8 +40,7 @@ export function isSettled(effect: Effect): boolean {
     case "efekt":
     // The card is named and the stock is the app's to count.
     case "otrzymaj":
-    // The Obszar is rolled for, not chosen, on all three cards that do this.
-    case "poloz-karte":
+
     // A die per card, and nobody picks which — 5.6 is not engaged.
     case "rzut-za-kazdego":
     // The card is named by the effect; there is nothing to ask.
@@ -62,6 +61,22 @@ export function isSettled(effect: Effect): boolean {
     // the player pointing at the board.
     case "przenies":
       return effect.to.kind === "pole";
+
+    /**
+     * The same question, about a Karta rather than a Postać.
+     *
+     * Two of the three cards that put a Karta down name one Obszar and ask
+     * nothing. The Lewiatan names six — "połóż jego Kartę na którymś z tych
+     * Obszarów, nie zajętym przez inną Postać" — and that is the player
+     * pointing at the board.
+     *
+     * This case used to say all three were settled, on the reading that the
+     * Obszar is rolled for. It is not, for the Lewiatan, and the executor knew:
+     * it suspended on `jedno-z` while this said there was nothing to ask, which
+     * is the divergence the comment on `pendingIn` calls a bug in this file.
+     */
+    case "poloz-karte":
+      return effect.gdzie.kind === "pole";
 
     // Both ends of it are the player's: which Karta, and which Obszar.
     case "przenies-karte":
