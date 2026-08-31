@@ -153,12 +153,13 @@ describe("the four ad-hoc columns, read as effects", () => {
     });
   });
 
-  it("measures Kamień from the turn it wears off on (20.1)", () => {
-    // The column holds a turn number, not a countdown, so the remaining turns
-    // are the difference — and it says nothing once that turn has arrived.
+  it("dates Kamień to the round it wears off in, rather than counting turns (20.1)", () => {
+    // The column holds a round number and is passed through as one. A countdown
+    // would have to be in the holder's own turns, and a statue takes none — it
+    // would never reach zero. It says nothing once that round has arrived.
     expect(fromColumns({ ...none, stoneUntilRound: 8 }, 5)[0].ends).toEqual({
-      kind: "turns",
-      turns: 3,
+      kind: "round",
+      round: 8,
     });
     expect(fromColumns({ ...none, stoneUntilRound: 5 }, 5)).toEqual([]);
   });

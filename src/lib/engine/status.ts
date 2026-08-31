@@ -16,8 +16,24 @@ import type { Nature } from "@/data/types";
  * be bent into.
  */
 export type Ends =
-  /** After this many more of the holder's own turns. Kamień is three (20.1). */
+  /** After this many more of the holder's own turns. */
   | { kind: "turns"; turns: number }
+  /**
+   * At the start of a named round, on `games.round`'s clock.
+   *
+   * The other clock, and the reason there are two. `turns` counts the holder's
+   * OWN goes, which is what a card means by "na 1 turę" — a buff that lasted a
+   * round would last longer at a table of six than at a table of two. But a
+   * character turned to Stone takes no goes at all, so a countdown in their own
+   * turns would never count down; 20.1's three are the table's circuits, and
+   * `stone_until_round` holds the one it wears off on.
+   *
+   * Which clock an effect is on decides what a player can be told about it. A
+   * round is a date and can be named outright; a countdown in the holder's own
+   * turns only becomes a date by walking the turn order forward, and the walk
+   * is a forecast. See `lapsesOn` in `statusRows.ts`.
+   */
+  | { kind: "round"; round: number }
   /** When the next fight finishes, however it finishes (17.4). */
   | { kind: "fight" }
   /** When a particular thing happens to the holder. */
@@ -495,6 +511,11 @@ export function describeEnd(ends: Ends): string {
       return ends.turns === 1
         ? "do końca tej tury"
         : `jeszcze ${ends.turns} ${ends.turns <= 4 ? "tury" : "tur"}`;
+    // Named outright, because a round deadline is the one duration in this
+    // union that is already a date. Everything else is a condition, and the
+    // countdown is a date only after somebody walks the order forward.
+    case "round":
+      return `mija na początku rundy ${ends.round}`;
     case "fight":
       return "do końca walki";
     case "event":
@@ -523,6 +544,14 @@ export function describeEnd(ends: Ends): string {
  * an effect happens to live in is the app's problem, not theirs.
  * ----------------------------------------------------------------------- */
 
+/**
+ * The source a lost turn is filed under.
+ *
+ * Named once because two files have to agree on it: this one writes it, and
+ * `lapsesOn` reads it to know that this status's countdown runs the other way.
+ */
+export const DEBT = "tura-stracona";
+
 /** What a seat's own columns say about it, in the shape everything else uses. */
 export interface TimedColumns {
   turnsLost: number;
@@ -531,40 +560,50 @@ export interface TimedColumns {
   natureChangedRound: number | null;
 }
 
-export function fromColumns(seat: TimedColumns, turn: number): Status[] {
+export function fromColumns(seat: TimedColumns, round: number): Status[] {
   const out: Status[] = [];
 
   if (seat.turnsLost > 0) {
     out.push({
       id: "tura-stracona",
-      source: "tura-stracona",
+      source: DEBT,
       // Just the fact. How many is the duration's to say, and saying it twice
       // gave "Traci 2 tury — jeszcze 2 tury".
       label: "Traci turę",
       modifier: { kind: "frozen" },
+      // The one `turns` in this file that counts turns NOT taken. Everything
+      // else with a countdown survives that many of the holder's goes; this
+      // one is a debt, and each go it names is one the holder does not get.
+      // `lapsesOn` has to know the difference, which is what `DEBT` is for.
       ends: { kind: "turns", turns: seat.turnsLost },
     });
   }
 
-  // 20.1: three turns as stone, and the column holds the turn it wears off on.
-  if (seat.stoneUntilRound !== null && seat.stoneUntilRound > turn) {
+  // 20.1: three turns as stone, and the column holds the round it wears off on.
+  //
+  // A round deadline rather than a countdown, and that is not a presentational
+  // choice: a statue takes no turns of its own, so a countdown measured in them
+  // would never reach zero. `nextSeat` compares the same column against
+  // `games.round` for exactly this reason.
+  if (seat.stoneUntilRound !== null && seat.stoneUntilRound > round) {
     out.push({
       id: "kamien",
       source: "kamien",
       label: "Zamieniony w Kamień",
       modifier: { kind: "frozen" },
-      ends: { kind: "turns", turns: seat.stoneUntilRound - turn },
+      ends: { kind: "round", round: seat.stoneUntilRound },
     });
   }
 
-  // 11.11: a failed attempt on the Most cannot be repeated next turn.
-  if (seat.bridgeBlockedUntilRound !== null && seat.bridgeBlockedUntilRound > turn) {
+  // 11.11: a failed attempt on the Most cannot be repeated next turn. Stored as
+  // a date for the same reason, and lifted by the round arriving.
+  if (seat.bridgeBlockedUntilRound !== null && seat.bridgeBlockedUntilRound > round) {
     out.push({
       id: "most-zablokowany",
       source: "most",
       label: "Nie wejdziesz na Kamienny Most",
       modifier: { kind: "barred", place: "most" },
-      ends: { kind: "turns", turns: seat.bridgeBlockedUntilRound - turn },
+      ends: { kind: "round", round: seat.bridgeBlockedUntilRound },
     });
   }
 
@@ -572,7 +611,7 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
   // of the turn. What the Natura now *is* the seat card says with the Karta
   // Zmiany Natury, which is where the rule puts it — this is only the part a
   // player deciding what to do next has to know.
-  if (seat.natureChangedRound !== null && seat.natureChangedRound === turn) {
+  if (seat.natureChangedRound !== null && seat.natureChangedRound === round) {
     out.push({
       id: "natura-zmieniona",
       source: "natura",
@@ -589,9 +628,9 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
 export function allStatuses(
   stored: readonly Status[],
   seat: TimedColumns,
-  turn: number,
+  round: number,
 ): Status[] {
-  return [...fromColumns(seat, turn), ...stored];
+  return [...fromColumns(seat, round), ...stored];
 }
 
 /* --------------------------------------------------------------------------
