@@ -187,11 +187,11 @@ loss on death are the same either way, so nothing above this line changes.
 | | rule | status | where |
 |---|---|---|---|
 | 11.1 | Trzęsawiska only at Uroczysko / Las Błędnych Ogni | ✅ | `CROSSINGS` |
-| 11.2 | except by Łódź, or by field and card effects | ◐ | the Łódź is encoded as an ability; crossing anywhere is not wired up |
+| 11.2 | except by Łódź, or by field and card effects | ◐ | **crossing anywhere works** — the Łódź and Pan Trzęsawisk open a `przeprawa`, and `crossRing` takes it from wherever the figure stands rather than from the two printed points. ◐ only because of **where it lands**: it puts you on the far side of the *printed* crossing, and the card says „przeprawisz się do Obszaru graniczącego z tym, z którego wyruszyłeś" — which wants an adjacency across the water that the board draws but never names |
 | 11.3 | rolled for only going inward | ✅ | `crossingIsDefended` |
 | 11.4 | failure costs 1 Życie and stops you; a draw only stops you | ✅ | `settleCrossing` |
 | 11.5 | Lodowy Las only at Przełęcz Wichrów / Dolina Czaszek | ✅ | |
-| 11.6 | except by Latarnia | ◐ | as 11.2 |
+| 11.6 | except by Latarnia | ◐ | as 11.2 — the Latarnia and Władca Lodu open the Lodowy Las the same way, and land you at the printed crossing rather than „na Obszarze graniczącym z tym, z którego wszedłeś" |
 | 11.7 | the Rycerz attacks only outbound characters | ✅ | |
 | 11.8 | loss costs 1 Życie, a draw stops you | ✅ | |
 | 11.9 | the Most is entered only from Ruiny Twierdzy / Wymarłe Miasto, past a guardian | ✅ | `BRIDGE_ENTRANCES`, `fightGuardian` |

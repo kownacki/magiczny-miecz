@@ -61,9 +61,14 @@ export interface Game {
   /**
    * Which trofea rule the table plays (1.4) — see `docs/TROFEA.md`.
    *
-   * "points" is the variant and the default — a beaten Wróg goes to the stos
-   * zużytych and his printed Miecz lands on `seat.trophy_points`. "cards" is
-   * 1.4 as printed: you hold the Karty and hand in the ones you choose.
+   * "points" is the variant and the default — a beaten Wróg's Karta goes to the
+   * stos zużytych the moment he dies, and what the seat keeps is a copy of him.
+   * "cards" is 1.4 as printed: you hold the Karta until you trade it.
+   *
+   * Both keep the trophy as a holding and both count the sevens off it; the
+   * cardboard is the whole difference. Not `seat.trophy_points`, which this
+   * used to say and which nothing has written since „Punkty" stopped being a
+   * pool — see the column's own note in db/schema.sql.
    *
    * Still optional in the type, though the column is `not null`: a page held
    * open across the deploy that added it would otherwise read `undefined` as a

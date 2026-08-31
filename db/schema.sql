@@ -186,11 +186,20 @@ create table if not exists magiczny_miecz.seats (
   -- 4.4 sends held trophies to the pile, and points that survived a death would
   -- make hoarding free — which is the one thing the variant must not change,
   -- since the run at the Bestia costs 2 Życia on a loss.
+  -- **Vestigial.** Nothing increments it and nothing reads it; only 4.4's death
+  -- zeroes it. It belongs to an earlier „Punkty" design where the mode was a
+  -- pool of points and the Karta went away at once — `convertTrophies` records
+  -- the reversal: "This used to cash every hoard in and bank the points,
+  -- because „Punkty" was built as a pool and a Karta was the only place a
+  -- trophy lived. It is not." Both modes keep the trophy as a holding now and
+  -- differ only in where the cardboard goes. Kept rather than dropped because
+  -- dropping a column on a live shared database is not worth doing for tidiness.
   trophy_points integer not null default 0,
   -- Everyone this Postać has beaten, for the shelf the seat card draws.
   --
-  -- Display only: the arithmetic never reads it, and 1.4's sevens come off
-  -- `trophy_points` or off the held Karty as they always did. It exists because
+  -- Display only: the arithmetic never reads it. 1.4's sevens come off the held
+  -- Karty in *both* modes — see `tradeTrophies`, which filters holdings by kind
+  -- and asks nothing about the mode. It exists because
   -- in `points` mode the Wróg is gone the instant he dies — Karta to the stos
   -- zużytych, his Miecz onto the score — and nothing else on the wire has ever
   -- named him again.
