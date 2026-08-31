@@ -366,6 +366,21 @@ suite("naming a card, a field or a creature", () => {
 });
 
 suite("the rest of the vocabulary", () => {
+  /**
+   * The spoil is `gold`, and the two Polish spellings still answer.
+   *
+   * The vocabulary is the engine's and the engine is English; only what is
+   * printed on the box — a Karta's name, an Obszar's — is Polish. `zloto` was
+   * the word this line printed, which put a localisation word in the app's own
+   * grammar.
+   */
+  it("takes the coin by the app's word, and by the box's two", () => {
+    const coin = { kind: "spoils", take: "zloto", card: null };
+    expect(ok("spoils gold")).toEqual(coin);
+    expect(ok("spoils zloto")).toEqual(coin);
+    expect(ok("spoils złoto")).toEqual(coin);
+  });
+
   it("settles a fight three ways", () => {
     // The outcome is an argument, which is how the engine has always modelled
     // it — `winfight` flattened it into the verb and nothing else here does.
@@ -445,7 +460,7 @@ suite("playing the game, and overruling it", () => {
       who: null,
       to: null,
     });
-    expect(err("cast")).toContain("cast <zaklęcie>");
+    expect(err("cast")).toContain("cast <spell>");
   });
 
   /**
@@ -645,16 +660,16 @@ suite("playing the game, and overruling it", () => {
     for (const [line, shape] of [
       ["kick", "kick <player>"],
       ["host", "host <player>"],
-      ["seat 3", "seat <player> <miejsce>"],
-      ["rename", "rename <player> as <imię>"],
-      ["card", "card <nazwa>"],
+      ["seat 3", "seat <player> <seat>"],
+      ["rename", "rename <player> as <name>"],
+      ["card", "card <name>"],
       ["gold", "gold +5|=12 [player] [force]"],
-      ["move", "move <obszar>"],
-      ["teleport", "teleport <obszar>"],
+      ["move", "move <field>"],
+      ["teleport", "teleport <field>"],
       // `deal` is not here: naming nothing is a request for the list rather
       // than a line with something missing, and an unknown name gets the real
       // answer instead of the shape — see the test below.
-      ["remove", "remove <postać> [hard]"],
+      ["remove", "remove <character> [hard]"],
     ] as const) {
       expect(err(line), line).toContain(shape);
     }
@@ -690,7 +705,7 @@ suite("playing the game, and overruling it", () => {
 /**
  * A printed usage line, typed back in.
  *
- * Optional parts come off as whole groups — `[at obszar]` is two words and one
+ * Optional parts come off as whole groups — `[at field]` is two words and one
  * option, and dropping tokens that merely *start* with a bracket left `obszar]`
  * behind, which is how `clear [TARGOWISKO] [at Karczma]` came to fail this
  * check and had to be written round rather than fixed.
@@ -710,14 +725,17 @@ function usageAsTyped(usage: string): string {
 
 const EXAMPLE: Record<string, string> = {
   "<player>": "Ola",
-  // The game's own nouns, each standing for something the box actually holds.
-  "<karta>": "MIECZ",
-  "<obszar>": "Karczma",
-  "<zaklęcie>": "BŁYSKAWICA",
-  "<postać>": "MAGOG",
-  "<nazwa>": "MAGOG",
-  "<imię>": "Ola",
-  "<miejsce>": "3",
+  // The engine's own words, each standing in for something the box holds. The
+  // placeholders are English because the vocabulary is the app's; only what is
+  // printed on a Karta or an Obszar is Polish.
+  "<card>": "MIECZ",
+  "<field>": "Karczma",
+  "<spell>": "BŁYSKAWICA",
+  "<character>": "MAGOG",
+  // Serves `card <name>`, which wants a real one, and `rename … as <name>`,
+  // which takes anything.
+  "<name>": "MAGOG",
+  "<seat>": "3",
   "won|lost|draw": "won",
   "won|lost": "won",
   "<command>": "help",
@@ -748,7 +766,7 @@ suite("help", () => {
     // just typed and got wrong.
     expect(ok("help put")).toEqual({ kind: "help", about: "put" });
     expect(helpLines("put")).toEqual([
-      "place <karta> at <obszar>",
+      "place <card> at <field>",
       "leave a card on an Obszar, the one you stand on unless named",
       "also: put",
     ]);
@@ -1070,7 +1088,7 @@ suite("people and Postacie are addressed differently", () => {
     expect(err("seat Ola")).toMatch(/Into which seat/);
     // Being stopped is the moment the shape is worth seeing, so every
     // missing-argument answer carries the usage.
-    expect(err("seat 3")).toBe("Seat whom? seat <player> <miejsce>");
+    expect(err("seat 3")).toBe("Seat whom? seat <player> <seat>");
   });
 
   it("means me when `unseat` is given nobody", () => {

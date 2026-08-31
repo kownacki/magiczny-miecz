@@ -433,7 +433,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "move",
     when: ["move"],
     aliases: ["walk"],
-    usage: "move <obszar>",
+    usage: "move <field>",
     summary: "walk the roll out and stand there (10.2) — `look` lists where it reaches",
     needs: "play",
     group: "turn",
@@ -454,7 +454,7 @@ export const COMMANDS: CommandSpec[] = [
     // l, i, x — and a letter that saves nothing costs a word somebody else
     // wanted.
     aliases: [],
-    usage: "answer [n] [karta]",
+    usage: "answer [n] [card]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
     needs: "play",
     group: "turn",
@@ -463,7 +463,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "buy",
     aliases: [],
     when: PLAYING,
-    usage: "buy <karta>",
+    usage: "buy <card>",
     summary: "buy from the Obszar you are standing on, at its printed price",
     needs: "play",
     group: "trade",
@@ -472,7 +472,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "sell",
     aliases: [],
     when: PLAYING,
-    usage: "sell <karta>",
+    usage: "sell <card>",
     summary: "sell one back to the Lichwiarz in the Gród",
     needs: "play",
     group: "trade",
@@ -490,7 +490,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "cast",
     aliases: [],
     when: PLAYING,
-    usage: "cast <zaklęcie> [at player] [to obszar]",
+    usage: "cast <spell> [at player] [to field]",
     summary: "cast a Zaklęcie you are holding (9.6)",
     needs: "play",
     group: "carrying",
@@ -515,7 +515,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "trade",
     aliases: [],
     when: PLAYING,
-    usage: "trade [n|karty]",
+    usage: "trade [n|cards]",
     summary: "cash beaten Wrogowie in at 7 points a Miecz (1.4) — how many Miecze you want, the Karty you name, or all of them",
     needs: "play",
     group: "trade",
@@ -542,7 +542,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "cross",
     aliases: [],
     when: PLAYING,
-    usage: "cross [obszar]",
+    usage: "cross [field]",
     summary: "cross between the Kręgi — the Trzęsawiska or the Lodowy Las (11.1-11.8)",
     needs: "play",
     group: "board",
@@ -569,7 +569,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "take",
     aliases: ["get"],
     when: ["field", "fight"],
-    usage: "take <karta>",
+    usage: "take <card>",
     summary: "pick up a Karta you drew or one lying on your Obszar (12.1, 13.4)",
     needs: "play",
     group: "carrying",
@@ -578,7 +578,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "drop",
     when: PLAYING,
     aliases: [],
-    usage: "drop <karta>",
+    usage: "drop <card>",
     summary: "put one down on the Obszar you are standing on (12.1)",
     needs: "play",
     group: "carrying",
@@ -587,7 +587,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "equip",
     when: PLAYING,
     aliases: ["wear"],
-    usage: "equip <karta> [slot]",
+    usage: "equip <card> [slot]",
     summary: "put a Przedmiot on — the place is worked out unless it fits two",
     needs: "play",
     group: "carrying",
@@ -596,7 +596,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "use",
     when: PLAYING,
     aliases: [],
-    usage: "use <karta>",
+    usage: "use <card>",
     summary: "spend a Karta that is spent by using it",
     needs: "play",
     group: "carrying",
@@ -605,7 +605,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "fight",
     aliases: [],
     when: ["field", "fight"],
-    usage: "fight [wróg]",
+    usage: "fight [foe]",
     summary: "square up to a Wróg on your Obszar — named when more than one is there (16.2)",
     needs: "play",
     group: "fight",
@@ -693,7 +693,7 @@ export const COMMANDS: CommandSpec[] = [
     // `x` is `examine` — Zork's word, and forty-five years of muscle memory
     // for "tell me about that thing".
     aliases: ["read", "x"],
-    usage: "card <nazwa>",
+    usage: "card <name>",
     summary: "what a Karta says — Postać, Zdarzenie, Przedmiot or Zaklęcie",
     needs: "play",
     group: "reading",
@@ -727,7 +727,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "seat",
     aliases: [],
-    usage: "seat <player> <miejsce>",
+    usage: "seat <player> <seat>",
     summary: "put somebody in a seat; refuses one that is taken",
     needs: "play",
     group: "table",
@@ -763,7 +763,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "rename",
     aliases: [],
-    usage: "rename <player> as <imię>",
+    usage: "rename <player> as <name>",
     summary: "give somebody a name",
     needs: "play",
     group: "table",
@@ -779,7 +779,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "pick",
     aliases: [],
-    usage: "pick [postać] [miejsce]",
+    usage: "pick [character] [seat]",
     summary: "a Postać into a seat — LOSOWA or nothing takes the surprise, yours unless numbered (4.4)",
     needs: "play",
     group: "table",
@@ -787,7 +787,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "remove",
     aliases: ["erase"],
-    usage: "remove <postać> [hard]",
+    usage: "remove <character> [hard]",
     summary: "a Postać out of the game, its Karty to the used piles — `hard` bars it for good",
     needs: "testmode",
     group: "override",
@@ -795,7 +795,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "revive",
     aliases: [],
-    usage: "revive <postać>",
+    usage: "revive <character>",
     summary: "back to life where it fell, with its own points and no Przedmioty",
     needs: "testmode",
     group: "override",
@@ -867,7 +867,7 @@ export const COMMANDS: CommandSpec[] = [
      */
     name: "deal",
     aliases: [],
-    usage: "deal <karta>",
+    usage: "deal <card>",
     summary: "any Karta happens to you, whatever kind it is — bare, it lists them",
     needs: "testmode",
     group: "override",
@@ -880,7 +880,7 @@ export const COMMANDS: CommandSpec[] = [
     // and the journal line that says where it went.
     name: "stack",
     aliases: [],
-    usage: "stack <karta>",
+    usage: "stack <card>",
     summary: "put a Karta on top of its pile, so the next draw is that one",
     needs: "testmode",
     group: "override",
@@ -903,8 +903,8 @@ export const COMMANDS: CommandSpec[] = [
     // a test table that dressed a field had no way to undress it.
     name: "clear",
     aliases: [],
-    usage: "clear [karta] [at obszar]",
-    summary: "take a Karta off an Obszar — bare, all of them; `at Karczma` for elsewhere",
+    usage: "clear [card] [at field]",
+    summary: "take a Karta off an Obszar — bare, all of them; `at` names another",
     needs: "testmode",
     group: "override",
   },
@@ -914,7 +914,7 @@ export const COMMANDS: CommandSpec[] = [
     // Przedmiot down", and a word cannot mean both that and a card conjured
     // onto a field.
     aliases: ["put"],
-    usage: "place <karta> at <obszar>",
+    usage: "place <card> at <field>",
     summary: "leave a card on an Obszar, the one you stand on unless named",
     needs: "testmode",
     group: "override",
@@ -925,7 +925,7 @@ export const COMMANDS: CommandSpec[] = [
     // anywhere at all, which is a different act and now says so.
     name: "teleport",
     aliases: [],
-    usage: "teleport <obszar>",
+    usage: "teleport <field>",
     summary: "stand on any Obszar, without a roll and without walking there",
     needs: "testmode",
     group: "override",
@@ -952,7 +952,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "spoils",
     aliases: [],
     when: ["fight"],
-    usage: "spoils [zloto|karta]",
+    usage: "spoils [gold|card]",
     summary: "settle a won duel: the Życie, their Sztuka Złota, or a Przedmiot you name (17.9)",
     needs: "play",
     group: "fight",
@@ -1277,7 +1277,14 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "spoils") {
     const said = tail.trim();
     if (said === "") return { ok: { kind: "spoils", take: "zycie", card: null } };
-    if (said.toLowerCase() === "zloto" || said.toLowerCase() === "złoto") {
+    /**
+     * `gold`, because the vocabulary is the engine's and the engine is English.
+     * The two Polish spellings still answer — nobody's fingers should have to
+     * relearn a word — but the printed line says the one that belongs to the
+     * app rather than to the box.
+     */
+    const spoil = said.toLowerCase();
+    if (spoil === "gold" || spoil === "zloto" || spoil === "złoto") {
       return { ok: { kind: "spoils", take: "zloto", card: null } };
     }
     // Anything else is a Przedmiot by name, matched the way every card name is.
