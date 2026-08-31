@@ -745,6 +745,11 @@ export function SeatCard({
                    Karta makes, in the same corner, so a player who knows where
                    to look finds it in the same spot at either kind of table. */
                 places={slotted ? (hasSakwa ? undefined : BODY) : ["tajemna-sakwa"]}
+                /* Klasyczny has no body to draw, so the one square the Karta
+                   makes stands on its own. Slotowy is the doll either way —
+                   with the Sakwa's square in the corner or with a gap where it
+                   would be. */
+                layout={slotted ? "doll" : "row"}
                 worn={wornBySlot(seat)}
                 mayWear={mayWear}
                 canAct={canAdjust}

@@ -122,6 +122,7 @@ export function SlotPanel({
   onUse,
   onDropInto,
   places,
+  layout = "doll",
 }: {
   /** What is in each place; missing keys are empty places. */
   worn: Partial<Record<Slot, SlotItem>>;
@@ -159,19 +160,30 @@ export function SlotPanel({
   /** Something was put into a place — dropped, or carried there and clicked. */
   onDropInto: (holdingId: string, slot: Slot) => void;
   /**
-   * Which places to draw, when it is not the whole body.
+   * Which places to draw. Every one of them, unless told otherwise.
    *
-   * The Tajemna Sakwa's inside is the reason this exists. It is a place a
-   * *Karta* makes rather than a place on a character, so it turns up at a
-   * klasyczny table too — where there is no body to draw and this panel is
-   * otherwise not on screen at all. Given a subset, the grid stops being the
-   * doll's shape and becomes a row of that many squares.
+   * A subset is still laid out on the doll — `LAYOUT` gives each place fixed
+   * coordinates, so leaving one out leaves a gap where it was rather than
+   * reshuffling the rest. The Tajemna Sakwa's square is the only one that ever
+   * comes and goes, and it is off in the corner where a gap is a gap.
    */
   places?: readonly Slot[];
+  /**
+   * The doll, or a plain row of squares.
+   *
+   * Two separate questions, and they were one prop for a few hours with the
+   * predictable result: passing a subset of the body silently un-shaped the
+   * doll into a row of eleven. Which squares to draw and how to arrange them
+   * have nothing to do with each other, so they are asked separately.
+   *
+   * `row` exists for the klasyczny table, which has no body at all and draws
+   * the Sakwa's inside on its own.
+   */
+  layout?: "doll" | "row";
 }) {
   /** The place a drag is over, so it can say it will take it. */
   const [over, setOver] = useState<Slot | null>(null);
-  const whole = places === undefined;
+  const doll = layout === "doll";
   const drawn = places ?? (Object.keys(LAYOUT) as Slot[]);
 
   return (
@@ -189,7 +201,7 @@ export function SlotPanel({
       // Three columns of body, a gutter, then the two that only have to be
       // found.
       style={{
-        gridTemplateColumns: whole
+        gridTemplateColumns: doll
           ? `repeat(3, ${SLOT_WIDTH}px) 1.5rem ${SLOT_WIDTH}px`
           : `repeat(${drawn.length}, ${SLOT_WIDTH}px)`,
       }}
@@ -223,9 +235,10 @@ export function SlotPanel({
                 : "empty";
 
         return (
-          // The doll's own coordinates when the doll is what is being drawn;
-          // otherwise the cells flow, because a subset has no shape to keep.
-          <div key={slot} style={whole ? { gridArea: LAYOUT[slot] } : undefined}>
+          // The doll's own coordinates when the doll is what is being drawn —
+          // whether or not every square is in it. A row has no shape to keep,
+          // so its cells flow.
+          <div key={slot} style={doll ? { gridArea: LAYOUT[slot] } : undefined}>
             <ItemSlot
               // The paper doll only exists in slotowy, so anything on it is
               // worn by definition.
