@@ -34,6 +34,22 @@ export type Ends =
    * is a forecast. See `lapsesOn` in `statusRows.ts`.
    */
   | { kind: "round"; round: number }
+  /**
+   * When the turn in progress ends — whoever's turn that is.
+   *
+   * The third clock, and the one a card reaches for when it can be used at a
+   * moment that is not yours. The Eliksir Siły says "na 1 turę" and `USES` has
+   * always let it be drunk „w dowolnym momencie", which is right: you drink it
+   * in a fight somebody else started. But `turns` counts the *holder's* goes,
+   * so an Eliksir drunk on a rival's turn survived until the end of your own
+   * next one — a whole circuit of the table on a card that says one turn.
+   *
+   * Ends for everybody at once, so `finishTurn` sheds it from every seat rather
+   * than only from the one that just played. Nothing else in `status.ts` works
+   * that way, and that is exactly the difference: `turns` is a countdown a seat
+   * carries, and this is a moment the table passes through.
+   */
+  | { kind: "this-turn" }
   /** When the next fight finishes, however it finishes (17.4). */
   | { kind: "fight" }
   /** When a particular thing happens to the holder. */
@@ -380,6 +396,20 @@ export function afterFight(statuses: readonly Status[]): Status[] {
 }
 
 /**
+ * A turn has ended — anybody's.
+ *
+ * The counterpart to `afterTurn`, and the difference is who it is asked of.
+ * `afterTurn` is a countdown the seat that just played carries, so it is asked
+ * of that seat alone. This is a moment the whole table passes through, so
+ * `finishTurn` asks it of every seat: an Eliksir drunk in a fight on somebody
+ * else's turn is spent by the end of *that* turn, which is what the card says
+ * and what its holder's own counter cannot express.
+ */
+export function afterAnyTurn(statuses: readonly Status[]): Status[] {
+  return statuses.filter((status) => status.ends.kind !== "this-turn");
+}
+
+/**
  * The holder threw for their freedom (both Świątynie, face 9).
  *
  * Rolled once and read by every status waiting on a die, because the board asks
@@ -516,6 +546,12 @@ export function describeEnd(ends: Ends): string {
     // countdown is a date only after somebody walks the order forward.
     case "round":
       return `mija na początku rundy ${ends.round}`;
+    // "Bieżącej" rather than "tej", because the two are different sentences
+    // and only one of them is about somebody else's turn. `turns: 1` on the
+    // active seat also reads "do końca tej tury" and means the holder's own;
+    // this one means whichever turn is happening.
+    case "this-turn":
+      return "do końca bieżącej tury";
     case "fight":
       return "do końca walki";
     case "event":

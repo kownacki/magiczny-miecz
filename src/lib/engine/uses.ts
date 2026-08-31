@@ -74,12 +74,25 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
     co: "+2 Miecza na 1 turę",
     kiedy: null,
     // The app can carry this one now: two points of Miecz that expire with the
-    // holder's own turn, which is exactly what `status.ts` was written for.
+    // turn it was drunk in, which is exactly what `status.ts` was written for.
     rozpatruje: "aplikacja",
     efekt: {
       label: "+2 Miecza",
       modifier: { kind: "points", miecz: 2 },
-      ends: { kind: "turns", turns: 1 },
+      /**
+       * The turn in progress, not the holder's own next one.
+       *
+       * `kiedy: null` — „w dowolnym momencie" — is why. You drink this in a
+       * fight somebody else started, and `turns: 1` counts the *holder's* goes:
+       * an Eliksir drunk on a rival's turn kept its two points all the way
+       * round the table and through your own next turn as well. A card that
+       * says "na 1 turę" was buying a circuit.
+       *
+       * Drunk on your own turn — the common case — the two are the same
+       * moment, so nothing changes for the player who drinks it before a fight
+       * they started.
+       */
+      ends: { kind: "this-turn" },
     },
   },
   "jablko-natchnienia": {

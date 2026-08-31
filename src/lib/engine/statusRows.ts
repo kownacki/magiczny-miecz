@@ -76,6 +76,18 @@ export function lapsesOn(
   if (status.ends.kind === "round") {
     return { round: status.ends.round, certainty: "pewne", onOwnTurn: false };
   }
+  /**
+   * The turn in progress, which is the round in progress.
+   *
+   * Exact rather than forecast: no walk is involved, because the moment it ends
+   * at is the one already happening. `onOwnTurn` is false whoever is holding
+   * it — the turn it ends with belongs to whoever is playing, and on a
+   * bystander's card "po twojej turze" would name the wrong person entirely.
+   */
+  if (status.ends.kind === "this-turn") {
+    const now = queue.find((entry) => entry.status === "active");
+    return now ? { round: now.round, certainty: "pewne", onOwnTurn: false } : null;
+  }
   if (status.ends.kind !== "turns") return null;
 
   const debt = status.source === DEBT;

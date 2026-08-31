@@ -585,7 +585,11 @@ describe("spending a Karta that is used up by using it", () => {
     expect(writes.effects?.insert?.[0]).toMatchObject({
       source: "eliksir-sily",
       modifier: { kind: "points", miecz: 2 },
-      ends: { kind: "turns", turns: 1 },
+      // The turn in progress, not the holder's own next one. `USES` lets this
+      // be drunk „w dowolnym momencie", and `turns: 1` counts the holder's own
+      // goes — so drunk in a fight on somebody else's turn it kept its two
+      // points for a whole circuit of the table.
+      ends: { kind: "this-turn" },
     });
     expect(result).toEqual({ card: "ELIKSIR SIŁY", did: ["+2 Miecza"], stol: false });
   });

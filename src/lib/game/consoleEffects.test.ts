@@ -177,3 +177,44 @@ describe("the console can reach a lost turn at all", () => {
     });
   });
 });
+
+/**
+ * "Na 1 turę", when the turn is not yours.
+ *
+ * `USES` has always let the Eliksir be drunk „w dowolnym momencie", which is
+ * right — you drink it in a fight somebody else started. What was wrong is what
+ * happened next: `Ends.turns` counts the *holder's* own goes, so an Eliksir
+ * drunk on a rival's turn survived every seat in between and the holder's own
+ * next turn as well. A card that says one turn was buying a circuit.
+ */
+describe("an effect that ends with the turn itself", () => {
+  const potion = (gameId: string, seatId: string) =>
+    addEffect(gameId, seatId, {
+      source: "eliksir-sily",
+      label: "+2 Miecza",
+      modifier: { kind: "points", miecz: 2 },
+      ends: { kind: "this-turn" },
+    });
+
+  it("is spent by the end of the turn it was drunk in, on a seat that is not playing", async () => {
+    const { gameId, actor, second } = await table();
+    // Seat 1 is playing; seat 2 drinks. One pass, and it is gone — where a
+    // countdown in seat 2's own turns would have carried it through seat 2's
+    // next turn as well.
+    await potion(gameId, second);
+    expect(await runCommand(gameId, actor, { kind: "me", who: "2" })).toContain("+2 Miecza");
+
+    await runCommand(gameId, actor, { kind: "endturn" });
+    expect(await runCommand(gameId, actor, { kind: "me", who: "2" })).not.toContain("+2 Miecza");
+  });
+
+  it("says which turn it means, and dates it without a forecast", async () => {
+    const { gameId, actor, first } = await table();
+    await potion(gameId, first);
+    const said = await runCommand(gameId, actor, { kind: "me", who: null });
+    // No round is walked for this one: the turn it ends with is the one already
+    // happening, so there is nothing provisional about it.
+    expect(said).toContain("+2 Miecza — do końca bieżącej tury");
+    expect(said).not.toContain("prognoza");
+  });
+});

@@ -1,7 +1,7 @@
 /** Passing the turn on: what expires, what is left lying on the Obszar, and whose turn is next (10.1, 16.8). */
 
 import { nextSeat, startTurn } from "@/lib/engine/turn";
-import { afterTurn, playsAgain, type Status } from "@/lib/engine/status";
+import { afterAnyTurn, afterTurn, playsAgain, type Status } from "@/lib/engine/status";
 import { scriptFor } from "@/lib/engine/cardScript";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
@@ -205,6 +205,21 @@ export function passTurn(snapshot: Snapshot): Changeset {
    */
   const again = seat ? playsAgain(statusesOf(snapshot, seat.id)) : false;
   const expired = seat ? tickEffects(snapshot, seat.id) : {};
+  /**
+   * And what ends with the turn itself, wherever it is sitting.
+   *
+   * `tickEffects` above is the seat's own countdown and is asked of the seat
+   * that just played. `Ends.this-turn` is the other shape: a moment the table
+   * passes through, so it has to be asked of everybody. An Eliksir drunk in a
+   * fight on somebody else's turn is held by a seat this pass would otherwise
+   * never look at, and it is spent by the end of that turn — which is what "na
+   * 1 turę" means when the turn is not yours.
+   */
+  const endedWithTurn = mergeAll(
+    ...snapshot.seats.map((row) =>
+      keepOnly(snapshot, row.id, afterAnyTurn(statusesOf(snapshot, row.id))),
+    ),
+  );
 
   const state = top(game.turn_state);
   // A turn cannot be put down mid-sentence: a running fight or a Karta
@@ -303,7 +318,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
   // separately — `tickEffects` below is the other one.
   const wrapped = !again && next !== null && next <= (game.active_seat ?? 0);
 
-  return mergeAll(expired, left, spentTurns, {
+  return mergeAll(expired, endedWithTurn, left, spentTurns, {
     game: {
       active_seat: again ? game.active_seat : next,
       round: wrapped ? game.round + 1 : game.round,

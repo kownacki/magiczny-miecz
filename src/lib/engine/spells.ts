@@ -506,6 +506,27 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "brak",
     effect:
       "Nikt, łącznie z tobą, nie używa Zaklęć ani Magicznych Przedmiotów do początku twojej następnej tury.",
+    /**
+     * Anchored to the wrong person, knowingly, and this is the note saying so.
+     *
+     * The card ends it "aż do początku **twojej** następnej tury" — the
+     * caster's. What is written here is a one-turn countdown handed to every
+     * victim on their own clock, so each of them sheds it at the end of their
+     * own next turn instead: a seat playing before the caster comes round is
+     * freed early, one playing after is held late.
+     *
+     * `Ends.this-turn` does not fix it — that ends with the turn in progress,
+     * and this spans the rest of the caster's turn plus everybody else's.
+     * `Ends.round` does not either: "the start of round N" is not "the start of
+     * the caster's turn in round N", and the seats before them in the order
+     * would go free too soon. What it wants is a fifth kind anchored to a named
+     * seat — `{ kind: "before"; seatIndex }` — shed when that seat's turn
+     * begins, with the caster filled in where this data is executed.
+     *
+     * Left as it is rather than half-fixed, because the countdown is at least
+     * the right length for the table as a whole and a wrong anchor that looks
+     * exact is worse than one that is written down.
+     */
     stosuje: {
       op: "efekt",
       label: "Wojna Żywiołów",
