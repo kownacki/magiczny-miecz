@@ -5,6 +5,7 @@ import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
 import { SLOT_ICON } from "@/lib/view/slotIcons";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
+import { TILE_GAP } from "./tile-row";
 
 /**
  * What a character is wearing, laid out like a body.
@@ -156,7 +157,12 @@ export function SlotPanel({
 
   return (
     <div
-      className="grid shrink-0 gap-1.5"
+      // `TILE_GAP.card`, not a number of its own. This is a grid rather than a
+      // `TileRow` — three columns of body, a gutter, then the two relics — but
+      // it holds the same 86px tiles as the Plecak directly underneath it, and
+      // it was spacing them at 6px against the pack's 8. Two rows of the same
+      // card, one above the other, packed differently.
+      className={`grid shrink-0 ${TILE_GAP.card}`}
       // One width for every place, and the same one the pack uses: a card is
       // the same object wherever it sits, so it is the same size wherever it
       // sits. Rows size themselves, because the name under the picture is part

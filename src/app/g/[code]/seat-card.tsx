@@ -42,6 +42,7 @@ import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
 import { EffectMark, EffectTally } from "./effect-mark";
 import { EffectList } from "./effect-list";
+import { TILE_GAP } from "./tile-row";
 /**
  * How many marks the folded bar shows before it starts counting.
  *
@@ -545,7 +546,7 @@ export function SeatCard({
             the person the name belongs to, and at the far edge of a wide seat
             card they read as belonging to whatever they happen to be next to. */}
         {seat.effects.length > 0 && (
-          <span className="flex shrink-0 items-center gap-1">
+          <span className={`flex shrink-0 items-center ${TILE_GAP.mark}`}>
             {marks.map((mark) => (
               <EffectMark key={mark.id} mark={mark} nature={asNature(seat.nature)} />
             ))}

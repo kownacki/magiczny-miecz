@@ -37,6 +37,7 @@ import { MAX_SEATS } from "@/lib/game/modes";
 import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 import { EffectList } from "./effect-list";
 import { EffectMark, EffectTally } from "./effect-mark";
+import { TileRow } from "./tile-row";
 
 export function PlayersDrawer({
   seats,
@@ -244,14 +245,16 @@ export function PlayersDrawer({
                       you look at somebody else's cards, so the one kind of card
                       that was only ever a glyph here should be a card too. */}
                   {seat.effects.length > 0 && (
-                    <div className="mb-2 flex flex-wrap items-center gap-1">
-                      {seat.effects.map((effect) => (
-                        <EffectMark
-                          key={effect.id}
-                          mark={effect}
-                          nature={asNature(seat.nature)}
-                        />
-                      ))}
+                    <div className="mb-2">
+                      <TileRow size="mark" frame={false}>
+                        {seat.effects.map((effect) => (
+                          <EffectMark
+                            key={effect.id}
+                            mark={effect}
+                            nature={asNature(seat.nature)}
+                          />
+                        ))}
+                      </TileRow>
                     </div>
                   )}
                   <div className="mb-2 flex items-start gap-3">
@@ -357,7 +360,7 @@ export function PlayersDrawer({
                         })
                       }
                     >
-                      <div className="mb-2 flex flex-wrap gap-2">
+                      <TileRow frame={false}>
                         {/* The hand first, and always in the same corner.
                         
                             It is the one thing in the row that cannot be read,
@@ -395,7 +398,7 @@ export function PlayersDrawer({
                               onClick={() => onInspect(card)}
                             />
                           ))}
-                      </div>
+                      </TileRow>
                     </Fold>
                   )}
 

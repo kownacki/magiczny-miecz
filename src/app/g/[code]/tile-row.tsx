@@ -1,6 +1,6 @@
 "use client";
 
-/** One row of card squares, wherever the seat card draws a handful of them. */
+/** One row of card squares, wherever the app draws a handful of them. */
 
 /**
  * How a row is answering a card in the air, or null when it is not a target.
@@ -43,6 +43,13 @@ const ANSWER: Record<RowAnswer["colour"], { over: string; near: string }> = {
  * So the geometry lives here and the sections say only what is theirs: whether
  * a card can be dropped in, and what is inside.
  *
+ * It outgrew the seat card. The roster, the Księga's shelf and the Obszar's
+ * pile of Karty all drew the same row of the same 86px tiles and all three had
+ * written out their own spacing — `gap-2` in two places and `gap-3` in the
+ * other two — so the same eight cards sat differently depending on which panel
+ * you were looking at them in. `size` and `columns` are what those three
+ * needed that the seat card's four did not.
+ *
  * **`overflow-hidden` is load-bearing**, and it is the pack's reason that
  * generalised. A card at the start of a wrapped row steps aside into nothing —
  * there is no room inside the rectangle to its left — so it leans out past the
@@ -51,7 +58,28 @@ const ANSWER: Record<RowAnswer["colour"], { over: string; near: string }> = {
  * right place to cut it. There is room for the tiles' hover ring inside the
  * padding, so nothing that should show gets cut with it.
  */
+/**
+ * The space a row leaves around its tiles, by what is in it.
+ *
+ * Two sizes of art tile in the whole app and one ratio between them: 8px
+ * around an 86px card and 4px around a 40px mark are both a shade under a
+ * tenth of the tile. A mark row given the card row's gap reads as a row with
+ * something missing between its items, which is what it looked like beside a
+ * name.
+ */
+export const TILE_GAP = {
+  /** `TILE_WIDTH` — a Przedmiot, a Zaklęcie, a Karta on an Obszar. */
+  card: "gap-2",
+  /** `MARK_WIDTH` — an effect beside a name. */
+  mark: "gap-1",
+} as const;
+
+export type TileSize = keyof typeof TILE_GAP;
+
 export function TileRow({
+  size = "card",
+  columns,
+  frame = true,
   answer = null,
   onDragOver,
   onDragLeave,
@@ -61,6 +89,28 @@ export function TileRow({
   onPointerLeave,
   children,
 }: {
+  /** What is in the row, which is what decides how much space goes round it. */
+  size?: TileSize;
+  /**
+   * A fixed number of columns instead of a wrapping row.
+   *
+   * The Księga's shelf is laid out for five across and says so in its headings,
+   * and a wrapped row only fits five while the panel is wide enough — so every
+   * pixel spent on padding or a scrollbar could take a column away. Columns of
+   * `1fr` cannot lose one, and the leftover spreads between them rather than
+   * pooling past the last tile.
+   */
+  columns?: number;
+  /**
+   * The inset and the border the seat card's rows carry.
+   *
+   * They are there to be a drop target: a card can be dragged into the Plecak
+   * and the row lights up to say so. A shelf you only read wants the tiles
+   * against the panel's own padding instead, so it turns this off — and with
+   * it the border, which would otherwise be a rectangle round something that
+   * cannot be dropped into.
+   */
+  frame?: boolean;
   answer?: RowAnswer | null;
   onDragOver?: React.DragEventHandler<HTMLDivElement>;
   onDragLeave?: React.DragEventHandler<HTMLDivElement>;
@@ -87,7 +137,29 @@ export function TileRow({
       onClick={onClick}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
-      className={`flex flex-wrap gap-2 overflow-hidden rounded border p-1 transition ${tone}`}
+      /**
+       * Columns the width of a tile, and the leftover outside the block.
+       *
+       * `1fr` columns were the first try and they put the slack in the wrong
+       * place: a column wider than its tile spaces the tiles apart, so the
+       * shelf sat at 11px between cards while every other row in the app sat
+       * at 8. `max-content` is the tile's own width — `CardTile` is a fixed
+       * 86 — so the gap is the gap, and whatever the panel has spare splits
+       * evenly either side of the block instead of between the cards.
+       */
+      style={
+        columns
+          ? { gridTemplateColumns: `repeat(${columns}, max-content)`, justifyContent: "center" }
+          : undefined
+      }
+      className={`${columns ? "grid" : "flex flex-wrap"} ${TILE_GAP[size]} transition ${
+        // The clip belongs to the frame, and only to it: it is there to cut a
+        // card leaning out of the bag against the row's own border. Unframed
+        // there is no border to cut against and no padding to keep a tile's
+        // hover ring inside, so clipping would trim the ring off whichever
+        // tile sits at an edge.
+        frame ? `overflow-hidden rounded border p-1 ${tone}` : ""
+      }`}
     >
       {children}
     </div>

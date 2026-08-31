@@ -11,6 +11,7 @@ import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
 import { CardTile, type TileCard } from "./card-tile";
+import { TileRow } from "./tile-row";
 import { Fold } from "./fold";
 import {
   RULES_SHELVES,
@@ -353,13 +354,14 @@ export function CardLibrary({
          *
          * Five tiles across, which is what the section headings were laid out
          * for and about half again the players' width: 5 x 86 (`TILE_WIDTH`,
-         * shared with the Plecak and the paper doll) + 4 x 12 (`gap-3`) = 478,
-         * + 32 for the padding either side = 510.
+         * shared with the Plecak and the paper doll) + 4 x 8 (`TILE_GAP.card`,
+         * shared with them too) = 462, + 32 for the padding either side = 494.
          *
-         * It was 5 x 92 while `CardTile` had a width of its own. Unifying the
-         * tile took thirty pixels out of the shelf, and leaving the panel at its
-         * old 572 would have put them back as the strip of dead panel the last
-         * paragraph is about.
+         * Both terms have shrunk since this was 572, and for the same reason
+         * twice: the tile had a width of its own and the shelf had a gap of its
+         * own, and neither had any business differing from the Plecak's. The
+         * panel has to come in with them or the pixels they gave up come back
+         * as the strip of dead panel the last paragraph is about.
          *
          * The last term is the one that had to change. It was 16 — one
          * scrollbar, measured once — and a scrollbar is not one width. It is
@@ -379,7 +381,7 @@ export function CardLibrary({
          * panel past the last column — the shelf did not look narrow, it looked
          * misaligned.
          */
-        width="max-w-[542px]"
+        width="max-w-[526px]"
         /**
          * The one drawer that holds the scrollbar's room whether or not there
          * is a scrollbar.
@@ -577,7 +579,7 @@ export function CardLibrary({
                   pixel or two each, instead of pooling past the last tile. The
                   tiles keep their own 92 and sit centred in whatever they are
                   given. */}
-              <div className="grid grid-cols-5 justify-items-center gap-3">
+              <TileRow columns={5} frame={false}>
                 {section.cards.map((card) => (
                   <CardTile
                     key={card.cardId}
@@ -596,7 +598,7 @@ export function CardLibrary({
                     )}
                   </CardTile>
                 ))}
-              </div>
+              </TileRow>
             </Fold>
           ))}
         </div>

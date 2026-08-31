@@ -2,6 +2,7 @@
 
 import { fieldWithText } from "@/lib/view/fieldText";
 import { CardTile } from "./card-tile";
+import { TileRow } from "./tile-row";
 import { tileFor } from "./table";
 import { WithRules } from "./rule-ref";
 import type { EqMode } from "@/lib/engine/slots";
@@ -207,7 +208,7 @@ export function FieldModal({
                  has learnt one shelf should not have to learn a second shape
                  for the identical act. Everything the app knows about a card
                  is one hover away on all three. */
-              <div className="flex flex-wrap gap-3">
+              <TileRow frame={false}>
                 {cards.map((lying) => {
                   const name = NAMES.get(lying.cardId) ?? lying.cardId;
                   // Only Przedmioty and Przyjaciele are picked up (12.1). A Wróg
@@ -251,7 +252,7 @@ export function FieldModal({
                     </CardTile>
                   );
                 })}
-              </div>
+              </TileRow>
             )}
             {/* 13.1 and 12.1: things happen on the field your move ended on, so
                 a player reading about somewhere else is told why there is no
