@@ -103,7 +103,7 @@ import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
 import { overflowOf, waysOut } from "./commands/overflow";
 import type { Snapshot } from "./change";
 import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
-import { inPlayAt } from "@/lib/engine/slots";
+import { SLOT_LABEL, STORAGE, inPlayAt } from "@/lib/engine/slots";
 import { DEALABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
@@ -1295,8 +1295,8 @@ export async function runCommand(
       if (slot === null) return `${named(seat)} carries ${cardName(held.card_id)}.`;
       // Putting a Karta away is not wearing it — the one place in this list
       // that is not somewhere on a character.
-      return slot === "tajemna-sakwa"
-        ? `${named(seat)} puts ${cardName(held.card_id)} in the Tajemna Sakwa.`
+      return STORAGE.includes(slot)
+        ? `${named(seat)} puts ${cardName(held.card_id)} away — ${SLOT_LABEL[slot]}.`
         : `${named(seat)} wears ${cardName(held.card_id)} — ${slot}.`;
     }
 
@@ -1977,8 +1977,8 @@ export async function runCommand(
       const carried = items.filter((one) => one.slot === null).sort(byName);
       // Not worn and not in the Plecak: put away, and out of both counts. Its
       // own line, because "Worn: KIJ I SZNUR (tajemna-sakwa)" said the one
-      // thing about this Karta that is not true.
-      const stowed = items.filter((one) => one.slot === "tajemna-sakwa").sort(byName);
+      // thing about such a Karta that is not true.
+      const stowed = items.filter((one) => STORAGE.includes(one.slot as Slot)).sort(byName);
       /**
        * Beaten minus held, as a multiset: two Nobbiny are two of each, and a
        * set difference would call the second one gone.
@@ -2051,7 +2051,11 @@ export async function runCommand(
           ? [`Worn: ${worn.map((one) => `${cardName(one.card_id)} (${one.slot})`).join(", ")}`]
           : []),
         ...(stowed.length
-          ? [`W Sakwie: ${stowed.map((one) => cardName(one.card_id)).join(", ")} — nie liczy się do 5.4 i nikt tego nie zabierze`]
+          ? [
+              `Schowane: ${stowed
+                .map((one) => `${cardName(one.card_id)} (${SLOT_LABEL[one.slot as Slot]})`)
+                .join(", ")} — nie liczy się do 5.4 i nikt tego nie zabierze`,
+            ]
           : []),
         `Pack ${view.carried}/${view.carryLimit} (${eqModeOf(snapshot.game)}): ` +
           `${carried.length ? carried.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,

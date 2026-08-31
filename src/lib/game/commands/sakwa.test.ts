@@ -19,7 +19,7 @@ import { aHolding, aSeat, aTable } from "../fixture";
 import { carriedCount } from "@/lib/engine/derive";
 import { asHolding } from "./seat";
 import { equipCard, spilled } from "./holdings";
-import { inPlayAt, sakwaOpen, type Slot } from "@/lib/engine/slots";
+import { inPlayAt, openStorage, type Slot } from "@/lib/engine/slots";
 import { inEffect } from "@/lib/engine/holdings";
 import { carryLimit } from "@/lib/engine/derive";
 import { apply } from "../change";
@@ -95,7 +95,7 @@ describe("putting something in it", () => {
   it("refuses when the Karta that makes the place is not held", () => {
     const at = table([{ card_id: "miecz" }], "classic");
     expect(() => equipCard(at, { holdingId: "h0", slot: "tajemna-sakwa" })).toThrow(
-      /Nie masz Tajemnej Sakwy/,
+      /nie masz Karty, która robi to miejsce/,
     );
   });
 
@@ -123,19 +123,19 @@ describe("a bag that is not open", () => {
     { card_id: "miecz", slot: "tajemna-sakwa" },
   ];
 
+  const open = (at: ReturnType<typeof table>, mode: "classic" | "slots") =>
+    openStorage(at.holdings.map((h) => ({ cardId: h.card_id, slot: h.slot })), mode);
+
   it("is open in klasyczny by being held, because there is nowhere to wear it", () => {
-    const at = table(held(null), "classic");
-    expect(sakwaOpen(at.holdings.map((h) => ({ cardId: h.card_id, slot: h.slot })), "classic")).toBe(true);
+    expect(open(table(held(null), "classic"), "classic")).toEqual(["tajemna-sakwa"]);
   });
 
   it("is shut in slotowy while it is in the Plecak", () => {
-    const at = table(held(null), "slots");
-    expect(sakwaOpen(at.holdings.map((h) => ({ cardId: h.card_id, slot: h.slot })), "slots")).toBe(false);
+    expect(open(table(held(null), "slots"), "slots")).toEqual([]);
   });
 
   it("is open in slotowy once it is worn", () => {
-    const at = table(held("pouch"), "slots");
-    expect(sakwaOpen(at.holdings.map((h) => ({ cardId: h.card_id, slot: h.slot })), "slots")).toBe(true);
+    expect(open(table(held("pouch"), "slots"), "slots")).toEqual(["tajemna-sakwa"]);
   });
 
   it("refuses to take anything in while it is shut", () => {

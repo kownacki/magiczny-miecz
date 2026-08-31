@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeAbility } from "@/lib/engine/abilityText";
 import { abilitiesOfCharacter, asCharacterId, notesForCharacter } from "@/lib/engine/characters";
-import { SLOT_LABEL, sakwaOpen, type Slot } from "@/lib/engine/slots";
+import { SLOT_LABEL, STORAGE, openStorage, type Slot } from "@/lib/engine/slots";
 import { characterImageUrl } from "@/lib/view/cardImages";
 import { type TileCard } from "./card-tile";
 import { CarriedCard, type Carried } from "./carry";
@@ -163,22 +163,16 @@ export function SeatCard({
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
 
   /**
-   * Whether the Tajemna Sakwa is open, and so whether its place is drawn.
+   * Which storage places this character actually has open.
    *
-   * The one square on this card that is not a property of the character. "W
-   * Sakwie możesz umieścić 1 Przedmiot" — the place comes with the Karta and
-   * goes with it, and drawing an empty one for somebody who has never seen the
-   * bag would be an offer the rules do not make.
-   *
-   * `sakwaOpen`, not "is it held": in slotowy the bag has to be *worn*, which
-   * is what this variant asks of every bearer — a Koń in the Plecak pulls
-   * nothing either. Asked through the engine so the square on screen and the
-   * refusal on the server cannot come to different answers.
+   * The squares on this card that are not properties of the character: they
+   * come with a Karta and go with it, and drawing an empty one for somebody who
+   * has never seen the bag would be an offer the rules do not make. Asked
+   * through the engine so the square on screen and the refusal on the server
+   * cannot come to different answers — in slotowy the Karta has to be worn,
+   * which is what this variant asks of every bearer.
    */
-  const hasSakwa = sakwaOpen(seat.holdings, slotted ? "slots" : "classic");
-  const BODY = (Object.keys(SLOT_LABEL) as Slot[]).filter(
-    (slot) => slot !== "tajemna-sakwa",
-  );
+  const stores = openStorage(seat.holdings, slotted ? "slots" : "classic");
 
   /**
    * The card on the cursor.
@@ -724,7 +718,7 @@ export function SeatCard({
                 control too many — reaching for the sheet and hitting the body
                 is what it actually got used for. The tally stays, since it is
                 the part worth reading without counting. */}
-            {(slotted || hasSakwa) && (
+            {(slotted || stores.length > 0) && (
               /* `shrink-0`, so the row's `justify-between` pushes it to the
                  far edge: the Karta and the body are two things to look at,
                  and a body that stretches to fill the gap makes one wide
@@ -741,7 +735,7 @@ export function SeatCard({
                   /* Klasyczny has no body, so the heading is the Karta's own
                      name rather than a place on a character — and no tally,
                      because one square out of one is not a sum anybody needs. */
-                  title={slotted ? "Na sobie" : "Tajemna Sakwa"}
+                  title={slotted ? "Na sobie" : "Schowane"}
                   tally={
                     slotted
                       ? `${Object.keys(wornBySlot(seat)).length} / ${PLACES_ON_THE_BODY}`
@@ -752,7 +746,15 @@ export function SeatCard({
                 /* The whole doll in slotowy; in klasyczny the one place the
                    Karta makes, in the same corner, so a player who knows where
                    to look finds it in the same spot at either kind of table. */
-                places={slotted ? (hasSakwa ? undefined : BODY) : ["tajemna-sakwa"]}
+                /* The doll minus the storage squares that are not open, or —
+                   in klasyczny, which has no doll — only those squares. */
+                places={
+                  slotted
+                    ? (Object.keys(SLOT_LABEL) as Slot[]).filter(
+                        (slot) => !STORAGE.includes(slot) || stores.includes(slot),
+                      )
+                    : stores
+                }
                 /* Klasyczny has no body to draw, so the one square the Karta
                    makes stands on its own. Slotowy is the doll either way —
                    with the Sakwa's square in the corner or with a gap where it

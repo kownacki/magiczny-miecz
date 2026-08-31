@@ -2,7 +2,7 @@
 
 import type { Item, Nature } from "@/data/types";
 import type { Holding, Seat } from "./state";
-import { RELICS, inPlayAt, type EqMode } from "./slots";
+import { RELICS, STORAGE, inPlayAt, type EqMode, type Slot } from "./slots";
 import {
   carryLimit as abilityCarryLimit,
   fillsAPlace,
@@ -285,7 +285,7 @@ export function carriedCount(
        * so this bag is one of your four, and using it costs no space beyond
        * the place the protected Karta was already taking.
        */
-      held.slot !== "tajemna-sakwa" &&
+      !STORAGE.includes(held.slot as Slot) &&
       (eqMode === "classic" || held.slot == null),
   ).length;
 }

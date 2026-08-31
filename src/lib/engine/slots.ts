@@ -226,12 +226,12 @@ export function slotsFor(cardId: string): readonly Slot[] {
 
 /** Whether this card may be worn in this place. */
 export function fitsIn(cardId: string, slot: Slot): boolean {
-  if (slot === "tajemna-sakwa") return goesInTheSakwa(cardId);
+  if (STORAGE.includes(slot)) return goesInStorage(cardId);
   return slotsFor(cardId).includes(slot);
 }
 
 /**
- * What may be put inside the Tajemna Sakwa.
+ * What may be put away in a storage place.
  *
  * "1 Przedmiot", and the card says no more than that — so the answer is every
  * Przedmiot, with two exclusions that are the app's and are written down here
@@ -266,39 +266,114 @@ export function fitsIn(cardId: string, slot: Slot): boolean {
  * back in the pack.
  */
 /**
+ * What kind of place each one is, and it is the only table that knows.
+ *
+ * Two kinds, and the difference is whether a card in it *works*. Every place on
+ * the doll is somewhere a card works from — that is what wearing a thing means,
+ * and it is the whole of the slotted variant: a Koń pulls where it is ridden, a
+ * Miecz cuts where it is held. So `slot != null` was a correct answer to "is
+ * this card in play" for as long as every place was a body place.
+ *
+ * Then one was not, and the answer went wrong everywhere at once — in
+ * `inEffect`, in `carryLimit`, in the console's own sheet. Two bugs in an hour,
+ * both the same shape: a field standing in for a question until a new value
+ * made the two come apart.
+ *
+ * So the question has a name and one table answers it. `storage` is somewhere a
+ * Karta is *put away*: out of play, out of 5.4's count, and — because the only
+ * card that makes one says so — out of everybody's reach. Nothing outside this
+ * file needs to know which card that is.
+ *
+ * `madeBy` is the other half: a storage place exists only while the Karta that
+ * makes it is being held, which is what tells `openStorage` whether there is an
+ * "in" at all. A second bag with a pocket costs one line here.
+ */
+const PLACE: Record<Slot, { kind: "body" } | { kind: "storage"; madeBy: string }> = {
+  head: { kind: "body" },
+  amulet: { kind: "body" },
+  body: { kind: "body" },
+  "main-hand": { kind: "body" },
+  "off-hand": { kind: "body" },
+  gloves: { kind: "body" },
+  ring: { kind: "body" },
+  mount: { kind: "body" },
+  pouch: { kind: "body" },
+  // Found rather than chosen, but worn all the same: one opens the Most and the
+  // other the Zamek, which is work done from where they hang.
+  "magiczny-miecz": { kind: "body" },
+  "tarcza-tolimana": { kind: "body" },
+  // "W Sakwie możesz **umieścić** 1 Przedmiot" — storage, and the rest of that
+  // card is about nobody being able to reach what is in it.
+  "tajemna-sakwa": { kind: "storage", madeBy: "tajemna-sakwa" },
+};
+
+/** Places where a Karta is put away rather than worn. */
+export const STORAGE: readonly Slot[] = (Object.keys(PLACE) as Slot[]).filter(
+  (slot) => PLACE[slot].kind === "storage",
+);
+
+/**
  * Whether a card in this place is *in play*, rather than merely somewhere.
  *
- * Every place on the doll is somewhere a card works from — that is what wearing
- * a thing means, and it is the whole of the slotted variant: a Koń pulls where
- * it is ridden, a Miecz cuts where it is held. `slot != null` was the same
- * question for as long as every place was on the body.
- *
- * The Tajemna Sakwa's inside is the one that is not. A Karta in the bag is put
- * away: "W Sakwie możesz **umieścić** 1 Przedmiot" is storage, and the rest of
- * the card is about nobody being able to reach it. A Miecz in there is not in
- * your hand, and a Koń in there is not pulling anything — so a stored card is
- * out of `inEffect` and lends nothing to `carryLimit`, exactly as it is out of
- * `carriedCount`.
- *
- * The alternative would be a card that is safe from every thief in the box and
- * still swinging in every fight, which is a strictly better sword for no
- * reason the Karta gives.
+ * The question `slot != null` was standing in for. A stored Karta is out of
+ * `inEffect` and lends nothing to `carryLimit`, exactly as it is out of
+ * `carriedCount` — because the alternative is a Miecz safe from every thief in
+ * the box and still swinging in every fight, which is a strictly better sword
+ * for no reason any Karta gives.
  */
 export function inPlayAt(slot: string | null | undefined): boolean {
-  return slot != null && slot !== "tajemna-sakwa";
+  return slot != null && PLACE[slot as Slot]?.kind === "body";
 }
 
+/**
+ * The old name, kept while another session's refactor is in flight over the
+ * files that call it. One bag, so "is the Sakwa open" and "which storage places
+ * are open" are the same question; delete it when the callers have moved.
+ */
 export function sakwaOpen(
   holdings: readonly { cardId: string; slot?: string | null }[],
   eqMode: EqMode,
 ): boolean {
-  return holdings.some(
-    (held) =>
-      held.cardId === "tajemna-sakwa" && (eqMode === "classic" || held.slot === "pouch"),
-  );
+  return openStorage(holdings, eqMode).length > 0;
 }
 
-export function goesInTheSakwa(cardId: string): boolean {
+/** Which Karta makes this storage place, for a rule that has to name it. */
+export function makerOf(slot: Slot): string | null {
+  const place = PLACE[slot];
+  return place.kind === "storage" ? place.madeBy : null;
+}
+
+/**
+ * Which storage places this seat actually has: the ones whose Karta is there to
+ * make them.
+ *
+ * Held is enough in klasyczny, because there is nowhere to wear anything and a
+ * card works from the pack. In slotowy the Karta has to be *worn*, and that is
+ * not a rule invented for any one bag — `carryLimit` asks the same of the whole
+ * bearer family, so a Koń in the Plecak pulls nothing either. A bag you are not
+ * wearing is a bag that is not open.
+ *
+ * Which means a place can close under something that is in it: take the bag off
+ * and the Karta inside has nowhere to be. `spilled` is what puts it back in the
+ * pack.
+ */
+export function openStorage(
+  holdings: readonly { cardId: string; slot?: string | null }[],
+  eqMode: EqMode,
+): Slot[] {
+  return STORAGE.filter((slot) => {
+    const place = PLACE[slot];
+    return (
+      place.kind === "storage" &&
+      holdings.some(
+        (held) =>
+          held.cardId === place.madeBy && (eqMode === "classic" || inPlayAt(held.slot)),
+      )
+    );
+  });
+}
+
+export function goesInStorage(cardId: string): boolean {
   return !RELICS.has(cardId) && cardId !== "magiczna-sakwa" && cardId !== "tajemna-sakwa";
 }
 
