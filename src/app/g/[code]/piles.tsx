@@ -41,7 +41,29 @@ const LEAVES = 10;
 /** The isometric offset per leaf: right and up, as a stack seen from a corner. */
 const STEP = { x: 2, y: 2 };
 
-const CARD = { w: 92, h: 131 };
+/**
+ * One card, and the height is not a suggestion.
+ *
+ * Tailwind's preflight sets `img { height: auto }`, so an `<Image>` given a
+ * width and a height keeps the width and works the height out from the file.
+ * That made this constant fiction: the backs are cut 460x701 by
+ * `export-card-back.mjs` and rendered 140 tall, the faces are cut 460x768 by
+ * the slicer and rendered 154, and the box was sized for 131 — three numbers,
+ * none of them agreeing, which is why a used pile stood taller than the stack
+ * of backs beside it and hung out of its own box. Both are now given this
+ * rectangle outright, in the style rather than in the attribute, and filled
+ * with `object-cover`.
+ *
+ * 154 is the *face's* own shape at this width (527x880 → 153.6), so a face is
+ * never cropped and a back loses four pixels off each side instead. Sized to
+ * the back it was the other way about and the wordiest cards in the deck lost
+ * their last two lines — TAJEMNICZA SZKATUŁA's sixth die face, KRYSZTAŁ LOSU's
+ * fifth and sixth — which reads as a broken picture rather than as a thumbnail.
+ * A back is a frame around a word: taking a sliver off its sides costs nothing
+ * anybody can see, and the two crops are two cuts of one printed card anyway
+ * (the cell is 496x877, and the face slicer's is the nearer of the two).
+ */
+const CARD = { w: 92, h: 154 };
 
 /**
  * The edge of one card in a stack.
@@ -57,6 +79,23 @@ const CARD = { w: 92, h: 131 };
  * rather than as a stripe.
  */
 const EDGE = "border border-white/25 shadow-[-1px_1px_2px_rgba(0,0,0,0.6)]";
+
+/**
+ * Where one leaf sits, counted down from the top card.
+ *
+ * `depth` 0 is the card you can see, and it is anchored to the same place in
+ * every pile at this table — a full one and a pile of one put their top card on
+ * the same spot, and the leaves grow *downward and left* out from under it.
+ *
+ * It used to be the other way about: leaf 0 at the bottom-left corner and each
+ * one up and right, so the top card's position moved with the count and a used
+ * pile of one sat a stack's whole height below the deck beside it. Depth is
+ * what a stack shows; where its face is is not.
+ */
+function leafAt(depth: number): { bottom: number; left: number } {
+  const under = LEAVES - 1 - depth;
+  return { bottom: under * STEP.y, left: under * STEP.x };
+}
 
 /**
  * The box every stack is drawn in, whatever is in it.
@@ -221,22 +260,23 @@ function Pile({
       <div className="relative" style={{ width: BOX.w, height: BOX.h }}>
         {leaves === 0 ? (
           <div
-            style={{ width: CARD.w, height: CARD.h }}
-            className="absolute bottom-0 left-0 rounded border border-dashed border-edge"
+            style={{ ...leafAt(0), width: CARD.w, height: CARD.h }}
+            className="absolute rounded border border-dashed border-edge"
           />
         ) : (
-          Array.from({ length: leaves }, (_, index) => (
+          // Deepest leaf first, so each card paints over the one beneath it and
+          // the top of the pile is the last thing drawn.
+          Array.from({ length: leaves }, (_, index) => leaves - 1 - index).map((depth) => (
             <Image
-              key={index}
+              key={depth}
               src={back}
               alt=""
               width={CARD.w}
               height={CARD.h}
-              // Bottom-left leaf first, each one up and to the right, so the
-              // stack is drawn from underneath and the top card is a whole card
-              // rather than an edge.
-              style={{ bottom: index * STEP.y, left: index * STEP.x }}
-              className={`absolute rounded ${EDGE}`}
+              // Both dimensions in the style, because the `height` attribute
+              // alone loses to preflight's `height: auto` — see `CARD`.
+              style={{ ...leafAt(depth), width: CARD.w, height: CARD.h }}
+              className={`absolute rounded object-cover ${EDGE}`}
             />
           ))
         )}
@@ -284,36 +324,41 @@ function Used({
       <div className="relative" style={{ width: BOX.w, height: BOX.h }}>
         {leaves === 0 ? (
           <div
-            style={{ width: CARD.w, height: CARD.h }}
-            className="absolute bottom-0 left-0 rounded border border-dashed border-edge"
+            style={{ ...leafAt(0), width: CARD.w, height: CARD.h }}
+            className="absolute rounded border border-dashed border-edge"
           />
         ) : (
-          Array.from({ length: leaves }, (_, index) => {
+          Array.from({ length: leaves }, (_, index) => leaves - 1 - index).map((depth) => {
             // Only the topmost shows its face. What is under it is an edge,
             // which is all you would see of it on a table anyway.
-            const last = index === leaves - 1;
-            const face = last && card ? cardImageUrl(card.cardId, card.ref) : null;
-            const place = { bottom: index * STEP.y, left: index * STEP.x };
+            const face = depth === 0 && card ? cardImageUrl(card.cardId, card.ref) : null;
+            const place = { ...leafAt(depth), width: CARD.w, height: CARD.h };
             return face ? (
               <button
-                key={index}
+                key={depth}
                 onClick={() => card && onInspect(card)}
                 title={card?.name}
+                // Sized like every other leaf, so the hover outline is the card
+                // and not whatever shape the picture happened to come out.
                 style={place}
-                className={`absolute rounded transition hover:border-ochre ${EDGE}`}
+                className={`absolute overflow-hidden rounded transition hover:border-ochre ${EDGE}`}
               >
+                {/* Given the rectangle rather than allowed to set its own
+                    height — see `CARD`. At this shape a face fills it exactly,
+                    so nothing of the card is lost. */}
                 <Image
                   src={face}
                   alt={card?.name ?? ""}
                   width={CARD.w}
                   height={CARD.h}
-                  className="rounded"
+                  style={{ width: CARD.w, height: CARD.h }}
+                  className="rounded object-cover"
                 />
               </button>
             ) : (
               <div
-                key={index}
-                style={{ ...place, width: CARD.w, height: CARD.h }}
+                key={depth}
+                style={place}
                 className={`absolute rounded bg-panel ${EDGE}`}
               />
             );
