@@ -1754,8 +1754,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   onRoll={() => post("turn", { action: "roll" })}
                   // 13.4: what is already lying here counts against the number
                   // the field asks for, which is why a silted-up Obszar draws
-                  // nothing and the button is not there.
-                  canDraw={onField !== null && onField.draw - onField.drawn.length > 0}
+                  // nothing and the button is not there. `draw` is what is
+                  // still owed — subtracted on arrival and spent per draw — so
+                  // this no longer has to work it out from `drawn`, which taking
+                  // a card shrinks (see `afterMove`).
+                  canDraw={onField !== null && onField.draw > 0}
                   onDraw={() => post("turn", { action: "draw" })}
                   busy={busy}
                   onOpen={(id) => {

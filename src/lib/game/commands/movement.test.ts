@@ -421,8 +421,11 @@ describe("ruch (10.2, 13.4)", () => {
 
     // Only this field's card leaves the board; the one two squares away stays.
     expect(writes.fieldCards).toEqual({ delete: ["fc-1"] });
+    // Płaskowyż Mgieł prints 3; one Karta is already lying here, so two are
+    // still owed. `draw` is what is left rather than what was printed — the
+    // subtraction happens once, on arrival, and taking the Hełm cannot undo it.
     expect(top(writes.game!.turn_state!)).toMatchObject({
-      draw: 3,
+      draw: 2,
       drawn: [{ cardId: "helm", cardClass: "item" }],
     });
   });

@@ -529,7 +529,38 @@ export function afterMove(
     phase: "field",
     fieldId: field.id,
     from,
-    draw: field.draw ?? 0,
+    /**
+     * What is still owed, settled here and never recomputed.
+     *
+     * `draw` used to be the printed number and "may I draw?" was
+     * `draw - drawn.length > 0`, which reads the same until a card is taken:
+     * picking the blocker up shrank `drawn`, and the Obszar owed a card again.
+     * Land on a „wyciągnij 1 kartę" square with a Miecz lying on it and you
+     * could take the Miecz *and* draw — the block paying out twice.
+     *
+     * 13.4 settles it once, at the moment of badanie Obszaru: „ciągnie się ich
+     * tylko tyle, by ich suma równała się liczbie Kart". Taking is 16.6, a
+     * later step, and 12.1b already says which order they go in — „Najpierw
+     * wyciągnij Karty, które ten Obszar każe ciągnąć". So the subtraction
+     * happens on arrival and what happens to `drawn` afterwards cannot undo it.
+     *
+     * Confirmed by the one place the community has written this down, RUNner on
+     * forum.magiaimiecz.eu answering exactly this question: „Jeśli np. miecz
+     * leży na obszarze «wylosuj 1 kartę», to nie losuje się nic" — and not
+     * afterwards either.
+     *
+     * **A modification worth considering, deliberately not taken.** Counting
+     * *Przedmioty* toward the sum is what makes an Obszar blockable on purpose:
+     * three swords dropped on a „wyciągnij 3 karty" square kill it, and a
+     * visitor with a full pack (5.4) or the wrong Natura (5.3) cannot even
+     * clear it. The rules are plain that they count — „jakieś Karty", any cards
+     * — and Talisman's own FAQ says the same ("any cards of any type"), so the
+     * box is followed here. A house rule that excluded Przedmioty and
+     * Przyjaciele from the make-up count, leaving only Spotkania, Wrogowie,
+     * Nieznajomi and Miejsca, would remove the griefing without touching
+     * anything the deck does by itself.
+     */
+    draw: Math.max(0, (field.draw ?? 0) - waiting.length),
     drawn: resolutionOrder([...waiting]),
   };
 }

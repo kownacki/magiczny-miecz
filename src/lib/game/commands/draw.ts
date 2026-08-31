@@ -9,7 +9,8 @@ import { drawFrom, remaining, type Shuffle } from "@/lib/engine/deck";
 import { cardName, plural } from "@/lib/engine/polish";
 import { wandRefills } from "@/lib/engine/derive";
 import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
-import { afterDraw } from "@/lib/engine/turn";
+import { FIELDS } from "@/lib/engine/board";
+import { afterDraw, type TurnPhase } from "@/lib/engine/turn";
 import { replaceTop, top } from "@/lib/engine/stack";
 import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
@@ -103,6 +104,18 @@ export interface Drawn {
  * `apply(snapshot, soFar)` rather than merging the two changesets side by side,
  * which would silently keep only the second pile.
  */
+/**
+ * One off the Obszar's tally — unless a Karta asked for it.
+ *
+ * `wyciagnij` (Skalne Wrota) and Odmiana Losu draw *past* what the square owes,
+ * so they must not spend it: three extra Karty should not stop the player
+ * drawing the one the Obszar was printed with.
+ */
+function countedOff(phase: TurnPhase, byCard: boolean | undefined): TurnPhase {
+  if (byCard || phase.phase !== "field") return phase;
+  return { ...phase, draw: Math.max(0, phase.draw - 1) };
+}
+
 export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> {
   const seat = activeSeat(snapshot);
   // 13.2: a turn spent meeting somebody is not also spent exploring.
@@ -113,12 +126,13 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   }
 
   /**
-   * 13.4's count, which only the browser was keeping.
+   * 13.4's count, which only the browser was keeping — and kept wrongly.
    *
    * "Jeżeli na danym Obszarze leżą już jakieś Karty, ciągnie się ich tylko
    * tyle, by ich suma równała się liczbie Kart, które zgodnie z instrukcją
    * powinny zostać na tym Obszarze wyciągnięte." The waiting Karty are lifted
-   * into `drawn` on arrival, so the sum is already there to compare against.
+   * into `drawn` on arrival and subtracted from the allowance there, so what is
+   * left to draw is `state.draw` and nothing recomputes it — see `afterMove`.
    * 16.8's worked example is the check, and its two cards both exist: an
    * abandoned Niedźwiedź (Wróg) and 2 Sztuki Złota (Przedmiot) become „2 z 3
    * Kart" for whoever stops there next. So nothing here filters by class —
@@ -128,11 +142,16 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
    * route could both draw a square dry. A rule kept only by a greyed-out
    * button is not kept.
    */
-  if (!command.byCard && state.drawn.length >= state.draw) {
+  if (!command.byCard && state.draw <= 0) {
+    // Which of the two it is cannot be read off the frame — `draw` is 0 either
+    // way — so the board is asked what the Obszar prints. Told "nie ciągnie się
+    // Kart" about a square that plainly says „wyciągnij 1 kartę", a player goes
+    // looking for the bug rather than for what is lying on it.
+    const prints = FIELDS.get(state.fieldId)?.draw ?? 0;
     throw new Error(
-      state.draw === 0
+      prints === 0
         ? "Na tym Obszarze nie ciągnie się Kart (13.4)."
-        : `Ten Obszar daje ${state.draw} — masz już tyle (13.4).`,
+        : `Ten Obszar daje ${prints} — tyle już tu leży albo wyciągnięto (13.4).`,
     );
   }
 
@@ -182,11 +201,14 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
       game: {
         turn_state: replaceTop(
           snapshot.game.turn_state,
-          afterDraw(state, {
-            cardId: card.id,
-            cardClass: card.cardClass,
-            ref: drawn[0],
-          }),
+          countedOff(
+            afterDraw(state, {
+              cardId: card.id,
+              cardClass: card.cardClass,
+              ref: drawn[0],
+            }),
+            command.byCard,
+          ),
         ),
         deck: { ...decks, events: after },
       },

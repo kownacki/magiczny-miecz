@@ -775,7 +775,9 @@ export function takeFromField(
       !fought.includes(row.card_id),
   );
   if (guarded) throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");
-  if (state.draw > state.drawn.length) {
+  // `draw` is what is *still* owed — see `afterMove`. It used to be the printed
+  // number, and this compared it against `drawn`, which the take below shrinks.
+  if (state.draw > 0) {
     throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
   }
 

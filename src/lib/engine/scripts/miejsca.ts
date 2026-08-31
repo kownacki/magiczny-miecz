@@ -8,6 +8,32 @@ import type { CardScript } from "../cardScript";
  *
  * Absent is the normal state: a card with no entry here shows its printed text
  * and the players apply it, exactly as before.
+ *
+ * # `zostaje` is the printed rule, and the printed rule silts the board up
+ *
+ * A Miejsce with `disposition: { kind: "zostaje" }` never leaves its Obszar, and
+ * 13.4 counts every Karta lying on an Obszar against what that Obszar draws. So
+ * a Krąg the table walks round for an hour fills with Miejsca and stops dealing
+ * anything — not by anyone's doing, just by the deck running.
+ *
+ * That is the box's rule and it stays. It is also the one thing the Polish
+ * community wrote a house rule for, on magiaimiecz.eu's *Magiczny Miecz —
+ * Modyfikacje Zasad*:
+ *
+ * > „Standardowe zasady mówią, że kiedy na badanym obszarze wylosuje się kartę
+ * > Miejsca, to pozostaje tam ona do końca gry. Moje doświadczenie jednak mówi,
+ * > że tego typu zapis jest kompletnie niepraktyczny, ponieważ gracze często
+ * > chodzą długo po jednym kręgu, który szybko zapełnia się Miejscami i blokuje
+ * > możliwość losowania dalszych kart zdarzeń."
+ *
+ * Their fix is a d6 rolled when the Miejsce appears: 1 it goes at once, 2-3
+ * after one visit, 4-5 after a tracked number of visits, 6 permanent. **Worth
+ * building as a variant** — and cheap, because `disposition` already carries
+ * „po N turach" alongside „zostaje", so it is a data change over the seven
+ * `zostaje` Miejsca plus a roll, not an engine one. Not taken now because the
+ * box is what this plays by default; see the same shape as `eq_mode` and
+ * `trophy_mode`, both of which default away from the book only where a table
+ * asked them to.
  */
 export const MIEJSCA: Readonly<Record<string, CardScript>> = {
   "drzewo-zycia": {

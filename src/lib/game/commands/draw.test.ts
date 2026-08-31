@@ -97,26 +97,49 @@ describe("ciągnięcie Karty Zdarzeń", () => {
    * the route could both draw a square dry.
    */
   describe("13.4's count", () => {
+    /**
+     * `draw` is what is *still* owed, subtracted on arrival — see `afterMove`.
+     * These build the frame directly, so they state the remainder rather than
+     * the printed number.
+     */
     const owed = (draw: number, drawn: { cardId: string; cardClass: "foe" }[]) =>
       table({ game: { turn_state: onField({ draw, drawn }) } });
     const lying = [{ cardId: "cyklop", cardClass: "foe" as const }];
 
-    it("refuses once the Obszar's number is already on the field", () => {
-      expect(() => drawCard(owed(1, lying), { named: null, shuffle: never })).toThrow(
-        "Ten Obszar daje 1 — masz już tyle (13.4).",
+    it("refuses once the Karty lying here fill the number", () => {
+      // HERE is Step I, which prints „wyciągnij 1 kartę" — and the refusal says
+      // so, because `draw` is 0 whether the square asks for nothing or has been
+      // filled, and only the board knows which.
+      expect(() => drawCard(owed(0, lying), { named: null, shuffle: never })).toThrow(
+        "Ten Obszar daje 1 — tyle już tu leży albo wyciągnięto (13.4).",
       );
-    });
-
-    it("still draws the difference", () => {
-      // A square worth 2 with one Karta already lying on it.
-      const done = drawCard(owed(2, lying), { named: null, shuffle: never });
-      expect(done.result.card?.id).toBe("cyklop");
     });
 
     it("says so differently where the Obszar draws nothing at all", () => {
-      expect(() => drawCard(owed(0, []), { named: null, shuffle: never })).toThrow(
+      const bare = table({
+        game: { turn_state: onField({ fieldId: asFieldId("karczma")!, draw: 0, drawn: [] }) },
+        seats: [aSeat({ id: "seat-a", field_id: asFieldId("karczma")! })],
+      });
+      expect(() => drawCard(bare, { named: null, shuffle: never })).toThrow(
         "Na tym Obszarze nie ciągnie się Kart (13.4).",
       );
+    });
+
+    it("still draws what is left over", () => {
+      const done = drawCard(owed(1, lying), { named: null, shuffle: never });
+      expect(done.result.card?.id).toBe("cyklop");
+    });
+
+    /**
+     * And spends it, so a square worth two is worth two and not for ever.
+     *
+     * The old shape compared the printed number against `drawn.length`, which
+     * `takeCard` shrinks — so picking a blocker up handed the draw back and a
+     * „wyciągnij 1 kartę" square with a Miecz on it paid out twice.
+     */
+    it("counts the draw off the Obszar's tally", () => {
+      const after = drawCard(owed(1, lying), { named: null, shuffle: never });
+      expect(top(after.writes.game!.turn_state!)).toMatchObject({ draw: 0 });
     });
 
     /**
@@ -124,11 +147,12 @@ describe("ciągnięcie Karty Zdarzeń", () => {
      *
      * Skalne Wrota says „wyciągnij 3 Karty" and Odmiana Losu swaps one for
      * another; 13.4 caps what the *square* owes, not what a card may do once it
-     * is being resolved. Without this the count would silently break both.
+     * is being resolved. It neither needs the tally nor spends it.
      */
-    it("lets a Karta draw past it", () => {
-      const done = drawCard(owed(1, lying), { named: null, shuffle: never, byCard: true });
+    it("lets a Karta draw past it without spending it", () => {
+      const done = drawCard(owed(0, lying), { named: null, shuffle: never, byCard: true });
       expect(done.result.card?.id).toBe("cyklop");
+      expect(top(done.writes.game!.turn_state!)).toMatchObject({ draw: 0 });
     });
   });
 
