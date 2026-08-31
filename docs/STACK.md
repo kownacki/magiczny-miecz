@@ -1,13 +1,18 @@
 # The resolution stack
 
-**Status: step 3's two cards proven live; law 4 waiting on Michał** (2026-08-31).
-The Trójgłowy Smok is the `loop` frame's first occupant — three heads, one at a
-time, regrown on anything but a win — and the CHOCHLIK is the `ask` frame's,
-the first question in the box that belongs to no card script. Both MANUAL
-entries are deleted, and nine of the acceptance test's eleven moments now run.
-What each took, and the narrowings they settled, is below the steps table.
-Law 4 is not started and should not be until the question in "Law 4 is blocked
-on a question" is answered.
+**Status: step 3 done, law 4 narrowed and built, step 4 proven for it**
+(2026-08-31). The Trójgłowy Smok has the `loop` frame, the CHOCHLIK has the
+`ask` frame, Odmiana Losu by a bystander turned out to need no code, and a
+Zaklęcie can now reach the fight beneath it. Nine of the acceptance test's ten
+moments run; the tenth (Celina's second turn, law 2's cut) is the one law never
+exercised end to end. All of it proven on table PHK2P across two devices and a
+spectator.
+
+**What step 3 was for**: the MANUAL list in `coverage.ts` went from twenty-two
+clauses to seven the same day. What is left of it is three blockers rather than
+seven cards — see docs/TASKS.md, "Two decisions and three blockers".
+
+What each card took, and the narrowings it settled, is below the steps table.
 
 **Proven live on table PHK2P**, two devices and a spectator against a running
 server, which is step 4's gate for the parts step 3 built:
@@ -37,7 +42,8 @@ continuation; `answer` reaches a frame from the route and the console; the
 browser renders a suspended frame's question. Proven live: Kurhan's face 6
 suspended `[field, script, fight]` over the wire, the Duch was fought and
 lost, and the mark landed on the field two commits after the suspension.
-Steps 3–4 are still to come. The laws below were decided before any code.
+Steps 3-4 are done bar the last acceptance moment; see the status above. The
+laws below were decided before any code.
 
 The engine keeps one frame of turn state and forgets where it was whenever
 something opens on top of it. This page is the specification for replacing
@@ -346,9 +352,10 @@ what law 3 owes (the attempt ends, the heads regrow, 17.4 settles the Smok for
 the turn) reached by the dice rather than by the Krąg, so nothing is asserted
 about a mechanism nobody has written.
 
-## Law 4 is blocked on a question, not on work
+## Law 4: the question, and how it was answered
 
-**Raised 2026-08-31, before writing any of it.** Law 4 says the cast becomes a
+**Raised 2026-08-31 before writing any of it, and answered the same day — the
+narrowing is at the end of this section.** Law 4 says the cast becomes a
 `cast` frame above the fight, and the acceptance test's moment 7 spells out the
 stack it wants: `[field, loop, fight, cast(B), ask(A: use Władca Zaklęć?)]`.
 

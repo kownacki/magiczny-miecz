@@ -334,15 +334,57 @@ because the app rolls, moves and computes everything.
       reads `spoils` / `spoilsHoldingId`, so it is a picker on a button that is
       already there.
 
-- [ ] **The last 6 cards.** 132 of 138 distinct event cards have a script — 112
-      `pelne` and 20 `czesciowe`. What remains is individually irregular rather
-      than merely unwritten, and the app says so on screen rather than staying
-      quiet — see `coverage.ts`.
+- [ ] **Two decisions and three blockers**, written down here because they are
+      what the remaining work is actually waiting on (2026-08-31).
 
-      The six with nothing at all: **Sobowtór**, whose strength is its
-      opponent's, and **Wampir**, whose grows as it wins; **Kometa**, which
-      reaches other cards lying on the board; **Turniej Rycerski**; **Diament
-      Królów**; **Tajemna Sakwa**.
+      **A status has nowhere to sit on a Karta lying on an Obszar.**
+      `seat_effects.seat_id` is `not null`. That one constraint stops the Krąg
+      Płomieni's burning Wróg, the Władca Gromu's paralysed creatures, half of
+      the Ocalony, and the Wampir's growing Życie. One migration, four cards —
+      **on the database three other projects share, so it is Michał's to
+      approve.**
+
+      **Nothing records which Przedmioty are inside a container.** The Magiczna
+      Sakwa and the Tragarz destroy what they carried and the app sheds the
+      overflow onto the Obszar instead, which is wrong in the player's favour;
+      the Tajemna Sakwa wants the same link. `carried_by` already does exactly
+      this for a Krzyżowiec's Zaklęcie — but putting a Przedmiot *into* a Sakwa
+      is something a player has to be able to do, so this is **a feature, and
+      wants Michał's say on whether it earns its UI.**
+
+      **Cross-obstacle adjacency is not on the board.** The Łódź and the
+      Latarnia land you at the crossing's printed exit rather than "na Obszarze
+      sąsiadującym", because the rings are 14, 16 and 18 fields and do not line
+      up. Nobody's decision — just work nobody has done, and another session was
+      measuring it as this was written.
+
+- [ ] **The last 6 cards.** 132 of 138 distinct event cards have a script — 128
+      `pelne` and 4 `czesciowe`, after the sweep of 2026-08-31 took the MANUAL
+      list from twenty-two clauses to seven. The app says on screen which is
+      which — see `coverage.ts`.
+
+      The six with nothing at all, and what each of them actually wants:
+
+      - **Sobowtór** — one line. His strength being his opponent's is already
+        carried in `cards.ts` and tested; what he lacks is a `SCRIPTS` entry, so
+        "Pozostanie tu, aż ktoś go pokona" is unencoded and `coverageOf` calls
+        him `brak` — "aplikacja jej nie prowadzi" — about a card the app fights
+        correctly. `sobowtor: STRAZUJE()` answers both.
+      - **Kometa** — buildable today, no new model. "Giną wszyscy Nieznajomi"
+        is a sweep of one class off the Kraina you are walking: the `stranger`
+        rows in that ring go to the used pile.
+      - **Turniej Rycerski** — assembly. A challenge, a teleport and an ordinary
+        duel, all three of which exist.
+      - **Diament Królów** — mostly assembly. Its second half, a lost duel that
+        must be paid with the Diament rather than anything else, is
+        `CardScript.przegrana` pointing the other way.
+      - **Wampir** — blocked. His Życie grows as he wins, which is a number
+        that has to live on the Karta lying on the Obszar. Same wall as the
+        three Zaklęcia below.
+      - **Tajemna Sakwa** — blocked. "W Sakwie możesz umieścić 1 Przedmiot" is
+        the container link the Magiczna Sakwa and the Tragarz also want.
+
+      So they are three afternoons and two blockers, not six puzzles.
 
       Three reasons listed here have since gone. A consumable spent at a moment
       of the holder's choosing is `uses.ts`; a friend that imposes an ongoing
