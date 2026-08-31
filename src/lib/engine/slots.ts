@@ -325,18 +325,6 @@ export function inPlayAt(slot: string | null | undefined): boolean {
   return slot != null && PLACE[slot as Slot]?.kind === "body";
 }
 
-/**
- * The old name, kept while another session's refactor is in flight over the
- * files that call it. One bag, so "is the Sakwa open" and "which storage places
- * are open" are the same question; delete it when the callers have moved.
- */
-export function sakwaOpen(
-  holdings: readonly { cardId: string; slot?: string | null }[],
-  eqMode: EqMode,
-): boolean {
-  return openStorage(holdings, eqMode).length > 0;
-}
-
 /** Which Karta makes this storage place, for a rule that has to name it. */
 export function makerOf(slot: Slot): string | null {
   const place = PLACE[slot];

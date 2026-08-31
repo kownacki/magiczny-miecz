@@ -17,7 +17,7 @@ import {
   mayHold,
 } from "@/lib/engine/derive";
 import { CLASS_NAME, forbiddenSaid, forbiddenTo, kindForCard, slotOnArrival } from "@/lib/engine/holdings";
-import { SLOT_LABEL, fitsIn, isWearable, sakwaOpen, type Slot } from "@/lib/engine/slots";
+import { SLOT_LABEL, STORAGE, fitsIn, isWearable, openStorage, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import {
@@ -689,8 +689,9 @@ export function equipCard(
    *
    * Both directions: putting one in, and taking the one that is in out.
    */
-  const theSakwa = command.slot === "tajemna-sakwa" || held.slot === "tajemna-sakwa";
-  if (snapshot.game.eq_mode !== "slots" && !theSakwa) {
+  const stowing =
+    STORAGE.includes(command.slot as Slot) || STORAGE.includes(held.slot as Slot);
+  if (snapshot.game.eq_mode !== "slots" && !stowing) {
     throw new Error("Ten stół gra klasycznym ekwipunkiem — nie ma miejsc na przedmioty.");
   }
 
@@ -703,18 +704,19 @@ export function equipCard(
    * not exist.
    */
   if (
-    command.slot === "tajemna-sakwa" &&
-    !sakwaOpen(
+    STORAGE.includes(command.slot as Slot) &&
+    !openStorage(
       snapshot.holdings
         .filter((one) => one.seat_id === held.seat_id)
         .map((one) => ({ cardId: one.card_id, slot: one.slot })),
       eqModeOf(snapshot.game),
-    )
+    ).includes(command.slot as Slot)
   ) {
+    const place = SLOT_LABEL[command.slot as Slot];
     throw new Error(
       snapshot.game.eq_mode === "slots"
-        ? "Tajemna Sakwa musi być założona — w plecaku jest zamknięta."
-        : "Nie masz Tajemnej Sakwy — nie ma gdzie tego włożyć.",
+        ? `${place}: Karta, która robi to miejsce, musi być założona — w plecaku jest zamknięta.`
+        : `${place}: nie masz Karty, która robi to miejsce.`,
     );
   }
 
@@ -829,12 +831,13 @@ export function spilled(snapshot: Snapshot, soFar: Changeset = {}): Changeset {
   const after = apply(snapshot, soFar);
   const mode = eqModeOf(after.game);
   const stranded = after.holdings.filter((held) => {
-    if (held.slot !== "tajemna-sakwa") return false;
+    if (!STORAGE.includes(held.slot as Slot)) return false;
     const theirs = after.holdings.filter((one) => one.seat_id === held.seat_id);
-    return !sakwaOpen(
+    const open = openStorage(
       theirs.map((one) => ({ cardId: one.card_id, slot: one.slot })),
       mode,
     );
+    return !open.includes(held.slot as Slot);
   });
   if (stranded.length === 0) return {};
   return {
