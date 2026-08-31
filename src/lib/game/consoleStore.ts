@@ -847,8 +847,10 @@ export async function runCommand(
       const seat = seatOf(null);
       const where = command.fieldId ?? seat.field_id;
       if (!where) throw new Error("Postać nie stoi na żadnym polu.");
-      const gone = await clearField(gameId, seat.id, requireFieldId(where));
-      return `${fieldName(asFieldId(where))} swept — ${gone} ${gone === 1 ? "Karta" : "Kart"} on the used pile.`;
+      const gone = await clearField(gameId, seat.id, requireFieldId(where), command.cardId);
+      return command.cardId
+        ? `${cardName(command.cardId)} off ${fieldName(asFieldId(where))}.`
+        : `${fieldName(asFieldId(where))} swept — ${gone.length} ${gone.length === 1 ? "Karta" : "Kart"} on the used pile.`;
     }
 
     case "place": {

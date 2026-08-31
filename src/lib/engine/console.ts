@@ -247,7 +247,7 @@ export type Command =
   | { kind: "stack"; cardId: string; pile: null; at: null }
   | { kind: "stack"; cardId: null; pile: "events" | "spells"; at: number }
   /** Test mode: everything lying on an Obszar, off it (`place`'s inverse). */
-  | { kind: "clear"; fieldId: FieldId | null }
+  | { kind: "clear"; fieldId: FieldId | null; cardId: string | null }
   /** Test mode: what is left in a pile, and what has been used (9.5, 16.8). */
   | { kind: "pile"; pile: "events" | "spells" | null }
   | { kind: "endturn" }
@@ -903,8 +903,8 @@ export const COMMANDS: CommandSpec[] = [
     // a test table that dressed a field had no way to undress it.
     name: "clear",
     aliases: [],
-    usage: "clear [Karczma]",
-    summary: "take everything lying on an Obszar off it, onto the used pile",
+    usage: "clear [TARGOWISKO]",
+    summary: "take a Karta off an Obszar — bare, all of them; `at Karczma` for elsewhere",
     needs: "testmode",
     group: "override",
   },
@@ -1311,11 +1311,37 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    * reason the field is optional.
    */
   if (word === "clear") {
-    if (tail === "") return { ok: { kind: "clear", fieldId: null } };
-    const where = findByName(PLACES, (field) => field.name, tail);
-    if ("ambiguous" in where) return { error: `Which one — ${where.ambiguous.join(", ")}?` };
-    if ("missing" in where) return { error: `No Obszar called \`${tail}\`.` };
-    return { ok: { kind: "clear", fieldId: where.found.id } };
+    if (tail === "") return { ok: { kind: "clear", fieldId: null, cardId: null } };
+    /**
+     * `place`'s grammar backwards, and the same `at` between the two names.
+     *
+     * `clear` takes the lot off the Obszar you stand on, `clear Karczma` the
+     * lot off a named one, `clear TARGOWISKO` one Karta off yours, and
+     * `clear TARGOWISKO at Karczma` one off a named one. A bare word is tried
+     * as an Obszar first and as a Karta second, which is unambiguous in
+     * practice and settled by `at` when it is not.
+     */
+    const cut = tail.search(AT);
+    const said = cut === -1 ? tail : tail.slice(0, cut);
+    const place = cut === -1 ? "" : tail.slice(cut).replace(AT, "");
+
+    let fieldId: FieldId | null = null;
+    if (place !== "") {
+      const where = findByName(PLACES, (field) => field.name, place);
+      if ("ambiguous" in where) return { error: `Which one — ${where.ambiguous.join(", ")}?` };
+      if ("missing" in where) return { error: `No Obszar called \`${place}\`.` };
+      fieldId = where.found.id;
+    }
+
+    if (cut === -1) {
+      const where = findByName(PLACES, (field) => field.name, said);
+      if ("found" in where) return { ok: { kind: "clear", fieldId: where.found.id, cardId: null } };
+    }
+    return name(CARDS, (one) => one.name, said, "card", (one) => ({
+      kind: "clear",
+      fieldId,
+      cardId: one.id,
+    }), "clear");
   }
 
   if (word === "place" || word === "put") {

@@ -850,7 +850,7 @@ describe("clearing an Obszar", () => {
       { id: "fc-1", card_id: "cyklop" },
       { id: "fc-2", card_id: "helm" },
     ]), { seatId: "seat-a", fieldId: HERE });
-    expect(result).toBe(2);
+    expect(result).toEqual(["cyklop", "helm"]);
     expect(writes.fieldCards?.delete).toEqual(["fc-1", "fc-2"]);
   });
 
@@ -877,6 +877,30 @@ describe("clearing an Obszar", () => {
     });
     expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
     expect(discardOf(writes, "events")).toEqual([]);
+  });
+
+  /** One row, not every copy: a field can hold two Targowiska. */
+  it("takes one named Karta and leaves its twin", () => {
+    const { writes, result } = clearField(
+      table([
+        { id: "fc-1", card_id: "targowisko" },
+        { id: "fc-2", card_id: "targowisko" },
+        { id: "fc-3", card_id: "cyklop" },
+      ]),
+      { seatId: "seat-a", fieldId: HERE, cardId: "targowisko" },
+    );
+    expect(result).toEqual(["targowisko"]);
+    expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
+  });
+
+  it("says so when the named Karta is not lying there", () => {
+    expect(() =>
+      clearField(table([{ id: "fc-1", card_id: "cyklop" }]), {
+        seatId: "seat-a",
+        fieldId: HERE,
+        cardId: "targowisko",
+      }),
+    ).toThrow(/nie leży na tym Obszarze/);
   });
 
   it("says so rather than sweeping nothing", () => {

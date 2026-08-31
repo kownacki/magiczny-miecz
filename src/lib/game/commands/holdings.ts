@@ -812,10 +812,25 @@ export function takeFromField(
  */
 export function clearField(
   snapshot: Snapshot,
-  command: { seatId: string; fieldId: FieldId },
-): Outcome<number> {
-  const lying = snapshot.fieldCards.filter((row) => row.field_id === command.fieldId);
-  if (lying.length === 0) throw new Error("Na tym Obszarze nic nie leży.");
+  command: { seatId: string; fieldId: FieldId; cardId?: string },
+): Outcome<string[]> {
+  const here = snapshot.fieldCards.filter((row) => row.field_id === command.fieldId);
+  if (here.length === 0) throw new Error("Na tym Obszarze nic nie leży.");
+
+  /**
+   * One Karta, or the lot.
+   *
+   * Named, it takes a single row and not every copy of that card: a field can
+   * hold two Targowiska and „take that one off" is the likelier wish. Sweeping
+   * both is `clear` with no name, which is the same distinction `place` draws
+   * going the other way — one card at a time down, one card or all of them up.
+   */
+  const lying = command.cardId
+    ? here.filter((row) => row.card_id === command.cardId).slice(0, 1)
+    : here;
+  if (lying.length === 0) {
+    throw new Error(`${cardName(command.cardId!)} nie leży na tym Obszarze.`);
+  }
 
   const gone: Changeset = { fieldCards: { delete: lying.map((row) => row.id) } };
   return {
@@ -837,7 +852,7 @@ export function clearField(
         ],
       }),
     ),
-    result: lying.length,
+    result: lying.map((row) => row.card_id),
   };
 }
 

@@ -1652,8 +1652,9 @@ export async function clearField(
   gameId: string,
   seatId: string,
   fieldId: FieldId,
-): Promise<number> {
-  return change(gameId, clearFieldOn, { seatId, fieldId });
+  cardId?: string | null,
+): Promise<string[]> {
+  return change(gameId, clearFieldOn, { seatId, fieldId, ...(cardId ? { cardId } : {}) });
 }
 
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {
