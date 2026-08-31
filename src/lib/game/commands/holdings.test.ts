@@ -5,7 +5,7 @@ import { PRINTED_STOCK } from "@/lib/engine/stock";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { apply, type Snapshot } from "../change";
 import { aHolding, aSeat, aTable } from "../fixture";
-import { top } from "@/lib/engine/stack";
+import { only, top } from "@/lib/engine/stack";
 import {
   clearField,
   dropCard,
@@ -41,6 +41,61 @@ const discardOf = (writes: { game?: { deck?: unknown } }, pile: "events" | "spel
 describe("taking a card", () => {
   const table = (over: Parameters<typeof aTable>[0] = {}) =>
     aTable({ seats: [aSeat({ id: "seat-a", field_id: HERE })], ...over });
+
+  /**
+   * The wrench survives being picked up.
+   *
+   * `granted` used to be the caller's to pass and two of the three callers did
+   * not, so a Karta conjured by `deal` and then taken arrived in the Plecak as
+   * an ordinary one — with the journal saying „tryb testowy" on the line above
+   * it. The mark exists so a conjured card cannot be mistaken for a real one
+   * later, and being picked up is exactly when it starts looking like one.
+   */
+  describe("the test-mode mark", () => {
+    const dealt = () =>
+      table({
+        game: {
+          turn_state: only(onField({ drawn: [{ cardId: "eliksir-sily", cardClass: "item", granted: true }] })),
+        },
+      });
+
+    it("comes off the turn's drawn list, with no caller saying so", () => {
+      const { writes } = takeCard(dealt(), { seatId: "seat-a", cardId: "eliksir-sily" });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ card_id: "eliksir-sily", granted: true });
+    });
+
+    it("comes off the Obszar the card is lying on", () => {
+      const lying = table({
+        game: { turn_state: only(onField()) },
+        fieldCards: [
+          { id: "fc1", field_id: HERE, card_id: "eliksir-sily", granted: true },
+        ] as never,
+      });
+      const { writes } = takeCard(lying, { seatId: "seat-a", cardId: "eliksir-sily" });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ granted: true });
+    });
+
+    it("is not invented for a card the deck really did give up", () => {
+      const real = table({
+        game: {
+          turn_state: only(onField({ drawn: [{ cardId: "eliksir-sily", cardClass: "item" }] })),
+        },
+      });
+      const { writes } = takeCard(real, { seatId: "seat-a", cardId: "eliksir-sily" });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ granted: false });
+    });
+
+    it("cannot be taken off by a caller that says otherwise", () => {
+      // `||`, not `??`: a caller may add the mark and never remove one the
+      // table is already carrying.
+      const { writes } = takeCard(dealt(), {
+        seatId: "seat-a",
+        cardId: "eliksir-sily",
+        granted: false,
+      });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ granted: true });
+    });
+  });
 
   it("refuses a card it has never heard of", () => {
     expect(() => takeCard(table(), { seatId: "seat-a", cardId: "smok-z-tarnowa" })).toThrow(

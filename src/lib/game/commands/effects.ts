@@ -548,7 +548,18 @@ async function walk(
               },
             }
           : {};
-      const back = putOnPile(apply(snapshot, off), "events", [{ cardId: command.cardId }]);
+      /**
+       * With its mark, because `putOnPile` reads it: a conjured Karta belongs
+       * to no pile and must not join one, or 9.5 deals a copy the deck still
+       * holds. Every other door to the pile passes it (`asReturnable`); this
+       * one named the card and nothing else.
+       */
+      const granted =
+        shelf.phase === "field" &&
+        shelf.drawn.some((entry) => entry.cardId === command.cardId && entry.granted);
+      const back = putOnPile(apply(snapshot, off), "events", [
+        { cardId: command.cardId, granted },
+      ]);
       return {
         writes: merge(off, back),
         result: {

@@ -194,9 +194,48 @@ function escortFor(
   };
 }
 
+/**
+ * Whether the copy of this card on the table was conjured by the test console.
+ *
+ * Two places a card can be taken from, and both carry the mark: the turn's own
+ * drawn list, and the Obszar it is lying on. See `granted` in db/schema.sql —
+ * the deck never gave a conjured copy up, so it must not reach a pile as
+ * though it had.
+ */
+function grantedHere(snapshot: Snapshot, seatId: string, cardId: string): boolean {
+  const state = top(snapshot.game.turn_state);
+  if (state.phase === "field" && state.drawn.some((one) => one.cardId === cardId && one.granted)) {
+    return true;
+  }
+  const seat = snapshot.seats.find((row) => row.id === seatId);
+  return snapshot.fieldCards.some(
+    (row) => row.field_id === seat?.field_id && row.card_id === cardId && row.granted,
+  );
+}
+
 export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> {
   const { seatId, cardId } = command;
-  const granted = command.granted ?? false;
+  /**
+   * The test-mode mark is read off the table, not taken on trust.
+   *
+   * It used to be the caller's to pass, and two of the three callers did not:
+   * the console's `take` and the browser's both handed over a bare `cardId`,
+   * so a Karta conjured by `deal` and then picked up arrived in the Plecak as
+   * an ordinary one. The journal said „tryb testowy" on the line above and the
+   * card carried no wrench — which is the worst version of this, because the
+   * mark exists precisely so a conjured card cannot be mistaken for a real one
+   * later, and the moment it is picked up is the moment it starts looking like
+   * one.
+   *
+   * `takeFromField` did pass it, so the same Karta kept its mark or lost it
+   * depending on whether it was still in the turn's drawn list or had settled
+   * onto the Obszar — a distinction no player can see.
+   *
+   * So it is derived here, from wherever this card is being taken from, and
+   * `||` rather than `??`: a caller that knows may add the mark and can never
+   * remove one the table is already carrying.
+   */
+  const granted = command.granted || grantedHere(snapshot, seatId, cardId);
 
   // Both decks. 21.1 has a character take the Wyposażenie card for a Magiczny
   // Miecz or a Tarcza Tolimana, and 21.3 lets either be left on the board like

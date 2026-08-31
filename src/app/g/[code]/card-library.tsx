@@ -380,6 +380,22 @@ export function CardLibrary({
          * misaligned.
          */
         width="max-w-[542px]"
+        /**
+         * The one drawer that holds the scrollbar's room whether or not there
+         * is a scrollbar.
+         *
+         * The shelf is a grid, so it re-divides its width the instant a
+         * scrollbar appears or goes — and every tile in it steps sideways as
+         * you move between a shelf long enough to scroll and one that is not.
+         * A reserved strip is the lesser of the two things to look at, and here
+         * it is not even a strip: thirty cards deep, this drawer nearly always
+         * has a scrollbar in it using the room.
+         *
+         * The zoom bug that made the reservation dangerous cannot come back:
+         * five `1fr` columns give a growing gutter a pixel or two off each
+         * column instead of a column.
+         */
+        steady
         title="Księga Tolimana"
         onClose={onClose}
         head={
