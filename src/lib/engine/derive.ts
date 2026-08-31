@@ -261,6 +261,29 @@ export function carriedCount(
       // The book, not a house rule: "(sama Sakwa nie jest liczona jako
       // Przedmiot)". One card says it — see `fillsAPlace`.
       fillsAPlace(held.cardId) &&
+      /**
+       * What is in the Tajemna Sakwa is not in the Plecak, in either variant.
+       *
+       * Above the `eqMode` test on purpose, and that placement is the whole
+       * rule. Everything below it is the slotted variant's house rule — a card
+       * counts where it is worn — and this is not that: the Sakwa is a place
+       * the *card* makes, so it exists at a klasyczny table too, where there is
+       * no body to wear anything on. Under the test instead, the same Karta
+       * would have cost a place at one table and nothing at the next.
+       *
+       * Why nothing at either: five of the six bearers in the box say what they
+       * *carry* for you — Koń 8, Muł 4, Zaprzęg dowolną liczbę, Magiczna Sakwa
+       * 5, Tragarz 4 — and all five hold it outside your own four. The Tajemna
+       * Sakwa says „możesz **umieścić** 1 Przedmiot": a place, not a load. It
+       * would be the only bearer in the box whose contents pressed on 5.4, and
+       * nothing on the card asks for that.
+       *
+       * The Sakwa itself still counts. Only the Magiczna Sakwa carries the
+       * "(sama Sakwa nie jest liczona)" note, and that note is about the bag —
+       * so this bag is one of your four, and using it costs no space beyond
+       * the place the protected Karta was already taking.
+       */
+      held.slot !== "tajemna-sakwa" &&
       (eqMode === "classic" || held.slot == null),
   ).length;
 }

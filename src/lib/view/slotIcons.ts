@@ -31,4 +31,8 @@ export const SLOT_ICON: Record<Slot, string> = {
   pouch: "/slots/sakwa.svg",
   "magiczny-miecz": "/slots/magiczny-miecz.svg",
   "tarcza-tolimana": "/slots/tarcza-tolimana.svg",
+  // The inside of the bag borrows the bag's own picture. It is the same object
+  // seen from the other side, and drawing a second, different sakwa for the
+  // place a sakwa makes would say there were two bags.
+  "tajemna-sakwa": "/slots/sakwa.svg",
 };

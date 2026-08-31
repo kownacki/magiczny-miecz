@@ -23,6 +23,16 @@ describe("slotted equipment", () => {
     const filled = new Set(Object.values(SLOT_OF).flat());
     for (const slot of SLOTS) {
       expect(SLOT_LABEL[slot]).toBeTruthy();
+      /**
+       * One place is not on the body and so is not in `SLOT_OF`.
+       *
+       * The Tajemna Sakwa's inside takes any Przedmiot — the card says "1
+       * Przedmiot" and stops — so listing every id that goes in it would be
+       * listing the box. It earns its exemption the way the guard means: it is
+       * a place a *Karta* makes, and the Karta is right there in `SLOT_OF`
+       * with a place of its own. It is not a hunch about a belt.
+       */
+      if (slot === "tajemna-sakwa") continue;
       expect(filled.has(slot)).toBe(true);
     }
   });
@@ -137,11 +147,47 @@ describe("every Przedmiot in the box, one at a time", () => {
 
   it.each(ALL)("%s fits exactly the places it is meant to", (id) => {
     const mine = slotsFor(id);
-    for (const slot of SLOTS) {
+    // Every place on the body pairs with `SLOT_OF`. The Sakwa's inside does
+    // not and is asked separately below: it is a place a Karta makes rather
+    // than a place on a character, so what goes in it is a question about
+    // Przedmioty in general and not about where this one is worn.
+    for (const slot of SLOTS.filter((one) => one !== "tajemna-sakwa")) {
       expect(fitsIn(id, slot)).toBe(mine.includes(slot));
     }
     // Wearable or not, never both and never neither.
     expect(isWearable(id)).toBe(mine.length > 0);
+  });
+
+  /**
+   * "W Sakwie możesz umieścić 1 Przedmiot" — and the card says no more, so the
+   * answer is every Przedmiot but the ones the app excludes on its own account.
+   */
+  describe("what goes in the Tajemna Sakwa", () => {
+    it("takes an ordinary Przedmiot, worn or not", () => {
+      for (const id of ["miecz", "helm", "kon", "eliksir-sily", "latarnia"]) {
+        expect(fitsIn(id, "tajemna-sakwa"), id).toBe(true);
+      }
+    });
+
+    it("refuses the relics, which have places of their own and are already outside 5.4", () => {
+      for (const id of ["magiczny-miecz", "tarcza-tolimana", "tarcza-boga-tolimana"]) {
+        expect(fitsIn(id, "tajemna-sakwa"), id).toBe(false);
+      }
+    });
+
+    it("refuses a sakwa inside a sakwa", () => {
+      // The Magiczna Sakwa lends its five places only while it is in effect, so
+      // tucking it away would take five places off its holder at the moment
+      // they were tidying up.
+      expect(fitsIn("magiczna-sakwa", "tajemna-sakwa")).toBe(false);
+      expect(fitsIn("tajemna-sakwa", "tajemna-sakwa")).toBe(false);
+    });
+
+    it("does not make the Sakwa itself wearable anywhere new", () => {
+      // It is still worn in the pouch like the other bag; the new place is what
+      // is *inside* it.
+      expect(slotsFor("tajemna-sakwa")).toEqual(["pouch"]);
+    });
   });
 
   it("splits the box the way the variant says", () => {

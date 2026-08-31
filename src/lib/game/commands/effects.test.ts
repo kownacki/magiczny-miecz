@@ -315,6 +315,89 @@ describe("losing what you carry (strata)", () => {
       ],
     });
 
+  /**
+   * "Przedmiot ten i Sakwę będziesz mógł utracić **jedynie** w wypadku użycia
+   * Zaklęcia »Pan Bogactwa« (nikt nie może go zażądać jako okupu za przegraną
+   * walkę, nie stracisz go na Bagnach, etc.)."
+   *
+   * `strata` is the door the card is shutting. The Bagna, the Złoczyńca, the
+   * Wielkolud, the Zasadzka, a lost fight's ransom and the Urocza Diablica all
+   * come through it, so the exclusion goes here once rather than on six cards.
+   */
+  describe("what the Tajemna Sakwa keeps out of reach", () => {
+    const withBag = () =>
+      aTable({
+        seats: [aSeat({ id: "seat-a", gold: 3 })],
+        holdings: [
+          aHolding({ id: "h1", card_id: "helm", kind: "item" }),
+          aHolding({ id: "bag", card_id: "tajemna-sakwa", kind: "item" }),
+          aHolding({ id: "safe", card_id: "miecz", kind: "item", slot: "tajemna-sakwa" }),
+        ],
+      });
+
+    it("survives a card that takes every Przedmiot you have", async () => {
+      // ZASADZKA: "Tracisz całe złoto i wszystkie Przedmioty." All of them but
+      // these two.
+      const { writes } = await run({ op: "strata", co: "wszystkie-przedmioty", target: "ty" }, withBag());
+      expect(writes.holdings?.delete).toEqual(["h1"]);
+    });
+
+    it("cannot be the one the die picks, however the die falls", async () => {
+      // Only the Hełm is in the pool, so the pick is the Hełm whatever is
+      // thrown — which is the assertion: there is nothing else to reach.
+      for (const face of [1, 2, 6]) {
+        const { writes } = await run(
+          { op: "strata", co: "przedmiot", ile: 1, wybor: "losowo", target: "ty" } as Effect,
+          withBag(),
+          { random: scriptedRandom([face]) },
+        );
+        expect(writes.holdings?.delete, `rzut ${face}`).toEqual(["h1"]);
+      }
+    });
+
+    /**
+     * The one door left open, and it is open by construction rather than by a
+     * special case: Pan Bogactwa is `zabierz`, not `strata`. It names its
+     * victim and takes a card that changes hands, so it never asks the pool
+     * `strata` builds — and it clears the slot on the way, which is the Karta
+     * coming out of the bag as it changes owner.
+     */
+    it("is still reachable by the one Zaklęcie the card names", async () => {
+      const twoSeats = aTable({
+        seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
+        holdings: [aHolding({ id: "safe", card_id: "miecz", kind: "item", slot: "tajemna-sakwa" })],
+      });
+      const { writes } = await applyEffect(
+        twoSeats,
+        {
+          seatId: "seat-a",
+          toSeatId: "seat-b",
+          effect: { op: "zabierz", co: "przedmiot-lub-zloto" } as Effect,
+          reason: "PAN BOGACTWA",
+          decided: { choices: [0] },
+          shuffle: asIs,
+        },
+        ports(),
+      );
+      expect(writes.holdings?.patch?.[0]).toMatchObject({
+        id: "safe",
+        patch: { slot: null },
+      });
+    });
+
+    it("leaves an empty Sakwa takeable, because the card protects a pair", async () => {
+      // "Przedmiot ten i Sakwę" — the bag is safe as the container of
+      // something. With nothing in it there is no „ten Przedmiot" to be the
+      // other half, and a bag on its own is a bag.
+      const empty = aTable({
+        seats: [aSeat({ id: "seat-a" })],
+        holdings: [aHolding({ id: "bag", card_id: "tajemna-sakwa", kind: "item" })],
+      });
+      const { writes } = await run({ op: "strata", co: "wszystkie-przedmioty", target: "ty" }, empty);
+      expect(writes.holdings?.delete).toEqual(["bag"]);
+    });
+  });
+
   it("takes everything of a kind when the card says wszystkie", async () => {
     const { writes } = await run({ op: "strata", co: "wszystkie-przedmioty", target: "ty" }, carrying());
     expect(writes.holdings?.delete?.sort()).toEqual(["h1", "h2"]);

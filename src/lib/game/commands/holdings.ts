@@ -673,13 +673,43 @@ export function equipCard(
   snapshot: Snapshot,
   command: { holdingId: string; slot: Slot | null },
 ): Outcome<void> {
-  if (snapshot.game.eq_mode !== "slots") {
-    throw new Error("Ten stół gra klasycznym ekwipunkiem — nie ma miejsc na przedmioty.");
-  }
-
   const held = snapshot.holdings.find((h) => h.id === command.holdingId);
   if (!held) throw new Error("Nie ma takiej karty.");
   if (held.kind !== "item") throw new Error("Zakładać można tylko Przedmioty.");
+
+  /**
+   * The Sakwa's inside is not a place on the body, so klasyczny has it too.
+   *
+   * Everything else this function moves is the slotted variant's — a house
+   * rule about wearing things, and a klasyczny table has no body to wear them
+   * on. The Tajemna Sakwa is not that: the place is made by a Karta anybody
+   * can be holding, and "W Sakwie możesz umieścić 1 Przedmiot" is printed in
+   * the same box as 5.4. Refusing it at a klasyczny table would be the app
+   * withholding a card's own rule over a variant the card knows nothing about.
+   *
+   * Both directions: putting one in, and taking the one that is in out.
+   */
+  const theSakwa = command.slot === "tajemna-sakwa" || held.slot === "tajemna-sakwa";
+  if (snapshot.game.eq_mode !== "slots" && !theSakwa) {
+    throw new Error("Ten stół gra klasycznym ekwipunkiem — nie ma miejsc na przedmioty.");
+  }
+
+  /**
+   * And there is no place unless the Karta that makes it is held.
+   *
+   * `fitsIn` answers what may go in; this answers whether there is an "in" at
+   * all. Separate because they fail differently: a relic offered to the bag is
+   * a rule about the card, and a bag nobody is carrying is a place that does
+   * not exist.
+   */
+  if (
+    command.slot === "tajemna-sakwa" &&
+    !snapshot.holdings.some(
+      (one) => one.seat_id === held.seat_id && one.card_id === "tajemna-sakwa",
+    )
+  ) {
+    throw new Error("Nie masz Tajemnej Sakwy — nie ma gdzie tego włożyć.");
+  }
 
   if (command.slot === null) {
     // Taking something off puts it in the pack, and the pack is still the four

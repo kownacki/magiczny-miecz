@@ -321,11 +321,19 @@ create table if not exists magiczny_miecz.holdings (
   face text not null default 'open' check (face in ('open', 'hidden')),
   -- Where it is worn, in the slotted variant only; null means the pack, which
   -- is the only place anything is in classic play.
-  -- The last two are not gear: they are the Magiczny Miecz and the Tarcza
-  -- Tolimana, which only have to be found (p3). See RELICS in slots.ts.
+  -- Three of these are not gear. Two are the Magiczny Miecz and the Tarcza
+  -- Tolimana, which only have to be found (p3) — see RELICS in slots.ts.
+  --
+  -- The third is not on the body at all: 'tajemna-sakwa' is the *inside* of the
+  -- Karta of that name. "W Sakwie możesz umieścić 1 Przedmiot", and a place is
+  -- what that sentence needs — one card in it, and what is in it out of reach
+  -- of everything but Pan Bogactwa. It is the one value here that means
+  -- something at a klasyczny table too, because the place is made by a Karta
+  -- rather than by the slotted variant. See `carriedCount`, where the exclusion
+  -- for it sits above the eq_mode test for that reason.
   slot text check (slot in ('head', 'amulet', 'body', 'main-hand',
     'off-hand', 'gloves', 'ring', 'mount', 'pouch',
-    'magiczny-miecz', 'tarcza-tolimana')),
+    'magiczny-miecz', 'tarcza-tolimana', 'tajemna-sakwa')),
   -- Where the card sits in its owner's pack, when they have said.
   --
   -- Nullable on purpose: null is "no opinion", which is what every card starts

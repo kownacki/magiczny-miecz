@@ -64,6 +64,12 @@ const LAYOUT: Record<Slot, string> = {
   // that hold it, and standing apart says that without a caption.
   "magiczny-miecz": "1 / 5 / 2 / 6",
   "tarcza-tolimana": "2 / 5 / 3 / 6",
+
+  // Under the two of them, in the corner the grid already had and nothing was
+  // in. Not among the body's nine, because it is not somewhere on a character
+  // — it is inside a Karta the character is holding, and it comes and goes
+  // with that Karta.
+  "tajemna-sakwa": "3 / 5 / 4 / 6",
 };
 
 /**
@@ -115,6 +121,7 @@ export function SlotPanel({
   onTakeOff,
   onUse,
   onDropInto,
+  places,
 }: {
   /** What is in each place; missing keys are empty places. */
   worn: Partial<Record<Slot, SlotItem>>;
@@ -151,9 +158,21 @@ export function SlotPanel({
   onUse?: (holdingId: string, cardId: string) => void;
   /** Something was put into a place — dropped, or carried there and clicked. */
   onDropInto: (holdingId: string, slot: Slot) => void;
+  /**
+   * Which places to draw, when it is not the whole body.
+   *
+   * The Tajemna Sakwa's inside is the reason this exists. It is a place a
+   * *Karta* makes rather than a place on a character, so it turns up at a
+   * klasyczny table too — where there is no body to draw and this panel is
+   * otherwise not on screen at all. Given a subset, the grid stops being the
+   * doll's shape and becomes a row of that many squares.
+   */
+  places?: readonly Slot[];
 }) {
   /** The place a drag is over, so it can say it will take it. */
   const [over, setOver] = useState<Slot | null>(null);
+  const whole = places === undefined;
+  const drawn = places ?? (Object.keys(LAYOUT) as Slot[]);
 
   return (
     <div
@@ -169,9 +188,13 @@ export function SlotPanel({
       // of the place now.
       // Three columns of body, a gutter, then the two that only have to be
       // found.
-      style={{ gridTemplateColumns: `repeat(3, ${SLOT_WIDTH}px) 1.5rem ${SLOT_WIDTH}px` }}
+      style={{
+        gridTemplateColumns: whole
+          ? `repeat(3, ${SLOT_WIDTH}px) 1.5rem ${SLOT_WIDTH}px`
+          : `repeat(${drawn.length}, ${SLOT_WIDTH}px)`,
+      }}
     >
-      {(Object.keys(LAYOUT) as Slot[]).map((slot) => {
+      {drawn.map((slot) => {
         const item = worn[slot];
         // On the cursor: drawn faintly where it came from rather than removed.
         //
@@ -200,7 +223,9 @@ export function SlotPanel({
                 : "empty";
 
         return (
-          <div key={slot} style={{ gridArea: LAYOUT[slot] }}>
+          // The doll's own coordinates when the doll is what is being drawn;
+          // otherwise the cells flow, because a subset has no shape to keep.
+          <div key={slot} style={whole ? { gridArea: LAYOUT[slot] } : undefined}>
             <ItemSlot
               // The paper doll only exists in slotowy, so anything on it is
               // worn by definition.

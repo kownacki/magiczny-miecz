@@ -1255,12 +1255,34 @@ async function walk(
         }
 
         const at = apply(snapshot, writes);
-        // A carried Zaklęcie is the Przyjaciel's, not the character's, so a
-        // "strata" reaching for a Przedmiot or a Przyjaciel cannot pick it: it
-        // goes when its friend goes and never on its own account. Written as a
-        // flatMap so the narrowing is the compiler's too, not only the filter's.
+        /**
+         * What a loss may reach for, which is not everything a seat has.
+         *
+         * A carried Zaklęcie is the Przyjaciel's, not the character's: it goes
+         * when its friend goes and never on its own account.
+         *
+         * And the Tajemna Sakwa, with whatever is in it. "Przedmiot ten i
+         * Sakwę będziesz mógł utracić **jedynie** w wypadku użycia Zaklęcia
+         * »Pan Bogactwa«" — so every door but that one is shut, and this is the
+         * door: `strata` is what the Bagna, the Złoczyńca, the Wielkolud, the
+         * Zasadzka, a lost fight's ransom and the Urocza Diablica all come
+         * through. Pan Bogactwa does not; it names its target and takes it, so
+         * it reaches past this on purpose.
+         *
+         * Both halves, because the card protects both. A rule that took the bag
+         * and left its contents floating would be worse than one that took
+         * neither.
+         *
+         * Written as a flatMap so the narrowing is the compiler's too, not only
+         * the filter's.
+         */
+        const inTheSakwa = at.holdings.some(
+          (held) => held.seat_id === row.id && held.slot === "tajemna-sakwa",
+        );
+        const spared = (held: { card_id: string; slot: string | null }) =>
+          held.slot === "tajemna-sakwa" || (inTheSakwa && held.card_id === "tajemna-sakwa");
         const mine = at.holdings.flatMap((held) =>
-          held.seat_id === row.id && held.kind !== "carried"
+          held.seat_id === row.id && held.kind !== "carried" && !spared(held)
             ? [{ id: held.id, cardId: held.card_id, kind: held.kind, granted: held.granted }]
             : [],
         );

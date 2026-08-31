@@ -100,6 +100,25 @@ export const SLOTS = [
   // The two that only have to be found. See RELICS.
   "magiczny-miecz",
   "tarcza-tolimana",
+  /**
+   * Inside the Tajemna Sakwa, which is a place rather than a thing worn.
+   *
+   * Named after the card the way the two above it are, and for the same reason:
+   * it exists only while that Karta is held, and nothing else in the box can
+   * ever be in it.
+   *
+   * "W Sakwie możesz umieścić 1 Przedmiot. Przedmiot ten i Sakwę będziesz mógł
+   * utracić jedynie w wypadku użycia Zaklęcia »Pan Bogactwa«." A place is what
+   * that sentence needs: one card goes in it, what is in it is out of reach,
+   * and both halves are things a slot already is.
+   *
+   * `umieścić w`, not `nieść`. Every other bearer in the box — Koń, Muł,
+   * Zaprzęg, Magiczna Sakwa, Tragarz — says it *carries* a number of your
+   * items, and this one says you *place* one inside. That is why what is in
+   * here is out of 5.4's count in both variants and not only in slotowy: see
+   * `carriedCount`.
+   */
+  "tajemna-sakwa",
 ] as const;
 
 export type Slot = (typeof SLOTS)[number];
@@ -116,6 +135,7 @@ export const SLOT_LABEL: Record<Slot, string> = {
   ring: "Pierścień",
   mount: "Wierzchowiec",
   pouch: "Sakwa",
+  "tajemna-sakwa": "W Sakwie",
 };
 
 /**
@@ -206,7 +226,33 @@ export function slotsFor(cardId: string): readonly Slot[] {
 
 /** Whether this card may be worn in this place. */
 export function fitsIn(cardId: string, slot: Slot): boolean {
+  if (slot === "tajemna-sakwa") return goesInTheSakwa(cardId);
   return slotsFor(cardId).includes(slot);
+}
+
+/**
+ * What may be put inside the Tajemna Sakwa.
+ *
+ * "1 Przedmiot", and the card says no more than that — so the answer is every
+ * Przedmiot, with two exclusions that are the app's and are written down here
+ * rather than inferred anywhere else.
+ *
+ * **No relics.** The Magiczny Miecz and the Tarcza Tolimana have places of
+ * their own, are already outside 5.4, and are not things anybody chooses to
+ * carry. Putting one in the bag would buy nothing but immunity and cost the
+ * board the two squares that say whether the Most and the Zamek are open.
+ *
+ * **No sakwa inside a sakwa.** The Magiczna Sakwa lends its five places only
+ * while it is in effect, and in slotowy `inEffect` counts what is worn — so
+ * tucking it away would silently take five places off the holder at the moment
+ * they were tidying up. A bag that switches another bag off is a rule nobody
+ * would guess.
+ *
+ * Przyjaciele and Zaklęcia are neither: 6.3 and 9.3 keep their own counts, and
+ * the card says Przedmiot.
+ */
+export function goesInTheSakwa(cardId: string): boolean {
+  return !RELICS.has(cardId) && cardId !== "magiczna-sakwa" && cardId !== "tajemna-sakwa";
 }
 
 /** Whether this card has any place on the body at all. */
