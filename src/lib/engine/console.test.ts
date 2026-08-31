@@ -1028,6 +1028,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     becomes: { kind: "stack", cardId: "wilkolak", pile: null, at: null },
   },
   pile: { line: "pile events", becomes: { kind: "pile", pile: "events" } },
+  clear: { line: "clear Karczma", becomes: { kind: "clear", fieldId: "karczma" } },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
   endturn: { line: "endturn", becomes: { kind: "endturn" } },

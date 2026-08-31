@@ -795,6 +795,52 @@ export function takeFromField(
   return { writes: merge(lifted, taken.writes), result: taken.result };
 }
 
+/**
+ * Takes everything lying on an Obszar off it.
+ *
+ * `place`'s inverse, and the gap it fills is that there was none: nothing in
+ * the game removes a Karta from a field except the lawful ways — taking it
+ * (16.6), beating it (16.2), or arriving and lifting it into your turn. A test
+ * table that put three Targowiska on the Wrzosowiska had no way to put the
+ * board back.
+ *
+ * The Karty go where 16.8's leftovers always go — the stos zużytych, through
+ * `putOnPile`, which knows to keep a `granted` card out of a deck that never
+ * gave it up and a Wyposażenie card out of a deck it does not belong to
+ * (21.2). Deleting them would take them out of the box, and 9.5 refills from
+ * that pile.
+ */
+export function clearField(
+  snapshot: Snapshot,
+  command: { seatId: string; fieldId: FieldId },
+): Outcome<number> {
+  const lying = snapshot.fieldCards.filter((row) => row.field_id === command.fieldId);
+  if (lying.length === 0) throw new Error("Na tym Obszarze nic nie leży.");
+
+  const gone: Changeset = { fieldCards: { delete: lying.map((row) => row.id) } };
+  return {
+    writes: merge(
+      gone,
+      merge(putOnPile(apply(snapshot, gone), "events", lying.map(asReturnable)), {
+        journal: [
+          {
+            seatId: command.seatId,
+            round: snapshot.game.round,
+            kind: "override" as const,
+            payload: {
+              what: "clear-field",
+              fieldId: command.fieldId,
+              cards: lying.map((row) => row.card_id),
+            },
+            manual: true,
+          },
+        ],
+      }),
+    ),
+    result: lying.length,
+  };
+}
+
 /* --------------------------------------------------------------------------
  * The test console's two shortcuts.
  * ----------------------------------------------------------------------- */

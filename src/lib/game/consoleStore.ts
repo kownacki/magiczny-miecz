@@ -82,6 +82,7 @@ import {
   reviveCharacter,
   settleSpell,
   spendHolding,
+  clearField,
   stackCard,
   stageCard,
   stackNth,
@@ -800,6 +801,18 @@ export async function runCommand(
       }
       await stageCard(gameId, seat.id, command.cardId);
       return `Dealt: ${cardName(command.cardId)}.`;
+    }
+
+    /**
+     * An Obszar swept clear — the inverse of `place`, and of a `deal` whose
+     * Karta has since settled there.
+     */
+    case "clear": {
+      const seat = seatOf(null);
+      const where = command.fieldId ?? seat.field_id;
+      if (!where) throw new Error("Postać nie stoi na żadnym polu.");
+      const gone = await clearField(gameId, seat.id, requireFieldId(where));
+      return `${fieldName(asFieldId(where))} swept — ${gone} ${gone === 1 ? "Karta" : "Kart"} on the used pile.`;
     }
 
     case "place": {

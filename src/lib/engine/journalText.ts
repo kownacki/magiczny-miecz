@@ -568,6 +568,18 @@ export function describe(
        * word for word the failure the note above was written about. A third
        * override arrived and the reader still assumed two.
        */
+      /**
+       * An Obszar swept clear by the console. Names the Karty, because what
+       * was lying there is exactly what a reader will want to check — the
+       * board looked one way and now looks another, and 16.8 made that
+       * everybody's business.
+       */
+      if (data.what === "clear-field") {
+        const swept = Array.isArray(data.cards) ? (data.cards as string[]) : [];
+        return line(
+          `${who} sprząta ${field(data.fieldId)}: ${swept.map((id) => card(id)).join(", ")}.`,
+        );
+      }
       if (data.what === "endless-stock") {
         return line("Zwykłego Wyposażenia nie będzie już brakować (21.2).");
       }

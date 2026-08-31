@@ -27,7 +27,8 @@ import {
   shuffleFor,
   type Decks,
 } from "./decks";
-import { apply, change, effectRowsFor, merge, type Changeset, type CommandPorts, type EffectRow, type Snapshot } from "./change";
+import { apply, change, effectRowsFor, merge, type Changeset, type CommandPorts, type EffectRow, type Handler, type Snapshot } from "./change";
+import { holdOverflow, releaseOverflow } from "./commands/overflow";
 import { appRandom, supplied } from "./random";
 import {
   addEffect as addEffectTo,
@@ -88,6 +89,7 @@ import type { JournalKind } from "@/lib/engine/journal";
 import {
   dropCard as dropCardOn,
   equipCard as equipCardOn,
+  clearField as clearFieldOn,
   grantCard as grantCardOn,
   placeCard as placeCardOn,
   reorderPack as reorderPackOn,
@@ -780,8 +782,27 @@ export async function takeCard(
  * when over the carrying limit. Either way the card leaves the hand; where it
  * physically goes is the players' business at a table and not tracked yet.
  */
+/**
+ * A way out of an overflow frame, with the check that closes it.
+ *
+ * The three verbs `waysUnder` names — odrzuć, użyj, załóż — are verbs the app
+ * already had, so the frame does not need a fourth. It needs each of them
+ * followed by "and is the seat under now?", which is what this wraps around
+ * them. 5.4 hands the choice to the player and says nothing about the method;
+ * neither does this.
+ *
+ * Chained through the writes rather than the snapshot, because the card being
+ * dropped is the one that decides the answer.
+ */
+function thenRelease<C, T>(handler: Handler<C, T>): Handler<C, T> {
+  return async (snapshot, command, ports) => {
+    const { writes, result } = await handler(snapshot, command, ports);
+    return { writes: merge(writes, releaseOverflow(snapshot, writes)), result };
+  };
+}
+
 export async function dropCard(gameId: string, holdingId: string): Promise<void> {
-  await change(gameId, dropCardOn, { holdingId });
+  await change(gameId, thenRelease(dropCardOn), { holdingId });
 }
 
 /**
@@ -881,7 +902,7 @@ export async function reorderPack(
 
 
 export async function spendHolding(gameId: string, holdingId: string): Promise<UseResult> {
-  return change(gameId, spendHoldingOn, (of) => ({ holdingId, shuffle: shuffleFor(of.game) }));
+  return change(gameId, thenRelease(spendHoldingOn), (of) => ({ holdingId, shuffle: shuffleFor(of.game) }));
 }
 
 /**
@@ -1290,20 +1311,29 @@ export async function finishTurn(gameId: string): Promise<void> {
     gameId,
     (snapshot) => {
       /**
-       * 5.6, at the other end of the turn.
+       * 5.6, at the other end of the turn — and now on the stack rather than
+       * in somebody's face.
        *
-       * Guarded here and in `rollForMove` rather than everywhere, because those
+       * Checked here and in `rollForMove` rather than everywhere, because those
        * are the two doors: you cannot begin a turn owing the rule, and you
        * cannot hand one on. An overflow that happens mid-turn — the Bagna
        * taking your Koń — is therefore settled before play moves, which is as
        * close to "natychmiast" as a turn-based referee can honestly get.
        *
+       * What changed is what happens at the door. It used to throw at whoever
+       * pressed the button, which told one player and left the table looking at
+       * a game that had simply stopped responding. Now it opens the frame and
+       * writes it: the turn does not pass, and every device is looking at the
+       * same sentence about the same seat, with the ways out named.
+       *
        * `passTurn` itself is left alone. Half the game passes the turn as a
        * consequence of something else — a death, a lost turn, a fall off the
        * Most — and none of those is a player choosing to walk away from a rule.
        */
+      const held = holdOverflow(snapshot);
+      if (held.game) return { writes: held, result: undefined };
+
       const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
-      if (seat) refuseWhileOverLimit(snapshot, seat.id);
       if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
       return { writes: passTurn(snapshot), result: undefined };
     },
@@ -1328,7 +1358,7 @@ export async function equipCard(
   holdingId: string,
   slot: Slot | null,
 ): Promise<void> {
-  await change(gameId, equipCardOn, { holdingId, slot });
+  await change(gameId, thenRelease(equipCardOn), { holdingId, slot });
 }
 
 /**
@@ -1573,6 +1603,15 @@ export async function stackNth(
 ): Promise<{ pile: "events" | "spells"; cardId: string }> {
   const cardId = await change(gameId, stackAtOn, { seatId, pile, at });
   return { pile, cardId };
+}
+
+/** Sweeps an Obszar clear, for a test table that dressed one and wants it back. */
+export async function clearField(
+  gameId: string,
+  seatId: string,
+  fieldId: FieldId,
+): Promise<number> {
+  return change(gameId, clearFieldOn, { seatId, fieldId });
 }
 
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {

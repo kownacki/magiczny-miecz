@@ -7,6 +7,7 @@ import { apply, type Snapshot } from "../change";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { top } from "@/lib/engine/stack";
 import {
+  clearField,
   dropCard,
   equipCard,
   grantCard,
@@ -821,5 +822,79 @@ describe("granting a card by fiat", () => {
     expect(() => grantCard(table(), { seatId: "seat-a", cardId: "gruszka" })).toThrow(
       "Nie wiem, czym jest: gruszka",
     );
+  });
+});
+
+/**
+ * Sweeping an Obszar clear — `place`'s inverse, and the one act the game has
+ * no lawful version of.
+ *
+ * A Karta leaves a field by being taken (16.6), beaten (16.2) or lifted into
+ * an arriving turn. A test table that dressed a field had no way to undress it.
+ */
+describe("clearing an Obszar", () => {
+  const table = (cards: { id: string; card_id: string; granted?: boolean }[]) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", field_id: HERE })],
+      fieldCards: cards.map((one) => ({
+        id: one.id,
+        field_id: HERE,
+        card_id: one.card_id,
+        granted: one.granted ?? false,
+      })),
+      game: { deck: { events: { draw: [], discard: [] }, spells: { draw: [], discard: [] } } },
+    });
+
+  it("takes everything off and says how much", () => {
+    const { writes, result } = clearField(table([
+      { id: "fc-1", card_id: "cyklop" },
+      { id: "fc-2", card_id: "helm" },
+    ]), { seatId: "seat-a", fieldId: HERE });
+    expect(result).toBe(2);
+    expect(writes.fieldCards?.delete).toEqual(["fc-1", "fc-2"]);
+  });
+
+  /** 16.8's leftovers go where leftovers go, so 9.5 can deal them again. */
+  it("sends the Karty to the stos zużytych rather than out of the box", () => {
+    const { writes } = clearField(table([{ id: "fc-1", card_id: "cyklop" }]), {
+      seatId: "seat-a",
+      fieldId: HERE,
+    });
+    expect(discardOf(writes, "events")).toEqual([EVENT_COPIES.get("cyklop")![0]]);
+  });
+
+  /**
+   * Except a conjured one, which no pile ever gave up.
+   *
+   * `putOnPile` is what knows this, and it is why sweeping is routed through it
+   * rather than through a bare delete: a `deal`-ed Cyklop reaching the used
+   * pile would hand the deck a second one.
+   */
+  it("leaves a conjured Karta out of the pile", () => {
+    const { writes } = clearField(table([{ id: "fc-1", card_id: "cyklop", granted: true }]), {
+      seatId: "seat-a",
+      fieldId: HERE,
+    });
+    expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
+    expect(discardOf(writes, "events")).toEqual([]);
+  });
+
+  it("says so rather than sweeping nothing", () => {
+    expect(() => clearField(table([]), { seatId: "seat-a", fieldId: HERE })).toThrow(
+      "Na tym Obszarze nic nie leży.",
+    );
+  });
+
+  /** Marked manual, and it names what was swept — 16.8 made that public. */
+  it("writes down what it took", () => {
+    const { writes } = clearField(table([{ id: "fc-1", card_id: "cyklop" }]), {
+      seatId: "seat-a",
+      fieldId: HERE,
+    });
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "override",
+      manual: true,
+      payload: { what: "clear-field", fieldId: HERE, cards: ["cyklop"] },
+    });
   });
 });

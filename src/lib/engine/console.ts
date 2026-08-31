@@ -246,6 +246,8 @@ export type Command =
    */
   | { kind: "stack"; cardId: string; pile: null; at: null }
   | { kind: "stack"; cardId: null; pile: "events" | "spells"; at: number }
+  /** Test mode: everything lying on an Obszar, off it (`place`'s inverse). */
+  | { kind: "clear"; fieldId: FieldId | null }
   /** Test mode: what is left in a pile, and what has been used (9.5, 16.8). */
   | { kind: "pile"; pile: "events" | "spells" | null }
   | { kind: "endturn" }
@@ -896,6 +898,17 @@ export const COMMANDS: CommandSpec[] = [
     group: "override",
   },
   {
+    // `place`'s inverse, and the reason it exists is that nothing else undoes
+    // it: a Karta leaves an Obszar by being taken, beaten or walked onto, and
+    // a test table that dressed a field had no way to undress it.
+    name: "clear",
+    aliases: [],
+    usage: "clear [Karczma]",
+    summary: "take everything lying on an Obszar off it, onto the used pile",
+    needs: "testmode",
+    group: "override",
+  },
+  {
     name: "place",
     // `drop` was an alias here and is not any more: it is the lawful "put a
     // Przedmiot down", and a word cannot mean both that and a card conjured
@@ -1297,6 +1310,14 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    * standing on — which is what a tester wants most of the time, and the only
    * reason the field is optional.
    */
+  if (word === "clear") {
+    if (tail === "") return { ok: { kind: "clear", fieldId: null } };
+    const where = findByName(PLACES, (field) => field.name, tail);
+    if ("ambiguous" in where) return { error: `Which one — ${where.ambiguous.join(", ")}?` };
+    if ("missing" in where) return { error: `No Obszar called \`${tail}\`.` };
+    return { ok: { kind: "clear", fieldId: where.found.id } };
+  }
+
   if (word === "place" || word === "put") {
     const cut = tail.search(AT);
     const cardPart = cut === -1 ? tail : tail.slice(0, cut);
@@ -1941,7 +1962,7 @@ export function complete(
       // given and can certainly be looked at.
       return { pool: [...READABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
     }
-    if (verb === "cross") return { pool: PLACES.map((f) => f.name), at: 1 };
+    if (verb === "cross" || verb === "clear") return { pool: PLACES.map((f) => f.name), at: 1 };
     if (verb === "teleport" || verb === "move" || verb === "walk") {
       return { pool: PLACES.map((f) => f.name), at: 1 };
     }
@@ -2111,6 +2132,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   endfight: "testmode",
   stack: "testmode",
   pile: "testmode",
+  clear: "testmode",
   endcast: "play",
   spoils: "play",
   // Both sides call `drawSpell`. 9.5 deals them; this is that.
