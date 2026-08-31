@@ -22,6 +22,16 @@ rather than a printed page, it says so.
 | **Labirynt Magów** | a spiral maze, **also playable standalone** | 40 Kart Labiryntu, 40 Zdarzeń, 16 Zaklęć, 18 Kart Postaci, plansza, 6 Kart Alternatywnych Zakończeń Gry |
 | **Magia** | none | more cards for the other three decks, plus 10 spells |
 
+**One base-game loose end lands here.** 13.5's worked example in the Instrukcja
+names a *Klątwa (Zaklęcie)* lying on Równina Samotnych Skał, and there is no
+such card in the base box. It is in **Labirynt Magów** — „połóż tę Kartę na
+dowolnym Obszarze jednego z Kręgów ... Każda Postać, która wpadnie w tę pułapkę
+straci natychmiast 1 Życie" — which is precisely the card the example spends a
+paragraph on. Every other card those examples name is in the base box, so the
+likeliest reading is that Klątwa was drafted for the base game, cut before
+print, and printed later here. Worth knowing before anyone concludes the base
+transcription is missing a Zaklęcie: it is not.
+
 Jaskinia's rulebook is a 126 MB scan that would not open; its component list is
 the one inferred from sheets rather than read. Every scan is image-only, and the
 card sheets are A4 at 2480×3508 like the base game's, so `extract-assets.mjs`
