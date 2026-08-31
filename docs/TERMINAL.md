@@ -174,7 +174,7 @@ and it is what makes the browser console useful for more than cheating.
 ### Testmode only
 Everything the console has today: `kill` · `revive` · `remove` · `give` ·
 `place` · `winfight` · `wingame` · `endfight` · `stone` · `effect` · `nature` ·
-`gold`/`miecz`/`magia` · `turn` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
+`gold`/`miecz`/`magia`/`tury` · `turn` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
 `host` · `rename`
 
 **Settled:** `go` is now `teleport` and has lost its `move` alias; `place` has
@@ -465,11 +465,13 @@ already there when the conventions were settled:
 
 ### Known, and left
 
-- **`gold|sword|magic|life`** prints as though those were four names for one
-  command, and they are four different parameters. The alias mechanism is doing
-  something it is not shaped for. The summary says "move a parameter", which
-  carries it; splitting them into four specs would repeat one usage line four
-  times to fix a comma.
+- **`gold|sword|magic|life|tury`** prints as though those were five names for
+  one command, and they are five different things — four parameters and a debt.
+  The alias mechanism is doing something it is not shaped for. The summary says
+  "move a parameter", which carries it; splitting them into five specs would
+  repeat one usage line five times to fix a comma. `tury` is the odd one and is
+  flagged in the summary: it is `turns_lost`, spent one per pass, and 1.3's
+  floor has nothing to do with it.
 - **`turn <player>`** means "pass until it is their turn", which reads oddly
   next to `endturn`. It is a testmode verb and rare; renaming it would cost more
   than the confusion does.

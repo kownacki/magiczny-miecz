@@ -152,8 +152,17 @@ export function stageOf(status: string, phase: string | undefined): Stage {
     : "other";
 }
 
-/** Which parameter a stat command moves. The column names, as the store knows them. */
-export type StatName = "sword" | "magic" | "life" | "gold";
+/**
+ * Which parameter a stat command moves. The column names, as the store knows them.
+ *
+ * `tury` is the odd one and is here for the same reason `stone` and `effect`
+ * are: it is a state a card makes, `turns_lost` has always held it, and there
+ * was no way to reach it at a prompt — so the one thing on the board that
+ * silently skips a player could be seen only by drawing the card that causes
+ * it. It is not a parameter and never touches 1.3's floor; it is a debt, spent
+ * one per pass by `passTurn`.
+ */
+export type StatName = "sword" | "magic" | "life" | "gold" | "tury";
 
 /** The three a character can have. 3.2's fourth, "any", is a card's word, not a state. */
 export type Nature = "good" | "evil" | "chaotic";
@@ -353,6 +362,7 @@ const STATS: Record<string, StatName> = {
   magic: "magic",
   life: "life",
   gold: "gold",
+  tury: "tury",
 };
 
 export const COMMANDS: CommandSpec[] = [
@@ -376,9 +386,9 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "gold",
-    aliases: ["sword", "magic", "life"],
+    aliases: ["sword", "magic", "life", "tury"],
     usage: "gold +5|=12 [player] [force]",
-    summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor",
+    summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor; `tury` owes turns",
     needs: "testmode",
     group: "override",
   },

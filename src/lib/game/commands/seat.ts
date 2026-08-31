@@ -18,6 +18,7 @@ import {
   spellsHushed,
   type Status,
 } from "@/lib/engine/status";
+import { projectQueue } from "@/lib/engine/turnQueue";
 import type { TargetSeat } from "@/lib/engine/targets";
 import type { Holding } from "@/lib/engine/state";
 import type { EqMode, Slot } from "@/lib/engine/slots";
@@ -164,6 +165,38 @@ function inFight(
   return addsMagiaToMiecz(abilities) || magiaCountsAsMiecz(statuses)
     ? { miecz: total.miecz + total.magia, magia: total.magia }
     : total;
+}
+
+/**
+ * The turn order walked forward, for anything that has to date an effect.
+ *
+ * `lapsesOn` needs it: a countdown in the holder's own turns is only a round
+ * number once somebody has worked out when those turns actually arrive, and
+ * adding the countdown to `games.round` is wrong for every seat that is owed
+ * turns or standing in Kamień — which is most of the seats with effects worth
+ * dating. `projectQueue` spends lost turns exactly as `finishTurn` does, so the
+ * forecast and the app cannot drift apart.
+ *
+ * The depth is generous rather than `DEFAULT_DEPTH`: the turn bar only draws a
+ * handful of chips, but an effect can sit five rounds out and still want a
+ * date, and the walk is cheap.
+ */
+export function turnQueueOf(snapshot: Snapshot, depth = 40) {
+  return projectQueue(
+    // Same filter `finishTurn` applies — a seat with no Postać is not in the
+    // order, so it must not be in a forecast of the order either.
+    snapshot.seats
+      .filter((seat) => seat.character_id)
+      .map((seat) => ({
+        index: seat.seat_index,
+        eliminated: seat.eliminated,
+        turnsLost: seat.turns_lost,
+        stoneUntilRound: seat.stone_until_round,
+      })),
+    snapshot.game.active_seat,
+    snapshot.game.round,
+    depth,
+  );
 }
 
 export function seatView(snapshot: Snapshot, seatId: string): SeatView {

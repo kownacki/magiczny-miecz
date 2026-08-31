@@ -22,6 +22,7 @@ import { EVENTS, SPELL_BY_REF } from "./decks";
 import { TROPHY_RATE, offersFor } from "./commands/shop";
 import { carriesSpell, fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
+import { foldStatuses, type StatusRow } from "@/lib/engine/statusRows";
 import { change } from "./change";
 import { ADJUSTABLE, type Adjustable } from "./commands/adjust";
 import { driverOf, isQuiet, nameOfSeat } from "./commands/lobby";
@@ -97,7 +98,7 @@ import { only, replaceTop, top } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { askOnTop } from "@/lib/engine/ask";
 import type { Snapshot } from "./change";
-import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
+import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
 import { GIVEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
@@ -519,7 +520,9 @@ export async function runCommand(
      * surface that has no Postgres behind it. Every other read in here goes
      * through the port, which is the whole reason the port exists.
      */
-    const game = (await activeStore().load(gameId)).game;
+    const snapshot = await activeStore().load(gameId);
+    const game = snapshot.game;
+    const queue = turnQueueOf(snapshot);
     // Readiness is the poczekalnia's word and means nothing once play has
     // started, so it is only printed where it can still be acted on.
     const waiting = game.status === "lobby";
@@ -542,11 +545,31 @@ export async function runCommand(
         at: `${game.active_seat === seat.seat_index ? "▸" : " "}${seat.seat_index + 1}`,
         card: characterName(seat.character_id) + (seat.eliminated ? " †" : ""),
         who: one ? person(one) : "—",
+        /**
+         * And what is on them, which is the whole reason a roster is read.
+         *
+         * 9.3 hides a hand of Zaklęcia and nothing else: an effect is a thing
+         * the table can see, and has to be able to see, because whose turn is
+         * being passed over and why is exactly what makes turn order hard to
+         * follow. `mine` is false here on purpose even for your own row — this
+         * is the list of everybody, and "po twojej turze" on one line of it
+         * reads as a claim about the others.
+         */
+        effects: foldStatuses(seatView(snapshot, seat.id).statuses, {
+          queue,
+          seatIndex: seat.seat_index,
+        }),
       };
     });
 
     const wide = Math.max(0, ...rows.map((row) => row.card.length));
-    const lines = rows.map((row) => `${row.at}  ${row.card.padEnd(wide)}  ${row.who}`);
+    const lines = rows.flatMap((row) => [
+      `${row.at}  ${row.card.padEnd(wide)}  ${row.who}`,
+      // Indented under the seat they belong to rather than squeezed into a
+      // fourth column: one seat can carry five of these and a column would
+      // wrap every other row on the table.
+      ...row.effects.map((effect) => `      ${effectRow(effect)}`),
+    ]);
 
     // Everybody the seats did not account for, which is what a spectator is:
     // somebody at the table driving nothing (4.4 lets a player whose Postać
@@ -1922,6 +1945,21 @@ export async function runCommand(
         // fight figure can be the smallest of the three.
         ...(championLine(view) ? [`In a fight: ${championLine(view)}`] : []),
         `Nature: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
+        /**
+         * What is true of this character for a while, and when it stops being.
+         *
+         * Above the pack on purpose: a Kamień or a Krąg Płomieni decides
+         * whether the rest of this sheet can be acted on at all, and it was the
+         * one thing about a character the console never printed — the browser
+         * had glyphs for it and a terminal had nothing.
+         */
+        ...effectLines(
+          foldStatuses(view.statuses, {
+            queue: turnQueueOf(snapshot),
+            seatIndex: seat.seat_index,
+            mine: own,
+          }),
+        ),
         // Worn and carried are different places — 5.1 and the slot variant both
         // turn on which — and listing a Hełm you are wearing under "Pack" said
         // equipping it had not worked.
@@ -2036,6 +2074,50 @@ export async function runCommand(
  * paragraph. Fixed at four rather than measured against a terminal, because
  * nothing here knows how wide one is and a wrong guess wraps every row.
  */
+/**
+ * What a second copy of an effect did, in the two words it takes to say it.
+ *
+ * Only ever printed where there *was* a second copy. A card that visibly did
+ * nothing is the sort of thing a table argues about two turns later, and the
+ * argument is always the same one: did it stack? `stackingOf` already knows;
+ * this is that answer reaching the person who drew the card.
+ */
+const STACK_SAID: Record<StatusRow["stacking"], string> = {
+  sums: "sumuje się",
+  queues: "po kolei",
+  refreshes: "odnawia",
+  exclusive: "bez zmian",
+};
+
+/** One effect, as a line: what it is, how many landed, and when it lapses. */
+function effectRow(row: StatusRow): string {
+  return (
+    `${row.mark.glyph} ${row.label}` +
+    (row.count > 1 ? ` ×${row.count} (${STACK_SAID[row.stacking]})` : "") +
+    ` — ${row.when}`
+  );
+}
+
+/**
+ * A seat's effects as a block, with the one caveat that applies to all of them.
+ *
+ * The caveat is printed once and only where it is earned. A round taken off a
+ * stored deadline is exact; a round worked out by walking the turn order is a
+ * forecast, because the next Karta drawn can add a lost turn to somebody and
+ * move every date after it. Saying so on every line would be noise, and noise
+ * is what stops the real warnings being read.
+ */
+function effectLines(rows: readonly StatusRow[]): string[] {
+  if (rows.length === 0) return [];
+  return [
+    "Effects:",
+    ...rows.map((row) => `  ${effectRow(row)}`),
+    ...(rows.some((row) => row.lapse?.certainty === "prognoza")
+      ? ["  (rundy liczone w turach są prognozą — jedna Karta może je przesunąć)"]
+      : []),
+  ];
+}
+
 function columns(names: readonly string[], perRow = 4): string[] {
   const widest = Math.max(...names.map((one) => one.length), 0);
   const rows: string[] = [];

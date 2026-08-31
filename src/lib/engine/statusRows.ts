@@ -125,8 +125,10 @@ export function whenSaid(status: Status, lapse: Lapse | null, mine: boolean): st
   // words are wrong enough here to be worth replacing outright.
   if (status.source === DEBT && status.ends.kind === "turns") {
     const owed = status.ends.turns;
-    const many = owed === 1 ? "1 turę" : `${owed} ${owed <= 4 ? "tury" : "tur"}`;
-    return lapse ? `traci ${many} — wraca w rundzie ${lapse.round}` : `traci ${many}`;
+    // Said the way the label is not, because the two are printed side by side:
+    // "Traci turę — traci 2 tury" is the same sentence twice.
+    const many = `jeszcze ${owed} ${owed === 1 ? "tura" : owed <= 4 ? "tury" : "tur"}`;
+    return lapse ? `${many} — wraca w rundzie ${lapse.round}` : many;
   }
 
   // `round` already names its round; anything else would say it twice.

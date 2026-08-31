@@ -120,8 +120,8 @@ describe("whenSaid", () => {
     const at = projectQueue(table({ 1: { turnsLost: 2 } }), 0, 5, 12);
     // Not "do końca tej tury", which is what the generic countdown words would
     // have made of a single lost turn.
-    expect(whenSaid(fromColumns({ ...none, turnsLost: 1 }, 5)[0], null, true)).toBe("traci 1 turę");
-    expect(whenSaid(debt, lapsesOn(debt, at, 1), true)).toBe("traci 2 tury — wraca w rundzie 7");
+    expect(whenSaid(fromColumns({ ...none, turnsLost: 1 }, 5)[0], null, true)).toBe("jeszcze 1 tura");
+    expect(whenSaid(debt, lapsesOn(debt, at, 1), true)).toBe("jeszcze 2 tury — wraca w rundzie 7");
   });
 
   it("leaves an effect with no date saying only what lifts it", () => {
@@ -211,7 +211,7 @@ describe("foldStatuses", () => {
   it("works with no projection at all, and simply has no dates", () => {
     const rows = foldStatuses(allStatuses([buff(2)], { ...none, turnsLost: 1 }, 5));
     expect(rows.map((row) => row.lapse)).toEqual([null, null]);
-    expect(rows[0].when).toBe("traci 1 turę");
+    expect(rows[0].when).toBe("jeszcze 1 tura");
   });
 
   it("puts the whole of a seat's trouble into rows a panel can draw", () => {
