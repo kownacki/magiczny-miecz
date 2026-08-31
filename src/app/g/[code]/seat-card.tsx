@@ -673,6 +673,14 @@ export function SeatCard({
                       height={238}
                       className="h-auto w-48 rounded"
                       unoptimized
+                      /* The Karta Postaci is the largest thing above the fold
+                         and is on screen from the first paint, so it is the
+                         Largest Contentful Paint on every table — Next says so
+                         in the dev log. Lazy by default means it is fetched
+                         after layout, which is the one image on the page that
+                         should not be. `character-picker` already marks its
+                         own for the same reason. */
+                      priority
                     />
                   </button>
                 )}
