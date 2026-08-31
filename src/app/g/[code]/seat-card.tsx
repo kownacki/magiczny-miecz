@@ -40,7 +40,7 @@ import { FightsForYou } from "./fights-for-you";
 import { Fold } from "./fold";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
-import { EffectMark, ToneGlyph } from "./effect-mark";
+import { EffectMark, EffectTally } from "./effect-mark";
 import { EffectList } from "./effect-list";
 /**
  * How many marks the folded bar shows before it starts counting.
@@ -168,19 +168,6 @@ export function SeatCard({
    * something up is to put it down somewhere else — and "somewhere else" is
    * usually the other half.
    */
-  /**
-   * The three counts the folded bar carries.
-   *
-   * "Obojętny" gets its own rather than being folded into one of the others —
-   * putting a mark that neither helps nor hurts into "helping" would be the app
-   * taking a view it has no basis for. It was left off the bar entirely for a
-   * version, which was the same mistake in the other direction: the hover said
-   * "1 inny efekt" over a bar that showed only "▲1", so the card was carrying a
-   * fact its own summary denied.
-   */
-  const helping = seat.effects.filter((mark) => mark.tone === "dobry").length;
-  const hurting = seat.effects.filter((mark) => mark.tone === "zly").length;
-  const otherwise = seat.effects.filter((mark) => mark.tone === "obojetny").length;
   /**
    * The marks in the order the folded bar counts them.
    *
@@ -479,25 +466,7 @@ export function SeatCard({
                       grey and carries a number, and the two never appear on the
                       same line — the bar is what a *folded* card shows and the
                       marks are what an open one does. */}
-                  {/* Counted in `TONE_ORDER`, which is the order the open
-                      card draws the marks in. */}
-                  {(
-                    [
-                      { n: otherwise, shape: "square", tone: "text-muted" },
-                      { n: helping, shape: "up", tone: "text-verdigris" },
-                      { n: hurting, shape: "down", tone: "text-vermilion" },
-                    ] as const
-                  )
-                    .filter((count) => count.n > 0)
-                    .map((count, at) => (
-                      <span
-                        key={count.shape}
-                        className={`${count.tone} ${at > 0 ? "ml-1.5" : ""}`}
-                      >
-                        <ToneGlyph shape={count.shape} />
-                        {count.n}
-                      </span>
-                    ))}
+                  <EffectTally effects={seat.effects} />
                 </span>
               )}
               {/* What the body is carrying, where the body itself sits when the

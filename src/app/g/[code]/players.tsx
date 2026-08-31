@@ -26,6 +26,7 @@ import { characterStandeeUrl } from "@/lib/view/cardImages";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
+import { asNature } from "./table";
 import type { PublicSeat } from "./table-layout";
 import { Drawer } from "./drawer";
 import { Fold } from "./fold";
@@ -35,6 +36,7 @@ import { natureSaid } from "./nature-line";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 import { EffectList } from "./effect-list";
+import { EffectMark, EffectTally } from "./effect-mark";
 
 export function PlayersDrawer({
   seats,
@@ -94,10 +96,23 @@ export function PlayersDrawer({
    * Read once, when the drawer mounts, which is every time it opens: it is a
    * starting point and not a rule, so somebody who shuts the only seat gets to
    * keep it shut for as long as they are looking at it.
+   *
+   * A set, and not one id. Opening a seat used to shut whichever was open,
+   * which makes the one thing this panel is for — comparing players — a matter
+   * of remembering what the last one said. Two characters' numbers are a
+   * comparison; two characters' numbers one after the other are two facts.
    */
-  const [open, setOpen] = useState<string | null>(
-    openSeatId ?? (seats.length === 1 ? seats[0].id : null),
-  );
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => {
+    const start = openSeatId ?? (seats.length === 1 ? seats[0].id : null);
+    return new Set(start ? [start] : []);
+  });
+  const toggleSeat = (id: string) =>
+    setOpen((was) => {
+      const next = new Set(was);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   /**
    * Which seats have their cards unfolded, by exception.
    *
@@ -120,21 +135,20 @@ export function PlayersDrawer({
         </>
       }
       /**
-       * Three Przedmioty across, exactly.
+       * The drawer's own width, which is the Stosy drawer's.
        *
-       * The roster's widest thing is a row of `CardTile`s, and a row that fits
-       * three and a sliver reads as a row that could not decide. Counted rather
-       * than rounded: 3 x 92 (`CardTile`'s own width) + 2 x 8 (`gap-2`) = 292,
-       * + 16 for the seat box's `px-2`, + 2 for its border, + 24 for the
-       * column's `p-3`, + 15 for the scrollbar gutter the drawer always
-       * reserves — measured, not assumed — + 1 for the drawer's own left edge,
-       * which the sum missed and which left the row a pixel short of three.
-       * = 350, and the row measures 292 exactly.
+       * It was 350px, counted to fit exactly three `CardTile`s across and not a
+       * pixel more: 3 x 92 + 2 x 8 = 292, plus the seat box's padding and
+       * border, the column's, the scrollbar gutter the drawer always reserves,
+       * and the drawer's own left edge. The arithmetic was right and the
+       * premise stopped being: a seat now carries a row of effect tiles, their
+       * durations in words underneath, and several seats open at once. The
+       * widest thing in here is no longer the row of three.
        *
-       * The gutter stays reserved whether or not the list scrolls, which is
-       * what keeps the tiles from stepping sideways when a seat is unfolded.
+       * So it takes the default, and the default is what Stosy takes — two
+       * drawers of the same width read as two drawers rather than as one that
+       * has moved. Three tiles still fit, with slack rather than to the pixel.
        */
-      width="max-w-[350px]"
       onClose={onClose}
     >
       <div className="flex flex-col gap-2 p-3">
@@ -142,7 +156,7 @@ export function PlayersDrawer({
           const real = asCharacterId(seat.characterId);
           const character = real ? (byId.get(real) ?? null) : null;
           const portrait = character ? characterStandeeUrl(character.id) : null;
-          const expanded = open === seat.id;
+          const expanded = open.has(seat.id);
           const mine = seat.id === mySeatId;
           const colour = SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
 
@@ -154,7 +168,7 @@ export function PlayersDrawer({
               } ${seat.eliminated ? "opacity-50" : ""}`}
             >
               <button
-                onClick={() => setOpen(expanded ? null : seat.id)}
+                onClick={() => toggleSeat(seat.id)}
                 className="flex w-full items-center gap-2 px-2 py-1.5 text-left"
               >
                 <span
@@ -192,29 +206,18 @@ export function PlayersDrawer({
                     A seat sitting out three rounds in Kamień looked, folded,
                     exactly like a seat having an ordinary game — and this
                     drawer is where the table comes to ask why the turn keeps
-                    skipping somebody. The glyphs rather than a count, because
-                    two of them fit where "2 efekty" does not, and they are the
-                    same shapes the row shows when it opens. */}
+                    skipping somebody.
+
+                    Counted, not one glyph per effect: two Eliksiry drew "▲▲",
+                    which says "some" in the space where "▲2" says how many. The
+                    same summary a folded seat card carries, from the same
+                    component, so the two cannot come to disagree. */}
                 {seat.effects.length > 0 && (
                   <span
-                    aria-hidden
                     title={seat.effects.map((effect) => effect.title).join(" · ")}
-                    className="shrink-0 text-[11px] leading-none"
+                    className="tnum shrink-0 text-[11px] leading-none"
                   >
-                    {seat.effects.map((effect) => (
-                      <span
-                        key={effect.id}
-                        className={
-                          effect.tone === "dobry"
-                            ? "text-verdigris"
-                            : effect.tone === "zly"
-                              ? "text-vermilion"
-                              : "text-muted"
-                        }
-                      >
-                        {effect.glyph}
-                      </span>
-                    ))}
+                    <EffectTally effects={seat.effects} />
                   </span>
                 )}
                 <span className="tnum shrink-0 text-[11px]">
@@ -231,6 +234,26 @@ export function PlayersDrawer({
 
               {expanded && (
                 <div className="border-t border-edge/60 px-2 py-2">
+                  {/* The Karty first, above the figure and its numbers.
+
+                      They are the reason the numbers are what they are: a
+                      Miecz of 9 on a character whose card says 5 is a question,
+                      and the two Eliksiry answering it were below the answer.
+                      The same tiles the seat card draws beside a name, with the
+                      same hover onto the Karta itself — this drawer is where
+                      you look at somebody else's cards, so the one kind of card
+                      that was only ever a glyph here should be a card too. */}
+                  {seat.effects.length > 0 && (
+                    <div className="mb-2 flex flex-wrap items-center gap-1">
+                      {seat.effects.map((effect) => (
+                        <EffectMark
+                          key={effect.id}
+                          mark={effect}
+                          nature={asNature(seat.nature)}
+                        />
+                      ))}
+                    </div>
+                  )}
                   <div className="mb-2 flex items-start gap-3">
                     {portrait && character && (
                       <Standee character={character} portrait={portrait} />

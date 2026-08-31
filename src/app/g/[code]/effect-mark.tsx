@@ -41,7 +41,50 @@ export function ToneGlyph({ shape }: { shape: "up" | "down" | "square" }) {
   );
 }
 
-export 
+/**
+ * How many are helping, how many are not, and how many are neither.
+ *
+ * The summary a *shut* thing owes its reader. One glyph per tone with a number
+ * on it rather than one glyph per effect: a row of five identical triangles
+ * says "several" in the space where "▲5" says how many, and beside four
+ * parameters and a name the space is the whole constraint.
+ *
+ * "Obojętny" gets its own count rather than being folded into one of the
+ * others. Putting a mark that neither helps nor hurts under "helping" would be
+ * the app taking a view it has no basis for — and leaving it out entirely was
+ * the same mistake the other way, because the hover said "1 inny efekt" over a
+ * bar showing only "▲1".
+ *
+ * Counted in `TONE_ORDER`, which is the order an open card draws the marks in:
+ * one set, two readings, one order between them.
+ */
+export function EffectTally({
+  effects,
+}: {
+  effects: readonly { tone: "dobry" | "zly" | "obojetny" }[];
+}) {
+  const count = (tone: string) => effects.filter((effect) => effect.tone === tone).length;
+  const rows = (
+    [
+      { n: count("obojetny"), shape: "square", tone: "text-muted" },
+      { n: count("dobry"), shape: "up", tone: "text-verdigris" },
+      { n: count("zly"), shape: "down", tone: "text-vermilion" },
+    ] as const
+  ).filter((row) => row.n > 0);
+
+  return (
+    <>
+      {rows.map((row, at) => (
+        <span key={row.shape} className={`${row.tone} ${at > 0 ? "ml-1.5" : ""}`}>
+          <ToneGlyph shape={row.shape} />
+          {row.n}
+        </span>
+      ))}
+    </>
+  );
+}
+
+export
 function EffectMark({
   mark,
   nature,
