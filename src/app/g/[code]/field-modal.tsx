@@ -2,6 +2,7 @@
 
 import { fieldWithText } from "@/lib/view/fieldText";
 import { CardTile } from "./card-tile";
+import { tileFor } from "./table";
 import { WithRules } from "./rule-ref";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
@@ -217,13 +218,13 @@ export function FieldModal({
                   return (
                     <CardTile
                       key={lying.id}
-                      card={{
-                        cardId: lying.cardId,
-                        name,
-                        text: TEXTS.get(lying.cardId),
-                        holdable: takeable,
-                        granted: lying.granted,
-                      }}
+                      /* Through `tileFor` like every other shelf: the name, the
+                         printed text and the conjured mark are its business, and
+                         building the object here by hand is what lost the mark
+                         on an Obszar in the first place. `holdable` stays local
+                         — 12.1 is about where the card is, which is the one
+                         thing this window knows and `tileFor` does not. */
+                      card={{ ...tileFor({ cardId: lying.cardId, granted: lying.granted }), holdable: takeable }}
                       eqMode={eqMode}
                       nature={nature}
                       /* The ask is out and the answer is not a foregone

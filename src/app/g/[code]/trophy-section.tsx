@@ -486,7 +486,7 @@ function TrophyTile({
   // than trusted — the one boundary this component has. An id the box does not
   // know draws its own name and no picture, which is what `tileFor` does with
   // anything it cannot place.
-  const card = tileFor({ id: cardId, cardId: cardId as CardId, kind: "trophy", face: "open" });
+  const card = tileFor({ cardId: cardId as CardId, kind: "trophy" });
   return (
     <ItemSlot
       item={{ holdingId: cardId, cardId, card, inert: false }}

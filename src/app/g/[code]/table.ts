@@ -207,15 +207,36 @@ export const KIND_LABEL: Record<Held["kind"], string> = {
   spell: "Zaklęcie",
 };
 
-export function tileFor(held: Held): TileCard {
+/**
+ * The one place a Karta becomes something drawable.
+ *
+ * Everything a tile knows that is not about *where* the card is — its name, its
+ * printed text, whether the console conjured it — is decided here, so a view
+ * that draws a card asks for one rather than assembling one. That is not a
+ * style preference: the conjured mark went missing on an Obszar precisely
+ * because `field-modal` could not call this and built the object by hand
+ * instead, and dropped the flag doing it.
+ *
+ * It used to take a whole `Held`, which is why a card lying on a field could
+ * not use it — a field row is `{ id, fieldId, cardId, granted }` and holds no
+ * `kind`. So it takes the least it needs. `kindLabel` is absent for a card on
+ * the board, which is right: „Przedmiot" describes a thing in somebody's pack,
+ * and a Karta lying on an Obszar is not in one yet.
+ *
+ * Anything a tile learns next is added once, here, rather than at every call
+ * site — which is the whole of the argument for it.
+ */
+export function tileFor(card: {
+  cardId: CardId;
+  kind?: Held["kind"];
+  granted?: boolean;
+}): TileCard {
   return {
-    cardId: held.cardId,
-    name: CARD_NAMES.get(held.cardId) ?? held.cardId,
-    text: CARD_TEXTS.get(held.cardId),
-    kindLabel: KIND_LABEL[held.kind],
-    // Travels with the card into every view that draws it — the hover, the
-    // whole Karta — rather than each of them being told separately.
-    granted: held.granted,
+    cardId: card.cardId,
+    name: CARD_NAMES.get(card.cardId) ?? card.cardId,
+    text: CARD_TEXTS.get(card.cardId),
+    ...(card.kind ? { kindLabel: KIND_LABEL[card.kind] } : {}),
+    granted: card.granted,
   };
 }
 
