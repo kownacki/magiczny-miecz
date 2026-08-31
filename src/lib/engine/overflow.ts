@@ -7,6 +7,9 @@ import type { Ability } from "./abilities";
 import { slotOnArrival } from "./holdings";
 import { isUsable } from "./uses";
 import { RELICS, type EqMode, type Slot } from "./slots";
+import { pop, push, top, type TurnState } from "./stack";
+import type { TurnPhase } from "./turn";
+import { plural } from "./polish";
 
 /**
  * How far over a seat is, or null when it is not.
@@ -130,4 +133,61 @@ export function waysUnder<T extends Holding & { id: string }>(
     }
   }
   return ways;
+}
+
+/* --------------------------------------------------------------------------
+ * The frame: 5.6's "natychmiast", on the stack.
+ *
+ * `overflowIn` says whether a seat is over and `waysUnder` says what could be
+ * done about it. What was missing between them is *when*: both rules say the
+ * surplus goes immediately, and the app enforced that by refusing the next
+ * thing the overloaded player tried to do — which is a different rule, and one
+ * nobody else at the table can see being broken.
+ *
+ * So the surplus opens a frame, exactly as a fight or a question does, and the
+ * table waits on it. See docs/STACK.md.
+ * ----------------------------------------------------------------------- */
+
+export type OverflowFrame = Extract<TurnPhase, { phase: "overflow" }>;
+
+/** The surplus goes on top of whatever is running; everything beneath waits. */
+export function openOverflow(state: TurnState, frame: OverflowFrame): TurnState {
+  return push(state, frame);
+}
+
+/** Under the limit again: the frame comes off and what was running resumes. */
+export function closeOverflow(state: TurnState): TurnState {
+  return pop(state);
+}
+
+/**
+ * The frame on top, or null.
+ *
+ * Only the top, because that is what "the table waits" means: a surplus that
+ * had something pushed above it would be a surplus play had carried on past.
+ * Nothing pushes above one — the guard below is what makes that true.
+ */
+export function overflowOnTop(state: TurnState): OverflowFrame | null {
+  const frame = top(state);
+  return frame.phase === "overflow" ? frame : null;
+}
+
+/**
+ * What the table is waiting for, said the way both rules word it.
+ *
+ * The number is how many have to go, not how many are held: 5.6 and 2.6 are
+ * both about the surplus, and "odrzuć 2" is the sentence a player can act on
+ * where "masz 6 przy limicie 4" is one they have to do arithmetic on. Both are
+ * here, because the second is what makes the first checkable.
+ */
+export function overflowSaid(over: Overflow, who: string): string {
+  const noun =
+    over.what === "przedmioty"
+      ? `${over.held} ${plural(over.held, "Przedmiot", "Przedmioty", "Przedmiotów")}`
+      : `${over.held} ${plural(over.held, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
+  const rule = over.what === "przedmioty" ? "5.6" : "2.6";
+  return (
+    `${who}: ${noun} przy limicie ${over.limit}` +
+    ` — ${over.over} ${plural(over.over, "musi", "muszą", "musi")} zniknąć, zanim gra ruszy dalej (${rule}).`
+  );
 }

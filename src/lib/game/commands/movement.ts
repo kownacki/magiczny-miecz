@@ -29,6 +29,7 @@ import {
 } from "../change";
 import type { GameRow, SeatRow } from "../store";
 import { activeSeat, eqModeOf, refuseWhileHeld, refuseWhileOverLimit } from "./seat";
+import { refuseWhileOverflow } from "./overflow";
 import { refuseWhileBeastAwaits } from "./beast";
 import { driverOf, nameOfSeat } from "./lobby";
 
@@ -347,8 +348,24 @@ export async function rollForMove(
   ports: CommandPorts,
 ): Promise<Outcome<number>> {
   const seat = activeSeat(snapshot);
+  /**
+   * Before the phase check, because it is the better answer to the same fact.
+   *
+   * A surplus frame sits on top of the `roll` it interrupted, so without this
+   * the roll is already refused — with "Nie czas na rzut", which is true and
+   * tells nobody anything. This names the seat, the rule and the way out.
+   */
+  refuseWhileOverflow(snapshot, seat.id);
   if (top(snapshot.game.turn_state).phase !== "roll") throw new Error("Nie czas na rzut.");
-  // 5.6: "musi natychmiast odrzucić". The turn does not begin until it has.
+  /**
+   * 5.6: "musi natychmiast odrzucić". The turn does not begin until it has.
+   *
+   * Still a refusal here rather than a frame, and the reason is the return
+   * type: this hands back the die it threw, and a write that opens a frame
+   * instead has no die to hand back. Reaching this at all means a surplus
+   * arrived between turns and neither the pass nor the act that caused it
+   * opened one — so it is the backstop, not the door.
+   */
   refuseWhileOverLimit(snapshot, seat.id);
   // Held where they stand — the Krąg Płomieni. Everything else in a turn hangs
   // off having rolled, which is why this is the door it is asked at.

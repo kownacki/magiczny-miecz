@@ -99,6 +99,8 @@ import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { only, replaceTop, top } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { askOnTop } from "@/lib/engine/ask";
+import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
+import { overflowOf, waysOut } from "./commands/overflow";
 import type { Snapshot } from "./change";
 import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
 import { DEALABLE } from "@/lib/engine/console";
@@ -193,6 +195,7 @@ const PHASE: Record<string, string> = {
   bridge: "the Most",
   script: "a Karta mid-resolution",
   loop: "a Wróg fought in rounds",
+  overflow: "somebody is over their limit",
   end: "end of turn",
 };
 
@@ -209,6 +212,39 @@ function frameLabel(frame: TurnPhase): string {
     return `${frame.of.cardName}: ${frame.round} ${frame.done + 1} z ${frame.times}`;
   }
   return PHASE[frame.phase] ?? frame.phase;
+}
+
+/**
+ * The overflow frame written out, with every way out of it listed.
+ *
+ * Public, all of it, and that is the difference from `askLines`. A hand of
+ * Zaklęcia is 9.3's secret; a Przedmiot is not, and neither is the fact that
+ * somebody is carrying more than they may. The whole table is waiting on this,
+ * so the whole table is told what it is waiting for and what would end it.
+ *
+ * The ways out are read fresh rather than off the frame, because using a card
+ * changes them — see `waysOut`.
+ */
+function overflowLines(snapshot: Snapshot): string[] {
+  const frame = overflowOnTop(snapshot.game.turn_state);
+  if (!frame) return [];
+  const seat = snapshot.seats.find((one) => one.id === frame.seatId);
+  const over = overflowOf(snapshot, frame.seatId);
+  if (!seat || !over) return [];
+
+  const whose = nameOfSeat(snapshot.users, seat.seat_index);
+  const said: Record<string, string> = {
+    odrzuc: "odrzuć  (na Obszar)",
+    uzyj: "użyj    (na stos zużytych)",
+    zaloz: "załóż   (na siebie)",
+  };
+  return [
+    overflowSaid(over, whose),
+    ...waysOut(snapshot, frame.seatId).map(
+      (way) => `  ${said[way.kind]}  ${cardName(way.cardId)}`,
+    ),
+    "  — `drop <nazwa>`, `use <nazwa>` albo `equip <nazwa>`",
+  ];
 }
 
 /**
@@ -1645,9 +1681,13 @@ export async function runCommand(
       await abandonFight(gameId);
       return "Fight dropped.";
 
-    case "endturn":
-      await finishTurn(gameId);
-      return "Turn passed.";
+    case "endturn": {
+      // The turn does not always pass: a surplus opens a frame instead, and
+      // saying "Turn passed" over one would be the console announcing the
+      // opposite of what it just did.
+      if ((await finishTurn(gameId)) === "passed") return "Turn passed.";
+      return overflowLines(await activeStore().load(gameId)).join("\n");
+    }
 
     /* ----------------------------------------------------------------------
      * Playing. Everything below is the game as printed — the same functions
@@ -1794,7 +1834,7 @@ export async function runCommand(
        */
       if (game.status === "finished") {
         return [
-          `Turn ${game.round} — the game is over.`,
+          `Round ${game.round} — the game is over.`,
           "`journal` says how it ended.",
         ].join("\n");
       }
@@ -1829,14 +1869,14 @@ export async function runCommand(
        * 4.4 lets a player whose Postać died choose another, so a table where
        * every one of them is dead is not over — it is waiting for somebody to
        * pick. Nothing said so: `look` gave the turn's answer as usual and read
-       * "Turn 8 — nobody / Obszar: — / Phase: roll", which is three facts about
+       * "Round 8 — nobody / Obszar: — / Phase: roll", which is three facts about
        * a turn that is not happening, and every command after it refused with
        * "Brak aktywnego gracza".
        */
       if (game.active_seat === null) {
         const out = snapshot.seats.filter((one) => one.character_id);
         return [
-          `Turn ${game.round} — nobody is playing.`,
+          `Round ${game.round} — nobody is playing.`,
           ...out.map((one) => `  ${named(one)} — ${one.eliminated ? "dead" : "out of play"}`),
           "4.4: whoever lost a Postać may `pick` another and start from its MGR.",
         ].join("\n");
@@ -1854,7 +1894,7 @@ export async function runCommand(
       );
       const phase = state.phase ?? "";
       return [
-        `Turn ${game.round} — ${active ? named(active) : "nobody"}`,
+        `Round ${game.round} — ${active ? named(active) : "nobody"}`,
         `Obszar: ${fieldName(active?.field_id ?? null)}`,
         `Phase: ${PHASE[phase] ?? phase}${state.roll ? ` (rolled ${state.roll})` : ""}`,
         // The pile under the running frame, when there is one — a summoned
@@ -1872,6 +1912,10 @@ export async function runCommand(
         ...(here.length
           ? [`On the Obszar: ${here.map((one) => cardName(one.card_id)).join(", ")}`]
           : []),
+        // The one thing the whole table is waiting on, spelled out with its
+        // ways out — before `waitingOn`, because it is what everything else in
+        // this list has stopped for.
+        ...overflowLines(snapshot),
         ...waitingOn(top(game.turn_state)),
         ...(standing.length > 1
           ? [`Also here: ${standing.map((one) => named(one)).join(", ")}`]

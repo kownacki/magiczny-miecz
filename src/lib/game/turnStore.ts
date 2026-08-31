@@ -28,7 +28,7 @@ import {
   type Decks,
 } from "./decks";
 import { apply, change, effectRowsFor, merge, type Changeset, type CommandPorts, type EffectRow, type Handler, type Snapshot } from "./change";
-import { holdOverflow, releaseOverflow } from "./commands/overflow";
+import { holdOverflow, refuseWhileOverflow, releaseOverflow } from "./commands/overflow";
 import { appRandom, supplied } from "./random";
 import {
   addEffect as addEffectTo,
@@ -114,7 +114,7 @@ import {
   takeNewCharacter as takeNewCharacterOn,
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
-import { setEndlessStock as setEndlessStockOn, refuseWhileOverLimit } from "./commands/seat";
+import { setEndlessStock as setEndlessStockOn } from "./commands/seat";
 import { refuseWhileBeastAwaits } from "./commands/beast";
 import {
   removeCharacter as removeCharacterOn,
@@ -766,7 +766,7 @@ export async function takeCard(
   /** Set when this card came off a field that was holding a granted one. */
   granted = false,
 ): Promise<void> {
-  const taken = await change(gameId, takeCardOn, { seatId, cardId, granted });
+  const taken = await change(gameId, thenHold(takeCardOn), { seatId, cardId, granted });
   // A Sztuka Złota is not luggage — taking it resolves it. The command does the
   // writes it owns and hands back the script rather than guessing at a rule
   // `applyEffect` owns.
@@ -798,6 +798,28 @@ function thenRelease<C, T>(handler: Handler<C, T>): Handler<C, T> {
   return async (snapshot, command, ports) => {
     const { writes, result } = await handler(snapshot, command, ports);
     return { writes: merge(writes, releaseOverflow(snapshot, writes)), result };
+  };
+}
+
+/**
+ * A card gained, with the check that opens the frame if it put somebody over.
+ *
+ * The other half of `thenRelease`, and the reason both exist here rather than
+ * inside the commands: a Karta arriving is one command's business and 5.6 is
+ * the table's, so the rule is wrapped round the verb instead of written into
+ * it. Sixty-seven commands write to this game and only a handful can overload
+ * anybody; those are the ones wearing this.
+ *
+ * It matters most where the seat gaining the card is not the seat playing. A
+ * raid hands a Przedmiot to the raider on somebody else's turn, and until now
+ * the only thing that noticed was a refusal aimed at the overloaded player the
+ * next time *they* tried to do something — by which point the table had played
+ * on through a state the rules do not allow.
+ */
+function thenHold<C, T>(handler: Handler<C, T>): Handler<C, T> {
+  return async (snapshot, command, ports) => {
+    const { writes, result } = await handler(snapshot, command, ports);
+    return { writes: merge(writes, holdOverflow(snapshot, writes)), result };
   };
 }
 
@@ -1306,8 +1328,16 @@ export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
  * A seat sitting out spends one lost turn here rather than being passed over
  * silently, so "tracisz 1 turę" costs exactly one trip round the table.
  */
-export async function finishTurn(gameId: string): Promise<void> {
-  await change(
+/**
+ * Hands the turn on — or stops, and says which it did.
+ *
+ * `"held"` is the surplus: the frame was opened and the turn stayed where it
+ * is, so a caller that announces "turn passed" regardless would be announcing
+ * the opposite of what happened. It is a return value rather than a throw
+ * because a throw discards the writes, and the frame *is* the write.
+ */
+export async function finishTurn(gameId: string): Promise<"passed" | "held"> {
+  return change(
     gameId,
     (snapshot) => {
       /**
@@ -1330,12 +1360,24 @@ export async function finishTurn(gameId: string): Promise<void> {
        * consequence of something else — a death, a lost turn, a fall off the
        * Most — and none of those is a player choosing to walk away from a rule.
        */
-      const held = holdOverflow(snapshot);
-      if (held.game) return { writes: held, result: undefined };
-
       const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
+      /**
+       * A frame already up is refused, not re-opened.
+       *
+       * `holdOverflow` is idempotent — it will not stack a copy of itself — so
+       * on a table that is already waiting it answers `{}`, and without this
+       * the pass read that as "nobody is over" and went ahead. `passTurn`
+       * writes `only(startTurn())`, so the turn moved on *and* the frame was
+       * thrown away with the rest of the stack: the one thing the table was
+       * waiting for, deleted by the button it was blocking.
+       */
+      refuseWhileOverflow(snapshot, seat?.id ?? null);
+
+      const held = holdOverflow(snapshot);
+      if (held.game) return { writes: held, result: "held" as const };
+
       if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
-      return { writes: passTurn(snapshot), result: undefined };
+      return { writes: passTurn(snapshot), result: "passed" as const };
     },
     undefined,
   );
@@ -1470,7 +1512,7 @@ export async function buyGoods(
   seatId: string,
   cardId: string,
 ): Promise<void> {
-  const bought = await change(gameId, buyGoodsFor, { seatId, cardId });
+  const bought = await change(gameId, thenHold(buyGoodsFor), { seatId, cardId });
   if (bought.resolve) {
     await applyEffect(gameId, seatId, bought.resolve.effect, bought.resolve.reason);
   }
@@ -1615,7 +1657,7 @@ export async function clearField(
 }
 
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {
-  await change(gameId, grantCardOn, { seatId, cardId });
+  await change(gameId, thenHold(grantCardOn), { seatId, cardId });
 }
 
 export async function placeSeat(

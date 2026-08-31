@@ -194,6 +194,42 @@ export type TurnPhase =
       reason: string;
       question: Question;
     }
+  /**
+   * Somebody is carrying more than they can, and the table waits (5.6, 2.6).
+   *
+   * Both rules say **natychmiast** and neither says what goes. 5.4 leaves the
+   * Przedmiot to the player — "zależy wyłącznie od decyzji gracza" — and 2.6
+   * leaves the Zaklęcie the same way. So this frame is the "natychmiast": it
+   * goes on top of whatever is running and nothing else happens until the seat
+   * it names is back under its limit.
+   *
+   * A frame rather than a refusal, and that is the whole point of it. The
+   * refusal it replaces fired at the *next* thing the overloaded player tried
+   * to do, which is not what "immediately" means and, worse, is silent for
+   * everybody else: a seat could go over on somebody else's turn — a Koń
+   * stolen in a raid, a Pierścień's Magia suspended by walking onto the
+   * Zaczarowane Wzgórza — and the table would carry on with nothing on screen
+   * saying the game was in a state the rules do not allow.
+   *
+   * **It can name a seat that is not the active one.** Every other frame in
+   * this union belongs to the turn it is in; this one belongs to the table.
+   * Law 5 still holds — the frame says whose problem it is — but the seat it
+   * names is whoever went over, and play does not resume for anybody until
+   * they have answered.
+   *
+   * What counts as an answer is `waysUnder`: putting a Karta down is only the
+   * obvious one, and drinking an Eliksir or wearing a Hełm you were carrying
+   * are answers too. So the frame holds the *problem* and never a chosen
+   * remedy — it says how far over and in what, and the ways out are worked out
+   * fresh each time it is read, because using a card changes them.
+   */
+  | {
+      phase: "overflow";
+      /** Law 5: whose limit this is. Not necessarily the seat whose turn it is. */
+      seatId: string;
+      /** 5.6's four, or 2.6's table. */
+      what: "przedmioty" | "zaklecia";
+    }
   | { phase: "end" };
 
 /**
