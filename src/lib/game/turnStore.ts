@@ -516,7 +516,7 @@ export async function stageCard(gameId: string, seatId: string, cardId: string):
           {
             seatId,
             round: snapshot.game.round,
-            kind: "test-card-field",
+            kind: "test-deal",
             payload: { cardId: card.id, fieldId: seat.field_id },
             manual: true,
           },

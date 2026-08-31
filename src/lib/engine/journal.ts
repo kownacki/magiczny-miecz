@@ -92,6 +92,7 @@ export const JOURNAL_KINDS = [
   "taken",
   "test-card",
   "test-card-field",
+  "test-deal",
   "test-stack",
   "test-fight-end",
   "trophies-traded",

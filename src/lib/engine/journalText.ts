@@ -461,6 +461,19 @@ export function describe(
     // twice would be the only difference the table cannot check.
     case "test-card-field":
       return line(`${who} kładzie na polu ${field(data.fieldId)}: ${card(data.cardId)}.`);
+    /**
+     * A Karta dealt into the turn, which is not the same as put on the Obszar.
+     *
+     * This used to share `test-card-field`'s line — „kładzie na polu X: Y" —
+     * and that is `place`'s sentence, not this one. It sent a reader to the
+     * Obszar to look for a card that was in their own turn, found them „Nic —
+     * Obszar jest pusty", and cost an evening to somebody who reasonably
+     * concluded the Miejsca were unimplemented. Worded off `card`'s own line
+     * instead, because that is what a dealt Karta is: a draw the deck did not
+     * make.
+     */
+    case "test-deal":
+      return line(`${who} wyciąga poza talią: ${card(data.cardId)}.`);
     // The pile arranged so a named Karta comes up next. Worth a row of its own
     // rather than leaving the `draw` that follows to look ordinary: every other
     // draw in the journal is the deck's word, and this is the one that is not.
