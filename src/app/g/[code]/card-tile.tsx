@@ -163,6 +163,16 @@ export function CardTile({
             {card.name}
           </span>
         )}
+        {/* Conjured rather than dealt, marked on the tile and not only on the
+            Karta it opens into. A tile is what a player actually scans — the
+            row of them on an Obszar, the Plecak, the paper doll — and a mark
+            you have to hover to see is a mark that is not there. Top left: the
+            slot owns the top right and the badge the whole bottom edge. */}
+        {card.granted && (
+          <span className="absolute left-0 top-0 rounded-br bg-night/85 px-0.5 py-0.5">
+            <CardMark mark="granted" size={14} />
+          </span>
+        )}
         {/* Which place on the body this one is in (5.6), where the pack's own
             arrow to put it there would be. Small, in the corner, and over the
             picture rather than under the name: the name is what the card is,
