@@ -9,7 +9,7 @@ import { cardName } from "@/lib/engine/polish";
 import { apply, merge, mergeAll, type Changeset, type CommandPorts, type Outcome, type Snapshot } from "../change";
 import { activeSeat, eqModeOf, seatById, seatView } from "./seat";
 import { addEffect, keepOnly, statusesOf } from "./turn";
-import { castSpell, type Cast, type CastSpell } from "./fight";
+import { castSpell, type Cast, type CastSpell } from "./spells";
 import { takeCard } from "./holdings";
 import { asReturnable, putOnPile } from "./piles";
 

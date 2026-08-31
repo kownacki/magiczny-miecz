@@ -57,13 +57,15 @@ import {
   speakCarriedSpell as speakCarriedSpellOn,
 } from "./commands/friends";
 import {
-  type CastSpell,
-  attackSeat as attackSeatOn,
-  sendRaider as sendRaiderOn,
-  beginFight as beginFightOn,
   castSpell as castSpellOn,
   settleSpell as settleSpellOn,
   type Cast,
+  type CastSpell,
+} from "./commands/spells";
+import {
+  attackSeat as attackSeatOn,
+  sendRaider as sendRaiderOn,
+  beginFight as beginFightOn,
   escape as escapeOn,
   fightRoll as fightRollOn,
   resolveFight as resolveFightOn,

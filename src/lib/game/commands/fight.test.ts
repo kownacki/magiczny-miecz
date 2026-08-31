@@ -13,14 +13,13 @@ import { apply } from "../change";
 import {
   attackSeat,
   beginFight,
-  castSpell,
   escape,
   fightRoll,
   resolveFight,
-  settleSpell,
   setFightPlayerTotal,
   shieldSaves,
 } from "./fight";
+import { castSpell, settleSpell } from "./spells";
 
 /** A character standing where its move ended, with cards turned over in front of it. */
 const pole = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnPhase => ({

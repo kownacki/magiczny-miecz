@@ -3,7 +3,7 @@ import { asFieldId } from "@/lib/engine/board";
 import { isMagicalItem } from "@/lib/engine/cards";
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
-import { castSpell } from "./fight";
+import { castSpell } from "./spells";
 import { pointsOf, seatView } from "./seat";
 
 /**

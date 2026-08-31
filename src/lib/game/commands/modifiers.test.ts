@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
-import { beginFight, castSpell, fightRoll } from "./fight";
+import { beginFight, fightRoll } from "./fight";
+import { castSpell } from "./spells";
 import { takeCard } from "./holdings";
 import type { TurnPhase } from "@/lib/engine/turn";
 

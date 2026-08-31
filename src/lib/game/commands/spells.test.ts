@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
-import { castSpell, settleSpell } from "./fight";
+import { castSpell, settleSpell } from "./spells";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS } from "@/lib/engine/spells";
 import { manualNote } from "@/lib/engine/coverage";

@@ -6,7 +6,8 @@ import { top, type TurnState } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
-import { beginFight, castSpell } from "./fight";
+import { beginFight } from "./fight";
+import { castSpell } from "./spells";
 import { claimFloor } from "./spellFloor";
 
 /**
