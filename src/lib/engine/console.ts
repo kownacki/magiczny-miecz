@@ -1256,7 +1256,17 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     // the thing somebody dressing a test table wants, and Tab's grid cannot
     // carry the headings that answer it.
     if (tail === "") return { ok: { kind: "give", cardId: null } };
-    return name(HOLDABLE, (card) => card.name, tail, "card", (card) => ({
+    /**
+     * Matched against every Karta, not only the ones a hand can hold.
+     *
+     * Tab's list stays narrow — offering a name the next line rejects is worse
+     * than a short list, which is the note above `GIVEABLE`. Parsing is the
+     * opposite case: matching only the giveable ones turned "a Wróg is beaten,
+     * not taken" into "No card called `SMOK`", which is not true and sends
+     * somebody looking for a spelling mistake. So the name resolves, and
+     * `grantCard` says which door the card does go through.
+     */
+    return name(READABLE, (card) => card.name, tail, "card", (card) => ({
       kind: "give",
       cardId: card.id,
     }), "give");

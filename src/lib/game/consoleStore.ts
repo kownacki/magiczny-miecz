@@ -778,11 +778,21 @@ export async function runCommand(
        * headings live here — the same shape `help` prints, for the same reason.
        */
       if (command.cardId === null) {
-        return GIVEABLE.flatMap((group, at) => [
-          ...(at > 0 ? [""] : []),
-          `${group.title} (${group.cards.length})`,
-          ...columns(group.cards.map((one) => one.name)),
-        ]).join("\n");
+        return [
+          ...GIVEABLE.flatMap((group, at) => [
+            ...(at > 0 ? [""] : []),
+            `${group.title} (${group.cards.length})`,
+            ...columns(group.cards.map((one) => one.name)),
+          ]),
+          // The other seventy-six, and where they go. A catalogue that lists
+          // what a hand can hold and says nothing about the rest reads as the
+          // whole box, and the commonest thing somebody wants from a test table
+          // — a particular Karta resolved — is not on it.
+          "",
+          "Reszta talii nie idzie do ręki:",
+          "  Wrogowie — `summon WILKOŁAK`, potem `settle won`",
+          "  Spotkania, Nieznajomi, Miejsca — `stack SABAT CZAROWNIC`, potem `draw`",
+        ].join("\n");
       }
       const seat = seatOf(null);
       await grantCard(gameId, seat.id, command.cardId);

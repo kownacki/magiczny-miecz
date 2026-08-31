@@ -16,7 +16,7 @@ import {
   carryLimit,
   mayHold,
 } from "@/lib/engine/derive";
-import { forbiddenSaid, forbiddenTo, kindForCard, slotOnArrival } from "@/lib/engine/holdings";
+import { CLASS_NAME, forbiddenSaid, forbiddenTo, kindForCard, slotOnArrival } from "@/lib/engine/holdings";
 import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
@@ -857,8 +857,29 @@ export function grantCard(
   const event = EVENTS.find((card) => card.id === cardId);
 
   const kind = spell ? "spell" : equipment ? "item" : event ? kindForCard(event) : null;
+  /**
+   * Three ways to be ungiveable, and they used to be two messages, one of them
+   * a small lie.
+   *
+   * "Nie wiem, czym jest" was said to a Spotkanie, which the app knows exactly
+   * what it is — it simply is not a thing anybody holds. Now that `stack` and
+   * `summon` exist, both refusals can say which door the card does go through
+   * instead of only which one it does not, and the genuinely unknown id gets
+   * its own message back.
+   */
+  if (kind === null && event) {
+    throw new Error(
+      `${event.name} to ${CLASS_NAME[event.cardClass] ?? "Karta"} — nikt jej nie trzyma. ` +
+        `Połóż ją na wierzchu talii: \`stack ${event.name}\`, potem \`draw\`.`,
+    );
+  }
   if (kind === null) throw new Error(`Nie wiem, czym jest: ${cardId}`);
-  if (kind === "trophy") throw new Error("Wroga trzeba pokonać, nie wziąć (16.2).");
+  if (kind === "trophy") {
+    throw new Error(
+      `Wroga trzeba pokonać, nie wziąć (16.2). \`summon ${event?.name ?? cardId}\`, ` +
+        "a potem `settle won` — trofeum liczy się wtedy w obu wariantach (1.4).",
+    );
+  }
 
   /**
    * Conjured gear arrives the same way found gear does.

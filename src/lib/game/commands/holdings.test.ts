@@ -805,10 +805,16 @@ describe("granting a card by fiat", () => {
     );
   });
 
+  /**
+   * And says what it is, and where it goes instead.
+   *
+   * This used to share "Nie wiem, czym jest" with a card the app has genuinely
+   * never heard of, which was a small lie: it knows exactly what MGŁA is. The
+   * two are separate now, and the one the app knows names the door.
+   */
   it("refuses a Spotkanie, which is nobody's to hold", () => {
-    expect(() => grantCard(table(), { seatId: "seat-a", cardId: "mgla" })).toThrow(
-      "Nie wiem, czym jest: mgla",
-    );
+    expect(() => grantCard(table(), { seatId: "seat-a", cardId: "mgla" })).toThrow(/Spotkanie/);
+    expect(() => grantCard(table(), { seatId: "seat-a", cardId: "mgla" })).toThrow(/stack/);
   });
 
   it("refuses a card it has never heard of", () => {

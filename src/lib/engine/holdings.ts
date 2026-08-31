@@ -41,6 +41,20 @@ export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | n
 }
 
 /**
+ * What a card class is called, for a refusal that has to name one.
+ *
+ * Only the three nobody holds need it — every other class reaches a hand and
+ * has nothing to explain. Here rather than in `view/` because it is the other
+ * half of `kindForCard`: the function that answers "no holding" is the one that
+ * has to say what the card is instead.
+ */
+export const CLASS_NAME: Record<string, string> = {
+  encounter: "Spotkanie",
+  stranger: "Nieznajomy",
+  place: "Miejsce",
+};
+
+/**
  * Bonuses conferred by each card that grants one, by card id.
  *
  * Two sources, and the order between them matters. A card may print its bonus
