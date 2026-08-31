@@ -404,6 +404,20 @@ Postać musi zastosować się do instrukcji, związanych z Obszarem, na którym 
 ### 13.5
 Badanie Obszarów (inne Obszary). Postać stosuje się do instrukcji wydrukowanej na Obszarze, na którym się znalazła. Jeżeli są tam jacyś Wrogowie (16.2-3) muszą oni najpierw zostać pokonani (17.1-5, 18.1-2.) lub należy im uciec (19.1-2.). Następnie Postać może odwiedzić Nieznajomych, zabrać złoto, Przedmioty (5.4.) i Przyjaciół. Do niektórych instrukcji Postać musi się zastosować, do innych może, jeśli ma ochotę.
 
+<!-- The KLĄTWA named in this example is not a card in the box. Every other
+card the Instrukcja names in a worked example exists — NIEDŹWIEDŹ, WILKOŁAK,
+CYKLOP, ZAKLĘTA ŚCIEŻKA, 2 SZTUKI ZŁOTA — and the transcription is not short:
+165 Karty Zdarzeń rows (138 distinct) and 30 Zaklęcia rows (27 distinct), which
+are the counts checked against the printed sheets. So the example is written
+against a set that had a Zaklęcie called Klątwa and the printed one does not.
+
+It matters only as evidence. The rule itself is 13.4's own „jakieś Karty" —
+any cards, no class named — and 16.8's example carries the same point with two
+cards that do exist: an abandoned Niedźwiedź (Wróg) and 2 Sztuki Złota
+(Przedmiot) become „2 z 3 Kart" for whoever stops there next. Whether a
+Zaklęcie left on a field counts toward 13.4 is therefore un-evidenced by the
+box rather than settled by this example. -->
+
 > Przykład: Quark znajduje się na Płaskowyżu Mgieł i wyrzuca 5 oczek. Może więc zakończyć swój ruch w Dolinie Cienia lub na Równinie Samotnych Skał. Jednak w Dolinie Cienia leży odkryta Karta Wilkołaka. Miecz Wilkołaka jest równy 10 punktom. Ponadto ze względu na magiczne działanie Doliny, Wilkołak otrzyma 1 dodatkowy punkt Miecza, wskutek czego jego całkowity Miecz wyniesie 11 punktów. Ponieważ aktualnie Miecz Quarka wynosi tylko 3 punkty, jego porażka, a tym samym utrata 1 punktu Życia jest pewna. Z drugiej strony, na Równinie Samotnych Skał leży Klątwa (Zaklęcie) pozostawiona tam przez inną Postać, więc i na tym Obszarze Quark będzie musiał utracić punkt Życia. Jednak na Równinie Samotnych Skał należy wyciągnąć 2 Karty, a Klątwa stanowi tylko jedną z nich. Quark będzie więc mógł wyciągnąć jeszcze jedną Kartę, co może się okazać dla niego korzystne. Wykonuje więc ruch do Obszaru Równiny Samotnych Skał, traci 1 punkt Życia wskutek Klątwy i ciągnie Kartę Zdarzeń. Niestety Karta ta reprezentuje Cyklopa (Miecz 6, a na Obszarze Równiny Samotnych Skał, Miecz 8). A to pech!
 
 ## 14. SPOTKANIA NA KAMIENNYM MOŚCIE

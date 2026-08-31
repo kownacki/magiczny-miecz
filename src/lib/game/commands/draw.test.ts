@@ -88,10 +88,10 @@ describe("ciągnięcie Karty Zdarzeń", () => {
    * 13.4's count, which for a long time only the browser was keeping.
    *
    * "Jeżeli na danym Obszarze leżą już jakieś Karty, ciągnie się ich tylko
-   * tyle, by ich suma równała się liczbie Kart..." — and 13.5's worked example
-   * is the check: Równina Samotnych Skał draws 2, a Klątwa is lying on it, and
-   * Quark draws exactly one more. The waiting Karty are lifted into `drawn` on
-   * arrival, so the sum is already there to compare against.
+   * tyle, by ich suma równała się liczbie Kart..." — and 16.8's worked example
+   * is the check: an abandoned Niedźwiedź and 2 Sztuki Złota become „2 z 3
+   * Kart" for whoever stops there next. The waiting Karty are lifted into
+   * `drawn` on arrival, so the sum is already there to compare against.
    *
    * The Draw button was disabled and nothing else refused, so the console and
    * the route could both draw a square dry.
@@ -107,8 +107,8 @@ describe("ciągnięcie Karty Zdarzeń", () => {
       );
     });
 
-    it("still draws the difference, which is 13.5's own example", () => {
-      // Równina Samotnych Skał draws 2 and one Karta is lying on it.
+    it("still draws the difference", () => {
+      // A square worth 2 with one Karta already lying on it.
       const done = drawCard(owed(2, lying), { named: null, shuffle: never });
       expect(done.result.card?.id).toBe("cyklop");
     });

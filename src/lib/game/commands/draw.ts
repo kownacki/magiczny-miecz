@@ -118,9 +118,11 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
    * "Jeżeli na danym Obszarze leżą już jakieś Karty, ciągnie się ich tylko
    * tyle, by ich suma równała się liczbie Kart, które zgodnie z instrukcją
    * powinny zostać na tym Obszarze wyciągnięte." The waiting Karty are lifted
-   * into `drawn` on arrival, so the sum is already there to compare against —
-   * and 13.5's worked example is the check: Równina Samotnych Skał draws 2, a
-   * Klątwa is lying on it, and Quark draws exactly one more.
+   * into `drawn` on arrival, so the sum is already there to compare against.
+   * 16.8's worked example is the check, and its two cards both exist: an
+   * abandoned Niedźwiedź (Wróg) and 2 Sztuki Złota (Przedmiot) become „2 z 3
+   * Kart" for whoever stops there next. So nothing here filters by class —
+   * 13.4 says „jakieś Karty" and means it.
    *
    * The button was disabled and nothing else refused, so the console and the
    * route could both draw a square dry. A rule kept only by a greyed-out
