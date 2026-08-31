@@ -1165,7 +1165,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           fieldId={inspecting}
           cards={fieldCards
             .filter((card) => card.fieldId === inspecting)
-            .map((card) => ({ id: card.id, cardId: card.cardId }))}
+            .map((card) => ({ id: card.id, cardId: card.cardId, granted: card.granted }))}
           standingHere={mySeat?.field_id === inspecting}
           canAct={mySeat?.seat_index === game?.active_seat}
           // Ending the turn lives in this window now, not in the box in the

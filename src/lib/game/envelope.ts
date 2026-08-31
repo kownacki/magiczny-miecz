@@ -114,7 +114,13 @@ export interface Envelope {
   /** Everybody here, seated or watching, in join order. */
   users: EnvelopeUser[];
   mySeatIndex: number | null;
-  fieldCards: { id: string; fieldId: string | null; cardId: string }[];
+  /**
+   * `granted` travels because the wrench does. A Karta the test console
+   * conjured is marked wherever it is drawn — in a hand, in a slot, in the
+   * turn, in a fight — and a card lying on an Obszar was the one place the
+   * mark could not reach, because the flag stopped at the server.
+   */
+  fieldCards: { id: string; fieldId: string | null; cardId: string; granted?: boolean }[];
   stock: Record<string, number>;
   seats: EnvelopeSeat[];
 }
@@ -299,6 +305,7 @@ export function envelopeFor(
       id: row.id,
       fieldId: row.field_id,
       cardId: row.card_id,
+      ...(row.granted ? { granted: true as const } : {}),
     })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.

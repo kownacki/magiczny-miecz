@@ -45,6 +45,8 @@ const EVENT_BY_ID = new Map(EVENTS.map((card) => [card.id, card]));
 export interface FieldCardHere {
   id: string;
   cardId: CardId;
+  /** Conjured rather than drawn — the wrench says so, as it does everywhere else. */
+  granted?: boolean;
 }
 
 /**
@@ -220,6 +222,7 @@ export function FieldModal({
                         name,
                         text: TEXTS.get(lying.cardId),
                         holdable: takeable,
+                        granted: lying.granted,
                       }}
                       eqMode={eqMode}
                       nature={nature}

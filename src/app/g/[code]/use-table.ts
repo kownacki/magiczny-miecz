@@ -50,6 +50,8 @@ export interface FieldCard {
   id: string;
   fieldId: FieldId;
   cardId: CardId;
+  /** Conjured by the test console, and marked with the wrench wherever it is drawn. */
+  granted?: boolean;
 }
 
 export interface Game {

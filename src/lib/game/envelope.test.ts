@@ -455,4 +455,29 @@ describe("what a character is under, sent as rows", () => {
       title: "Traci turę — jeszcze 1 tura — wraca w rundzie 6",
     });
   });
+
+  /**
+   * The wrench follows a conjured Karta everywhere, and this was the one place
+   * it could not reach.
+   *
+   * A `granted` card is marked in a hand, in a slot, in the turn and in a
+   * fight, because `Held.granted` is on the wire. A card lying on an Obszar was
+   * not: the field row went out as `{ id, fieldId, cardId }` and the flag
+   * stopped at the server, so a Targowisko the console conjured looked exactly
+   * like one the deck had dealt.
+   */
+  it("marks a conjured Karta lying on an Obszar", () => {
+    const state = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      users: [aUser({ id: "usra", name: "Michał", seat_index: 0 })],
+      fieldCards: [
+        { id: "fc-1", field_id: "karczma", card_id: "targowisko", granted: true },
+        { id: "fc-2", field_id: "karczma", card_id: "cyklop", granted: false },
+      ],
+    });
+    const out = envelopeFor(state, "usra", NOW).fieldCards;
+    expect(out.find((one) => one.id === "fc-1")).toMatchObject({ granted: true });
+    // And an ordinary one says nothing, so nothing is marked that was dealt.
+    expect(out.find((one) => one.id === "fc-2")?.granted).toBeUndefined();
+  });
 });
