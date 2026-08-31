@@ -11,7 +11,7 @@ import { wandRefills } from "@/lib/engine/derive";
 import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { FIELDS } from "@/lib/engine/board";
 import { afterDraw, type TurnPhase } from "@/lib/engine/turn";
-import { replaceTop, top } from "@/lib/engine/stack";
+import { replaceTop, requireTop } from "@/lib/engine/stack";
 import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
 import { activeSeat, holdingsOf, seatById, seatView } from "./seat";
@@ -120,10 +120,11 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   const seat = activeSeat(snapshot);
   // 13.2: a turn spent meeting somebody is not also spent exploring.
   refuseAgainst13_2(snapshot, "explore");
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") {
-    throw new Error("Nie czas na ciągnięcie kart (13.4).");
-  }
+  const state = requireTop(
+    snapshot.game.turn_state,
+    "field",
+    "Nie czas na ciągnięcie kart (13.4).",
+  );
 
   /**
    * 13.4's count, which only the browser was keeping — and kept wrongly.

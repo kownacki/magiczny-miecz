@@ -18,7 +18,7 @@ import {
   startTurn,
 } from "@/lib/engine/turn";
 import type { TurnCard } from "@/lib/engine/state";
-import { only, replaceTop, top } from "@/lib/engine/stack";
+import { only, replaceTop, requireTop } from "@/lib/engine/stack";
 import { EVENTS, type Decks } from "../decks";
 import {
   mergeAll,
@@ -356,7 +356,7 @@ export async function rollForMove(
    * tells nobody anything. This names the seat, the rule and the way out.
    */
   refuseWhileOverflow(snapshot, seat.id);
-  if (top(snapshot.game.turn_state).phase !== "roll") throw new Error("Nie czas na rzut.");
+  requireTop(snapshot.game.turn_state, "roll");
   /**
    * 5.6: "musi natychmiast odrzucić". The turn does not begin until it has.
    *
@@ -472,8 +472,7 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
   const fieldId = requireFieldId(command.destination, "Ruch");
   const viaBridge = command.viaBridge ?? false;
   const seat = activeSeat(snapshot);
-  const phase = top(snapshot.game.turn_state);
-  if (phase.phase !== "move") throw new Error("Nie czas na ruch.");
+  const phase = requireTop(snapshot.game.turn_state, "move");
 
   // Only the squares the roll actually reaches are accepted, so a stale page
   // cannot post a destination from a previous roll.

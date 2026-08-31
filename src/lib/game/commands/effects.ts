@@ -25,7 +25,15 @@ import { placeSeat } from "./character";
 import { peekSpells } from "./draw";
 import { FIELD_SCRIPTS } from "@/lib/engine/fieldScript";
 import { putOnPile } from "./piles";
-import { pop, push, replaceTop, top, type TurnState } from "@/lib/engine/stack";
+import {
+  pop,
+  push,
+  replaceTop,
+  requireTop,
+  top,
+  topIf,
+  type TurnState,
+} from "@/lib/engine/stack";
 import { statusesOf } from "./turn";
 import { hasAttacked } from "@/lib/engine/status";
 import { activeSeat, pointsOf, seatView } from "./seat";
@@ -249,8 +257,7 @@ export async function continueTopScript(
   ports: CommandPorts,
 ): Promise<Outcome<Resolution>> {
   const state = snapshot.game.turn_state;
-  const frame = top(state);
-  if (frame.phase !== "script") throw new Error("Nic tu nie czeka na dokończenie.");
+  const frame = requireTop(state, "script");
 
   const carried: ApplyEffect = {
     seatId: frame.seatId,
@@ -750,8 +757,8 @@ async function walk(
 
 /** Notes a card or an offer as dealt with, so the turn stops asking about it. */
 function markResolved(snapshot: Snapshot, key: string): Changeset {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") return {};
+  const state = topIf(snapshot.game.turn_state, "field");
+  if (!state) return {};
   const already = state.resolved ?? [];
   if (already.includes(key)) return {};
   return { game: { turn_state: replaceTop(snapshot.game.turn_state, { ...state, resolved: [...already, key] }) } };
@@ -872,9 +879,11 @@ export async function resolveFieldOffer(
 ): Promise<Outcome<{ offer: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
   if (!seat.field_id) throw new Error("Postać nie stoi na Obszarze.");
-  if (top(snapshot.game.turn_state).phase !== "field") {
-    throw new Error("To rozpatruje się po wejściu na Obszar.");
-  }
+  requireTop(
+    snapshot.game.turn_state,
+    "field",
+    "To rozpatruje się po wejściu na Obszar.",
+  );
 
   const script = fieldScriptFor(seat.field_id);
   const offer = script?.offers.find((o) => o.name === command.offerName);
@@ -991,8 +1000,7 @@ export async function resolveDrawnCard(
   ports: CommandPorts,
 ): Promise<Outcome<{ card: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") throw new Error("Nie ma czego rozpatrywać.");
+  const state = requireTop(snapshot.game.turn_state, "field");
   if (!state.drawn.some((entry) => entry.cardId === command.cardId)) {
     throw new Error("Tej Karty tu nie ma.");
   }

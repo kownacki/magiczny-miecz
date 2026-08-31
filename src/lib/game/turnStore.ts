@@ -12,7 +12,7 @@ import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
-import { only, replaceTop, top } from "@/lib/engine/stack";
+import { only, replaceTop, requireTop, top } from "@/lib/engine/stack";
 import { settleExposedLoop } from "@/lib/engine/loop";
 import { answerAsk as answerAskOn } from "./commands/ask";
 import {
@@ -578,8 +578,7 @@ export async function abandonFight(gameId: string): Promise<void> {
   await change(
     gameId,
     async (snapshot, _command, ports) => {
-      const state = top(snapshot.game.turn_state);
-      if (state.phase !== "fight") throw new Error("Nie ma walki.");
+      const state = requireTop(snapshot.game.turn_state, "fight");
       const seat = snapshot.seats.find((s) => s.seat_index === snapshot.game.active_seat);
       const { cardName } = state.fight;
       return withScriptContinued(snapshot, {

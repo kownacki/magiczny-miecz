@@ -5,7 +5,7 @@ import { afterAnyTurn, afterTurn, playsAgain, type Status } from "@/lib/engine/s
 import { scriptFor } from "@/lib/engine/cardScript";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
-import { only, top } from "@/lib/engine/stack";
+import { only, top, topIf } from "@/lib/engine/stack";
 import { apply, merge, mergeAll, type Changeset, type Snapshot } from "../change";
 import { putOnPile } from "./piles";
 
@@ -24,8 +24,8 @@ import { putOnPile } from "./piles";
  * cannot reach either without first doing one of those two.
  */
 export function hasExplored(snapshot: Snapshot): boolean {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") return false;
+  const state = topIf(snapshot.game.turn_state, "field");
+  if (!state) return false;
   return state.drawn.length > 0 || (state.resolved?.length ?? 0) > 0;
 }
 

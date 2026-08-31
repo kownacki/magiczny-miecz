@@ -5,7 +5,7 @@ import type { SpellFloor } from "@/lib/engine/turn";
 import type { Changeset, CommandPorts, Outcome, Snapshot } from "../change";
 import { seatById } from "./seat";
 import { nameOfSeat } from "./lobby";
-import { replaceTop, top } from "@/lib/engine/stack";
+import { replaceTop, requireTop, topIf } from "@/lib/engine/stack";
 
 /**
  * How long a claim lasts before it lapses.
@@ -37,8 +37,7 @@ export function claimFloor(
   command: { seatId: string },
   ports: CommandPorts,
 ): Outcome<void> {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "fight") throw new Error("Nie ma walki.");
+  const state = requireTop(snapshot.game.turn_state, "fight");
 
   const seat = seatById(snapshot, command.seatId);
   if (seat.eliminated) throw new Error("Zmarła Postać nie rzuca Zaklęć (4.4).");
@@ -83,9 +82,9 @@ export function releaseFloor(
   command: { seatId: string },
   ports: CommandPorts,
 ): Outcome<void> {
-  const state = top(snapshot.game.turn_state);
   const nothing: Changeset = {};
-  if (state.phase !== "fight") return { writes: nothing, result: undefined };
+  const state = topIf(snapshot.game.turn_state, "fight");
+  if (!state) return { writes: nothing, result: undefined };
 
   const seat = seatById(snapshot, command.seatId);
   const held = floorOf(state.fight, ports.now());

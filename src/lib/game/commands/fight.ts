@@ -72,7 +72,15 @@ import { scriptFor } from "@/lib/engine/cardScript";
 import type { Effect } from "@/lib/engine/cardScript";
 import { summariseEffect } from "@/lib/engine/effectText";
 import { asReturnable, putOnPile } from "./piles";
-import { only, pop, push, replaceTop, top, type TurnState } from "@/lib/engine/stack";
+import {
+  only,
+  pop,
+  push,
+  replaceTop,
+  requireTop,
+  top,
+  type TurnState,
+} from "@/lib/engine/stack";
 import {
   activeSeat,
   eqModeOf,
@@ -212,8 +220,7 @@ export function closeFightFrame(
 
 export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<void> {
   const seat = activeSeat(snapshot);
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") throw new Error("Nie czas na walkę.");
+  const state = requireTop(snapshot.game.turn_state, "field", "Nie czas na walkę.");
   if (command.cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
 
   // 17.4 ends the fight when the dice are compared, whatever the result. A card
@@ -410,8 +417,7 @@ export function beginNamedFight(
   command: { name: string; miecz?: number; magia?: number },
 ): Outcome<void> {
   const seat = activeSeat(snapshot);
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") throw new Error("Nie czas na walkę.");
+  const state = requireTop(snapshot.game.turn_state, "field", "Nie czas na walkę.");
 
   const { name, miecz, magia } = command;
   return {
@@ -1511,8 +1517,7 @@ export async function fightRoll(
   ports: CommandPorts,
 ): Promise<Outcome<void>> {
   const seat = activeSeat(snapshot);
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "fight") throw new Error("Nie ma walki.");
+  const state = requireTop(snapshot.game.turn_state, "fight");
 
   // 17.3 puts the spells before the dice, so the dice wait — but only while
   // somebody actually holds the floor, and only until it lapses. Checked here
@@ -1716,9 +1721,12 @@ export interface SendRaider {
  */
 export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<void> {
   const seat = activeSeat(snapshot);
-  const state = top(snapshot.game.turn_state);
   // "Po zakończeniu ruchu" — the friend is sent from where the move ended.
-  if (state.phase !== "field") throw new Error("Wyprawę zleca się po ruchu (16.1).");
+  const state = requireTop(
+    snapshot.game.turn_state,
+    "field",
+    "Wyprawę zleca się po ruchu (16.1).",
+  );
 
   const mode = eqModeOf(snapshot.game);
   const view = seatView(snapshot, seat.id);
@@ -1825,8 +1833,7 @@ export function attackSeat(
   if (target.field_id !== attacker.field_id) {
     throw new Error("Spotkanie jest możliwe tylko na tym samym Obszarze (13.1).");
   }
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") throw new Error("Nie czas na spotkanie.");
+  const state = requireTop(snapshot.game.turn_state, "field", "Nie czas na spotkanie.");
   // 13.2: "musi dokonać wyboru" — and this turn has already made it.
   refuseAgainst13_2(snapshot, "meet");
 
@@ -2165,8 +2172,7 @@ export async function resolveFight(
   command: { spoils?: Spoils } | void,
   ports: CommandPorts,
 ): Promise<Outcome<void>> {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "fight") throw new Error("Nie ma walki.");
+  const state = requireTop(snapshot.game.turn_state, "fight");
 
   const seat = activeSeat(snapshot);
   const { fight } = state;

@@ -6,6 +6,7 @@
  * rather than at a table.
  */
 
+import { STORAGE, makerOf, type Slot } from "@/lib/engine/slots";
 import { FIELDS } from "@/lib/engine/board";
 import type { FieldId } from "@/lib/engine/board";
 import type { Shuffle } from "@/lib/engine/deck";
@@ -33,7 +34,7 @@ import { summonFighter } from "./fight";
 import { nameOfSeat } from "./lobby";
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
-import { only, replaceTop, top } from "@/lib/engine/stack";
+import { only, replaceTop, requireTop, top } from "@/lib/engine/stack";
 import { keepOnly, statusesOf, addEffect } from "./turn";
 import { turnToStone } from "./stone";
 import { seatView } from "./seat";
@@ -665,11 +666,14 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
        * Written as a flatMap so the narrowing is the compiler's too, not only
        * the filter's.
        */
-      const inTheSakwa = at.holdings.some(
-        (held) => held.seat_id === row.id && held.slot === "tajemna-sakwa",
+      const stored = at.holdings.filter(
+        (held) => held.seat_id === row.id && STORAGE.includes(held.slot as Slot),
       );
+      // The bag as well as what is in it, but only while there is something in
+      // it: "Przedmiot ten i Sakwę" is a pair, and an empty bag is a bag.
+      const bags = new Set(stored.map((held) => makerOf(held.slot as Slot)));
       const spared = (held: { card_id: string; slot: string | null }) =>
-        held.slot === "tajemna-sakwa" || (inTheSakwa && held.card_id === "tajemna-sakwa");
+        STORAGE.includes(held.slot as Slot) || bags.has(held.card_id);
       const mine = at.holdings.flatMap((held) =>
         held.seat_id === row.id && held.kind !== "carried" && !spared(held)
           ? [{ id: held.id, cardId: held.card_id, kind: held.kind, granted: held.granted }]
@@ -959,8 +963,11 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
      * 15.2's order means by "the one in front of you" and what the sheet is
      * showing when this may be spoken.
      */
-    const state = top(snapshot.game.turn_state);
-    if (state.phase !== "field") throw new Error("Nie ma wyciągniętej Karty do wymiany.");
+    const state = requireTop(
+      snapshot.game.turn_state,
+      "field",
+      "Nie ma wyciągniętej Karty do wymiany.",
+    );
     const settled = new Set([...(state.resolved ?? []), ...(state.fought ?? [])]);
     const facing = state.drawn.find((entry) => !settled.has(entry.cardId));
     if (!facing) throw new Error("Nie ma wyciągniętej Karty do wymiany.");

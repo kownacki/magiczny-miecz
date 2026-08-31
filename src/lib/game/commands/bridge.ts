@@ -30,7 +30,7 @@ import {
   startGuardianFight,
   strengthPending,
 } from "@/lib/engine/turn";
-import { only, replaceTop, top } from "@/lib/engine/stack";
+import { only, replaceTop, requireTop, top } from "@/lib/engine/stack";
 import {
   apply,
   merge,
@@ -338,8 +338,7 @@ export async function rollGuardianStrength(
   ports: CommandPorts,
 ): Promise<Outcome<{ strength: number }>> {
   const seat = activeSeat(snapshot);
-  const phase = top(snapshot.game.turn_state);
-  if (phase.phase !== "fight") throw new Error("Nie ma walki.");
+  const phase = requireTop(snapshot.game.turn_state, "fight");
   if (!strengthPending(phase.fight)) {
     throw new Error("Siła przeciwnika jest już znana.");
   }
@@ -376,10 +375,7 @@ export function enterBridge(
   snapshot: Snapshot,
   command: { outcome: BridgeOutcome },
 ): Outcome<{ at: string | null }> {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "bridge") {
-    throw new Error("Nie ma teraz próby wejścia na Most.");
-  }
+  const state = requireTop(snapshot.game.turn_state, "bridge");
   return settleBridge(
     snapshot,
     state.bridge,

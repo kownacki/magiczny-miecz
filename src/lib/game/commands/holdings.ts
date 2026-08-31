@@ -32,7 +32,7 @@ import type { HoldingRow } from "../store";
 import { asReturnable, pushOntoPile, putOnPile, trophiesToPile } from "./piles";
 import { eqModeOf, holdingsOf, seatById, seatView } from "./seat";
 import { cardName } from "@/lib/engine/polish";
-import { replaceTop, top } from "@/lib/engine/stack";
+import { replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
 
 /* --------------------------------------------------------------------------
  * The small pure things these commands need, which the store keeps as queries.
@@ -59,8 +59,8 @@ function forbiddenFor(card: EventCard): ("good" | "evil" | "chaotic")[] | undefi
  * and nothing is written.
  */
 export function liftOffField(snapshot: Snapshot, cardId: string): Changeset {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") return {};
+  const state = topIf(snapshot.game.turn_state, "field");
+  if (!state) return {};
   const at = state.drawn.findIndex((entry) => entry.cardId === cardId);
   if (at === -1) return {};
   return {
@@ -866,10 +866,11 @@ export function takeFromField(
    * the Rękawice and the Srebrna Strzała on the Ruchome Skały, standing on
    * them, and they wait "na Postać, która zakończy tutaj ruch".
    */
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") {
-    throw new Error("Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).");
-  }
+  const state = requireTop(
+    snapshot.game.turn_state,
+    "field",
+    "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).",
+  );
 
   // 12.1 a) and b): what is lying here is not reachable while a Wróg is on it
   // or while the Obszar still owes Karty. "W wymienionych przypadkach należy

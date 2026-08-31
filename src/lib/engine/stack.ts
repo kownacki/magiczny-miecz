@@ -24,6 +24,69 @@ export function top(state: TurnState): TurnPhase {
 }
 
 /**
+ * What a verb says when the frame it needs is not the one on screen.
+ *
+ * One sentence per frame kind, so "there is no fight" is phrased the same way
+ * wherever it is said. It was written out at each site before this table, six
+ * times verbatim for `fight` alone, and the copies had begun to disagree.
+ *
+ * These are refusals about the *shape of the turn*, not about a printed rule,
+ * so they carry no rule number — see CLAUDE.md on where numbers go. A verb
+ * whose refusal does enforce a rule passes its own sentence to `requireTop`,
+ * which is why the override exists: "Zabierać można tylko po zakończeniu ruchu
+ * na tym Obszarze (12.1)" is about 12.1, not about there being no field frame.
+ */
+const NOT_ON_SCREEN: Record<TurnPhase["phase"], string> = {
+  roll: "Nie czas na rzut.",
+  move: "Nie czas na ruch.",
+  field: "Nie ma czego rozpatrywać.",
+  fight: "Nie ma walki.",
+  bridge: "Nie ma teraz próby wejścia na Most.",
+  script: "Nic tu nie czeka na dokończenie.",
+  loop: "Nie ma walki w rundach.",
+  ask: "Nic tu nie czeka na odpowiedź.",
+  overflow: "Nie ma nadmiaru Kart do odłożenia.",
+  end: "Tura jeszcze się nie skończyła.",
+};
+
+/**
+ * The frame on screen, insisting it is the kind asked for.
+ *
+ * The narrowed frame comes back, so a caller that needed `fight.fight` reads it
+ * off the return value instead of casting the union open — which is what the
+ * `as Extract<TurnPhase, …>` casts scattered through the tests were doing.
+ *
+ * The cast inside is the one thing TypeScript cannot follow: it does not narrow
+ * a union through a comparison against a generic parameter, even when the
+ * comparison is exactly the discriminant. It is sound because `phase` is that
+ * discriminant and the check immediately precedes it.
+ */
+export function requireTop<K extends TurnPhase["phase"]>(
+  state: TurnState,
+  kind: K,
+  refusal?: string,
+): Extract<TurnPhase, { phase: K }> {
+  const frame = top(state);
+  if (frame.phase !== kind) throw new Error(refusal ?? NOT_ON_SCREEN[kind]);
+  return frame as Extract<TurnPhase, { phase: K }>;
+}
+
+/**
+ * The same question asked quietly: the narrowed frame, or null.
+ *
+ * For the verbs that have something sensible to do when the frame is not there
+ * — an empty Changeset, an empty list, `false` — rather than a refusal to show
+ * the player.
+ */
+export function topIf<K extends TurnPhase["phase"]>(
+  state: TurnState,
+  kind: K,
+): Extract<TurnPhase, { phase: K }> | null {
+  const frame = top(state);
+  return frame.phase === kind ? (frame as Extract<TurnPhase, { phase: K }>) : null;
+}
+
+/**
  * A one-frame stack.
  *
  * Step 1's workhorse: every write that used to replace the whole `turn_state`
