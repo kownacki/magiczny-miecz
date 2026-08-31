@@ -15,7 +15,7 @@
  */
 
 import Image from "next/image";
-import { ART_RATIO, cardArtUrl } from "@/lib/view/cardImages";
+import { TILE_ART_HEIGHT, TILE_WIDTH, cardArtUrl } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
@@ -38,8 +38,10 @@ import { ART_BORDER, PICKABLE } from "./pickable";
  * picture. `export-card-art.mjs` now settles the aspect where the pictures are
  * made; this is the same number read off the other end.
  */
-export const SLOT_WIDTH = 86;
-export const SLOT_ART_HEIGHT = Math.round(SLOT_WIDTH / ART_RATIO);
+/** Both the shared tile size — see `cardImages.ts`. Re-exported under the names
+ * the slot panel and the spell hand already lay their grids out with. */
+export const SLOT_WIDTH = TILE_WIDTH;
+export const SLOT_ART_HEIGHT = TILE_ART_HEIGHT;
 
 /**
  * How far a card steps aside to show where a carried one is going.

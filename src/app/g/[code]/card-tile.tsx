@@ -6,6 +6,8 @@ import { WithRules } from "./rule-ref";
 import {
   ART_RATIO,
   CHARACTER_ART_RATIO,
+  TILE_ART_HEIGHT,
+  TILE_WIDTH,
   cardArtUrl,
   cardImageUrl,
   characterArtUrl,
@@ -109,7 +111,7 @@ export function CardTile({
   const src = card.character
     ? characterArtUrl(card.cardId)
     : cardArtUrl(card.cardId, card.ref);
-  const width = size === "md" ? 132 : 92;
+  const width = size === "md" ? 132 : TILE_WIDTH;
   // The tile takes the shape of whichever family it is drawing, rather than
   // cropping the picture back into a box built for the other one. A Karta
   // Postaci's frame is a different rectangle from a Karta Zdarzeń's, and this
@@ -164,13 +166,14 @@ export function CardTile({
           </span>
         )}
         {/* Conjured rather than dealt, marked on the tile and not only on the
-            Karta it opens into. A tile is what a player actually scans — the
-            row of them on an Obszar, the Plecak, the paper doll — and a mark
-            you have to hover to see is a mark that is not there. Top left: the
-            slot owns the top right and the badge the whole bottom edge. */}
+            Karta it opens into: a tile is what a player actually scans, and a
+            mark you have to hover to find is a mark that is not there.
+            Bottom right, in `ItemSlot`'s corner and at its size, because the
+            row of Karty on an Obszar and the row in the Plecak are the same
+            kind of thing and had no business marking themselves differently. */}
         {card.granted && (
-          <span className="absolute left-0 top-0 rounded-br bg-night/85 px-0.5 py-0.5">
-            <CardMark mark="granted" size={14} />
+          <span className="absolute bottom-0 right-0 rounded-tl bg-night/85 px-1 py-0.5">
+            <CardMark mark="granted" />
           </span>
         )}
         {/* Which place on the body this one is in (5.6), where the pack's own
@@ -205,18 +208,16 @@ export function CardTile({
 }
 
 /**
- * The height a tile's picture is drawn at, and the width a Zaklęcie's back
- * takes at that height.
+ * The width a Zaklęcie's back takes at a tile's art height.
  *
- * 92 is `CardTile`'s width and 240/209 its art's shape, so 80 is what a
- * Przedmiot occupies. The back keeps its own proportions there — 460 x 701 as
- * it was cut — which is 52 across. Matching the height rather than the width is
- * what makes a mixed row read as one row.
+ * `TILE_WIDTH` and `TILE_ART_HEIGHT` come from `cardImages.ts` now — they were
+ * written down here as 92 and 80 while `ItemSlot` had its own 86, which is how
+ * the Karty on an Obszar came to be a different size from the Karty in the
+ * Plecak. The back keeps its own proportions at that height — 460 x 701 as it
+ * was cut. Matching the height rather than the width is what makes a mixed row
+ * read as one row.
  */
-export const TILE_ART_HEIGHT = 80;
-export const SPELL_BACK_WIDTH = 52;
-/** What one tile takes across, which is what a stack of backs must not exceed. */
-const TILE_WIDTH = 92;
+export const SPELL_BACK_WIDTH = Math.round(TILE_ART_HEIGHT * (460 / 701));
 /** The widest a back may show of the one beneath it. */
 const SPELL_BACK_STEP = 20;
 /**
@@ -304,7 +305,7 @@ export function CardBack({ count }: { count: number }) {
   const wide = SPELL_BACK_WIDTH + (drawn - 1) * step;
   return (
     <figure className="flex flex-col items-center gap-1">
-      <span className="flex h-[80px] items-center" style={{ width: wide }}>
+      <span className="flex items-center" style={{ width: wide, height: TILE_ART_HEIGHT }}>
         {Array.from({ length: drawn }, (_, at) => (
           <Image
             key={at}

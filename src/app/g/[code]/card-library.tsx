@@ -352,8 +352,14 @@ export function CardLibrary({
          * cannot outgrow.
          *
          * Five tiles across, which is what the section headings were laid out
-         * for and about half again the players' width: 5 x 92 (`CardTile`'s
-         * own) + 4 x 12 (`gap-3`) = 508, + 32 for the padding either side = 540.
+         * for and about half again the players' width: 5 x 86 (`TILE_WIDTH`,
+         * shared with the Plecak and the paper doll) + 4 x 12 (`gap-3`) = 478,
+         * + 32 for the padding either side = 510.
+         *
+         * It was 5 x 92 while `CardTile` had a width of its own. Unifying the
+         * tile took thirty pixels out of the shelf, and leaving the panel at its
+         * old 572 would have put them back as the strip of dead panel the last
+         * paragraph is about.
          *
          * The last term is the one that had to change. It was 16 — one
          * scrollbar, measured once — and a scrollbar is not one width. It is
@@ -373,7 +379,7 @@ export function CardLibrary({
          * panel past the last column — the shelf did not look narrow, it looked
          * misaligned.
          */
-        width="max-w-[572px]"
+        width="max-w-[542px]"
         title="Księga Tolimana"
         onClose={onClose}
         head={

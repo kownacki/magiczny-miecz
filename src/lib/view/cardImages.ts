@@ -21,6 +21,17 @@ import { RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
  * box built for the 28 Karty Postaci and crop a quarter off each.
  */
 export const ART_RATIO = 240 / 209;
+
+/**
+ * How wide a card is drawn as a tile, everywhere.
+ *
+ * There were two of these — `CardTile`'s 92 and `ItemSlot`'s 86 — for the same
+ * idea, so the row of Karty on an Obszar and the row in the Plecak were six
+ * pixels apart and read as two different kinds of thing. One number, and the
+ * art's height derived from it rather than written down beside it.
+ */
+export const TILE_WIDTH = 86;
+export const TILE_ART_HEIGHT = Math.round(TILE_WIDTH / ART_RATIO);
 /**
  * The mała Karta Postaci, not a crop of the duża one.
  *
