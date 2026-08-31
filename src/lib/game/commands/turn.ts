@@ -6,7 +6,16 @@ import { scriptFor } from "@/lib/engine/cardScript";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
 import { only, top, topIf } from "@/lib/engine/stack";
-import { apply, merge, mergeAll, type Changeset, type Snapshot } from "../change";
+import {
+  apply,
+  merge,
+  mergeAll,
+  type Changeset,
+  type Outcome,
+  type Snapshot,
+} from "../change";
+import { holdOverflow, refuseWhileOverflow } from "./overflow";
+import { refuseWhileBeastAwaits } from "./beast";
 import { putOnPile } from "./piles";
 
 /**
@@ -374,4 +383,52 @@ export function addEffect(
       },
     ],
   };
+}
+
+/**
+ * Handing the turn on, with the two rules that can refuse it (5.6, 14.7).
+ *
+ * The body of this lived inside a `change()` lambda in `turnStore.ts`, which
+ * made "may this turn be handed on, and what happens if not" the one turn
+ * question no test could ask without a database. It is four pure calls over a
+ * Snapshot and it belongs here, beside the `passTurn` it guards.
+ *
+ * 5.6, at the other end of the turn — and now on the stack rather than in
+ * somebody's face.
+ *
+ * Checked here and in `rollForMove` rather than everywhere, because those are
+ * the two doors: you cannot begin a turn owing the rule, and you cannot hand
+ * one on. An overflow that happens mid-turn — the Bagna taking your Koń — is
+ * therefore settled before play moves, which is as close to "natychmiast" as a
+ * turn-based referee can honestly get.
+ *
+ * What changed is what happens at the door. It used to throw at whoever
+ * pressed the button, which told one player and left the table looking at a
+ * game that had simply stopped responding. Now it opens the frame and writes
+ * it: the turn does not pass, and every device is looking at the same sentence
+ * about the same seat, with the ways out named.
+ *
+ * `passTurn` itself is left alone. Half the game passes the turn as a
+ * consequence of something else — a death, a lost turn, a fall off the Most —
+ * and none of those is a player choosing to walk away from a rule.
+ */
+export function finishTurn(snapshot: Snapshot): Outcome<"passed" | "held"> {
+  const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
+  /**
+   * A frame already up is refused, not re-opened.
+   *
+   * `holdOverflow` is idempotent — it will not stack a copy of itself — so on a
+   * table that is already waiting it answers `{}`, and without this the pass
+   * read that as "nobody is over" and went ahead. `passTurn` writes
+   * `only(startTurn())`, so the turn moved on *and* the frame was thrown away
+   * with the rest of the stack: the one thing the table was waiting for,
+   * deleted by the button it was blocking.
+   */
+  refuseWhileOverflow(snapshot, seat?.id ?? null);
+
+  const held = holdOverflow(snapshot);
+  if (held.game) return { writes: held, result: "held" };
+
+  if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
+  return { writes: passTurn(snapshot), result: "passed" };
 }

@@ -218,6 +218,24 @@ export function closeFightFrame(
   return below.phase === "field" ? replaceTop(pop(state), endFight(fight)) : pop(state);
 }
 
+/**
+ * A fight closed and the loop beneath it settled — the pair, as one act.
+ *
+ * The two always go together and were composed by hand at three sites, which
+ * is one hand-composition too many for an invariant: a loop is never the top
+ * of the stack at rest (docs/STACK.md, law 3), so every path that pops a fight
+ * owes the question "was this a round of something". Only `resolveFight` does
+ * not use this, and deliberately — a win that is not the last one pushes the
+ * next head rather than settling, which is the one case that has to look at
+ * the loop itself.
+ */
+export function shutFight(
+  state: TurnState,
+  fight: Extract<TurnPhase, { phase: "fight" }>,
+): TurnState {
+  return settleExposedLoop(closeFightFrame(state, fight));
+}
+
 export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<void> {
   const seat = activeSeat(snapshot);
   const state = requireTop(snapshot.game.turn_state, "field", "Nie czas na walkę.");
@@ -990,7 +1008,7 @@ async function landSpell(
           named.seat_index === snapshot.game.active_seat)));
 
   const broke: Changeset = stopped
-    ? { game: { turn_state: settleExposedLoop(closeFightFrame(running.game.turn_state, frame)) } }
+    ? { game: { turn_state: shutFight(running.game.turn_state, frame) } }
     : {};
 
   return {
@@ -2076,7 +2094,7 @@ export function escape(
     // 19.1 out of a round of a looping fight is out of the whole creature:
     // there is nobody left swinging at the next head, and a loop frame is
     // never left on screen. Nothing cut is kept — see the frame's own note.
-    let shut = settleExposedLoop(closeFightFrame(beforeState, before));
+    let shut = shutFight(beforeState, before);
     const revealed = top(shut);
     if (sweep.length > 0 && revealed.phase === "field") {
       shut = replaceTop(shut, {

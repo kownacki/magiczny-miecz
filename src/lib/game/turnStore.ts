@@ -12,8 +12,7 @@ import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
-import { only, replaceTop, requireTop, top } from "@/lib/engine/stack";
-import { settleExposedLoop } from "@/lib/engine/loop";
+import { only, requireTop } from "@/lib/engine/stack";
 import { answerAsk as answerAskOn } from "./commands/ask";
 import {
   afterFight,
@@ -27,13 +26,14 @@ import {
   shuffleFor,
   type Decks,
 } from "./decks";
-import { apply, change, effectRowsFor, merge, type Changeset, type CommandPorts, type EffectRow, type Handler, type Snapshot } from "./change";
-import { holdOverflow, refuseWhileOverflow, releaseOverflow } from "./commands/overflow";
+import { change, effectRowsFor, merge, type EffectRow, type Handler } from "./change";
+import { holdOverflow, releaseOverflow } from "./commands/overflow";
+import { closeFight, resume } from "./commands/frames";
+import { finishTurn as finishTurnOn } from "./commands/turn";
 import { appRandom, supplied } from "./random";
 import {
   addEffect as addEffectTo,
   keepOnly as keepOnlyIn,
-  passTurn,
   statusesOf as statusesIn,
   tickEffects as tickEffectsOf,
 } from "./commands/turn";
@@ -58,7 +58,6 @@ import {
 } from "./commands/friends";
 import {
   type CastSpell,
-  closeFightFrame,
   attackSeat as attackSeatOn,
   sendRaider as sendRaiderOn,
   beginFight as beginFightOn,
@@ -116,7 +115,6 @@ import {
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
 import { setEndlessStock as setEndlessStockOn } from "./commands/seat";
-import { refuseWhileBeastAwaits } from "./commands/beast";
 import {
   removeCharacter as removeCharacterOn,
   reviveCharacter as reviveCharacterOn,
@@ -549,68 +547,38 @@ export async function stageCard(gameId: string, seatId: string, cardId: string):
  * broken off rather than fled — because a row that read like 19.1 would make
  * the test hatch indistinguishable from the thing it exists to test.
  */
-/**
- * Runs the card the closed frame was sitting on, in the same commit.
- *
- * A fight opened by a `walka` step sits above a `script` frame, and closing it
- * reveals a card mid-sentence. The player already pressed the only button
- * there was — the fight's — so the card continues by itself: one call, because
- * one is all it can take. A completion pops the frame; a second `walka` opens
- * the next fight and the top is a fight again; an unanswered question leaves
- * the frame waiting for `answerScript`. None of those wants a second call.
- */
-async function withScriptContinued<T>(
-  snapshot: Snapshot,
-  done: { writes: Changeset; result: T },
-  ports: CommandPorts,
-): Promise<{ writes: Changeset; result: T }> {
-  const after = apply(snapshot, done.writes);
-  if (top(after.game.turn_state).phase !== "script") return done;
-  const more = await continueTopScript(
-    after,
-    { shuffle: shuffleFor(snapshot.game) },
-    ports,
-  );
-  return { writes: merge(done.writes, more.writes), result: done.result };
-}
-
 export async function abandonFight(gameId: string): Promise<void> {
   await change(
     gameId,
     async (snapshot, _command, ports) => {
+      // `endFight` puts the character back on its field with the fight's
+      // creatures already in `fought` — startFight settles them the moment it
+      // opens — so the field resumes with nothing outstanding rather than
+      // offering the same creature again the moment the modal closes. A
+      // *pushed* fight — a `walka` step's, a summon's — pops instead, and the
+      // frame beneath takes it from there; and a round of a looping fight
+      // leaves the loop on top when it pops, which `closeFight` settles.
       const state = requireTop(snapshot.game.turn_state, "fight");
       const seat = snapshot.seats.find((s) => s.seat_index === snapshot.game.active_seat);
       const { cardName } = state.fight;
-      return withScriptContinued(snapshot, {
-        // `endFight` puts the character back on its field with the fight's
-        // creatures already in `fought` — startFight settles them the moment it
-        // opens — so the field resumes with nothing outstanding rather than
-        // offering the same creature again the moment the modal closes. A
-        // *pushed* fight — a `walka` step's, a summon's — pops instead, and the
-        // frame beneath takes it from there.
-        writes: {
-          game: {
-            // A round of a looping fight leaves the loop on top when it pops,
-            // and a loop is never on screen by itself — walking out of the
-            // second head is walking out of the creature.
-            turn_state: settleExposedLoop(closeFightFrame(snapshot.game.turn_state, state)),
-          },
-          ...(seat
-            ? {
-                journal: [
-                  {
-                    seatId: seat.id,
-                    round: snapshot.game.round,
-                    kind: "test-fight-end" as const,
-                    payload: { cardName },
-                    manual: true,
-                  },
-                ],
-              }
-            : {}),
-        },
-        result: undefined,
-      }, ports);
+      return closeFight(
+        snapshot,
+        state,
+        ports,
+        seat
+          ? {
+              journal: [
+                {
+                  seatId: seat.id,
+                  round: snapshot.game.round,
+                  kind: "test-fight-end" as const,
+                  payload: { cardName },
+                  manual: true,
+                },
+              ],
+            }
+          : {},
+      );
     },
     undefined,
   );
@@ -648,7 +616,7 @@ export async function answerAsk(
   return change(
     gameId,
     async (snapshot, command, ports) =>
-      withScriptContinued(snapshot, answerAskOn(snapshot, command), ports),
+      resume(snapshot, answerAskOn(snapshot, command), ports),
     { ...(seatId ? { seatId } : {}), choice },
   );
 }
@@ -740,7 +708,7 @@ export async function resolveFight(gameId: string, spoils?: Spoils): Promise<voi
   await change(
     gameId,
     async (snapshot, command, ports) =>
-      withScriptContinued(snapshot, await resolveFightOn(snapshot, command, ports), ports),
+      resume(snapshot, await resolveFightOn(snapshot, command, ports), ports),
     spoils ? { spoils } : undefined,
   );
 }
@@ -1281,7 +1249,7 @@ export async function escape(
   return change(
     gameId,
     async (snapshot, command, ports) =>
-      withScriptContinued(snapshot, escapeOn(snapshot, command), ports),
+      resume(snapshot, escapeOn(snapshot, command), ports),
     { reported, actorSeatId },
   );
 }
@@ -1347,50 +1315,7 @@ export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
  * because a throw discards the writes, and the frame *is* the write.
  */
 export async function finishTurn(gameId: string): Promise<"passed" | "held"> {
-  return change(
-    gameId,
-    (snapshot) => {
-      /**
-       * 5.6, at the other end of the turn — and now on the stack rather than
-       * in somebody's face.
-       *
-       * Checked here and in `rollForMove` rather than everywhere, because those
-       * are the two doors: you cannot begin a turn owing the rule, and you
-       * cannot hand one on. An overflow that happens mid-turn — the Bagna
-       * taking your Koń — is therefore settled before play moves, which is as
-       * close to "natychmiast" as a turn-based referee can honestly get.
-       *
-       * What changed is what happens at the door. It used to throw at whoever
-       * pressed the button, which told one player and left the table looking at
-       * a game that had simply stopped responding. Now it opens the frame and
-       * writes it: the turn does not pass, and every device is looking at the
-       * same sentence about the same seat, with the ways out named.
-       *
-       * `passTurn` itself is left alone. Half the game passes the turn as a
-       * consequence of something else — a death, a lost turn, a fall off the
-       * Most — and none of those is a player choosing to walk away from a rule.
-       */
-      const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
-      /**
-       * A frame already up is refused, not re-opened.
-       *
-       * `holdOverflow` is idempotent — it will not stack a copy of itself — so
-       * on a table that is already waiting it answers `{}`, and without this
-       * the pass read that as "nobody is over" and went ahead. `passTurn`
-       * writes `only(startTurn())`, so the turn moved on *and* the frame was
-       * thrown away with the rest of the stack: the one thing the table was
-       * waiting for, deleted by the button it was blocking.
-       */
-      refuseWhileOverflow(snapshot, seat?.id ?? null);
-
-      const held = holdOverflow(snapshot);
-      if (held.game) return { writes: held, result: "held" as const };
-
-      if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
-      return { writes: passTurn(snapshot), result: "passed" as const };
-    },
-    undefined,
-  );
+  return change(gameId, finishTurnOn, undefined);
 }
 
 /**
