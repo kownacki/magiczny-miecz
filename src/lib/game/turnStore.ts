@@ -7,7 +7,7 @@ import {
 import {
   type FieldId,
 } from "@/lib/engine/board";
-import { afterDraw } from "@/lib/engine/turn";
+import { dealtInto } from "@/lib/engine/turn";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
@@ -500,19 +500,14 @@ export async function stageCard(gameId: string, seatId: string, cardId: string):
     if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura.");
     if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
 
-    const entry = { cardId: card.id, cardClass: card.cardClass, granted: true };
-    const state = top(snapshot.game.turn_state);
-    const turn_state =
-      state.phase === "field"
-        ? replaceTop(snapshot.game.turn_state, afterDraw(state, entry))
-        : only({
-            phase: "field" as const,
-            fieldId: seat.field_id,
-            from: null,
-            draw: 0,
-            drawn: [entry],
-            fought: [],
-          });
+    const turn_state = dealtInto(
+      snapshot.game.turn_state,
+      { cardId: card.id, cardClass: card.cardClass, granted: true },
+      seat.field_id,
+    );
+    // `draw`'s own refusal, in `draw`'s own words: a card resolves into the
+    // turn, and mid-fight or mid-Karta there is nowhere to put one.
+    if (!turn_state) throw new Error("Nie czas na ciągnięcie kart (13.4).");
 
     return {
       writes: {

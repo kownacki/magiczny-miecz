@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  asFieldId,
   BRIDGE_ENTRANCES,
   DOLNY_KRAG,
   destination,
@@ -8,9 +9,12 @@ import {
   ringOf,
 } from "./board";
 import { crossingFrom } from "./rings";
+import { only, top } from "./stack";
+import type { TurnCard } from "./state";
 import {
   afterDraw,
   afterMove,
+  dealtInto,
   afterRoll,
   bridgeBlockUntil,
   bridgeBlocked,
@@ -480,5 +484,80 @@ describe("a table where everybody owes a turn", () => {
     const stone = { index: 0, eliminated: false, turnsLost: 0, stoneUntilRound: 9 };
     expect(nextSeat([stone], 0, 5).seat).toBeNull();
     expect(nextSeat([stone], 0, 9).seat).toBe(0);
+  });
+});
+
+/* ==========================================================================
+ * Where a conjured Karta goes (`deal`), and where it may not go.
+ * ======================================================================= */
+
+describe("dealing a Karta into a turn", () => {
+  const HERE = asFieldId("karczma")!;
+  const card = { cardId: "helm", cardClass: "item" as const, granted: true as const };
+  const other = { cardId: "cyklop", cardClass: "foe" as const };
+
+  const field = (drawn: TurnCard[] = []): TurnPhase => ({
+    phase: "field",
+    fieldId: HERE,
+    from: null,
+    draw: 0,
+    drawn,
+  });
+
+  it("appends to a turn already standing on an Obszar, in 15.2 order", () => {
+    const after = dealtInto(only(field([other])), card, HERE);
+    // The Wróg is class II and the Przedmiot class V, so he stays in front.
+    expect(after?.stack).toHaveLength(1);
+    expect(top(after!)).toMatchObject({
+      phase: "field",
+      drawn: [{ cardId: "cyklop" }, { cardId: "helm" }],
+    });
+  });
+
+  /** Nothing is happening, so there is nothing to destroy by opening one. */
+  it("opens a field phase when the turn has not got there yet", () => {
+    const idles: TurnPhase[] = [
+      { phase: "roll" },
+      { phase: "move", roll: 3, options: [] },
+      { phase: "end" },
+    ];
+    for (const idle of idles) {
+      const after = dealtInto(only(idle), card, HERE);
+      expect(top(after!), idle.phase).toMatchObject({ phase: "field", fieldId: HERE });
+    }
+  });
+
+  /**
+   * And refuses everything else, which is the bug this function was made for.
+   *
+   * It used to replace the whole stack with a fresh one-frame field phase, so
+   * `deal TARGOWISKO`, `answer`, `deal HEŁM` left no Targowisko and no sign
+   * there had been one.
+   */
+  it("refuses to talk over a Karta that is mid-resolution", () => {
+    const suspended: TurnPhase = {
+      phase: "script",
+      seatId: "seat-a",
+      cardId: "targowisko",
+      reason: "TARGOWISKO",
+      effect: { op: "nic" },
+      cursor: [],
+    };
+    expect(dealtInto({ stack: [field(), suspended] }, card, HERE)).toBeNull();
+  });
+
+  it("refuses mid-fight and on the Kamienny Most", () => {
+    const fight: TurnPhase = {
+      phase: "fight",
+      fight: { kind: "miecz", cards: [], name: "CYKLOP", strength: 4, seat: null, rolls: {} },
+    } as unknown as TurnPhase;
+    expect(dealtInto(only(fight), card, HERE)).toBeNull();
+    const most: TurnPhase = { phase: "bridge", bridge: BRIDGE_ENTRANCES[0] };
+    expect(dealtInto(only(most), card, HERE)).toBeNull();
+  });
+
+  /** Whatever the top happens to be: something is waiting underneath it. */
+  it("refuses any stack deeper than one frame", () => {
+    expect(dealtInto({ stack: [field(), field()] }, card, HERE)).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ import {
   type FieldId,
 } from "./board";
 import { resolutionOrder, type TurnCard } from "./state";
+import { only, replaceTop, top, type TurnState } from "./stack";
 import type { Crossing } from "./rings";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 import type { Effect } from "./cardScript";
@@ -565,6 +566,42 @@ export function atBridge(bridge: BridgeEntrance): TurnPhase {
 export function afterDraw(phase: TurnPhase, card: TurnCard): TurnPhase {
   if (phase.phase !== "field") return phase;
   return { ...phase, drawn: resolutionOrder([...phase.drawn, card]) };
+}
+
+/**
+ * Where a conjured Karta goes, or null when there is nowhere to put it.
+ *
+ * `deal`'s half of the resolution stack, and the reason it is a function rather
+ * than a line inside the command: it got this wrong, and silently. A dealt card
+ * used to replace the whole stack with a fresh one-frame field phase, so
+ * dealing anything while a Karta was suspended mid-resolution — or during a
+ * fight, or on the Kamienny Most — threw the suspended frame away and left no
+ * trace that there had been one. `deal TARGOWISKO`, `answer`, `deal HEŁM` and
+ * the Targowisko was simply gone.
+ *
+ * The rule follows from what `deal` is. It is `draw` with the choice taken off
+ * the deck, and `draw` refuses outside the field phase (13.4) because a drawn
+ * card resolves *into* the turn and there is nowhere else to put one. So:
+ *
+ * - **a field phase** takes the card, ordered against everything else already
+ *   drawn (15.2) — the whole point of appending rather than replacing;
+ * - **nothing happening** — waiting to roll, mid-move, or a turn already over —
+ *   opens one where the figure stands, so a card can be looked at without
+ *   rolling first. There is nothing there to destroy;
+ * - **anything else** is refused. A fight, a bridge ordeal and a suspended
+ *   script are all mid-something, and so is any stack deeper than one frame,
+ *   whatever its top happens to be.
+ */
+export function dealtInto(
+  state: TurnState,
+  card: TurnCard,
+  fieldId: FieldId,
+): TurnState | null {
+  if (state.stack.length > 1) return null;
+  const frame = top(state);
+  if (frame.phase === "field") return replaceTop(state, afterDraw(frame, card));
+  if (frame.phase !== "roll" && frame.phase !== "move" && frame.phase !== "end") return null;
+  return only({ phase: "field", fieldId, from: null, draw: 0, drawn: [card], fought: [] });
 }
 
 export function endTurn(): TurnPhase {
