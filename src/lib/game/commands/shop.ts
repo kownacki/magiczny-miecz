@@ -141,7 +141,7 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
     {
       journal: [...bySeat].map(([seatId, points]) => ({
         seatId,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "override" as const,
         payload: { what: "trophy-mode", points, cards: held.filter((h) => h.seat_id === seatId).length },
       })),
@@ -256,7 +256,7 @@ export function tradeTrophies(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "trophies-traded",
           payload: { points, gained, lost: points - gained * TROPHY_RATE },
         },
@@ -302,7 +302,7 @@ export function sellHolding(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "sold",
           payload: { cardId: held.card_id, price },
         },
@@ -340,7 +340,7 @@ export function payHealer(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "healing",
           payload: { points: wanted, paid },
         },
@@ -383,7 +383,7 @@ export function buyGoods(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "bought",
           payload: { cardId: command.cardId, price: entry.cena },
         },

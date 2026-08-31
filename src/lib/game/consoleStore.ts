@@ -1514,7 +1514,7 @@ export async function runCommand(
               journal: [
                 {
                   seatId: seat.id,
-                  turn: snapshot.game.turn,
+                  round: snapshot.game.round,
                   kind: "victory" as const,
                   payload: { kind: "ordinary", beastTotal: 0 },
                 },
@@ -1533,7 +1533,7 @@ export async function runCommand(
             journal: [
               {
                 seatId: seat.id,
-                turn: snapshot.game.turn,
+                round: snapshot.game.round,
                 kind: "beast-loss" as const,
                 payload: { kind: "ordinary", beastTotal: 0 },
               },
@@ -1750,7 +1750,7 @@ export async function runCommand(
        */
       if (game.status === "finished") {
         return [
-          `Turn ${game.turn} — the game is over.`,
+          `Turn ${game.round} — the game is over.`,
           "`journal` says how it ended.",
         ].join("\n");
       }
@@ -1792,7 +1792,7 @@ export async function runCommand(
       if (game.active_seat === null) {
         const out = snapshot.seats.filter((one) => one.character_id);
         return [
-          `Turn ${game.turn} — nobody is playing.`,
+          `Turn ${game.round} — nobody is playing.`,
           ...out.map((one) => `  ${named(one)} — ${one.eliminated ? "dead" : "out of play"}`),
           "4.4: whoever lost a Postać may `pick` another and start from its MGR.",
         ].join("\n");
@@ -1810,7 +1810,7 @@ export async function runCommand(
       );
       const phase = state.phase ?? "";
       return [
-        `Turn ${game.turn} — ${active ? named(active) : "nobody"}`,
+        `Turn ${game.round} — ${active ? named(active) : "nobody"}`,
         `Obszar: ${fieldName(active?.field_id ?? null)}`,
         `Phase: ${PHASE[phase] ?? phase}${state.roll ? ` (rolled ${state.roll})` : ""}`,
         // The pile under the running frame, when there is one — a summoned

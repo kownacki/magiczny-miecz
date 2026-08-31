@@ -537,18 +537,20 @@ export function afterMove(
  * The one-turn bar 11.11 puts on a failed or drawn bridge attempt.
  *
  * "nie może w następnej turze podjąć kolejnej próby wejścia na Most" — the next
- * turn, and only the next one. The turn counter counts rounds rather than
- * seat-turns, so a seat gets exactly one go per number, and barring the next
- * round means the mark has to outlast it: set at `turn + 2` and tested with a
+ * turn, and only the next one.
+ *
+ * Measured in **rounds** — `games.round`, the circuit of the table (see
+ * CONTEXT.md, "tura"). A seat gets one go per round, so barring the next
+ * one means the mark has to outlast it: set at `round + 2` and tested with a
  * strict `>`, an attempt on round 3 is barred on round 4 and free again on
- * round 5. The obvious `turn + 1` bars nothing.
+ * round 5. The obvious `round + 1` bars nothing.
  */
-export function bridgeBlockUntil(turn: number): number {
-  return turn + 2;
+export function bridgeBlockUntil(round: number): number {
+  return round + 2;
 }
 
-export function bridgeBlocked(blockedUntil: number | null, turn: number): boolean {
-  return blockedUntil !== null && blockedUntil > turn;
+export function bridgeBlocked(blockedUntil: number | null, round: number): boolean {
+  return blockedUntil !== null && blockedUntil > round;
 }
 
 /** Stops the move at a bridge entrance, with the guardian still to be dealt with. */
@@ -786,18 +788,23 @@ export function endFight(phase: TurnPhase): TurnPhase {
  * out, and 4.4 removes a dead character entirely, so both are skipped. Turns
  * lost are spent one per pass, which is what makes "tracisz 1 turę" cost
  * exactly one go round the table.
+ *
+ * A **turn** here is one seat's go, which is what the box means by "tura"
+ * (10.1, and Formuła Czasu's "3 kolejnych tur zamiast jednej"). The `round`
+ * argument is the other thing — see CONTEXT.md.
  */
 export interface TurnOrderSeat {
   index: number;
   eliminated: boolean;
   turnsLost: number;
-  stoneUntilTurn: number | null;
+  stoneUntilRound: number | null;
 }
 
 export function nextSeat(
   seats: readonly TurnOrderSeat[],
   current: number | null,
-  turn: number,
+  /** The round we are in — `games.round`, the circuit of the table. */
+  round: number,
 ): { seat: number | null; skipped: number[] } {
   const playable = seats.filter((seat) => !seat.eliminated);
   if (playable.length === 0) return { seat: null, skipped: [] };
@@ -810,7 +817,9 @@ export function nextSeat(
     if (candidate.eliminated) continue;
     // Turned to Stone freezes a character for three turns (20.4) and it cannot
     // act at all in that time — distinct from a lost turn, which is spent.
-    if (candidate.stoneUntilTurn !== null && candidate.stoneUntilTurn > turn) {
+    // 20.1 measures those three in rounds, so this reads the round counter and
+    // not the seat's own goes: a stone seat takes none of the latter.
+    if (candidate.stoneUntilRound !== null && candidate.stoneUntilRound > round) {
       skipped.push(candidate.index);
       continue;
     }

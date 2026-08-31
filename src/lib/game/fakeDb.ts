@@ -51,7 +51,7 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
     endless_stock: true,
     die_source: "app",
     status: "lobby",
-    turn: 0,
+    round: 0,
     turn_state: { phase: "roll" },
     revision: 0,
     characters_out: [],
@@ -73,9 +73,9 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
     character_id: null,
     field_id: null,
     nature: null,
-    nature_changed_turn: null,
-    stone_until_turn: null,
-    bridge_blocked_until_turn: null,
+    nature_changed_round: null,
+    stone_until_round: null,
+    bridge_blocked_until_round: null,
   },
   users: { is_host: false, ready: false, seat_index: null, device_id: null, left_at: null },
   // `note` and `points` were in here and are not columns — invented from the
@@ -85,7 +85,7 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
   holdings: { face: "open", granted: false, slot: null, ordinal: null, carried_by: null },
   seat_effects: {},
   field_cards: { granted: false },
-  moves: { turn: 0, payload: {}, manual: false, seat_id: null, user_id: null, actor_name: null },
+  moves: { round: 0, payload: {}, manual: false, seat_id: null, user_id: null, actor_name: null },
 };
 
 /** Now, as a timestamp column would be. */

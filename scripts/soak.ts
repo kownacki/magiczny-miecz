@@ -113,7 +113,7 @@ for (let turn = 0; turn < TURNS; turn++) {
 }
 
 const game = (await activeStore().load(gameId)).game;
-console.log(`--- ${TURNS} turns asked for; game is at turn ${game.turn}, ${game.status} ---`);
+console.log(`--- ${TURNS} turns asked for; game is at turn ${game.round}, ${game.status} ---`);
 for (const one of await seatsFor(gameId)) {
   console.log(`  seat ${one.seat_index}: ${one.character_id ?? "—"} · ${one.life} Życia` +
     `${one.eliminated ? " · dead" : ""}`);

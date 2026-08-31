@@ -74,7 +74,7 @@ export async function fightBeast(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "victory",
             payload: { kind, beastTotal, rolls: { kindDie, strengthDie, myDie, itsDie } },
           },
@@ -90,7 +90,7 @@ export async function fightBeast(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "beast-loss",
           payload: { kind, beastTotal },
         },
@@ -109,7 +109,7 @@ export async function fightBeast(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "beast-draw",
           payload: { kind, beastTotal },
         },

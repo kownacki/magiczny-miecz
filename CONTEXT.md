@@ -135,6 +135,38 @@ moment, which is the whole reason they are ports.
   typed name cannot be declined (`journalText.ts`); the notice is second-person
   and immediate, which is why it can quote the dice (`noticeText.ts`). Two
   registers, deliberately.
+- **"tura"** meant two different things and the word was doing both jobs. The
+  box is consistent: 10.1 divides play into **tury**, which the Postacie take
+  "kolejno", and a tura *contains* a **ruch** — move first, then deal with where
+  you landed. So a **tura is one character's go**, it takes a possessive
+  ("do początku **twojej** następnej tury"), and Formuła Czasu settles it beyond
+  argument by granting "3 kolejnych tur **zamiast jednej**": one is what you
+  normally get. The rulebook never coins a word for the full circuit of the
+  table.
+
+  The code needs that word, because it counts one. Resolved:
+
+  - a **turn** is one seat's go. `Ends: { kind: "turns", turns: N }` counts N
+    more of *the holder's own*, ticked by `tickEffects` when that seat's go
+    ends — which is why a skipped seat's buff does not burn away while it
+    cannot act.
+  - a **round** is the circuit of the table — `games.round`, renamed from
+    `turn` by migration on 2026-08-31, along with `moves.round`,
+    `stone_until_round`, `bridge_blocked_until_round` and
+    `nature_changed_round`. `passTurn` advances it only when play comes back
+    round to or past the first seat, and 20.1's three Stone turns really are
+    three rounds. This is the standard board-game usage: a turn is one
+    player's go, a round is the cycle in which each of them takes one.
+
+  The two coincide in the ordinary case — one seat, one go, one round — which
+  is why nothing has broken. They come apart exactly where a table starts
+  arguing: a skipped seat advances the round without taking a turn, and Formuła
+  Czasu gives one seat three turns inside a single round.
+
+  `seats.turns_lost` is deliberately **not** renamed: it counts a seat's own
+  goes, which really are turns. The screen follows the same split — "Runda 4"
+  for the counter, "Twoja tura" for whose go it is.
+
 - **Own points** and derived points are never the same number, and neither is
   ever called "total" in storage — only `sword_own` / `magic_own` are stored, and
   the sum is computed at read time. See the non-negotiable in `CLAUDE.md`.

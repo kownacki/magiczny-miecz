@@ -150,7 +150,8 @@ export interface EffectPatch {
  */
 export interface JournalWrite {
   seatId: string | null;
-  turn: number;
+  /** The round it happened in — `games.round`, not a seat's own go. */
+  round: number;
   kind: JournalKind;
   payload?: Record<string, unknown>;
   manual?: boolean;
@@ -745,7 +746,7 @@ async function appendJournal(
       seat_id: line.seatId,
       user_id: driving(line.seatId)?.id ?? null,
       actor_name: driving(line.seatId)?.name ?? null,
-      turn: line.turn,
+      round: line.round,
       kind: line.kind,
       payload: line.payload ?? {},
       manual: line.manual ?? false,

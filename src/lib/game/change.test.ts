@@ -5,15 +5,15 @@ import { aHolding, aSeat, aTable, aUser } from "./fixture";
 describe("merge", () => {
   it("keeps both sides' lists, in order", () => {
     const merged = merge(
-      { journal: [{ seatId: "a", turn: 1, kind: "roll" }] },
-      { journal: [{ seatId: "a", turn: 1, kind: "move" }] },
+      { journal: [{ seatId: "a", round: 1, kind: "roll" }] },
+      { journal: [{ seatId: "a", round: 1, kind: "move" }] },
     );
     expect(merged.journal?.map((line) => line.kind)).toEqual(["roll", "move"]);
   });
 
   it("lets the later write win, column by column", () => {
-    const merged = merge({ game: { turn: 4, status: "playing" } }, { game: { turn: 5 } });
-    expect(merged.game).toEqual({ turn: 5, status: "playing" });
+    const merged = merge({ game: { round: 4, status: "playing" } }, { game: { round: 5 } });
+    expect(merged.game).toEqual({ round: 5, status: "playing" });
   });
 
   /**
@@ -45,7 +45,7 @@ describe("merge", () => {
     // A changeset carrying `seatsRemoved: []` says a change touched the seats,
     // and a reader that believes it — a test, a log line, a future writer of
     // `commit` — is being told something that did not happen.
-    expect(merge({ game: { turn: 4 } }, { journal: [] })).not.toHaveProperty("seatsRemoved");
+    expect(merge({ game: { round: 4 } }, { journal: [] })).not.toHaveProperty("seatsRemoved");
   });
 
   it("is empty for empty", () => {
@@ -144,8 +144,8 @@ describe("apply", () => {
     const table = aTable({ journalSeq: 12 });
     const after = apply(table, {
       journal: [
-        { seatId: null, turn: 1, kind: "roll" },
-        { seatId: null, turn: 1, kind: "move" },
+        { seatId: null, round: 1, kind: "roll" },
+        { seatId: null, round: 1, kind: "move" },
       ],
     });
     expect(after.journalSeq).toBe(14);
@@ -160,15 +160,15 @@ describe("apply", () => {
    * shape: the point of Życie, and then the bar on trying again next turn.
    */
   it("folds two patches for the same seat instead of keeping the last", () => {
-    const table = aTable({ seats: [aSeat({ id: "a", life: 4, bridge_blocked_until_turn: null })] });
+    const table = aTable({ seats: [aSeat({ id: "a", life: 4, bridge_blocked_until_round: null })] });
     const after = apply(table, {
       seats: [
         { id: "a", patch: { life: 3 } },
-        { id: "a", patch: { bridge_blocked_until_turn: 9 } },
+        { id: "a", patch: { bridge_blocked_until_round: 9 } },
       ],
     });
     expect(after.seats[0].life).toBe(3);
-    expect(after.seats[0].bridge_blocked_until_turn).toBe(9);
+    expect(after.seats[0].bridge_blocked_until_round).toBe(9);
   });
 
   it("lets a later patch win on the same column", () => {
@@ -253,7 +253,7 @@ describe("whether a changeset asks for anything", () => {
    * changeset asking for nothing, and `commit` then drops it without a word.
    */
   const oneWrite: [string, Changeset][] = [
-    ["a column on the games row", { game: { turn: 4 } }],
+    ["a column on the games row", { game: { round: 4 } }],
     ["a seat patched", { seats: [{ id: "seat-a", patch: { gold: 2 } }] }],
     ["a seat removed", { seatsRemoved: ["seat-a"] }],
     [
@@ -285,7 +285,7 @@ describe("whether a changeset asks for anything", () => {
       { effects: { patch: [{ id: "eff-1", patch: { ends: { kind: "turns", turns: 2 } } }] } },
     ],
     ["an effect lifted", { effects: { delete: ["eff-1"] } }],
-    ["a line owed to the journal", { journal: [{ seatId: "seat-a", turn: 3, kind: "roll" }] }],
+    ["a line owed to the journal", { journal: [{ seatId: "seat-a", round: 3, kind: "roll" }] }],
   ];
 
   it.each(oneWrite)("counts %s as something", (_what, writes) => {

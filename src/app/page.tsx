@@ -14,7 +14,7 @@ interface GameSummary {
   joinCode: string;
   status: string;
   mode: string;
-  turn: number;
+  round: number;
   lastPlayedAt: string;
   players: { name: string | null; characterId: string | null; abandoned: boolean }[];
 }
@@ -267,7 +267,7 @@ export default function Home() {
                         table worth seeing before you open it. */}
                     {game.mode === "companion" ? "przy planszy" : "symulacja"} ·{" "}
                     {STATUS_LABEL[game.status] ?? game.status}
-                    {game.status === "playing" ? ` · tura ${game.turn}` : ""} ·{" "}
+                    {game.status === "playing" ? ` · tura ${game.round}` : ""} ·{" "}
                     {whenPlayed(game.lastPlayedAt)}
                   </span>
                 </span>

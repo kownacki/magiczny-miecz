@@ -124,7 +124,7 @@ export interface Seat {
   nature: string | null;
   turns_lost: number;
   /** Turn the Kamień wears off on (20.1). Null when not petrified. */
-  stone_until_turn: number | null;
+  stone_until_round: number | null;
   eliminated: boolean;
   /**
    * Whoever is driving this chair, and null when nobody is.

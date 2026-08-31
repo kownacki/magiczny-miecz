@@ -513,8 +513,8 @@ export function describeEnd(ends: Ends): string {
 /* --------------------------------------------------------------------------
  * The four ad-hoc columns, read as effects.
  *
- * `turns_lost`, `stone_until_turn`, `bridge_blocked_until_turn` and
- * `nature_changed_turn` predate this module and are read by the turn engine
+ * `turns_lost`, `stone_until_round`, `bridge_blocked_until_round` and
+ * `nature_changed_round` predate this module and are read by the turn engine
  * itself when it works out whose turn is next. Moving them into the store would
  * be a rewrite of turn order to gain nothing, so they stay where they are and
  * are projected here instead.
@@ -526,9 +526,9 @@ export function describeEnd(ends: Ends): string {
 /** What a seat's own columns say about it, in the shape everything else uses. */
 export interface TimedColumns {
   turnsLost: number;
-  stoneUntilTurn: number | null;
-  bridgeBlockedUntilTurn: number | null;
-  natureChangedTurn: number | null;
+  stoneUntilRound: number | null;
+  bridgeBlockedUntilRound: number | null;
+  natureChangedRound: number | null;
 }
 
 export function fromColumns(seat: TimedColumns, turn: number): Status[] {
@@ -547,24 +547,24 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
   }
 
   // 20.1: three turns as stone, and the column holds the turn it wears off on.
-  if (seat.stoneUntilTurn !== null && seat.stoneUntilTurn > turn) {
+  if (seat.stoneUntilRound !== null && seat.stoneUntilRound > turn) {
     out.push({
       id: "kamien",
       source: "kamien",
       label: "Zamieniony w Kamień",
       modifier: { kind: "frozen" },
-      ends: { kind: "turns", turns: seat.stoneUntilTurn - turn },
+      ends: { kind: "turns", turns: seat.stoneUntilRound - turn },
     });
   }
 
   // 11.11: a failed attempt on the Most cannot be repeated next turn.
-  if (seat.bridgeBlockedUntilTurn !== null && seat.bridgeBlockedUntilTurn > turn) {
+  if (seat.bridgeBlockedUntilRound !== null && seat.bridgeBlockedUntilRound > turn) {
     out.push({
       id: "most-zablokowany",
       source: "most",
       label: "Nie wejdziesz na Kamienny Most",
       modifier: { kind: "barred", place: "most" },
-      ends: { kind: "turns", turns: seat.bridgeBlockedUntilTurn - turn },
+      ends: { kind: "turns", turns: seat.bridgeBlockedUntilRound - turn },
     });
   }
 
@@ -572,7 +572,7 @@ export function fromColumns(seat: TimedColumns, turn: number): Status[] {
   // of the turn. What the Natura now *is* the seat card says with the Karta
   // Zmiany Natury, which is where the rule puts it — this is only the part a
   // player deciding what to do next has to know.
-  if (seat.natureChangedTurn !== null && seat.natureChangedTurn === turn) {
+  if (seat.natureChangedRound !== null && seat.natureChangedRound === turn) {
     out.push({
       id: "natura-zmieniona",
       source: "natura",

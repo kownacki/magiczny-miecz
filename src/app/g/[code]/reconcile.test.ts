@@ -52,7 +52,7 @@ function seat(over: Partial<Seat> = {}): Seat {
     gold: 1,
     nature: "good",
     turns_lost: 0,
-    stone_until_turn: null,
+    stone_until_round: null,
     holdings: [],
     hidden_count: 0,
     away: false,

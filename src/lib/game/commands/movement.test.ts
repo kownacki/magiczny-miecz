@@ -13,7 +13,7 @@ import { moveTo, rollForMove, startGame } from "./movement";
  * ----------------------------------------------------------------------- */
 
 const lobby = (seats: ReturnType<typeof aSeat>[], users?: ReturnType<typeof aUser>[]) =>
-  aTable({ game: { status: "lobby", turn: 0, active_seat: null, deck: null }, seats, users });
+  aTable({ game: { status: "lobby", round: 0, active_seat: null, deck: null }, seats, users });
 
 describe("otwarcie stołu (3.2, 9.5)", () => {
   it("refuses a table where nobody has taken a character", () => {
@@ -26,7 +26,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
   /** One character is a game: the Bestia can be beaten alone (14.7, 22). */
   it("starts a table of one", () => {
     const { writes } = startGame(lobby([aSeat()]), { decks: noDeck() }, ports());
-    expect(writes.game).toMatchObject({ status: "playing", turn: 1, active_seat: 0 });
+    expect(writes.game).toMatchObject({ status: "playing", round: 1, active_seat: 0 });
   });
 
   it("names whoever has not said they are ready", () => {
@@ -61,7 +61,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     const { writes } = startGame(table, { decks: noDeck() }, ports());
     expect(writes.game).toMatchObject({
       status: "playing",
-      turn: 1,
+      round: 1,
       active_seat: 1,
       turn_state: only({ phase: "roll" }),
     });
@@ -69,7 +69,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     // seat that actually holds a Karta.
     expect(writes.journal?.at(0)).toMatchObject({
       seatId: null,
-      turn: 1,
+      round: 1,
       kind: "start",
       payload: { seats: 1 },
     });
@@ -78,7 +78,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     expect(writes.journal?.slice(1)).toEqual([
       {
         seatId: "seat-b",
-        turn: 1,
+        round: 1,
         kind: "joined",
         payload: { characterId: "goblin", opening: true },
       },
@@ -97,7 +97,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     expect(simulated.writes.game?.deck).toBe(decks);
 
     const physical = aTable({
-      game: { mode: "companion", status: "lobby", turn: 0, active_seat: null, deck: null },
+      game: { mode: "companion", status: "lobby", round: 0, active_seat: null, deck: null },
       seats: [aSeat()],
     });
     expect(startGame(physical, { decks }, ports()).writes.game?.deck).toBeNull();
@@ -121,7 +121,7 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 5 } }]);
     expect(writes.journal?.[0]).toMatchObject({
       seatId: "seat-a",
-      turn: 1,
+      round: 1,
       kind: "starting-kit",
       payload: { character: "ksiaze", items: ["helm", "miecz"], gold: 5 },
     });
@@ -179,7 +179,7 @@ const rolling = (
   holdings: HoldingRow[] = [],
 ) =>
   aTable({
-    game: { active_seat: 0, turn: 3, turn_state: { phase: "roll" } },
+    game: { active_seat: 0, round: 3, turn_state: { phase: "roll" } },
     // Named rather than leant on: the fixture's own Obszar is deliberately one
     // with no rule of its own, and these tests are about this one's neighbours.
     seats: [aSeat({ seat_index: 0, field_id: asFieldId("zaczarowane-wzgorza"), ...seat })],
@@ -195,7 +195,7 @@ describe("starting the game", () => {
    */
   it("refuses a game that has already begun", () => {
     const table = aTable({
-      game: { status: "playing", turn: 3 },
+      game: { status: "playing", round: 3 },
       seats: [aSeat({ character_id: asSeatCharacter("mag") })],
     });
     expect(() => startGame(table, { decks: noDeck() }, ports())).toThrow(/już się zaczęła/);
@@ -220,7 +220,7 @@ describe("rzut na ruch (10.2)", () => {
    */
   it("refuses the roll to a character held where they stand", async () => {
     const held = aTable({
-      game: { active_seat: 0, turn: 3, turn_state: { phase: "roll" } },
+      game: { active_seat: 0, round: 3, turn_state: { phase: "roll" } },
       seats: [aSeat({ seat_index: 0, field_id: asFieldId("zaczarowane-wzgorza") })],
       effects: [
         {
@@ -245,7 +245,7 @@ describe("rzut na ruch (10.2)", () => {
   it("records the roll, and that the app threw it", async () => {
     const { writes } = await rollForMove(rolling(), {}, die(5));
     expect(writes.journal).toEqual([
-      { seatId: "seat-a", turn: 3, kind: "roll", payload: { roll: 5, manual: false }, manual: false },
+      { seatId: "seat-a", round: 3, kind: "roll", payload: { roll: 5, manual: false }, manual: false },
     ]);
   });
 
@@ -331,7 +331,7 @@ describe("rzut na ruch (10.2)", () => {
 
     /** 11.11: "nie może w następnej turze podjąć kolejnej próby wejścia na Most". */
     it("is withheld from somebody who failed there last turn", async () => {
-      const barred = atUrwisko({ bridge_blocked_until_turn: 4 }, [
+      const barred = atUrwisko({ bridge_blocked_until_round: 4 }, [
         aHolding({ card_id: "magiczny-miecz" }),
       ]);
       const { writes } = await rollForMove(barred, {}, die(2));
@@ -348,7 +348,7 @@ const walking = (from: "zaczarowane-wzgorza" | "urwisko-1", over: Parameters<typ
   aTable({
     game: {
       active_seat: 0,
-      turn: 3,
+      round: 3,
       turn_state: afterRoll(from, 2, { bridgeOffered: from === "urwisko-1" }),
       ...(over.game ?? {}),
     },
@@ -371,7 +371,7 @@ describe("ruch (10.2, 13.4)", () => {
     expect(writes.journal).toEqual([
       {
         seatId: "seat-a",
-        turn: 3,
+        round: 3,
         kind: "move",
         payload: { from: "zaczarowane-wzgorza", to: "pustelnia", direction: "clockwise" },
       },

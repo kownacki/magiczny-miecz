@@ -137,9 +137,9 @@ describe("telling the player how long", () => {
 describe("the four ad-hoc columns, read as effects", () => {
   const none = {
     turnsLost: 0,
-    stoneUntilTurn: null,
-    bridgeBlockedUntilTurn: null,
-    natureChangedTurn: null,
+    stoneUntilRound: null,
+    bridgeBlockedUntilRound: null,
+    natureChangedRound: null,
   };
 
   it("says nothing about a seat nothing is true of", () => {
@@ -156,23 +156,23 @@ describe("the four ad-hoc columns, read as effects", () => {
   it("measures Kamień from the turn it wears off on (20.1)", () => {
     // The column holds a turn number, not a countdown, so the remaining turns
     // are the difference — and it says nothing once that turn has arrived.
-    expect(fromColumns({ ...none, stoneUntilTurn: 8 }, 5)[0].ends).toEqual({
+    expect(fromColumns({ ...none, stoneUntilRound: 8 }, 5)[0].ends).toEqual({
       kind: "turns",
       turns: 3,
     });
-    expect(fromColumns({ ...none, stoneUntilTurn: 5 }, 5)).toEqual([]);
+    expect(fromColumns({ ...none, stoneUntilRound: 5 }, 5)).toEqual([]);
   });
 
   it("shows the Most being barred without calling it a freeze (11.11)", () => {
     // A character barred from the bridge walks normally everywhere else.
-    const [barred] = fromColumns({ ...none, bridgeBlockedUntilTurn: 6 }, 5);
+    const [barred] = fromColumns({ ...none, bridgeBlockedUntilRound: 6 }, 5);
     expect(barred.modifier).toEqual({ kind: "barred", place: "most" });
     expect(frozen([barred])).toBe(false);
   });
 
   it("mentions a Natura changed this turn, and only this turn (7.2)", () => {
-    expect(fromColumns({ ...none, natureChangedTurn: 5 }, 5)).toHaveLength(1);
-    expect(fromColumns({ ...none, natureChangedTurn: 4 }, 5)).toEqual([]);
+    expect(fromColumns({ ...none, natureChangedRound: 5 }, 5)).toHaveLength(1);
+    expect(fromColumns({ ...none, natureChangedRound: 4 }, 5)).toEqual([]);
   });
 
   it("puts both halves of the model in one list", () => {

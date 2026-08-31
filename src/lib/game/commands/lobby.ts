@@ -146,13 +146,13 @@ export function promoteHost(
   users: readonly UserRow[],
   leaving: UserRow,
   /**
-   * Which turn to file the line under.
+   * Which round to file the line under.
    *
    * Required rather than optional, so that adding the journal line here could
    * not silently miss a caller: both of them — somebody leaving, and the sweep
    * — have a snapshot to hand and the compiler named them.
    */
-  turn: number,
+  round: number,
 ): Changeset {
   if (!leaving.is_host) return {};
   const candidate = nextHost(users, leaving);
@@ -165,7 +165,7 @@ export function promoteHost(
     journal: [
       {
         seatId: null,
-        turn,
+        round,
         kind: "new-host",
         // Nobody chose this one: the host walked away or went quiet, and the
         // role goes to whoever has been here longest. `taken` is the other
@@ -329,7 +329,7 @@ export function unseat(
         journal: [
           {
             seatId: snapshot.seats.find((seat) => seat.seat_index === user.seat_index)?.id ?? null,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "left-seat",
             payload: { name: user.name, seatIndex: user.seat_index },
           },
@@ -457,7 +457,7 @@ export function setTrophyMode(
         journal: [
           {
             seatId: null,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "override" as const,
             payload: { what: "trophy-mode" },
           },
@@ -502,7 +502,7 @@ export function openTable(
       journal: [
         {
           seatId: null,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "table-opened",
           // The mode, because it is the one setting that cannot be changed
           // afterwards.
@@ -510,7 +510,7 @@ export function openTable(
         },
         {
           seatId: command.hostSeatId,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "joined-table",
           payload: { name: command.hostName },
         },
@@ -529,7 +529,7 @@ export function noteArrival(
       journal: [
         {
           seatId: command.seatId,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "joined-table",
           // A person with no chair is watching, which is a thing six seats
           // allows and the journal should say plainly rather than by omission.
@@ -558,7 +558,7 @@ export function leaveTable(
     journal: [
       {
         seatId: null,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "left-table",
         payload: { user: user.id, name: user.name, kicked: command.kicked ?? false },
       },
@@ -566,7 +566,7 @@ export function leaveTable(
   };
 
   return {
-    writes: mergeAll(stood.writes, promoteHost(after.users, user, snapshot.game.turn), gone),
+    writes: mergeAll(stood.writes, promoteHost(after.users, user, snapshot.game.round), gone),
     result: { ...stood.result, removed: true },
   };
 }
@@ -606,7 +606,7 @@ export function takeSeat(
       journal: [
         {
           seatId: snapshot.seats.find((seat) => seat.seat_index === command.seatIndex)?.id ?? null,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "took-seat",
           // The chair, not the Postać: nothing has been chosen yet, and
           // `joined` is the line for that — usually minutes later.
@@ -650,7 +650,7 @@ export function takeHostRole(
       journal: [
         {
           seatId: null,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "new-host",
           // `taken` separates the two doors this command is: the host handing
           // it over, and somebody picking it up because the host has gone. A
@@ -819,7 +819,7 @@ export function sweepLobby(
   const host = snapshot.users.find((one) => one.is_host);
   const handover =
     host && (goneIds.has(host.id) || isQuiet(host, now, HOST_MISSING_AFTER_MS))
-      ? promoteHost(staying, host, snapshot.game.turn)
+      ? promoteHost(staying, host, snapshot.game.round)
       : {};
 
   if (gone.length === 0) return { writes: handover, result: { gameGone: false } };
@@ -863,7 +863,7 @@ export function sweepLobby(
       {
         journal: gone.map((one) => ({
           seatId: null,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "left-table" as const,
           payload: { user: one.id, name: one.name, kicked: false, swept: true },
         })),

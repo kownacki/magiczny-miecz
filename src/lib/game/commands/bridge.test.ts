@@ -35,7 +35,7 @@ const dice = (...results: number[]) => ports({ random: scriptedRandom(results) }
 describe("wejście na Most (11.9-11.11)", () => {
   const standing = (over: Parameters<typeof aSeat>[0] = {}) =>
     aTable({
-      game: { turn: 3, turn_state: { phase: "bridge", bridge: RUINY } },
+      game: { round: 3, turn_state: { phase: "bridge", bridge: RUINY } },
       seats: [aSeat({ field_id: "ruiny-twierdzy", ...over })],
     });
 
@@ -54,7 +54,7 @@ describe("wejście na Most (11.9-11.11)", () => {
     const { writes, result } = settleBridge(standing({ sword_own: 5 }), RUINY, "przegrana");
     expect(result).toEqual({ at: null });
     expect(writes.seats).toEqual([
-      { id: "seat-a", patch: { bridge_blocked_until_turn: 5, sword_own: 4 } },
+      { id: "seat-a", patch: { bridge_blocked_until_round: 5, sword_own: 4 } },
     ]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "bridge-failed",
@@ -68,7 +68,7 @@ describe("wejście na Most (11.9-11.11)", () => {
    */
   it("costs a draw the next turn's attempt and nothing else", () => {
     const { writes } = settleBridge(standing({ sword_own: 5 }), RUINY, "remis");
-    expect(writes.seats).toEqual([{ id: "seat-a", patch: { bridge_blocked_until_turn: 5 } }]);
+    expect(writes.seats).toEqual([{ id: "seat-a", patch: { bridge_blocked_until_round: 5 } }]);
     expect(writes.journal?.[0]).toMatchObject({ payload: { outcome: "remis" } });
   });
 
@@ -84,11 +84,11 @@ describe("wejście na Most (11.9-11.11)", () => {
 
   it("takes Magia on the Wymarłe Miasto side", () => {
     const table = aTable({
-      game: { turn: 3, turn_state: { phase: "bridge", bridge: MIASTO } },
+      game: { round: 3, turn_state: { phase: "bridge", bridge: MIASTO } },
       seats: [aSeat({ field_id: "wymarle-miasto", magic_own: 4, magic_floor: 1 })],
     });
     const { writes } = settleBridge(table, MIASTO, "przegrana");
-    expect(writes.seats?.[0].patch).toEqual({ bridge_blocked_until_turn: 5, magic_own: 3 });
+    expect(writes.seats?.[0].patch).toEqual({ bridge_blocked_until_round: 5, magic_own: 3 });
   });
 
   /**
@@ -104,7 +104,7 @@ describe("wejście na Most (11.9-11.11)", () => {
 
 describe("przeprawa między Kręgami (11.4, 11.8)", () => {
   const at = (fieldId: "uroczysko" | "przelecz-wichrow", over: Parameters<typeof aSeat>[0] = {}) =>
-    aTable({ game: { turn: 3 }, seats: [aSeat({ field_id: fieldId, ...over })] });
+    aTable({ game: { round: 3 }, seats: [aSeat({ field_id: fieldId, ...over })] });
 
   it("walks the character across and lands it on the far field", () => {
     const { writes, result } = settleCrossing(at("uroczysko"), TRZESAWISKA, "wygrana");
@@ -132,7 +132,7 @@ describe("przeprawa między Kręgami (11.4, 11.8)", () => {
     const withSpell = (fieldId: string, przez: "trzesawiska" | "lodowy-las") =>
       aTable({
         game: {
-          turn: 3,
+          round: 3,
           active_seat: 0,
           turn_state: { phase: "roll" } as never,
         },
@@ -341,7 +341,7 @@ describe("siła strażnika Wejścia na Most", () => {
 
 describe("Most zgłoszony przez stół", () => {
   const attempting = aTable({
-    game: { turn: 3, turn_state: { phase: "bridge", bridge: MIASTO } },
+    game: { round: 3, turn_state: { phase: "bridge", bridge: MIASTO } },
     seats: [aSeat({ field_id: "wymarle-miasto", magic_own: 4, magic_floor: 1 })],
   });
 
@@ -372,7 +372,7 @@ describe("przewoźnik", () => {
   const onTheRiver = (over: Parameters<typeof aSeat>[0] = {}, holdings = [] as ReturnType<typeof aHolding>[]) =>
     aTable({
       game: {
-        turn: 3,
+        round: 3,
         turn_state: {
           phase: "field",
           fieldId: "przeprawa-1",
@@ -523,7 +523,7 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
     fieldId: "pulapka" | "magiczna-pulapka",
     over: Parameters<typeof aSeat>[0] = {},
     holdings = [] as ReturnType<typeof aHolding>[],
-  ) => aTable({ game: { turn: 3 }, seats: [aSeat({ field_id: fieldId, ...over })], holdings });
+  ) => aTable({ game: { round: 3 }, seats: [aSeat({ field_id: fieldId, ...over })], holdings });
 
   /** Three dice less the character's Miecz; nothing left over is nothing at all. */
   it("misses a character whose Miecz covers the three dice", async () => {
@@ -632,7 +632,7 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
 
 describe("Gra ze Śmiercią", () => {
   const playing = (over: Parameters<typeof aSeat>[0] = {}) =>
-    aTable({ game: { turn: 3 }, seats: [aSeat({ field_id: "gra-ze-smiercia", ...over })] });
+    aTable({ game: { round: 3 }, seats: [aSeat({ field_id: "gra-ze-smiercia", ...over })] });
 
   /** Two for the character, then two for Death — in that order. */
   it("walks on when the character's two beat Death's", async () => {
@@ -671,7 +671,7 @@ describe("Gra ze Śmiercią", () => {
    */
   it("hands play on when the game with Death kills, and never back to the dead", async () => {
     const dying = aTable({
-      game: { turn: 3, active_seat: 1 },
+      game: { round: 3, active_seat: 1 },
       seats: [
         aSeat({ id: "seat-a", seat_index: 0 }),
         aSeat({ id: "seat-b", seat_index: 1, field_id: "gra-ze-smiercia", life: 1 }),
@@ -702,7 +702,7 @@ describe("Gra ze Śmiercią", () => {
   it("decides the pass against the turn this command has already closed", async () => {
     const dying = aTable({
       game: {
-        turn: 3,
+        round: 3,
         active_seat: 1,
         turn_state: {
           phase: "field",
@@ -731,7 +731,7 @@ describe("Gra ze Śmiercią", () => {
 
 describe("Cerber", () => {
   const dog = (over: Parameters<typeof aSeat>[0] = {}) =>
-    aTable({ game: { turn: 3 }, seats: [aSeat({ field_id: "cerber", ...over })] });
+    aTable({ game: { round: 3 }, seats: [aSeat({ field_id: "cerber", ...over })] });
 
   /** One die, and the dog takes between one and three points. */
   it("takes half the die, rounded up", async () => {
@@ -748,7 +748,7 @@ describe("Cerber", () => {
 
   it("can kill, and hands play on when it does", async () => {
     const dying = aTable({
-      game: { turn: 3, active_seat: 1 },
+      game: { round: 3, active_seat: 1 },
       seats: [
         aSeat({ id: "seat-a", seat_index: 0 }),
         aSeat({ id: "seat-b", seat_index: 1, field_id: "cerber", life: 2 }),
@@ -768,7 +768,7 @@ describe("Demon Zagłady i Monstrum (14.6)", () => {
   /** Two dice, added, with no offset — a different creature on a different rule. */
   it("opens a magical fight against the Demon with two dice of strength", async () => {
     const table = aTable({
-      game: { turn: 3 },
+      game: { round: 3 },
       seats: [aSeat({ field_id: "demon-zaglady", sword_own: 9, magic_own: 5, magic_floor: 1 })],
     });
     const { writes, result } = await resolveBridgeOrdeal(table, undefined, dice(3, 4));

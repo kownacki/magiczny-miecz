@@ -129,7 +129,7 @@ export function differences(a: Tables, b: Tables): string[] {
 
   const gameOf = (t: Tables) => {
     const row = (t.games[0] ?? {}) as Record<string, unknown>;
-    return { status: row.status, turn: row.turn, active_seat: row.active_seat, seed: row.seed };
+    return { status: row.status, round: row.round, active_seat: row.active_seat, seed: row.seed };
   };
   check("game", gameOf(a), gameOf(b));
 

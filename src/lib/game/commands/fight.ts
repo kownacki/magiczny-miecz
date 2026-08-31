@@ -283,7 +283,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
       },
       journal: foes.map((f) => ({
         seatId: seat.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "fight-end" as const,
         payload: { cardId: f.card.id, outcome: "wygrana", bezWalki: relic },
       })),
@@ -380,7 +380,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "fight-start",
           payload: {
             cardIds: [...command.cardIds],
@@ -431,7 +431,7 @@ export function beginNamedFight(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "fight-start",
           payload: { nazwa: name, enemyTotal: miecz ?? magia },
         },
@@ -783,7 +783,7 @@ async function answerSpell(
     journal: [
       {
         seatId: caster.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "spell",
         payload: { cardId: input.answering, name: input.answerName, ...payload },
       },
@@ -1134,7 +1134,7 @@ export async function castSpell(
           journal: [
             {
               seatId: caster.id,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "spell",
               payload: {
                 cardId: held.card_id,
@@ -1255,7 +1255,7 @@ export async function castSpell(
         journal: [
           {
             seatId: caster.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "spell",
             payload: {
               cardId: held.card_id,
@@ -1316,7 +1316,7 @@ export async function castSpell(
     journal: [
       {
         seatId: caster.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "spell",
         payload: {
           cardId: held.card_id,
@@ -1434,7 +1434,7 @@ export async function settleSpell(
       journal: [
         {
           seatId: waiting.seatId,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "spell",
           payload: {
             cardId: waiting.spell,
@@ -1553,7 +1553,7 @@ export async function fightRoll(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "fight-roll",
           payload: { side: command.side, roll, ...(shift !== 0 ? { thrown, shift } : {}) },
           manual,
@@ -1601,7 +1601,7 @@ export async function shieldSaves(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "shielded",
           payload: { die, upTo, saved },
         },
@@ -1666,7 +1666,7 @@ export async function friendDiesInstead(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "died-for-you",
             payload: { cardId: row.card_id, die },
           },
@@ -1885,7 +1885,7 @@ export function attackSeat(
       journal: [
         {
           seatId: attacker.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "duel",
           payload: { target: target.seat_index, field: attacker.field_id },
         },
@@ -2026,7 +2026,7 @@ export function escape(
       journal: [
         {
           seatId: fleeing.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "spell",
           payload: {
             cardId: KRAG_PLOMIENI,
@@ -2106,7 +2106,7 @@ export function escape(
       journal: [
         {
           seatId: fleeing.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: succeeded ? "escape" : "escape-failed",
           payload: {
             onBridge,
@@ -2202,7 +2202,7 @@ export async function resolveFight(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "guardian-end",
           payload: { guardian: fight.cardName, outcome, enemyTotal: fight.enemyTotal },
         },
@@ -2402,7 +2402,7 @@ export async function resolveFight(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "fight-end",
           payload: { cardId: fight.cardId, outcome: fight.result.outcome, ...closed.said },
         },
@@ -2507,7 +2507,7 @@ function stolenLife(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset 
     journal: [
       {
         seatId: seat.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "healed",
         payload: { points, stolen: true },
       },
@@ -2544,7 +2544,7 @@ function takeSpoils(
     journal: [
       {
         seatId: winner.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "duel",
         payload: { spoils: spoils.take, what, from: loser.seat_index },
       },
@@ -2640,7 +2640,7 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
   const said: Changeset = {
     journal: won.map(({ cardId }) => ({
       seatId: seat.id,
-      turn: snapshot.game.turn,
+      round: snapshot.game.round,
       kind: "taken" as const,
       payload: { cardId, kind: "trophy" },
     })),
@@ -2771,7 +2771,7 @@ function missionDone(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset
     journal: [
       {
         seatId: seat.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "effect",
         payload: { source: "twierdza-strzegaca-drog", label: "Misja wypełniona" },
       },

@@ -110,7 +110,7 @@ export function changeNature(
    * here reads as the card having been forgotten.
    *
    * Still not a use of 7.3's one change per turn: nothing is written to the
-   * seat, so `nature_changed_turn` is untouched and the real change this
+   * seat, so `nature_changed_round` is untouched and the real change this
    * character might make later in the turn is still available. And nothing can
    * become forbidden by 7.4 when the Natura it would be forbidden by is the one
    * already in force.
@@ -124,7 +124,7 @@ export function changeNature(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "nature-change",
             payload: {
               from: seat.nature,
@@ -150,7 +150,7 @@ export function changeNature(
   if (
     !freely &&
     !command.force &&
-    seat.nature_changed_turn === snapshot.game.turn
+    seat.nature_changed_round === snapshot.game.round
   ) {
     // Said with the way out in it. The mark can only have been the game's own
     // — nothing typed writes one — so a tester meeting this is meeting a real
@@ -221,7 +221,7 @@ export function changeNature(
             : {}),
           journal: losing.map((h) => ({
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "discarded" as const,
             payload: {
               cardId: h.card_id,
@@ -244,14 +244,14 @@ export function changeNature(
               nature: command.nature,
               // 7.3's memory, and only where the character is who changed it.
               // See `byHand` above.
-              ...(byHand ? {} : { nature_changed_turn: snapshot.game.turn }),
+              ...(byHand ? {} : { nature_changed_round: snapshot.game.round }),
             },
           },
         ],
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "nature-change",
             payload: { from: seat.nature, to: command.nature, nowForbidden },
             manual: byHand,
@@ -326,7 +326,7 @@ export function placeSeat(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "moved-by-hand",
             payload: {
               from: seat.field_id,
@@ -586,9 +586,9 @@ export async function takeNewCharacter(
           life: 4,
           gold: kit.gold ?? 1,
           turns_lost: 0,
-          stone_until_turn: null,
-          bridge_blocked_until_turn: null,
-          nature_changed_turn: null,
+          stone_until_round: null,
+          bridge_blocked_until_round: null,
+          nature_changed_round: null,
         },
       },
     ],
@@ -616,7 +616,7 @@ export async function takeNewCharacter(
           journal: [
             {
               seatId: seat.id,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "starting-kit",
               // What arrived, not what the Karta promised — see `dealt`.
               // The promised list is dropped out of the spread: `...kit` would put
@@ -656,7 +656,7 @@ export async function takeNewCharacter(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           /**
            * A death and a latecomer are not the same event, and the journal
            * says which: one is a Postać starting over under 4.4, the other

@@ -71,7 +71,13 @@ create table if not exists magiczny_miecz.games (
   status text not null default 'lobby' check (status in ('lobby', 'playing', 'finished')),
   -- Whose turn it is, as a seat index. Null in the lobby.
   active_seat integer,
-  turn integer not null default 0,
+  -- The ROUND — the circuit of the table, not one seat's go. The box calls one
+  -- character's go a "tura" (10.1, and Formuła Czasu's "3 kolejnych tur zamiast
+  -- jednej") and coins no word for the circuit; the code counts one, so it uses
+  -- the standard board-game term. `passTurn` advances this only when play comes
+  -- back round to or past the first seat. A seat's own goes are counted
+  -- separately, by `tickEffects`. See CONTEXT.md, "tura".
+  round integer not null default 0,
   -- Where the active seat is in its turn: the phase and whatever that phase is
   -- carrying — the roll, the options, the cards drawn, the fight. Written as
   -- one value so a turn cannot be half-changed.
@@ -201,14 +207,14 @@ create table if not exists magiczny_miecz.seats (
   -- Turn bookkeeping for effects that suspend a character.
   turns_lost integer not null default 0,
   -- Turned to Stone lasts exactly three turns (20.1).
-  stone_until_turn integer,
+  stone_until_round integer,
   -- 11.11: failing or drawing against a bridge guardian bars another attempt
   -- next turn. A turn number rather than a counter, so skipped turns cannot
   -- make the block drift.
-  bridge_blocked_until_turn integer,
+  bridge_blocked_until_round integer,
   -- 7.3: at most one Natura change per turn, so the turn it happened on is
   -- recorded rather than a flag that would need clearing.
-  nature_changed_turn integer,
+  nature_changed_round integer,
   -- Dead (4.4). Kept on the seat and not on the character, because it is the
   -- seat that has to be skipped in turn order — and because the character is
   -- gone from here the moment it dies: `characters_out` on the games row is
@@ -348,8 +354,8 @@ create index if not exists holdings_seat_idx on magiczny_miecz.holdings(seat_id)
 -- Ends union there for why a countdown is one case among four and not the frame
 -- everything else has to be bent into.
 --
--- Deliberately not a replacement for turns_lost / stone_until_turn /
--- bridge_blocked_until_turn / nature_changed_turn. Those four are read by the
+-- Deliberately not a replacement for turns_lost / stone_until_round /
+-- bridge_blocked_until_round / nature_changed_round. Those four are read by the
 -- turn engine itself when it works out whose turn is next, and moving them
 -- would be a rewrite of turn order to gain nothing. They are projected into the
 -- same list at read time instead, so a player sees one set of effects whichever
@@ -411,7 +417,8 @@ create table if not exists magiczny_miecz.moves (
   -- rather than print one, and goes null with them without taking the name.
   user_id text references magiczny_miecz.users(id) on delete set null,
   actor_name text,
-  turn integer not null default 0,
+  -- The round the line was written in. See games.round.
+  round integer not null default 0,
   -- The closed list `JournalKind` holds, spelled out so the database knows it
   -- too. A kind the reader does not recognise is dropped rather than rendered
   -- blank — the journal is opened to settle arguments and a line with no

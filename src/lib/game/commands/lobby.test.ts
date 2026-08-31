@@ -186,7 +186,7 @@ describe("handing the role over", () => {
       journal: [
         {
           seatId: null,
-          turn: 3,
+          round: 3,
           kind: "new-host",
           payload: { name: "Gracz 2", from: "Gracz 1" },
         },
@@ -306,7 +306,7 @@ describe("out of the chair, still at the table", () => {
     expect(writes.journal).toEqual([
       {
         seatId: "seat-0",
-        turn: 3,
+        round: 3,
         kind: "left-seat",
         payload: { name: "Gracz 1", seatIndex: 0 },
       },
@@ -412,7 +412,7 @@ describe("off the table altogether", () => {
     const thrown = leaveTable(lobby({}, {}), { userId: "usr-1", kicked: true });
     expect(walked.writes.journal?.[0]).toEqual({
       seatId: null,
-      turn: 3,
+      round: 3,
       kind: "left-table",
       payload: { user: "usr-1", name: "Gracz 2", kicked: false },
     });
@@ -505,7 +505,7 @@ describe("sitting down", () => {
     expect(writes.journal).toEqual([
       {
         seatId: "seat-1",
-        turn: 3,
+        round: 3,
         kind: "took-seat",
         payload: { name: "Gracz 2", seatIndex: 1 },
       },
@@ -875,7 +875,7 @@ describe("sweeping the poczekalnia", () => {
       expect(writes.journal).toEqual([
         {
           seatId: null,
-          turn: 3,
+          round: 3,
           kind: "left-table",
           payload: { user: "usr-1", name: "Gracz 2", kicked: false, swept: true },
         },
@@ -958,7 +958,7 @@ describe("somebody arriving at the table", () => {
   it("writes a line naming them, against the seat they were given", () => {
     expect(noteArrival(table(2), { name: "Ola", seatId: "seat-1" }).writes.journal?.[0]).toEqual({
       seatId: "seat-1",
-      turn: 3,
+      round: 3,
       kind: "joined-table",
       payload: { name: "Ola" },
     });
@@ -972,7 +972,7 @@ describe("somebody arriving at the table", () => {
     const watching = noteArrival(table(2), { name: "Ola", seatId: null });
     expect(watching.writes.journal?.[0]).toEqual({
       seatId: null,
-      turn: 3,
+      round: 3,
       kind: "joined-table",
       payload: { name: "Ola", spectator: true },
     });
@@ -1011,8 +1011,8 @@ describe("opening a table", () => {
     const { writes } = openTable(table, { hostName: "Michał", hostSeatId: "seat-0" });
 
     expect(writes.journal).toEqual([
-      { seatId: null, turn: 3, kind: "table-opened", payload: { mode: "simulation" } },
-      { seatId: "seat-0", turn: 3, kind: "joined-table", payload: { name: "Michał" } },
+      { seatId: null, round: 3, kind: "table-opened", payload: { mode: "simulation" } },
+      { seatId: "seat-0", round: 3, kind: "joined-table", payload: { name: "Michał" } },
     ]);
   });
 

@@ -110,7 +110,7 @@ export function settleBridge(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "bridge-entry",
             payload: { from: entrance.from, guardian: entrance.guardian },
           },
@@ -130,7 +130,7 @@ export function settleBridge(
   // separate updates, which `apply` would fold by id and keep only the later of
   // — so a cascade reading its own work would have seen the point come back.
   const patch: SeatPatch["patch"] = {
-    bridge_blocked_until_turn: bridgeBlockUntil(snapshot.game.turn),
+    bridge_blocked_until_round: bridgeBlockUntil(snapshot.game.round),
   };
   if (outcome === "przegrana") {
     // 1.2-1.5 and 2.2-2.6: a character's own points can never fall below the
@@ -149,7 +149,7 @@ export function settleBridge(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "bridge-failed",
           payload: { from: entrance.from, guardian: entrance.guardian, outcome },
         },
@@ -185,7 +185,7 @@ export function settleCrossing(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "crossing-failed",
           payload: { from: crossing.from, obstacle: crossing.obstacle, outcome, ...extra },
         },
@@ -239,7 +239,7 @@ export function settleCrossing(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "crossing",
           payload: { from: crossing.from, to: crossing.to, obstacle: crossing.obstacle, ...extra },
         },
@@ -284,7 +284,7 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "guardian-start",
             payload: { guardian: entrance.guardian },
           },
@@ -309,7 +309,7 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "guardian-start",
           payload: { guardian: crossing.test.guardian },
         },
@@ -352,7 +352,7 @@ export async function rollGuardianStrength(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "guardian-strength",
           payload: { roll },
           manual,
@@ -431,7 +431,7 @@ export function payFerry(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "ferry",
             payload: { field: here, paid: toll },
           },
@@ -452,7 +452,7 @@ export function payFerry(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "ferry-refused",
           payload: { field: here, back },
         },
@@ -613,7 +613,7 @@ export async function resolveBridgeOrdeal(
     throw new Error("Na tym Obszarze nie ma czego rozpatrywać.");
   }
 
-  const turn = snapshot.game.turn;
+  const round = snapshot.game.round;
   // `parametr` and not `walka`: none of the six is a fight. The two creatures
   // open one, and the numbers this seeds it with are the character's standing
   // Miecz and Magia, which is what `startGuardianFight` expects.
@@ -644,7 +644,7 @@ export async function resolveBridgeOrdeal(
         writes: mergeAll(
           {
             journal: [
-              { seatId: seat.id, turn, kind: "bridge-trap", payload: { dice, result: 0 } },
+              { seatId: seat.id, round, kind: "bridge-trap", payload: { dice, result: 0 } },
             ],
           },
           closed,
@@ -679,7 +679,7 @@ export async function resolveBridgeOrdeal(
           journal: [
             {
               seatId: seat.id,
-              turn,
+              round,
               kind: "bridge-trap",
               payload: {
                 dice,
@@ -712,7 +712,7 @@ export async function resolveBridgeOrdeal(
     const played = mergeAll(
       {
         journal: [
-          { seatId: seat.id, turn, kind: "bridge-death-game", payload: { mine, deaths, outcome } },
+          { seatId: seat.id, round, kind: "bridge-death-game", payload: { mine, deaths, outcome } },
         ],
       },
       closed,
@@ -750,7 +750,7 @@ export async function resolveBridgeOrdeal(
     const [die] = await rollDice(ports.random, 1, "cerber");
     const loss = cerberLoss(die);
     const bitten = mergeAll(
-      { journal: [{ seatId: seat.id, turn, kind: "bridge-cerberus", payload: { die, loss } }] },
+      { journal: [{ seatId: seat.id, round, kind: "bridge-cerberus", payload: { die, loss } }] },
       closed,
     );
     // Same chain as the Gra ze Śmiercią above, and for the same reason: the dog
@@ -788,7 +788,7 @@ export async function resolveBridgeOrdeal(
       journal: [
         {
           seatId: seat.id,
-          turn,
+          round,
           kind: "bridge-guardian",
           payload: { guardian: creature.name, dice, strength },
         },

@@ -124,8 +124,8 @@ describe("what a seat is to everybody else", () => {
 describe("what a character is under", () => {
   it("folds the stored effects together with the columns the turn engine reads", () => {
     const table = aTable({
-      game: { turn: 5 },
-      seats: [aSeat({ id: "seat-a", turns_lost: 1, stone_until_turn: 7 })],
+      game: { round: 5 },
+      seats: [aSeat({ id: "seat-a", turns_lost: 1, stone_until_round: 7 })],
       effects: [
         {
           id: "e1",

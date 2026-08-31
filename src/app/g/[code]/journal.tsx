@@ -206,7 +206,7 @@ export function Journal({
                 heading={
                   expanded &&
                   !line.marker &&
-                  (at === 0 || line.turn !== lines[at - 1].turn) &&
+                  (at === 0 || line.round !== lines[at - 1].round) &&
                   // A boundary line already says which round this is, in both
                   // views. Deriving one above it would say it twice.
                   !lines[at - 1]?.marker
@@ -249,7 +249,7 @@ function Line({
     <>
       {heading && (
         <li className="mt-3 text-[11px] uppercase tracking-wide text-muted/70 first:mt-0">
-          Tura {line.turn}
+          Runda {line.round}
         </li>
       )}
       <li className="flex items-baseline gap-2 text-xs leading-snug">

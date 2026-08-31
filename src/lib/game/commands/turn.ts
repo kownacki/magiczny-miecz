@@ -96,6 +96,11 @@ export function keepOnly(
  * Counted in the holder's OWN turns, so this is the moment: "na 1 turę" on a
  * card means one of yours, and measuring it in rounds would make an Eliksir
  * last longer at a table of six than at a table of two.
+ *
+ * This is the *other* counter, and the distinction is the one CONTEXT.md's
+ * "tura" entry exists for. `games.round` counts rounds and advances for
+ * everybody at once; this ticks only for the seat whose go just ended, which
+ * is why a skipped seat's buff does not burn away while it cannot act.
  */
 export function tickEffects(snapshot: Snapshot, seatId: string): Changeset {
   return keepOnly(snapshot, seatId, afterTurn(statusesOf(snapshot, seatId)));
@@ -117,7 +122,8 @@ export function leaveCardsBehind(
     fieldId: string;
     remaining: readonly TurnCard[];
     seatId: string | null;
-    turn: number;
+    /** The round to file the lines under — see CONTEXT.md, "tura". */
+    round: number;
   },
 ): Changeset {
   const spentByReading = (card: TurnCard) =>
@@ -167,7 +173,7 @@ export function leaveCardsBehind(
     journal: [
       {
         seatId: input.seatId,
-        turn: input.turn,
+        round: input.round,
         kind: "left-behind",
         payload: { fieldId: input.fieldId, cardIds: stays.map((card) => card.cardId) },
       },
@@ -214,7 +220,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
           fieldId: state.fieldId,
           remaining: state.drawn,
           seatId: seat?.id ?? null,
-          turn: game.turn,
+          round: game.round,
         })
       : {};
 
@@ -224,7 +230,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
       index: s.seat_index,
       eliminated: s.eliminated,
       turnsLost: s.turns_lost,
-      stoneUntilTurn: s.stone_until_turn,
+      stoneUntilRound: s.stone_until_round,
     }));
 
   /**
@@ -247,7 +253,8 @@ export function passTurn(snapshot: Snapshot): Changeset {
 
   let next: number | null = null;
   let skipped: number[] = [];
-  let asOfTurn = game.turn;
+  // The round we are in, which is what `nextSeat` compares Stone against.
+  let asOfRound = game.round;
 
   // The guard is a backstop, not the exit: each pass spends a turn from
   // everybody it skips, so the loop is bounded by the largest `turns_lost` at
@@ -256,7 +263,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
     const attempt = nextSeat(
       order.map((row) => ({ ...row, turnsLost: owedBy(row.index) })),
       pass === 0 ? game.active_seat : next,
-      asOfTurn,
+      asOfRound,
     );
     next = attempt.seat;
     skipped = attempt.skipped;
@@ -276,7 +283,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
     // eliminated. 20.1 measures stone in turn numbers, so it comes back on its
     // own as the counter moves, and passing again would achieve nothing.
     if (!anySpent) break;
-    asOfTurn += 1;
+    asOfRound += 1;
   }
 
   const spentTurns: Changeset = {
@@ -290,14 +297,16 @@ export function passTurn(snapshot: Snapshot): Changeset {
       .filter((one): one is NonNullable<typeof one> => one !== null),
   };
 
-  // The turn counter advances when play comes back round to or past the first
-  // seat, which is what the three-turn Stone timer in 20.1 counts.
+  // `games.round` is the circuit of the table: it advances when play comes
+  // back round to or past the first seat, which is what 20.1's three-turn
+  // Stone timer counts. A seat's own goes are counted elsewhere and
+  // separately — `tickEffects` below is the other one.
   const wrapped = !again && next !== null && next <= (game.active_seat ?? 0);
 
   return mergeAll(expired, left, spentTurns, {
     game: {
       active_seat: again ? game.active_seat : next,
-      turn: wrapped ? game.turn + 1 : game.turn,
+      round: wrapped ? game.round + 1 : game.round,
       turn_state: only(startTurn()),
     },
     // `wrapped` and the number it wrapped to, because the round counter is not
@@ -308,13 +317,13 @@ export function passTurn(snapshot: Snapshot): Changeset {
     journal: [
       {
         seatId: seat?.id ?? null,
-        turn: game.turn,
+        round: game.round,
         kind: "turn-end",
         payload: {
           next: again ? game.active_seat : next,
           skipped,
           wrapped,
-          turnAfter: wrapped ? game.turn + 1 : game.turn,
+          turnAfter: wrapped ? game.round + 1 : game.round,
           // Said, because a turn that does not move is the sort of thing a
           // table argues about two turns later.
           ...(again ? { again: true } : {}),
@@ -344,7 +353,7 @@ export function addEffect(
     journal: [
       {
         seatId: command.seatId,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "effect",
         payload: { source, label, ends },
       },

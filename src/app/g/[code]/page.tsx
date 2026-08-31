@@ -467,7 +467,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
 
 
 
-  const turnKey = game ? `${game.turn}:${game.active_seat}` : null;
+  const turnKey = game ? `${game.round}:${game.active_seat}` : null;
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWaved([]);
@@ -1599,7 +1599,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   screen-width away from the roster that answers the next
                   question you have after reading it. */}
               <span className="text-muted">
-                Tura <span className="tnum text-ink/70">{game.turn}</span> ·{" "}
+                Runda <span className="tnum text-ink/70">{game.round}</span> ·{" "}
                 {active ? (active.player_name ?? "—") : "—"}
               </span>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
@@ -1821,11 +1821,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   playerName: seat.player_name,
                   characterId: seat.character_id,
                   turnsLost: seat.turns_lost,
-                  stoneUntilTurn: seat.stone_until_turn,
+                  stoneUntilRound: seat.stone_until_round,
                   eliminated: seat.eliminated,
                 }))}
                 activeSeat={game.active_seat}
-                turn={game.turn}
+                round={game.round}
                 mySeatIndex={mySeatIndex}
                 /**
                  * The roster, opened on that seat — the same place the name in

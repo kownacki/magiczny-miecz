@@ -3,7 +3,7 @@ import { projectQueue, turnsUntil, type QueueEntry } from "./turnQueue";
 import { nextSeat, type TurnOrderSeat } from "./turn";
 
 function seat(index: number, over: Partial<TurnOrderSeat> = {}): TurnOrderSeat {
-  return { index, eliminated: false, turnsLost: 0, stoneUntilTurn: null, ...over };
+  return { index, eliminated: false, turnsLost: 0, stoneUntilRound: null, ...over };
 }
 
 /** Just the seats that actually get to act, in order. */
@@ -28,7 +28,7 @@ describe("projectQueue", () => {
 
   it("advances the turn counter only when play comes back round", () => {
     const queue = projectQueue([seat(0), seat(1), seat(2)], 0, 7, 3);
-    expect(queue.map((entry) => entry.turn)).toEqual([7, 7, 7, 8]);
+    expect(queue.map((entry) => entry.round)).toEqual([7, 7, 7, 8]);
   });
 
   it("spends one lost turn per trip round the table", () => {
@@ -46,11 +46,11 @@ describe("projectQueue", () => {
     // alongside the one it is playing right now.
     const queue = projectQueue([seat(0, { turnsLost: 1 }), seat(1)], 0, 1, 3);
     expect(queue).toEqual([
-      { seatIndex: 0, turn: 1, status: "active" },
-      { seatIndex: 1, turn: 1, status: "upcoming" },
-      { seatIndex: 0, turn: 2, status: "skipped", reason: "lost", remaining: 1 },
-      { seatIndex: 1, turn: 2, status: "upcoming" },
-      { seatIndex: 0, turn: 3, status: "upcoming" },
+      { seatIndex: 0, round: 1, status: "active" },
+      { seatIndex: 1, round: 1, status: "upcoming" },
+      { seatIndex: 0, round: 2, status: "skipped", reason: "lost", remaining: 1 },
+      { seatIndex: 1, round: 2, status: "upcoming" },
+      { seatIndex: 0, round: 3, status: "upcoming" },
     ]);
   });
 
@@ -61,7 +61,7 @@ describe("projectQueue", () => {
     const skip = queue.find((entry) => entry.status === "skipped");
     expect(skip).toEqual({
       seatIndex: 1,
-      turn: 4,
+      round: 4,
       status: "skipped",
       reason: "lost",
       remaining: 1,
@@ -69,12 +69,12 @@ describe("projectQueue", () => {
   });
 
   it("reports the reason and how long is left", () => {
-    const queue = projectQueue([seat(0), seat(1, { stoneUntilTurn: 4 })], 0, 1, 4);
+    const queue = projectQueue([seat(0), seat(1, { stoneUntilRound: 4 })], 0, 1, 4);
     const frozen = skips(queue);
     expect(frozen[0].reason).toBe("stone");
     // Counts down as the clock runs, so the bar can say how much longer.
     expect(frozen.map((entry) => entry.remaining)).toEqual([3, 2, 1]);
-    // Seat 1 sits out turns 1-3 and rejoins on 4, when stoneUntilTurn stops
+    // Seat 1 sits out turns 1-3 and rejoins on 4, when stoneUntilRound stops
     // being greater than the counter (20.1). Seat 0 takes every turn until then,
     // which is why four turns of lookahead are needed to see the thaw at all.
     expect(acting(queue)).toEqual([0, 0, 0, 0, 1]);
@@ -82,7 +82,7 @@ describe("projectQueue", () => {
 
   it("calls a seat that is both frozen and owed a turn frozen", () => {
     // nextSeat tests stone first, so the label has to agree with it.
-    const queue = projectQueue([seat(0), seat(1, { stoneUntilTurn: 9, turnsLost: 1 })], 0, 1, 2);
+    const queue = projectQueue([seat(0), seat(1, { stoneUntilRound: 9, turnsLost: 1 })], 0, 1, 2);
     expect(skips(queue)[0].reason).toBe("stone");
   });
 
@@ -95,7 +95,7 @@ describe("projectQueue", () => {
   it("stops when nobody can act", () => {
     // Everyone frozen: finishTurn parks active_seat at null, so the forecast
     // must not invent turns past that point.
-    const seats = [seat(0, { stoneUntilTurn: 99 }), seat(1, { stoneUntilTurn: 99 })];
+    const seats = [seat(0, { stoneUntilRound: 99 }), seat(1, { stoneUntilRound: 99 })];
     const queue = projectQueue(seats, 0, 1, 5);
     expect(queue.filter((entry) => entry.status === "upcoming")).toHaveLength(0);
     expect(skips(queue).length).toBeGreaterThan(0);
@@ -116,43 +116,43 @@ describe("projectQueue", () => {
 describe("projectQueue agrees with nextSeat", () => {
   // The forecast must never contradict what finishTurn will actually do; a bar
   // that is confidently wrong is worse than no bar.
-  const cases: Array<{ name: string; seats: TurnOrderSeat[]; from: number; turn: number }> = [
-    { name: "clean table", seats: [seat(0), seat(1), seat(2)], from: 0, turn: 1 },
+  const cases: Array<{ name: string; seats: TurnOrderSeat[]; from: number; round: number }> = [
+    { name: "clean table", seats: [seat(0), seat(1), seat(2)], from: 0, round: 1 },
     {
       name: "one sitting out",
       seats: [seat(0), seat(1, { turnsLost: 1 }), seat(2)],
       from: 0,
-      turn: 1,
+      round: 1,
     },
     {
       name: "one frozen",
-      seats: [seat(0), seat(1, { stoneUntilTurn: 5 }), seat(2)],
+      seats: [seat(0), seat(1, { stoneUntilRound: 5 }), seat(2)],
       from: 2,
-      turn: 3,
+      round: 3,
     },
     {
       name: "everyone owed a turn",
       seats: [seat(0), seat(1, { turnsLost: 1 }), seat(2, { turnsLost: 1 })],
       from: 0,
-      turn: 4,
+      round: 4,
     },
   ];
 
-  for (const { name, seats, from, turn } of cases) {
+  for (const { name, seats, from, round } of cases) {
     it(`first forecast turn matches nextSeat — ${name}`, () => {
-      const queue = projectQueue(seats, from, turn, 1);
+      const queue = projectQueue(seats, from, round, 1);
       const first = queue.find((entry) => entry.status === "upcoming");
-      expect(first?.seatIndex).toBe(nextSeat(seats, from, turn).seat);
+      expect(first?.seatIndex).toBe(nextSeat(seats, from, round).seat);
     });
 
     it(`reports the same skips as nextSeat — ${name}`, () => {
-      const queue = projectQueue(seats, from, turn, 1);
+      const queue = projectQueue(seats, from, round, 1);
       const upTo = queue.findIndex((entry) => entry.status === "upcoming");
       const forecast = queue
         .slice(0, upTo === -1 ? undefined : upTo)
         .filter((entry) => entry.status === "skipped")
         .map((entry) => entry.seatIndex);
-      expect(forecast).toEqual(nextSeat(seats, from, turn).skipped);
+      expect(forecast).toEqual(nextSeat(seats, from, round).skipped);
     });
   }
 

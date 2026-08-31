@@ -21,21 +21,21 @@ export interface QueueSeat {
   playerName: string | null;
   characterId: string | null;
   turnsLost: number;
-  stoneUntilTurn: number | null;
+  stoneUntilRound: number | null;
   eliminated: boolean;
 }
 
 export function TurnQueue({
   seats,
   activeSeat,
-  turn,
+  round,
   mySeatIndex,
   onPick,
   depth = DEFAULT_DEPTH,
 }: {
   seats: readonly QueueSeat[];
   activeSeat: number | null;
-  turn: number;
+  round: number;
   mySeatIndex: number | null;
   /** Open the roster on that seat. Absent where there is nobody to open. */
   onPick?: (seatIndex: number) => void;
@@ -49,10 +49,10 @@ export function TurnQueue({
       index: seat.seatIndex,
       eliminated: seat.eliminated,
       turnsLost: seat.turnsLost,
-      stoneUntilTurn: seat.stoneUntilTurn,
+      stoneUntilRound: seat.stoneUntilRound,
     })),
     activeSeat,
-    turn,
+    round,
     depth,
   );
   if (queue.length === 0) return null;
@@ -68,12 +68,12 @@ export function TurnQueue({
     >
       {queue.map((entry, at) => (
         <QueueChip
-          key={`${entry.turn}-${entry.seatIndex}-${entry.status}-${at}`}
+          key={`${entry.round}-${entry.seatIndex}-${entry.status}-${at}`}
           entry={entry}
           seat={bySeat.get(entry.seatIndex)}
           // A new round starts here, so the bar says so rather than leaving the
           // player to count seats.
-          startsTurn={at > 0 && entry.turn !== queue[at - 1].turn}
+          startsTurn={at > 0 && entry.round !== queue[at - 1].round}
           mine={entry.seatIndex === mySeatIndex}
           onPick={onPick}
         />
@@ -113,7 +113,7 @@ function QueueChip({
     <>
       {startsTurn && (
         <span className="flex shrink-0 items-center px-1 text-[11px] tracking-wide text-muted/70">
-          Tura {entry.turn}
+          Runda {entry.round}
         </span>
       )}
       {/* A button, and what it opens is the *player*.

@@ -44,12 +44,12 @@ export interface SeatRow {
   trophy_beaten: string[];
   nature: string | null;
   turns_lost: number;
-  stone_until_turn: number | null;
+  stone_until_round: number | null;
   /** 11.11: the turn a failed bridge attempt stops barring another. */
-  bridge_blocked_until_turn: number | null;
+  bridge_blocked_until_round: number | null;
   created_at: string;
   /** 7.3: the turn this seat last changed its Natura on. */
-  nature_changed_turn: number | null;
+  nature_changed_round: number | null;
   eliminated: boolean;
 }
 
@@ -92,7 +92,14 @@ export interface GameRow {
   die_source: string;
   status: string;
   active_seat: number | null;
-  turn: number;
+  /**
+   * The **round** — the circuit of the table, not one seat's go.
+   *
+   * `passTurn` advances it only when play comes back round to or past the
+   * first seat, and 20.1's three Stone turns are counted against it. A seat's
+   * own goes are counted separately, by `tickEffects`. See CONTEXT.md, "tura".
+   */
+  round: number;
   revision: number;
   /**
    * The last line number this game's journal has handed out.
@@ -131,11 +138,11 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 export const GAME_COLUMNS =
-  "id,join_code,mode,eq_mode,endless_stock,trophy_mode,die_source,status,active_seat,turn,revision,journal_seq,turn_state,deck,characters_out,seed";
+  "id,join_code,mode,eq_mode,endless_stock,trophy_mode,die_source,status,active_seat,round,revision,journal_seq,turn_state,deck,characters_out,seed";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
-  "id,seat_index,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,trophy_points,trophy_beaten,nature,turns_lost,stone_until_turn,bridge_blocked_until_turn,nature_changed_turn,eliminated,created_at";
+  "id,seat_index,character_id,field_id,sword_own,magic_own,sword_floor,magic_floor,life,gold,trophy_points,trophy_beaten,nature,turns_lost,stone_until_round,bridge_blocked_until_round,nature_changed_round,eliminated,created_at";
 
 /** The same for a user. `claim_token` is never among them. */
 export const USER_COLUMNS =
@@ -250,7 +257,7 @@ export async function createGame(
 export async function recentGames(limit: number): Promise<Record<string, unknown>[]> {
   const { data, error } = await db
     .from("games")
-    .select("id,join_code,status,mode,turn,last_played_at,created_at")
+    .select("id,join_code,status,mode,round,last_played_at,created_at")
     .order("last_played_at", { ascending: false })
     .limit(limit);
   if (error) throw new Failure(`recentGames: ${error.message}`);
@@ -343,7 +350,7 @@ export async function journalRows(
 ): Promise<Record<string, unknown>[]> {
   let query = on
     .from("moves")
-    .select("seq,seat_id,actor_name,turn,kind,payload,manual")
+    .select("seq,seat_id,actor_name,round,kind,payload,manual")
     .eq("game_id", gameId)
     .order("seq", { ascending: false })
     .limit(options.limit);

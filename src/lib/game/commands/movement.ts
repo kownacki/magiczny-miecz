@@ -121,7 +121,7 @@ export function startGame(
   const opened: Changeset = {
     game: {
       status: "playing",
-      turn: 1,
+      round: 1,
       active_seat: chosen[0].seat_index,
       turn_state: only(startTurn()),
       // Only a simulation needs a deck. In companion mode the deck is the
@@ -162,7 +162,7 @@ export function startGame(
 
   const started: Changeset = {
     journal: [
-      { seatId: null, turn: FIRST_TURN, kind: "start", payload: { seats: chosen.length } },
+      { seatId: null, round: FIRST_TURN, kind: "start", payload: { seats: chosen.length } },
       /**
        * Who is playing what, said once, here.
        *
@@ -180,7 +180,7 @@ export function startGame(
         .sort((a, b) => a.seat_index - b.seat_index)
         .map((seat) => ({
           seatId: seat.id,
-          turn: FIRST_TURN,
+          round: FIRST_TURN,
           kind: "joined" as const,
           // `opening` is what makes the sentence "siada" rather than "dosiada
           // się": nobody is joining a game in progress here, they are the
@@ -283,7 +283,7 @@ function startingGear(
     journal: [
       {
         seatId: seat.id,
-        turn: FIRST_TURN,
+        round: FIRST_TURN,
         kind: "starting-kit",
         // The promised list is dropped out of the spread: `...kit` would put
           // back the Miecz that never came, which is the one thing this
@@ -378,7 +378,7 @@ export async function rollForMove(
   // on the Magiczny Miecz in the ability registry — rather than the id being
   // named a second time here.
   const hasSword = opensTheWayTo(heldAbilities(mine.map((h) => h.card_id)), "most");
-  const blocked = bridgeBlocked(seat.bridge_blocked_until_turn, snapshot.game.turn);
+  const blocked = bridgeBlocked(seat.bridge_blocked_until_round, snapshot.game.round);
 
   // Mgła caps the walk (`move-max`). Read here rather than in `afterRoll`,
   // which is given facts about the seat already decided — the same shape as
@@ -415,7 +415,7 @@ export async function rollForMove(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "roll",
           // The cap goes in the payload even though `roll` lines are UNSPOKEN,
           // because the row is the record of what the app decided and "why was
@@ -489,7 +489,7 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: chosen.bridge ? "bridge-attempt" : "move",
           payload: {
             from: seat.field_id,

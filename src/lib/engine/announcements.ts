@@ -28,14 +28,14 @@ export interface Announcement {
 /** The half of a seat these depend on. */
 export interface Watched {
   turnsLost: number;
-  stoneUntilTurn: number | null;
+  stoneUntilRound: number | null;
   eliminated: boolean;
 }
 
 export function watch(seat: Watched): Watched {
   return {
     turnsLost: seat.turnsLost,
-    stoneUntilTurn: seat.stoneUntilTurn,
+    stoneUntilRound: seat.stoneUntilRound,
     eliminated: seat.eliminated,
   };
 }
@@ -71,7 +71,7 @@ export function announce(before: Watched | null, now: Watched): Announcement | n
 
   // 20.1: three turns, and 20.5 makes them untouchable meanwhile — worth
   // saying, because from the outside it looks exactly like being skipped.
-  if (now.stoneUntilTurn !== null && now.stoneUntilTurn !== before.stoneUntilTurn) {
+  if (now.stoneUntilRound !== null && now.stoneUntilRound !== before.stoneUntilRound) {
     return {
       kind: "stone",
       title: "Zamieniony w Kamień",

@@ -33,7 +33,7 @@ function seed(): Tables {
         die_source: "app",
         status: "playing",
         active_seat: 0,
-        turn: 3,
+        round: 3,
         revision: 7,
         journal_seq: 12,
         last_played_at: "2026-01-01T00:00:00Z",
@@ -116,15 +116,15 @@ describe("a game kept somewhere that is not Postgres", () => {
 
     await expect(
       store.commit(snapshot, {
-        game: { turn: 99 },
+        game: { round: 99 },
         seats: [{ id: "s1", patch: { life: 1 } }],
-        journal: [{ seatId: "s1", turn: 3, kind: "roll", payload: {} }],
+        journal: [{ seatId: "s1", round: 3, kind: "roll", payload: {} }],
       }),
     ).rejects.toBeInstanceOf(Conflict);
 
     // Not "the games row was left alone" — *nothing* was written. A commit that
     // gave up halfway would leave a seat on 1 Życie and no line saying why.
-    expect(tables.games[0]).toMatchObject({ turn: 3, revision: 8 });
+    expect(tables.games[0]).toMatchObject({ round: 3, revision: 8 });
     expect(tables.seats[0]).toMatchObject({ life: 4 });
     expect(tables.moves).toHaveLength(1);
   });
@@ -151,6 +151,6 @@ describe("a game kept somewhere that is not Postgres", () => {
     // And `apply` still describes what a commit would do, so a command can read
     // its own writes without either half knowing where the game is kept.
     const snapshot = await store.load("g1");
-    expect(apply(snapshot, { game: { turn: 4 } }).game.turn).toBe(4);
+    expect(apply(snapshot, { game: { round: 4 } }).game.round).toBe(4);
   });
 });

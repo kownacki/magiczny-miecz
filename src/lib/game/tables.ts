@@ -115,7 +115,7 @@ interface MoveWrite {
   seat_id: string | null;
   user_id: string | null;
   actor_name: string | null;
-  turn: number;
+  round: number;
   kind: string;
   payload: Record<string, unknown>;
   manual: boolean;

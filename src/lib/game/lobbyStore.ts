@@ -48,7 +48,7 @@ export interface GameSummary {
   joinCode: string;
   status: string;
   mode: string;
-  turn: number;
+  round: number;
   lastPlayedAt: string;
   createdAt: string;
   players: { name: string | null; characterId: string | null; abandoned: boolean }[];
@@ -128,7 +128,7 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
     joinCode: game.join_code as string,
     status: game.status as string,
     mode: game.mode as string,
-    turn: game.turn as number,
+    round: game.round as number,
     lastPlayedAt: game.last_played_at as string,
     createdAt: game.created_at as string,
     /**

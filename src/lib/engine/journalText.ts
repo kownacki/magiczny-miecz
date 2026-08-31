@@ -17,7 +17,8 @@ import type { JournalKind } from "./journal";
 export interface JournalEntry {
   seq: number;
   seatId: string | null;
-  turn: number;
+  /** The round it happened in — see CONTEXT.md, "tura". */
+  round: number;
   kind: JournalKind;
   payload: Record<string, unknown>;
   manual: boolean;
@@ -58,7 +59,8 @@ export interface JournalRef {
 
 export interface JournalLine {
   seq: number;
-  turn: number;
+  /** The round it happened in — see CONTEXT.md, "tura". */
+  round: number;
   text: string;
   /** A human correction rather than something the rules did (LOBBY.md). */
   manual: boolean;
@@ -78,7 +80,7 @@ export interface JournalLine {
    * A round boundary rather than something somebody did.
    *
    * Drawn as a heading, and it *is* the heading: the expanded view used to
-   * derive one whenever `turn` changed, which would now print "Tura 4"
+   * derive one whenever the round changed, which would now print "Tura 4"
    * immediately above a line saying the same thing. The derived heading stays
    * for games that were already running when this was added, and for the very
    * first line, which has no boundary before it.
@@ -306,7 +308,7 @@ export function describe(
 
   const line = (text: string): JournalLine => ({
     seq: entry.seq,
-    turn: entry.turn,
+    round: entry.round,
     text,
     manual: entry.manual,
     seatIndex: seat?.seatIndex ?? null,
@@ -888,7 +890,7 @@ export function describeTurnChange(
     const it = named(missed);
     lines.push({
       seq: at_(),
-      turn: entry.turn,
+      round: entry.round,
       text: `${it.text} traci turę.`,
       manual: false,
       seatIndex: missed?.seatIndex ?? null,
@@ -902,7 +904,7 @@ export function describeTurnChange(
   const next = seats.find((candidate) => candidate.seatIndex === data.next);
   lines.push({
     seq: at_(),
-    turn: entry.turn,
+    round: entry.round,
     text: `${named(seat).text} kończy turę.`,
     manual: false,
     seatIndex: seat?.seatIndex ?? null,
@@ -921,8 +923,8 @@ export function describeTurnChange(
   if (wrapped) {
     lines.push({
       seq: at_(),
-      turn: num(data.turnAfter),
-      text: `Tura ${num(data.turnAfter)}`,
+      round: num(data.turnAfter),
+      text: `Runda ${num(data.turnAfter)}`,
       manual: false,
       seatIndex: null,
       marker: true,
@@ -934,7 +936,7 @@ export function describeTurnChange(
       // Filed under the round it belongs to, so the expanded view groups it
       // beneath the heading above rather than the one before it.
       seq: at_(),
-      turn: wrapped ? num(data.turnAfter) : entry.turn,
+      round: wrapped ? num(data.turnAfter) : entry.round,
       text: `${named(next).text} zaczyna turę.`,
       manual: false,
       seatIndex: next.seatIndex,

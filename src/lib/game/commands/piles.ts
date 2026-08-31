@@ -189,7 +189,7 @@ function wroteStack(
     writes: {
       game: { deck: { ...decks, [pile]: after } },
       journal: [
-        { seatId, turn: snapshot.game.turn, kind: "test-stack", payload: { cardId }, manual: true },
+        { seatId, round: snapshot.game.round, kind: "test-stack", payload: { cardId }, manual: true },
       ],
     },
     result: pile,

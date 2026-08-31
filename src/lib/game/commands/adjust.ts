@@ -123,7 +123,7 @@ export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adj
     journal: [
       {
         seatId: seat.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: record.kind,
         // `from` and `to` alongside `delta`, so a reader can see that what was
         // asked for and what happened are not the same number. The journal is

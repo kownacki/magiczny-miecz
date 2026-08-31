@@ -34,7 +34,7 @@ export interface Seat {
 
   turnsLost: number;
   /** Set while Zamieniony w Kamień; clears after three turns (20.1). */
-  stoneUntilTurn: number | null;
+  stoneUntilRound: number | null;
   eliminated: boolean;
 
   holdings: Holding[];

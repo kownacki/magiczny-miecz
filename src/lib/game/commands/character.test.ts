@@ -23,12 +23,12 @@ const CHARACTERS = charactersData as Character[];
 
 describe("zmiana Natury (7.2-7.4)", () => {
   const table = (over: Parameters<typeof aSeat>[0] = {}, holdings = [] as ReturnType<typeof aHolding>[]) =>
-    aTable({ game: { turn: 5 }, seats: [aSeat({ nature: "good", ...over })], holdings });
+    aTable({ game: { round: 5 }, seats: [aSeat({ nature: "good", ...over })], holdings });
 
   it("writes the new Natura and the turn it happened on", () => {
     const { writes } = changeNature(table(), { seatId: "seat-a", nature: "evil" });
     expect(writes.seats).toEqual([
-      { id: "seat-a", patch: { nature: "evil", nature_changed_turn: 5 } },
+      { id: "seat-a", patch: { nature: "evil", nature_changed_round: 5 } },
     ]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "nature-change",
@@ -42,25 +42,25 @@ describe("zmiana Natury (7.2-7.4)", () => {
    */
   it("refuses a second change in the same turn", () => {
     expect(() =>
-      changeNature(table({ nature_changed_turn: 5 }), { seatId: "seat-a", nature: "evil" }),
+      changeNature(table({ nature_changed_round: 5 }), { seatId: "seat-a", nature: "evil" }),
     ).toThrow(/najwyżej raz na turę/);
   });
 
   it("allows it again once the turn has moved on", () => {
-    const { writes } = changeNature(table({ nature_changed_turn: 4 }), {
+    const { writes } = changeNature(table({ nature_changed_round: 4 }), {
       seatId: "seat-a",
       nature: "evil",
     });
-    expect(writes.seats?.[0].patch).toMatchObject({ nature_changed_turn: 5 });
+    expect(writes.seats?.[0].patch).toMatchObject({ nature_changed_round: 5 });
   });
 
   /**
    * The test console's, and the reason it is a flag rather than a caller
-   * quietly clearing `nature_changed_turn` first — which is the same act with
+   * quietly clearing `nature_changed_round` first — which is the same act with
    * the rule out of sight.
    */
   it("lets the console past 7.3, and says in the journal that somebody typed it", () => {
-    const { writes } = changeNature(table({ nature_changed_turn: 5 }), {
+    const { writes } = changeNature(table({ nature_changed_round: 5 }), {
       seatId: "seat-a",
       nature: "evil",
       force: true,
@@ -91,7 +91,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
    */
   it("still refuses a typed change over a 7.3 the game wrote", () => {
     expect(() =>
-      changeNature(table({ nature_changed_turn: 5 }), {
+      changeNature(table({ nature_changed_round: 5 }), {
         seatId: "seat-a",
         nature: "evil",
         byHand: true,
@@ -123,12 +123,12 @@ describe("zmiana Natury (7.2-7.4)", () => {
 
   it("still records the turn when the game did it", () => {
     const { writes } = changeNature(table(), { seatId: "seat-a", nature: "evil" });
-    expect(writes.seats?.[0].patch).toMatchObject({ nature_changed_turn: 5 });
+    expect(writes.seats?.[0].patch).toMatchObject({ nature_changed_round: 5 });
   });
 
   /** Magog's own card lets it change freely, and 8.2 puts that above 7.3. */
   it("lets Magog change as often as it likes", () => {
-    const magog = table({ character_id: asSeatCharacter("magog"), nature_changed_turn: 5 });
+    const magog = table({ character_id: asSeatCharacter("magog"), nature_changed_round: 5 });
     expect(changeNature(magog, { seatId: "seat-a", nature: "evil" }).result).toEqual({
       nowForbidden: [],
     });
@@ -165,7 +165,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
   it("leaves it in the pack where the variant has places to put things", () => {
     const held = [aHolding({ id: "h-wlocznia", card_id: "swieta-wlocznia", kind: "item" })];
     const slotted = aTable({
-      game: { turn: 5, eq_mode: "slots" },
+      game: { round: 5, eq_mode: "slots" },
       seats: [aSeat({ nature: "good" })],
       holdings: held,
     });
@@ -208,7 +208,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
   });
 
   it("does not spend 7.3's one change on a Natura that did not move", () => {
-    // Nothing written to the seat, so `nature_changed_turn` stays where it was
+    // Nothing written to the seat, so `nature_changed_round` stays where it was
     // and the real change this character might still make is available.
     const { writes } = changeNature(table({ nature: "evil" }), {
       seatId: "seat-a",
@@ -217,7 +217,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
     expect(writes.seats).toBeUndefined();
     // And 7.3 does not refuse it either, however many times it is asked.
     expect(() =>
-      changeNature(table({ nature: "evil", nature_changed_turn: 5 }), {
+      changeNature(table({ nature: "evil", nature_changed_round: 5 }), {
         seatId: "seat-a",
         nature: "evil",
       }),
@@ -339,7 +339,7 @@ const dead = (over: Parameters<typeof aSeat>[0] = {}) =>
 
 describe("nowa Postać po śmierci (4.4)", () => {
   it("seats the new character on its own MGR with its printed points", async () => {
-    const table = aTable({ game: { turn: 9 }, seats: [dead()] });
+    const table = aTable({ game: { round: 9 }, seats: [dead()] });
     const { writes } = await takeNewCharacter(
       table,
       { seatId: "seat-a", characterId: "zdobywca", bySeat: "seat-a" },
@@ -357,13 +357,13 @@ describe("nowa Postać po śmierci (4.4)", () => {
       life: 4,
       gold: 1,
       turns_lost: 0,
-      stone_until_turn: null,
-      bridge_blocked_until_turn: null,
-      nature_changed_turn: null,
+      stone_until_round: null,
+      bridge_blocked_until_round: null,
+      nature_changed_round: null,
     });
     expect(writes.journal?.at(-1)).toMatchObject({
       seatId: "seat-a",
-      turn: 9,
+      round: 9,
       kind: "new-character",
       payload: { characterId: "zdobywca" },
     });
@@ -517,7 +517,7 @@ describe("nowa Postać po śmierci (4.4)", () => {
 describe("dosiadka: a latecomer to a table already running", () => {
   it("is the same deal, filed under its own name", async () => {
     const table = aTable({
-      game: { turn: 4 },
+      game: { round: 4 },
       seats: [aSeat({ character_id: null, field_id: null, eliminated: false })],
     });
     const { writes } = await takeNewCharacter(
@@ -526,7 +526,7 @@ describe("dosiadka: a latecomer to a table already running", () => {
       ports(),
     );
     expect(writes.journal?.at(-1)).toMatchObject({
-      turn: 4,
+      round: 4,
       kind: "joined",
       payload: { characterId: "zdobywca" },
     });
@@ -546,7 +546,7 @@ describe("dosiadka: a latecomer to a table already running", () => {
    */
   it("is still a latecomer when its seat came in out of play", async () => {
     const table = aTable({
-      game: { turn: 4 },
+      game: { round: 4 },
       seats: [aSeat({ character_id: null, field_id: null, eliminated: true })],
     });
     const { writes } = await takeNewCharacter(
@@ -629,7 +629,7 @@ describe("losowa Postać", () => {
 const waiting = (
   seats = [aSeat({ character_id: null, field_id: null })],
   users?: ReturnType<typeof aUser>[],
-) => aTable({ game: { status: "lobby", turn: 0 }, seats, users });
+) => aTable({ game: { status: "lobby", round: 0 }, seats, users });
 
 /** A seat in the poczekalnia, numbered so several can sit at one table. */
 const empty = (index: number, over: Parameters<typeof aSeat>[0] = {}) =>
@@ -1025,7 +1025,7 @@ describe("rozstrzygnięcie losowań na starcie", () => {
    */
   it("fills the seats holding the surprise and nobody else", async () => {
     const table = aTable({
-      game: { status: "lobby", turn: 0 },
+      game: { status: "lobby", round: 0 },
       seats: [
         empty(0, { character_id: asSeatCharacter("losowa") }),
         empty(1),
@@ -1044,7 +1044,7 @@ describe("rozstrzygnięcie losowań na starcie", () => {
 
   it("gives two seats that both asked for a surprise two different Postacie", async () => {
     const table = aTable({
-      game: { status: "lobby", turn: 0 },
+      game: { status: "lobby", round: 0 },
       seats: [
         empty(0, { character_id: asSeatCharacter("losowa") }),
         empty(1, { character_id: asSeatCharacter("losowa") }),

@@ -185,7 +185,7 @@ async function whereWeAre(all: boolean): Promise<string> {
   const active = snapshot.seats.find((one) => one.seat_index === snapshot.game.active_seat);
   const driver = snapshot.users.find((one) => one.seat_index === active?.seat_index);
   const whose = active ? (driver?.name ?? `seat ${active.seat_index + 1}`) : "nobody";
-  return `Turn ${snapshot.game.turn} — ${whose}, ${stage}${testing}.`;
+  return `Turn ${snapshot.game.round} — ${whose}, ${stage}${testing}.`;
 }
 
 /** Whether the console knows this word at all, table or no table. */
@@ -352,7 +352,7 @@ async function recent(count: number): Promise<void> {
         seq: row.seq as number,
         seatId: (row.seat_id as string | null) ?? null,
         actorName: (row.actor_name as string | null) ?? null,
-        turn: row.turn as number,
+        round: row.round as number,
         kind,
         payload: (row.payload ?? {}) as Record<string, unknown>,
         manual: Boolean(row.manual),
@@ -468,7 +468,7 @@ async function local(line: string): Promise<boolean> {
     if (found.length === 0) say("No tables. `table new Kowi, Ola` opens one.");
     for (const one of found) {
       say(
-        `  ${one.code}  ${one.status}  turn ${one.turn}  ${one.eqMode}  ` +
+        `  ${one.code}  ${one.status}  round ${one.round}  ${one.eqMode}  ` +
           one.players.join(", "),
       );
     }

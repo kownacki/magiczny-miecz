@@ -256,11 +256,11 @@ describe("the deck, which never travels", () => {
    * somebody stops it.
    */
   it("does not send the seed either", () => {
-    const sent = withoutDeck({ deck: null, seed: "s3cr3t", join_code: "ABCD", turn: 3 });
+    const sent = withoutDeck({ deck: null, seed: "s3cr3t", join_code: "ABCD", round: 3 });
     expect(sent).not.toHaveProperty("seed");
     expect(JSON.stringify(sent)).not.toContain("s3cr3t");
     // And the rest of the row still travels.
-    expect(sent).toMatchObject({ join_code: "ABCD", turn: 3 });
+    expect(sent).toMatchObject({ join_code: "ABCD", round: 3 });
   });
 
   const deck = {
@@ -296,9 +296,9 @@ describe("the deck, which never travels", () => {
   });
 
   it("keeps the rest of the games row", () => {
-    expect(withoutDeck({ deck: null, join_code: "ABCD", turn: 3 })).toMatchObject({
+    expect(withoutDeck({ deck: null, join_code: "ABCD", round: 3 })).toMatchObject({
       join_code: "ABCD",
-      turn: 3,
+      round: 3,
     });
   });
 });

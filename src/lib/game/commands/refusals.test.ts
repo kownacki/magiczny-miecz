@@ -17,10 +17,10 @@ import { attackSeat } from "./fight";
  * and Magia is the same rule seen from inside — the only moment a statue would
  * use either is defending an attack, which is one of the things forbidden.
  */
-const table = (over: { stoneUntil?: number | null; turn?: number } = {}) =>
+const table = (over: { stoneUntil?: number | null; round?: number } = {}) =>
   aTable({
     game: {
-      turn: over.turn ?? 1,
+      round: over.round ?? 1,
       active_seat: 0,
       turn_state: {
         phase: "field",
@@ -37,17 +37,17 @@ const table = (over: { stoneUntil?: number | null; turn?: number } = {}) =>
         seat_index: 1,
         field_id: "mokradla-1",
         life: 4,
-        stone_until_turn: over.stoneUntil === undefined ? 4 : over.stoneUntil,
+        stone_until_round: over.stoneUntil === undefined ? 4 : over.stoneUntil,
       }),
     ],
   });
 
 describe("a Postać Zamieniona w Kamień", () => {
   it("is stone until the turn it becomes flesh again (20.1)", () => {
-    expect(isStone(table({ stoneUntil: 4, turn: 1 }), "seat-b")).toBe(true);
-    expect(isStone(table({ stoneUntil: 4, turn: 3 }), "seat-b")).toBe(true);
-    // 20.1's three turns are up: `stone_until_turn` is the turn it ends.
-    expect(isStone(table({ stoneUntil: 4, turn: 4 }), "seat-b")).toBe(false);
+    expect(isStone(table({ stoneUntil: 4, round: 1 }), "seat-b")).toBe(true);
+    expect(isStone(table({ stoneUntil: 4, round: 3 }), "seat-b")).toBe(true);
+    // 20.1's three turns are up: `stone_until_round` is the turn it ends.
+    expect(isStone(table({ stoneUntil: 4, round: 4 }), "seat-b")).toBe(false);
     expect(isStone(table({ stoneUntil: null }), "seat-b")).toBe(false);
   });
 
@@ -61,7 +61,7 @@ describe("a Postać Zamieniona w Kamień", () => {
   });
 
   it("loses it again once it is flesh (20.1)", () => {
-    const at = table({ turn: 4 });
+    const at = table({ round: 4 });
     expect(spendLife(at, "seat-b", 1).result).toBe(3);
   });
 
@@ -78,18 +78,18 @@ describe("a Postać Zamieniona w Kamień", () => {
   });
 
   it("can be attacked again once it is flesh", () => {
-    expect(() => attackSeat(table({ turn: 4 }), { targetSeatId: "seat-b" })).not.toThrow();
+    expect(() => attackSeat(table({ round: 4 }), { targetSeatId: "seat-b" })).not.toThrow();
   });
 
   it("cannot be cast at (20.5)", () => {
     expect(() => refuseAgainstStone(table(), "seat-b", "spell")).toThrow(/Zaklęć/);
-    expect(() => refuseAgainstStone(table({ turn: 4 }), "seat-b", "spell")).not.toThrow();
+    expect(() => refuseAgainstStone(table({ round: 4 }), "seat-b", "spell")).not.toThrow();
   });
 
   /** 20.5 is explicit that the Zaklęcia stay, unlike everything else (20.2). */
   it("keeps its Zaklęcia through the change", () => {
     const at = aTable({
-      game: { turn: 1 },
+      game: { round: 1 },
       seats: [aSeat({ id: "seat-b", field_id: "mokradla-1" })],
       holdings: [
         { id: "s1", seat_id: "seat-b", card_id: "golem", kind: "spell", face: "hidden" },
@@ -97,7 +97,7 @@ describe("a Postać Zamieniona w Kamień", () => {
     });
     const after = apply(at, turnToStone(at, { seatId: "seat-b" }));
     expect(after.holdings.map((one) => one.kind)).toEqual(["spell"]);
-    expect(after.seats[0].stone_until_turn).toBe(1 + STONE_TURNS);
+    expect(after.seats[0].stone_until_round).toBe(1 + STONE_TURNS);
   });
 });
 
@@ -111,7 +111,7 @@ describe("a Postać Zamieniona w Kamień", () => {
 describe("standing in the Zamek Bestii", () => {
   const atCastle = (cards: readonly string[], fieldId = "zamek-bestii") =>
     aTable({
-      game: { turn: 1, active_seat: 0, turn_state: { phase: "roll" } as TurnPhase },
+      game: { round: 1, active_seat: 0, turn_state: { phase: "roll" } as TurnPhase },
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId(fieldId) })],
       holdings: cards.map((cardId, at) =>
         aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId, kind: "item" }),
@@ -158,7 +158,7 @@ describe("a Postać in the Krąg Płomieni", () => {
   const inFlames = () =>
     aTable({
       game: {
-        turn: 1,
+        round: 1,
         active_seat: 0,
         turn_state: {
           phase: "field",

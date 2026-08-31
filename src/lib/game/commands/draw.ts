@@ -111,7 +111,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "card",
             payload: { ...named, source: "fizyczna" },
           },
@@ -139,7 +139,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
         // zostanie wyczerpany, tasuje się Karty ... już użyte i korzysta z nich
         // ponownie." At a table that is the loudest thing that happens all
         // evening, and it used to happen in silence.
-        { seatId: null, turn: snapshot.game.turn, kind: "reshuffle", payload: { pile: "zdarzenia" } },
+        { seatId: null, round: snapshot.game.round, kind: "reshuffle", payload: { pile: "zdarzenia" } },
       ]
     : [];
 
@@ -160,7 +160,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
         ...recycledLine,
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "card",
           payload: { cardId: card.id, ref: drawn[0], source: "talia", recycled },
         },
@@ -256,7 +256,7 @@ export function peekSpells(
       // that lands, and `answerAsk` writes that with the ordinary `spell` line
       // — which is also the one line 9.3 keeps to a single seat.
       journal: looked.recycled
-        ? [{ seatId: null, turn: snapshot.game.turn, kind: "reshuffle", payload: { pile: "zaklecia" } }]
+        ? [{ seatId: null, round: snapshot.game.round, kind: "reshuffle", payload: { pile: "zaklecia" } }]
         : [],
     },
     frame: {
@@ -339,7 +339,7 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
     ? [
         // 9.5 in as many words: "Jeśli stos zostanie wyczerpany, tasuje się
         // Karty Zaklęć już użyte i korzysta z nich ponownie."
-        { seatId: null, turn: snapshot.game.turn, kind: "reshuffle", payload: { pile: "zaklecia" } },
+        { seatId: null, round: snapshot.game.round, kind: "reshuffle", payload: { pile: "zaklecia" } },
       ]
     : [];
 
@@ -359,7 +359,7 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
       },
       journal: [
         ...recycledLine,
-        { seatId: seat.id, turn: snapshot.game.turn, kind: "spell", payload: { spellId: spell.id } },
+        { seatId: seat.id, round: snapshot.game.round, kind: "spell", payload: { spellId: spell.id } },
       ],
     },
     result: spell.id,

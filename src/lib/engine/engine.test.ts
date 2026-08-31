@@ -39,7 +39,7 @@ const seat = (over: Partial<Seat> = {}): Seat => ({
   gold: 1,
   nature: "good",
   turnsLost: 0,
-  stoneUntilTurn: null,
+  stoneUntilRound: null,
   eliminated: false,
   holdings: [],
   ...over,

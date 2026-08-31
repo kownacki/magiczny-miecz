@@ -229,7 +229,7 @@ describe("przywrócenie Postaci (konsola)", () => {
       sword_own: 2,
       magic_own: 1,
       turns_lost: 0,
-      stone_until_turn: null,
+      stone_until_round: null,
     });
     // Where it fell: the Obszar is not in the patch at all.
     expect(writes.seats?.[0].patch).not.toHaveProperty("field_id");

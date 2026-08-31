@@ -194,11 +194,11 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
       })),
     {
       turnsLost: row.turns_lost,
-      stoneUntilTurn: row.stone_until_turn,
-      bridgeBlockedUntilTurn: row.bridge_blocked_until_turn,
-      natureChangedTurn: row.nature_changed_turn,
+      stoneUntilRound: row.stone_until_round,
+      bridgeBlockedUntilRound: row.bridge_blocked_until_round,
+      natureChangedRound: row.nature_changed_round,
     },
-    snapshot.game.turn,
+    snapshot.game.round,
   );
 
   /**
@@ -471,7 +471,7 @@ export function setEndlessStock(
       journal: [
         {
           seatId: null,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "override",
           payload: { what: "endless-stock" },
           // Not `manual`. That flag draws "tryb testowy" beside the line and

@@ -12,8 +12,8 @@ export type SkipReason = "stone" | "lost";
 
 export interface QueueEntry {
   seatIndex: number;
-  /** The turn counter this entry falls on, on the same clock `games.turn` uses. */
-  turn: number;
+  /** The round this entry falls on, on the same clock `games.round` uses. */
+  round: number;
   status: QueueStatus;
   reason?: SkipReason;
   /**
@@ -42,7 +42,7 @@ export interface QueueEntry {
 export function projectQueue(
   seats: readonly TurnOrderSeat[],
   current: number | null,
-  turn: number,
+  round: number,
   depth: number = DEFAULT_DEPTH,
 ): QueueEntry[] {
   // A working copy: lost turns are spent as the walk passes over them, exactly
@@ -51,11 +51,11 @@ export function projectQueue(
   const entries: QueueEntry[] = [];
 
   if (current !== null && state.some((seat) => seat.index === current)) {
-    entries.push({ seatIndex: current, turn, status: "active" });
+    entries.push({ seatIndex: current, round, status: "active" });
   }
 
   let cursor = current;
-  let clock = turn;
+  let clock = round;
   let taken = 0;
 
   while (taken < depth) {
@@ -66,7 +66,7 @@ export function projectQueue(
       if (!seat) continue;
       // Stone is tested first, because that is the order nextSeat tests them
       // in: a character who is both frozen and owed a lost turn reads as frozen.
-      const frozen = seat.stoneUntilTurn !== null && seat.stoneUntilTurn > clock;
+      const frozen = seat.stoneUntilRound !== null && seat.stoneUntilRound > clock;
       // Which round the skipped slot belongs to.
       //
       // The walk passes seats in index order, so any seat at or below the one
@@ -82,10 +82,10 @@ export function projectQueue(
       const slotTurn = index <= (cursor ?? -1) ? clock + 1 : clock;
       entries.push({
         seatIndex: index,
-        turn: slotTurn,
+        round: slotTurn,
         status: "skipped",
         reason: frozen ? "stone" : "lost",
-        remaining: frozen ? seat.stoneUntilTurn! - clock : seat.turnsLost,
+        remaining: frozen ? seat.stoneUntilRound! - clock : seat.turnsLost,
       });
       // Mirrors finishTurn, which spends a lost turn on any skipped seat that
       // has one — including a frozen one. Whether that is right is a rules
@@ -102,7 +102,7 @@ export function projectQueue(
     // seat — the same test finishTurn makes, and what the Stone timer counts.
     if (next <= (cursor ?? 0)) clock += 1;
     cursor = next;
-    entries.push({ seatIndex: next, turn: clock, status: "upcoming" });
+    entries.push({ seatIndex: next, round: clock, status: "upcoming" });
     taken += 1;
   }
 

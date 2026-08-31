@@ -16,7 +16,7 @@ const SEATS: JournalSeat[] = [
 ];
 
 function entry(kind: JournalKind, payload: Record<string, unknown> = {}, over: Partial<JournalEntry> = {}) {
-  return { seq: 1, seatId: "a", turn: 2, kind, payload, manual: false, ...over };
+  return { seq: 1, seatId: "a", round: 2, kind, payload, manual: false, ...over };
 }
 
 /** The third argument is a seat id, or the whole entry when a test needs more of it. */
@@ -282,7 +282,7 @@ suite("what the journal does not say", () => {
     for (const payload of [
       { spellId: "formula-czasu" },
       { spellId: "formula-czasu", seatId: "a" },
-      { spellId: "formula-czasu", turn: 3 },
+      { spellId: "formula-czasu", round: 3 },
     ]) {
       expect(text("spell", payload)).not.toMatch(/FORMUŁA|formula-czasu/);
     }
@@ -401,14 +401,14 @@ suite("the end of a turn", () => {
     // round that had already started a line earlier.
     expect(lines.map((line) => line.text)).toEqual([
       "Michał (GOBLIN) kończy turę.",
-      "Tura 4",
+      "Runda 4",
       "Michał (GOBLIN) zaczyna turę.",
     ]);
     const marker = lines.find((line) => line.marker)!;
     expect(marker.seatIndex).toBeNull();
     // The turn that starts is filed under the round that just began, so the
     // expanded view groups it beneath that heading and not the previous one.
-    expect(lines.at(-1)!.turn).toBe(4);
+    expect(lines.at(-1)!.round).toBe(4);
   });
 
   it("does not name a round when play merely moved on", () => {
@@ -416,7 +416,7 @@ suite("the end of a turn", () => {
       entry("turn-end", { next: 1, skipped: [], wrapped: false, turnAfter: 3 }),
       SEATS,
     );
-    expect(lines.some((line) => /^Tura /.test(line.text))).toBe(false);
+    expect(lines.some((line) => /^Runda /.test(line.text))).toBe(false);
   });
 
   it("says nothing about rows that are not the end of a turn", () => {

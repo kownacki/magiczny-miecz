@@ -37,7 +37,7 @@ function seed(): Tables {
         die_source: "app",
         status: "playing",
         active_seat: 0,
-        turn: 3,
+        round: 3,
         revision: 7,
         // The high-water mark lives on this row now, and the one line already
         // in `moves` is where it stands.
@@ -76,7 +76,7 @@ beforeEach(() => {
 const game = () =>
   tables.games[0] as unknown as {
     revision: number;
-    turn: number;
+    round: number;
     journal_seq: number;
     last_played_at: string;
   };
@@ -100,9 +100,9 @@ describe("committing a change", () => {
     await change("g1", () => ({
       writes: {
         journal: [
-          { seatId: "s1", turn: 3, kind: "roll" },
-          { seatId: "s1", turn: 3, kind: "move" },
-          { seatId: "s1", turn: 3, kind: "card" },
+          { seatId: "s1", round: 3, kind: "roll" },
+          { seatId: "s1", round: 3, kind: "move" },
+          { seatId: "s1", round: 3, kind: "card" },
         ],
       },
       result: undefined,
@@ -130,7 +130,7 @@ describe("committing a change", () => {
     await expect(
       commit(snapshot, {
         seats: [{ id: "s1", patch: { gold: 99 } }],
-        journal: [{ seatId: "s1", turn: 3, kind: "roll" }],
+        journal: [{ seatId: "s1", round: 3, kind: "roll" }],
       }),
     ).rejects.toThrow(Conflict);
     expect(tables.seats[0].gold).toBe(1);
@@ -146,11 +146,11 @@ describe("losing the race", () => {
     beforeWrite = () => {
       beforeWrite = undefined;
       game().revision = 8;
-      game().turn = 4;
+      game().round = 4;
     };
 
     await change("g1", (snap) => {
-      seen.push(snap.game.turn);
+      seen.push(snap.game.round);
       return { writes: { seats: [{ id: "s1", patch: { gold: 2 } }] }, result: undefined };
     }, undefined);
 
@@ -257,8 +257,8 @@ describe("two changes reaching the journal at once", () => {
     const snapshot = await loadSnapshot("g1");
     await commit(snapshot, {
       journal: [
-        { seatId: "s1", turn: 3, kind: "roll" },
-        { seatId: "s1", turn: 3, kind: "move" },
+        { seatId: "s1", round: 3, kind: "roll" },
+        { seatId: "s1", round: 3, kind: "move" },
       ],
     });
     // Two lines taken, and the counter says so — which is what the next reader
@@ -280,7 +280,7 @@ describe("two changes reaching the journal at once", () => {
     };
 
     await expect(
-      commit(snapshot, { journal: [{ seatId: "s1", turn: 3, kind: "roll" }] }),
+      commit(snapshot, { journal: [{ seatId: "s1", round: 3, kind: "roll" }] }),
     ).rejects.toThrow(Conflict);
 
     // Nothing of ours was written, so nothing of ours could have collided.
@@ -296,7 +296,7 @@ describe("two changes reaching the journal at once", () => {
     };
 
     await change("g1", () => ({
-      writes: { journal: [{ seatId: "s1", turn: 3, kind: "roll" }] },
+      writes: { journal: [{ seatId: "s1", round: 3, kind: "roll" }] },
       result: undefined,
     }), undefined);
 

@@ -51,7 +51,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         // What the driver was called when this happened. Preferred over the
         // seat's name by the reader, so a takeover cannot rewrite the past.
         actorName: (row.actor_name as string | null) ?? null,
-        turn: row.turn as number,
+        round: row.round as number,
         kind,
         payload: (row.payload ?? {}) as Record<string, unknown>,
         manual: Boolean(row.manual),

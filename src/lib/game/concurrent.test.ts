@@ -32,7 +32,7 @@ function seed(lying: string[]): Tables {
         die_source: "app",
         status: "playing",
         active_seat: 0,
-        turn: 3,
+        round: 3,
         revision: 7,
         journal_seq: 12,
         last_played_at: "2026-01-01T00:00:00Z",

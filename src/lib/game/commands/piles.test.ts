@@ -168,7 +168,7 @@ describe("stacking a card for the next draw", () => {
     const events = pile([eventRef("cyklop")]);
     const out = stacked({ game: { deck: { events, spells: pile() } } }, "cyklop");
     expect(out.writes.journal).toEqual([
-      { seatId, turn: 3, kind: "test-stack", payload: { cardId: "cyklop" }, manual: true },
+      { seatId, round: 3, kind: "test-stack", payload: { cardId: "cyklop" }, manual: true },
     ]);
   });
 });

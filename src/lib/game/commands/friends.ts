@@ -109,7 +109,7 @@ export function healFromFriend(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "healed",
             payload: { cardId: from?.cardId, points: wanted, price: 0 },
           },
@@ -180,7 +180,7 @@ export function partWithFriend(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "sold",
           payload: { cardId: held.card_id, price: offer.cena },
         },
@@ -220,7 +220,7 @@ export function payFriend(snapshot: Snapshot, command: { seatId?: string }): Out
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "paid-friend",
             payload: { cardId: terms.cardId, price: terms.cena },
           },
@@ -300,7 +300,7 @@ export async function speakCarriedSpell(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "discarded",
           payload: { cardId: friend.card_id, kind: "friend" },
         },
@@ -342,7 +342,7 @@ export async function breakFree(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "effect",
           payload: {
             source: "opętanie",
@@ -411,7 +411,7 @@ export function claimMission(snapshot: Snapshot, command: { seatId?: string }): 
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "effect",
           payload: { source: "twierdza-strzegaca-drog", label: "Tarcza Tolimana za misję" },
         },

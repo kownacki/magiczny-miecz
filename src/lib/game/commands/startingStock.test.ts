@@ -13,7 +13,7 @@ const SWORDS = ["bledny-rycerz", "kat", "ksiaze", "rycerz-ciemnosci", "zdobywca"
 
 const fiveSwords = (endless: boolean) =>
   aTable({
-    game: { status: "lobby", turn: 0, active_seat: null, deck: null, endless_stock: endless },
+    game: { status: "lobby", round: 0, active_seat: null, deck: null, endless_stock: endless },
     seats: SWORDS.map((id, at) =>
       aSeat({ id: `seat-${at}`, seat_index: at, character_id: asSeatCharacter(id) }),
     ),

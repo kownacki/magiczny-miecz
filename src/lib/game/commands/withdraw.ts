@@ -157,9 +157,9 @@ export function removeCharacter(
           nature: null,
           eliminated: false,
           turns_lost: 0,
-          stone_until_turn: null,
-          bridge_blocked_until_turn: null,
-          nature_changed_turn: null,
+          stone_until_round: null,
+          bridge_blocked_until_round: null,
+          nature_changed_round: null,
         },
       },
     ],
@@ -185,7 +185,7 @@ export function removeCharacter(
     journal: [
       {
         seatId: seat.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "override" as const,
         manual: true,
         payload: {
@@ -258,7 +258,7 @@ export function reviveCharacter(
             sword_own: seat.sword_floor,
             magic_own: seat.magic_floor,
             turns_lost: 0,
-            stone_until_turn: null,
+            stone_until_round: null,
           },
         },
       ],
@@ -289,7 +289,7 @@ export function reviveCharacter(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "override" as const,
           manual: true,
           payload: { what: "revive", character },

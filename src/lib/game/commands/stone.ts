@@ -24,12 +24,12 @@ export const STONE_TURNS = 3;
  *
  * Read off the turn counter rather than a flag, because that is what 20.1
  * measures in: "przez trzy tury", and a turn a character sits out is still a
- * turn. `stone_until_turn` is the turn it becomes flesh again, so the
+ * turn. `stone_until_round` is the turn it becomes flesh again, so the
  * comparison is strict.
  */
 export function isStone(snapshot: Snapshot, seatId: string): boolean {
   const seat = snapshot.seats.find((row) => row.id === seatId);
-  return seat?.stone_until_turn != null && seat.stone_until_turn > snapshot.game.turn;
+  return seat?.stone_until_round != null && seat.stone_until_round > snapshot.game.round;
 }
 
 /**
@@ -119,13 +119,13 @@ export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Ch
     }
   }
 
-  const until = snapshot.game.turn + STONE_TURNS;
+  const until = snapshot.game.round + STONE_TURNS;
   return mergeAll(taken, gone, left, {
-    seats: [{ id: seat.id, patch: { stone_until_turn: until, gold: 0 } }],
+    seats: [{ id: seat.id, patch: { stone_until_round: until, gold: 0 } }],
     journal: [
       {
         seatId: seat.id,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "stone",
         payload: {
           until,

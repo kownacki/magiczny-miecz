@@ -65,7 +65,7 @@ export function answerAsk(snapshot: Snapshot, command: AnswerAsk): Outcome<strin
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "spell",
           // The ordinary line a drawn Zaklęcie writes, with the Przyjaciel who
           // made it a choice named on it — a new kind would have cost a

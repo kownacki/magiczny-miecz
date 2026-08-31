@@ -105,7 +105,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
     expect(writes.journal).toEqual([
       {
         seatId: "seat-a",
-        turn: 3,
+        round: 3,
         kind: "card",
         payload: {
           cardId: "cyklop",
@@ -160,7 +160,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
     expect(writes.journal?.map((line) => line.kind)).toEqual(["reshuffle", "card"]);
     expect(writes.journal?.[0]).toEqual({
       seatId: null,
-      turn: 3,
+      round: 3,
       kind: "reshuffle",
       payload: { pile: "zdarzenia" },
     });
@@ -201,7 +201,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
       expect(writes.game?.deck).toBeUndefined();
       expect(writes.journal?.[0]).toEqual({
         seatId: "seat-a",
-        turn: 3,
+        round: 3,
         kind: "card",
         payload: { cardId: "cyklop", cardClass: "foe", source: "fizyczna" },
       });
@@ -277,7 +277,7 @@ describe("rozdanie Zaklęcia", () => {
     ]);
     expect(deckAfter(writes).spells).toEqual({ draw: [], discard: [] });
     expect(writes.journal).toEqual([
-      { seatId: "seat-a", turn: 3, kind: "spell", payload: { spellId: "krag-plomieni" } },
+      { seatId: "seat-a", round: 3, kind: "spell", payload: { spellId: "krag-plomieni" } },
     ]);
   });
 
@@ -297,7 +297,7 @@ describe("rozdanie Zaklęcia", () => {
     expect(writes.journal?.map((line) => line.kind)).toEqual(["reshuffle", "spell"]);
     expect(writes.journal?.[0]).toEqual({
       seatId: null,
-      turn: 3,
+      round: 3,
       kind: "reshuffle",
       payload: { pile: "zaklecia" },
     });

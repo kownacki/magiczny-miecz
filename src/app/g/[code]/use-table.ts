@@ -83,7 +83,7 @@ export interface Game {
    * being offered.
    */
   characters_out: string[];
-  turn: number;
+  round: number;
   revision: number;
   die_source: string;
   turn_state: TurnState;
@@ -386,7 +386,7 @@ async function saidWrong(response: Response): Promise<string> {
     if (mineNow) {
       const reading = watch({
         turnsLost: mineNow.turns_lost,
-        stoneUntilTurn: mineNow.stone_until_turn,
+        stoneUntilRound: mineNow.stone_until_round,
         eliminated: mineNow.eliminated,
       });
       const said = announce(watched.current, reading);

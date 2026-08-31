@@ -31,7 +31,7 @@ const seat = (index: number, over: Partial<TurnOrderSeat> = {}): TurnOrderSeat =
   index,
   eliminated: false,
   turnsLost: 0,
-  stoneUntilTurn: null,
+  stoneUntilRound: null,
   ...over,
 });
 
@@ -229,7 +229,7 @@ describe("turn order", () => {
   });
 
   it("skips a character turned to stone until its three turns are up (20.1)", () => {
-    const stone = [seat(0), seat(1, { stoneUntilTurn: 5 })];
+    const stone = [seat(0), seat(1, { stoneUntilRound: 5 })];
     expect(nextSeat(stone, 0, 3).seat).toBe(0);
     expect(nextSeat(stone, 0, 5).seat).toBe(1);
   });
@@ -456,7 +456,7 @@ describe("a table where everybody owes a turn", () => {
     index,
     eliminated: false,
     turnsLost,
-    stoneUntilTurn: null,
+    stoneUntilRound: null,
   });
 
   it("finds nobody when every seat is waiting", () => {
@@ -477,7 +477,7 @@ describe("a table where everybody owes a turn", () => {
   it("still reports nobody when what is left is stone, which no pass helps", () => {
     // 20.1 measures Kamień in turn numbers, so it comes back as the counter
     // moves rather than by being passed over.
-    const stone = { index: 0, eliminated: false, turnsLost: 0, stoneUntilTurn: 9 };
+    const stone = { index: 0, eliminated: false, turnsLost: 0, stoneUntilRound: 9 };
     expect(nextSeat([stone], 0, 5).seat).toBeNull();
     expect(nextSeat([stone], 0, 9).seat).toBe(0);
   });

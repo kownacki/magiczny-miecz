@@ -6,7 +6,7 @@ import { leaveCardsBehind, passTurn, tickEffects } from "./turn";
 
 const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
   aTable({
-    game: { active_seat: 0, turn: 3, ...(over.game ?? {}) },
+    game: { active_seat: 0, round: 3, ...(over.game ?? {}) },
     seats: over.seats ?? [
       aSeat({ id: "seat-a", seat_index: 0 }),
       aSeat({ id: "seat-b", seat_index: 1 }),
@@ -17,13 +17,13 @@ const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
 describe("passing the turn (10.1)", () => {
   it("hands play to the next seat and starts them at the roll", () => {
     const writes = passTurn(two());
-    expect(writes.game).toMatchObject({ active_seat: 1, turn: 3, turn_state: only({ phase: "roll" }) });
+    expect(writes.game).toMatchObject({ active_seat: 1, round: 3, turn_state: only({ phase: "roll" }) });
   });
 
   /** 20.1 counts the round, so it has to advance when play comes back round. */
   it("advances the round counter on the way past the first seat", () => {
-    const writes = passTurn(two({ game: { active_seat: 1, turn: 3 } }));
-    expect(writes.game).toMatchObject({ active_seat: 0, turn: 4 });
+    const writes = passTurn(two({ game: { active_seat: 1, round: 3 } }));
+    expect(writes.game).toMatchObject({ active_seat: 0, round: 4 });
     expect(writes.journal?.[0]).toMatchObject({
       kind: "turn-end",
       payload: { next: 0, wrapped: true, turnAfter: 4 },
@@ -58,7 +58,7 @@ describe("passing the turn (10.1)", () => {
 
   it("does not advance the round while the turn stays where it is", () => {
     const again = two({
-      game: { active_seat: 1, turn: 3 },
+      game: { active_seat: 1, round: 3 },
       effects: [
         {
           id: "eff-1",
@@ -72,7 +72,7 @@ describe("passing the turn (10.1)", () => {
     });
     const writes = passTurn(again);
     // 20.1 counts rounds, and a seat taking three turns has not been round.
-    expect(writes.game).toMatchObject({ active_seat: 1, turn: 3 });
+    expect(writes.game).toMatchObject({ active_seat: 1, round: 3 });
   });
 
   it("skips a seat that owes a turn, and spends one of what it owes", () => {
@@ -117,7 +117,7 @@ describe("passing the turn (10.1)", () => {
     const table = two({
       game: {
         active_seat: 0,
-        turn: 3,
+        round: 3,
         turn_state: {
           phase: "field",
           fieldId: asFieldId("mroczna-polana")!,
@@ -146,7 +146,7 @@ describe("passing the turn (10.1)", () => {
     const table = two({
       game: {
         active_seat: 0,
-        turn: 3,
+        round: 3,
         turn_state: {
           phase: "field",
           fieldId: asFieldId("mroczna-polana")!,
@@ -215,7 +215,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
     leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
       fieldId: "przelecz-wichrow",
       seatId: "seat-a",
-      turn: 3,
+      round: 3,
       remaining: cardIds.map((cardId) => ({ cardId, cardClass: "friend" }) as never),
     });
 

@@ -543,7 +543,7 @@ export async function abandonFight(gameId: string): Promise<void> {
                 journal: [
                   {
                     seatId: seat.id,
-                    turn: snapshot.game.turn,
+                    round: snapshot.game.round,
                     kind: "test-fight-end" as const,
                     payload: { cardName },
                     manual: true,

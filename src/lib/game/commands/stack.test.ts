@@ -66,7 +66,7 @@ const theTable = (): Snapshot =>
   aTable({
     game: {
       active_seat: 0,
-      turn: 3,
+      round: 3,
       turn_state: { phase: "roll" } as TurnPhase,
       deck: {
         // Ścieżka, Smok and Grota for the Płaskowyż's three, then the Koszmar

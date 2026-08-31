@@ -178,7 +178,7 @@ function escortFor(
         ? [
             {
               seatId: null,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "reshuffle" as const,
               payload: { pile: "zaklecia" },
             },
@@ -186,7 +186,7 @@ function escortFor(
         : []),
       {
         seatId,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "carried-spell" as const,
         payload: { cardId, spellId: spell.id },
       },
@@ -230,7 +230,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
         journal: [
           {
             seatId,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "taken",
             // The card's own kind, not the Sztuka Złota's. Three cards are
             // consumed on the way in now and only one of them is money.
@@ -409,7 +409,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     paid.journal = [
       {
         seatId,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "paid-friend",
         payload: { cardId, price: zloto, life: zycie, joining: true },
       },
@@ -444,7 +444,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   return {
     writes: mergeAll(discarded, kept, lifted, {
       journal: [
-        { seatId, turn: snapshot.game.turn, kind: "taken", payload: { cardId, kind } },
+        { seatId, round: snapshot.game.round, kind: "taken", payload: { cardId, kind } },
       ],
     }),
     result: { kind, resolve: null },
@@ -558,7 +558,7 @@ export function dropCard(
       journal: [
         {
           seatId: held?.seat_id ?? null,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "discarded",
           payload: {
             cardId: held?.card_id,
@@ -835,7 +835,7 @@ export function placeCard(
       journal: [
         {
           seatId: command.seatId,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "test-card-field",
           payload: { cardId: command.cardId, fieldId },
           manual: true,
@@ -903,7 +903,7 @@ export function grantCard(
       journal: [
         {
           seatId,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "test-card",
           payload: { cardId, kind },
           manual: true,

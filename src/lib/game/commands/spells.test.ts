@@ -63,7 +63,7 @@ const seat = (t: ReturnType<typeof apply>, id: string) => t.seats.find((s) => s.
 describe("Fatum, which is a die table and nothing else", () => {
   it("reads each face off the die", async () => {
     const at = { seatIndex: 1 };
-    expect(seat((await cast("fatum", { dice: [1], target: at })).after, "seat-b").stone_until_turn)
+    expect(seat((await cast("fatum", { dice: [1], target: at })).after, "seat-b").stone_until_round)
       .not.toBeNull();
     expect(seat((await cast("fatum", { dice: [2], target: at })).after, "seat-b").gold).toBe(0);
     expect(seat((await cast("fatum", { dice: [6], target: at })).after, "seat-b").life).toBe(4);

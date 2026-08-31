@@ -303,7 +303,7 @@ function fightOver(
       journal: [
         {
           seatId,
-          turn: after.game.turn,
+          round: after.game.round,
           kind: "fight-start",
           payload: { nazwa: opens.nazwa, enemyTotal: opens.miecz ?? opens.magia },
         },
@@ -669,7 +669,7 @@ async function walk(
           journal: [
             {
               seatId,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "field-table",
               payload: { offer: reason, face },
             },
@@ -916,7 +916,7 @@ async function walk(
         writes: mergeAll(lifted, piled, {
           journal: gone.map((held) => ({
             seatId,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "lost-card" as const,
             payload: { cardId: held.card_id, kind: held.kind },
           })),
@@ -1010,7 +1010,7 @@ async function walk(
           journal: [
             {
               seatId: taker,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "taken",
               payload: { cardId: card.card_id, kind: card.kind, od: seatId },
             },
@@ -1061,7 +1061,7 @@ async function walk(
           journal: [
             {
               seatId,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "left-behind",
               payload: { cardId: command.cardId, field: chosen },
             },
@@ -1187,7 +1187,7 @@ async function walk(
         });
         lines.push({
           seatId: row.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "turn-lost",
           payload: { turns: effect.turns, reason },
         });
@@ -1323,7 +1323,7 @@ async function walk(
           journal: [
             {
               seatId: row.id,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "lost-card",
               payload: { co: effect.co, cardIds: lost.map((h) => h.cardId), gold: gold },
             },
@@ -1713,7 +1713,7 @@ export async function spendHolding(
       journal: [
         {
           seatId,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "used",
           payload: { cardId, ...(face !== undefined ? { face } : {}) },
         },
@@ -1822,7 +1822,7 @@ export async function resolveFieldOffer(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "field-table",
           payload: { offer: offer.name, skipped: true },
         },
@@ -1854,7 +1854,7 @@ export async function resolveFieldOffer(
           journal: [
             {
               seatId: seat.id,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "field-table",
               payload: { offer: offer.name, face },
               manual: command.manual ?? false,
@@ -1918,7 +1918,7 @@ export async function resolveDrawnCard(
           journal: [
             {
               seatId: seat.id,
-              turn: snapshot.game.turn,
+              round: snapshot.game.round,
               kind: "card-table",
               payload: { cardId: command.cardId, face },
               manual: command.manual ?? false,

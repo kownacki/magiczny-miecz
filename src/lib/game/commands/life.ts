@@ -32,7 +32,7 @@ export function healSeat(
       journal: [
         {
           seatId: seat.id,
-          turn: snapshot.game.turn,
+          round: snapshot.game.round,
           kind: "healed",
           payload: { from: seat.life, to: healed },
         },
@@ -102,7 +102,7 @@ export function spendLife(
         journal: [
           {
             seatId: seat.id,
-            turn: snapshot.game.turn,
+            round: snapshot.game.round,
             kind: "healed",
             payload: { saved: saved.label, points },
           },
@@ -216,7 +216,7 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
     journal: [
       {
         seatId,
-        turn: snapshot.game.turn,
+        round: snapshot.game.round,
         kind: "death",
         payload: {
           droppedOnField: left.map((h) => h.card_id),
