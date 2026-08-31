@@ -540,7 +540,22 @@ export function CardLibrary({
                   : undefined
               }
             >
-              <div className="flex flex-wrap gap-3">
+              {/* Five columns by construction, not by arithmetic.
+
+                  Wrapping is what made the count a sum in the first place: a
+                  row of fixed 92px tiles fits five only while the container is
+                  at least 508 wide, so every pixel spent elsewhere — padding, a
+                  scrollbar, a zoom level — was a pixel that could take a column
+                  away. Widening the drawer until it could not fixed the count
+                  and left the slack in one place: a strip of empty panel down
+                  the right of every row.
+
+                  A grid of five `1fr` columns cannot lose one, and the leftover
+                  goes where leftover should go — spread between the columns, a
+                  pixel or two each, instead of pooling past the last tile. The
+                  tiles keep their own 92 and sit centred in whatever they are
+                  given. */}
+              <div className="grid grid-cols-5 justify-items-center gap-3">
                 {section.cards.map((card) => (
                   <CardTile
                     key={card.cardId}
