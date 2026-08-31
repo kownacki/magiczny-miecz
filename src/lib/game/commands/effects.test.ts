@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { isSettled } from "@/lib/engine/resolve";
+import { SCRIPTS } from "@/lib/engine/cardScript";
 import { scriptedRandom } from "@/lib/engine/ports";
 import type { Effect } from "@/lib/engine/cardScript";
 import { only, top, type TurnState } from "@/lib/engine/stack";
@@ -727,5 +729,30 @@ describe("a Karta drawn onto the Obszar (16.1)", () => {
     expect(result.pending).toBeNull();
     const state = top(writes.game!.turn_state!) as { resolved?: string[] };
     expect(state.resolved).toContain("zaraza");
+  });
+});
+
+/**
+ * A shop drawn as a Karta, which used to end the game.
+ *
+ * `kup` was unsettled, on the reading that somebody has to say which card
+ * changes hands. Somebody does, but not while the Karta is resolving:
+ * `resolveDrawnCard` suspended into a `script` frame, `buy` could not see the
+ * shop because `offerOn` reads the Obszar's offers and the Karty *lying* on it
+ * and the Targowisko was still in the turn's `drawn`, and the only way onto the
+ * field was to finish resolving. „Nic się nie stało. Wciąż czeka" for ever, and
+ * `endturn` refused as well — „Najpierw dokończ: TARGOWISKO". One drawn Karta
+ * wedged the table.
+ */
+describe("a shop on a Karta (16.7, 21.1)", () => {
+  it("resolves rather than asking, and names what is for sale", async () => {
+    const shop = SCRIPTS["targowisko"];
+    expect(shop, "TARGOWISKO has no script").toBeDefined();
+    expect(isSettled(shop!.effect)).toBe(true);
+  });
+
+  /** Its counterpart: the offer is the Karta's, so the Karta has to stay. */
+  it("stays on the Obszar it was drawn on", () => {
+    expect(SCRIPTS["targowisko"]?.disposition).toEqual({ kind: "zostaje" });
   });
 });

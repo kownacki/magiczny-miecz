@@ -45,6 +45,29 @@ export function isSettled(effect: Effect): boolean {
     case "rzut-za-kazdego":
     // The card is named by the effect; there is nothing to ask.
     case "uwolnij":
+    /**
+     * A shop is a standing offer, not a question — and treating it as one
+     * wedged the game.
+     *
+     * These sat below with the unsettled ops on the reading that somebody has
+     * to say which card changes hands. Somebody does, but not *here*: a
+     * Targowisko is a Miejsce that „zostaje", and resolving the Karta is what
+     * puts it on the Obszar. The buying is `buy` afterwards, against
+     * `offerOn`, which reads the Obszar's own offers and the Karty lying on
+     * it — exactly how every printed shop on the board already works.
+     *
+     * Unsettled, it deadlocked instead. `resolveDrawnCard` suspended into a
+     * `script` frame; `buy` could not see the shop because the card was still
+     * in the turn's `drawn` and not yet in `fieldCards`; and the card could
+     * only reach `fieldCards` by resolving. „Nic się nie stało. Wciąż czeka"
+     * for ever, and `endturn` refused too — „Najpierw dokończ: TARGOWISKO".
+     * Drawing one Karta ended the game.
+     *
+     * This is `otrzymaj`'s bug in another coat; see the note below it, which
+     * describes the same shape and the same symptom.
+     */
+    case "kup":
+    case "sprzedaj":
       return true;
 
     // Somebody has to say which card changes hands (5.6, or Szaleństwo's own
@@ -136,8 +159,6 @@ export function isSettled(effect: Effect): boolean {
     // that hand out a Magiczny Miecz and a Tarcza Tolimana came back pending
     // and empty — a prayer that appeared to do nothing and left the turn
     // waiting on a question nobody had been asked.
-    case "kup":
-    case "sprzedaj":
     case "zaklecia-do-limitu":
     case "zamien-punkty":
       return false;

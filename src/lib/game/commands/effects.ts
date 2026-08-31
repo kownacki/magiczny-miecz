@@ -1621,6 +1621,30 @@ async function walk(
     case "ruch-dodatkowy":
       return nothing(["dodatkowy ruch — rzuć jeszcze raz"]);
 
+    /**
+     * A shop opening, which is all resolving the Karta does.
+     *
+     * Nothing changes hands here. The Targowisko „zostaje" — its disposition
+     * lays it on the Obszar — and from then on `offerOn` finds it among the
+     * Karty lying there, so `buy` and `sell` work against it exactly as they do
+     * against a shop printed on the board. Buying is the player's own move,
+     * made when they like and as often as the stock allows; it was never this
+     * card's job to ask.
+     */
+    case "kup":
+    case "sprzedaj":
+      return {
+        writes: {},
+        result: {
+          did: [
+            effect.op === "kup"
+              ? `otwarte na sprzedaż: ${effect.towar.map((one) => one.co).join(", ")}`
+              : "można tu sprzedawać",
+          ],
+          pending: null,
+        },
+      };
+
     case "wyciagnij": {
       let writes: Changeset = {};
       for (let i = 0; i < effect.count; i++) {
