@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeAbility } from "@/lib/engine/abilityText";
 import { abilitiesOfCharacter, asCharacterId, notesForCharacter } from "@/lib/engine/characters";
-import { SLOT_LABEL, type Slot } from "@/lib/engine/slots";
+import { SLOT_LABEL, sakwaOpen, type Slot } from "@/lib/engine/slots";
 import { characterImageUrl } from "@/lib/view/cardImages";
 import { type TileCard } from "./card-tile";
 import { CarriedCard, type Carried } from "./carry";
@@ -163,14 +163,19 @@ export function SeatCard({
   const character = CHARACTERS.find((c) => c.id === seat.character_id);
 
   /**
-   * Whether the Tajemna Sakwa is here to make its place.
+   * Whether the Tajemna Sakwa is open, and so whether its place is drawn.
    *
    * The one square on this card that is not a property of the character. "W
-   * Sakwie możesz umieścić 1 Przedmiot" — so the place comes with the Karta and
+   * Sakwie możesz umieścić 1 Przedmiot" — the place comes with the Karta and
    * goes with it, and drawing an empty one for somebody who has never seen the
    * bag would be an offer the rules do not make.
+   *
+   * `sakwaOpen`, not "is it held": in slotowy the bag has to be *worn*, which
+   * is what this variant asks of every bearer — a Koń in the Plecak pulls
+   * nothing either. Asked through the engine so the square on screen and the
+   * refusal on the server cannot come to different answers.
    */
-  const hasSakwa = seat.holdings.some((held) => held.cardId === "tajemna-sakwa");
+  const hasSakwa = sakwaOpen(seat.holdings, slotted ? "slots" : "classic");
   const BODY = (Object.keys(SLOT_LABEL) as Slot[]).filter(
     (slot) => slot !== "tajemna-sakwa",
   );

@@ -251,6 +251,30 @@ export function fitsIn(cardId: string, slot: Slot): boolean {
  * Przyjaciele and Zaklęcia are neither: 6.3 and 9.3 keep their own counts, and
  * the card says Przedmiot.
  */
+/**
+ * Whether the Tajemna Sakwa is open — that is, whether the place exists at all.
+ *
+ * Held is enough in klasyczny, because there is nowhere to wear anything and a
+ * card works from the pack. In slotowy it has to be *worn*, and that is not a
+ * rule invented for this card: `carryLimit` already asks the same of the whole
+ * bearer family, so a Koń in the Plecak pulls nothing and a Magiczna Sakwa in
+ * the Plecak lends nothing. A bag you are not wearing is a bag that is not
+ * open.
+ *
+ * Which means the place can close under something that is in it — take the
+ * Sakwa off and the Karta inside has nowhere to be. `spilled` is what puts it
+ * back in the pack.
+ */
+export function sakwaOpen(
+  holdings: readonly { cardId: string; slot?: string | null }[],
+  eqMode: EqMode,
+): boolean {
+  return holdings.some(
+    (held) =>
+      held.cardId === "tajemna-sakwa" && (eqMode === "classic" || held.slot === "pouch"),
+  );
+}
+
 export function goesInTheSakwa(cardId: string): boolean {
   return !RELICS.has(cardId) && cardId !== "magiczna-sakwa" && cardId !== "tajemna-sakwa";
 }

@@ -17,7 +17,7 @@ import {
   mayHold,
 } from "@/lib/engine/derive";
 import { CLASS_NAME, forbiddenSaid, forbiddenTo, kindForCard, slotOnArrival } from "@/lib/engine/holdings";
-import { SLOT_LABEL, fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
+import { SLOT_LABEL, fitsIn, isWearable, sakwaOpen, type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import {
@@ -704,11 +704,18 @@ export function equipCard(
    */
   if (
     command.slot === "tajemna-sakwa" &&
-    !snapshot.holdings.some(
-      (one) => one.seat_id === held.seat_id && one.card_id === "tajemna-sakwa",
+    !sakwaOpen(
+      snapshot.holdings
+        .filter((one) => one.seat_id === held.seat_id)
+        .map((one) => ({ cardId: one.card_id, slot: one.slot })),
+      eqModeOf(snapshot.game),
     )
   ) {
-    throw new Error("Nie masz Tajemnej Sakwy — nie ma gdzie tego włożyć.");
+    throw new Error(
+      snapshot.game.eq_mode === "slots"
+        ? "Tajemna Sakwa musi być założona — w plecaku jest zamknięta."
+        : "Nie masz Tajemnej Sakwy — nie ma gdzie tego włożyć.",
+    );
   }
 
   if (command.slot === null) {
@@ -803,6 +810,38 @@ export function equipCard(
  * it, and it must be your turn, because 13.1 is explicit that nothing happens
  * on a field you merely passed through.
  */
+/**
+ * What was in the Sakwa when the Sakwa stopped being open.
+ *
+ * Taking the bag off, dropping it, or having Pan Bogactwa take it all close
+ * the place — and a Karta sitting in a place that no longer exists would be
+ * the worst of both halves of this card: uncounted against 5.4 and still
+ * unreachable by every rule that takes a Przedmiot.
+ *
+ * So it goes back in the Plecak, where anything without a place goes. That can
+ * put the holder over the four of 5.4, and it should: the overflow frame opens
+ * and asks them what goes, which is the same answer 5.6 gives to losing a Koń.
+ *
+ * Chained through `apply` for the usual reason — the write that closes the
+ * place is the one being made, so the stored snapshot still has it open.
+ */
+export function spilled(snapshot: Snapshot, soFar: Changeset = {}): Changeset {
+  const after = apply(snapshot, soFar);
+  const mode = eqModeOf(after.game);
+  const stranded = after.holdings.filter((held) => {
+    if (held.slot !== "tajemna-sakwa") return false;
+    const theirs = after.holdings.filter((one) => one.seat_id === held.seat_id);
+    return !sakwaOpen(
+      theirs.map((one) => ({ cardId: one.card_id, slot: one.slot })),
+      mode,
+    );
+  });
+  if (stranded.length === 0) return {};
+  return {
+    holdings: { patch: stranded.map((held) => ({ id: held.id, patch: { slot: null } })) },
+  };
+}
+
 export function takeFromField(
   snapshot: Snapshot,
   command: { seatId: string; fieldCardId: string },

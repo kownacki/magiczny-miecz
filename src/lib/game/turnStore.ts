@@ -93,6 +93,7 @@ import {
   grantCard as grantCardOn,
   placeCard as placeCardOn,
   reorderPack as reorderPackOn,
+  spilled,
   takeCard as takeCardOn,
   takeFromField as takeFromFieldOn,
 } from "./commands/holdings";
@@ -797,7 +798,17 @@ export async function takeCard(
 function thenRelease<C, T>(handler: Handler<C, T>): Handler<C, T> {
   return async (snapshot, command, ports) => {
     const { writes, result } = await handler(snapshot, command, ports);
-    return { writes: merge(writes, releaseOverflow(snapshot, writes)), result };
+    /**
+     * The Sakwa empties first, and then the limit is asked.
+     *
+     * Order matters and it is the ordinary `merge` trap: taking the bag off
+     * puts what was inside back in the Plecak, which is what can push the
+     * holder over the four — so the surplus has to be judged on the state that
+     * already has the spill in it, or the frame would open a move late.
+     */
+    const spill = spilled(snapshot, writes);
+    const done = merge(writes, spill);
+    return { writes: merge(done, releaseOverflow(snapshot, done)), result };
   };
 }
 

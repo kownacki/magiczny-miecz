@@ -10,11 +10,17 @@
  * that takes a Przedmiot away.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { emptyTables, memoryHandle, memoryStore, resetStore, setStore, activeStore } from "../gameStore";
+import { createGame } from "../store";
+import { setReady } from "../lobbyStore";
+import { equipCard as equip, grantCard, startGame, takeNewCharacter } from "../turnStore";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { carriedCount } from "@/lib/engine/derive";
 import { asHolding } from "./seat";
-import { equipCard } from "./holdings";
+import { equipCard, spilled } from "./holdings";
+import { sakwaOpen } from "@/lib/engine/slots";
+import { apply } from "../change";
 import type { EqMode } from "@/lib/engine/slots";
 
 const table = (
@@ -95,5 +101,104 @@ describe("putting something in it", () => {
     const at = table([{ card_id: "tajemna-sakwa" }, { card_id: "miecz", slot: "tajemna-sakwa" }], "classic");
     const { writes } = equipCard(at, { holdingId: "h1", slot: null });
     expect(writes.holdings?.patch?.[0]).toMatchObject({ id: "h1", patch: { slot: null } });
+  });
+});
+
+
+/**
+ * When the place closes.
+ *
+ * In slotowy the bag has to be worn for its inside to exist — the same thing
+ * `carryLimit` asks of the whole bearer family, where a Koń in the Plecak pulls
+ * nothing. So the place can close under something that is in it, and a Karta
+ * left in a place that does not exist would be the worst of both halves of this
+ * card: uncounted against 5.4 and still unreachable by every rule that takes a
+ * Przedmiot.
+ */
+describe("a bag that is not open", () => {
+  const held = (slot: string | null) => [
+    { card_id: "tajemna-sakwa", slot },
+    { card_id: "miecz", slot: "tajemna-sakwa" },
+  ];
+
+  it("is open in klasyczny by being held, because there is nowhere to wear it", () => {
+    const at = table(held(null), "classic");
+    expect(sakwaOpen(at.holdings.map((h) => ({ cardId: h.card_id, slot: h.slot })), "classic")).toBe(true);
+  });
+
+  it("is shut in slotowy while it is in the Plecak", () => {
+    const at = table(held(null), "slots");
+    expect(sakwaOpen(at.holdings.map((h) => ({ cardId: h.card_id, slot: h.slot })), "slots")).toBe(false);
+  });
+
+  it("is open in slotowy once it is worn", () => {
+    const at = table(held("pouch"), "slots");
+    expect(sakwaOpen(at.holdings.map((h) => ({ cardId: h.card_id, slot: h.slot })), "slots")).toBe(true);
+  });
+
+  it("refuses to take anything in while it is shut", () => {
+    const at = table([...held("pouch"), { card_id: "helm" }], "slots");
+    const off = apply(at, { holdings: { patch: [{ id: "h0", patch: { slot: null } }] } });
+    expect(() => equipCard(off, { holdingId: "h2", slot: "tajemna-sakwa" })).toThrow(
+      /musi być założona/,
+    );
+  });
+
+  it("puts what was inside back in the Plecak when the bag comes off", () => {
+    const at = table(held("pouch"), "slots");
+    // Taking the bag off is the write; the Miecz inside has nowhere to be.
+    const off = { holdings: { patch: [{ id: "h0", patch: { slot: null } }] } };
+    expect(spilled(at, off).holdings?.patch).toEqual([{ id: "h1", patch: { slot: null } }]);
+  });
+
+  it("leaves it alone while the bag is still on", () => {
+    expect(spilled(table(held("pouch"), "slots"))).toEqual({});
+    expect(spilled(table(held(null), "classic"))).toEqual({});
+  });
+
+  it("spills it when the bag leaves the seat entirely", () => {
+    const at = table(held("pouch"), "slots");
+    const dropped = { holdings: { delete: ["h0"] } };
+    expect(spilled(at, dropped).holdings?.patch).toEqual([{ id: "h1", patch: { slot: null } }]);
+  });
+});
+
+/**
+ * And the same thing through the store, because `spilled` being right is only
+ * half of it: it has to be *called*, on the write that closes the place, before
+ * the limit is judged.
+ */
+describe("taking the bag off, end to end", () => {
+  afterEach(() => resetStore());
+
+  async function playing() {
+    const tables = emptyTables();
+    const handle = memoryHandle(tables);
+    const { game } = await createGame("Ola", "simulation", "slots", null, handle);
+    setStore(memoryStore(tables));
+    const seat = tables.seats[0].id as string;
+    const user = (tables.users[0] as { id: string }).id;
+    await takeNewCharacter(game.id, seat, "goblin", seat);
+    await setReady(game.id, user, true);
+    await startGame(game.id);
+    return { gameId: game.id, seat };
+  }
+
+  it("puts what was inside back in the Plecak, and counts it again", async () => {
+    const { gameId, seat } = await playing();
+    await grantCard(gameId, seat, "tajemna-sakwa");
+    await grantCard(gameId, seat, "miecz");
+
+    const held = async (cardId: string) =>
+      (await activeStore().load(gameId)).holdings.find((one) => one.card_id === cardId)!;
+
+    // `grantCard` wears what it can, so the bag is already in the pouch.
+    expect((await held("tajemna-sakwa")).slot).toBe("pouch");
+    await equip(gameId, (await held("miecz")).id, "tajemna-sakwa");
+    expect((await held("miecz")).slot).toBe("tajemna-sakwa");
+
+    // Off it comes, and the Miecz has nowhere to be.
+    await equip(gameId, (await held("tajemna-sakwa")).id, null);
+    expect((await held("miecz")).slot).toBeNull();
   });
 });
