@@ -406,11 +406,7 @@ suite("playing the game, and overruling it", () => {
    */
   it("classifies every command exactly once, and the same way twice", () => {
     for (const spec of COMMANDS) {
-      const line = spec.usage
-        .split(/\s+/)
-        .map((word) => EXAMPLE[word] ?? word)
-        .filter((word) => !word.startsWith("["))
-        .join(" ");
+      const line = usageAsTyped(spec.usage);
       const parsed = parseCommand(line);
       if ("error" in parsed) throw new Error(`${spec.name}: ${parsed.error}`);
       expect(needsOf(parsed.ok), spec.name).toBe(spec.needs);
@@ -449,7 +445,7 @@ suite("playing the game, and overruling it", () => {
       who: null,
       to: null,
     });
-    expect(err("cast")).toContain("cast BŁYSKAWICA");
+    expect(err("cast")).toContain("cast <zaklęcie>");
   });
 
   /**
@@ -479,7 +475,7 @@ suite("playing the game, and overruling it", () => {
   it("takes a number of points to heal, and only a number", () => {
     expect(ok("heal")).toEqual({ kind: "heal", points: null });
     expect(ok("heal 2")).toEqual({ kind: "heal", points: 2 });
-    expect(err("heal lots")).toContain("heal [2]");
+    expect(err("heal lots")).toContain("heal [n]");
   });
 
   it("reads an answer as a path, not a single pick", () => {
@@ -547,12 +543,7 @@ suite("playing the game, and overruling it", () => {
    */
   it("agrees with itself about which lines need no game", () => {
     for (const spec of COMMANDS) {
-      const line = spec.usage
-        .split(/\s+/)
-        .map((word) => EXAMPLE[word] ?? word)
-        .filter((word) => !word.startsWith("["))
-        .join(" ");
-      const parsed = parseCommand(line);
+      const parsed = parseCommand(usageAsTyped(spec.usage));
       if ("error" in parsed) throw new Error(`${spec.name}: ${parsed.error}`);
       expect(worksOffTable(parsed.ok), spec.name).toBe(spec.offTable === true);
     }
@@ -654,16 +645,16 @@ suite("playing the game, and overruling it", () => {
     for (const [line, shape] of [
       ["kick", "kick <player>"],
       ["host", "host <player>"],
-      ["seat 3", "seat <player> 3"],
-      ["rename", "rename <player> as Ola"],
-      ["card", "card MAGOG"],
+      ["seat 3", "seat <player> <miejsce>"],
+      ["rename", "rename <player> as <imię>"],
+      ["card", "card <nazwa>"],
       ["gold", "gold +5|=12 [player] [force]"],
-      ["move", "move Karczma"],
-      ["teleport", "teleport Karczma"],
+      ["move", "move <obszar>"],
+      ["teleport", "teleport <obszar>"],
       // `deal` is not here: naming nothing is a request for the list rather
       // than a line with something missing, and an unknown name gets the real
       // answer instead of the shape — see the test below.
-      ["remove", "remove 3|MAGOG [hard]"],
+      ["remove", "remove <postać> [hard]"],
     ] as const) {
       expect(err(line), line).toContain(shape);
     }
@@ -696,8 +687,37 @@ suite("playing the game, and overruling it", () => {
 });
 
 /** A stand-in for each placeholder a usage line uses, so every line can be typed. */
+/**
+ * A printed usage line, typed back in.
+ *
+ * Optional parts come off as whole groups — `[at obszar]` is two words and one
+ * option, and dropping tokens that merely *start* with a bracket left `obszar]`
+ * behind, which is how `clear [TARGOWISKO] [at Karczma]` came to fail this
+ * check and had to be written round rather than fixed.
+ *
+ * What is left is the required part, with each `<placeholder>` swapped for
+ * something real. That is the whole point of the check: `help` prints these and
+ * a player types them back, so a line that cannot be typed is a line that lies.
+ */
+function usageAsTyped(usage: string): string {
+  return usage
+    .replace(/\[[^\]]*\]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => EXAMPLE[word] ?? word)
+    .join(" ");
+}
+
 const EXAMPLE: Record<string, string> = {
   "<player>": "Ola",
+  // The game's own nouns, each standing for something the box actually holds.
+  "<karta>": "MIECZ",
+  "<obszar>": "Karczma",
+  "<zaklęcie>": "BŁYSKAWICA",
+  "<postać>": "MAGOG",
+  "<nazwa>": "MAGOG",
+  "<imię>": "Ola",
+  "<miejsce>": "3",
   "won|lost|draw": "won",
   "won|lost": "won",
   "<command>": "help",
@@ -728,7 +748,7 @@ suite("help", () => {
     // just typed and got wrong.
     expect(ok("help put")).toEqual({ kind: "help", about: "put" });
     expect(helpLines("put")).toEqual([
-      "place MIECZ at Karczma",
+      "place <karta> at <obszar>",
       "leave a card on an Obszar, the one you stand on unless named",
       "also: put",
     ]);
@@ -1050,7 +1070,7 @@ suite("people and Postacie are addressed differently", () => {
     expect(err("seat Ola")).toMatch(/Into which seat/);
     // Being stopped is the moment the shape is worth seeing, so every
     // missing-argument answer carries the usage.
-    expect(err("seat 3")).toBe("Seat whom? seat <player> 3");
+    expect(err("seat 3")).toBe("Seat whom? seat <player> <miejsce>");
   });
 
   it("means me when `unseat` is given nobody", () => {
@@ -1181,10 +1201,9 @@ suite("every command, once each", () => {
    */
   it("reads back every usage line it prints", () => {
     for (const spec of COMMANDS) {
-      const typed = spec.usage
-        .replace(/\[[^\]]+\]/g, "")
-        .replace(/(\S*\|\S*)/g, (word) => word.split("|")[0])
-        .trim();
+      // The same reading as `usageAsTyped`, plus `a|b|c` collapsing to its
+      // first word — this check is about the shape being typeable at all.
+      const typed = usageAsTyped(spec.usage).replace(/(\S*\|\S*)/g, (word) => word.split("|")[0]);
       const parsed = parseCommand(typed);
       expect("ok" in parsed, `${spec.name}: ${typed}`).toBe(true);
     }

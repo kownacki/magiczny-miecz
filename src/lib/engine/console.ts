@@ -433,7 +433,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "move",
     when: ["move"],
     aliases: ["walk"],
-    usage: "move Karczma",
+    usage: "move <obszar>",
     summary: "walk the roll out and stand there (10.2) — `look` lists where it reaches",
     needs: "play",
     group: "turn",
@@ -454,7 +454,7 @@ export const COMMANDS: CommandSpec[] = [
     // l, i, x — and a letter that saves nothing costs a word somebody else
     // wanted.
     aliases: [],
-    usage: "answer [2] [KARTA]",
+    usage: "answer [n] [karta]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
     needs: "play",
     group: "turn",
@@ -463,7 +463,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "buy",
     aliases: [],
     when: PLAYING,
-    usage: "buy MIECZ",
+    usage: "buy <karta>",
     summary: "buy from the Obszar you are standing on, at its printed price",
     needs: "play",
     group: "trade",
@@ -472,7 +472,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "sell",
     aliases: [],
     when: PLAYING,
-    usage: "sell MIECZ",
+    usage: "sell <karta>",
     summary: "sell one back to the Lichwiarz in the Gród",
     needs: "play",
     group: "trade",
@@ -481,7 +481,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "heal",
     aliases: [],
     when: PLAYING,
-    usage: "heal [2]",
+    usage: "heal [n]",
     summary: "take back a point of Życie, or buy several where they are sold (4.2)",
     needs: "play",
     group: "trade",
@@ -490,7 +490,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "cast",
     aliases: [],
     when: PLAYING,
-    usage: "cast BŁYSKAWICA [at Ola] [to Mroczna Polana]",
+    usage: "cast <zaklęcie> [at player] [to obszar]",
     summary: "cast a Zaklęcie you are holding (9.6)",
     needs: "play",
     group: "carrying",
@@ -515,7 +515,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "trade",
     aliases: [],
     when: PLAYING,
-    usage: "trade [2|CYKLOP, NOBBIN]",
+    usage: "trade [n|karty]",
     summary: "cash beaten Wrogowie in at 7 points a Miecz (1.4) — how many Miecze you want, the Karty you name, or all of them",
     needs: "play",
     group: "trade",
@@ -542,7 +542,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "cross",
     aliases: [],
     when: PLAYING,
-    usage: "cross [Uroczysko]",
+    usage: "cross [obszar]",
     summary: "cross between the Kręgi — the Trzęsawiska or the Lodowy Las (11.1-11.8)",
     needs: "play",
     group: "board",
@@ -569,7 +569,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "take",
     aliases: ["get"],
     when: ["field", "fight"],
-    usage: "take MAGICZNY MIECZ",
+    usage: "take <karta>",
     summary: "pick up a Karta you drew or one lying on your Obszar (12.1, 13.4)",
     needs: "play",
     group: "carrying",
@@ -578,7 +578,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "drop",
     when: PLAYING,
     aliases: [],
-    usage: "drop MAGICZNY MIECZ",
+    usage: "drop <karta>",
     summary: "put one down on the Obszar you are standing on (12.1)",
     needs: "play",
     group: "carrying",
@@ -587,7 +587,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "equip",
     when: PLAYING,
     aliases: ["wear"],
-    usage: "equip HEŁM [slot]",
+    usage: "equip <karta> [slot]",
     summary: "put a Przedmiot on — the place is worked out unless it fits two",
     needs: "play",
     group: "carrying",
@@ -596,7 +596,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "use",
     when: PLAYING,
     aliases: [],
-    usage: "use KRYSZTAŁ LOSU",
+    usage: "use <karta>",
     summary: "spend a Karta that is spent by using it",
     needs: "play",
     group: "carrying",
@@ -605,7 +605,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "fight",
     aliases: [],
     when: ["field", "fight"],
-    usage: "fight [WILKOŁAK]",
+    usage: "fight [wróg]",
     summary: "square up to a Wróg on your Obszar — named when more than one is there (16.2)",
     needs: "play",
     group: "fight",
@@ -693,7 +693,7 @@ export const COMMANDS: CommandSpec[] = [
     // `x` is `examine` — Zork's word, and forty-five years of muscle memory
     // for "tell me about that thing".
     aliases: ["read", "x"],
-    usage: "card MAGOG",
+    usage: "card <nazwa>",
     summary: "what a Karta says — Postać, Zdarzenie, Przedmiot or Zaklęcie",
     needs: "play",
     group: "reading",
@@ -727,7 +727,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "seat",
     aliases: [],
-    usage: "seat <player> 3",
+    usage: "seat <player> <miejsce>",
     summary: "put somebody in a seat; refuses one that is taken",
     needs: "play",
     group: "table",
@@ -763,7 +763,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "rename",
     aliases: [],
-    usage: "rename <player> as Ola",
+    usage: "rename <player> as <imię>",
     summary: "give somebody a name",
     needs: "play",
     group: "table",
@@ -779,7 +779,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "pick",
     aliases: [],
-    usage: "pick [LOSOWA|MAGOG] [3]",
+    usage: "pick [postać] [miejsce]",
     summary: "a Postać into a seat — LOSOWA or nothing takes the surprise, yours unless numbered (4.4)",
     needs: "play",
     group: "table",
@@ -787,7 +787,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "remove",
     aliases: ["erase"],
-    usage: "remove 3|MAGOG [hard]",
+    usage: "remove <postać> [hard]",
     summary: "a Postać out of the game, its Karty to the used piles — `hard` bars it for good",
     needs: "testmode",
     group: "override",
@@ -795,7 +795,7 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "revive",
     aliases: [],
-    usage: "revive 3|MAGOG",
+    usage: "revive <postać>",
     summary: "back to life where it fell, with its own points and no Przedmioty",
     needs: "testmode",
     group: "override",
@@ -867,7 +867,7 @@ export const COMMANDS: CommandSpec[] = [
      */
     name: "deal",
     aliases: [],
-    usage: "deal HEŁM",
+    usage: "deal <karta>",
     summary: "any Karta happens to you, whatever kind it is — bare, it lists them",
     needs: "testmode",
     group: "override",
@@ -880,7 +880,7 @@ export const COMMANDS: CommandSpec[] = [
     // and the journal line that says where it went.
     name: "stack",
     aliases: [],
-    usage: "stack WILKOŁAK",
+    usage: "stack <karta>",
     summary: "put a Karta on top of its pile, so the next draw is that one",
     needs: "testmode",
     group: "override",
@@ -903,7 +903,7 @@ export const COMMANDS: CommandSpec[] = [
     // a test table that dressed a field had no way to undress it.
     name: "clear",
     aliases: [],
-    usage: "clear [TARGOWISKO]",
+    usage: "clear [karta] [at obszar]",
     summary: "take a Karta off an Obszar — bare, all of them; `at Karczma` for elsewhere",
     needs: "testmode",
     group: "override",
@@ -914,7 +914,7 @@ export const COMMANDS: CommandSpec[] = [
     // Przedmiot down", and a word cannot mean both that and a card conjured
     // onto a field.
     aliases: ["put"],
-    usage: "place MIECZ at Karczma",
+    usage: "place <karta> at <obszar>",
     summary: "leave a card on an Obszar, the one you stand on unless named",
     needs: "testmode",
     group: "override",
@@ -925,7 +925,7 @@ export const COMMANDS: CommandSpec[] = [
     // anywhere at all, which is a different act and now says so.
     name: "teleport",
     aliases: [],
-    usage: "teleport Karczma",
+    usage: "teleport <obszar>",
     summary: "stand on any Obszar, without a roll and without walking there",
     needs: "testmode",
     group: "override",
@@ -952,7 +952,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "spoils",
     aliases: [],
     when: ["fight"],
-    usage: "spoils [zloto|MIECZ]",
+    usage: "spoils [zloto|karta]",
     summary: "settle a won duel: the Życie, their Sztuka Złota, or a Przedmiot you name (17.9)",
     needs: "play",
     group: "fight",
@@ -1988,7 +1988,22 @@ export function complete(
       // given and can certainly be looked at.
       return { pool: [...READABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
     }
-    if (verb === "cross" || verb === "clear") return { pool: PLACES.map((f) => f.name), at: 1 };
+    if (verb === "cross") return { pool: PLACES.map((f) => f.name), at: 1 };
+    /**
+     * `clear` names a Karta first and an Obszar only after `at`.
+     *
+     * It offered Obszary in both places, which is the wrong half of the
+     * grammar: the common use is "take that Karta off the square I am standing
+     * on", and Tab answered with a wall of place names. `place` splits its two
+     * pools on the same word and this is its inverse, so it splits them the
+     * same way.
+     */
+    if (verb === "clear") {
+      const said = parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "at");
+      return said === -1
+        ? { pool: CARDS.map((c) => c.name), at: 1 }
+        : { pool: PLACES.map((f) => f.name), at: said + 1 };
+    }
     if (verb === "teleport" || verb === "move" || verb === "walk") {
       return { pool: PLACES.map((f) => f.name), at: 1 };
     }
