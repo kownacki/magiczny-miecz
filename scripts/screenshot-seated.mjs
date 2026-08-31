@@ -6,9 +6,14 @@ import { chromium } from "playwright";
  * Usage: node scripts/screenshot-seated.mjs <tableUrl> <out.png> <claimToken> [w] [h]
  *
  * The table screen shows a player their own controls only when it owns a seat,
- * and seat ownership lives in localStorage. Without planting the token first
- * every screenshot shows the spectator view, which is not the thing worth
- * looking at.
+ * and seat ownership lives in `sessionStorage` — see `seatToken.ts`, which says
+ * why: a seat is held by a window rather than by a machine, so two tabs are two
+ * players. Without planting the token first every screenshot shows the
+ * spectator view, which is not the thing worth looking at.
+ *
+ * This script planted it in `localStorage` for a while after the move, which
+ * fails in exactly the way that is hardest to notice: the page loads, renders,
+ * throws nothing, and quietly shows the join screen instead.
  */
 const [url, out, token, width = "1280", height = "1000"] = process.argv.slice(2);
 if (!url || !out || !token) {
@@ -29,11 +34,12 @@ page.on("console", (message) => {
 page.on("pageerror", (error) => problems.push(`page: ${error}`));
 
 const origin = new URL(url).origin;
-const code = new URL(url).pathname.split("/").pop();
-// localStorage is per-origin, so the token has to be planted from a page on
-// that origin before the table itself loads.
+const code = new URL(url).pathname.split("/").pop().toUpperCase();
+// Storage is per-origin, so the token has to be planted from a page on that
+// origin before the table itself loads — and in the same tab, because
+// `sessionStorage` is scoped to exactly this one.
 await page.goto(origin);
-await page.evaluate(([key, value]) => localStorage.setItem(key, value), [`mm:${code}`, token]);
+await page.evaluate(([key, value]) => sessionStorage.setItem(key, value), [`mm:${code}`, token]);
 
 await page.goto(url, { waitUntil: "networkidle" });
 await page.waitForTimeout(2400);

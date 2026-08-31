@@ -2130,6 +2130,7 @@ function asPublicSeat(seat: Seat, driver: Person | null): PublicSeat {
     away: seat.away,
     isHost: driver?.isHost ?? false,
     turnsLost: seat.turns_lost,
+    effects: seat.effects,
     cards: seat.holdings
       .filter((held) => held.kind !== "spell")
       .map((held) => ({

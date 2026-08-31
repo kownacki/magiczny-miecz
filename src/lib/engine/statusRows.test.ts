@@ -79,6 +79,19 @@ describe("lapsesOn: a countdown becomes a date only by walking the order", () =>
     });
   });
 
+  it("never pays a debt with the turn its holder is standing in", () => {
+    // Found on a real table: seat 0 is playing and owes two turns, and the
+    // panel read "traci 2 tury — wraca w rundzie 1" during round 1. A debt is
+    // turns taken away, and the one already happening is not one of them — so
+    // the turn in progress counts towards a countdown ("do końca tej tury")
+    // and never towards a debt.
+    const queue = projectQueue(table({ 0: { turnsLost: 2 } }), 0, 5, 20);
+    const [debt] = fromColumns({ ...none, turnsLost: 2 }, 5);
+    expect(lapsesOn(debt, queue, 0)?.round).toBeGreaterThan(5);
+    // The countdown beside it still starts with the turn in progress.
+    expect(lapsesOn(buff(1), queue, 0)).toMatchObject({ round: 5 });
+  });
+
   it("says nothing at all about an effect that is not a time", () => {
     const queue = projectQueue(table(), 0, 5, 12);
     for (const ends of [

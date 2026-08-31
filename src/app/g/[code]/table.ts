@@ -100,7 +100,30 @@ export interface Seat {
     source: string;
     glyph: string;
     tone: "dobry" | "zly" | "obojetny";
+    /** `label — when`, for a hover and for anywhere one line is all there is. */
     title: string;
+    /** The card's own words for it, in the language the cards use. */
+    label: string;
+    /**
+     * How long it has left, and the round it lapses in where there is one.
+     *
+     * Composed on the server, because working it out needs the whole turn
+     * order walked forward and the browser is sent one seat at a time.
+     */
+    when: string;
+    /** How many applications this row stands for — two Kręgi Płomieni are one row. */
+    count: number;
+    /** What the second and later ones did. Only worth saying when `count > 1`. */
+    stacking: "sums" | "queues" | "refreshes" | "exclusive";
+    /**
+     * Whether the round in `when` was read off a column or worked out.
+     *
+     * `prognoza` means the turn order was walked to get there, and the next
+     * Karta drawn can move it. Null where the effect has no round at all —
+     * Fatum until somebody speaks Władca Zaklęć, a Świątynia's hold until a
+     * die — which is a thing the panel must not paper over with a number.
+     */
+    certainty: "pewne" | "prognoza" | null;
   }[];
   life: number;
   gold: number;

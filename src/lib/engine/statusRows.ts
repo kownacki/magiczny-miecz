@@ -78,10 +78,26 @@ export function lapsesOn(
   }
   if (status.ends.kind !== "turns") return null;
 
-  // The holder's actual goes, in order. Skipped slots are not turns and do not
-  // tick anything: `finishTurn` calls `tickEffects` for the seat that played,
-  // and for nobody it passed over.
-  const own = queue.filter((entry) => entry.seatIndex === seatIndex && entry.status !== "skipped");
+  const debt = status.source === DEBT;
+
+  /**
+   * The holder's actual goes, in order.
+   *
+   * Skipped slots are not turns and tick nothing: `finishTurn` calls
+   * `tickEffects` for the seat that played and for nobody it passed over.
+   *
+   * The turn in progress counts for a countdown and not for a debt. "Do końca
+   * tej tury" on the active seat means the one they are standing in, so it is
+   * the first of theirs — but a debt is turns taken away, and the turn already
+   * happening is not one of them. Counting it dated a debt to the round its
+   * holder was playing in, which is a sentence that answers its own question
+   * wrongly: "traci 2 tury — wraca w rundzie 1" was on screen during round 1.
+   */
+  const own = queue.filter(
+    (entry) =>
+      entry.seatIndex === seatIndex &&
+      (debt ? entry.status === "upcoming" : entry.status !== "skipped"),
+  );
 
   /**
    * A lost turn counts the other way, so it is read the other way.
@@ -90,24 +106,12 @@ export function lapsesOn(
    * says "N of your goes are taken from you", and what ends it is the first go
    * that actually happens. Reading it like the others would put the debt's end
    * two turns past the turn that discharges it.
-   *
-   * It reads `pewne` rather than `prognoza` on purpose where the debt is the
-   * only thing in the way: the seats before it are being passed over by the
-   * same walk that spends the debt, and a card drawn in between can add to the
-   * debt but cannot make the turn arrive sooner. The forecast is still a
-   * forecast — `projectQueue` says so — so the certainty here is the one thing
-   * in this file that is a judgement rather than a fact, and it is the weaker
-   * of the two that the walk can support.
    */
-  const at = status.source === DEBT ? 0 : status.ends.turns - 1;
+  const at = debt ? 0 : status.ends.turns - 1;
   const entry = own[at];
   if (!entry) return null;
 
-  return {
-    round: entry.round,
-    certainty: "prognoza",
-    onOwnTurn: status.source !== DEBT,
-  };
+  return { round: entry.round, certainty: "prognoza", onOwnTurn: !debt };
 }
 
 /**

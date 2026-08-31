@@ -41,6 +41,7 @@ import { Fold } from "./fold";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
 import { EffectMark, ToneGlyph } from "./effect-mark";
+import { EffectList } from "./effect-list";
 /**
  * How many marks the folded bar shows before it starts counting.
  *
@@ -586,6 +587,16 @@ export function SeatCard({
 
       {character && (
         <>
+          {/* What is true of this character, above everything it owns.
+
+              A Kamień or a Krąg Płomieni decides whether the rest of this card
+              can be acted on at all, so it is read before the pack rather than
+              under it. Not behind a fold of its own: the card already has one,
+              and a reading aid nobody can see without opening two things is one
+              nobody reads. The marks beside the name stay — they are what a
+              *folded* card shows, and this is what an open one does. */}
+          <EffectList effects={marks} />
+
           {/* The character and what it is wearing, pushed to opposite sides.
               They are two different things to look at — who this is, and what
               they have on — and sitting them shoulder to shoulder in the middle

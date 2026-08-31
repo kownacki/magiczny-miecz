@@ -657,7 +657,12 @@ export function describe(
     }
 
     case "stone":
-      return line(`${who} zamienia się w Kamień — wraca w turze ${num(data.until)}.`);
+      // A round, and now the line says so. `stone_until_round` was renamed
+      // with the rest of the counters and this sentence was not, so the
+      // journal was the one place still calling the circuit a "tura" —
+      // beside a panel two inches away saying "rundzie 4" about the same
+      // moment.
+      return line(`${who} zamienia się w Kamień — wraca w rundzie ${num(data.until)}.`);
     case "death":
       return line(`${who} ginie na polu ${field(data.field)}.`);
     // Somebody who was not at the table when it started. A different line from

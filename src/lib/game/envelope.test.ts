@@ -357,3 +357,102 @@ describe("a Zaklęcie waiting to be answered (9.6)", () => {
     expect(envelopeFor(twoHands(), "usra", NOW).spoken).toBeNull();
   });
 });
+
+/**
+ * The effects, folded and dated on the server.
+ *
+ * Both halves have to happen here rather than in a browser. Stacking is a rule
+ * — what a second Krąg Płomieni did is the engine's to say — and the round an
+ * effect lapses in needs the whole turn order walked, while a device is sent
+ * one seat at a time and could not walk it if it wanted to.
+ */
+describe("what a character is under, sent as rows", () => {
+  const table = (over: Parameters<typeof aSeat>[0] = {}, effects: unknown[] = []) =>
+    aTable({
+      game: { round: 5, active_seat: 0 },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0 }),
+        aSeat({ id: "seat-b", seat_index: 1, ...over }),
+      ],
+      users: [
+        aUser({ id: "usra", name: "Michał", seat_index: 0 }),
+        aUser({ id: "usrb", name: "Ola", seat_index: 1, is_host: false }),
+      ],
+      effects: effects as never,
+    });
+
+  const held = (id: string, turns: number) => ({
+    id,
+    seat_id: "seat-b",
+    source: "krag-plomieni",
+    label: "Krąg Płomieni",
+    modifier: { kind: "frozen" },
+    ends: { kind: "turns", turns },
+  });
+
+  it("dates a lost turn to the round the seat plays again in", () => {
+    const envelope = envelopeFor(table({ turns_lost: 2 }), "usra", NOW);
+    expect(seatIn(envelope, "seat-b").effects).toMatchObject([
+      { label: "Traci turę", when: "jeszcze 2 tury — wraca w rundzie 7", certainty: "prognoza" },
+    ]);
+  });
+
+  it("names a stored deadline outright, and calls it exact", () => {
+    const envelope = envelopeFor(table({ stone_until_round: 8 }), "usra", NOW);
+    expect(seatIn(envelope, "seat-b").effects).toMatchObject([
+      { label: "Zamieniony w Kamień", when: "mija na początku rundy 8", certainty: "pewne" },
+    ]);
+  });
+
+  it("folds two of one thing into one row, and says what the second did", () => {
+    const envelope = envelopeFor(table({}, [held("e1", 1), held("e2", 3)]), "usra", NOW);
+    const [row, ...rest] = seatIn(envelope, "seat-b").effects;
+    expect(rest).toEqual([]);
+    expect(row).toMatchObject({ count: 2, stacking: "exclusive" });
+    // The row stops being true when the longer of the two does.
+    expect(row.when).toContain("rundzie 7");
+  });
+
+  it("leaves an effect that is not a time without a round at all", () => {
+    const fatum = {
+      id: "e1",
+      seat_id: "seat-b",
+      source: "fatum",
+      label: "Fatum",
+      modifier: { kind: "frozen" },
+      ends: { kind: "dispelled" },
+    };
+    const row = seatIn(envelopeFor(table({}, [fatum]), "usra", NOW), "seat-b").effects[0];
+    expect(row).toMatchObject({ when: "dopóki ktoś tego nie zdejmie", certainty: null });
+  });
+
+  /**
+   * The one word that depends on who is reading. A countdown lapsing after its
+   * holder's own turn is "po twojej turze" on your own card and "po turze
+   * Postaci" on somebody else's — and the envelope is built per device, so the
+   * same seat reads differently on two screens by design.
+   */
+  it("speaks about a seat in the second person only on that seat's own device", () => {
+    const state = table({}, [held("e1", 2)]);
+    expect(seatIn(envelopeFor(state, "usrb", NOW), "seat-b").effects[0].when).toContain(
+      "po twojej turze",
+    );
+    expect(seatIn(envelopeFor(state, "usra", NOW), "seat-b").effects[0].when).toContain(
+      "po turze Postaci",
+    );
+    // And a spectator, who is driving nothing, is nobody's second person.
+    expect(seatIn(envelopeFor(state, null, NOW), "seat-b").effects[0].when).toContain(
+      "po turze Postaci",
+    );
+  });
+
+  it("keeps the mark the marks beside a name have always used", () => {
+    const envelope = envelopeFor(table({ turns_lost: 1 }), "usra", NOW);
+    expect(seatIn(envelope, "seat-b").effects[0]).toMatchObject({
+      glyph: "■",
+      tone: "zly",
+      source: "tura-stracona",
+      title: "Traci turę — jeszcze 1 tura — wraca w rundzie 6",
+    });
+  });
+});

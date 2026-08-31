@@ -34,6 +34,7 @@ import { StatFigure } from "./token-rail";
 import { natureSaid } from "./nature-line";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
+import { EffectList } from "./effect-list";
 
 export function PlayersDrawer({
   seats,
@@ -186,6 +187,36 @@ export function PlayersDrawer({
                     <span className="ml-2 text-[11px] text-muted">nieobecny</span>
                   ) : null}
                 </span>
+                {/* Shut, the row still has to admit there is something to open.
+
+                    A seat sitting out three rounds in Kamień looked, folded,
+                    exactly like a seat having an ordinary game — and this
+                    drawer is where the table comes to ask why the turn keeps
+                    skipping somebody. The glyphs rather than a count, because
+                    two of them fit where "2 efekty" does not, and they are the
+                    same shapes the row shows when it opens. */}
+                {seat.effects.length > 0 && (
+                  <span
+                    aria-hidden
+                    title={seat.effects.map((effect) => effect.title).join(" · ")}
+                    className="shrink-0 text-[11px] leading-none"
+                  >
+                    {seat.effects.map((effect) => (
+                      <span
+                        key={effect.id}
+                        className={
+                          effect.tone === "dobry"
+                            ? "text-verdigris"
+                            : effect.tone === "zly"
+                              ? "text-vermilion"
+                              : "text-muted"
+                        }
+                      >
+                        {effect.glyph}
+                      </span>
+                    ))}
+                  </span>
+                )}
                 <span className="tnum shrink-0 text-[11px]">
                   <span className="text-miecz">{seat.miecz}</span>
                   <span className="text-muted"> / </span>
@@ -265,11 +296,19 @@ export function PlayersDrawer({
                       />
                       <Row label="Życie" tone="text-zycie" value={seat.life} />
                       <Row label="Złoto" tone="text-zloto" value={seat.gold} />
-                      {seat.turnsLost > 0 && (
-                        <Row label="Traci tur" value={String(seat.turnsLost)} />
-                      )}
                     </dl>
                   </div>
+
+                  {/* Under the numbers, because it is the thing that decides
+                      what the numbers are allowed to do next.
+
+                      This replaces a lone "Traci tur 2", which was the wrong
+                      half of the answer twice: a count with no idea when it
+                      runs out, and nothing at all about the Kamień or the
+                      Zaklęcie sitting beside it. Same component as the player's
+                      own sheet, so the two cannot drift into two vocabularies
+                      for one set of facts. */}
+                  <EffectList effects={seat.effects} />
 
                   {/* 5.2 and 6.2 put these face up, so they are everybody's to
                       read. A spell hand is 9.3's and shows as a back.

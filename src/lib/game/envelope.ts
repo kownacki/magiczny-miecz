@@ -3,11 +3,12 @@
 import type { TurnState } from "@/lib/engine/stack";
 import { visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou, heldAbilities } from "@/lib/engine/abilities";
-import { markOf, spokenSpell } from "@/lib/engine/status";
+import { spokenSpell } from "@/lib/engine/status";
+import { foldStatuses } from "@/lib/engine/statusRows";
 import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
-import { seatView } from "./commands/seat";
+import { seatView, turnQueueOf } from "./commands/seat";
 import type { Snapshot } from "./change";
 import { AWAY_AFTER_MS } from "./commands/lobby";
 
@@ -53,7 +54,7 @@ export interface EnvelopeSeat {
   spell_capacity: number;
   sword_in_fight: number;
   magic_in_fight: number;
-  effects: { id: string; source: string | null }[];
+  effects: { id: string; source: string | null; label: string; when: string }[];
   [column: string]: unknown;
 }
 
@@ -241,6 +242,14 @@ export function envelopeFor(
       : (seats.find((seat) => seat.seat_index === me.seat_index) ?? null);
 
   /**
+   * The turn order walked once, for the whole envelope.
+   *
+   * Every seat's countdowns are dated against the same walk, so two cards on
+   * screen at the same moment cannot disagree about which round it is.
+   */
+  const queue = turnQueueOf(table);
+
+  /**
    * Away is judged here, once, for everybody.
    *
    * Every device compared its own clock against a timestamp before this, so a
@@ -383,14 +392,40 @@ export function envelopeFor(
             ? null
             : (view.holdings.find((held) => fightsForYou(heldAbilities([held.cardId])))?.cardId ??
               null),
-        // What a player is shown beside their name, already worked out: the
-        // browser gets marks, not a modelling problem.
-        effects: view.statuses.map((status) => ({
-          id: status.id,
+        /**
+         * What a player is shown beside their name, already worked out: the
+         * browser gets rows, not a modelling problem.
+         *
+         * Folded here rather than in the browser because both halves of the
+         * answer need things a device does not have. Stacking is a rule — what
+         * a second Krąg Płomieni did is `stackingOf`'s to say, not a panel's —
+         * and the round an effect lapses in needs the whole turn order walked,
+         * while a device is sent one seat at a time. So the words arrive
+         * finished and the panel draws them.
+         *
+         * `mine` is the seat this device is driving, and it decides one word:
+         * a countdown lapsing after its holder's turn reads "po twojej turze"
+         * on your own card and "po turze Postaci" on everybody else's.
+         */
+        effects: foldStatuses(view.statuses, {
+          queue,
+          seatIndex: seat.seat_index,
+          mine: mine?.id === seat.id,
+        }).map((row) => ({
+          id: row.key,
           // The card that put it there, so the browser can draw its picture
           // rather than a shape standing in for it.
-          source: status.source,
-          ...markOf(status),
+          source: row.from[0].source,
+          glyph: row.mark.glyph,
+          tone: row.mark.tone,
+          // Not `markOf`'s own title: that one ends at `describeEnd`, which
+          // knows the duration and not the round it falls in.
+          title: `${row.label} — ${row.when}`,
+          label: row.label,
+          when: row.when,
+          count: row.count,
+          stacking: row.stacking,
+          certainty: row.lapse?.certainty ?? null,
         })),
       };
     }),

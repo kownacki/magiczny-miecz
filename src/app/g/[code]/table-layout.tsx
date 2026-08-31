@@ -3,6 +3,7 @@
 import { LAYER } from "./layers";
 import type { SeatCharacter } from "@/lib/engine/characters";
 import type { TileCard } from "./card-tile";
+import type { Seat } from "./table";
 
 /**
  * The game screen: a board on the left, everything about you on the right.
@@ -165,6 +166,17 @@ export interface PublicSeat {
   away: boolean;
   isHost: boolean;
   turnsLost: number;
+  /**
+   * Everything true of this character for a while, worked out on the server.
+   *
+   * The roster showed one of these as a bare "Traci tur 2" and the rest not at
+   * all, which is the wrong half of the answer twice over: it named a number
+   * without saying when it runs out, and it said nothing about the Kamień or
+   * the Zaklęcie beside it. Whose turn is being passed over and why is the part
+   * of turn order that is hardest to follow, and the roster is where the table
+   * goes to ask.
+   */
+  effects: Seat["effects"];
   cards: TileCard[];
   hiddenSpells: number;
 }
