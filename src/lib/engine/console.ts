@@ -282,7 +282,8 @@ export type Command =
   /* The Bestia, the Most, and the two thresholds between the rings. */
   | { kind: "beast" }
   | { kind: "bridge" }
-  | { kind: "cross" }
+  /** `cross`, and `cross Uroczysko` where several Obszary border you (11.2). */
+  | { kind: "cross"; to: FieldId | null }
   | { kind: "guardian" }
   | { kind: "ferry"; pay: boolean }
   /* Shops, healers and Zaklęcia. */
@@ -539,7 +540,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "cross",
     aliases: [],
     when: PLAYING,
-    usage: "cross",
+    usage: "cross [Uroczysko]",
     summary: "cross between the Kręgi — the Trzęsawiska or the Lodowy Las (11.1-11.8)",
     needs: "play",
     group: "board",
@@ -1589,7 +1590,13 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
 
   if (word === "beast") return { ok: { kind: "beast" } };
   if (word === "bridge" || word === "most") return { ok: { kind: "bridge" } };
-  if (word === "cross") return { ok: { kind: "cross" } };
+  if (word === "cross") {
+    if (tail === "") return { ok: { kind: "cross", to: null } };
+    const where = findByName(PLACES, (field) => field.name, tail);
+    if ("ambiguous" in where) return { error: `Which one — ${where.ambiguous.join(", ")}?` };
+    if ("missing" in where) return { error: `No Obszar called \`${tail}\`.` };
+    return { ok: { kind: "cross", to: where.found.id } };
+  }
   if (word === "guardian") return { ok: { kind: "guardian" } };
   if (word === "ferry") {
     // `pay` last and bare, the way `force` and `hard` are.
@@ -1934,6 +1941,7 @@ export function complete(
       // given and can certainly be looked at.
       return { pool: [...READABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
     }
+    if (verb === "cross") return { pool: PLACES.map((f) => f.name), at: 1 };
     if (verb === "teleport" || verb === "move" || verb === "walk") {
       return { pool: PLACES.map((f) => f.name), at: 1 };
     }

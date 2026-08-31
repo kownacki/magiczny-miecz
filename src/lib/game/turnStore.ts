@@ -1195,9 +1195,9 @@ export async function enterBridge(
 
 export async function crossRing(
   gameId: string,
-  input: { outcome?: CrossOutcome; dice?: number[] | null } = {},
+  input: { outcome?: CrossOutcome; dice?: number[] | null; to?: FieldId } = {},
 ): Promise<{ to: string | null; outcome: CrossOutcome; dice?: number[]; magia?: number }> {
-  return change(gameId, crossRingOn, { outcome: input.outcome }, {
+  return change(gameId, crossRingOn, { outcome: input.outcome, to: input.to }, {
     random: supplied(input.dice ?? [], appRandom()),
   });
 }

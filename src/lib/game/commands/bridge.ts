@@ -6,6 +6,7 @@ import {
   FIELDS,
   isFerry,
   type BridgeEntrance,
+  type FieldId,
 } from "@/lib/engine/board";
 import { CROSSINGS, crossingFrom, trzesawiskaOutcome, type Crossing } from "@/lib/engine/rings";
 import {
@@ -44,6 +45,7 @@ import {
 import { asReturnable, putOnPile } from "./piles";
 import { keepOnly, statusesOf } from "./turn";
 import { afterEvent, grantedCrossing } from "@/lib/engine/status";
+import { facing } from "@/lib/engine/across";
 import { spendLife } from "./life";
 import { activeSeat, pointsOf, seatView } from "./seat";
 
@@ -484,7 +486,7 @@ export type CrossOutcome = "udana" | "remis" | "nieudana";
  */
 export async function crossRing(
   snapshot: Snapshot,
-  command: { outcome?: CrossOutcome } = {},
+  command: { outcome?: CrossOutcome; to?: FieldId } = {},
   ports: CommandPorts,
 ): Promise<Outcome<{ to: string | null; outcome: CrossOutcome; dice?: number[]; magia?: number }>> {
   const seat = activeSeat(snapshot);
@@ -505,17 +507,40 @@ export async function crossRing(
    * land is the far side of the one they are taking rather than a choice.
    */
   const granted = grantedCrossing(statusesOf(snapshot, seat.id));
-  const here = FIELDS.get(seat.field_id);
-  const opened = granted
-    ? CROSSINGS.find(
-        (one) =>
-          one.obstacle === granted.przez &&
-          FIELDS.get(one.from)?.region === here?.region,
-      )
-    : undefined;
-  const crossing: Crossing | undefined = opened
-    ? { from: seat.field_id, to: opened.to, obstacle: opened.obstacle }
-    : crossingFrom(seat.field_id);
+
+  /**
+   * Where a granted crossing puts you: „do Obszaru graniczącego z tym, z
+   * którego wyruszyłeś".
+   *
+   * It used to land you at the far side of the *printed* crossing whatever
+   * square you set out from — cross the Trzęsawiska from Mokradła I and you
+   * arrived at Las Błędnych Ogni, which is Uroczysko's neighbour and not
+   * yours. Right ring, wrong Obszar, and the cards are explicit about it.
+   *
+   * `facing` is the board read off the scan; see `across.ts` for how, and for
+   * the two printed crossings that check it. Where several Obszary border you
+   * — the corners, and the short top and bottom bands — the player says which,
+   * because that is what „graniczącego" leaves open and what a table does
+   * looking at the board.
+   */
+  const opposite = granted ? facing(seat.field_id, granted.przez) : [];
+  if (granted && opposite.length > 1 && !command.to) {
+    throw new Error(
+      `${granted.label}: na który Obszar? ${opposite.map((id) => FIELDS.get(id)?.name ?? id).join(", ")}`,
+    );
+  }
+  if (command.to && !opposite.includes(command.to)) {
+    throw new Error(
+      opposite.length === 0
+        ? "Stąd nie ma przeprawy."
+        : `Ten Obszar nie graniczy z tym, z którego wyruszasz. ${opposite.map((id) => FIELDS.get(id)?.name ?? id).join(", ")}`,
+    );
+  }
+  const landing = command.to ?? opposite[0];
+  const crossing: Crossing | undefined =
+    granted && landing
+      ? { from: seat.field_id, to: landing, obstacle: granted.przez }
+      : crossingFrom(seat.field_id);
   if (!crossing) {
     throw new Error(
       granted

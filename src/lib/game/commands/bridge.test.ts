@@ -149,19 +149,47 @@ describe("przeprawa między Kręgami (11.4, 11.8)", () => {
         ],
       });
 
+    /**
+     * „Przeprawisz się do Obszaru graniczącego z tym, z którego wyruszyłeś."
+     *
+     * This used to land on `las-blednych-ogni` whatever square you set out
+     * from, because it took the far side of the *printed* crossing — which is
+     * Uroczysko's neighbour, not the Karczma's. Right Krąg, wrong Obszar.
+     * Across the Trzęsawiska from the Karczma is the Świątynia Bogini Nemed;
+     * see `across.ts`.
+     */
     it("crosses from an Obszar the board has no crossing on", async () => {
       const { writes, result } = await crossRing(
         withSpell("karczma", "trzesawiska"),
         {},
         ports(),
       );
-      // Out of the Kraina they are in, by the crossing that leads that way.
-      expect(result.to).toBe("las-blednych-ogni");
+      expect(result.to).toBe("swiatynia-bogini-nemed");
       expect(result.outcome).toBe("udana");
       expect(writes.journal?.[0]).toMatchObject({
         kind: "crossing",
-        payload: { from: "karczma", to: "las-blednych-ogni" },
+        payload: { from: "karczma", to: "swiatynia-bogini-nemed" },
       });
+    });
+
+    /**
+     * And where the board puts two Obszary against one, it asks.
+     *
+     * Gród is the Dolny Krąg's bottom-right corner, so it faces the right band
+     * and the bottom band both — „graniczącego" leaves that open and a table
+     * looking at the board would simply pick.
+     */
+    it("asks which, from a corner that borders two", async () => {
+      const corner = withSpell("grod", "trzesawiska");
+      await expect(crossRing(corner, {}, ports())).rejects.toThrow(/Magiczne Wrota|Płaskowyż/);
+      const { result } = await crossRing(corner, { to: "plaskowyz-mgiel" }, ports());
+      expect(result.to).toBe("plaskowyz-mgiel");
+    });
+
+    it("refuses an Obszar that does not border the one you set out from", async () => {
+      await expect(
+        crossRing(withSpell("karczma", "trzesawiska"), { to: "pustelnia" }, ports()),
+      ).rejects.toThrow(/nie graniczy/);
     });
 
     it("is spent by being taken", async () => {

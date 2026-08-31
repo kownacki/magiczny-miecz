@@ -1151,7 +1151,7 @@ export async function runCommand(
 
     case "cross": {
       const seat = seatOf(null);
-      const done = await crossRing(gameId);
+      const done = await crossRing(gameId, command.to ? { to: command.to } : {});
       const rolled = done.dice ? ` (${done.dice.join("+")} against Magia ${done.magia})` : "";
       return done.to
         ? `${named(seat)} crosses to ${fieldName(asFieldId(done.to))}.${rolled}`

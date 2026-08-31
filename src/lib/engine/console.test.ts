@@ -973,7 +973,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     becomes: { kind: "cast", name: "BŁYSKAWICA", who: null, to: null },
   },
   bridge: { line: "bridge", becomes: { kind: "bridge" } },
-  cross: { line: "cross", becomes: { kind: "cross" } },
+  cross: { line: "cross", becomes: { kind: "cross", to: null } },
   guardian: { line: "guardian", becomes: { kind: "guardian" } },
   ferry: { line: "ferry", becomes: { kind: "ferry", pay: false } },
   drop: { line: "drop MAGICZNY MIECZ", becomes: { kind: "putdown", name: "MAGICZNY MIECZ" } },
