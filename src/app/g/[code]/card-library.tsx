@@ -348,18 +348,32 @@ export function CardLibrary({
       <Drawer
         side="left"
         /**
-         * Sized to the shelf rather than to a scale.
+         * Sized to the shelf rather than to a scale, with room a scrollbar
+         * cannot outgrow.
          *
          * Five tiles across, which is what the section headings were laid out
          * for and about half again the players' width: 5 x 92 (`CardTile`'s
-         * own) + 4 x 12 (`gap-3`) = 508, + 32 for the padding either side,
-         * + 16 for the scrollbar gutter the drawer always reserves = 556.
+         * own) + 4 x 12 (`gap-3`) = 508, + 32 for the padding either side = 540.
+         *
+         * The last term is the one that had to change. It was 16 — one
+         * scrollbar, measured once — and a scrollbar is not one width. It is
+         * reserved in device pixels, so in the CSS pixels this sum is written
+         * in it *grows as you zoom out*: 15 at 100%, 16.7 at 90%, 30 at 50%.
+         * At 556 the shelf dropped to four columns the moment somebody zoomed
+         * to 90%, which is not a rendering bug so much as arithmetic that only
+         * held at one zoom level.
+         *
+         * 32 covers a 15px scrollbar down to about 50% zoom, and the slack
+         * above it is inside the scrolling column, where it reads as padding
+         * rather than as a strip of empty panel. The shelf is thirty cards
+         * deep, so in practice there is always a scrollbar in it to use the
+         * room.
          *
          * A round `max-w-xl` was 36rem, which left a finger's width of dead
          * panel past the last column — the shelf did not look narrow, it looked
          * misaligned.
          */
-        width="max-w-[556px]"
+        width="max-w-[572px]"
         title="Księga Tolimana"
         onClose={onClose}
         head={

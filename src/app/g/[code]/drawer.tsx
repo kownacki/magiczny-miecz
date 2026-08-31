@@ -118,10 +118,23 @@ export function Drawer({
         {head}
       </SurfaceHead>
 
-      {/* A gutter that is always there, so a drawer sized to fit its contents
-          fits them whether the list is long enough to scroll or not — and so
-          the arithmetic behind `width` has one fewer unknown in it. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
+      {/* The scrollbar takes its room when there is a scrollbar, and not
+          before.
+
+          This reserved it always (`scrollbar-gutter: stable`), on the argument
+          that a drawer sized to fit its contents should fit them whether the
+          list scrolls or not. It cost two things. A drawer with nothing to
+          scroll — the roster with two seats in it — carried a visible strip of
+          dead panel down its inside edge. And the reservation is the
+          scrollbar's *device* width, which means its size in CSS pixels grows
+          as you zoom out: 15px at 100% is 16.7 at 90%, and the Księga's shelf,
+          budgeted to the pixel for five tiles across, silently became four.
+
+          A width that only holds at one zoom level is not a width. So the room
+          is guaranteed by the drawer's own `width` instead — see the note on
+          the Księga's, which now has an allowance a scrollbar cannot outgrow —
+          and the gutter appears with the scrollbar it belongs to. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {children}
       </div>
     </aside>

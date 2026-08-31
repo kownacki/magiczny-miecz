@@ -139,11 +139,11 @@ export function PlayersDrawer({
        *
        * It was 350px, counted to fit exactly three `CardTile`s across and not a
        * pixel more: 3 x 92 + 2 x 8 = 292, plus the seat box's padding and
-       * border, the column's, the scrollbar gutter the drawer always reserves,
-       * and the drawer's own left edge. The arithmetic was right and the
-       * premise stopped being: a seat now carries a row of effect tiles, their
-       * durations in words underneath, and several seats open at once. The
-       * widest thing in here is no longer the row of three.
+       * border, the column's, a scrollbar, and the drawer's own left edge. The
+       * arithmetic was right and the premise stopped being: a seat now carries
+       * a row of effect tiles, their durations in words underneath, and
+       * several seats open at once. The widest thing in here is no longer the
+       * row of three.
        *
        * So it takes the default, and the default is what Stosy takes — two
        * drawers of the same width read as two drawers rather than as one that
