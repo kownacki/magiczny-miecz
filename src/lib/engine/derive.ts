@@ -5,6 +5,7 @@ import type { Holding, Seat } from "./state";
 import { RELICS, type EqMode } from "./slots";
 import {
   carryLimit as abilityCarryLimit,
+  fillsAPlace,
   heldAbilities,
   spellsOverLimit,
   type Ability,
@@ -257,6 +258,9 @@ export function carriedCount(
       // Tarcza Tolimana never count against the four of 5.4, in either variant,
       // because neither is a thing anybody chooses to carry.
       !RELICS.has(held.cardId) &&
+      // The book, not a house rule: "(sama Sakwa nie jest liczona jako
+      // Przedmiot)". One card says it — see `fillsAPlace`.
+      fillsAPlace(held.cardId) &&
       (eqMode === "classic" || held.slot == null),
   ).length;
 }

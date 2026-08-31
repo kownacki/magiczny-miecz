@@ -111,7 +111,23 @@ export type Ability =
    * unbounded ("możesz przewozić dowolną liczbę Przedmiotów"), which is why
    * that is a separate value rather than a very large number.
    */
-  | { kind: "udzwig"; items: number | "bez-limitu" }
+  | {
+      kind: "udzwig";
+      items: number | "bez-limitu";
+      /**
+       * The carrier does not fill one of the places it opens.
+       *
+       * "(sama Sakwa nie jest liczona jako Przedmiot)" — the Magiczna Sakwa
+       * says it and nothing else in the box does, which I checked against every
+       * card text in all three decks. Without it she is +5 that costs one of
+       * your four, and a net +4 is not what the card offers.
+       *
+       * A flag on the ability rather than a set beside `RELICS`, because it is
+       * a fact about *this carrier* rather than about a class of card: a Koń
+       * takes up room in your hands and says nothing to the contrary.
+       */
+      samaSieNieLiczy?: true;
+    }
   /** Zaprzęg adds one to the movement roll; Wierzchowiec one to three. */
   | { kind: "ruch-bonus"; min: number; max: number }
   /** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */
@@ -411,7 +427,7 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
     { kind: "ruch-bonus", min: 1, max: 1 },
   ],
   wierzchowiec: [{ kind: "ruch-bonus", min: 1, max: 3 }],
-  "magiczna-sakwa": [{ kind: "udzwig", items: 5 }],
+  "magiczna-sakwa": [{ kind: "udzwig", items: 5, samaSieNieLiczy: true }],
   // "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie
   // odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan
   // Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może
@@ -943,6 +959,13 @@ export function bestShield(abilities: readonly Ability[]): number {
     if (ability.kind === "oslona" && ability.upTo > best) best = ability.upTo;
   }
   return best;
+}
+
+/** Whether holding this card costs one of the places it opens (5.4). */
+export function fillsAPlace(cardId: string): boolean {
+  return !abilitiesOf(cardId).some(
+    (ability) => ability.kind === "udzwig" && ability.samaSieNieLiczy === true,
+  );
 }
 
 export function carryLimit(abilities: readonly Ability[], base: number): number {
