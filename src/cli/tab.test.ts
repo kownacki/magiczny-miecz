@@ -71,13 +71,13 @@ describe("finishing a line at a prompt", () => {
   });
 
   it("gives back whole lines, so nothing eats the verb", () => {
-    const [hits] = tab("give krysz");
+    const [hits] = tab("deal krysz");
     expect(hits.length).toBeGreaterThan(1);
-    for (const hit of hits) expect(hit.startsWith("give ")).toBe(true);
+    for (const hit of hits) expect(hit.startsWith("deal ")).toBe(true);
   });
 
   it("finishes a name without a Polish keyboard", () => {
-    expect(tab("give swiety g")[0]).toEqual(["give ŚWIĘTY GRAAL "]);
+    expect(tab("deal swiety g")[0]).toEqual(["deal ŚWIĘTY GRAAL "]);
   });
 
   it("knows who is at the table", () => {
@@ -85,7 +85,7 @@ describe("finishing a line at a prompt", () => {
   });
 
   it("says nothing rather than guessing", () => {
-    expect(tab("give Narnia")[0]).toEqual([]);
+    expect(tab("deal Narnia")[0]).toEqual([]);
     expect(tab("")[0].length).toBeGreaterThan(0);
   });
 
@@ -153,7 +153,7 @@ describe("finishing a line at a prompt", () => {
    * Get either wrong and Tab appends to what is already there.
    */
   it("hands readline a fragment its candidates can replace", () => {
-    for (const line of ["endt", "give krysz", "kick mich", "teleport kar"]) {
+    for (const line of ["endt", "deal krysz", "kick mich", "teleport kar"]) {
       const [hits, fragment] = tab(line);
       expect(fragment, line).toBe(line);
       for (const hit of hits) expect(hit.toLowerCase().startsWith(line.slice(0, 3).toLowerCase())).toBe(true);

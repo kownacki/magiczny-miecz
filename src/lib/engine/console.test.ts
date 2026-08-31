@@ -141,30 +141,30 @@ suite("naming a card, a field or a creature", () => {
   it("types English and names Polish", () => {
     expect(ok("magic +1")).toMatchObject({ stat: "magic" });
     expect(err("magia +1")).toMatch(/No command/);
-    expect(ok("give MAGICZNY MIECZ")).toMatchObject({ cardId: "magiczny-miecz" });
+    expect(ok("deal MAGICZNY MIECZ")).toMatchObject({ cardId: "magiczny-miecz" });
     expect(ok("teleport Świątynia Tolimana")).toMatchObject({ fieldId: "swiatynia-tolimana" });
     expect(ok("pick BŁĘDNY RYCERZ")).toMatchObject({ characterId: "bledny-rycerz" });
   });
 
   it("finds a card by the name printed on it", () => {
-    expect(ok("give MAGICZNY MIECZ")).toEqual({ kind: "give", cardId: "magiczny-miecz" });
+    expect(ok("deal MAGICZNY MIECZ")).toEqual({ kind: "deal", cardId: "magiczny-miecz" });
   });
 
   it("does not need a Polish keyboard", () => {
-    expect(ok("give swiety graal")).toEqual({ kind: "give", cardId: "swiety-graal" });
+    expect(ok("deal swiety graal")).toEqual({ kind: "deal", cardId: "swiety-graal" });
   });
 
   it("prefers an exact name over the longer names containing it", () => {
     // MIECZ and MIECZ CHAOSU both exist; typing the whole of one is not
     // ambiguous just because the other starts the same way.
-    expect(ok("give miecz")).toEqual({ kind: "give", cardId: "miecz" });
+    expect(ok("deal miecz")).toEqual({ kind: "deal", cardId: "miecz" });
   });
 
   it("asks which one when a query really does name several", () => {
     // KRYSZTAŁ LOSU and KRYSZTAŁ MAGÓW both start here and neither is what was
     // typed, which is the only case where guessing would be wrong.
-    expect(err("give krysz")).toMatch(/Which one/);
-    expect(err("give krysz")).toContain("KRYSZTAŁ LOSU");
+    expect(err("deal krysz")).toMatch(/Which one/);
+    expect(err("deal krysz")).toContain("KRYSZTAŁ LOSU");
   });
 
   it("leaves a card where you stand, or on the Obszar you name", () => {
@@ -189,7 +189,7 @@ suite("naming a card, a field or a creature", () => {
   it("reaches the Wyposażenie deck, which is not the Karty Zdarzeń", () => {
     // The card that could once not be asked for at all, because only the event
     // deck was searched.
-    expect(ok("give tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
+    expect(ok("deal tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
     expect(ok("place tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
   });
 
@@ -228,7 +228,7 @@ suite("naming a card, a field or a creature", () => {
 
   it("names a Zaklęcie where a hand can hold one, and not where a field cannot", () => {
     // 9.3 keeps a granted spell face down; `grantCard` has always taken one.
-    expect(ok("give kamien filozoficzny")).toMatchObject({ cardId: "kamien-filozoficzny" });
+    expect(ok("deal kamien filozoficzny")).toMatchObject({ cardId: "kamien-filozoficzny" });
     // 9.6 sends a spent spell to the used pile, and none lies on a board.
     expect(err("place kamien filozoficzny")).toMatch(/No card/);
   });
@@ -262,19 +262,33 @@ suite("naming a card, a field or a creature", () => {
     expect(err("pile trophies")).toMatch(/Which pile/);
   });
 
-  it("fights only a Wróg", () => {
-    expect(ok("summon WILKOŁAK")).toEqual({ kind: "summon", cardId: "wilkolak" });
-    // A Przedmiot is not a creature, so it is not there to be found.
-    expect(err("summon magiczny miecz")).toMatch(/No Wróg/);
+  /**
+   * Every class, which is the whole of why `deal` replaced two verbs.
+   *
+   * `give` matched what a hand could hold and `summon` what could be fought,
+   * so a Spotkanie was on neither list and answering "No card called `MGŁA`"
+   * about a card that is printed once was the result.
+   */
+  it("names a Karta of any class at all", () => {
+    for (const [said, cardId] of [
+      ["deal WILKOŁAK", "wilkolak"],
+      ["deal MAGICZNY MIECZ", "magiczny-miecz"],
+      ["deal MGŁA", "mgla"],
+      ["deal ALCHEMIK", "alchemik"],
+      ["deal TARGOWISKO", "targowisko"],
+      ["deal KRĄG PŁOMIENI", "krag-plomieni"],
+    ] as const) {
+      expect(ok(said), said).toEqual({ kind: "deal", cardId });
+    }
   });
 
   it("asks for the name when none was given", () => {
     expect(err("teleport")).toMatch(/Which Obszar/);
-    expect(err("summon")).toMatch(/Which Wróg/);
+    expect(err("place")).toMatch(/Which card/);
   });
 
   /**
-   * Except `give`, where naming nothing is a question rather than a mistake.
+   * Except `deal`, where naming nothing is a question rather than a mistake.
    *
    * "What can I ask for?" is the thing somebody dressing a test table wants,
    * and Tab answers with a grid readline draws itself, which no heading
@@ -288,17 +302,18 @@ suite("naming a card, a field or a creature", () => {
    * between 2 SZTUKI ZŁOTA and ARONDIGHT and shuffled the kinds together. The
    * pool says it has already chosen an order; readline prints what it is given.
    */
-  it("offers the giveable cards grouped, not shuffled together alphabetically", () => {
-    const { options } = complete("give ", []);
+  it("offers the cards grouped, not shuffled together alphabetically", () => {
+    const { options } = complete("deal ", []);
     const at = (name: string) => options.indexOf(name);
-    // Last Przedmiot, first Przyjaciel, first Zaklęcie — in that order.
+    // Last Przedmiot, first Przyjaciel, first Wróg — in that order.
     expect(at("ZWIERCIADŁO ZNISZCZENIA")).toBeLessThan(at("ALCHEMIK"));
-    expect(at("ALCHEMIK")).toBeLessThan(at("FATUM"));
+    expect(at("ALCHEMIK")).toBeLessThan(at("CYKLOP"));
     // Alphabetical *within* a group, so a name is still findable.
     expect(at("ALCHEMIK")).toBeLessThan(at("RYCERZ"));
-    // And nothing `give` would refuse: no Wróg, no Spotkanie, no Miejsce.
-    for (const refused of ["CYKLOP", "MGŁA", "KARCZMA"]) {
-      expect(options, refused).not.toContain(refused);
+    // And every class is on it, which is the change: none of these could be
+    // asked for before, because neither verb owned them.
+    for (const reachable of ["CYKLOP", "MGŁA", "TARGOWISKO"]) {
+      expect(options, reachable).toContain(reachable);
     }
   });
 
@@ -309,21 +324,30 @@ suite("naming a card, a field or a creature", () => {
    * no heading survives. The browser console builds its own, so it gets the
    * three kinds labelled rather than ninety names in one run.
    */
-  it("cuts the giveable cards into named groups for a surface that can draw them", () => {
-    const { sections } = complete("give ", []);
+  it("cuts the cards into named groups for a surface that can draw them", () => {
+    const { sections } = complete("deal ", []);
     expect(sections?.map((one) => one.title)).toEqual([
       "Przedmioty",
       "Przyjaciele",
+      "Wrogowie",
+      "Spotkania",
+      "Nieznajomi",
+      "Miejsca",
       "Zaklęcia",
     ]);
     // The same hits, cut up rather than added to.
-    const { options } = complete("give ", []);
+    const { options } = complete("deal ", []);
     expect(sections?.flatMap((one) => one.options).sort()).toEqual([...options].sort());
   });
 
   it("drops a heading the fragment has emptied", () => {
-    // Nothing in Przyjaciele or Zaklęcia begins "TA".
-    expect(complete("give TA", []).sections?.map((one) => one.title)).toEqual(["Przedmioty"]);
+    // TARCZA TOLIMANA is a Przedmiot and TAJEMNE PRZEJŚCIE / TARGOWISKO are
+    // Miejsca. No Przyjaciel, Wróg, Spotkanie, Nieznajomy or Zaklęcie begins
+    // "TA", so those five headings go rather than standing empty.
+    expect(complete("deal TA", []).sections?.map((one) => one.title)).toEqual([
+      "Przedmioty",
+      "Miejsca",
+    ]);
   });
 
   /** Every other pool is a list of names with no shape, and stays one run. */
@@ -332,8 +356,8 @@ suite("naming a card, a field or a creature", () => {
     expect(complete("teleport ", []).sections).toBeUndefined();
   });
 
-  it("takes a bare `give` as a request for the list", () => {
-    expect(ok("give")).toEqual({ kind: "give", cardId: null });
+  it("takes a bare `deal` as a request for the list", () => {
+    expect(ok("deal")).toEqual({ kind: "deal", cardId: null });
   });
 
   it("says when nothing is called that", () => {
@@ -399,7 +423,7 @@ suite("playing the game, and overruling it", () => {
       expect(permits(ok(line), { testmode: false }).ok, line).toBe(true);
     }
     // Overruling: every one of these is a rule the game states otherwise.
-    for (const line of ["kill", "revive 3", "give MAGICZNY MIECZ", "teleport Karczma", "gold +5"]) {
+    for (const line of ["kill", "revive 3", "deal MAGICZNY MIECZ", "teleport Karczma", "gold +5"]) {
       expect(permits(ok(line), { testmode: false }).ok, line).toBe(false);
     }
   });
@@ -636,8 +660,7 @@ suite("playing the game, and overruling it", () => {
       ["gold", "gold +5|=12 [player] [force]"],
       ["move", "move Karczma"],
       ["teleport", "teleport Karczma"],
-      ["summon", "summon WILKOŁAK"],
-      // `give` is not here: naming nothing is a request for the list rather
+      // `deal` is not here: naming nothing is a request for the list rather
       // than a line with something missing, and an unknown name gets the real
       // answer instead of the shape — see the test below.
       ["remove", "remove 3|MAGOG [hard]"],
@@ -649,9 +672,9 @@ suite("playing the game, and overruling it", () => {
   it("does not bury a real answer under the usage", () => {
     // An ambiguous name already carries the candidates, which is the useful
     // half; the shape would be noise on top of it.
-    expect(err("give krysz")).toBe("Which one — KRYSZTAŁ LOSU, KRYSZTAŁ MAGÓW?");
+    expect(err("deal krysz")).toBe("Which one — KRYSZTAŁ LOSU, KRYSZTAŁ MAGÓW?");
     // A name nothing answers to is a wrong answer, not a missing one.
-    expect(err("give Narnia")).toBe("No card called `Narnia`.");
+    expect(err("deal Narnia")).toBe("No card called `Narnia`.");
   });
 
   it("takes `all` as a word about the list rather than a command name", () => {
@@ -827,32 +850,32 @@ suite("finishing a half-typed line", () => {
   const tab = (line: string) => complete(line, ["Michał", "Ola"]);
 
   it("finishes a command and leaves room for its argument", () => {
-    expect(tab("gi")).toEqual({ line: "give ", options: [] });
+    expect(tab("gu")).toEqual({ line: "guardian ", options: [] });
     expect(tab("endf")).toEqual({ line: "endfight ", options: [] });
   });
 
   it("keeps the slash somebody typed", () => {
-    expect(tab("/gi").line).toBe("/give ");
+    expect(tab("/gu").line).toBe("/guardian ");
   });
 
   it("goes as far as the candidates agree, and lists them", () => {
-    // get, give, gold and guardian all start here, so there is nothing to add.
-    expect(tab("g")).toEqual({ line: "g", options: ["get", "give", "gold", "guardian"] });
-    // `give` also hands back the same hits under their headings, which a
+    // get, gold and guardian all start here, so there is nothing to add.
+    expect(tab("g")).toEqual({ line: "g", options: ["get", "gold", "guardian"] });
+    // `deal` also hands back the same hits under their headings, which a
     // terminal ignores and the browser console draws.
-    expect(tab("give krysz")).toMatchObject({
-      line: "give KRYSZTAŁ ",
+    expect(tab("deal krysz")).toMatchObject({
+      line: "deal KRYSZTAŁ ",
       options: ["KRYSZTAŁ LOSU", "KRYSZTAŁ MAGÓW"],
     });
   });
 
   it("finishes a name without a Polish keyboard, in the case it is printed in", () => {
     expect(tab("teleport kar")).toEqual({ line: "teleport Karczma ", options: [] });
-    expect(tab("give swiety g")).toEqual({ line: "give ŚWIĘTY GRAAL ", options: [] });
+    expect(tab("deal swiety g")).toEqual({ line: "deal ŚWIĘTY GRAAL ", options: [] });
   });
 
   it("completes a card from any word of its name", () => {
-    expect(tab("give magiczny mie").line).toBe("give MAGICZNY MIECZ ");
+    expect(tab("deal magiczny mie").line).toBe("deal MAGICZNY MIECZ ");
   });
 
   it("offers cards before the `at` and Obszary after it", () => {
@@ -883,9 +906,10 @@ suite("finishing a half-typed line", () => {
     expect(tab("revive mago").line).toBe("revive MAGOG ");
   });
 
-  it("offers only Wrogowie to a fight", () => {
-    expect(tab("summon magiczny")).toEqual({ line: "summon magiczny", options: [] });
-    expect(tab("summon wilko").line).toBe("summon WILKOŁAK ");
+  /** Every class, and the Wrogowie among them — `deal` took `summon`'s job. */
+  it("offers a Wróg alongside everything else", () => {
+    expect(tab("deal wilko").line).toBe("deal WILKOŁAK ");
+    expect(tab("deal magiczny mie").line).toBe("deal MAGICZNY MIECZ ");
   });
 
   it("completes a player where a player goes, and after the amount", () => {
@@ -991,13 +1015,12 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     line: "effect fog Ola",
     becomes: { kind: "effect", effect: "fog", who: "Ola" },
   },
-  give: { line: "give MAGICZNY MIECZ", becomes: { kind: "give", cardId: "magiczny-miecz" } },
+  deal: { line: "deal MAGICZNY MIECZ", becomes: { kind: "deal", cardId: "magiczny-miecz" } },
   place: {
     line: "place MIECZ at Karczma",
     becomes: { kind: "place", cardId: "miecz", fieldId: "karczma" },
   },
   teleport: { line: "teleport Karczma", becomes: { kind: "teleport", fieldId: "karczma" } },
-  summon: { line: "summon WILKOŁAK", becomes: { kind: "summon", cardId: "wilkolak" } },
   settle: { line: "settle won", becomes: { kind: "settle", outcome: "wygrana" } },
   endgame: { line: "endgame won", becomes: { kind: "endgame", won: true } },
   stack: {
@@ -1179,7 +1202,7 @@ suite("every command, once each", () => {
     // belong to the lawful vocabulary — putting a Przedmiot down, and walking
     // the roll out — and neither can also mean its testmode namesake.
     // `card` was one of these and is a verb now: reading a Karta is the
-    // commoner want for that word, and conjuring one is `give`.
+    // commoner want for that word, and conjuring one is `deal`.
     expect(Object.keys(alias).length).toBe(4);
   });
 });

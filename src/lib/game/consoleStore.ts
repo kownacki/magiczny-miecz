@@ -7,7 +7,7 @@ import { cardIdNamed, describeCard } from "@/lib/engine/lookup";
 import type { Character } from "@/data/types";
 import { asFieldId, FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { spellScript } from "@/lib/engine/spells";
-import { pileContents } from "./decks";
+import { SPELL_BY_ID, pileContents } from "./decks";
 import { isRandomPick, RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 import {
   helpLines,
@@ -83,6 +83,7 @@ import {
   settleSpell,
   spendHolding,
   stackCard,
+  stageCard,
   stackNth,
   takeCard,
   takeFromField,
@@ -99,7 +100,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import { askOnTop } from "@/lib/engine/ask";
 import type { Snapshot } from "./change";
 import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
-import { GIVEABLE } from "@/lib/engine/console";
+import { DEALABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 import { fold } from "@/lib/engine/search";
@@ -768,35 +769,37 @@ export async function runCommand(
       return `${characterName(back)} stands up again on ${fieldName(seat.field_id)}.`;
     }
 
-    case "give": {
-      /**
-       * Bare, it lists what there is to ask for, by kind.
-       *
-       * `give` is how a test table is dressed, and "what can I get?" is a
-       * question about kinds before it is a question about names. Tab answers
-       * with a grid readline draws itself and no heading can survive, so the
-       * headings live here — the same shape `help` prints, for the same reason.
-       */
+    /**
+     * A Karta happens to you, exactly as if it had come off the top.
+     *
+     * One path for all six classes, because `draw` is one path for all six
+     * classes: the card joins the turn and resolves the way its class resolves
+     * — a Wróg attacks (16.2), a Spotkanie is obeyed (16.1), a Przedmiot is
+     * offered and you `take` it (16.6). The two verbs this replaced put a card
+     * where *they* thought it should go, which is why one of them could not
+     * take a Wróg and neither could take a Spotkanie.
+     *
+     * The Zaklęcia are the one exception and not a special case: they are a
+     * different pile, and 9.5 deals one into a hand rather than onto an Obszar.
+     * Dealt face down, like every other (9.3).
+     *
+     * Nothing leaves a pile either way — see `stackCard` for when you want that.
+     */
+    case "deal": {
       if (command.cardId === null) {
-        return [
-          ...GIVEABLE.flatMap((group, at) => [
-            ...(at > 0 ? [""] : []),
-            `${group.title} (${group.cards.length})`,
-            ...columns(group.cards.map((one) => one.name)),
-          ]),
-          // The other seventy-six, and where they go. A catalogue that lists
-          // what a hand can hold and says nothing about the rest reads as the
-          // whole box, and the commonest thing somebody wants from a test table
-          // — a particular Karta resolved — is not on it.
-          "",
-          "Reszta talii nie idzie do ręki:",
-          "  Wrogowie — `summon WILKOŁAK`, potem `settle won`",
-          "  Spotkania, Nieznajomi, Miejsca — `stack SABAT CZAROWNIC`, potem `draw`",
-        ].join("\n");
+        return DEALABLE.flatMap((group, at) => [
+          ...(at > 0 ? [""] : []),
+          `${group.title} (${group.cards.length})`,
+          ...columns(group.cards.map((one) => one.name)),
+        ]).join("\n");
       }
       const seat = seatOf(null);
-      await grantCard(gameId, seat.id, command.cardId);
-      return `${named(seat)} takes ${cardName(command.cardId)}.`;
+      if (SPELL_BY_ID.has(command.cardId)) {
+        await grantCard(gameId, seat.id, command.cardId);
+        return `${named(seat)} draws ${cardName(command.cardId)}.`;
+      }
+      await stageCard(gameId, seat.id, command.cardId);
+      return `Dealt: ${cardName(command.cardId)}.`;
     }
 
     case "place": {
@@ -1460,11 +1463,6 @@ export async function runCommand(
       return [...one("events", "Karty Zdarzeń"), "", ...one("spells", "Zaklęcia")].join("\n");
     }
 
-    case "summon": {
-      const seat = seatOf(null);
-      await stageFight(gameId, seat.id, command.cardId);
-      return `${named(seat)} fights ${cardName(command.cardId)}.`;
-    }
 
     case "settle": {
       /**

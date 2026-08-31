@@ -7,13 +7,12 @@ import {
 import {
   type FieldId,
 } from "@/lib/engine/board";
-import {
-} from "@/lib/engine/turn";
+import { afterDraw } from "@/lib/engine/turn";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
-import { only, top } from "@/lib/engine/stack";
+import { only, replaceTop, top } from "@/lib/engine/stack";
 import { settleExposedLoop } from "@/lib/engine/loop";
 import { answerAsk as answerAskOn } from "./commands/ask";
 import {
@@ -472,6 +471,67 @@ export async function stageFight(
     undefined,
   );
   await beginFight(gameId, [card.id]);
+}
+
+/**
+ * Puts a Karta in front of the active seat as though it had just been drawn.
+ *
+ * `stageFight` without the fight, and for the three classes that have no other
+ * door: a Spotkanie, a Nieznajomy and a Miejsce are obeyed rather than held, so
+ * neither the hand nor a staged fight is anywhere to put one. Before this the
+ * only way to see one resolve was to draw until it came up.
+ *
+ * Marked `granted`, because the deck still holds this card — the whole point of
+ * the test verb is that the piles are not touched. And appended rather than
+ * replacing the frame when a turn is already standing on an Obszar, so 15.2's
+ * order is worked out over everything drawn rather than over this card alone.
+ * With no field phase open it opens one where the figure stands, exactly as
+ * `stageFight` does, so the card can be looked at without rolling first.
+ */
+export async function stageCard(gameId: string, seatId: string, cardId: string): Promise<void> {
+  const card = EVENTS.find((one) => one.id === cardId);
+  if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+
+  await change(
+    gameId,
+    (snapshot) => {
+    const seat = snapshot.seats.find((one) => one.id === seatId);
+    if (!seat) throw new Error("Nieznane miejsce.");
+    if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura.");
+    if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+
+    const entry = { cardId: card.id, cardClass: card.cardClass, granted: true };
+    const state = top(snapshot.game.turn_state);
+    const turn_state =
+      state.phase === "field"
+        ? replaceTop(snapshot.game.turn_state, afterDraw(state, entry))
+        : only({
+            phase: "field" as const,
+            fieldId: seat.field_id,
+            from: null,
+            draw: 0,
+            drawn: [entry],
+            fought: [],
+          });
+
+    return {
+      writes: {
+        game: { turn_state },
+        journal: [
+          {
+            seatId,
+            round: snapshot.game.round,
+            kind: "test-card-field",
+            payload: { cardId: card.id, fieldId: seat.field_id },
+            manual: true,
+          },
+        ],
+      },
+      result: undefined,
+    };
+    },
+    undefined,
+  );
 }
 
 /**

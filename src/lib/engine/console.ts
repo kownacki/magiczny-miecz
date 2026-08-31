@@ -223,10 +223,14 @@ export type Command =
       force: boolean;
     }
   /** `cardId` is null for a bare `give`, which lists what there is to ask for. */
-  | { kind: "give"; cardId: string | null }
+  /**
+   * Test mode: a Karta happens to you, whatever kind of Karta it is.
+   *
+   * Null lists what there is to ask for, as bare `give` used to.
+   */
+  | { kind: "deal"; cardId: string | null }
   | { kind: "place"; cardId: string; fieldId: FieldId | null }
   | { kind: "teleport"; fieldId: FieldId }
-  | { kind: "summon"; cardId: string }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
@@ -840,12 +844,28 @@ export const COMMANDS: CommandSpec[] = [
     group: "override",
   },
   {
-    name: "give",
-    // `card` was an alias here and has become a verb: reading one is what
-    // somebody usually wants from that word, and conjuring one is `give`.
+    /**
+     * One verb for every Karta in the box, because `draw` is already one.
+     *
+     * It replaced `give` and `summon`, which between them covered ninety of the
+     * hundred and sixty-five and left the rest reachable only by drawing until
+     * one came up. Those two were named after their *destinations* — a hand, a
+     * fight — which is why there had to be two, and why neither could take a
+     * Spotkanie: nobody holds one and nobody fights one.
+     *
+     * `deal` is named after the act instead. The table deals and the player
+     * draws, so the referee's word is the one that overrules: `deal` is to
+     * `draw` what `teleport` is to `move` — the same end state, with the choice
+     * taken off the dice.
+     *
+     * Nothing comes off a pile. Every Karta it conjures is `granted`, so the
+     * deck keeps its own copy and the Wyposażenie stock is untouched — `stack`
+     * is the verb for when you want the real card off the real pile.
+     */
+    name: "deal",
     aliases: [],
-    usage: "give [MIECZ]",
-    summary: "put a card in a hand — bare, it lists what there is to ask for",
+    usage: "deal HEŁM",
+    summary: "any Karta happens to you, whatever kind it is — bare, it lists them",
     needs: "testmode",
     group: "override",
   },
@@ -893,17 +913,6 @@ export const COMMANDS: CommandSpec[] = [
     aliases: [],
     usage: "teleport Karczma",
     summary: "stand on any Obszar, without a roll and without walking there",
-    needs: "testmode",
-    group: "override",
-  },
-  {
-    // Was `fight`. The lawful word is what a player types all game — you fight
-    // what is standing in front of you — and this conjures a Wróg out of
-    // nothing, which is a different act and now says so.
-    name: "summon",
-    aliases: [],
-    usage: "summon WILKOŁAK",
-    summary: "conjure a Wróg onto your Obszar and square up to it",
     needs: "testmode",
     group: "override",
   },
@@ -1004,39 +1013,54 @@ const CARDS: { id: string; name: string }[] = [
 ];
 
 /**
- * What `give` will actually put in a hand, in the three groups a player thinks
- * in.
+ * Every Karta `deal` can make happen, in the six kinds a player thinks in.
  *
- * `grantCard` takes an item, a friend or a spell and refuses everything else:
- * a Wróg with 16.2 ("Wroga trzeba pokonać, nie wziąć") and a Spotkanie, a
- * Nieznajomy or a Miejsce with "Nie wiem, czym jest" — `kindForCard` answers
- * null for the three that nobody carries. So of the 165 Karty Zdarzeń plus the
- * Wyposażenie, 82 were on offer and could not be given, which is the failure
- * the note below this one already names for `place`: a list that offers what
- * the next line will reject is worse than a shorter list.
+ * All of them, which is the change: `give` listed what a hand could hold and
+ * `summon` what could be fought, so ninety of the hundred and sixty-five were
+ * on a list somewhere and the other seventy-five were on neither. A card is
+ * dealt the way drawing it would deal it, and every class can be drawn.
  *
- * Grouped rather than merely filtered because `give` is how a test table is
- * dressed, and "what can I get?" is a question about kinds before it is a
+ * Grouped rather than merely sorted because `deal` is how a test table is
+ * dressed, and "what can I ask for?" is a question about kinds before it is a
  * question about names. Tab cannot draw the headings — readline owns that grid
- * — so the order clusters them there, and bare `give` prints the catalogue.
+ * — so the order clusters them there, and bare `deal` prints the catalogue.
+ *
+ * The Zaklęcia are last and are the one class that does not reach the turn:
+ * they are their own pile, and 9.5 deals one into a hand rather than onto an
+ * Obszar.
  */
-export const GIVEABLE: readonly { title: string; cards: readonly { id: string; name: string }[] }[] = [
-  {
-    title: "Przedmioty",
-    cards: byName([
-      ...(events as EventCard[]).filter((card) => card.cardClass === "item"),
-      ...(itemCards as Item[]).filter((item) => !events.some((card) => card.id === item.id)),
-    ]),
-  },
-  {
-    title: "Przyjaciele",
-    cards: byName((events as EventCard[]).filter((card) => card.cardClass === "friend")),
-  },
-  // 9.3 keeps a Zaklęcie face down even when it arrived by fiat. Without these
-  // the thirteen that may be cast "w dowolnej chwili" were reachable only by
-  // drawing until one turned up.
-  { title: "Zaklęcia", cards: byName(spells as Spell[]) },
-];
+export const DEALABLE: readonly { title: string; cards: readonly { id: string; name: string }[] }[] =
+  [
+    {
+      title: "Przedmioty",
+      cards: byName([
+        ...(events as EventCard[]).filter((card) => card.cardClass === "item"),
+        ...(itemCards as Item[]).filter((item) => !events.some((card) => card.id === item.id)),
+      ]),
+    },
+    {
+      title: "Przyjaciele",
+      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "friend")),
+    },
+    {
+      title: "Wrogowie",
+      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "foe")),
+    },
+    {
+      title: "Spotkania",
+      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "encounter")),
+    },
+    {
+      title: "Nieznajomi",
+      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "stranger")),
+    },
+    {
+      title: "Miejsca",
+      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "place")),
+    },
+    // 9.3 keeps a Zaklęcie face down even when it arrived by fiat.
+    { title: "Zaklęcia", cards: byName(spells as Spell[]) },
+  ];
 
 /**
  * One entry per card, alphabetically.
@@ -1065,9 +1089,6 @@ const STACKABLE: { id: string; name: string }[] = byName([
   ...(events as EventCard[]),
   ...(spells as Spell[]),
 ]);
-
-/** The same, flat, in group order — what `give` matches a name against. */
-const HOLDABLE: { id: string; name: string }[] = GIVEABLE.flatMap((group) => [...group.cards]);
 
 /** Everything with a Karta worth reading, which is more than a hand may hold. */
 const READABLE: { id: string; name: string }[] = [...CARDS, ...(spells as Spell[])];
@@ -1251,25 +1272,19 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   if (word === "endfight") return { ok: { kind: "endfight" } };
   if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
 
-  if (word === "give") {
+  if (word === "deal") {
     // Bare, it is a question rather than a mistake: "what can I ask for?" is
     // the thing somebody dressing a test table wants, and Tab's grid cannot
     // carry the headings that answer it.
-    if (tail === "") return { ok: { kind: "give", cardId: null } };
-    /**
-     * Matched against every Karta, not only the ones a hand can hold.
-     *
-     * Tab's list stays narrow — offering a name the next line rejects is worse
-     * than a short list, which is the note above `GIVEABLE`. Parsing is the
-     * opposite case: matching only the giveable ones turned "a Wróg is beaten,
-     * not taken" into "No card called `SMOK`", which is not true and sends
-     * somebody looking for a spelling mistake. So the name resolves, and
-     * `grantCard` says which door the card does go through.
-     */
+    if (tail === "") return { ok: { kind: "deal", cardId: null } };
+    // Every Karta in the box, because every Karta can be drawn. The two verbs
+    // this replaced each matched a slice of the deck, which is why asking for
+    // the wrong slice answered "No card called `SMOK`" about a card that is
+    // printed twice.
     return name(READABLE, (card) => card.name, tail, "card", (card) => ({
-      kind: "give",
+      kind: "deal",
       cardId: card.id,
-    }), "give");
+    }), "deal");
   }
 
   /**
@@ -1466,12 +1481,6 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { error: "Which pile — `events` or `spells`?" };
   }
 
-  if (word === "summon") {
-    return name(FOES, (card) => card.name, tail, "Wróg", (card) => ({
-      kind: "summon",
-      cardId: card.id,
-    }), "summon");
-  }
 
   if (word === "answer") {
     const parts = tail.split(/\s+/).filter(Boolean);
@@ -1889,12 +1898,21 @@ export function complete(
      * forgotten. Tab draws a plain grid and cannot label the groups, so their
      * order is the whole of what it can carry.
      */
-    if (verb === "give") {
+    /**
+     * Every Karta, in the order `DEALABLE` groups them.
+     *
+     * `ordered`, or the sort below would put ALCHEMIK between 2 SZTUKI ZŁOTA
+     * and ARONDIGHT and the six kinds would be shuffled together — which is
+     * what happened when this pool was first grouped and the sort was
+     * forgotten. Tab draws a plain grid and cannot label the groups, so their
+     * order is the whole of what it can carry.
+     */
+    if (verb === "deal") {
       return {
-        pool: HOLDABLE.map((c) => c.name),
+        pool: DEALABLE.flatMap((group) => group.cards.map((one) => one.name)),
         at: 1,
         ordered: true,
-        groups: GIVEABLE.map((group) => ({
+        groups: DEALABLE.map((group) => ({
           title: group.title,
           names: group.cards.map((one) => one.name),
         })),
@@ -1910,7 +1928,7 @@ export function complete(
     }
     if (verb === "stack") return { pool: STACKABLE.map((c) => c.name), at: 1 };
     if (verb === "pile" || verb === "deck") return { pool: ["events", "spells"], at: 1 };
-    if (verb === "summon" || verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
+    if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
     if (verb === "card" || verb === "read" || verb === "x") {
       // Everything readable, which is every Karta in the box: a Wróg cannot be
       // given and can certainly be looked at.
@@ -2077,10 +2095,9 @@ const NEEDS: Record<Command["kind"], Capability> = {
   // separate — 20.1 is a rule, and this is how it is reached.
   stone: "testmode",
   effect: "testmode",
-  give: "testmode",
+  deal: "testmode",
   place: "testmode",
   teleport: "testmode",
-  summon: "testmode",
   settle: "testmode",
   endgame: "testmode",
   endfight: "testmode",

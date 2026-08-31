@@ -172,14 +172,25 @@ and it is what makes the browser console useful for more than cheating.
 `players` · `journal [n]` · `piles` · `card <nazwa>` · `history [n]`
 
 ### Testmode only
-Everything the console has today: `kill` · `revive` · `remove` · `give` ·
-`place` · `winfight` · `wingame` · `endfight` · `stone` · `effect` · `nature` ·
+Everything the console has today: `kill` · `revive` · `remove` · `deal` ·
+`stack` · `pile` · `place` · `winfight` · `wingame` · `endfight` · `stone` · `effect` · `nature` ·
 `gold`/`miecz`/`magia`/`tury` · `turn` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
 `host` · `rename`
 
 **Settled:** `go` is now `teleport` and has lost its `move` alias; `place` has
 lost `drop`. Both freed words belong to the lawful vocabulary, and neither can
 also mean its testmode namesake.
+
+`give` and `summon` are now one verb, `deal`. They were named after their
+*destinations* — a hand, a fight — which is why there had to be two, and why
+between them they covered ninety of the hundred and sixty-five Karty and left
+the other seventy-five reachable only by drawing until one came up: nobody
+holds a Spotkanie and nobody fights one. `deal` is named after the act, and is
+to `draw` what `teleport` is to `move`: the same end state, with the choice
+taken off the deck. A dealt Karta joins the turn and resolves the way its class
+resolves, so there is one path for all six. Nothing leaves a pile — every dealt
+card is `granted`; `stack` is the verb for taking the real card off the real
+pile.
 
 **Still open, found while building:** `me` prints a character's *own* Miecz and
 Magia. Rules 1.2–1.5 and 2.2–2.6 say points from items and friends are computed
