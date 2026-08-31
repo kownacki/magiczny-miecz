@@ -81,21 +81,31 @@ const CARD = { w: 92, h: 154 };
 const EDGE = "border border-white/25 shadow-[-1px_1px_2px_rgba(0,0,0,0.6)]";
 
 /**
- * Where one leaf sits, counted down from the top card.
+ * Where the nth card from the bottom of a pile sits.
  *
- * `depth` 0 is the card you can see, and it is anchored to the same place in
- * every pile at this table — a full one and a pile of one put their top card on
- * the same spot, and the leaves grow *downward and left* out from under it.
+ * A pile is built up from the table: leaf 0 lies flat in the bottom-left corner
+ * and every card after it goes up and to the right, so a stack grows north-east
+ * out of the place an empty one occupies and the *top* card is as high as the
+ * pile is deep. That is what a stack of cards seen from a corner does, and it
+ * is why a thinning pile is a thing you see rather than count.
  *
- * It used to be the other way about: leaf 0 at the bottom-left corner and each
- * one up and right, so the top card's position moved with the count and a used
- * pile of one sat a stack's whole height below the deck beside it. Depth is
- * what a stack shows; where its face is is not.
+ * Both piles are laid out by it, which is all "stack the same as the unused
+ * one" needs: the same corner, the same step, the same direction. The top
+ * cards of two piles of different depths are not level with each other, and
+ * should not be — that difference *is* the reading.
  */
-function leafAt(depth: number): { bottom: number; left: number } {
-  const under = LEAVES - 1 - depth;
-  return { bottom: under * STEP.y, left: under * STEP.x };
+function leafAt(fromBottom: number): { bottom: number; left: number } {
+  return { bottom: fromBottom * STEP.y, left: fromBottom * STEP.x };
 }
+
+/**
+ * Where an empty pile is drawn: the table under it, not a card on top of it.
+ *
+ * The bottom leaf's place, so the outline starts level with the lowest card of
+ * the stack beside it and on the same side — and so the first card laid down
+ * lands exactly where the outline was.
+ */
+const EMPTY = leafAt(0);
 
 /**
  * The box every stack is drawn in, whatever is in it.
@@ -260,22 +270,22 @@ function Pile({
       <div className="relative" style={{ width: BOX.w, height: BOX.h }}>
         {leaves === 0 ? (
           <div
-            style={{ ...leafAt(0), width: CARD.w, height: CARD.h }}
+            style={{ ...EMPTY, width: CARD.w, height: CARD.h }}
             className="absolute rounded border border-dashed border-edge"
           />
         ) : (
-          // Deepest leaf first, so each card paints over the one beneath it and
+          // Bottom leaf first, so each card paints over the one beneath it and
           // the top of the pile is the last thing drawn.
-          Array.from({ length: leaves }, (_, index) => leaves - 1 - index).map((depth) => (
+          Array.from({ length: leaves }, (_, index) => (
             <Image
-              key={depth}
+              key={index}
               src={back}
               alt=""
               width={CARD.w}
               height={CARD.h}
               // Both dimensions in the style, because the `height` attribute
               // alone loses to preflight's `height: auto` — see `CARD`.
-              style={{ ...leafAt(depth), width: CARD.w, height: CARD.h }}
+              style={{ ...leafAt(index), width: CARD.w, height: CARD.h }}
               className={`absolute rounded object-cover ${EDGE}`}
             />
           ))
@@ -324,18 +334,19 @@ function Used({
       <div className="relative" style={{ width: BOX.w, height: BOX.h }}>
         {leaves === 0 ? (
           <div
-            style={{ ...leafAt(0), width: CARD.w, height: CARD.h }}
+            style={{ ...EMPTY, width: CARD.w, height: CARD.h }}
             className="absolute rounded border border-dashed border-edge"
           />
         ) : (
-          Array.from({ length: leaves }, (_, index) => leaves - 1 - index).map((depth) => {
+          Array.from({ length: leaves }, (_, index) => {
             // Only the topmost shows its face. What is under it is an edge,
             // which is all you would see of it on a table anyway.
-            const face = depth === 0 && card ? cardImageUrl(card.cardId, card.ref) : null;
-            const place = { ...leafAt(depth), width: CARD.w, height: CARD.h };
+            const last = index === leaves - 1;
+            const face = last && card ? cardImageUrl(card.cardId, card.ref) : null;
+            const place = { ...leafAt(index), width: CARD.w, height: CARD.h };
             return face ? (
               <button
-                key={depth}
+                key={index}
                 onClick={() => card && onInspect(card)}
                 title={card?.name}
                 // Sized like every other leaf, so the hover outline is the card
@@ -357,7 +368,7 @@ function Used({
               </button>
             ) : (
               <div
-                key={depth}
+                key={index}
                 style={place}
                 className={`absolute rounded bg-panel ${EDGE}`}
               />
