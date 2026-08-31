@@ -6,6 +6,7 @@ import {
   fieldName,
   LOST_LABEL,
   plural,
+  roundShown,
   STAT_LABEL,
   TARGET_FULL,
   TARGET_SHORT,
@@ -148,5 +149,18 @@ describe("naming what is printed on a card", () => {
   it("tells a character and a card of the same id apart", () => {
     expect(characterName("czarodziej")).toBe("CZARODZIEJ");
     expect(cardName("demon")).toBe("DEMON");
+  });
+});
+
+/**
+ * The one place that decides how a round is numbered on screen.
+ *
+ * Five surfaces print it and the column they print is 0-based, so the whole
+ * point of the helper is that none of them adds the one itself.
+ */
+describe("the round as a person counts it", () => {
+  it("shows the first circuit of the table as 1, not 0", () => {
+    expect(roundShown(0)).toBe(1);
+    expect(roundShown(4)).toBe(5);
   });
 });

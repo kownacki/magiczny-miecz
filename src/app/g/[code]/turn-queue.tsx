@@ -13,7 +13,7 @@
 import Image from "next/image";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
 import { characterStandeeUrl } from "@/lib/view/cardImages";
-import { plural } from "@/lib/engine/polish";
+import { plural, roundShown } from "@/lib/engine/polish";
 import { DEFAULT_DEPTH, projectQueue, type QueueEntry } from "@/lib/engine/turnQueue";
 
 export interface QueueSeat {
@@ -113,7 +113,7 @@ function QueueChip({
     <>
       {startsTurn && (
         <span className="flex shrink-0 items-center px-1 text-[11px] tracking-wide text-muted/70">
-          Runda {entry.round}
+          Runda {roundShown(entry.round)}
         </span>
       )}
       {/* A button, and what it opens is the *player*.

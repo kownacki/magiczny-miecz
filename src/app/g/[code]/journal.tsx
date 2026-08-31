@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { roundShown } from "@/lib/engine/polish";
 import { ChromeButton, SurfaceHead } from "./chrome";
 import { readSeatToken } from "@/lib/game/seatToken";
 import { Lookable } from "./lookable";
@@ -249,7 +250,7 @@ function Line({
     <>
       {heading && (
         <li className="mt-3 text-[11px] uppercase tracking-wide text-muted/70 first:mt-0">
-          Runda {line.round}
+          Runda {roundShown(line.round)}
         </li>
       )}
       <li className="flex items-baseline gap-2 text-xs leading-snug">

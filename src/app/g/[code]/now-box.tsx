@@ -14,11 +14,13 @@
  */
 
 import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { roundShown } from "@/lib/engine/polish";
 import type { TurnStep, TurnWindow, WindowId } from "@/lib/engine/turnWindows";
 import { Lookable } from "./lookable";
 
 export function NowBox({
   playerName,
+  round,
   onPlayer,
   characterId,
   characterName,
@@ -38,6 +40,21 @@ export function NowBox({
   onDraw,
 }: {
   playerName: string;
+  /**
+   * Which circuit of the table this is (`games.round`).
+   *
+   * Not „tura": CONTEXT.md settles the two words apart — a tura is one
+   * character's go, a runda is the cycle in which each of them takes one — and
+   * this is the second. The queue beside this box already writes „Runda N"
+   * where the forecast crosses into the next one; what was missing was the one
+   * we are *in*, which is the number a player actually asks for. It goes here
+   * rather than only on the bar because the bar scrolls sideways and this box
+   * does not.
+   *
+   * Passed as the column holds it and shown through `roundShown`, like every
+   * other place that prints one.
+   */
+  round: number;
   /** Opens the players drawer on this player, since the name is the question. */
   onPlayer?: () => void;
   /**
@@ -117,12 +134,23 @@ export function NowBox({
             the display face, which reads as a heading and is not one — so the
             box announced *who* before it announced *what it was*, and a player
             who had not been told had to work it out from the buttons. */}
-        <h2
-          id="teraz"
-          className="mb-1 text-[11px] uppercase tracking-widest text-muted"
-        >
-          Teraz
-        </h2>
+        <div className="mb-1 flex items-baseline justify-between gap-2">
+          <h2 id="teraz" className="text-[11px] uppercase tracking-widest text-muted">
+            Teraz
+          </h2>
+          {/* Opposite the heading and in the same hand as it: this is what kind
+              of moment it is, not something to act on. Round 1 is a real
+              answer — `passTurn` counts from the circuit it completes, so the
+              first time round the table is round 0 until it wraps — so it is
+              printed from the first turn rather than hidden while it is
+              small. */}
+          <span
+            className="shrink-0 text-[11px] uppercase tracking-widest text-muted/70 tabular-nums"
+            title="Kolejny obieg stołu — każdy gracz ma w nim jedną turę"
+          >
+            Runda {roundShown(round)}
+          </span>
+        </div>
         <p className="flex min-w-0 items-center gap-1.5 font-[family-name:var(--font-display)] text-sm text-ochre">
           {/* The same dot the journal puts beside every line, so the colour is
               learned in the one place a player looks up most — including on

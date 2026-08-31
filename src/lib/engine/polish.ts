@@ -84,6 +84,25 @@ export function cardName(cardId: string): string {
   );
 }
 
+/**
+ * The round as a person counts it.
+ *
+ * `games.round` counts circuits *completed*: it starts at 0 and advances only
+ * when play comes back round to or past the first seat, so the whole first time
+ * round the table is stored as 0 — which on screen reads as an unset field
+ * rather than as a count. Nobody at a table says „runda zero".
+ *
+ * So every surface adds one, and adds it here. Five of them print this number —
+ * the bar, the Teraz box, the queue's boundary labels, the Dziennik's headings
+ * and the marker line `passTurn` writes when play wraps — and a convention
+ * applied to four of the five is worse than either convention applied to all
+ * of them. The column is untouched: 20.1's Kamień and 11.11's Most compare
+ * against absolute round numbers and none of that arithmetic moves.
+ */
+export function roundShown(round: number): number {
+  return round + 1;
+}
+
 /** The four tracked numbers, in the case they are read in ("+2 Miecza"). */
 export type Stat = Extract<Effect, { op: "punkty" }>["stat"];
 

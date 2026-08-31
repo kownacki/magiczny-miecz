@@ -399,9 +399,14 @@ suite("the end of a turn", () => {
     // The heading sits BETWEEN the halves: the round it names is the one the
     // next player is about to take, so after them it would be announcing a
     // round that had already started a line earlier.
+    //
+    // „Runda 5" for a stored 4: the column counts circuits completed and starts
+    // at 0, so every surface that prints one adds one — see `roundShown`. The
+    // `round` the line is *filed* under stays the stored number, which is what
+    // groups it with the rest of that round.
     expect(lines.map((line) => line.text)).toEqual([
       "Michał (GOBLIN) kończy turę.",
-      "Runda 4",
+      "Runda 5",
       "Michał (GOBLIN) zaczyna turę.",
     ]);
     const marker = lines.find((line) => line.marker)!;

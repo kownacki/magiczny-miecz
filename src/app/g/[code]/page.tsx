@@ -12,7 +12,7 @@ import { SeatActions } from "./seat-actions";
 import { SpellHand } from "./spell-hand";
 import { SpokenSpell } from "./spoken-spell";
 import { CardDetail, type TileCard } from "./card-tile";
-import { plural } from "@/lib/engine/polish";
+import { plural, roundShown } from "@/lib/engine/polish";
 import { SeatCard } from "./seat-card";
 import {
   CARD_NAMES,
@@ -1599,7 +1599,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   screen-width away from the roster that answers the next
                   question you have after reading it. */}
               <span className="text-muted">
-                Runda <span className="tnum text-ink/70">{game.round}</span> ·{" "}
+                Runda <span className="tnum text-ink/70">{roundShown(game.round)}</span> ·{" "}
                 {active ? (active.player_name ?? "—") : "—"}
               </span>
               <span className="tnum tracking-[0.2em] text-muted">{game.join_code}</span>
@@ -1728,6 +1728,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               {active && (
                 <NowBox
                   playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
+                  round={game.round}
                   seatIndex={active.seat_index}
                   onPlayer={() => {
                     setAskedAbout(active.id);
