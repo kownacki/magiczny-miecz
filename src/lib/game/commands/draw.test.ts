@@ -84,6 +84,54 @@ describe("ciągnięcie Karty Zdarzeń", () => {
     ).toThrow("Nie czas na ciągnięcie kart (13.4).");
   });
 
+  /**
+   * 13.4's count, which for a long time only the browser was keeping.
+   *
+   * "Jeżeli na danym Obszarze leżą już jakieś Karty, ciągnie się ich tylko
+   * tyle, by ich suma równała się liczbie Kart..." — and 13.5's worked example
+   * is the check: Równina Samotnych Skał draws 2, a Klątwa is lying on it, and
+   * Quark draws exactly one more. The waiting Karty are lifted into `drawn` on
+   * arrival, so the sum is already there to compare against.
+   *
+   * The Draw button was disabled and nothing else refused, so the console and
+   * the route could both draw a square dry.
+   */
+  describe("13.4's count", () => {
+    const owed = (draw: number, drawn: { cardId: string; cardClass: "foe" }[]) =>
+      table({ game: { turn_state: onField({ draw, drawn }) } });
+    const lying = [{ cardId: "cyklop", cardClass: "foe" as const }];
+
+    it("refuses once the Obszar's number is already on the field", () => {
+      expect(() => drawCard(owed(1, lying), { named: null, shuffle: never })).toThrow(
+        "Ten Obszar daje 1 — masz już tyle (13.4).",
+      );
+    });
+
+    it("still draws the difference, which is 13.5's own example", () => {
+      // Równina Samotnych Skał draws 2 and one Karta is lying on it.
+      const done = drawCard(owed(2, lying), { named: null, shuffle: never });
+      expect(done.result.card?.id).toBe("cyklop");
+    });
+
+    it("says so differently where the Obszar draws nothing at all", () => {
+      expect(() => drawCard(owed(0, []), { named: null, shuffle: never })).toThrow(
+        "Na tym Obszarze nie ciągnie się Kart (13.4).",
+      );
+    });
+
+    /**
+     * A Karta's own instruction is not the player asking for more.
+     *
+     * Skalne Wrota says „wyciągnij 3 Karty" and Odmiana Losu swaps one for
+     * another; 13.4 caps what the *square* owes, not what a card may do once it
+     * is being resolved. Without this the count would silently break both.
+     */
+    it("lets a Karta draw past it", () => {
+      const done = drawCard(owed(1, lying), { named: null, shuffle: never, byCard: true });
+      expect(done.result.card?.id).toBe("cyklop");
+    });
+  });
+
   it("takes the top card and puts the pile back one shorter", () => {
     const { writes, result } = drawCard(table(), { named: null, shuffle: never });
 

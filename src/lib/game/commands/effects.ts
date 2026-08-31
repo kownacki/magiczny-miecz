@@ -1553,7 +1553,11 @@ async function walk(
       const back = putOnPile(apply(snapshot, taken), "events", [
         { cardId: facing.cardId, granted: facing.granted },
       ]);
-      const drew = drawCard(apply(snapshot, mergeAll(taken, back)), { named: null, shuffle });
+      const drew = drawCard(apply(snapshot, mergeAll(taken, back)), {
+        named: null,
+        shuffle,
+        byCard: true,
+      });
 
       return {
         writes: mergeAll(taken, back, drew.writes),
@@ -1620,7 +1624,7 @@ async function walk(
     case "wyciagnij": {
       let writes: Changeset = {};
       for (let i = 0; i < effect.count; i++) {
-        const done = drawCard(apply(snapshot, writes), { named: null, shuffle });
+        const done = drawCard(apply(snapshot, writes), { named: null, shuffle, byCard: true });
         writes = merge(writes, done.writes);
       }
       return { writes, result: { did: [`wyciągnięto ${effect.count} Kart`], pending: null } };

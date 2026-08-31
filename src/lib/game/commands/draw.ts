@@ -73,6 +73,16 @@ export interface DrawCard extends FromThePile {
    * 15.2 order.
    */
   named: { cardId: string; cardClass: CardClass } | null;
+  /**
+   * This draw is a Karta's instruction rather than the Obszar's count.
+   *
+   * 13.4 says how many the *Obszar* is worth and the count below enforces it.
+   * A card that says „wyciągnij 3 Karty" (Skalne Wrota) or „odrzuć jedną i
+   * wyciągnij w zamian inną" (Odmiana Losu) is not the player asking for more,
+   * so the count does not apply to it — the rule caps what the square owes, not
+   * what a card can do once it is being resolved.
+   */
+  byCard?: true;
 }
 
 export interface Drawn {
@@ -100,6 +110,28 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") {
     throw new Error("Nie czas na ciągnięcie kart (13.4).");
+  }
+
+  /**
+   * 13.4's count, which only the browser was keeping.
+   *
+   * "Jeżeli na danym Obszarze leżą już jakieś Karty, ciągnie się ich tylko
+   * tyle, by ich suma równała się liczbie Kart, które zgodnie z instrukcją
+   * powinny zostać na tym Obszarze wyciągnięte." The waiting Karty are lifted
+   * into `drawn` on arrival, so the sum is already there to compare against —
+   * and 13.5's worked example is the check: Równina Samotnych Skał draws 2, a
+   * Klątwa is lying on it, and Quark draws exactly one more.
+   *
+   * The button was disabled and nothing else refused, so the console and the
+   * route could both draw a square dry. A rule kept only by a greyed-out
+   * button is not kept.
+   */
+  if (!command.byCard && state.drawn.length >= state.draw) {
+    throw new Error(
+      state.draw === 0
+        ? "Na tym Obszarze nie ciągnie się Kart (13.4)."
+        : `Ten Obszar daje ${state.draw} — masz już tyle (13.4).`,
+    );
   }
 
   if (snapshot.game.mode === "companion") {
