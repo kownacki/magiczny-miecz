@@ -19,7 +19,9 @@ import { aHolding, aSeat, aTable } from "../fixture";
 import { carriedCount } from "@/lib/engine/derive";
 import { asHolding } from "./seat";
 import { equipCard, spilled } from "./holdings";
-import { sakwaOpen } from "@/lib/engine/slots";
+import { inPlayAt, sakwaOpen, type Slot } from "@/lib/engine/slots";
+import { inEffect } from "@/lib/engine/holdings";
+import { carryLimit } from "@/lib/engine/derive";
 import { apply } from "../change";
 import type { EqMode } from "@/lib/engine/slots";
 
@@ -200,5 +202,57 @@ describe("taking the bag off, end to end", () => {
     // Off it comes, and the Miecz has nowhere to be.
     await equip(gameId, (await held("tajemna-sakwa")).id, null);
     expect((await held("miecz")).slot).toBeNull();
+  });
+});
+
+
+/**
+ * Put away is not worn.
+ *
+ * The slotted variant's whole idea is that a card works *where it is worn* — a
+ * Miecz cuts in a hand, a Koń pulls where it is ridden — and `slot != null` was
+ * the same question for as long as every place was on the body. The Sakwa's
+ * inside is the one that is not: "W Sakwie możesz **umieścić** 1 Przedmiot" is
+ * storage, and the rest of the card is about nobody being able to reach it.
+ *
+ * A Miecz that is safe from every thief in the box *and* still swinging in
+ * every fight would be a strictly better sword for no reason the Karta gives.
+ */
+describe("a Karta in the Sakwa is out of play, not on the body", () => {
+  const held = (cardId: string, slot: Slot | null) => ({
+    cardId,
+    slot,
+    kind: "item" as const,
+    face: "open" as const,
+  });
+
+  it("knows which places put a card in play", () => {
+    for (const slot of ["main-hand", "head", "mount", "pouch"]) {
+      expect(inPlayAt(slot), slot).toBe(true);
+    }
+    expect(inPlayAt("tajemna-sakwa")).toBe(false);
+    expect(inPlayAt(null)).toBe(false);
+  });
+
+  it("keeps a stored Miecz out of the reckoning", () => {
+    const inHand = [held("miecz", "main-hand")];
+    const stowed = [held("miecz", "tajemna-sakwa")];
+    expect(inEffect(inHand, "slots").map((one) => one.cardId)).toEqual(["miecz"]);
+    expect(inEffect(stowed, "slots")).toEqual([]);
+  });
+
+  it("keeps a stored Koń from pulling anything", () => {
+    // "Koń może nieść 8 twoich Przedmiotów" — from under you, not from a bag.
+    const ridden = [held("kon", "mount")];
+    const stowed = [held("kon", "tajemna-sakwa")];
+    // The Koń's eight on top of the slotted pack's four; stowed, just the four.
+    expect(carryLimit(ridden, "slots")).toBe(12);
+    expect(carryLimit(stowed, "slots")).toBe(4);
+  });
+
+  it("still keeps it out of the Plecak's four, which is the other half", () => {
+    // Out of play and out of the count: it is somewhere else entirely.
+    const at = table([{ card_id: "tajemna-sakwa", slot: "pouch" }, { card_id: "miecz", slot: "tajemna-sakwa" }], "slots");
+    expect(packed(at, "slots")).toBe(0);
   });
 });

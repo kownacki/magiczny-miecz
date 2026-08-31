@@ -265,6 +265,29 @@ export function fitsIn(cardId: string, slot: Slot): boolean {
  * Sakwa off and the Karta inside has nowhere to be. `spilled` is what puts it
  * back in the pack.
  */
+/**
+ * Whether a card in this place is *in play*, rather than merely somewhere.
+ *
+ * Every place on the doll is somewhere a card works from — that is what wearing
+ * a thing means, and it is the whole of the slotted variant: a Koń pulls where
+ * it is ridden, a Miecz cuts where it is held. `slot != null` was the same
+ * question for as long as every place was on the body.
+ *
+ * The Tajemna Sakwa's inside is the one that is not. A Karta in the bag is put
+ * away: "W Sakwie możesz **umieścić** 1 Przedmiot" is storage, and the rest of
+ * the card is about nobody being able to reach it. A Miecz in there is not in
+ * your hand, and a Koń in there is not pulling anything — so a stored card is
+ * out of `inEffect` and lends nothing to `carryLimit`, exactly as it is out of
+ * `carriedCount`.
+ *
+ * The alternative would be a card that is safe from every thief in the box and
+ * still swinging in every fight, which is a strictly better sword for no
+ * reason the Karta gives.
+ */
+export function inPlayAt(slot: string | null | undefined): boolean {
+  return slot != null && slot !== "tajemna-sakwa";
+}
+
 export function sakwaOpen(
   holdings: readonly { cardId: string; slot?: string | null }[],
   eqMode: EqMode,

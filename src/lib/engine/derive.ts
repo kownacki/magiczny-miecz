@@ -2,7 +2,7 @@
 
 import type { Item, Nature } from "@/data/types";
 import type { Holding, Seat } from "./state";
-import { RELICS, type EqMode } from "./slots";
+import { RELICS, inPlayAt, type EqMode } from "./slots";
 import {
   carryLimit as abilityCarryLimit,
   fillsAPlace,
@@ -234,7 +234,9 @@ export function carryLimit(
   // whole point of the variant is that a thing works where it is worn, and the
   // mount place is where a mount is worn.
   const counts = (held: Holding) =>
-    held.kind !== "trophy" && (eqMode === "classic" || held.slot != null);
+    // `inPlayAt` rather than "has a place": a Koń in the Tajemna Sakwa is a
+    // Koń in a bag, and it pulls nothing from in there.
+    held.kind !== "trophy" && (eqMode === "classic" || inPlayAt(held.slot));
   const carried = holdings.filter(counts).map((h) => h.cardId);
   const base = eqMode === "slots" ? SLOTTED_PACK_LIMIT : BASE_CARRY_LIMIT;
   return abilityCarryLimit(heldAbilities(carried), base);

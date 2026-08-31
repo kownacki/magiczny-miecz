@@ -7,7 +7,7 @@ import { ABILITIES } from "./abilities";
 import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
-import { isWearable, slotsFor, type Slot } from "./slots";
+import { inPlayAt, isWearable, slotsFor, type Slot } from "./slots";
 import type { Holding } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
@@ -185,7 +185,10 @@ export function inEffect<T extends { cardId: string; slot?: string | null }>(
   };
   if (eqMode === "classic") return holdings.filter((held) => allowed(held.cardId));
   return holdings.filter(
-    (held) => (held.slot != null || !isWearable(held.cardId)) && allowed(held.cardId),
+    // `inPlayAt`, not `slot != null`: a Karta in the Tajemna Sakwa is put away
+    // rather than worn, so it does nothing while it is in there. See the note
+    // on that function.
+    (held) => (inPlayAt(held.slot) || !isWearable(held.cardId)) && allowed(held.cardId),
   );
 }
 
