@@ -251,6 +251,27 @@ function Deck({
   );
 }
 
+/**
+ * What is written under a pile, centred on the card rather than on the box.
+ *
+ * The box is wider than a card by the whole depth of the stack, because the
+ * leaves lean out of it to the right — so a caption centred on the box sits
+ * nine pixels right of the card it names, which is exactly enough to read as
+ * not lined up with anything. Centred on the outline instead: the rectangle a
+ * card occupies at the bottom of the pile, which is where an empty one draws
+ * its dashes and where a pile of one puts its only card.
+ *
+ * Fixed to the card and not to the ink, so the caption does not slide sideways
+ * as a pile is spent.
+ */
+function Caption({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-center" style={{ width: CARD.w }}>
+      {children}
+    </div>
+  );
+}
+
 /** The face-down one, drawn as a stack of backs. */
 function Pile({
   label,
@@ -266,7 +287,7 @@ function Pile({
 }) {
   const leaves = Math.min(count, LEAVES);
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-start gap-1">
       <div className="relative" style={{ width: BOX.w, height: BOX.h }}>
         {leaves === 0 ? (
           <div
@@ -294,11 +315,13 @@ function Pile({
       {/* Against the whole deck, because "163" alone says nothing: the thing
           worth knowing is how far through it the table has got, and a stack
           only shows that once it is nearly gone. */}
-      <p className="tnum text-sm text-ink">
-        {count}
-        <span className="text-muted">/{of}</span>
-      </p>
-      <p className="text-[10px] text-muted">{label}</p>
+      <Caption>
+        <p className="tnum text-sm text-ink">
+          {count}
+          <span className="text-muted">/{of}</span>
+        </p>
+        <p className="text-[10px] text-muted">{label}</p>
+      </Caption>
     </div>
   );
 }
@@ -330,7 +353,7 @@ function Used({
   const leaves = Math.min(count, LEAVES);
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-start gap-1">
       <div className="relative" style={{ width: BOX.w, height: BOX.h }}>
         {leaves === 0 ? (
           <div
@@ -377,8 +400,10 @@ function Used({
         )}
       </div>
 
-      <p className="tnum text-sm text-ochre/80">{count}</p>
-      <p className="text-[10px] text-muted">stos zużytych</p>
+      <Caption>
+        <p className="tnum text-sm text-ochre/80">{count}</p>
+        <p className="text-[10px] text-muted">stos zużytych</p>
+      </Caption>
     </div>
   );
 }
