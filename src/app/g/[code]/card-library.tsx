@@ -9,7 +9,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
-import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
+import { CARD_CLASS_LABEL, isFoeClass, type CardClass } from "@/data/types";
 import { CardTile, cardKey, type TileCard } from "./card-tile";
 import { TileRow } from "./tile-row";
 import { Fold } from "./fold";
@@ -63,12 +63,11 @@ const SHELVES: { key: Shelf; label: string }[] = [
   { key: "postacie", label: "Postacie" },
   { key: "item", label: "Przedmioty" },
   { key: "friend", label: "Przyjaciele" },
-  // Two shelves because the box prints two classes — `Wróg II Bestia` and
-  // `Wróg III Demon` — and this drawer is an index of the box. Folding them
-  // would hide the one thing a reader comes here to check: which of the two a
-  // creature is, and so whether it is fought with Miecz or with Magia.
+  // One shelf for both printed classes. The Księga is browsed by name — every
+  // shelf here is sorted alphabetically — and somebody looking up the Wilkołak
+  // should not have to know first whether he fights with Miecz or Magia. Which
+  // of the two each one is stays on its own tile, in `kindLabel`.
   { key: "foe", label: "Wrogowie" },
-  { key: "demon", label: "Demony" },
   { key: "encounter", label: "Spotkania" },
   { key: "stranger", label: "Nieznajomi" },
   { key: "place", label: "Miejsca" },
@@ -100,6 +99,21 @@ const REGIONS: { key: Region; label: string }[] = [
 ];
 
 /** Deduplicated, because the deck holds several copies of many cards on purpose. */
+/**
+ * Whether a card belongs on the shelf being drawn.
+ *
+ * A plain `card.cardClass === shelf` everywhere else, and not for the Wrogowie:
+ * the box prints two classes of them — `Wróg II Bestia` and `Wróg III Demon` —
+ * and this drawer shelves them together, so the Demon has no shelf of its own
+ * to be found on. Said once because `shelfCards` and `shelfSize` both ask, and
+ * a shelf whose tally disagreed with its contents is exactly the kind of quiet
+ * wrongness the Księga is read to settle.
+ */
+function onShelf(card: EventCard, shelf: Shelf): boolean {
+  if (shelf === "foe") return isFoeClass(card.cardClass);
+  return card.cardClass === shelf;
+}
+
 function shelfCards(shelf: Shelf): TileCard[] {
   const unique = new Map<string, TileCard>();
   const holdable = TAKEABLE.has(shelf);
@@ -133,7 +147,7 @@ function shelfCards(shelf: Shelf): TileCard[] {
     }
   } else {
     for (const card of events as EventCard[]) {
-      if (card.cardClass !== shelf) continue;
+      if (!onShelf(card, shelf)) continue;
       add({
         cardId: card.id,
         name: card.name,
@@ -202,7 +216,7 @@ function shelfSize(shelf: Shelf): { designs: number; cards: number } {
   if (shelf === "postacie") return count((characters as Character[]).map((one) => one.id));
   if (shelf === "obszary") return { designs: 0, cards: 0 };
   return count(
-    (events as EventCard[]).filter((card) => card.cardClass === shelf).map((card) => card.id),
+    (events as EventCard[]).filter((card) => onShelf(card, shelf)).map((card) => card.id),
   );
 }
 
