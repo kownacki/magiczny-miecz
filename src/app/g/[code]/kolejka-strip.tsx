@@ -1,8 +1,10 @@
 "use client";
 
 import type { CardId } from "@/data/ids";
-import { CARD_CLASS_LABEL } from "@/data/types";
-import { cardName } from "@/lib/engine/polish";
+import type { EqMode } from "@/lib/engine/slots";
+import type { Nature } from "@/data/types";
+import { CardTile } from "./card-tile";
+import { tileFor } from "./table";
 import { kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
 import type { TurnCard } from "@/lib/engine/state";
 import { WithRules } from "./rule-ref";
@@ -84,12 +86,17 @@ export function KolejkaStrip({
   cards,
   settled,
   onInspect,
+  eqMode,
+  nature,
 }: {
   /** The turn's own `drawn`, in `resolutionOrder`'s order. */
   cards: readonly TurnCard[];
   /** Resolved and fought together: 17.4 settles a Wróg whether he was beaten or fled. */
   settled: readonly string[];
   onInspect?: (cardId: CardId) => void;
+  /** Passed through to the tiles, whose hover says where a Przedmiot must go. */
+  eqMode?: EqMode;
+  nature?: Nature | null;
 }) {
   const frames = kolejkaFor(cards, settled);
   const frameOf = new Map<string, KolejkaFrame>();
@@ -132,45 +139,54 @@ export function KolejkaStrip({
           {left > 0 ? `${left} z ${chips.length}` : "gotowe"}
         </span>
       </div>
-      {/* Scrolls in its own box rather than widening the column: an Obszar that
-          has silted up holds more than fits, and a page that scrolls sideways
-          is a page nobody can read. */}
-      <ol className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+      {/**
+       * The same tiles as the Plecak, the Księga and the Obszar's own window.
+       *
+       * They were chips with the name in them, which is the one thing a row of
+       * Karty does not need spelling out: a card is recognised by its picture,
+       * and every other shelf in the app had already learned that. `CardTile`
+       * brings the illustration, the name under it, the conjured wrench and —
+       * the reason this matters here — the hover that opens the whole Karta.
+       * Reading what is three places down the queue without settling what is in
+       * front of you is exactly what a player wants from this row.
+       *
+       * Scrolls in its own box rather than widening the sheet: an Obszar that
+       * has silted up holds more than fits, and a page that scrolls sideways is
+       * a page nobody can read.
+       */}
+      <ol className="flex items-start gap-2 overflow-x-auto pb-1">
         {chips.map((chip, index) => {
           const current = index === at;
           return (
-            <li key={`${index}-${chip.card.cardId}`} className="shrink-0">
-              <button
-                type="button"
-                disabled={!onInspect}
-                onClick={() => onInspect?.(chip.card.cardId as CardId)}
-                title={
-                  chip.frame
-                    ? whyOf(chip.frame)
-                    : // 12.1 gives these the run of the turn, which is exactly
-                      // why they are not in anybody's way.
-                      "Możesz, ale nie musisz — w każdej chwili do końca tury (12.1)"
-                }
-                className={`flex max-w-[220px] items-center gap-1.5 rounded border px-2 py-1 text-left transition ${
-                  chip.done
-                    ? "border-edge/50 bg-transparent text-muted/50"
-                    : current
-                      ? "border-ochre bg-ochre/10 text-ink"
-                      : chip.stops
-                        ? "border-edge bg-transparent text-muted"
-                        : // Offered rather than owed: dashed, because the
-                          // difference between "you must" and "you may" is the
-                          // one thing this row exists to show.
-                          "border-dashed border-edge/60 bg-transparent text-muted/70"
-                } ${onInspect ? "hover:border-ochre/70" : ""}`}
-              >
-                <span className="shrink-0 text-[9px] uppercase tracking-widest text-muted/70">
-                  {CARD_CLASS_LABEL[chip.card.cardClass]}
-                </span>
-                <span className={`truncate text-[11px] ${chip.done ? "line-through" : ""}`}>
-                  {cardName(chip.card.cardId)}
-                </span>
-              </button>
+            <li
+              key={`${index}-${chip.card.cardId}`}
+              /* The ring is the queue's own mark and sits outside the tile's
+                 border, so it reads as "you are here" rather than as a card
+                 with a different frame. */
+              className={`shrink-0 rounded ${current ? "ring-2 ring-ochre" : ""}`}
+              /* Why this Karta is in the way, with its rule. The tile's own
+                 hover opens the whole Karta, which says what it *is*; this says
+                 what the turn is doing about it, which the Karta cannot. */
+              title={
+                chip.frame
+                  ? whyOf(chip.frame)
+                  : "Możesz, ale nie musisz — w każdej chwili do końca tury (12.1)"
+              }
+            >
+              <CardTile
+                card={tileFor({
+                  cardId: chip.card.cardId as CardId,
+                  granted: chip.card.granted,
+                })}
+                dimmed={chip.done}
+                /* 12.1 gives these the run of the turn, so they are in the row
+                   to be seen and not to be got past. The badge says which is
+                   which in the one word the cards themselves use. */
+                badge={chip.done ? "gotowe" : chip.stops ? undefined : "możesz"}
+                eqMode={eqMode}
+                nature={nature}
+                onClick={onInspect ? () => onInspect(chip.card.cardId as CardId) : undefined}
+              />
             </li>
           );
         })}
