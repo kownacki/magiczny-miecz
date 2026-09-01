@@ -990,6 +990,28 @@ pack at all, and whether it would now split one correctly along the class line.
 something knows about packs; nobody has read it against 17.5 since the classes
 were two.
 
+### SKALNE WROTA draws three more Karty in the middle of a queue
+
+"Jeżeli chcesz przejść przez Skalne Wrota, **wyciągnij 3 nowe Karty Zdarzeń** i
+odłóż Kartę Wrót. Jeśli nie chcesz ryzykować, Wrota będą czekać na tym Obszarze
+na kogoś odważniejszego."
+
+The one card in the box that adds to the Obszar's kolejka while the kolejka is
+being worked through, and it wants a decision the rest of the design does not
+force: do the three join the end of the queue that is already running, or open
+a queue of their own on top of it? Appending is simpler and puts a Wróg drawn
+this way behind a Przedmiot already waiting, which 15.2 would not; nesting is
+right and is where the kolejka meets the resolution stack in docs/STACK.md.
+
+Two other things about this card are unsettled with it. Its disposition is
+**conditional** — `odloz` only if you go through, otherwise it stays — and it
+is typed as a plain `odloz` today, so declining it would bin a card the box
+says waits for somebody braver. And it is the only card whose frame's answer
+decides whether the Karta leaves the Obszar.
+
+Parked at the point the Obszar's kolejka was designed (September 2026), not
+forgotten.
+
 ## Known gaps, left open on purpose
 
 Two rules the app carries only halfway, both looked at and both deliberately
