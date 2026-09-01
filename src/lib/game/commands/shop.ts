@@ -1,6 +1,5 @@
 /** The establishments: trading trophies for Miecz (1.4), and the desks that buy, sell and heal (21.2, 4.7). */
 
-import { combatValueOf } from "@/lib/engine/cards";
 import { trophyPointsOf } from "@/lib/engine/trophies";
 import { heldAbilities } from "@/lib/engine/abilities";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
@@ -8,7 +7,7 @@ import { fieldScriptFor } from "@/lib/engine/fieldScript";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import { goodsId } from "@/lib/engine/goods";
 import type { FieldId } from "@/lib/engine/board";
-import { EVENTS } from "../decks";
+
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import type { SeatRow } from "../store";
 import { asReturnable, putOnPile, trophiesToPile } from "./piles";
