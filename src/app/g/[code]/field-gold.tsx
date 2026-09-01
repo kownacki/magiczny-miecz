@@ -5,7 +5,6 @@
 import { useState } from "react";
 import { TILE_WIDTH } from "@/lib/view/cardImages";
 import { CoinStack } from "./token-pile";
-import { plural } from "@/lib/engine/polish";
 
 /**
  * The gold's geometry, derived from the Karta tile it stands beside.
@@ -27,18 +26,6 @@ import { plural } from "@/lib/engine/polish";
 const GAP = 8;
 const COIN = Math.floor((TILE_WIDTH - GAP) / 2);
 const PER_STACK = 5;
-
-/**
- * Two stacks and no more, which is the ceiling the rail's own gold has for the
- * same reason: past ten the pile stops growing, the mark on the last coin says
- * so, and the numeral beside it goes on being exact. The coins are all ones, so
- * the picture was only ever an impression of how much is lying here.
- *
- * A third column would say more and cost what the first two bought: at 39 a
- * coin it would be 133 wide against a Karta's 86, and a pile wider than the
- * cards beside it is not being read against them any more.
- */
-const STACKS_MAX = 2;
 
 /**
  * What is lying here, and the one control that takes it.
@@ -67,51 +54,63 @@ export function FieldGold({
   const asked = Number.parseInt(want, 10);
   const ok = Number.isFinite(asked) && asked >= 1 && asked <= gold;
 
+  /**
+   * The pile, and nothing saying how big it is.
+   *
+   * There was a "104 Sztuki Złota" beside it, which is the number the Fold's
+   * own heading is already carrying two lines above — the same fact twice, and
+   * the second one in the place a reader is looking at the coins.
+   *
+   * And no ceiling on the columns. The rail beside a Karta Postaci stops at
+   * three and marks the last coin, because it is a fixed strip that cannot grow;
+   * this is inside a panel that scrolls, so the pile simply is as big as it is
+   * and wraps. A mark here would say "more than thirty" where the coins
+   * themselves say a hundred and four.
+   */
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-start gap-3">
-        <CoinStack
-          count={gold}
-          src="/tokens/gold.png"
-          size={COIN}
-          perStack={PER_STACK}
-          maxColumns={STACKS_MAX}
-          gap={GAP}
-        />
-        <p className="text-xs text-muted">
-          <span className="tnum text-zloto">{gold}</span>{" "}
-          {plural(gold, "Sztuka Złota", "Sztuki Złota", "Sztuk Złota")}
-        </p>
-      </div>
+      <CoinStack count={gold} src="/tokens/gold.png" size={COIN} perStack={PER_STACK} gap={GAP} />
       {canTake && (
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={1}
-            max={gold}
-            value={want}
-            onChange={(event) => setWant(event.target.value)}
-            placeholder="ile"
-            aria-label="Ile Sztuk Złota zabrać"
-            className="tnum w-16 rounded border border-edge bg-night/40 px-2 py-1 text-xs text-ink"
-          />
-          <button
-            disabled={busy || !ok}
-            onClick={() => {
-              onTake(asked);
-              setWant("");
-            }}
-            className="rounded border border-verdigris/60 px-2 py-1 text-[11px] text-verdigris transition hover:border-verdigris disabled:border-edge disabled:text-muted/50"
-          >
-            weź
-          </button>
+        /**
+         * The same plain underlined word the Karty use for the same act, rather
+         * than a bordered button: two boxed controls under a shelf of tiles
+         * whose own take is a link made the money look like a different kind of
+         * business from the loot beside it, when 12.1 names them in one breath.
+         *
+         * `weź wszystko` sits under the pair instead of beside it. It is the
+         * second reading of one question — "how much?", then "all of it" — and
+         * on one line the eye takes the three as three separate controls.
+         */
+        <div className="flex flex-col items-start gap-1.5">
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={gold}
+              value={want}
+              onChange={(event) => setWant(event.target.value)}
+              placeholder="ile"
+              aria-label="Ile Sztuk Złota zabrać"
+              className="tnum w-14 rounded border border-edge bg-night/40 px-1.5 py-0.5 text-[11px] text-ink"
+            />
+            <button
+              disabled={busy || !ok}
+              onClick={() => {
+                onTake(asked);
+                setWant("");
+              }}
+              className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
+            >
+              weź
+            </button>
+          </div>
           <button
             disabled={busy}
             onClick={() => {
               onTake(gold);
               setWant("");
             }}
-            className="rounded border border-edge px-2 py-1 text-[11px] text-muted transition hover:border-ochre/70 hover:text-ochre disabled:opacity-40"
+            className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
           >
             weź wszystko
           </button>

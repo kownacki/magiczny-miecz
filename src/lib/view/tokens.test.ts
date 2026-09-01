@@ -127,6 +127,21 @@ suite("dividing a pile into columns", () => {
     }
   });
 
+  /**
+   * A pile with nowhere it has to end.
+   *
+   * The rail beside a Karta Postaci is a fixed strip and stops at three columns
+   * with the last coin standing down to say so. Gold lying on an Obszar is
+   * inside a panel that scrolls, and there the mark is worse than the columns
+   * it saves: it reads "more than thirty" where the coins themselves would have
+   * said a hundred and four. So no ceiling is a real answer this has to give.
+   */
+  it("draws every item when there is no ceiling", () => {
+    expect(pileColumns(104, 5, Infinity)).toEqual({ columns: 21, drawn: 104, cut: false });
+    expect(pileColumns(1, 5, Infinity)).toEqual({ columns: 1, drawn: 1, cut: false });
+    expect(pileColumns(0, 5, Infinity)).toEqual({ columns: 0, drawn: 0, cut: false });
+  });
+
   it("counts a fraction of a point as nothing extra", () => {
     // Nothing in this game deals in halves, but the value arrives off a column
     // and a pile drawn from a fraction would be a pile nobody could explain.

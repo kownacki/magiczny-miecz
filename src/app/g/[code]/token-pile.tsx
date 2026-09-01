@@ -142,8 +142,16 @@ export function CoinStack({
   size: number;
   /** How deep one column stands before the next is started. */
   perStack: number;
-  /** How wide the pile may grow before it stops counting and says so. */
-  maxColumns: number;
+  /**
+   * How wide the pile may grow before it stops counting and says so.
+   *
+   * Omitted, it does not stop. A rail is a fixed strip beside a Karta Postaci
+   * and has to end somewhere; a pile on an Obszar is inside a panel that
+   * scrolls, and there the mark is worse than the columns it saves — it says a
+   * hoard is "thirty-something" where the coins themselves would have said
+   * which. So the ceiling is the caller's, and having none is a real answer.
+   */
+  maxColumns?: number;
   /** Between columns. The rail's piles nearly touch; an Obszar's take a tile's gap. */
   gap: number;
   /** Whose colours the "more than fits" mark wears. */
@@ -160,11 +168,15 @@ export function CoinStack({
 }) {
   const overlap = coinOverlap(size);
   const lift = overlap - size;
-  const { columns, drawn, cut } = pileColumns(count, perStack, maxColumns);
+  const { columns, drawn, cut } = pileColumns(count, perStack, maxColumns ?? Infinity);
 
   return (
     <span
-      className="flex shrink-0 items-start"
+      /* Wraps, which only an uncapped pile ever needs: a rail is three columns
+         and cannot reach the edge of anything, and a pile that may grow without
+         limit will. `gap` is the row gap too, so a wrapped pile is spaced the
+         same in both directions. */
+      className="flex flex-wrap items-start"
       style={{ gap }}
       title={title}
       aria-hidden={alt === "" ? true : undefined}
