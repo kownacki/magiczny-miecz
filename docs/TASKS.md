@@ -949,6 +949,47 @@ Przedmiot cards, which is printed on them and was never transcribed (WOJNA
 status is the resolution stack's `cast` frame wearing a different hat — see
 docs/STACK.md law 4, which supersedes it when step 2 lands.
 
+## Parked deliberately — the Obszar inventory's two neighbours
+
+Both came out of the September 2026 pass over what lies on an Obszar (see
+`src/lib/view/fieldGroups.ts`), both were looked at properly, and both were put
+down on purpose so the card work could land on its own. Neither is blocked.
+
+### Gold lying on an Obszar
+
+`fieldGroups` groups **Karty** and nothing else. Loose Sztuki Złota are not a
+Karta Zdarzeń, print no numeral and are not in `field_cards` at all — but 12.1
+names them in the same breath as the cards: "może odwiedzić znajdującego się
+tam Nieznajomego, **zabrać leżące złoto**, Przedmioty (5.4.) lub Przyjaciół".
+They arrive on a field the same ways: 12.1 when a Postać dies, 20.2 when one is
+Zamieniona w Kamień.
+
+So the Obszar window is honest about the cards and silent about the coins, and
+a player reading it cannot see everything that is there. When this is picked
+up, the question to answer first is where gold on a field is *stored* — it has
+no row today — and the display follows from that. It belongs in the
+"Przedmioty i Przyjaciele" group when it exists.
+
+### Class II and class III as two separate battles (17.5, 18.2)
+
+The Demon getting its own class (`CARD_CLASS.demon`) made explicit something
+the engine has never been asked about. 17.5:
+
+> Więcej niż jeden przeciwnik. Jeżeli Postać jest atakowana przez więcej niż
+> jedną istotę, **Miecze tych istot są sumowane**, a do uzyskanego rezultatu
+> dodawany jest wynik rzutu kostką.
+
+and 18.2 resolves magical combat "w identyczny sposób". So a Wilk and a
+Wilkołak on one Obszar are **one** fight at Miecz 12, not two fights in some
+order — and because Miecz and Magia cannot be added, an Obszar holding both
+kinds gives exactly **two** fights: the summed II first, then the summed III.
+
+What was NOT checked, and is the whole of the task: whether `fight.ts` sums a
+pack at all, and whether it would now split one correctly along the class line.
+`fought` already lists a pack's members and `trophiesFrom` walks them, so
+something knows about packs; nobody has read it against 17.5 since the classes
+were two.
+
 ## Known gaps, left open on purpose
 
 Two rules the app carries only halfway, both looked at and both deliberately
