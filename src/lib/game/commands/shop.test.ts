@@ -395,6 +395,45 @@ describe("buying from a shelf (21.1)", () => {
   });
 });
 
+describe("a Karta with a buyer of its own (DIAMENT KRÓLÓW)", () => {
+  const ZAMEK = asFieldId("zamek")!;
+  const holding = () => [aHolding({ id: "h1", seat_id: "seat-a", card_id: "diament-krolow", kind: "item" })];
+
+  /**
+   * "Może zostać sprzedany w Zamku za 5 Sztuk Złota." It was a note for the
+   * player to apply by hand, and the Zamek has no desk — so the app's answer on
+   * the one square the card names was "Nikt tu nie skupuje Przedmiotów", a
+   * refusal quoting a rule the card overrides.
+   */
+  it("sells for its own price on the Obszar its own text names", () => {
+    const at = standing(ZAMEK, { gold: 0 }, holding());
+    const { writes } = sellHolding(at, { seatId: "seat-a", holdingId: "h1" });
+    expect(writes.seats?.[0].patch.gold).toBe(5);
+    expect(writes.holdings?.delete).toEqual(["h1"]);
+  });
+
+  /**
+   * And only there. At the Gród it is not the Zamek's business and falls
+   * through to the Lichwiarz, who pays his flat one for it — a bad trade the
+   * rules plainly allow and not this command's place to prevent.
+   */
+  it("falls through to the desk wherever the card does not name a buyer", () => {
+    const at = standing(GROD, { gold: 0 }, holding());
+    expect(sellHolding(at, { seatId: "seat-a", holdingId: "h1" }).writes.seats?.[0].patch.gold)
+      .toBe(1);
+  });
+
+  /** The Zamek buys the Diament and nothing else: it has no desk of its own. */
+  it("does not turn the Obszar into a desk for everything else", () => {
+    const at = standing(ZAMEK, { gold: 0 }, [
+      aHolding({ id: "h2", seat_id: "seat-a", card_id: "helm", kind: "item" }),
+    ]);
+    expect(() => sellHolding(at, { seatId: "seat-a", holdingId: "h2" })).toThrow(
+      /Nikt tu nie skupuje/,
+    );
+  });
+});
+
 /* ==========================================================================
  * 12.1's window, which trade is inside exactly as taking is.
  * ======================================================================= */

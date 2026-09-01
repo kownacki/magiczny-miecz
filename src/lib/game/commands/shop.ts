@@ -1,7 +1,7 @@
 /** The establishments: trading trophies for Miecz (1.4), and the desks that buy, sell and heal (21.2, 4.7). */
 
 import { trophyPointsOf } from "@/lib/engine/trophies";
-import { heldAbilities } from "@/lib/engine/abilities";
+import { abilitiesOf, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
 import { fieldScriptFor } from "@/lib/engine/fieldScript";
 import { HEAL_CEILING } from "@/lib/engine/derive";
@@ -322,9 +322,21 @@ export function tradeTrophies(
 }
 
 /**
- * Sells a Przedmiot, at a desk or to an Alchemik walking beside you.
+ * Sells a Przedmiot: to a buyer named on the card, at a desk, or to an Alchemik
+ * walking beside you.
  *
- * The two are the same trade at the same rate, and the card says so.
+ * The last two are the same trade at the same rate and the card says so. The
+ * first is one Karta's own arrangement — "może zostać sprzedany w Zamku za 5
+ * Sztuk Złota" — and the DIAMENT KRÓLÓW is the only thing in the box that has
+ * one. It was a note in `CARD_NOTES` for the player to apply by hand, and the
+ * Zamek has no desk, so the app's answer to somebody trying was "Nikt tu nie
+ * skupuje Przedmiotów" — a refusal, on the square the card names, quoting a
+ * rule the card overrides.
+ *
+ * Its own price is asked first, and only where the card names. At the Gród the
+ * Diament is not the Zamek's business and falls through to the Lichwiarz, who
+ * pays his flat 1 for it — a bad trade the rules plainly allow, and not this
+ * command's place to prevent.
  */
 export function sellHolding(
   snapshot: Snapshot,
@@ -333,15 +345,21 @@ export function sellHolding(
   const seat = standingShopper(snapshot, command.seatId);
   const mine = snapshot.holdings.filter((h) => h.seat_id === seat.id);
 
+  const held = mine.find((h) => h.id === command.holdingId);
+  if (!held) throw new Error("Nie masz tej karty.");
+
+  // The card's own buyer, where it names one and you are standing there.
+  const named = abilitiesOf(held.card_id).find(
+    (ability): ability is Extract<Ability, { kind: "sprzedaj-w" }> =>
+      ability.kind === "sprzedaj-w" && ability.fields.includes(seat.field_id as FieldId),
+  );
   const desk = offerOn(snapshot, seat.field_id as FieldId, "sprzedaj");
   const alchemist = heldAbilities(mine.map((h) => h.card_id)).find(
     (ability) => ability.kind === "skup",
   );
-  const price = desk?.cena ?? (alchemist?.kind === "skup" ? alchemist.cena : null);
+  const price =
+    named?.cena ?? desk?.cena ?? (alchemist?.kind === "skup" ? alchemist.cena : null);
   if (price === null) throw new Error("Nikt tu nie skupuje Przedmiotów.");
-
-  const held = mine.find((h) => h.id === command.holdingId);
-  if (!held) throw new Error("Nie masz tej karty.");
   // A Przyjaciel is a person and a trophy is a memory; neither is something the
   // Lichwiarz deals in. 5.4 counts only Przedmioty and so does he.
   if (held.kind !== "item") throw new Error("Lichwiarz kupuje tylko Przedmioty.");

@@ -228,6 +228,20 @@ export type Ability =
    */
   | { kind: "skup"; cena: number }
   /**
+   * A Przedmiot with a buyer of its own, named on the card.
+   *
+   * Not `skup`, which is a *desk* that takes anything at a flat rate — the
+   * Gród's Lichwiarz, the Alchemik's pouch. This is the other way round: one
+   * Karta with one price at one named Obszar, and the DIAMENT KRÓLÓW is the
+   * only thing in the box that has it. "Może zostać sprzedany w Zamku za 5
+   * Sztuk Złota."
+   *
+   * `fields` rather than a single id, the way `bez-oplaty` carries the two
+   * Przeprawy: nothing in the base game names two buyers, and a list costs
+   * nothing and reads the same.
+   */
+  | { kind: "sprzedaj-w"; fields: readonly FieldId[]; cena: number }
+  /**
    * Łódź and Latarnia: cross anywhere rather than only at the two legal places
    * (11.2, 11.6). Both are consumed whether or not they are used.
    */
@@ -372,10 +386,12 @@ export type Ability =
  */
 export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = {
   "poszukiwacz-przygod": ["atakuje Postać lub Wroga do 3 Obszarów stąd, po twoim ruchu"],
-  "diament-krolow": [
-    "sprzedasz w Zamku za 5 Sz. Z.",
-    "przegraną walkę z Postacią płacisz Diamentem, nie punktem Życia",
-  ],
+  // The sale is `sprzedaj-w` now and says itself; what is left here is the
+  // clause the app does not enforce. See the note above: a rule stated in
+  // CARD_NOTES is one the players apply themselves, so a rule that moves into
+  // the engine has to move out of here or the card claims to be doing less
+  // than it is.
+  "diament-krolow": ["przegraną walkę z Postacią płacisz Diamentem, nie punktem Życia"],
   "tajemna-sakwa": [
     "1 Przedmiot włożony do Sakwy jest nie do odebrania — zabierze go tylko Pan Bogactwa",
   ],
@@ -577,6 +593,10 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // --- friends --------------------------------------------------------------
   // "1 Przedmiot zamienia się w 1 Sztukę cennego kruszcu."
   alchemik: [{ kind: "skup", cena: 1 }],
+  // "może zostać sprzedany w Zamku za 5 Sztuk Złota" — the one Karta in the box
+  // with a buyer of its own. The other half of its text, the one about paying
+  // for a lost duel with the Diament rather than a Życie, is still CARD_NOTES'.
+  "diament-krolow": [{ kind: "sprzedaj-w", fields: ["zamek"], cena: 5 }],
   pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
   strzyga: [{ kind: "punkty", magia: 1 }],
   chochlik: [

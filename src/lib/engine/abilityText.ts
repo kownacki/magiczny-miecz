@@ -311,6 +311,11 @@ export function describeAbility(ability: Ability): string {
       return `przeprawa przez Trzęsawiska: ${ability.dice} kostki`;
     case "skup":
       return `zamienia Przedmiot na złoto (${ability.cena} Sz. Z. za sztukę)`;
+    // Colon rather than a preposition, exactly as `bez-oplaty` two cases up:
+    // an Obszar's name is printed on the board and goes in verbatim, so nothing
+    // here can decline it and „w Zamek" is what asking would produce.
+    case "sprzedaj-w":
+      return `sprzedasz za ${ability.cena} Sz. Z.: ${fieldNames(ability.fields)}`;
     case "przeprawa-wszedzie":
       return ability.obstacle === "trzesawiska"
         // Both are the rulebook's own sentences: 11.2 "Trzęsawiska można
