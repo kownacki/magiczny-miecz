@@ -109,27 +109,34 @@ export function pileColumns(
 }
 
 /**
- * How much of the coin underneath still shows, for a stack that has to fit.
+ * How much of the coin underneath still shows: half of it, at any size.
  *
- * The other half of `pileColumns`, and here for the same reason: it was written
- * twice, once for the rail beside a Karta Postaci and once for the gold lying
- * on an Obszar, with the variables renamed and the same sum underneath.
+ * The other half of `pileColumns`, and here for the same reason — it was
+ * written twice, once for the rail beside a Karta Postaci and once for the gold
+ * lying on an Obszar, with the variables renamed and the same sum underneath.
  *
- * A stack of identical tokens is drawn by overlapping them — that is what a
- * pile of coins looks like from across a table, and it costs nothing to draw
- * since every coin is the same picture anyway. What decides the overlap is the
- * box the full stack has to fit: the top token stands whole and the `perStack -
- * 1` under it each contribute this much.
+ * A stack of identical tokens is drawn by overlapping them, which is what a
+ * pile of coins looks like from across a table and costs nothing to draw since
+ * every coin is the same picture anyway. **How far** they overlap is a
+ * proportion of the coin and not a division of the room available, which is the
+ * correction: fitting a stack to its box makes the overlap a function of how
+ * many coins there happen to be, so the same pile is drawn differently in two
+ * places and one of them is always wrong. Five 39px coins fitted to a 75px tile
+ * left nine pixels of each showing — ruled lines with one ingot at the bottom —
+ * while ten 16px coins fitted to a rail left eight, which is half of one and
+ * reads as a stack.
  *
- *     size + (perStack - 1) * overlap <= boxHeight
+ * Half is that rail's own figure, kept: `(91 - 16) / 9` floors to exactly 8.
+ * So this changes nothing about the Karta Postaci and gives every other pile
+ * the proportion that was already working there.
  *
- * Floored, so a stack is never a pixel taller than its room. The two callers
- * ask it different questions and get answers that look nothing alike — 16px
- * coins ten deep in 91 give 8, 39px coins five deep in 75 give 9 — which is the
- * point: neither number is written down anywhere, so changing either box moves
- * its pile instead of leaving a constant that used to be right.
+ * The room is not forgotten, it has moved: `tokens.test.ts` asserts the rail's
+ * full stack of ten still fits the half-card it stands in. A number that has to
+ * hold is better as a thing checked than as a formula that quietly reshapes the
+ * picture to keep itself true.
  */
-export function stackOverlap(boxHeight: number, size: number, perStack: number): number {
-  if (perStack <= 1) return size;
-  return Math.max(1, Math.floor((boxHeight - size) / (perStack - 1)));
+export const COIN_SHOWING = 0.5;
+
+export function coinOverlap(size: number): number {
+  return Math.max(1, Math.round(size * COIN_SHOWING));
 }

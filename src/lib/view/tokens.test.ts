@@ -1,5 +1,5 @@
 import { describe as suite, expect, it } from "vitest";
-import { COLUMNS_MAX, DENOMINATIONS, pileColumns, stackOverlap, tokensFor } from "./tokens";
+import { COLUMNS_MAX, DENOMINATIONS, coinOverlap, pileColumns, tokensFor } from "./tokens";
 
 suite("making change in żetony", () => {
   it("is all ones while ones fit a column", () => {
@@ -140,41 +140,44 @@ suite("dividing a pile into columns", () => {
   });
 });
 
-suite("fitting a stack of coins into its box", () => {
-  /** The rail's gold: ten 16px coins in the half-card they are given. */
-  const rail = () => stackOverlap(91, 16, 10);
-  /** An Obszar's gold: five 39px coins down one Karta tile's picture. */
-  const obszar = () => stackOverlap(75, 39, 5);
+suite("how far the coins in a stack overlap", () => {
+  /** The rail's gold beside a Karta Postaci, and an Obszar's. */
+  const rail = () => coinOverlap(16);
+  const obszar = () => coinOverlap(39);
 
-  it("makes a full stack exactly as tall as the room it has", () => {
-    // The top coin whole, the rest a sliver each. This is the promise the sum
-    // exists to keep: ten coins are one rail, ten coins on an Obszar are one
-    // Karta tile.
-    expect(16 + 9 * rail()).toBeLessThanOrEqual(91);
-    expect(39 + 4 * obszar()).toBe(75);
-  });
-
-  it("answers each caller in its own numbers", () => {
+  it("shows half of every coin, whatever size it is drawn at", () => {
     expect(rail()).toBe(8);
-    expect(obszar()).toBe(9);
+    expect(obszar()).toBe(20);
   });
 
-  it("never lets a stack outgrow its box by a pixel", () => {
-    // Floored rather than rounded: a stack a pixel too tall pushes whatever is
-    // under it, and on the rail that is the numeral the pile is read by.
-    for (const height of [40, 41, 42, 43, 44]) {
-      expect(16 + 9 * stackOverlap(height, 16, 10)).toBeLessThanOrEqual(height);
-    }
+  /**
+   * The figure is the rail's own, so nothing about the Karta Postaci moved when
+   * the rule stopped being "fit the box" and became "half a coin".
+   *
+   * `(91 - 16) / 9` floors to 8, which is exactly half of 16. That coincidence
+   * is what made half the right proportion to take everywhere else.
+   */
+  it("leaves the rail drawn exactly as it was", () => {
+    expect(Math.floor((91 - 16) / 9)).toBe(rail());
   });
 
-  it("keeps a sliver showing even in a box with no room for one", () => {
-    // Coins at zero overlap are one coin, and a stack of ten drawn as one coin
-    // is a picture that lies about the count beside it. A pile too big for its
-    // box is `pileColumns`' problem, not this one.
-    expect(stackOverlap(10, 16, 10)).toBe(1);
+  /**
+   * The room the rail has, kept as an assertion rather than as the formula.
+   *
+   * A stack a pixel too tall pushes what is under it, and on the rail that is
+   * the numeral the pile is read by. Fitting to the box guaranteed this and
+   * cost the picture — the overlap became a function of how many coins there
+   * happened to be, so 39px coins five deep showed nine pixels each. So the
+   * proportion draws the pile and this holds it to the room.
+   */
+  it("keeps a full stack of ten inside the half-card it stands in", () => {
+    expect(16 + 9 * rail()).toBeLessThanOrEqual(91);
   });
 
-  it("gives a stack of one the whole token, since nothing sits under it", () => {
-    expect(stackOverlap(75, 39, 1)).toBe(39);
+  it("never closes a stack up into a single coin", () => {
+    // Rounded to at least one: a stack of ten drawn as one coin is a picture
+    // that lies about the count beside it.
+    expect(coinOverlap(1)).toBe(1);
+    expect(coinOverlap(0)).toBe(1);
   });
 });

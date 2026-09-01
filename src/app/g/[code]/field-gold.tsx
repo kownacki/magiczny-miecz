@@ -3,56 +3,40 @@
 /** Sztuki Złota lying on an Obszar: the pile, and how much of it you are taking (12.1). */
 
 import { useState } from "react";
-import { TILE_ART_HEIGHT, TILE_WIDTH } from "@/lib/view/cardImages";
+import { TILE_WIDTH } from "@/lib/view/cardImages";
 import { CoinStack } from "./token-pile";
 import { plural } from "@/lib/engine/polish";
 
 /**
  * The gold's geometry, derived from the Karta tile it stands beside.
  *
- * One intent settles all of it: **the pile takes up exactly one Karta's worth
- * of room**, so a glance at an Obszar reads the money against the Karty next to
- * it rather than in some unit of its own.
+ * The width is the tile's: `gold.png` is square — 101 by 101 — so two coins and
+ * the gap between them fill 86, which makes each 39, and ten of them read as a
+ * pile against the Karty next to it rather than in a unit of their own.
  *
- * Two stacks across a tile's width, three coins down its height. `gold.png` is
- * square — 101 by 101 — so the width decides the coin: two of them and the gap
- * between fill 86, which makes each 39. Three at full height would be 117
- * against the art's 75, so they overlap; `stackOverlap` works out by how much,
- * and `CoinStack` draws it — the same pile as the purse beside a Karta Postaci,
- * at four times the size.
- *
- * Derived rather than written down, so changing the tile moves the gold with it
- * instead of leaving two numbers that used to agree.
- *
- * # Why three and not five
- *
- * Five was the first answer, on the arithmetic that ten Sztuki Złota should be
- * one tile — a nice number, and the rail's own stacks of ten are exactly that
- * idea. It did not survive being looked at. The rail's coins are 16px and a
- * sliver of one is a sliver of a yellow square, which is all anybody reads at
- * that size; these are 39px and carry a picture of an *ingot*, so five deep
- * left nine pixels showing and the pile drew as a stack of horizontal lines
- * with one coin on the bottom. The picture stopped being a coin.
- *
- * Three leaves eighteen — most of each ingot — and the footprint is untouched,
- * because what was fitted to the tile is the stack's height and not its count.
- * The number beside the pile was always the reading; the pile is what makes it
- * money at a glance, and it has to look like money to do that.
+ * The height is nobody's. It used to be the tile's too, on the arithmetic that
+ * ten Sztuki Złota should take exactly one Karta's worth of room — and fitting
+ * five coins into 75 pixels left nine of each showing, which at this size is
+ * not a coin but a ruled line. Coins overlap by half of themselves now,
+ * wherever they are drawn (`coinOverlap`), which is the proportion the purse
+ * beside a Karta Postaci has always used. So the stack is as tall as it is, and
+ * what makes the two piles look like the same object is that they are drawn the
+ * same way rather than fitted to the same box.
  */
 // `TILE_GAP.card` is `gap-2`, and a margin cannot be set from a class name.
 const GAP = 8;
 const COIN = Math.floor((TILE_WIDTH - GAP) / 2);
-const PER_STACK = 3;
+const PER_STACK = 5;
 
 /**
  * Two stacks and no more, which is the ceiling the rail's own gold has for the
- * same reason: past six the pile stops growing, the mark on the last coin says
+ * same reason: past ten the pile stops growing, the mark on the last coin says
  * so, and the numeral beside it goes on being exact. The coins are all ones, so
  * the picture was only ever an impression of how much is lying here.
  *
- * A third column would say more and cost the thing the first two bought: at 39
- * a coin the pile would be 133 wide against a Karta's 86, and a pile wider than
- * the cards beside it is no longer being read against them.
+ * A third column would say more and cost what the first two bought: at 39 a
+ * coin it would be 133 wide against a Karta's 86, and a pile wider than the
+ * cards beside it is not being read against them any more.
  */
 const STACKS_MAX = 2;
 
@@ -91,7 +75,6 @@ export function FieldGold({
           src="/tokens/gold.png"
           size={COIN}
           perStack={PER_STACK}
-          boxHeight={TILE_ART_HEIGHT}
           maxColumns={STACKS_MAX}
           gap={GAP}
         />

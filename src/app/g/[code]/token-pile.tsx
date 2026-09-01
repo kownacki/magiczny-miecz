@@ -1,7 +1,7 @@
 /** A pile of identical tokens, overlapped to fit a box — the rail's gold, and an Obszar's. */
 
 import Image from "next/image";
-import { pileColumns, stackOverlap } from "@/lib/view/tokens";
+import { coinOverlap, pileColumns } from "@/lib/view/tokens";
 
 /**
  * The two colours printed on a żeton, read off the scans rather than guessed:
@@ -129,7 +129,6 @@ export function CoinStack({
   src,
   size,
   perStack,
-  boxHeight,
   maxColumns,
   gap,
   stat = "gold",
@@ -143,8 +142,6 @@ export function CoinStack({
   size: number;
   /** How deep one column stands before the next is started. */
   perStack: number;
-  /** The room a full column has to fit — what decides the overlap. */
-  boxHeight: number;
   /** How wide the pile may grow before it stops counting and says so. */
   maxColumns: number;
   /** Between columns. The rail's piles nearly touch; an Obszar's take a tile's gap. */
@@ -161,7 +158,7 @@ export function CoinStack({
    */
   alt?: string;
 }) {
-  const overlap = stackOverlap(boxHeight, size, perStack);
+  const overlap = coinOverlap(size);
   const lift = overlap - size;
   const { columns, drawn, cut } = pileColumns(count, perStack, maxColumns);
 

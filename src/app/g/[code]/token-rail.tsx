@@ -17,23 +17,20 @@ import { IN_FIGHT, figuresOf } from "@/lib/engine/figures";
  */
 
 /**
- * The Karta Postaci is drawn 192 wide and keeps its proportions, so it stands
- * this tall. Two piles share each side of it.
- */
-const CARD_HEIGHT = 238;
-
-
-/**
- * How tall one pile may stand: half the card, less the ± and the total that
- * share the rail underneath it.
+ * How tall one pile may stand: half the Karta Postaci — drawn 192 wide, so 238
+ * tall — less the ± and the total that share the rail underneath it.
  *
- * Only the gold uses it, and only to work out how much of each coin can show:
- * a full stack of ten is exactly this tall. The żetony proper are counted
- * rather than measured — five to a column — because they have faces that have
- * to stay visible, and a pile whose height depends on the arithmetic is a pile
- * you have to read instead of recognise.
+ * Ninety-one, and nothing computes against it any more. It used to divide the
+ * gold's overlap, which made how far the coins sat over each other a function
+ * of how many there were; the overlap is half a coin now, wherever a coin is
+ * drawn, and `tokens.test.ts` holds a full stack of ten to this number instead.
+ * The two agree because the proportion was read off this rail in the first
+ * place: `(91 - 16) / 9` floors to exactly 8.
+ *
+ * Kept as the note it is. A constant nothing reads is worth deleting; a measure
+ * a test is enforcing somewhere else is worth writing down where the thing it
+ * measures is drawn.
  */
-const STACK_HEIGHT = Math.round(CARD_HEIGHT / 2) - 28;
 
 
 /**
@@ -100,7 +97,6 @@ export function Tokens({ stat, points, label }: { stat: string; points: number; 
         src="/tokens/gold.png"
         size={SIZE}
         perStack={10}
-        boxHeight={STACK_HEIGHT}
         maxColumns={COLUMNS_MAX}
         // The two piles on a rail nearly touch, which is `gap-0.5`.
         gap={2}
