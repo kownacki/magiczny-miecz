@@ -151,25 +151,29 @@ export function complete(
       const at = said();
       if (at !== -1) return shelved(FIELD_KINDS, at + 1);
       /**
-       * `place gold N` is not a Karta and Tab cannot finish a number, so the
-       * money form is offered as a word and then gets out of the way: nothing
-       * where the amount goes, and `at` once it has been typed.
+       * The money form, which both verbs have: `place gold N` puts coins down
+       * and `clear gold [N]` takes them off. Tab cannot finish a number, so the
+       * word is offered and then it gets out of the way — nothing where the
+       * amount goes, and `at` once something has been typed there.
        *
-       * Not for `clear`, which has no money form — it sweeps whatever is on the
-       * square, coins included, and a `clear gold` Tab taught would be a line
-       * the parser reads as a card nothing is called.
+       * `clear` differs in one respect: the amount is optional, because bare
+       * `clear gold` means the lot. So `at` is offered as soon as the word is
+       * finished, and again after a number.
        */
       const money = (parts[1] ?? "").toLowerCase();
-      if (verb !== "clear" && GOLD_WORDS.has(money)) {
+      if (GOLD_WORDS.has(money)) {
         const amountIn = parts.length >= 4 && parts[parts.length - 1] === "";
-        return amountIn ? { pool: ["at"], at: parts.length - 1 } : { pool: [], at: parts.length - 1 };
+        const bare = verb === "clear" && parts.length === 3 && parts[2] === "";
+        return amountIn || bare
+          ? { pool: ["at"], at: parts.length - 1 }
+          : { pool: [], at: parts.length - 1 };
       }
       const names = PLACEABLE.flatMap((group) => group.cards.map((one) => one.name));
       if (finished(names)) return { pool: ["at"], at: parts.length - 1 };
       // Money first, the way 12.1 lists it — "zabrać leżące złoto, Przedmioty
       // lub Przyjaciół" — and because it is one word against a hundred and
       // sixty-five, which is the one a list this long can afford to lead with.
-      return shelved(verb === "clear" ? PLACEABLE : [GOLD_OFFERED, ...PLACEABLE], 1);
+      return shelved([GOLD_OFFERED, ...PLACEABLE], 1);
     }
     /**
      * `take` names something lying on the Obszar or dealt into the turn, which

@@ -260,7 +260,17 @@ export type Command =
   | { kind: "stack"; cardId: string; pile: null; at: null }
   | { kind: "stack"; cardId: null; pile: "events" | "spells"; at: number }
   /** Test mode: everything lying on an Obszar, off it (`place`'s inverse). */
-  | { kind: "clear"; fieldId: FieldId | null; cardId: string | null }
+  | { kind: "clear"; fieldId: FieldId | null; cardId: string | null; gold: null }
+  /**
+   * The money named on its own, which bare `clear` takes anyway and
+   * `clear MIECZ` leaves alone — so there was no way to say "just the coins".
+   *
+   * "all" rather than a number, because bare `clear gold` means the lot the way
+   * bare `take gold` does. A third state and not a nullable number: `cardId:
+   * null` already means "everything on the square", so nothing about the two
+   * card fields could have carried this.
+   */
+  | { kind: "clear"; fieldId: FieldId | null; cardId: null; gold: number | "all" }
   /** Test mode: what is left in a pile, and what has been used (9.5, 16.8). */
   | { kind: "pile"; pile: "events" | "spells" | null }
   /**
@@ -949,8 +959,8 @@ export const COMMANDS: CommandSpec[] = [
     // a test table that dressed a field had no way to undress it.
     name: "clear",
     aliases: [],
-    usage: "clear [card] [at field]",
-    summary: "take a Karta off an Obszar — bare, the loose Złoto and all of them; `at` names another",
+    usage: "clear [gold [N]|card] [at field]",
+    summary: "take Złoto or a Karta off an Obszar — bare, all of both; `gold` just the coins; `at` names another",
     needs: "testmode",
     group: "override",
   },

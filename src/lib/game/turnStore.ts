@@ -1299,8 +1299,14 @@ export async function clearField(
   seatId: string,
   fieldId: FieldId,
   cardId?: string | null,
+  gold?: number | "all",
 ): Promise<{ cards: string[]; gold: number }> {
-  return change(gameId, clearFieldOn, { seatId, fieldId, ...(cardId ? { cardId } : {}) });
+  return change(gameId, clearFieldOn, {
+    seatId,
+    fieldId,
+    ...(cardId ? { cardId } : {}),
+    ...(gold !== undefined && gold !== null ? { gold } : {}),
+  });
 }
 
 export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {

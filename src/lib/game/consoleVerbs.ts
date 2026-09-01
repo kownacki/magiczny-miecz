@@ -436,8 +436,20 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const seat = seatOf(null);
     const where = command.fieldId ?? seat.field_id;
     if (!where) throw new Error("Postać nie stoi na żadnym polu.");
-    const gone = await clearField(gameId, seat.id, requireFieldId(where), command.cardId);
+    const gone = await clearField(
+      gameId,
+      seat.id,
+      requireFieldId(where),
+      command.cardId,
+      command.gold ?? undefined,
+    );
     if (command.cardId) return `${cardName(command.cardId)} off ${fieldName(asFieldId(where))}.`;
+    // Named on its own, the money is the whole answer: a line reporting "0 Kart
+    // on the used pile" alongside would be counting something nobody asked
+    // about.
+    if (command.gold !== null) {
+      return `${sztuki(gone.gold)} off ${fieldName(asFieldId(where))}.`;
+    }
     // The Karty and the loose gold are two different fates and the line says
     // both: cards go to the used pile (9.5 deals them again), coins simply go.
     const cards = `${gone.cards.length} ${gone.cards.length === 1 ? "Karta" : "Kart"} on the used pile`;

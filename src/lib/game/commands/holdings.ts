@@ -831,10 +831,54 @@ export function takeFromField(
  * (21.2). Deleting them would take them out of the box, and 9.5 refills from
  * that pile.
  */
+function sweepGold(
+  snapshot: Snapshot,
+  fieldId: FieldId,
+  want: number | "all",
+  seatId: string,
+): Outcome<{ cards: string[]; gold: number }> {
+  const lying = snapshot.fieldGold.find((row) => row.field_id === fieldId);
+  if (!lying || lying.gold <= 0) throw new Error("Nie ma tu złota.");
+
+  const gone = want === "all" ? lying.gold : Math.floor(want);
+  if (!Number.isFinite(gone) || gone < 1) throw new Error("Ile Sztuk Złota?");
+  if (gone > lying.gold) {
+    throw new Error(`Leży tu tylko ${lying.gold} — tyle najwyżej możesz zdjąć.`);
+  }
+
+  return {
+    writes: mergeAll(takeGold(snapshot, fieldId, gone), {
+      journal: [
+        {
+          seatId,
+          round: snapshot.game.round,
+          kind: "override" as const,
+          // The same row a full sweep writes, with no Karty in it. One line for
+          // one act, so a reader following the board does not have to learn
+          // that the console has two ways of taking things off a square.
+          payload: { what: "clear-field", fieldId, cards: [], gold: gone },
+          manual: true,
+        },
+      ],
+    }),
+    result: { cards: [], gold: gone },
+  };
+}
+
 export function clearField(
   snapshot: Snapshot,
-  command: { seatId: string; fieldId: FieldId; cardId?: string },
+  command: { seatId: string; fieldId: FieldId; cardId?: string; gold?: number | "all" },
 ): Outcome<{ cards: string[]; gold: number }> {
+  /**
+   * The money on its own, which is a different sweep and not a filter on this
+   * one: it takes no Karty, so none of the turn-frame surgery below applies.
+   *
+   * "all" is what bare `clear gold` means, the way bare `take gold` does. A
+   * number takes that much and leaves the rest, which is the only way to put a
+   * square *back* to a particular amount — `place gold` can only add.
+   */
+  if (command.gold !== undefined) return sweepGold(snapshot, command.fieldId, command.gold, command.seatId);
+
   const here = snapshot.fieldCards.filter((row) => row.field_id === command.fieldId);
 
   /**

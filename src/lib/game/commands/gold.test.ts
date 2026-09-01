@@ -356,6 +356,38 @@ describe("sweeping an Obszar takes the gold with the Karty", () => {
     expect(apply(before, writes).fieldGold.map((row) => row.gold)).toEqual([6]);
   });
 
+  /**
+   * The coins named on their own, which bare `clear` takes anyway and
+   * `clear MIECZ` leaves — so "just the money" had no way of being said, and
+   * neither had "three of it". That second one is the only way to put a square
+   * back to a particular amount, `place gold` being able only to add.
+   */
+  it("takes the gold alone, all of it or a stated amount, and leaves the Karty", () => {
+    const before = apply(dressed(), {
+      fieldCards: { insert: [{ field_id: HERE, card_id: "targowisko", granted: true }] },
+    });
+
+    const some = clearField(before, { seatId: "seat-a", fieldId: HERE, gold: 2 });
+    expect(some.result).toEqual({ cards: [], gold: 2 });
+    const left = apply(before, some.writes);
+    expect(left.fieldGold.map((row) => row.gold)).toEqual([4]);
+    expect(left.fieldCards.map((row) => row.card_id)).toEqual(["targowisko"]);
+
+    const lot = clearField(before, { seatId: "seat-a", fieldId: HERE, gold: "all" });
+    expect(lot.result.gold).toBe(6);
+    expect(apply(before, lot.writes).fieldGold).toEqual([]);
+    expect(apply(before, lot.writes).fieldCards.map((row) => row.card_id)).toEqual(["targowisko"]);
+  });
+
+  it("refuses more coins than are lying there, and refuses none", () => {
+    const before = dressed();
+    expect(() => clearField(before, { seatId: "seat-a", fieldId: HERE, gold: 9 })).toThrow(/tylko 6/);
+    expect(() => clearField(before, { seatId: "seat-a", fieldId: HERE, gold: 0 })).toThrow(/Ile/);
+    expect(() => clearField(table(), { seatId: "seat-a", fieldId: HERE, gold: "all" })).toThrow(
+      /Nie ma tu złota/,
+    );
+  });
+
   /** A square holding nothing but coins is not an empty square. */
   it("sweeps a square whose only contents are gold", () => {
     const before = dressed();

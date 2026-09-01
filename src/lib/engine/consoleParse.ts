@@ -110,6 +110,35 @@ export const PLACEABLE: readonly Catalogue[] = byKind(CARDS);
  */
 export const GOLD_WORDS: ReadonlySet<string> = new Set(["gold", "złoto", "zloto"]);
 
+/**
+ * The money form of a verb that otherwise names a Karta.
+ *
+ * `place` and `take` both have one, because both acts have a money half that
+ * is not a card: 12.1 names „leżące złoto, Przedmioty lub Przyjaciół" in one
+ * breath and the console had a word for two of the three.
+ *
+ * Answers null when the word is not the money word, so the caller falls
+ * through to its card lookup unchanged — which is what keeps `place 2 SZTUKI
+ * ZŁOTA` meaning the Karta of that name. Nothing in the box is called „gold"
+ * or „złoto" on its own, and the boundary is what stops a card that merely
+ * begins with the letters from being read as money.
+ */
+const GOLD_WORD = /^(gold|złoto|zloto)\b\s*(.*)$/i;
+
+function goldAsked(said: string): string | null {
+  const hit = GOLD_WORD.exec(said.trim());
+  return hit ? hit[2].trim() : null;
+}
+
+/** A whole number of coins, or the reason it is not one. */
+function coins(said: string, verb: string): { gold: number } | { error: string } {
+  const asked = Number(said);
+  if (!Number.isInteger(asked) || asked < 1) {
+    return { error: `\`${verb} gold\` wants a whole number of Sztuki Złota — \`${verb} gold 5\`.` };
+  }
+  return { gold: asked };
+}
+
 /** What Tab offers where the money word goes. The English one, which is the verb's own. */
 export const GOLD_OFFERED: Catalogue = {
   title: "Złoto",
@@ -416,7 +445,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    * reason the field is optional.
    */
   if (word === "clear") {
-    if (tail === "") return { ok: { kind: "clear", fieldId: null, cardId: null } };
+    if (tail === "") return { ok: { kind: "clear", fieldId: null, cardId: null, gold: null } };
     /**
      * `place`'s grammar backwards, and the same `at` between the two names.
      *
@@ -438,45 +467,40 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
       fieldId = where.found.id;
     }
 
+    /**
+     * The money, named on its own.
+     *
+     * Bare `clear` takes it along with everything else and `clear MIECZ` leaves
+     * it, so there was no way to say "just the coins" — and none to say how
+     * many. Bare `clear gold` means the lot, the way bare `take gold` does.
+     *
+     * Before the Obszar lookup as well as the card one: nothing on the board is
+     * called Złoto either, and a keyword that loses to a place name is a
+     * keyword you cannot rely on.
+     */
+    const asked = goldAsked(said);
+    if (asked !== null) {
+      if (asked === "" || asked.toLowerCase() === "all") {
+        return { ok: { kind: "clear", fieldId, cardId: null, gold: "all" } };
+      }
+      const amount = coins(asked, "clear");
+      if ("error" in amount) return amount;
+      return { ok: { kind: "clear", fieldId, cardId: null, gold: amount.gold } };
+    }
+
     if (cut === -1) {
       const where = findByName(PLACES, (field) => field.name, said);
-      if ("found" in where) return { ok: { kind: "clear", fieldId: where.found.id, cardId: null } };
+      if ("found" in where) {
+        return { ok: { kind: "clear", fieldId: where.found.id, cardId: null, gold: null } };
+      }
     }
     return name(CARDS, (one) => one.name, said, "card", (one) => ({
       kind: "clear",
       fieldId,
       cardId: one.id,
+      gold: null,
     }), "clear");
   }
-
-/**
- * The money form of a verb that otherwise names a Karta.
- *
- * `place` and `take` both have one, because both acts have a money half that
- * is not a card: 12.1 names „leżące złoto, Przedmioty lub Przyjaciół" in one
- * breath and the console had a word for two of the three.
- *
- * Answers null when the word is not the money word, so the caller falls
- * through to its card lookup unchanged — which is what keeps `place 2 SZTUKI
- * ZŁOTA` meaning the Karta of that name. Nothing in the box is called „gold"
- * or „złoto" on its own, and the boundary is what stops a card that merely
- * begins with the letters from being read as money.
- */
-const GOLD_WORD = /^(gold|złoto|zloto)\b\s*(.*)$/i;
-
-function goldAsked(said: string): string | null {
-  const hit = GOLD_WORD.exec(said.trim());
-  return hit ? hit[2].trim() : null;
-}
-
-/** A whole number of coins, or the reason it is not one. */
-function coins(said: string, verb: string): { gold: number } | { error: string } {
-  const asked = Number(said);
-  if (!Number.isInteger(asked) || asked < 1) {
-    return { error: `\`${verb} gold\` wants a whole number of Sztuki Złota — \`${verb} gold 5\`.` };
-  }
-  return { gold: asked };
-}
 
   if (word === "place" || word === "put") {
     const cut = tail.search(AT);

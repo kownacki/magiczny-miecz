@@ -228,6 +228,34 @@ suite("naming a card, a field or a creature", () => {
     expect(err("place gold -2")).toContain("place gold 5");
   });
 
+  /**
+   * `clear`'s money form, which bare `clear` was doing anyway and no line could
+   * ask for on its own.
+   *
+   * Bare `clear` sweeps the coins along with the Karty and `clear MIECZ` leaves
+   * them, so "just the coins" and "three of them" were both unsayable — and
+   * three of them is the only way to put a square back to a particular amount,
+   * since `place gold` can only add.
+   */
+  it("takes the gold off an Obszar, all of it unless a number says", () => {
+    expect(ok("clear gold")).toEqual({ kind: "clear", cardId: null, gold: "all", fieldId: null });
+    expect(ok("clear gold all")).toMatchObject({ gold: "all" });
+    expect(ok("clear gold 3")).toEqual({ kind: "clear", cardId: null, gold: 3, fieldId: null });
+    expect(ok("clear gold 3 at Karczma")).toEqual({
+      kind: "clear",
+      cardId: null,
+      gold: 3,
+      fieldId: "karczma",
+    });
+    expect(ok("clear złoto 2")).toMatchObject({ gold: 2 });
+  });
+
+  it("still means the Karta, and the Obszar, where those are what was named", () => {
+    expect(ok("clear 1 SZTUKA ZŁOTA")).toMatchObject({ cardId: "1-sztuka-zlota", gold: null });
+    expect(ok("clear Karczma")).toMatchObject({ fieldId: "karczma", cardId: null, gold: null });
+    expect(ok("clear")).toEqual({ kind: "clear", cardId: null, gold: null, fieldId: null });
+  });
+
   it("names both halves of a place, and complains about the one that is wrong", () => {
     // Bare is the catalogue, as bare `deal` is — a mistake is a name nothing
     // is called, and that is what still complains.
@@ -449,10 +477,9 @@ suite("naming a card, a field or a creature", () => {
     // and the money, which is not a Karta and leads them the way 12.1 lists it.
     expect(titles("place ")).toEqual(["Złoto", ...KARTY]);
     expect(titles("take ")).toEqual(["Złoto", ...KARTY]);
-    // `clear` has no money form: it sweeps whatever is on the square, coins
-    // included, so a `clear gold` would be a line the parser reads as a card
-    // nothing is called.
-    expect(titles("clear ")).toEqual(KARTY);
+    // `clear` grew one too: bare it sweeps the coins with the Karty, and named
+    // it takes the coins alone.
+    expect(titles("clear ")).toEqual(["Złoto", ...KARTY]);
     // A Hełm has no pile to sit on top of (21.2); a Zaklęcie has its own.
     expect(titles("stack ")).toContain("Zaklęcia");
     // And the one shelf that is not a Karta Zdarzeń class.
@@ -567,6 +594,11 @@ suite("naming a card, a field or a creature", () => {
     expect(complete("place gold 5 at ", []).sections?.[0].title).toBe("Dolny Krąg");
     // Bare `take gold` is already the lot; `all` is the word for saying so.
     expect(complete("take gold ", []).line).toBe("take gold all ");
+    // `clear` has the same money form, and its amount is optional — so `at` is
+    // what comes next whether or not one was typed.
+    expect(complete("clear ", []).options[0]).toBe("gold");
+    expect(complete("clear gold ", []).line).toBe("clear gold at ");
+    expect(complete("clear gold 3 ", []).line).toBe("clear gold 3 at ");
   });
 
   /** Every other pool is a list of names with no shape, and stays one run. */
@@ -959,8 +991,25 @@ suite("playing the game, and overruling it", () => {
  * a player types them back, so a line that cannot be typed is a line that lies.
  */
 function usageAsTyped(usage: string): string {
-  return usage
-    .replace(/\[[^\]]*\]/g, " ")
+  /**
+   * Innermost brackets first, and repeatedly.
+   *
+   * One pass of `\[[^\]]*\]` reads `[gold [N]|card]` as `[gold [N]` and leaves
+   * `|card]` standing, which the parser then goes looking for a card called. It
+   * also quietly took the teeth out of this whole check for `take`, whose
+   * `<gold [N]|card>` came out as the string `<gold |card>` — a thing `take`
+   * accepts as a card name, so a usage line that could not be typed passed the
+   * test that exists to say it can.
+   */
+  let said = usage;
+  for (let was = ""; was !== said; ) {
+    was = said;
+    said = said.replace(/\[[^[\]]*\]/g, " ");
+  }
+  return said
+    // What an optional left behind inside a placeholder: `<gold [N]|card>`
+    // becomes `<gold |card>`, and the space is not part of the name.
+    .replace(/<([^>]*)>/g, (_, inner: string) => `<${inner.replace(/\s+/g, "")}>`)
     .split(/\s+/)
     .filter(Boolean)
     .map((word) => EXAMPLE[word] ?? word)
@@ -980,6 +1029,9 @@ const EXAMPLE: Record<string, string> = {
   // which takes anything.
   "<name>": "MAGOG",
   "<seat>": "3",
+  // Two verbs whose one argument is a Karta or the money. The Karta stands
+  // in, since the money form has its own worked lines just below.
+  "<gold|card>": "MIECZ",
   "won|lost|draw": "won",
   "won|lost": "won",
   "<command>": "help",
@@ -1326,7 +1378,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   pile: { line: "pile events", becomes: { kind: "pile", pile: "events" } },
   clear: {
     line: "clear Karczma",
-    becomes: { kind: "clear", fieldId: "karczma", cardId: null },
+    becomes: { kind: "clear", fieldId: "karczma", cardId: null, gold: null },
   },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
