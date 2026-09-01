@@ -68,17 +68,35 @@ function Toast({ notice, onDismiss }: { notice: Notice; onDismiss: (id: number) 
   }, [notice.id, onDismiss]);
 
   return (
-    <button
-      type="button"
+    /**
+     * A region you can click away, not a button.
+     *
+     * It was a `<button>` wrapping the whole notice, which read well and was
+     * illegal the moment the notice cited a rule: `WithRules` turns "(5.3)"
+     * into a button of its own, and a button inside a button is a hydration
+     * error in as many words. Every refusal worth showing names a rule, so
+     * this was every refusal.
+     *
+     * Two actions cannot share one control. Dismissing is the click anywhere,
+     * which is what it always was and what `title` still says; reading the
+     * rule is the button inside, and it stops the click from reaching this one
+     * — see `rule-ref.tsx`, which has been careful about that all along.
+     *
+     * `role="status"` is what a toast is: something announced without taking
+     * the focus. It also loses nothing that mattered, because the thing worth
+     * reaching by keyboard is the rule, and that is still a button.
+     */
+    <div
+      role="status"
       onClick={() => onDismiss(notice.id)}
       title="Zamknij"
-      className={`pointer-events-auto rounded border border-vermilion/50 bg-night/95 px-3 py-2 text-left text-sm text-vermilion shadow-[0_4px_20px_rgba(0,0,0,0.55)] transition duration-300 hover:border-vermilion ${
+      className={`pointer-events-auto cursor-pointer rounded border border-vermilion/50 bg-night/95 px-3 py-2 text-left text-sm text-vermilion shadow-[0_4px_20px_rgba(0,0,0,0.55)] transition duration-300 hover:border-vermilion ${
         leaving ? "translate-y-1 opacity-0" : "opacity-100"
       }`}
     >
       {/* The rule number in a refusal is the whole reason it names one: "(5.3)"
           is an assertion until you can read 5.3. */}
       <WithRules text={notice.text} />
-    </button>
+    </div>
   );
 }
