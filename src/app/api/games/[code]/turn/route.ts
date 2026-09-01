@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { handle } from "@/app/api/handle";
 import type { Requests } from "@/lib/game/requests";
 
-import type { Spoils } from "@/lib/game/commands/fight";
+import type { Spoils } from "@/lib/game/commands/spoils";
 
 import { mayAct } from "@/lib/game/permission";
 import {

@@ -7,7 +7,8 @@ import { top, type TurnState } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
-import { beginFight, fightRoll, resolveFight } from "./fight";
+import { beginFight, fightRoll } from "./fight";
+import { resolveFight } from "./spoils";
 import { continueTopScript } from "./effects";
 
 /**

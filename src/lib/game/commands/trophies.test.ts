@@ -3,7 +3,7 @@ import { apply } from "../change";
 import { EVENT_COPIES, decksOf } from "../decks";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
-import { resolveFight } from "./fight";
+import { resolveFight } from "./spoils";
 import { tradeTrophies, TROPHY_RATE } from "./shop";
 import { setTrophyMode } from "./lobby";
 import { dropCard } from "./holdings";

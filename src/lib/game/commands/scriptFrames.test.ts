@@ -6,7 +6,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { aSeat, aTable, aUser, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
 import { applyEffect, continueTopScript } from "./effects";
-import { resolveFight } from "./fight";
+import { resolveFight } from "./spoils";
 import { passTurn } from "./turn";
 
 /**

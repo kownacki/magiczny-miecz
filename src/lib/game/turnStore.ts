@@ -62,16 +62,8 @@ import {
   type Cast,
   type CastSpell,
 } from "./commands/spells";
-import {
-  attackSeat as attackSeatOn,
-  sendRaider as sendRaiderOn,
-  beginFight as beginFightOn,
-  escape as escapeOn,
-  fightRoll as fightRollOn,
-  resolveFight as resolveFightOn,
-  type Spoils,
-  setFightPlayerTotal as setFightPlayerTotalOn,
-} from "./commands/fight";
+import { attackSeat as attackSeatOn, sendRaider as sendRaiderOn, beginFight as beginFightOn, escape as escapeOn, fightRoll as fightRollOn, setFightPlayerTotal as setFightPlayerTotalOn } from "./commands/fight";
+import { resolveFight as resolveFightOn, type Spoils } from "./commands/spoils";
 import {
   crossRing as crossRingOn,
   enterBridge as enterBridgeOn,

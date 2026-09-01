@@ -5,7 +5,7 @@ import { aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFieldOffer } from "./effects";
 import { claimMission } from "./friends";
-import { resolveFight } from "./fight";
+import { resolveFight } from "./spoils";
 import { statusesOf } from "./turn";
 import { missionOf } from "@/lib/engine/status";
 import { asSeatCharacter } from "@/lib/engine/characters";

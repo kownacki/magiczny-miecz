@@ -10,15 +10,8 @@ import { pointsOf } from "./seat";
 import { hasAttacked } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
 import { apply } from "../change";
-import {
-  attackSeat,
-  beginFight,
-  escape,
-  fightRoll,
-  resolveFight,
-  setFightPlayerTotal,
-  shieldSaves,
-} from "./fight";
+import { attackSeat, beginFight, escape, fightRoll, setFightPlayerTotal, shieldSaves } from "./fight";
+import { resolveFight } from "./spoils";
 import { castSpell, settleSpell } from "./spells";
 
 /** A character standing where its move ended, with cards turned over in front of it. */
