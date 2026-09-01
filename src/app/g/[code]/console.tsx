@@ -302,37 +302,58 @@ export function TestConsole({
     const box = tail.current;
     if (!box) return;
     /**
-     * Except when nothing has been said, where the bottom is right after all.
+     * Except when nothing has been said, where there is no answer to read.
      *
-     * Opening is not asking a question. The transcript is the one restored from
-     * the last visit, so the last anchor in it belongs to a command answered
-     * long ago — pinning that to the top showed the *start* of an old answer and
-     * left everything since below the fold, on a console somebody opened to see
-     * where the game had got to. It read as not having scrolled at all.
+     * The transcript is the one restored from the last visit, so the last
+     * anchor in it belongs to a command answered long ago; pinning that to the
+     * top would show the *start* of an old answer. The effect below puts a
+     * console that has just appeared at the bottom, which is where somebody
+     * who has not asked anything wants to be.
      *
      * `printed` answers it exactly, and is the reason it is a counter rather
      * than `log.length`: it counts what *this* console has said, so zero means
-     * the whole box is history and there is no answer in it to read from the
-     * top. One line said and the anchor takes over for the rest of the session.
+     * the whole box is history.
      *
      * A pure function of state, deliberately, rather than a ref remembering
      * whether it has run. Two attempts at that both failed the same way: in
      * development StrictMode invokes every effect twice against a ref that
      * survives between the two passes, so the second pass took the other branch
-     * and undid the first — bottom then anchor, or anchor then bottom,
-     * depending which way the flag was read. Both passes agree on this.
+     * and undid the first. Both passes agree on this.
      */
-    if (printed.current === 0) {
-      box.scrollTo({ top: box.scrollHeight });
-      return;
-    }
+    if (printed.current === 0) return;
     const anchors = box.querySelectorAll<HTMLElement>("[data-echo],[data-anchor]");
     const last = anchors[anchors.length - 1];
     const top = last
       ? box.scrollTop + last.getBoundingClientRect().top - box.getBoundingClientRect().top
       : box.scrollHeight;
     box.scrollTo({ top });
-  }, [log, open, big, nudge]);
+  }, [log, big, nudge]);
+
+  /**
+   * A console that has just appeared shows the end of the transcript.
+   *
+   * Appearing is not asking a question, and the two were one effect: whatever
+   * the last answer was got pinned to the top again every time the console came
+   * back into view. After a reload that was right by accident — nothing had
+   * been said yet, so it fell to the bottom — and the moment you had typed
+   * anything, bringing the console back from its bar showed you the *start* of
+   * the answer you had already read, with everything since below the fold. It
+   * read as the console having scrolled itself to the top.
+   *
+   * `shown` and not `open`, because the commonest way back is not an open at
+   * all: Escape puts the console down to one line of chrome and the key or a
+   * click grows it again, with the same mount, the same log and the same
+   * `printed`. That is the path this was wrong on.
+   *
+   * Normal against big is deliberately not in it. Throwing the console wide is
+   * "let me see more of this answer", so the anchor above keeps its place.
+   */
+  const shown = open && size !== "mini";
+  useEffect(() => {
+    const box = tail.current;
+    if (!shown || !box) return;
+    box.scrollTo({ top: box.scrollHeight });
+  }, [shown]);
 
   if (!open) return null;
 
