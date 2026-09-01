@@ -666,7 +666,27 @@ export function dealtInto(
 ): TurnState | null {
   if (state.stack.length > 1) return null;
   const frame = top(state);
-  if (frame.phase === "field") return replaceTop(state, afterDraw(frame, card));
+  if (frame.phase === "field") {
+    /**
+     * Counted off the Obszar's tally, exactly as a real draw is.
+     *
+     * `deal` is to `draw` what `teleport` is to `move`: the same end state with
+     * the choice taken off the deck. The end state includes 13.4's arithmetic,
+     * and this did not do it — a Karta staged onto Bezdroża left the square
+     * still owing two, so `refuseWhileUndrawn` would not let the tester fight
+     * what they had just put there, and the only way forward was to draw two
+     * more Karty they did not want.
+     *
+     * Not `byCard`'s exception. That is for a Karta drawing *past* the tally —
+     * the Skalne Wrota's three, Odmiana Losu — where the square's own count is
+     * somebody else's business. A dealt card stands in for one off the top.
+     */
+    const dealt = afterDraw(frame, card);
+    return replaceTop(
+      state,
+      dealt.phase === "field" ? { ...dealt, draw: Math.max(0, frame.draw - 1) } : dealt,
+    );
+  }
   if (frame.phase !== "roll" && frame.phase !== "move" && frame.phase !== "end") return null;
   return only({ phase: "field", fieldId, from: null, draw: 0, drawn: [card], fought: [] });
 }

@@ -504,6 +504,32 @@ describe("dealing a Karta into a turn", () => {
     drawn,
   });
 
+  /**
+   * `deal` is to `draw` what `teleport` is to `move`: the same end state with
+   * the choice taken off the deck, and the end state includes 13.4's count.
+   *
+   * It did not, and it showed: a Karta staged onto a square that owed two left
+   * it owing two, so `refuseWhileUndrawn` would not let a tester fight what
+   * they had just put there, and the only way on was to draw two more Karty
+   * they did not want.
+   */
+  it("counts a staged Karta off the Obszar's tally, as a real draw does (13.4)", () => {
+    const owing = { ...field(), draw: 2 } as Extract<TurnPhase, { phase: "field" }>;
+    const after = top(dealtInto(only(owing), card, HERE)!) as Extract<
+      TurnPhase,
+      { phase: "field" }
+    >;
+    expect(after.draw).toBe(1);
+  });
+
+  it("never counts below nothing", () => {
+    const after = top(dealtInto(only(field()), card, HERE)!) as Extract<
+      TurnPhase,
+      { phase: "field" }
+    >;
+    expect(after.draw).toBe(0);
+  });
+
   it("appends to a turn already standing on an Obszar, in 15.2 order", () => {
     const after = dealtInto(only(field([other])), card, HERE);
     // The Wróg is class II and the Przedmiot class V, so he stays in front.
