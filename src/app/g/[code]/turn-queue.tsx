@@ -14,6 +14,7 @@ import Image from "next/image";
 import { seatColour } from "@/lib/view/boardMap";
 import { figureUrl } from "@/lib/view/cardImages";
 import { plural, roundShown } from "@/lib/engine/polish";
+import { StruckOut } from "./card-mark";
 import { DEFAULT_DEPTH, projectQueue, type QueueEntry } from "@/lib/engine/turnQueue";
 
 export interface QueueSeat {
@@ -176,23 +177,18 @@ function QueueChip({
               {entry.seatIndex + 1}
             </span>
           )}
-          {skipped && !stone && (
-            /**
-             * A line through the portrait, so the state survives being glanced
-             * at rather than read.
-             *
-             * Not over a statue. It is drawn on a figure that still looks like
-             * the character playing, which is the whole of what it is for — a
-             * chip you can tell is being passed over without reading the
-             * caption. On a Kamień chip the picture has *already* been swapped
-             * for a different card (20.1), so the line adds nothing the figure
-             * is not shouting, and what it looks like on a white card face is
-             * damage to the card.
-             */
-            <span className="absolute inset-0 flex items-center">
-              <span className="h-px w-full bg-vermilion/90" />
-            </span>
-          )}
+          {/* Crossed out, the same mark a spent trofeum and a Karta that has
+              left the Obszar carry — `StruckOut`'s own note says why an X and
+              not a bar: a line across a picture reads as a redaction, and an X
+              is what somebody draws on a thing that is not in play.
+
+              This chip used to draw its own single hairline, which was that
+              idea a third time in a third shape. Both reasons get it: a
+              statue's picture already says it is a statue, but what the mark
+              answers is not "why" — it is "is this turn happening", and that
+              question is the same one whether the seat is frozen or owes a
+              turn. The caption underneath is where the two part company. */}
+          {skipped && <StruckOut />}
         </div>
         <span
           className={`max-w-[10ch] truncate text-xs leading-none ${

@@ -132,13 +132,20 @@ function Masked({
  * done with.
  *
  * Positioned against whatever it is dropped into, so the caller owns the
- * `relative` and this owns everything else about the mark.
+ * `relative` and the `overflow-hidden` and this owns everything else about the
+ * mark. Both are load-bearing: the strokes are drawn twice as wide as the box
+ * and cut back to it, which is what lets one mark sit correctly on boxes of
+ * different shapes. It began on the near-square art tile, where 140% of the
+ * width already cleared the diagonal; the turn bar's chip is a standee, half
+ * as wide as it is tall, and there the same 140% was a small X floating in the
+ * middle of a card. Sized off the longer side instead, and the caller's clip
+ * decides where it stops.
  */
 export function StruckOut() {
   return (
     <span aria-hidden className="pointer-events-none absolute inset-0">
-      <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
-      <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
+      <span className="absolute left-1/2 top-1/2 h-0.5 w-[200%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
+      <span className="absolute left-1/2 top-1/2 h-0.5 w-[200%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
     </span>
   );
 }
