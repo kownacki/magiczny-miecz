@@ -440,7 +440,7 @@ export function TestConsole({
        * It started below them, on the reasoning that a fight is what you are
        * looking at and this is only what you are typing at — which is exactly
        * backwards. The console is most wanted when a modal has the game stuck
-       * behind it: `endfight` and `endturn` exist for that, and a way out that
+       * behind it: `endfight` and `turn end` exist for that, and a way out that
        * the thing you are escaping paints over is not a way out. So it clears
        * the modals' backdrop as well as their z-order, and is not dimmed by it.
        */

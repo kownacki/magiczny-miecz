@@ -374,15 +374,6 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "spoils", take: "zycie", card: said } };
   }
   if (word === "endfight") return { ok: { kind: "endfight" } };
-  if (word === "endturn" || word === "pass") {
-    // Bare and last, the way `gold`'s and `nature`'s are — there is nothing
-    // else on this line for it to be confused with.
-    const said = tail.trim().toLowerCase();
-    if (said && said !== "force") {
-      return { error: `\`${tail.trim()}\`? \`endturn\` takes only \`force\`.` };
-    }
-    return { ok: { kind: "endturn", force: said === "force" } };
-  }
 
   if (word === "deal") {
     // Bare, it is a question rather than a mistake: "what can I ask for?" is
@@ -590,7 +581,37 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "remove", seat, characterId, hard } };
   }
 
-  if (word === "turn") return { ok: { kind: "turn", who: tail || null } };
+  /**
+   * One noun and the three things done to it.
+   *
+   * Bare is `end`, because handing the turn on is the line somebody types
+   * twenty times a session and it kept its own word for years — `pass` and
+   * `endturn` still say it, and now they say it as this. Anything else in the
+   * first position is a person: `turn reset` and `turn Ola` are told apart by
+   * the one word that is not a name.
+   *
+   * A player really called „reset" is out of luck and can use their seat
+   * number. That is the whole cost of the subword, and it is worth it: the
+   * alternative is a fourth verb nobody would find.
+   */
+  if (word === "turn" || word === "pass" || word === "endturn") {
+    const parts = tail.split(/\s+/).filter(Boolean);
+    // `force` last and bare, the way `gold`'s and `nature`'s are.
+    const forced = parts.length > 0 && parts[parts.length - 1].toLowerCase() === "force";
+    const said = (forced ? parts.slice(0, -1) : parts).join(" ");
+    const act = said.toLowerCase();
+
+    if (act === "reset") {
+      if (forced) return { error: "`turn reset` takes no `force` — it refuses nothing." };
+      return { ok: { kind: "turn", act: "reset" } };
+    }
+    if (act === "" || act === "end") return { ok: { kind: "turn", act: "end", force: forced } };
+    // A name, which is the one act that cannot default to you: a bare `turn`
+    // is handing yours on, and walking play round to yourself is a no-op
+    // nobody types.
+    if (forced) return { error: "`force` belongs to `turn end`, not to a name." };
+    return { ok: { kind: "turn", act: "reach", who: said } };
+  }
   if (word === "stone") return { ok: { kind: "stone", who: tail || null } };
 
   if (word === "effect") {

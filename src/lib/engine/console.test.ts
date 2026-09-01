@@ -56,17 +56,16 @@ suite("reading a line", () => {
   });
 
   it("does not care about case or spacing", () => {
-    expect(ok("   ENDTURN   ")).toEqual({ kind: "endturn", force: false });
+    expect(ok("   ENDTURN   ")).toEqual({ kind: "turn", act: "end", force: false });
   });
 
-  /**
-   * `force` is the only word on this line, so anything else is a typo rather
-   * than an argument — and a turn handed on by accident cannot be handed back.
-   */
-  it("reads the one word `endturn` takes, and refuses any other", () => {
-    expect(ok("endturn force")).toEqual({ kind: "endturn", force: true });
-    expect(ok("PASS Force")).toEqual({ kind: "endturn", force: true });
-    expect(err("endturn now")).toMatch(/force/);
+  /** Case and spacing are nobody's business but the reader's. */
+  it("reads the acts whatever case they are typed in", () => {
+    expect(ok("PASS Force")).toEqual({ kind: "turn", act: "end", force: true });
+    expect(ok("TURN Reset")).toEqual({ kind: "turn", act: "reset" });
+    // Anything else in that position is a person, which is the one act that
+    // cannot default to you — a bare `turn` is handing your own on.
+    expect(ok("turn now")).toEqual({ kind: "turn", act: "reach", who: "now" });
   });
 
   it("says so when there is nothing to read", () => {
@@ -233,9 +232,23 @@ suite("naming a card, a field or a creature", () => {
     expect(err("effect haste")).toMatch(/fog, frozen, barred/);
   });
 
-  it("hands the turn to whoever is named", () => {
-    expect(ok("turn Ola")).toEqual({ kind: "turn", who: "Ola" });
-    expect(ok("turn")).toEqual({ kind: "turn", who: null });
+  /**
+   * One noun, three things done to it — and the bare word is the one anybody
+   * types twenty times a session.
+   */
+  it("reads the three things done to a turn", () => {
+    expect(ok("turn")).toEqual({ kind: "turn", act: "end", force: false });
+    expect(ok("turn end")).toEqual({ kind: "turn", act: "end", force: false });
+    expect(ok("turn end force")).toEqual({ kind: "turn", act: "end", force: true });
+    expect(ok("turn force")).toEqual({ kind: "turn", act: "end", force: true });
+    expect(ok("turn reset")).toEqual({ kind: "turn", act: "reset" });
+    expect(ok("turn Ola")).toEqual({ kind: "turn", act: "reach", who: "Ola" });
+    // The two words that used to be verbs of their own still say the bare act.
+    expect(ok("pass")).toEqual(ok("turn"));
+    expect(ok("endturn force")).toEqual(ok("turn force"));
+    // `force` belongs to the act that refuses things, and to no other.
+    expect(err("turn reset force")).toMatch(/refuses nothing/);
+    expect(err("turn Ola force")).toMatch(/`turn end`/);
   });
 
   it("names a Zaklęcie where a hand can hold one, and not where a field cannot", () => {
@@ -520,7 +533,7 @@ suite("the rest of the vocabulary", () => {
     expect(ok("kill Ola")).toEqual({ kind: "kill", who: "Ola" });
     expect(ok("spell")).toEqual({ kind: "spell", who: null, wand: false });
     expect(ok("endfight")).toEqual({ kind: "endfight" });
-    expect(ok("pass")).toEqual({ kind: "endturn", force: false });
+    expect(ok("pass")).toEqual({ kind: "turn", act: "end", force: false });
   });
 });
 
@@ -721,15 +734,19 @@ suite("playing the game, and overruling it", () => {
    * overruling the rules and needs the same key `kill` does. A second verb
    * would have said the same thing in a word nobody would think to look for.
    */
-  it("locks the flag rather than the verb", () => {
-    expect(permits(ok("endturn"), { testmode: false }).ok).toBe(true);
+  it("locks the act rather than the verb", () => {
+    // 10.1 belongs to everybody, and so does the word for it.
+    expect(permits(ok("turn"), { testmode: false }).ok).toBe(true);
+    expect(permits(ok("turn end"), { testmode: false }).ok).toBe(true);
     expect(permits(ok("pass"), { testmode: false }).ok).toBe(true);
-    const refused = permits(ok("endturn force"), { testmode: false });
-    expect(refused.ok).toBe(false);
-    // Naming the verb alone would send somebody looking for what is wrong with
-    // a line they can type perfectly well.
-    if (!refused.ok) expect(refused.why).toContain("endturn force");
-    expect(permits(ok("endturn force"), { testmode: true }).ok).toBe(true);
+    for (const line of ["turn force", "turn reset", "turn Ola"]) {
+      const refused = permits(ok(line), { testmode: false });
+      expect(refused.ok, line).toBe(false);
+      // Naming the bare verb would send somebody looking for what is wrong
+      // with a line they can type perfectly well.
+      if (!refused.ok) expect(refused.why, line).not.toBe("`turn` overrules the rules — turn testmode on first.");
+      expect(permits(ok(line), { testmode: true }).ok, line).toBe(true);
+    }
   });
 
   it("allows everything once testmode is on", () => {
@@ -1105,15 +1122,17 @@ suite("finishing a half-typed line", () => {
   });
 
   /**
-   * `force` is typed at a console that has just refused you, which is the
-   * worst moment to be remembering a word. So Tab finishes it, the way it
-   * finishes `gold +5 force`.
+   * What there is to do to a turn, offered the moment the noun is typed —
+   * `force` above all, which is a word you reach for at a console that has
+   * just refused you, and that is the worst moment to be remembering one.
    */
-  it("finishes the one word `endturn` takes", () => {
-    expect(tab("endturn ").line).toBe("endturn force ");
-    expect(tab("pass fo").line).toBe("pass force ");
-    // And not where it would be refused anyway.
-    expect(complete("endturn ", [], { testmode: false }).line).toBe("endturn ");
+  it("offers the acts a turn takes, and `force` after the one that refuses", () => {
+    expect(tab("turn ").options).toEqual(["end", "Michał", "Ola", "reset"]);
+    expect(tab("turn re").line).toBe("turn reset ");
+    expect(tab("turn end ").line).toBe("turn end force ");
+    expect(tab("pass ").options).toContain("reset");
+    // Outside test mode there is one act, and Tab does not teach the others.
+    expect(complete("turn ", [], { testmode: false }).line).toBe("turn end ");
   });
 });
 
@@ -1191,7 +1210,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     line: "nature evil Ola",
     becomes: { kind: "nature", nature: "evil", who: "Ola", force: false },
   },
-  turn: { line: "turn Ola", becomes: { kind: "turn", who: "Ola" } },
+  turn: { line: "turn", becomes: { kind: "turn", act: "end", force: false } },
   stone: { line: "stone Ola", becomes: { kind: "stone", who: "Ola" } },
   effect: {
     line: "effect fog Ola",
@@ -1216,7 +1235,6 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
-  endturn: { line: "endturn", becomes: { kind: "endturn", force: false } },
   spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola", wand: false } },
 };
 

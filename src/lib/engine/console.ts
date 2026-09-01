@@ -71,14 +71,23 @@ export function complete(
     // takes its one argument straight away.
     if (stat) return { pool: [...players, "force"], at: 2 };
     /**
-     * The one word `endturn` takes, and only where it would be allowed.
+     * What there is to do to a turn, and who to do the third one to.
      *
-     * Offered rather than left to be remembered, because `force` is a word you
-     * type at a console that has just refused you, and a refusal that does not
-     * say what to type next is a refusal you argue with.
+     * Offered rather than left to be remembered: `force` is a word you type at
+     * a console that has just refused you, and a refusal that does not say
+     * what to type next is a refusal you argue with. The two acts that need
+     * test mode are not offered without it, the way `availableIn` hides a
+     * locked verb — Tab must not teach a line that will be refused.
      */
-    if (verb === "endturn" || verb === "pass") {
-      return { pool: offering.testmode === false ? [] : ["force"], at: 1 };
+    if (verb === "turn" || verb === "pass" || verb === "endturn") {
+      if (offering.testmode === false) return { pool: ["end"], at: 1 };
+      // `force` after `end`, and nowhere else — it is the only act that
+      // refuses anything.
+      const said = (parts[1] ?? "").toLowerCase();
+      if (parts.length > 2 && (said === "end" || said === "")) {
+        return { pool: ["force"], at: 2 };
+      }
+      return { pool: ["end", "reset", ...players], at: 1 };
     }
     /**
      * A catalogue as a pool: every name in it, in its own order, with the
@@ -173,7 +182,6 @@ export function complete(
       verb === "unseat" ||
       verb === "host" ||
       verb === "spell" ||
-      verb === "turn" ||
       verb === "stone"
     ) {
       return { pool: [...players], at: 1 };

@@ -80,6 +80,7 @@ import {
   drawSpell,
   drawSpellWithWand,
   finishTurn,
+  resetTurn,
   moveTo,
   resolveDrawnCard,
   startGame,
@@ -501,20 +502,53 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
   },
 
   /**
-   * Hands play round until it is somebody's turn.
+   * The three things anybody does to a turn: hand it on, start it over, or
+   * walk play round to somebody.
    *
-   * By passing, not by writing `active_seat`: 10.1's order is not a number to
-   * be set, and going round properly is what spends the lost turns, ticks the
-   * effects, leaves the drawn cards on their field and advances the counter
-   * that 20.1 measures stone in. So a seat that is stoned is reached by the
-   * stone running out, which is the honest answer to asking for its turn.
-   *
-   * Bounded, because a seat can be unreachable — eliminated, or a table where
-   * everybody owes turns. The bound is generous enough to outlast three turns
-   * of stone and is a backstop rather than the exit.
+   * One handler because it is one word now — see the `turn` Command. The two
+   * acts that overrule the rules are locked by `needsOf`, not here: a verb
+   * decides what it does, and `permits` decides who may.
    */
   turn: async (ctx, command) => {
     const { gameId, seats, seatOf, named } = ctx;
+
+    if (command.act === "end") {
+      // The turn does not always pass: a surplus opens a frame instead, and
+      // saying "Turn passed" over one would be the console announcing the
+      // opposite of what it just did. Forced, it always passes — that is what
+      // the word buys — so the frame is never the answer.
+      if ((await finishTurn(gameId, command.force)) === "passed") {
+        return command.force ? "Turn passed — forced." : "Turn passed.";
+      }
+      return overflowLines(await activeStore().load(gameId)).join("\n");
+    }
+
+    /**
+     * The same seat, the same turn, from the beginning.
+     *
+     * `turn end force` and `turn <player>` both cost a circuit of the table —
+     * the round advances and every countdown ticks — which is a different
+     * table from the one being tested.
+     */
+    if (command.act === "reset") {
+      await resetTurn(gameId);
+      return `${named(seatOf(null))} starts this turn again — rzut.`;
+    }
+
+    /**
+     * Hands play round until it is somebody's turn.
+     *
+     * By passing, not by writing `active_seat`: 10.1's order is not a number
+     * to be set, and going round properly is what spends the lost turns, ticks
+     * the effects, leaves the drawn cards on their field and advances the
+     * counter that 20.1 measures stone in. So a seat that is stoned is reached
+     * by the stone running out, which is the honest answer to asking for its
+     * turn.
+     *
+     * Bounded, because a seat can be unreachable — eliminated, or a table
+     * where everybody owes turns. The bound is generous enough to outlast
+     * three turns of stone and is a backstop rather than the exit.
+     */
     const seat = seatOf(command.who);
     if (!seat.character_id) throw new Error(`${named(seat)} has no character.`);
     if (seat.eliminated) throw new Error(`${named(seat)} is dead — try \`revive\`.`);
@@ -1295,18 +1329,6 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const { gameId } = ctx;
     await abandonFight(gameId);
     return "Fight dropped.";
-  },
-
-  endturn: async (ctx, command) => {
-    const { gameId } = ctx;
-    // The turn does not always pass: a surplus opens a frame instead, and
-    // saying "Turn passed" over one would be the console announcing the
-    // opposite of what it just did. Forced, it always passes — that is what
-    // the word buys — so the frame is never the answer.
-    if ((await finishTurn(gameId, command.force)) === "passed") {
-      return command.force ? "Turn passed — forced." : "Turn passed.";
-    }
-    return overflowLines(await activeStore().load(gameId)).join("\n");
   },
 
   /* ----------------------------------------------------------------------

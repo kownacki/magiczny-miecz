@@ -481,6 +481,67 @@ export function addEffect(
 }
 
 /**
+ * This turn from the top: the frame back to the rzut, everything it did left
+ * standing.
+ *
+ * The test console's, and the only thing in the app that unspends a turn.
+ * `turn end force` hands the turn on and `turn <player>` walks it round the
+ * table, and both of those cost a circuit — the round advances, countdowns
+ * tick, „na 1 turę" expires — which is a different table from the one being
+ * tested. This gives the same seat the same turn again.
+ *
+ * What it resets is the **frame**: the roll, the move, 13.2's choice, what has
+ * been drawn and resolved, and any fight or Karta suspended above it. What it
+ * does not reset is the world, because it cannot — a Karta taken is in the
+ * pack, a fight fought is fought, a Sztuka Złota spent is spent. `clear`,
+ * `deal` and `gold` are the verbs for those, and pretending otherwise would be
+ * an undo that quietly is not one.
+ *
+ * The Karty drawn this turn are left lying on the Obszar (16.8), through the
+ * same door the end of a turn and a teleport's cut use — a Wróg who died here
+ * is not among them (16.2), he has an owner. Deleting them would take them out
+ * of the box, and the point of starting the turn over is usually to walk onto
+ * that Obszar again and find them.
+ *
+ * The figure stays where it is. Sending it back to where the move began would
+ * be a move nobody made, and after a teleport there is no such square to send
+ * it to — `teleport` is the verb for standing somewhere else.
+ */
+export function resetTurn(snapshot: Snapshot): Outcome<void> {
+  const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat) ?? null;
+  // Searched for rather than read off the top, as every other cut does: the
+  // field can be standing under a fight or a half-resolved Karta, and its
+  // Karty are still lying there.
+  const field = [...snapshot.game.turn_state.stack].reverse().find((one) => one.phase === "field");
+  const left: Changeset =
+    field && field.phase === "field" && field.drawn.length > 0
+      ? leaveCardsBehind(snapshot, {
+          fieldId: field.fieldId,
+          remaining: field.drawn,
+          beaten: field.beaten,
+          seatId: seat?.id ?? null,
+          round: snapshot.game.round,
+        })
+      : {};
+
+  return {
+    writes: merge(left, {
+      game: { turn_state: only(startTurn()) },
+      journal: [
+        {
+          seatId: seat?.id ?? null,
+          round: snapshot.game.round,
+          kind: "override",
+          payload: { what: "reset-turn" },
+          manual: true,
+        },
+      ],
+    }),
+    result: undefined,
+  };
+}
+
+/**
  * Handing the turn on, with the two rules that can refuse it (5.6, 14.7).
  *
  * The body of this lived inside a `change()` lambda in `turnStore.ts`, which
@@ -507,7 +568,7 @@ export function addEffect(
  * consequence of something else — a death, a lost turn, a fall off the Most —
  * and none of those is a player choosing to walk away from a rule.
  *
- * `force` is `endturn force`, and it is the test console's alone: every guard
+ * `force` is `turn end force`, and it is the test console's alone: every guard
  * above it is a rule of the game, so the capability comes off the flag rather
  * than off a second verb (`gold +5 force` set the pattern). It exists because
  * the refusals are exactly right for a game and exactly wrong for a table being

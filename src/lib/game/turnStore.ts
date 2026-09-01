@@ -29,7 +29,7 @@ import {
 import { change, effectRowsFor, merge, type EffectRow, type Handler } from "./change";
 import { holdOverflow, releaseOverflow } from "./commands/overflow";
 import { closeFight, resume } from "./commands/frames";
-import { finishTurn as finishTurnOn } from "./commands/turn";
+import { finishTurn as finishTurnOn, resetTurn as resetTurnOn } from "./commands/turn";
 import { appRandom, supplied } from "./random";
 import {
   addEffect as addEffectTo,
@@ -1075,9 +1075,17 @@ export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
  * the opposite of what happened. It is a return value rather than a throw
  * because a throw discards the writes, and the frame *is* the write.
  */
+/**
+ * This turn from the top, for the test console — see `resetTurn` in
+ * `commands/turn.ts` for what it does and deliberately does not undo.
+ */
+export async function resetTurn(gameId: string): Promise<void> {
+  await change(gameId, resetTurnOn, undefined);
+}
+
 export async function finishTurn(
   gameId: string,
-  /** `endturn force`, which is the test console's and always answers "passed". */
+  /** `turn end force`, which is the test console's and always answers "passed". */
   force = false,
 ): Promise<"passed" | "held"> {
   return change(gameId, finishTurnOn, { force });

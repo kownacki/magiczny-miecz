@@ -253,15 +253,27 @@ export type Command =
   /** Test mode: what is left in a pile, and what has been used (9.5, 16.8). */
   | { kind: "pile"; pile: "events" | "spells" | null }
   /**
-   * The turn handed on — or, with `force`, handed on anyway.
+   * The turn, in the three things anybody does to one.
    *
-   * `endturn` is the game and everybody has it. `force` is the test console's,
-   * because everything it walks past is a rule: 5.6's surplus, 14.7's Bestia,
-   * and a Karta or a question the turn has not finished. So the capability
-   * comes off the flag rather than off a second verb, the way `gold +5 force`
-   * does — one line, two commands.
+   * They were three verbs — `endturn`, `resetturn` and `turn <player>` — which
+   * is three words to learn for one noun, and `help` listed them a screen
+   * apart. The act is the second word now, so the family reads as a family and
+   * Tab offers what there is to do to a turn the moment you have typed it.
+   *
+   * **`end`** is 10.1 and belongs to everybody; it is what the bare word
+   * means, because handing the turn on is the thing you type twenty times a
+   * session. `force` is the test console's: everything it walks past is a rule
+   * — 5.6's surplus, 14.7's Bestia, and a Karta or a question the turn has not
+   * finished — so the capability comes off the flag rather than off a second
+   * verb, the way `gold +5 force` does.
+   *
+   * **`reset`** is this turn from the top, and **`<player>`** hands play round
+   * until it is somebody's. Both overrule the rules, and both are the console's.
    */
-  | { kind: "endturn"; force: boolean }
+  | { kind: "turn"; act: "end"; force: boolean }
+  | { kind: "turn"; act: "reset" }
+  /** Whose turn to walk play round to — never null, or a typo would end yours. */
+  | { kind: "turn"; act: "reach"; who: string }
   /* Playing. These are the game as printed: you roll, you walk it out, you meet
      what is on the Obszar, you hand the turn on. */
   | { kind: "roll" }
@@ -361,7 +373,6 @@ export type Command =
    * being broken. `force` is the answer to having been told.
    */
   | { kind: "nature"; nature: Nature; who: string | null; force: boolean }
-  | { kind: "turn"; who: string | null }
   | { kind: "stone"; who: string | null }
   | { kind: "effect"; effect: EffectName; who: string | null };
 
@@ -831,12 +842,23 @@ export const COMMANDS: CommandSpec[] = [
     group: "override",
   },
   {
+    /**
+     * One noun, three things you do to it — see the `turn` Command for why the
+     * three verbs became one.
+     *
+     * `needs: "play"` because the bare word is 10.1 and belongs to everybody;
+     * the two acts that overrule the rules are locked by `needsOf` instead,
+     * which is where a capability that depends on the *arguments* is decided.
+     */
     name: "turn",
-    aliases: [],
-    usage: "turn [player]",
-    summary: "pass until it is their turn (10.1)",
-    needs: "testmode",
-    group: "override",
+    aliases: ["pass", "endturn"],
+    // Anything but the poczekalnia, where there is no turn to do anything to.
+    when: PLAYING,
+    usage: "turn [end|reset|<player>] [force]",
+    summary:
+      "hand the turn on (10.1) — bare, or `end`. `reset` starts it over, a name hands play round to somebody; `force` overrules what refuses",
+    needs: "play",
+    group: "turn",
   },
   {
     name: "stone",
@@ -990,16 +1012,6 @@ export const COMMANDS: CommandSpec[] = [
     group: "override",
   },
   {
-    name: "endturn",
-    aliases: ["pass"],
-    usage: "endturn [force]",
-    summary: "hand the turn on — `force` hands it on over a surplus or an unfinished Karta",
-    // Anything but the poczekalnia, where there is no turn to hand on.
-    when: PLAYING,
-    needs: "play",
-    group: "turn",
-  },
-  {
     name: "spell",
     when: PLAYING,
     aliases: [],
@@ -1031,7 +1043,7 @@ const NEEDS: Record<Command["kind"], Capability> = {
   rename: "play",
   host: "play",
   pick: "play",
-  endturn: "play",
+
   roll: "play",
   move: "play",
   draw: "play",
@@ -1072,7 +1084,8 @@ const NEEDS: Record<Command["kind"], Capability> = {
   // control calls, and 7.2 is a rule of the game. What overrules anything is
   // `force`, which is why this is decided in `needsOf` rather than here.
   nature: "testmode",
-  turn: "testmode",
+  // The bare word is 10.1; `needsOf` raises it for the acts that are not.
+  turn: "play",
   // Both sides call `turnToStone`. There was never a second act here to
   // separate — 20.1 is a rule, and this is how it is reached.
   stone: "testmode",
@@ -1093,9 +1106,17 @@ const NEEDS: Record<Command["kind"], Capability> = {
 };
 
 export function needsOf(command: Command): Capability {
-  // `endturn` is the game; `endturn force` overrules it. What needs test mode
-  // is the flag, not the verb, so this one answer cannot be read off `NEEDS`.
-  if (command.kind === "endturn" && command.force) return "testmode";
+  /**
+   * `turn` is the game; two of the three things you can do to one are not.
+   *
+   * Handing it on is 10.1 and everybody's. Forcing it past 5.6 and 14.7,
+   * starting it over, and walking play round to a named seat are the console
+   * overruling the rules — and what needs test mode is the *act*, not the
+   * verb, so this answer cannot be read off `NEEDS`.
+   */
+  if (command.kind === "turn") {
+    return command.act === "end" && !command.force ? "play" : "testmode";
+  }
   return NEEDS[command.kind];
 }
 
@@ -1155,10 +1176,13 @@ export function permits(
   at: { testmode: boolean },
 ): { ok: true } | { ok: false; why: string } {
   if (needsOf(command) === "play" || at.testmode) return { ok: true };
-  // The flag, where the flag is what is locked: „`endturn` overrules the rules"
-  // is a lie about a verb everybody has, and the reader would go looking for
-  // the wrong thing to turn on.
-  const said = command.kind === "endturn" ? "endturn force" : command.kind;
+  // The act, where the act is what is locked: „`turn` overrules the rules" is
+  // a lie about a verb everybody has, and the reader would go looking for the
+  // wrong thing to turn on.
+  const said =
+    command.kind === "turn"
+      ? `turn ${command.act === "reach" ? command.who : command.act === "reset" ? "reset" : "force"}`
+      : command.kind;
   return {
     ok: false,
     why: `\`${said}\` overrules the rules — turn testmode on first.`,

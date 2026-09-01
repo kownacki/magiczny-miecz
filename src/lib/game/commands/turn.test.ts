@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
 import { only, top } from "@/lib/engine/stack";
+import type { TurnPhase } from "@/lib/engine/turn";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { apply } from "../change";
-import { finishTurn, leaveCardsBehind, passTurn, tickEffects } from "./turn";
+import { finishTurn, leaveCardsBehind, passTurn, resetTurn, tickEffects } from "./turn";
 
 const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
   aTable({
@@ -286,7 +287,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
 });
 
 /**
- * `endturn force`: the test console handing the turn on over a rule.
+ * `turn end force`: the test console handing the turn on over a rule.
  *
  * Every refusal below is right for a game and wrong for a table being built by
  * hand — a surplus dealt in, a Tarcza put on, a Karta half-resolved by a script
@@ -386,5 +387,102 @@ describe("handing the turn on anyway (the test console's `force`)", () => {
     expect(() => finishTurn(at)).toThrow(/TARGOWISKO/);
     const after = apply(at, finishTurn(at, { force: true }).writes);
     expect(after.game.active_seat).toBe(1);
+  });
+});
+
+/**
+ * `turn reset`: the same seat, the same turn, from the beginning.
+ *
+ * The only thing in the app that unspends a turn. `turn end force` hands the
+ * turn on and `turn <player>` walks it round the table, and both cost a
+ * circuit — the round advances, countdowns tick, „na 1 turę" expires — which
+ * is a different table from the one being tested.
+ */
+describe("starting this turn over (the test console's `turn reset`)", () => {
+  const mid = (phase: TurnPhase) =>
+    aTable({
+      game: { active_seat: 0, round: 3, turn_state: only(phase) },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("mroczna-polana")! }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
+      ],
+    });
+
+  const field = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}) =>
+    ({
+      phase: "field",
+      fieldId: asFieldId("mroczna-polana")!,
+      from: asFieldId("karczma")!,
+      draw: 0,
+      drawn: [],
+      ...over,
+    }) as TurnPhase;
+
+  it("puts the frame back to the rzut", () => {
+    const { writes } = resetTurn(mid(field({ met: true, resolved: ["mgla"] })));
+    expect(writes.game?.turn_state).toEqual(only({ phase: "roll" }));
+  });
+
+  /** The round is not touched: this is the same turn, not the next one. */
+  it("costs no round, no lost turn and no countdown", () => {
+    const { writes } = resetTurn(mid(field()));
+    expect(writes.game?.round).toBeUndefined();
+    expect(writes.game?.active_seat).toBeUndefined();
+    expect(writes.seats).toBeUndefined();
+    expect(writes.effects).toBeUndefined();
+  });
+
+  /**
+   * 16.8: what this turn drew and nobody took is left lying face up, through
+   * the same door the end of a turn and a teleport's cut use. Deleting it
+   * would take the Karta out of the box, and the reason to start the turn over
+   * is usually to walk onto that Obszar again.
+   */
+  it("leaves what was drawn lying on the Obszar", () => {
+    const { writes } = resetTurn(
+      mid(field({ drawn: [{ cardId: "cyklop", cardClass: "foe" }] })),
+    );
+    expect(writes.fieldCards?.insert).toEqual([
+      expect.objectContaining({ field_id: "mroczna-polana", card_id: "cyklop" }),
+    ]);
+  });
+
+  /** A Wróg who died here has an owner (16.2) and is not left behind. */
+  it("does not put a beaten Wróg back on the board", () => {
+    const { writes } = resetTurn(
+      mid(field({ drawn: [{ cardId: "cyklop", cardClass: "foe" }], beaten: ["cyklop"] })),
+    );
+    expect(writes.fieldCards?.insert ?? []).toEqual([]);
+  });
+
+  /** A fight or a half-resolved Karta goes with the rest of the stack. */
+  it("cuts whatever was standing over the field", () => {
+    const stuck = aTable({
+      game: {
+        active_seat: 0,
+        round: 3,
+        turn_state: {
+          stack: [
+            field({ drawn: [{ cardId: "cyklop", cardClass: "foe" }] }),
+            { phase: "script", seatId: "seat-a", cardId: "grota", reason: "GROTA", effect: { op: "kup", towar: [] }, cursor: [] },
+          ],
+        },
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("mroczna-polana")! })],
+    });
+    const { writes } = resetTurn(stuck);
+    expect(writes.game?.turn_state).toEqual(only({ phase: "roll" }));
+    // And the Karta underneath is still on the Obszar rather than gone with it.
+    expect(writes.fieldCards?.insert).toHaveLength(1);
+  });
+
+  it("files it as the override it is", () => {
+    const { writes } = resetTurn(mid(field()));
+    expect(writes.journal?.[0]).toMatchObject({
+      seatId: "seat-a",
+      kind: "override",
+      manual: true,
+      payload: { what: "reset-turn" },
+    });
   });
 });

@@ -609,6 +609,15 @@ export function describe(
           `${who} zdejmuje z pola ${field(data.fieldId)}: ${swept.map((id) => card(id)).join(", ")}.`,
         );
       }
+      /**
+       * A turn started over, which is the console unspending something the
+       * game has no way to unspend. Said plainly, because the next lines will
+       * be a second rzut and a second ruch in the same round, and a reader
+       * scrolling past that needs to know it is not a bug.
+       */
+      if (data.what === "reset-turn") {
+        return line(`${who} zaczyna tę turę od nowa.`);
+      }
       if (data.what === "endless-stock") {
         return line("Zwykłego Wyposażenia nie będzie już brakować (21.2).");
       }

@@ -153,7 +153,7 @@ shortcuts. Promoting those into the grammar is the substantial part of this work
 and it is what makes the browser console useful for more than cheating.
 
 ### Play — the turn
-**Built:** `roll` · `move <pole>` · `draw` · `endturn` · `look` · `me`
+**Built:** `roll` · `move <pole>` · `draw` · `turn` (`pass`) · `look` · `me`
 **Left:** `bridge` · `cross`
 
 ### Play — encounters
@@ -174,16 +174,26 @@ and it is what makes the browser console useful for more than cheating.
 ### Testmode only
 Everything the console has today: `kill` · `revive` · `remove` · `deal` ·
 `stack` · `pile` · `place` · `winfight` · `wingame` · `endfight` · `stone` · `effect` · `nature` ·
-`gold`/`miecz`/`magia`/`tury` · `turn` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
+`gold`/`miecz`/`magia`/`tury` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
 `host` · `rename`
 
-…and one flag rather than a verb: **`endturn force`**. `endturn` is 10.1 and
-belongs to everybody; `force` walks past 5.6's surplus, 14.7's Bestia and a
-Karta the turn never finished, so it is the console overruling the rules and
-needs the same key `kill` does. The capability comes off the flag rather than
-off a second word — `gold +5 force` set the pattern — and it earns its place
-because a table built by hand goes over 5.4's four the moment the fifth `deal`
-lands, and from there the only lawful way on is to undo the setup.
+…and two acts of a verb everybody has. **`turn`** is one noun and the three
+things done to one: bare (or `end`) hands it on, which is 10.1 and belongs to
+everybody; **`turn reset`** starts this turn over; **`turn <player>`** hands
+play round until it is somebody's; and **`turn end force`** goes past what
+refuses — 5.6's surplus, 14.7's Bestia, a Karta or a question the turn never
+finished. The last three overrule the rules and need the same key `kill` does,
+so the capability comes off the *act* rather than off a second verb, exactly as
+`gold +5 force` takes it off a flag (`needsOf`).
+
+`force` earns its place because a table built by hand goes over 5.4's four the
+moment the fifth `deal` lands, and from there the only lawful way on is to undo
+the setup. `reset` earns its because the two ways back before it — forcing the
+turn on, or walking play round the table — both cost a circuit: the round
+advances, countdowns tick, „na 1 turę" expires, and what comes back is the next
+turn rather than this one. It resets the *frame*, never the world: a Karta
+taken is in the pack, a fight fought is fought, and `clear`, `deal` and `gold`
+are the verbs for those.
 
 **Settled:** `go` is now `teleport` and has lost its `move` alias; `place` has
 lost `drop`. Both freed words belong to the lawful vocabulary, and neither can
@@ -491,9 +501,13 @@ already there when the conventions were settled:
   repeat one usage line five times to fix a comma. `tury` is the odd one and is
   flagged in the summary: it is `turns_lost`, spent one per pass, and 1.3's
   floor has nothing to do with it.
-- **`turn <player>`** means "pass until it is their turn", which reads oddly
-  next to `endturn`. It is a testmode verb and rare; renaming it would cost more
-  than the confusion does.
+- ~~**`turn <player>`** means "pass until it is their turn", which reads oddly
+  next to `endturn`.~~ Settled by collapsing the family: `endturn`, `resetturn`
+  and `turn <player>` were three words for one noun, listed a screen apart in
+  `help`. The act is the second word now — `turn end`, `turn reset`,
+  `turn <player>` — and `pass` and `endturn` are kept as aliases for the bare
+  one, because handing the turn on is the line somebody types twenty times a
+  session and it had its own word for years.
 
 ### What we deliberately do not do
 

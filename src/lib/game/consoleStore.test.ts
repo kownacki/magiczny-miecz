@@ -145,13 +145,13 @@ describe("handing the turn on over a surplus", () => {
     // "natychmiast"), so this is the refusal rather than the hold — which is
     // the state a console actually sits in when somebody types `force`.
     await expect(
-      runCommand(gameId, actor, { kind: "endturn", force: false }),
+      runCommand(gameId, actor, { kind: "turn", act: "end", force: false }),
     ).rejects.toThrow(/Najpierw zejdź do limitu/);
   });
 
   it("passes it when forced, and says that is what it did", async () => {
     const { gameId, actor } = await overloaded();
-    expect(await runCommand(gameId, actor, { kind: "endturn", force: true })).toBe(
+    expect(await runCommand(gameId, actor, { kind: "turn", act: "end", force: true })).toBe(
       "Turn passed — forced.",
     );
   });
@@ -224,5 +224,33 @@ describe("teleporting into a turn that goes on", () => {
     await expect(runCommand(gameId, actor, { kind: "draw" })).rejects.toThrow(
       /nie ciągnie się Kart/,
     );
+  });
+});
+
+/**
+ * `turn reset`: the same seat, the same turn, from the beginning.
+ *
+ * The two lines that used to be the only ways back — `turn end force` and
+ * `turn <player>` — both cost a circuit of the table, so what came back was
+ * the next turn rather than this one.
+ */
+describe("starting a turn over from the console", () => {
+  it("puts the frame back to the rzut without moving play on", async () => {
+    const { gameId, actor } = await playing();
+    await rollForMove(gameId, null);
+    await runCommand(gameId, actor, { kind: "teleport", fieldId: "bezdroza" });
+    expect(top((await activeStore().load(gameId)).game.turn_state)).toMatchObject({
+      phase: "field",
+    });
+
+    const before = (await activeStore().load(gameId)).game;
+    const said = await runCommand(gameId, actor, { kind: "turn", act: "reset" });
+    expect(said).toMatch(/rzut/);
+
+    const after = (await activeStore().load(gameId)).game;
+    expect(top(after.turn_state)).toEqual({ phase: "roll" });
+    // The same turn, so the round and the seat are where they were.
+    expect(after.round).toBe(before.round);
+    expect(after.active_seat).toBe(before.active_seat);
   });
 });
