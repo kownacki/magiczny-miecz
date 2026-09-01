@@ -3,29 +3,38 @@
 /** Sztuki Złota lying on an Obszar: the pile, and how much of it you are taking (12.1). */
 
 import { useState } from "react";
-import { TILE_WIDTH } from "@/lib/view/cardImages";
+import { TILE_ART_HEIGHT, TILE_WIDTH } from "@/lib/view/cardImages";
+import { clampCoins, stackOverlap } from "@/lib/view/tokens";
 import { CoinStack } from "./token-pile";
 
 /**
- * The gold's geometry, derived from the Karta tile it stands beside.
+ * The gold's geometry, fitted to the Karta tile it stands beside.
  *
- * The width is the tile's: `gold.png` is square — 101 by 101 — so two coins and
- * the gap between them fill 86, which makes each 39, and ten of them read as a
- * pile against the Karty next to it rather than in a unit of their own.
+ * **Fifteen Sztuki Złota take up exactly one Karta's worth of room**: three
+ * columns of five, so a glance at an Obszar reads the money against the Karty
+ * next to it rather than in a unit of its own. Both halves fall out of that.
  *
- * The height is nobody's. It used to be the tile's too, on the arithmetic that
- * ten Sztuki Złota should take exactly one Karta's worth of room — and fitting
- * five coins into 75 pixels left nine of each showing, which at this size is
- * not a coin but a ruled line. Coins overlap by half of themselves now,
- * wherever they are drawn (`coinOverlap`), which is the proportion the purse
- * beside a Karta Postaci has always used. So the stack is as tall as it is, and
- * what makes the two piles look like the same object is that they are drawn the
- * same way rather than fitted to the same box.
+ * The width gives the coin. Three across a tile's 86 with the row's own gap
+ * twice between them makes each 23, and `gold.png` is square, so that is its
+ * height too. (Eighty-five against eighty-six: a pixel is the price of three
+ * whole numbers, and it is under rather than over, which is the side to be on.)
+ *
+ * The height gives the overlap: 23 and four more at 13 is exactly 75, the
+ * tile's picture. That is `stackOverlap`, which used to be the only rule and
+ * was wrong as one — dividing the room by the coins made the overlap a function
+ * of how many there were, and at a 39px coin it left nine pixels of an ingot
+ * showing. At 23 it answers 13 where half a coin is 12, so the fitted stack is
+ * the *looser* of the two and the shape costs the picture nothing. The test
+ * beside it holds that: a fitted overlap under `coinOverlap` means the box is
+ * too small for the pile.
  */
 // `TILE_GAP.card` is `gap-2`, and a margin cannot be set from a class name.
 const GAP = 8;
-const COIN = Math.floor((TILE_WIDTH - GAP) / 2);
 const PER_STACK = 5;
+/** Three columns is what fifteen means; nothing stops a richer square at four. */
+const COLUMNS = 3;
+const COIN = Math.floor((TILE_WIDTH - (COLUMNS - 1) * GAP) / COLUMNS);
+const OVERLAP = stackOverlap(TILE_ART_HEIGHT, COIN, PER_STACK);
 
 /**
  * What is lying here, and the one control that takes it.
@@ -49,10 +58,19 @@ export function FieldGold({
   busy: boolean;
   onTake: (gold: number) => void;
 }) {
+  /**
+   * What has been typed, already held to what is lying there.
+   *
+   * Clamped on the way in rather than checked on the way out: asking for 99 off
+   * a square holding 6 plainly means all of it, and a disabled button with
+   * nothing saying why is the worst answer to a clear request. `clampCoins`
+   * owns every case — over, under, fractional, unreadable, empty — and is
+   * tested, because "what can be typed into a number field" is a longer list
+   * than it looks.
+   */
   const [want, setWant] = useState("");
-
   const asked = Number.parseInt(want, 10);
-  const ok = Number.isFinite(asked) && asked >= 1 && asked <= gold;
+  const ok = Number.isFinite(asked) && asked >= 1;
 
   /**
    * The pile, and nothing saying how big it is.
@@ -69,7 +87,14 @@ export function FieldGold({
    */
   return (
     <div className="flex flex-col gap-2">
-      <CoinStack count={gold} src="/tokens/gold.png" size={COIN} perStack={PER_STACK} gap={GAP} />
+      <CoinStack
+        count={gold}
+        src="/tokens/gold.png"
+        size={COIN}
+        perStack={PER_STACK}
+        overlap={OVERLAP}
+        gap={GAP}
+      />
       {canTake && (
         /**
          * The same plain underlined word the Karty use for the same act, rather
@@ -88,7 +113,7 @@ export function FieldGold({
               min={1}
               max={gold}
               value={want}
-              onChange={(event) => setWant(event.target.value)}
+              onChange={(event) => setWant(clampCoins(event.target.value, gold))}
               placeholder="ile"
               aria-label="Ile Sztuk Złota zabrać"
               className="tnum w-14 rounded border border-edge bg-night/40 px-1.5 py-0.5 text-[11px] text-ink"

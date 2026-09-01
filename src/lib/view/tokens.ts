@@ -140,3 +140,51 @@ export const COIN_SHOWING = 0.5;
 export function coinOverlap(size: number): number {
   return Math.max(1, Math.round(size * COIN_SHOWING));
 }
+
+/**
+ * The overlap that makes a stack of `perStack` exactly `boxHeight` tall.
+ *
+ * The proportion above is the default and the rail's; this is for a pile that
+ * has been given a shape to fill. Gold on an Obszar is fitted to the Karta tile
+ * beside it — fifteen coins, three columns of five, the footprint of one card —
+ * so the height is a promise and the overlap is what keeps it.
+ *
+ * This was here before, as the *only* rule, and it was wrong as one: dividing
+ * the room by the coins makes the overlap a function of how many there are, so
+ * 39px coins five deep showed nine pixels each and drew as ruled lines. What
+ * makes it right here is that it now has to agree with the proportion rather
+ * than replace it — at a 23px coin in 75 pixels it answers 13, where half would
+ * be 12, so the fitted stack is the looser of the two. A caller reaching for
+ * this whose answer comes out *under* `coinOverlap` is fitting a pile into a
+ * box too small for it, and should make the box bigger or the pile shorter.
+ */
+export function stackOverlap(boxHeight: number, size: number, perStack: number): number {
+  if (perStack <= 1) return size;
+  return Math.max(1, Math.floor((boxHeight - size) / (perStack - 1)));
+}
+
+/**
+ * A typed number of Sztuki Złota, held to what is actually lying there.
+ *
+ * 12.1 puts the amount in the player's gift — "zabrać leżące złoto" names none,
+ * and Talisman's 12:1 says *any* Gold Counters may be taken — so the field is
+ * free text and everything that can be typed into it has to mean something.
+ *
+ * Clamped rather than refused, which is the difference between a control and an
+ * exam: asking for 99 off a square holding 6 plainly means "all of it", and a
+ * disabled button with no explanation is the worst answer to a clear request.
+ * A fraction floors, because there are no half coins; anything at or below zero
+ * comes back as one, the smallest take there is; anything unreadable comes back
+ * empty, so backspacing to nothing still works.
+ *
+ * The server does **not** clamp — `takeFieldGold` refuses. That is deliberate
+ * and they are not in disagreement: a command guessing what an out-of-range
+ * number meant is a command inventing a move, where a control doing it is a
+ * control being usable. This is what keeps the refusal unreachable.
+ */
+export function clampCoins(typed: string, lying: number): string {
+  if (typed.trim() === "") return "";
+  const asked = Math.floor(Number(typed));
+  if (!Number.isFinite(asked)) return "";
+  return String(Math.min(Math.max(1, asked), Math.max(1, Math.floor(lying))));
+}

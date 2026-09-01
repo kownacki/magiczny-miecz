@@ -1,5 +1,13 @@
 import { describe as suite, expect, it } from "vitest";
-import { COLUMNS_MAX, DENOMINATIONS, coinOverlap, pileColumns, tokensFor } from "./tokens";
+import {
+  COLUMNS_MAX,
+  DENOMINATIONS,
+  clampCoins,
+  coinOverlap,
+  pileColumns,
+  stackOverlap,
+  tokensFor,
+} from "./tokens";
 
 suite("making change in żetony", () => {
   it("is all ones while ones fit a column", () => {
@@ -194,5 +202,95 @@ suite("how far the coins in a stack overlap", () => {
     // that lies about the count beside it.
     expect(coinOverlap(1)).toBe(1);
     expect(coinOverlap(0)).toBe(1);
+  });
+});
+
+suite("fitting a stack to a shape it has been given", () => {
+  /** Gold on an Obszar: fifteen coins as three columns of five, one Karta tile. */
+  const obszar = () => stackOverlap(75, 23, 5);
+
+  it("makes a full stack exactly as tall as the box", () => {
+    expect(23 + 4 * obszar()).toBe(75);
+  });
+
+  /**
+   * The check that keeps this from being the mistake it was when it stood
+   * alone: a fitted stack must be no tighter than a proportional one.
+   *
+   * Dividing the room by the coins makes the overlap a function of how many
+   * there are, which is how 39px coins five deep came to show nine pixels each
+   * and draw as ruled lines. At 23 in 75 it answers 13 where half is 12 — the
+   * looser of the two — so the tile is a shape being filled rather than a
+   * clamp being applied.
+   */
+  it("is no tighter than half the coin, or the box is too small for the pile", () => {
+    expect(obszar()).toBeGreaterThanOrEqual(coinOverlap(23));
+  });
+
+  it("gives a stack of one the whole token, since nothing sits under it", () => {
+    expect(stackOverlap(75, 23, 1)).toBe(23);
+  });
+
+  it("keeps a sliver showing even where there is no room for one", () => {
+    expect(stackOverlap(10, 23, 5)).toBe(1);
+  });
+});
+
+suite("what may be typed into the take-gold field (12.1)", () => {
+  it("takes a plain number through unchanged", () => {
+    expect(clampCoins("3", 6)).toBe("3");
+    expect(clampCoins("6", 6)).toBe("6");
+  });
+
+  /** Asking for more than is there plainly means all of it. */
+  it("clamps down to what is lying there", () => {
+    expect(clampCoins("99", 6)).toBe("6");
+    expect(clampCoins("7", 6)).toBe("6");
+  });
+
+  /** One is the smallest take there is; nothing below it means anything. */
+  it("clamps up from zero and from below it", () => {
+    expect(clampCoins("0", 6)).toBe("1");
+    expect(clampCoins("-4", 6)).toBe("1");
+  });
+
+  it("floors a fraction, there being no half coins", () => {
+    expect(clampCoins("2.7", 6)).toBe("2");
+    expect(clampCoins("0.5", 6)).toBe("1");
+    expect(clampCoins("9.9", 6)).toBe("6");
+  });
+
+  /**
+   * Empty stays empty, or the field could not be cleared to type into: a
+   * control that types "1" back at you the moment you backspace is a control
+   * you cannot correct.
+   */
+  it("lets the field be emptied", () => {
+    expect(clampCoins("", 6)).toBe("");
+    expect(clampCoins("   ", 6)).toBe("");
+  });
+
+  it("answers empty to anything that is not a number", () => {
+    // "-" and "e" are both half-typed numbers a number input will hand over.
+    for (const said of ["abc", "-", "e", "--2", "1e", "NaN"]) {
+      expect(clampCoins(said, 6), said).toBe("");
+    }
+  });
+
+  /**
+   * A pile that is not there cannot be taken from, and the control is not shown
+   * — but a clamp that answered "0" would put a number in the box that no take
+   * accepts, and the server refuses anything below one.
+   */
+  it("never answers a number the command would refuse", () => {
+    for (const lying of [0, 1, 6, 104]) {
+      for (const said of ["-9", "0", "1", "5", "1000", "2.5"]) {
+        const out = clampCoins(said, lying);
+        if (out === "") continue;
+        expect(Number(out), `${said} of ${lying}`).toBeGreaterThanOrEqual(1);
+        expect(Number(out), `${said} of ${lying}`).toBeLessThanOrEqual(Math.max(1, lying));
+        expect(Number.isInteger(Number(out)), `${said} of ${lying}`).toBe(true);
+      }
+    }
   });
 });

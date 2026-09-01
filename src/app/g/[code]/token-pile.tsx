@@ -130,6 +130,7 @@ export function CoinStack({
   size,
   perStack,
   maxColumns,
+  overlap: given,
   gap,
   stat = "gold",
   title,
@@ -152,6 +153,14 @@ export function CoinStack({
    * which. So the ceiling is the caller's, and having none is a real answer.
    */
   maxColumns?: number;
+  /**
+   * How far the coins sit over each other, where the caller has a shape to fill.
+   *
+   * Omitted, it is half a coin (`coinOverlap`) — the rail's proportion, and the
+   * right default for a pile that is only a pile. Gold on an Obszar is fitted
+   * to the Karta tile beside it, so it passes `stackOverlap`'s answer instead.
+   */
+  overlap?: number;
   /** Between columns. The rail's piles nearly touch; an Obszar's take a tile's gap. */
   gap: number;
   /** Whose colours the "more than fits" mark wears. */
@@ -166,7 +175,7 @@ export function CoinStack({
    */
   alt?: string;
 }) {
-  const overlap = coinOverlap(size);
+  const overlap = given ?? coinOverlap(size);
   const lift = overlap - size;
   const { columns, drawn, cut } = pileColumns(count, perStack, maxColumns ?? Infinity);
 
