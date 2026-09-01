@@ -4,7 +4,13 @@ import { characterName, effectRow } from "./consoleLines";
 
 import { pickPlayer, type Command } from "@/lib/engine/console";
 import { foldStatuses } from "@/lib/engine/statusRows";
-import { driverOf, isQuiet, nameOfSeat } from "./commands/lobby";
+import {
+  driverOf,
+  nameOfSeat,
+} from "./commands/lobby";
+import {
+  isQuiet,
+} from "./commands/presence";
 import { seatsFor, usersFor, type SeatRow, type UserRow } from "./store";
 import { activeStore } from "./gameStore";
 import { seatView, turnQueueOf } from "./commands/seat";

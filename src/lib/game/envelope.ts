@@ -10,7 +10,9 @@ import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
 import { cardLending, seatView, turnQueueOf } from "./commands/seat";
 import type { Snapshot } from "./change";
-import { AWAY_AFTER_MS } from "./commands/lobby";
+import {
+  AWAY_AFTER_MS,
+} from "./commands/presence";
 
 /**
  * The read model, and the counterpart to `Changeset`.

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { envelopeFor, withoutDeck } from "./envelope";
 import { aHolding, aSeat, aTable, aUser } from "./fixture";
-import { AWAY_AFTER_MS } from "./commands/lobby";
+import {
+  AWAY_AFTER_MS,
+} from "./commands/presence";
 
 /**
  * The secret this file is here to keep.

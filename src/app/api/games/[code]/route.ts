@@ -11,7 +11,9 @@ import {
   markSeenUser,
   usersFor,
 } from "@/lib/game/store";
-import { AWAY_AFTER_MS } from "@/lib/game/commands/lobby";
+import {
+  AWAY_AFTER_MS,
+} from "@/lib/game/commands/presence";
 import { sweepLobby } from "@/lib/game/lobbyStore";
 import { envelopeFor } from "@/lib/game/envelope";
 import { effectsFor } from "@/lib/game/turnStore";

@@ -10,16 +10,18 @@ import {
   openTable as openTableOn,
   setEqMode as setEqModeOn,
   setTrophyMode as setTrophyModeOn,
-  needsSweep,
   renameUser as renameUserOn,
   setReady as setReadyOn,
-  sweepLobby as sweepLobbyOn,
   takeHostRole as takeHostRoleOn,
   resumeAs as resumeAsOn,
-  isQuiet,
-  HOST_MISSING_AFTER_MS,
   type LeaveResult,
 } from "./commands/lobby";
+import {
+  needsSweep,
+  sweepLobby as sweepLobbyOn,
+  isQuiet,
+  HOST_MISSING_AFTER_MS,
+} from "./commands/presence";
 import { chooseCharacter as chooseCharacterOn } from "./commands/character";
 import { deleteGame, recentGames, seatsInGames, usersFor, usersInGames } from "./store";
 

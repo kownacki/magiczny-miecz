@@ -7,7 +7,9 @@ import * as tables from "./tables";
 import { tablesFor } from "./tables";
 import { makeClaimToken, makeJoinCode, makeSeed } from "./codes";
 import { MAX_SEATS, type GameMode } from "./modes";
-import { isQuiet } from "./commands/lobby";
+import {
+  isQuiet,
+} from "./commands/presence";
 import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
 import { Failure } from "./failure";

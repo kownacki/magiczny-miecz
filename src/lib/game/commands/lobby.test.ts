@@ -1,16 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { only } from "@/lib/engine/stack";
 import {
-  AWAY_AFTER_MS,
-  GOODBYE_GRACE_MS,
-  HOST_MISSING_AFTER_MS,
-  LOBBY_GONE_AFTER_MS,
   driverOf,
-  goneFrom,
-  isQuiet,
   leaveTable,
   nameOfSeat,
-  needsSweep,
   nextHost,
   noteArrival,
   openTable,
@@ -20,12 +13,21 @@ import {
   resumeAs,
   seatUnder,
   setReady,
-  sweepLobby,
   takeHostRole,
   takeSeat,
   unseat,
   userOf,
 } from "./lobby";
+import {
+  AWAY_AFTER_MS,
+  GOODBYE_GRACE_MS,
+  HOST_MISSING_AFTER_MS,
+  LOBBY_GONE_AFTER_MS,
+  goneFrom,
+  isQuiet,
+  needsSweep,
+  sweepLobby,
+} from "./presence";
 import { aSeat, aTable, aUser, ports } from "../fixture";
 import { apply } from "../change";
 import type { SeatRow, UserRow } from "../store";
