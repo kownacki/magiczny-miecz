@@ -20,6 +20,8 @@ import type { CardId } from "@/data/ids";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
+import { Fold } from "./fold";
+import { fieldGroups } from "@/lib/view/fieldGroups";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
 
@@ -165,6 +167,17 @@ export function FieldModal({
   // ENDS here, and only until the end of that turn.
   const arrived = phase === "field";
 
+  /**
+   * Grouped for reading, which is not the order they resolve in.
+   *
+   * `cards` arrives in arrival order — `fieldCardsFor` reads `field_cards` by
+   * `created_at` — and `fieldGroups` keeps it inside each group. The stack a
+   * player actually walks through when their move ends here is
+   * `resolutionOrder`'s, I through VI, and it is untouched by any of this: see
+   * the note at the top of `fieldGroups.ts` for why there are two.
+   */
+  const groups = fieldGroups(cards);
+
   return (
     <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
@@ -197,62 +210,97 @@ export function FieldModal({
           </section>
 
           <section>
+            {/* "Leży tutaj" was the old heading and it said the wrong thing
+                twice: a Karta gets here by being *placed* as often as by being
+                left — the Upiór's die table names six Obszary, the Eremita's
+                six more, and Władca Zdarzeń moves any face-up Karta to a chosen
+                one — and "leży" reads as abandoned, which a Cudotwórca living
+                here to the end of the game is not. What they all have in common
+                is the Obszar, so the heading says that and nothing else. */}
             <h3 className="mb-2 text-[11px] uppercase tracking-widest text-muted">
-              Leży tutaj
+              Na tym Obszarze
             </h3>
-            {cards.length === 0 ? (
+            {groups.length === 0 ? (
               <p className="text-xs text-muted/70">Nic — Obszar jest pusty.</p>
             ) : (
-              /* The same tiles as the Plecak and the Księga, for the same
-                 reason: a card is recognised by its picture, and a player who
-                 has learnt one shelf should not have to learn a second shape
-                 for the identical act. Everything the app knows about a card
-                 is one hover away on all three. */
-              <TileRow frame={false}>
-                {cards.map((lying) => {
-                  const name = NAMES.get(lying.cardId) ?? lying.cardId;
-                  // Only Przedmioty and Przyjaciele are picked up (12.1). A Wróg
-                  // lying here is fought and a Spotkanie is read — and a card
-                  // off the Wyposażenie sheet is always a Przedmiot.
-                  const event = EVENT_BY_ID.get(lying.cardId as EventCard["id"]);
-                  const takeable = event ? kindForCard(event) !== null : NAMES.has(lying.cardId);
-                  return (
-                    <CardTile
-                      key={lying.id}
-                      /* Through `tileFor` like every other shelf: the name, the
-                         printed text and the conjured mark are its business, and
-                         building the object here by hand is what lost the mark
-                         on an Obszar in the first place. `holdable` stays local
-                         — 12.1 is about where the card is, which is the one
-                         thing this window knows and `tileFor` does not. */
-                      card={{ ...tileFor({ cardId: lying.cardId, granted: lying.granted }), holdable: takeable }}
-                      eqMode={eqMode}
-                      nature={nature}
-                      /* The ask is out and the answer is not a foregone
-                         conclusion — 12.1 can be lost to somebody standing on
-                         the same Obszar — so the card greys where it lies and
-                         moves once the server says it moved. */
-                      dimmed={asked.includes(lying.id)}
-                      onClick={() => onInspect(lying.cardId)}
-                    >
-                      {takeable && standingHere && canAct && arrived && (
-                        <button
-                          /* Only this card's own ask, never the table's
-                             `busy`: what is lying on one Obszar is several
-                             independent questions, and closing all of them
-                             because one is out makes a player wait a round trip
-                             per card for no reason the rules give. */
-                          disabled={asked.includes(lying.id)}
-                          onClick={() => onTake(lying.id)}
-                          className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
+              /* One `Fold` per group, the same section every shelf in the app
+                 is built from — the rule above it, the small capitals, the
+                 tally beside the name. Not foldable: `onToggle` is what puts
+                 the triangle on, and a group of two cards has nothing worth
+                 hiding behind a second click.
+
+                 `fieldGroups` has already dropped the empty ones, so an Obszar
+                 with a single Wróg on it reads "Wrogowie 1" and stops. */
+              groups.map((group, at) => (
+                <Fold
+                  key={group.key}
+                  title={group.title}
+                  tally={group.cards.length}
+                  first={at === 0}
+                  /* A step below "Na tym Obszarze", which is the same size and
+                     the same small capitals — two headings at one weight read
+                     as two unrelated blocks rather than a heading and the
+                     groups under it. `tone` is the knob `Fold` already has for
+                     exactly this. */
+                  tone="text-muted/70"
+                >
+                  {/* The same tiles as the Plecak and the Księga, for the same
+                      reason: a card is recognised by its picture, and a player
+                      who has learnt one shelf should not have to learn a second
+                      shape for the identical act. Everything the app knows
+                      about a card is one hover away on all three. */}
+                  <TileRow frame={false}>
+                    {group.cards.map((lying) => {
+                      // Only Przedmioty and Przyjaciele are picked up (12.1). A
+                      // Wróg lying here is fought and a Spotkanie is read — and
+                      // a card off the Wyposażenie sheet is always a Przedmiot.
+                      const event = EVENT_BY_ID.get(lying.cardId as EventCard["id"]);
+                      const takeable = event
+                        ? kindForCard(event) !== null
+                        : NAMES.has(lying.cardId);
+                      return (
+                        <CardTile
+                          key={lying.id}
+                          /* Through `tileFor` like every other shelf: the name,
+                             the printed text and the conjured mark are its
+                             business, and building the object here by hand is
+                             what lost the mark on an Obszar in the first place.
+                             `holdable` stays local — 12.1 is about where the
+                             card is, which is the one thing this window knows
+                             and `tileFor` does not. */
+                          card={{
+                            ...tileFor({ cardId: lying.cardId, granted: lying.granted }),
+                            holdable: takeable,
+                          }}
+                          eqMode={eqMode}
+                          nature={nature}
+                          /* The ask is out and the answer is not a foregone
+                             conclusion — 12.1 can be lost to somebody standing
+                             on the same Obszar — so the card greys where it
+                             lies and moves once the server says it moved. */
+                          dimmed={asked.includes(lying.id)}
+                          onClick={() => onInspect(lying.cardId)}
                         >
-                          weź
-                        </button>
-                      )}
-                    </CardTile>
-                  );
-                })}
-              </TileRow>
+                          {takeable && standingHere && canAct && arrived && (
+                            <button
+                              /* Only this card's own ask, never the table's
+                                 `busy`: what is lying on one Obszar is several
+                                 independent questions, and closing all of them
+                                 because one is out makes a player wait a round
+                                 trip per card for no reason the rules give. */
+                              disabled={asked.includes(lying.id)}
+                              onClick={() => onTake(lying.id)}
+                              className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
+                            >
+                              weź
+                            </button>
+                          )}
+                        </CardTile>
+                      );
+                    })}
+                  </TileRow>
+                </Fold>
+              ))
             )}
             {/* 13.1 and 12.1: things happen on the field your move ended on, so
                 a player reading about somewhere else is told why there is no

@@ -88,8 +88,9 @@ export interface TurnCard {
  *
  * **15.1 sits above 15.2.** A card whose instruction sends it to a named Obszar
  * is "rozpatrywana w pierwszej kolejności" whatever numeral it prints — the
- * Upiór is a Wróg and the Eremita a Spotkanie, and both go before either class
- * would put them. So the sort has two keys and this is the first of them.
+ * Upiór is a Demon (III) and the Eremita a Nieznajomy (IV), and both go before
+ * either class would put them. So the sort has two keys and this is the first
+ * of them.
  *
  * The other half of 15.1 — "nie mają wpływu na Postać, która je wyciągnęła" —
  * needs nothing here and is not enforced anywhere either, because the shape
