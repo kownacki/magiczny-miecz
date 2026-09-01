@@ -147,6 +147,19 @@ function better(one: Offer, than: Offer): boolean {
  * rather than defaulted, because a trophy priced at zero because nobody said
  * is exactly the silent wrongness this avoids.
  *
+ * Zero for a Wróg fought magically, and that is the rule rather than caution.
+ * 1.4 keeps the Karty of "napotkanymi Wrogami (mającymi określony parametr
+ * Miecza)" and 16.2 says it again — "Karty pokonanych Wrogów **tego
+ * rodzaju**" — so a Demon is beaten and gone, and the seven-point arithmetic
+ * never has to price a Magia in Miecze. Ten of the thirty-two Wrogowie are
+ * magical, which is why this is not an edge (docs/TROFEA.md).
+ *
+ * `trophiesFrom` already refuses to make one a trophy at all, so nothing here
+ * should ever meet one. This is the same answer said a second time, at the
+ * place that would otherwise inflate a total if a stray holding ever arrived —
+ * which is exactly what the trophy panel's own copy was doing while this one
+ * counted any number it found.
+ *
  * Here rather than in `commands/shop.ts` because three places needed it and
  * only one could reach it: the console had a byte-identical private copy and
  * the trophy panel a third variant. The engine is the one home every caller
@@ -155,7 +168,8 @@ function better(one: Offer, than: Offer): boolean {
  */
 export function trophyPointsOf(cardId: string, mirror?: { miecz: number }): number {
   const card = EVENTS.find((one) => one.id === cardId);
-  return (card ? combatValueOf(card, mirror)?.total : 0) ?? 0;
+  const worth = card ? combatValueOf(card, mirror) : null;
+  return worth?.kind === "ordinary" ? worth.total : 0;
 }
 
 /** One beaten Wróg on the shelf, and whether his Karta is still in hand. */

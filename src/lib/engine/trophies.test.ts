@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { TROPHY_RATE, mostSwords, offerFor, offersFor, pointOffers } from "./trophies";
+import {
+  TROPHY_RATE,
+  mostSwords,
+  offerFor,
+  offersFor,
+  pointOffers,
+  trophyPointsOf,
+} from "./trophies";
 
 /**
  * The arithmetic 1.4 leaves to the player, done properly.
@@ -209,5 +216,48 @@ describe("every offer is the best the hand can do", () => {
         expect(spent).toBe(offer.points);
       }
     }
+  });
+});
+
+/**
+ * Which Wrogowie are worth anything, which is a rule and not caution.
+ *
+ * 1.4 keeps the Karty of "napotkanymi Wrogami (mającymi określony parametr
+ * Miecza)" and 16.2 says it again — "Karty pokonanych Wrogów **tego rodzaju**"
+ * — so a Wróg fought magically is beaten and gone, and the seven-point
+ * arithmetic never prices a Magia in Miecze. Ten of the thirty-two are
+ * magical (docs/TROFEA.md), so this decides a third of the deck.
+ *
+ * This counted any number it found until now, while the trophy panel kept its
+ * own copy that read the rule correctly. `trophiesFrom` refuses to make a
+ * magical Wróg a trophy at all, so the two never met in an ordinary game —
+ * which is exactly why the disagreement could sit there.
+ */
+describe("what a beaten Wróg is worth (1.4, 16.2)", () => {
+  it("is the Miecz printed on an ordinary one", () => {
+    expect(trophyPointsOf("cyklop")).toBe(6);
+    expect(trophyPointsOf("czarna-hybryda")).toBe(2);
+  });
+
+  it("is nothing for one fought magically, whatever his Magia", () => {
+    // Książę Demonów carries a Magia of 10 — the largest number on any Wróg —
+    // so counting it would have been worth a Miecz and a half on its own.
+    expect(trophyPointsOf("ksiaze-demonow")).toBe(0);
+    expect(trophyPointsOf("duch-ciemnosci")).toBe(0);
+  });
+
+  it("is nothing for a card that is not a Wróg at all", () => {
+    expect(trophyPointsOf("helm")).toBe(0);
+    expect(trophyPointsOf("nie-ma-takiej-karty")).toBe(0);
+  });
+
+  /**
+   * The Sobowtór has no number of his own — "posiada zawsze tyle punktów
+   * Miecza, ile jego przeciwnik" — so he is priced at what he fought at, and
+   * asked for rather than defaulted so a trophy is never silently worth zero.
+   */
+  it("prices the one Wróg who mirrors at what he fought", () => {
+    expect(trophyPointsOf("sobowtor", { miecz: 7 })).toBe(7);
+    expect(trophyPointsOf("sobowtor")).toBe(0);
   });
 });

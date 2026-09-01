@@ -3,9 +3,8 @@
 /** Trofea (1.4): who you beat, what it buys, and what a trade would waste. */
 
 import { useState } from "react";
-import events from "@/data/events.json";
-import type { EventCard } from "@/data/types";
-import { combatValueOf } from "@/lib/engine/cards";
+
+import { trophyPointsOf as trophyValue } from "@/lib/engine/trophies";
 import { TROPHY_RATE, offersFor, type Offer } from "@/lib/engine/trophies";
 import { plural as polishPlural } from "@/lib/engine/polish";
 import { Fold } from "./fold";
@@ -16,28 +15,16 @@ import { CARD_NAMES, tileFor, type Seat } from "./table";
 import type { CardId } from "@/data/ids";
 import { shelfFor } from "./trophy-shelf";
 
-const EVENTS = events as EventCard[];
-
 /**
  * What one beaten Wróg is worth, by the number printed on his Karta.
  *
- * Read here rather than sent, because the browser holds the card id and
- * `combatValueOf` is the same function the engine prices trophies with — so the
- * ledger and `tradeTrophies` cannot disagree about a Cyklop.
- *
- * Zero for anything that is not a foe with a Miecz. Only those become trophies
- * at all — a Demon is fought magically, beaten and gone — so this should never
- * fire; it is here so a stray holding cannot silently inflate a total.
- *
- * `mirror` is the holder's own Miecz, for the Sobowtór, whose Karta carries no
- * number: „posiada zawsze tyle punktów Miecza, ile jego przeciwnik", and the
- * character holding him is the one who made him.
+ * `engine/trophies.ts`'s, which is where the same arithmetic already answered
+ * for `tradeTrophies` and the console. This file used to hold a third copy —
+ * the only one of the three that read 1.4 correctly and returned nothing for a
+ * Wróg fought magically, while the engine's counted his Magia. The engine
+ * agrees now, so the ledger and the trade cannot disagree about a Demon.
  */
-export function trophyValue(cardId: string, mirror?: { miecz: number }): number {
-  const card = EVENTS.find((one) => one.id === cardId);
-  const worth = card ? combatValueOf(card, mirror) : null;
-  return worth?.kind === "ordinary" ? worth.total : 0;
-}
+export { trophyValue };
 
 /**
  * The trofea a character has, and the trade worth making.
