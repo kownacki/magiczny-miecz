@@ -156,6 +156,24 @@ export function BoardMap({
         const cell = CELL_BY_ID.get(fieldId);
         if (!cell) return null;
         const spots = dotPositions(cell, here.length);
+        /**
+         * One dot per figure, and it says nothing about Kamień.
+         *
+         * Which is a gap with its eyes open rather than an oversight. 20.1's
+         * subject is literally what stands on the board — „reprezentującą ją na
+         * planszy Kartę należy zamienić na Kartę Zamieniony w Kamień" — and
+         * this is the board. Everywhere the app draws a *figure* it makes that
+         * swap (`figureUrl`: the turn bar, the roster, the Obszar's Gracze
+         * shelf); here it draws a coloured circle eleven pixels across, which
+         * has nowhere to put a card and no room for a mark that would still
+         * read at this size beside five others on one square.
+         *
+         * So it is left alone deliberately, and the note is here so that
+         * whoever next changes what a seat looks like on the map — a figure
+         * instead of a dot, a bigger dot, a ring — decides about the statue at
+         * the same time rather than discovering afterwards that the one place
+         * showing the whole board was the one place not showing this.
+         */
         return here.map((seat, i) => (
           <g key={seat.id}>
             <circle

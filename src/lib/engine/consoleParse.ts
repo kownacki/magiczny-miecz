@@ -692,7 +692,16 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     if (forced) return { error: "`force` belongs to `turn end`, not to a name." };
     return { ok: { kind: "turn", act: "reach", who: said } };
   }
-  if (word === "stone") return { ok: { kind: "stone", who: tail || null } };
+  /**
+   * Two words, one act and its undo — the shape `ready`/`unready` already has.
+   *
+   * The lift is a word rather than a flag on the same one because that is what
+   * a person types when they mean it: `stone Ola off` reads as an argument to
+   * `stone` and `unstone Ola` reads as the opposite of `stone Ola`, which it is.
+   */
+  if (word === "stone" || word === "unstone") {
+    return { ok: { kind: "stone", who: tail || null, stone: word === "stone" } };
+  }
 
   if (word === "effect") {
     const [said, ...who] = tail.split(/\s+/).filter(Boolean);

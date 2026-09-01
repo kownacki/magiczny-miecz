@@ -609,6 +609,25 @@ export function describe(
        * board looked one way and now looks another, and 16.8 made that
        * everybody's business.
        */
+      /**
+       * A Kamień lifted by hand, which is an `override` and not a rule: 20.1
+       * says what turns a Postać to stone and nothing says what takes it back
+       * early, so this is a person overruling the referee like every other
+       * line under this kind.
+       *
+       * Names the round it was going to end in, because that is the fact the
+       * line undoes — „zamienia się w Kamień — wraca w rundzie 4" is what a
+       * reader saw earlier, and this is the sentence that cancels it.
+       */
+      if (data.what === "unstone") {
+        const until = num(data.until);
+        return line(
+          `${who} przestaje być Kamieniem` +
+            (until > 0 ? ` — miał wrócić w rundzie ${until}` : "") +
+            ".",
+        );
+      }
+
       if (data.what === "clear-field") {
         const swept = Array.isArray(data.cards) ? (data.cards as string[]) : [];
         /**

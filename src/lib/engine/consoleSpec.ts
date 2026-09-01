@@ -396,7 +396,8 @@ export type Command =
    * being broken. `force` is the answer to having been told.
    */
   | { kind: "nature"; nature: Nature; who: string | null; force: boolean }
-  | { kind: "stone"; who: string | null }
+  /** `stone` turns one to Kamień, `unstone` lifts it — see `freeFromStone`. */
+  | { kind: "stone"; who: string | null; stone: boolean }
   | { kind: "effect"; effect: EffectName; who: string | null };
 
 /**
@@ -886,9 +887,9 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "stone",
     when: PLAYING,
-    aliases: [],
+    aliases: ["unstone"],
     usage: "stone [player]",
-    summary: "turn to stone for three turns (20.1)",
+    summary: "turn to stone for three turns (20.1) — `unstone` lifts it early",
     // Likewise: 20.1 says what turns a Postać to stone, and it is never a
     // player deciding to be.
     needs: "testmode",

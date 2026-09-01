@@ -305,7 +305,10 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("turns somebody to stone, and knows the three effects by name", () => {
-    expect(ok("stone Ola")).toEqual({ kind: "stone", who: "Ola" });
+    expect(ok("stone Ola")).toEqual({ kind: "stone", who: "Ola", stone: true });
+    // The undo, which is the same pair `ready`/`unready` is.
+    expect(ok("unstone Ola")).toEqual({ kind: "stone", who: "Ola", stone: false });
+    expect(ok("unstone")).toEqual({ kind: "stone", who: null, stone: false });
     expect(ok("effect fog")).toEqual({ kind: "effect", effect: "fog", who: null });
     expect(ok("effect barred Ola")).toEqual({ kind: "effect", effect: "barred", who: "Ola" });
     // Closed on purpose: the alternative is a modifier typed as JSON, which is
@@ -1358,7 +1361,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     becomes: { kind: "nature", nature: "evil", who: "Ola", force: false },
   },
   turn: { line: "turn", becomes: { kind: "turn", act: "end", force: false } },
-  stone: { line: "stone Ola", becomes: { kind: "stone", who: "Ola" } },
+  stone: { line: "stone Ola", becomes: { kind: "stone", who: "Ola", stone: true } },
   effect: {
     line: "effect fog Ola",
     becomes: { kind: "effect", effect: "fog", who: "Ola" },

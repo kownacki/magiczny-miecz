@@ -156,3 +156,56 @@ export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Ch
     ],
   });
 }
+
+/**
+ * Lifts a Kamień before its three rounds are up.
+ *
+ * The console could inflict this state and not undo it, which is the one
+ * asymmetry CLAUDE.md's "every tracked value needs a manual override" names
+ * outright: *a referee you cannot correct is worse than no referee*. Every
+ * other tracked number has a way back — `tury =0` for a debt, `life +1` for a
+ * point taken by mistake — and the only way out of a mis-aimed `stone` was to
+ * wait three rounds or destroy the character, because `takeNewCharacter` and
+ * `withdrawSeat` were the two things in the app that cleared the column.
+ *
+ * A lift and not a dial. There is no such thing as a shorter Kamień: 20.1
+ * prints three turns and nothing in the box shortens them, so an override that
+ * let a referee set "two more rounds" would be offering a state the game does
+ * not have. What a table actually needs is *undo*, and `stone` / `unstone` is
+ * that pair — the same shape as `ready` / `unready`.
+ *
+ * Filed as an `override`, which is what it is. 20.1 is the rule for turning to
+ * stone; there is no rule for a person deciding it should not have happened,
+ * and `journalRules` answers `null` for the kind rather than guessing at one.
+ *
+ * Null rather than a round already past, though `stillStone` reads the two the
+ * same. The column means "the round this wears off in", and a game that has
+ * never been stone should say so by having no date rather than a stale one.
+ */
+export function freeFromStone(snapshot: Snapshot, command: { seatId: string }): Changeset {
+  const seat = seatById(snapshot, command.seatId);
+  if (!isStone(snapshot, command.seatId)) {
+    // Nobody named, the way `refuseAgainstStone` above says the same thing the
+    // other way round. A raw `character_id` here read "elf nie jest Zamieniona
+    // w Kamień" — an id where a name belongs, in the wrong gender, and the
+    // console has already said whose seat it is.
+    //
+    // And no rule number: 20.1 is the rule for turning to stone, and there is
+    // none for a person deciding it should not have happened.
+    throw new Error("Ta Postać nie jest Zamieniona w Kamień.");
+  }
+  return {
+    seats: [{ id: seat.id, patch: { stone_until_round: null } }],
+    journal: [
+      {
+        seatId: seat.id,
+        round: snapshot.game.round,
+        kind: "override",
+        // What it was going to wear off on, because that is the fact the line
+        // is undoing and the only one a reader cannot reconstruct afterwards.
+        payload: { what: "unstone", until: seat.stone_until_round },
+        manual: true,
+      },
+    ],
+  };
+}

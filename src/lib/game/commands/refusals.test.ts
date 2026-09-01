@@ -3,7 +3,13 @@ import { apply } from "../change";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { asFieldId } from "@/lib/engine/board";
 import type { TurnPhase } from "@/lib/engine/turn";
-import { isStone, refuseAgainstStone, turnToStone, STONE_TURNS } from "./stone";
+import {
+  freeFromStone,
+  isStone,
+  refuseAgainstStone,
+  turnToStone,
+  STONE_TURNS,
+} from "./stone";
 import { spendLife } from "./life";
 import { refuseWhileBeastAwaits } from "./beast";
 import { refuseWhileHeld } from "./seat";
@@ -98,6 +104,38 @@ describe("a Postać Zamieniona w Kamień", () => {
     });
     expect(() => refuseWhileHeld(flames, "seat-b")).toThrow(/Krąg Płomieni/);
     expect(() => refuseWhileHeld(flames, "seat-b", "wladca-zaklec")).not.toThrow();
+  });
+
+  /**
+   * The undo, which the console had no word for.
+   *
+   * `stone` could inflict three rounds and nothing could give them back short
+   * of destroying the character — the asymmetry CLAUDE.md's "a referee you
+   * cannot correct is worse than no referee" names.
+   */
+  it("can be lifted by hand before the three turns are up", () => {
+    const at = table();
+    expect(isStone(at, "seat-b")).toBe(true);
+    const writes = freeFromStone(at, { seatId: "seat-b" });
+    expect(isStone(apply(at, writes), "seat-b")).toBe(false);
+    // Null, not a round already past: the column means "the round this wears
+    // off in", and a Postać that is not stone has no such round.
+    expect(
+      apply(at, writes).seats.find((one) => one.id === "seat-b")?.stone_until_round,
+    ).toBeNull();
+    // Filed as somebody overruling the referee, because that is what it is —
+    // 20.1 says what turns a Postać to stone and no rule takes it back early.
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "override",
+      manual: true,
+      payload: { what: "unstone", until: 4 },
+    });
+  });
+
+  it("refuses to lift a Kamień that is not there", () => {
+    expect(() => freeFromStone(table({ stoneUntil: null }), { seatId: "seat-b" })).toThrow(
+      /Ta Postać nie jest Zamieniona w Kamień/,
+    );
   });
 
   /** The one door every loss comes through — a fight, a Karta, an Obszar. */

@@ -105,7 +105,11 @@ import {
   type MovedBy,
   takeNewCharacter as takeNewCharacterOn,
 } from "./commands/character";
-import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
+import {
+  STONE_TURNS,
+  freeFromStone as freeFromStoneOn,
+  turnToStone as turnToStoneOn,
+} from "./commands/stone";
 import { setEndlessStock as setEndlessStockOn } from "./commands/seat";
 import {
   removeCharacter as removeCharacterOn,
@@ -820,6 +824,15 @@ export async function turnToStone(gameId: string, seatId: string): Promise<void>
   await change(
     gameId,
     (snapshot) => ({ writes: turnToStoneOn(snapshot, { seatId }), result: undefined }),
+    undefined,
+  );
+}
+
+/** The other half of the pair: a Kamień lifted by hand. See `freeFromStone`. */
+export async function freeFromStone(gameId: string, seatId: string): Promise<void> {
+  await change(
+    gameId,
+    (snapshot) => ({ writes: freeFromStoneOn(snapshot, { seatId }), result: undefined }),
     undefined,
   );
 }

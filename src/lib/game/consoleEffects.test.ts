@@ -108,7 +108,7 @@ describe("`me` says what is on a character and when it lapses", () => {
 
   it("names the round outright for a date, with no forecast caveat on it", async () => {
     const { gameId, actor } = await table();
-    await runCommand(gameId, actor, { kind: "stone", who: "1" });
+    await runCommand(gameId, actor, { kind: "stone", stone: true, who: "1" });
 
     const said = await runCommand(gameId, actor, { kind: "me", who: null });
     expect(said).toContain("Zamieniony w Kamień — mija na początku rundy 4");
@@ -142,7 +142,7 @@ describe("`who` shows the table what is on everybody", () => {
   it("hangs each seat's effects under its own row", async () => {
     const { gameId, actor } = await table();
     await owe(gameId, actor, "2", 1);
-    await runCommand(gameId, actor, { kind: "stone", who: "1" });
+    await runCommand(gameId, actor, { kind: "stone", stone: true, who: "1" });
 
     const lines = (await runCommand(gameId, actor, { kind: "who" })).split("\n");
     const at = lines.findIndex((line) => line.includes("ELF"));

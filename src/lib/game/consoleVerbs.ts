@@ -103,6 +103,7 @@ import {
   takeFieldGold,
   takeFromField,
   takeNewCharacter,
+  freeFromStone,
   turnToStone,
   answerAsk,
   answerScript,
@@ -593,6 +594,10 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
   stone: async (ctx, command) => {
     const { gameId, seatOf, named } = ctx;
     const seat = seatOf(command.who);
+    if (!command.stone) {
+      await freeFromStone(gameId, seat.id);
+      return `${named(seat)} is flesh again.`;
+    }
     await turnToStone(gameId, seat.id);
     return `${named(seat)} is stone for ${STONE_TURNS} turns (20.1).`;
   },
