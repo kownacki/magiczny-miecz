@@ -53,6 +53,22 @@ export interface FieldCardHere {
   cardId: CardId;
   /** Conjured rather than drawn — the wrench says so, as it does everywhere else. */
   granted?: boolean;
+  /**
+   * On the Obszar, but held by the turn rather than by a `field_cards` row.
+   *
+   * The moment a character stops somewhere, `liftFieldCards` deletes every row
+   * on that Obszar and the Karty move into the turn's own `drawn` — they come
+   * back at the end of it through `leaveCardsBehind`. So for the whole of the
+   * turn that is reading it, the Obszar looks empty to anything that asks the
+   * table, and this window asked the table. It showed nothing on the one turn
+   * anybody is looking.
+   *
+   * These are those Karty. They are on the Obszar in every sense the player
+   * cares about; what they do not have is a row id, so `take-field` cannot name
+   * them and the "weź" button belongs to the sheet that is working through them
+   * rather than to this list.
+   */
+  viaTurn?: boolean;
 }
 
 /**
@@ -81,6 +97,8 @@ export function FieldModal({
   whyNotEnd,
   onEnd,
   busy,
+  owed,
+  onDraw,
   onTake,
   asked = [],
   onInspect,
@@ -103,6 +121,15 @@ export function FieldModal({
   nature?: Nature | null;
   fieldId: FieldId;
   cards: FieldCardHere[];
+  /**
+   * How many Karty this Obszar still owes (13.4), and the way to deal them.
+   *
+   * Absent when the window was opened off the map: reading about somewhere you
+   * are not standing is the other half of what it is for, and 13.1 gives you
+   * nothing to do there.
+   */
+  owed?: number;
+  onDraw?: () => void;
   /** Whether the viewer's own character is on this field (12.1, 13.1). */
   standingHere: boolean;
   /** Whether it is their turn to be doing anything about it. */
@@ -225,6 +252,24 @@ export function FieldModal({
                 {cards.length > 0 && ` — leżą tu już ${cards.length}`}
               </p>
             ) : null}
+            {/**
+             * The sum done out loud, and the button that acts on it.
+             *
+             * 13.4 is arithmetic a table does by looking — three printed, two
+             * lying, deal one — and the app was making the player do it from
+             * two numbers in different places, then press a button in a third.
+             * Badanie Obszaru is one motion and this is where it is read, so
+             * this is where it happens.
+             */}
+            {owed !== undefined && owed > 0 && onDraw && (
+              <button
+                onClick={onDraw}
+                disabled={busy}
+                className="mb-2 w-full rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
+              >
+                Wyciągnij {owed === 1 ? "kartę" : `${owed} ${owed < 5 ? "karty" : "kart"}`}
+              </button>
+            )}
             <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
               {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
             </p>
@@ -316,7 +361,7 @@ export function FieldModal({
                           dimmed={asked.includes(lying.id)}
                           onClick={() => onInspect(lying.cardId)}
                         >
-                          {takeable && standingHere && canAct && arrived && (
+                          {takeable && !lying.viaTurn && standingHere && canAct && arrived && (
                             <button
                               /* Only this card's own ask, never the table's
                                  `busy`: what is lying on one Obszar is several

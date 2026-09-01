@@ -490,6 +490,33 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setFolded(false);
   }, [turnKey]);
 
+  /**
+   * Arriving somewhere that owes Karty opens the Obszar, once.
+   *
+   * 10.1 makes a turn two things — "a) ruch b) spotkania i badanie Obszaru" —
+   * and the second used to begin with a player hunting for a button. Landing on
+   * a square that draws is not a moment with a decision in it: something is
+   * going to be turned over, and the only question is what. So the window that
+   * says what is here opens itself, with the count and the deal in it.
+   *
+   * Keyed on the Obszar and not on the turn, so it fires again for a character
+   * a Karta moved (13.1 gives them a fresh badanie where they land) and does
+   * not fire twice for the same one. Only for the seat whose turn it is: a
+   * watcher gets the kolejka across the top and no window opening in their face.
+   */
+  const myField = seats.find((seat) => seat.seat_index === mySeatIndex)?.field_id ?? null;
+  // Read here rather than from `turnState` below, which is past the early
+  // returns a hook may not sit behind.
+  const nowOnField = game ? top(game.turn_state) : null;
+  const owesHere = nowOnField?.phase === "field" && nowOnField.draw > 0;
+  const arrivedAt = myTurn && owesHere && myField ? `${turnKey}:${myField}` : null;
+  const openedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (arrivedAt === null || openedFor.current === arrivedAt) return;
+    openedFor.current = arrivedAt;
+    setInspecting(asFieldId(myField));
+  }, [arrivedAt, myField]);
+
 
 
 
@@ -1150,10 +1177,41 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
           nature={asNature(mySeat?.nature)}
           fieldId={inspecting}
-          cards={fieldCards
-            .filter((card) => card.fieldId === inspecting)
-            .map((card) => ({ id: card.id, cardId: card.cardId, granted: card.granted }))}
+          /**
+           * What is on the Obszar, from both places it can be.
+           *
+           * `field_cards` holds it while nobody is standing there. The moment
+           * somebody stops, `liftFieldCards` deletes those rows and the Karty
+           * live in that turn's own `drawn` until `leaveCardsBehind` writes
+           * back what was not taken — so asking only the table showed an empty
+           * Obszar on the one turn anybody is reading it.
+           *
+           * The turn's copy is added only for the seat whose turn it is and
+           * only on the Obszar they are standing on, which is the one case the
+           * two cannot both be populated.
+           */
+          cards={[
+            ...fieldCards
+              .filter((card) => card.fieldId === inspecting)
+              .map((card) => ({ id: card.id, cardId: card.cardId, granted: card.granted })),
+            ...(onField && myTurn && mySeat?.field_id === inspecting
+              ? onField.drawn.map((card, at) => ({
+                  // No row to name, so the key is the turn's own position. See
+                  // `viaTurn` — it is also what hides the "weź" button, which
+                  // needs a `field_cards` id this Karta does not have.
+                  id: `tura-${at}-${card.cardId}`,
+                  cardId: card.cardId as CardId,
+                  granted: card.granted,
+                  viaTurn: true as const,
+                }))
+              : []),
+          ]}
           standingHere={mySeat?.field_id === inspecting}
+          /* 13.4's remainder, and the deal itself — offered only where the
+             character actually is, since 13.1 gives them nothing to do on an
+             Obszar they are only reading about. */
+          owed={mySeat?.field_id === inspecting ? (onField?.draw ?? 0) : undefined}
+          onDraw={() => post("turn", { action: "draw" })}
           canAct={mySeat?.seat_index === game?.active_seat}
           // Ending the turn lives in this window now, not in the box in the
           // corner: a turn is read in one place and should be finished there.
