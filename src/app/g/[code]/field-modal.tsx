@@ -272,7 +272,20 @@ export function FieldModal({
 
   return (
     <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
+      {/* Wide enough for the deal while the deal is what it is showing.
+          Three Karty at `PICTURE_WIDTH` are 648 across with the gaps, and the
+          reading width is 512 — so the widest Obszar in the box printed three
+          cards into a column one and a half of them wide. It goes back to the
+          reading width afterwards, which is the width the rest of it wants:
+          prose, small capitals and rows of tiles do not want 768.
+
+          Only one change of width is ever visible, at the moment of the deal;
+          the window closes out of the wide state rather than shrinking. */}
+      <div
+        className={`flex max-h-[85vh] w-full flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)] ${
+          revealing ? "max-w-3xl" : "max-w-lg"
+        }`}
+      >
         <header className="flex items-baseline justify-between gap-3 border-b border-edge px-4 py-3">
           <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
             {field.name}
