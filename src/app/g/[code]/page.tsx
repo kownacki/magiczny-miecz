@@ -1279,6 +1279,18 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     cardId: card.cardId as CardId,
                     granted: card.granted,
                     viaTurn: true as const,
+                    /**
+                     * Turned over just now, as against found lying here.
+                     *
+                     * `ref` is which physical slice came off the pile, and only
+                     * a Karta the deck actually gave up this turn has one:
+                     * `liftFieldCards` rebuilds a Karta off a `field_cards` row,
+                     * which does not carry it. So the presence of a ref is the
+                     * difference between "I drew this" and "this was already
+                     * here", which is exactly what the reveal wants to show
+                     * large.
+                     */
+                    ...(card.ref ? { justDrawn: true as const, ref: card.ref } : {}),
                   }))
               : []),
           ]}

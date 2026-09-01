@@ -25,6 +25,9 @@ import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
 import { Fold } from "./fold";
 import { fieldGroups, type FieldGroupKey } from "@/lib/view/fieldGroups";
+import Image from "next/image";
+import { cardImageUrl } from "@/lib/view/cardImages";
+import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
 
@@ -68,6 +71,10 @@ export interface FieldCardHere {
   viaTurn?: boolean;
   /** What is left beside a Miejsce that lays out points (16.7). */
   pool?: number;
+  /** Turned over just now rather than found lying here — shown large in the reveal. */
+  justDrawn?: boolean;
+  /** Which slice came off the pile, so the picture is the copy that was dealt. */
+  ref?: string;
 }
 
 /**
@@ -237,6 +244,8 @@ export function FieldModal({
    * the note at the top of `fieldGroups.ts` for why there are two.
    */
   const groups = fieldGroups(cards);
+  /** What the deal just turned over, for the reveal above the rest. */
+  const drawnNow = cards.filter((card) => card.justDrawn);
 
   /**
    * Whether either action section has anything in it.
@@ -305,22 +314,54 @@ export function FieldModal({
                 Wyciągnij {owed === 1 ? "kartę" : `${owed} ${owed < 5 ? "karty" : "kart"}`}
               </button>
             )}
-            {/* Where the draw button was, once there is nothing left to deal:
-                the same place, so the eye does not have to move to find what to
-                press next. */}
-            {revealing && onDealSeen && (
-              <button
-                onClick={onDealSeen}
-                disabled={busy}
-                className="mb-2 w-full rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
-              >
-                Rozpatrz po kolei
-              </button>
-            )}
+
             <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
               {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
             </p>
           </section>
+
+          {/**
+           * The deal, at the size the Karty were turned over at.
+           *
+           * A tile is for recognising a Karta you already know is there; this
+           * is the moment it *arrives*, and at a table that moment is three
+           * pieces of card face up in front of everybody, read before anything
+           * is picked up. So the ones that just came off the pile are shown
+           * whole and full size, above what was already lying here — which the
+           * section below goes on listing, tiles and all, because that is the
+           * other half of what the reveal is for.
+           */}
+          {revealing && drawnNow.length > 0 && (
+            <section>
+              <h3 className="mb-2 text-[11px] uppercase tracking-widest text-verdigris">
+                Wyciągnięto {drawnNow.length}{" "}
+                {drawnNow.length === 1
+                  ? "kartę"
+                  : `${drawnNow.length < 5 ? "karty" : "kart"}`}
+              </h3>
+              <div className="flex flex-wrap items-start gap-3">
+                {drawnNow.map((card) => {
+                  const src = cardImageUrl(card.cardId, card.ref);
+                  return src ? (
+                    <Image
+                      key={card.id}
+                      src={src}
+                      alt={NAMES.get(card.cardId) ?? card.cardId}
+                      width={PICTURE_WIDTH}
+                      height={Math.round(PICTURE_WIDTH * CARD_RATIO)}
+                      style={{ width: PICTURE_WIDTH }}
+                      className="block h-auto rounded border border-edge"
+                      unoptimized
+                    />
+                  ) : (
+                    <p key={card.id} className="text-xs text-muted">
+                      {NAMES.get(card.cardId) ?? card.cardId}
+                    </p>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section>
             {/* "Leży tutaj" was the old heading and it said the wrong thing
@@ -450,6 +491,20 @@ export function FieldModal({
               </p>
             )}
           </section>
+
+          {/* Last of what the reveal is: you have seen the deal and what was
+              already here, and this is the way on. At the foot of the two
+              because it follows them — a "go on" above the thing it goes on
+              from is a button you press before you have read anything. */}
+          {revealing && onDealSeen && (
+            <button
+              onClick={onDealSeen}
+              disabled={busy}
+              className="w-full rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
+            >
+              Rozpatrz po kolei
+            </button>
+          )}
 
           {/* What can be done here, for whoever is standing here on their own
               turn. Everyone can read the Obszar — at a table the others read it
