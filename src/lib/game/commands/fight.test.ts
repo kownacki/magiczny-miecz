@@ -308,7 +308,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       seats: [aSeat({ id: "seat-a", seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
       users: duellists(),
       fieldCards: [
-        { id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false },
+        { id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false, pool: null },
       ],
       holdings: [
         aHolding({ id: "s-1", seat_id: "seat-a", card_id: "golem", kind: "spell", face: "hidden" }),
@@ -412,7 +412,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     const atACard = aTable({
       game: { active_seat: 0, turn_state: { phase: "roll" } },
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
-      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false }],
+      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false, pool: null }],
       holdings: [
         aHolding({ id: "s-1", seat_id: "seat-a", card_id: "krag-plomieni", kind: "spell", face: "hidden" }),
       ],
@@ -864,7 +864,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         aHolding({ id: "s-1", seat_id: "seat-a", card_id: "siewca-spustoszenia", kind: "spell" }),
       ],
       fieldCards: [
-        { id: "fc-1", field_id: "mroczna-polana", card_id: "cyklop", granted: false },
+        { id: "fc-1", field_id: "mroczna-polana", card_id: "cyklop", granted: false, pool: null },
       ],
     });
 
@@ -977,7 +977,7 @@ describe("kostki w walce (17.3, 17.4)", () => {
         }),
       },
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
-      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false }],
+      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false, pool: null }],
     });
     const { writes } = await resolveFight(board, undefined, ports());
     expect(writes.fieldCards?.delete).toEqual(["fc1"]);

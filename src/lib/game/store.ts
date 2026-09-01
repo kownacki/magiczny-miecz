@@ -166,7 +166,7 @@ export const USER_COLUMNS =
 export const HOLDING_COLUMNS = "id,seat_id,card_id,kind,face,slot,ordinal,carried_by,granted";
 
 /** And a Karta lying face up on a field (16.8), which has four. */
-export const FIELD_CARD_COLUMNS = "id,field_id,card_id,granted";
+export const FIELD_CARD_COLUMNS = "id,field_id,card_id,granted,pool";
 
 /**
  * Creates a table and returns the host's seat token.
@@ -681,6 +681,17 @@ export interface FieldCardRow {
   card_id: string;
   /** Dropped here by a test grant; it goes nowhere when it leaves again. */
   granted: boolean;
+  /**
+   * What is left of a Miejsce's pool of points (16.7), null for every other
+   * card — which is every card but the Drzewo Życia, the Jezioro Magiczne and
+   * the Zaklęte Źródło.
+   *
+   * The count belongs to the Karta and not to anybody looking at it: it
+   * outlives every visitor and the next character to stop here inherits what
+   * the last one left. See `engine/pools.ts` and the column's own note in
+   * db/schema.sql.
+   */
+  pool: number | null;
 }
 
 export async function fieldCardsFor(gameId: string, on: DbHandle = handleNow()): Promise<FieldCardRow[]> {

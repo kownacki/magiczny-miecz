@@ -76,6 +76,20 @@ export interface TurnCard {
    * off the top.
    */
   granted?: boolean;
+  /**
+   * What is left of a Miejsce's pool of points (16.7), for the three Karty
+   * that lie on an Obszar with one.
+   *
+   * Here rather than only on the row because the row does not survive a visit:
+   * `liftFieldCards` deletes every Karta on the Obszar when somebody stops
+   * there and `leaveCardsBehind` writes back whatever they did not take, so a
+   * Drzewo Życia is off the board for the length of a turn. A count that lived
+   * only in `field_cards` would be four again every time anybody walked past.
+   *
+   * Absent on every other card, and absent means "ask `startingPool`" rather
+   * than "empty" — see `afterVisit`.
+   */
+  pool?: number | null;
 }
 
 /**

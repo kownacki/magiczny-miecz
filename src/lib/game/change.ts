@@ -123,6 +123,23 @@ export interface NewFieldCard {
   field_id: string;
   card_id: string;
   granted?: boolean;
+  /** Seeded from the card's own `zostaje-z-pula`; absent for everything else. */
+  pool?: number | null;
+}
+
+/**
+ * A Karta on an Obszar changing without leaving it.
+ *
+ * There was no such thing until the wells: a card on a field arrived, sat
+ * there, and left, so insert and delete were the whole vocabulary. A Drzewo
+ * Życia with one fruit left is the same Karta on the same Obszar with a
+ * different number beside it, which is a patch and not a delete followed by an
+ * insert — that pair would give it a new row id and lose its place in
+ * `created_at`, and arrival order is what orders the Obszar's inventory.
+ */
+export interface FieldCardPatch {
+  id: string;
+  patch: Partial<Omit<FieldCardRow, "id">>;
 }
 
 export interface NewEffect {
@@ -203,7 +220,7 @@ export interface Changeset {
   usersNew?: NewUser[];
   usersRemoved?: string[];
   holdings?: { insert?: NewHolding[]; patch?: HoldingPatch[]; delete?: string[] };
-  fieldCards?: { insert?: NewFieldCard[]; delete?: string[] };
+  fieldCards?: { insert?: NewFieldCard[]; patch?: FieldCardPatch[]; delete?: string[] };
   effects?: { insert?: NewEffect[]; patch?: EffectPatch[]; delete?: string[] };
   journal?: JournalWrite[];
 }
@@ -288,6 +305,7 @@ export function merge(first: Changeset, second: Changeset): Changeset {
       ? {
           fieldCards: drop({
             insert: both(first.fieldCards?.insert, second.fieldCards?.insert),
+            patch: both(first.fieldCards?.patch, second.fieldCards?.patch),
             delete: both(first.fieldCards?.delete, second.fieldCards?.delete),
           }),
         }
@@ -411,14 +429,22 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
     );
 
   const goneFieldCards = new Set(writes.fieldCards?.delete ?? []);
+  const fieldCardPatches = byId(writes.fieldCards?.patch);
   const fieldCards = snapshot.fieldCards
     .filter((card) => !goneFieldCards.has(card.id))
+    // Removals before patches, here and in `commit`, so the two agree about a
+    // Karta that was drunk dry and taken off the Obszar in one Changeset.
+    .map((card) => {
+      const patch = fieldCardPatches.get(card.id);
+      return patch ? ({ ...card, ...patch } as FieldCardRow) : card;
+    })
     .concat(
       (writes.fieldCards?.insert ?? []).map((one) => ({
         id: pendingId(),
         field_id: one.field_id,
         card_id: one.card_id,
         granted: one.granted ?? false,
+        pool: one.pool ?? null,
       })),
     );
 
@@ -536,6 +562,7 @@ export function isEmpty(writes: Changeset): boolean {
     !writes.holdings?.patch?.length &&
     !writes.holdings?.delete?.length &&
     !writes.fieldCards?.insert?.length &&
+    !writes.fieldCards?.patch?.length &&
     !writes.fieldCards?.delete?.length &&
     !writes.effects?.insert?.length &&
     !writes.effects?.patch?.length &&
@@ -660,6 +687,10 @@ export async function commit(
     const { error } = await on.from("field_cards").delete().eq("game_id", gameId).in("id", writes.fieldCards.delete);
     if (error) throw new Failure(`commit(fieldCards.delete): ${error.message}`);
   }
+  for (const card of writes.fieldCards?.patch ?? []) {
+    const { error } = await t.fieldCards.update(card.patch).eq("id", card.id);
+    if (error) throw new Failure(`commit(fieldCards.patch): ${error.message}`);
+  }
   if (writes.fieldCards?.insert?.length) {
     const { error } = await t.fieldCards.insert(
       writes.fieldCards.insert.map((one) => ({
@@ -671,6 +702,10 @@ export async function commit(
         // sends as null and the column refuses. It cost a half-written commit
         // the first time a card went down that nobody had conjured.
         granted: one.granted ?? false,
+        // Null rather than undefined for the same reason, though this column
+        // takes one: an omitted key and an explicit null are the same row here
+        // and it is worth them looking the same in the code too.
+        pool: one.pool ?? null,
       })),
     );
     if (error) throw new Failure(`commit(fieldCards.insert): ${error.message}`);

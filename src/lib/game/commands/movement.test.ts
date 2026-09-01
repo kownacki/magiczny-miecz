@@ -413,8 +413,8 @@ describe("ruch (10.2, 13.4)", () => {
   it("picks up what somebody left on the Obszar", () => {
     const table = walking("zaczarowane-wzgorza", {
       fieldCards: [
-        { id: "fc-1", field_id: "plaskowyz-mgiel", card_id: "helm", granted: false },
-        { id: "fc-2", field_id: "pustelnia", card_id: "wilk", granted: false },
+        { id: "fc-1", field_id: "plaskowyz-mgiel", card_id: "helm", granted: false, pool: null },
+        { id: "fc-2", field_id: "pustelnia", card_id: "wilk", granted: false, pool: null },
       ],
     });
     const { writes } = moveTo(table, { destination: "plaskowyz-mgiel" });
@@ -434,7 +434,7 @@ describe("ruch (10.2, 13.4)", () => {
     const table = () =>
       walking("urwisko-1", {
         fieldCards: [
-          { id: "fc-1", field_id: "ruiny-twierdzy", card_id: "helm", granted: false },
+          { id: "fc-1", field_id: "ruiny-twierdzy", card_id: "helm", granted: false, pool: null },
         ],
       });
 

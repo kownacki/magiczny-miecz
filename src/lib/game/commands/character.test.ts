@@ -418,7 +418,7 @@ describe("przestawienie figury", () => {
         },
       },
       fieldCards: [
-        { id: "fc-1", field_id: "bezdroza", card_id: "cyklop", granted: false },
+        { id: "fc-1", field_id: "bezdroza", card_id: "cyklop", granted: false, pool: null },
       ],
     });
     const { writes } = placeSeat(mid, {

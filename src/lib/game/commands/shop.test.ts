@@ -36,7 +36,7 @@ describe("what an Obszar is offering", () => {
   it("finds one that arrived as a card and stayed", () => {
     const withCard = aTable({
       seats: [aSeat({ id: "seat-a", field_id: STEP })],
-      fieldCards: [{ id: "fc1", field_id: "step-1", card_id: "alchemik", granted: false }],
+      fieldCards: [{ id: "fc1", field_id: "step-1", card_id: "alchemik", granted: false, pool: null }],
     });
     // Only asserts the walk reaches field cards at all; which card carries what
     // is `cardScript.ts`'s business and is tested there.

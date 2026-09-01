@@ -70,7 +70,7 @@ describe("taking a card", () => {
       const lying = table({
         game: { turn_state: only(onField()) },
         fieldCards: [
-          { id: "fc1", field_id: HERE, card_id: "eliksir-sily", granted: true },
+          { id: "fc1", field_id: HERE, card_id: "eliksir-sily", granted: true, pool: null },
         ] as never,
       });
       const { writes } = takeCard(lying, { seatId: "seat-a", cardId: "eliksir-sily" });
@@ -328,6 +328,7 @@ describe("taking a card", () => {
         field_id: ELSEWHERE,
         card_id: "magiczny-miecz",
         granted: false,
+        pool: null,
       })),
     });
     expect(() => takeCard(gone, { seatId: "seat-a", cardId: "magiczny-miecz" })).toThrow(
@@ -644,7 +645,7 @@ describe("wearing a Przedmiot (slotowy)", () => {
  * ======================================================================= */
 
 describe("picking something up off the Obszar (12.1)", () => {
-  const lying = { id: "fc1", field_id: HERE, card_id: "helm", granted: false };
+  const lying = { id: "fc1", field_id: HERE, card_id: "helm", granted: false, pool: null };
 
   const table = (over: Parameters<typeof aTable>[0] = {}) =>
     aTable({
@@ -709,7 +710,7 @@ describe("picking something up off the Obszar (12.1)", () => {
   /** 12.1 a): "należy najpierw pokonać Wrogów albo im uciec". */
   it("refuses while an unfought Wróg lies on the same Obszar", () => {
     const guarded = table({
-      fieldCards: [lying, { id: "fc2", field_id: HERE, card_id: "cyklop", granted: false }],
+      fieldCards: [lying, { id: "fc2", field_id: HERE, card_id: "cyklop", granted: false, pool: null }],
     });
     expect(() => takeFromField(guarded, { seatId: "seat-a", fieldCardId: "fc1" })).toThrow(
       "Najpierw pokonaj Wrogów albo im ucieknij (12.1a).",
@@ -719,7 +720,7 @@ describe("picking something up off the Obszar (12.1)", () => {
   it("lets it through once that Wróg has been fought", () => {
     const beaten = table({
       game: { turn_state: onField({ fought: ["cyklop"] }) },
-      fieldCards: [lying, { id: "fc2", field_id: HERE, card_id: "cyklop", granted: false }],
+      fieldCards: [lying, { id: "fc2", field_id: HERE, card_id: "cyklop", granted: false, pool: null }],
     });
     expect(takeFromField(beaten, { seatId: "seat-a", fieldCardId: "fc1" }).result.kind).toBe(
       "item",
@@ -759,6 +760,7 @@ describe("picking something up off the Obszar (12.1)", () => {
       field_id: HERE,
       card_id: "tarcza-tolimana",
       granted: false,
+      pool: null,
     }));
     const table_ = table({ fieldCards: all });
     expect(takeFromField(table_, { seatId: "seat-a", fieldCardId: "fc0" }).result.kind).toBe(
@@ -898,6 +900,7 @@ describe("clearing an Obszar", () => {
         field_id: HERE,
         card_id: one.card_id,
         granted: one.granted ?? false,
+        pool: null,
       })),
       game: { deck: { events: { draw: [], discard: [] }, spells: { draw: [], discard: [] } } },
     });

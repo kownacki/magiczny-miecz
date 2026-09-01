@@ -5,6 +5,7 @@ import { scriptFor } from "@/lib/engine/cardScript";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { describeEffect } from "@/lib/engine/effectText";
 import { usageOf } from "@/lib/engine/uses";
+import { afterVisit } from "@/lib/engine/pools";
 import { cardName } from "@/lib/engine/polish";
 import type { Effect } from "@/lib/engine/cardScript";
 import {
@@ -17,7 +18,7 @@ import {
   type Snapshot,
 } from "../change";
 import { putOnPile } from "./piles";
-import { requireTop } from "@/lib/engine/stack";
+import { replaceTop, requireTop, topIf } from "@/lib/engine/stack";
 import { activeSeat, seatView } from "./seat";
 import { skipsRollAt } from "@/lib/engine/abilities";
 import { addEffect } from "./turn";
@@ -337,7 +338,36 @@ export async function resolveDrawnCard(
         } satisfies Changeset)
       : {};
 
-  const soFar = mergeAll(rolled, done.writes, kept);
+  /**
+   * One point off the well, for a Karta that lies there with a pool (16.7).
+   *
+   * "Każdy, kto tu trafi, będzie mógł zjeść owoc odzyskując 1 punkt Życia i
+   * zmniejszając tym samym liczbę punktów przy Drzewie." Only when the effect
+   * actually ran: a `pending` or `suspended` resolution has not fed anybody, and
+   * these three are `optional`, so somebody who walks past a Zaklęte Źródło with
+   * full Magia must not empty it by looking at it.
+   *
+   * Written onto the turn's own card rather than onto a row, because there is
+   * no row — `liftFieldCards` deleted it on arrival. `leaveCardsBehind` puts
+   * back what is left, or nothing at all when the well has run dry.
+   */
+  const drunk = ((): Changeset => {
+    if (done.result.pending || done.result.suspended) return {};
+    const state = topIf(snapshot.game.turn_state, "field");
+    if (!state) return {};
+    const at = state.drawn.findIndex((entry) => entry.cardId === command.cardId);
+    if (at === -1) return {};
+    const left = afterVisit(command.cardId, state.drawn[at].pool ?? null);
+    if (!left) return {};
+    const drawn = state.drawn.map((entry, index) =>
+      index === at ? { ...entry, pool: left.left } : entry,
+    );
+    return {
+      game: { turn_state: replaceTop(snapshot.game.turn_state, { ...state, drawn }) },
+    };
+  })();
+
+  const soFar = mergeAll(rolled, done.writes, kept, drunk);
   const noted =
     done.result.pending || done.result.suspended
       ? {}

@@ -544,7 +544,27 @@ export function liftFieldCards(
     writes: { fieldCards: { delete: waiting.map((row) => row.id) } },
     cards: waiting.flatMap((row) => {
       const card = EVENTS.find((c) => c.id === row.card_id);
-      return card ? [{ cardId: card.id, cardClass: card.cardClass }] : [];
+      /**
+       * Both marks travel back off the board, and only one of them used to.
+       *
+       * `leaveCardsBehind` is careful to write `granted` onto the row — its
+       * comment says why, a conjured Karta must not become a real one — and
+       * this, the other half of the same round trip, dropped it. A staged
+       * Cyklop left lying on an Obszar came back off it clean, and the next
+       * character to pick him up put a phantom on the used pile. `pool` would
+       * have gone the same way: a Drzewo Życia refilled itself to four every
+       * time somebody stopped on its Obszar.
+       */
+      return card
+        ? [
+            {
+              cardId: card.id,
+              cardClass: card.cardClass,
+              ...(row.granted ? { granted: true } : {}),
+              ...(row.pool !== null ? { pool: row.pool } : {}),
+            },
+          ]
+        : [];
     }),
   };
 }

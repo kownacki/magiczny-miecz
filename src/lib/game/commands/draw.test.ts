@@ -504,7 +504,7 @@ describe("stan Wyposażenia (21.2)", () => {
   /** 12.1 and 16.8: a card left lying on an Obszar is still out of the shop. */
   it("counts a copy lying on a field too", () => {
     const table = aTable({
-      fieldCards: [{ id: "f-1", field_id: HERE, card_id: "latarnia", granted: false }],
+      fieldCards: [{ id: "f-1", field_id: HERE, card_id: "latarnia", granted: false, pool: null }],
     });
     expect(shopStock(table).latarnia).toBe(0);
   });

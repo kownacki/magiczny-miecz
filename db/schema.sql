@@ -404,6 +404,21 @@ create table if not exists magiczny_miecz.field_cards (
   -- somebody else would otherwise re-enter the game as a real one, and reach a
   -- pile the next time it was discarded. See holdings.granted.
   granted boolean not null default false,
+  -- What is left of a Miejsce's pool, and null for everything else.
+  --
+  -- 16.7's three wells: Drzewo Życia lays out 4 punkty Życia, Jezioro Magiczne
+  -- 4 Miecza, Zaklęte Źródło 4 Magii, and each says the same thing — "Każdy,
+  -- kto tu trafi, będzie mógł [...] zmniejszając tym samym liczbę punktów przy
+  -- Drzewie [...] Po wykorzystaniu 4 punktów, Drzewo usycha".
+  --
+  -- On the row and not in `seat_effects`, which is where every other running
+  -- count lives, because that table's `seat_id` is `not null` and this count
+  -- belongs to nobody: it is the Karta's, it outlives every visitor, and the
+  -- next character to stop here inherits whatever the last one left. A Karta
+  -- lying on an Obszar having nowhere to carry state is the same gap that
+  -- keeps KRĄG PŁOMIENI and WŁADCA GROMU at `czesciowe` in coverage.ts; this
+  -- column closes it for the one shape that needs only a number.
+  pool int,
   created_at timestamptz not null default now()
 );
 

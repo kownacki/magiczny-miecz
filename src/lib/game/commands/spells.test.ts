@@ -202,7 +202,7 @@ describe("every Zaklęcie is carried out, and the halves that are not are named"
  */
 describe("Władca Zdarzeń, and the answer it waits for", () => {
   const HERE = "wrzosowiska";
-  const lying = { id: "fc1", field_id: HERE, card_id: "cyklop", granted: false };
+  const lying = { id: "fc1", field_id: HERE, card_id: "cyklop", granted: false, pool: null };
 
   const table = (over: { seats?: unknown[] } = {}) =>
     aTable({

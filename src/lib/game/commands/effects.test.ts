@@ -453,7 +453,7 @@ describe("moving a Karta that is lying on the board", () => {
   const board = (over: { seats?: ReturnType<typeof aSeat>[] } = {}) =>
     aTable({
       seats: over.seats ?? [aSeat({ id: "seat-a", seat_index: 0 })],
-      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false }],
+      fieldCards: [{ id: "fc1", field_id: "wrzosowiska", card_id: "cyklop", granted: false, pool: null }],
     });
 
   const move = (table: ReturnType<typeof board>, destination?: string) =>

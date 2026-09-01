@@ -130,7 +130,7 @@ describe("passing the turn (10.1)", () => {
     });
     const writes = passTurn(table);
     expect(writes.fieldCards?.insert).toEqual([
-      { field_id: "mroczna-polana", card_id: "helm", granted: false },
+      { field_id: "mroczna-polana", card_id: "helm", granted: false, pool: null },
     ]);
     expect(writes.journal?.map((line) => line.kind)).toEqual(["left-behind", "turn-end"]);
   });
@@ -158,7 +158,7 @@ describe("passing the turn (10.1)", () => {
       },
     });
     expect(passTurn(table).fieldCards?.insert).toEqual([
-      { field_id: "mroczna-polana", card_id: "wilkolak", granted: true },
+      { field_id: "mroczna-polana", card_id: "wilkolak", granted: true, pool: null },
     ]);
   });
 });
@@ -219,6 +219,51 @@ describe("what is left on the Obszar at the end of a turn", () => {
       round: 3,
       remaining: cardIds.map((cardId) => ({ cardId, cardClass: "friend" }) as never),
     });
+
+  /**
+   * 16.7's three wells, whose count belongs to the Karta and not to anybody.
+   *
+   * Nothing subtracted from these before: `disposition` said `zostaje-z-pula`
+   * from the day they were transcribed, `describeDisposition` printed a
+   * sentence about four points, and no code anywhere took one away — so four
+   * players could drink from one Drzewo forever and it never withered.
+   */
+  describe("a Miejsce with a pool (16.7)", () => {
+    const pooled = (cardId: string, pool?: number | null) =>
+      leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
+        fieldId: "przelecz-wichrow",
+        seatId: "seat-a",
+        round: 3,
+        remaining: [{ cardId, cardClass: "place", ...(pool === undefined ? {} : { pool }) } as never],
+      });
+
+    it("lays out four points beside a well nobody has drunk from yet", () => {
+      // "Po znalezieniu Drzewa, połóż przy nim 4 punkty Życia."
+      expect(pooled("drzewo-zycia").fieldCards?.insert).toEqual([
+        { field_id: "przelecz-wichrow", card_id: "drzewo-zycia", granted: false, pool: 4 },
+      ]);
+    });
+
+    it("writes back what the visitor left, not a fresh four", () => {
+      expect(pooled("jezioro-magiczne", 2).fieldCards?.insert?.[0]).toMatchObject({ pool: 2 });
+    });
+
+    /** "Po wykorzystaniu 4 punktów, Drzewo usycha, należy odłożyć jego Kartę." */
+    it("sends a well that has run dry to the stos zużytych rather than back", () => {
+      const writes = pooled("zaklete-zrodlo", 0);
+      expect(writes.fieldCards?.insert ?? []).toEqual([]);
+      // Not left behind either: it goes the way the Tragarz does, onto the pile.
+      expect(writes.journal?.map((line) => line.kind) ?? []).not.toContain("left-behind");
+    });
+
+    it("leaves a Miejsce with no pool exactly as it was", () => {
+      // "Labirynt pozostanie tu do końca rozgrywki" — nothing beside it to count.
+      expect(pooled("labirynt").fieldCards?.insert?.[0]).toMatchObject({
+        card_id: "labirynt",
+        pool: null,
+      });
+    });
+  });
 
   it("leaves an unpaid Najemnik lying there, because he says he waits", () => {
     // "Jeśli odmówisz zapłaty, będzie czekał tu na bardziej hojną Postać."

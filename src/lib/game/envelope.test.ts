@@ -473,8 +473,8 @@ describe("what a character is under, sent as rows", () => {
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
       users: [aUser({ id: "usra", name: "Michał", seat_index: 0 })],
       fieldCards: [
-        { id: "fc-1", field_id: "karczma", card_id: "targowisko", granted: true },
-        { id: "fc-2", field_id: "karczma", card_id: "cyklop", granted: false },
+        { id: "fc-1", field_id: "karczma", card_id: "targowisko", granted: true, pool: null },
+        { id: "fc-2", field_id: "karczma", card_id: "cyklop", granted: false, pool: null },
       ],
     });
     const out = envelopeFor(state, "usra", NOW).fieldCards;

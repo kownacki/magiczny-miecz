@@ -3,6 +3,7 @@
 import { nextSeat, startTurn } from "@/lib/engine/turn";
 import { afterAnyTurn, afterTurn, playsAgain, type Status } from "@/lib/engine/status";
 import { scriptFor } from "@/lib/engine/cardScript";
+import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
 import { only, top, topIf } from "@/lib/engine/stack";
@@ -155,7 +156,16 @@ export function leaveCardsBehind(
    * says `odłóż`, which is the door this function already has.
    */
   const walksOff = (card: TurnCard) => entryPrice(abilitiesOf(card.cardId))?.bezZaplaty === "odchodzi";
-  const goes = (card: TurnCard) => spentByReading(card) || walksOff(card);
+  /**
+   * "Po wykorzystaniu 4 punktów, Drzewo usycha, należy odłożyć jego Kartę."
+   *
+   * A well that has been drunk dry leaves by the same door as a Karta whose own
+   * text says `odłóż`, which is the door below. The three of them are the only
+   * cards in the box that stay for a while and then go for a reason that is
+   * neither a turn count nor a visitor — see `engine/pools.ts`.
+   */
+  const ranDry = (card: TurnCard) => drawsFromPool(card.cardId) && !poolRemains(card.cardId, card.pool ?? null);
+  const goes = (card: TurnCard) => spentByReading(card) || walksOff(card) || ranDry(card);
   const stays = input.remaining.filter((card) => !goes(card));
 
   // The other half of the same sentence: a Karta whose own text says "odłóż" is
@@ -182,6 +192,16 @@ export function leaveCardsBehind(
         field_id: input.fieldId,
         card_id: card.cardId,
         granted: card.granted === true,
+        /**
+         * What is left beside a Miejsce, or what it lays out on being found.
+         *
+         * "Po znalezieniu Drzewa, połóż przy nim 4 punkty Życia" is the second
+         * half: a well arriving here for the first time has no count yet, and
+         * `startingPool` is what it starts with. A well coming back after a
+         * visit carries the number `resolveDrawnCard` left on it. Null for
+         * every other card, which is every card but three.
+         */
+        pool: card.pool ?? startingPool(card.cardId),
       })),
     },
     // 16.8 leaves them lying face up, so what was left and where is something
