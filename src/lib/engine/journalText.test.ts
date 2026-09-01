@@ -325,6 +325,26 @@ suite("Polish agreement", () => {
     );
   });
 
+  /**
+   * The board's two halves of one act, a word apart.
+   *
+   * `clear` said „sprząta", which is housework — a table tidied rather than a
+   * Karta taken off the board. The box's own phrase is „zdjąć z planszy", and
+   * it makes the line `place`'s exact inverse, which is what it is.
+   */
+  it("takes a Karta off a pole the way `place` puts one on", () => {
+    expect(text("test-card-field", { fieldId: "wrzosowiska", cardId: "targowisko" })).toBe(
+      "Michał (GOBLIN) kładzie na polu Wrzosowiska: TARGOWISKO.",
+    );
+    expect(
+      text("override", {
+        what: "clear-field",
+        fieldId: "wrzosowiska",
+        cards: ["targowisko", "sidh"],
+      }),
+    ).toBe("Michał (GOBLIN) zdejmuje z pola Wrzosowiska: TARGOWISKO, SIDH.");
+  });
+
   it("never uses a gendered past tense", () => {
     // Player names carry no gender, and Polish past tense does. Every sentence
     // is third-person present so it reads correctly for anyone at the table.

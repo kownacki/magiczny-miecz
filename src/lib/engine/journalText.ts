@@ -590,8 +590,23 @@ export function describe(
        */
       if (data.what === "clear-field") {
         const swept = Array.isArray(data.cards) ? (data.cards as string[]) : [];
+        /**
+         * „Zdejmuje z pola X", against `place`'s „kładzie na polu X" — the two
+         * lines are one word apart because the two acts are.
+         *
+         * It said „sprząta", which is housework: a table being tidied rather
+         * than a Karta leaving the board. „Zdjąć z planszy" is the box's own
+         * phrase for it (WŁADCA ZDARZEŃ: „zdjąć z planszy… i położyć"), and
+         * „usuwa" would have been worse than either — the Karty are not
+         * removed, they go to the stos zużytych, which is what 9.5 deals from
+         * next.
+         *
+         * „z pola X" keeps the name in the nominative, as every other line
+         * naming an Obszar does: the names are printed on the board and are
+         * inserted verbatim, so nothing here can decline them.
+         */
         return line(
-          `${who} sprząta ${field(data.fieldId)}: ${swept.map((id) => card(id)).join(", ")}.`,
+          `${who} zdejmuje z pola ${field(data.fieldId)}: ${swept.map((id) => card(id)).join(", ")}.`,
         );
       }
       if (data.what === "endless-stock") {
