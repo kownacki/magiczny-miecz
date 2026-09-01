@@ -6,7 +6,8 @@ import { buildDeck, type DeckState } from "@/lib/engine/deck";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { asTurnState, type TurnState } from "@/lib/engine/stack";
 import { scriptedRandom } from "@/lib/engine/ports";
-import type { CommandPorts, Snapshot } from "./change";
+import { apply, type CommandPorts, type Outcome, type Snapshot } from "./change";
+import { requireTop } from "@/lib/engine/stack";
 import type { GameRow, HoldingRow, SeatRow, UserRow } from "./store";
 
 /**
@@ -163,4 +164,83 @@ export const NOW = Date.parse("2026-01-01T12:00:00Z");
 /** The ports a command runs against in a test: no dice unless a test scripts some. */
 export function ports(over: Partial<CommandPorts> = {}): CommandPorts {
   return { random: scriptedRandom([]), now: () => NOW, ...over };
+}
+
+/**
+ * A command as the driver calls one: snapshot in, Changeset out.
+ *
+ * Every command in `commands/` has this shape, and the ones that need neither
+ * ports nor a command object are assignable to it unchanged — a function of
+ * two parameters satisfies a type of three.
+ */
+type AnyCommand<C, T> = (
+  snapshot: Snapshot,
+  command: C,
+  ports: CommandPorts,
+) => Outcome<T> | Promise<Outcome<T>>;
+
+/**
+ * A table you can play turns against, for tests that are a sequence rather
+ * than a single question.
+ *
+ * `aTable` is deep and carries no *time*: every multi-step test wrote the fold
+ * out by hand —
+ *
+ *     at = apply(at, (await rollForMove(at, {}, ports({ random: … }))).writes);
+ *
+ * — once per moment, which meant each moment re-ran its own prefix inline and
+ * a scenario read as plumbing rather than as the ten moments it is. The
+ * acceptance test in `commands/stack.test.ts` had a moment blocked on this and
+ * saying so: "waits on a second turn in the harness".
+ *
+ * Mutable on purpose. A test is a script of things that happen in order, and
+ * threading a new binding through each line is the noise this exists to
+ * delete.
+ */
+export interface Driver {
+  /** The table as it now stands. */
+  readonly snapshot: Snapshot;
+  /** The stack, top last — what `docs/STACK.md` writes in its right-hand column. */
+  readonly phases: TurnPhase["phase"][];
+  /** What the last `run` returned, for the assertions that are about the result. */
+  readonly result: unknown;
+  /** Runs one command and folds its Changeset in. */
+  run<C, T>(
+    command: AnyCommand<C, T>,
+    args?: C,
+    over?: Partial<CommandPorts>,
+  ): Promise<Driver>;
+  /** The frame on screen, insisting it is the kind named. */
+  frame<K extends TurnPhase["phase"]>(kind: K): Extract<TurnPhase, { phase: K }>;
+}
+
+export function at(start: Snapshot): Driver {
+  let table = start;
+  let last: unknown = undefined;
+  const driver: Driver = {
+    get snapshot() {
+      return table;
+    },
+    get phases() {
+      return table.game.turn_state.stack.map((frame) => frame.phase);
+    },
+    get result() {
+      return last;
+    },
+    async run<C, T>(command: AnyCommand<C, T>, args?: C, over: Partial<CommandPorts> = {}) {
+      const done = await command(table, args as C, ports(over));
+      table = apply(table, done.writes);
+      last = done.result;
+      return driver;
+    },
+    frame<K extends TurnPhase["phase"]>(kind: K) {
+      return requireTop(table.game.turn_state, kind);
+    },
+  };
+  return driver;
+}
+
+/** Dice for one `run`, in the order the command will ask for them. */
+export function rolling(...faces: number[]): Partial<CommandPorts> {
+  return { random: scriptedRandom(faces) };
 }

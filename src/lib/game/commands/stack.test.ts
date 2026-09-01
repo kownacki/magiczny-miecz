@@ -4,7 +4,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { top, type TurnState } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { EVENT_COPIES } from "../decks";
-import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
+import { aHolding, aSeat, aTable, at as driving, aUser, ports, rolling } from "../fixture";
 import { apply, type Snapshot } from "../change";
 import { drawCard } from "./draw";
 import { beginFight, fightRoll, resolveFight } from "./fight";
@@ -12,6 +12,7 @@ import { castSpell } from "./spells";
 import { claimFloor } from "./spellFloor";
 import { resolveDrawnCard } from "./effects";
 import { moveTo, rollForMove } from "./movement";
+import { finishTurn } from "./turn";
 
 /**
  * The resolution stack's acceptance test — docs/STACK.md, "The acceptance test".
@@ -95,12 +96,17 @@ const theTable = (): Snapshot =>
         magic_own: 5,
         field_id: asFieldId("krag-mocy"),
       }),
+      /**
+       * Three Obszary widdershins of the Płaskowyż, for the same reason Ania
+       * is four: moment 10 is a real walk. She was on Uroczysko, which is in
+       * the Dolny Krąg and cannot reach a Środkowy Obszar at all.
+       */
       aSeat({
         id: "seat-c",
         seat_index: 2,
         character_id: "elf",
         nature: "evil",
-        field_id: asFieldId("uroczysko"),
+        field_id: asFieldId("wieza-przeznaczenia"),
       }),
       aSeat({ id: "seat-d", seat_index: 3, field_id: asFieldId("osada") }),
     ],
@@ -118,13 +124,13 @@ const theTable = (): Snapshot =>
 
 /** Moment 1 and 2: on the Płaskowyż with its three Karty turned over. */
 async function throughTheDraw(): Promise<Snapshot> {
-  let at = theTable();
-  at = apply(at, (await rollForMove(at, {}, ports({ random: scriptedRandom([4]) }))).writes);
-  at = apply(at, moveTo(at, { destination: "plaskowyz-mgiel" }).writes);
+  const play = driving(theTable());
+  await play.run(rollForMove, {}, rolling(4));
+  await play.run(moveTo, { destination: "plaskowyz-mgiel" });
   for (let n = 0; n < 3; n++) {
-    at = apply(at, drawCard(at, { named: null, shuffle: asIs }).writes);
+    await play.run(drawCard, { named: null, shuffle: asIs });
   }
-  return at;
+  return play.snapshot;
 }
 
 describe("the resolution stack (docs/STACK.md)", () => {
@@ -279,8 +285,100 @@ describe("the resolution stack (docs/STACK.md)", () => {
     expect(field.resolved ?? []).not.toContain(GROTA);
   });
 
+  /**
+   * The turn Ania actually played, ended, and handed on twice — the whole of
+   * moments 1 to 9 and then some, which is what moment 10 needs standing
+   * behind it. `finishTurn` refuses while the Smok's attempt is still open
+   * (17.4), so the Krąg of moments 7-8 is what lets the turn close at all.
+   */
+  async function untilCelinaArrives() {
+    const play = driving(await throughTheDraw());
+    // Moment 3: Bartek's Odmiana Losu swaps the Ścieżka out for the Koszmar,
+    // which is the Karta moment 10 turns on.
+    await play.run(castSpell, { seatId: "seat-b", holdingId: "h-odmiana", shuffle: asIs });
+    await play.run(resolveDrawnCard, { cardId: KOSZMAR, shuffle: asIs });
+    await play.run(beginFight, { cardIds: [SMOK] });
+    const dice = rolling(6, 1, 1, 1, 1, 1);
+    await play.run(fightRoll, { side: "player" }, dice);
+    await play.run(fightRoll, { side: "enemy" }, dice);
+    await play.run(resolveFight, undefined as never, dice);
+    await play.run(claimFloor, { seatId: "seat-b" });
+    await play.run(castSpell, {
+      seatId: "seat-b",
+      holdingId: "h-krag",
+      target: { foeInFight: true },
+      shuffle: asIs,
+    });
+    // Ania's turn ends; Bartek's passes; Celina walks three Obszary onto the
+    // Płaskowyż the three Karty are lying on.
+    await play.run(finishTurn);
+    await play.run(finishTurn);
+    await play.run(rollForMove, {}, rolling(3));
+    await play.run(moveTo, { destination: "plaskowyz-mgiel" });
+    return play;
+  }
+
+  it("10. Celina arrives and draws zero — the Karty are already lying there (15.1)", async () => {
+    const play = await untilCelinaArrives();
+
+    expect(play.snapshot.game.active_seat).toBe(2);
+    const field = play.frame("field");
+    // 15.1 draws on arrival; these Karty were drawn by Ania and left face up
+    // (16.8), so there is nothing to draw and everything to deal with.
+    expect(field.draw).toBe(0);
+    expect(field.drawn.map((one) => one.cardId)).toEqual([SMOK, KOSZMAR, GROTA]);
+  });
+
+  it("10. Koszmar grants the Zła Postać her wish, and the teleport is a cut (laws 2, 5)", async () => {
+    const play = await untilCelinaArrives();
+
+    /**
+     * „Jeżeli jesteś Złą Postacią, spełni jedno z twoich życzeń" — Celina is,
+     * and the sixth wish is „przeniesienie w tym Kręgu". The choice and the
+     * Obszar travel together in one commit, which is the batching docs/STACK.md
+     * kept: an own `wybor` the player can answer up front never needs a frame.
+     */
+    await play.run(resolveDrawnCard, {
+      cardId: KOSZMAR,
+      decided: { choices: [5], destination: "las-blednych-ogni" },
+      shuffle: asIs,
+    });
+
+    // Law 2: what was above the field frame is abandoned, not queued, and a
+    // fresh field opens at the destination — "tak, jakby jego ruch zakończył
+    // się" there. `draw: 0`, because 15.1 makes drawing a consequence of
+    // arriving and she did not walk here.
+    expect(play.phases).toEqual(["field"]);
+    const landed = play.frame("field");
+    expect(landed.fieldId).toBe("las-blednych-ogni");
+    expect(landed.draw).toBe(0);
+    expect(landed.drawn).toEqual([]);
+    expect(play.snapshot.seats[2].field_id).toBe("las-blednych-ogni");
+  });
+
+  /**
+   * The last assertion docs/STACK.md makes about moment 10, and the app does
+   * not keep it. Written out rather than left implied, because the scenario
+   * was written before the code precisely so this kind of thing would surface.
+   *
+   * 15.2's worked example is explicit — Obbol is moved off the Płaskowyż by the
+   * Zaklęta Ścieżka, does *not* fight the Niedźwiedź and does *not* take the
+   * gold, and they "stay face up for the next character". Here the Smok and the
+   * Grota do not stay: arriving lifts every Karta lying on the Obszar into the
+   * turn's frame and deletes the `fieldCards` rows, and the cut then throws
+   * that frame away — so two Karty leave the game altogether.
+   *
+   * The cause is that law 2's cut is carried out by `placeSeat`, which is the
+   * *manual override* — its own docstring is about a figure "put here by hand"
+   * — and it writes `only({ …, drawn: [] })`, discarding the stack rather than
+   * popping to the field frame and leaving what was on it behind.
+   *
+   * Left as a todo rather than fixed here: `placeSeat` is also the host's
+   * desync control, and giving the cut its own command is a rules change with
+   * Michał's name on it, not a test harness's to take.
+   */
   it.todo(
-    "10. Celina arrives, draws zero (15.1), takes Koszmar's wish: teleport is a cut → [field(chosen, draw 0)] (laws 2, 5) — waits on a second turn in the harness",
+    "10. the Smok and the Grota stay on the Płaskowyż for whoever comes next (15.2) — the cut deletes them; see placeSeat",
   );
 
   it("never holds two ask frames at once", async () => {
@@ -296,9 +394,10 @@ describe("the resolution stack (docs/STACK.md)", () => {
 
 /** One head fought out, dice and settle, exactly as the two buttons do it. */
 async function head(table: Snapshot, mine: number, its: number): Promise<Snapshot> {
-  const dice = ports({ random: scriptedRandom([mine, its, 1, 1, 1, 1]) });
-  let at = table;
-  at = apply(at, (await fightRoll(at, { side: "player" }, dice)).writes);
-  at = apply(at, (await fightRoll(at, { side: "enemy" }, dice)).writes);
-  return apply(at, (await resolveFight(at, undefined as never, dice)).writes);
+  const dice = rolling(mine, its, 1, 1, 1, 1);
+  const play = driving(table);
+  await play.run(fightRoll, { side: "player" }, dice);
+  await play.run(fightRoll, { side: "enemy" }, dice);
+  await play.run(resolveFight, undefined as never, dice);
+  return play.snapshot;
 }
