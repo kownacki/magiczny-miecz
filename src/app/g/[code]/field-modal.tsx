@@ -18,6 +18,7 @@ import { BridgeOrdeal, Crossing, Ferry } from "./crossing-controls";
 import { FieldServices } from "./field-services";
 import { isFerry } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
+import { parseRollTable } from "@/lib/engine/rollTable";
 import type { CardId } from "@/data/ids";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
@@ -226,6 +227,26 @@ export function FieldModal({
    */
   const groups = fieldGroups(cards);
 
+  /**
+   * Whether either action section has anything in it.
+   *
+   * Both were rendered on the gate alone — standing here, on your turn, in the
+   * field phase — and both carry a `border-t`, so an Obszar that offers nothing
+   * drew a rule across the window with nothing under it. Płaskowyż Mgieł draws
+   * three: it has no ferry, no die table, no shop, no crossing and no ordeal,
+   * and it showed three dividers stacked at the bottom, one per empty box.
+   *
+   * A rule is a separator, so it needs two things to separate.
+   */
+  const hasOffers =
+    isFerry(fieldId) ||
+    (field.text !== undefined && parseRollTable(field.text) !== null) ||
+    fieldScriptFor(fieldId) !== null;
+  const hasCrossing =
+    crossingFrom(fieldId) !== undefined ||
+    BRIDGE_ORDEAL.has(fieldId) ||
+    (phase === "field" && (raid !== undefined || friend !== undefined));
+
   return (
     <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
@@ -415,7 +436,7 @@ export function FieldModal({
               last turn on, and it is spent. `resolveFieldOffer` refuses it
               server-side too; this is so the button is not there to be pressed
               in the first place. */}
-          {standingHere && canAct && onAction && phase === "field" && (
+          {standingHere && canAct && onAction && phase === "field" && hasOffers && (
             <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
               {/* 11.2's toll, which is a thing this Obszar asks of you and so
                   belongs with the rest of what it asks. */}
@@ -458,7 +479,11 @@ export function FieldModal({
               through more than once, because the Demon does not move and
               neither do you. Both are therefore offered before the roll as
               well as on arrival. */}
-          {standingHere && canAct && onAction && (phase === "field" || phase === "roll") && (
+          {standingHere &&
+            canAct &&
+            onAction &&
+            (phase === "field" || phase === "roll") &&
+            (hasCrossing || onEnd) && (
             <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
               {crossingFrom(fieldId) && (
                 <Crossing
@@ -494,14 +519,35 @@ export function FieldModal({
                   refuses — 10.1's move, 14.7's Bestia — and a greyed control
                   that does not say why is a control that looks broken. */}
               {onEnd && (
-                <div className="flex flex-col gap-1 border-t border-edge/60 pt-3">
-                  <button
-                    onClick={onEnd}
-                    disabled={busy || !canEnd}
-                    className="rounded border border-ochre bg-ochre/10 px-3 py-2 font-[family-name:var(--font-display)] text-sm tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
-                  >
-                    Zakończ turę
-                  </button>
+                <div
+                  className={`flex flex-col gap-1 ${hasCrossing ? "border-t border-edge/60 pt-3" : ""}`}
+                >
+                  {/**
+                   * The button, or the reason there is no button — never both.
+                   *
+                   * It used to be a greyed control with the refusal under it,
+                   * on the reasoning that a disabled thing which does not say
+                   * why looks broken. That was right about the sentence and
+                   * wrong about the button: now that the kolejka and the
+                   * Obszar's own instruction are duties too, the turn cannot be
+                   * ended for most of the time it is being played, so the
+                   * control was greyed nearly always and the sentence under it
+                   * was doing all the work. A button that is almost never
+                   * pressable is furniture.
+                   *
+                   * So the sentence stands alone until the turn really can end,
+                   * and then the button appears. Nothing is lost: the refusal
+                   * still names what is owed and the rule that owes it.
+                   */}
+                  {canEnd ? (
+                    <button
+                      onClick={onEnd}
+                      disabled={busy}
+                      className="rounded border border-ochre bg-ochre/10 px-3 py-2 font-[family-name:var(--font-display)] text-sm tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
+                    >
+                      Zakończ turę
+                    </button>
+                  ) : null}
                   {!canEnd && whyNotEnd && (
                     <p className="text-[11px] text-muted">
                       {/* „Najpierw: Stocz walkę z Bestią (14.7)." — the number
