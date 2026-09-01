@@ -48,6 +48,15 @@ const NAMES = new Map<string, string>([
 /** Only the event deck carries the class that says whether a card is takeable. */
 const EVENT_BY_ID = new Map(EVENTS.map((card) => [card.id, card]));
 
+/**
+ * What the reveal needs: three Karty side by side, and nothing spare.
+ *
+ * Three is the most any Obszar in the box deals — Płaskowyż Mgieł, Bezdroża
+ * and the Równina Samotnych Skał print the largest numbers and none prints
+ * more. The gaps are `gap-3` and the padding is the body's `px-4`.
+ */
+const REVEAL_WIDTH = 3 * PICTURE_WIDTH + 2 * 12 + 2 * 16;
+
 export interface FieldCardHere {
   id: string;
   cardId: CardId;
@@ -272,18 +281,20 @@ export function FieldModal({
 
   return (
     <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
-      {/* Wide enough for the deal while the deal is what it is showing.
-          Three Karty at `PICTURE_WIDTH` are 648 across with the gaps, and the
-          reading width is 512 — so the widest Obszar in the box printed three
-          cards into a column one and a half of them wide. It goes back to the
-          reading width afterwards, which is the width the rest of it wants:
-          prose, small capitals and rows of tiles do not want 768.
+      {/* Wide enough for the deal, and no wider.
+          `REVEAL_WIDTH` is the arithmetic rather than the next Tailwind bucket
+          up: three Karty at the width a Karta is read at, the two gaps between
+          them and the window's own padding. `max-w-3xl` was 88 pixels more than
+          that, which the cards did not use and the prose above them did — a
+          paragraph set to 768 is a line nobody wants to read twice.
 
           Only one change of width is ever visible, at the moment of the deal;
-          the window closes out of the wide state rather than shrinking. */}
+          the window closes out of the wide state rather than shrinking back
+          under somebody who is still reading it. */}
       <div
+        style={revealing ? { maxWidth: REVEAL_WIDTH } : undefined}
         className={`flex max-h-[85vh] w-full flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)] ${
-          revealing ? "max-w-3xl" : "max-w-lg"
+          revealing ? "" : "max-w-lg"
         }`}
       >
         <header className="flex items-baseline justify-between gap-3 border-b border-edge px-4 py-3">
