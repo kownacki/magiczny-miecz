@@ -513,10 +513,29 @@ export function ItemSlot({
         </figcaption>
         {/* The controls go quiet with the card they belong to: "załóż" under a
           card that is currently on the cursor is an offer to do the thing you
-          are already in the middle of doing. */}
-        <div className={lifted ? "pointer-events-none opacity-30" : undefined}>
-          {children}
-        </div>
+          are already in the middle of doing.
+
+          A flex column, and not a plain block, because the controls are text
+          the size of a footnote inside a panel whose line-height is 24px: an
+          inline button in a block sits on a baseline in the middle of that
+          line box, with ten dead pixels above it. The Plecak's controls were
+          already inside a `flex` of their own and sat tight under the name;
+          the hand's single „rzuć" was not, and drifted half a line down. Which
+          of the two was right was not a decision anybody made — it fell out of
+          whether the caller happened to wrap what it passed.
+
+          Drawn only when there is something to put in it: the row's own gap
+          would otherwise leave four pixels under every card that has no
+          controls at all, which is every card on somebody else's seat. */}
+        {children ? (
+          <div
+            className={`flex flex-col items-center ${
+              lifted ? "pointer-events-none opacity-30" : ""
+            }`}
+          >
+            {children}
+          </div>
+        ) : null}
       </figure>
       {preview}
     </div>
