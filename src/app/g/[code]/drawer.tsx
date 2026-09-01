@@ -29,7 +29,6 @@ export function Drawer({
   title,
   /** Tailwind max-width. The cards want more room than the players do. */
   width = "max-w-sm",
-  steady = false,
   head,
   onClose,
   children,
@@ -37,22 +36,6 @@ export function Drawer({
   side: "left" | "right";
   title: React.ReactNode;
   width?: string;
-  /**
-   * Hold the scrollbar's room whether or not there is a scrollbar.
-   *
-   * Off by default, because a drawer that rarely scrolls — the roster with two
-   * seats in it — spends the reservation on a strip of dead panel down its
-   * inside edge, and nothing in it moves when a scrollbar does arrive: the rows
-   * are fluid and simply get narrower.
-   *
-   * On where the contents are laid out in columns. The Księga's shelf is a grid
-   * of five, and a grid re-divides its width the instant the scrollbar appears
-   * or goes — so every tile in it steps sideways as you move between a shelf
-   * long enough to scroll and one that is not. That is a worse thing to look at
-   * than a reserved strip, and the strip is not even visible there: the shelf
-   * scrolls almost always, so the room is almost always in use.
-   */
-  steady?: boolean;
   /** A row under the title — a search box, a tally, whatever the surface needs. */
   head?: React.ReactNode;
   onClose: () => void;
@@ -141,25 +124,20 @@ export function Drawer({
           This reserved it always (`scrollbar-gutter: stable`), on the argument
           that a drawer sized to fit its contents should fit them whether the
           list scrolls or not. It cost two things. A drawer with nothing to
-          scroll — the roster with two seats in it — carried a visible strip of
-          dead panel down its inside edge. And the reservation is the
-          scrollbar's *device* width, which means its size in CSS pixels grows
-          as you zoom out: 15px at 100% is 16.7 at 90%, and the Księga's shelf,
-          budgeted to the pixel for five tiles across, silently became four.
+          scroll — the roster with two seats in it, the Księga after a search
+          that found two cards — carried a visible strip of dead panel down its
+          inside edge. And the reservation is the scrollbar's *device* width,
+          so its size in CSS pixels grows as you zoom out: 15px at 100% is 16.7
+          at 90%, and the Księga's shelf, budgeted to the pixel for five tiles
+          across, silently became four.
 
-          A width that only holds at one zoom level is not a width. So the room
-          is guaranteed by the drawer's own `width` instead — see the note on
-          the Księga's — and the gutter appears with the scrollbar it belongs
-          to, except where a caller asks for `steady` and says why.
-
-          The zoom half of that bug cannot come back even there: the shelf is a
-          grid of five `1fr` columns now, so a gutter that grows as you zoom out
-          takes a pixel or two off each column instead of taking a column. */}
-      <div
-        className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${
-          steady ? "[scrollbar-gutter:stable]" : ""
-        }`}
-      >
+          A width that only holds at one zoom level is not a width. The room is
+          guaranteed by the drawer's own `width` instead — see the note on the
+          Księga's, which carries the arithmetic — and what the room is *for*
+          no longer moves when the scrollbar comes and goes: the shelf is a
+          grid of fixed columns anchored to the left edge, so a narrower panel
+          takes from the margin past the last tile and from nothing else. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {children}
       </div>
     </aside>

@@ -138,18 +138,31 @@ export function TileRow({
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       /**
-       * Columns the width of a tile, and the leftover outside the block.
+       * Columns the width of a tile, and the leftover past the last one.
        *
        * `1fr` columns were the first try and they put the slack in the wrong
        * place: a column wider than its tile spaces the tiles apart, so the
        * shelf sat at 11px between cards while every other row in the app sat
        * at 8. `max-content` is the tile's own width — `CardTile` is a fixed
-       * 86 — so the gap is the gap, and whatever the panel has spare splits
-       * evenly either side of the block instead of between the cards.
+       * 86 — so the gap is the gap and the spare stays outside the block.
+       *
+       * `start`, and not `center`, which is where the spare went first. A
+       * centred block reads perfectly while the row is full and wrongly the
+       * moment it is not: two cards found by a search sat in the middle of the
+       * panel, so the same card was in a different place depending on how many
+       * came back with it. Every other row of cards in the app begins at the
+       * left edge — they are `flex-wrap`, which has no choice — and a shelf
+       * that agreed with them everywhere but the short rows was the odd one.
+       *
+       * It also takes the scrollbar out of the arithmetic. Columns of a fixed
+       * width, anchored left, sit exactly where they sat whether or not the
+       * panel is scrolling; centred, every tile stepped sideways by half a
+       * scrollbar as you moved between a long shelf and a short one, which is
+       * the whole reason the drawer used to reserve the room permanently.
        */
       style={
         columns
-          ? { gridTemplateColumns: `repeat(${columns}, max-content)`, justifyContent: "center" }
+          ? { gridTemplateColumns: `repeat(${columns}, max-content)` }
           : undefined
       }
       className={`${columns ? "grid" : "flex flex-wrap"} ${TILE_GAP[size]} transition ${

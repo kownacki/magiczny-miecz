@@ -349,55 +349,47 @@ export function CardLibrary({
       <Drawer
         side="left"
         /**
-         * Sized to the shelf rather than to a scale, with room a scrollbar
-         * cannot outgrow.
+         * Sized to the shelf, plus a scrollbar, plus one gap.
          *
-         * Five tiles across, which is what the section headings were laid out
-         * for and about half again the players' width: 5 x 86 (`TILE_WIDTH`,
-         * shared with the Plecak and the paper doll) + 4 x 8 (`TILE_GAP.card`,
-         * shared with them too) = 462, + 32 for the padding either side = 494.
+         * Five tiles across, which is what the section headings are laid out
+         * for: 5 x 86 (`TILE_WIDTH`, shared with the Plecak and the paper
+         * doll) + 4 x 8 (`TILE_GAP.card`, shared with them too) = 462, + 32
+         * for the padding either side, + 1 for the border = 495 before the
+         * scrollbar.
          *
-         * Both terms have shrunk since this was 572, and for the same reason
-         * twice: the tile had a width of its own and the shelf had a gap of its
-         * own, and neither had any business differing from the Plecak's. The
-         * panel has to come in with them or the pixels they gave up come back
-         * as the strip of dead panel the last paragraph is about.
+         * The last term is the one that cannot be a measurement. A scrollbar
+         * is reserved in *device* pixels, so its size in the CSS pixels this
+         * sum is written in grows as the reader zooms out: 15 at 100%, 16.7 at
+         * 90%, 18.75 at 80%, 22.4 at 67%. At 511 the shelf would be exactly
+         * right at 100% and one tile too narrow at 90%, which is not a width
+         * so much as arithmetic that holds at one zoom level.
          *
-         * The last term is the one that had to change. It was 16 — one
-         * scrollbar, measured once — and a scrollbar is not one width. It is
-         * reserved in device pixels, so in the CSS pixels this sum is written
-         * in it *grows as you zoom out*: 15 at 100%, 16.7 at 90%, 30 at 50%.
-         * At 556 the shelf dropped to four columns the moment somebody zoomed
-         * to 90%, which is not a rendering bug so much as arithmetic that only
-         * held at one zoom level.
+         * 23 covers it down to about 65%, and what is left over at 100% is
+         * 8px — the row's own gap, once, past the last tile. That is the least
+         * it can be while still being a margin: any smaller and the fifth
+         * column is the first thing a zoom level takes.
          *
-         * 32 covers a 15px scrollbar down to about 50% zoom, and the slack
-         * above it is inside the scrolling column, where it reads as padding
-         * rather than as a strip of empty panel. The shelf is thirty cards
-         * deep, so in practice there is always a scrollbar in it to use the
-         * room.
-         *
-         * A round `max-w-xl` was 36rem, which left a finger's width of dead
-         * panel past the last column — the shelf did not look narrow, it looked
-         * misaligned.
+         * It has come down from 572 and then 526. The tile had a width of its
+         * own and the shelf had a gap of its own, neither with any business
+         * differing from the Plecak's; and the panel was budgeted for a
+         * scrollbar at 50% zoom, which bought a rare zoom level with a strip of
+         * dead panel everybody else looks at.
          */
-        width="max-w-[526px]"
+        width="max-w-[518px]"
         /**
-         * The one drawer that holds the scrollbar's room whether or not there
-         * is a scrollbar.
+         * No reserved gutter, because there is nothing left to hold still.
          *
-         * The shelf is a grid, so it re-divides its width the instant a
-         * scrollbar appears or goes — and every tile in it steps sideways as
-         * you move between a shelf long enough to scroll and one that is not.
-         * A reserved strip is the lesser of the two things to look at, and here
-         * it is not even a strip: thirty cards deep, this drawer nearly always
-         * has a scrollbar in it using the room.
+         * This was the one drawer that kept the scrollbar's room whether or not
+         * there was a scrollbar, and the reason was real: the shelf was a grid
+         * that re-divided its width the instant the scrollbar came or went, so
+         * every tile in it stepped sideways as you moved between a long shelf
+         * and a short one.
          *
-         * The zoom bug that made the reservation dangerous cannot come back:
-         * five `1fr` columns give a growing gutter a pixel or two off each
-         * column instead of a column.
+         * Fixed columns anchored to the left edge do not move (see `TileRow`),
+         * so the room can be given up. Which is worth doing: a shelf short
+         * enough not to scroll — a search with two hits — was showing a strip
+         * of empty panel down its inside edge to hold a place nothing needed.
          */
-        steady
         title="Księga Tolimana"
         onClose={onClose}
         head={
