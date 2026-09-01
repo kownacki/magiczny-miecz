@@ -8,7 +8,7 @@ import { inEffect } from "@/lib/engine/holdings";
 import { cardName } from "@/lib/engine/polish";
 import { apply, merge, mergeAll, type Changeset, type CommandPorts, type Outcome, type Snapshot } from "../change";
 import { activeSeat, eqModeOf, seatById, seatView } from "./seat";
-import { addEffect, keepOnly, statusesOf } from "./turn";
+import { addEffect, keepOnly, storedStatuses } from "./turn";
 import { castSpell, type Cast, type CastSpell } from "./spells";
 import { takeCard } from "./holdings";
 import { asReturnable, putOnPile } from "./piles";
@@ -330,7 +330,7 @@ export async function breakFree(
   ports: CommandPorts,
 ): Promise<Outcome<{ die: number; freed: string[] }>> {
   const seat = command.seatId ? seatById(snapshot, command.seatId) : activeSeat(snapshot);
-  const held = statusesOf(snapshot, seat.id);
+  const held = storedStatuses(snapshot, seat.id);
   if (!heldByARoll(held)) throw new Error("Nic cię tu nie trzyma.");
 
   const die = await ports.random.rollD6("opętanie: rzut o wolność");
@@ -379,7 +379,7 @@ export function claimMission(snapshot: Snapshot, command: { seatId?: string }): 
     throw new Error("Władca czeka w Twierdzy Strzegącej Dróg.");
   }
 
-  const errand = missionOf(statusesOf(snapshot, seat.id));
+  const errand = missionOf(storedStatuses(snapshot, seat.id));
   if (!errand) throw new Error("Nie masz misji od Władcy.");
 
   let paid: Changeset = {};
@@ -406,7 +406,7 @@ export function claimMission(snapshot: Snapshot, command: { seatId?: string }): 
     writes: mergeAll(paid, given.writes, keepOnly(
       apply(snapshot, mergeAll(paid, given.writes)),
       seat.id,
-      statusesOf(snapshot, seat.id).filter((status) => status.id !== errand.id),
+      storedStatuses(snapshot, seat.id).filter((status) => status.id !== errand.id),
     ), {
       journal: [
         {

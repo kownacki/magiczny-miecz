@@ -30,7 +30,7 @@ import { slotOnArrival } from "@/lib/engine/holdings";
 import type { Nature } from "@/data/types";
 import type { Slot } from "@/lib/engine/slots";
 import { afterFight, missionOf } from "@/lib/engine/status";
-import { keepOnly, statusesOf } from "./turn";
+import { keepOnly, storedStatuses } from "./turn";
 import type { SeatRow } from "../store";
 import { settleBridge, settleCrossing } from "./bridge";
 import { spendLife } from "./life";
@@ -94,7 +94,7 @@ export async function resolveFight(
 
   // 17.4 ends a fight the moment the dice are compared — win, lose or draw —
   // so anything that lasts "one fight" is spent whichever way it went.
-  const cleared = keepOnly(snapshot, seat.id, afterFight(statusesOf(snapshot, seat.id)));
+  const cleared = keepOnly(snapshot, seat.id, afterFight(storedStatuses(snapshot, seat.id)));
 
   if (fight.guardian) {
     const outcome = fight.result.outcome;
@@ -692,7 +692,7 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
  */
 function missionDone(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changeset {
   if (fight.result?.outcome !== "wygrana") return {};
-  const errand = missionOf(statusesOf(snapshot, seat.id));
+  const errand = missionOf(storedStatuses(snapshot, seat.id));
   if (!errand || errand.done) return {};
 
   const wanted = fight.opponentSeat !== undefined ? "character" : "foe";

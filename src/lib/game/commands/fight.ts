@@ -62,7 +62,7 @@ import { refuseAgainstStone } from "./stone";
 import { slotsFor } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { hasAttacked } from "@/lib/engine/status";
-import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, statusesOf } from "./turn";
+import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, storedStatuses } from "./turn";
 
 /**
  * The one Zaklęcie the rules name inside another rule.
@@ -991,7 +991,7 @@ export function attackSeat(
    * Written once: a second duel adds nothing, and a character with two marks
    * would read as twice the sinner for no reason the card gives.
    */
-  const marked = hasAttacked(statusesOf(snapshot, attacker.id))
+  const marked = hasAttacked(storedStatuses(snapshot, attacker.id))
     ? {}
     : addEffect(snapshot, {
         seatId: attacker.id,

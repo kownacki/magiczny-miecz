@@ -43,7 +43,7 @@ import {
 } from "../change";
 
 import { asReturnable, putOnPile } from "./piles";
-import { keepOnly, statusesOf } from "./turn";
+import { keepOnly, storedStatuses } from "./turn";
 import { afterEvent, grantedCrossing } from "@/lib/engine/status";
 import { facing } from "@/lib/engine/across";
 import { spendLife } from "./life";
@@ -216,7 +216,7 @@ export function settleCrossing(
    * in the pack would be a Przyjaciel doing nothing, which is exactly the state
    * this rule exists to end.
    */
-  const held = statusesOf(snapshot, seat.id);
+  const held = storedStatuses(snapshot, seat.id);
   const shed = afterEvent(held, "crossing");
   const gone = held.filter((was) => !shed.some((still) => still.id === was.id));
   // Matched on the printed name, because that is what `applyEffect` writes into
@@ -502,7 +502,7 @@ export async function crossRing(
    * the character is in. Each obstacle has one in each direction, so where they
    * land is the far side of the one they are taking rather than a choice.
    */
-  const granted = grantedCrossing(statusesOf(snapshot, seat.id));
+  const granted = grantedCrossing(storedStatuses(snapshot, seat.id));
 
   /**
    * Where a granted crossing puts you: „do Obszaru graniczącego z tym, z

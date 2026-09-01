@@ -5,7 +5,7 @@ import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { resolveDrawnCard, resolveFieldOffer } from "./resolving";
 import { settleCrossing } from "./bridge";
 import { takeCard } from "./holdings";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import { barredFromFriends, movementCap } from "@/lib/engine/status";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { CROSSINGS } from "@/lib/engine/rings";
@@ -66,7 +66,7 @@ describe("the Południca, who slows you until you cross water", () => {
   it("joins as a Przyjaciel and caps the walk at one Obszar", async () => {
     const after = await meet(drawing("uroczysko", "poludnica"), "poludnica");
     expect(held(after)).toEqual(["poludnica"]);
-    expect(movementCap(statusesOf(after, "seat-a"))).toBe(1);
+    expect(movementCap(storedStatuses(after, "seat-a"))).toBe(1);
   });
 
   /**
@@ -80,7 +80,7 @@ describe("the Południca, who slows you until you cross water", () => {
     const across = apply(carrying, settleCrossing(carrying, crossing!, "wygrana").writes);
 
     expect(held(across)).toEqual([]);
-    expect(movementCap(statusesOf(across, "seat-a"))).toBeNull();
+    expect(movementCap(storedStatuses(across, "seat-a"))).toBeNull();
   });
 
   it("stays through a crossing that failed", async () => {
@@ -89,7 +89,7 @@ describe("the Południca, who slows you until you cross water", () => {
     const stuck = apply(carrying, settleCrossing(carrying, crossing!, "przegrana").writes);
 
     expect(held(stuck)).toEqual(["poludnica"]);
-    expect(movementCap(statusesOf(stuck, "seat-a"))).toBe(1);
+    expect(movementCap(storedStatuses(stuck, "seat-a"))).toBe(1);
   });
 });
 
@@ -107,7 +107,7 @@ describe("the Zły Duch, who empties the room", () => {
 
   it("bars new Przyjaciele while he is there", async () => {
     const after = await meet(drawing("mroczna-polana", "zly-duch"), "zly-duch");
-    expect(barredFromFriends(statusesOf(after, "seat-a"))).toBe(true);
+    expect(barredFromFriends(storedStatuses(after, "seat-a"))).toBe(true);
     expect(() => takeCard(after, { seatId: "seat-a", cardId: "krzyzowiec" })).toThrow(
       /nie pozwala ci zdobywać Przyjaciół/,
     );
@@ -136,7 +136,7 @@ describe("the Zły Duch, who empties the room", () => {
     );
 
     expect(held(freed)).toEqual(["poludnica"]);
-    expect(barredFromFriends(statusesOf(freed, "seat-a"))).toBe(false);
+    expect(barredFromFriends(storedStatuses(freed, "seat-a"))).toBe(false);
     expect(() => takeCard(freed, { seatId: "seat-a", cardId: "krzyzowiec" })).not.toThrow();
   });
 

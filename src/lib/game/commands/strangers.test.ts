@@ -6,7 +6,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { buildDeck } from "@/lib/engine/deck";
 import { resolveDrawnCard } from "./resolving";
 import { attackSeat } from "./fight";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import { hasAttacked, movementCap } from "@/lib/engine/status";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS as SPELL_CARDS } from "../decks";
@@ -120,7 +120,7 @@ describe("the Dobre Bóstwo, which judges what you did", () => {
   };
 
   it("marks whoever raised a hand, at the moment of attacking", () => {
-    expect(hasAttacked(statusesOf(guilty(), "seat-a"))).toBe(true);
+    expect(hasAttacked(storedStatuses(guilty(), "seat-a"))).toBe(true);
   });
 
   /** "musisz złożyć w ofierze 1 Sz.Z. Jeśli nie chcesz będziesz uwięziony..." */
@@ -136,7 +136,7 @@ describe("the Dobre Bóstwo, which judges what you did", () => {
   it("pins a guilty character who refuses, and keeps their gold", async () => {
     const { after } = await visit(guilty(), "dobre-bostwo", [1]);
     expect(after.seats[0].gold).toBe(3);
-    expect(movementCap(statusesOf(after, "seat-a"))).toBe(0);
+    expect(movementCap(storedStatuses(after, "seat-a"))).toBe(0);
   });
 });
 

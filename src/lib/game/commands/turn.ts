@@ -88,18 +88,16 @@ export function refuseWhileUndrawn(snapshot: Snapshot): void {
   );
 }
 
-/** What one seat is under, in the shape the engine reasons about. */
-export function statusesOf(snapshot: Snapshot, seatId: string): Status[] {
-  return snapshot.effects
-    .filter((row) => row.seat_id === seatId)
-    .map((row) => ({
-      id: row.id,
-      source: row.source,
-      label: row.label,
-      modifier: row.modifier,
-      ends: row.ends,
-    }));
-}
+/**
+ * Re-exported so the fourteen callers that ask for the rows keep one import.
+ *
+ * It lives in `seat.ts` beside `allStatusesOf`, which is the other half and the
+ * one a door should ask — the two only make sense read together, and this file
+ * cannot hold them both: `turn.ts` reaches `seat.ts` through `overflow.ts`
+ * already, so the dependency runs this way and not the other.
+ */
+export { storedStatuses } from "./seat";
+import { storedStatuses } from "./seat";
 /**
  * Writes back whatever an engine function decided is left.
  *
@@ -114,7 +112,7 @@ export function keepOnly(
   seatId: string,
   left: readonly Status[],
 ): Changeset {
-  const before = statusesOf(snapshot, seatId);
+  const before = storedStatuses(snapshot, seatId);
   const surviving = new Map(left.map((status) => [status.id, status]));
   const gone: string[] = [];
   const changed: { id: string; patch: { ends: Status["ends"] } }[] = [];
@@ -149,7 +147,7 @@ export function keepOnly(
  * is why a skipped seat's buff does not burn away while it cannot act.
  */
 export function tickEffects(snapshot: Snapshot, seatId: string): Changeset {
-  return keepOnly(snapshot, seatId, afterTurn(statusesOf(snapshot, seatId)));
+  return keepOnly(snapshot, seatId, afterTurn(storedStatuses(snapshot, seatId)));
 }
 
 /**
@@ -284,7 +282,7 @@ export function passTurn(snapshot: Snapshot, force = false): Changeset {
    * was left on the Obszar is left. What does not happen is the seat changing,
    * so 16.8's cards are cleared away and the same player begins again.
    */
-  const again = seat ? playsAgain(statusesOf(snapshot, seat.id)) : false;
+  const again = seat ? playsAgain(storedStatuses(snapshot, seat.id)) : false;
   const expired = seat ? tickEffects(snapshot, seat.id) : {};
   /**
    * And what ends with the turn itself, wherever it is sitting.
@@ -298,7 +296,7 @@ export function passTurn(snapshot: Snapshot, force = false): Changeset {
    */
   const endedWithTurn = mergeAll(
     ...snapshot.seats.map((row) =>
-      keepOnly(snapshot, row.id, afterAnyTurn(statusesOf(snapshot, row.id))),
+      keepOnly(snapshot, row.id, afterAnyTurn(storedStatuses(snapshot, row.id))),
     ),
   );
 

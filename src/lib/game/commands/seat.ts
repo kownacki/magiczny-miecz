@@ -215,24 +215,7 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId),
   );
 
-  const statuses = allStatuses(
-    snapshot.effects
-      .filter((e) => e.seat_id === row.id)
-      .map((e) => ({
-        id: e.id,
-        source: e.source,
-        label: e.label,
-        modifier: e.modifier,
-        ends: e.ends,
-      })),
-    {
-      turnsLost: row.turns_lost,
-      stoneUntilRound: row.stone_until_round,
-      bridgeBlockedUntilRound: row.bridge_blocked_until_round,
-      natureChangedRound: row.nature_changed_round,
-    },
-    snapshot.game.round,
-  );
+  const statuses = allStatusesOf(snapshot, row.id);
 
   /**
    * What the cards lend, read after the statuses because one of them changes it.
@@ -413,22 +396,85 @@ export function refuseWhileOverLimit(snapshot: Snapshot, seatId: string): void {
  * card names its own antidote and `oprocz` carries it, so nothing here has to
  * know which spell that is.
  */
+/**
+ * The status **rows** one seat has, which is not everything true of that seat.
+ *
+ * The distinction this pair exists to keep, and getting it wrong is a rule the
+ * app silently stops enforcing. Four statuses have no row at all — a lost turn,
+ * the Kamień, a barred Most, a Natura changed this turn — because they predate
+ * the effects table and live in the seat's own columns; `fromColumns` projects
+ * them and `allStatuses` puts both halves together. **`allStatusesOf` in
+ * `seat.ts` is what a door should ask.**
+ *
+ * This one is for the other job: lifecycle. `keepOnly` writes back the
+ * survivors by *difference*, so what it is given has to be rows and only rows —
+ * a projected status handed to it has no id to keep and no row to delete, and a
+ * countdown ticked on one would be written back as a row that never existed.
+ * Every caller here is doing that bookkeeping and is right to ask for the rows.
+ *
+ * `refuseWhileHeld` was the one that was not, and it cost 20.5: a Postać
+ * Zamieniona w Kamień „nie może też używać swoich Zaklęć", the freeze that says
+ * so is projected off `stone_until_round`, and a door reading only the rows
+ * could not see it. A statue could speak a Zaklęcie at any moment — and did.
+ */
+export function storedStatuses(snapshot: Snapshot, seatId: string): Status[] {
+  return snapshot.effects
+    .filter((row) => row.seat_id === seatId)
+    .map((row) => ({
+      id: row.id,
+      source: row.source,
+      label: row.label,
+      modifier: row.modifier,
+      ends: row.ends,
+    }));
+}
+
+/**
+ * **Everything** true of one seat right now — both halves of the model.
+ *
+ * What a door should ask, as against `storedStatuses`, which is the rows alone
+ * and is for lifecycle. Four statuses have no row: a lost turn, the Kamień, a
+ * barred Most and a Natura changed this turn live in the seat's own columns,
+ * because they predate the effects table and moving them would be a rewrite of
+ * turn order to gain nothing. `fromColumns` projects them and this puts the two
+ * together, so a rule can be written once against "what is true of this seat"
+ * without knowing which half an answer came from — which is the whole point of
+ * `allStatuses` and was being had only by the read path.
+ */
+export function allStatusesOf(snapshot: Snapshot, seatId: string): Status[] {
+  const row = seatById(snapshot, seatId);
+  return allStatuses(storedStatuses(snapshot, seatId), {
+    turnsLost: row.turns_lost,
+    stoneUntilRound: row.stone_until_round,
+    bridgeBlockedUntilRound: row.bridge_blocked_until_round,
+    natureChangedRound: row.nature_changed_round,
+  }, snapshot.game.round);
+}
+
 export function refuseWhileHeld(
   snapshot: Snapshot,
   seatId: string,
   casting?: string,
 ): void {
-  const held = frozenBy(
-    snapshot.effects
-      .filter((row) => row.seat_id === seatId)
-      .map((row) => ({
-        id: row.id,
-        source: row.source,
-        label: row.label,
-        modifier: row.modifier,
-        ends: row.ends,
-      })),
-  );
+  /**
+   * Asked of everything, not of the rows.
+   *
+   * This door is what stops a frozen character acting — `moveTo` and
+   * `castSpell` are its two callers — and it read `snapshot.effects` directly,
+   * so the only freeze it could see was one somebody had written a row for. The
+   * Krąg Płomieni has a row. Kamień does not: 20.1 lives in
+   * `stone_until_round`, `fromColumns` projects the freeze off it, and this
+   * never looked there.
+   *
+   * Moving was safe by accident — a statue is skipped by `nextSeat` and never
+   * gets a turn to spend — but a Zaklęcie is not turn-gated. „W dowolnym
+   * momencie" is printed on several of them and answering somebody else's spell
+   * is the whole shape of the Władca Zaklęć, so a Postać Zamieniona w Kamień
+   * could speak one at any moment. 20.5 says it may use them „po odczarowaniu z
+   * Kamienia, czyli po 3 turach", and the Karta says „nie może też używać
+   * swoich Zaklęć" in as many words.
+   */
+  const held = frozenBy(allStatusesOf(snapshot, seatId));
   if (!held) return;
   if (casting !== undefined && held.oprocz.includes(casting)) return;
   throw new Error(

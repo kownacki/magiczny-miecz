@@ -18,7 +18,6 @@ import {
   afterFight,
   type Ends,
   type Modifier,
-  type Status,
 } from "@/lib/engine/status";
 import {
   EVENTS,
@@ -34,7 +33,7 @@ import { appRandom, supplied } from "./random";
 import {
   addEffect as addEffectTo,
   keepOnly as keepOnlyIn,
-  statusesOf as statusesIn,
+  storedStatuses as statusesIn,
   tickEffects as tickEffectsOf,
 } from "./commands/turn";
 import { healSeat as healCommand } from "./commands/life";
@@ -687,19 +686,6 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
  * ------------------------------------------------------------------------ */
 export async function effectsFor(gameId: string): Promise<EffectRow[]> {
   return effectRowsFor(gameId);
-}
-
-/** What one seat is under, in the shape the engine reasons about. */
-export async function statusesOf(gameId: string, seatId: string): Promise<Status[]> {
-  return (await effectsFor(gameId))
-    .filter((row) => row.seat_id === seatId)
-    .map((row) => ({
-      id: row.id,
-      source: row.source,
-      label: row.label,
-      modifier: row.modifier,
-      ends: row.ends,
-    }));
 }
 
 /** Puts a seat under something, and says so. */

@@ -8,7 +8,7 @@ import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { breakFree } from "./friends";
 import { beginFight } from "./fight";
 import { movementCap } from "@/lib/engine/status";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
@@ -427,7 +427,7 @@ describe("being held in place, and throwing to get out", () => {
    */
   it("caps the character's movement at nothing", async () => {
     const { after } = await pray("swiatynia-tolimana", 9);
-    expect(movementCap(statusesOf(after, "seat-a"))).toBe(0);
+    expect(movementCap(storedStatuses(after, "seat-a"))).toBe(0);
   });
 
   it("keeps holding on a high roll and lets go on a low one", async () => {
@@ -435,11 +435,11 @@ describe("being held in place, and throwing to get out", () => {
 
     const missed = await breakFree(after, {}, ports({ random: scriptedRandom([5]) }));
     expect(missed.result.freed).toHaveLength(0);
-    expect(movementCap(statusesOf(apply(after, missed.writes), "seat-a"))).toBe(0);
+    expect(movementCap(storedStatuses(apply(after, missed.writes), "seat-a"))).toBe(0);
 
     const escaped = await breakFree(after, {}, ports({ random: scriptedRandom([3]) }));
     expect(escaped.result.freed).toHaveLength(1);
-    expect(movementCap(statusesOf(apply(after, escaped.writes), "seat-a"))).toBeNull();
+    expect(movementCap(storedStatuses(apply(after, escaped.writes), "seat-a"))).toBeNull();
   });
 
   it("refuses to throw when nothing is holding you", async () => {

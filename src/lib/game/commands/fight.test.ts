@@ -8,7 +8,7 @@ import { only, top, type TurnState } from "@/lib/engine/stack";
 import { aHolding, aSeat, aTable, aUser, NOW, ports } from "../fixture";
 import { pointsOf } from "./seat";
 import { hasAttacked } from "@/lib/engine/status";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import { apply } from "../change";
 import { attackSeat, beginFight, closeFightFrame, escape, fightRoll, setFightPlayerTotal, shieldSaves } from "./fight";
 import { resolveFight } from "./spoils";
@@ -1193,8 +1193,8 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
   it("remembers that the attacker raised a hand (13.3)", () => {
     const first = table();
     const marked = apply(first, attackSeat(first, { targetSeatId: "seat-b" }).writes);
-    expect(hasAttacked(statusesOf(marked, "seat-a"))).toBe(true);
-    expect(hasAttacked(statusesOf(marked, "seat-b"))).toBe(false);
+    expect(hasAttacked(storedStatuses(marked, "seat-a"))).toBe(true);
+    expect(hasAttacked(storedStatuses(marked, "seat-b"))).toBe(false);
 
     // A later duel adds nothing. Only the mark is carried over — the first
     // attack also opened a fight, and 13.1 refuses a second from inside one.

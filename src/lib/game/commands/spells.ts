@@ -33,7 +33,7 @@ import { refuseWhileHeld, seatView } from "./seat";
 import { refuseAgainstStone } from "./stone";
 import { FLOOR_MS, floorOf } from "./spellFloor";
 import { spellsHushed } from "@/lib/engine/status";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import type { SeatRow } from "../store";
 import { shutFight } from "./fight";
 
@@ -510,7 +510,7 @@ export async function castSpell(
    * once, so the caster who spoke it is refused by their own spell for the rest
    * of their turn, which is what „łącznie z tobą" says.
    */
-  const hushed = spellsHushed(statusesOf(snapshot, caster.id));
+  const hushed = spellsHushed(storedStatuses(snapshot, caster.id));
   if (hushed) throw new Error(`${hushed} — nikt teraz nie rzuca Zaklęć.`);
 
   /**
@@ -589,7 +589,7 @@ export async function castSpell(
    * character nothing could move.
    */
   if (held.card_id === "wladca-zaklec" && !standingSpell(snapshot, ports.now())) {
-    const lifted = statusesOf(snapshot, caster.id).filter(
+    const lifted = storedStatuses(snapshot, caster.id).filter(
       (status) => status.ends.kind === "dispelled",
     );
     if (lifted.length > 0) {

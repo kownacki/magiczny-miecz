@@ -5,7 +5,7 @@ import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
 import { barredFromFriends } from "@/lib/engine/status";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
 import { drawFrom } from "@/lib/engine/deck";
@@ -420,7 +420,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
    */
   if (kind === "friend") {
     const bearer = snapshot.seats.find((one) => one.id === seatId);
-    if (bearer && barredFromFriends(statusesOf(snapshot, bearer.id))) {
+    if (bearer && barredFromFriends(storedStatuses(snapshot, bearer.id))) {
       throw new Error(`${cardName(cardId)} — Zły Duch nie pozwala ci zdobywać Przyjaciół.`);
     }
   }

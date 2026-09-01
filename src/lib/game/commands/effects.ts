@@ -30,7 +30,7 @@ import {
   topIf,
   type TurnState,
 } from "@/lib/engine/stack";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import { hasAttacked } from "@/lib/engine/status";
 import { pointsOf } from "./seat";
 import { asFieldId, ringFields } from "@/lib/engine/board";
@@ -639,7 +639,7 @@ async function walk(
           : // What the character did earlier, which 13.3 wrote down for the one
             // card that asks.
             effect.warunek.is === "attacker"
-            ? hasAttacked(statusesOf(snapshot, seat.id))
+            ? hasAttacked(storedStatuses(snapshot, seat.id))
             : /**
                * `prog` reads the **parametr**, not the żetony.
                *

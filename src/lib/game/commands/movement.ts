@@ -4,7 +4,7 @@ import { FIELDS, requireFieldId } from "@/lib/engine/board";
 import type { FieldId } from "@/lib/engine/board";
 import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
 import { movementCap, moveMultiplier } from "@/lib/engine/status";
-import { statusesOf } from "./turn";
+import { storedStatuses } from "./turn";
 import { asCharacterId, startingKit, withoutItems } from "@/lib/engine/characters";
 import { type EqMode, type Slot } from "@/lib/engine/slots";
 import { slotsOnArrival } from "@/lib/engine/holdings";
@@ -385,7 +385,7 @@ export async function rollForMove(
    * cap below is read against the result: a character under both the Formuła
    * and an Mgła walks the smaller of the two, which is the Mgła.
    */
-  const roll = thrown * moveMultiplier(statusesOf(snapshot, seat.id));
+  const roll = thrown * moveMultiplier(storedStatuses(snapshot, seat.id));
 
   // 11.10 offers the bridge as part of the move, so whether it is on the table
   // has to be settled before the destinations are drawn: a Magiczny Miecz is
@@ -401,7 +401,7 @@ export async function rollForMove(
   // which is given facts about the seat already decided — the same shape as
   // `bridgeOffered` beside it. Nothing consulted it before: the status could be
   // put on a seat and the character walked the full roll anyway.
-  const cap = movementCap(statusesOf(snapshot, seat.id));
+  const cap = movementCap(storedStatuses(snapshot, seat.id));
 
   const manual = command.manual ?? false;
   return {

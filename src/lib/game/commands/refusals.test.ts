@@ -6,6 +6,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import { isStone, refuseAgainstStone, turnToStone, STONE_TURNS } from "./stone";
 import { spendLife } from "./life";
 import { refuseWhileBeastAwaits } from "./beast";
+import { refuseWhileHeld } from "./seat";
 import { attackSeat } from "./fight";
 
 /**
@@ -49,6 +50,54 @@ describe("a Postać Zamieniona w Kamień", () => {
     // 20.1's three turns are up: `stone_until_round` is the turn it ends.
     expect(isStone(table({ stoneUntil: 4, round: 4 }), "seat-b")).toBe(false);
     expect(isStone(table({ stoneUntil: null }), "seat-b")).toBe(false);
+  });
+
+  /**
+   * The other half of 20.5, which the app had never enforced.
+   *
+   * „Ona pozostawia swoje Zaklęcia. Będzie je mogła użyć **po odczarowaniu z
+   * Kamienia, czyli po 3 turach**", and the Karta says it outright: „nie może
+   * też używać swoich Zaklęć". Keeping them and using them are two things, and
+   * only the keeping was ever true here.
+   *
+   * `refuseWhileHeld` is the door — `castSpell` and `moveTo` are its callers.
+   * Moving was safe by accident, because a statue never gets a turn to spend;
+   * a Zaklęcie is not turn-gated, so nothing stopped one being spoken.
+   */
+  it("cannot speak a Zaklęcie of its own until it is flesh again (20.5)", () => {
+    expect(() => refuseWhileHeld(table(), "seat-b")).toThrow(/Kamień/);
+    // With a card named, too: `oprocz` is the Krąg Płomieni's escape hatch and
+    // Kamień prints none, so naming one changes nothing.
+    expect(() => refuseWhileHeld(table(), "seat-b", "wladca-zaklec")).toThrow(/Kamień/);
+    // And it lifts on the turn it is meant to.
+    expect(() => refuseWhileHeld(table({ round: 4 }), "seat-b")).not.toThrow();
+    // Everybody else is untouched.
+    expect(() => refuseWhileHeld(table(), "seat-a")).not.toThrow();
+  });
+
+  /**
+   * The same door, for the status that *does* have a row.
+   *
+   * Both halves of the model reach it now, and this is the half that always
+   * did — kept as a test so a future reader can see that widening it took
+   * nothing away.
+   */
+  it("still refuses a seat frozen by a stored effect, and honours its escape", () => {
+    const flames = apply(table({ stoneUntil: null }), {
+      effects: {
+        insert: [
+          {
+            seat_id: "seat-b",
+            source: "Krąg Płomieni",
+            label: "Krąg Płomieni",
+            modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
+            ends: { kind: "dispelled" },
+          },
+        ],
+      },
+    });
+    expect(() => refuseWhileHeld(flames, "seat-b")).toThrow(/Krąg Płomieni/);
+    expect(() => refuseWhileHeld(flames, "seat-b", "wladca-zaklec")).not.toThrow();
   });
 
   /** The one door every loss comes through — a fight, a Karta, an Obszar. */

@@ -35,7 +35,7 @@ import { nameOfSeat } from "./lobby";
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
 import { only, replaceTop, requireTop, top } from "@/lib/engine/stack";
-import { keepOnly, statusesOf, addEffect } from "./turn";
+import { keepOnly, storedStatuses, addEffect } from "./turn";
 import { turnToStone } from "./stone";
 import { seatView } from "./seat";
 import { isSpared } from "@/lib/engine/abilities";
@@ -325,7 +325,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
   uwolnij: (ctx, effect) => {
     const { snapshot, seatId } = ctx;
     const name = cardName(effect.od);
-    const held = statusesOf(snapshot, seatId);
+    const held = storedStatuses(snapshot, seatId);
     const left = held.filter((status) => status.source !== name);
     const card = snapshot.holdings.find(
       (h) => h.seat_id === seatId && h.card_id === effect.od,
