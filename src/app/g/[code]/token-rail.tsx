@@ -1,7 +1,8 @@
 /** The rail up the side of a Karta Postaci: one parameter, drawn as its żetony. */
 
 import Image from "next/image";
-import { pileColumns, tokensFor } from "@/lib/view/tokens";
+import { COLUMNS_MAX, pileColumns, tokensFor } from "@/lib/view/tokens";
+import { CoinStack, MoreThanFits } from "./token-pile";
 import { IN_FIGHT, figuresOf } from "@/lib/engine/figures";
 
 /**
@@ -53,23 +54,6 @@ const STAT_COLOUR: Record<string, string> = {
 
 
 /**
- * The two colours printed on a żeton, read off the scans rather than guessed:
- * the field it is printed on and the ink of the numeral standing on it.
- *
- * `MoreThanFits` is the one square on a rail that is drawn instead of
- * photographed, and this is what keeps it from announcing the fact.
- */
-const TOKEN_INK: Record<string, { field: string; ink: string }> = {
-  sword: { field: "#ff4f14", ink: "#fff300" },
-  magic: { field: "#404491", ink: "#f0f8f1" },
-  life: { field: "#009640", ink: "#fff508" },
-  // The coin is the one with nothing to copy: it carries no numeral, so it has
-  // no ink of its own and the dots take a dark gold — the colour a stamp on a
-  // coin would be, against the yellow the rest of the stack is.
-  gold: { field: "#fff300", ink: "#6f5300" },
-};
-
-/**
  * A number of points, as the tokens it is made of.
  *
  * This is what the table looks like: a character's own Miecz is a little pile
@@ -100,62 +84,34 @@ export function Tokens({ stat, points, label }: { stat: string; points: number; 
   const SIZE = 16;
   if (stat === "gold") {
     /**
-     * Money is a stack, not a row.
+     * Money is a stack, not a row — see `CoinStack`, which is that picture and
+     * is shared with the gold lying on an Obszar.
      *
-     * There is one gold denomination in the box, so twelve Sztuk Złota is
-     * twelve identical coins — and twelve identical coins side by side is a
-     * picture nobody reads, while twelve coins in a pile is a thing everybody
-     * recognises from across a table. Each sits over the one before with a
-     * sliver showing, which is what a stack of chips looks like and costs
-     * nothing to draw, since every coin is the same picture anyway.
-     *
-     * Stacks of ten, each one finished before the next is started.
-     *
-     * Ten is how money is counted at a table — nobody builds two stacks of
-     * seven — and a full one is exactly what its half of the card holds, nine
-     * slivers under a whole top coin. Filling each before starting the next is
-     * the point of counting that way: a glance at four full stacks and a short
-     * one is forty-something without reading anything, where four stacks of
-     * eleven and a straggler is just a heap that happens to be in columns.
-     *
-     * Three stacks and no more — see COLUMNS_MAX. Past thirty the pile stops
-     * growing and the numeral goes on being exact, which costs nothing: the
-     * coins are all ones, so the picture was only ever an impression of how
-     * rich somebody is and the count was always the reading.
+     * Stacks of ten, each finished before the next is started. Ten is how money
+     * is counted at a table — nobody builds two stacks of seven — and a full one
+     * is exactly what its half of the card holds. Three stacks at the outside
+     * (`COLUMNS_MAX`): past thirty the pile stops growing and the numeral goes
+     * on being exact, which costs nothing, since the coins are all ones and the
+     * picture was only ever an impression of how rich somebody is.
      */
-    const PER_STACK = 10;
-    const REVEAL = Math.floor((STACK_HEIGHT - SIZE) / (PER_STACK - 1));
-    // Past thirty the top coin stands down and says so — see `MoreThanFits`.
-    // A coin of picture is nothing to give up on a stack this deep, and what
-    // is bought with it is the difference between a full pile and a full pile
-    // that has stopped counting.
-    const { columns: stacks, drawn: coins, cut } = pileColumns(points, PER_STACK);
-
     return (
-      <span className="flex items-start gap-0.5" title={`${label}: ${points}`}>
-        {Array.from({ length: stacks }, (_, stack) => (
-          <span key={stack} className="flex flex-col items-center">
-            {Array.from(
-              { length: Math.min(PER_STACK, coins - stack * PER_STACK) },
-              (_, index) => (
-                <Image
-                  key={index}
-                  src="/tokens/gold.png"
-                  alt=""
-                  width={SIZE}
-                  height={SIZE}
-                  style={index > 0 ? { marginTop: REVEAL - SIZE } : undefined}
-                  className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
-                  unoptimized
-                />
-              ),
-            )}
-            {cut && stack === stacks - 1 && (
-              <MoreThanFits stat={stat} size={SIZE} lift={REVEAL - SIZE} />
-            )}
-          </span>
-        ))}
-      </span>
+      <CoinStack
+        count={points}
+        src="/tokens/gold.png"
+        size={SIZE}
+        perStack={10}
+        boxHeight={STACK_HEIGHT}
+        maxColumns={COLUMNS_MAX}
+        // The two piles on a rail nearly touch, which is `gap-0.5`.
+        gap={2}
+        stat={stat}
+        title={`${label}: ${points}`}
+        /* Announced once, exactly as the żetony branch below does it. The pile
+           of coins used to be silent — every `alt` empty — and the only thing
+           saying how rich a seat was, was the numeral `RailStat` prints under
+           it. */
+        alt={`${label} ${points}`}
+      />
     );
   }
 
@@ -216,81 +172,6 @@ export function Tokens({ stat, points, label }: { stat: string; points: number; 
   );
 }
 
-
-/**
- * The last square of a pile that has outgrown its rail.
- *
- * Three columns is the ceiling (`COLUMNS_MAX`), and a rail filled to it used to
- * look exactly like a rail that merely happened to be full: fifteen żetony of
- * four read as sixty whether the seat had sixty or nine hundred, and the only
- * thing that knew the difference was the numeral underneath. The picture had
- * stopped counting without admitting it.
- *
- * So the last token stands down and says there is more. One square of picture
- * is a cheap price at a size where nobody is counting the pile anyway, and
- * anybody who misses the mark still has the exact figure printed below it.
- *
- * Kept from a screen reader: the first token in the pile already announces the
- * parameter and its value, and this adds nothing a listener does not have.
- *
- * Drawn as a żeton and not as a control. It was a dashed outline over the panel
- * for a while, which is the costume every button in this app wears — so the one
- * square on the rail that does nothing was the one square that looked like it
- * did. It wears the pile's own field and ink instead: last in the row, plainly
- * part of it, and plainly not a number.
- */
-function MoreThanFits({
-  stat,
-  size,
-  /** The overlap a coin in a gold stack sits at, so the mark stacks like one. */
-  lift,
-}: {
-  stat: string;
-  size: number;
-  lift?: number;
-}) {
-  const { field, ink } = TOKEN_INK[stat] ?? TOKEN_INK.sword;
-  /**
-   * Three dots, drawn rather than typed.
-   *
-   * A "…" is text, and text on a line sits on its baseline: centring the line
-   * box in the square leaves the ink four and a half pixels low, because an
-   * ellipsis is all descender-less and hugs the bottom of the em. Measured, not
-   * guessed — but the correction is a share of Inter's own metrics, and a
-   * magic percentage that quietly stops being right if the font ever falls back
-   * is a worse thing to leave behind than three circles.
-   *
-   * Sized off `size` so they stay the same dots at whatever a żeton is drawn
-   * at, and heavy enough to read as the printed ink rather than as punctuation.
-   */
-  const dot = Math.max(2, Math.round(size * 0.18));
-  const gap = Math.max(1, Math.round(size * 0.07));
-  return (
-    <span
-      style={{ width: size, height: size, marginTop: lift, background: field }}
-      aria-hidden
-      // The coins carry a shadow because they overlap and a stack needs its
-      // edges; the żetony sit apart and do not. Whichever pile this ends, it
-      // is drawn the way the pictures above it are.
-      className={`flex items-center justify-center rounded-[2px] ${
-        lift === undefined ? "" : "shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
-      }`}
-    >
-      {[0, 1, 2].map((index) => (
-        <span
-          key={index}
-          style={{
-            width: dot,
-            height: dot,
-            background: ink,
-            marginLeft: index === 0 ? 0 : gap,
-          }}
-          className="rounded-full"
-        />
-      ))}
-    </span>
-  );
-}
 
 /**
  * One parameter, as a pile of żetony up the side of the character card.

@@ -107,3 +107,29 @@ export function pileColumns(
   const drawn = cut ? room - 1 : items;
   return { columns: Math.min(maxColumns, Math.ceil(items / perColumn)), drawn, cut };
 }
+
+/**
+ * How much of the coin underneath still shows, for a stack that has to fit.
+ *
+ * The other half of `pileColumns`, and here for the same reason: it was written
+ * twice, once for the rail beside a Karta Postaci and once for the gold lying
+ * on an Obszar, with the variables renamed and the same sum underneath.
+ *
+ * A stack of identical tokens is drawn by overlapping them — that is what a
+ * pile of coins looks like from across a table, and it costs nothing to draw
+ * since every coin is the same picture anyway. What decides the overlap is the
+ * box the full stack has to fit: the top token stands whole and the `perStack -
+ * 1` under it each contribute this much.
+ *
+ *     size + (perStack - 1) * overlap <= boxHeight
+ *
+ * Floored, so a stack is never a pixel taller than its room. The two callers
+ * ask it different questions and get answers that look nothing alike — 16px
+ * coins ten deep in 91 give 8, 39px coins five deep in 75 give 9 — which is the
+ * point: neither number is written down anywhere, so changing either box moves
+ * its pile instead of leaving a constant that used to be right.
+ */
+export function stackOverlap(boxHeight: number, size: number, perStack: number): number {
+  if (perStack <= 1) return size;
+  return Math.max(1, Math.floor((boxHeight - size) / (perStack - 1)));
+}

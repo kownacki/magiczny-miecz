@@ -3,8 +3,8 @@
 /** Sztuki Złota lying on an Obszar: the pile, and how much of it you are taking (12.1). */
 
 import { useState } from "react";
-import Image from "next/image";
 import { TILE_ART_HEIGHT, TILE_WIDTH } from "@/lib/view/cardImages";
+import { CoinStack } from "./token-pile";
 import { plural } from "@/lib/engine/polish";
 
 /**
@@ -17,56 +17,25 @@ import { plural } from "@/lib/engine/polish";
  * Two stacks across a tile's width, five coins down its height. `gold.png` is
  * square — 101 by 101 — so the width decides the coin: two of them and the gap
  * between fill 86, which makes each 39. Five at full height would be 195
- * against the art's 75, so they overlap, the way coins in a pile do and the way
- * the purse beside a Karta Postaci already draws them. `REVEAL` is how much of
- * the one underneath still shows.
+ * against the art's 75, so they overlap; `stackOverlap` works out by how much,
+ * and `CoinStack` draws it — the same pile as the purse beside a Karta Postaci,
+ * at four times the size and half the depth.
  *
- * Derived rather than written down, so changing the tile moves the gold with
- * it instead of leaving two numbers that used to agree.
+ * Derived rather than written down, so changing the tile moves the gold with it
+ * instead of leaving two numbers that used to agree.
  */
 // `TILE_GAP.card` is `gap-2`, and a margin cannot be set from a class name.
 const GAP = 8;
 const COIN = Math.floor((TILE_WIDTH - GAP) / 2);
 const PER_STACK = 5;
-const REVEAL = Math.floor((TILE_ART_HEIGHT - COIN) / (PER_STACK - 1));
 
 /**
  * Two stacks and no more, which is the ceiling the rail's own gold has for the
- * same reason: past ten the pile stops growing and the numeral under it goes
- * on being exact. The coins are all ones, so the picture was only ever an
- * impression of how much is lying here and the count was always the reading.
+ * same reason: past ten the pile stops growing, the mark on the last coin says
+ * so, and the numeral beside it goes on being exact. The coins are all ones, so
+ * the picture was only ever an impression of how much is lying here.
  */
 const STACKS_MAX = 2;
-
-function Pile({ gold }: { gold: number }) {
-  /**
-   * `pileColumns` is the rail's and is not this, because it splits a pile that
-   * overflows into what is drawn and a marker saying it did — and here there is
-   * nothing to say: the count is printed beside the coins, in full, always.
-   */
-  const drawn = Math.min(gold, STACKS_MAX * PER_STACK);
-  const columns = Math.ceil(drawn / PER_STACK);
-  return (
-    <span className="flex shrink-0 items-start" style={{ gap: GAP }} aria-hidden>
-      {Array.from({ length: columns }, (_, stack) => (
-        <span key={stack} className="flex flex-col items-center">
-          {Array.from({ length: Math.min(PER_STACK, drawn - stack * PER_STACK) }, (_, at) => (
-            <Image
-              key={at}
-              src="/tokens/gold.png"
-              alt=""
-              width={COIN}
-              height={COIN}
-              style={at > 0 ? { marginTop: REVEAL - COIN } : undefined}
-              className="rounded-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.55)]"
-              unoptimized
-            />
-          ))}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 /**
  * What is lying here, and the one control that takes it.
@@ -98,7 +67,15 @@ export function FieldGold({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start gap-3">
-        <Pile gold={gold} />
+        <CoinStack
+          count={gold}
+          src="/tokens/gold.png"
+          size={COIN}
+          perStack={PER_STACK}
+          boxHeight={TILE_ART_HEIGHT}
+          maxColumns={STACKS_MAX}
+          gap={GAP}
+        />
         <p className="text-xs text-muted">
           <span className="tnum text-zloto">{gold}</span>{" "}
           {plural(gold, "Sztuka Złota", "Sztuki Złota", "Sztuk Złota")}
