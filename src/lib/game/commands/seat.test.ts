@@ -109,6 +109,9 @@ describe("what a seat is to everybody else", () => {
       fieldId: "karczma",
       nature: "evil",
       eliminated: false,
+      // The two states `seatsTargeted` passes over, side by side: off the board
+      // (4.4) and standing on it out of reach (20.1-20.5).
+      stone: false,
     });
   });
 

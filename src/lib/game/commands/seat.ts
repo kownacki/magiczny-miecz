@@ -16,6 +16,7 @@ import {
   frozenBy,
   magiaCountsAsMiecz,
   spellsHushed,
+  stillStone,
   type Status,
 } from "@/lib/engine/status";
 import { projectQueue } from "@/lib/engine/turnQueue";
@@ -284,6 +285,7 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
       fieldId: row.field_id,
       nature,
       eliminated: row.eliminated,
+      stone: stillStone(row.stone_until_round, snapshot.game.round),
     },
   };
 }

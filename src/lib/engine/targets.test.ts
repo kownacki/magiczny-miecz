@@ -8,6 +8,7 @@ function seat(seatIndex: number, over: Partial<TargetSeat> = {}): TargetSeat {
     fieldId: "karczma",
     nature: "good",
     eliminated: false,
+    stone: false,
     ...over,
   };
 }
@@ -15,6 +16,27 @@ function seat(seatIndex: number, over: Partial<TargetSeat> = {}): TargetSeat {
 const indices = (found: TargetSeat[] | null) => found?.map((s) => s.seatIndex) ?? null;
 
 describe("who an effect hits", () => {
+  /**
+   * 20.1-20.5, which say it four times from four directions: a Postać
+   * Zamieniona w Kamień is out of the game for three turns and nothing aimed
+   * at a group reaches it. The Władca Gromu was the live case — a Zaklęcie
+   * that takes a turn from everyone on an Obszar, which 20.5 forbids outright
+   * against a statue — and PRZESILENIE the loud one, since it would empty a
+   * hand 20.5 says is kept until the three turns are up.
+   */
+  it("passes over a Postać Zamienioną w Kamień, and only that one (20.1-20.5)", () => {
+    const seats = [seat(0), seat(1, { stone: true }), seat(2)];
+    expect(indices(seatsTargeted("wszyscy", seats, seats[0]))).toEqual([0, 2]);
+    expect(indices(seatsTargeted("wszyscy-tutaj", seats, seats[0]))).toEqual([0, 2]);
+    expect(indices(seatsTargeted("dobrzy", seats, seats[0]))).toEqual([0, 2]);
+    // Its own turn cannot come round while it is stone, but the answer is the
+    // same from every direction rather than special-cased per target.
+    expect(indices(seatsTargeted(undefined, seats, seats[1]))).toEqual([]);
+    // And it is back in the list the turn it is flesh again.
+    const flesh = [seat(0), seat(1), seat(2)];
+    expect(indices(seatsTargeted("wszyscy", flesh, flesh[0]))).toEqual([0, 1, 2]);
+  });
+
   it("means the drawer when no target is named", () => {
     const seats = [seat(0), seat(1)];
     expect(indices(seatsTargeted(undefined, seats, seats[0]))).toEqual([0]);

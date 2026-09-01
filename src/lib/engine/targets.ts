@@ -10,6 +10,8 @@ export interface TargetSeat {
   fieldId: FieldId | null;
   nature: Nature | null;
   eliminated: boolean;
+  /** Zamieniona w Kamień right now (20.1) — nothing aimed at a group reaches it. */
+  stone: boolean;
 }
 
 /**
@@ -43,7 +45,33 @@ export function seatsTargeted(
   const spared = (seat: TargetSeat) =>
     seat.characterId === null || !oprocz.includes(seat.characterId);
 
-  const only = (chosen: readonly TargetSeat[]) => chosen.filter(spared);
+  /**
+   * Nothing aimed at a group reaches a Postać Zamienioną w Kamień.
+   *
+   * Chapter 20 says this four times from four directions rather than once, and
+   * it is the four together that make it a rule about *reaching* rather than
+   * four separate immunities. 20.2: it possesses no Przedmioty, no złoto, no
+   * Przyjaciół, so there is nothing on it to take. 20.3: „nie zmienia swojej
+   * wartości punktów Magii ani Miecza", and „po powrocie do swojej zwykłej
+   * postaci, **nadal ma taką samą wartość**" — a promise about the far end of
+   * the three turns that only holds if nothing moved the numbers in between.
+   * 20.4: it cannot be moved. 20.5: no point of Życie can be taken from it and
+   * no Zaklęcie cast at it, and it keeps its Zaklęcia to use „po odczarowaniu z
+   * Kamienia, czyli po 3 turach" — which PRZESILENIE would make untrue.
+   *
+   * So a statue is out of the game for three turns, and the four ops that go
+   * through here — `punkty`, `strata`, `tura-stracona`, `efekt` — pass it by.
+   * Filtered rather than refused, because a Władca Gromu thrown at an Obszar
+   * with a statue and two live Postacie is still a Zaklęcie that lands: it just
+   * does not land on the statue. A Zaklęcie aimed at *one* named Postać is the
+   * other case and refuses out loud — see `refuseAgainstStone`.
+   *
+   * Beside `eliminated` on purpose. The two are not the same state — a dead
+   * character is off the board and a statue is standing on it — but they are
+   * the same answer to this question, and the answer is what this function is.
+   */
+  const only = (chosen: readonly TargetSeat[]) =>
+    chosen.filter((seat) => spared(seat) && !seat.stone);
 
   switch (target) {
     // No target named means the card is talking to whoever drew it.

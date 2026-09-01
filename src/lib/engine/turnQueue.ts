@@ -88,10 +88,36 @@ export function projectQueue(
         reason: frozen ? "stone" : "lost",
         remaining: frozen ? seat.stoneUntilRound! - clock : seat.turnsLost,
       });
-      // Mirrors finishTurn, which spends a lost turn on any skipped seat that
-      // has one — including a frozen one. Whether that is right is a rules
-      // question (a character in Stone arguably cannot be spending turns), but
-      // it is what the app does, and the forecast has to match the app.
+      /**
+       * Mirrors finishTurn, which spends a lost turn on any skipped seat that
+       * has one — including a frozen one. A statue owed turns pays them off
+       * *while* it is stone rather than after, so being stoned mid-debt costs
+       * three rounds and not three plus the debt.
+       *
+       * This was written down as an open rules question and it has an answer.
+       * 16.1 is what settles it: „Jeżeli spowodowałoby to utratę tury przez
+       * Postać, musi ona powstrzymać się od podejmowania jakichkolwiek dalszych
+       * działań — **ta właśnie tura** liczy się jako stracona." The character
+       * there has already rolled, already moved and already arrived, and the
+       * turn still counts as the lost one — so what makes a turn *lost* in this
+       * box is that the character spends it doing nothing, not that it was a
+       * turn they would otherwise have enjoyed. A round in Kamień is exactly a
+       * turn spent doing nothing.
+       *
+       * 20.1 and 20.4 agree from the other end: „powraca... po zakończeniu 3
+       * tury" and „przez trzy tury nie może się poruszać" both state the
+       * incapacity as three, and a debt that survived the stone would keep a
+       * character out for three plus however many it owed.
+       *
+       * So does this file's own vocabulary, which is where the doubt came from:
+       * `DEBT` is the one countdown that "counts turns NOT taken — each go it
+       * names is one the holder does not get", and three of them are not got.
+       *
+       * (Nothing can *add* to the debt while the stone lasts: `seatsTargeted`
+       * passes a statue over, so a Burza Siedmiu Słońc drawn by somebody else
+       * does not reach it. The only way into this state is to owe turns first
+       * and be stoned after — a Fatum, which can be spoken at any moment.)
+       */
       if (seat.turnsLost > 0) seat.turnsLost -= 1;
     }
 
