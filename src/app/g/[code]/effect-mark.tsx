@@ -8,6 +8,7 @@ import { useCardPreview } from "./card-preview";
 import { ART_BORDER, PICKABLE } from "./pickable";
 import { type TileCard } from "./card-tile";
 import { SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
+import { plural } from "@/lib/engine/polish";
 
 /** Twice what it was, and the shape every other card in the app is drawn in. */
 const MARK_WIDTH = 40;
@@ -39,6 +40,50 @@ export function ToneGlyph({ shape }: { shape: "up" | "down" | "square" }) {
       {shape === "square" && <rect x="2.4" y="2.4" width="5.2" height="5.2" />}
     </svg>
   );
+}
+
+/**
+ * Neither, good, bad — the order effects are read in, wherever they are read.
+ *
+ * The folded bar counts them in this order and the open card draws them in it,
+ * because they are one set shown two ways and somebody folding the card to
+ * check should find the same thing in the same place.
+ *
+ * Within a tone they stay in the order they started: `effectsFor` reads them
+ * `.order("created_at")` and this sort is stable, so the secondary key is the
+ * one the server already sorted by and neither end has to carry a timestamp to
+ * get it. The four ad-hoc statuses — a lost turn, the Kamień, a barred Most —
+ * have no start of their own and keep the place `allStatuses` gives them.
+ */
+export const TONE_ORDER = ["obojetny", "dobry", "zly"] as const;
+
+/**
+ * What is helping and what is not, said in words.
+ *
+ * No "otwórz Kartę, żeby zobaczyć które" on the end any more: it was a sentence
+ * explaining a click, hanging off the thing that answers the click, under a
+ * cursor that already says it can be pressed.
+ *
+ * Polish counts in three — jeden efekt, dwa efekty, pięć efektów — so the
+ * sentence is built rather than pluralised with an "s", the way every other
+ * count in this app is (`plural` in `polish.ts`). "Obojętne" are left out of
+ * both numbers and named on the end: they are true of the character and neither
+ * help nor hurt, and folding them into either count would be an opinion.
+ */
+export function effectsSaid(effects: readonly { tone: string; title: string }[]): string {
+  const count = (tone: string) => effects.filter((mark) => mark.tone === tone).length;
+  const said = (n: number, one: string, few: string, many: string) =>
+    `${n} ${plural(n, one, few, many)}`;
+  const words: Record<string, [string, string, string]> = {
+    obojetny: ["inny efekt", "inne efekty", "innych efektów"],
+    dobry: ["wzmocnienie", "wzmocnienia", "wzmocnień"],
+    zly: ["osłabienie", "osłabienia", "osłabień"],
+  };
+  // `TONE_ORDER`, like the marks and the counts: one set, three readings, one
+  // order between them.
+  return TONE_ORDER.filter((tone) => count(tone) > 0)
+    .map((tone) => said(count(tone), ...words[tone]))
+    .join(", ");
 }
 
 /**

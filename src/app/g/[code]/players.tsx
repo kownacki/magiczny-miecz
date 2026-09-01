@@ -36,7 +36,7 @@ import { natureSaid } from "./nature-line";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
 import { EffectList } from "./effect-list";
-import { EffectMark, EffectTally } from "./effect-mark";
+import { EffectMark, EffectTally, effectsSaid } from "./effect-mark";
 import { TileRow } from "./tile-row";
 
 export function PlayersDrawer({
@@ -185,14 +185,20 @@ export function PlayersDrawer({
                 */}
               <button
                 onClick={() => toggleSeat(seat.id)}
-                className="flex w-full flex-col gap-0.5 px-2 py-1.5 text-left"
+                className="flex w-full items-center gap-2 px-2 py-1.5 text-left"
               >
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{ background: colour }}
+                  aria-hidden
+                />
+                {/* The two lines, and the handle beside them rather than on
+                    one of them. „+" opens the whole row, not its top half, so
+                    it stands in a column of its own down the right — with the
+                    effects ending where the numbers above them do instead of
+                    stopping a glyph short and leaving the corner ragged. */}
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex w-full items-center gap-2">
-                  <span
-                    className="h-3 w-3 shrink-0 rounded-full"
-                    style={{ background: colour }}
-                    aria-hidden
-                  />
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">
                     {seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}
                     {/* Your own row is named, because a list of everybody that
@@ -220,13 +226,11 @@ export function PlayersDrawer({
                     <span className="text-muted"> / </span>
                     <span className="text-zloto">{seat.gold}</span>
                   </span>
-                  <span className="shrink-0 text-[10px] text-muted">{expanded ? "−" : "+"}</span>
                 </span>
 
-                {/* Under the name and indented to it — the dot's width and the
-                    gap after it — so the two lines read as one row rather than
-                    as two entries. */}
-                <span className="flex w-full items-center gap-2 pl-5">
+                {/* Under the name, and inside the same column, so the two lines
+                    read as one row rather than as two entries. */}
+                <span className="flex w-full items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
                     {character ? (
                       <Lookable kind="character" id={character.id} name={character.name} />
@@ -251,12 +255,26 @@ export function PlayersDrawer({
                       component, so the two cannot come to disagree. */}
                   {seat.effects.length > 0 && (
                     <span
-                      title={seat.effects.map((effect) => effect.title).join(" · ")}
+                      /* How many, not which — `effectsSaid`, the same sentence
+                         a folded seat card gives its own bar.
+                         
+                         It used to be every effect's full title strung
+                         together, which on a Postać carrying three of them was
+                         a paragraph hanging off a row two glyphs wide, and
+                         still not the thing the glyphs raise: they say „▲1 ■1"
+                         and the question is what those *are*. Which ones is
+                         what opening the row answers, and opening it is one
+                         click away on the same row. */
+                      title={effectsSaid(seat.effects)}
                       className="tnum shrink-0 text-[11px] leading-none"
                     >
                       <EffectTally effects={seat.effects} />
                     </span>
                   )}
+                </span>
+                </span>
+                <span className="shrink-0 self-center text-[10px] text-muted">
+                  {expanded ? "−" : "+"}
                 </span>
               </button>
 

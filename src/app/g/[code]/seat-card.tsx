@@ -32,14 +32,14 @@ import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import { forbiddenIn } from "@/lib/engine/holdings";
 import Image from "next/image";
-import { characterKind, plural } from "@/lib/engine/polish";
+import { characterKind } from "@/lib/engine/polish";
 import { seatColour } from "@/lib/view/boardMap";
 import { RailStat, StatFigure } from "./token-rail";
 import { FightsForYou } from "./fights-for-you";
 import { Fold } from "./fold";
 import { NatureLine, natureSaid } from "./nature-line";
 import { Lookable } from "./lookable";
-import { EffectMark, EffectTally } from "./effect-mark";
+import { EffectMark, EffectTally, TONE_ORDER, effectsSaid } from "./effect-mark";
 import { EffectList } from "./effect-list";
 import { TILE_GAP } from "./tile-row";
 /**
@@ -50,50 +50,6 @@ import { TILE_GAP } from "./tile-row";
  * say what — and carries their titles on its own hover, so nothing is lost that
  * was not already a hover away.
  */
-/**
- * Neither, good, bad — the order effects are read in, wherever they are read.
- *
- * The folded bar counts them in this order and the open card draws them in it,
- * because they are one set shown two ways and somebody folding the card to
- * check should find the same thing in the same place.
- *
- * Within a tone they stay in the order they started: `effectsFor` reads them
- * `.order("created_at")` and this sort is stable, so the secondary key is the
- * one the server already sorted by and neither end has to carry a timestamp to
- * get it. The four ad-hoc statuses — a lost turn, the Kamień, a barred Most —
- * have no start of their own and keep the place `allStatuses` gives them.
- */
-const TONE_ORDER = ["obojetny", "dobry", "zly"] as const;
-
-/**
- * What is helping and what is not, said in words.
- *
- * No "otwórz Kartę, żeby zobaczyć które" on the end any more: it was a sentence
- * explaining a click, hanging off the thing that answers the click, under a
- * cursor that already says it can be pressed.
- *
- * Polish counts in three — jeden efekt, dwa efekty, pięć efektów — so the
- * sentence is built rather than pluralised with an "s", the way every other
- * count in this app is (`plural` in `polish.ts`). "Obojętne" are left out of
- * both numbers and named on the end: they are true of the character and neither
- * help nor hurt, and folding them into either count would be an opinion.
- */
-function effectsSaid(effects: readonly { tone: string; title: string }[]): string {
-  const count = (tone: string) => effects.filter((mark) => mark.tone === tone).length;
-  const said = (n: number, one: string, few: string, many: string) =>
-    `${n} ${plural(n, one, few, many)}`;
-  const words: Record<string, [string, string, string]> = {
-    obojetny: ["inny efekt", "inne efekty", "innych efektów"],
-    dobry: ["wzmocnienie", "wzmocnienia", "wzmocnień"],
-    zly: ["osłabienie", "osłabienia", "osłabień"],
-  };
-  // `TONE_ORDER`, like the marks and the counts: one set, three readings, one
-  // order between them.
-  return TONE_ORDER.filter((tone) => count(tone) > 0)
-    .map((tone) => said(count(tone), ...words[tone]))
-    .join(", ");
-}
-
 export function SeatCard({
   seat,
   active,
