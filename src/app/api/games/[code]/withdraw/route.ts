@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { bodyOf } from "@/lib/game/requests";
-import { refused } from "@/app/api/refused";
-import { findGame, seatsFor, verifyActor } from "@/lib/game/store";
+import { handle } from "@/app/api/handle";
+
+import { seatsFor } from "@/lib/game/store";
 import { removeCharacter } from "@/lib/game/turnStore";
 
 /**
@@ -25,13 +25,7 @@ import { removeCharacter } from "@/lib/game/turnStore";
  * code that typechecked and could not run.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const game = await findGame(code.toUpperCase());
-  if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
-
-  const body = await bodyOf(request, "withdraw");
-  const actor = await verifyActor(game.id, String(body.token ?? ""));
-  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  return handle(request, params, "withdraw", async ({ game, actor, body }) => {
 
   // Named by seat, because that is what a host is looking at when they decide:
   // a chair with somebody's Postać standing in it and nobody behind it.
@@ -39,7 +33,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
   const target = seats.find((seat) => seat.id === String(body.seatId ?? ""));
   if (!target) return NextResponse.json({ error: "Nie ma takiego miejsca." }, { status: 404 });
 
-  try {
     const { characterId, returned } = await removeCharacter(
       game.id,
       target.id,
@@ -47,7 +40,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       actor.user.id,
     );
     return NextResponse.json({ characterId, returned });
-  } catch (error) {
-    return refused(error);
-  }
+  });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { bodyOf } from "@/lib/game/requests";
-import { refused } from "@/app/api/refused";
-import { findGame, verifyActor } from "@/lib/game/store";
+import { handle } from "@/app/api/handle";
+
+
 import type { Slot } from "@/lib/engine/slots";
 import { requireFieldId } from "@/lib/engine/board";
 import {
@@ -34,20 +34,13 @@ import {
  * somebody else notices.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const game = await findGame(code.toUpperCase());
-  if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
-
-  const body = await bodyOf(request, "holdings");
-  const actor = await verifyActor(game.id, String(body.token ?? ""));
-  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  return handle(request, params, "holdings", async ({ game, actor, body }) => {
   const seat = actor.seat;
   // Watching is not acting: a spectator holds a good token and drives no
   // Postać, which every route below this line is about.
   if (!seat) {
     return NextResponse.json({ error: "Nie prowadzisz żadnej Postaci." }, { status: 403 });
   }
-  try {
     switch (body.action) {
       case "take":
         await takeCard(game.id, String(body.seatId ?? seat.id), String(body.cardId));
@@ -193,7 +186,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         return NextResponse.json({ error: "Nieznana akcja." }, { status: 400 });
     }
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    return refused(error);
-  }
+  });
 }

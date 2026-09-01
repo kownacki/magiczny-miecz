@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { bodyOf, type Requests } from "@/lib/game/requests";
+import { handle } from "@/app/api/handle";
+import type { Requests } from "@/lib/game/requests";
+
 import type { Spoils } from "@/lib/game/commands/fight";
-import { refused } from "@/app/api/refused";
-import { findGame, verifyActor } from "@/lib/game/store";
+
 import { mayAct } from "@/lib/game/permission";
 import {
   attackSeat,
@@ -73,13 +74,7 @@ function spoilsIn(body: Partial<Requests["turn"]>): Spoils | undefined {
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const game = await findGame(code.toUpperCase());
-  if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
-
-  const body = await bodyOf(request, "turn");
-  const actor = await verifyActor(game.id, String(body.token ?? ""));
-  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  return handle(request, params, "turn", async ({ game, actor, body }) => {
   // Watching is not acting. A spectator holds a perfectly good token and drives
   // no Postać, which every action below this line is about.
   const seat = actor.seat;
@@ -93,7 +88,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
   }
 
-  try {
     switch (body.action) {
       case "roll":
         await rollForMove(game.id, typeof body.value === "number" ? body.value : null);
@@ -310,7 +304,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         return NextResponse.json({ error: "Nieznana akcja." }, { status: 400 });
     }
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    return refused(error);
-  }
+  });
 }

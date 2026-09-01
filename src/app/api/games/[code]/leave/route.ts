@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { bodyOf } from "@/lib/game/requests";
-import { refused } from "@/app/api/refused";
-import { findGame, verifyActor } from "@/lib/game/store";
+import { handle } from "@/app/api/handle";
+
+
 import { leaveTable, unseat } from "@/lib/game/lobbyStore";
 
 /**
@@ -12,15 +12,8 @@ import { leaveTable, unseat } from "@/lib/game/lobbyStore";
  * player may apply to anyone.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const game = await findGame(code.toUpperCase());
-  if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
+  return handle(request, params, "leave", async ({ game, actor, body }) => {
 
-  const body = await bodyOf(request, "leave");
-  const actor = await verifyActor(game.id, String(body.token ?? ""));
-  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
-
-  try {
     // Naming somebody else is a kick, which is the host's. Naming nobody is
     // going yourself — and `standing` says whether you are leaving the chair or
     // the table, which are different things now and get different journal
@@ -36,7 +29,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         ? await unseat(game.id, actor.user.id)
         : await leaveTable(game.id, actor.user.id),
     );
-  } catch (error) {
-    return refused(error);
-  }
+  });
 }

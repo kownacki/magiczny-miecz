@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { bodyOf } from "@/lib/game/requests";
-import { refused } from "@/app/api/refused";
-import { findGame, verifyActor } from "@/lib/game/store";
+import { handle } from "@/app/api/handle";
+
 import { startGame } from "@/lib/game/turnStore";
 
 /**
@@ -20,21 +19,12 @@ import { startGame } from "@/lib/game/turnStore";
  * else's game from outside the room.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const game = await findGame(code.toUpperCase());
-  if (!game) return NextResponse.json({ error: "Nie ma takiego stołu." }, { status: 404 });
-
-  const body = await bodyOf(request, "start");
-  const actor = await verifyActor(game.id, String(body.token ?? ""));
-  if (!actor) return NextResponse.json({ error: "Nieznane miejsce." }, { status: 403 });
+  return handle(request, params, "start", async ({ game, actor }) => {
   if (!actor.user.is_host) {
     return NextResponse.json({ error: "Grę rozpoczyna gospodarz." }, { status: 403 });
   }
 
-  try {
     await startGame(game.id);
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    return refused(error);
-  }
+  });
 }
