@@ -8,11 +8,10 @@ import { useState } from "react";
 import { orderWith } from "./pack-order";
 import { asCharacterId, mayHaveFriends, startingKit } from "@/lib/engine/characters";
 import { carriedCount, carryLimit, wandRefills } from "@/lib/engine/derive";
-import { SLOTS, fitsIn, type Slot } from "@/lib/engine/slots";
+import { slotsFor, type Slot } from "@/lib/engine/slots";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { CardBack, type TileCard } from "./card-tile";
 import { type Carried } from "./carry";
-import { EquipButton } from "./equip-button";
 import { Fold } from "./fold";
 import { TileRow } from "./tile-row";
 import { useRack } from "./rack";
@@ -361,18 +360,17 @@ export function Hand({
             quiet={moving}
             // The test mark comes off the card itself — see `ItemSlot`.
             marks={held.kind === "trophy" ? ["trofeum"] : []}
-            // Up onto the body, mirroring the arrow down that takes a card
-            // off it. Only where there is one place it could go: with two
-            // hands to choose between, an arrow would be choosing for you, and
-            // the pair of named buttons below is the whole point.
+            // Up onto the body, mirroring the arrow down that takes a card off
+            // it. Every wearable has one place and only one, so the arrow is
+            // never choosing for you — see `placeFor`.
             corner={
-              canAct && slotted && wearsInOnePlace(held.cardId) ? (
+              canAct && slotted && placeFor(held.cardId) ? (
                 <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
                     onCarry(null);
-                    const slot = SLOTS.find((place) => fitsIn(held.cardId, place))!;
+                    const slot = placeFor(held.cardId)!;
                     // Where the two change places, say where the displaced one
                     // is going before the server does: it takes this card's
                     // square, and waiting to be told that means watching it
@@ -388,7 +386,7 @@ export function Hand({
                     onEquip(held.id, slot);
                   }}
                   title={
-                    wornBySlot(seat)[SLOTS.find((slot) => fitsIn(held.cardId, slot))!]
+                    wornBySlot(seat)[placeFor(held.cardId)!]
                       ? "Załóż — to, co tam jest, wraca na to miejsce w plecaku"
                       : "Załóż"
                   }
@@ -459,9 +457,10 @@ export function Hand({
             // another on the next would be worse than no gesture.
             onDoubleClick={() => {
               if (!canAct || held.kind !== "item") return;
-              const place = slotted
-                ? SLOTS.find((slot) => fitsIn(held.cardId, slot))
-                : undefined;
+              // The place on the body, which is the only one a gesture picks:
+              // a Sakwa is filled by putting a card in it, never by a card
+              // deciding for itself that it would rather be put away.
+              const place = slotted ? placeFor(held.cardId) : null;
               if (place) {
                 onCarry(null);
                 return onEquip(held.id, place);
@@ -544,17 +543,6 @@ export function Hand({
           >
             {canAct && (
               <span className="flex items-center gap-2">
-                {/* Only where there is something to decide. A card with one
-                    place has the arrow in its corner and needs no word for the
-                    same act; a card with two hands to go in needs the two
-                    named buttons, which is what this is. */}
-                {slotted && held.kind === "item" && !wearsInOnePlace(held.cardId) && (
-                  <EquipButton
-                    cardId={held.cardId}
-                    worn={wornBySlot(seat)}
-                    onEquip={(slot) => onEquip(held.id, slot)}
-                  />
-                )}
                 {/* Always drawn where a card has a use, whether or not the
                     double-click reaches it — a gesture nobody can see is not
                     an offer. In ochre because it costs you the card, unlike
@@ -802,13 +790,20 @@ function FriendsHeld({
 const slottedIrrelevant = "classic" as const;
 
 /**
- * Putting a Przedmiot on.
+ * Where this card is worn, or nothing where it is only ever carried.
  *
- * One button when there is one place it can go, and a choice of two when it is
- * a weapon and both hands are places it could go — which is the only real
- * decision the variant offers, so it is the only one worth a second button.
+ * `slotsFor` and not `SLOTS.filter(fitsIn)`, which is the same question asked
+ * of a list that has since grown something that is not a place on the body.
+ * Every storage place takes almost every Przedmiot, so the filter answered
+ * "two places" for a Miecz and the pack offered a choice between them — under
+ * the labels „gł." and „pom.", the second of which was the Tajemna Sakwa
+ * wearing the off hand's name.
+ *
+ * No card in the box has two places on a body: `SLOT_OF` gives each of them
+ * exactly one, hands included. So there is nothing to choose and the arrow in
+ * the corner is the whole gesture. What goes in a Sakwa is put there by hand,
+ * which is what a bag you choose one thing to put in wants anyway.
  */
-/** Somewhere to put it, and only one somewhere — so no choice to offer. */
-function wearsInOnePlace(cardId: string): boolean {
-  return SLOTS.filter((slot) => fitsIn(cardId, slot)).length === 1;
+function placeFor(cardId: string): Slot | null {
+  return slotsFor(cardId)[0] ?? null;
 }
