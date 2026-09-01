@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * The two things a card can be flagged as, and the one way of drawing them.
+ * The things a card can be flagged as, and the one way of drawing each.
  *
- * Its own module because both the tile and the whole Karta draw it, and those
+ * Its own module because both the tile and the whole Karta draw them, and those
  * two already import each other's types — a runtime import between them would
  * close the loop.
  */
@@ -109,6 +109,36 @@ function Masked({
           height: size,
         }}
       />
+    </span>
+  );
+}
+
+/**
+ * A card that is done with: crossed out where it lies.
+ *
+ * One mark, two rows that had it separately. `ItemSlot` drew it on a trofeum
+ * spent under 1.4 and the kolejka drew it on a Karta that has left the Obszar —
+ * a Spotkanie read and discarded, a Wróg beaten and kept (16.2) — and the two
+ * were the same four lines with a different colour, which is how they came to
+ * disagree: gold in one place and red in the other, for the identical idea.
+ *
+ * Vermilion, because ochre is this app's word for "you can reach this" and a
+ * finished card is the opposite of an offer.
+ *
+ * Across the picture rather than over the whole tile, so the corner marks and
+ * the name below stay readable: this says the card is gone, not that the tile
+ * is unreadable. Two lines rather than one, because a bar across a picture
+ * reads as a redaction and an X is the mark somebody puts on a thing that is
+ * done with.
+ *
+ * Positioned against whatever it is dropped into, so the caller owns the
+ * `relative` and this owns everything else about the mark.
+ */
+export function StruckOut() {
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0">
+      <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
+      <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
     </span>
   );
 }

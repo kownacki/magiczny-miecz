@@ -20,7 +20,7 @@ import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
-import { CardMark, type SlotMark } from "./card-mark";
+import { CardMark, StruckOut, type SlotMark } from "./card-mark";
 import { ART_BORDER, PICKABLE } from "./pickable";
 
 /**
@@ -492,17 +492,7 @@ export function ItemSlot({
             />
           )}
 
-          {/* Drawn across the picture rather than over the whole square, so the
-              corner marks and the name below stay readable — this says the card
-              is gone, not that the tile is unreadable. Two lines rather than a
-              single strike: a bar across a picture reads as a redaction, and an
-              X is the mark somebody puts on a thing that is done with. */}
-          {struck && (
-            <span aria-hidden className="pointer-events-none absolute inset-0">
-              <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
-              <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
-            </span>
-          )}
+          {struck && <StruckOut />}
 
           {/* Bottom-right, together, because they answer the same question and
               a player scanning a pack should only have to look in one place.

@@ -12,7 +12,7 @@ import {
   faceFor,
 } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
-import { CardMark, WornMark } from "./card-mark";
+import { CardMark, StruckOut, WornMark } from "./card-mark";
 import { LAYER } from "./layers";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
@@ -215,18 +215,7 @@ export function CardTile({
             className="pointer-events-none absolute inset-0 bg-ochre/75 mix-blend-multiply"
           />
         )}
-        {struck && (
-          <span aria-hidden className="pointer-events-none absolute inset-0">
-            {/* Vermilion, at the weight `ItemSlot` strikes a spent trofeum
-                with, because it is the same mark meaning the same thing. Ochre
-                was wrong twice over: it is this app's word for "you can reach
-                this", so the crossing-out was drawn in the colour of an offer,
-                and a Karta struck in gold beside a trofeum struck in red is two
-                marks for one idea. */}
-            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
-            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
-          </span>
-        )}
+        {struck && <StruckOut />}
         {/* Conjured rather than dealt, marked on the tile and not only on the
             Karta it opens into: a tile is what a player actually scans, and a
             mark you have to hover to find is a mark that is not there.
