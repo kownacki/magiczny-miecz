@@ -38,7 +38,7 @@ const facing = (foe: string, cards: string[], spells: string[] = []): Snapshot =
         phase: "field",
         fieldId: "wrzosowiska",
         from: null,
-        draw: 1,
+        draw: 0,
         drawn: [{ cardId: foe, cardClass: "foe" }],
       } as TurnPhase,
     },

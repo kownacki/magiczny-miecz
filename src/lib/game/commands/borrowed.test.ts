@@ -34,7 +34,7 @@ const facing = (cardId: string): Snapshot =>
         phase: "field",
         fieldId: "wrzosowiska",
         from: null,
-        draw: 1,
+        draw: 0,
         drawn: [{ cardId, cardClass: "place" }],
       } as TurnPhase,
     },

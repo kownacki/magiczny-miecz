@@ -40,7 +40,7 @@ const meeting = (card: string, gold: number, magic = 4) =>
       active_seat: 0,
       deck: someSpells() as never,
       turn_state: {
-        phase: "field", fieldId: "wrzosowiska", from: null, draw: 1,
+        phase: "field", fieldId: "wrzosowiska", from: null, draw: 0,
         drawn: [{ cardId: card, cardClass: "stranger" }], resolved: [],
       } as TurnPhase,
     },

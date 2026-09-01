@@ -56,7 +56,7 @@ const table = (foe: string, holdings = [] as unknown[]): Snapshot =>
         phase: "field",
         fieldId: "wrzosowiska",
         from: null,
-        draw: 1,
+        draw: 0,
         drawn: [{ cardId: foe, cardClass: "foe" }],
       } as TurnPhase,
     },

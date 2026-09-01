@@ -62,7 +62,7 @@ import { refuseAgainstStone } from "./stone";
 import { slotsFor } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { hasAttacked } from "@/lib/engine/status";
-import { addEffect, refuseAgainst13_2, statusesOf } from "./turn";
+import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, statusesOf } from "./turn";
 
 /**
  * The one Zaklęcie the rules name inside another rule.
@@ -200,6 +200,10 @@ export function shutFight(
 export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<void> {
   const seat = activeSeat(snapshot);
   const state = requireTop(snapshot.game.turn_state, "field", "Nie czas na walkę.");
+  // 13.4: the whole deal comes before any of the reading. A Wróg turned over
+  // second is not fought until the third Karta is down, because that one may
+  // outrank him (15.1, 15.2) or carry the character off the Obszar (16.8).
+  refuseWhileUndrawn(snapshot);
   if (command.cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
 
   // 17.4 ends the fight when the dice are compared, whatever the result. A card

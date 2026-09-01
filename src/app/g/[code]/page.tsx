@@ -802,6 +802,21 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     (panel.sheet === "always" ||
       (panel.sheet === "when-drawn" &&
         turnState.phase === "field" &&
+        /**
+         * Not while the Obszar still owes Karty (13.4).
+         *
+         * The sheet opened on `drawn.length > 0`, which is true from the moment
+         * a character stops on a square that already had something lying on it
+         * — so Płaskowyż Mgieł with two Karty on it and a third still owed put
+         * the Wilk up with "Walcz" under him before the deal was finished.
+         * `refuseWhileUndrawn` refuses that on the server; this is so the
+         * button is not there to be pressed.
+         *
+         * What the player sees instead is the Obszar's own window, which is
+         * where the count and the deal are. The sheet takes over the moment
+         * there is nothing left to turn over.
+         */
+        turnState.draw <= 0 &&
         (turnState.drawn.length > 0 ||
           compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null)));
 

@@ -19,7 +19,7 @@ const pole = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnP
   phase: "field",
   fieldId: "mroczna-polana",
   from: null,
-  draw: 1,
+  draw: 0,
   drawn: [{ cardId: "cyklop", cardClass: "foe" }],
   ...over,
 });
@@ -49,7 +49,7 @@ const walka = (over: Partial<Fight> = {}): TurnPhase => ({
     enemyRoll: null,
     result: null,
     fieldId: "mroczna-polana",
-    draw: 1,
+    draw: 0,
     drawn: [{ cardId: "cyklop", cardClass: "foe" }],
     fought: ["cyklop"],
     ...over,
@@ -211,6 +211,41 @@ describe("otwarcie walki (17.4, 17.5)", () => {
 /* --------------------------------------------------------------------------
  * Speaking into one.
  * ----------------------------------------------------------------------- */
+
+/**
+ * 13.4: the whole deal before any of the reading.
+ *
+ * Found on a real table — Płaskowyż Mgieł prints three, two were lying on it,
+ * and the Wilk was already offering "Walcz" with the third Karta still in the
+ * deck. It matters because what comes up last can resolve first: 15.1 puts a
+ * relocating Karta above every numeral, 15.2 orders the rest by numeral, and
+ * 16.8's own worked example has a Spotkanie carry Obbol off the Obszar before
+ * he ever fights the Niedźwiedź he had already turned over.
+ */
+describe("the deal comes before the reading (13.4)", () => {
+  const midDeal = () =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", field_id: asFieldId("plaskowyz-mgiel")! })],
+      game: {
+        turn_state: only({
+          phase: "field",
+          fieldId: asFieldId("plaskowyz-mgiel")!,
+          from: null,
+          // Three printed, two turned over, one still owed.
+          draw: 1,
+          drawn: [
+            { cardId: "wilk", cardClass: "foe" },
+            { cardId: "czarodziej", cardClass: "stranger" },
+          ],
+        } as never),
+      },
+    });
+
+  it("refuses a fight while the Obszar still owes a Karta", () => {
+    expect(() => beginFight(midDeal(), { cardIds: ["wilk"] })).toThrow(/13\.4/);
+    expect(() => beginFight(midDeal(), { cardIds: ["wilk"] })).toThrow(/Najpierw wyciągnij/);
+  });
+});
 
 describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
   const casting = (

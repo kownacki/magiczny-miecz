@@ -60,6 +60,34 @@ export function refuseAgainst13_2(snapshot: Snapshot, doing: "meet" | "explore")
   }
 }
 
+/**
+ * Nothing on the Obszar is resolved while it still owes Karty (13.4).
+ *
+ * Badanie Obszaru is dealing *and* reading, and the dealing comes first — all
+ * of it. The Talisman FAQ's encounter sequence opens with it ("the character
+ * must follow the instructions on the space first") and 13.4 settles the whole
+ * number on arrival rather than one at a time.
+ *
+ * It is not ceremony. 15.1 puts a Karta that relocates itself above every
+ * numeral and 15.2 orders the rest by numeral, so what comes up *last* can
+ * resolve *first*: a Spotkanie dealt third goes before a Wróg dealt second, and
+ * a Spotkanie's die can carry the character off the Obszar entirely — 16.8's
+ * own worked example, where Obbol never fights the Niedźwiedź he had already
+ * turned over. Fighting the Wróg before the last Karta is dealt settles a
+ * fight the rules may never have asked for.
+ *
+ * Płaskowyż Mgieł found this: two Karty lying, one still owed, and the Wilk was
+ * already offering "Walcz".
+ */
+export function refuseWhileUndrawn(snapshot: Snapshot): void {
+  const state = topIf(snapshot.game.turn_state, "field");
+  if (!state || state.draw <= 0) return;
+  throw new Error(
+    `Najpierw wyciągnij ${state.draw === 1 ? "Kartę" : `${state.draw} Karty`}, ` +
+      "które ten Obszar każe ciągnąć (13.4).",
+  );
+}
+
 /** What one seat is under, in the shape the engine reasons about. */
 export function statusesOf(snapshot: Snapshot, seatId: string): Status[] {
   return snapshot.effects

@@ -35,7 +35,7 @@ const drawnBy = (occupied: string[]): Snapshot =>
         phase: "field",
         fieldId: "wrzosowiska",
         from: null,
-        draw: 1,
+        draw: 0,
         drawn: [{ cardId: LEWIATAN, cardClass: "foe" }],
       } as TurnPhase,
       deck: { events: { draw: [], discard: [] }, spells: { draw: [], discard: [] } },

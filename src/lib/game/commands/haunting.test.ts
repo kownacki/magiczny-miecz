@@ -29,7 +29,7 @@ const drawing = (field: FieldId, card: string, friends: string[] = []) =>
         phase: "field",
         fieldId: field,
         from: null,
-        draw: 1,
+        draw: 0,
         drawn: [{ cardId: card, cardClass: "encounter" }],
         resolved: [],
       } as TurnPhase,

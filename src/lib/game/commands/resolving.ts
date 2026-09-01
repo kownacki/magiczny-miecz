@@ -21,7 +21,7 @@ import { putOnPile } from "./piles";
 import { replaceTop, requireTop, topIf } from "@/lib/engine/stack";
 import { activeSeat, seatView } from "./seat";
 import { skipsRollAt } from "@/lib/engine/abilities";
-import { addEffect } from "./turn";
+import { addEffect, refuseWhileUndrawn } from "./turn";
 import type { Decisions } from "./ops";
 import { applyEffect, markResolved } from "./effects";
 
@@ -262,6 +262,8 @@ export async function resolveDrawnCard(
 ): Promise<Outcome<{ card: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
   const state = requireTop(snapshot.game.turn_state, "field");
+  // The whole deal before any of the reading (13.4) — see `refuseWhileUndrawn`.
+  refuseWhileUndrawn(snapshot);
   if (!state.drawn.some((entry) => entry.cardId === command.cardId)) {
     throw new Error("Tej Karty tu nie ma.");
   }

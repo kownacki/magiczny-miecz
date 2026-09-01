@@ -555,7 +555,7 @@ const meeting = (field: FieldId, foes: string[]) =>
         phase: "field",
         fieldId: field,
         from: null,
-        draw: 1,
+        draw: 0,
         drawn: foes.map((cardId) => ({ cardId, cardClass: "foe" })),
       } as TurnPhase,
     },
