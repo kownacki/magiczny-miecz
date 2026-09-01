@@ -544,7 +544,26 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * turn, to read the square — is not shown a reveal they have already had.
    */
   const [dealSeen, setDealSeen] = useState<string | null>(null);
-  const revealing = hereKey !== null && dealDone === true && dealSeen !== hereKey;
+  /**
+   * Nothing on this Obszar has been dealt with yet.
+   *
+   * The reveal used to hang on `dealSeen` alone, which is a piece of this
+   * component's state: it survives no reload, and there is no way back into a
+   * moment the app has forgotten it was in. A player who refreshed mid-badanie
+   * got the sheet and never the deal.
+   *
+   * So the moment is *derived* from the turn, and the client flag only ends it
+   * early. "The Karty are down and none of them has been touched" is what being
+   * at the start of a badanie means, and it is on the frame, so it comes back
+   * with the page.
+   */
+  const nothingSettledHere =
+    nowOnField?.phase === "field" &&
+    (nowOnField.resolved?.length ?? 0) === 0 &&
+    (nowOnField.fought?.length ?? 0) === 0 &&
+    (nowOnField.beaten?.length ?? 0) === 0;
+  const revealing =
+    hereKey !== null && dealDone === true && nothingSettledHere && dealSeen !== hereKey;
 
 
 
