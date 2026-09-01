@@ -99,7 +99,14 @@ export interface Requests {
     on: boolean;
   };
   host: { userId: string };
-  join: { name: string; deviceId: string | null; seatId: string; resume: boolean };
+  /**
+   * `name` is nullable because sitting down without giving one is a thing to
+   * do — `join/route.ts` reads it as `typeof body.name === "string" &&
+   * body.name.trim() ? … : null` and has always accepted it. It was typed
+   * `string` here and three call sites sent null anyway, which nothing caught
+   * because all three went round `post` with a hand-written `fetch`.
+   */
+  join: { name: string | null; deviceId: string | null; seatId: string; resume: boolean };
   /**
    * `standing` is the difference between the two ways out, and the reason this
    * one route serves both: out of the chair, or out of the table. Naming

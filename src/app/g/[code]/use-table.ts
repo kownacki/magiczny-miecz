@@ -403,6 +403,33 @@ async function saidWrong(response: Response): Promise<string> {
   }, [code, router]);
 
   /**
+   * One typed request, with the caller keeping the response.
+   *
+   * `post` is the fire-and-forget door: it reads the reply only to raise a
+   * notice, then refreshes. Ten call sites could not use it because they need
+   * the body — a minted token to write, a console line to print, whether the
+   * table remembered this device — so each wrote out its own `fetch`, and with
+   * it its own URL, method, headers and token read. That is where the checking
+   * `Requests` exists to do stopped happening: `addLocalPlayer` was sending
+   * `local: true`, a field `Requests["join"]` does not have and
+   * `join/route.ts` never read, which is exactly the bug that docblock
+   * recounts.
+   *
+   * So the plumbing is shared and the response is not. Everything below still
+   * decides for itself what a reply means; what it no longer decides is how to
+   * address the table.
+   */
+  const send = useCallback(
+    <R extends Route>(path: R, body: Partial<Requests[R]> = {}): Promise<Response> =>
+      fetch(`/api/games/${code}/${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...body, token: readSeatToken(code) }),
+      }),
+    [code],
+  );
+
+  /**
    * Was this browser somebody here?
    *
    * Asked by a device that has arrived holding nothing — a tab that was closed
@@ -418,11 +445,7 @@ async function saidWrong(response: Response): Promise<string> {
   const askWhoIWas = useCallback(async () => {
     const device = deviceId();
     if (!device) return;
-    const response = await fetch(`/api/games/${code}/join`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ resume: true, deviceId: device }),
-    });
+    const response = await send("join", { resume: true, deviceId: device });
     if (!response.ok) return;
     const data = await response.json();
     if (data.resumed) {
@@ -433,7 +456,7 @@ async function saidWrong(response: Response): Promise<string> {
       return;
     }
     setElsewhere(Boolean(data.live));
-  }, [code]);
+  }, [send]);
 
   /** Yes: be that person again. */
   async function resumeHere() {
@@ -551,16 +574,12 @@ async function saidWrong(response: Response): Promise<string> {
   /** One line, run on the server, answered with what to print. */
   const runConsole = useCallback(
     async (line: string) => {
-      const response = await fetch(`/api/games/${code}/debug`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "console", line, token: readSeatToken(code) }),
-      });
+      const response = await send("debug", { action: "console", line });
       const body = await response.json().catch(() => ({}));
       await refresh();
       return response.ok ? String(body.said ?? "ok") : String(body.error ?? "?");
     },
-    [code, refresh],
+    [refresh, send],
   );
 
   /**
@@ -629,11 +648,7 @@ async function saidWrong(response: Response): Promise<string> {
     if (!seated) return;
     setBusy(true);
     try {
-      const response = await fetch(`/api/games/${code}/leave`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: readSeatToken(code) }),
-      });
+      const response = await send("leave");
       if (!response.ok) {
         setError(await saidWrong(response));
         return;
@@ -663,13 +678,9 @@ async function saidWrong(response: Response): Promise<string> {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/games/${code}/join`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        // What browser this is, so that closing the tab is something to come
-        // back from rather than the end of being this person. See `deviceId`.
-        body: JSON.stringify({ name: name.trim() || null, deviceId: deviceId() }),
-      });
+      // What browser this is, so that closing the tab is something to come
+      // back from rather than the end of being this person. See `deviceId`.
+      const response = await send("join", { name: name.trim() || null, deviceId: deviceId() });
       const data = await response.json();
       if (!response.ok) return setError(data.error);
       writeSeatToken(code, data.token);
@@ -694,11 +705,7 @@ async function saidWrong(response: Response): Promise<string> {
    * the last player left them.
    */
   async function claimSeat(seatId: string, name: string | null = null) {
-    const response = await fetch(`/api/games/${code}/join`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seatId, name }),
-    });
+    const response = await send("join", { seatId, name });
     const data = await response.json();
     if (!response.ok) return setError(data.error);
     writeSeatToken(code, data.token);
@@ -736,11 +743,7 @@ async function saidWrong(response: Response): Promise<string> {
     // people can want Kapłanka and only the server knows who asked first.
     if (isRandomPick(characterId)) {
       setTaking((current) => ({ ...current, [seatId]: RANDOM_CHARACTER_ID }));
-      void fetch(`/api/games/${code}/character`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ characterId, seatId, token: readSeatToken(code) }),
-      })
+      void send("character", { characterId, seatId })
         .then(refresh)
         .catch(() => {
           // A dropped request leaves the seat as it was; the next poll will
@@ -751,11 +754,7 @@ async function saidWrong(response: Response): Promise<string> {
 
     setPendingCharacter(characterId);
     try {
-      await fetch(`/api/games/${code}/character`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ characterId, seatId, token: readSeatToken(code) }),
-      });
+      await send("character", { characterId, seatId });
       // Taken or refused, the next question is the same one: what is true now?
       await refresh();
     } catch {
@@ -920,14 +919,11 @@ async function saidWrong(response: Response): Promise<string> {
   }
 
   async function addLocalPlayer(name: string) {
-    const response = await fetch(`/api/games/${code}/join`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      // `local` marks a seat the host is filling for somebody at the table with
-      // no device — the only seat anybody may choose a character for but their
-      // own.
-      body: JSON.stringify({ name: name.trim() || null, local: true }),
-    });
+    // A seat the host is filling for somebody at the table with no device.
+    // It used to send `local: true` as well — a field `Requests["join"]` never
+    // had and `join/route.ts` never read, which only survived because this
+    // call went round the checked door.
+    const response = await send("join", { name: name.trim() || null });
     if (!response.ok) return setError(await saidWrong(response));
     refresh();
   }
