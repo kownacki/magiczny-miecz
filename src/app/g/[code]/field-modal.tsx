@@ -123,19 +123,21 @@ export interface FieldCardHere {
 type ShelfKey = FieldGroupKey | "zloto" | "gracze";
 
 /**
- * Where the Złoto shelf stands: after the loot, before the residents.
+ * Where the Złoto shelf stands: at the head of what may be taken.
  *
- * 12.1 lists what may be taken in that order — "zabrać leżące złoto, Przedmioty
- * lub Przyjaciół" — and gold answers the same question the loot does, which is
- * the only one this window is really asked: what of this is mine to take. So it
- * sits with the things you pick up rather than at the foot under the Miejsca,
- * which is where a shelf appended to the list would have put it.
+ * 12.1 lists it first — "zabrać leżące złoto, Przedmioty lub Przyjaciół" — and
+ * gold answers the same question the loot does, which is the only one this
+ * window is really asked: what of this is mine to take. So the money leads the
+ * things you pick up, in the box's own order, rather than sitting at the foot
+ * under the Miejsca where a shelf appended to the list would have put it.
  *
  * Said as "before these" rather than as an index, because `fieldGroups` drops
  * the empty groups: a position counted into a list that changes length is right
- * until the first Obszar with no Wrogowie on it.
+ * until the first Obszar with no Wrogowie on it. The residents are in the set
+ * as well as the loot, so an Obszar with a Labirynt and no Przedmioty still has
+ * its gold above them and not tacked on at the end.
  */
-const AFTER_THE_LOOT = new Set<FieldGroupKey>(["mieszkancy", "inne"]);
+const BEFORE_THE_LOOT = new Set<FieldGroupKey>(["rzeczy", "mieszkancy", "inne"]);
 
 /**
  * A field, opened.
@@ -336,14 +338,14 @@ export function FieldModal({
   const groups = fieldGroups(cards);
   /**
    * Which shelf the Złoto goes in front of, or null when there is none lying
-   * here. `findIndex` answers -1 when nothing comes after the loot, and then
-   * the money is simply last — which on an Obszar holding only gold is also
-   * first.
+   * here. `findIndex` answers -1 on an Obszar holding only Spotkania and
+   * Wrogowie — nothing there is takeable — and then the money is simply last,
+   * which on an Obszar holding only gold is also first.
    */
   const goldAt = (() => {
     if (gold <= 0) return null;
-    const residents = groups.findIndex((group) => AFTER_THE_LOOT.has(group.key));
-    return residents === -1 ? groups.length : residents;
+    const takeable = groups.findIndex((group) => BEFORE_THE_LOOT.has(group.key));
+    return takeable === -1 ? groups.length : takeable;
   })();
   /** What the deal just turned over, for the reveal above the rest. */
   const drawnNow = cards.filter((card) => card.justDrawn);
