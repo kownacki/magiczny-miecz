@@ -287,9 +287,14 @@ export function PlayersDrawer({
                 {/* Bigger than the small print it sits beside, because it is
                     not print: it is the one thing on the row you press, and at
                     ten pixels it read as a footnote to the numbers above it.
-                    `leading-5` keeps its line box the name's, so growing the
-                    glyph does not move it off the line it belongs to. */}
-                <span className="shrink-0 self-start text-[15px] leading-5 text-muted">
+
+                    Centred inside a box the height of the first line — `h-5`,
+                    which is the `gap-0.5` column's own line — rather than left
+                    to a line-height that happens to match. The glyph can then
+                    be any size and still sit on the row it belongs to; matching
+                    two numbers by hand is how it drifted off in the first
+                    place. */}
+                <span className="flex h-5 shrink-0 items-center self-start text-[15px] text-muted">
                   {expanded ? "−" : "+"}
                 </span>
               </button>
