@@ -86,6 +86,7 @@ import {
   spilled,
 } from "./commands/wearing";
 import {
+  drawAll as drawAllOn,
   drawCard as drawCardOn,
   drawSpell as drawSpellOn,
   drawSpellWithWand as drawSpellWithWandOn,
@@ -189,6 +190,21 @@ export async function drawCard(
   named: { cardId: string; cardClass: CardClass } | null,
 ): Promise<{ card: EventCard | null; recycled: boolean }> {
   return change(gameId, drawCardOn, (of) => ({ named, shuffle: shuffleFor(of.game) }));
+}
+
+/**
+ * Badanie Obszaru, as the one act it is at a table (13.4).
+ *
+ * The Karty an Obszar owes are dealt together — you stop, you count what is
+ * already lying there, and you turn over the difference. `drawCard` above is
+ * what remains for the two cases that really are singular: a companion table
+ * naming the cardboard it just turned over, and a Karta that draws *past* the
+ * Obszar's tally (`byCard` — the Skalne Wrota, Odmiana Losu).
+ */
+export async function drawAll(
+  gameId: string,
+): Promise<{ cards: EventCard[]; dealt: number; recycled: boolean }> {
+  return change(gameId, drawAllOn, (of) => ({ shuffle: shuffleFor(of.game) }));
 }
 
 /**

@@ -17,6 +17,7 @@ import { type StatusRow } from "@/lib/engine/statusRows";
 import { nameOfSeat } from "./commands/lobby";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { kolejkaFor, offeredNotQueued } from "@/lib/engine/kolejka";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { askOnTop } from "@/lib/engine/ask";
 import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
@@ -179,13 +180,50 @@ export function waitingOn(frame: TurnPhase): string[] {
    * after he had been killed and picked up as a trophy, which is the referee
    * telling the table to deal with something it has already dealt with.
    */
-  const settled = new Set([...(state.resolved ?? []), ...(state.fought ?? [])]);
-  const waiting = (state.drawn ?? []).filter((one) => !settled.has(one.cardId));
+  const settled = [...new Set([...(state.resolved ?? []), ...(state.fought ?? [])])];
+
+  /**
+   * Two lists, because the Obszar holds two kinds of thing.
+   *
+   * The kolejka is what the turn must stop for, in 15.1/15.2 order; what is
+   * merely offered is everything 12.1 gives the run of the turn — "w każdej
+   * chwili, aż do końca swojej tury może odwiedzić znajdującego się tam
+   * Nieznajomego, zabrać leżące złoto, Przedmioty lub Przyjaciół". Printing
+   * them as one list said a Cudotwórca and a Wilkołak were the same kind of
+   * problem.
+   */
+  const frames = kolejkaFor(state.drawn ?? [], settled).filter((frame) => !frame.done);
+  const offered = offeredNotQueued(state.drawn ?? []).filter(
+    (card) => !settled.includes(card.cardId),
+  );
+
   return [
-    ...(offer ? [`The Obszar asks: ${offer.name} — \`answer\` or \`answer <n>\``] : []),
-    ...(waiting.length
-      ? [`Waiting: ${waiting.map((one) => cardName(one.cardId)).join(", ")}`]
+    ...(frames.length
+      ? [
+          `Kolejka: ${frames
+            .map((frame, at) => {
+              // A pack is one frame and fought as one (17.5, 18.2), so it is
+              // printed as one thing with a plus in it rather than as two.
+              const names = frame.cards.map((one) => cardName(one.cardId)).join(" + ");
+              return at === 0 ? `» ${names}` : names;
+            })
+            .join(" · ")}`,
+        ]
       : []),
+    ...(offered.length
+      ? [`Offered: ${offered.map((one) => cardName(one.cardId)).join(", ")}`]
+      : []),
+    /**
+     * The Obszar's own instruction comes last, and used to be printed first.
+     *
+     * 13.5 fields — the Karczma, the Kurhan, the Wieża — do their printed thing
+     * *after* every Karta on them, which is the Talisman FAQ's step 10 against
+     * its steps 3-9 and what 12.1's own worked example does on Ruchome Skały:
+     * Książę takes the Różdżka, draws a Zaklęcie off it, and only then "musi
+     * zastosować się do instrukcji". Listing it above the Karty told the table
+     * to do it first.
+     */
+    ...(offer ? [`The Obszar asks: ${offer.name} — \`answer\` or \`answer <n>\``] : []),
   ];
 }
 

@@ -208,7 +208,13 @@ describe("teleporting into a turn that goes on", () => {
       fieldId: "bezdroza",
       draw: 2,
     });
-    expect(await runCommand(gameId, actor, { kind: "draw" })).toMatch(/Drawn:/);
+    // Both of them, in one command: badanie Obszaru is one act (13.4), so the
+    // square is owed nothing afterwards and the turn is never half-explored.
+    expect(await runCommand(gameId, actor, { kind: "draw" })).toMatch(/^Drawn 2: /);
+    expect(top((await activeStore().load(gameId)).game.turn_state)).toMatchObject({
+      draw: 0,
+      drawn: [expect.anything(), expect.anything()],
+    });
   });
 
   it("owes nothing where the Obszar prints nothing", async () => {

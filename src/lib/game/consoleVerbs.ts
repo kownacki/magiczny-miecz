@@ -76,7 +76,7 @@ import {
   payFerry,
   rollGuardianStrength,
   changeNature,
-  drawCard,
+  drawAll,
   drawSpell,
   drawSpellWithWand,
   finishTurn,
@@ -1345,11 +1345,19 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     return `${named(seatOf(null))} walks to ${fieldName(command.fieldId)}.`;
   },
 
+  /**
+   * The whole of what the Obszar owes, in one line (13.4).
+   *
+   * It used to be one Karta per `draw`, so exploring a Płaskowyż Mgieł was
+   * three commands and two of them landed the turn in a state the game has no
+   * name for. Badanie Obszaru is one motion at a table and it is one here.
+   */
   draw: async (ctx) => {
     const { gameId } = ctx;
-    const { card, recycled } = await drawCard(gameId, null);
+    const { cards, dealt, recycled } = await drawAll(gameId);
     const turned = recycled ? " The pile was turned over." : "";
-    return card ? `Drawn: ${card.name}.${turned}` : `Nothing to draw.${turned}`;
+    if (dealt === 0) return `Nothing to draw.${turned}`;
+    return `Drawn ${dealt}: ${cards.map((card) => card.name).join(", ")}.${turned}`;
   },
 
   /**
