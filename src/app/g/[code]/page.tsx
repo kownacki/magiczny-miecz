@@ -40,6 +40,7 @@ import { JoinGate, LeaveButton, ReturnGate, SecondTabNotice, TakeOverGate } from
 import { type LobbySeat } from "./lobby-view";
 import { TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
+import { KolejkaStrip } from "./kolejka-strip";
 import { NowBox } from "./now-box";
 import { factsIn, turnSteps, windowsFor } from "@/lib/engine/turnWindows";
 import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "@/lib/engine/duties";
@@ -1726,7 +1727,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   // still owed — subtracted on arrival and spent per draw — so
                   // this no longer has to work it out from `drawn`, which taking
                   // a card shrinks (see `afterMove`).
-                  canDraw={onField !== null && onField.draw > 0}
+                  owed={onField?.draw ?? 0}
                   onDraw={() => post("turn", { action: "draw" })}
                   busy={busy}
                   onOpen={(id) => {
@@ -1818,6 +1819,41 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 }}
               />
             </div>
+            {/**
+             * What the Obszar still owes, under whose-turn-it-is and above
+             * everything a player acts on.
+             *
+             * Here rather than inside the Obszar's window because it is not a
+             * thing to act on — it is where the turn *is*, which is the same
+             * question the box above answers about the table. And it is drawn
+             * for everybody, not only the active seat: half of what makes a
+             * game at a table legible is watching somebody work through the
+             * row of Karty they turned over, and 16.8 makes those Karty public
+             * on purpose.
+             *
+             * It draws nothing at all when the Obszar owes nothing, which is
+             * most turns — the optional Karty are the Obszar window's, where
+             * 12.1 already gives them the run of the turn.
+             */}
+            {onField && (
+              <KolejkaStrip
+                cards={onField.drawn}
+                /* Fought counts as settled, not only resolved: 17.4 ends a
+                   Wróg the moment the dice are compared, won or lost, and
+                   `beginFight` refuses a rematch on that same list. */
+                settled={[...(onField.resolved ?? []), ...(onField.fought ?? [])]}
+                /* The same door the Obszar's window uses: a chip in the
+                   kolejka is a Karta, and reading one is one act wherever it
+                   is pressed. */
+                onInspect={(cardId) =>
+                  setInspectingCard({
+                    cardId,
+                    name: CARD_NAMES.get(cardId) ?? cardId,
+                    text: CARD_TEXTS.get(cardId),
+                  })
+                }
+              />
+            )}
             {/* The refusal used to sit here, in the column, and shove the
                 Karta Postaci down the page on every mis-click. It is a remark
                 about what you just tried, so it goes to the rail in the corner

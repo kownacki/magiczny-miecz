@@ -31,7 +31,7 @@ export function NowBox({
   windows,
   steps,
   canRoll,
-  canDraw,
+  owed,
   away,
   since,
   busy,
@@ -82,7 +82,15 @@ export function NowBox({
   /** The turn has not been rolled yet — 10.2 makes this the first thing it does. */
   canRoll: boolean;
   /** The Obszar still owes cards (13.4 counts what is already lying there). */
-  canDraw: boolean;
+  /**
+   * How many Karty this Obszar still owes (13.4).
+   *
+   * A number rather than the boolean it was, because the button deals all of
+   * them at once now and has to say how many. What is already lying here is
+   * subtracted on arrival — see `afterMove` — so this is the remainder and not
+   * what the square prints.
+   */
+  owed: number;
   /** The player whose turn it is has stopped checking in (AWAY_AFTER_MS). */
   away?: boolean;
   /**
@@ -303,14 +311,20 @@ export function NowBox({
           action window like everything else. */}
       {/* Drawing is the roll's twin: the field says how many and there is
           nothing to decide, so it is a button here rather than a window. What
-          comes off the deck is the decision, and that opens one. */}
-      {isMine && canDraw && (
+          comes off the deck is the decision, and that opens one.
+
+          It says the number because it deals the number. Badanie Obszaru is one
+          act (13.4) and the button now does the whole of it, so „Wyciągnij
+          kartę" was about to be a lie on every square that prints two or three
+          — and the count is exactly what a player wants to know before pressing
+          it, since what is already lying here has been subtracted from it. */}
+      {isMine && owed > 0 && (
         <button
           onClick={onDraw}
           disabled={busy}
           className="mt-2 shrink-0 rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
         >
-          Wyciągnij kartę
+          Wyciągnij {owed === 1 ? "kartę" : `${owed} ${owed < 5 ? "karty" : "kart"}`}
         </button>
       )}
 

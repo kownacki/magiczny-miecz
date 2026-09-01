@@ -19,6 +19,7 @@ import {
   fightGuardian,
   payFerry,
   rollGuardianStrength,
+  drawAll,
   drawCard,
   enterBridge,
   escape,
@@ -98,14 +99,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         await moveTo(game.id, String(body.fieldId), body.viaBridge === true);
         break;
       case "draw":
-        // A named card means the physical deck decided; nothing named means
-        // the app draws one itself.
-        await drawCard(
-          game.id,
-          body.cardId
-            ? { cardId: String(body.cardId), cardClass: body.cardClass as CardClass }
-            : null,
-        );
+        /**
+         * Badanie Obszaru is one act (13.4), so one press deals the lot.
+         *
+         * A named card still means the physical deck decided and only that one
+         * came up — companion's door, and the reason `drawCard` is still here.
+         * Nothing named is simulation, where the app deals everything the
+         * Obszar still owes at once rather than making the player press the
+         * same button three times for one motion at the table.
+         */
+        if (body.cardId) {
+          await drawCard(game.id, {
+            cardId: String(body.cardId),
+            cardClass: body.cardClass as CardClass,
+          });
+        } else {
+          await drawAll(game.id);
+        }
         break;
       case "fight":
         // One Wróg, or several at once (17.5) whose Miecze add together.
