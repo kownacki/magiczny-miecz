@@ -562,8 +562,25 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     (nowOnField.resolved?.length ?? 0) === 0 &&
     (nowOnField.fought?.length ?? 0) === 0 &&
     (nowOnField.beaten?.length ?? 0) === 0;
+  /**
+   * Which deal this is — the Karty themselves, not the turn and the square.
+   *
+   * Keyed on `${turn}:${field}` first, which is the same key twice for two
+   * different deals: a character who leaves an Obszar and comes back inside one
+   * turn — routine while testing, where the console teleports back and forth —
+   * gets a fresh badanie under a key already marked as looked at, and the
+   * reveal never appears. The Karty in front of you are what makes it a
+   * different deal, so they are the key.
+   *
+   * By `ref` where there is one, because two Nobbiny are two Karty and the same
+   * name: the slice off the pile is what tells one copy from the other.
+   */
+  const dealKey =
+    nowOnField?.phase === "field" && nowOnField.drawn.length > 0
+      ? nowOnField.drawn.map((card) => card.ref ?? card.cardId).join("|")
+      : null;
   const revealing =
-    hereKey !== null && dealDone === true && nothingSettledHere && dealSeen !== hereKey;
+    dealKey !== null && dealDone === true && nothingSettledHere && dealSeen !== dealKey;
 
 
 
@@ -1324,7 +1341,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
              rather than a flicker. */
           revealing={revealing && mySeat?.field_id === inspecting}
           onDealSeen={() => {
-            setDealSeen(hereKey);
+            setDealSeen(dealKey);
             setInspecting(null);
           }}
           canAct={mySeat?.seat_index === game?.active_seat}
@@ -1421,7 +1438,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             // Shutting the window counts as having looked: the reveal holds the
             // sheet back, so leaving it un-answered would close the one window
             // there is and open nothing in its place.
-            if (revealing) setDealSeen(hereKey);
+            if (revealing) setDealSeen(dealKey);
             setInspecting(null);
             setNotice(null);
           }}
