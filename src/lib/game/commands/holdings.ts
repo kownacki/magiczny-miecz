@@ -202,6 +202,29 @@ function grantedHere(snapshot: Snapshot, seatId: string, cardId: string): boolea
 }
 
 /**
+ * Whether this Karta is one of the things lying on the Obszar you are standing
+ * on — which is what 12.1 is about, and nothing else.
+ *
+ * "zabrać **leżące** złoto, Przedmioty lub Przyjaciół". A card bought at a
+ * Targowisko, the Tarcza the Władca hands over for a finished errand, one a
+ * Karta's own `otrzymaj` grants — none of those is lying here, and none of them
+ * is what 12.1's two exceptions are holding back.
+ *
+ * Both lists, for the reason `refuseOverAFoe` reads both: arriving lifts every
+ * `field_cards` row into the turn's frame and the end of the turn writes back
+ * what nobody took, so which list a Karta is in says nothing a player can see.
+ */
+function lyingHere(snapshot: Snapshot, seatId: string, cardId: string): boolean {
+  const seat = snapshot.seats.find((one) => one.id === seatId);
+  const state = top(snapshot.game.turn_state);
+  const inTurn = state.phase === "field" ? state.drawn : [];
+  return (
+    inTurn.some((entry) => entry.cardId === cardId) ||
+    snapshot.fieldCards.some((row) => row.field_id === seat?.field_id && row.card_id === cardId)
+  );
+}
+
+/**
  * 12.1a, asked of both places a Karta can be lying on an Obszar.
  *
  * "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec" —
@@ -251,6 +274,26 @@ function refuseOverAFoe(snapshot: Snapshot, seatId: string, exempt?: string): vo
   throw new Error(`Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1a).`);
 }
 
+/**
+ * 12.1b: nothing is picked up while the Obszar still owes Karty.
+ *
+ * "b) Jest to Obszar, na który ciągnięte są Karty (13.4)." The remedy 12.1
+ * names is to draw them and read them, and `draw` is what is *still* owed —
+ * see `afterMove`. A Karta the console `place`d on the square counts off the
+ * tally when the turn lifts it (`dealtInto`), so this only fires where the
+ * Obszar genuinely has more coming.
+ *
+ * Silent outside a field frame, which is the difference from
+ * `refuseUnlessCollectable`: spoils after a fight, a starting kit and a card
+ * effect that hands you something are not somebody collecting off a square,
+ * and none of them has a field frame on top to be owed anything.
+ */
+function refuseWhileOwing(snapshot: Snapshot): void {
+  const state = top(snapshot.game.turn_state);
+  if (state.phase !== "field" || state.draw <= 0) return;
+  throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
+}
+
 export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> {
   const { seatId, cardId } = command;
   /**
@@ -283,6 +326,20 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   const card = EVENTS.find((c) => c.id === cardId);
   const equipment = card ? null : (items as Item[]).find((i) => i.id === cardId);
   if (!card && !equipment) throw new Error(`Nieznana karta: ${cardId}`);
+
+  /**
+   * 12.1's two exceptions, before anything is picked up — including the money.
+   *
+   * They used to sit below the branch that resolves a Sztuka Złota, so the one
+   * card in the box that *is* gold could be taken over an unfought Wilk's head
+   * while the loose coins beside it were refused. Same rule, same square, two
+   * answers, decided by which of the two shapes the money happened to be in.
+   *
+   * Above 5.3's Natura check as well: whether you may be picking anything up at
+   * all comes before which card it is.
+   */
+  refuseOverAFoe(snapshot, seatId, cardId);
+  if (lyingHere(snapshot, seatId, cardId)) refuseWhileOwing(snapshot);
 
   // Everything on the Wyposażenie sheet is a Przedmiot; only the event deck
   // needs its class read to tell an item from a friend from a trophy.
@@ -335,8 +392,6 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     throw new Error(`${card.name} — twoja Natura nie pozwala ci tego nieść (5.3).`);
   }
 
-  // 12.1a: nothing is picked up while a Wróg is still standing on the field.
-  refuseOverAFoe(snapshot, seatId, cardId);
 
   /**
    * "Miecza nie można otrzymać w Krainie Dolnego Kręgu."
@@ -664,17 +719,18 @@ export function dropCard(
  * Kart."
  */
 function refuseUnlessCollectable(snapshot: Snapshot, seat: SeatRow): void {
-  const state = requireTop(
+  // The opening clause, which is this door's alone: 12.1 is about a Postać
+  // "której ruch kończy się na danym Obszarze", so collecting outside a field
+  // frame is not a late take but no take at all. `takeCard` cannot ask this —
+  // it is also how a shop delivers and how a Karta grants.
+  requireTop(
     snapshot.game.turn_state,
     "field",
     "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).",
   );
 
   refuseOverAFoe(snapshot, seat.id);
-  // `draw` is what is *still* owed — see `afterMove`.
-  if (state.draw > 0) {
-    throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
-  }
+  refuseWhileOwing(snapshot);
 }
 
 /**

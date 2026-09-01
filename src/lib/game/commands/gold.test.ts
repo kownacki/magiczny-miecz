@@ -162,6 +162,64 @@ describe("taking gold off an Obszar (12.1)", () => {
     expect(() => takeCard(settled, { seatId: "seat-a", cardId: "miecz" })).not.toThrow();
   });
 
+  /**
+   * 12.1b, the other exception, and the other direction the two came apart in.
+   *
+   * `refuseUnlessCollectable` asked it and `takeCard` did not, so on a Bezdroża
+   * that owes two Karty with a Miecz already lying there, the gold was refused
+   * and the Miecz was handed over. Same square, same moment, opposite answers.
+   */
+  it("refuses a Karta lying here while the Obszar still owes Karty", () => {
+    const owing = table({
+      fieldGold: [{ id: "fg1", field_id: HERE, gold: 3 }],
+      fieldCards: [{ id: "fc1", field_id: HERE, card_id: "miecz", granted: false, pool: null }],
+      game: { active_seat: 0, turn_state: only(arrived({ draw: 1 })) },
+    });
+    expect(() => takeFieldGold(owing, { seatId: "seat-a", gold: 1 })).toThrow(/12\.1b/);
+    expect(() => takeCard(owing, { seatId: "seat-a", cardId: "miecz" })).toThrow(/12\.1b/);
+  });
+
+  /**
+   * And it stops at what is lying there, which is 12.1's whole subject —
+   * "zabrać **leżące** złoto, Przedmioty lub Przyjaciół".
+   *
+   * A card bought at a Targowisko, the Tarcza the Władca hands over for a
+   * finished errand, one a Karta's own `otrzymaj` grants: none of those is
+   * lying on the square, and none is what the two exceptions hold back. They
+   * all arrive through `takeCard` too, so the guard asks *which* card rather
+   * than merely *when*.
+   */
+  it("lets a Karta that is not lying here through while Karty are still owed", () => {
+    const owing = table({
+      game: { active_seat: 0, turn_state: only(arrived({ draw: 1 })) },
+    });
+    expect(() => takeCard(owing, { seatId: "seat-a", cardId: "helm" })).not.toThrow();
+  });
+
+  /**
+   * The money Karta, which skipped both exceptions by being answered first.
+   *
+   * „1 SZTUKA ZŁOTA" is a Przedmiot that resolves into the purse on the way in
+   * — "Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż" — and that
+   * branch returned before either guard ran. So the one card in the box that
+   * *is* gold could be taken over an unfought Wilk's head while the loose coins
+   * beside it were refused: same rule, same square, two answers, decided by
+   * which of the two shapes the money happened to be in.
+   */
+  it("holds the gold Karta to the same two exceptions as the coins", () => {
+    const wilk = { cardId: "wilk", cardClass: "foe" as const, granted: false };
+    const coin = { cardId: "1-sztuka-zlota", cardClass: "item" as const, granted: false };
+    const guarded = table({
+      game: { active_seat: 0, turn_state: only(arrived({ drawn: [wilk, coin] })) },
+    });
+    expect(() => takeCard(guarded, { seatId: "seat-a", cardId: "1-sztuka-zlota" })).toThrow(/WILK/);
+
+    const owing = table({
+      game: { active_seat: 0, turn_state: only(arrived({ draw: 1, drawn: [coin] })) },
+    });
+    expect(() => takeCard(owing, { seatId: "seat-a", cardId: "1-sztuka-zlota" })).toThrow(/12\.1b/);
+  });
+
   /** 12.1b — and the same one about a square that still owes Karty. */
   it("refuses while the Obszar still owes Karty", () => {
     const owing = table({
