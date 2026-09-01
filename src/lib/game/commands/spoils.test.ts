@@ -92,3 +92,86 @@ describe("what the winner of a duel takes (17.9)", () => {
     ).rejects.toThrow(/17\.9/);
   });
 });
+
+/**
+ * 16.2: "Karty pokonanych Wrogów tego rodzaju można zachować" — a beaten Wróg's
+ * Karta is *kept*, which is the opposite of left lying.
+ *
+ * Nothing took him off the Obszar. `trophiesFrom` put his Karta in the winner's
+ * pack and `leaveCardsBehind` wrote the same Karta back onto the square at the
+ * end of the turn, so a beaten Wilk was a trophy in a pack *and* a live
+ * creature on the board, waiting for whoever stopped there next. Found at a
+ * real table on Płaskowyż Mgieł: two Wrogowie beaten together under 17.5, both
+ * still standing in the Obszar's window afterwards.
+ */
+describe("a beaten Wróg leaves the Obszar (16.2)", () => {
+  const won = (over: { cardId?: string; fought?: string[]; drawn?: unknown[] } = {}) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          phase: "field",
+          fieldId: "wrzosowiska",
+          from: null,
+          draw: 0,
+          drawn: over.drawn ?? [
+            { cardId: "wilk", cardClass: "foe" },
+            { cardId: "helm", cardClass: "item" },
+          ],
+        },
+        stack: undefined,
+      } as never,
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "wrzosowiska" })],
+    });
+
+  /** Built as a fight pushed over that field, which is what an ordinary one is. */
+  const fighting = (fought: string[]) => {
+    const table = won();
+    const field = (table.game.turn_state as { stack: unknown[] }).stack[0];
+    return {
+      ...table,
+      game: {
+        ...table.game,
+        turn_state: {
+          stack: [
+            field,
+            {
+              phase: "fight",
+              fight: {
+                cardId: fought[0],
+                cardName: fought[0].toUpperCase(),
+                kind: "ordinary",
+                enemyTotal: 2,
+                playerTotal: 9,
+                playerRoll: 6,
+                enemyRoll: 1,
+                result: { outcome: "wygrana" },
+                fieldId: "wrzosowiska",
+                draw: 0,
+                drawn: (field as { drawn: unknown[] }).drawn,
+                fought,
+              },
+            },
+          ],
+        },
+      },
+    } as typeof table;
+  };
+
+  it("takes the beaten creature out of the turn's Karty", async () => {
+    const { writes } = await resolveFight(fighting(["wilk"]), undefined, ports({ random: scriptedRandom([]) }));
+    const after = apply(fighting(["wilk"]), writes);
+    const state = (after.game.turn_state as { stack: { drawn?: { cardId: string }[] }[] }).stack[0];
+    expect(state.drawn?.map((one) => one.cardId)).toEqual(["helm"]);
+  });
+
+  /** 17.5 settles a pack as one, so all of it leaves together. */
+  it("takes the whole pack when they were fought as one (17.5)", async () => {
+    const table = fighting(["wilk", "niedzwiedz"]);
+    const { writes } = await resolveFight(table, undefined, ports({ random: scriptedRandom([]) }));
+    const state = (apply(table, writes).game.turn_state as {
+      stack: { drawn?: { cardId: string }[] }[];
+    }).stack[0];
+    expect(state.drawn?.map((one) => one.cardId)).toEqual(["helm"]);
+  });
+});

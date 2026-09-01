@@ -24,7 +24,7 @@ import {
 import { applyEffect } from "./effects";
 import { scriptFor } from "@/lib/engine/cardScript";
 import { asReturnable, putOnPile } from "./piles";
-import { push, replaceTop, requireTop, type TurnState } from "@/lib/engine/stack";
+import { push, replaceTop, requireTop, top, type TurnState } from "@/lib/engine/stack";
 import { activeSeat, eqModeOf, holdingsOf, seatView, trophyModeOf } from "./seat";
 import { slotOnArrival } from "@/lib/engine/holdings";
 import type { Nature } from "@/data/types";
@@ -290,8 +290,42 @@ export async function resolveFight(
    * rather than onto the fight itself. A duel has no card to consult, and a
    * raid was not the character's own fight to lose.
    */
+  /**
+   * A Wróg who lost is off the Obszar, whether or not he was worth keeping.
+   *
+   * Nothing took him off it. `trophiesFrom` put his Karta in the winner's pack
+   * and `leaveCardsBehind` then wrote the same Karta back onto the square at
+   * the end of the turn, so a beaten Wilk was in two places at once — a trophy
+   * in a pack and a live creature on the board, waiting to be fought again by
+   * the next character to stop there. It also broke the arithmetic 21.2 runs on
+   * `copiesInPlay`, which counts holdings and Obszary together.
+   *
+   * 16.2 is the rule: "Karty pokonanych Wrogów tego rodzaju można zachować" —
+   * a beaten Wróg's Karta is *kept*, which is the opposite of left lying.
+   *
+   * Keyed on being beaten and not on being worth a trophy, because those are
+   * two different questions and 1.4 answers only the second: a Demon is fought
+   * with Magia, earns nothing under 1.4 — "Wrogami (mającymi określony parametr
+   * Miecza)" — and is every bit as dead. `trophyPointsOf` already says so; this
+   * is the same fact at the other end.
+   *
+   * Not a duel, where the loser is a Postać and there is no Karta to remove,
+   * and not a raid, which `beatenOffTheBoard` above has already lifted off the
+   * board by its `field_cards` row.
+   */
+  const swept = ((): TurnState => {
+    if (fight.result?.outcome !== "wygrana") return closed.state;
+    if (fight.opponentSeat !== undefined || fight.raid || fight.guardian) return closed.state;
+    const state = top(closed.state);
+    if (state.phase !== "field") return closed.state;
+    const dead = new Set(fight.fought ?? [fight.cardId]);
+    const left = state.drawn.filter((entry) => !dead.has(entry.cardId));
+    if (left.length === state.drawn.length) return closed.state;
+    return replaceTop(closed.state, { ...state, drawn: left });
+  })();
+
   const beaten = mergeAll(upToNow, stolen, cleared_, {
-    game: { turn_state: closed.state },
+    game: { turn_state: swept },
   });
   const toll =
     fight.result.outcome === "przegrana" &&
@@ -306,7 +340,7 @@ export async function resolveFight(
     // the state the close produced. Merged before it, the close would put the
     // state back and the question would be gone.
     writes: mergeAll(upToNow, stolen, cleared_, kill ? trophiesFrom(snapshot, seat, fight) : {}, {
-      game: { turn_state: closed.state },
+      game: { turn_state: swept },
       journal: [
         {
           seatId: seat.id,
