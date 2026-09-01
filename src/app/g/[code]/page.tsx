@@ -1062,6 +1062,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 : []
             }
             fought={turnState.phase === "field" ? (turnState.fought ?? []) : []}
+            beaten={turnState.phase === "field" ? (turnState.beaten ?? []) : []}
             fight={turnState.phase === "fight" ? turnState.fight : null}
             // The direction choice, which used to be a panel of its own below
             // the queue. It is the same shape as everything else in here: one
@@ -1257,10 +1258,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                    */
                   .filter(
                     (card) =>
-                      !isSpent(card, [
-                        ...(onField.resolved ?? []),
-                        ...(onField.fought ?? []),
-                      ]),
+                      !isSpent(
+                        card,
+                        [...(onField.resolved ?? []), ...(onField.fought ?? [])],
+                        onField.beaten ?? [],
+                      ),
                   )
                   .map((card, at) => ({
                   // No row to name, so the key is the turn's own position. See

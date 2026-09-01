@@ -291,37 +291,42 @@ export async function resolveFight(
    * raid was not the character's own fight to lose.
    */
   /**
-   * A Wróg who lost is off the Obszar, whether or not he was worth keeping.
+   * A Wróg who lost is written down as dead, and stops being on the Obszar.
    *
-   * Nothing took him off it. `trophiesFrom` put his Karta in the winner's pack
-   * and `leaveCardsBehind` then wrote the same Karta back onto the square at
-   * the end of the turn, so a beaten Wilk was in two places at once — a trophy
-   * in a pack and a live creature on the board, waiting to be fought again by
-   * the next character to stop there. It also broke the arithmetic 21.2 runs on
-   * `copiesInPlay`, which counts holdings and Obszary together.
+   * Nothing recorded it. `trophiesFrom` put his Karta in the winner's pack and
+   * `leaveCardsBehind` wrote the same Karta back onto the square at the end of
+   * the turn, so a beaten Wilk finished as a trophy in a pack *and* a live
+   * creature on the board — and 21.2's `copiesInPlay`, which counts holdings
+   * and Obszary together, saw one card twice.
    *
-   * 16.2 is the rule: "Karty pokonanych Wrogów tego rodzaju można zachować" —
-   * a beaten Wróg's Karta is *kept*, which is the opposite of left lying.
+   * 16.2 is the rule: "Karty pokonanych Wrogów tego rodzaju można zachować",
+   * and kept is the opposite of left lying.
    *
-   * Keyed on being beaten and not on being worth a trophy, because those are
-   * two different questions and 1.4 answers only the second: a Demon is fought
-   * with Magia, earns nothing under 1.4 — "Wrogami (mającymi określony parametr
-   * Miecza)" — and is every bit as dead. `trophyPointsOf` already says so; this
-   * is the same fact at the other end.
+   * Written onto the frame rather than cut out of `drawn`, which is what this
+   * did first. Cutting settled the Obszar and lost the turn's record of what
+   * happened on it, so the kolejka could not show the Wróg struck through — and
+   * a row that simply drops a creature the table watched die is a worse account
+   * of the turn than one that crosses him out.
    *
-   * Not a duel, where the loser is a Postać and there is no Karta to remove,
-   * and not a raid, which `beatenOffTheBoard` above has already lifted off the
-   * board by its `field_cards` row.
+   * Keyed on being beaten and not on being worth a trophy: those are different
+   * questions and 1.4 answers only the second — a Demon is fought with Magia,
+   * earns nothing under "Wrogami (mającymi określony parametr Miecza)", and is
+   * every bit as dead.
+   *
+   * Not a duel, where the loser is a Postać and there is no Karta; not a raid,
+   * which `beatenOffTheBoard` lifts off by its `field_cards` row; not a
+   * guardian, who is nobody's drawn card and stays at his door either way.
    */
   const swept = ((): TurnState => {
     if (fight.result?.outcome !== "wygrana") return closed.state;
     if (fight.opponentSeat !== undefined || fight.raid || fight.guardian) return closed.state;
     const state = top(closed.state);
     if (state.phase !== "field") return closed.state;
-    const dead = new Set(fight.fought ?? [fight.cardId]);
-    const left = state.drawn.filter((entry) => !dead.has(entry.cardId));
-    if (left.length === state.drawn.length) return closed.state;
-    return replaceTop(closed.state, { ...state, drawn: left });
+    const dead = fight.fought ?? [fight.cardId];
+    const already = state.beaten ?? [];
+    const fresh = dead.filter((cardId) => !already.includes(cardId));
+    if (fresh.length === 0) return closed.state;
+    return replaceTop(closed.state, { ...state, beaten: [...already, ...fresh] });
   })();
 
   const beaten = mergeAll(upToNow, stolen, cleared_, {

@@ -63,6 +63,23 @@ export type TurnPhase =
        */
       fought?: string[];
       /**
+       * Which of them died, as against merely being fought (17.4).
+       *
+       * `fought` is the wider list and cannot answer this: it holds every
+       * creature this turn has settled with, "beaten or walked away from", and
+       * the two go opposite ways afterwards. A Wróg you fled stays lying on the
+       * Obszar for the next character (16.8); a Wróg you beat is *kept* — "Karty
+       * pokonanych Wrogów tego rodzaju można zachować" (16.2) — as a trophy, or
+       * simply gone if he was a Demon, whom 1.4 pays nothing for.
+       *
+       * Recorded rather than deleted from `drawn`, which is what this replaced.
+       * Deleting settled the Obszar correctly and lost the turn's own record of
+       * what happened on it, so the kolejka — the row the table reads — could
+       * not show a beaten Wróg struck through. What is on the Obszar and what
+       * was dealt with on it are two questions, and the frame can answer both.
+       */
+      beaten?: string[];
+      /**
        * This turn was spent meeting somebody rather than exploring (13.2).
        *
        * "Postać musi dokonać wyboru między spotkaniem z inną Postacią

@@ -47,6 +47,7 @@ export function DrawnCard({
   cards,
   resolved,
   fought,
+  beaten,
   ring,
   occupied = [],
   mySword,
@@ -65,6 +66,8 @@ export function DrawnCard({
   cards: DrawnEntry[];
   resolved: string[];
   fought: string[];
+  /** Wrogowie who died here (16.2) — struck in the kolejka, gone from the Obszar. */
+  beaten?: string[];
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
   /**
@@ -205,6 +208,7 @@ export function DrawnCard({
           /* The Karta this sheet is showing, so the row cannot light a
              different one. */
           current={card.cardId}
+          beaten={beaten}
         />
         ) : null
       }

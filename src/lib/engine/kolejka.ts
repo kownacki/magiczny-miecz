@@ -106,8 +106,28 @@ export function leavesWhenResolved(card: TurnCard): boolean {
   );
 }
 
-/** Settled this turn *and* gone from the Obszar because of it. */
-export function isSpent(card: TurnCard, settled: readonly string[]): boolean {
+/**
+ * Dealt with *and* no longer on the Obszar because of it.
+ *
+ * Two ways a Karta goes, and the row that reads them wants one answer. A
+ * Spotkanie or a Nieznajomy whose text ends "odłóż tę Kartę" is used up by
+ * being read; a Wróg who lost is kept by whoever beat him (16.2) — a trophy, or
+ * nothing at all if he was a Demon, whom 1.4 pays for nothing. Both leave, and
+ * both are struck through in the kolejka rather than dropped from it, because
+ * the row is the turn's account of what happened and a creature the table
+ * watched die belongs in it.
+ *
+ * A Wróg merely *fought* is not this. 17.4 settles a fight whichever way it
+ * went, and one you fled from is exactly the Karta 16.8 leaves lying there for
+ * whoever stops here next — which is why `beaten` is its own list and `fought`
+ * cannot stand in for it.
+ */
+export function isSpent(
+  card: TurnCard,
+  settled: readonly string[],
+  beaten: readonly string[] = [],
+): boolean {
+  if (beaten.includes(card.cardId)) return true;
   return leavesWhenResolved(card) && settled.includes(card.cardId);
 }
 

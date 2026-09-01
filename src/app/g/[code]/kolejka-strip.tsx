@@ -104,6 +104,7 @@ export function KolejkaStrip({
   cards,
   settled,
   current,
+  beaten = [],
   onInspect,
   eqMode,
   nature,
@@ -125,6 +126,8 @@ export function KolejkaStrip({
    * decide which it is.
    */
   current?: string | null;
+  /** Wrogowie who died here, struck through rather than dropped (16.2). */
+  beaten?: readonly string[];
   onInspect?: (cardId: CardId) => void;
   /** Passed through to the tiles, whose hover says where a Przedmiot must go. */
   eqMode?: EqMode;
@@ -208,7 +211,7 @@ export function KolejkaStrip({
                    tell them apart: dimmed is settled and still lying here,
                    struck is settled and gone — a DOBRE BÓSTWO that has judged
                    you is on the used pile, not on the Obszar. */
-                struck={isSpent(chip.card, settled)}
+                struck={isSpent(chip.card, settled, beaten)}
                 /* "You are here", in the paint the trofea already use for a
                    card picked out of a row. It was a ring round the whole
                    `<li>`, which drew a second frame outside the tile's own and

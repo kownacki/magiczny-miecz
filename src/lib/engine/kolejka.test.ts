@@ -220,3 +220,20 @@ describe("what is spent by being read (16.1, 16.5, 16.7)", () => {
     expect(isSpent(one("czarodziej"), ["czarodziej"])).toBe(false);
   });
 });
+
+describe("a Wróg who died here (16.2)", () => {
+  const wilk = onField("wilk")[0];
+
+  it("is spent, so the row strikes him rather than dropping him", () => {
+    expect(isSpent(wilk, [], ["wilk"])).toBe(true);
+  });
+
+  /**
+   * 17.4 settles a fight whichever way it went, so `fought` cannot stand in for
+   * `beaten`: the Wróg you ran from is exactly the Karta 16.8 leaves lying
+   * there for whoever stops here next.
+   */
+  it("is not one that was merely fought", () => {
+    expect(isSpent(wilk, ["wilk"], [])).toBe(false);
+  });
+});

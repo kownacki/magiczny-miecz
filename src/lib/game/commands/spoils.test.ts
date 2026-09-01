@@ -3,6 +3,7 @@ import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFight } from "./spoils";
+import { leaveCardsBehind } from "./turn";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { TurnPhase } from "@/lib/engine/turn";
 
@@ -158,20 +159,60 @@ describe("a beaten Wróg leaves the Obszar (16.2)", () => {
     } as typeof table;
   };
 
-  it("takes the beaten creature out of the turn's Karty", async () => {
-    const { writes } = await resolveFight(fighting(["wilk"]), undefined, ports({ random: scriptedRandom([]) }));
-    const after = apply(fighting(["wilk"]), writes);
-    const state = (after.game.turn_state as { stack: { drawn?: { cardId: string }[] }[] }).stack[0];
-    expect(state.drawn?.map((one) => one.cardId)).toEqual(["helm"]);
+  const fieldAfter = async (fought: string[]) => {
+    const table = fighting(fought);
+    const { writes } = await resolveFight(table, undefined, ports({ random: scriptedRandom([]) }));
+    return (apply(table, writes).game.turn_state as {
+      stack: { drawn?: { cardId: string }[]; beaten?: string[] }[];
+    }).stack[0];
+  };
+
+  /**
+   * Written down rather than cut out of `drawn`.
+   *
+   * Deleting him settled the Obszar and lost the turn's own account of it, so
+   * the kolejka could not show him struck through — and a row that simply drops
+   * a creature the table watched die is a worse record than one that crosses
+   * him out. The Karta stays in the turn; `beaten` is what says it is over.
+   */
+  it("writes the beaten creature down as dead", async () => {
+    const state = await fieldAfter(["wilk"]);
+    expect(state.beaten).toEqual(["wilk"]);
+    expect(state.drawn?.map((one) => one.cardId)).toEqual(["wilk", "helm"]);
   });
 
-  /** 17.5 settles a pack as one, so all of it leaves together. */
-  it("takes the whole pack when they were fought as one (17.5)", async () => {
-    const table = fighting(["wilk", "niedzwiedz"]);
-    const { writes } = await resolveFight(table, undefined, ports({ random: scriptedRandom([]) }));
-    const state = (apply(table, writes).game.turn_state as {
-      stack: { drawn?: { cardId: string }[] }[];
-    }).stack[0];
-    expect(state.drawn?.map((one) => one.cardId)).toEqual(["helm"]);
+  /** 17.5 settles a pack as one, so all of it dies together. */
+  it("writes down the whole pack when they were fought as one (17.5)", async () => {
+    expect((await fieldAfter(["wilk", "niedzwiedz"])).beaten).toEqual(["wilk", "niedzwiedz"]);
+  });
+
+  /** And the Obszar does not get him back at the end of the turn (16.2). */
+  it("does not leave him lying there afterwards", () => {
+    const writes = leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
+      fieldId: "wrzosowiska",
+      seatId: "seat-a",
+      round: 3,
+      remaining: [
+        { cardId: "wilk", cardClass: "foe" },
+        { cardId: "helm", cardClass: "item" },
+      ] as never,
+      beaten: ["wilk"],
+    });
+    expect(writes.fieldCards?.insert?.map((row) => row.card_id)).toEqual(["helm"]);
+  });
+
+  /**
+   * A Wróg you ran from is not one you beat. 17.4 settles the fight either way
+   * and 16.8 leaves the survivor lying there for whoever stops here next.
+   */
+  it("leaves one that was only fought, not beaten", () => {
+    const writes = leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
+      fieldId: "wrzosowiska",
+      seatId: "seat-a",
+      round: 3,
+      remaining: [{ cardId: "wilk", cardClass: "foe" }] as never,
+      beaten: [],
+    });
+    expect(writes.fieldCards?.insert?.map((row) => row.card_id)).toEqual(["wilk"]);
   });
 });

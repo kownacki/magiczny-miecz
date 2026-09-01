@@ -169,6 +169,8 @@ export function leaveCardsBehind(
     seatId: string | null;
     /** The round to file the lines under — see CONTEXT.md, "tura". */
     round: number;
+    /** Wrogowie who died here — kept by their killer, not left behind (16.2). */
+    beaten?: readonly string[];
   },
 ): Changeset {
   // `leavesWhenResolved` is the same question the Obszar's window and the
@@ -195,8 +197,21 @@ export function leaveCardsBehind(
    * neither a turn count nor a visitor — see `engine/pools.ts`.
    */
   const ranDry = (card: TurnCard) => drawsFromPool(card.cardId) && !poolRemains(card.cardId, card.pool ?? null);
+  /**
+   * And a Wróg who died here does not come back to lie on it (16.2).
+   *
+   * He is a trophy in somebody's pack, or — a Demon, whom 1.4 pays nothing for
+   * — simply gone. Either way the Karta has an owner and writing a second copy
+   * onto the square would be one card in two places, which is what 21.2's
+   * `copiesInPlay` counts and would count twice.
+   *
+   * Not `fought`: that list holds every creature this turn settled with,
+   * beaten *or* fled, and a Wróg you ran from is exactly the one 16.8 leaves
+   * lying there for the next character.
+   */
+  const died = new Set(input.beaten ?? []);
   const goes = (card: TurnCard) => spentByReading(card) || walksOff(card) || ranDry(card);
-  const stays = input.remaining.filter((card) => !goes(card));
+  const stays = input.remaining.filter((card) => !goes(card) && !died.has(card.cardId));
 
   // The other half of the same sentence: a Karta whose own text says "odłóż" is
   // not left on the Obszar (16.8) and is not destroyed either — it joins the
@@ -322,6 +337,7 @@ export function passTurn(snapshot: Snapshot, force = false): Changeset {
       ? leaveCardsBehind(apply(snapshot, expired), {
           fieldId: state.fieldId,
           remaining: state.drawn,
+          beaten: state.beaten,
           seatId: seat?.id ?? null,
           round: game.round,
         })

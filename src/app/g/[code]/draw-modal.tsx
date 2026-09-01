@@ -51,6 +51,7 @@ export function DrawModal({
   cards,
   resolved,
   fought,
+  beaten,
   fight,
   move,
   bridge,
@@ -124,6 +125,8 @@ export function DrawModal({
   cards: DrawnEntry[];
   resolved: string[];
   fought: string[];
+  /** Wrogowie who died here (16.2). */
+  beaten?: string[];
   /** The fight in progress, which is fought here rather than behind the sheet. */
   fight: Fight | null;
   /** The die has been thrown and the character is standing between two roads. */
@@ -236,6 +239,7 @@ export function DrawModal({
       cards={cards}
       resolved={resolved}
       fought={fought}
+      beaten={beaten}
       ring={ring}
       occupied={occupied}
       mySword={mySword}

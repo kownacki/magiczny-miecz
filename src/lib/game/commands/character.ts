@@ -354,6 +354,7 @@ export function placeSeat(
       ? leaveCardsBehind(snapshot, {
           fieldId: field.fieldId,
           remaining: field.drawn,
+          beaten: field.beaten,
           seatId: seat.id,
           round: snapshot.game.round,
         })
