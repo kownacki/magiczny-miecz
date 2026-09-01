@@ -25,3 +25,28 @@ describe("the generated id types match the transcription", () => {
     expect([...generated]).toEqual(distinctSorted(source));
   });
 });
+
+/**
+ * Two names belong to two cards each.
+ *
+ * A Karta Postaci and a Karta Zdarzeń can share an id — `demon` is a Postać and
+ * a Wróg, `czarodziej` is a Postać and a Nieznajomy — and the pairs are nothing
+ * to do with each other: different pictures, different rules, and one of each
+ * pair is something the other can meet on the board.
+ *
+ * It is pinned here because the code that has to know lives a long way from the
+ * data: `cardKey` in `card-tile.tsx`, which is what the Księga's search keys its
+ * results on. Keyed on the bare id, the Postacie shelf claimed the name and the
+ * Nieznajomy CZARODZIEJ never appeared at all. If a third pair ever arrives, or
+ * one of these is renamed, this is where it says so.
+ */
+describe("the ids a Postać shares with a Karta Zdarzeń", () => {
+  it("is exactly these two, and nothing here is a coincidence to be fixed", () => {
+    const characterIds = new Set((characters as { id: string }[]).map((one) => one.id));
+    const shared = (events as { id: string }[])
+      .map((card) => card.id)
+      .filter((id) => characterIds.has(id))
+      .sort();
+    expect(shared).toEqual(["czarodziej", "demon"]);
+  });
+});

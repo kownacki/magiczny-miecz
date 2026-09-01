@@ -10,7 +10,7 @@ import { FIELDS, type FieldId } from "@/lib/engine/board";
 import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, type CardClass } from "@/data/types";
-import { CardTile, type TileCard } from "./card-tile";
+import { CardTile, cardKey, type TileCard } from "./card-tile";
 import { TileRow } from "./tile-row";
 import { Fold } from "./fold";
 import {
@@ -328,15 +328,20 @@ export function CardLibrary({
     // A handful of cards sit on two shelves — a Magiczny Miecz is both drawn
     // and bought — and the first shelf that claims one keeps it, so the order
     // of the tabs above is the order of the sections below.
+    //
+    // By `cardKey` and not by the id, because two of these are not one card on
+    // two shelves but two cards with one name: searching CZARODZIEJ found the
+    // Postać, and the Nieznajomy of the same name — a different picture, a
+    // different rule, a card you can actually meet — never appeared at all.
     const seen = new Set<string>();
     const found: { key: Shelf; label: string; cards: TileCard[] }[] = [];
     for (const { key, label } of SHELVES) {
       const hits = shelfCards(key).filter(
         (card) =>
-          !seen.has(card.cardId) &&
+          !seen.has(cardKey(card)) &&
           (fold(card.name).includes(needle) || fold(card.text ?? "").includes(needle)),
       );
-      for (const card of hits) seen.add(card.cardId);
+      for (const card of hits) seen.add(cardKey(card));
       if (hits.length > 0) found.push({ key, label, cards: hits });
     }
     return found;

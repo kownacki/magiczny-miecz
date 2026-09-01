@@ -71,6 +71,21 @@ export interface TileCard {
   slot?: Slot | null;
 }
 
+/**
+ * What identifies a card, which is not its id alone.
+ *
+ * `demon` and `czarodziej` each name a Karta Postaci *and* a Karta Zdarzeń —
+ * the Wróg and the Nieznajomy — and the two are different cards with different
+ * pictures and different rules. Anything holding a set of cards from more than
+ * one shelf has to key it on this, or the first of the pair swallows the
+ * second: the Księga's search dropped the Nieznajomy CZARODZIEJ entirely,
+ * because the Postacie shelf is above the Nieznajomi one and had already
+ * claimed the name.
+ */
+export function cardKey(card: TileCard): string {
+  return `${card.character ? "postac" : "karta"}:${card.cardId}`;
+}
+
 export function CardTile({
   card,
   size = "sm",
