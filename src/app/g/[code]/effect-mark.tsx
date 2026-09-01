@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { type Nature } from "@/data/types";
 import { CARD_NAMES, CARD_TEXTS, type Seat } from "./table";
-import { cardArtUrl } from "@/lib/view/cardImages";
+import { STONE_CARD, cardArtUrl } from "@/lib/view/cardImages";
+import { STONE } from "@/lib/engine/status";
 import { useCardPreview } from "./card-preview";
 import { ART_BORDER, PICKABLE } from "./pickable";
 import { type TileCard } from "./card-tile";
@@ -137,17 +138,35 @@ function EffectMark({
   mark: Seat["effects"][number];
   nature: Nature | null;
 }) {
-  const name = CARD_NAMES.get(mark.source);
+  /**
+   * The one status with no card that has a card anyway.
+   *
+   * `mark.source` is a card id for everything a Karta or a Zaklęcie put on a
+   * seat, and one of four bare words for the statuses `fromColumns` projects
+   * off the seat's own columns — which is why three of those four fall back to
+   * a glyph. Kamień is the exception, and it is the exception because 20.1
+   * says so: the box prints a Karta for exactly this state and puts it on the
+   * board. A mark that had a picture available and drew an orange square
+   * instead was the one status in the app whose own card the app was hiding.
+   *
+   * The hover follows it. Every other mark with a picture opens the Karta
+   * behind it, and this one has the best Karta of the lot to open — four
+   * printed lines saying precisely what being stone costs.
+   */
+  const stone = mark.source === STONE;
+  const name = stone ? STONE_CARD.name : CARD_NAMES.get(mark.source);
   const card: TileCard | null = name
     ? {
-        cardId: mark.source,
+        cardId: stone ? STONE_CARD.cardId : mark.source,
         name,
-        text: CARD_TEXTS.get(mark.source),
+        ...(stone ? { ref: STONE_CARD.ref, text: STONE_CARD.text } : { text: CARD_TEXTS.get(mark.source) }),
         kindLabel: mark.title,
       }
     : null;
   const { handlers, preview } = useCardPreview(card, false, "classic", nature);
-  const art = cardArtUrl(mark.source);
+  const art = stone
+    ? cardArtUrl(STONE_CARD.cardId, STONE_CARD.ref)
+    : cardArtUrl(mark.source);
   // The shape a card is drawn in everywhere else: the illustration export is
   // 240x155 and every slot in the pack and on the body takes that ratio, so a
   // mark that took it too stopped needing to crop. A square was cutting the

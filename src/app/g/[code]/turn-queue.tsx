@@ -176,9 +176,19 @@ function QueueChip({
               {entry.seatIndex + 1}
             </span>
           )}
-          {skipped && (
-            // A line through the portrait, so the state survives being glanced
-            // at rather than read.
+          {skipped && !stone && (
+            /**
+             * A line through the portrait, so the state survives being glanced
+             * at rather than read.
+             *
+             * Not over a statue. It is drawn on a figure that still looks like
+             * the character playing, which is the whole of what it is for — a
+             * chip you can tell is being passed over without reading the
+             * caption. On a Kamień chip the picture has *already* been swapped
+             * for a different card (20.1), so the line adds nothing the figure
+             * is not shouting, and what it looks like on a white card face is
+             * damage to the card.
+             */
             <span className="absolute inset-0 flex items-center">
               <span className="h-px w-full bg-vermilion/90" />
             </span>
