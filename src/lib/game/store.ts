@@ -151,6 +151,24 @@ export const USER_COLUMNS =
   "id,name,device_id,is_host,ready,seat_index,seen_at,left_at,created_at";
 
 /**
+ * A card somebody is holding — every column of it.
+ *
+ * Named here beside the other three because this one was written out at its
+ * call site and had gone stale in the way nothing catches: `carried_by` was
+ * added to the table and to `HoldingRow`, and not to the list. The compiler was
+ * happy — the cast at the end of a Supabase read asserts the shape rather than
+ * checking it — so every holding in the game arrived with `carried_by`
+ * undefined, and the Zaklęcie a Krzyżowiec or a Gnom walks around with lost its
+ * bearer. Putting the Przyjaciel down left his Karta on the Obszar and his
+ * spell in nobody's hands, which is the one thing 6.4 and 9.6 are careful
+ * about between them.
+ */
+export const HOLDING_COLUMNS = "id,seat_id,card_id,kind,face,slot,ordinal,carried_by,granted";
+
+/** And a Karta lying face up on a field (16.8), which has four. */
+export const FIELD_CARD_COLUMNS = "id,field_id,card_id,granted";
+
+/**
  * Creates a table and returns the host's seat token.
  *
  * Retries on a join-code collision rather than trusting randomness: codes are
@@ -639,7 +657,7 @@ export interface HoldingRow {
 export async function holdingsFor(gameId: string, on: DbHandle = handleNow()): Promise<HoldingRow[]> {
   const { data, error } = await on
     .from("holdings")
-    .select("id,seat_id,card_id,kind,face,slot,ordinal,granted")
+    .select(HOLDING_COLUMNS)
     .eq("game_id", gameId)
     // A pack the player has arranged first, in the order they arranged it;
     // everything else after it, oldest first, which is how the whole table read
@@ -668,7 +686,7 @@ export interface FieldCardRow {
 export async function fieldCardsFor(gameId: string, on: DbHandle = handleNow()): Promise<FieldCardRow[]> {
   const { data, error } = await on
     .from("field_cards")
-    .select("id,field_id,card_id,granted")
+    .select(FIELD_CARD_COLUMNS)
     .eq("game_id", gameId)
     .order("created_at");
   if (error) throw new Error(error.message);
