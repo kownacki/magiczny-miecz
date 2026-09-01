@@ -76,6 +76,19 @@ describe("linijki, których zasada zależy od treści", () => {
     expect(ruleForKind("reshuffle", { pile: "zdarzenia" })).toBe("13.4");
   });
 
+  /**
+   * 5.5 is a Przedmiot's rule and 6.4 is his own. Both leave a Karta face up on
+   * the Obszar you are standing on, and only one of them is about somebody who
+   * then walks off with whoever picks him up.
+   */
+  it("cites the Przyjaciel's own rule when a Przyjaciel is left behind", () => {
+    expect(ruleForKind("discarded", { kind: "friend", cardId: "pasterz" })).toBe("6.4");
+    expect(ruleForKind("discarded", { kind: "item", cardId: "miecz" })).toBe("5.5");
+    // A row from before the payload carried a kind still answers with the rule
+    // that was right for every card it could have been about.
+    expect(ruleForKind("discarded")).toBe("5.5");
+  });
+
   it("names the border that was crossed", () => {
     expect(ruleForKind("crossing", { obstacle: "lodowy-las" })).toBe("11.7");
     expect(ruleForKind("crossing", { obstacle: "trzesawiska" })).toBe("11.1");

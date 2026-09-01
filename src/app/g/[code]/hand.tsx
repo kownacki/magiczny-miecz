@@ -631,7 +631,10 @@ export function Hand({
       friends={friends}
       seat={seat}
       isMine={isMine}
+      canAct={canAct}
       moving={moving}
+      asked={asked}
+      onDrop={onDrop}
       onInspect={onInspect}
     />
     </>
@@ -664,15 +667,23 @@ function FriendsHeld({
   friends,
   seat,
   isMine,
+  canAct,
   moving,
+  asked,
+  onDrop,
   onInspect,
 }: {
   friends: readonly Seat["holdings"][number][];
   seat: Seat;
   /** Whose card this is. The empty state is addressed to its owner. */
   isMine: boolean;
+  /** This card is yours to act on, which is not the same as it being your turn. */
+  canAct: boolean;
   /** Something is in the air over the pack; no Karta opens while it is. */
   moving: boolean;
+  /** Friends asked about and not yet answered, greyed where they stand. */
+  asked: readonly string[];
+  onDrop: (holdingId: string) => void;
   onInspect: (card: TileCard) => void;
 }) {
   /**
@@ -728,8 +739,37 @@ function FriendsHeld({
           nature={asNature(seat.nature)}
           tone="filled"
           quiet={moving}
+          // On its way out and not gone yet, exactly as in the pack: the
+          // question is asked in a dialog and carried out by the server, and
+          // between the two there is a Przyjaciel who is still standing here
+          // and already leaving.
+          dimmed={asked.includes(held.id)}
           onClick={() => onInspect(tileFor(held))}
-        />
+        >
+          {/* 6.4, which is the one thing you can do with a Przyjaciel and the
+              one thing this section did not offer.
+              
+              „Postać może w każdej chwili pozbyć się posiadanego Przyjaciela
+              (jednego lub kilku), pozostawiając jego Kartę, na Obszarze, na
+              którym aktualnie się znajduje." The engine has always done it —
+              the console can, and death and the Kamienny Most both leave
+              friends lying where they stood — and the browser had no way to
+              say it, so the only rule chapter 6 gives a player to *use* was
+              the only one they could not reach.
+              
+              „w każdej chwili" is meant: no turn is required, and none is
+              asked for. The same „odrzuć" the pack draws, in the same place,
+              because the outcome is the same one — a Karta face up on the
+              Obszar you are standing on, for whoever stops there next. */}
+          {canAct && (
+            <button
+              onClick={() => onDrop(held.id)}
+              className="text-[9px] text-muted underline hover:text-vermilion"
+            >
+              odrzuć
+            </button>
+          )}
+        </ItemSlot>
       ))}
     </TileRow>
   );

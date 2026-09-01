@@ -561,11 +561,22 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     if (!held) return;
     const name = CARD_NAMES.get(held.cardId) ?? held.cardId;
     const here = seat?.field_id ? FIELD_NAMES.get(seat.field_id) : null;
+    const where = here ? `na Obszarze ${here}` : "na Obszarze";
     setAsk({
       title: `Odrzuć: ${name}`,
-      body: here
-        ? `${name} zostanie na Obszarze ${here}, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`
-        : `${name} zostanie na Obszarze, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`,
+      /**
+       * A Przyjaciel is left, not thrown away, and the rule is his own.
+       *
+       * 5.5 is about a Przedmiot and 6.4 about him — „pozostawiając jego
+       * Kartę, na Obszarze, na którym aktualnie się znajduje" — and the two
+       * sentences differ in what happens next as well as in the number: a card
+       * is picked up, and he *goes with* whoever picks him up. Saying it in the
+       * dialog is the last moment anybody is deciding.
+       */
+      body:
+        held.kind === "friend"
+          ? `Zostawisz jego Kartę ${where} — kto się tu zatrzyma, może go wziąć ze sobą (6.4, 12.1).`
+          : `${name} zostanie ${where}, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`,
       confirmLabel: "Odrzuć",
       tone: "grave",
       onConfirm: () => {

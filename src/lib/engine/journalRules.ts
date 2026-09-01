@@ -73,7 +73,8 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   taken: "16.6",
   /** Two piles, two rules — see `refine`. */
   reshuffle: "9.5",
-  /** Odrzucenie Przedmiotu — jego Karta zostaje odkryta na Obszarze. */
+  /** Odrzucenie Przedmiotu — jego Karta zostaje odkryta na Obszarze. A
+   *  Przyjaciel put down is 6.4's own sentence — see `refine`. */
   discarded: "5.5",
   /** Zbieranie z planszy odkrytych Kart. */
   "left-behind": "12.1",
@@ -179,6 +180,14 @@ const REFINE: Partial<Record<JournalKind, (payload: Payload) => string | null>> 
   effect: (payload) => (isSpell(payload?.source) ? "9.6" : null),
   /** Which border: the Trzęsawiska are 11.1, the Lodowy Las 11.7. */
   crossing: (payload) => (payload?.obstacle === "lodowy-las" ? "11.7" : "11.1"),
+  /**
+   * What was put down. 5.5 is a Przedmiot's rule and says the Karta is left
+   * face up where you stand; 6.4 says the same thing about a Przyjaciel in its
+   * own words, and is the only rule in chapter 6 a player acts on rather than
+   * has happen to them. A reader who follows the link off "zostawia PASTERZA"
+   * should land on the sentence that allows it.
+   */
+  discarded: (payload) => (payload?.kind === "friend" ? "6.4" : "5.5"),
 };
 
 /** What a journal row carries, as much of it as this file reads. */
