@@ -508,38 +508,43 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // Read here rather than from `turnState` below, which is past the early
   // returns a hook may not sit behind.
   const nowOnField = game ? top(game.turn_state) : null;
-  const owesHere = nowOnField?.phase === "field" && nowOnField.draw > 0;
-  const arrivedAt = myTurn && owesHere && myField ? `${turnKey}:${myField}` : null;
-  const openedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (arrivedAt === null || openedFor.current === arrivedAt) return;
-    openedFor.current = arrivedAt;
-    setInspecting(asFieldId(myField));
-  }, [arrivedAt, myField]);
-
-  /**
-   * And the other half: the deal is done, so the window that made it stands
-   * aside for the sheet.
-   *
-   * It opened itself to say what was here and to deal the rest. The moment the
-   * rest is dealt there is a Karta on screen to work through, and the two
-   * windows were both up — the Obszar's over the sheet, so pressing "Wyciągnij
-   * kartę" appeared to do nothing while a WIDMO waited underneath it.
-   *
-   * Only the one this opened, and only once: `openedFor` is the key it opened
-   * for, and closing is recorded against the same key. A player who opens the
-   * Obszar themselves mid-resolution — to end the turn, to read the square —
-   * keeps it, because they did not open this one.
-   */
   const dealDone =
     nowOnField?.phase === "field" && nowOnField.draw <= 0 && nowOnField.drawn.length > 0;
-  const handedOver = useRef<string | null>(null);
+  /** One badanie of one Obszar: the thing all of this is keyed on. */
+  const hereKey = myTurn && myField ? `${turnKey}:${myField}` : null;
+  /** Something to deal, or something already lying here to look at. */
+  const hasBusiness =
+    nowOnField?.phase === "field" && (nowOnField.draw > 0 || nowOnField.drawn.length > 0);
+  const openedFor = useRef<string | null>(null);
   useEffect(() => {
-    const key = openedFor.current;
-    if (key === null || handedOver.current === key || !dealDone) return;
-    handedOver.current = key;
-    setInspecting(null);
-  }, [dealDone]);
+    if (!hasBusiness || hereKey === null || openedFor.current === hereKey) return;
+    openedFor.current = hereKey;
+    setInspecting(asFieldId(myField));
+  }, [hasBusiness, hereKey, myField]);
+
+  /**
+   * The deal is turned over and looked at before anything is resolved.
+   *
+   * Badanie Obszaru is one motion at a table with two halves: you deal the
+   * Karty the square owes, and then everybody looks at what came up — all of
+   * it, together, before the first one is picked up. The app did the first half
+   * and jumped straight to a Wróg's sheet, so the only view of the whole deal
+   * was the one nobody got, the moment in between.
+   *
+   * The window is already open — it is the one the deal was made in — so the
+   * reveal is that window staying put until the player says go on. Until they
+   * do, the sheet is held back (`sheetApplies`), which is also what stops the
+   * two stacking on top of each other.
+   *
+   * It covers arriving at a square that owed nothing, too: three Karty left
+   * lying on a Płaskowyż Mgieł are a deal somebody else made, and looking at
+   * them before working through them is the same act.
+   *
+   * Once per badanie, so a player who opens the Obszar again later — to end the
+   * turn, to read the square — is not shown a reveal they have already had.
+   */
+  const [dealSeen, setDealSeen] = useState<string | null>(null);
+  const revealing = hereKey !== null && dealDone === true && dealSeen !== hereKey;
 
 
 
@@ -842,6 +847,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
          * there is nothing left to turn over.
          */
         turnState.draw <= 0 &&
+        // And not while the deal is still being looked at — see `revealing`.
+        !revealing &&
         (turnState.drawn.length > 0 ||
           compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null)));
 
@@ -1281,6 +1288,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
              Obszar they are only reading about. */
           owed={mySeat?.field_id === inspecting ? (onField?.draw ?? 0) : undefined}
           onDraw={() => post("turn", { action: "draw" })}
+          /* The deal, turned over and not yet worked through. The button that
+             ends it is the only way on, which is what makes this a moment
+             rather than a flicker. */
+          revealing={revealing && mySeat?.field_id === inspecting}
+          onDealSeen={() => {
+            setDealSeen(hereKey);
+            setInspecting(null);
+          }}
           canAct={mySeat?.seat_index === game?.active_seat}
           // Ending the turn lives in this window now, not in the box in the
           // corner: a turn is read in one place and should be finished there.
@@ -1372,6 +1387,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             : {})}
           notice={error ? null : notice}
           onClose={() => {
+            // Shutting the window counts as having looked: the reveal holds the
+            // sheet back, so leaving it un-answered would close the one window
+            // there is and open nothing in its place.
+            if (revealing) setDealSeen(hereKey);
             setInspecting(null);
             setNotice(null);
           }}

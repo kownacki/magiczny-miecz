@@ -98,6 +98,8 @@ export function FieldModal({
   busy,
   owed,
   onDraw,
+  revealing = false,
+  onDealSeen,
   onTake,
   asked = [],
   onInspect,
@@ -129,6 +131,17 @@ export function FieldModal({
    */
   owed?: number;
   onDraw?: () => void;
+  /**
+   * The Karty are dealt and are being looked at, before any of them is worked.
+   *
+   * Badanie Obszaru is one motion at a table with two halves — deal what the
+   * square owes, then everybody looks at what came up, all of it, before the
+   * first Karta is picked up. This is the second half, and the window is
+   * already the right place for it: it is the one the deal was made in.
+   */
+  revealing?: boolean;
+  /** Done looking. The Karty go to the sheet and this window stands aside. */
+  onDealSeen?: () => void;
   /** Whether the viewer's own character is on this field (12.1, 13.1). */
   standingHere: boolean;
   /** Whether it is their turn to be doing anything about it. */
@@ -287,6 +300,18 @@ export function FieldModal({
                 className="mb-2 w-full rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
               >
                 Wyciągnij {owed === 1 ? "kartę" : `${owed} ${owed < 5 ? "karty" : "kart"}`}
+              </button>
+            )}
+            {/* Where the draw button was, once there is nothing left to deal:
+                the same place, so the eye does not have to move to find what to
+                press next. */}
+            {revealing && onDealSeen && (
+              <button
+                onClick={onDealSeen}
+                disabled={busy}
+                className="mb-2 w-full rounded border border-ochre bg-ochre/10 px-2 py-2 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ochre transition hover:bg-ochre/20 disabled:opacity-40"
+              >
+                Rozpatrz po kolei
               </button>
             )}
             <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
