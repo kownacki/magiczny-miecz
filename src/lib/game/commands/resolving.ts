@@ -127,7 +127,14 @@ export async function spendHolding(
 }
 
 /**
- * Rolls an Obszar's own table, or simply carries out what it offers (15.1).
+ * Rolls an Obszar's own table, or simply carries out what it offers (13.5).
+ *
+ * 13.5 and not 15.1. That rule is about a Karta Zdarzeń whose instruction sends
+ * it to a named Obszar — the Upiór, the Eremita, the Lewiatan — and has nothing
+ * to say about a square's own printed text. What governs this is "Postać stosuje
+ * się do instrukcji wydrukowanej na Obszarze, na którym się znalazła [...] Do
+ * niektórych instrukcji Postać musi się zastosować, do innych może, jeśli ma
+ * ochotę", which is also where `obowiazkowe` comes from.
  *
  * One die, and only when the offer is a table. Said here rather than left to
  * whatever the face happens to do — a face that opens a fight would otherwise

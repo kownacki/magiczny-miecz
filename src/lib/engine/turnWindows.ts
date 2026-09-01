@@ -17,9 +17,10 @@ import { compulsoryOffer } from "./fieldScript";
  * size whatever is in it.
  *
  * The decision of what is on that list is here, pure, because it is a reading
- * of the rules and not a question about React: 16.4 will not let a Wróg be
- * walked past, a Karczma happens to you on arrival, and 11.4 makes retrying a
- * crossing the point of the next turn.
+ * of the rules and not a question about React: a Wróg attacks the character who
+ * turned him over (16.2), the Karczma's die is one of the instructions 13.5
+ * says a Postać *must* obey, and 11.4 makes retrying a crossing the point of
+ * the next turn.
  */
 export type WindowId =
   | "walka"
@@ -39,9 +40,13 @@ export interface TurnWindow {
    * The rules do not let this one be ignored.
    *
    * A button is an offer, and some of these are not offers — a Wróg attacks the
-   * character who drew him (16.2) and the Karczma happens on arrival. The box
-   * opens a compulsory window rather than waiting to be asked, which is what
-   * the draw modal already does for a fight.
+   * character who turned him over (16.2), and the Karczma prints "MUSISZ RZUCIĆ
+   * KOSTKĄ", which is 13.5's "do niektórych instrukcji Postać musi się
+   * zastosować". The box opens a compulsory window rather than waiting to be
+   * asked, which is what the draw modal already does for a fight.
+   *
+   * Compulsory is not immediate: `dutiesBeforeEnding` is what actually refuses,
+   * at the end of the turn, and this only decides what opens by itself.
    */
   compulsory?: boolean;
 }
@@ -110,9 +115,13 @@ export function factsIn(state: TurnPhase, standingOn: FieldId | null): TurnFacts
 /**
  * The windows this turn offers, most pressing first.
  *
- * Order is the whole of the ranking a player needs: 16.4 is explicit that
- * Spotkania and Wrogowie come before anything else on the Obszar, and a fight
- * already under way comes before even that.
+ * Order is the whole of the ranking a player needs. The Karty come before the
+ * Obszar's own instruction because 13.5 puts them there — a square that draws
+ * no Karty does its printed thing *after* everything lying on it, which is what
+ * 12.1's worked example does on Ruchome Skały: Książę takes the Różdżka, draws
+ * a Zaklęcie off it, and only then "musi zastosować się do instrukcji". Among
+ * the Karty themselves the order is 15.1's placed ones, then 15.2's numerals
+ * (16.4). A fight already under way comes before all of it.
  */
 export function windowsFor(facts: TurnFacts): TurnWindow[] {
   const windows: TurnWindow[] = [];
@@ -135,7 +144,10 @@ export function windowsFor(facts: TurnFacts): TurnWindow[] {
     windows.push({ id: "ruch", label: "Ruch", compulsory: true });
   }
 
-  // 16.4: everything drawn here is settled before the Obszar itself is.
+  // 13.5: a non-drawing Obszar does its own printed thing after every Karta on
+  // it, so the Karty are what the turn is on until they are gone. Not 16.4 —
+  // that rule orders the Karty against *each other* ("Postać może przystąpić do
+  // rozpatrzenia pozostałych Kart Zdarzeń") and says nothing about the square.
   if (facts.cardsWaiting > 0) {
     windows.push({
       id: "karty",
