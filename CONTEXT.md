@@ -167,6 +167,43 @@ moment, which is the whole reason they are ports.
   goes, which really are turns. The screen follows the same split — "Runda 4"
   for the counter, "Twoja tura" for whose go it is.
 
+  **A turn owed is the third thing, and it counts the other way.** Two columns
+  are measured in a seat's own goes and they point in opposite directions:
+  `Ends: { kind: "turns", turns: N }` counts N goes the holder *will take*
+  before a buff wears off, and `turns_lost` counts N goes the holder *will not
+  get*. Same unit, opposite sign, and nothing in the shape says which — so the
+  debt is filed under a named source, `DEBT` in `status.ts`, and `lapsesOn`
+  reads that to know the countdown runs backwards. An Eliksir with two turns
+  left and a debt of two are not the same number twice.
+
+  A skipped seat shows the difference cleanly. Its buff does not tick — see
+  above: `finishTurn` calls `tickEffects` for the seat that played and for
+  nobody it passed over — while its debt is spent by that very skip. Both are
+  right, and they are the same fact seen from two ends: the skipped go is one
+  the holder did not get, which is nothing for a buff to be measured against
+  and exactly what a debt is counting.
+
+  **What makes a turn "lost" is that it is spent doing nothing.** Not that it
+  was a go you would otherwise have enjoyed — 16.1 is explicit: „Jeżeli
+  spowodowałoby to utratę tury przez Postać, musi ona powstrzymać się od
+  podejmowania jakichkolwiek dalszych działań — **ta właśnie tura** liczy się
+  jako stracona." The character there has already rolled, already moved and
+  already arrived, and that turn still counts as the lost one. So a loss drawn
+  by whoever is playing costs them the rest of the go they are in
+  (`isPlaying ? turns - 1 : turns` in `ops.ts`), and everybody else banks a
+  whole one, because for them it is a go that has not started.
+
+  **Which is why Kamień pays the debt off rather than deferring it.** 20.1's
+  three turns are on the *round* clock — `stone_until_round`, because a statue
+  takes no goes and a countdown in its own goes would never reach zero — and
+  each of those rounds is a go spent doing nothing, which is what a lost turn
+  is. So a character stoned while owing two turns is out for three rounds and
+  not five, and 20.1's „powraca po zakończeniu 3 tury" stays literally true.
+  Nothing can add to the debt while the stone lasts: `seatsTargeted` passes a
+  statue over, so the only way into that state is to owe turns first and be
+  stoned after. The whole argument is written out in `turnQueue.ts`, where it
+  used to sit as an open question.
+
 - **Own points** and derived points are never the same number, and neither is
   ever called "total" in storage — only `sword_own` / `magic_own` are stored, and
   the sum is computed at read time. See the non-negotiable in `CLAUDE.md`.
