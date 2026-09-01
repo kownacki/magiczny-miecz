@@ -109,6 +109,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 3.2 | each character starts with 1, unless its card says otherwise | ✅ | `STARTING_KIT` (the Książę's five) |
 | 3.3 | prices are in Sztuki Złota | — | |
 | 3.4 | payments go back to the supply | — | no token supply to model |
+| 3.4 | …"nie dotyczy handlu między Postaciami" | ✗ | an aside about a rule the book never states. 13.3 lists what a meeting *is* — attack, or use an ability — and nothing anywhere grants a voluntary transfer; every one in the box is taken (17.9, ZŁOCZYŃCA, SZALEŃSTWO, ZWIERCIADŁO). Talisman, which chapter 3 is adapted from, has the rule outright; Magiczny Miecz carried the parenthesis and dropped its sentence. 5.5 and 6.4 already let a Przedmiot or Przyjaciel be left for somebody. Parked — see docs/TASKS.md |
 | 3.5 | gold never counts against the item limit | ✅ | `carriedCount` |
 
 ## 4. Punkty Życia
@@ -202,13 +203,16 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 12.1 | pick up gold, items and friends lying on your field | ✅ | `liftFieldCards` on arrival; `takeFromField` for anything lying there, from the field's own modal |
-| 12.1 | …but only after any Wrogowie are dealt with | ✅ | `takeCard` refuses while an unsettled Wróg is on the field |
+| 12.1 | pick up gold, items and friends lying on your field | ✅ | `liftFieldCards` on arrival; `takeFromField` for the Karty, `takeFieldGold` for loose Sztuki Złota out of `field_gold`, both from the field's own modal |
+| 12.1a | …but only after any Wrogowie are dealt with | ✅ | `refuseOverAFoe`, reading the board **and** the turn's frame — it read only one for a while, so the rule fired for a Przedmiot and not for the gold beside it |
+| 12.1b | …and only once the Obszar has drawn what it owes | ✅ | `refuseWhileOwing`, on anything lying here (`lyingHere`) — a bought card, the Władca's Tarcza and an `otrzymaj` grant are not "leżące" and pass |
+| 12.1 | …and visiting a Nieznajomy is under the same two exceptions | ✅ | one sentence grants visiting and taking together and a) and b) except the whole of it, so buying, selling and healing go through the same `refuseUnlessSettledHere` as taking |
 
 ## 13. Spotkania i badanie Obszarów
 
 | | rule | status | where |
 |---|---|---|---|
+| 13.1 | nothing at all on the square a turn *starts* from | ✅ | `refuseUnlessSettledHere` requires a `field` frame, so trade is refused in the `roll` phase — it was not, and a character standing on a TARGOWISKO could empty it before moving |
 | 13.1 | only on the field your move ended on — or was moved to by a Spotkanie | ✅ | the second half was missing: `placeSeat` staged a teleport's destination as owing nothing, so an Obszar a Karta sent you to could not be drawn on or explored. It goes through the same `afterMove` a walk does now (`by: "karta"`), and 15.2's Obbol draws his Karta on Równina Traw. The position override is the one caller that still does not arrive |
 | 13.2 | meet another character *or* explore, not both | ✅ | the choice stays the player's and only the "not both" is enforced: attacking is refused once a Karta has been drawn or the Obszar's offer resolved, and drawing is refused once the turn has been spent meeting. The mark rides through the fight and back out (`endFight`), because a settled duel leaves nothing behind saying it happened — and a fight with a Wróg is not a meeting and does not spend the turn |
 | 13.3 | attack, or use an ability on them | ◐ | attacking works; abilities do not exist (8.1) |

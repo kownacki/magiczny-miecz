@@ -949,26 +949,42 @@ Przedmiot cards, which is printed on them and was never transcribed (WOJNA
 status is the resolution stack's `cast` frame wearing a different hat — see
 docs/STACK.md law 4, which supersedes it when step 2 lands.
 
-## Parked deliberately — the Obszar inventory's two neighbours
+## Parked deliberately — the Obszar inventory's neighbours
 
-Both came out of the September 2026 pass over what lies on an Obszar (see
-`src/lib/view/fieldGroups.ts`), both were looked at properly, and both were put
-down on purpose so the card work could land on its own. Neither is blocked.
+These came out of the September 2026 pass over what lies on an Obszar (see
+`src/lib/view/fieldGroups.ts`). Each was looked at properly and put down on
+purpose so the card work could land on its own. None is blocked. The first has
+since been built and is kept struck through rather than deleted, because a note
+that said the opposite for a while is worth leaving where somebody can see it
+changed.
 
-### Gold lying on an Obszar
+### ~~Gold lying on an Obszar~~ — built
 
-`fieldGroups` groups **Karty** and nothing else. Loose Sztuki Złota are not a
-Karta Zdarzeń, print no numeral and are not in `field_cards` at all — but 12.1
-names them in the same breath as the cards: "może odwiedzić znajdującego się
-tam Nieznajomego, **zabrać leżące złoto**, Przedmioty (5.4.) lub Przyjaciół".
-They arrive on a field the same ways: 12.1 when a Postać dies, 20.2 when one is
-Zamieniona w Kamień.
+The question the note said to answer first was where gold on a field is
+*stored*, and the answer is its own table: `field_gold`, one row per Obszar that
+has any, so taking three of five is a patch rather than a read-modify-write two
+commands might race. Not `field_cards` — a Sztuka Złota is not a Karta, and
+minting `1-sztuka-zlota` rows would hand the deck copies it never gave up.
 
-So the Obszar window is honest about the cards and silent about the coins, and
-a player reading it cannot see everything that is there. When this is picked
-up, the question to answer first is where gold on a field is *stored* — it has
-no row today — and the display follows from that. It belongs in the
-"Przedmioty i Przyjaciele" group when it exists.
+4.4 and 20.2 both leave a purse behind now; 12.1 takes any amount off it. The
+Obszar window draws it as a pile of coins fitted to the Karta tile beside it,
+above the loot the way 12.1 lists it, and the console has `place gold N`,
+`take gold [N]` and `clear gold [N]` with help and Tab.
+
+Four rules bugs came out of it, all of the same shape — one rule written twice
+against the two places a Karta can be, because arriving lifts every
+`field_cards` row into the turn's frame:
+
+- 12.1a fired for a Przedmiot and not for gold, so coins could be taken over an
+  unfought Wilk's head.
+- 12.1b fired for gold and not for a drawn Przedmiot.
+- Both skipped the money *Karta* entirely, that branch of `takeCard` returning
+  before either guard.
+- `offerOn` read only the board, so a TARGOWISKO was shut for the whole of the
+  turn you land on it and open to anybody merely passing through — exactly
+  inverted.
+
+`refuseUnlessSettledHere` is the one guard now, and trade goes through it too.
 
 ### Class II and class III as two separate battles (17.5, 18.2)
 
@@ -989,6 +1005,60 @@ pack at all, and whether it would now split one correctly along the class line.
 `fought` already lists a pack's members and `trophiesFrom` walks them, so
 something knows about packs; nobody has read it against 17.5 since the classes
 were two.
+
+### Handel między Postaciami — parked, and probably not in the game
+
+Two Postacie standing on one Obszar cannot trade, and after a search of the
+rulebook and all four card sets the honest reading is that **the base game
+never gave them a way to.** Written down here because the absence looks like a
+gap, was investigated as one, and is not.
+
+**What the box actually says.** 13.3 is exhaustive about what a meeting is:
+"Spotkanie z inną Postacią może przybrać jedną z dwóch form: Postać która
+właśnie weszła na dany Obszar może zaatakować Postać, która już się tam
+znajduje (17.6-10.) lub użyć w stosunku do niej swoich specjalnych zdolności."
+Attack, or use your abilities. Not trade.
+
+Every transfer between characters in the box is **involuntary** — 17.9's
+spoils, ZŁOCZYŃCA robbing whoever he beats, SZALEŃSTWO taking a Zaklęcie,
+ZWIERCIADŁO ZNISZCZENIA used against somebody. No Karta, Zaklęcie or
+Charakterystyka grants a voluntary one.
+
+**The one trace, and where it came from.** 3.4 has a parenthesis:
+
+> Płatności za wszelkiego rodzju zakupy lub usługi odkładane są do zapasu
+> nieużytych żetonów Sztuk Złota (zasada ta nie dotyczy, rzecz jasna, **handlu
+> między Postaciami**).
+
+"Obviously this does not apply to trade between Characters" — an aside about a
+rule that is not in the book. Talisman, which chapter 3 is adapted from, states
+it outright: characters in the same space may trade objects, gold and
+followers. Magiczny Miecz carried the parenthesis across and dropped the
+sentence it was parenthetical to. That is a printing history, not a rule.
+
+**What is already legal and does most of the job.** 5.5 lets a Postać drop a
+Przedmiot on its Obszar "w dowolnym momencie" and 6.4 the same for a
+Przyjaciel, so anything except gold can change hands by being left for somebody
+who ends their move there — slowly, publicly, and at the risk of a third player
+taking it first. Gold has no such rule: 12.1 lets it be picked up and nothing
+lets it be put down, which `takeFieldGold`'s doc already notes.
+
+**If it is ever built** it is a table setting beside `eq_mode`, `trophy_mode`
+and `endless_stock`, never a default — the manual is king unless a variant says
+otherwise. What it would need, in the order the layers go:
+
+- a `trade` command taking a partner seat, and what moves: gold, Przedmioty,
+  Przyjaciele (Talisman's three), never Zaklęcia — 9.3 keeps a hand concealed
+  and a trade would have to reveal one.
+- both seats inside 12.1's window on the same Obszar, which is now one guard:
+  `refuseUnlessSettledHere`. 13.1 already says nothing may happen on the square
+  a turn starts from, and that applies to both sides of a trade, not just the
+  active one.
+- consent from the passive seat, which nothing in this app has ever needed:
+  every command today is one seat's. That is the real cost of the feature and
+  the reason it is not a small job.
+- 5.3's Natura check on the receiving side, and 5.4's carrying limit, both of
+  which `takeCard` already applies.
 
 ### SKALNE WROTA draws three more Karty in the middle of a queue
 
