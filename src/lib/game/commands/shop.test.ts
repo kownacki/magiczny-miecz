@@ -1,23 +1,46 @@
 import { describe, expect, it } from "vitest";
+import type { Snapshot } from "../change";
 import { asFieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
 import { EVENTS } from "../decks";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { TROPHY_RATE, buyGoods, offerOn, payHealer, sellHolding, tradeTrophies } from "./shop";
 import { goodsId } from "@/lib/engine/goods";
+import { only } from "@/lib/engine/stack";
+import type { TurnPhase } from "@/lib/engine/turn";
 
 /** The board's own establishments, read off `fieldScript.ts` rather than guessed. */
 const GROD = asFieldId("grod")!; // Lichwiarz, 1 Sz. Z.
 const OSADA = asFieldId("osada")!; // Znachor, 1 Sz. Z.
 const STEP = asFieldId("step-1")!; // nothing at all
 
+/**
+ * Standing on the Obszar, move finished, nothing owed — 12.1's own window.
+ *
+ * The turn frame used to be left at `aTable`'s default `roll`, because nothing
+ * looked: `standingShopper` asked whether the seat existed and stood somewhere
+ * and stopped there. It asks 12.1 now, the way the taking commands next door
+ * always have — so these fixtures have to be in the window they were always
+ * meant to be describing. Everything below is about prices, stock and purses,
+ * and the window is what lets it stay about those.
+ */
 const standing = (
   fieldId: typeof GROD,
   seat: Parameters<typeof aSeat>[0] = {},
   holdings: ReturnType<typeof aHolding>[] = [],
 ) =>
   aTable({
-    seats: [aSeat({ id: "seat-a", field_id: fieldId, ...seat })],
+    seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: fieldId, ...seat })],
+    game: {
+      active_seat: 0,
+      turn_state: only({
+        phase: "field",
+        fieldId,
+        from: null,
+        draw: 0,
+        drawn: [],
+      } as TurnPhase),
+    },
     holdings,
   });
 
@@ -30,6 +53,38 @@ describe("what an Obszar is offering", () => {
   it("finds nothing where there is nothing", () => {
     expect(offerOn(standing(STEP), STEP, "sprzedaj")).toBeNull();
     expect(offerOn(standing(STEP), STEP, "uzdrow")).toBeNull();
+  });
+
+  /**
+   * The one the whole feature turned on, and it was inverted.
+   *
+   * Arriving lifts every `field_cards` row into the turn's frame, so on the
+   * turn you land on a TARGOWISKO it is in `drawn` and not on the board. Reading
+   * only the board meant the shop answered "Na tym Obszarze nie ma czego kupić"
+   * for the whole of the one turn 12.1 lets you use it, and served anybody
+   * merely passing through on some other turn — which 13.1 forbids outright.
+   * Precisely backwards, and invisible, both halves being the same Karta on the
+   * same square.
+   */
+  it("finds a shop the turn is holding, not only one lying on the board", () => {
+    const HERE = OSADA;
+    const midTurn = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: HERE })],
+      game: {
+        active_seat: 0,
+        turn_state: only({
+          phase: "field",
+          fieldId: HERE,
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "targowisko", cardClass: "place", granted: false }],
+        } as TurnPhase),
+      },
+    });
+    expect(offerOn(midTurn, HERE, "kup")).not.toBeNull();
+    // And the Karta has to be on *this* square: another turn's frame elsewhere
+    // is not a shelf here.
+    expect(offerOn(midTurn, STEP, "kup")).toBeNull();
   });
 
   /** 16.8 leaves a shop that walked in as a Karta lying there; 21.1 counts it. */
@@ -294,8 +349,7 @@ describe("a seat that is not standing anywhere", () => {
 
 describe("buying from a shelf (21.1)", () => {
   /** Osada's shop, whose prices are printed in `fieldScript.ts`. */
-  const shopping = (gold: number) =>
-    aTable({ seats: [aSeat({ id: "seat-a", field_id: OSADA, gold })] });
+  const shopping = (gold: number) => standing(OSADA, { gold });
 
   const forSale = () => {
     const shop = offerOn(shopping(9), OSADA, "kup");
@@ -304,7 +358,7 @@ describe("buying from a shelf (21.1)", () => {
   };
 
   it("refuses where there is no shelf", () => {
-    const nowhere = aTable({ seats: [aSeat({ id: "seat-a", field_id: STEP, gold: 9 })] });
+    const nowhere = standing(STEP, { gold: 9 });
     expect(() => buyGoods(nowhere, { seatId: "seat-a", cardId: "helm" })).toThrow(
       /nie ma czego kupić/,
     );
@@ -338,5 +392,95 @@ describe("buying from a shelf (21.1)", () => {
     expect(writes.holdings?.insert?.[0]).toMatchObject({ seat_id: "seat-a", card_id: cardId });
     expect(writes.seats).toContainEqual({ id: "seat-a", patch: { gold: 9 - first.cena } });
     expect(writes.journal?.map((line) => line.kind)).toContain("bought");
+  });
+});
+
+/* ==========================================================================
+ * 12.1's window, which trade is inside exactly as taking is.
+ * ======================================================================= */
+
+describe("when a character may trade at all (12.1, 13.1)", () => {
+  /**
+   * One door each, on an Obszar that actually has that desk — no square in the
+   * box has all three. The Osada prints a Płatnerz and a Medyk; the Gród prints
+   * the Lichwiarz.
+   */
+  const DOORS: [string, typeof GROD, (table: Snapshot, seatId: string) => unknown][] = [
+    ["buy", OSADA, (t, seatId) => buyGoods(t, { seatId, cardId: "helm" })],
+    ["sell", GROD, (t, seatId) => sellHolding(t, { seatId, holdingId: "h1" })],
+    ["heal", OSADA, (t, seatId) => payHealer(t, { seatId, points: 1 })],
+  ];
+
+  const shop = (fieldId: typeof GROD, state: TurnPhase, active = 0) =>
+    aTable({
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, field_id: fieldId, gold: 9 }),
+        aSeat({ id: "seat-b", seat_index: 1, field_id: fieldId, gold: 9 }),
+      ],
+      holdings: [aHolding({ id: "h1", seat_id: "seat-a", card_id: "helm", kind: "item" })],
+      game: { active_seat: active, turn_state: only(state) },
+    });
+
+  const arrived = (fieldId: typeof GROD): TurnPhase =>
+    ({ phase: "field", fieldId, from: null, draw: 0, drawn: [] }) as TurnPhase;
+
+  /**
+   * 13.1: "w żadnym przypadku nie mogą nikogo spotkać ani wogóle podejmować
+   * żadnych czynności na Obszarze, z którego rozpoczynają ruch."
+   *
+   * The plainest of the four and the easiest to see: standing on a Targowisko
+   * at the start of your turn, before rolling, you could empty it.
+   */
+  it("refuses before the move, on the square the turn starts from", () => {
+    for (const [what, field, run] of DOORS) {
+      const before = shop(field, { phase: "roll" } as TurnPhase);
+      expect(() => run(before, "seat-a"), what).toThrow(/13\.1/);
+    }
+  });
+
+  /**
+   * 10.1, which the taking commands checked and the trading ones did not — and
+   * it is reachable from a browser rather than only in theory, the route
+   * reading `body.seatId`.
+   */
+  it("refuses a seat whose turn it is not, standing on the same square", () => {
+    for (const [what, field, run] of DOORS) {
+      const table = shop(field, arrived(field));
+      expect(() => run(table, "seat-b"), what).toThrow(/10\.1/);
+    }
+  });
+
+  /**
+   * 12.1a and b, which except the whole of 12.1 and not only its taking half:
+   * "odwiedzić znajdującego się tam Nieznajomego, zabrać leżące złoto,
+   * Przedmioty lub Przyjaciół z wyjątkiem sytuacji, w której…". A Wilk does not
+   * wait politely while you haggle.
+   */
+  it("refuses over an unfought Wróg, and while the Obszar still owes Karty", () => {
+    const wilk = { cardId: "wilk", cardClass: "foe" as const, granted: false };
+    for (const [what, field, run] of DOORS) {
+      const guarded = shop(field, { ...arrived(field), drawn: [wilk] } as TurnPhase);
+      const owing = shop(field, { ...arrived(field), draw: 1 } as TurnPhase);
+      expect(() => run(guarded, "seat-a"), what).toThrow(/WILK/);
+      expect(() => run(owing, "seat-a"), what).toThrow(/12\.1b/);
+    }
+  });
+
+  /**
+   * And through, in the window itself.
+   *
+   * Asserted as "not refused by the gate" rather than "does not throw": each of
+   * these has arithmetic of its own — a purse, a shelf, a wound — and this
+   * suite is about the window, not about what is for sale.
+   */
+  it("lets all three past the gate once the move has ended here", () => {
+    for (const [what, field, run] of DOORS) {
+      const table = shop(field, arrived(field));
+      try {
+        run(table, "seat-a");
+      } catch (refused) {
+        expect((refused as Error).message, what).not.toMatch(/10\.1|12\.1|13\.1/);
+      }
+    }
   });
 });

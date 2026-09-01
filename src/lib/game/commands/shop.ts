@@ -11,7 +11,8 @@ import type { FieldId } from "@/lib/engine/board";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import type { SeatRow } from "../store";
 import { asReturnable, putOnPile, trophiesToPile } from "./piles";
-import { takeCard, type Taken } from "./holdings";
+import { refuseUnlessSettledHere, takeCard, type Taken } from "./holdings";
+import { top } from "@/lib/engine/stack";
 import { cardName, plural } from "@/lib/engine/polish";
 import { TROPHY_RATE, offerFor, offersFor } from "@/lib/engine/trophies";
 import { pointsOf, seatById } from "./seat";
@@ -30,6 +31,20 @@ export { TROPHY_RATE, offerFor, offersFor };
  *
  * A shop can be printed on the board or can have walked in as a Karta and
  * stayed (16.8), and 21.1 makes no distinction between them.
+ *
+ * # Why it reads two lists
+ *
+ * The same reason `refuseOverAFoe` and `clearField` do, and with the sharpest
+ * consequence of the three. Arriving lifts every `field_cards` row into the
+ * turn's frame (`liftFieldCards`) and the end of the turn writes back what
+ * nobody took, so a Karta on the square you are standing on is not in
+ * `fieldCards` — it is in `drawn`.
+ *
+ * Reading only the board meant a TARGOWISKO answered "Na tym Obszarze nie ma
+ * czego kupić" for the whole of the turn you land on it, and served anybody who
+ * was merely passing by on some other turn. The shop worked in exactly the
+ * window 13.1 forbids and shut in the one 12.1 grants — precisely inverted, and
+ * invisible, because both halves are the same Karta lying on the same square.
  */
 export function offerOn<K extends Effect["op"]>(
   snapshot: Snapshot,
@@ -45,19 +60,62 @@ export function offerOn<K extends Effect["op"]>(
 
   for (const offer of fieldScriptFor(fieldId)?.offers ?? []) walk(offer.effect);
 
-  for (const card of snapshot.fieldCards.filter((c) => c.field_id === fieldId)) {
-    const script = scriptFor(card.card_id);
+  const state = top(snapshot.game.turn_state);
+  const inTurn =
+    state.phase === "field" && state.fieldId === fieldId
+      ? state.drawn.map((one) => one.cardId)
+      : [];
+  const onBoard = snapshot.fieldCards
+    .filter((c) => c.field_id === fieldId)
+    .map((c) => c.card_id);
+
+  for (const cardId of [...onBoard, ...inTurn]) {
+    const script = scriptFor(cardId);
     if (script) walk(script.effect);
   }
 
   return (found[0] as Extract<Effect, { op: K }>) ?? null;
 }
 
-/** A seat that is actually standing somewhere, which every trade needs. */
+/**
+ * A seat that may trade here, now.
+ *
+ * # What this used to ask, and what it left out
+ *
+ * "Does the seat exist and is it standing somewhere" — and nothing else. So a
+ * character could shop in the `roll` phase, before moving at all, on the square
+ * they were about to leave; and a player could shop on somebody else's turn,
+ * which is reachable from a browser rather than merely in theory, the route
+ * taking `body.seatId`. The taking commands next door were checking four things
+ * this checked none of, on the same square, in the same window.
+ *
+ * # Why the same four
+ *
+ * Because 12.1 is one sentence: "Postać, której ruch kończy się na danym
+ * Obszarze w każdej chwili, aż do końca swojej tury może **odwiedzić
+ * znajdującego się tam Nieznajomego, zabrać leżące złoto, Przedmioty lub
+ * Przyjaciół** z wyjątkiem sytuacji, w której: a) … b) …". Visiting and taking
+ * are granted together and excepted together, and the remedy names both halves
+ * — "należy najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść
+ * wyciągniętych Kart". A Wilk does not wait politely while you haggle.
+ *
+ * 13.1 is blunter about the phase and is what the message cites: "w żadnym
+ * przypadku nie mogą nikogo spotkać ani wogóle podejmować żadnych czynności na
+ * Obszarze, z którego rozpoczynają ruch."
+ *
+ * So this is `refuseUnlessSettledHere`, the same guard the two taking doors go
+ * through, with a sentence of its own. Everything it checks is the same, and
+ * that is the point: the split is what let two rules run on one square.
+ */
 export function standingShopper(snapshot: Snapshot, seatId: string): SeatRow {
   const seat = snapshot.seats.find((s) => s.id === seatId);
   if (!seat) throw new Error("Nie ma takiego miejsca.");
   if (!seat.field_id) throw new Error("Postać nie stoi jeszcze na Obszarze.");
+  refuseUnlessSettledHere(
+    snapshot,
+    seat,
+    "Handlować można dopiero po zakończeniu ruchu na tym Obszarze (13.1).",
+  );
   return seat;
 }
 

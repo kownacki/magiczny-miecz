@@ -718,19 +718,34 @@ export function dropCard(
  * najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych
  * Kart."
  */
-function refuseUnlessCollectable(snapshot: Snapshot, seat: SeatRow): void {
-  // The opening clause, which is this door's alone: 12.1 is about a Postać
-  // "której ruch kończy się na danym Obszarze", so collecting outside a field
-  // frame is not a late take but no take at all. `takeCard` cannot ask this —
-  // it is also how a shop delivers and how a Karta grants.
-  requireTop(
-    snapshot.game.turn_state,
-    "field",
-    "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).",
-  );
+export function refuseUnlessSettledHere(snapshot: Snapshot, seat: SeatRow, why: string): void {
+  // 10.1, first, because it is the answer to a different question than the
+  // other three: those say "not yet", this says "not you".
+  if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura (10.1).");
+
+  /**
+   * The opening clause. 12.1 is about a Postać "której ruch kończy się na danym
+   * Obszarze" and 13.1 is blunter still — "w żadnym przypadku nie mogą nikogo
+   * spotkać ani wogóle podejmować żadnych czynności na Obszarze, z którego
+   * rozpoczynają ruch". Outside a field frame nothing here has happened yet.
+   *
+   * The sentence is the caller's because the two doors are refusing different
+   * acts, and a player pressing „weź" and a player pressing „kup" should be
+   * told which one they cannot do and under which rule. Everything the guard
+   * *checks* is the same.
+   */
+  requireTop(snapshot.game.turn_state, "field", why);
 
   refuseOverAFoe(snapshot, seat.id);
   refuseWhileOwing(snapshot);
+}
+
+/** 12.1's own sentence, for the two doors that take things off a square. */
+export const NOT_COLLECTED_YET =
+  "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).";
+
+function refuseUnlessCollectable(snapshot: Snapshot, seat: SeatRow): void {
+  refuseUnlessSettledHere(snapshot, seat, NOT_COLLECTED_YET);
 }
 
 /**
@@ -757,13 +772,14 @@ export function takeFieldGold(
   command: { seatId: string; gold: number },
 ): Outcome<{ took: number }> {
   const seat = seatById(snapshot, command.seatId);
-  if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura (10.1).");
   if (!seat.field_id) throw new Error("Postać nie stoi na żadnym Obszarze.");
+  // Whether you may be taking anything at all, before what there is to take:
+  // "there is no gold here" is a strange thing to be told on somebody else's
+  // turn.
+  refuseUnlessCollectable(snapshot, seat);
 
   const lying = snapshot.fieldGold.find((row) => row.field_id === seat.field_id);
   if (!lying || lying.gold <= 0) throw new Error("Nie ma tu złota.");
-
-  refuseUnlessCollectable(snapshot, seat);
 
   const want = Math.floor(command.gold);
   if (!Number.isFinite(want) || want < 1) throw new Error("Podaj, ile Sztuk Złota zabierasz.");
@@ -792,15 +808,13 @@ export function takeFromField(
   command: { seatId: string; fieldCardId: string },
 ): Outcome<Taken> {
   const seat = seatById(snapshot, command.seatId);
-  if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura (10.1).");
+  refuseUnlessCollectable(snapshot, seat);
 
   const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
   if (!lying) throw new Error("Tej Karty już tam nie ma.");
   if (lying.field_id !== seat.field_id) {
     throw new Error("Można zabierać tylko z Obszaru, na którym się stoi (12.1).");
   }
-
-  refuseUnlessCollectable(snapshot, seat);
 
   // Off the field first, so the carrying limit and 21.2's stock — both of which
   // count copies in play — do not see the same card twice. A refusal from
