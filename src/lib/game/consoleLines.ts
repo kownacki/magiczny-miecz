@@ -1,7 +1,5 @@
 /** What the console prints: the lines, labels and lookups both consoles turn rows into. */
 
-/** One typed line from the test console, carried out against a real table. */
-
 import characters from "@/data/characters.json";
 import { cardIdNamed, describeCard } from "@/lib/engine/lookup";
 
@@ -27,21 +25,6 @@ import type { Snapshot } from "./change";
 import { cardLending } from "./commands/seat";
 import { fold } from "@/lib/engine/search";
 
-/**
- * The third edge, beside `turnStore.ts` and `lobbyStore.ts`.
- *
- * The grammar this carries out is `engine/console.ts`'s and is pure; this is
- * the half with the database in it, and it does almost nothing of its own —
- * every branch calls the function the game itself calls, so a tested Życie is
- * lost the way a real one is and a staged fight rolls the dice real combat
- * rolls. Nothing here can quietly disagree with the rules by keeping its own
- * copy of them.
- *
- * It lived in `turnStore.ts`, which made that file the largest in the repo and
- * made two unrelated things one: the turn, and the shortcut for testing the
- * turn. They are not read together and they are not changed together, and only
- * one of them ships to a table that is actually playing.
- */
 
 /**
  * What each of the console's three effect words writes.
