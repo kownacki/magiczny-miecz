@@ -997,12 +997,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             turnState.phase === "fight" ? turnState.fight.cardName : null,
           )}
           onOpen={() => {
-            // Back to whatever the turn is on: the sheet if it is a fight or a
-            // card, and the Obszar otherwise — which for the player being asked
-            // is where the turn is ended, and for everybody else is where they
-            // can see what it is being ended on.
+            /**
+             * Back to whatever the turn is on, and never to nothing.
+             *
+             * The sheet if it is a fight or a Karta, and the Obszar otherwise —
+             * which for the player being asked is where the turn is ended, and
+             * for everybody else is where they can see what it is being ended
+             * on.
+             *
+             * "Otherwise" used to mean "no window is compulsory", which read
+             * the *list* rather than what is actually on screen. Mid-deal the
+             * Karty window is compulsory and the sheet is shut (13.4), so this
+             * unfolded something that was not there and left the player where
+             * they started. It asks `sheetApplies` now, which is the same
+             * question the sheet itself is drawn on.
+             */
             setFolded(false);
-            if (!turnWindows.some((window) => window.compulsory)) setInspecting(active.field_id);
+            if (!sheetApplies) setInspecting(active.field_id);
           }}
         />
       )}
@@ -1820,10 +1831,24 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   onDraw={() => post("turn", { action: "draw" })}
                   busy={busy}
                   onOpen={(id) => {
-                    // The two the draw modal already owns open themselves; the
-                    // rest are the Obszar, which is one window with the field's
-                    // own actions in it.
-                    if (id === "walka" || id === "karty") return setFolded(false);
+                    /**
+                     * The sheet if there is one, and the Obszar otherwise.
+                     *
+                     * "Walka" and "Karty" belong to the draw sheet, so pressing
+                     * them used to unfold it and nothing else. Which worked
+                     * until the sheet learned to stay shut while the Obszar
+                     * still owes Karty (13.4): "Karty 2" was then a chip that
+                     * unfolded something that was not there, and pressing it
+                     * did nothing at all.
+                     *
+                     * Nothing on this bar may be inert. Where the sheet does
+                     * not apply the Obszar's window is what the turn is in —
+                     * and on that very turn it is also where the deal is, which
+                     * is what the player pressing "Karty" is looking for.
+                     */
+                    if ((id === "walka" || id === "karty") && sheetApplies) {
+                      return setFolded(false);
+                    }
                     setInspecting(active.field_id);
                   }}
                 />
