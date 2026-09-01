@@ -9,6 +9,8 @@ import {
   EFFECTS,
   FIELD_KINDS,
   FOES,
+  GOLD_OFFERED,
+  GOLD_WORDS,
   NATURES,
   PEOPLE,
   PLACEABLE,
@@ -148,8 +150,40 @@ export function complete(
     if (verb === "place" || verb === "put" || verb === "clear") {
       const at = said();
       if (at !== -1) return shelved(FIELD_KINDS, at + 1);
+      /**
+       * `place gold N` is not a Karta and Tab cannot finish a number, so the
+       * money form is offered as a word and then gets out of the way: nothing
+       * where the amount goes, and `at` once it has been typed.
+       *
+       * Not for `clear`, which has no money form — it sweeps whatever is on the
+       * square, coins included, and a `clear gold` Tab taught would be a line
+       * the parser reads as a card nothing is called.
+       */
+      const money = (parts[1] ?? "").toLowerCase();
+      if (verb !== "clear" && GOLD_WORDS.has(money)) {
+        const amountIn = parts.length >= 4 && parts[parts.length - 1] === "";
+        return amountIn ? { pool: ["at"], at: parts.length - 1 } : { pool: [], at: parts.length - 1 };
+      }
       const names = PLACEABLE.flatMap((group) => group.cards.map((one) => one.name));
-      return finished(names) ? { pool: ["at"], at: parts.length - 1 } : shelved(PLACEABLE, 1);
+      if (finished(names)) return { pool: ["at"], at: parts.length - 1 };
+      // Money first, the way 12.1 lists it — "zabrać leżące złoto, Przedmioty
+      // lub Przyjaciół" — and because it is one word against a hundred and
+      // sixty-five, which is the one a list this long can afford to lead with.
+      return shelved(verb === "clear" ? PLACEABLE : [GOLD_OFFERED, ...PLACEABLE], 1);
+    }
+    /**
+     * `take` names something lying on the Obszar or dealt into the turn, which
+     * is the same pool `place` puts there — and the gold beside it, since 12.1
+     * gives both to whoever finished their move here.
+     *
+     * Tab cannot know what is actually on the square, so it offers what could
+     * be. That is what `drop` does with a hand it cannot see either.
+     */
+    if (verb === "take" || verb === "get") {
+      const money = (parts[1] ?? "").toLowerCase();
+      // Bare `take gold` already means the lot; `all` is the word for saying so.
+      if (GOLD_WORDS.has(money)) return { pool: ["all"], at: 2 };
+      return shelved([GOLD_OFFERED, ...PLACEABLE], 1);
     }
     /**
      * `drop` is a Karta out of your own hand and takes no Obszar — it is the

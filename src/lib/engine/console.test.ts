@@ -437,16 +437,22 @@ suite("naming a card, a field or a creature", () => {
    */
   it("cuts every card pool into the same kinds", () => {
     const titles = (line: string) => complete(line, []).sections?.map((one) => one.title);
-    // No Zaklęcie ever lies on an Obszar (9.5), so `place` is the six kinds.
-    expect(titles("place ")).toEqual([
+    const KARTY = [
       "Przedmioty",
       "Przyjaciele",
       "Wrogowie",
       "Spotkania",
       "Nieznajomi",
       "Miejsca",
-    ]);
-    expect(titles("clear ")).toEqual(titles("place "));
+    ];
+    // No Zaklęcie ever lies on an Obszar (9.5), so `place` is the six kinds —
+    // and the money, which is not a Karta and leads them the way 12.1 lists it.
+    expect(titles("place ")).toEqual(["Złoto", ...KARTY]);
+    expect(titles("take ")).toEqual(["Złoto", ...KARTY]);
+    // `clear` has no money form: it sweeps whatever is on the square, coins
+    // included, so a `clear gold` would be a line the parser reads as a card
+    // nothing is called.
+    expect(titles("clear ")).toEqual(KARTY);
     // A Hełm has no pile to sit on top of (21.2); a Zaklęcie has its own.
     expect(titles("stack ")).toContain("Zaklęcia");
     // And the one shelf that is not a Karta Zdarzeń class.
@@ -514,7 +520,23 @@ suite("naming a card, a field or a creature", () => {
       return parsed.ok;
     };
     for (const { title, options } of complete("place ", []).sections ?? []) {
-      for (const name of options) expect(typed(`place ${name}`), `${title}: ${name}`).toBeTruthy();
+      /**
+       * Złoto is the one shelf whose entry is not a whole line.
+       *
+       * `gold` is a word the amount follows, and Tab cannot finish a number —
+       * so what the heading promises is that `place gold 5` is typeable, not
+       * that `place gold` is. The promise is still kept, and it is still worth
+       * checking: a heading whose word the parser did not know would send
+       * somebody down the same blind alley either way.
+       */
+      const amount = title === "Złoto" ? " 5" : "";
+      for (const name of options) {
+        expect(typed(`place ${name}${amount}`), `${title}: ${name}`).toBeTruthy();
+      }
+    }
+    for (const { title, options } of complete("take ", []).sections ?? []) {
+      // Bare `take gold` is a whole line here — it means the lot (12.1).
+      for (const name of options) expect(typed(`take ${name}`), `${title}: ${name}`).toBeTruthy();
     }
     for (const { options } of complete("teleport ", []).sections ?? []) {
       for (const name of options) expect(typed(`teleport ${name}`), name).toBeTruthy();
@@ -525,6 +547,26 @@ suite("naming a card, a field or a creature", () => {
     for (const { options } of complete("card ", []).sections ?? []) {
       for (const name of options) expect(typed(`card ${name}`), name).toBeTruthy();
     }
+  });
+
+  /**
+   * The money word, offered where the grammar takes it and nowhere else.
+   *
+   * A completer that offers a word the parser rejects is worse than one that
+   * offers nothing: it teaches a line, and the line is refused.
+   */
+  it("offers gold where a Karta or money could go, and gets out of the way after", () => {
+    expect(complete("place ", []).options[0]).toBe("gold");
+    expect(complete("take ", []).options[0]).toBe("gold");
+    // A number cannot be finished, so nothing is offered where it goes and the
+    // line is handed back untouched.
+    expect(complete("place gold ", [])).toMatchObject({ line: "place gold ", options: [] });
+    // Once it has been typed the only thing left is where, and one option is
+    // typed for you rather than listed.
+    expect(complete("place gold 5 ", []).line).toBe("place gold 5 at ");
+    expect(complete("place gold 5 at ", []).sections?.[0].title).toBe("Dolny Krąg");
+    // Bare `take gold` is already the lot; `all` is the word for saying so.
+    expect(complete("take gold ", []).line).toBe("take gold all ");
   });
 
   /** Every other pool is a list of names with no shape, and stays one run. */
@@ -968,8 +1010,8 @@ suite("help", () => {
     // just typed and got wrong.
     expect(ok("help put")).toEqual({ kind: "help", about: "put" });
     expect(helpLines("put")).toEqual([
-      "place [card|gold N] [at field]",
-      "leave a card or loose Złoto on an Obszar, the one you stand on unless named — bare, the catalogue",
+      "place [gold N|card] [at field]",
+      "leave loose Złoto or a card on an Obszar, the one you stand on unless named — bare, the catalogue",
       "also: put",
     ]);
   });

@@ -102,6 +102,22 @@ const ZAKLECIA: Catalogue = { title: "Zaklęcia", cards: byName(spells as Spell[
 export const PLACEABLE: readonly Catalogue[] = byKind(CARDS);
 
 /**
+ * The same three words, as a set, for Tab.
+ *
+ * The completer has to know where a line stopped naming a Karta and started
+ * naming money, and it cannot ask a regex that also strips the amount. One
+ * list, so the word Tab offers is a word the parser reads.
+ */
+export const GOLD_WORDS: ReadonlySet<string> = new Set(["gold", "złoto", "zloto"]);
+
+/** What Tab offers where the money word goes. The English one, which is the verb's own. */
+export const GOLD_OFFERED: Catalogue = {
+  title: "Złoto",
+  cards: [{ id: "gold", name: "gold" }],
+};
+
+
+/**
  * Every Karta `deal` can make happen, in the six kinds a player thinks in.
  *
  * All of them, which is the change: `give` listed what a hand could hold and
