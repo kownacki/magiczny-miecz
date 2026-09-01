@@ -74,7 +74,14 @@ export interface Decks {
   events: DeckState;
   spells: DeckState;
 }
-
+/**
+ * Both piles a simulated game deals from.
+ *
+ * Kept separate because they recycle separately: rule 9.5 says the Spell pile
+ * is reshuffled from used spells when it runs out, and the event deck does the
+ * same for its own discards. Merging them would let a spent Zaklęcie come back
+ * as a Karta Zdarzeń.
+ */
 export function freshDecks(order: Shuffle = shuffle): Decks {
   return {
     events: buildDeck(EVENTS.map((card) => cardRef(card.source)), order),

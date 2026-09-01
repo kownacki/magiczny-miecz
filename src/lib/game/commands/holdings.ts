@@ -1020,8 +1020,23 @@ export function placeCard(
     result: fieldId,
   };
 }
-
-/** Hands a seat a card that came from nowhere, for testing what it then does. */
+/**
+ * Puts a card straight into a seat's hand, out of nowhere.
+ *
+ * For testing, and only that. It skips every check taking a card normally makes
+ * — 5.3's Natura restriction, 5.4's carrying limit, 21.2's finite Wyposażenie
+ * pile — because the point is to reach a state quickly rather than to reach it
+ * legally.
+ *
+ * Only the three kinds anybody actually holds. A Wróg is a trophy you have to
+ * beat, and Spotkania, Nieznajomi and Miejsca are resolved and set aside; none
+ * of them are things a hand can contain, so granting one would put a row in the
+ * holdings table that no rule knows how to read.
+ *
+ * Journalled as a manual override, because that is exactly what it is: the
+ * journal draws those differently and says so, and a card that appeared by
+ * magic should not be indistinguishable from one that was won.
+ */
 export function grantCard(
   snapshot: Snapshot,
   command: { seatId: string; cardId: string },

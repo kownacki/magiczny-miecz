@@ -70,8 +70,15 @@ export function statusesOf(snapshot: Snapshot, seatId: string): Status[] {
       ends: row.ends,
     }));
 }
-
-/** The stored effects reduced to whatever is left of them. */
+/**
+ * Writes back whatever an engine function decided is left.
+ *
+ * The engine returns the survivors rather than naming what to delete, so this
+ * deletes by difference: anything that was there and is not in the answer has
+ * ended. A countdown that ticked comes back as the same id with a smaller
+ * number, so it is updated rather than replaced — the row is the effect, and
+ * replacing it would make an Eliksir look like it had been drunk twice.
+ */
 export function keepOnly(
   snapshot: Snapshot,
   seatId: string,

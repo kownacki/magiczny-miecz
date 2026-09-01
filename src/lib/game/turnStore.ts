@@ -131,65 +131,6 @@ export type { BridgeOrdealResult, BridgeOutcome, CrossOutcome };
 export type { Decisions, Resolution, UseResult };
 export type { Decks };
 
-
-/**
- * The one Zaklęcie the rules name inside another rule.
- *
- * 19.1 does not say "a spell that lets you escape" — it says the Krąg Płomieni,
- * by name, and it is the only way in the game to slip away from another Postać.
- * So it is looked up here rather than left to the generic casting path, which
- * has nowhere to put a mechanical effect.
- */
-
-/**
- * How many Zaklęcia a character was dealt at setup (9.5).
- *
- * The Różdżka Zaklęć is measured against this rather than against 2.6's table,
- * so the limit cannot be worked out from Magia alone — see `spellAllowance`.
- * A stored `character_id` is narrowed on the way in, and an unseated seat has
- * no starting hand.
- */
-
-
-/**
- * Puts cards on the used pile — "stos zużytych Kart Zdarzeń", and the spells'
- * own (9.5, 9.6, 4.4, 1.4, 6.4, 16.6, 20.2).
- *
- * One door for all of it, because the rulebook keeps sending cards through it
- * from seven different chapters and every one of those used to end in a bare
- * `delete`. A card that is deleted has not been "odłożona na stos zużytych" —
- * it has left the game, and 9.5 can never bring it back.
- *
- * Simulation only: at a physical table the pile is a pile.
- *
- * An id with no copies is not an error. The Wyposażenie is a stock and not a
- * deck (21.2), so a Hełm handed back has nowhere here to go and is counted by
- * `shopStock` instead.
- */
-
-/**
- * The drawn copy, once its Wyposażenie card has taken its place (16.6, 21.1).
- *
- * The one case that runs the other way: this card *did* come off the deck, so
- * the deck is exactly where it goes. 16.6 says it outright for the two relics —
- * "musi je zamienić na identyczne z Wyposażenia, a wyciągnięte odłożyć na stos
- * zużytych" — and 21.1 extends the same exchange to every card in the chapter,
- * which is what makes `stockLeft` count copies in play rather than keeping a
- * tally.
- */
-
-
-
-/**
- * Both piles a simulated game deals from.
- *
- * Kept separate because they recycle separately: rule 9.5 says the Spell pile
- * is reshuffled from used spells when it runs out, and the event deck does the
- * same for its own discards. Merging them would let a spent Zaklęcie come back
- * as a Karta Zdarzeń.
- */
-
-
 /** Reads the stored decks, tolerating a game started before spells existed. */
 import type { Slot } from "@/lib/engine/slots";
 import { holdingsFor } from "./store";
@@ -199,7 +140,6 @@ import { holdingsFor } from "./store";
  * one of these call sites used to drop on the floor while building the same
  * object by hand.
  */
-
 export async function startGame(gameId: string): Promise<void> {
   // Everybody who asked to be surprised finds out now, and not a moment
   // earlier — the sentinel sits in the seat for the whole poczekalnia so that
@@ -218,8 +158,6 @@ export async function startGame(gameId: string): Promise<void> {
     for (let n = 0; n < seat.spells; n++) await drawSpell(gameId, seat.seatId);
   }
 }
-
-
 
 /**
  * Records the movement roll.
@@ -243,33 +181,6 @@ export async function moveTo(
 }
 
 /**
- * Picks up whatever is lying face up on a field, into the arriving character's
- * turn (12.1, 13.4, 16.8).
- *
- * They leave the board here and come back in `finishTurn` if they are still
- * unclaimed then, which is what makes a field accumulate: a Wróg nobody beat
- * and a Przedmiot nobody could carry are both waiting for the next character
- * to stop there.
- */
-
-/**
- * Leaves behind whatever the character did not take (16.8).
- *
- * "Karty, które pozostają na danym Obszarze ... muszą leżeć koszulkami do dołu"
- * — cards that remain, remain, face up, for whoever stops here next. So the
- * default is to leave everything.
- *
- * The exception is the cards that are used up by being read: a Spotkanie, a
- * Nieznajomy or a Miejsce whose own text ends "a następnie ją odłóż" has done
- * its work by the end of the turn, because 16.1 and 16.5 make obeying it
- * compulsory. A Przedmiot is not like that. The gold card also says "odłóż",
- * but only *after* you have converted it — leave it lying there and it is still
- * a Sztuka Złota waiting for the next character, which is exactly what the
- * first version of this got wrong.
- */
-
-
-/**
  * Records a drawn card.
  *
  * Companion mode is told which card came up, because the physical deck decided.
@@ -284,13 +195,6 @@ export async function drawCard(
   return change(gameId, drawCardOn, (of) => ({ named, shuffle: shuffleFor(of.game) }));
 }
 
-/**
- * Deals a spell to a seat, if its Magia allows one more (2.6, 9.2).
- *
- * The capacity check is the rule that actually bites: a character with Magia 1
- * may hold no spells at all, and one that gains a spell it cannot hold must
- * shed the excess immediately (9.4).
- */
 /**
  * The Różdżka Zaklęć's other half: a hand that refills itself (9.5).
  *
@@ -317,22 +221,6 @@ export async function drawSpell(gameId: string, seatId: string): Promise<string 
 }
 
 /**
- * Opens a fight against a card already drawn this turn.
- *
- * The player's total is seeded from their own points only. Items and friends
- * count towards it under 1.5, but those are physical cards on the table that
- * the referee does not track yet — so the number is seeded low and left
- * editable rather than being quietly wrong.
- */
-/**
- * How many copies of a card are anywhere in the game — held by anybody, or
- * lying face up on a field where somebody left it (12.1, 16.8).
- *
- * This is the denominator for 21.2: every copy in play is one that is not on
- * the pile to be bought.
- */
-
-/**
  * What the Wyposażenie pile still has, for every card on it.
  *
  * Sent with the table state so a shop can show what it has rather than offering
@@ -352,25 +240,6 @@ export async function shopStock(
     },
   );
 }
-
-/**
- * Which seats hold a Zaklęcie that 17.3 or 17.7 lets them speak before the
- * dice.
- *
- * Built from what people are actually holding rather than from who is at the
- * table, so a fight where nobody has a spell to cast never stops for one. That
- * is the difference between a rule being enforced and a rule being in the way:
- * most fights in this game involve no spells at all.
- */
-/**
- * How long a claim on the moment before the dice lasts.
- *
- * Thirty seconds is a house rule — the rulebook has no clock anywhere, only
- * "before the roll" (17.3) — and it exists to stop a fight hanging on somebody
- * who has gone to make tea. It is not meant to be a test of reflexes: the race
- * is the *claim*, which is one button, and the time after it is for reading a
- * hand of three and picking one, with the whole table waiting.
- */
 
 /**
  * Claims the moment before the dice (17.3, 17.7, 9.1).
@@ -637,13 +506,6 @@ export async function answerAsk(
  * 9.7 is the one hard prohibition and is enforced: nothing works on the
  * creatures of the Kamienny Most, nor on the Bestia.
  */
-/**
- * The two spells the app carries out rather than reads aloud.
- *
- * Returns what it took, for the journal — a spell that says "wszystkie" needs
- * to say how many that turned out to be, or the table cannot check it.
- */
-
 export async function castSpell(
   gameId: string,
   seatId: string,
@@ -708,19 +570,11 @@ export async function resolveFight(gameId: string, spoils?: Spoils): Promise<voi
 }
 
 /**
- * Takes a drawn card into a seat's keeping.
- *
- * Which pile it joins comes from its class (16.6, 1.4), not from the caller, so
- * a defeated Wróg cannot be filed as equipment and start adding its Miecz to
- * its killer. Spells are the only kind held concealed (9.3).
- */
-/**
  * Takes a card off the field's stack once somebody has claimed it.
  *
  * What is still listed when the turn ends is exactly what nobody took, which is
  * what 16.8 leaves lying there for the next character.
  */
-
 export async function takeCard(
   gameId: string,
   seatId: string,
@@ -737,13 +591,6 @@ export async function takeCard(
   }
 }
 
-/**
- * Drops a held card.
- *
- * Rule 5.5 lets a character discard an item at any moment, and 5.6 forces it
- * when over the carrying limit. Either way the card leaves the hand; where it
- * physically goes is the players' business at a table and not tracked yet.
- */
 /**
  * A way out of an overflow frame, with the check that closes it.
  *
@@ -824,7 +671,6 @@ export async function dropCard(gameId: string, holdingId: string): Promise<void>
  * of Miecz for a turn, and everything the buff system will carry once more
  * cards are transcribed.
  * ------------------------------------------------------------------------ */
-
 export async function effectsFor(gameId: string): Promise<EffectRow[]> {
   return effectRowsFor(gameId);
 }
@@ -855,16 +701,6 @@ export async function addEffect(
   );
 }
 
-/**
- * Writes back whatever an engine function decided is left.
- *
- * The engine returns the survivors rather than naming what to delete, so this
- * deletes by difference: anything that was there and is not in the answer has
- * ended. A countdown that ticked comes back as the same id with a smaller
- * number, so it is updated rather than replaced — the row is the effect, and
- * replacing it would make an Eliksir look like it had been drunk twice.
- */
-
 /** One of this seat's own turns has gone by (see `afterTurn`). */
 export async function tickEffects(gameId: string, seatId: string): Promise<void> {
   await change(
@@ -894,7 +730,6 @@ export async function reorderPack(
   await change(gameId, reorderPackOn, { seatId, holdingIds });
 }
 
-
 export async function spendHolding(gameId: string, holdingId: string): Promise<UseResult> {
   return change(gameId, thenRelease(spendHoldingOn), (of) => ({ holdingId, shuffle: shuffleFor(of.game) }));
 }
@@ -906,7 +741,6 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
  * and anything past a multiple of seven is lost. The traded cards go to the
  * used pile.
  */
-
 export async function tradeTrophies(
   gameId: string,
   seatId: string,
@@ -924,7 +758,6 @@ export async function tradeTrophies(
  * expressible. Journalled with `manual` set so the log distinguishes what the
  * engine decided from what a human asserted.
  */
-
 export async function adjust(
   gameId: string,
   seatId: string,
@@ -936,33 +769,6 @@ export async function adjust(
 ): Promise<Adjusted> {
   return change(gameId, adjustSeat, { seatId, stat, delta, reason, record, force });
 }
-
-/**
- * Takes Życie off a character, and buries it if that was the last of it (4.4).
- *
- * The one place that does this, because it was six places and three of them
- * forgot the second half. Losing to the Demon Zagłady, playing badly against
- * Śmierć and being bitten by Cerber all wrote the new number straight to the
- * row — so a character could reach zero on the Kamienny Most and simply carry
- * on, alive at nothing, taking turns nobody could explain and never appearing
- * in the journal as having died. Those are the three fields where a character
- * is *most* likely to die, which is how it stayed unnoticed: the deaths that
- * did work were the ones anybody tests.
- *
- * Returns what is left, because most callers want to say it.
- */
-
-/**
- * Rule 4.4: a character that has lost all its Życie is dead.
- *
- * It comes off the board, and its Przedmioty and Przyjaciele stay on the field
- * where it died — which is why they are dropped rather than deleted silently.
- * Its Zaklęcia go to the used pile, and its Miecz and Magia tokens go back to
- * the reserve, which is what clearing the seat's own points represents.
- *
- * The player is not out of the game: 4.4 lets them start again with a new
- * character. Choosing one is left to them rather than done automatically.
- */
 
 /**
  * Heals a character (4.7).
@@ -1003,19 +809,6 @@ export async function changeNature(
 }
 
 /**
- * Which Natures a card forbids (5.3).
- *
- * It used to read this out of the card's prose, looking for "jedynie" and
- * "tylko" — and all three cards that carry the restriction phrase it the other
- * way round, as a prohibition: "Włóczni nie mogą posiadać Złe Postacie". So the
- * search found nothing on exactly the cards the rule exists for, and a Zła
- * Postać could pick up the Święta Włócznia.
- *
- * It is data now, in the same registry as everything else a card does, so the
- * rule and the hover cannot disagree about it.
- */
-
-/**
  * Turns a character to stone for three turns (20.1).
  *
  * While stone it cannot move (20.4), holds nothing (20.2) and cannot be robbed
@@ -1023,7 +816,6 @@ export async function changeNature(
  * (20.3), which is why nothing is written to them here — the seat is simply
  * skipped in turn order until the timer runs out.
  */
-
 export async function turnToStone(gameId: string, seatId: string): Promise<void> {
   await change(
     gameId,
@@ -1065,13 +857,6 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
   await change(gameId, attackSeatOn, { targetSeatId });
 }
 
-/**
- * Sends the Poszukiwacz Przygód out at somebody up to three Obszary off.
- *
- * Separate from `attackSeat` because it is not the same fight: the character
- * stays where they are, the friend fights with his own three points, and losing
- * costs the friend rather than a point of Życie.
- */
 /** Buys a turn of the Najemnik's sword. Returns the card, so the console can name him. */
 export async function payFriend(gameId: string, seatId?: string): Promise<string> {
   return await change(gameId, payFriendOn, { seatId });
@@ -1116,7 +901,6 @@ export async function sendRaider(
 ): Promise<void> {
   await change(gameId, sendRaiderOn, target);
 }
-
 
 /**
  * Squares up to whatever is guarding the way through.
@@ -1165,31 +949,9 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
 export type FightOutcome = "wygrana" | "remis" | "przegrana";
 
 /**
- * Applies the result of a bridge guardian (11.9-11.11).
- *
- * Three outcomes, not two. 11.11 gives a draw its own consequence: "Jeżeli
- * wynik walki jest remisowy Postać nie traci punktu Magii lub Miecza, lecz
- * również nie może w następnej turze podjąć kolejnej próby wejścia na Most."
- * So a draw is cheap but not free — it costs the next turn's attempt, the same
- * as a loss does, and only a loss takes the point.
- *
- * Whichever way it goes the turn ends here: on a win at the bridge entrance
- * (11.10), otherwise back on the ring at the field the attempt was made from.
- */
-
-/**
- * Applies the result of a crossing between rings (11.4, 11.8).
- *
- * Failure costs a point of Życie and stops the journey. A draw costs nothing
- * but still stops it. Either way the character stays put and may try again next
- * turn, which 11.4 says is exactly what the next turn is for.
- */
-
-/**
  * The table reporting how a bridge guardian went, where it is not being fought
  * through the app — companion mode with the creature resolved on the table.
  */
-
 export async function enterBridge(
   gameId: string,
   outcome: BridgeOutcome,
@@ -1207,7 +969,6 @@ export async function enterBridge(
  * normally goes through `fightGuardian` and the combat engine; this route is
  * what remains for a table resolving that fight themselves.
  */
-
 export async function crossRing(
   gameId: string,
   input: { outcome?: CrossOutcome; dice?: number[] | null; to?: FieldId } = {},
@@ -1295,12 +1056,6 @@ export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
 }
 
 /**
- * Ends the turn and hands play on.
- *
- * A seat sitting out spends one lost turn here rather than being passed over
- * silently, so "tracisz 1 turę" costs exactly one trip round the table.
- */
-/**
  * Hands the turn on — or stops, and says which it did.
  *
  * `"held"` is the surplus: the frame was opened and the turn stayed where it
@@ -1333,18 +1088,6 @@ export async function equipCard(
 }
 
 /**
- * Moves one card into a place, and says so if it did not.
- *
- * Supabase returns write errors in the result rather than throwing, so an
- * unchecked update is a write that can fail in silence — which is exactly what
- * happened when the Magiczny Miecz and the Tarcza Tolimana were given places of
- * their own: the column's CHECK still listed the nine gear slots, every equip
- * of a relic violated it, and the app reported success and changed nothing. A
- * silent write is worse than a failing one; the player is told their shield is
- * on and it is not.
- */
-
-/**
  * What the Kamienny Most does to a character standing on one of its fields.
  *
  * The bridge is where the game ends, and until now the app went quiet on it:
@@ -1356,7 +1099,6 @@ export async function equipCard(
  * Dice may be supplied, as everywhere else, because a table with real dice on
  * it beats a table being told what it rolled.
  */
-
 export async function resolveBridgeOrdeal(
   gameId: string,
   input: { dice?: number[]; itemRolls?: number[] } = {},
@@ -1365,16 +1107,6 @@ export async function resolveBridgeOrdeal(
     random: supplied([...(input.dice ?? []), ...(input.itemRolls ?? [])], appRandom()),
   });
 }
-
-/**
- * Rolls a character's Hełm, Tarcza or Zbroja against the point of Życie it is
- * about to lose (17.4), and says whether it was saved.
- *
- * Rolled automatically because there is nothing to decide: the card grants "the
- * right to roll" and no reason has ever existed to decline. Journalled either
- * way, since a save is the difference between a death and a scratch and the
- * table will want to see the die.
- */
 
 /**
  * Rule 4.4's second half: the player takes a new character and begins again.
@@ -1414,19 +1146,6 @@ export async function takeNewCharacter(
  * client says what it wants to buy; what it costs is not its to say, and a
  * referee that accepted a price from the player being charged would not be one.
  * ------------------------------------------------------------------------ */
-
-/**
- * Finds an operation of the given kind among everything on offer where a
- * character is standing — the field's own establishments, and any card lying
- * face up on it (16.8).
- *
- * The Targowisko and the Sztukmistrz are shops that settled onto a field, and a
- * shop that arrived on a card is not a different kind of shop from one printed
- * on the board. Looking in both places is what lets them be bought from with
- * the same three verbs.
- */
-
-/** The seat acting, with the field it is standing on. */
 
 /**
  * Buys one card from the shop on the field the character is standing on.
@@ -1486,36 +1205,6 @@ export async function payHealer(
   return change(gameId, payHealerFor, { seatId, points });
 }
 
-/**
- * Puts a character on a field by hand.
- *
- * The companion mode's founding assumption is that the figures on the table are
- * the truth and the app is a record of them, so the app *will* be wrong: a
- * figure gets knocked over, somebody counts six fields and moves five, a card
- * nobody has transcribed says "przenieś się gdzie chcesz". Every other tracked
- * value already has an override (see `adjust`); position, the value most likely
- * to drift and the one everything else is computed from, had none.
- *
- * Journalled as manual, like every other assertion a human makes over the
- * engine's head.
- */
-/**
- * Puts a card straight into a seat's hand, out of nowhere.
- *
- * For testing, and only that. It skips every check taking a card normally makes
- * — 5.3's Natura restriction, 5.4's carrying limit, 21.2's finite Wyposażenie
- * pile — because the point is to reach a state quickly rather than to reach it
- * legally.
- *
- * Only the three kinds anybody actually holds. A Wróg is a trophy you have to
- * beat, and Spotkania, Nieznajomi and Miejsca are resolved and set aside; none
- * of them are things a hand can contain, so granting one would put a row in the
- * holdings table that no rule knows how to read.
- *
- * Journalled as a manual override, because that is exactly what it is: the
- * journal draws those differently and says so, and a card that appeared by
- * magic should not be indistinguishable from one that was won.
- */
 /**
  * Leaves a card lying on a field, out of nowhere.
  *
@@ -1621,24 +1310,6 @@ export async function placeSeat(
  * exactly that and nothing else.
  * ------------------------------------------------------------------------ */
 
-/** What an effect did, in the words the table would use. */
-/**
- * What a player has already said, for an effect that asks.
- *
- * `choices` is a queue, taken in the order the effect walks: a card with a
- * choice inside a choice consumes two. `destination` answers the one question
- * that is a place rather than an option — "przenieś się na dowolny Obszar w
- * tym Kręgu".
- */
-/**
- * How many of a thing, in Polish.
- *
- * Miecz, Magia and Życie take the same form whatever the number — "+2 Życia" —
- * but Złoto declines: one Sztukę, two to four Sztuki, five and up Sztuk. The
- * deltas in this game are almost always one, which is exactly the case a single
- * fixed form gets wrong.
- */
-
 /**
  * Applies one effect to one seat, as far as it goes.
  *
@@ -1647,8 +1318,6 @@ export async function placeSeat(
  * a thing can be applied at all, and that lives in `resolve.ts` where it can be
  * tested against every card in the box.
  */
-/** A seat row as the target rules see it: where it stands, what it is, whether it is still playing. */
-
 export async function applyEffect(
   gameId: string,
   seatId: string,
@@ -1741,14 +1410,6 @@ export async function takeFromField(
     await applyEffect(gameId, seatId, taken.resolve.effect, taken.resolve.reason);
   }
 }
-
-/**
- * Writes a card down as dealt with for this turn.
- *
- * Not the same as taking it off the field: 16.8 leaves a resolved Spotkanie
- * lying there face up until the turn ends, so "still on the field" cannot mean
- * "still to be resolved". The same distinction `fought` makes for a Wróg.
- */
 
 /**
  * Stops the Wyposażenie pile running out (21.2), for good.

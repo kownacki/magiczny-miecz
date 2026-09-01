@@ -754,8 +754,13 @@ async function walk(
 /* --------------------------------------------------------------------------
  * The three doors an effect comes through.
  * ----------------------------------------------------------------------- */
-
-/** Notes a card or an offer as dealt with, so the turn stops asking about it. */
+/**
+ * Writes a card down as dealt with for this turn.
+ *
+ * Not the same as taking it off the field: 16.8 leaves a resolved Spotkanie
+ * lying there face up until the turn ends, so "still on the field" cannot mean
+ * "still to be resolved". The same distinction `fought` makes for a Wróg.
+ */
 function markResolved(snapshot: Snapshot, key: string): Changeset {
   const state = topIf(snapshot.game.turn_state, "field");
   if (!state) return {};

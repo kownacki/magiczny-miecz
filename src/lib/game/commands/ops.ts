@@ -120,7 +120,14 @@ export const owedAt = (effect: Effect, path: number[]): Outcome<Resolution> => (
   result: { did: [], pending: effect, suspended: { cursor: path } },
 });
 
-/** How many of a thing, in Polish. */
+/**
+ * How many of a thing, in Polish.
+ *
+ * Miecz, Magia and Życie take the same form whatever the number — "+2 Życia" —
+ * but Złoto declines: one Sztukę, two to four Sztuki, five and up Sztuk. The
+ * deltas in this game are almost always one, which is exactly the case a single
+ * fixed form gets wrong.
+ */
 function amountOf(stat: "sword" | "magic" | "life" | "gold", count: number): string {
   if (stat !== "gold") {
     return { sword: "Miecza", magic: "Magii", life: "Życia" }[stat];
