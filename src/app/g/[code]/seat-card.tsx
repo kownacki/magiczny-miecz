@@ -30,7 +30,7 @@ import { Hand } from "./hand";
 import { TrophySection } from "./trophy-section";
 import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
-import { forbiddenTo } from "@/lib/engine/holdings";
+import { forbiddenIn } from "@/lib/engine/holdings";
 import Image from "next/image";
 import { characterKind, plural } from "@/lib/engine/polish";
 import { seatColour } from "@/lib/view/boardMap";
@@ -225,14 +225,24 @@ export function SeatCard({
    * should not appear to go there — the place says no while the card is still
    * in the air, and the drop does nothing.
    */
-  const mayWear = (cardId: string) => !forbiddenTo(cardId, asNature(seat.nature));
+  /**
+   * Whether this card may go in this place at all (5.3).
+   *
+   * Asked of the place and not only of the card: `forbiddenIn` knows that a
+   * storage place in slotowy is not somewhere a card is used, so a Miecz
+   * Chaosu a DOBRY character may not swing can still be put away in the
+   * Tajemna Sakwa — where it does exactly as much as it does in the Plecak,
+   * which is nothing.
+   */
+  const mayPut = (cardId: string, slot: Slot | null) =>
+    !forbiddenIn(cardId, slot, asNature(seat.nature), slotted ? "slots" : "classic");
 
   const place = (slot: Slot | null) => {
     if (!carried) return;
     if (carried.from === (slot ?? "plecak")) return putDown();
     // Off the body is always allowed — that is how a card this character may
     // not hold gets taken off in the first place.
-    if (slot !== null && !mayWear(carried.cardId)) return putDown();
+    if (slot !== null && !mayPut(carried.cardId, slot)) return putDown();
     onEquip(carried.holdingId, slot);
     putDown();
   };
@@ -641,7 +651,7 @@ export function SeatCard({
                    would be. */
                 layout={slotted ? "doll" : "row"}
                 worn={wornBySlot(seat)}
-                mayWear={mayWear}
+                mayPut={mayPut}
                 canAct={canAdjust}
                 busy={false}
                 carrying={carried !== null}

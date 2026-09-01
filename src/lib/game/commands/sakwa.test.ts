@@ -107,6 +107,51 @@ describe("putting something in it", () => {
     const { writes } = equipCard(at, { holdingId: "h1", slot: null });
     expect(writes.holdings?.patch?.[0]).toMatchObject({ id: "h1", patch: { slot: null } });
   });
+
+  /**
+   * 5.3 guards the body, and the bag is not the body.
+   *
+   * A DOBRY character may not swing a Miecz Chaosu, and in slotowy the card
+   * stays in their Plecak doing nothing rather than being taken off them (the
+   * variant's own deviation). The Sakwa is that same nothing with a lid: not
+   * worn, not in effect, not counted against 5.4. Refusing it there while the
+   * pack one square away is allowed was the rule guarding a door it has no
+   * business at.
+   */
+  const chaotic = (eqMode: EqMode) =>
+    aTable({
+      game: { eq_mode: eqMode },
+      seats: [aSeat({ id: "seat-a", nature: "good" })],
+      holdings: [
+        aHolding({ id: "h0", seat_id: "seat-a", kind: "item", card_id: "tajemna-sakwa", slot: eqMode === "slots" ? "pouch" : null }),
+        aHolding({ id: "h1", seat_id: "seat-a", kind: "item", card_id: "miecz-chaosu" }),
+      ] as never,
+    });
+
+  it("takes a card the holder's Natura forbids, because nothing in it is used", () => {
+    const { writes } = equipCard(chaotic("slots"), { holdingId: "h1", slot: "tajemna-sakwa" });
+    expect(writes.holdings?.patch?.[0]).toMatchObject({
+      id: "h1",
+      patch: { slot: "tajemna-sakwa" },
+    });
+  });
+
+  it("still keeps it off the body", () => {
+    expect(() => equipCard(chaotic("slots"), { holdingId: "h1", slot: "main-hand" })).toThrow(
+      /Natura/,
+    );
+  });
+
+  /**
+   * Klasyczny keeps the guard: there a card in the bag is in effect like
+   * everything else held, so the bag would be a way of holding what 5.3 says
+   * may not be held.
+   */
+  it("keeps it out of the bag at a klasyczny table", () => {
+    expect(() => equipCard(chaotic("classic"), { holdingId: "h1", slot: "tajemna-sakwa" })).toThrow(
+      /Natura/,
+    );
+  });
 });
 
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { bonusFromHoldings, forbiddenTo, inEffect, kindForCard, visibleTo } from "./holdings";
+import {
+  bonusFromHoldings,
+  forbiddenIn,
+  forbiddenTo,
+  inEffect,
+  kindForCard,
+  visibleTo,
+} from "./holdings";
 import type { Holding } from "./state";
 
 const held = (cardId: string, kind: Holding["kind"], face: Holding["face"] = "open"): Holding => ({
@@ -122,6 +129,41 @@ describe("a card its holder may not hold", () => {
     const worn = { ...chaos, slot: "main-hand" };
     expect(inEffect([worn], "slots", "evil")).toHaveLength(1);
     expect(inEffect([worn], "slots", "good")).toHaveLength(0);
+  });
+
+  /**
+   * 5.3 guards the places a card is *used*, and one place is not one of them.
+   *
+   * The Tajemna Sakwa is the Plecak's side of the line the variant already
+   * draws: nothing in it is worn, nothing in it is in effect, nothing in it
+   * counts against 5.4. Refusing to let a DOBRY character put a Miecz Chaosu
+   * in there while the same card may lie in their pack one square away was the
+   * rule guarding a door it has no business at.
+   */
+  it("keeps a forbidden card off the body and lets it into the bag (slotowy)", () => {
+    expect(forbiddenIn("miecz-chaosu", "main-hand", "good", "slots")).toBe(true);
+    expect(forbiddenIn("miecz-chaosu", "tajemna-sakwa", "good", "slots")).toBe(false);
+    // The pack is where it already sits, and always was allowed to.
+    expect(forbiddenIn("miecz-chaosu", null, "good", "slots")).toBe(false);
+  });
+
+  /**
+   * Klasyczny keeps the guard, and it is not an inconsistency: there a card in
+   * the bag is in effect like everything else held, so the bag would be a way
+   * of holding what 5.3 says may not be held.
+   */
+  it("keeps it out of the bag in klasyczny, where holding is using", () => {
+    expect(forbiddenIn("miecz-chaosu", "tajemna-sakwa", "good", "classic")).toBe(true);
+    expect(inEffect([{ cardId: "miecz-chaosu", slot: "tajemna-sakwa" }], "classic", "good"))
+      .toHaveLength(0);
+  });
+
+  it("says nothing about a card the Natura allows, wherever it is going", () => {
+    for (const slot of ["main-hand", "tajemna-sakwa", null] as const) {
+      for (const mode of ["slots", "classic"] as const) {
+        expect(forbiddenIn("miecz", slot, "good", mode), `${slot} ${mode}`).toBe(false);
+      }
+    }
   });
 });
 

@@ -7,7 +7,7 @@ import { ABILITIES } from "./abilities";
 import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
-import { inPlayAt, isWearable, slotsFor, type Slot } from "./slots";
+import { STORAGE, inPlayAt, isWearable, slotsFor, type Slot } from "./slots";
 import type { Holding } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
@@ -225,6 +225,49 @@ export function forbiddenTo(cardId: string, nature: Nature | null): boolean {
   if (nature === null) return false;
   const forbidden = forbiddenNatures(cardId);
   return Boolean(forbidden?.includes(nature));
+}
+
+/**
+ * Whether 5.3 stands between this card and this place.
+ *
+ * 5.3 is about *using*: "Postać nie może używać Przedmiotów przeznaczonych dla
+ * Postaci o innej Naturze." What counts as using is the one thing the two
+ * variants disagree about, and this table has already taken a side — see
+ * `VARIANT_CHANGES`. In slotowy a forbidden Przedmiot stays in the Plecak,
+ * red and doing nothing, because carrying is not using there; the printed rule
+ * discards it because in klasyczny it is.
+ *
+ * A storage place is the Plecak's side of that line and not the body's.
+ * Nothing in the Tajemna Sakwa is worn, nothing in it is in effect (`inEffect`
+ * asks `inPlayAt`), and nothing in it counts against 5.4 — it is the most
+ * thoroughly put-away a card can be. Refusing to let a card the holder may not
+ * *use* be put somewhere it certainly is not used was 5.3 guarding a door it
+ * has no business at: the same card may sit in the Plecak, one square away.
+ *
+ * Klasyczny keeps the guard, and that is not an inconsistency. There a card in
+ * the bag is in effect like everything else you hold — `inEffect` filters that
+ * variant on Natura alone and never looks at a slot — so the bag would be a
+ * way of holding what 5.3 says you may not hold, which is the loophole and not
+ * the rule.
+ */
+export function forbiddenIn(
+  cardId: string,
+  slot: Slot | null,
+  nature: Nature | null,
+  eqMode: EqMode,
+): boolean {
+  if (!forbiddenTo(cardId, nature)) return false;
+  /**
+   * The Plecak is not a destination this rule has anything to say about.
+   *
+   * A card already held is already held — and `null` is also how a card comes
+   * *off* the body, which must never be refused: 7.2 can turn a Natura under a
+   * Zbroja, and a rule that trapped the card on its wearer would be 5.3
+   * enforcing the opposite of what it says. The app's answer to "you may no
+   * longer use this" is to grey it, not to take it away (see `inEffect`).
+   */
+  if (slot === null) return false;
+  return !(STORAGE.includes(slot) && eqMode === "slots");
 }
 
 /**

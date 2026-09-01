@@ -116,7 +116,7 @@ export function SlotPanel({
   movingCardId,
   liftedHoldingId,
   onDragging,
-  mayWear,
+  mayPut,
   onPickUp,
   onTakeOff,
   onUse,
@@ -139,13 +139,17 @@ export function SlotPanel({
   /** The card currently on the cursor, so the place it came from looks empty. */
   liftedHoldingId: string | null;
   /**
-   * Whether the character may use a card at all (5.3), asked of the card id.
+   * Whether this card may go in this place (5.3), asked of both.
    *
    * The panel knows where a card *fits*; whose it is and what their Natura
    * allows is the seat card's. Both answers are the same colour to a player —
    * red means "not there" — so they are asked together and drawn once.
+   *
+   * The slot is part of the question because 5.3 is about using a card, and
+   * one of these places is not a place a card is used: what is in the Tajemna
+   * Sakwa is put away, not worn. See `forbiddenIn`.
    */
-  mayWear?: (cardId: string) => boolean;
+  mayPut?: (cardId: string, slot: Slot) => boolean;
   onPickUp: (item: SlotItem, from: Slot) => void;
   onTakeOff: (holdingId: string) => void;
   /**
@@ -220,7 +224,7 @@ export function SlotPanel({
         // lights up green and then refuses the drop is worse than one that
         // never lit up.
         const takes = (cardId: string) =>
-          fitsIn(cardId, slot) && (mayWear?.(cardId) ?? true);
+          fitsIn(cardId, slot) && (mayPut?.(cardId, slot) ?? true);
         const tone: SlotTone =
           over === slot && movingCardId
             ? takes(movingCardId)

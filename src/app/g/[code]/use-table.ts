@@ -22,7 +22,7 @@ import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
 import { describeResult } from "@/lib/engine/noticeText";
 import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
-import { forbiddenSaid, forbiddenTo } from "@/lib/engine/holdings";
+import { forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
 import { isStale, standingMoves, standingPicks, standingRules } from "./reconcile";
 
 /**
@@ -859,7 +859,10 @@ async function saidWrong(response: Response): Promise<string> {
      * and it is worse than useless on the one move it happens on — you saw it
      * work.
      */
-    if (slot !== null && forbiddenTo(held.cardId, asNature(mineNow.nature))) {
+    // The host's unconfirmed switch counts, the same way it does everywhere
+    // else on this screen — see the note on `game` in the return below.
+    const eqMode = (houseRules.eq_mode ?? game?.eq_mode) === "slots" ? "slots" : "classic";
+    if (slot !== null && forbiddenIn(held.cardId, slot, asNature(mineNow.nature), eqMode)) {
       return setError(forbiddenSaid(CARD_NAMES.get(held.cardId) ?? held.cardId));
     }
     if (slot === null && held.slot != null) {

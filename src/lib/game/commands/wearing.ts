@@ -2,7 +2,7 @@
 
 import type { Nature } from "@/data/types";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
-import { forbiddenSaid, forbiddenTo } from "@/lib/engine/holdings";
+import { forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
 import {
   SLOT_LABEL,
   STORAGE,
@@ -149,7 +149,14 @@ export function equipCard(
    * that says why.
    */
   const wearer = snapshot.seats.find((seat) => seat.id === held.seat_id);
-  if (forbiddenTo(held.card_id, (wearer?.nature ?? null) as Nature | null)) {
+  if (
+    forbiddenIn(
+      held.card_id,
+      command.slot,
+      (wearer?.nature ?? null) as Nature | null,
+      eqModeOf(snapshot.game),
+    )
+  ) {
     throw new Error(forbiddenSaid(cardName(held.card_id)));
   }
 
