@@ -78,6 +78,7 @@ import {
   grantCard as grantCardOn,
   placeCard as placeCardOn,
   takeCard as takeCardOn,
+  takeFieldGold as takeFieldGoldOn,
   takeFromField as takeFromFieldOn,
 } from "./commands/holdings";
 import {
@@ -1435,6 +1436,20 @@ export async function takeFromField(
   if (taken.resolve) {
     await applyEffect(gameId, seatId, taken.resolve.effect, taken.resolve.reason);
   }
+}
+
+/**
+ * Sztuki Złota picked up off the Obszar, as many as the player asked for (12.1).
+ *
+ * No `resolve` to chase, unlike a Karta: gold is not a card that turns into
+ * something on being taken, it is already the thing.
+ */
+export async function takeFieldGold(
+  gameId: string,
+  seatId: string,
+  gold: number,
+): Promise<{ took: number }> {
+  return change(gameId, takeFieldGoldOn, { seatId, gold });
 }
 
 /**

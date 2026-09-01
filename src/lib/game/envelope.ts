@@ -130,6 +130,8 @@ export interface Envelope {
     /** What is left beside a Miejsce that lays out points (16.7). */
     pool?: number;
   }[];
+  /** Loose Sztuki Złota on an Obszar, by field (12.1). Public — 16.8's reasoning. */
+  fieldGold: { fieldId: string; gold: number }[];
   stock: Record<string, number>;
   seats: EnvelopeSeat[];
 }
@@ -247,7 +249,7 @@ export function envelopeFor(
   myUserId: string | null,
   now: number,
 ): Envelope {
-  const { game, seats, users, holdings, fieldCards } = table;
+  const { game, seats, users, holdings, fieldCards, fieldGold } = table;
   const me = users.find((one) => one.id === myUserId) ?? null;
   // The seat *they are driving*, which is what decides whose hidden cards they
   // may see (9.3). A spectator drives none and sees none.
@@ -321,6 +323,7 @@ export function envelopeFor(
       // fruit on it is exactly the sort of thing a table plans around.
       ...(row.pool !== null ? { pool: row.pool } : {}),
     })),
+    fieldGold: fieldGold.map((row) => ({ fieldId: row.field_id, gold: row.gold })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.
     stock: shopStock({ holdings, fieldCards, game }),

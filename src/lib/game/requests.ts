@@ -42,6 +42,8 @@ export interface Requests {
     seatId: string;
     cardId: string;
     fieldCardId: string;
+    /** `take-gold`: how many Sztuki Złota off the Obszar (12.1). */
+    gold: number;
     holdingId: string;
     holdingIds: string[];
     /**

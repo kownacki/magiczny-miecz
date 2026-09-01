@@ -146,6 +146,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     game,
     seats,
     fieldCards,
+    fieldGold,
     stock,
     spoken,
     users,
@@ -1373,6 +1374,14 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           onTake={(fieldCardId) =>
             void askFor(fieldCardId, () => post("holdings", { action: "take-field", fieldCardId }))
           }
+          /* Loose Sztuki Złota, which are a row on the Obszar rather than a
+             Karta on it — dropped by a character who died here (4.4), by one
+             turned to stone, or by a Karta that pays out on a square. */
+          gold={fieldGold.find((row) => row.fieldId === inspecting)?.gold ?? 0}
+          /* No seatId, like `take-field` beside it: the route reads it off the
+             caller's token, and 12.1's three conditions are checked there —
+             `refuseUnlessCollectable`, shared by both. */
+          onTakeGold={(gold) => post("holdings", { action: "take-gold", gold })}
           onInspect={(cardId) =>
             setInspectingCard({
               cardId,

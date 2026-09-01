@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { fieldWithText } from "@/lib/view/fieldText";
 import { CardTile } from "./card-tile";
@@ -24,6 +24,7 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
 import { Fold } from "./fold";
+import { FieldGold } from "./field-gold";
 import { fieldGroups, type FieldGroupKey } from "@/lib/view/fieldGroups";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
@@ -75,6 +76,31 @@ export interface FieldCardHere {
 }
 
 /**
+ * A shelf in the Obszar's inventory — the four `fieldGroups` builds, and the
+ * one that holds no Karty.
+ *
+ * Złoto is not a group of cards and cannot be one: `fieldGroups` sorts `cards`,
+ * and loose gold is not a card to sort. It is a shelf all the same, folding and
+ * tallying like the rest, so the key type is the groups' plus it.
+ */
+type ShelfKey = FieldGroupKey | "zloto";
+
+/**
+ * Where the Złoto shelf stands: after the loot, before the residents.
+ *
+ * 12.1 lists what may be taken in that order — "zabrać leżące złoto, Przedmioty
+ * lub Przyjaciół" — and gold answers the same question the loot does, which is
+ * the only one this window is really asked: what of this is mine to take. So it
+ * sits with the things you pick up rather than at the foot under the Miejsca,
+ * which is where a shelf appended to the list would have put it.
+ *
+ * Said as "before these" rather than as an index, because `fieldGroups` drops
+ * the empty groups: a position counted into a list that changes length is right
+ * until the first Obszar with no Wrogowie on it.
+ */
+const AFTER_THE_LOOT = new Set<FieldGroupKey>(["mieszkancy", "inne"]);
+
+/**
  * A field, opened.
  *
  * The map can only ever be a summary — a name, some dots, one small picture —
@@ -105,6 +131,8 @@ export function FieldModal({
   revealing = false,
   onDealSeen,
   onTake,
+  gold = 0,
+  onTakeGold,
   asked = [],
   onInspect,
   onClose,
@@ -199,6 +227,17 @@ export function FieldModal({
   friend?: React.ReactNode;
   busy: boolean;
   onTake: (fieldCardId: string) => void;
+  /**
+   * Sztuki Złota lying loose on the Obszar, which are not Karty and never were.
+   *
+   * 12.1 names them in the same breath as the Karty — "zabrać leżące złoto,
+   * Przedmioty lub Przyjaciół" — and they arrive here the same three ways: a
+   * Karta that pays out on a square, a character who died on it (4.4), one
+   * turned to stone. What they never are is a card, so they get a shelf of
+   * their own rather than a fake Karta with a number on it.
+   */
+  gold?: number;
+  onTakeGold?: (gold: number) => void;
   /** Cards whose take the server has not answered yet — see `asked` in the table. */
   asked?: readonly string[];
   onInspect: (cardId: CardId) => void;
@@ -213,10 +252,10 @@ export function FieldModal({
    * reader tidying one Obszar, not a preference about how the app looks, and
    * `preferences.ts` is for the second kind.
    */
-  const [shut, setShut] = useState<ReadonlySet<FieldGroupKey>>(() => new Set());
+  const [shut, setShut] = useState<ReadonlySet<ShelfKey>>(() => new Set());
   // Above the `!field` guard below: a hook after an early return is called on
   // some renders and not others, which is the one thing React will not have.
-  const toggle = (key: FieldGroupKey) =>
+  const toggle = (key: ShelfKey) =>
     setShut((was) => {
       const next = new Set(was);
       if (!next.delete(key)) next.add(key);
@@ -241,6 +280,17 @@ export function FieldModal({
    * the note at the top of `fieldGroups.ts` for why there are two.
    */
   const groups = fieldGroups(cards);
+  /**
+   * Which shelf the Złoto goes in front of, or null when there is none lying
+   * here. `findIndex` answers -1 when nothing comes after the loot, and then
+   * the money is simply last — which on an Obszar holding only gold is also
+   * first.
+   */
+  const goldAt = (() => {
+    if (gold <= 0) return null;
+    const residents = groups.findIndex((group) => AFTER_THE_LOOT.has(group.key));
+    return residents === -1 ? groups.length : residents;
+  })();
   /** What the deal just turned over, for the reveal above the rest. */
   const drawnNow = cards.filter((card) => card.justDrawn);
 
@@ -266,6 +316,33 @@ export function FieldModal({
     crossingFrom(fieldId) !== undefined ||
     BRIDGE_ORDEAL.has(fieldId) ||
     (phase === "field" && (raid !== undefined || friend !== undefined));
+
+  /**
+   * A function rather than an element because the shelf has two homes — between
+   * two groups, or alone on an Obszar that holds nothing else — and `first`
+   * (the rule above it) is the one thing that differs between them.
+   */
+  const goldShelf = (first: boolean) => (
+    <Fold
+      key="zloto"
+      title="Złoto"
+      tally={gold}
+      first={first}
+      tone="text-muted/70"
+      open={!shut.has("zloto")}
+      onToggle={() => toggle("zloto")}
+    >
+      <FieldGold
+        gold={gold}
+        /* The same gate the Karty's own "weź" has: 12.1 gives what is lying
+           here to the character whose move ENDS here, and only until that turn
+           is over. */
+        canTake={standingHere && canAct && arrived && onTakeGold !== undefined}
+        busy={busy}
+        onTake={(amount) => onTakeGold?.(amount)}
+      />
+    </Fold>
+  );
 
   return (
     <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
@@ -366,7 +443,7 @@ export function FieldModal({
             <h3 className="mb-2 text-[11px] uppercase tracking-widest text-muted">
               Na tym Obszarze
             </h3>
-            {groups.length === 0 ? (
+            {groups.length === 0 && goldAt === null ? (
               <p className="text-xs text-muted/70">Nic — Obszar jest pusty.</p>
             ) : (
               /* One `Fold` per group, the same section every shelf in the app
@@ -375,92 +452,97 @@ export function FieldModal({
 
                  `fieldGroups` has already dropped the empty ones, so an Obszar
                  with a single Wróg on it reads "Wrogowie 1" and stops. */
-              groups.map((group, at) => (
-                <Fold
-                  key={group.key}
-                  title={group.title}
-                  tally={group.cards.length}
-                  first={at === 0}
-                  /* A step below "Na tym Obszarze", which is the same size and
-                     the same small capitals — two headings at one weight read
-                     as two unrelated blocks rather than a heading and the
-                     groups under it. `tone` is the knob `Fold` already has for
-                     exactly this. */
-                  tone="text-muted/70"
-                  open={!shut.has(group.key)}
-                  onToggle={() => toggle(group.key)}
-                  /* What the heading keeps when it is shut, exactly as
-                     Przyjaciele does: the tally alone says how many are hidden
-                     and not which, and on an Obszar which is the whole
-                     question — "Wrogowie 2" is a reason to look again, and
-                     "Wilkołak · Demon" is a reason to walk away. */
-                  aside={
-                    shut.has(group.key) ? (
-                      <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-ochre/80">
-                        {group.cards
-                          .map((lying) => NAMES.get(lying.cardId) ?? lying.cardId)
-                          .join(" · ")}
-                      </span>
-                    ) : undefined
-                  }
-                >
-                  {/* The same tiles as the Plecak and the Księga, for the same
-                      reason: a card is recognised by its picture, and a player
-                      who has learnt one shelf should not have to learn a second
-                      shape for the identical act. Everything the app knows
-                      about a card is one hover away on all three. */}
-                  <TileRow frame={false}>
-                    {group.cards.map((lying) => {
-                      // Only Przedmioty and Przyjaciele are picked up (12.1). A
-                      // Wróg lying here is fought and a Spotkanie is read — and
-                      // a card off the Wyposażenie sheet is always a Przedmiot.
-                      const event = EVENT_BY_ID.get(lying.cardId as EventCard["id"]);
-                      const takeable = event
-                        ? kindForCard(event) !== null
-                        : NAMES.has(lying.cardId);
-                      return (
-                        <CardTile
-                          key={lying.id}
-                          /* Through `tileFor` like every other shelf: the name,
-                             the printed text and the conjured mark are its
-                             business, and building the object here by hand is
-                             what lost the mark on an Obszar in the first place.
-                             `holdable` stays local — 12.1 is about where the
-                             card is, which is the one thing this window knows
-                             and `tileFor` does not. */
-                          card={{
-                            ...tileFor({ cardId: lying.cardId, granted: lying.granted }),
-                            holdable: takeable,
-                          }}
-                          eqMode={eqMode}
-                          nature={nature}
-                          /* The ask is out and the answer is not a foregone
-                             conclusion — 12.1 can be lost to somebody standing
-                             on the same Obszar — so the card greys where it
-                             lies and moves once the server says it moved. */
-                          dimmed={asked.includes(lying.id)}
-                          onClick={() => onInspect(lying.cardId)}
-                        >
-                          {takeable && !lying.viaTurn && standingHere && canAct && arrived && (
-                            <button
-                              /* Only this card's own ask, never the table's
-                                 `busy`: what is lying on one Obszar is several
-                                 independent questions, and closing all of them
-                                 because one is out makes a player wait a round
-                                 trip per card for no reason the rules give. */
-                              disabled={asked.includes(lying.id)}
-                              onClick={() => onTake(lying.id)}
-                              className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
+              <>
+                {groups.map((group, at) => (
+                  <Fragment key={group.key}>
+                    {at === goldAt && goldShelf(at === 0)}
+                    <Fold
+                      title={group.title}
+                      tally={group.cards.length}
+                      first={at === 0 && goldAt !== 0}
+                      /* A step below "Na tym Obszarze", which is the same size and
+                         the same small capitals — two headings at one weight read
+                         as two unrelated blocks rather than a heading and the
+                         groups under it. `tone` is the knob `Fold` already has for
+                         exactly this. */
+                      tone="text-muted/70"
+                      open={!shut.has(group.key)}
+                      onToggle={() => toggle(group.key)}
+                      /* What the heading keeps when it is shut, exactly as
+                         Przyjaciele does: the tally alone says how many are hidden
+                         and not which, and on an Obszar which is the whole
+                         question — "Wrogowie 2" is a reason to look again, and
+                         "Wilkołak · Demon" is a reason to walk away. */
+                      aside={
+                        shut.has(group.key) ? (
+                          <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-ochre/80">
+                            {group.cards
+                              .map((lying) => NAMES.get(lying.cardId) ?? lying.cardId)
+                              .join(" · ")}
+                          </span>
+                        ) : undefined
+                      }
+                    >
+                      {/* The same tiles as the Plecak and the Księga, for the same
+                          reason: a card is recognised by its picture, and a player
+                          who has learnt one shelf should not have to learn a second
+                          shape for the identical act. Everything the app knows
+                          about a card is one hover away on all three. */}
+                      <TileRow frame={false}>
+                        {group.cards.map((lying) => {
+                          // Only Przedmioty and Przyjaciele are picked up (12.1). A
+                          // Wróg lying here is fought and a Spotkanie is read — and
+                          // a card off the Wyposażenie sheet is always a Przedmiot.
+                          const event = EVENT_BY_ID.get(lying.cardId as EventCard["id"]);
+                          const takeable = event
+                            ? kindForCard(event) !== null
+                            : NAMES.has(lying.cardId);
+                          return (
+                            <CardTile
+                              key={lying.id}
+                              /* Through `tileFor` like every other shelf: the name,
+                                 the printed text and the conjured mark are its
+                                 business, and building the object here by hand is
+                                 what lost the mark on an Obszar in the first place.
+                                 `holdable` stays local — 12.1 is about where the
+                                 card is, which is the one thing this window knows
+                                 and `tileFor` does not. */
+                              card={{
+                                ...tileFor({ cardId: lying.cardId, granted: lying.granted }),
+                                holdable: takeable,
+                              }}
+                              eqMode={eqMode}
+                              nature={nature}
+                              /* The ask is out and the answer is not a foregone
+                                 conclusion — 12.1 can be lost to somebody standing
+                                 on the same Obszar — so the card greys where it
+                                 lies and moves once the server says it moved. */
+                              dimmed={asked.includes(lying.id)}
+                              onClick={() => onInspect(lying.cardId)}
                             >
-                              weź
-                            </button>
-                          )}
-                        </CardTile>
-                      );
-                    })}
-                  </TileRow>
-                </Fold>
-              ))
+                              {takeable && !lying.viaTurn && standingHere && canAct && arrived && (
+                                <button
+                                  /* Only this card's own ask, never the table's
+                                     `busy`: what is lying on one Obszar is several
+                                     independent questions, and closing all of them
+                                     because one is out makes a player wait a round
+                                     trip per card for no reason the rules give. */
+                                  disabled={asked.includes(lying.id)}
+                                  onClick={() => onTake(lying.id)}
+                                  className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
+                                >
+                                  weź
+                                </button>
+                              )}
+                            </CardTile>
+                          );
+                        })}
+                      </TileRow>
+                    </Fold>
+                  </Fragment>
+                ))}
+                {goldAt === groups.length && goldShelf(groups.length === 0)}
+              </>
             )}
             {/* 13.1 and 12.1: things happen on the field your move ended on, so
                 a player reading about somewhere else is told why there is no

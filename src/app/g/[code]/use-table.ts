@@ -154,6 +154,8 @@ export interface Table {
   spoken: Spoken | null;
   seats: Seat[];
   fieldCards: FieldCard[];
+  /** Loose Sztuki Złota lying on an Obszar (12.1). */
+  fieldGold: { fieldId: string; gold: number }[];
   stock: Record<string, number>;
   /**
    * Everybody in the room, seated or watching, in join order.
@@ -211,6 +213,7 @@ export function useTable(code: string): Table {
   const [seats, setSeats] = useState<Seat[]>([]);
   /** Cards lying face up on the board (16.8) — public to every seat. */
   const [fieldCards, setFieldCards] = useState<FieldCard[]>([]);
+  const [fieldGold, setFieldGold] = useState<{ fieldId: string; gold: number }[]>([]);
   /** What the Wyposażenie pile still holds (21.2), so a shop offers only what it has. */
   const [stock, setStock] = useState<Record<string, number>>({});
   const [spoken, setSpoken] = useState<Spoken | null>(null);
@@ -385,6 +388,7 @@ async function saidWrong(response: Response): Promise<string> {
     setTaking((current) => standingPicks(current, data.seats as Seat[]));
     setMoved((current) => standingMoves(current, data.seats as Seat[], movedAt.current, now));
     setFieldCards(data.fieldCards ?? []);
+    setFieldGold(data.fieldGold ?? []);
     setStock(data.stock ?? {});
     setSpoken((data.spoken as Spoken | null) ?? null);
     setUsers(data.users ?? []);
@@ -948,6 +952,7 @@ async function saidWrong(response: Response): Promise<string> {
       : game,
     seats,
     fieldCards,
+    fieldGold,
     stock,
     spoken,
     users,

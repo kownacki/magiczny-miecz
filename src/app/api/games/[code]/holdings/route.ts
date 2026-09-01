@@ -19,6 +19,7 @@ import {
   sellHolding,
   settleSpell,
   takeCard,
+  takeFieldGold,
   takeFromField,
   tradeTrophies,
   turnToStone,
@@ -53,6 +54,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
           String(body.seatId ?? seat.id),
           String(body.fieldCardId),
         );
+        break;
+      // 12.1's other half: "zabrać leżące złoto". The amount is the player's —
+      // see `takeFieldGold`.
+      case "take-gold":
+        await takeFieldGold(game.id, String(body.seatId ?? seat.id), Number(body.gold));
         break;
       case "drop":
         await dropCard(game.id, String(body.holdingId));
