@@ -23,6 +23,13 @@ import {
   asNature,
   type Seat,
 } from "./table";
+import {
+  boardCards as allBoardCards,
+  driverOf as driverOfSeat,
+  otherSeats,
+  pickingFor as whoIsPicking,
+  tableScreenHolder as holderOfTableScreen,
+} from "./table-view";
 import { CardLibrary } from "./card-library";
 import { useTable, type Person } from "./use-table";
 import { TestConsole, wakeConsole } from "./console";
@@ -674,16 +681,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   }
 
   const mySeat = seats.find((seat) => seat.seat_index === mySeatIndex);
-  /**
-   * Whoever is driving a given chair, or nobody.
-   *
-   * The one thing the browser has to do for itself now that a chair and a
-   * person are two rows: the seat carries a `driver_id` and everything about
-   * the person is in `users`. Running the table, being ready and having gone
-   * quiet are all facts about somebody, and a chair has none of them.
-   */
-  const driverOf = (seat: Seat | null | undefined) =>
-    users.find((one) => one.id === seat?.driver_id) ?? null;
+  const driverOf = (seat: Seat | null | undefined) => driverOfSeat(users, seat);
   const amHost = me?.isHost === true;
 
   /**
@@ -705,24 +703,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // over and taps it, so it drives the active player rather than sitting idle
   // saying "waiting".
   const isTableScreen = amHost && game.mode === "companion";
-  const tableScreenHolder = users.find((one) => one.isHost)?.name ?? null;
+  const tableScreenHolder = holderOfTableScreen(users);
 
-  // Whose character is being chosen. Left to the app until somebody says
-  // otherwise: this device's own seat first, then — only where the host is
-  // choosing on behalf of people with no device — a companion seat still
-  // without one. It used to fall through to *any* characterless seat, which is
-  // why opening a table could leave you aiming at a stranger's slot.
-  const pickingFor =
-    picking === "auto"
-      ? mySeat && !mySeat.character_id
-        ? mySeat
-        : amHost && game.mode === "companion"
-          ? // A chair with nobody driving it and nothing in it: somebody in the
-            // room the host is setting up, which is what `no_device` used to
-            // mark and is now simply the absence of a driver.
-            (seats.find((seat) => seat.driver_id === null && !seat.character_id) ?? null)
-          : null
-      : (seats.find((seat) => seat.id === picking) ?? null);
+  const pickingFor = whoIsPicking(picking, seats, mySeat, amHost && game.mode === "companion");
 
   // Cards in play this turn. A fight keeps the stack it interrupted, so the
   // panel does not empty out mid-combat.
@@ -748,33 +731,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         ),
       }
     : mySeat;
-  const others = seats.filter((seat) => seat.id !== mine?.id && seat.character_id);
-  /**
-   * Every Karta lying face up on the board, and where each could be moved to.
-   *
-   * What a Zaklęcie aimed at a Karta may be aimed at — the Siewca takes one off
-   * the board and the Władca Zdarzeń picks one up and puts it down somewhere
-   * else, and both of them need this list rather than the drawn cards of a
-   * turn. Read once here, because two hands are given it: the seat card's and
-   * the fight sheet's.
-   */
-  const boardCards = fieldCards.map((row) => ({
-    id: row.id,
-    name: CARD_NAMES.get(row.cardId) ?? row.cardId,
-    where: FIELD_NAMES.get(row.fieldId) ?? row.fieldId,
-    /* Where the Władca Zdarzeń could put this Karta down: „na innym Obszarze w
-       tym samym Kręgu", and „nowy Obszar nie może być zajęty przez inną
-       Postać". Worked out here because this is what knows where everybody
-       stands — the hand only draws the answer. The engine checks all three
-       again; this is so the offer is not a list of refusals. */
-    moveTo: ringFields(row.fieldId as FieldId)
-      .filter(
-        (fieldId) =>
-          fieldId !== row.fieldId &&
-          !seats.some((seat) => !seat.eliminated && seat.field_id === fieldId),
-      )
-      .map((fieldId) => ({ fieldId, name: FIELD_NAMES.get(fieldId) ?? fieldId })),
-  }));
+  const others = otherSeats(seats, mine?.id);
+  const boardCards = allBoardCards(fieldCards, seats);
 
   /**
    * What this turn is offering, as a short list of windows.
