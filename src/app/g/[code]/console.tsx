@@ -602,9 +602,10 @@ export function TestConsole({
                *
                * A terminal cannot do this — readline draws its own grid from a
                * flat list and no heading survives it — but this console draws
-               * its own, and `give`'s ninety names are three kinds a player is
-               * choosing between before they are ninety names. Everything else
-               * has no shape of its own and stays one run.
+               * its own, and `place`'s hundred and sixty-five names are six
+               * kinds a player is choosing between before they are a hundred
+               * and sixty-five names. The board is four Kręgi the same way.
+               * Everything else has no shape of its own and stays one run.
                */
               if (done.sections) {
                 sayBlock(done.sections.map((g) => `${g.title}\n  ${g.options.join("   ")}`));

@@ -154,3 +154,28 @@ describe("handing the turn on over a surplus", () => {
     );
   });
 });
+
+/**
+ * "What is there to put down?" — bare `place`, which used to be a mistake.
+ *
+ * The same catalogue bare `deal` prints, cut into the six kinds, and the same
+ * reading: naming nothing is a question. What separates the two lists is the
+ * Zaklęcia, which never lie on an Obszar (9.5).
+ */
+describe("the catalogue a bare command prints", () => {
+  it("lists what can be laid on an Obszar, by kind", async () => {
+    const { gameId, actor } = await playing();
+    const said = await runCommand(gameId, actor, { kind: "place", cardId: null, fieldId: null });
+    expect(said).toContain("Przedmioty (");
+    expect(said).toContain("Wrogowie (");
+    expect(said).not.toContain("Zaklęcia (");
+    // And a name out of the last group, so this is the whole list and not a head.
+    expect(said).toContain("TARGOWISKO");
+  });
+
+  it("lists the Zaklęcia too when the verb is `deal`", async () => {
+    const { gameId, actor } = await playing();
+    const said = await runCommand(gameId, actor, { kind: "deal", cardId: null });
+    expect(said).toContain("Zaklęcia (");
+  });
+});

@@ -5,8 +5,15 @@ import events from "@/data/events.json";
 import itemCards from "@/data/items.json";
 import spells from "@/data/spells.json";
 import { isFoeClass } from "@/data/types";
-import type { Character, EventCard, Item, Spell } from "@/data/types";
-import { FIELDS, type FieldId } from "./board";
+import type { CardClass, Character, EventCard, Item, Spell } from "@/data/types";
+import {
+  DOLNY_KRAG,
+  FIELDS,
+  GORNY_KRAG,
+  KAMIENNY_MOST,
+  SRODKOWY_KRAG,
+  type FieldId,
+} from "./board";
 import { SLOTS } from "./slots";
 import { findByName, fold } from "./search";
 import { RANDOM_CHARACTER_ID, RANDOM_CHARACTER_NAME } from "./characters";
@@ -32,10 +39,67 @@ export const FOES = (events as EventCard[]).filter((card) => isFoeClass(card.car
  * merged by id rather than concatenated. The one name only it has is TARCZA
  * TOLIMANA, and it was already once the card that could not be asked for.
  */
-export const CARDS: { id: string; name: string }[] = [
+export const CARDS: (EventCard | Item)[] = [
   ...(events as EventCard[]),
   ...(itemCards as Item[]).filter((item) => !events.some((card) => card.id === item.id)),
 ];
+
+export interface Catalogue {
+  title: string;
+  cards: readonly { id: string; name: string }[];
+}
+
+/**
+ * The six kinds a Karta comes in, in the order the numeral prints them.
+ *
+ * 16's own order — Spotkanie I, Wróg II and III, Nieznajomy IV, Przedmiot and
+ * Przyjaciel V, Miejsce VI — turned round so the two kinds somebody actually
+ * types at a console come first. A Przedmiot is what a test table is dressed
+ * with and a Wróg is what it is pointed at; a Miejsce is looked up once.
+ *
+ * Both Wróg classes stand together under one heading, as the Księga shelves
+ * them: a list is read by name, and somebody looking for the Wilkołak should
+ * not have to know first whether he fights with Miecz or Magia.
+ */
+const KINDS: readonly { title: string; holds: (kind: string) => boolean }[] = [
+  { title: "Przedmioty", holds: (kind) => kind === "item" },
+  { title: "Przyjaciele", holds: (kind) => kind === "friend" },
+  { title: "Wrogowie", holds: (kind) => isFoeClass(kind as CardClass) },
+  { title: "Spotkania", holds: (kind) => kind === "encounter" },
+  { title: "Nieznajomi", holds: (kind) => kind === "stranger" },
+  { title: "Miejsca", holds: (kind) => kind === "place" },
+];
+
+/** A Karta Zdarzeń says which class it is; a Wyposażenie card is Przedmiot by being one. */
+const kindOf = (card: EventCard | Item): string =>
+  "cardClass" in card ? card.cardClass : "item";
+
+/**
+ * A pile of cards cut into those kinds, dropping any heading nothing fell under.
+ *
+ * One function rather than a catalogue per verb, because `deal`, `place`,
+ * `stack` and `card` are all the same question — "which Karta do you mean?" —
+ * asked of different halves of the box, and three of them used to answer it
+ * with one alphabetical heap of a hundred and sixty-five names.
+ */
+function byKind(cards: readonly (EventCard | Item)[]): Catalogue[] {
+  return KINDS.map((kind) => ({
+    title: kind.title,
+    cards: byName(cards.filter((card) => kind.holds(kindOf(card)))),
+  })).filter((group) => group.cards.length > 0);
+}
+
+/** 9.3 keeps a Zaklęcie face down even when it arrived by fiat. */
+const ZAKLECIA: Catalogue = { title: "Zaklęcia", cards: byName(spells as Spell[]) };
+
+/**
+ * Every Karta that is not a Zaklęcie, in the six kinds.
+ *
+ * What `place` puts on an Obszar and what `clear` takes off it — the Zaklęcia
+ * are the one class that never lies on a square, being their own pile and
+ * dealt into a hand (9.5).
+ */
+export const PLACEABLE: readonly Catalogue[] = byKind(CARDS);
 
 /**
  * Every Karta `deal` can make happen, in the six kinds a player thinks in.
@@ -54,38 +118,7 @@ export const CARDS: { id: string; name: string }[] = [
  * they are their own pile, and 9.5 deals one into a hand rather than onto an
  * Obszar.
  */
-export const DEALABLE: readonly { title: string; cards: readonly { id: string; name: string }[] }[] =
-  [
-    {
-      title: "Przedmioty",
-      cards: byName([
-        ...(events as EventCard[]).filter((card) => card.cardClass === "item"),
-        ...(itemCards as Item[]).filter((item) => !events.some((card) => card.id === item.id)),
-      ]),
-    },
-    {
-      title: "Przyjaciele",
-      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "friend")),
-    },
-    {
-      title: "Wrogowie",
-      cards: byName((events as EventCard[]).filter((card) => isFoeClass(card.cardClass))),
-    },
-    {
-      title: "Spotkania",
-      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "encounter")),
-    },
-    {
-      title: "Nieznajomi",
-      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "stranger")),
-    },
-    {
-      title: "Miejsca",
-      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "place")),
-    },
-    // 9.3 keeps a Zaklęcie face down even when it arrived by fiat.
-    { title: "Zaklęcia", cards: byName(spells as Spell[]) },
-  ];
+export const DEALABLE: readonly Catalogue[] = [...PLACEABLE, ZAKLECIA];
 
 /**
  * One entry per card, alphabetically.
@@ -115,10 +148,27 @@ export const STACKABLE: { id: string; name: string }[] = byName([
   ...(spells as Spell[]),
 ]);
 
+/** The same two piles, cut into kinds for the list Tab draws. */
+export const STACK_KINDS: readonly Catalogue[] = [...byKind(events as EventCard[]), ZAKLECIA];
+
 /** Everything with a Karta worth reading, which is more than a hand may hold. */
 export const READABLE: { id: string; name: string }[] = [...CARDS, ...(spells as Spell[])];
 
 export const PEOPLE = characters as Character[];
+
+/**
+ * Everything `card` will read out, in kinds — the whole box plus the Postacie.
+ *
+ * The one catalogue with a heading that is not a Karta Zdarzeń class, because
+ * `card` is the verb for "that card I want to read" and a Karta Postaci is one
+ * of those. It is last for the same reason the Zaklęcia are second to last: it
+ * is the shelf you go to on purpose, not the one you browse.
+ */
+export const READ_KINDS: readonly Catalogue[] = [
+  ...PLACEABLE,
+  ZAKLECIA,
+  { title: "Postacie", cards: byName(characters as Character[]) },
+];
 
 /** What each effect word means, for the answer and for Tab. */
 export const EFFECTS: Record<string, EffectName> = {
@@ -150,6 +200,27 @@ export const NATURES: Record<string, Nature> = {
   chaotic: "chaotic",
 };
 export const PLACES = [...FIELDS.values()];
+
+/**
+ * The board as four lists, outermost first — the order it is walked.
+ *
+ * Ninety-odd Obszary in one alphabetical heap made you read every name to find
+ * the one you wanted, when what you actually know about an Obszar is which
+ * Krąg it is on. The Księga's drawer cuts them exactly this way, and Tab now
+ * answers `place ... at` and `teleport` with the same four shelves.
+ *
+ * Inside a Krąg they stay in **board order**, clockwise from where `rings.ts`
+ * starts each one, rather than being sorted: the names come in pairs (Urwisko
+ * I and II, Bagna I and II, both Przeprawy) that sit opposite each other on the
+ * board, and alphabetical order files them together while board order says
+ * where they are.
+ */
+export const FIELD_KINDS: readonly Catalogue[] = [
+  { title: "Dolny Krąg", cards: DOLNY_KRAG },
+  { title: "Środkowy Krąg", cards: SRODKOWY_KRAG },
+  { title: "Górny Krąg", cards: GORNY_KRAG },
+  { title: "Kamienny Most", cards: KAMIENNY_MOST },
+];
 
 /** Where `at` splits `place MIECZ at Karczma` into its two names. */
 const AT = /\s+at\s+/i;
@@ -382,6 +453,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
       if ("missing" in where) return { error: `No Obszar called \`${fieldPart}\`.` };
       fieldId = where.found.id;
     }
+    // Bare, it is a question rather than a mistake — the same reading bare
+    // `deal` has, and the same catalogue behind it.
+    if (cardPart.trim() === "") return { ok: { kind: "place", cardId: null, fieldId } };
     return name(CARDS, (c) => c.name, cardPart, "card", (c) => ({
       kind: "place",
       cardId: c.id,

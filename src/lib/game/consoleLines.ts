@@ -6,7 +6,7 @@ import { cardIdNamed, describeCard } from "@/lib/engine/lookup";
 import type { Character } from "@/data/types";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { isRandomPick } from "@/lib/engine/characters";
-import { type EffectName } from "@/lib/engine/console";
+import { type Catalogue, type EffectName } from "@/lib/engine/console";
 import { cardName } from "@/lib/engine/polish";
 import { trophyPointsOf } from "@/lib/engine/trophies";
 import { SPELL_BY_REF } from "./decks";
@@ -345,6 +345,23 @@ export function columns(names: readonly string[], perRow = 4): string[] {
     );
   }
   return rows;
+}
+
+/**
+ * A catalogue printed: a heading per kind, its tally, and the names in columns.
+ *
+ * The answer to "what is there?", and the same shape Tab draws under its own
+ * headings — bare `deal` and bare `place` are that question asked of two
+ * halves of the box, so they are answered in one voice rather than two.
+ */
+export function catalogue(kinds: readonly Catalogue[]): string {
+  return kinds
+    .flatMap((group, at) => [
+      ...(at > 0 ? [""] : []),
+      `${group.title} (${group.cards.length})`,
+      ...columns(group.cards.map((one) => one.name)),
+    ])
+    .join("\n");
 }
 
 /**

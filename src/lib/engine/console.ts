@@ -7,13 +7,15 @@ import {
   CARDS,
   DEALABLE,
   EFFECTS,
+  FIELD_KINDS,
   FOES,
   NATURES,
   PEOPLE,
-  PLACES,
-  READABLE,
-  STACKABLE,
+  PLACEABLE,
+  READ_KINDS,
+  STACK_KINDS,
   VERBS,
+  type Catalogue,
 } from "./consoleParse";
 
 export function complete(
@@ -79,68 +81,91 @@ export function complete(
       return { pool: offering.testmode === false ? [] : ["force"], at: 1 };
     }
     /**
-     * Only what `give` will accept, in the order `GIVEABLE` groups them.
+     * A catalogue as a pool: every name in it, in its own order, with the
+     * headings kept beside them for a console that can draw them.
      *
      * `ordered`, or the sort below would put ALCHEMIK between 2 SZTUKI ZŁOTA
-     * and ARONDIGHT and the three kinds would be shuffled together — which is
-     * what happened when this pool was first grouped and the sort was
-     * forgotten. Tab draws a plain grid and cannot label the groups, so their
-     * order is the whole of what it can carry.
+     * and ARONDIGHT and the kinds would be shuffled together — which is what
+     * happened when the first of these was grouped and the sort was forgotten.
+     * Tab draws a plain grid and cannot label the groups, so their order is
+     * the whole of what it can carry there; the browser console draws the
+     * headings from `sections`.
      */
+    const shelved = (kinds: readonly Catalogue[], at: number) => ({
+      pool: kinds.flatMap((group) => group.cards.map((one) => one.name)),
+      at,
+      ordered: true as const,
+      groups: kinds.map((group) => ({
+        title: group.title,
+        names: group.cards.map((one) => one.name),
+      })),
+    });
+
     /**
-     * Every Karta, in the order `DEALABLE` groups them.
+     * Where `at` splits a line that names a Karta and then an Obszar.
      *
-     * `ordered`, or the sort below would put ALCHEMIK between 2 SZTUKI ZŁOTA
-     * and ARONDIGHT and the six kinds would be shuffled together — which is
-     * what happened when this pool was first grouped and the sort was
-     * forgotten. Tab draws a plain grid and cannot label the groups, so their
-     * order is the whole of what it can carry.
+     * Past it the names on offer are the board's; before it, the deck's.
      */
-    if (verb === "deal") {
-      return {
-        pool: DEALABLE.flatMap((group) => group.cards.map((one) => one.name)),
-        at: 1,
-        ordered: true,
-        groups: DEALABLE.map((group) => ({
-          title: group.title,
-          names: group.cards.map((one) => one.name),
-        })),
-      };
-    }
-    if (verb === "place" || verb === "put" || verb === "drop") {
-      // Which half of the line is being typed. Past the `at`, the names on
-      // offer are the board's; before it, the deck's.
-      const said = parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "at");
-      return said === -1
-        ? { pool: CARDS.map((c) => c.name), at: 1 }
-        : { pool: PLACES.map((f) => f.name), at: said + 1 };
-    }
-    if (verb === "stack") return { pool: STACKABLE.map((c) => c.name), at: 1 };
-    if (verb === "pile" || verb === "deck") return { pool: ["events", "spells"], at: 1 };
-    if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
-    if (verb === "card" || verb === "read" || verb === "x") {
-      // Everything readable, which is every Karta in the box: a Wróg cannot be
-      // given and can certainly be looked at.
-      return { pool: [...READABLE.map((one) => one.name), ...PEOPLE.map((one) => one.name)], at: 1 };
-    }
-    if (verb === "cross") return { pool: PLACES.map((f) => f.name), at: 1 };
+    const said = () => parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "at");
+
     /**
-     * `clear` names a Karta first and an Obszar only after `at`.
+     * Whether the name in front of `at` is finished, so `at` is what comes next.
      *
-     * It offered Obszary in both places, which is the wrong half of the
+     * Tab went quiet here, which is the one place it must not: `place EREMITA `
+     * offered nothing, because no card name starts with "eremita " and the
+     * fragment being matched still included the space. The keyword is the only
+     * thing that can follow a finished name, so it is what is offered — and
+     * only when the name really is finished, or `place TARCZA ` would stop
+     * offering TARCZA TOLIMANA, which is a different card.
+     */
+    const finished = (names: readonly string[]): boolean => {
+      if (parts.length < 3 || parts[parts.length - 1] !== "") return false;
+      const typed = fold(parts.slice(1, -1).join(" "));
+      return (
+        names.some((name) => fold(name) === typed) &&
+        !names.some((name) => fold(name).startsWith(`${typed} `))
+      );
+    };
+
+    if (verb === "deal") return shelved(DEALABLE, 1);
+    /**
+     * `place` names a Karta first and an Obszar only after `at`; `clear` is its
+     * inverse and reads the same way.
+     *
+     * `clear` offered Obszary in both places, which is the wrong half of the
      * grammar: the common use is "take that Karta off the square I am standing
-     * on", and Tab answered with a wall of place names. `place` splits its two
-     * pools on the same word and this is its inverse, so it splits them the
-     * same way.
+     * on", and Tab answered with a wall of place names.
      */
-    if (verb === "clear") {
-      const said = parts.findIndex((part, index) => index > 0 && part.toLowerCase() === "at");
-      return said === -1
-        ? { pool: CARDS.map((c) => c.name), at: 1 }
-        : { pool: PLACES.map((f) => f.name), at: said + 1 };
+    if (verb === "place" || verb === "put" || verb === "clear") {
+      const at = said();
+      if (at !== -1) return shelved(FIELD_KINDS, at + 1);
+      const names = PLACEABLE.flatMap((group) => group.cards.map((one) => one.name));
+      return finished(names) ? { pool: ["at"], at: parts.length - 1 } : shelved(PLACEABLE, 1);
     }
-    if (verb === "teleport" || verb === "move" || verb === "walk") {
-      return { pool: PLACES.map((f) => f.name), at: 1 };
+    /**
+     * `drop` is a Karta out of your own hand and takes no Obszar — it is the
+     * square you are standing on (12.1). It sat in `place`'s branch from when
+     * the two shared a word, so Tab offered it an `at` the grammar rejects.
+     */
+    if (verb === "drop") return { pool: CARDS.map((c) => c.name), at: 1 };
+    if (verb === "stack") return shelved(STACK_KINDS, 1);
+    if (verb === "pile" || verb === "deck") return { pool: ["events", "spells"], at: 1 };
+    /**
+     * Every Wróg, in one list and not two.
+     *
+     * The box prints `Wróg II Bestia` and `Wróg III Demon`, and they are two
+     * classes everywhere a rule counts them (15.2, 17.5, 18.2) — but this is a
+     * list read by name, and the Księga shelves them together for the same
+     * reason. One heading over the whole pool is no heading at all, so `fight`
+     * keeps the plain alphabet.
+     */
+    if (verb === "fight") return { pool: FOES.map((c) => c.name), at: 1 };
+    // Everything readable, which is every Karta in the box and every Postać: a
+    // Wróg cannot be dealt into a hand and can certainly be looked at.
+    if (verb === "card" || verb === "read" || verb === "x") return shelved(READ_KINDS, 1);
+    // The board, wherever an Obszar is named on its own.
+    if (verb === "cross" || verb === "teleport" || verb === "move" || verb === "walk") {
+      return shelved(FIELD_KINDS, 1);
     }
     if (
       verb === "kill" ||

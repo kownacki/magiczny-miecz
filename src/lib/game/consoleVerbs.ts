@@ -6,9 +6,9 @@ import {
   PHASE,
   askLines,
   cardLines,
+  catalogue,
   championLine,
   characterName,
-  columns,
   effectLines,
   fieldCardNamed,
   fieldName,
@@ -110,7 +110,7 @@ import { only, replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
 import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
 import { SLOT_LABEL, STORAGE, inPlayAt } from "@/lib/engine/slots";
-import { DEALABLE } from "@/lib/engine/console";
+import { DEALABLE, PLACEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 
@@ -414,13 +414,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
    */
   deal: async (ctx, command) => {
     const { gameId, seatOf, named } = ctx;
-    if (command.cardId === null) {
-      return DEALABLE.flatMap((group, at) => [
-        ...(at > 0 ? [""] : []),
-        `${group.title} (${group.cards.length})`,
-        ...columns(group.cards.map((one) => one.name)),
-      ]).join("\n");
-    }
+    if (command.cardId === null) return catalogue(DEALABLE);
     const seat = seatOf(null);
     if (SPELL_BY_ID.has(command.cardId)) {
       await grantCard(gameId, seat.id, command.cardId);
@@ -447,6 +441,9 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
 
   place: async (ctx, command) => {
     const { gameId, seatOf } = ctx;
+    // Bare, the same answer bare `deal` gives, minus the one class that never
+    // lies on an Obszar: a Zaklęcie is its own pile and goes to a hand (9.5).
+    if (command.cardId === null) return catalogue(PLACEABLE);
     const seat = seatOf(null);
     const where = await placeCard(gameId, seat.id, command.cardId, command.fieldId);
     return `${cardName(command.cardId)} lies on ${FIELDS.get(where)?.name ?? where}.`;

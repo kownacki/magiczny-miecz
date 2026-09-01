@@ -222,7 +222,16 @@ export type Command =
    * Null lists what there is to ask for, as bare `give` used to.
    */
   | { kind: "deal"; cardId: string | null }
-  | { kind: "place"; cardId: string; fieldId: FieldId | null }
+  /**
+   * A Karta laid on an Obszar, and — with no card named — the catalogue of what
+   * there is to lay.
+   *
+   * Null lists rather than refuses, exactly as bare `deal` does. The two ask
+   * the same question of the same box, and answering one with the six kinds
+   * and the other with "Which card?" made the shorter list the harder one to
+   * find.
+   */
+  | { kind: "place"; cardId: string | null; fieldId: FieldId | null }
   | { kind: "teleport"; fieldId: FieldId }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
@@ -916,8 +925,8 @@ export const COMMANDS: CommandSpec[] = [
     // Przedmiot down", and a word cannot mean both that and a card conjured
     // onto a field.
     aliases: ["put"],
-    usage: "place <card> at <field>",
-    summary: "leave a card on an Obszar, the one you stand on unless named",
+    usage: "place [card] [at field]",
+    summary: "leave a card on an Obszar, the one you stand on unless named — bare, the catalogue",
     needs: "testmode",
     group: "override",
   },

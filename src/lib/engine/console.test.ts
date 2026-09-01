@@ -191,7 +191,9 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("names both halves of a place, and complains about the one that is wrong", () => {
-    expect(err("place")).toMatch(/Which card/);
+    // Bare is the catalogue, as bare `deal` is — a mistake is a name nothing
+    // is called, and that is what still complains.
+    expect(ok("place")).toEqual({ kind: "place", cardId: null, fieldId: null });
     expect(err("place MIECZ at Narnia")).toContain("Narnia");
     expect(err("place nothing at Karczma")).toMatch(/No card/);
   });
@@ -294,7 +296,7 @@ suite("naming a card, a field or a creature", () => {
 
   it("asks for the name when none was given", () => {
     expect(err("teleport")).toMatch(/Which Obszar/);
-    expect(err("place")).toMatch(/Which card/);
+    expect(err("stack")).toMatch(/Which card/);
   });
 
   /**
@@ -360,10 +362,111 @@ suite("naming a card, a field or a creature", () => {
     ]);
   });
 
+  /**
+   * The same shelves everywhere the same question is asked.
+   *
+   * `deal`, `place`, `clear`, `stack` and `card` all ask "which Karta do you
+   * mean?" of different halves of the box, and three of them used to answer
+   * with one alphabetical run of a hundred and sixty-five names.
+   */
+  it("cuts every card pool into the same kinds", () => {
+    const titles = (line: string) => complete(line, []).sections?.map((one) => one.title);
+    // No Zaklęcie ever lies on an Obszar (9.5), so `place` is the six kinds.
+    expect(titles("place ")).toEqual([
+      "Przedmioty",
+      "Przyjaciele",
+      "Wrogowie",
+      "Spotkania",
+      "Nieznajomi",
+      "Miejsca",
+    ]);
+    expect(titles("clear ")).toEqual(titles("place "));
+    // A Hełm has no pile to sit on top of (21.2); a Zaklęcie has its own.
+    expect(titles("stack ")).toContain("Zaklęcia");
+    // And the one shelf that is not a Karta Zdarzeń class.
+    expect(titles("card ")?.at(-1)).toBe("Postacie");
+  });
+
+  /**
+   * The board as four shelves, everywhere an Obszar is named.
+   *
+   * Ninety-odd names in one alphabetical heap made you read every one to find
+   * the field you wanted, when what you know about a field is its Krąg.
+   */
+  it("cuts the board into its four parts, outermost first", () => {
+    const kregi = ["Dolny Krąg", "Środkowy Krąg", "Górny Krąg", "Kamienny Most"];
+    for (const line of ["teleport ", "cross ", "place MIECZ at ", "clear MIECZ at "]) {
+      expect(complete(line, []).sections?.map((one) => one.title), line).toEqual(kregi);
+    }
+    // Board order inside a Krąg, not alphabetical: Urwisko I and II sit
+    // opposite each other and the order is what says so.
+    const gorny = complete("teleport ", []).sections?.find((one) => one.title === "Górny Krąg");
+    expect(gorny?.options[0]).toBe("Urwisko I");
+  });
+
+  /**
+   * Tab went quiet after a finished card name, which is the one place it must
+   * not: `at` is the only word that can come next.
+   */
+  it("offers the `at` a finished card name is waiting for", () => {
+    expect(complete("place EREMITA ", []).line).toBe("place EREMITA at ");
+    expect(complete("clear GROTA ", []).line).toBe("clear GROTA at ");
+    // Not while the name could still be a longer one: TARCZA is a card, and so
+    // are TARCZA TOLIMANA and TARCZA BOGA TOLIMANA. The two longer names are
+    // still what Tab offers, because finishing the wrong one puts a different
+    // Karta on the Obszar.
+    expect(complete("place TARCZA ", []).options).toEqual([
+      "TARCZA BOGA TOLIMANA",
+      "TARCZA TOLIMANA",
+    ]);
+    // And not for a fragment that names nothing.
+    expect(complete("place ZZZ ", []).options).toEqual([]);
+  });
+
+  /**
+   * `drop` sat in `place`'s branch from when the two shared a word, so Tab
+   * offered it an `at` the grammar rejects — `drop` puts a Karta down on the
+   * Obszar you are standing on (12.1) and names no other.
+   */
+  it("does not offer `drop` an Obszar it cannot take", () => {
+    expect(complete("drop MIECZ ", []).options).toEqual([]);
+    expect(complete("drop MIE", []).options).toContain("MIECZ");
+  });
+
+  /**
+   * A catalogue must not offer a name the next line rejects.
+   *
+   * This is the failure the note above `STACKABLE` describes, and it is the
+   * whole risk of cutting one pool into shelves: a heading is a promise that
+   * what is under it can be typed. Every name, through the real parser, at the
+   * verb that offered it.
+   */
+  it("offers nothing the grammar will not take back", () => {
+    const typed = (line: string) => {
+      const parsed = parseCommand(line);
+      if ("error" in parsed) throw new Error(`${line}: ${parsed.error}`);
+      return parsed.ok;
+    };
+    for (const { title, options } of complete("place ", []).sections ?? []) {
+      for (const name of options) expect(typed(`place ${name}`), `${title}: ${name}`).toBeTruthy();
+    }
+    for (const { options } of complete("teleport ", []).sections ?? []) {
+      for (const name of options) expect(typed(`teleport ${name}`), name).toBeTruthy();
+    }
+    for (const { options } of complete("stack ", []).sections ?? []) {
+      for (const name of options) expect(typed(`stack ${name}`), name).toBeTruthy();
+    }
+    for (const { options } of complete("card ", []).sections ?? []) {
+      for (const name of options) expect(typed(`card ${name}`), name).toBeTruthy();
+    }
+  });
+
   /** Every other pool is a list of names with no shape, and stays one run. */
   it("says nothing about groups where there are none", () => {
-    expect(complete("place ", []).sections).toBeUndefined();
-    expect(complete("teleport ", []).sections).toBeUndefined();
+    // One heading over a whole pool is no heading at all. Both printed classes
+    // of Wróg stand together here, as the Księga shelves them.
+    expect(complete("fight ", []).sections).toBeUndefined();
+    expect(complete("pick ", []).sections).toBeUndefined();
   });
 
   it("takes a bare `deal` as a request for the list", () => {
@@ -795,8 +898,8 @@ suite("help", () => {
     // just typed and got wrong.
     expect(ok("help put")).toEqual({ kind: "help", about: "put" });
     expect(helpLines("put")).toEqual([
-      "place <card> at <field>",
-      "leave a card on an Obszar, the one you stand on unless named",
+      "place [card] [at field]",
+      "leave a card on an Obszar, the one you stand on unless named — bare, the catalogue",
       "also: put",
     ]);
   });
