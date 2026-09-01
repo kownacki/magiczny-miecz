@@ -61,6 +61,7 @@ import { ConfirmDialog, type Confirmation } from "./confirm";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { MAX_SEATS } from "@/lib/game/modes";
+import { stillStone } from "@/lib/engine/status";
 import { Toasts } from "./toast";
 import { OpenRule, Rules } from "./rule-ref";
 import type { RulesShelf } from "./rules-shelf";
@@ -1382,6 +1383,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
              caller's token, and 12.1's three conditions are checked there —
              `refuseUnlessCollectable`, shared by both. */
           onTakeGold={(gold) => post("holdings", { action: "take-gold", gold })}
+          /**
+           * Who is standing on it (12.1, 19.1), narrowed here rather than in
+           * the window.
+           *
+           * Every seat carries `stone_until_round`, and whether that column is
+           * still in force is the one comparison chapter 20 turns on — so it
+           * goes through `stillStone` like the four other places that ask, and
+           * the Obszar cannot come to its own conclusion about who is a statue.
+           * A seat with no Postać is left out: it is not on the board.
+           */
+          standing={seats
+            .filter((seat) => seat.field_id === inspecting && seat.character_id && !seat.eliminated)
+            .sort((a, b) => a.seat_index - b.seat_index)
+            .map((seat) => ({
+              id: seat.id,
+              seatIndex: seat.seat_index,
+              playerName: seat.player_name,
+              characterId: seat.character_id,
+              stone: stillStone(seat.stone_until_round, game.round),
+              active: seat.seat_index === game.active_seat,
+              mine: seat.id === mySeat?.id,
+            }))}
+          onPickSeat={(seatId) => {
+            setAskedAbout(seatId);
+            setRightDrawer("gracze");
+          }}
           onInspect={(cardId) =>
             setInspectingCard({
               cardId,

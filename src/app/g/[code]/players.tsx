@@ -20,9 +20,7 @@
 
 import { useState } from "react";
 import { Lookable } from "./lookable";
-import Image from "next/image";
 import type { Character } from "@/data/types";
-import { characterStandeeUrl } from "@/lib/view/cardImages";
 import { seatColour } from "@/lib/view/boardMap";
 import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
@@ -30,13 +28,14 @@ import { asNature } from "./table";
 import type { PublicSeat } from "./table-layout";
 import { Drawer } from "./drawer";
 import { Fold } from "./fold";
-import { useCardPreview } from "./card-preview";
 import { StatFigure } from "./token-rail";
 import { natureSaid } from "./nature-line";
 import { MAX_SEATS } from "@/lib/game/modes";
-import { NATURE_LABEL, characterKind } from "@/lib/engine/polish";
+import { NATURE_LABEL } from "@/lib/engine/polish";
 import { EffectList } from "./effect-list";
 import { EffectMark, EffectTally, effectsSaid } from "./effect-mark";
+import { SeatFigure } from "./seat-figure";
+import { STONE } from "@/lib/engine/status";
 import { TileRow } from "./tile-row";
 
 export function PlayersDrawer({
@@ -156,7 +155,12 @@ export function PlayersDrawer({
         {seats.map((seat) => {
           const real = asCharacterId(seat.characterId);
           const character = real ? (byId.get(real) ?? null) : null;
-          const portrait = character ? characterStandeeUrl(character.id) : null;
+          // 20.1: a character turned to stone is not standing there any more —
+          // the Karta Zaklętego w Kamień is. Read off the effects rather than
+          // off a column, because that is the half of the model the roster is
+          // already given: `fromColumns` projects `stone_until_round` into one
+          // of these, and the mark beside the name comes from the same row.
+          const stone = seat.effects.some((effect) => effect.source === STONE);
           const expanded = open.has(seat.id);
           const mine = seat.id === mySeatId;
           const colour = seatColour(seat.seatIndex);
@@ -324,8 +328,8 @@ export function PlayersDrawer({
                     </div>
                   )}
                   <div className="mb-2 flex items-start gap-3">
-                    {portrait && character && (
-                      <Standee character={character} portrait={portrait} />
+                    {(character || stone) && (
+                      <SeatFigure characterId={seat.characterId} stone={stone} width={56} />
                     )}
                     {/* A third for the names and two for the answers. Even
                         columns gave the six shortest words in the app half the
@@ -657,34 +661,3 @@ function WithdrawButton({
   );
 }
 
-/**
- * The Postać a seat is playing, read by pointing at it.
- *
- * It used to be a click that opened the whole Karta over the table — a modal to
- * answer "which one is that again?", with the roster gone behind it while you
- * read. The hover says the same thing beside the figure and leaves the roster
- * where it was; holding Cmd keeps it, which is the way to read the
- * Charakterystyka at length.
- *
- * Its own component because `useCardPreview` is a hook and the roster draws one
- * of these per seat. A hook cannot be called in a loop, so the loop calls a
- * component instead.
- */
-function Standee({ character, portrait }: { character: Character; portrait: string }) {
-  const card = {
-    cardId: character.id,
-    name: character.name,
-    character: true,
-    text: character.abilities.join("\n\n"),
-    kindLabel: characterKind(character),
-  };
-  // No `eqMode`: a Karta Postaci has no slots and `characterProfile` ignores
-  // it. The variant only matters for a Przedmiot, which this never is.
-  const { handlers, preview } = useCardPreview(card);
-  return (
-    <span {...handlers} className="shrink-0 rounded border border-edge transition hover:border-ochre">
-      <Image src={portrait} alt={character.name} width={56} height={94} className="rounded" />
-      {preview}
-    </span>
-  );
-}

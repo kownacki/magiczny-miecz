@@ -3,7 +3,7 @@
 import { apply, merge, mergeAll, type Changeset, type Snapshot } from "../change";
 import { asReturnable, dropGold, putOnPile } from "./piles";
 import { seatById } from "./seat";
-import { untouchable } from "@/lib/engine/status";
+import { stillStone, untouchable } from "@/lib/engine/status";
 
 /** 20.1 measures it in turn numbers, so a skipped turn cannot make it drift. */
 export const STONE_TURNS = 3;
@@ -29,7 +29,7 @@ export const STONE_TURNS = 3;
  */
 export function isStone(snapshot: Snapshot, seatId: string): boolean {
   const seat = snapshot.seats.find((row) => row.id === seatId);
-  return seat?.stone_until_round != null && seat.stone_until_round > snapshot.game.round;
+  return stillStone(seat?.stone_until_round ?? null, snapshot.game.round);
 }
 
 /**

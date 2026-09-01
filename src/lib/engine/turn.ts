@@ -19,6 +19,7 @@ import type { Crossing } from "./rings";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 import type { Effect } from "./cardScript";
 import type { CardRef } from "./deck";
+import { stillStone } from "./status";
 
 /**
  * A turn is rule 10.1's two steps — move, then deal with where you landed —
@@ -960,7 +961,7 @@ export function nextSeat(
     // act at all in that time — distinct from a lost turn, which is spent.
     // 20.1 measures those three in rounds, so this reads the round counter and
     // not the seat's own goes: a stone seat takes none of the latter.
-    if (candidate.stoneUntilRound !== null && candidate.stoneUntilRound > round) {
+    if (stillStone(candidate.stoneUntilRound, round)) {
       skipped.push(candidate.index);
       continue;
     }

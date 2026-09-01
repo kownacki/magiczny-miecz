@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   allStatuses,
   fromColumns,
+  stillStone,
   markOf,
   afterEvent,
   afterFight,
@@ -162,6 +163,18 @@ describe("the four ad-hoc columns, read as effects", () => {
       round: 8,
     });
     expect(fromColumns({ ...none, stoneUntilRound: 5 }, 5)).toEqual([]);
+  });
+
+  it("ends Kamień on the round it names, not the one after (20.1)", () => {
+    // The comparison five places make, made in one. 20.1's „po zakończeniu 3
+    // tury" is what makes it strict: the round the column names is the one the
+    // character is flesh again in. A `>=` here is a statue standing a whole
+    // round too long, and nothing downstream would have said so.
+    expect(stillStone(8, 7)).toBe(true);
+    expect(stillStone(8, 8)).toBe(false);
+    expect(stillStone(8, 9)).toBe(false);
+    // A seat that has never been stone.
+    expect(stillStone(null, 3)).toBe(false);
   });
 
   it("shows the Most being barred without calling it a freeze (11.11)", () => {

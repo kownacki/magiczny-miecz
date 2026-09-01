@@ -7,6 +7,7 @@ import manifest from "@/data/card-images.json";
 import artManifest from "@/data/card-art.json";
 import portraits from "@/data/character-images.json";
 import standees from "@/data/character-standees.json";
+import markers from "@/data/markers.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { cardRef } from "@/lib/engine/deck";
 import { RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
@@ -243,4 +244,56 @@ export function faceFor(card: CardArt): string | null {
 /** Just the illustration, for where a whole card would be a grey smear. */
 export function artFor(card: CardArt): string | null {
   return card.character ? characterArtUrl(card.cardId) : cardArtUrl(card.cardId, card.ref);
+}
+
+/* --------------------------------------------------------------------------
+ * 20.1's swap.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * The Karta the box puts on the board in place of a figure (20.1).
+ *
+ * „Jeżeli Postać zostanie na 3 tury Zamieniona w Kamień, reprezentującą ją na
+ * planszy Kartę należy zamienić na Kartę Zamieniony w Kamień." That is a
+ * *component* instruction, and it is the whole of what the rule asks a table to
+ * do — everything else in chapter 20 is what the app already enforces. So it is
+ * the one part of Kamień that has to be drawn rather than computed.
+ *
+ * There are four of them printed and they are identical, so the first is the
+ * card: `markers.json` records all four because the sheet does, and nothing
+ * here is choosing between copies. Read off that file rather than written down,
+ * so the slice moves with the transcription if the sheet is ever re-cut.
+ *
+ * The card's own printed title is `ZAKLĘTY W KAMIEŃ` and the rulebook's chapter
+ * heading is `ZAMIENIONY W KAMIEŃ` — the box disagrees with itself, and both
+ * are kept where they belong: the name here is the paper's, and the app's own
+ * copy (the effect's label, the journal, the refusals) says the Instrukcja's.
+ */
+const STONE_MARKER = markers.stone[0];
+const STONE_SLICE = cardRef(STONE_MARKER.source);
+
+export const STONE_CARD = {
+  cardId: STONE_MARKER.id,
+  name: STONE_MARKER.name,
+  text: STONE_MARKER.text,
+  ref: STONE_SLICE,
+} as const;
+
+/**
+ * What stands for a seat on the board: its mała Karta Postaci, or the Kamień
+ * card standing in its place.
+ *
+ * One function because the swap has to happen in every place a figure is drawn
+ * or it happens in none of them — the turn bar, the roster and the Obszar all
+ * draw the same object and all three had their own `characterStandeeUrl` call.
+ *
+ * The two pictures are cut to different rectangles and it does not matter: 516
+ * by 880 against the standee's 249 by 420 is 0.586 against 0.593, a percent
+ * apart, which `object-cover` takes off the sides of a card that has nothing
+ * printed there. So the Kamień card goes in the figure's own box rather than
+ * every box that holds a figure learning a second shape.
+ */
+export function figureUrl(characterId: string | null, stone: boolean): string | null {
+  if (stone) return cardImageUrl(STONE_CARD.cardId, STONE_CARD.ref);
+  return characterId ? characterStandeeUrl(characterId) : null;
 }

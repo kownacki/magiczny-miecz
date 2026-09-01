@@ -588,6 +588,30 @@ export function describeEnd(ends: Ends): string {
  */
 export const DEBT = "tura-stracona";
 
+/**
+ * The source Kamień is filed under, and the one comparison that decides it.
+ *
+ * `stone_until_round > round` was written out in five places — the command that
+ * reads it, the turn engine that skips the seat, the queue that forecasts the
+ * skip, this projection, and now the figure the browser draws — and every one
+ * of them had to get the strictness right on its own. 20.1 says "po zakończeniu
+ * 3 tury", so the round it names is the one the character is flesh again in and
+ * the comparison is strict; a `>=` anywhere in that list is a statue that
+ * stands one round too long, and nothing would have said so.
+ */
+export const STONE = "kamien";
+
+export function stillStone(
+  stoneUntilRound: number | null,
+  round: number,
+  // A predicate rather than a `boolean`, so the column is *narrowed* by the
+  // check and the two callers that go on to name the date do not each reach
+  // for a `!`. That is the whole point of putting the comparison in one place:
+  // a null that has been ruled out should stay ruled out.
+): stoneUntilRound is number {
+  return stoneUntilRound !== null && stoneUntilRound > round;
+}
+
 /** What a seat's own columns say about it, in the shape everything else uses. */
 export interface TimedColumns {
   turnsLost: number;
@@ -621,10 +645,10 @@ export function fromColumns(seat: TimedColumns, round: number): Status[] {
   // choice: a statue takes no turns of its own, so a countdown measured in them
   // would never reach zero. `nextSeat` compares the same column against
   // `games.round` for exactly this reason.
-  if (seat.stoneUntilRound !== null && seat.stoneUntilRound > round) {
+  if (stillStone(seat.stoneUntilRound, round)) {
     out.push({
-      id: "kamien",
-      source: "kamien",
+      id: STONE,
+      source: STONE,
       label: "Zamieniony w Kamień",
       modifier: { kind: "frozen" },
       ends: { kind: "round", round: seat.stoneUntilRound },

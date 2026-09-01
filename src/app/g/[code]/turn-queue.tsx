@@ -12,7 +12,7 @@
 
 import Image from "next/image";
 import { seatColour } from "@/lib/view/boardMap";
-import { characterStandeeUrl } from "@/lib/view/cardImages";
+import { figureUrl } from "@/lib/view/cardImages";
 import { plural, roundShown } from "@/lib/engine/polish";
 import { DEFAULT_DEPTH, projectQueue, type QueueEntry } from "@/lib/engine/turnQueue";
 
@@ -96,10 +96,21 @@ function QueueChip({
   onPick?: (seatIndex: number) => void;
 }) {
   const colour = seatColour(entry.seatIndex);
-  const standee = seat?.characterId ? characterStandeeUrl(seat.characterId) : null;
   const name = seat?.playerName ?? `Miejsce ${entry.seatIndex + 1}`;
   const skipped = entry.status === "skipped";
   const active = entry.status === "active";
+  /**
+   * 20.1's swap, on the chip.
+   *
+   * `projectQueue` has already worked out which of the two reasons a seat is
+   * being passed over for, and it is the same test `nextSeat` makes — so the
+   * figure and the caption under it cannot disagree about whether somebody is
+   * stone. Only on a slot that is actually skipped: a chip further down the
+   * queue is a forecast of a turn the character will be flesh for again, and
+   * standing a statue there would be the forecast saying the opposite.
+   */
+  const stone = skipped && entry.reason === "stone";
+  const figure = figureUrl(seat?.characterId ?? null, stone);
 
   // Never colour alone: the reason is spelled out on the chip, so a player who
   // cannot separate the seat colours still reads the same information.
@@ -158,8 +169,8 @@ function QueueChip({
             active ? "h-[144px] w-[85px] border-2" : "h-[108px] w-[64px]"
           } ${skipped ? "opacity-55" : ""}`}
         >
-          {standee ? (
-            <Image src={standee} alt="" fill sizes="96px" className="object-cover" />
+          {figure ? (
+            <Image src={figure} alt="" fill sizes="96px" className="object-cover" />
           ) : (
             <span className="flex h-full w-full items-center justify-center bg-panel text-xs text-muted">
               {entry.seatIndex + 1}

@@ -26,6 +26,9 @@ import type { EventCard, Item } from "@/data/types";
 import { Fold } from "./fold";
 import { FieldGold } from "./field-gold";
 import { fieldGroups, type FieldGroupKey } from "@/lib/view/fieldGroups";
+import { seatColour } from "@/lib/view/boardMap";
+import { TILE_WIDTH } from "@/lib/view/cardImages";
+import { SeatFigure } from "./seat-figure";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
 
@@ -45,6 +48,40 @@ const NAMES = new Map<string, string>([
 ]);
 /** Only the event deck carries the class that says whether a card is takeable. */
 const EVENT_BY_ID = new Map(EVENTS.map((card) => [card.id, card]));
+
+/**
+ * What to call a figure standing here.
+ *
+ * The player's name and not the Postać's, because this list answers "who is
+ * here" and a seat is a person. Which Postać they are playing is the picture
+ * itself, and the whole Karta is one hover away. „ty" the way the turn bar says
+ * it — the one figure on the board a reader never has to identify.
+ */
+function nameOf(seat: SeatHere): string {
+  if (seat.mine) return "ty";
+  return seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`;
+}
+
+/**
+ * A Postać standing on this Obszar, as this window needs to draw one.
+ *
+ * Not `PublicSeat`: the roster's object carries four parameters, a hand, a
+ * purse and an effect list, and none of that is what an Obszar is asked. What
+ * is here is what stands here — who, as which Postać, and whether it is a
+ * Postać at all this turn (20.1).
+ */
+export interface SeatHere {
+  id: string;
+  seatIndex: number;
+  playerName: string | null;
+  characterId: string | null;
+  /** 20.1: the Kamień card is on the board in its place. */
+  stone: boolean;
+  /** Whose turn it is, marked here as well as in the bar. */
+  active: boolean;
+  /** The viewer's own figure. */
+  mine: boolean;
+}
 
 export interface FieldCardHere {
   id: string;
@@ -83,7 +120,7 @@ export interface FieldCardHere {
  * and loose gold is not a card to sort. It is a shelf all the same, folding and
  * tallying like the rest, so the key type is the groups' plus it.
  */
-type ShelfKey = FieldGroupKey | "zloto";
+type ShelfKey = FieldGroupKey | "zloto" | "gracze";
 
 /**
  * Where the Złoto shelf stands: after the loot, before the residents.
@@ -133,6 +170,8 @@ export function FieldModal({
   onTake,
   gold = 0,
   onTakeGold,
+  standing = [],
+  onPickSeat,
   asked = [],
   onInspect,
   onClose,
@@ -225,6 +264,21 @@ export function FieldModal({
    * seat is holding, which this window does not know and should not learn.
    */
   friend?: React.ReactNode;
+  /**
+   * Who is standing here (12.1, 19.1).
+   *
+   * The Obszar window listed everything on the square except the players on it,
+   * which is the half a table actually looks at first: whether somebody else is
+   * here decides whether the Karta lying there is still going to be there next
+   * turn, and 19.1's wymknięcie się and every attack between Postacie are
+   * questions about exactly this list.
+   *
+   * Public, like the Karty and for 16.8's reason — figures on a board are not
+   * hidden — so it is drawn whether or not the viewer is standing here.
+   */
+  standing?: readonly SeatHere[];
+  /** Open the roster on that seat, the same way the turn bar's chips do. */
+  onPickSeat?: (seatId: string) => void;
   busy: boolean;
   onTake: (fieldCardId: string) => void;
   /**
@@ -344,6 +398,67 @@ export function FieldModal({
     </Fold>
   );
 
+  /**
+   * Who is standing here, above everything lying here.
+   *
+   * First of the shelves and not last, because it is the first question asked
+   * of a square you are thinking of moving to. What is lying on an Obszar is
+   * loot and it will still be loot next turn; who is standing on it is the part
+   * that can attack you, be attacked, or take the loot before you get there.
+   *
+   * A figure and not a Karta, so it is drawn with `SeatFigure` rather than
+   * `CardTile` — and that is the same object 20.1 swaps for the Kamień card, so
+   * a statue on this Obszar reads as a statue here exactly as it does in the
+   * turn bar and the roster.
+   */
+  const players = standing.length === 0 ? null : (
+    <Fold
+      key="gracze"
+      title="Gracze"
+      tally={standing.length}
+      first
+      tone="text-muted/70"
+      open={!shut.has("gracze")}
+      onToggle={() => toggle("gracze")}
+      /* Shut, the names — the same thing the card shelves keep, and for the
+         same reason: "Gracze 2" is a reason to look again and the two names
+         are the answer. */
+      aside={
+        shut.has("gracze") ? (
+          <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-ochre/80">
+            {standing.map(nameOf).join(" · ")}
+          </span>
+        ) : undefined
+      }
+    >
+      <TileRow frame={false}>
+        {standing.map((seat) => (
+          <figure key={seat.id} className="flex flex-col items-center gap-1">
+            <SeatFigure
+              characterId={seat.characterId}
+              stone={seat.stone}
+              width={TILE_WIDTH}
+              colour={seatColour(seat.seatIndex)}
+              onClick={onPickSeat ? () => onPickSeat(seat.id) : undefined}
+              title={
+                onPickSeat ? `${nameOf(seat)} — otwórz w Graczach` : nameOf(seat)
+              }
+            />
+            <figcaption
+              style={{ width: TILE_WIDTH }}
+              className={`truncate text-center text-[9px] leading-tight ${
+                seat.active ? "text-ochre" : "text-muted"
+              }`}
+              title={nameOf(seat)}
+            >
+              {nameOf(seat)}
+            </figcaption>
+          </figure>
+        ))}
+      </TileRow>
+    </Fold>
+  );
+
   return (
     <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
@@ -443,7 +558,7 @@ export function FieldModal({
             <h3 className="mb-2 text-[11px] uppercase tracking-widest text-muted">
               Na tym Obszarze
             </h3>
-            {groups.length === 0 && goldAt === null ? (
+            {groups.length === 0 && goldAt === null && players === null ? (
               <p className="text-xs text-muted/70">Nic — Obszar jest pusty.</p>
             ) : (
               /* One `Fold` per group, the same section every shelf in the app
@@ -453,13 +568,14 @@ export function FieldModal({
                  `fieldGroups` has already dropped the empty ones, so an Obszar
                  with a single Wróg on it reads "Wrogowie 1" and stops. */
               <>
+                {players}
                 {groups.map((group, at) => (
                   <Fragment key={group.key}>
-                    {at === goldAt && goldShelf(at === 0)}
+                    {at === goldAt && goldShelf(at === 0 && players === null)}
                     <Fold
                       title={group.title}
                       tally={group.cards.length}
-                      first={at === 0 && goldAt !== 0}
+                      first={at === 0 && goldAt !== 0 && players === null}
                       /* A step below "Na tym Obszarze", which is the same size and
                          the same small capitals — two headings at one weight read
                          as two unrelated blocks rather than a heading and the
@@ -541,7 +657,7 @@ export function FieldModal({
                     </Fold>
                   </Fragment>
                 ))}
-                {goldAt === groups.length && goldShelf(groups.length === 0)}
+                {goldAt === groups.length && goldShelf(groups.length === 0 && players === null)}
               </>
             )}
             {/* 13.1 and 12.1: things happen on the field your move ended on, so

@@ -288,7 +288,7 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 20.1 | three turns as stone | ✅ | `stone_until_turn` |
+| 20.1 | three turns as stone, and the figure swapped for the Kamień card | ✅ | `stone_until_round`, and the one comparison that reads it is `stillStone` — five callers, one strictness. The swap is `figureUrl`: the turn bar, the roster and the Obszar's Gracze shelf all draw a seat through it, so a statue is a statue in all three |
 | 20.2 | a stone character keeps no items, gold or friends | ✅ | `turnToStone` — items and gold to the field, friends to the used pile |
 | 20.3 | Miecz and Magia are kept but unusable | ✅ | kept, and never used: the only moment a statue would swing either is defending an attack, and 20.5 forbids the attack. Two rows, one guard — see below |
 | 20.4 | cannot move for three turns | ✅ | `nextSeat` |

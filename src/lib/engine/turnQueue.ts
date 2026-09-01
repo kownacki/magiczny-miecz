@@ -1,6 +1,7 @@
 /** Projects who acts next, and who gets passed over on the way, for the turn bar. */
 
 import { nextSeat, type TurnOrderSeat } from "./turn";
+import { stillStone } from "./status";
 
 /** How many actual turns to look ahead. Skips do not count against this. */
 export const DEFAULT_DEPTH = 10;
@@ -66,7 +67,7 @@ export function projectQueue(
       if (!seat) continue;
       // Stone is tested first, because that is the order nextSeat tests them
       // in: a character who is both frozen and owed a lost turn reads as frozen.
-      const frozen = seat.stoneUntilRound !== null && seat.stoneUntilRound > clock;
+      const frozen = stillStone(seat.stoneUntilRound, clock);
       // Which round the skipped slot belongs to.
       //
       // The walk passes seats in index order, so any seat at or below the one
