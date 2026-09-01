@@ -800,3 +800,35 @@ export const TARGET_LABEL: Record<SpellTarget, string> = {
   zaklecie: "na Zaklęcie",
   brak: "—",
 };
+
+/**
+ * A Zaklęcie's two formalised lines: the window it opens in, and its aim.
+ *
+ * Both were printed under the tile in the hand, which is the one place they are
+ * least useful: a row of five cards carried two lines of small type each, and
+ * the answer to "when can I speak this" is wanted while you are looking at the
+ * card, not while you are counting the row. So they moved to the panel every
+ * other card answers in — where a Przedmiot says which place it is worn in, a
+ * Zaklęcie says when it may be spoken and at what.
+ *
+ * Null for a Zaklęcie the app carries no script for, which is the honest answer
+ * rather than a guess at a window. The target is null where the card names none.
+ */
+export function spellFacts(cardId: string): { when: string; at: string | null } | null {
+  const script = spellScript(cardId);
+  if (!script) return null;
+  return {
+    when: script.timing.map((timing) => TIMING_LABEL[timing]).join(" / "),
+    at: script.target === "brak" ? null : TARGET_LABEL[script.target],
+  };
+}
+
+/**
+ * The word for speaking one, as `USE_VERB` is the word for spending a Przedmiot.
+ *
+ * Here rather than in the component for the same reason that one is in
+ * `uses.ts`: the journal, the console and the button all name the same act, and
+ * a verb that lives in a button is one three surfaces have to agree about by
+ * remembering to.
+ */
+export const CAST_VERB = "rzuć";

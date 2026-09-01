@@ -11,7 +11,7 @@ import { useRack } from "./rack";
 import { ItemSlot, SLOT_WIDTH } from "./item-slot";
 import type { SpellId } from "@/data/ids";
 import {
-  TARGET_LABEL,
+  CAST_VERB,
   TIMING_LABEL,
   castableNow,
   spellScript,
@@ -438,6 +438,28 @@ export function SpellHand({
           /** Aimed at something, with nothing of that kind on the board. */
           const nowhere = needsAim && aims.length === 0;
           const name = card?.name ?? entry.cardId;
+          /**
+           * Why „rzuć" is greyed, said on the hover rather than in the button.
+           *
+           * All three reasons are things about the board and the moment, not
+           * about the card — which is why they read badly as a label on the
+           * control itself, and why the label is now one word whatever is true.
+           * The window comes first because it is the commonest and the one the
+           * player can do something about by waiting.
+           */
+          const whyNot = busy
+            ? null
+            : blocked !== null
+              ? blocked
+              : !now
+                ? `tylko ${script?.timing.map((when) => TIMING_LABEL[when]).join(" / ")}`
+                : nowhere
+                  ? atFields
+                    ? "brak Obszarów"
+                    : atCards && !atSeats
+                      ? "brak Kart"
+                      : "brak celów"
+                  : null;
 
           return (
             // The same square the pack is built from, at the same size. A
@@ -520,23 +542,6 @@ export function SpellHand({
                   : undefined
               }
             >
-              {/* When it may be spoken and at what, under the card that says
-                  it. Almost every Zaklęcie opens with a clause about its
-                  moment — "przed wykonaniem ruchu", "w dowolnej chwili" — and
-                  that clause is most of what you need to know while deciding
-                  which to hold and which to spend. It used to be a badge on
-                  the corner showing the first of them and hiding the rest.
-                  Lit when the window is open, so a hand can be read at a
-                  glance for what is live. */}
-              {script && (
-                <div className="text-center leading-tight" style={{ width: SLOT_WIDTH }}>
-                  <p className={`text-[10px] ${now ? "text-magia" : "text-muted/60"}`}>
-                    {script.timing.map((when) => TIMING_LABEL[when]).join(" / ")}
-                  </p>
-                  <p className="text-[10px] text-muted/60">{TARGET_LABEL[script.target]}</p>
-                </div>
-              )}
-
               {moving?.holdingId === entry.holdingId ? (
                 /* The second question, in the same square as the first: the
                    Karta is chosen, and this is where it goes. */
@@ -611,26 +616,26 @@ export function SpellHand({
                   </button>
                 </div>
               ) : (
+                /* The Przedmiot's „użyj", for the act that is a hand's
+                   equivalent: one word, underlined, in the colour of the thing
+                   it spends. A Zaklęcie and a Przedmiot are the same object to
+                   a player — a card you hold and may spend — and this was the
+                   last place the two were drawn differently, as a bordered box
+                   the width of the card with a label that changed under you.
+
+                   One word, always the same word. It used to say „nie teraz"
+                   or „brak celów" in the button's own face, which put a
+                   sentence about the state of the board inside the control for
+                   acting on it — and the tile is already dimmed when the window
+                   is shut. Why it is greyed is on the hover, where the rest of
+                   what the app knows about the card is. */
                 <button
                   disabled={busy || !now || blocked !== null || nowhere}
                   onClick={() => (mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {}))}
-                  title={
-                    now
-                      ? script?.effect
-                      : `tylko ${script?.timing.map((t) => TIMING_LABEL[t]).join(" / ")}`
-                  }
-                  style={{ width: SLOT_WIDTH }}
-                  className="rounded border border-magia/50 px-2 py-1 text-[11px] text-ink transition hover:bg-magia/20 disabled:opacity-40"
+                  title={whyNot ?? script?.effect}
+                  className="text-[9px] text-magia underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
                 >
-                  {nowhere
-                    ? atFields
-                      ? "brak Obszarów"
-                      : atCards && !atSeats
-                        ? "brak Kart"
-                        : "brak celów"
-                    : now
-                      ? "Rzuć"
-                      : "nie teraz"}
+                  {CAST_VERB}
                 </button>
               )}
             </ItemSlot>

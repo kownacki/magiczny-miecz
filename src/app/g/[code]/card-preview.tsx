@@ -34,6 +34,7 @@ import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { NATURE_LABEL } from "@/lib/engine/polish";
+import { spellFacts } from "@/lib/engine/spells";
 import { cardName } from "@/lib/engine/polish";
 
 const CHARACTERS = charactersData as Character[];
@@ -459,8 +460,12 @@ export function CardPreview({
   // The Karta's own printed figures. Absent for the "Losowa" card, which is
   // nobody yet and has nothing to print.
   const starting = card.character ? (CHARACTERS.find((one) => one.id === card.cardId) ?? null) : null;
+  // What a Zaklęcie says about itself that is not printed on it: when it may
+  // be spoken, and what it is aimed at. Asked of the card id, which answers
+  // for nothing else in the box.
+  const spell = imageless ? null : spellFacts(card.cardId);
   const anythingToSay =
-    !src || card.text || card.kindLabel || profile?.slotLabel || hasFacts(profile);
+    !src || card.text || card.kindLabel || profile?.slotLabel || spell || hasFacts(profile);
 
   return createPortal(
     <div
@@ -541,6 +546,25 @@ export function CardPreview({
           {profile?.slotLabel && (
             <p className="text-[11px] text-muted">
               Slot: <span className="text-ink">{profile.slotLabel}</span>
+            </p>
+          )}
+
+          {/* The Zaklęcie's half of that same line. A Przedmiot answers "where
+              does this go"; a Zaklęcie answers "when may I speak it, and at
+              what", which is the question somebody holding four of them is
+              actually asking. It used to be printed under the tile in the hand
+              — two lines of small type per card, five cards to a row — where it
+              crowded out the pictures and still had to be re-read one card at a
+              time. */}
+          {spell && (
+            <p className="text-[11px] text-muted">
+              Kiedy: <span className="text-magia">{spell.when}</span>
+              {spell.at && (
+                <>
+                  {" · "}
+                  <span className="text-ink">{spell.at}</span>
+                </>
+              )}
             </p>
           )}
 

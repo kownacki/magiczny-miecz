@@ -4,6 +4,7 @@ import type { Spell } from "@/data/types";
 import {
   SPELLS,
   TIMING_LABEL,
+  spellFacts,
   castableNow,
   momentOf,
   momentsIn,
@@ -201,5 +202,35 @@ describe("momentsIn", () => {
       expect(castableNow(wladca, before)).toBe(true);
       expect(castableNow(wladca, after)).toBe(true);
     }
+  });
+});
+
+/**
+ * The two lines the hover panel prints for a Zaklęcie.
+ *
+ * Every card in the pile has to have them, because the panel is where they
+ * moved to when the tile stopped printing them: a Zaklęcie whose window is a
+ * blank line reads as one that can be spoken at any time.
+ */
+describe("what a Zaklęcie says about itself", () => {
+  it("names a window for every Zaklęcie the app carries", () => {
+    for (const id of Object.keys(SPELLS)) {
+      const facts = spellFacts(id);
+      expect(facts, id).not.toBeNull();
+      expect(facts!.when, id).not.toBe("");
+    }
+  });
+
+  it("says nothing about the aim of a Zaklęcie that has none", () => {
+    // „brak" is a real answer and „—" is not a target; the panel leaves the
+    // half-line out rather than printing a dash after the window.
+    for (const [id, script] of Object.entries(SPELLS)) {
+      if (script?.target !== "brak") continue;
+      expect(spellFacts(id)!.at, id).toBeNull();
+    }
+  });
+
+  it("answers with nothing for a card that is not a Zaklęcie", () => {
+    expect(spellFacts("miecz")).toBeNull();
   });
 });
