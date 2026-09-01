@@ -5,10 +5,11 @@
 
 import { useState } from "react";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { fieldScriptFor, trades } from "@/lib/engine/fieldScript";
+import { fieldScriptFor, residesOn, trades } from "@/lib/engine/fieldScript";
 import { goodsId } from "@/lib/engine/goods";
 import { HEAL_CEILING } from "@/lib/engine/derive";
-import { cardName } from "@/lib/engine/polish";
+import { cardName, plural } from "@/lib/engine/polish";
+import { drawsFromPool, startingPool } from "@/lib/engine/pools";
 import type { FieldId } from "@/lib/engine/board";
 import { EffectControls } from "./effect-controls";
 import type { OnService, OnSuggestion } from "./turn-controls";
@@ -26,9 +27,16 @@ import type { OnService, OnSuggestion } from "./turn-controls";
  * Nothing here decides a price. The buttons say what to buy; the server reads
  * what it costs off the same board.
  */
+/** What the three wells lay out, in the case the sentence needs. */
+const POOL_OF: Record<"life" | "sword" | "magic", string> = {
+  life: "Życia",
+  sword: "Miecza",
+  magic: "Magii",
+};
+
 export function FieldServices({
   fieldId,
-  fieldCardIds,
+  fieldCards,
   busy,
   typedRolls,
   onRollOffer,
@@ -39,7 +47,14 @@ export function FieldServices({
   onService,
 }: {
   fieldId: FieldId;
-  fieldCardIds: string[];
+  /**
+   * The Karty lying here, with what is left beside a well.
+   *
+   * Ids alone until a Miejsce needed to say how much of itself was left — a
+   * Drzewo Życia with one fruit on it is a different offer from one with four,
+   * and the count is the Karta's rather than the square's.
+   */
+  fieldCards: { cardId: string; pool?: number }[];
   busy: boolean;
   /** The other face of `Simulated`: true at a physical table, where a die may be typed in rather than thrown. */
   typedRolls: boolean;
@@ -50,13 +65,47 @@ export function FieldServices({
   onSuggestion: OnSuggestion;
   onService?: OnService;
 }) {
-  // A shop that arrived on a card is not a different kind of shop from one
-  // printed on the board: the Targowisko settles on a field and sells eight
-  // Przedmioty from it, so it belongs in the same box with the same buttons.
-  const fromCards = fieldCardIds.flatMap((cardId) => {
+  /**
+   * The Karty that have settled here and are things you may go and do.
+   *
+   * A shop that arrived on a Karta is not a different kind of shop from one
+   * printed on the board — the Targowisko sells eight Przedmioty off a square
+   * it landed on — and a healer is not a different kind of healer either. The
+   * Cudotwórca lives on his Obszar "do końca rozgrywki" and gives two punkty
+   * Życia "podczas każdych odwiedzin", which is the Osada's Medyk with no board
+   * printed under him. Both belong in this box with the same buttons.
+   *
+   * `residesOn` is the wider question and `trades` the older, narrower one:
+   * every shop is a resident, but the Czarodziej and the Sztukmistrz sell
+   * nothing `kup` understands and were left out while the test was "does it
+   * trade". Asked as `||` rather than replaced, because a Karta can trade
+   * without staying — nothing in the base game does, and the two questions are
+   * still not the same question.
+   */
+  const fromCards = fieldCards.flatMap(({ cardId, pool }) => {
     const script = scriptFor(cardId);
-    if (!script || !trades(script.effect)) return [];
-    return [{ name: cardName(cardId), effect: script.effect }];
+    if (!script) return [];
+    if (!trades(script.effect) && !residesOn(cardId)) return [];
+    /**
+     * "Po znalezieniu Drzewa, połóż przy nim 4 punkty Życia [...] Po
+     * wykorzystaniu 4 punktów, Drzewo usycha."
+     *
+     * Said on the offer, because it is the offer: a well with one fruit left is
+     * a different thing to walk to than one with four, and until now the number
+     * lived on a database row that nothing on screen ever asked. A row written
+     * before the column reads as full, the same way `afterVisit` reads it.
+     */
+    const left = drawsFromPool(cardId) ? (pool ?? startingPool(cardId)) : null;
+    const beside =
+      left === null || script.disposition.kind !== "zostaje-z-pula"
+        ? null
+        : `${left} ${plural(left, "punkt", "punkty", "punktów")} ${POOL_OF[script.disposition.stat]}`;
+    return [
+      {
+        name: beside === null ? cardName(cardId) : `${cardName(cardId)} — ${beside}`,
+        effect: script.effect,
+      },
+    ];
   });
   const script = fieldScriptFor(fieldId);
   // A compulsory field is not offered here: "MUSISZ RZUCIĆ KOSTKĄ" happens to

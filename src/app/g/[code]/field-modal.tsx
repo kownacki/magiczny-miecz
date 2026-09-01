@@ -42,10 +42,6 @@ const NAMES = new Map<string, string>([
   ...EVENTS.map((c) => [c.id, c.name] as const),
   ...(items as Item[]).map((c) => [c.id, c.name] as const),
 ]);
-const TEXTS = new Map<string, string>([
-  ...EVENTS.map((c) => [c.id, c.text] as const),
-  ...(items as Item[]).map((c) => [c.id, c.text ?? ""] as const),
-]);
 /** Only the event deck carries the class that says whether a card is takeable. */
 const EVENT_BY_ID = new Map(EVENTS.map((card) => [card.id, card]));
 
@@ -70,6 +66,8 @@ export interface FieldCardHere {
    * rather than to this list.
    */
   viaTurn?: boolean;
+  /** What is left beside a Miejsce that lays out points (16.7). */
+  pool?: number;
 }
 
 /**
@@ -457,7 +455,7 @@ export function FieldModal({
               {fieldScriptFor(fieldId) && (
                 <FieldServices
                   fieldId={fieldId}
-                  fieldCardIds={cards.map((card) => card.cardId)}
+                  fieldCards={cards.map((card) => ({ cardId: card.cardId, pool: card.pool }))}
                   busy={busy}
                   typedRolls={typedRolls}
                   onRollOffer={(offer) => onAction({ action: "pole-tabela", offer })}

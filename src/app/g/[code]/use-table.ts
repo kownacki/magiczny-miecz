@@ -52,6 +52,14 @@ export interface FieldCard {
   cardId: CardId;
   /** Conjured by the test console, and marked with the wrench wherever it is drawn. */
   granted?: boolean;
+  /**
+   * What is left beside a Miejsce that lays points out (16.7).
+   *
+   * Three Karty have one — Drzewo Życia, Jezioro Magiczne, Zaklęte Źródło — and
+   * it is the only count in the box belonging to a Karta rather than to a
+   * Postać. Absent on everything else.
+   */
+  pool?: number;
 }
 
 export interface Game {

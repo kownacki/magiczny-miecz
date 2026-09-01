@@ -122,7 +122,14 @@ export interface Envelope {
    * turn, in a fight — and a card lying on an Obszar was the one place the
    * mark could not reach, because the flag stopped at the server.
    */
-  fieldCards: { id: string; fieldId: string | null; cardId: string; granted?: boolean }[];
+  fieldCards: {
+    id: string;
+    fieldId: string | null;
+    cardId: string;
+    granted?: boolean;
+    /** What is left beside a Miejsce that lays out points (16.7). */
+    pool?: number;
+  }[];
   stock: Record<string, number>;
   seats: EnvelopeSeat[];
 }
@@ -308,6 +315,11 @@ export function envelopeFor(
       fieldId: row.field_id,
       cardId: row.card_id,
       ...(row.granted ? { granted: true as const } : {}),
+      // Sent only where there is one, so every other Karta stays three fields
+      // wide on the wire. What is left beside a Drzewo Życia is public — 16.8
+      // makes what lies on an Obszar visible to everybody, and a well with one
+      // fruit on it is exactly the sort of thing a table plans around.
+      ...(row.pool !== null ? { pool: row.pool } : {}),
     })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.

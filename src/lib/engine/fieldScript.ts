@@ -1,6 +1,6 @@
 /** What the fields that offer something actually offer, in the same language the cards use. */
 
-import type { Effect } from "./cardScript";
+import { scriptFor, type Effect } from "./cardScript";
 import type { FieldId } from "./board";
 
 /**
@@ -833,6 +833,39 @@ export function compulsoryOffer(
  * can visit, and hoisting it into "Możesz tu odwiedzić" would offer a service
  * nobody at this Obszar can actually buy.
  */
+/**
+ * Whether this Karta has settled on the Obszar and is a thing you may visit.
+ *
+ * The other half of `trades`, and the same argument one step further. A shop
+ * that arrived on a Karta is not a different kind of shop from one printed on
+ * the board — that was `trades`' case, and the Targowisko its example. A
+ * *healer* that arrived on a Karta is not a different kind of healer either:
+ * the Cudotwórca lives on his Obszar "do końca rozgrywki" and restores two
+ * punkty Życia "podczas każdych odwiedzin", which is the Osada's Medyk with a
+ * different price and no board printed under him.
+ *
+ * Two conditions, and both matter.
+ *
+ * **It stays.** `zostaje` and `zostaje-z-pula` are the dispositions that make a
+ * Karta furniture — a fixture of the square rather than something happening to
+ * the character who turned it over. A Karta that leaves when it is read is an
+ * encounter and belongs in the kolejka, not in a list of what you may go and do.
+ *
+ * **You may walk past it.** `optional` is the verb the card itself uses:
+ * "podczas każdych odwiedzin", "która tu zawita", "jeżeli chcesz". The
+ * residents that do *not* say that — the Urocza Diablica's "jeżeli do niej
+ * trafisz, będziesz musiał", the Labirynt, the Spalona Ziemia — happen to you
+ * on arrival, so they are the kolejka's and must not also be offered here as
+ * something to choose. `owesAFrame` draws that line and this is its other side.
+ */
+export function residesOn(cardId: string): boolean {
+  const script = scriptFor(cardId);
+  if (!script) return false;
+  const stays =
+    script.disposition.kind === "zostaje" || script.disposition.kind === "zostaje-z-pula";
+  return stays && script.optional === true;
+}
+
 export function trades(effect: Effect): boolean {
   if (effect.op === "kup" || effect.op === "sprzedaj" || effect.op === "uzdrow") return true;
   if (effect.op === "po-kolei") return effect.steps.some(trades);
