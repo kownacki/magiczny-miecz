@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { fieldWithText } from "@/lib/view/fieldText";
 import { CardTile } from "./card-tile";
 import { TileRow } from "./tile-row";
@@ -21,7 +23,7 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
 import { Fold } from "./fold";
-import { fieldGroups } from "@/lib/view/fieldGroups";
+import { fieldGroups, type FieldGroupKey } from "@/lib/view/fieldGroups";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
 
@@ -159,6 +161,25 @@ export function FieldModal({
   onInspect: (cardId: CardId) => void;
   onClose: () => void;
 }) {
+  /**
+   * Which groups the reader has shut, by key.
+   *
+   * Shut rather than open, so the default needs no seeding and a group that
+   * appears mid-turn — somebody drops a Miecz on the Obszar you are reading —
+   * arrives open like the rest. Local to the window on purpose: this is one
+   * reader tidying one Obszar, not a preference about how the app looks, and
+   * `preferences.ts` is for the second kind.
+   */
+  const [shut, setShut] = useState<ReadonlySet<FieldGroupKey>>(() => new Set());
+  // Above the `!field` guard below: a hook after an early return is called on
+  // some renders and not others, which is the one thing React will not have.
+  const toggle = (key: FieldGroupKey) =>
+    setShut((was) => {
+      const next = new Set(was);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+
   const field = fieldWithText(fieldId);
 
   if (!field) return null;
@@ -225,9 +246,7 @@ export function FieldModal({
             ) : (
               /* One `Fold` per group, the same section every shelf in the app
                  is built from — the rule above it, the small capitals, the
-                 tally beside the name. Not foldable: `onToggle` is what puts
-                 the triangle on, and a group of two cards has nothing worth
-                 hiding behind a second click.
+                 tally beside the name, the triangle.
 
                  `fieldGroups` has already dropped the empty ones, so an Obszar
                  with a single Wróg on it reads "Wrogowie 1" and stops. */
@@ -243,6 +262,22 @@ export function FieldModal({
                      groups under it. `tone` is the knob `Fold` already has for
                      exactly this. */
                   tone="text-muted/70"
+                  open={!shut.has(group.key)}
+                  onToggle={() => toggle(group.key)}
+                  /* What the heading keeps when it is shut, exactly as
+                     Przyjaciele does: the tally alone says how many are hidden
+                     and not which, and on an Obszar which is the whole
+                     question — "Wrogowie 2" is a reason to look again, and
+                     "Wilkołak · Demon" is a reason to walk away. */
+                  aside={
+                    shut.has(group.key) ? (
+                      <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-ochre/80">
+                        {group.cards
+                          .map((lying) => NAMES.get(lying.cardId) ?? lying.cardId)
+                          .join(" · ")}
+                      </span>
+                    ) : undefined
+                  }
                 >
                   {/* The same tiles as the Plecak and the Księga, for the same
                       reason: a card is recognised by its picture, and a player
