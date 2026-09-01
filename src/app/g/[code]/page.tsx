@@ -792,6 +792,22 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   // turn is *offering* is `factsIn`'s reading, not this one.
   const onField = turnState.phase === "field" ? turnState : null;
 
+  /**
+   * What this Obszar still owes, in the shape `dutiesBeforeEnding` asks for.
+   *
+   * The same reading the kolejka strip is drawn from and the same one
+   * `finishTurn` refuses on, so the queue, the disabled button and the server's
+   * refusal cannot tell a player three different things. Fought counts as
+   * settled beside resolved: 17.4 ends a Wróg the moment the dice are compared,
+   * won or lost.
+   */
+  const owedHere = onField
+    ? {
+        drawn: onField.drawn,
+        settled: [...(onField.resolved ?? []), ...(onField.fought ?? [])],
+      }
+    : null;
+
   const overlays = (
     <>
       {/* Drawn in test mode, and — folded to one line — whenever something has
@@ -1144,7 +1160,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           canEnd={
             !!active &&
             !panel.blocksEnding &&
-            mayEndTurn({ fieldId: active.field_id, done: [], phase: turnState.phase })
+            mayEndTurn({ fieldId: active.field_id, done: [], phase: turnState.phase, onField: owedHere })
           }
           whyNotEnd={
             active
@@ -1153,6 +1169,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     fieldId: active.field_id,
                     done: [],
                     phase: turnState.phase,
+                    onField: owedHere,
                   }),
                 )
               : null

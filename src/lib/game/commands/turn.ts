@@ -18,6 +18,7 @@ import {
 import { holdOverflow, refuseWhileOverflow } from "./overflow";
 import { refuseWhileBeastAwaits } from "./beast";
 import { putOnPile } from "./piles";
+import { dutiesBeforeEnding, whyCannotEnd } from "@/lib/engine/duties";
 
 /**
  * 13.2's fork: a turn is spent meeting somebody, or exploring the Obszar.
@@ -492,6 +493,44 @@ export function finishTurn(
     if (held.game) return { writes: held, result: "held" };
 
     if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
+    refuseWhileOwed(snapshot);
   }
   return { writes: passTurn(snapshot, command.force), result: "passed" };
+}
+
+/**
+ * The Obszar's own two refusals, which nothing enforced until now.
+ *
+ * A Wróg that attacks (16.2), a Spotkanie whose instruction is binding (16.1),
+ * a Nieznajomy or a Miejsce that happens to you rather than offering itself
+ * (16.5, 16.7), and the Obszar's own MUSISZ (13.5) — every one of them was
+ * drawn as `compulsory` in the turn's windows and every one of them could be
+ * walked away from by pressing the button beside them. A rule kept by a label
+ * is not kept, which is the same fault `drawCard` had when the count lived only
+ * in a disabled button.
+ *
+ * `move` and `beast` are already refused above by doors of their own, so they
+ * are dropped here rather than reported twice with different words.
+ *
+ * The reading is `dutiesBeforeEnding`'s, which is `nextFrame`'s, which is what
+ * the kolejka on screen is drawn from — so the queue, the disabled button and
+ * this refusal cannot tell a player three different things.
+ */
+function refuseWhileOwed(snapshot: Snapshot): void {
+  const state = topIf(snapshot.game.turn_state, "field");
+  const owed = dutiesBeforeEnding({
+    fieldId: state?.fieldId ?? null,
+    done: [],
+    phase: state ? "field" : undefined,
+    onField: state
+      ? {
+          drawn: state.drawn,
+          // 17.4 settles a Wróg the moment the dice are compared, won or lost,
+          // and `beginFight` refuses a rematch on that same list.
+          settled: [...(state.resolved ?? []), ...(state.fought ?? [])],
+        }
+      : null,
+  }).filter((duty) => duty.kind === "kolejka" || duty.kind === "obszar");
+  const why = whyCannotEnd(owed);
+  if (why) throw new Error(why);
 }
