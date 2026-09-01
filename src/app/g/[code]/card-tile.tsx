@@ -217,8 +217,14 @@ export function CardTile({
         )}
         {struck && (
           <span aria-hidden className="pointer-events-none absolute inset-0">
-            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-ochre/60" />
-            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-ochre/60" />
+            {/* Vermilion, at the weight `ItemSlot` strikes a spent trofeum
+                with, because it is the same mark meaning the same thing. Ochre
+                was wrong twice over: it is this app's word for "you can reach
+                this", so the crossing-out was drawn in the colour of an offer,
+                and a Karta struck in gold beside a trofeum struck in red is two
+                marks for one idea. */}
+            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-vermilion/70" />
+            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
           </span>
         )}
         {/* Conjured rather than dealt, marked on the tile and not only on the
