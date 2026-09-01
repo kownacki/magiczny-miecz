@@ -185,10 +185,21 @@ export function PlayersDrawer({
                 */}
               <button
                 onClick={() => toggleSeat(seat.id)}
-                className="flex w-full items-center gap-2 px-2 py-1.5 text-left"
+                className="flex w-full items-start gap-2 px-2 py-1.5 text-left"
               >
+                {/* Against the top line, both of them.
+                    
+                    The dot is the seat's colour and „+" is the handle, and both
+                    belong to the row's first line — the one with the name on
+                    it. Centred against the pair they drifted to the seam
+                    between the two lines, pointing at neither: the dot sat
+                    beside the gap under the name and the handle beside the
+                    Postać, which is not what either is about. `mt-1` puts the
+                    dot on the name's own middle rather than on the top of its
+                    line box, which is where `items-start` alone would leave a
+                    12px circle beside 20px of text. */}
                 <span
-                  className="h-3 w-3 shrink-0 rounded-full"
+                  className="mt-1 h-3 w-3 shrink-0 rounded-full"
                   style={{ background: colour }}
                   aria-hidden
                 />
@@ -273,7 +284,12 @@ export function PlayersDrawer({
                   )}
                 </span>
                 </span>
-                <span className="shrink-0 self-center text-[10px] text-muted">
+                {/* Bigger than the small print it sits beside, because it is
+                    not print: it is the one thing on the row you press, and at
+                    ten pixels it read as a footnote to the numbers above it.
+                    `leading-5` keeps its line box the name's, so growing the
+                    glyph does not move it off the line it belongs to. */}
+                <span className="shrink-0 self-start text-[15px] leading-5 text-muted">
                   {expanded ? "−" : "+"}
                 </span>
               </button>
