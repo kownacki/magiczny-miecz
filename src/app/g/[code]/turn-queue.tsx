@@ -11,7 +11,7 @@
  */
 
 import Image from "next/image";
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { seatColour } from "@/lib/view/boardMap";
 import { characterStandeeUrl } from "@/lib/view/cardImages";
 import { plural, roundShown } from "@/lib/engine/polish";
 import { DEFAULT_DEPTH, projectQueue, type QueueEntry } from "@/lib/engine/turnQueue";
@@ -95,7 +95,7 @@ function QueueChip({
   mine: boolean;
   onPick?: (seatIndex: number) => void;
 }) {
-  const colour = SEAT_COLOURS[entry.seatIndex % SEAT_COLOURS.length];
+  const colour = seatColour(entry.seatIndex);
   const standee = seat?.characterId ? characterStandeeUrl(seat.characterId) : null;
   const name = seat?.playerName ?? `Miejsce ${entry.seatIndex + 1}`;
   const skipped = entry.status === "skipped";

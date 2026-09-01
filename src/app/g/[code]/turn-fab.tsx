@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { seatColour } from "@/lib/view/boardMap";
 
 /**
  * The turn, at the foot of every screen at the table.
@@ -70,7 +70,7 @@ export function TurnFab({
   owed: string | null;
   onOpen: () => void;
 }) {
-  const colour = SEAT_COLOURS[seatIndex % SEAT_COLOURS.length];
+  const colour = seatColour(seatIndex);
   const pill = useRef<HTMLButtonElement>(null);
 
   /**

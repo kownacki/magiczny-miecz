@@ -15,7 +15,7 @@
  */
 
 import type { Character } from "@/data/types";
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { seatColour as colourOfSeat } from "@/lib/view/boardMap";
 import { characterStandeeUrl } from "@/lib/view/cardImages";
 import {
   RANDOM_CHARACTER_ID,
@@ -298,7 +298,7 @@ export function seatPortrait(seat: LobbySeat, character: Character | null): stri
  * the foot of the card they took are the same colour by construction.
  */
 export function seatColour(seat: LobbySeat): string {
-  return SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
+  return colourOfSeat(seat.seatIndex);
 }
 
 /* --------------------------------------------------------------------------

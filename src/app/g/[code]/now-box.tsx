@@ -13,7 +13,7 @@
  * this answers "now", and they are the same question asked twice.
  */
 
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { seatColour } from "@/lib/view/boardMap";
 import { roundShown } from "@/lib/engine/polish";
 import type { TurnStep, TurnWindow, WindowId } from "@/lib/engine/turnWindows";
 import { Lookable } from "./lookable";
@@ -126,7 +126,7 @@ export function NowBox({
        * cannot read the name.
        */
       className="flex min-h-[180px] w-[270px] shrink-0 flex-col rounded-lg border bg-panel p-3"
-      style={{ borderColor: SEAT_COLOURS[seatIndex % SEAT_COLOURS.length] }}
+      style={{ borderColor: seatColour(seatIndex) }}
     >
       <header className="mb-2 min-w-0">
         {/* What the box is, in the same hand as Dziennik and the other
@@ -158,7 +158,7 @@ export function NowBox({
               are without being told. */}
           <span
             className="h-2 w-2 shrink-0 rounded-full"
-            style={{ background: SEAT_COLOURS[seatIndex % SEAT_COLOURS.length] }}
+            style={{ background: seatColour(seatIndex) }}
             aria-hidden
           />
           {/* In brackets after the name, the way the journal has always

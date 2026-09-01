@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { seatColour } from "@/lib/view/boardMap";
 import { roundShown } from "@/lib/engine/polish";
 import { ChromeButton, SurfaceHead } from "./chrome";
 import { readSeatToken } from "@/lib/game/seatToken";
@@ -152,10 +152,7 @@ export function Journal({
                   lines[lines.length - 1].seatIndex === null
                     ? undefined
                     : {
-                        backgroundColor:
-                          SEAT_COLOURS[
-                            lines[lines.length - 1].seatIndex! % SEAT_COLOURS.length
-                          ],
+                        backgroundColor: seatColour(lines[lines.length - 1].seatIndex!),
                       }
                 }
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
@@ -232,7 +229,7 @@ function Line({
   eqMode: EqMode;
 }) {
   const colour =
-    line.seatIndex === null ? null : SEAT_COLOURS[line.seatIndex % SEAT_COLOURS.length];
+    line.seatIndex === null ? null : seatColour(line.seatIndex);
 
   // A round boundary is not somebody's move, so it is not drawn like one: no
   // dot, and set like the heading it replaces. It shows in the collapsed sliver

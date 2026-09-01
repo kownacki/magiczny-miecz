@@ -5,15 +5,7 @@ import type { CardId } from "@/data/ids";
 import { cardArtUrl } from "@/lib/view/cardImages";
 
 import { useState } from "react";
-import {
-  BRIDGE_LINKS,
-  CELLS,
-  CELL_BY_ID,
-  SEAT_COLOURS,
-  VIEW,
-  dotPositions,
-  type Cell,
-} from "@/lib/view/boardMap";
+import { BRIDGE_LINKS, CELLS, CELL_BY_ID, VIEW, dotPositions, type Cell, seatColour } from "@/lib/view/boardMap";
 
 export interface MapSeat {
   id: string;
@@ -170,7 +162,7 @@ export function BoardMap({
               cx={spots[i].x}
               cy={spots[i].y}
               r={11}
-              fill={SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length]}
+              fill={seatColour(seat.seatIndex)}
               stroke={seat.seatIndex === activeSeatIndex ? "#f0e6d2" : "#10131f"}
               strokeWidth={seat.seatIndex === activeSeatIndex ? 4 : 2}
             />

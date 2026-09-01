@@ -34,7 +34,7 @@ import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import { forbiddenTo } from "@/lib/engine/holdings";
 import Image from "next/image";
 import { characterKind, plural } from "@/lib/engine/polish";
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { seatColour } from "@/lib/view/boardMap";
 import { RailStat, StatFigure } from "./token-rail";
 import { FightsForYou } from "./fights-for-you";
 import { Fold } from "./fold";
@@ -396,7 +396,7 @@ export function SeatCard({
             <span className="flex min-w-0 flex-1 items-center gap-2 normal-case tracking-normal">
               <span
                 className="h-2 w-2 shrink-0 rounded-full"
-                style={{ background: SEAT_COLOURS[seat.seat_index % SEAT_COLOURS.length] }}
+                style={{ background: seatColour(seat.seat_index) }}
                 aria-hidden
               />
               <span className="truncate text-ink">
@@ -525,7 +525,7 @@ export function SeatCard({
             and nothing anywhere said which one was yours. */}
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: SEAT_COLOURS[seat.seat_index % SEAT_COLOURS.length] }}
+          style={{ background: seatColour(seat.seat_index) }}
           aria-hidden
         />
         <h3 className="font-[family-name:var(--font-display)] text-ink">

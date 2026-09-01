@@ -261,6 +261,19 @@ export const SEAT_COLOURS: readonly string[] = [
 ];
 
 /**
+ * The colour for one seat, wrapping round when there are more seats than
+ * colours.
+ *
+ * The wraparound was written out at every use — `SEAT_COLOURS[i %
+ * SEAT_COLOURS.length]`, eleven times across nine files — which is eleven
+ * chances to reach past the end of the array on a seventh player. lobby-view.ts
+ * had already wrapped it for itself and only the lobby could use that one.
+ */
+export function seatColour(seatIndex: number): string {
+  return SEAT_COLOURS[seatIndex % SEAT_COLOURS.length];
+}
+
+/**
  * Where to draw each player's dot, given who is standing where.
  *
  * Several characters share a field constantly — everyone starts scattered but

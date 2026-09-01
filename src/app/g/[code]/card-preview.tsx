@@ -19,7 +19,9 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { cardImageUrl, characterImageUrl } from "@/lib/view/cardImages";
+import {
+  faceFor,
+} from "@/lib/view/cardImages";
 import { characterProfile, itemProfile } from "@/lib/engine/abilityText";
 import { CardFacts, hasFacts } from "./card-facts";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
@@ -437,11 +439,7 @@ export function CardPreview({
   // A character's id is not a card id, even when it looks like one: `demon` and
   // `czarodziej` name both. Going through the card registry for those two hands
   // back a Wróg and a Nieznajomy rather than the Postać being pointed at.
-  const src = imageless
-    ? null
-    : card.character
-      ? characterImageUrl(card.cardId)
-      : cardImageUrl(card.cardId, card.ref);
+  const src = imageless ? null : faceFor(card);
   // A Postać is read at the size the detail view reads one at; everything else
   // is recognised at the smaller one. See `CHARACTER_PICTURE_WIDTH`.
   const pictureWidth = card.character ? CHARACTER_PICTURE_WIDTH : PICTURE_WIDTH;

@@ -215,3 +215,32 @@ export function natureCardUrl(nature: string | null): string | null {
   const face = nature === null ? undefined : NATURE_FACE[nature];
   return face ? `/cards/natura-${face}.jpg` : null;
 }
+
+/**
+ * What a card the browser is holding looks like, whichever family it is from.
+ *
+ * A Karta Postaci and a Karta Zdarzeń are looked up in different places and
+ * `demon` and `czarodziej` each name one of each — so the id alone hands back
+ * the wrong picture rather than none, which is the failure hardest to notice.
+ * Every caller therefore carried the same `card.character ? … : …` branch, in
+ * three places and twice per place: once for the whole card and once for the
+ * illustration cut out of it.
+ *
+ * Taking the flag and the two ids together means a caller cannot pick the
+ * lookup and the id out of step.
+ */
+export interface CardArt {
+  cardId: string;
+  ref?: string;
+  character?: boolean;
+}
+
+/** The whole card, framed, as it is printed. */
+export function faceFor(card: CardArt): string | null {
+  return card.character ? characterImageUrl(card.cardId) : cardImageUrl(card.cardId, card.ref);
+}
+
+/** Just the illustration, for where a whole card would be a grey smear. */
+export function artFor(card: CardArt): string | null {
+  return card.character ? characterArtUrl(card.cardId) : cardArtUrl(card.cardId, card.ref);
+}

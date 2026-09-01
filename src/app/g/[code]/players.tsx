@@ -23,7 +23,7 @@ import { Lookable } from "./lookable";
 import Image from "next/image";
 import type { Character } from "@/data/types";
 import { characterStandeeUrl } from "@/lib/view/cardImages";
-import { SEAT_COLOURS } from "@/lib/view/boardMap";
+import { seatColour } from "@/lib/view/boardMap";
 import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import { asNature } from "./table";
@@ -159,7 +159,7 @@ export function PlayersDrawer({
           const portrait = character ? characterStandeeUrl(character.id) : null;
           const expanded = open.has(seat.id);
           const mine = seat.id === mySeatId;
-          const colour = SEAT_COLOURS[seat.seatIndex % SEAT_COLOURS.length];
+          const colour = seatColour(seat.seatIndex);
 
           return (
             <div

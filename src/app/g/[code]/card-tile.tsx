@@ -8,10 +8,8 @@ import {
   CHARACTER_ART_RATIO,
   TILE_ART_HEIGHT,
   TILE_WIDTH,
-  cardArtUrl,
-  cardImageUrl,
-  characterArtUrl,
-  characterImageUrl,
+  artFor,
+  faceFor,
 } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
 import { CardMark, WornMark } from "./card-mark";
@@ -108,9 +106,7 @@ export function CardTile({
   // The illustration, not the whole card. A card shrunk to tile size is a grey
   // smear with a four-pixel title; the picture is the thing a player actually
   // recognises when reaching across a table. The whole card is one hover away.
-  const src = card.character
-    ? characterArtUrl(card.cardId)
-    : cardArtUrl(card.cardId, card.ref);
+  const src = artFor(card);
   const width = size === "md" ? 132 : TILE_WIDTH;
   // The tile takes the shape of whichever family it is drawing, rather than
   // cropping the picture back into a box built for the other one. A Karta
@@ -373,9 +369,7 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
   // that knows to: `demon` and `czarodziej` each name a character *and* an
   // event card, so the id alone would hand back the wrong picture rather than
   // none — the failure that is hardest to notice.
-  const src = card.character
-    ? characterImageUrl(card.cardId)
-    : cardImageUrl(card.cardId, card.ref);
+  const src = faceFor(card);
   // Coverage is about Karty Zdarzeń — whether the app can carry out what a card
   // does when it is drawn. A Karta Postaci is not drawn and not resolved; it is
   // who you are for the whole game. Asking the registry about one got "brak"

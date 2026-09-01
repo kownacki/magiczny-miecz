@@ -70,10 +70,14 @@ export function characterName(characterId: string): string {
  * buys Przedmioty, 12.5 has a Zaklęcie spoken out loud, and both arrive as a
  * bare id.
  *
- * `src/lib/game/turnStore.ts` and `src/lib/game/commands/holdings.ts` each
- * carry a byte-identical copy of this, written before there was anywhere in the
- * engine to put it. They should import this one; nothing else in this file's
- * warning about two copies of one label is any less true of a lookup.
+ * Both the copies this note used to name — in `turnStore.ts` and
+ * `commands/holdings.ts` — are gone, and their callers import this one.
+ *
+ * What remains elsewhere is not a copy of this and should not be folded into
+ * it. `journalText.ts` takes `unknown` off a stored payload and answers
+ * "kartę" for a row that has none, and `consoleStore.ts` takes `string | null`
+ * off a column and answers "—" for an empty one. Those fallbacks are the
+ * surfaces' own sentences, not this lookup wearing a guard.
  */
 export function cardName(cardId: string): string {
   return (
