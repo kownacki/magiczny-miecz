@@ -143,26 +143,26 @@ type Glyph = "minimise" | "shrink" | "restore" | "expand" | "collapse" | "pin" |
 const PATHS: Record<Glyph, React.ReactNode> = {
   // Down into the edge it is docked against.
   minimise: <path d="M5 8l7 7 7-7" />,
+  // The sheet used the chevron, and a chevron says "down" — which is what a
+  // console docked to the bottom edge does and not what this does. The sheet
+  // does not slide anywhere: it becomes the pill at the foot of the screen.
   /**
    * Into the corner it goes to, which is what this one actually does.
    *
-   * The sheet used the chevron, and a chevron says "down" — which is what a
-   * console docked to the bottom edge does and not what this does. The sheet
-   * does not slide anywhere: it becomes the pill at the foot of the screen, so
-   * the glyph is the one every window manager uses for exactly that, a frame
-   * with an arrow drawn into the small square it collapses to.
+   * Drawn twice before this and wrong both times, because a glyph is not a
+   * thing to reason about: the first was a corner bracket, an arrow and a
+   * second square, which at sixteen pixels is more strokes than the box holds;
+   * the second put the arrowhead where it belonged and still read as pointing
+   * *out*, because a bracket and an arrow at that size make one shape. Four
+   * candidates were rendered at 96 and at 16 and looked at, and this is the one
+   * that says it: a closed frame, so the arrow has something to be inside of,
+   * and the arrow into the corner it collapses to.
    */
   shrink: (
     <>
-      {/* A corner of the frame rather than all four sides. At sixteen pixels a
-          whole rounded square, an arrow and a second square inside it is more
-          strokes than the box can hold — the first drawing of this looked
-          clipped because it was simply too full. Two sides say "frame" and
-          leave the arrow room to be read. */}
-      <path d="M10 4h8a2 2 0 0 1 2 2v8" />
-      <path d="M18 6l-5 5" />
-      <path d="M13 8v3h3" />
-      <rect x="4" y="14" width="6" height="6" rx="1.5" />
+      <rect x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+      <path d="M16 8l-5 5" />
+      <path d="M11 9.5V13h3.5" />
     </>
   ),
   restore: <path d="M5 16l7-7 7 7" />,
