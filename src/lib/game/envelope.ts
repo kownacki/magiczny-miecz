@@ -2,13 +2,13 @@
 
 import type { TurnState } from "@/lib/engine/stack";
 import { visibleTo } from "@/lib/engine/holdings";
-import { fightsForYou, heldAbilities } from "@/lib/engine/abilities";
+import { fightsForYou } from "@/lib/engine/abilities";
 import { spokenSpell } from "@/lib/engine/status";
 import { foldStatuses } from "@/lib/engine/statusRows";
 import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
-import { seatView, turnQueueOf } from "./commands/seat";
+import { cardLending, seatView, turnQueueOf } from "./commands/seat";
 import type { Snapshot } from "./change";
 import { AWAY_AFTER_MS } from "./commands/lobby";
 
@@ -397,8 +397,7 @@ export function envelopeFor(
         fights_for_you:
           fightsForYou(view.abilities) === null
             ? null
-            : (view.holdings.find((held) => fightsForYou(heldAbilities([held.cardId])))?.cardId ??
-              null),
+            : cardLending(view, (held) => fightsForYou(held) !== null),
         /**
          * What a player is shown beside their name, already worked out: the
          * browser gets rows, not a modelling problem.

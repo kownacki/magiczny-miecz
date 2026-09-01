@@ -20,7 +20,7 @@ import { cardName } from "@/lib/engine/polish";
 import { shelfFor, trophyPointsOf } from "@/lib/engine/trophies";
 import { SPELL_BY_REF } from "./decks";
 import { TROPHY_RATE, offersFor } from "./commands/shop";
-import { carriesSpell, fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
+import { carriesSpell, fightsForYou, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
 import { foldStatuses, type StatusRow } from "@/lib/engine/statusRows";
 import { change } from "./change";
@@ -96,13 +96,13 @@ import {
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
-import { only, replaceTop, top } from "@/lib/engine/stack";
+import { only, replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { askOnTop } from "@/lib/engine/ask";
 import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
 import { overflowOf, waysOut } from "./commands/overflow";
 import type { Snapshot } from "./change";
-import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
+import { cardLending, eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
 import { SLOT_LABEL, STORAGE, inPlayAt } from "@/lib/engine/slots";
 import { DEALABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
@@ -272,15 +272,9 @@ function askLines(snapshot: Snapshot, forSeatId: string | null): string[] {
 }
 
 /** The question the turn is stuck on, for `look`. */
-function waitingOn(turnState: unknown): string[] {
-  const state = turnState as {
-    phase?: string;
-    fieldId?: FieldId;
-    drawn?: { cardId: string }[];
-    resolved?: string[];
-    fought?: string[];
-  };
-  if (state.phase !== "field") return [];
+function waitingOn(frame: TurnPhase): string[] {
+  if (frame.phase !== "field") return [];
+  const state = frame;
   const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);
   /**
    * Fought counts as dealt with, not just resolved.
@@ -424,8 +418,8 @@ export interface Actor {
  */
 function championLine(view: { abilities: readonly Ability[]; holdings: readonly { cardId: string }[] }): string {
   if (!fightsForYou(view.abilities)) return "";
-  const who = view.holdings.find((held) => fightsForYou(heldAbilities([held.cardId])));
-  return who ? `${cardName(who.cardId)} fights for you` : "";
+  const who = cardLending(view, (held) => fightsForYou(held) !== null);
+  return who ? `${cardName(who)} fights for you` : "";
 }
 
 export async function runCommand(
@@ -1319,16 +1313,11 @@ export async function runCommand(
     case "fight": {
       const seat = seatOf(null);
       const snapshot = await activeStore().load(gameId);
-      const state = top(snapshot.game.turn_state) as {
-        phase?: string;
-        drawn?: { cardId: string; cardClass: string }[];
-        resolved?: string[];
-      };
-
       // Already in one — the dice are what is owed, not another opponent.
-      if (state.phase !== "fight") {
-        const waiting = (state.drawn ?? []).filter(
-          (one) => one.cardClass === "foe" && !(state.resolved ?? []).includes(one.cardId),
+      const field = topIf(snapshot.game.turn_state, "field");
+      if (field) {
+        const waiting = (field.drawn ?? []).filter(
+          (one) => one.cardClass === "foe" && !(field.resolved ?? []).includes(one.cardId),
         );
         if (waiting.length === 0) throw new Error("No Wróg here to fight.");
         const wanted = command.cardId
@@ -1351,29 +1340,15 @@ export async function runCommand(
        * is asked for here rather than by the verb that starts the fight: every
        * fight comes through this line, and only some of them owe it.
        */
-      const owed = top((await activeStore().load(gameId)).game.turn_state) as {
-        fight?: { strengthRoll?: number | null };
-      };
-      if (owed.fight?.strengthRoll === null) await rollGuardianStrength(gameId, null);
+      const owed = topIf((await activeStore().load(gameId)).game.turn_state, "fight");
+      if (owed?.fight.strengthRoll === null) await rollGuardianStrength(gameId, null);
 
       // Null on both, because the app throws its own dice in simulation.
       await fightRoll(gameId, "player", null);
       await fightRoll(gameId, "enemy", null);
 
-      const after = top((await activeStore().load(gameId)).game.turn_state) as {
-        fight?: {
-          cardName: string;
-          playerTotal: number;
-          enemyTotal: number;
-          playerRoll: number | null;
-          enemyRoll: number | null;
-          /** An object, not a string — `CombatResult` carries who won as well. */
-          result: { outcome: "wygrana" | "przegrana" | "remis" } | null;
-          /** Set only in a duel, which is the one fight 17.9 pays out for. */
-          opponentSeat?: number;
-        };
-      };
-      const fight = after.fight;
+      const after = topIf((await activeStore().load(gameId)).game.turn_state, "fight");
+      const fight = after?.fight;
       if (!fight) return "The fight is over.";
       const mine = fight.playerTotal + (fight.playerRoll ?? 0);
       const theirs = fight.enemyTotal + (fight.enemyRoll ?? 0);
@@ -1401,8 +1376,8 @@ export async function runCommand(
       }
 
       await resolveFight(gameId);
-      const ended = top((await activeStore().load(gameId)).game.turn_state) as { phase?: string };
-      return `${said} — ${outcome}.${ended.phase === "fight" ? " Still fighting." : ""}`;
+      const ended = topIf((await activeStore().load(gameId)).game.turn_state, "fight");
+      return `${said} — ${outcome}.${ended ? " Still fighting." : ""}`;
     }
 
     case "escape": {
@@ -1646,12 +1621,7 @@ export async function runCommand(
      */
     case "spoils": {
       const seat = seatOf(null);
-      const state = top((await activeStore().load(gameId)).game.turn_state) as {
-        phase?: string;
-        fight?: { opponentSeat?: number; result?: { outcome: string } | null };
-      };
-      const fight = state.fight;
-      if (state.phase !== "fight" || !fight) throw new Error("Nie ma walki.");
+      const { fight } = requireTop((await activeStore().load(gameId)).game.turn_state, "fight");
       if (fight.opponentSeat === undefined) {
         throw new Error("Tylko pojedynek z Postacią coś daje zwycięzcy (17.9).");
       }
@@ -1762,13 +1732,11 @@ export async function runCommand(
         const done = await answerScript(gameId, { choices: command.choices });
         return said(done.did, done.pending !== null);
       }
-      const state = top(snapshot.game.turn_state) as {
-        phase?: string;
-        fieldId?: FieldId;
-        drawn?: { cardId: string }[];
-        resolved?: string[];
-      };
-      if (state.phase !== "field") throw new Error("Nothing is waiting for an answer.");
+      const state = requireTop(
+        snapshot.game.turn_state,
+        "field",
+        "Nothing is waiting for an answer.",
+      );
 
       const decided = { choices: command.choices };
       // The Obszar's own table first: 13.4 makes it compulsory, so it is what
@@ -1888,21 +1856,20 @@ export async function runCommand(
         ].join("\n");
       }
 
-      const state = top(game.turn_state) as {
-        phase?: string;
-        roll?: number;
-        options?: { fieldId: string; fieldName: string }[];
-      };
+      // Two questions: what is on screen at all, and the roll and options
+      // that only a `move` frame has.
+      const state = top(game.turn_state);
+      const moving = topIf(game.turn_state, "move");
       const active = snapshot.seats.find((one) => one.seat_index === game.active_seat);
       const here = snapshot.fieldCards.filter((one) => one.field_id === active?.field_id);
       const standing = snapshot.seats.filter(
         (one) => one.field_id === active?.field_id && !one.eliminated,
       );
-      const phase = state.phase ?? "";
+      const phase = state.phase;
       return [
         `Round ${game.round} — ${active ? named(active) : "nobody"}`,
         `Obszar: ${fieldName(active?.field_id ?? null)}`,
-        `Phase: ${PHASE[phase] ?? phase}${state.roll ? ` (rolled ${state.roll})` : ""}`,
+        `Phase: ${PHASE[phase] ?? phase}${moving ? ` (rolled ${moving.roll})` : ""}`,
         // The pile under the running frame, when there is one — a summoned
         // fight over the roll it interrupted. Printed bottom-up so it reads in
         // the order it will resolve back down. Silent at depth 1, which is
@@ -1912,8 +1879,8 @@ export async function runCommand(
               `Stack: ${game.turn_state.stack.map(frameLabel).join(" › ")}`,
             ]
           : []),
-        ...(state.options?.length
-          ? [`Reaches: ${state.options.map((one) => one.fieldName).join(", ")}`]
+        ...(moving?.options.length
+          ? [`Reaches: ${moving.options.map((one) => one.fieldName).join(", ")}`]
           : []),
         ...(here.length
           ? [`On the Obszar: ${here.map((one) => cardName(one.card_id)).join(", ")}`]

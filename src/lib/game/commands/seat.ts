@@ -518,3 +518,24 @@ export function setEndlessStock(
     result: undefined,
   };
 }
+
+/**
+ * Which Karta in a hand is the one lending an ability.
+ *
+ * `SeatView.abilities` is a flat list — what the character can do, with the
+ * card that grants it dropped — which is the right shape for almost every
+ * question asked of it. Three places want the other half: the journal and the
+ * console both name the Przyjaciel who fights for you, and the peek names the
+ * card that let you look. Each re-scanned the holdings itself, asking
+ * `heldAbilities` one card at a time, which is this function written out.
+ *
+ * Takes the predicate rather than an ability kind because the callers do not
+ * agree on one: two ask `fightsForYou`, which reads a whole list, and one asks
+ * for a count above zero.
+ */
+export function cardLending(
+  view: { holdings: readonly { cardId: string }[] },
+  holds: (abilities: Ability[]) => boolean,
+): string | null {
+  return view.holdings.find((held) => holds(heldAbilities([held.cardId])))?.cardId ?? null;
+}

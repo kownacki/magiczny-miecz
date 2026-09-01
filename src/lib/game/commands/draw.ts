@@ -3,7 +3,7 @@
 import type { CardClass, EventCard } from "@/data/types";
 import type { EventId } from "@/data/ids";
 import { spellsAtSetup } from "@/lib/engine/characters";
-import { heldAbilities, spellsPeeked } from "@/lib/engine/abilities";
+import { spellsPeeked } from "@/lib/engine/abilities";
 import { openAsk, type AskFrame } from "@/lib/engine/ask";
 import { drawFrom, remaining, type Shuffle } from "@/lib/engine/deck";
 import { cardName, plural } from "@/lib/engine/polish";
@@ -14,7 +14,7 @@ import { afterDraw, type TurnPhase } from "@/lib/engine/turn";
 import { replaceTop, requireTop } from "@/lib/engine/stack";
 import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
-import { activeSeat, holdingsOf, seatById, seatView } from "./seat";
+import { activeSeat, cardLending, holdingsOf, seatById, seatView } from "./seat";
 import { refuseAgainst13_2 } from "./turn";
 
 /* --------------------------------------------------------------------------
@@ -302,8 +302,7 @@ export function peekSpells(
   // Which Karta is doing the offering, asked of the same abilities the number
   // came from rather than named here — the Chochlik is the only one today, and
   // this is where a second one would arrive without an edit.
-  const by =
-    view.holdings.find((one) => spellsPeeked(heldAbilities([one.cardId])) > 0)?.cardId ?? null;
+  const by = cardLending(view, (held) => spellsPeeked(held) > 0);
 
   return {
     writes: {
