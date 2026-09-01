@@ -358,29 +358,44 @@ describe("the resolution stack (docs/STACK.md)", () => {
   });
 
   /**
-   * The last assertion docs/STACK.md makes about moment 10, and the app does
-   * not keep it. Written out rather than left implied, because the scenario
-   * was written before the code precisely so this kind of thing would surface.
+   * The last assertion docs/STACK.md makes about moment 10, and the one the
+   * scenario was written before the code to catch.
    *
    * 15.2's worked example is explicit — Obbol is moved off the Płaskowyż by the
    * Zaklęta Ścieżka, does *not* fight the Niedźwiedź and does *not* take the
-   * gold, and they "stay face up for the next character". Here the Smok and the
-   * Grota do not stay: arriving lifts every Karta lying on the Obszar into the
-   * turn's frame and deletes the `fieldCards` rows, and the cut then throws
-   * that frame away — so two Karty leave the game altogether.
-   *
-   * The cause is that law 2's cut is carried out by `placeSeat`, which is the
-   * *manual override* — its own docstring is about a figure "put here by hand"
-   * — and it writes `only({ …, drawn: [] })`, discarding the stack rather than
-   * popping to the field frame and leaving what was on it behind.
-   *
-   * Left as a todo rather than fixed here: `placeSeat` is also the host's
-   * desync control, and giving the cut its own command is a rules change with
-   * Michał's name on it, not a test harness's to take.
+   * gold, and they "stay face up for the next character". They did not: arriving
+   * lifts every Karta lying on an Obszar into the turn's frame and deletes the
+   * `fieldCards` rows, and the cut then threw that frame away, so the Smok and
+   * the Grota left the game altogether.
    */
-  it.todo(
-    "10. the Smok and the Grota stay on the Płaskowyż for whoever comes next (15.2) — the cut deletes them; see placeSeat",
-  );
+  it("10. the Smok and the Grota stay on the Płaskowyż for whoever comes next (15.2, 16.8)", async () => {
+    const play = await untilCelinaArrives();
+    await play.run(resolveDrawnCard, {
+      cardId: KOSZMAR,
+      decided: { choices: [5], destination: "las-blednych-ogni" },
+      shuffle: asIs,
+    });
+
+    const left = play.snapshot.fieldCards
+      .filter((one) => one.field_id === "plaskowyz-mgiel")
+      .map((one) => one.card_id);
+    // The Smok unfought and the Grota beside him, which is the sentence
+    // docs/STACK.md has always ended moment 10 with.
+    expect(left).toContain(SMOK);
+    expect(left).toContain(GROTA);
+
+    /**
+     * And exactly what an ordinary turn ending here would have left, which is
+     * the property worth pinning rather than the list.
+     *
+     * `leaveCardsBehind` is one door and both walk through it, so a Karta whose
+     * own text sends it to the pile goes there either way and a Karta that waits
+     * stays either way. The Koszmar waits — his disposition is `do-pierwszej`,
+     * "czeka tu na pierwszą Postać" — so he is still lying there, exactly as he
+     * is when a turn simply ends on this Obszar.
+     */
+    expect(left.sort()).toEqual([GROTA, KOSZMAR, SMOK].sort());
+  });
 
   it("never holds two ask frames at once", async () => {
     const drawn = await throughTheDraw();

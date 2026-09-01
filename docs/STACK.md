@@ -3,9 +3,15 @@
 **Status: step 3 done, law 4 narrowed and built, step 4 proven for it**
 (2026-08-31). The Trójgłowy Smok has the `loop` frame, the CHOCHLIK has the
 `ask` frame, Odmiana Losu by a bystander turned out to need no code, and a
-Zaklęcie can now reach the fight beneath it. Nine of the acceptance test's ten
-moments run; the tenth (Celina's second turn, law 2's cut) is the one law never
-exercised end to end. All of it proven on table PHK2P across two devices and a
+Zaklęcie can now reach the fight beneath it.
+
+**The acceptance test runs end to end** (2026-09-01). All ten moments, no
+`todo`s. Moment 10 came last and cost a bug: law 2's cut threw away the frame
+it popped, and because arriving lifts an Obszar's Karty into that frame, the
+Smok and the Grota left the game — 15.2's Obbol example says outright they stay
+face up for the next character. `placeSeat` now leaves them behind through the
+same `leaveCardsBehind` an ordinary turn end uses, so the two doors cannot
+disagree. This is what a scenario written before the code is for. All of it proven on table PHK2P across two devices and a
 spectator.
 
 **What step 3 was for**: the MANUAL list in `coverage.ts` went from twenty-two

@@ -1,6 +1,7 @@
 /** The Postać on a seat: choosing and dealing it (0.1-0.4), its Natura (7.2-7.4), where its figure stands, and taking a new one after death (4.4). */
 
 import charactersData from "@/data/characters.json";
+import { leaveCardsBehind } from "./turn";
 import type { Character, EventCard, Nature } from "@/data/types";
 import { requireFieldId, fieldByName, type FieldId } from "@/lib/engine/board";
 import {
@@ -296,32 +297,65 @@ export function placeSeat(
    * left alone because the character has not moved yet this turn.
    */
   const phase = top(snapshot.game.turn_state).phase;
-  const restage: Changeset =
-    seat.seat_index === snapshot.game.active_seat &&
-    phase !== "roll" &&
-    phase !== "end"
-      ? {
-          game: {
-            // Freshly arrived: whatever was drawn belonged to the old field,
-            // and the new one has not been resolved at all. `draw: 0` rather
-            // than the field's printed count, because a figure put here by hand
-            // did not walk here, and 15.1 makes drawing a consequence of
-            // arriving.
-            turn_state: only({
-              phase: "field",
-              fieldId,
-              from: null,
-              draw: 0,
-              drawn: [],
-              fought: [],
-            }),
-          },
-        }
+  const moving =
+    seat.seat_index === snapshot.game.active_seat && phase !== "roll" && phase !== "end";
+
+  /**
+   * The Obszar keeps its Karty (16.8), whoever walks away from them and why.
+   *
+   * This is law 2's cut — „tak, jakby jego ruch zakończył się" somewhere else —
+   * and 15.2's worked example says outright what it costs: Obbol is moved off
+   * the Płaskowyż by the Zaklęta Ścieżka, does *not* fight the Niedźwiedź and
+   * does *not* take the gold, and they stay face up for the next character.
+   *
+   * They did not before. Arriving lifts every Karta lying on an Obszar into
+   * the turn's frame and deletes its `fieldCards` rows, so a frame thrown away
+   * took them with it and two Karty left the game — which the acceptance test
+   * in `stack.test.ts` was written to catch and duly did.
+   *
+   * `leaveCardsBehind` is the same door the end of an ordinary turn uses, so a
+   * Karta abandoned by a teleport and a Karta nobody got round to are put down
+   * the same way, including the ones whose own text sends them to the pile
+   * instead.
+   *
+   * The frame is searched for rather than read off the top: a cut can happen
+   * with a `script` frame standing over the field, which is exactly the case
+   * the Koszmar's wish makes.
+   */
+  const field = [...snapshot.game.turn_state.stack].reverse().find((one) => one.phase === "field");
+  const left: Changeset =
+    moving && field && field.phase === "field" && field.drawn.length > 0
+      ? leaveCardsBehind(snapshot, {
+          fieldId: field.fieldId,
+          remaining: field.drawn,
+          seatId: seat.id,
+          round: snapshot.game.round,
+        })
       : {};
 
+  const restage: Changeset = moving
+    ? {
+        game: {
+          // Freshly arrived: whatever was drawn belonged to the old field, and
+          // the new one has not been resolved at all. `draw: 0` rather than the
+          // field's printed count, because a figure put here did not walk here,
+          // and 15.1 makes drawing a consequence of arriving.
+          turn_state: only({
+            phase: "field",
+            fieldId,
+            from: null,
+            draw: 0,
+            drawn: [],
+            fought: [],
+          }),
+        },
+      }
+    : {};
+
   return {
-    writes: merge(
+    writes: mergeAll(
       { seats: [{ id: seat.id, patch: { field_id: fieldId } }] },
+      left,
       merge(restage, {
         journal: [
           {
