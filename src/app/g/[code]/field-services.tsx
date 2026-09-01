@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { fieldScriptFor, residesOn, trades } from "@/lib/engine/fieldScript";
+import { fieldScriptFor, offersFromCard } from "@/lib/engine/fieldScript";
 import { goodsId } from "@/lib/engine/goods";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import { cardName, plural } from "@/lib/engine/polish";
@@ -84,8 +84,7 @@ export function FieldServices({
    */
   const fromCards = fieldCards.flatMap(({ cardId, pool }) => {
     const script = scriptFor(cardId);
-    if (!script) return [];
-    if (!trades(script.effect) && !residesOn(cardId)) return [];
+    if (!script || !offersFromCard(cardId)) return [];
     /**
      * "Po znalezieniu Drzewa, połóż przy nim 4 punkty Życia [...] Po
      * wykorzystaniu 4 punktów, Drzewo usycha."

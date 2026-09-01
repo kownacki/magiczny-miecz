@@ -13,7 +13,7 @@ import { kindForCard } from "@/lib/engine/holdings";
 import type { FieldId } from "@/lib/engine/board";
 import { crossingFrom } from "@/lib/engine/rings";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
-import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { fieldScriptFor, offersFromCard } from "@/lib/engine/fieldScript";
 import { BridgeOrdeal, Crossing, Ferry } from "./crossing-controls";
 import { FieldServices } from "./field-services";
 import { isFerry } from "@/lib/engine/board";
@@ -252,7 +252,10 @@ export function FieldModal({
   const hasOffers =
     isFerry(fieldId) ||
     (field.text !== undefined && parseRollTable(field.text) !== null) ||
-    fieldScriptFor(fieldId) !== null;
+    fieldScriptFor(fieldId) !== null ||
+    // What has settled here counts too: the services of an Obszar are not all
+    // printed on it. See `offersFromCard`.
+    cards.some((card) => offersFromCard(card.cardId));
   const hasCrossing =
     crossingFrom(fieldId) !== undefined ||
     BRIDGE_ORDEAL.has(fieldId) ||
@@ -508,20 +511,22 @@ export function FieldModal({
             (phase === "field" || phase === "roll") &&
             (hasCrossing || onEnd) && (
             /**
-             * The rule belongs to the things you can *do*, not to a footnote.
+             * One rule at this boundary, and this section owns it.
              *
-             * On most turns this section holds nothing but the reason the turn
-             * cannot end yet — a sentence — and a full-width rule above a
-             * sentence is a divider separating one thing from nothing. It gets
-             * its border when it has a crossing, an ordeal, a wyprawa or a
-             * button in it; a bare "Najpierw: Rozpatrz: WILK (16.4)" is a
-             * remark and is set as one.
+             * Twice now a pair of them has shown up here with nothing in
+             * between, and twice the fix was to work out which of the two
+             * should be suppressed — a condition on the section, then another
+             * on the control inside it. Two conditions that have to agree are
+             * how you get two rules: each was right on its own and they were
+             * both true at once.
+             *
+             * So the boundary has an owner. This section draws the rule
+             * whenever it renders, and it only renders with something in it
+             * (`hasCrossing || onEnd`); nothing inside it draws one at all.
+             * `gap-3` is what separates a crossing from the button below it,
+             * which is what separates every other pair of things in here.
              */
-            <section
-              className={`flex flex-col gap-3 ${
-                hasCrossing || canEnd ? "border-t border-edge/60 pt-3" : "pt-1"
-              }`}
-            >
+            <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
               {crossingFrom(fieldId) && (
                 <Crossing
                   crossing={crossingFrom(fieldId)!}
@@ -556,14 +561,7 @@ export function FieldModal({
                   refuses — 10.1's move, 14.7's Bestia — and a greyed control
                   that does not say why is a control that looks broken. */}
               {onEnd && (
-                <div
-                  className={`flex flex-col gap-1 ${
-                    // Only where something above it needs separating from: the
-                    // section's own rule already does the job when this is all
-                    // there is.
-                    hasCrossing && canEnd ? "border-t border-edge/60 pt-3" : ""
-                  }`}
-                >
+                <div className="flex flex-col gap-1">
                   {/**
                    * The button, or the reason there is no button — never both.
                    *

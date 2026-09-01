@@ -858,6 +858,22 @@ export function compulsoryOffer(
  * on arrival, so they are the kolejka's and must not also be offered here as
  * something to choose. `owesAFrame` draws that line and this is its other side.
  */
+/**
+ * Whether a Karta lying here puts anything in the Obszar's "Możesz tu odwiedzić".
+ *
+ * The two questions asked as one, because two callers need the same answer and
+ * had it in different shapes: `FieldServices` built the list and the window
+ * above it decided whether to draw the box the list goes in — and that decision
+ * looked only at the *square*, so an Obszar whose services had all arrived on
+ * Karty drew no box at all. A Czarodziej who had settled on a Płaskowyż Mgieł
+ * was visitable and invisible.
+ */
+export function offersFromCard(cardId: string): boolean {
+  const script = scriptFor(cardId);
+  if (!script) return false;
+  return trades(script.effect) || residesOn(cardId);
+}
+
 export function residesOn(cardId: string): boolean {
   const script = scriptFor(cardId);
   if (!script) return false;
