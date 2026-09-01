@@ -76,6 +76,7 @@ export function SeatFigure({
   colour,
   /** Passed over this round — the wash the turn bar puts on a skipped chip. */
   dimmed = false,
+  lookup = true,
   onClick,
   title,
 }: {
@@ -90,6 +91,22 @@ export function SeatFigure({
   /** The seat's colour, which is what the border is for. */
   colour?: string;
   dimmed?: boolean;
+  /**
+   * Whether pointing at the figure opens the Karta behind it.
+   *
+   * On by default, and off wherever the figure is a way *to* the player rather
+   * than a picture of their Postać. The turn bar settled this once and its
+   * reasoning is the general one: a figure on a board carries a person's name
+   * and their seat colour, and the question somebody has when they reach for it
+   * is "who is that, and what have they got" — which is the roster's question,
+   * not the Karta's. Offering both means the pointer answers one question and
+   * the click answers a different one, off the same object.
+   *
+   * So the roster keeps the lookup, because you are already *in* the answer to
+   * the first question and the Karta is the next thing in; the Obszar's shelf
+   * does not, because it is a list of people and the click goes to them.
+   */
+  lookup?: boolean;
   onClick?: () => void;
   title?: string;
 }) {
@@ -98,7 +115,9 @@ export function SeatFigure({
   const card = cardOf(character, stone);
   // No `eqMode`: neither a Karta Postaci nor the Kamień card has a slot, and
   // `characterProfile` ignores the variant. It only matters for a Przedmiot.
-  const { handlers, preview } = useCardPreview(card);
+  // Null where the figure is not offering a lookup: the hook takes it, and a
+  // null card is a hover that opens nothing.
+  const { handlers, preview } = useCardPreview(lookup ? card : null);
   const height = figureHeight(width);
 
   const box = (
@@ -111,7 +130,17 @@ export function SeatFigure({
       {src ? (
         <Image
           src={src}
-          alt={card?.name ?? ""}
+          /**
+           * The Karta's name where the picture *is* the offer, and nothing
+           * where it is a picture of a person somebody else has already named.
+           *
+           * With the lookup on, this image is the one thing a reader is being
+           * pointed at and its name is the whole of what it says. With it off,
+           * the figure sits under a caption and inside a control that both say
+           * whose it is — so naming it a third time, as a Karta rather than as
+           * a person, is a screen reader reading out the costume.
+           */
+          alt={lookup ? (card?.name ?? "") : ""}
           width={width}
           height={height}
           className="h-full w-full object-cover"

@@ -439,6 +439,12 @@ export function FieldModal({
               stone={seat.stone}
               width={TILE_WIDTH}
               colour={seatColour(seat.seatIndex)}
+              /* No lookup — see `lookup` on the component. This shelf is a
+                 list of *people*, and the one question it raises is answered
+                 in Gracze, which is where the click goes. A hover onto the
+                 Karta Postaci here would be a second answer to a question
+                 nobody asked of an Obszar. */
+              lookup={false}
               onClick={onPickSeat ? () => onPickSeat(seat.id) : undefined}
               title={
                 onPickSeat ? `${nameOf(seat)} — otwórz w Graczach` : nameOf(seat)
