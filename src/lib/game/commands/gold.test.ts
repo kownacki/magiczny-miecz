@@ -6,7 +6,8 @@ import { asFieldId } from "@/lib/engine/board";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { killSeat } from "./life";
 import { turnToStone } from "./stone";
-import { takeFieldGold } from "./holdings";
+import { clearField, placeGold, takeFieldGold } from "./holdings";
+import { RULE_FOR } from "@/lib/engine/journalRules";
 
 const HERE = asFieldId("mroczna-polana")!;
 
@@ -138,5 +139,135 @@ describe("taking gold off an Obszar (12.1)", () => {
       ),
     });
     expect(takeFieldGold(full, { seatId: "seat-a", gold: 3 }).result.took).toBe(3);
+  });
+});
+
+/* ==========================================================================
+ * The console's two doors: coins conjured onto a square, and a square swept.
+ * ======================================================================= */
+
+describe("what the journal says about gold changing hands", () => {
+  /**
+   * Its own kind, and not `taken`.
+   *
+   * It rode on `taken` — the Przedmiot line — whose sentence names a Karta, so
+   * a purse filled off an Obszar was written down as „zdobywa: kartę": a card
+   * that was never there, on a turn where none was picked up. The rule went
+   * wrong with it, because `RULE_FOR` keys off the kind: 16.6 is the Przedmiot
+   * lying on the Obszar, and 12.1 is the sentence that names the gold.
+   */
+  it("files a purse filled off an Obszar under 12.1, not 16.6", () => {
+    const before = table({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: HERE, gold: 0 })],
+      fieldGold: [{ id: "fg-1", field_id: HERE, gold: 6 }],
+    });
+    const { writes } = takeFieldGold(before, { seatId: "seat-a", gold: 2 });
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "gold-taken",
+      payload: { gold: 2, fieldId: HERE },
+    });
+    expect(RULE_FOR["gold-taken"]).toBe("12.1");
+  });
+});
+
+describe("placing gold by fiat", () => {
+  it("lays it on the Obszar the Postać stands on", () => {
+    const before = table();
+    const { writes, result } = placeGold(before, { seatId: "seat-a", gold: 5, target: null });
+    expect(result).toEqual({ fieldId: HERE, gold: 5 });
+    expect(apply(before, writes).fieldGold.map((row) => row.gold)).toEqual([5]);
+  });
+
+  it("lays it on a named Obszar instead, without moving anybody", () => {
+    const before = table();
+    const there = asFieldId("karczma")!;
+    const after = apply(before, placeGold(before, { seatId: "seat-a", gold: 2, target: there }).writes);
+    expect(after.fieldGold.map((row) => [row.field_id, row.gold])).toEqual([[there, 2]]);
+    expect(after.seats[0].field_id).toBe(HERE);
+  });
+
+  /**
+   * Coins add up where Karty pile up. `dropGold` patches the row rather than
+   * inserting a second, which is the same reason `merge` resolves a column as
+   * later-wins: two rows for one square would be a total nobody adds.
+   */
+  it("adds to what is already lying there", () => {
+    const before = apply(table(), placeGold(table(), { seatId: "seat-a", gold: 4, target: null }).writes);
+    const after = apply(before, placeGold(before, { seatId: "seat-a", gold: 3, target: null }).writes);
+    expect(after.fieldGold.map((row) => row.gold)).toEqual([7]);
+  });
+
+  /** Money out of nowhere is still money — 3.1's bank hands out what it is asked for. */
+  it("takes nothing off anybody's purse", () => {
+    const before = table();
+    expect(apply(before, placeGold(before, { seatId: "seat-a", gold: 9, target: null }).writes).seats[0].gold)
+      .toBe(3);
+  });
+
+  it("refuses an amount that is not a number of coins", () => {
+    const before = table();
+    for (const gold of [0, -2]) {
+      expect(() => placeGold(before, { seatId: "seat-a", gold, target: null })).toThrow("Ile Sztuk Złota?");
+    }
+  });
+
+  /**
+   * The journal says a person did it, and `manual` is what marks it as the
+   * console rather than the game. `test-gold-field` and not `test-card-field`:
+   * the reader who follows the line has to find coins on that square, not a
+   * Karta that is not there.
+   */
+  it("writes it down as the override it is", () => {
+    const { writes } = placeGold(table(), { seatId: "seat-a", gold: 5, target: null });
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "test-gold-field",
+      manual: true,
+      payload: { gold: 5, fieldId: HERE },
+    });
+  });
+});
+
+describe("sweeping an Obszar takes the gold with the Karty", () => {
+  const dressed = () => {
+    const before = table();
+    return apply(before, placeGold(before, { seatId: "seat-a", gold: 6, target: null }).writes);
+  };
+
+  it("leaves no coins behind, and says how many went", () => {
+    const before = dressed();
+    const { writes, result } = clearField(before, { seatId: "seat-a", fieldId: HERE });
+    expect(result.gold).toBe(6);
+    expect(apply(before, writes).fieldGold).toEqual([]);
+  });
+
+  /**
+   * `clear` with a name takes the one thing named. Money has no name to type,
+   * so a named sweep cannot be asking for it — and taking it anyway would be
+   * the command doing something nobody typed.
+   */
+  it("leaves it alone when a single Karta is named", () => {
+    const before = apply(dressed(), {
+      fieldCards: { insert: [{ field_id: HERE, card_id: "targowisko", granted: true }] },
+    });
+    const { writes, result } = clearField(before, {
+      seatId: "seat-a",
+      fieldId: HERE,
+      cardId: "targowisko",
+    });
+    expect(result.gold).toBe(0);
+    expect(apply(before, writes).fieldGold.map((row) => row.gold)).toEqual([6]);
+  });
+
+  /** A square holding nothing but coins is not an empty square. */
+  it("sweeps a square whose only contents are gold", () => {
+    const before = dressed();
+    expect(() => clearField(before, { seatId: "seat-a", fieldId: HERE })).not.toThrow();
+    expect(clearField(before, { seatId: "seat-a", fieldId: HERE }).result.cards).toEqual([]);
+  });
+
+  it("still refuses a square with nothing on it at all", () => {
+    expect(() => clearField(table(), { seatId: "seat-a", fieldId: HERE })).toThrow(
+      "Na tym Obszarze nic nie leży.",
+    );
   });
 });

@@ -8,7 +8,7 @@ import characters from "@/data/characters.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { asFieldId } from "./board";
 import { asCharacterId } from "./characters";
-import { NATURE_LABEL, fieldName as nameOfField, plural, roundShown } from "./polish";
+import { NATURE_LABEL, fieldName as nameOfField, plural, roundShown, sztuki } from "./polish";
 import { USE_VERB_PAST } from "./uses";
 import { describeEnd, type Ends } from "./status";
 import type { JournalKind } from "./journal";
@@ -229,7 +229,6 @@ function natura(value: unknown): string | null {
 }
 
 const life = (n: number) => `${n} ${plural(n, "Życie", "Życia", "Żyć")}`;
-const sztuki = (n: number) => `${n} ${plural(n, "Sztukę", "Sztuki", "Sztuk")} Złota`;
 const tury = (n: number) => `${n} ${plural(n, "turę", "tury", "tur")}`;
 
 /**
@@ -463,6 +462,21 @@ export function describe(
       return line(`${who} płaci ${card(data.cardId)} ${data.price} Sz. Z. za pomoc w tej turze.`);
     case "taken":
       return line(`${who} zdobywa: ${card(data.cardId)}.`);
+    /**
+     * Money, which has no Karta to name.
+     *
+     * It rode on `taken` and rendered „zdobywa: kartę" — the fallback `card`
+     * gives an id that is not there — so the journal said a card was picked up
+     * on a turn where none was. Its own kind, and its own rule with it: 16.6 is
+     * about a Przedmiot lying on the Obszar and 12.1 is the sentence that names
+     * gold.
+     *
+     * The Obszar is in the line because gold has no name to be recognised by:
+     * „zdobywa 3 Sztuki Złota" is a fact about a purse, and where it came from
+     * is what makes it a fact about the board.
+     */
+    case "gold-taken":
+      return line(`${who} zabiera z pola ${field(data.fieldId)}: ${sztuki(num(data.gold))}.`);
     // A card handed over by the test shortcut rather than won. Said, and marked
     // manual like every other override: a card that appeared by fiat must not
     // read like one that was earned, and a row nothing can render at all is
@@ -475,6 +489,13 @@ export function describe(
     // twice would be the only difference the table cannot check.
     case "test-card-field":
       return line(`${who} kładzie na polu ${field(data.fieldId)}: ${card(data.cardId)}.`);
+    /**
+     * Its money half. The same sentence to the colon, because it is the same
+     * act — something is on a square that was not on it before — and what
+     * follows the colon is what the next visitor will find.
+     */
+    case "test-gold-field":
+      return line(`${who} kładzie na polu ${field(data.fieldId)}: ${sztuki(Number(data.gold ?? 0))}.`);
     /**
      * A Karta dealt into the turn, which is not the same as put on the Obszar.
      *
@@ -605,9 +626,19 @@ export function describe(
          * naming an Obszar does: the names are printed on the board and are
          * inserted verbatim, so nothing here can decline them.
          */
-        return line(
-          `${who} zdejmuje z pola ${field(data.fieldId)}: ${swept.map((id) => card(id)).join(", ")}.`,
-        );
+        /**
+         * The loose gold is one of the things swept, so it is one of the things
+         * named. It was not, and a square holding nothing but coins produced
+         * „zdejmuje z pola Mokradła I: ." — a colon with nothing after it,
+         * which is the reader being told that something happened and refused
+         * the one detail they came for.
+         *
+         * Last in the list, after the Karty, the way the Obszar's own window
+         * puts the money under the loot.
+         */
+        const coins = num(data.gold);
+        const took = [...swept.map((id) => card(id)), ...(coins > 0 ? [sztuki(coins)] : [])];
+        return line(`${who} zdejmuje z pola ${field(data.fieldId)}: ${took.join(", ")}.`);
       }
       /**
        * A turn started over, which is the console unspending something the

@@ -910,7 +910,7 @@ describe("clearing an Obszar", () => {
       { id: "fc-1", card_id: "cyklop" },
       { id: "fc-2", card_id: "helm" },
     ]), { seatId: "seat-a", fieldId: HERE });
-    expect(result).toEqual(["cyklop", "helm"]);
+    expect(result.cards).toEqual(["cyklop", "helm"]);
     expect(writes.fieldCards?.delete).toEqual(["fc-1", "fc-2"]);
   });
 
@@ -949,7 +949,7 @@ describe("clearing an Obszar", () => {
       ]),
       { seatId: "seat-a", fieldId: HERE, cardId: "targowisko" },
     );
-    expect(result).toEqual(["targowisko"]);
+    expect(result.cards).toEqual(["targowisko"]);
     expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
   });
 
@@ -998,7 +998,7 @@ describe("clearing an Obszar", () => {
     it("sweeps a named Karta out of the turn when no row holds it", () => {
       const at = standing([{ cardId: "sidh" }, { cardId: "grota" }]);
       const { writes, result } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardId: "sidh" });
-      expect(result).toEqual(["sidh"]);
+      expect(result.cards).toEqual(["sidh"]);
       expect(top(writes.game!.turn_state!)).toMatchObject({
         phase: "field",
         drawn: [{ cardId: "grota" }],
@@ -1010,7 +1010,7 @@ describe("clearing an Obszar", () => {
     it("sweeps the lot when nothing is named", () => {
       const at = standing([{ cardId: "sidh" }, { cardId: "grota" }]);
       const { result, writes } = clearField(at, { seatId: "seat-a", fieldId: HERE });
-      expect(result).toEqual(["sidh", "grota"]);
+      expect(result.cards).toEqual(["sidh", "grota"]);
       expect(top(writes.game!.turn_state!)).toMatchObject({ drawn: [] });
     });
 

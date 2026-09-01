@@ -77,6 +77,7 @@ import {
   clearField as clearFieldOn,
   grantCard as grantCardOn,
   placeCard as placeCardOn,
+  placeGold as placeGoldOn,
   takeCard as takeCardOn,
   takeFieldGold as takeFieldGoldOn,
   takeFromField as takeFromFieldOn,
@@ -1258,6 +1259,16 @@ export async function placeCard(
   return change(gameId, placeCardOn, { seatId, cardId, target });
 }
 
+/** Its money half: coins on a square, which are not a Karta — see `placeGold`. */
+export async function placeGold(
+  gameId: string,
+  seatId: string,
+  gold: number,
+  target: FieldId | null,
+): Promise<{ fieldId: FieldId; gold: number }> {
+  return change(gameId, placeGoldOn, { seatId, gold, target });
+}
+
 /**
  * Puts a named Karta on top of its pile, so the next `draw` is that card.
  *
@@ -1290,13 +1301,19 @@ export async function stackNth(
   return { pile, cardId };
 }
 
-/** Sweeps an Obszar clear, for a test table that dressed one and wants it back. */
+/**
+ * Sweeps an Obszar clear, for a test table that dressed one and wants it back.
+ *
+ * The Karty and the loose gold come back separately because they went
+ * separately: cards to the used pile, coins off the board (12.1 names both as
+ * lying there, and nothing in the box is a pile of spent money).
+ */
 export async function clearField(
   gameId: string,
   seatId: string,
   fieldId: FieldId,
   cardId?: string | null,
-): Promise<string[]> {
+): Promise<{ cards: string[]; gold: number }> {
   return change(gameId, clearFieldOn, { seatId, fieldId, ...(cardId ? { cardId } : {}) });
 }
 

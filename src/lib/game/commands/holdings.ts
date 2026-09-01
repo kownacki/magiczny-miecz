@@ -7,7 +7,7 @@ import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
 import { barredFromFriends } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
-import { FIELDS, type FieldId } from "@/lib/engine/board";
+import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { combatValueOf } from "@/lib/engine/cards";
 import { drawFrom } from "@/lib/engine/deck";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
@@ -18,7 +18,7 @@ import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import type { HoldingRow, SeatRow } from "../store";
-import { asReturnable, pushOntoPile, putOnPile, takeGold, trophiesToPile } from "./piles";
+import { asReturnable, dropGold, pushOntoPile, putOnPile, takeGold, trophiesToPile } from "./piles";
 import { eqModeOf, holdingsOf, seatById, seatView } from "./seat";
 import { cardName } from "@/lib/engine/polish";
 import { replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
@@ -693,7 +693,7 @@ export function takeFieldGold(
         {
           seatId: seat.id,
           round: snapshot.game.round,
-          kind: "taken" as const,
+          kind: "gold-taken" as const,
           payload: { gold: want, fieldId: seat.field_id },
         },
       ],
@@ -749,7 +749,7 @@ export function takeFromField(
 export function clearField(
   snapshot: Snapshot,
   command: { seatId: string; fieldId: FieldId; cardId?: string },
-): Outcome<string[]> {
+): Outcome<{ cards: string[]; gold: number }> {
   const here = snapshot.fieldCards.filter((row) => row.field_id === command.fieldId);
 
   /**
@@ -773,7 +773,19 @@ export function clearField(
   const inTurn =
     frame?.phase === "field" && frame.fieldId === command.fieldId ? frame.drawn : [];
 
-  if (here.length === 0 && inTurn.length === 0) {
+  /**
+   * The loose Sztuki Złota, which are on the Obszar as much as the Karty are
+   * (12.1 names them in the same breath) and were not swept with them.
+   *
+   * Only by a bare `clear`. `clear MIECZ` names one thing and takes that one
+   * thing; sweeping the money along with it would be the command doing
+   * something nobody typed, and the coins have no name to type.
+   */
+  const coins = command.cardId
+    ? undefined
+    : snapshot.fieldGold.find((row) => row.field_id === command.fieldId);
+
+  if (here.length === 0 && inTurn.length === 0 && !coins) {
     throw new Error("Na tym Obszarze nic nie leży.");
   }
 
@@ -801,8 +813,12 @@ export function clearField(
     return found === -1 ? [] : [found];
   })();
 
-  if (lying.length === 0 && takenFromTurn.length === 0) {
-    throw new Error(`${cardName(command.cardId!)} nie leży na tym Obszarze.`);
+  // Only a named Karta can be missing. A bare sweep has already been let
+  // through by the guard above, which knows about the gold — and this one did
+  // not, so a square holding nothing but coins refused with the name of the
+  // card nobody had asked for: „undefined nie leży na tym Obszarze".
+  if (command.cardId && lying.length === 0 && takenFromTurn.length === 0) {
+    throw new Error(`${cardName(command.cardId)} nie leży na tym Obszarze.`);
   }
 
   const swept = new Set(takenFromTurn);
@@ -845,6 +861,7 @@ export function clearField(
   ];
   const gone: Changeset = {
     ...(lying.length > 0 ? { fieldCards: { delete: lying.map((row) => row.id) } } : {}),
+    ...(coins ? { fieldGold: { delete: [coins.id] } } : {}),
     ...(edited ? { game: edited } : {}),
   };
   return {
@@ -860,13 +877,16 @@ export function clearField(
               what: "clear-field",
               fieldId: command.fieldId,
               cards: taken.map((card) => card.cardId),
+              // Named only when there was some, so every line that swept only
+              // Karty reads exactly as it did.
+              ...(coins ? { gold: coins.gold } : {}),
             },
             manual: true,
           },
         ],
       }),
     ),
-    result: taken.map((card) => card.cardId),
+    result: { cards: taken.map((card) => card.cardId), gold: coins?.gold ?? 0 },
   };
 }
 
@@ -922,6 +942,57 @@ export function placeCard(
     result: fieldId,
   };
 }
+/**
+ * Puts Sztuki Złota on an Obszar, by fiat.
+ *
+ * `placeCard`'s sibling and not a special case of it, because a coin is not a
+ * Karta. The box has two gold *cards* — „1 SZTUKA ZŁOTA", „2 SZTUKI ZŁOTA" —
+ * and `place 1 SZTUKA ZŁOTA` still lays one of those down: it is a Przedmiot
+ * that lies on the Obszar until somebody takes it, and taking it is what turns
+ * it into money ("Zamień tę Kartę na 1 Sztukę Złota, a następnie ją odłóż").
+ * Loose gold has already been through that, or never was a card at all — 4.4's
+ * purse spilled where a Postać died, a Karta that paid out onto a square — and
+ * 12.1 lets it be picked up an arbitrary amount at a time, which no card does.
+ *
+ * So the console needs both, and they are two words apart: `place gold 5`
+ * against `place 2 SZTUKI ZŁOTA`.
+ *
+ * No `granted` and nothing to carry it: a coin conjured by the console is
+ * indistinguishable from a coin that was won, because a Sztuka Złota *is*
+ * indistinguishable from a Sztuka Złota. `granted` exists so a card that
+ * appeared by fiat cannot re-enter a finite pile (21.2) as a real one, and
+ * money has no pile to re-enter — 3.1 has the bank hand out as much as it is
+ * asked for.
+ */
+export function placeGold(
+  snapshot: Snapshot,
+  command: { seatId: string; gold: number; target: FieldId | null },
+): Outcome<{ fieldId: FieldId; gold: number }> {
+  const seat = snapshot.seats.find((one) => one.id === command.seatId);
+  if (!seat) throw new Error("Nieznane miejsce.");
+
+  const fieldId = command.target ?? seat.field_id;
+  if (!fieldId) throw new Error("Ta Postać nigdzie nie stoi — podaj Obszar.");
+
+  const gold = Math.floor(command.gold);
+  if (!Number.isFinite(gold) || gold < 1) throw new Error("Ile Sztuk Złota?");
+
+  return {
+    writes: mergeAll(dropGold(snapshot, fieldId, gold), {
+      journal: [
+        {
+          seatId: command.seatId,
+          round: snapshot.game.round,
+          kind: "test-gold-field" as const,
+          payload: { gold, fieldId },
+          manual: true,
+        },
+      ],
+    }),
+    result: { fieldId: requireFieldId(fieldId), gold },
+  };
+}
+
 /**
  * Puts a card straight into a seat's hand, out of nowhere.
  *

@@ -254,3 +254,18 @@ export function characterTitle(character: {
 }): string {
   return `${character.name} — ${characterFacts(character)} · start: ${character.start}`;
 }
+
+/**
+ * A number of Sztuki Złota, declined the way Polish declines it.
+ *
+ * In the accusative, which is the case every sentence that uses it wants:
+ * „kładzie 1 Sztukę Złota", „zabiera 5 Sztuk Złota". „Złota" is the genitive of
+ * „Złoto" and stays put whatever the count does, which is why the plural rule
+ * applies to the first word alone.
+ *
+ * Out of `journalText.ts`, where it was written for the journal and then wanted
+ * by the console the moment `place gold` existed.
+ */
+export function sztuki(n: number): string {
+  return `${n} ${plural(n, "Sztukę", "Sztuki", "Sztuk")} Złota`;
+}

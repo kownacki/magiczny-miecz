@@ -177,10 +177,11 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("leaves a card where you stand, or on the Obszar you name", () => {
-    expect(ok("place MIECZ")).toEqual({ kind: "place", cardId: "miecz", fieldId: null });
+    expect(ok("place MIECZ")).toEqual({ kind: "place", cardId: "miecz", gold: null, fieldId: null });
     expect(ok("place MIECZ at Karczma")).toEqual({
       kind: "place",
       cardId: "miecz",
+      gold: null,
       fieldId: "karczma",
     });
     // `put` and `drop` are the two words somebody reaches for first; `place` is
@@ -189,12 +190,64 @@ suite("naming a card, a field or a creature", () => {
     expect(ok("put MIECZ")).toMatchObject({ kind: "place", cardId: "miecz" });
   });
 
+  /**
+   * The money half, which is not a card and must not be looked up as one.
+   *
+   * The box does print two gold Karty — „1 SZTUKA ZŁOTA", „2 SZTUKI ZŁOTA" —
+   * and those still go through the card lookup, because they are Przedmioty
+   * that lie on the Obszar until somebody takes them. What `place gold 5` puts
+   * down is the coins themselves, which is what 4.4 spills and what 12.1 lets
+   * you pick up an arbitrary amount of.
+   */
+  it("lays down loose gold, which no card is called", () => {
+    expect(ok("place gold 5")).toEqual({ kind: "place", cardId: null, gold: 5, fieldId: null });
+    expect(ok("place gold 2 at Karczma")).toEqual({
+      kind: "place",
+      cardId: null,
+      gold: 2,
+      fieldId: "karczma",
+    });
+    // The Polish word too, with and without its diacritic — this console is
+    // typed at by somebody reading a Polish rulebook.
+    expect(ok("place złoto 3")).toMatchObject({ gold: 3 });
+    expect(ok("place zloto 3")).toMatchObject({ gold: 3 });
+  });
+
+  it("still means the Karta when the Karta is the one named", () => {
+    expect(ok("place 1 SZTUKA ZŁOTA")).toMatchObject({
+      kind: "place",
+      cardId: "1-sztuka-zlota",
+      gold: null,
+    });
+  });
+
+  it("wants a whole number of coins, and says so", () => {
+    expect(err("place gold")).toMatch(/How much/);
+    expect(err("place gold nic")).toContain("place gold 5");
+    expect(err("place gold 0")).toContain("place gold 5");
+    expect(err("place gold -2")).toContain("place gold 5");
+  });
+
   it("names both halves of a place, and complains about the one that is wrong", () => {
     // Bare is the catalogue, as bare `deal` is — a mistake is a name nothing
     // is called, and that is what still complains.
-    expect(ok("place")).toEqual({ kind: "place", cardId: null, fieldId: null });
+    expect(ok("place")).toEqual({ kind: "place", cardId: null, gold: null, fieldId: null });
     expect(err("place MIECZ at Narnia")).toContain("Narnia");
     expect(err("place nothing at Karczma")).toMatch(/No card/);
+  });
+
+  /**
+   * 12.1 puts the amount in the player's gift — Talisman's 12:1, the sentence
+   * it is adapted from, says *any* Gold Counters may be taken — so a number is
+   * allowed and bare means the lot, which is what a hand does at a table.
+   */
+  it("takes gold off an Obszar, all of it unless a number says", () => {
+    expect(ok("take gold")).toEqual({ kind: "take", name: null, gold: null });
+    expect(ok("take gold all")).toEqual({ kind: "take", name: null, gold: null });
+    expect(ok("take gold 3")).toEqual({ kind: "take", name: null, gold: 3 });
+    expect(ok("take złoto 3")).toMatchObject({ gold: 3 });
+    // A Karta whose name happens to be about gold is still a Karta.
+    expect(ok("take 2 SZTUKI ZŁOTA")).toEqual({ kind: "take", name: "2 SZTUKI ZŁOTA" });
   });
 
   it("reaches the Wyposażenie deck, which is not the Karty Zdarzeń", () => {
@@ -915,8 +968,8 @@ suite("help", () => {
     // just typed and got wrong.
     expect(ok("help put")).toEqual({ kind: "help", about: "put" });
     expect(helpLines("put")).toEqual([
-      "place [card] [at field]",
-      "leave a card on an Obszar, the one you stand on unless named — bare, the catalogue",
+      "place [card|gold N] [at field]",
+      "leave a card or loose Złoto on an Obszar, the one you stand on unless named — bare, the catalogue",
       "also: put",
     ]);
   });
@@ -1219,7 +1272,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   deal: { line: "deal MAGICZNY MIECZ", becomes: { kind: "deal", cardId: "magiczny-miecz" } },
   place: {
     line: "place MIECZ at Karczma",
-    becomes: { kind: "place", cardId: "miecz", fieldId: "karczma" },
+    becomes: { kind: "place", cardId: "miecz", gold: null, fieldId: "karczma" },
   },
   teleport: { line: "teleport Karczma", becomes: { kind: "teleport", fieldId: "karczma" } },
   settle: { line: "settle won", becomes: { kind: "settle", outcome: "wygrana" } },

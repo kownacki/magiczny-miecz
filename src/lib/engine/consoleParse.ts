@@ -433,6 +433,35 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     }), "clear");
   }
 
+/**
+ * The money form of a verb that otherwise names a Karta.
+ *
+ * `place` and `take` both have one, because both acts have a money half that
+ * is not a card: 12.1 names „leżące złoto, Przedmioty lub Przyjaciół" in one
+ * breath and the console had a word for two of the three.
+ *
+ * Answers null when the word is not the money word, so the caller falls
+ * through to its card lookup unchanged — which is what keeps `place 2 SZTUKI
+ * ZŁOTA` meaning the Karta of that name. Nothing in the box is called „gold"
+ * or „złoto" on its own, and the boundary is what stops a card that merely
+ * begins with the letters from being read as money.
+ */
+const GOLD_WORD = /^(gold|złoto|zloto)\b\s*(.*)$/i;
+
+function goldAsked(said: string): string | null {
+  const hit = GOLD_WORD.exec(said.trim());
+  return hit ? hit[2].trim() : null;
+}
+
+/** A whole number of coins, or the reason it is not one. */
+function coins(said: string, verb: string): { gold: number } | { error: string } {
+  const asked = Number(said);
+  if (!Number.isInteger(asked) || asked < 1) {
+    return { error: `\`${verb} gold\` wants a whole number of Sztuki Złota — \`${verb} gold 5\`.` };
+  }
+  return { gold: asked };
+}
+
   if (word === "place" || word === "put") {
     const cut = tail.search(AT);
     const cardPart = cut === -1 ? tail : tail.slice(0, cut);
@@ -444,12 +473,23 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
       if ("missing" in where) return { error: `No Obszar called \`${fieldPart}\`.` };
       fieldId = where.found.id;
     }
+    // Money before Karty, because there is no Karta it could be: nothing in the
+    // box is called „gold" or „złoto" on its own, and the two that come close —
+    // „1 SZTUKA ZŁOTA", „2 SZTUKI ZŁOTA" — start with a numeral.
+    const asked = goldAsked(cardPart);
+    if (asked !== null) {
+      if (asked === "") return needs("place", "How much gold?");
+      const amount = coins(asked, "place");
+      if ("error" in amount) return amount;
+      return { ok: { kind: "place", cardId: null, gold: amount.gold, fieldId } };
+    }
     // Bare, it is a question rather than a mistake — the same reading bare
     // `deal` has, and the same catalogue behind it.
-    if (cardPart.trim() === "") return { ok: { kind: "place", cardId: null, fieldId } };
+    if (cardPart.trim() === "") return { ok: { kind: "place", cardId: null, gold: null, fieldId } };
     return name(CARDS, (c) => c.name, cardPart, "card", (c) => ({
       kind: "place",
       cardId: c.id,
+      gold: null,
       fieldId,
     }), "place");
   }
@@ -672,6 +712,21 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
   }
 
   if (word === "take" || word === "get") {
+    /**
+     * `take gold` scoops up the lot, which is what a hand does at a table and
+     * what the Obszar's own „weź wszystko" does on screen. A number takes that
+     * many — 12.1 puts the amount in the player's gift, and Talisman's 12:1,
+     * the sentence it is adapted from, says *any* Gold Counters may be taken.
+     */
+    const asked = goldAsked(tail);
+    if (asked !== null) {
+      if (asked === "" || asked.toLowerCase() === "all") {
+        return { ok: { kind: "take", name: null, gold: null } };
+      }
+      const amount = coins(asked, "take");
+      if ("error" in amount) return amount;
+      return { ok: { kind: "take", name: null, gold: amount.gold } };
+    }
     return tail ? { ok: { kind: "take", name: tail } } : needs("take", "Take what?");
   }
   // `drop` is the lawful one: `place` conjures a card onto a field and this puts

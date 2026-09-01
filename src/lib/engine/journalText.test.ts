@@ -332,6 +332,20 @@ suite("Polish agreement", () => {
    * Karta taken off the board. The box's own phrase is „zdjąć z planszy", and
    * it makes the line `place`'s exact inverse, which is what it is.
    */
+  /**
+   * The same sentence to the colon, because it is the same act: something is
+   * on a square that was not on it before, and what follows the colon is what
+   * the next visitor will find. Declined, since „kładzie" takes an accusative
+   * and one coin is a Sztukę where five are Sztuk.
+   */
+  it("says how much gold was laid down, in the case Polish puts it in", () => {
+    expect(text("test-gold-field", { fieldId: "kurhan", gold: 5 })).toBe(
+      "Michał (GOBLIN) kładzie na polu Kurhan: 5 Sztuk Złota.",
+    );
+    expect(text("test-gold-field", { fieldId: "kurhan", gold: 1 })).toContain("1 Sztukę Złota");
+    expect(text("test-gold-field", { fieldId: "kurhan", gold: 2 })).toContain("2 Sztuki Złota");
+  });
+
   it("takes a Karta off a pole the way `place` puts one on", () => {
     expect(text("test-card-field", { fieldId: "wrzosowiska", cardId: "targowisko" })).toBe(
       "Michał (GOBLIN) kładzie na polu Wrzosowiska: TARGOWISKO.",
@@ -343,6 +357,20 @@ suite("Polish agreement", () => {
         cards: ["targowisko", "sidh"],
       }),
     ).toBe("Michał (GOBLIN) zdejmuje z pola Wrzosowiska: TARGOWISKO, SIDH.");
+  });
+
+  /**
+   * The gold goes with the Karty, and is named with them — a sweep of a square
+   * holding nothing but coins used to read „zdejmuje z pola X: ." and tell the
+   * reader that something had happened while refusing to say what.
+   */
+  it("names the loose gold a sweep took, after the Karty", () => {
+    expect(
+      text("override", { what: "clear-field", fieldId: "kurhan", cards: ["miecz"], gold: 4 }),
+    ).toBe("Michał (GOBLIN) zdejmuje z pola Kurhan: MIECZ, 4 Sztuki Złota.");
+    expect(text("override", { what: "clear-field", fieldId: "kurhan", cards: [], gold: 6 })).toBe(
+      "Michał (GOBLIN) zdejmuje z pola Kurhan: 6 Sztuk Złota.",
+    );
   });
 
   it("never uses a gendered past tense", () => {
@@ -542,6 +570,7 @@ const PAYLOADS: Record<string, Record<string, unknown>> = {
   "lost-card": { cardIds: ["miecz"] },
   "left-behind": { cardIds: ["miecz"], fieldId: "kurhan" },
   "test-card-field": { cardId: "miecz", fieldId: "kurhan" },
+  "test-gold-field": { gold: 5, fieldId: "kurhan" },
   points: { stat: "life", delta: -1 },
 };
 

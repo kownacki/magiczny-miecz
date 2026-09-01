@@ -31,7 +31,7 @@ import { spellScript } from "@/lib/engine/spells";
 import { SPELL_BY_ID, pileContents } from "./decks";
 import { RANDOM_CHARACTER_ID } from "@/lib/engine/characters";
 import { helpLines, statReply, type Command } from "@/lib/engine/console";
-import { cardName } from "@/lib/engine/polish";
+import { cardName, sztuki } from "@/lib/engine/polish";
 import { shelfFor, trophyPointsOf } from "@/lib/engine/trophies";
 import { carriesSpell } from "@/lib/engine/abilities";
 import { foldStatuses } from "@/lib/engine/statusRows";
@@ -88,6 +88,7 @@ import {
   rollForMove,
   grantCard,
   placeCard,
+  placeGold,
   placeSeat,
   removeCharacter,
   resolveFight,
@@ -99,6 +100,7 @@ import {
   stageCard,
   stackNth,
   takeCard,
+  takeFieldGold,
   takeFromField,
   takeNewCharacter,
   turnToStone,
@@ -435,13 +437,24 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const where = command.fieldId ?? seat.field_id;
     if (!where) throw new Error("Postać nie stoi na żadnym polu.");
     const gone = await clearField(gameId, seat.id, requireFieldId(where), command.cardId);
-    return command.cardId
-      ? `${cardName(command.cardId)} off ${fieldName(asFieldId(where))}.`
-      : `${fieldName(asFieldId(where))} swept — ${gone.length} ${gone.length === 1 ? "Karta" : "Kart"} on the used pile.`;
+    if (command.cardId) return `${cardName(command.cardId)} off ${fieldName(asFieldId(where))}.`;
+    // The Karty and the loose gold are two different fates and the line says
+    // both: cards go to the used pile (9.5 deals them again), coins simply go.
+    const cards = `${gone.cards.length} ${gone.cards.length === 1 ? "Karta" : "Kart"} on the used pile`;
+    const coins = gone.gold > 0 ? `, ${gone.gold} gold off the board` : "";
+    return `${fieldName(asFieldId(where))} swept — ${cards}${coins}.`;
   },
 
   place: async (ctx, command) => {
     const { gameId, seatOf } = ctx;
+    // Money is not a Karta and does not go through the catalogue: `place gold 5`
+    // puts coins on the square, `place 2 SZTUKI ZŁOTA` puts down the Przedmiot
+    // of that name, which becomes coins only when somebody takes it.
+    if (command.gold !== null) {
+      const seat = seatOf(null);
+      const put = await placeGold(gameId, seat.id, command.gold, command.fieldId);
+      return `${sztuki(put.gold)} on ${fieldName(put.fieldId)}.`;
+    }
     // Bare, the same answer bare `deal` gives, minus the one class that never
     // lies on an Obszar: a Zaklęcie is its own pile and goes to a hand (9.5).
     if (command.cardId === null) return catalogue(PLACEABLE);
@@ -892,6 +905,23 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const { gameId, seatOf, named } = ctx;
     const seat = seatOf(null);
     const snapshot = await activeStore().load(gameId);
+
+    /**
+     * Loose gold, which 12.1 names beside the Karty and which no `name` can
+     * find: coins have no name, and „all" is the reading a bare `take gold`
+     * gets because that is what a hand does at a table.
+     *
+     * `takeFieldGold` is the same door the Obszar's „weź" goes through, so the
+     * three conditions in 12.1 are checked once, in the command, and the
+     * console cannot quietly get a laxer version of them.
+     */
+    if (command.name === null) {
+      const lying = snapshot.fieldGold.find((one) => one.field_id === seat.field_id);
+      const want = command.gold ?? lying?.gold ?? 0;
+      const took = await takeFieldGold(gameId, seat.id, want);
+      return `${named(seat)} takes ${sztuki(took.took)} off the Obszar.`;
+    }
+
     const state = top(snapshot.game.turn_state) as {
       drawn?: { cardId: string }[];
       resolved?: string[];
@@ -1561,6 +1591,14 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       ...(here.length
         ? [`On the Obszar: ${here.map((one) => cardName(one.card_id)).join(", ")}`]
         : []),
+      // Loose gold on its own line rather than at the end of that one: it is
+      // not a Karta, and „TARGOWISKO, GROTA, 5 Sztuk Złota" reads as a third
+      // card until you get to the end of it. 12.1 makes it as much everybody's
+      // business as 16.8 makes the Karty.
+      ...(((): string[] => {
+        const coins = snapshot.fieldGold.find((one) => one.field_id === active?.field_id);
+        return coins && coins.gold > 0 ? [`Gold here: ${sztuki(coins.gold)}`] : [];
+      })()),
       // The one thing the whole table is waiting on, spelled out with its
       // ways out — before `waitingOn`, because it is what everything else in
       // this list has stopped for.

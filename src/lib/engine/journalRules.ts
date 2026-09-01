@@ -46,6 +46,7 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   "moved-by-hand": null,
   "test-card": null,
   "test-card-field": null,
+  "test-gold-field": null,
   "test-deal": null,
   "test-stack": null,
   "test-fight-end": null,
@@ -78,6 +79,13 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   // — cards ————————————————————————————————————————————————————————————
   /** "Postać może zabrać te Karty ze sobą" — the taking, not the drawing. */
   taken: "16.6",
+  /**
+   * Money, which 16.6 does not mention. 16.6 is the Przedmiot on the Obszar —
+   * "Kartę Przedmiotu (…) można zabrać" — and 12.1 is the sentence that names
+   * gold: "w każdej chwili, aż do końca swojej tury może (…) zabrać leżące
+   * złoto, Przedmioty lub Przyjaciół".
+   */
+  "gold-taken": "12.1",
   /** Two piles, two rules — see `refine`. */
   reshuffle: "9.5",
   /** Odrzucenie Przedmiotu — jego Karta zostaje odkryta na Obszarze. A

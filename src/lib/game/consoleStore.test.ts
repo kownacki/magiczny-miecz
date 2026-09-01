@@ -167,7 +167,7 @@ describe("handing the turn on over a surplus", () => {
 describe("the catalogue a bare command prints", () => {
   it("lists what can be laid on an Obszar, by kind", async () => {
     const { gameId, actor } = await playing();
-    const said = await runCommand(gameId, actor, { kind: "place", cardId: null, fieldId: null });
+    const said = await runCommand(gameId, actor, { kind: "place", cardId: null, gold: null, fieldId: null });
     expect(said).toContain("Przedmioty (");
     expect(said).toContain("Wrogowie (");
     expect(said).not.toContain("Zaklęcia (");

@@ -231,7 +231,18 @@ export type Command =
    * and the other with "Which card?" made the shorter list the harder one to
    * find.
    */
-  | { kind: "place"; cardId: string | null; fieldId: FieldId | null }
+  | { kind: "place"; cardId: string | null; fieldId: FieldId | null; gold: null }
+  /**
+   * The money half, which is not a card and never was.
+   *
+   * The box prints two gold *cards* — „1 SZTUKA ZŁOTA", „2 SZTUKI ZŁOTA" — and
+   * `place 2 SZTUKI ZŁOTA` still lays one of those down: a Przedmiot lying on
+   * the Obszar until somebody takes it, which is when it becomes money. Loose
+   * gold has been through that already, or never was a card — a purse spilled
+   * where a Postać died (4.4) — and 12.1 lets it be picked up an arbitrary
+   * amount at a time, which no card does. So the two are two words apart.
+   */
+  | { kind: "place"; cardId: null; fieldId: FieldId | null; gold: number }
   | { kind: "teleport"; fieldId: FieldId }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
@@ -301,6 +312,8 @@ export type Command =
   | { kind: "claim" }
   /* What you carry. A name, because a holding's id is a uuid nobody can type. */
   | { kind: "take"; name: string }
+  /** The same distinction `place` draws, going the other way. Null takes the lot. */
+  | { kind: "take"; name: null; gold: number | null }
   | { kind: "putdown"; name: string }
   | { kind: "equip"; name: string; slot: string | null }
   | { kind: "use"; name: string }
@@ -591,8 +604,8 @@ export const COMMANDS: CommandSpec[] = [
     name: "take",
     aliases: ["get"],
     when: ["field", "fight"],
-    usage: "take <card>",
-    summary: "pick up a Karta you drew or one lying on your Obszar (12.1, 13.4)",
+    usage: "take <card|gold [N]>",
+    summary: "pick up a Karta you drew or one lying on your Obszar; `gold` takes the coins, all of them unless a number says (12.1, 13.4)",
     needs: "play",
     group: "carrying",
   },
@@ -937,7 +950,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "clear",
     aliases: [],
     usage: "clear [card] [at field]",
-    summary: "take a Karta off an Obszar — bare, all of them; `at` names another",
+    summary: "take a Karta off an Obszar — bare, all of them and the loose Złoto; `at` names another",
     needs: "testmode",
     group: "override",
   },
@@ -947,8 +960,8 @@ export const COMMANDS: CommandSpec[] = [
     // Przedmiot down", and a word cannot mean both that and a card conjured
     // onto a field.
     aliases: ["put"],
-    usage: "place [card] [at field]",
-    summary: "leave a card on an Obszar, the one you stand on unless named — bare, the catalogue",
+    usage: "place [card|gold N] [at field]",
+    summary: "leave a card or loose Złoto on an Obszar, the one you stand on unless named — bare, the catalogue",
     needs: "testmode",
     group: "override",
   },
