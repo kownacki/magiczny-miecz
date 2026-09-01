@@ -27,11 +27,34 @@ const SHEETS = [
     kind: "event",
     slice: true,
   })),
+  /**
+   * The one sheet whose rows have to be borrowed.
+   *
+   * Its bottom half is the Dobry/Zły markers and the standees on a solid teal
+   * ground, and teal is dark enough to pass the cut-line test — so the boundary
+   * under the four ZAKLĘTY W KAMIEŃ cards is read as the run "printed rule plus
+   * the teal beginning below it", and collapsing that run to its midpoint lands
+   * eighteen pixels inside the teal. All four came out with a band of the
+   * sheet's background across the foot of the card, which is the sort of thing
+   * a reader sees at once and a slicer cannot.
+   *
+   * `rowsFrom` rather than four pairs of numbers written down here, which is
+   * what the note at the top of `grid.mjs` exists to avoid. The six card plates
+   * are one printing and five of them detect the *identical* regular grid —
+   * 59, 839, 1618, 2398, each 779 or 780 tall — so sheet 9's own rows are not a
+   * guess, they are the geometry its five siblings agree on. Borrowing them
+   * keeps the numbers detected rather than typed, and `run` refuses if the
+   * lender ever stops agreeing with itself.
+   *
+   * Only the rows. Its columns detect correctly and identically to every other
+   * plate: the teal runs across the sheet, not down it.
+   */
   {
     file: "Zdarzenia/MM - MAGICZNY MIECZ - Zdarzenia 9 Dobry-zły Kamień Piony.pdf",
     id: "zdarzenia-9",
     kind: "event-mixed",
     slice: true,
+    rowsFrom: "zdarzenia-1",
   },
 
   {
@@ -80,6 +103,8 @@ const BLEED = 6;
 function run() {
   fs.mkdirSync(OUT, { recursive: true });
   const catalogue = [];
+  /** What each sliced sheet's rows came out as, for a sheet that borrows them. */
+  const detected = new Map();
 
   for (const sheet of SHEETS) {
     const source = path.join(RAW, sheet.file);
@@ -115,6 +140,17 @@ function run() {
 
     const img = images[0];
     const cells = detectCells(img);
+    if (sheet.rowsFrom) {
+      const lender = detected.get(sheet.rowsFrom);
+      if (!lender) throw new Error(`${sheet.id} borrows rows from ${sheet.rowsFrom}, which has not been sliced`);
+      if (lender.height !== img.height) {
+        throw new Error(
+          `${sheet.id} is ${img.height} tall and ${sheet.rowsFrom} is ${lender.height} — not the same plate`,
+        );
+      }
+      cells.rows = lender.rows;
+    }
+    detected.set(sheet.id, { rows: cells.rows, height: img.height });
     const cols = cells.columns.length;
     const rows = cells.rows.length;
     const dir = path.join(OUT, sheet.id);
