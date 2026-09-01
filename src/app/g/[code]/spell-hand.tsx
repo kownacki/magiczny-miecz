@@ -471,7 +471,15 @@ export function SpellHand({
               }}
               label={name}
               tone="filled"
-              dimmed={!now}
+              /* Greyed when the card cannot be spoken, whichever of the two
+                 reasons it is: this card's own window is shut (9.1), or the
+                 whole rack is — a Kamień, a Wojna Żywiołów, an Obszar that
+                 forbids Zaklęcia, the Kryształ Magów. The second used to leave
+                 every Zaklęcie at full weight with a dead „rzuć" underneath,
+                 which reads as a hand you can spend and is not. Why it is
+                 greyed is on the hover, where the rest of what the app knows
+                 about the card is. */
+              dimmed={!now || blocked !== null}
               disabled={busy}
               // A card would land in front of this one, so this and everything
               // after it steps aside to show the space it is going into — the

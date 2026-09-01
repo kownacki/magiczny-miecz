@@ -2239,6 +2239,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       granted: held.granted,
                     }))}
                     moment={now}
+                    /* Why the whole rack is shut, in the server's own words —
+                       a Kamień, a Wojna Żywiołów, an Obszar that forbids
+                       Zaklęcia, the Kryształ Magów. The same sentence the
+                       route would refuse with, so a dimmed card explains
+                       itself instead of waiting to be pressed. */
+                    blocked={mine.spells_blocked}
                     opponents={others.map((seat) => ({
                       seatIndex: seat.seat_index,
                       name: seat.player_name ?? `Miejsce ${seat.seat_index + 1}`,

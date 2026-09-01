@@ -1,6 +1,6 @@
 /** A Zaklęcie from the moment it is spoken to the moment it lands or lapses (9.6, 9.7). */
 
-import { cannotUseSpells, immuneToSpell } from "@/lib/engine/abilities";
+import { immuneToSpell } from "@/lib/engine/abilities";
 import { KAMIENNY_MOST, ringFields, ringOf, type FieldId } from "@/lib/engine/board";
 import type { Shuffle } from "@/lib/engine/deck";
 import { refusesArms } from "@/lib/engine/cards";
@@ -11,6 +11,7 @@ import {
   spellScript,
   unattackableAfter,
   type SpellScript,
+  whyNoSpells,
 } from "@/lib/engine/spells";
 import { SPELL_BY_ID } from "../decks";
 import { cardName, fieldName } from "@/lib/engine/polish";
@@ -29,10 +30,10 @@ import type { Effect } from "@/lib/engine/cardScript";
 import { summariseEffect } from "@/lib/engine/effectText";
 import { asReturnable, putOnPile } from "./piles";
 import { replaceTop, top } from "@/lib/engine/stack";
-import { refuseWhileHeld, seatView } from "./seat";
+import { allStatusesOf, refuseWhileHeld, seatView } from "./seat";
 import { refuseAgainstStone } from "./stone";
 import { FLOOR_MS, floorOf } from "./spellFloor";
-import { spellsHushed } from "@/lib/engine/status";
+
 import { storedStatuses } from "./turn";
 import type { SeatRow } from "../store";
 import { shutFight } from "./fight";
@@ -491,40 +492,28 @@ export async function castSpell(
   // 9.7: "Żadne Zaklęcie nie działa na istoty napotkane na Kamiennym Moście ani
   // na samą Bestię." Where the caster stands is what decides it.
   /**
-   * "Nie możesz też rzucać Zaklęć" (Zaczarowane Wzgórza), and "Nie możesz tu
-   * używać Zaklęć" (Rozstajne Drogi II).
+   * The four bans that stop *every* Zaklęcie, asked in one place.
    *
-   * Asked of its own list rather than of the Przedmiot one. The Wzgórza carry
-   * both rules and the two Rozstajne Drogi carry one apiece, so reading the
-   * item list for this banned magic on the crossroads that permits it and
-   * allowed it on the one that does not.
-   */
-  if (suppressesSpells(caster.field_id)) {
-    throw new Error(`${fieldName(caster.field_id as FieldId)}: tu nie rzuca się Zaklęć.`);
-  }
-
-  /**
-   * The same prohibition arriving as a status rather than as an Obszar.
+   * "Nie możesz też rzucać Zaklęć" (Zaczarowane Wzgórza) and "Nie możesz tu
+   * używać Zaklęć" (Rozstajne Drogi II) — asked of the Obszar's own list rather
+   * than of the Przedmiot one, since the Wzgórza carry both rules and the two
+   * Rozstajne Drogi carry one apiece. The Wojna Żywiołów's „żaden gracz, łącznie
+   * z tobą", which refuses even the caster who spoke it. The Kryształ Magów's
+   * half of its own bargain. And a freeze with no exemption printed on it —
+   * 20.5's Kamień, which is the one of the four the rack could not see.
    *
-   * „Żaden gracz, łącznie z tobą" — the Wojna Żywiołów puts it on every seat at
-   * once, so the caster who spoke it is refused by their own spell for the rest
-   * of their turn, which is what „łącznie z tobą" says.
+   * Moved into `whyNoSpells` because the spell hand has to ask the same
+   * question to grey itself, and two lists of four bans would be four chances
+   * to disagree about whether a card is castable.
    */
-  const hushed = spellsHushed(storedStatuses(snapshot, caster.id));
-  if (hushed) throw new Error(`${hushed} — nikt teraz nie rzuca Zaklęć.`);
-
-  /**
-   * "Właściciel Kryształu nie może rzucać ani używać Zaklęć."
-   *
-   * Half of one bargain — the other half is an immunity to six named Zaklęcia
-   * and to an opponent's Odrodzenie, which waits on the spell effects being
-   * applied at all (see `castSpell`'s note on why they are not). This half
-   * needs nothing but a refusal, and refusing is the half that can be got
-   * wrong in the player's favour.
-   */
-  if (cannotUseSpells(seatView(snapshot, caster.id).abilities)) {
-    throw new Error("Właściciel Kryształu Magów nie rzuca ani nie używa Zaklęć.");
-  }
+  const noSpells = whyNoSpells({
+    fieldName: suppressesSpells(caster.field_id)
+      ? fieldName(caster.field_id as FieldId)
+      : null,
+    statuses: allStatusesOf(snapshot, caster.id),
+    abilities: seatView(snapshot, caster.id).abilities,
+  });
+  if (noSpells) throw new Error(noSpells);
 
   const onTheBridge = caster.field_id ? ringOf(caster.field_id) === KAMIENNY_MOST : false;
   const aimedAtSomethingThere =

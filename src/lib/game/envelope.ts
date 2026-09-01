@@ -1,9 +1,11 @@
 /** What one device is sent, and everything the others are not. */
 
 import type { TurnState } from "@/lib/engine/stack";
-import { visibleTo } from "@/lib/engine/holdings";
+import { suppressesSpells, visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou } from "@/lib/engine/abilities";
 import { spokenSpell } from "@/lib/engine/status";
+import { whyNoSpells } from "@/lib/engine/spells";
+import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { foldStatuses } from "@/lib/engine/statusRows";
 import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
@@ -54,6 +56,8 @@ export interface EnvelopeSeat {
   sword_total: number;
   magic_total: number;
   spell_capacity: number;
+  /** Why no Zaklęcie may be spoken at all right now — see `whyNoSpells`. */
+  spells_blocked: string | null;
   sword_in_fight: number;
   magic_in_fight: number;
   effects: { id: string; source: string | null; label: string; when: string }[];
@@ -400,6 +404,23 @@ export function envelopeFor(
         // Zaklęcie landed would be a cap nothing honoured. See `fromCards` for
         // why a wand in the pack counts as much as one on the body.
         spell_capacity: view.spellCapacity,
+        /**
+         * Why the whole rack is shut, when it is — the sentence `castSpell`
+         * would refuse with, worked out here for the same reason
+         * `spell_capacity` is: the greying and the refusal have to rest on one
+         * basis rather than two that usually agree.
+         *
+         * A Postać Zamieniona w Kamień was the case that showed it missing.
+         * Every Zaklęcie in its hand was drawn live with „rzuć" under it, and
+         * 20.5 only came out when somebody pressed one.
+         */
+        spells_blocked: whyNoSpells({
+          fieldName: suppressesSpells(seat.field_id)
+            ? (FIELDS.get(seat.field_id as FieldId)?.name ?? seat.field_id)
+            : null,
+          statuses: view.statuses,
+          abilities: view.abilities,
+        }),
         sword_in_fight: view.walka.miecz,
         magic_in_fight: view.walka.magia,
         /**

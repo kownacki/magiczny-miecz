@@ -74,6 +74,15 @@ export interface Seat {
    * agree most of the time.
    */
   spell_capacity: number;
+  /**
+   * Why nothing in the rack may be spoken, when nothing may.
+   *
+   * The server's own refusal sentence, not a flag: the hand greys itself with
+   * the words the route would have answered with, so a player who reads why a
+   * card is dimmed has read the rule that would have stopped them. Null is the
+   * ordinary case. See `whyNoSpells`.
+   */
+  spells_blocked: string | null;
   /** The same, reckoned for a fight — 1.5's other figure. */
   sword_in_fight: number;
   magic_in_fight: number;

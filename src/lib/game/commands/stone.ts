@@ -17,7 +17,17 @@ export const STONE_TURNS = 3;
  * Kamień, odłóż ich Karty na stos Kart zużytych" — and are not recoverable.
  *
  * Zaklęcia stay: 20.5 is explicit that the character keeps them and may use
- * them once it is flesh again.
+ * them once it is flesh again — keeps, and may not speak until then, which is
+ * `refuseWhileHeld`'s job rather than this one's.
+ *
+ * **The box contradicts itself about the Przyjaciele, and 20.2 wins.** 12.1's
+ * worked example lays out what a stoned Hummit left on the Ruchome Skały — "2
+ * Sztuki Złota, Opiekun (Przyjaciel), Sztylet i Rękawice, Magiczny Miecz i
+ * Różdżka Zaklęć" — and has the Książę pick the Opiekun up. A Przyjaciel
+ * cannot be lying there if 20.2's sentence is true, and 20.2's sentence is as
+ * plain as they come. A numbered rule beats an example, so the friends go to
+ * the used pile and are gone; it is written down here because a reader who
+ * finds the example first will otherwise read this function as a bug.
  */
 /**
  * Whether this seat is stone right now (20.1).

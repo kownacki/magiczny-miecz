@@ -3,6 +3,8 @@ import type { SpellId } from "@/data/ids";
 import type { Effect } from "./cardScript";
 import { isFoeClass } from "@/data/types";
 import type { TurnPhase } from "./turn";
+import { frozenBy, spellsHushed, type Status } from "./status";
+import { cannotUseSpells, type Ability } from "./abilities";
 
 /**
  * The third card shape, and the one the app had nothing at all for.
@@ -833,3 +835,40 @@ export function spellFacts(cardId: string): { when: string; at: string | null } 
  * remembering to.
  */
 export const CAST_VERB = "rzuć";
+
+/**
+ * Why no Zaklęcie at all may be spoken right now, or null when one may.
+ *
+ * One sentence, two readers. `castSpell` throws it and the spell hand greys
+ * itself with it, so the reason a card is dimmed is the reason the server would
+ * have given for refusing it — the same basis, not one that happens to agree
+ * most of the time. The rack used to be gated on nothing at all: a Postać
+ * Zamieniona w Kamień was offered every Zaklęcie in its hand with a live „rzuć"
+ * under each, and found out by pressing one.
+ *
+ * Only the blanket cases. A `frozen` status that prints an exemption is left to
+ * the door, because the Krąg Płomieni's whole shape is a prison with one key —
+ * „nie może zrobić nic poza użyciem Władcy Zaklęć" — and a rack greyed whole
+ * would hide the one card that gets you out. Kamień names no exemption, which
+ * is what makes it a blanket case: 20.5 gives the Zaklęcia back after three
+ * turns and not before.
+ */
+export function whyNoSpells(where: {
+  fieldName: string | null;
+  /** Everything true of the caster — both halves, so a projected freeze counts. */
+  statuses: readonly Status[];
+  abilities: readonly Ability[];
+}): string | null {
+  if (where.fieldName !== null) return `${where.fieldName}: tu nie rzuca się Zaklęć.`;
+
+  const hushed = spellsHushed(where.statuses);
+  if (hushed) return `${hushed} — nikt teraz nie rzuca Zaklęć.`;
+
+  const held = frozenBy(where.statuses);
+  if (held && held.oprocz.length === 0) return `${held.label} — nie możesz nic zrobić.`;
+
+  if (cannotUseSpells(where.abilities)) {
+    return "Właściciel Kryształu Magów nie rzuca ani nie używa Zaklęć.";
+  }
+  return null;
+}
