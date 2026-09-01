@@ -35,11 +35,12 @@ export interface FramePanel {
  *
  * Two rows are worth reading twice:
  *
- * - `ask` does **not** block ending, which is what the page did before this
- *   table existed and is preserved rather than quietly corrected. A question
- *   owed is unfinished business in exactly the way a suspended `script` is,
- *   so this is probably wrong — but changing it is a rule decision about
- *   whether `passTurn` should refuse, not a refactor's to take.
+ * - `ask` blocks ending, as `script` does. It did not when this table was
+ *   written — the page's hand-kept list named only `fight` and `script` — and
+ *   `passTurn` did not refuse one either, so the button and the server agreed
+ *   about the wrong answer. Both now refuse: a question owed is the turn's own
+ *   unfinished business, and the seat it is owed to need not be the seat
+ *   playing (docs/STACK.md, law 5).
  * - `loop` and `overflow` have no panel of their own. A loop is never the top
  *   of the stack at rest (docs/STACK.md, law 3) so nothing should ever draw
  *   it; the overflow frame is drawn by its own control rather than the sheet.
@@ -52,7 +53,7 @@ export const FRAME_PANEL: Record<TurnPhase["phase"], FramePanel> = {
   bridge: { sheet: "always", blocksEnding: false },
   script: { sheet: "no", blocksEnding: true },
   loop: { sheet: "no", blocksEnding: false },
-  ask: { sheet: "no", blocksEnding: false },
+  ask: { sheet: "no", blocksEnding: true },
   overflow: { sheet: "no", blocksEnding: false },
   end: { sheet: "no", blocksEnding: false },
 };

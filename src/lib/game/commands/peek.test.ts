@@ -11,6 +11,7 @@ import { apply, type Snapshot } from "../change";
 import { drawSpell } from "./draw";
 import { answerAsk } from "./ask";
 import { applyEffect, continueTopScript } from "./effects";
+import { passTurn } from "./turn";
 
 /**
  * The CHOCHLIK: the first question in the box that belongs to no card script.
@@ -234,5 +235,35 @@ describe("a card that stops mid-sentence to ask", () => {
     const done = apply(mid, answerAsk(mid, { seatId: "seat-a", choice: 0 }).writes);
     expect(done.seats[0].gold).toBe(gold - 1);
     expect(done.holdings.filter((h) => h.kind === "spell")).toHaveLength(1);
+  });
+});
+
+/**
+ * A question owed stops the turn, the way a suspended Karta does.
+ *
+ * `passTurn` writes `only(startTurn())` over the whole stack, so a turn handed
+ * on with an `ask` still up would delete the very thing the table was waiting
+ * for. It refused a `fight` and a `script` and not this, and the browser's
+ * "end turn" button agreed with it — both were wrong the same way.
+ *
+ * The seat being asked need not be the seat playing (docs/STACK.md, law 5),
+ * which is exactly the case where nobody at the table would notice.
+ */
+describe("a turn cannot be handed on mid-question", () => {
+  it("refuses to pass while an ask frame is on the stack", () => {
+    const table = withChochlik();
+    const asked = apply(table, drawSpell(table, { seatId: "seat-a", shuffle: asIs }).writes);
+    expect(top(asked.game.turn_state).phase).toBe("ask");
+
+    expect(() => passTurn(asked)).toThrow(/Najpierw odpowiedz/);
+  });
+
+  it("passes once the question has been answered", () => {
+    const table = withChochlik();
+    const asked = apply(table, drawSpell(table, { seatId: "seat-a", shuffle: asIs }).writes);
+    const answered = apply(asked, answerAsk(asked, { seatId: "seat-a", choice: 0 }).writes);
+
+    expect(top(answered.game.turn_state).phase).not.toBe("ask");
+    expect(() => passTurn(answered)).not.toThrow();
   });
 });

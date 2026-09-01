@@ -245,6 +245,21 @@ export function passTurn(snapshot: Snapshot): Changeset {
   if (state.phase === "script") {
     throw new Error(`Najpierw dokończ: ${state.reason} — Karta jest w trakcie rozpatrywania.`);
   }
+  /**
+   * A question owed is unfinished business in exactly the way a suspended
+   * Karta is, and for the same reason: the frame names a seat, and passing the
+   * turn writes `only(startTurn())` over the whole stack — so the thing the
+   * table was waiting on would be deleted by the button it was blocking.
+   *
+   * It was not refused before. The window is small — an `ask` is answered in
+   * the commit after it opens, and the browser's own batching means most
+   * questions never become a frame at all — but the seat it is owed to may not
+   * be the seat playing (law 5), and that is precisely the case where nobody
+   * would notice.
+   */
+  if (state.phase === "ask") {
+    throw new Error(`Najpierw odpowiedz: ${state.reason} — ktoś jeszcze wybiera.`);
+  }
   const left =
     state.phase === "field" && state.drawn.length > 0
       ? leaveCardsBehind(apply(snapshot, expired), {
