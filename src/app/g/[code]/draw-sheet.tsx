@@ -4,6 +4,7 @@ import Image from "next/image";
 import { CardMark } from "./card-mark";
 import { Overlay } from "./overlay";
 import { ChromeButton } from "./chrome";
+import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
 import { WithRules } from "./rule-ref";
 
 /**
@@ -134,7 +135,7 @@ export function DrawSheet({
                 `TurnFab` it folds down to, which cannot be dismissed and says
                 what you still owe. */}
             <ChromeButton
-              glyph="minimise"
+              glyph="shrink"
               title={
                 canAct
                   ? "Zwiń — wróć przyciskiem na dole"
@@ -162,12 +163,18 @@ export function DrawSheet({
         <div className="flex min-h-0 flex-1 gap-4">
           {art && (
             <div className="relative hidden shrink-0 self-start sm:block">
+              {/* The size the Księga and every hover read a Karta at.
+                  `PICTURE_WIDTH`, not a number of this sheet's own: it was 260
+                  against their 208, so the one place a Karta is *being dealt
+                  with* drew it bigger than the places you merely look one up,
+                  and it pushed the sheet's own controls down the screen. */}
               <Image
                 src={art}
                 alt={label}
-                width={300}
-                height={500}
-                className="h-auto w-[260px] rounded border border-edge"
+                width={PICTURE_WIDTH}
+                height={Math.round(PICTURE_WIDTH * CARD_RATIO)}
+                style={{ width: PICTURE_WIDTH }}
+                className="block h-auto rounded border border-edge"
                 priority
                 unoptimized
               />

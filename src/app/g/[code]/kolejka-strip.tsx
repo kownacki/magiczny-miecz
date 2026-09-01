@@ -169,10 +169,7 @@ export function KolejkaStrip({
           return (
             <li
               key={`${index}-${chip.card.cardId}`}
-              /* The ring is the queue's own mark and sits outside the tile's
-                 border, so it reads as "you are here" rather than as a card
-                 with a different frame. */
-              className={`shrink-0 rounded ${current ? "ring-2 ring-ochre" : ""}`}
+              className="shrink-0"
               /* Why this Karta is in the way, with its rule. The tile's own
                  hover opens the whole Karta, which says what it *is*; this says
                  what the turn is doing about it, which the Karta cannot. */
@@ -188,6 +185,11 @@ export function KolejkaStrip({
                   granted: chip.card.granted,
                 })}
                 dimmed={chip.done}
+                /* "You are here", in the paint the trofea already use for a
+                   card picked out of a row. It was a ring round the whole
+                   `<li>`, which drew a second frame outside the tile's own and
+                   enclosed the caption with it. */
+                chosen={current}
                 /* 12.1 gives these the run of the turn, so they are in the row
                    to be seen and not to be got past. The badge says which is
                    which in the one word the cards themselves use. */

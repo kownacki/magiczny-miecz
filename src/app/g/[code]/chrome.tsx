@@ -138,11 +138,28 @@ export function CloseButton({
   );
 }
 
-type Glyph = "minimise" | "restore" | "expand" | "collapse" | "pin" | "unpin";
+type Glyph = "minimise" | "shrink" | "restore" | "expand" | "collapse" | "pin" | "unpin";
 
 const PATHS: Record<Glyph, React.ReactNode> = {
   // Down into the edge it is docked against.
   minimise: <path d="M5 8l7 7 7-7" />,
+  /**
+   * Into the corner it goes to, which is what this one actually does.
+   *
+   * The sheet used the chevron, and a chevron says "down" — which is what a
+   * console docked to the bottom edge does and not what this does. The sheet
+   * does not slide anywhere: it becomes the pill at the foot of the screen, so
+   * the glyph is the one every window manager uses for exactly that, a frame
+   * with an arrow drawn into the small square it collapses to.
+   */
+  shrink: (
+    <>
+      <path d="M9 4h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
+      <path d="M15 9l-5 5" />
+      <path d="M10 11v3h3" />
+      <rect x="3" y="15" width="6" height="6" rx="1.5" />
+    </>
+  ),
   restore: <path d="M5 16l7-7 7 7" />,
   // Out to the corners, and back in from them.
   expand: (

@@ -47,7 +47,7 @@ const CHARACTERS = charactersData as Character[];
  * on. The panel is read for the formalised lines beside the picture; the
  * picture is there to be recognised.
  */
-const PICTURE_WIDTH = 208;
+export const PICTURE_WIDTH = 208;
 /**
  * A Karta Postaci, which is read rather than recognised.
  *
@@ -79,7 +79,7 @@ const CHARACTER_PICTURE_WIDTH = 340;
  * 550 across at the same 880 tall. That is why `place` measures the panel again
  * whenever it changes size rather than trusting either of these.
  */
-const CARD_RATIO = 880 / 528;
+export const CARD_RATIO = 880 / 528;
 const CHARACTER_CARD_RATIO = 780 / 629;
 const GAP = 12;
 

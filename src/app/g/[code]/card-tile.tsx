@@ -90,6 +90,7 @@ export function CardTile({
   card,
   size = "sm",
   dimmed = false,
+  chosen = false,
   badge,
   onClick,
   onDoubleClick,
@@ -103,6 +104,21 @@ export function CardTile({
   card: TileCard;
   size?: "sm" | "md";
   dimmed?: boolean;
+  /**
+   * Picked out of a row by something the player is deciding, not by the pointer.
+   *
+   * The same answer `ItemSlot` gives, in the same paint, because the trofea and
+   * this are the same question asked of two rows: the *paper* is washed gold and
+   * the frame is left alone. Borders were tried and are the wrong instrument —
+   * a chosen card and a hovered card end up competing for one edge, so either
+   * the pointer has nowhere louder to go or the choice is a weight of border you
+   * have to look twice at.
+   *
+   * Down here rather than in the callers because it kept being invented up
+   * there: the kolejka wrapped a ring round the whole `<li>`, which drew a
+   * second frame outside the tile's own and put the caption inside it.
+   */
+  chosen?: boolean;
   /** A short flag drawn over the corner — a price, a count, "zakryte". */
   badge?: string;
   onClick?: (event: React.MouseEvent) => void;
@@ -175,6 +191,19 @@ export function CardTile({
           <span className="flex h-full w-full items-center justify-center p-1 text-center text-[10px] leading-tight text-ink">
             {card.name}
           </span>
+        )}
+        {/* Multiplied, not laid over, so the ink stays black and only the paper
+            takes the colour — which is the only thing that works on these
+            scans, pen and ink with almost nothing in between. `mix-blend-color`
+            keeps the backdrop's luminosity and does nothing at all here.
+
+            Above the picture and below the marks, which have their own ground
+            and are meant to be read off it. */}
+        {chosen && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-ochre/75 mix-blend-multiply"
+          />
         )}
         {/* Conjured rather than dealt, marked on the tile and not only on the
             Karta it opens into: a tile is what a player actually scans, and a
