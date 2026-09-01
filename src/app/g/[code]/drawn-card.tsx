@@ -9,7 +9,7 @@ import { cardImageUrl } from "@/lib/view/cardImages";
 import { combatValueOf, roundsOf } from "@/lib/engine/cards";
 import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
-import { KolejkaStrip } from "./kolejka-strip";
+import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -181,6 +181,30 @@ export function DrawnCard({
       art={art}
       granted={card.granted === true}
       watching={`${who} ciągnie Kartę`}
+      /**
+       * The kolejka, across the foot of the sheet.
+       *
+       * It replaced the sentence "3 Karty na tym Obszarze — po kolei", which is
+       * a count and an assurance: it says there is an order without saying what
+       * the order is, so a player halfway through a busy Obszar knew how many
+       * were left and not which, nor whether the next one was a Wróg.
+       *
+       * At the foot rather than at the top of the right-hand column, where it
+       * first went. Up there it was a third thing competing with the card's own
+       * title, and it is not a third thing — it is the row on the table, and
+       * the Karta above it is the one in your hand.
+       */
+      footer={
+        worthShowing(cards) ? (
+        <KolejkaStrip
+          cards={cards.map((one) => ({
+            cardId: one.cardId,
+            cardClass: one.cardClass as CardClass,
+          }))}
+          settled={[...resolved, ...fought]}
+        />
+        ) : null
+      }
     >
       {/* Only what the card does not say itself. The scan carries its own
           name, class, Miecz and full text at a size you can read — printing
@@ -201,23 +225,6 @@ export function DrawnCard({
         </header>
       )}
 
-      {/**
-       * The kolejka, on the sheet the Karty are actually worked through.
-       *
-       * This was the sentence "3 Karty na tym Obszarze — po kolei", which is
-       * a count and an assurance: it says there is an order without saying
-       * what the order is, so a player halfway through a busy Obszar knew how
-       * many were left and not which, nor whether the next one was a Wróg.
-       *
-       * The strip says both, and it says only what the turn must stop for —
-       * a Miecz lying here is not in it, because 12.1 gives the taking the run
-       * of the turn and a queue that said "next" about it would invent an
-       * order the box does not impose.
-       */}
-      <KolejkaStrip
-        cards={cards.map((one) => ({ cardId: one.cardId, cardClass: one.cardClass as CardClass }))}
-        settled={[...resolved, ...fought]}
-      />
 
       {script && (
         <p className="text-[11px] text-ochre/80">

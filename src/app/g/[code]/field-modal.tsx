@@ -484,7 +484,21 @@ export function FieldModal({
             onAction &&
             (phase === "field" || phase === "roll") &&
             (hasCrossing || onEnd) && (
-            <section className="flex flex-col gap-3 border-t border-edge/60 pt-3">
+            /**
+             * The rule belongs to the things you can *do*, not to a footnote.
+             *
+             * On most turns this section holds nothing but the reason the turn
+             * cannot end yet — a sentence — and a full-width rule above a
+             * sentence is a divider separating one thing from nothing. It gets
+             * its border when it has a crossing, an ordeal, a wyprawa or a
+             * button in it; a bare "Najpierw: Rozpatrz: WILK (16.4)" is a
+             * remark and is set as one.
+             */
+            <section
+              className={`flex flex-col gap-3 ${
+                hasCrossing || canEnd ? "border-t border-edge/60 pt-3" : "pt-1"
+              }`}
+            >
               {crossingFrom(fieldId) && (
                 <Crossing
                   crossing={crossingFrom(fieldId)!}
@@ -520,7 +534,12 @@ export function FieldModal({
                   that does not say why is a control that looks broken. */}
               {onEnd && (
                 <div
-                  className={`flex flex-col gap-1 ${hasCrossing ? "border-t border-edge/60 pt-3" : ""}`}
+                  className={`flex flex-col gap-1 ${
+                    // Only where something above it needs separating from: the
+                    // section's own rule already does the job when this is all
+                    // there is.
+                    hasCrossing && canEnd ? "border-t border-edge/60 pt-3" : ""
+                  }`}
                 >
                   {/**
                    * The button, or the reason there is no button — never both.

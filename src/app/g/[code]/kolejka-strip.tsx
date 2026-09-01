@@ -82,6 +82,24 @@ type Chip = {
   frame?: KolejkaFrame;
 };
 
+/**
+ * Whether there is a row here at all — asked by the caller as well as by this.
+ *
+ * One Karta is not a row: the sheet this sits on is already showing it at full
+ * size, so a strip naming it again is the same fact twice. That is the guard
+ * the sentence it replaced also had, only ever saying "N Karty na tym Obszarze"
+ * when N was more than one.
+ *
+ * Exported because a component returning null is invisible to the thing that
+ * wrapped it. `DrawSheet` puts its footer in a bordered box, and a box that
+ * asked `footer &&` would have drawn a rule across the sheet with nothing under
+ * it — which is the exact empty-divider fault this file has now been on both
+ * sides of.
+ */
+export function worthShowing(cards: readonly unknown[]): boolean {
+  return cards.length > 1;
+}
+
 export function KolejkaStrip({
   cards,
   settled,
@@ -112,16 +130,7 @@ export function KolejkaStrip({
     };
   });
 
-  /**
-   * One Karta is not a row.
-   *
-   * The sheet this sits on is already showing it at full size, so a strip above
-   * naming it again is the same fact twice — which is the guard the sentence it
-   * replaced also had, only ever saying "N Karty na tym Obszarze" when N was
-   * more than one. Counted in Karty now rather than in frames, which is what
-   * made it disappear on an Obszar holding three.
-   */
-  if (chips.length < 2) return null;
+  if (!worthShowing(cards)) return null;
 
   // What the turn is stopped at, and how much of the Obszar is left to settle.
   const at = chips.findIndex((chip) => chip.stops && !chip.done);

@@ -57,6 +57,7 @@ export function DrawSheet({
   onMinimize,
   error,
   wide = false,
+  footer,
   children,
 }: SheetChrome & {
   label: string;
@@ -73,6 +74,16 @@ export function DrawSheet({
   watching: string;
   /** Room for a third column: the card, the fight, and a hand beside it. */
   wide?: boolean;
+  /**
+   * A strip across the foot of the sheet, under both columns.
+   *
+   * For what is *around* the Karta rather than about it — the Obszar's kolejka,
+   * which is the row of Karty lying on the table while this one is in your
+   * hand. In the right-hand column it was a third thing competing with the
+   * card's own title for the top of the sheet, and it is not a third thing: it
+   * is the setting the card is in.
+   */
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   // Folded away, this draws nothing: what replaces it is `TurnFab`, one pill
@@ -174,6 +185,12 @@ export function DrawSheet({
             {children}
           </div>
         </div>
+        {/* Under both columns and across the whole width, which is the shape of
+            the thing it holds: a row of Karty on the table, with the one being
+            dealt with above it. */}
+        {footer && (
+          <div className="shrink-0 border-t border-edge/60 pt-3">{footer}</div>
+        )}
       </div>
     </Overlay>
   );
