@@ -517,6 +517,30 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     setInspecting(asFieldId(myField));
   }, [arrivedAt, myField]);
 
+  /**
+   * And the other half: the deal is done, so the window that made it stands
+   * aside for the sheet.
+   *
+   * It opened itself to say what was here and to deal the rest. The moment the
+   * rest is dealt there is a Karta on screen to work through, and the two
+   * windows were both up — the Obszar's over the sheet, so pressing "Wyciągnij
+   * kartę" appeared to do nothing while a WIDMO waited underneath it.
+   *
+   * Only the one this opened, and only once: `openedFor` is the key it opened
+   * for, and closing is recorded against the same key. A player who opens the
+   * Obszar themselves mid-resolution — to end the turn, to read the square —
+   * keeps it, because they did not open this one.
+   */
+  const dealDone =
+    nowOnField?.phase === "field" && nowOnField.draw <= 0 && nowOnField.drawn.length > 0;
+  const handedOver = useRef<string | null>(null);
+  useEffect(() => {
+    const key = openedFor.current;
+    if (key === null || handedOver.current === key || !dealDone) return;
+    handedOver.current = key;
+    setInspecting(null);
+  }, [dealDone]);
+
 
 
 
