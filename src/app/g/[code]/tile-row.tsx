@@ -5,12 +5,16 @@
 /**
  * How a row is answering a card in the air, or null when it is not a target.
  *
- * The colour is the row's own: green and red are the pack saying whether 5.4
- * will have this card, and the Magia purple is the spell rack, which has no
- * second answer because nothing else can land there.
+ * Two colours, and they are the two answers: green for *I would take this* and
+ * red for 5.4 having no room. Not the row's own colour — there was a third,
+ * Magia purple, for the spell rack, on the grounds that the rack is a purple
+ * panel. But a row answering a card in the air is saying the same thing
+ * wherever it is, and a player dropping a card is not asking a different
+ * question of the two rows on one seat card. The rack simply never says the red
+ * one: a Zaklęcie moved inside the hand is inside 2.6 already.
  */
 export interface RowAnswer {
-  colour: "verdigris" | "vermilion" | "magia";
+  colour: "verdigris" | "vermilion";
   /** The pointer is inside, so the answer is being given rather than offered. */
   over: boolean;
 }
@@ -23,10 +27,6 @@ const ANSWER: Record<RowAnswer["colour"], { over: string; near: string }> = {
   vermilion: {
     over: "border-solid border-vermilion bg-vermilion/25",
     near: "border-dashed border-vermilion/60 bg-vermilion/10",
-  },
-  magia: {
-    over: "border-solid border-magia bg-magia/25",
-    near: "border-dashed border-magia/60 bg-magia/10",
   },
 };
 

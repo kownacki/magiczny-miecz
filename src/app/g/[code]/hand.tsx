@@ -283,8 +283,12 @@ export function Hand({
         }}
         onDragLeave={(event) => {
           // Only when the pointer leaves the pack itself, not on its way across
-          // a card inside it.
-          if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragOver(false);
+          // a card inside it. The gap closes with it: a drag that has left is
+          // no longer aiming at a place in this row, and the sliver it opened
+          // was the answer to a question nobody is asking any more.
+          if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+          setDragOver(false);
+          setInsertAt(null);
         }}
         onDrop={(event) => {
           // Whatever gap is open is where it lands — dropping into the space

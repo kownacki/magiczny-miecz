@@ -284,27 +284,28 @@ export function SpellHand({
           if (!onReorder || !event.dataTransfer.types.includes(SPELL_DRAG)) return;
           event.preventDefault();
           rack.setDragOver(true);
-          // The row itself under the pointer, rather than one of its cards on
-          // the way past: the margin and the free squares, both of which mean
-          // the end of the row. The free squares used to say it themselves,
-          // until they stopped taking events at all so that a card could be
-          // dropped on them.
-          if (event.target === event.currentTarget) rack.setInsertAt(null);
+          // Only ever the row itself: every card in it stops the drag from
+          // reaching here, so arriving means the pointer is on the margin or on
+          // one of the free squares, and both of those are the end of the row.
+          rack.setInsertAt(null);
         }}
-        onDragLeave={(event) => {
-          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        // Move rather than enter: a card is picked up by clicking one that is
+        // already inside the row, so the pointer never crosses the boundary and
+        // `pointerenter` never fires. The guard keeps this from setting state
+        // on every pixel.
+        onPointerMove={() => {
+          if (carried && !rack.dragOver) rack.setDragOver(true);
+        }}
+        onPointerLeave={() => {
           rack.setDragOver(false);
           rack.setInsertAt(null);
         }}
-        // The same sentence as the drag above, for a card carried on the
-        // cursor, which fires no drag events at all. Nothing in this row
-        // watches for the pointer leaving a card — the next card claims the
-        // gap and that was enough — so the row has to close it when the pointer
-        // is on the row and on no card.
-        onPointerMove={(event) => {
-          if (event.target === event.currentTarget && rack.insertAt !== null) {
-            rack.setInsertAt(null);
-          }
+        onDragLeave={(event) => {
+          // Only when the pointer leaves the row itself, not on its way across
+          // a card inside it.
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+          rack.setDragOver(false);
+          rack.setInsertAt(null);
         }}
         onDrop={(event) => {
           const before = rack.insertAt === null ? null : rack.lands(rack.insertAt);
@@ -326,7 +327,14 @@ export function SpellHand({
           rack.moveWithin(lifted, before);
           putDown();
         }}
-        answer={lifted === null ? null : { colour: "magia", over: rack.dragOver }}
+        /* Green, the same green a place on the body gives, because it is the
+           same answer to the same question: you are over me, and I would take
+           this. It was Magia purple on the grounds that the row is the spell
+           rack's — which is a fact about the panel, not about the card in the
+           air, and it made one of the two rows on a seat card answer in a
+           colour the other never uses. Nothing here can refuse, so there is no
+           red: a Zaklęcie moved inside the hand is inside 2.6 already. */
+        answer={lifted === null ? null : { colour: "verdigris", over: rack.dragOver }}
       >
         {hand.map((entry, index) => {
           const card = SPELL_BY_ID.get(entry.cardId);
@@ -485,12 +493,44 @@ export function SpellHand({
                 announceDrag(null);
                 rack.setInsertAt(null);
               }}
-              onDragOver={() =>
-                rack.setInsertAt(rack.itsOwnSquare(entry.holdingId) ? null : entry.holdingId)
-              }
-              onPointerEnter={() =>
-                lifted !== null &&
-                rack.setInsertAt(rack.itsOwnSquare(entry.holdingId) ? null : entry.holdingId)
+              // Taken here rather than left to the row behind it, so the card
+              // lands where the pointer is instead of at the end — and the row
+              // can then say plainly that anything reaching it is the end,
+              // which is what the Plecak has always said.
+              onDragOver={(event) => {
+                if (!onReorder || !event.dataTransfer.types.includes(SPELL_DRAG)) return;
+                event.stopPropagation();
+                event.preventDefault();
+                if (!rack.itsOwnSquare(entry.holdingId)) rack.setInsertAt(entry.holdingId);
+              }}
+              // No onDragLeave: unlike pointerleave, it fires on the way into a
+              // child as well as on the way out, so a drag crossing the picture
+              // inside this box would keep closing the gap it had just opened.
+              // Leaving the row clears it, and the next card claims it.
+              onDrop={(event) => {
+                rack.setInsertAt(null);
+                rack.setDragOver(false);
+                putDown();
+                const holdingId = event.dataTransfer.getData(SPELL_DRAG);
+                if (!holdingId || holdingId === entry.holdingId) return;
+                event.stopPropagation();
+                event.preventDefault();
+                rack.moveWithin(holdingId, rack.lands(entry.holdingId));
+              }}
+              /**
+               * A carried card has no drag events behind it, so hovering is
+               * watched directly for the same answer to show — both halves of
+               * it, exactly as in the Plecak. Its own square is not a place to
+               * put it, so nothing is open while the pointer is there.
+               */
+              onPointerEnter={() => {
+                if (!carried) return;
+                rack.setInsertAt(rack.itsOwnSquare(entry.holdingId) ? null : entry.holdingId);
+              }}
+              // Only this card's own gap: moving straight to the next card sets
+              // the new one in the same breath, and React keeps the last word.
+              onPointerLeave={() =>
+                rack.setInsertAt((at) => (at === entry.holdingId ? null : at))
               }
               /**
                * One click picks it up; the next puts down what is on the
