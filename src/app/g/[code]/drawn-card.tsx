@@ -9,6 +9,7 @@ import { cardImageUrl } from "@/lib/view/cardImages";
 import { combatValueOf, roundsOf } from "@/lib/engine/cards";
 import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
+import { KolejkaStrip } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -200,12 +201,23 @@ export function DrawnCard({
         </header>
       )}
 
-      {cards.length > 1 && (
-        <p className="text-[11px] text-muted">
-          {/* 15.2 resolves them lowest numeral first, and this is that order. */}
-          {cards.length} Karty na tym Obszarze — po kolei.
-        </p>
-      )}
+      {/**
+       * The kolejka, on the sheet the Karty are actually worked through.
+       *
+       * This was the sentence "3 Karty na tym Obszarze — po kolei", which is
+       * a count and an assurance: it says there is an order without saying
+       * what the order is, so a player halfway through a busy Obszar knew how
+       * many were left and not which, nor whether the next one was a Wróg.
+       *
+       * The strip says both, and it says only what the turn must stop for —
+       * a Miecz lying here is not in it, because 12.1 gives the taking the run
+       * of the turn and a queue that said "next" about it would invent an
+       * order the box does not impose.
+       */}
+      <KolejkaStrip
+        cards={cards.map((one) => ({ cardId: one.cardId, cardClass: one.cardClass as CardClass }))}
+        settled={[...resolved, ...fought]}
+      />
 
       {script && (
         <p className="text-[11px] text-ochre/80">

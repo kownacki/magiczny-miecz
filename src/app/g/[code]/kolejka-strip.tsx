@@ -1,6 +1,7 @@
 "use client";
 
-import { CARD_CLASS } from "@/data/types";
+import type { CardId } from "@/data/ids";
+import { CARD_CLASS_LABEL } from "@/data/types";
 import { cardName } from "@/lib/engine/polish";
 import { kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
 import type { TurnCard } from "@/lib/engine/state";
@@ -33,8 +34,6 @@ import { WithRules } from "./rule-ref";
  * renders what comes back, so the two cannot disagree.
  */
 
-const NUMERAL = ["I", "II", "III", "IV", "V", "VI"];
-
 /**
  * The one label that is not a card's name.
  *
@@ -47,9 +46,22 @@ function labelOf(frame: KolejkaFrame): string {
   return frame.cards.map((card) => cardName(card.cardId)).join(" + ");
 }
 
-function numeralOf(frame: KolejkaFrame): string {
-  const rank = CARD_CLASS[frame.cards[0].cardClass];
-  return NUMERAL[rank - 1] ?? "";
+/**
+ * What kind of thing this frame is, in the word the Karta prints.
+ *
+ * It was the Roman numeral — `II` for a Wilk, off `Wróg II Bestia` — on the
+ * reasoning that the row should show its own reason for being in that order.
+ * Two vertical strokes at chip size read as a pause icon and not as a numeral,
+ * which is what the first person to see it asked about. The ordering is
+ * already visible from left to right; what the numeral alone carried that
+ * nothing else did is II against III, and the word says that better than the
+ * numeral ever did — a Demon is fought with Magia and a Bestia with Miecz, and
+ * "Demon" says so where "III" needs the rulebook.
+ *
+ * The numeral is not lost: it is in the `title`, with the rule beside it.
+ */
+function kindOf(frame: KolejkaFrame): string {
+  return CARD_CLASS_LABEL[frame.cards[0].cardClass];
 }
 
 function whyOf(frame: KolejkaFrame): string {
@@ -57,19 +69,19 @@ function whyOf(frame: KolejkaFrame): string {
     case "placed":
       return "Trafia na wskazany Obszar — rozpatrywana w pierwszej kolejności (15.1)";
     case "spotkanie":
-      return "Spotkanie — należy wykonać instrukcję Karty (16.1)";
+      return "Spotkanie I — należy wykonać instrukcję Karty (16.1)";
     case "wrogowie-miecz":
       return frame.cards.length > 1
-        ? "Wrogowie atakują razem, Miecze się sumują (17.5)"
-        : "Wróg atakuje natychmiast (16.2)";
+        ? "Wróg II — atakują razem, Miecze się sumują (17.5)"
+        : "Wróg II — atakuje natychmiast, walka Mieczem (16.2)";
     case "wrogowie-magia":
       return frame.cards.length > 1
-        ? "Demony atakują razem, Magie się sumują (18.2)"
-        : "Demon — walka magiczna (16.3, 18.1)";
+        ? "Wróg III — atakują razem, Magie się sumują (18.2)"
+        : "Wróg III (Demon) — walka magiczna (16.3, 18.1)";
     case "nieznajomy":
-      return "Nieznajomy — konieczne jest wykonanie instrukcji Karty (16.5)";
+      return "Nieznajomy IV — konieczne jest wykonanie instrukcji Karty (16.5)";
     case "miejsce":
-      return "Miejsce — należy wykonać instrukcję Karty (16.7)";
+      return "Miejsce VI — należy wykonać instrukcję Karty (16.7)";
   }
 }
 
@@ -82,18 +94,30 @@ export function KolejkaStrip({
   cards: readonly TurnCard[];
   /** Resolved and fought together: 17.4 settles a Wróg whether he was beaten or fled. */
   settled: readonly string[];
-  onInspect?: (cardId: string) => void;
+  onInspect?: (cardId: CardId) => void;
 }) {
   const frames = kolejkaFor(cards, settled);
-  // An Obszar holding nothing but loot and services owes the turn nothing, and
-  // a heading over an empty row is a box saying it has nothing to say.
-  if (frames.length === 0) return null;
+  /**
+   * Nothing to draw for none, and nothing worth drawing for one.
+   *
+   * An Obszar holding only loot and services owes the turn nothing, so there is
+   * no queue. And a queue of one is not a queue: the sheet this sits on is
+   * already showing that Karta at full size, so a row above it saying "1 z 1"
+   * and naming it again is the same fact twice. The line it replaced had the
+   * same guard for the same reason — it only said "N Karty na tym Obszarze"
+   * when N was more than one.
+   */
+  if (frames.length < 2) return null;
 
   const at = frames.findIndex((frame) => !frame.done);
   const left = frames.filter((frame) => !frame.done).length;
 
   return (
-    <section className="rounded-lg border border-edge bg-panel p-3">
+    <section>
+      {/* No border and no ground of its own: this is inside the Obszar's
+          window, which is already a panel, and a box in a box for one chip is
+          more chrome than content — which is what it looked like standing in
+          the column. */}
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <h2 className="text-[11px] uppercase tracking-widest text-muted">
           <WithRules text="Kolejka (15.2)" />
@@ -116,7 +140,7 @@ export function KolejkaStrip({
               <button
                 type="button"
                 disabled={!onInspect}
-                onClick={() => onInspect?.(frame.cards[0].cardId)}
+                onClick={() => onInspect?.(frame.cards[0].cardId as CardId)}
                 title={whyOf(frame)}
                 className={`flex max-w-[220px] items-center gap-1.5 rounded border px-2 py-1 text-left transition ${
                   frame.done
@@ -126,11 +150,10 @@ export function KolejkaStrip({
                       : "border-edge bg-transparent text-muted"
                 } ${onInspect ? "hover:border-ochre/70" : ""}`}
               >
-                {/* The numeral the Karta actually prints, which is what 15.2
-                    orders by — so the row shows its own reason for being in
-                    this order rather than asking to be trusted. */}
-                <span className="shrink-0 text-[10px] tabular-nums tracking-widest text-muted/70">
-                  {numeralOf(frame)}
+                {/* Small capitals, so it reads as a label on the thing beside
+                    it rather than as another name. */}
+                <span className="shrink-0 text-[9px] uppercase tracking-widest text-muted/70">
+                  {kindOf(frame)}
                 </span>
                 <span
                   className={`truncate text-[11px] ${frame.done ? "line-through" : ""}`}
