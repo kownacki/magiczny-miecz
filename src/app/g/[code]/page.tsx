@@ -3,6 +3,7 @@
 import { ScriptFramePanel } from "./script-frame";
 import { AskFramePanel } from "./ask-frame";
 import { top } from "@/lib/engine/stack";
+import { panelFor } from "@/lib/view/frames";
 import { use, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { readTestMode, watchTestMode, writeTestMode, TESTING_POSSIBLE } from "@/lib/game/testMode";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
@@ -798,13 +799,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * and a field nobody may walk past, which opens it with nothing drawn because
    * the Karczma happens to you the moment you arrive.
    */
+  const panel = panelFor(turnState);
   const sheetApplies =
     active !== undefined &&
     active !== null &&
-    (turnState.phase === "fight" ||
-      turnState.phase === "move" ||
-      turnState.phase === "bridge" ||
-      (turnState.phase === "field" &&
+    (panel.sheet === "always" ||
+      (panel.sheet === "when-drawn" &&
+        turnState.phase === "field" &&
         (turnState.drawn.length > 0 ||
           compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null)));
 
@@ -1172,10 +1173,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           // corner: a turn is read in one place and should be finished there.
           canEnd={
             !!active &&
-            turnState.phase !== "fight" &&
-            // A suspended card is the turn's own unfinished business —
-            // passTurn refuses it server-side; the button should know too.
-            turnState.phase !== "script" &&
+            !panel.blocksEnding &&
             mayEndTurn({ fieldId: active.field_id, done: [], phase: turnState.phase })
           }
           whyNotEnd={

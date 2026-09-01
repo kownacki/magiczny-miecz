@@ -55,7 +55,7 @@ export interface TurnWindow {
  */
 export interface TurnFacts {
   /** Where the turn is: "rzut" before the move, "pole" on arrival, and so on. */
-  phase: string;
+  phase: TurnPhase["phase"];
   /** The Obszar the character is standing on, or null before they are placed. */
   standingOn: FieldId | null;
   /** Cards drawn here or lying here (16.8) and not yet dealt with. */
@@ -195,7 +195,7 @@ export interface TurnStep {
   state: StepState;
 }
 
-export function turnSteps(phase: string): TurnStep[] {
+export function turnSteps(phase: TurnPhase["phase"]): TurnStep[] {
   // The Kamienny Most is not made of these: 10.3 has no roll at all there, one
   // Obszar a turn and an instruction to get through. Claiming a roll had
   // happened would be a lie, and claiming one was coming would be worse.

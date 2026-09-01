@@ -6,6 +6,7 @@ import itemCards from "@/data/items.json";
 import spells from "@/data/spells.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
+import type { TurnPhase } from "./turn";
 import { SLOTS } from "./slots";
 import { findByName, fold } from "./search";
 import { RANDOM_CHARACTER_ID, RANDOM_CHARACTER_NAME } from "./characters";
@@ -145,7 +146,7 @@ const PLAYING: readonly Stage[] = ["roll", "move", "field", "fight", "other"];
  * the same function. Two readings of "where has this got to" would be two
  * consoles wearing one vocabulary.
  */
-export function stageOf(status: string, phase: string | undefined): Stage {
+export function stageOf(status: string, phase: TurnPhase["phase"] | undefined): Stage {
   if (status !== "playing") return "lobby";
   return phase === "roll" || phase === "move" || phase === "field" || phase === "fight"
     ? phase

@@ -155,7 +155,7 @@ describe("the move itself", () => {
 });
 
 describe("how far through the turn you are", () => {
-  const shape = (phase: string) =>
+  const shape = (phase: TurnPhase["phase"]) =>
     turnSteps(phase).map((step) => `${step.label}:${step.state}`);
 
   it("has not rolled yet at the start", () => {

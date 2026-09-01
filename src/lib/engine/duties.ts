@@ -1,6 +1,7 @@
 /** What a character still owes the rules before the turn may end. */
 
 import type { FieldId } from "./board";
+import type { TurnPhase } from "./turn";
 
 /**
  * Something compulsory that has not happened yet.
@@ -40,7 +41,7 @@ export function dutiesBeforeEnding(input: {
    * Where the turn has got to. A turn still at "rzut" has not moved, and 10.1
    * makes the move the first of the two things a turn is made of.
    */
-  phase?: string;
+  phase?: TurnPhase["phase"];
 }): Duty[] {
   const duties: Duty[] = [];
 
@@ -84,7 +85,7 @@ export function dutiesBeforeEnding(input: {
 export function mayEndTurn(input: {
   fieldId: FieldId | null;
   done: readonly DutyKind[];
-  phase?: string;
+  phase?: TurnPhase["phase"];
 }): boolean {
   return dutiesBeforeEnding(input).length === 0;
 }
