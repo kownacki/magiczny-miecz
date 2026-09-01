@@ -3,38 +3,48 @@
 /** Sztuki Złota lying on an Obszar: the pile, and how much of it you are taking (12.1). */
 
 import { useState } from "react";
-import { TILE_ART_HEIGHT, TILE_WIDTH } from "@/lib/view/cardImages";
+import { TILE_ART_HEIGHT, TILE_GAP_PX, TILE_WIDTH, tilesAcross } from "@/lib/view/cardImages";
 import { clampCoins, stackOverlap } from "@/lib/view/tokens";
 import { CoinStack } from "./token-pile";
 
 /**
  * The gold's geometry, fitted to the Karta tile it stands beside.
  *
- * **Fifteen Sztuki Złota take up exactly one Karta's worth of room**: three
- * columns of five, so a glance at an Obszar reads the money against the Karty
- * next to it rather than in a unit of its own. Both halves fall out of that.
+ * **Two columns of three fill one tile exactly**, in both directions and with
+ * nothing left over: two coins and the row's own gap make 86, and one coin plus
+ * two more at their overlap makes 75. So six Sztuki Złota are one Karta's worth
+ * of room, and a glance at an Obszar reads the money against the Karty next to
+ * it rather than in a unit of its own.
  *
- * The width gives the coin. Three across a tile's 86 with the row's own gap
- * twice between them makes each 23, and `gold.png` is square, so that is its
- * height too. (Eighty-five against eighty-six: a pixel is the price of three
- * whole numbers, and it is under rather than over, which is the side to be on.)
+ * Everything here falls out of that. The width gives the coin — 39 — and
+ * `gold.png` is square, so that is its height too; the height then gives the
+ * overlap, 18, which is what `stackOverlap` is for.
  *
- * The height gives the overlap: 23 and four more at 13 is exactly 75, the
- * tile's picture. That is `stackOverlap`, which used to be the only rule and
- * was wrong as one — dividing the room by the coins made the overlap a function
- * of how many there were, and at a 39px coin it left nine pixels of an ingot
- * showing. At 23 it answers 13 where half a coin is 12, so the fitted stack is
- * the *looser* of the two and the shape costs the picture nothing. The test
- * beside it holds that: a fitted overlap under `coinOverlap` means the box is
- * too small for the pile.
+ * Three deep and not five. Five 39px coins fitted to 75 leaves nine pixels of
+ * each showing, and at this size that is not a coin but a ruled line — the
+ * ingot printed on it disappears. Eighteen leaves nearly half. `tokens.test.ts`
+ * holds that as a floor rather than as a comment: a fitted stack has to leave
+ * at least a third of every coin, or the box is too small for the pile.
  */
-// `TILE_GAP.card` is `gap-2`, and a margin cannot be set from a class name.
-const GAP = 8;
-const PER_STACK = 5;
-/** Three columns is what fifteen means; nothing stops a richer square at four. */
-const COLUMNS = 3;
-const COIN = Math.floor((TILE_WIDTH - (COLUMNS - 1) * GAP) / COLUMNS);
+const GAP = TILE_GAP_PX;
+/** Columns of coins across one Karta tile. */
+const PER_TILE = 2;
+const PER_STACK = 3;
+const COIN = Math.floor((TILE_WIDTH - (PER_TILE - 1) * GAP) / PER_TILE);
 const OVERLAP = stackOverlap(TILE_ART_HEIGHT, COIN, PER_STACK);
+
+/**
+ * How wide the panel this sits in is, in Karta tiles.
+ *
+ * The Obszar's window is `max-w-lg` with `px-4` — 512 less sixteen a side — and
+ * five tiles is 462 of that 480. Derived rather than written down, so a panel
+ * that changes width takes the pile with it.
+ *
+ * It is the *caller's* number and not this file's, which is why it is a prop:
+ * this component knows how a pile is drawn and nothing about the box it is
+ * drawn in.
+ */
+const PANEL_TILES = tilesAcross(512 - 32);
 
 /**
  * What is lying here, and the one control that takes it.
@@ -51,12 +61,27 @@ export function FieldGold({
   canTake,
   busy,
   onTake,
+  tiles = PANEL_TILES,
 }: {
   gold: number;
   /** 12.1's three conditions, decided by the caller — see `refuseUnlessCollectable`. */
   canTake: boolean;
   busy: boolean;
   onTake: (gold: number) => void;
+  /**
+   * How many Karta tiles the container is wide, which is what the pile may fill
+   * before it stops counting.
+   *
+   * A full row is thirty — five tiles, ten columns, three deep — and thirty
+   * Sztuki Złota is a fortune in this game: a Miecz is one, the most expensive
+   * thing the Targowisko sells is three, and a Medyk charges one a wound. Past
+   * that the last coin stands down and says so, and the numeral in the heading
+   * goes on being exact.
+   *
+   * A row rather than an arbitrary ceiling, because that is the thing a reader
+   * can actually see: the coins stop where the panel does.
+   */
+  tiles?: number;
 }) {
   /**
    * What has been typed, already held to what is lying there.
@@ -93,6 +118,7 @@ export function FieldGold({
         size={COIN}
         perStack={PER_STACK}
         overlap={OVERLAP}
+        maxColumns={tiles * PER_TILE}
         gap={GAP}
       />
       {canTake && (

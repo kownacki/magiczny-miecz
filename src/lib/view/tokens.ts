@@ -151,13 +151,19 @@ export function coinOverlap(size: number): number {
  *
  * This was here before, as the *only* rule, and it was wrong as one: dividing
  * the room by the coins makes the overlap a function of how many there are, so
- * 39px coins five deep showed nine pixels each and drew as ruled lines. What
- * makes it right here is that it now has to agree with the proportion rather
- * than replace it — at a 23px coin in 75 pixels it answers 13, where half would
- * be 12, so the fitted stack is the looser of the two. A caller reaching for
- * this whose answer comes out *under* `coinOverlap` is fitting a pile into a
- * box too small for it, and should make the box bigger or the pile shorter.
+ * 39px coins **five** deep showed nine pixels each — a quarter of the coin, the
+ * printed ingot gone, ruled paper. What makes it right as a *second* rule is
+ * that the fit has to stay legible, and that is a floor rather than a
+ * comparison with `coinOverlap`: three deep in the same box answers 18, which
+ * is under half a coin and perfectly readable, so "at least as loose as the
+ * proportion" would reject a design that works.
+ *
+ * `COIN_LEAST_SHOWING` is the line. `tokens.test.ts` holds every fitted stack
+ * to it, and it is what separates the two cases above — 18 of 39 is 46%, 9 of
+ * 39 is 23%.
  */
+export const COIN_LEAST_SHOWING = 1 / 3;
+
 export function stackOverlap(boxHeight: number, size: number, perStack: number): number {
   if (perStack <= 1) return size;
   return Math.max(1, Math.floor((boxHeight - size) / (perStack - 1)));

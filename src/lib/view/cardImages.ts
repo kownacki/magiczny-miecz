@@ -33,6 +33,30 @@ export const ART_RATIO = 240 / 209;
  */
 export const TILE_WIDTH = 86;
 export const TILE_ART_HEIGHT = Math.round(TILE_WIDTH / ART_RATIO);
+
+/**
+ * The space a row leaves between two tiles, as a number.
+ *
+ * `TILE_GAP.card` in `tile-row.tsx` is the same eight pixels as the Tailwind
+ * class `gap-2`, and a class name cannot be divided into. Here beside the width
+ * it is measured against, because the two are one fact: a row of N tiles is
+ * `N * TILE_WIDTH + (N - 1) * TILE_GAP_PX` wide, and everything that has to fit
+ * that row — the gold pile most of all — needs both halves.
+ */
+export const TILE_GAP_PX = 8;
+
+/**
+ * How many Karta tiles fit across a box, which is the unit a panel's width is
+ * really in.
+ *
+ * The Obszar's window is `max-w-lg` with `px-4`, so its body is 480 and holds
+ * five. That number decides how wide the gold pile may grow before it stops
+ * counting, and deriving it means a panel that changes width moves the pile
+ * with it rather than leaving a constant that used to be right.
+ */
+export function tilesAcross(px: number): number {
+  return Math.max(1, Math.floor((px + TILE_GAP_PX) / (TILE_WIDTH + TILE_GAP_PX)));
+}
 /**
  * The mała Karta Postaci, not a crop of the duża one.
  *

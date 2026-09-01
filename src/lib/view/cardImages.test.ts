@@ -1,7 +1,14 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { STONE_CARD, cardImageUrl, figureUrl } from "./cardImages";
+import { describe as suite, describe, expect, it } from "vitest";
+import {
+  STONE_CARD,
+  TILE_GAP_PX,
+  TILE_WIDTH,
+  cardImageUrl,
+  figureUrl,
+  tilesAcross,
+} from "./cardImages";
 import events from "@/data/events.json";
 import manifest from "@/data/card-images.json";
 import type { EventCard } from "@/data/types";
@@ -79,5 +86,28 @@ describe("the Kamień card that stands in for a figure (20.1)", () => {
     // about the square, so it does not depend on the character being known.
     expect(figureUrl(null, false)).toBeNull();
     expect(figureUrl(null, true)).not.toBeNull();
+  });
+});
+
+suite("how many Karta tiles fit across a box", () => {
+  /**
+   * The Obszar's window: `max-w-lg` is 512 and `px-4` takes sixteen off each
+   * side. Five tiles come to 462, so the sixth would need 556.
+   */
+  it("answers five for the Obszar window's body", () => {
+    expect(tilesAcross(480)).toBe(5);
+  });
+
+  it("counts the gaps between tiles and not after the last one", () => {
+    expect(tilesAcross(TILE_WIDTH)).toBe(1);
+    expect(tilesAcross(TILE_WIDTH * 2 + TILE_GAP_PX)).toBe(2);
+    // A pixel short of the pair is still one.
+    expect(tilesAcross(TILE_WIDTH * 2 + TILE_GAP_PX - 1)).toBe(1);
+  });
+
+  /** Never nought: a box too narrow for a tile still has to draw something. */
+  it("answers one however narrow the box", () => {
+    expect(tilesAcross(0)).toBe(1);
+    expect(tilesAcross(20)).toBe(1);
   });
 });

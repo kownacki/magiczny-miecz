@@ -2,6 +2,7 @@ import { describe as suite, expect, it } from "vitest";
 import {
   COLUMNS_MAX,
   DENOMINATIONS,
+  COIN_LEAST_SHOWING,
   clampCoins,
   coinOverlap,
   pileColumns,
@@ -206,33 +207,56 @@ suite("how far the coins in a stack overlap", () => {
 });
 
 suite("fitting a stack to a shape it has been given", () => {
-  /** Gold on an Obszar: fifteen coins as three columns of five, one Karta tile. */
-  const obszar = () => stackOverlap(75, 23, 5);
+  /** Gold on an Obszar: two columns of three, the footprint of one Karta tile. */
+  const obszar = () => stackOverlap(75, 39, 3);
 
   it("makes a full stack exactly as tall as the box", () => {
-    expect(23 + 4 * obszar()).toBe(75);
+    expect(39 + 2 * obszar()).toBe(75);
   });
 
   /**
-   * The check that keeps this from being the mistake it was when it stood
-   * alone: a fitted stack must be no tighter than a proportional one.
+   * The floor that keeps this from being the mistake it was when it stood
+   * alone: a fitted stack must still look like coins.
    *
    * Dividing the room by the coins makes the overlap a function of how many
-   * there are, which is how 39px coins five deep came to show nine pixels each
-   * and draw as ruled lines. At 23 in 75 it answers 13 where half is 12 — the
-   * looser of the two — so the tile is a shape being filled rather than a
-   * clamp being applied.
+   * there are, which is how 39px coins *five* deep came to show nine pixels
+   * each — a quarter, the printed ingot gone. Three deep in the same box shows
+   * 18, which is 46% and reads perfectly. So the guard is a share of the coin
+   * and not a comparison with `coinOverlap`: half would reject the design that
+   * works along with the one that does not.
    */
-  it("is no tighter than half the coin, or the box is too small for the pile", () => {
-    expect(obszar()).toBeGreaterThanOrEqual(coinOverlap(23));
+  it("leaves at least a third of every coin showing", () => {
+    expect(obszar()).toBeGreaterThanOrEqual(39 * COIN_LEAST_SHOWING);
+    // And names the shape that failed, so the floor is not merely decorative.
+    expect(stackOverlap(75, 39, 5)).toBeLessThan(39 * COIN_LEAST_SHOWING);
   });
 
   it("gives a stack of one the whole token, since nothing sits under it", () => {
-    expect(stackOverlap(75, 23, 1)).toBe(23);
+    expect(stackOverlap(75, 39, 1)).toBe(39);
   });
 
   it("keeps a sliver showing even where there is no room for one", () => {
-    expect(stackOverlap(10, 23, 5)).toBe(1);
+    expect(stackOverlap(10, 39, 5)).toBe(1);
+  });
+});
+
+/**
+ * The ceiling the Obszar's pile actually gets, worked out the way the component
+ * works it out — so the number in the doc and the number on screen are one.
+ */
+suite("what a row of coins holds", () => {
+  it("is thirty in the Obszar's window, which is a fortune in this game", () => {
+    const tiles = 5;
+    const columns = tiles * 2;
+    expect(pileColumns(30, 3, columns)).toEqual({ columns: 10, drawn: 30, cut: false });
+    // The thirty-first is what says the picture has stopped counting.
+    expect(pileColumns(31, 3, columns)).toEqual({ columns: 10, drawn: 29, cut: true });
+    expect(pileColumns(400, 3, columns)).toEqual({ columns: 10, drawn: 29, cut: true });
+  });
+
+  /** A full row of coins is exactly as wide as the tiles it is measured in. */
+  it("comes to the same width as five Karta tiles", () => {
+    expect(10 * 39 + 9 * 8).toBe(5 * 86 + 4 * 8);
   });
 });
 
