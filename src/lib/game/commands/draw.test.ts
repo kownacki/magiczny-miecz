@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
+import type { CardClass } from "@/data/types";
 import type { DeckState, Shuffle } from "@/lib/engine/deck";
 import { PRINTED_STOCK } from "@/lib/engine/stock";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { top } from "@/lib/engine/stack";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { aHolding, aSeat, aTable } from "../fixture";
-import { drawCard, drawSpell, drawSpellWithWand, shopStock } from "./draw";
+import { drawAll, drawCard, drawSpell, drawSpellWithWand, shopStock } from "./draw";
 import { plural } from "@/lib/engine/polish";
 
 /**
@@ -287,6 +288,141 @@ describe("ciągnięcie Karty Zdarzeń", () => {
       });
       expect(result.card).toBeNull();
     });
+  });
+});
+
+/* ==========================================================================
+ * Badanie Obszaru as one act (13.4)
+ * ======================================================================= */
+
+describe("wyciągnięcie wszystkich Kart naraz", () => {
+  /** Płaskowyż Mgieł, the box's own worked example — it prints three. */
+  const MGLY = asFieldId("plaskowyz-mgiel")!;
+
+  const atMgly = (
+    over: {
+      draw?: number;
+      drawn?: { cardId: string; cardClass: CardClass }[];
+      events?: DeckState;
+      mode?: "simulation" | "companion";
+    } = {},
+  ) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", field_id: MGLY })],
+      game: {
+        ...(over.mode ? { mode: over.mode } : {}),
+        turn_state: {
+          phase: "field",
+          fieldId: MGLY,
+          from: null,
+          draw: over.draw ?? 3,
+          drawn: (over.drawn ?? []) as never,
+        },
+        deck: piles({
+          events:
+            over.events ?? pile([eventRef("cyklop"), eventRef("helm"), eventRef("niedzwiedz")]),
+        }),
+      },
+    });
+
+  const stateAfter = (writes: { game?: { turn_state?: unknown } }) =>
+    top(writes.game!.turn_state as never) as Extract<TurnPhase, { phase: "field" }>;
+
+  /**
+   * The whole point: at a table badanie Obszaru is one motion, not N of them.
+   *
+   * You stop, you look at what is lying there, you count, and you deal the
+   * difference. Between the first press and the second the app used to be in a
+   * state the game has no name for — half-explored — and every question about
+   * it had to be answered about a moment that does not exist at a table.
+   */
+  it("deals everything the Obszar owes in one act", () => {
+    const { writes, result } = drawAll(atMgly(), { shuffle: never });
+    expect(result.dealt).toBe(3);
+    const state = stateAfter(writes);
+    expect(state.drawn).toHaveLength(3);
+    expect(state.draw).toBe(0);
+  });
+
+  /**
+   * 13.4: "ciągnie się ich tylko tyle, by ich suma równała się liczbie Kart" —
+   * a Wilk and a Miecz already lying on a square that prints three.
+   */
+  it("deals only the difference when Karty are already lying here", () => {
+    const { writes, result } = drawAll(
+      atMgly({
+        draw: 1,
+        drawn: [
+          { cardId: "wilk", cardClass: "foe" },
+          { cardId: "miecz", cardClass: "item" },
+        ],
+      }),
+      { shuffle: never },
+    );
+    expect(result.dealt).toBe(1);
+    const state = stateAfter(writes);
+    expect(state.drawn).toHaveLength(3);
+    expect(state.draw).toBe(0);
+  });
+
+  /**
+   * 15.2 is not this command's arithmetic and must not become a second copy of
+   * it: every card joins through `afterDraw`, which re-runs `resolutionOrder`
+   * over the whole stack. So a Wróg dealt second still resolves before a
+   * Przedmiot dealt first.
+   */
+  it("orders what came up by 15.2, not by the order it was dealt", () => {
+    const { writes } = drawAll(
+      atMgly({ draw: 2, events: pile([eventRef("helm"), eventRef("cyklop")]) }),
+      { shuffle: never },
+    );
+    expect(stateAfter(writes).drawn.map((one) => one.cardId)).toEqual(["cyklop", "helm"]);
+  });
+
+  it("keeps a Karta already lying here inside the same ordering", () => {
+    const { writes } = drawAll(
+      atMgly({
+        draw: 1,
+        drawn: [{ cardId: "helm", cardClass: "item" }],
+        events: pile([eventRef("cyklop")]),
+      }),
+      { shuffle: never },
+    );
+    expect(stateAfter(writes).drawn.map((one) => one.cardId)).toEqual(["cyklop", "helm"]);
+  });
+
+  it("writes one journal line per Karta, not one for the gesture", () => {
+    const { writes } = drawAll(atMgly({ draw: 2 }), { shuffle: never });
+    expect((writes.journal ?? []).filter((line) => line.kind === "card")).toHaveLength(2);
+  });
+
+  /** 15.5: the used pile is turned over, and it used to happen in silence. */
+  it("turns the used pile over when the deck runs short, and says so", () => {
+    const { writes, result } = drawAll(
+      atMgly({ draw: 2, events: pile([eventRef("cyklop")], [eventRef("helm")]) }),
+      { shuffle: reversed },
+    );
+    expect(result.recycled).toBe(true);
+    expect(result.dealt).toBe(2);
+    expect((writes.journal ?? [])[0]).toMatchObject({ kind: "reshuffle" });
+  });
+
+  it("refuses before the move has finished on an Obszar", () => {
+    const early = aTable({
+      seats: [aSeat({ id: "seat-a", field_id: MGLY })],
+      game: { turn_state: { phase: "roll" }, deck: piles() },
+    });
+    expect(() => drawAll(early, { shuffle: never })).toThrow("Nie czas na ciągnięcie kart (13.4).");
+  });
+
+  it("refuses a square that owes nothing, and names the number it prints", () => {
+    expect(() => drawAll(atMgly({ draw: 0 }), { shuffle: never })).toThrow(/daje 3/);
+  });
+
+  it("refuses at a physical table, where the cardboard is dealt by hand", () => {
+    expect(() => drawAll(atMgly({ mode: "companion", draw: 2 }), { shuffle: never })).toThrow(
+      /nazwij każdą Kartę osobno/,
+    );
   });
 });
 

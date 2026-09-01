@@ -227,6 +227,145 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   };
 }
 
+/**
+ * Deals everything the Obszar still owes, in one act (13.4).
+ *
+ * # Why this exists beside `drawCard`
+ *
+ * At a table, badanie Obszaru is one motion. You stop, you look at what is
+ * already lying there, you count, and you deal the difference — three cards
+ * printed, two on the square, so one off the top. Nobody deals a card, resolves
+ * it, and then decides whether to deal the next: 13.4 settles the whole number
+ * at the moment of arrival ("ciągnie się ich tylko tyle, by ich suma równała
+ * się liczbie Kart") and `afterMove` has done that subtraction since long
+ * before this.
+ *
+ * The app made it N button presses because the command was singular, which is
+ * an app's habit and not a rule. It also leaked: between the first press and
+ * the second the turn is in a state the game has no name for — half-explored —
+ * and every question about it ("may I take the Miecz yet?") had to be answered
+ * about a moment that does not exist at a table.
+ *
+ * # What it does not do
+ *
+ * It does not resolve anything. Dealing and reading are two acts and 15.2 is
+ * about the second — the Karty come up, the table sees them, and the kolejka is
+ * worked through afterwards. So this returns the cards and orders them, and
+ * nothing here fights, takes or visits.
+ *
+ * # The ordering is still `afterDraw`'s
+ *
+ * Folded rather than sorted at the end, so the rule stays in one place: every
+ * card joining the stack re-runs `resolutionOrder`, which is what puts 15.1's
+ * placed Karty above the numerals and a Wróg drawn second above a Przedmiot
+ * drawn first. A local sort here would be a second copy of 15.2 to keep in
+ * step with the first.
+ */
+/** Nothing of its own: what to deal is 13.4's arithmetic, already on the frame. */
+export type DrawAll = FromThePile;
+
+export interface DrewAll {
+  cards: EventCard[];
+  /** How many the Obszar still owed, which is how many came up. */
+  dealt: number;
+  /** The used pile was turned over to satisfy it (15.5). */
+  recycled: boolean;
+}
+
+export function drawAll(snapshot: Snapshot, command: DrawAll): Outcome<DrewAll> {
+  const seat = activeSeat(snapshot);
+  // 13.2: a turn spent meeting somebody is not also spent exploring.
+  refuseAgainst13_2(snapshot, "explore");
+  const state = requireTop(
+    snapshot.game.turn_state,
+    "field",
+    "Nie czas na ciągnięcie kart (13.4).",
+  );
+
+  if (state.draw <= 0) {
+    // The same two answers `drawCard` gives, and for the same reason: told
+    // "nie ciągnie się Kart" about a square that plainly says „wyciągnij 1
+    // kartę", a player goes looking for the bug rather than for what is lying
+    // on it.
+    const prints = FIELDS.get(state.fieldId)?.draw ?? 0;
+    throw new Error(
+      prints === 0
+        ? "Na tym Obszarze nie ciągnie się Kart (13.4)."
+        : `Ten Obszar daje ${prints} — tyle już tu leży albo wyciągnięto (13.4).`,
+    );
+  }
+
+  /**
+   * Companion deals with real cardboard, so there is nothing here to deal.
+   *
+   * A physical table turns the Karty over itself and then tells the app their
+   * names, which is `drawCard`'s `named` and cannot be done for several at once
+   * without asking for several names. Refused rather than half-supported —
+   * companion is parked (`COMPANION_PARKED`) and a silently different meaning
+   * for one verb is exactly what the second pass over every change is for.
+   */
+  if (snapshot.game.mode === "companion") {
+    throw new Error("Przy fizycznym stole nazwij każdą Kartę osobno (13.4).");
+  }
+
+  const decks = decksOf(snapshot.game);
+  const { deck: after, drawn, recycled } = drawFrom(decks.events, state.draw, command.shuffle);
+  if (drawn.length === 0) throw new Error("Talia Kart Zdarzeń jest pusta.");
+
+  const cards = drawn.map((ref) => {
+    const card = BY_REF.get(ref);
+    if (!card) throw new Error(`Nieznana karta w talii: ${ref}`);
+    return { card, ref };
+  });
+
+  /**
+   * `draw: 0` outright rather than one subtraction per card.
+   *
+   * What the Obszar owed is what came up — `drawFrom` gives fewer only when
+   * both piles are empty together, and then there is nothing left to owe
+   * either. Counting down instead would leave a square owing cards the deck
+   * cannot produce, and the turn unable to end.
+   */
+  const filled: TurnPhase = cards.reduce<TurnPhase>(
+    (phase, { card, ref }) =>
+      afterDraw(phase, { cardId: card.id, cardClass: card.cardClass, ref }),
+    { ...state, draw: 0 },
+  );
+
+  return {
+    writes: {
+      game: {
+        turn_state: replaceTop(snapshot.game.turn_state, filled),
+        deck: { ...decks, events: after },
+      },
+      journal: [
+        // 15.5, and 9.5 in the same words for the other pile. At a table this is
+        // the loudest thing that happens all evening, and it used to happen in
+        // silence.
+        ...(recycled
+          ? [
+              {
+                seatId: null,
+                round: snapshot.game.round,
+                kind: "reshuffle" as const,
+                payload: { pile: "zdarzenia" },
+              },
+            ]
+          : []),
+        // One line per Karta, not one for the deal. The journal is a record of
+        // what came up, and "wyciągnięto 3 Karty" is a record of a gesture.
+        ...cards.map(({ card, ref }) => ({
+          seatId: seat.id,
+          round: snapshot.game.round,
+          kind: "card" as const,
+          payload: { cardId: card.id, ref, source: "talia", recycled },
+        })),
+      ],
+    },
+    result: { cards: cards.map((one) => one.card), dealt: cards.length, recycled },
+  };
+}
+
 /* --------------------------------------------------------------------------
  * A Zaklęcie.
  * ----------------------------------------------------------------------- */

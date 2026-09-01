@@ -85,11 +85,28 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     },
     disposition: { kind: "zostaje" },
   },
+  /**
+   * "Każdej Postaci przywróci 2 punkty Życia, podczas każdych **odwiedzin**."
+   *
+   * `optional`, on the verb. The box draws one distinction across all thirty
+   * Nieznajomi and Miejsca and draws it consistently: "kto tu **trafi**"
+   * happens because you landed — the Urocza Diablica below, the Labirynt, the
+   * Spalona Ziemia — and "**odwiedzin**", "**zawita**", "**wizyty**", "jeżeli
+   * **chcesz**" happen because you went to them.
+   *
+   * This and the Czarodziej were the two residents missing the flag while the
+   * Sztukmistrz, worded identically, had it. Nothing read `optional` at all
+   * until the kolejka did, so being wrong cost nothing and showed nothing; it
+   * costs a frame now, and a healer who heals you whether or not you asked.
+   */
   cudotworca: {
+    optional: true,
     effect: { op: "uzdrow", upTo: 2 },
     disposition: { kind: "zostaje" },
   },
+  /** "Każda Dobra Postać, która tu **zawita**, otrzyma 1 Zaklęcie." */
   czarodziej: {
+    optional: true,
     effect: {
       op: "gdy",
       warunek: { is: "natura", jedna_z: ["good"] },
