@@ -139,6 +139,12 @@ const TONE: Record<SlotTone, string> = {
  * Two answers to two different questions, and neither is a border, which is
  * what leaves the border free to answer the pointer.
  */
+/**
+ * The tones that are an answer to a card in the air rather than a description
+ * of what is here. While one of these is showing, the pointer says nothing.
+ */
+const ANSWERING = new Set<SlotTone>(["accepts", "rejects", "candidate"]);
+
 const WASH: Partial<Record<SlotTone, string>> = {
   rejects: "bg-vermilion",
   chosen: "bg-ochre/75",
@@ -380,12 +386,21 @@ export function ItemSlot({
           // through everything under it in its stacking context, and this one
           // has no business colouring the panel the slot is sitting on.
           //
-          // The hover goes on last so its gold wins over the tone's border: a
-          // square answering a card in the air is saying something louder than
-          // "the pointer is here", and green or red should not be overruled
-          // while it says it.
+          // No hover ring while the square is answering a card in the air.
+          //
+          // This comment used to say that green and red must not be overruled
+          // by the pointer, directly above a class list that let exactly that
+          // happen: `PICKABLE` came last, so its gold border won — and it won
+          // precisely when the answer mattered, because dropping a card means
+          // putting the pointer on the square you are asking about. An empty
+          // place has no picture for the red wash to tint, so the border was
+          // the whole of the answer and the answer was gold.
+          //
+          // The hover is for reading: thin gold means you can reach this,
+          // thicker gold means you are. Neither is a thing to say while
+          // somebody is holding a card over it.
           className={`relative isolate overflow-hidden rounded border ${TONE[shown]} ${
-            disabled || lifted ? "transition" : PICKABLE
+            disabled || lifted || ANSWERING.has(shown) ? "transition" : PICKABLE
           }`}
         >
           <button
