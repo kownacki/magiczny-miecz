@@ -75,4 +75,13 @@ export const LAYER = {
    * drawer and the bar.
    */
   hover: "z-[130]",
+  /**
+   * The card stuck to the pointer, which is above even that.
+   *
+   * It is not a description of anything: it is a thing the player is holding,
+   * and a held thing that goes behind a panel has been dropped as far as the
+   * eye is concerned. It sat at `z-50` — level with the modals, under the bar
+   * and every drawer — from before this file existed.
+   */
+  carried: "z-[140]",
 } as const;

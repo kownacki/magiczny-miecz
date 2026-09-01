@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { CarriedCard, useCarry } from "./carry";
 import spells from "@/data/spells.json";
 import type { Spell } from "@/data/types";
 import type { TileCard } from "./card-tile";
@@ -146,12 +147,19 @@ export function SpellHand({
   /**
    * The card in the air, which for a hand of Zaklęcia never leaves the hand.
    *
-   * Its own state and not the seat card's: a Zaklęcie has no place on the body
+   * Its own carry and not the seat card's: a Zaklęcie has no place on the body
    * and cannot go in the Plecak (9.3 keeps it concealed and 2.6 counts it
-   * separately), so the only journey it can make is within this row. Sharing
-   * the seat card's carry would offer places it can never land in.
+   * separately), so the only journey it can make is within this row, and
+   * sharing the seat card's would offer places it can never land in.
+   *
+   * The same `useCarry` all the same, which is the point. This row had written
+   * out its own two thirds of it — a `lifted` id, a click away and an Escape —
+   * and what it had not written was the card stuck to the pointer, so picking a
+   * Zaklęcie up looked like nothing happening at all. It also conflated the
+   * click with the drag, so the browser's own drag picture and this one would
+   * both have been on the cursor at once had it ever drawn one.
    */
-  const [lifted, setLifted] = useState<string | null>(null);
+  const { carried, lifted, pickUp, putDown, announceDrag } = useCarry();
   /** Whether the hand is showing. Before the early return, like every hook. */
   const [showing, setShowing] = useState(true);
 
@@ -174,34 +182,6 @@ export function SpellHand({
     onReorder,
   });
   const hand = rack.arranged;
-
-  /**
-   * A click anywhere that is not the row, or Escape, puts the card back.
-   *
-   * The seat card does this for a Przedmiot and this row is the same gesture,
-   * so it needs the same way out: a card left on the cursor is a gesture half
-   * finished, and the first click anywhere would otherwise move it.
-   */
-  useEffect(() => {
-    if (lifted === null) return;
-    const timer = setTimeout(() => {
-      const putBack = () => setLifted(null);
-      const onKey = (event: KeyboardEvent) => {
-        if (event.key === "Escape") setLifted(null);
-      };
-      window.addEventListener("click", putBack);
-      window.addEventListener("keydown", onKey);
-      cancel = () => {
-        window.removeEventListener("click", putBack);
-        window.removeEventListener("keydown", onKey);
-      };
-    }, 0);
-    let cancel: (() => void) | undefined;
-    return () => {
-      clearTimeout(timer);
-      cancel?.();
-    };
-  }, [lifted]);
 
   // An empty hand under the pack is still worth a line, for the same reason an
   // empty pack is drawn: the cap is the thing being said, and "0 / 2" says it.
@@ -330,7 +310,7 @@ export function SpellHand({
           const before = rack.insertAt === null ? null : rack.lands(rack.insertAt);
           rack.setDragOver(false);
           rack.setInsertAt(null);
-          setLifted(null);
+          putDown();
           const holdingId = event.dataTransfer.getData(SPELL_DRAG);
           if (!holdingId) return;
           event.preventDefault();
@@ -344,7 +324,7 @@ export function SpellHand({
           const before = rack.insertAt === null ? null : rack.lands(rack.insertAt);
           rack.setInsertAt(null);
           rack.moveWithin(lifted, before);
-          setLifted(null);
+          putDown();
         }}
         answer={lifted === null ? null : { colour: "magia", over: rack.dragOver }}
       >
@@ -495,10 +475,14 @@ export function SpellHand({
               onDragStart={(event) => {
                 event.dataTransfer.setData(SPELL_DRAG, entry.holdingId);
                 event.dataTransfer.effectAllowed = "move";
-                setLifted(entry.holdingId);
+                // Through `announceDrag`, which says it a tick late: the
+                // browser takes its picture of the card at the end of this
+                // handler, and fading the square inside it would put the faded
+                // one on the cursor. The pack has always done it this way.
+                announceDrag({ cardId: entry.cardId, holdingId: entry.holdingId });
               }}
               onDragEnd={() => {
-                setLifted(null);
+                announceDrag(null);
                 rack.setInsertAt(null);
               }}
               onDragOver={() =>
@@ -527,10 +511,19 @@ export function SpellHand({
                   });
                 }
                 event.stopPropagation();
-                if (lifted === null) return setLifted(entry.holdingId);
+                if (lifted === null) {
+                  return pickUp({
+                    holdingId: entry.holdingId,
+                    cardId: entry.cardId,
+                    name,
+                    // The row it never leaves, so „put it back" is a real
+                    // answer here rather than a journey to nowhere.
+                    from: "zaklecia",
+                  });
+                }
                 if (lifted !== entry.holdingId) rack.moveWithin(lifted, rack.lands(entry.holdingId));
                 rack.setInsertAt(null);
-                setLifted(null);
+                putDown();
               }}
               // Two clicks on the card speak it — the same gesture that puts
               // a Przedmiot on, for the act that is a hand's equivalent. It
@@ -661,6 +654,10 @@ export function SpellHand({
       </TileRow>
       )}
     </Fold>
+    {/* The card itself, stuck to the pointer — the same component the Plecak
+        puts there, fixed to the window and above everything, so it does not
+        matter which panel it was picked up in. */}
+    <CarriedCard carried={carried} />
     </div>
   );
 }

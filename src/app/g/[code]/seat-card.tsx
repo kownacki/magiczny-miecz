@@ -19,16 +19,15 @@
  * comments back on their functions.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { describeAbility } from "@/lib/engine/abilityText";
 import { abilitiesOfCharacter, asCharacterId, notesForCharacter } from "@/lib/engine/characters";
 import { SLOT_LABEL, STORAGE, openStorage, type Slot } from "@/lib/engine/slots";
 import { characterImageUrl } from "@/lib/view/cardImages";
 import { type TileCard } from "./card-tile";
-import { CarriedCard, type Carried } from "./carry";
+import { CarriedCard, useCarry } from "./carry";
 import { Hand } from "./hand";
 import { TrophySection } from "./trophy-section";
-import { dismissableOpen } from "./overlay";
 import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import { forbiddenTo } from "@/lib/engine/holdings";
@@ -199,64 +198,22 @@ export function SeatCard({
   const [showing, setShowing] = useState(true);
   /** The powers, which were the one fold here the browser held for itself. */
   const [abilities, setAbilities] = useState(false);
-  const [carried, setCarried] = useState<Carried | null>(null);
   /**
-   * The card being dragged, by id.
+   * The card in the air, and everything that ends it.
    *
-   * Kept in state because a `dragover` handler is not allowed to read what the
-   * drag is carrying — only the drop is — so without this the place under the
-   * pointer could not say whether it would accept before it was let go.
+   * All of it is `useCarry`'s — the click that picks a card up, the drag that
+   * is the same journey with the button held, the fade on the place it came
+   * from, and the four ways either gesture finishes. It was written out here,
+   * and the hand of Zaklęcia had two thirds of the same thing beside it.
    */
-  const [dragging, setDragging] = useState<{ cardId: string; holdingId: string } | null>(null);
-  /**
-   * Says what a drag has picked up — a tick after it picks it up.
-   *
-   * The browser takes its picture of the card being dragged at the end of the
-   * `dragstart` handler, and the place the card came from is faded the moment
-   * this lands. Fade it inside the handler and the picture on the cursor is the
-   * faded one, which is the opposite of what a card in the air should look
-   * like. Letting go cancels a pending fade rather than queueing behind it, so
-   * a drag abandoned in the same breath cannot leave a hollow behind.
-   */
-  const dragTimer = useRef<number | null>(null);
-  const announceDrag = useCallback((moving: { cardId: string; holdingId: string } | null) => {
-    if (dragTimer.current !== null) window.clearTimeout(dragTimer.current);
-    dragTimer.current = null;
-    if (!moving) return setDragging(null);
-    dragTimer.current = window.setTimeout(() => setDragging(moving), 0);
-  }, []);
-  const movingCardId = carried?.cardId ?? dragging?.cardId ?? null;
-  /**
-   * The card that is in the air, whichever way it was picked up.
-   *
-   * Clicking a card and dragging it are the same journey — one with the button
-   * held — so the place it came from looks the same either way: emptied, not
-   * still occupied by something that has gone slightly grey.
-   */
-  const liftedHoldingId = carried?.holdingId ?? dragging?.holdingId ?? null;
-
-  /**
-   * Puts down what is being carried.
-   *
-   * Onto the place it came from, it is simply put back: nothing moved, so
-   * nothing is sent. That is also what happens when it is dropped anywhere that
-   * is not a place at all — a click on the board, or Escape — because a card
-   * picked up and not put anywhere has not gone anywhere.
-   */
-  /**
-   * Nothing is in the air any more, whichever half was holding it.
-   *
-   * There are two: a card picked up by clicking (`carried`) and one picked up
-   * by dragging (`dragging`), and both feed `liftedHoldingId` and
-   * `movingCardId` — the fade on the place it came from, and the lit places it
-   * could go. Clearing one and not the other leaves the table looking exactly
-   * like a gesture still in progress, which is the state a mixed run of
-   * double-clicks, drags and corner buttons kept ending in.
-   */
-  const putDown = useCallback(() => {
-    setCarried(null);
-    announceDrag(null);
-  }, [announceDrag, setCarried]);
+  const {
+    carried,
+    lifted: liftedHoldingId,
+    movingCardId,
+    pickUp,
+    putDown,
+    announceDrag,
+  } = useCarry();
 
   /**
    * Whether this character may use that card at all (5.3).
@@ -279,83 +236,6 @@ export function SeatCard({
     onEquip(carried.holdingId, slot);
     putDown();
   };
-
-  // A click anywhere that is not a place, or Escape, puts it back. The places
-  // stop their own clicks from reaching the window, so this only hears the
-  // ones that missed. Registered a tick late so the click that picked the card
-  // up does not immediately put it down again.
-  useEffect(() => {
-    if (!carried) return;
-    let cancel: (() => void) | undefined;
-    const timer = setTimeout(() => {
-      const putBack = () => putDown();
-      const onKey = (event: KeyboardEvent) => {
-        // Not while a sheet is open over the table: Escape is the top one's.
-        if (event.key === "Escape" && !dismissableOpen()) putDown();
-      };
-      window.addEventListener("click", putBack);
-      window.addEventListener("keydown", onKey);
-      cancel = () => {
-        window.removeEventListener("click", putBack);
-        window.removeEventListener("keydown", onKey);
-      };
-    }, 0);
-    return () => {
-      clearTimeout(timer);
-      cancel?.();
-    };
-  }, [carried]);
-
-  /**
-   * A drag ends when it ends, wherever that is.
-   *
-   * `dragend` fires on the element the drag started from — and a drop that
-   * lands moves that card, so React has usually unmounted it by the time the
-   * event would arrive. The handler on the card then never runs, `dragging`
-   * stays set, and the table sits there with the origin faded and every place
-   * it could go lit up: a gesture that finished minutes ago, still showing.
-   *
-   * Listening at the window catches all of it — the drop that landed, the one
-   * that missed, the drag let go outside the window — and `drop` is here as
-   * well as `dragend` because one of the card handlers stops propagation, so
-   * that one would otherwise arrive only as the `dragend` that goes missing.
-   */
-  useEffect(() => {
-    if (!dragging) return;
-    const done = () => announceDrag(null);
-    window.addEventListener("dragend", done, true);
-    window.addEventListener("drop", done, true);
-    return () => {
-      window.removeEventListener("dragend", done, true);
-      window.removeEventListener("drop", done, true);
-    };
-  }, [dragging, announceDrag]);
-
-  /**
-   * Going away puts the card down.
-   *
-   * A card on the cursor is a gesture half finished, and a gesture cannot be
-   * left running in a tab nobody is looking at: you come back minutes later to
-   * a card stuck to the pointer, having forgotten which card it was or where it
-   * came from, and the first click anywhere puts it somewhere. Leaving the tab
-   * ends it, and so does the window losing focus.
-   *
-   * Nothing is lost by being eager about this. Putting it down is not a move —
-   * the card has not gone anywhere yet, and the pack is exactly as it was.
-   */
-  useEffect(() => {
-    if (!carried) return;
-    const putBack = () => putDown();
-    const onHidden = () => {
-      if (document.hidden) putBack();
-    };
-    document.addEventListener("visibilitychange", onHidden);
-    window.addEventListener("blur", putBack);
-    return () => {
-      document.removeEventListener("visibilitychange", onHidden);
-      window.removeEventListener("blur", putBack);
-    };
-  }, [carried]);
 
   return (
     /**
@@ -769,7 +649,7 @@ export function SeatCard({
                 liftedHoldingId={liftedHoldingId}
                 onDragging={announceDrag}
                 onPickUp={(item, from) =>
-                  setCarried({ ...item, name: item.card.name, from })
+                  pickUp({ ...item, name: item.card.name, from })
                 }
                 onTakeOff={(holdingId) => {
                   putDown();
@@ -800,7 +680,10 @@ export function SeatCard({
             carried={carried}
             moving={movingCardId !== null}
             liftedHoldingId={liftedHoldingId}
-            onCarry={setCarried}
+            /* Two words for the two halves, rather than one setter that also
+               means "let go": putting a card down is the thing with four ways
+               of happening, and it is the hook's. */
+            onCarry={(taken) => (taken ? pickUp(taken) : putDown())}
             onDragging={announceDrag}
             onDrop={onDrop}
             asked={asked}
