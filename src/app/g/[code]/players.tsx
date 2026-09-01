@@ -168,69 +168,96 @@ export function PlayersDrawer({
                 seat.seatIndex === activeSeatIndex ? "border-ochre/60" : "border-edge/60"
               } ${seat.eliminated ? "opacity-50" : ""}`}
             >
+              {/**
+                * Two lines, because a row is two different facts.
+                *
+                * Who is playing — the name, whether it is you, whether they are
+                * the host, whether anybody is there at all — and what their
+                * Postać is doing. Both were on one line, in one long truncating
+                * span, so a table of five people showed „Test (ty) BARBARZYŃ…"
+                * and the Postać's name, the one thing you open this drawer to
+                * check, was the first casualty of a long player name.
+                *
+                * The split is by *subject*, not by fitting: the person above,
+                * their figure below. Which is why the numbers stay on the top
+                * line — they are the seat's, and the drawer's whole job is to
+                * put five of them in a column you can read down.
+                */}
               <button
                 onClick={() => toggleSeat(seat.id)}
-                className="flex w-full items-center gap-2 px-2 py-1.5 text-left"
+                className="flex w-full flex-col gap-0.5 px-2 py-1.5 text-left"
               >
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ background: colour }}
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                  {seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}
-                  {/* Your own row is named, because a list of everybody that
-                      does not say which one is you is a list you have to count
-                      your way through. */}
-                  {mine && <span className="ml-1 text-[11px] text-ochre">(ty)</span>}
-                  <span className="ml-2 text-[11px] text-muted">
+                <span className="flex w-full items-center gap-2">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ background: colour }}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                    {seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}
+                    {/* Your own row is named, because a list of everybody that
+                        does not say which one is you is a list you have to count
+                        your way through. */}
+                    {mine && <span className="ml-1 text-[11px] text-ochre">(ty)</span>}
+                    {seat.isHost && (
+                      <span className="ml-2 text-[11px] text-ochre/80">gospodarz</span>
+                    )}
+                    {/* The character is still in the game; only its player is
+                        gone. Worth saying plainly — whoever is left has to decide
+                        whether to play it or leave it standing. */}
+                    {!seat.driven ? (
+                      <span className="ml-2 text-[11px] text-vermilion/80">bez gracza</span>
+                    ) : seat.away ? (
+                      <span className="ml-2 text-[11px] text-muted">nieobecny</span>
+                    ) : null}
+                  </span>
+                  <span className="tnum shrink-0 text-[11px]">
+                    <span className="text-miecz">{seat.miecz}</span>
+                    <span className="text-muted"> / </span>
+                    <span className="text-magia">{seat.magia}</span>
+                    <span className="text-muted"> / </span>
+                    <span className="text-zycie">{seat.life}</span>
+                    <span className="text-muted"> / </span>
+                    <span className="text-zloto">{seat.gold}</span>
+                  </span>
+                  <span className="shrink-0 text-[10px] text-muted">{expanded ? "−" : "+"}</span>
+                </span>
+
+                {/* Under the name and indented to it — the dot's width and the
+                    gap after it — so the two lines read as one row rather than
+                    as two entries. */}
+                <span className="flex w-full items-center gap-2 pl-5">
+                  <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
                     {character ? (
                       <Lookable kind="character" id={character.id} name={character.name} />
                     ) : (
                       "wybiera Postać"
                     )}
                   </span>
-                  {seat.isHost && (
-                    <span className="ml-2 text-[11px] text-ochre/80">gospodarz</span>
+                  {/* Shut, the row still has to admit there is something to open.
+
+                      A seat sitting out three rounds in Kamień looked, folded,
+                      exactly like a seat having an ordinary game — and this
+                      drawer is where the table comes to ask why the turn keeps
+                      skipping somebody.
+
+                      Beside the Postać rather than beside the player, because
+                      that is whose they are: a Kamień and two Eliksiry are
+                      things happening to a figure on the board.
+
+                      Counted, not one glyph per effect: two Eliksiry drew "▲▲",
+                      which says "some" in the space where "▲2" says how many. The
+                      same summary a folded seat card carries, from the same
+                      component, so the two cannot come to disagree. */}
+                  {seat.effects.length > 0 && (
+                    <span
+                      title={seat.effects.map((effect) => effect.title).join(" · ")}
+                      className="tnum shrink-0 text-[11px] leading-none"
+                    >
+                      <EffectTally effects={seat.effects} />
+                    </span>
                   )}
-                  {/* The character is still in the game; only its player is
-                      gone. Worth saying plainly — whoever is left has to decide
-                      whether to play it or leave it standing. */}
-                  {!seat.driven ? (
-                    <span className="ml-2 text-[11px] text-vermilion/80">bez gracza</span>
-                  ) : seat.away ? (
-                    <span className="ml-2 text-[11px] text-muted">nieobecny</span>
-                  ) : null}
                 </span>
-                {/* Shut, the row still has to admit there is something to open.
-
-                    A seat sitting out three rounds in Kamień looked, folded,
-                    exactly like a seat having an ordinary game — and this
-                    drawer is where the table comes to ask why the turn keeps
-                    skipping somebody.
-
-                    Counted, not one glyph per effect: two Eliksiry drew "▲▲",
-                    which says "some" in the space where "▲2" says how many. The
-                    same summary a folded seat card carries, from the same
-                    component, so the two cannot come to disagree. */}
-                {seat.effects.length > 0 && (
-                  <span
-                    title={seat.effects.map((effect) => effect.title).join(" · ")}
-                    className="tnum shrink-0 text-[11px] leading-none"
-                  >
-                    <EffectTally effects={seat.effects} />
-                  </span>
-                )}
-                <span className="tnum shrink-0 text-[11px]">
-                  <span className="text-miecz">{seat.miecz}</span>
-                  <span className="text-muted"> / </span>
-                  <span className="text-magia">{seat.magia}</span>
-                  <span className="text-muted"> / </span>
-                  <span className="text-zycie">{seat.life}</span>
-                  <span className="text-muted"> / </span>
-                  <span className="text-zloto">{seat.gold}</span>
-                </span>
-                <span className="shrink-0 text-[10px] text-muted">{expanded ? "−" : "+"}</span>
               </button>
 
               {expanded && (
