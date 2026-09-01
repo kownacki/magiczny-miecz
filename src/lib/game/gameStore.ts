@@ -123,6 +123,7 @@ export function emptyTables(): Tables {
     holdings: [],
     seat_effects: [],
     field_cards: [],
+    field_gold: [],
     moves: [],
   };
 }

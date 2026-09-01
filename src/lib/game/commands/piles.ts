@@ -24,6 +24,40 @@ export interface Returnable {
 }
 
 /** A row from either table, as the thing that has to be put away. */
+/**
+ * Sztuki Złota put down on an Obszar, added to whatever is already lying there.
+ *
+ * One row per Obszar, so this is an insert or a patch and never a second row
+ * for the same square. Read through the snapshot it is handed, which is what
+ * lets two writes in one turn add up: a caller chaining through
+ * `apply(snapshot, soFar)` sees the first one's total.
+ *
+ * The żetony are unlimited — the engine models no supply to draw down, which
+ * is the one part of 3.4 it leaves to the table.
+ */
+export function dropGold(snapshot: Snapshot, fieldId: string, gold: number): Changeset {
+  if (gold <= 0) return {};
+  const already = snapshot.fieldGold.find((row) => row.field_id === fieldId);
+  return already
+    ? { fieldGold: { patch: [{ id: already.id, patch: { gold: already.gold + gold } }] } }
+    : { fieldGold: { insert: [{ field_id: fieldId, gold }] } };
+}
+
+/**
+ * Sztuki Złota taken off an Obszar, and the row gone when there is none left.
+ *
+ * Deleted rather than left at zero, so "is there gold here" is a row and not a
+ * number to compare — an empty purse on a square is no purse.
+ */
+export function takeGold(snapshot: Snapshot, fieldId: string, gold: number): Changeset {
+  const already = snapshot.fieldGold.find((row) => row.field_id === fieldId);
+  if (!already || gold <= 0) return {};
+  const left = Math.max(0, already.gold - gold);
+  return left === 0
+    ? { fieldGold: { delete: [already.id] } }
+    : { fieldGold: { patch: [{ id: already.id, patch: { gold: left } }] } };
+}
+
 export function asReturnable(row: { card_id: string; granted: boolean }): Returnable {
   return { cardId: row.card_id, granted: row.granted };
 }

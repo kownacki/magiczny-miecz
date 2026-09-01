@@ -151,6 +151,7 @@ export function aTable(over: TableOver = {}): Snapshot {
       ),
     holdings: over.holdings ?? [],
     fieldCards: over.fieldCards ?? [],
+    fieldGold: over.fieldGold ?? [],
     effects: over.effects ?? [],
     // The snapshot's copy of the games row's own counter; a test that sets
     // one and not the other would be describing a table that cannot exist.

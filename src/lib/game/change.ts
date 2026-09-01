@@ -7,10 +7,12 @@ import { tablesFor } from "./tables";
 import {
   GAME_COLUMNS,
   fieldCardsFor,
+  fieldGoldFor,
   holdingsFor,
   seatsFor,
   usersFor,
   type FieldCardRow,
+  type FieldGoldRow,
   type GameRow,
   type HoldingRow,
   type SeatRow,
@@ -59,6 +61,7 @@ export interface Snapshot {
   users: UserRow[];
   holdings: HoldingRow[];
   fieldCards: FieldCardRow[];
+  fieldGold: FieldGoldRow[];
   effects: EffectRow[];
   /** The highest `seq` the journal held when this was read. */
   journalSeq: number;
@@ -142,6 +145,16 @@ export interface FieldCardPatch {
   patch: Partial<Omit<FieldCardRow, "id">>;
 }
 
+export interface NewFieldGold {
+  field_id: string;
+  gold: number;
+}
+
+export interface FieldGoldPatch {
+  id: string;
+  patch: Partial<Omit<FieldGoldRow, "id">>;
+}
+
 export interface NewEffect {
   seat_id: string;
   source: string;
@@ -221,6 +234,14 @@ export interface Changeset {
   usersRemoved?: string[];
   holdings?: { insert?: NewHolding[]; patch?: HoldingPatch[]; delete?: string[] };
   fieldCards?: { insert?: NewFieldCard[]; patch?: FieldCardPatch[]; delete?: string[] };
+  /**
+   * Loose Sztuki Złota on an Obszar (12.1).
+   *
+   * A row per Obszar rather than a number on a shared column, so two commands
+   * that both put gold down in one turn add up instead of the later one winning
+   * — the trap CLAUDE.md names about `merge` and `game.deck`.
+   */
+  fieldGold?: { insert?: NewFieldGold[]; patch?: FieldGoldPatch[]; delete?: string[] };
   effects?: { insert?: NewEffect[]; patch?: EffectPatch[]; delete?: string[] };
   journal?: JournalWrite[];
 }
@@ -307,6 +328,15 @@ export function merge(first: Changeset, second: Changeset): Changeset {
             insert: both(first.fieldCards?.insert, second.fieldCards?.insert),
             patch: both(first.fieldCards?.patch, second.fieldCards?.patch),
             delete: both(first.fieldCards?.delete, second.fieldCards?.delete),
+          }),
+        }
+      : {}),
+    ...(first.fieldGold || second.fieldGold
+      ? {
+          fieldGold: drop({
+            insert: both(first.fieldGold?.insert, second.fieldGold?.insert),
+            patch: both(first.fieldGold?.patch, second.fieldGold?.patch),
+            delete: both(first.fieldGold?.delete, second.fieldGold?.delete),
           }),
         }
       : {}),
@@ -448,6 +478,22 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
       })),
     );
 
+  const goneFieldGold = new Set(writes.fieldGold?.delete ?? []);
+  const fieldGoldPatches = byId(writes.fieldGold?.patch);
+  const fieldGold = snapshot.fieldGold
+    .filter((row) => !goneFieldGold.has(row.id))
+    .map((row) => {
+      const patch = fieldGoldPatches.get(row.id);
+      return patch ? ({ ...row, ...patch } as FieldGoldRow) : row;
+    })
+    .concat(
+      (writes.fieldGold?.insert ?? []).map((one) => ({
+        id: pendingId(),
+        field_id: one.field_id,
+        gold: one.gold,
+      })),
+    );
+
   const goneEffects = new Set(writes.effects?.delete ?? []);
   const effectPatches = byId(writes.effects?.patch);
   const effects = snapshot.effects
@@ -466,6 +512,7 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
     users,
     holdings,
     fieldCards,
+    fieldGold,
     effects,
     journalSeq: snapshot.journalSeq + (writes.journal?.length ?? 0),
   };
@@ -502,19 +549,20 @@ async function gameRow(gameId: string, on: DbHandle = handleNow()): Promise<Snap
 }
 
 export async function loadSnapshot(gameId: string, on: DbHandle = handleNow()): Promise<Snapshot> {
-  const [game, seats, users, holdings, fieldCards, effects] = await Promise.all([
+  const [game, seats, users, holdings, fieldCards, fieldGold, effects] = await Promise.all([
     gameRow(gameId, on),
     seatsFor(gameId, on),
     usersFor(gameId, on),
     holdingsFor(gameId, on),
     fieldCardsFor(gameId, on),
+    fieldGoldFor(gameId, on),
     effectRowsFor(gameId, on),
   ]);
   // Off the games row, which is also the row that has to be won to write at
   // all. It used to be a sixth query — `max(seq)` — read at the same moment as
   // everything else and settled long before the journal line was written, which
   // is precisely the gap two changes used to meet in.
-  return { game, seats, users, holdings, fieldCards, effects, journalSeq: game.journal_seq };
+  return { game, seats, users, holdings, fieldCards, fieldGold, effects, journalSeq: game.journal_seq };
 }
 
 /** Somebody else changed this game while we were deciding what to do to it. */
@@ -564,6 +612,9 @@ export function isEmpty(writes: Changeset): boolean {
     !writes.fieldCards?.insert?.length &&
     !writes.fieldCards?.patch?.length &&
     !writes.fieldCards?.delete?.length &&
+    !writes.fieldGold?.insert?.length &&
+    !writes.fieldGold?.patch?.length &&
+    !writes.fieldGold?.delete?.length &&
     !writes.effects?.insert?.length &&
     !writes.effects?.patch?.length &&
     !writes.effects?.delete?.length &&
@@ -709,6 +760,25 @@ export async function commit(
       })),
     );
     if (error) throw new Failure(`commit(fieldCards.insert): ${error.message}`);
+  }
+
+  if (writes.fieldGold?.delete?.length) {
+    const { error } = await on
+      .from("field_gold")
+      .delete()
+      .eq("game_id", gameId)
+      .in("id", writes.fieldGold.delete);
+    if (error) throw new Failure(`commit(fieldGold.delete): ${error.message}`);
+  }
+  for (const row of writes.fieldGold?.patch ?? []) {
+    const { error } = await t.fieldGold.update(row.patch).eq("id", row.id);
+    if (error) throw new Failure(`commit(fieldGold.patch): ${error.message}`);
+  }
+  if (writes.fieldGold?.insert?.length) {
+    const { error } = await t.fieldGold.insert(
+      writes.fieldGold.insert.map((one) => ({ game_id: gameId, ...one })),
+    );
+    if (error) throw new Failure(`commit(fieldGold.insert): ${error.message}`);
   }
 
   if (writes.effects?.delete?.length) {

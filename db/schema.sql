@@ -424,6 +424,31 @@ create table if not exists magiczny_miecz.field_cards (
 
 create index if not exists field_cards_game_idx on magiczny_miecz.field_cards(game_id, field_id);
 
+-- Loose Sztuki Złota lying on an Obszar (12.1, 20.2, and 4.4 by the reading in
+-- docs/TASKS.md).
+--
+-- Not a `field_cards` row, because coins are not Karty. 3.5 keeps them out of
+-- the Przedmiot limit and 3.4 draws them from a supply of żetony rather than
+-- from a deck, so a Sztuka Złota on the ground has no card and no back. Leaving
+-- them as `1-sztuka-zlota` rows — which is what `turnToStone` did — minted
+-- copies the deck never gave up: picking one up sent a Karta to the used pile
+-- that had never been dealt, and 21.2's `copiesInPlay` counted it.
+--
+-- One row per Obszar that has any, so taking three of five is a patch on a row
+-- rather than a read-modify-write of a column two commands might both touch.
+-- The engine treats the żetony as unlimited (there is no supply to draw down),
+-- which is the one part of 3.4 this deliberately does not model.
+create table if not exists magiczny_miecz.field_gold (
+  id uuid primary key default gen_random_uuid(),
+  game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
+  field_id text not null,
+  gold int not null default 0,
+  created_at timestamptz not null default now(),
+  unique (game_id, field_id)
+);
+
+create index if not exists field_gold_game_idx on magiczny_miecz.field_gold(game_id, field_id);
+
 -- ---------------------------------------------------------------------------
 
 -- Append-only journal of everything that happened. This is what makes the
@@ -490,6 +515,7 @@ alter table magiczny_miecz.users enable row level security;
 alter table magiczny_miecz.holdings enable row level security;
 alter table magiczny_miecz.seat_effects enable row level security;
 alter table magiczny_miecz.field_cards enable row level security;
+alter table magiczny_miecz.field_gold enable row level security;
 alter table magiczny_miecz.moves enable row level security;
 
 -- ---------------------------------------------------------------------------

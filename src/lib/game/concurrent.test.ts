@@ -62,6 +62,7 @@ function seed(lying: string[]): Tables {
     ],
     holdings: [],
     seat_effects: [],
+    field_gold: [],
     field_cards: lying.map((cardId, at) => ({
       id: `fc${at + 1}`,
       game_id: "g1",

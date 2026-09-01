@@ -63,6 +63,7 @@ function seed(): Tables {
     holdings: [],
     seat_effects: [],
     field_cards: [],
+    field_gold: [],
     moves: [{ id: "m0", game_id: "g1", seq: 12 }],
   };
 }

@@ -168,6 +168,9 @@ export const HOLDING_COLUMNS = "id,seat_id,card_id,kind,face,slot,ordinal,carrie
 /** And a Karta lying face up on a field (16.8), which has four. */
 export const FIELD_CARD_COLUMNS = "id,field_id,card_id,granted,pool";
 
+/** And loose Sztuki Złota, which have a row of their own — see db/schema.sql. */
+export const FIELD_GOLD_COLUMNS = "id,field_id,gold";
+
 /**
  * Creates a table and returns the host's seat token.
  *
@@ -692,6 +695,32 @@ export interface FieldCardRow {
    * db/schema.sql.
    */
   pool: number | null;
+}
+
+/**
+ * Loose gold lying on an Obszar (12.1).
+ *
+ * Its own table rather than a `field_cards` row, because a Sztuka Złota on the
+ * ground is not a Karta: 3.5 keeps it out of the Przedmiot limit and 3.4 draws
+ * it from a supply of żetony. See the column's note in db/schema.sql.
+ */
+export interface FieldGoldRow {
+  id: string;
+  field_id: string;
+  gold: number;
+}
+
+export async function fieldGoldFor(
+  gameId: string,
+  on: DbHandle = handleNow(),
+): Promise<FieldGoldRow[]> {
+  const { data, error } = await on
+    .from("field_gold")
+    .select(FIELD_GOLD_COLUMNS)
+    .eq("game_id", gameId)
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FieldGoldRow[];
 }
 
 export async function fieldCardsFor(gameId: string, on: DbHandle = handleNow()): Promise<FieldCardRow[]> {

@@ -12,6 +12,7 @@ export interface Tables {
   holdings: Row[];
   seat_effects: Row[];
   field_cards: Row[];
+  field_gold: Row[];
   moves: Row[];
 }
 
@@ -85,6 +86,7 @@ export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
   holdings: { face: "open", granted: false, slot: null, ordinal: null, carried_by: null },
   seat_effects: {},
   field_cards: { granted: false },
+  field_gold: { gold: 0 },
   moves: { round: 0, payload: {}, manual: false, seat_id: null, user_id: null, actor_name: null },
 };
 
@@ -96,6 +98,7 @@ export const STAMPED: Record<keyof Tables, readonly string[]> = {
   holdings: ["created_at"],
   seat_effects: ["created_at"],
   field_cards: ["created_at"],
+  field_gold: ["created_at"],
   moves: ["created_at"],
 };
 

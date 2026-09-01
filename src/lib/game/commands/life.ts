@@ -3,7 +3,7 @@
 import { HEAL_CEILING, heal } from "@/lib/engine/derive";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
 import { savedFromLoss } from "@/lib/engine/status";
-import { asReturnable, putOnPile, trophiesToPile } from "./piles";
+import { asReturnable, dropGold, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
 import { isStone } from "./stone";
 
@@ -158,6 +158,30 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
         }
       : {};
 
+  /**
+   * And the purse, which 4.4 forgets to mention.
+   *
+   * The rule lists what stays — "Wszystkie należące do niej Przedmioty oraz jej
+   * Przyjaciele pozostają na Obszarze" — and gives the Magia and Miecz żetony
+   * back to the spare pile and the Zaklęcia to the used one. Gold is in none of
+   * the three lists.
+   *
+   * It is an omission rather than a decision. 4.4 is Talisman's 4:3 adapted —
+   * the numbering runs in step, and 5.5 and 6.4 are 5:4 and 6:4 word for word —
+   * and 4:3 reads "all the Character's Objects, Magic Objects, Followers **and
+   * Gold Counters** are placed on the Space where the Character died". The
+   * Gold Counters fell out in translation. 20.2 settles it from the other side:
+   * being turned to stone for three turns leaves your gold on the square for
+   * anyone to take, and it would be strange for dying to be gentler on a purse.
+   */
+  const purse: Changeset =
+    seat?.field_id && seat.gold > 0
+      ? merge(
+          { seats: [{ id: seat.id, patch: { gold: 0 } }] },
+          dropGold(apply(snapshot, dropped), seat.field_id, seat.gold),
+        )
+      : {};
+
   const emptied: Changeset =
     mine.length > 0 ? { holdings: { delete: mine.map((h) => h.id) } } : {};
 
@@ -179,7 +203,7 @@ export function killSeat(snapshot: Snapshot, seatId: string): Changeset {
   const cleared: Changeset =
     undone.length > 0 ? { effects: { delete: undone.map((row) => row.id) } } : {};
 
-  const put = mergeAll(dropped, emptied, cleared);
+  const put = mergeAll(dropped, purse, emptied, cleared);
   // Chained rather than merged: both write `deck`, and a merge would let the
   // second overwrite the first's pile instead of adding to it.
   const spellsBack = putOnPile(apply(snapshot, put), "spells", spellCards.map(asReturnable));

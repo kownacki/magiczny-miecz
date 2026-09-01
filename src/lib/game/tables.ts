@@ -2,7 +2,7 @@
 
 import { db, type DbHandle } from "@/lib/supabase";
 import type { EffectRow } from "./change";
-import type { FieldCardRow, GameRow, HoldingRow, SeatRow, UserRow } from "./store";
+import type { FieldCardRow, FieldGoldRow, GameRow, HoldingRow, SeatRow, UserRow } from "./store";
 
 /**
  * Why this exists at all.
@@ -136,10 +136,12 @@ export function tablesFor(on: DbHandle) {
     games: table<GameRow>(on, "games"),
     holdings: table<HoldingRow, Owned>(on, "holdings"),
     fieldCards: table<FieldCardRow, Owned>(on, "field_cards"),
+    fieldGold: table<FieldGoldRow, Owned>(on, "field_gold"),
     seatEffects: table<EffectRow, Owned>(on, "seat_effects"),
     moves: table<MoveWrite, Owned>(on, "moves"),
   };
 }
 
 /** The default handle's, for the reads and the two writes that are not a change. */
-export const { seats, users, games, holdings, fieldCards, seatEffects, moves } = tablesFor(db);
+export const { seats, users, games, holdings, fieldCards, fieldGold, seatEffects, moves } =
+  tablesFor(db);

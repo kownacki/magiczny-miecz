@@ -17,8 +17,8 @@ import { type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
-import type { HoldingRow } from "../store";
-import { asReturnable, pushOntoPile, putOnPile, trophiesToPile } from "./piles";
+import type { HoldingRow, SeatRow } from "../store";
+import { asReturnable, pushOntoPile, putOnPile, takeGold, trophiesToPile } from "./piles";
 import { eqModeOf, holdingsOf, seatById, seatView } from "./seat";
 import { cardName } from "@/lib/engine/polish";
 import { replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
@@ -605,6 +605,103 @@ export function dropCard(
  * Reaching for what is already lying on the Obszar.
  * ----------------------------------------------------------------------- */
 
+/**
+ * The three things 12.1 asks before anything on an Obszar may be picked up.
+ *
+ * Shared, because gold is picked up under the same sentence as the Karty:
+ * "może odwiedzić znajdującego się tam Nieznajomego, zabrać leżące złoto,
+ * Przedmioty (5.4.) lub Przyjaciół" — one rule, one set of conditions, and two
+ * copies of them would be two chances to let one drift.
+ *
+ * **Your move has to have ended here.** 12.1 grants this to "Postać, której
+ * ruch KOŃCZY SIĘ na danym Obszarze", and only "aż do końca swojej tury". The
+ * Obszar you begin a turn standing on is the one you finished the last turn on,
+ * and that window has closed — 13.1 says it from the other side, "ani wogóle
+ * podejmować żadnych czynności na Obszarze, z którego rozpoczynają ruch". Its
+ * own worked example is exactly this: the Książę leaves the Sztylet, the
+ * Rękawice and the Srebrna Strzała on the Ruchome Skały, standing on them, and
+ * they wait "na Postać, która zakończy tutaj ruch".
+ *
+ * **a) and b).** Nothing here is reachable while a Wróg is standing on it or
+ * while the Obszar still owes Karty — "W wymienionych przypadkach należy
+ * najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych
+ * Kart."
+ */
+function refuseUnlessCollectable(snapshot: Snapshot, seat: SeatRow): void {
+  const state = requireTop(
+    snapshot.game.turn_state,
+    "field",
+    "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).",
+  );
+
+  const fought = state.fought ?? [];
+  const guarded = snapshot.fieldCards.some(
+    (row) =>
+      row.field_id === seat.field_id &&
+      isFoeClass(EVENTS.find((card) => card.id === row.card_id)?.cardClass) &&
+      !fought.includes(row.card_id),
+  );
+  if (guarded) throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");
+  // `draw` is what is *still* owed — see `afterMove`.
+  if (state.draw > 0) {
+    throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
+  }
+}
+
+/**
+ * Sztuki Złota picked up off an Obszar, as many as the player says (12.1).
+ *
+ * "zabrać leżące złoto" carries no number, and Talisman's 12:1 — the sentence
+ * this one is adapted from — reads "**any** Gold Counters […] may be taken by
+ * any Character whose Move ends on that Space". Permissive twice over: nothing
+ * compels the take, and nothing makes it all or nothing. So the amount is the
+ * player's, and `weź wszystko` is a convenience rather than the rule.
+ *
+ * Which is not a way to put gold down. There is no rule anywhere letting a
+ * Postać drop a Sztuka Złota — 5.5 grants it for a Przedmiot and 6.4 for a
+ * Przyjaciel and chapter 3 grants nothing of the kind — so gold leaves a purse
+ * only by being spent (3.3), taken by a Karta or an Obszar, or lost to the
+ * winner of a fight (17.9). Declining to pick some up is the one moment a
+ * player chooses how much they carry.
+ *
+ * 5.4's limit never applies: 3.5 keeps gold out of the Przedmiot count, and
+ * says so twice.
+ */
+export function takeFieldGold(
+  snapshot: Snapshot,
+  command: { seatId: string; gold: number },
+): Outcome<{ took: number }> {
+  const seat = seatById(snapshot, command.seatId);
+  if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura (10.1).");
+  if (!seat.field_id) throw new Error("Postać nie stoi na żadnym Obszarze.");
+
+  const lying = snapshot.fieldGold.find((row) => row.field_id === seat.field_id);
+  if (!lying || lying.gold <= 0) throw new Error("Nie ma tu złota.");
+
+  refuseUnlessCollectable(snapshot, seat);
+
+  const want = Math.floor(command.gold);
+  if (!Number.isFinite(want) || want < 1) throw new Error("Podaj, ile Sztuk Złota zabierasz.");
+  if (want > lying.gold) {
+    throw new Error(`Leży tu tylko ${lying.gold} — tyle najwyżej możesz zabrać (12.1).`);
+  }
+
+  return {
+    writes: mergeAll(takeGold(snapshot, seat.field_id, want), {
+      seats: [{ id: seat.id, patch: { gold: seat.gold + want } }],
+      journal: [
+        {
+          seatId: seat.id,
+          round: snapshot.game.round,
+          kind: "taken" as const,
+          payload: { gold: want, fieldId: seat.field_id },
+        },
+      ],
+    }),
+    result: { took: want },
+  };
+}
+
 export function takeFromField(
   snapshot: Snapshot,
   command: { seatId: string; fieldCardId: string },
@@ -618,40 +715,7 @@ export function takeFromField(
     throw new Error("Można zabierać tylko z Obszaru, na którym się stoi (12.1).");
   }
 
-  /**
-   * 12.1 grants this to "Postać, której ruch KOŃCZY SIĘ na danym Obszarze", and
-   * only "aż do końca swojej tury". The Obszar you begin a turn standing on is
-   * the one you finished the last turn on, and that window has closed — 13.1
-   * puts it as a prohibition from the other side, "ani wogóle podejmować
-   * żadnych czynności na Obszarze, z którego rozpoczynają ruch".
-   *
-   * 12.1's own worked example is exactly this: the Książę leaves the Sztylet,
-   * the Rękawice and the Srebrna Strzała on the Ruchome Skały, standing on
-   * them, and they wait "na Postać, która zakończy tutaj ruch".
-   */
-  const state = requireTop(
-    snapshot.game.turn_state,
-    "field",
-    "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).",
-  );
-
-  // 12.1 a) and b): what is lying here is not reachable while a Wróg is on it
-  // or while the Obszar still owes Karty. "W wymienionych przypadkach należy
-  // najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych
-  // Kart."
-  const fought = state.fought ?? [];
-  const guarded = snapshot.fieldCards.some(
-    (row) =>
-      row.field_id === seat.field_id &&
-      isFoeClass(EVENTS.find((card) => card.id === row.card_id)?.cardClass) &&
-      !fought.includes(row.card_id),
-  );
-  if (guarded) throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");
-  // `draw` is what is *still* owed — see `afterMove`. It used to be the printed
-  // number, and this compared it against `drawn`, which the take below shrinks.
-  if (state.draw > 0) {
-    throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
-  }
+  refuseUnlessCollectable(snapshot, seat);
 
   // Off the field first, so the carrying limit and 21.2's stock — both of which
   // count copies in play — do not see the same card twice. A refusal from

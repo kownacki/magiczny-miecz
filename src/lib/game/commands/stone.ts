@@ -1,7 +1,7 @@
 /** Zamieniony w Kamień: three turns of nothing, and what a character does not take into the stone (20.1-20.5). */
 
-import { apply, mergeAll, type Changeset, type Snapshot } from "../change";
-import { asReturnable, putOnPile } from "./piles";
+import { apply, merge, mergeAll, type Changeset, type Snapshot } from "../change";
+import { asReturnable, dropGold, putOnPile } from "./piles";
 import { seatById } from "./seat";
 import { untouchable } from "@/lib/engine/status";
 
@@ -102,21 +102,30 @@ export function turnToStone(snapshot: Snapshot, command: { seatId: string }): Ch
 
   let left: Changeset = {};
   if (seat.field_id) {
-    // Gold is left there too, and the deck already has a card that *is* one
-    // Sztuka Złota — so a purse of three becomes three of them lying on the
-    // Obszar, which is exactly what 12.1 lets the next character pick up.
-    const gold = Array.from({ length: seat.gold }, () => "1-sztuka-zlota");
-    const onField = [...dropped.map((h) => h.card_id), ...gold];
-    if (onField.length > 0) {
-      left = {
-        fieldCards: {
-          insert: onField.map((cardId) => ({
-            field_id: seat.field_id as string,
-            card_id: cardId,
-          })),
-        },
-      };
-    }
+    /**
+     * "Karty Przedmiotów i złota należy pozostawić na Obszarze" (20.2) — and
+     * the two are left in different ways, because they are different things.
+     *
+     * The Przedmioty are Karty and go down as rows on the square. The gold is
+     * not: 3.5 keeps it out of the Przedmiot limit and 3.4 draws it from a
+     * supply of żetony rather than from a deck. This used to put down one
+     * `1-sztuka-zlota` Karta per coin, which minted copies the deck had never
+     * given up — picked up, they reached the used pile having never been dealt,
+     * and 21.2's `copiesInPlay` counted them as real. A purse is a number now.
+     */
+    const onField = dropped.map((h) => h.card_id);
+    const cards: Changeset =
+      onField.length > 0
+        ? {
+            fieldCards: {
+              insert: onField.map((cardId) => ({
+                field_id: seat.field_id as string,
+                card_id: cardId,
+              })),
+            },
+          }
+        : {};
+    left = merge(cards, dropGold(apply(snapshot, merge(taken, cards)), seat.field_id, seat.gold));
   }
 
   const until = snapshot.game.round + STONE_TURNS;

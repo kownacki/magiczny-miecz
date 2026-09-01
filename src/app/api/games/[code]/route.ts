@@ -4,6 +4,7 @@ import { refused } from "@/app/api/refused";
 import {
   deleteGame,
   fieldCardsFor,
+  fieldGoldFor,
   findGame,
   holdingsFor,
   seatsFor,
@@ -47,7 +48,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   // in the app — every device asks for it every couple of seconds — and these
   // four do not depend on each other, so running them in sequence spent four
   // round trips to make one answer.
-  const [mine, seats, users, holdings, fieldCards, effects] = await Promise.all([
+  const [mine, seats, users, holdings, fieldCards, fieldGold, effects] = await Promise.all([
     token ? verifyActor(game.id, token) : Promise.resolve(null),
     seatsFor(game.id),
     // Everybody at the table, seated or watching — presence and names live
@@ -57,6 +58,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     // Face up on the board by rule 16.8, so there is nothing to conceal and
     // every seat is sent the same list.
     fieldCardsFor(game.id),
+    // Loose Sztuki Złota lying there, public for the same reason: a purse on
+    // the ground is something anybody who stops there may take (12.1).
+    fieldGoldFor(game.id),
     // Public too: what somebody is under is exactly what you weigh before
     // deciding whether to attack them.
     effectsFor(game.id),
@@ -74,6 +78,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     users,
     holdings,
     fieldCards,
+    fieldGold,
     effects,
     journalSeq: 0,
   };
