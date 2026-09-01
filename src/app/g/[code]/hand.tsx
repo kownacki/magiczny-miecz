@@ -264,6 +264,12 @@ export function Hand({
           if (!canAct || !event.dataTransfer.types.includes(DRAG_TYPE)) return;
           event.preventDefault();
           setDragOver(true);
+          // Only ever the pack itself: every card in it stops the drag from
+          // reaching here, so arriving means the pointer is on the margin or on
+          // one of the free squares, and both of those are the end of the
+          // queue. It was the free squares' own line until they stopped taking
+          // events at all.
+          setInsertAt(null);
         }}
         // Move rather than enter: a card is picked up by clicking one that is
         // already inside the pack, so the pointer never crosses the boundary
@@ -610,11 +616,18 @@ export function Hand({
               glyph="+"
               tone="empty"
               disabled
-              // Past the last card is the end of the queue, which is what a
-              // free square means: not a position of its own, just the room
-              // 5.4 has left.
-              onPointerEnter={() => setInsertAt(null)}
-              onDragOver={() => setInsertAt(null)}
+              // Nothing is aimed at these, so nothing is caught by them: the
+              // pointer goes straight through to the rectangle, which is the
+              // place they are part of. They used to eat the click — see
+              // `passive` — which made the widest part of the pack the one part
+              // of it you could not put a card down on. Taking a Miecz off had
+              // to be aimed at the margin, and the squares that were refusing
+              // it were the ones showing a „+".
+              //
+              // Past the last card is the end of the queue anyway, which is
+              // what a free square means: not a position of its own, just the
+              // room 5.4 has left. The rectangle behind says so now.
+              passive
             />
           ));
         })()}

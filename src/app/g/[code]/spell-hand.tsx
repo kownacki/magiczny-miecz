@@ -304,11 +304,27 @@ export function SpellHand({
           if (!onReorder || !event.dataTransfer.types.includes(SPELL_DRAG)) return;
           event.preventDefault();
           rack.setDragOver(true);
+          // The row itself under the pointer, rather than one of its cards on
+          // the way past: the margin and the free squares, both of which mean
+          // the end of the row. The free squares used to say it themselves,
+          // until they stopped taking events at all so that a card could be
+          // dropped on them.
+          if (event.target === event.currentTarget) rack.setInsertAt(null);
         }}
         onDragLeave={(event) => {
           if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
           rack.setDragOver(false);
           rack.setInsertAt(null);
+        }}
+        // The same sentence as the drag above, for a card carried on the
+        // cursor, which fires no drag events at all. Nothing in this row
+        // watches for the pointer leaving a card — the next card claims the
+        // gap and that was enough — so the row has to close it when the pointer
+        // is on the row and on no card.
+        onPointerMove={(event) => {
+          if (event.target === event.currentTarget && rack.insertAt !== null) {
+            rack.setInsertAt(null);
+          }
         }}
         onDrop={(event) => {
           const before = rack.insertAt === null ? null : rack.lands(rack.insertAt);
@@ -623,7 +639,8 @@ export function SpellHand({
         {/* How much room 2.6 has left, drawn — the same squares the Plecak
             draws for 5.4, from the same component and in the same size. Not
             places to aim at: past the last card is the end of the row, which is
-            what a free square means. */}
+            what a free square means — so they take no events and the row
+            behind them answers instead, exactly as in the Plecak. */}
         {capacity !== undefined &&
           Array.from({ length: Math.max(0, capacity - held.length) }, (_, i) => (
             <ItemSlot
@@ -633,8 +650,7 @@ export function SpellHand({
               glyph="+"
               tone="empty"
               disabled
-              onPointerEnter={() => rack.setInsertAt(null)}
-              onDragOver={() => rack.setInsertAt(null)}
+              passive
             />
           ))}
       </TileRow>

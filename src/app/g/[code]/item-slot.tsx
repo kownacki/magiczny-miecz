@@ -156,6 +156,7 @@ export function ItemSlot({
   struck = false,
   draggable = false,
   disabled = false,
+  passive = false,
   onClick,
   onDoubleClick,
   onDragStart,
@@ -204,6 +205,24 @@ export function ItemSlot({
   struck?: boolean;
   draggable?: boolean;
   disabled?: boolean;
+  /**
+   * Drawn, and not a target: every pointer and drag event goes through it.
+   *
+   * `disabled` is not the same thing and does not do this — it is worse than
+   * nothing here. A disabled button is not inert: the browser dispatches no
+   * mouse event on it *at all*, so the click does not reach the square, does
+   * not bubble past it, and simply never happens. It says nothing can be done
+   * here and then eats the gesture meant for whatever is behind it.
+   *
+   * The pack's free squares are behind-something squares: they are 5.4's
+   * remaining room, drawn, and the rectangle they sit in is the place. A card
+   * dropped in the fourth square does not go to the fourth square, it goes on
+   * the end. So putting a card down on one did nothing whatever —
+   * `elementFromPoint` over a free square answered with the „+" inside its
+   * disabled button — and taking something off the body had to be aimed at the
+   * margin between the squares, missing the widest part of the target.
+   */
+  passive?: boolean;
   onClick?: (event: React.MouseEvent) => void;
   onDoubleClick?: () => void;
   onDragStart?: (event: React.DragEvent) => void;
@@ -262,8 +281,15 @@ export function ItemSlot({
   // has gone dim, not as a place you have emptied. It still answers for itself
   // when something is held over it — that question is about where the card in
   // the air would land, not about where it came from.
+  //
+  // `candidate` is not downgraded with it, and that is the point: where a card
+  // came from is somewhere it fits, so it is a place the card in the air could
+  // go — the same dashed green every other place that would take it is wearing,
+  // said for the same reason. It used to be the one square that fitted and did
+  // not say so, which read as "not back here" about the commonest thing anybody
+  // does with a card they have picked up and thought better of.
   const shown: SlotTone =
-    lifted && (tone === "filled" || tone === "candidate")
+    lifted && tone === "filled"
       ? "empty"
       : // A card that is here and unavailable is red, wherever it is drawn: on
         // the body, in the pack, or in whatever holds the Nieznajomi next. Only
@@ -300,7 +326,7 @@ export function ItemSlot({
       onPointerLeave={onPointerLeave}
       {...handlers}
       style={{ width: SLOT_WIDTH }}
-      className="relative shrink-0"
+      className={`relative shrink-0 ${passive ? "pointer-events-none" : ""}`}
     >
       {/* The place, drawn behind whatever is in this square — so the sliver a
           card uncovers by sliding aside is the part you see. Behind every card
