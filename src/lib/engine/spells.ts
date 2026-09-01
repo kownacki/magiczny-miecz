@@ -1,6 +1,7 @@
 /** When a Zaklęcie may be cast, at what, and what casting it does (9.1, 9.6). */
 import type { SpellId } from "@/data/ids";
 import type { Effect } from "./cardScript";
+import { isFoeClass } from "@/data/types";
 import type { TurnPhase } from "./turn";
 
 /**
@@ -741,7 +742,7 @@ export function momentsIn(state: TurnPhase): SpellTiming[] {
       (state.fight.playerRoll !== null || state.fight.enemyRoll !== null),
     cardJustDrawn: state.phase === "field" && state.drawn.length > 0,
     meeting:
-      state.phase === "field" && state.drawn.some((entry) => entry.cardClass === "foe"),
+      state.phase === "field" && state.drawn.some((entry) => isFoeClass(entry.cardClass)),
   });
 }
 

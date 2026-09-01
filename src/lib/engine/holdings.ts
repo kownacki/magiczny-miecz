@@ -31,7 +31,14 @@ export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | n
       return "item";
     case "friend":
       return "friend";
+    // Both kinds of Wróg, deliberately together and deliberately here rather
+    // than through `isFoeClass`: this is a `switch` on the class and reads
+    // better as two labels. What a beaten Demon is *worth* is a different
+    // question and 1.4 answers it elsewhere — "Wrogami (mającymi określony
+    // parametr Miecza)" keeps only the Bestie, so `trophiesFrom` never makes
+    // one and `trophyPointsOf` prices a stray one at zero.
     case "foe":
+    case "demon":
       return "trophy";
     default:
       // Spotkania, Nieznajomi and Miejsca are resolved and set aside; nobody

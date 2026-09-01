@@ -1,6 +1,7 @@
 /** What a character is carrying: picking it up (12.1, 16.6, 21.1), putting it down (5.5, 6.4, 9.4), and the two test shortcuts that conjure a card. Where it is worn is ./wearing. */
 
 import items from "@/data/items.json";
+import { isFoeClass } from "@/data/types";
 import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
@@ -642,7 +643,7 @@ export function takeFromField(
   const guarded = snapshot.fieldCards.some(
     (row) =>
       row.field_id === seat.field_id &&
-      EVENTS.find((card) => card.id === row.card_id)?.cardClass === "foe" &&
+      isFoeClass(EVENTS.find((card) => card.id === row.card_id)?.cardClass) &&
       !fought.includes(row.card_id),
   );
   if (guarded) throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");

@@ -11,11 +11,31 @@ import type { CharacterId, EventId, ItemId, SpellId } from "./ids";
 export const CARD_CLASS = {
   encounter: 1,
   foe: 2,
-  // III is not used by any base-game card. Rule 16.3 singles out the Demon as a
-  // second kind of Wróg, which is the likeliest owner of the gap — and the
-  // expansions settle it: Krypta Upiorów prints `Wróg III Demon` across the top
-  // of five cards, the class name split around the numeral the way `Przedmiot V
-  // Magiczny` is. The gap is a Demon, and no base-game card fills it.
+  /**
+   * The Demon, 16.3's second kind of Wróg — and it is in this box.
+   *
+   * This slot said "III is not used by any base-game card" and pointed at the
+   * expansions for a numeral that is printed ten times on sheet 3 of the base
+   * game's own Karty Zdarzeń. Read off the scans, all ten headers at once:
+   * DUCH CIEMNOŚCI, DUCH ZAGŁADY, KSIĄŻĘ DEMONÓW ×2, DEMON, UPIÓR ×2, WAMPIR,
+   * WIDMO and ZJAWA every one print `Wróg III Demon`, against `Wróg II Bestia`
+   * on the Wilk and `Wróg II Wróg` on the Cyklop. They are exactly the ten
+   * foes carrying `magia` rather than `miecz`, which is what 16.3 and 18.1a
+   * describe: "Postać została zaatakowana przez Wroga - Demona, który posiada
+   * określony parametr Magii".
+   *
+   * What the mistake cost: every foe sorted as 2, so a Bestia and a Demon on
+   * one Obszar tied and fell back to arrival order, when 15.2 puts II first.
+   * That is not cosmetic — 17.5 sums the Miecze of everything attacking at
+   * once and 18.2 does the same for Magia, so the two classes are two separate
+   * battles, and which comes first decides which one an unlucky character dies
+   * in.
+   *
+   * A Demon is still a Wróg everywhere a rule says "Wróg" — trophies (1.4),
+   * 12.1a's block on collecting, the raid's targets. `isFoeClass` is the door
+   * for that, and it is the reason this is a second class rather than a flag.
+   */
+  demon: 3,
   stranger: 4,
   // Przedmiot and Przyjaciel BOTH print V — verified against the card headers,
   // and matching rule 16.6, which names "Przedmioty, Przedmioty Magiczne i
@@ -40,11 +60,34 @@ export type CardClass = keyof typeof CARD_CLASS;
 export const CARD_CLASS_LABEL: Record<CardClass, string> = {
   encounter: "Spotkanie",
   foe: "Wróg",
+  // Both words on a Demon's header are printed — it reads `Wróg III Demon`,
+  // the class split around the numeral the way `Przedmiot V Magiczny` is. The
+  // right-hand one is taken because the left is what it shares with the Bestia
+  // and the point of naming a class is to tell it from its neighbour.
+  demon: "Demon",
   stranger: "Nieznajomy",
   friend: "Przyjaciel",
   item: "Przedmiot",
   place: "Miejsce",
 };
+
+/**
+ * Whether a class is a Wróg, in the sense every rule that says "Wróg" means.
+ *
+ * The Bestia and the Demon are two resolution classes and one kind of thing:
+ * 16.2 and 16.3 name them separately only to order them and to send one to
+ * 17.1-5 and the other to 18.1-2. Everything else in the rulebook — the trophy
+ * kept for Miecz points (1.4), 12.1a's refusal to let anything be collected
+ * while one stands on the Obszar, 13.5's "muszą oni najpierw zostać pokonani" —
+ * says "Wróg" and means both.
+ *
+ * So callers ask this rather than comparing against `"foe"`, which was every
+ * one of them before the Demon had a class of its own and would have quietly
+ * stopped seeing half the Wrogowie in the box the moment it got one.
+ */
+export function isFoeClass(cardClass: CardClass | null | undefined): boolean {
+  return cardClass === "foe" || cardClass === "demon";
+}
 
 export type Nature = "good" | "evil" | "chaotic";
 

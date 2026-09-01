@@ -1,5 +1,6 @@
 /** A fight from the moment it opens to the moment somebody walks away from it (17.3-17.7, 19). The Zaklęcia spoken into one are ./spells. */
 
+import { isFoeClass } from "@/data/types";
 import type { SpellId } from "@/data/ids";
 import {
   bestShield,
@@ -1161,7 +1162,7 @@ export function escape(
     const sweep =
       byAbility && przed === "wrog"
         ? before.fight.drawn
-            .filter((entry) => entry.cardClass === "foe")
+            .filter((entry) => isFoeClass(entry.cardClass))
             .map((entry) => entry.cardId)
         : [];
     // Close the frame first; the ability's sweep then lands on whatever field
@@ -1188,7 +1189,7 @@ export function escape(
      * to be fought. Succeeding looked exactly like failing.
      */
     const fled = byAbility
-      ? before.drawn.filter((entry) => entry.cardClass === "foe").map((entry) => entry.cardId)
+      ? before.drawn.filter((entry) => isFoeClass(entry.cardClass)).map((entry) => entry.cardId)
       : [];
     if (fled.length > 0) {
       left = {

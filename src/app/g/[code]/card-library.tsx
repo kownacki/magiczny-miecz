@@ -63,7 +63,12 @@ const SHELVES: { key: Shelf; label: string }[] = [
   { key: "postacie", label: "Postacie" },
   { key: "item", label: "Przedmioty" },
   { key: "friend", label: "Przyjaciele" },
+  // Two shelves because the box prints two classes — `Wróg II Bestia` and
+  // `Wróg III Demon` — and this drawer is an index of the box. Folding them
+  // would hide the one thing a reader comes here to check: which of the two a
+  // creature is, and so whether it is fought with Miecz or with Magia.
   { key: "foe", label: "Wrogowie" },
+  { key: "demon", label: "Demony" },
   { key: "encounter", label: "Spotkania" },
   { key: "stranger", label: "Nieznajomi" },
   { key: "place", label: "Miejsca" },

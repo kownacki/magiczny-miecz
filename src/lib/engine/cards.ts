@@ -1,7 +1,7 @@
 /** Interprets a card's printed Miecz and Magia numbers, which mean different things depending on the card's class. */
 
 import events from "@/data/events.json";
-import { CARD_CLASS, type CardClass, type EventCard } from "@/data/types";
+import { CARD_CLASS, isFoeClass, type CardClass, type EventCard } from "@/data/types";
 import type { CombatKind } from "./combat";
 
 /**
@@ -139,7 +139,7 @@ export function combatValueOf(
   card: Pick<EventCard, "cardClass" | "miecz" | "magia"> & { id?: string },
   mirror?: { miecz: number },
 ): CombatValue | null {
-  if (card.cardClass !== "foe") return null;
+  if (!isFoeClass(card.cardClass)) return null;
   if (typeof card.magia === "number") return { kind: "magical", total: card.magia };
   if (typeof card.miecz === "number") return { kind: "ordinary", total: card.miecz };
   if (card.id && MIRRORS_ITS_OPPONENT.has(card.id)) {

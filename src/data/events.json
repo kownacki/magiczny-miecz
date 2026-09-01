@@ -486,7 +486,7 @@
     "id": "duch-ciemnosci",
     "set": "base",
     "name": "DUCH CIEMNOŚCI",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 3
@@ -498,7 +498,7 @@
     "id": "duch-zaglady",
     "set": "base",
     "name": "DUCH ZAGŁADY",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 4
@@ -510,7 +510,7 @@
     "id": "ksiaze-demonow",
     "set": "base",
     "name": "KSIĄŻĘ DEMONÓW",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 5
@@ -522,7 +522,7 @@
     "id": "ksiaze-demonow",
     "set": "base",
     "name": "KSIĄŻĘ DEMONÓW",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 6
@@ -534,7 +534,7 @@
     "id": "demon",
     "set": "base",
     "name": "DEMON",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 7
@@ -546,7 +546,7 @@
     "id": "upior",
     "set": "base",
     "name": "UPIÓR",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 8
@@ -558,7 +558,7 @@
     "id": "upior",
     "set": "base",
     "name": "UPIÓR",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 9
@@ -570,7 +570,7 @@
     "id": "wampir",
     "set": "base",
     "name": "WAMPIR",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 10
@@ -582,7 +582,7 @@
     "id": "widmo",
     "set": "base",
     "name": "WIDMO",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 11
@@ -594,7 +594,7 @@
     "id": "zjawa",
     "set": "base",
     "name": "ZJAWA",
-    "cardClass": "foe",
+    "cardClass": "demon",
     "source": {
       "sheet": "zdarzenia-3",
       "index": 12

@@ -4,6 +4,7 @@ import characters from "@/data/characters.json";
 import events from "@/data/events.json";
 import itemCards from "@/data/items.json";
 import spells from "@/data/spells.json";
+import { isFoeClass } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { SLOTS } from "./slots";
@@ -21,7 +22,7 @@ import {
 export const VERBS = new Set(COMMANDS.flatMap((spec) => [spec.name, ...spec.aliases]));
 
 /** Every card that can be fought: only a Wróg has a Miecz or a Magia to roll against. */
-export const FOES = (events as EventCard[]).filter((card) => card.cardClass === "foe");
+export const FOES = (events as EventCard[]).filter((card) => isFoeClass(card.cardClass));
 
 /**
  * Everything nameable as a card.
@@ -68,7 +69,7 @@ export const DEALABLE: readonly { title: string; cards: readonly { id: string; n
     },
     {
       title: "Wrogowie",
-      cards: byName((events as EventCard[]).filter((card) => card.cardClass === "foe")),
+      cards: byName((events as EventCard[]).filter((card) => isFoeClass(card.cardClass))),
     },
     {
       title: "Spotkania",

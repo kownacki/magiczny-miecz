@@ -1,5 +1,6 @@
 /** The console's sixty-three verbs, one entry each: what a typed line actually does to a table. */
 
+import { isFoeClass } from "@/data/types";
 import {
   EFFECTS,
   PHASE,
@@ -934,7 +935,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const field = topIf(snapshot.game.turn_state, "field");
     if (field) {
       const waiting = (field.drawn ?? []).filter(
-        (one) => one.cardClass === "foe" && !(field.resolved ?? []).includes(one.cardId),
+        (one) => isFoeClass(one.cardClass) && !(field.resolved ?? []).includes(one.cardId),
       );
       if (waiting.length === 0) throw new Error("No Wróg here to fight.");
       const wanted = command.cardId

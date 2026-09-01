@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bonusOf, combatValueOf } from "./cards";
 import events from "@/data/events.json";
+import { isFoeClass } from "@/data/types";
 import type { EventCard } from "@/data/types";
 
 const EVENTS = events as EventCard[];
@@ -25,8 +26,37 @@ describe("combat values (16.2, 16.3)", () => {
   it("offers a fight for every Wróg that prints a value, and no one else", () => {
     for (const card of EVENTS) {
       const value = combatValueOf(card);
-      if (value) expect(card.cardClass).toBe("foe");
+      if (value) expect(isFoeClass(card.cardClass)).toBe(true);
     }
+  });
+
+  /**
+   * The two classes and the two kinds of fight are the same split, in both
+   * directions.
+   *
+   * 16.2 is a Wróg "z określonym parametrem Miecza" and 16.3 a Demon "który
+   * posiada określony parametr Magii" — so the numeral printed on the card and
+   * the stat printed under the art cannot disagree, and a transcription that
+   * put `magia` on a II or `miecz` on a III would be a card the app fights with
+   * the wrong stat. Asserted over the whole deck rather than by name, because
+   * the point is that there is no exception.
+   */
+  it("matches the printed numeral to the printed stat, both ways (16.2, 16.3)", () => {
+    const seen = { foe: 0, demon: 0 };
+    for (const card of EVENTS) {
+      const value = combatValueOf(card);
+      if (!value) continue;
+      if (card.cardClass === "demon") {
+        expect(value.kind).toBe("magical");
+        seen.demon += 1;
+      } else {
+        expect(value.kind).toBe("ordinary");
+        seen.foe += 1;
+      }
+    }
+    // Ten Demony on sheet 3, read off the printed headers; the rest are Bestie.
+    expect(seen.demon).toBe(10);
+    expect(seen.foe).toBeGreaterThan(0);
   });
 });
 
