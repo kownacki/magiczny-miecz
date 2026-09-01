@@ -103,6 +103,7 @@ export function worthShowing(cards: readonly unknown[]): boolean {
 export function KolejkaStrip({
   cards,
   settled,
+  current,
   onInspect,
   eqMode,
   nature,
@@ -111,6 +112,19 @@ export function KolejkaStrip({
   cards: readonly TurnCard[];
   /** Resolved and fought together: 17.4 settles a Wróg whether he was beaten or fled. */
   settled: readonly string[];
+  /**
+   * The Karta being dealt with, as the sheet around this decides it.
+   *
+   * Handed in rather than worked out, because working it out is how the two
+   * came to disagree: the sheet shows the first Karta that is neither settled
+   * nor fought, and this marked the first that *stops the turn* — so on an
+   * Obszar whose first Karta was a Czarodziej the sheet held the Czarodziej
+   * while the row lit the Dobre Bóstwo behind him.
+   *
+   * There is one Karta in front of the player and one thing on screen may
+   * decide which it is.
+   */
+  current?: string | null;
   onInspect?: (cardId: CardId) => void;
   /** Passed through to the tiles, whose hover says where a Przedmiot must go. */
   eqMode?: EqMode;
@@ -132,8 +146,13 @@ export function KolejkaStrip({
 
   if (!worthShowing(cards)) return null;
 
-  // What the turn is stopped at, and how much of the Obszar is left to settle.
-  const at = chips.findIndex((chip) => chip.stops && !chip.done);
+  // What the sheet is holding, and how much of the Obszar is left to settle.
+  // The fallback is for a caller with no sheet around it: the first Karta not
+  // yet settled, which is the same rule the sheet applies.
+  const at =
+    current != null
+      ? chips.findIndex((chip) => chip.card.cardId === current)
+      : chips.findIndex((chip) => !chip.done);
   const left = chips.filter((chip) => !chip.done).length;
 
   return (

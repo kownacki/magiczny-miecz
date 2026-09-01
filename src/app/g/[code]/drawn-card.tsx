@@ -202,6 +202,9 @@ export function DrawnCard({
             cardClass: one.cardClass as CardClass,
           }))}
           settled={[...resolved, ...fought]}
+          /* The Karta this sheet is showing, so the row cannot light a
+             different one. */
+          current={card.cardId}
         />
         ) : null
       }
