@@ -74,15 +74,17 @@ import { stackAt as stackAtOn, stackForDraw as stackForDrawOn } from "./commands
 import type { JournalKind } from "@/lib/engine/journal";
 import {
   dropCard as dropCardOn,
-  equipCard as equipCardOn,
   clearField as clearFieldOn,
   grantCard as grantCardOn,
   placeCard as placeCardOn,
-  reorderPack as reorderPackOn,
-  spilled,
   takeCard as takeCardOn,
   takeFromField as takeFromFieldOn,
 } from "./commands/holdings";
+import {
+  equipCard as equipCardOn,
+  reorderPack as reorderPackOn,
+  spilled,
+} from "./commands/wearing";
 import {
   drawCard as drawCardOn,
   drawSpell as drawSpellOn,

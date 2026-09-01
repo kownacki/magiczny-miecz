@@ -9,13 +9,15 @@ import { only, top } from "@/lib/engine/stack";
 import {
   clearField,
   dropCard,
-  equipCard,
   grantCard,
   placeCard,
-  reorderPack,
   takeCard,
   takeFromField,
 } from "./holdings";
+import {
+  equipCard,
+  reorderPack,
+} from "./wearing";
 
 /** Real fields, read through the board's own guard rather than written as strings. */
 const HERE = asFieldId("mroczna-polana")!;

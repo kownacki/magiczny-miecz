@@ -18,7 +18,10 @@ import { equipCard as equip, grantCard, startGame, takeNewCharacter } from "../t
 import { aHolding, aSeat, aTable } from "../fixture";
 import { carriedCount } from "@/lib/engine/derive";
 import { asHolding } from "./seat";
-import { equipCard, spilled } from "./holdings";
+import {
+  equipCard,
+  spilled,
+} from "./wearing";
 import { inPlayAt, openStorage, type Slot } from "@/lib/engine/slots";
 import { inEffect } from "@/lib/engine/holdings";
 import { carryLimit } from "@/lib/engine/derive";
