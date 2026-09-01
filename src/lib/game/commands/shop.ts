@@ -1,6 +1,7 @@
 /** The establishments: trading trophies for Miecz (1.4), and the desks that buy, sell and heal (21.2, 4.7). */
 
 import { combatValueOf } from "@/lib/engine/cards";
+import { trophyPointsOf } from "@/lib/engine/trophies";
 import { heldAbilities } from "@/lib/engine/abilities";
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
 import { fieldScriptFor } from "@/lib/engine/fieldScript";
@@ -89,10 +90,7 @@ export function standingShopper(snapshot: Snapshot, seatId: string): SeatRow {
  * for rather than defaulted — a trophy priced at zero because nobody said is
  * exactly the silent wrongness this avoids.
  */
-export function trophyPointsOf(cardId: string, mirror?: { miecz: number }): number {
-  const card = EVENTS.find((one) => one.id === cardId);
-  return (card ? combatValueOf(card, mirror)?.total : 0) ?? 0;
-}
+export { trophyPointsOf };
 
 /**
  * Every hoarded Karta back to the stos zużytych, for the whole table.

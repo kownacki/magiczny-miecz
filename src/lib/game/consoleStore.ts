@@ -17,8 +17,8 @@ import {
   type EffectName,
 } from "@/lib/engine/console";
 import { cardName } from "@/lib/engine/polish";
-import { combatValueOf } from "@/lib/engine/cards";
-import { EVENTS, SPELL_BY_REF } from "./decks";
+import { shelfFor, trophyPointsOf } from "@/lib/engine/trophies";
+import { SPELL_BY_REF } from "./decks";
 import { TROPHY_RATE, offersFor } from "./commands/shop";
 import { carriesSpell, fightsForYou, heldAbilities, type Ability } from "@/lib/engine/abilities";
 import type { Modifier } from "@/lib/engine/status";
@@ -1988,15 +1988,14 @@ export async function runCommand(
        * the subtraction means the same thing there: whom this seat beat and no
        * longer has.
        */
-      const leftHand = (() => {
-        const still = trophies.map((one) => one.card_id);
-        return seat.trophy_beaten.filter((cardId) => {
-          const at = still.indexOf(cardId);
-          if (at === -1) return true;
-          still.splice(at, 1);
-          return false;
-        });
-      })();
+      // `shelfFor` is the one place this subtraction lives — the panel's and
+      // the console's, since it moved into the engine where both may reach it.
+      const leftHand = shelfFor(
+        seat.trophy_beaten,
+        trophies.map((one) => ({ holdingId: one.id, cardId: one.card_id })),
+      )
+        .filter((one) => one.gone)
+        .map((one) => one.cardId);
       return [
         `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
         /**
@@ -2083,7 +2082,7 @@ export async function runCommand(
         ...(trophies.length
           ? [
               `Trophies: ${trophies
-                .map((one) => `${cardName(one.card_id)} ${trophyPoints(one.card_id, view.parametr)}`)
+                .map((one) => `${cardName(one.card_id)} ${trophyPointsOf(one.card_id, view.parametr)}`)
                 .join(", ")}` +
                 trophyLedger(trophies.map((one) => one.card_id), view.parametr),
               ...tradeMenu(trophies.map((one) => one.card_id), view.parametr),
@@ -2216,16 +2215,7 @@ function columns(names: readonly string[], perRow = 4): string[] {
   return rows;
 }
 
-/**
- * What one beaten Wróg is worth towards 1.4's sevens.
- *
- * `mirror` is the holder's own Miecz, for the Sobowtór, who has no number of
- * his own — see `combatValueOf`.
- */
-function trophyPoints(cardId: string, mirror?: { miecz: number }): number {
-  const card = EVENTS.find((one) => one.id === cardId);
-  return (card ? combatValueOf(card, mirror)?.total : 0) ?? 0;
-}
+
 
 /**
  * The sum, the Miecze it buys and what handing in all of it would burn.
@@ -2236,7 +2226,7 @@ function trophyPoints(cardId: string, mirror?: { miecz: number }): number {
  * has no waste to warn about, only a total.
  */
 function trophyLedger(cardIds: readonly string[], mirror: { miecz: number }): string {
-  const points = cardIds.reduce((sum, cardId) => sum + trophyPoints(cardId, mirror), 0);
+  const points = cardIds.reduce((sum, cardId) => sum + trophyPointsOf(cardId, mirror), 0);
   const swords = Math.floor(points / TROPHY_RATE);
   const wasted = points - swords * TROPHY_RATE;
   if (swords < 1) return `  (${points} pkt — ${TROPHY_RATE} za Miecz)`;
@@ -2257,7 +2247,7 @@ function trophyLedger(cardIds: readonly string[], mirror: { miecz: number }): st
  */
 function tradeMenu(cardIds: readonly string[], mirror: { miecz: number }): string[] {
   const offers = offersFor(
-    cardIds.map((cardId) => ({ cardId, points: trophyPoints(cardId, mirror) })),
+    cardIds.map((cardId) => ({ cardId, points: trophyPointsOf(cardId, mirror) })),
   );
   if (offers.length === 0) return [];
   const only = offers.length === 1 && offers[0].cardIds.length === cardIds.length;
