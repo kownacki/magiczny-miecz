@@ -137,7 +137,26 @@ export function Drawer({
           no longer moves when the scrollbar comes and goes: the shelf is a
           grid of fixed columns anchored to the left edge, so a narrower panel
           takes from the margin past the last tile and from nothing else. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* The same room the column beside it leaves for whatever parks over the
+          foot of the screen — see `table-layout.tsx`, which does this with the
+          same one line and explains why it is padding rather than a shorter
+          box.
+
+          A drawer is laid inside the layout's content row and stretched
+          `inset-y-0`, so it runs to the bottom of that row and past the two
+          things that sit over it: the console, which is docked to the right
+          column and takes the whole width below `lg`, and the turn's pill,
+          which is centred on the window. Both publish their height and neither
+          was being read here, so the last seat in a full roster had its buttons
+          under the console with nothing to scroll — the box ended exactly where
+          the content did, and the part you could not reach was the part
+          something else was standing on. */}
+      <div
+        style={{
+          paddingBottom: "calc(var(--console-h, 0px) + var(--fab-h, 0px))",
+        }}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+      >
         {children}
       </div>
     </aside>
