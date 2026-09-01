@@ -687,28 +687,106 @@ export function clearField(
   command: { seatId: string; fieldId: FieldId; cardId?: string },
 ): Outcome<string[]> {
   const here = snapshot.fieldCards.filter((row) => row.field_id === command.fieldId);
-  if (here.length === 0) throw new Error("Na tym Obszarze nic nie leży.");
+
+  /**
+   * And what the turn standing on it is holding face up, which is on the
+   * Obszar just as much (16.8).
+   *
+   * A Karta lies in one of two places depending on nothing a player can see:
+   * arriving lifts every row into the turn's frame (`liftFieldCards`) and the
+   * end of the turn writes back whatever nobody took (`leaveCardsBehind`). So
+   * „clear SIDH" on the square SIDH is drawn on found nothing and answered „Na
+   * tym Obszarze nic nie leży" — with the Obszar's own window listing it two
+   * inches away. That is the app's filing system leaking into the game.
+   *
+   * The frame is searched for rather than read off the top, the way the cut in
+   * `placeSeat` searches: a `script` or `fight` frame can be standing over the
+   * field, and the Karty underneath are still lying there.
+   */
+  const stack = snapshot.game.turn_state.stack;
+  const at = stack.map((frame) => frame.phase).lastIndexOf("field");
+  const frame = at === -1 ? null : stack[at];
+  const inTurn =
+    frame?.phase === "field" && frame.fieldId === command.fieldId ? frame.drawn : [];
+
+  if (here.length === 0 && inTurn.length === 0) {
+    throw new Error("Na tym Obszarze nic nie leży.");
+  }
 
   /**
    * One Karta, or the lot.
    *
-   * Named, it takes a single row and not every copy of that card: a field can
+   * Named, it takes a single copy and not every one of that card: a field can
    * hold two Targowiska and „take that one off" is the likelier wish. Sweeping
-   * both is `clear` with no name, which is the same distinction `place` draws
-   * going the other way — one card at a time down, one card or all of them up.
+   * them all is `clear` with no name, which is the same distinction `place`
+   * draws going the other way — one card at a time down, one card or all of
+   * them up.
+   *
+   * A row on the board goes before a card in the turn, so the two halves are
+   * ordered rather than raced. Nothing turns on which — they are the same
+   * Karta on the same square — but a rule that is written down is one nobody
+   * has to work out from the outcome.
    */
   const lying = command.cardId
     ? here.filter((row) => row.card_id === command.cardId).slice(0, 1)
     : here;
-  if (lying.length === 0) {
+  const takenFromTurn = ((): readonly number[] => {
+    if (!command.cardId) return inTurn.map((_, index) => index);
+    if (lying.length > 0) return [];
+    const found = inTurn.findIndex((card) => card.cardId === command.cardId);
+    return found === -1 ? [] : [found];
+  })();
+
+  if (lying.length === 0 && takenFromTurn.length === 0) {
     throw new Error(`${cardName(command.cardId!)} nie leży na tym Obszarze.`);
   }
 
-  const gone: Changeset = { fieldCards: { delete: lying.map((row) => row.id) } };
+  const swept = new Set(takenFromTurn);
+  const kept = inTurn.filter((_, index) => !swept.has(index));
+  const left = new Set(kept.map((card) => card.cardId));
+  /**
+   * The lists beside `drawn` name cards by id, so a card that has gone must go
+   * out of them too — a `resolved` id with no Karta behind it is a card the
+   * turn thinks it has dealt with and the reader cannot find.
+   *
+   * Only where the last copy went: two Targowiska are one entry in `resolved`.
+   */
+  const without = (ids: readonly string[] | undefined) =>
+    ids === undefined ? undefined : ids.filter((cardId) => left.has(cardId));
+  const edited: Changeset["game"] =
+    frame?.phase === "field" && takenFromTurn.length > 0
+      ? {
+          turn_state: {
+            stack: [
+              ...stack.slice(0, at),
+              {
+                ...frame,
+                drawn: kept,
+                ...(frame.resolved ? { resolved: without(frame.resolved) } : {}),
+                ...(frame.fought ? { fought: without(frame.fought) } : {}),
+                ...(frame.beaten ? { beaten: without(frame.beaten) } : {}),
+              },
+              ...stack.slice(at + 1),
+            ],
+          },
+        }
+      : undefined;
+
+  const taken = [
+    ...lying.map(asReturnable),
+    ...takenFromTurn.map((index) => ({
+      cardId: inTurn[index].cardId,
+      granted: inTurn[index].granted ?? false,
+    })),
+  ];
+  const gone: Changeset = {
+    ...(lying.length > 0 ? { fieldCards: { delete: lying.map((row) => row.id) } } : {}),
+    ...(edited ? { game: edited } : {}),
+  };
   return {
     writes: merge(
       gone,
-      merge(putOnPile(apply(snapshot, gone), "events", lying.map(asReturnable)), {
+      merge(putOnPile(apply(snapshot, gone), "events", taken), {
         journal: [
           {
             seatId: command.seatId,
@@ -717,14 +795,14 @@ export function clearField(
             payload: {
               what: "clear-field",
               fieldId: command.fieldId,
-              cards: lying.map((row) => row.card_id),
+              cards: taken.map((card) => card.cardId),
             },
             manual: true,
           },
         ],
       }),
     ),
-    result: lying.map((row) => row.card_id),
+    result: taken.map((card) => card.cardId),
   };
 }
 

@@ -969,6 +969,105 @@ describe("clearing an Obszar", () => {
     );
   });
 
+  /**
+   * The half the board does not hold: what the turn standing here lifted.
+   *
+   * Arriving takes every row off the Obszar and into the frame (16.8), so on
+   * the square somebody is standing on there are usually no rows at all — and
+   * `clear SIDH` answered „Na tym Obszarze nic nie leży" with the Obszar's own
+   * window listing SIDH. One Karta, one square, two places to keep it, and
+   * only the app knows which.
+   */
+  describe("and the Karty the turn is holding face up", () => {
+    const standing = (drawn: { cardId: string; granted?: boolean }[], over: Record<string, unknown> = {}) =>
+      aTable({
+        seats: [aSeat({ id: "seat-a", field_id: HERE })],
+        game: {
+          deck: { events: { draw: [], discard: [] }, spells: { draw: [], discard: [] } },
+          turn_state: only({
+            phase: "field",
+            fieldId: HERE,
+            from: null,
+            draw: 0,
+            drawn: drawn.map((one) => ({ cardId: one.cardId, cardClass: "place" as const, ...(one.granted ? { granted: true } : {}) })),
+            ...over,
+          }),
+        },
+      });
+
+    it("sweeps a named Karta out of the turn when no row holds it", () => {
+      const at = standing([{ cardId: "sidh" }, { cardId: "grota" }]);
+      const { writes, result } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardId: "sidh" });
+      expect(result).toEqual(["sidh"]);
+      expect(top(writes.game!.turn_state!)).toMatchObject({
+        phase: "field",
+        drawn: [{ cardId: "grota" }],
+      });
+      // And to the used pile, like any other leftover.
+      expect(discardOf(writes, "events")).toEqual([EVENT_COPIES.get("sidh")![0]]);
+    });
+
+    it("sweeps the lot when nothing is named", () => {
+      const at = standing([{ cardId: "sidh" }, { cardId: "grota" }]);
+      const { result, writes } = clearField(at, { seatId: "seat-a", fieldId: HERE });
+      expect(result).toEqual(["sidh", "grota"]);
+      expect(top(writes.game!.turn_state!)).toMatchObject({ drawn: [] });
+    });
+
+    /**
+     * A card gone from `drawn` has to go from the lists that name it, or the
+     * turn holds an id with no Karta behind it.
+     */
+    it("takes the swept Karta out of `resolved` with it", () => {
+      const at = standing([{ cardId: "sidh" }, { cardId: "grota" }], {
+        resolved: ["sidh", "grota"],
+      });
+      const { writes } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardId: "sidh" });
+      expect(top(writes.game!.turn_state!)).toMatchObject({ resolved: ["grota"] });
+    });
+
+    /** The board's copy goes first, so the two halves are ordered, not raced. */
+    it("prefers a row on the board to the same Karta in the turn", () => {
+      const at = aTable({
+        seats: [aSeat({ id: "seat-a", field_id: HERE })],
+        fieldCards: [{ id: "fc-1", field_id: HERE, card_id: "sidh", granted: false, pool: null }],
+        game: {
+          deck: { events: { draw: [], discard: [] }, spells: { draw: [], discard: [] } },
+          turn_state: only({
+            phase: "field",
+            fieldId: HERE,
+            from: null,
+            draw: 0,
+            drawn: [{ cardId: "sidh", cardClass: "place" as const }],
+          }),
+        },
+      });
+      const { writes } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardId: "sidh" });
+      expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
+      expect(writes.game?.turn_state).toBeUndefined();
+    });
+
+    /** Somebody else's turn, on another Obszar, is none of this Obszar's business. */
+    it("leaves a frame standing on a different Obszar alone", () => {
+      const at = aTable({
+        seats: [aSeat({ id: "seat-a", field_id: HERE })],
+        game: {
+          deck: { events: { draw: [], discard: [] }, spells: { draw: [], discard: [] } },
+          turn_state: only({
+            phase: "field",
+            fieldId: asFieldId("karczma")!,
+            from: null,
+            draw: 0,
+            drawn: [{ cardId: "sidh", cardClass: "place" as const }],
+          }),
+        },
+      });
+      expect(() => clearField(at, { seatId: "seat-a", fieldId: HERE })).toThrow(
+        "Na tym Obszarze nic nie leży.",
+      );
+    });
+  });
+
   /** Marked manual, and it names what was swept — 16.8 made that public. */
   it("writes down what it took", () => {
     const { writes } = clearField(table([{ id: "fc-1", card_id: "cyklop" }]), {
