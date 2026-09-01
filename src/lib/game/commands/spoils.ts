@@ -1,6 +1,7 @@
 /** What a settled fight comes to: who takes what, what it costs, and what the trophy is worth (17.4, 17.9, 1.4).*/
 
-import { stealsLife } from "@/lib/engine/abilities";
+
+import { abilitiesOf, stealsLife } from "@/lib/engine/abilities";
 import { combatValueOf } from "@/lib/engine/cards";
 import {
   advanceLoop,
@@ -160,8 +161,63 @@ export async function resolveFight(
     fight.opponentSeat !== undefined &&
     fight.result.outcome === "wygrana";
 
+  /**
+   * The DIAMENT KRÓLÓW, which pays for a lost duel in its owner's place.
+   *
+   * "Jeżeli przegrasz walkę z inną Postacią, będzie ci musiała odebrać Diament,
+   * dzięki czemu nie utracisz 1 punktu Życia."
+   *
+   * # The ruling
+   *
+   * Two readings, and the card's own words pick one. "Musiała" is compulsion on
+   * the winner, so she does not get to insist on the Życie — but "dzięki czemu
+   * nie utracisz 1 punktu Życia" only says anything if a punkt Życia was
+   * otherwise going to be lost. A winner who elected the gold or another
+   * Przedmiot was never taking one, and the clause would be describing a
+   * benefit nobody was about to be denied.
+   *
+   * So it fires **on the Życie spoil and only there**, and it fires without the
+   * winner's leave. That is also the reading 17.9 itself sets up from the other
+   * side: "Zwycięzca ma prawo zmusić pokonanego do utraty jednego punktu Życia
+   * (czemu **może zapobiec użycie odpowiednich Przedmiotów lub Zaklęć**)". The
+   * Diament is one of those Przedmioty, said from the card's end, and what it
+   * costs to use is itself.
+   *
+   * # Where it goes
+   *
+   * With the other two spoils, not in the save chain — no osłona is rolled and
+   * no Giermek dies, for the reason written above them: 17.4 is about a blow
+   * landing, and none does. The Diament changes hands instead.
+   *
+   * Asked of the ability and not of the card's id, so a second Przedmiot with
+   * the same clause — an expansion, a house card — needs only the registry
+   * line. The DIAMENT KRÓLÓW is the base game's only one.
+   *
+   * Both directions of a duel, which is why the winner is worked out here
+   * rather than taken as `seat`: 17.9's choice is only offered to the asker,
+   * but the Diament is not a choice — a drawer who loses their own duel while
+   * carrying it pays with it just the same.
+   */
+  const victor =
+    fight.opponentSeat === undefined
+      ? undefined
+      : fight.result.outcome === "wygrana"
+        ? seat
+        : snapshot.seats.find((one) => one.seat_index === fight.opponentSeat);
+  const diamond =
+    loser !== undefined && victor !== undefined && (spoils === null || spoils.take === "zycie")
+      ? snapshot.holdings.find(
+          (one) =>
+            one.seat_id === loser.id &&
+            one.kind === "item" &&
+            abilitiesOf(one.card_id).some((a) => a.kind === "placi-za-przegrana"),
+        )
+      : undefined;
+
   let paid: Changeset = {};
-  if (robbing && loser && spoils) {
+  if (diamond && loser && victor) {
+    paid = takeSpoils(snapshot, victor, loser, { take: "przedmiot", holdingId: diamond.id });
+  } else if (robbing && loser && spoils) {
     paid = takeSpoils(snapshot, seat, loser, spoils);
   } else if (loser) {
     // Nothing is rolled for a raid: the character never stood in the fight, so

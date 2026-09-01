@@ -242,6 +242,17 @@ export type Ability =
    */
   | { kind: "sprzedaj-w"; fields: readonly FieldId[]; cena: number }
   /**
+   * Paid to the winner of a duel in place of the punkt Życia 17.9 lets her take.
+   *
+   * The rule 17.9 leaves room for in its own parenthesis — "czemu może zapobiec
+   * użycie odpowiednich Przedmiotów lub Zaklęć" — said from the Przedmiot's
+   * end. What it costs to use is itself: the Karta changes hands.
+   *
+   * Read by `spoils.ts` rather than by a hand-written card id, so a second one
+   * — an expansion, a house card — needs nothing but this line.
+   */
+  | { kind: "placi-za-przegrana" }
+  /**
    * Łódź and Latarnia: cross anywhere rather than only at the two legal places
    * (11.2, 11.6). Both are consumed whether or not they are used.
    */
@@ -386,12 +397,12 @@ export type Ability =
  */
 export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = {
   "poszukiwacz-przygod": ["atakuje Postać lub Wroga do 3 Obszarów stąd, po twoim ruchu"],
-  // The sale is `sprzedaj-w` now and says itself; what is left here is the
-  // clause the app does not enforce. See the note above: a rule stated in
-  // CARD_NOTES is one the players apply themselves, so a rule that moves into
-  // the engine has to move out of here or the card claims to be doing less
-  // than it is.
-  "diament-krolow": ["przegraną walkę z Postacią płacisz Diamentem, nie punktem Życia"],
+  // Both clauses are the engine's now — the sale is `sprzedaj-w` and the lost
+  // duel is `spoils.ts` — so neither is here. See the note above: a rule stated
+  // in CARD_NOTES is one the players apply themselves, and a card that keeps
+  // its note after the engine takes the rule claims to be doing less than it
+  // is. What the reader gets instead is the two `describeAbility` lines, which
+  // is one fewer thing to keep in step.
   "tajemna-sakwa": [
     "1 Przedmiot włożony do Sakwy jest nie do odebrania — zabierze go tylko Pan Bogactwa",
   ],
@@ -596,7 +607,14 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // "może zostać sprzedany w Zamku za 5 Sztuk Złota" — the one Karta in the box
   // with a buyer of its own. The other half of its text, the one about paying
   // for a lost duel with the Diament rather than a Życie, is still CARD_NOTES'.
-  "diament-krolow": [{ kind: "sprzedaj-w", fields: ["zamek"], cena: 5 }],
+  "diament-krolow": [
+    { kind: "sprzedaj-w", fields: ["zamek"], cena: 5 },
+    // "Jeżeli przegrasz walkę z inną Postacią, będzie ci musiała odebrać
+    // Diament, dzięki czemu nie utracisz 1 punktu Życia." 17.9's own
+    // parenthesis is what it answers — "czemu może zapobiec użycie
+    // odpowiednich Przedmiotów lub Zaklęć" — and `spoils.ts` is where it fires.
+    { kind: "placi-za-przegrana" },
+  ],
   pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
   strzyga: [{ kind: "punkty", magia: 1 }],
   chochlik: [

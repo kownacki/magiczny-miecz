@@ -15,7 +15,16 @@ import type { TurnPhase } from "@/lib/engine/turn";
  * who wanted the Magiczny Miecz off a beaten rival had no way to say so and the
  * referee was making the choice the rulebook gives the player.
  */
-const duel = (over: { eqMode?: "slots" | "classic"; theirGold?: number } = {}) =>
+const duel = (
+  over: {
+    eqMode?: "slots" | "classic";
+    theirGold?: number;
+    /** What the loser is carrying, for the one Przedmiot that pays a duel. */
+    theirs?: ReturnType<typeof aHolding>[];
+    /** Which way the asker's duel went. */
+    outcome?: "wygrana" | "przegrana";
+  } = {},
+) =>
   aTable({
     game: {
       active_seat: 0,
@@ -30,7 +39,7 @@ const duel = (over: { eqMode?: "slots" | "classic"; theirGold?: number } = {}) =
         playerTotal: 9,
         playerRoll: 6,
         enemyRoll: 1,
-        result: { outcome: "wygrana" },
+        result: { outcome: over.outcome ?? "wygrana" },
         fieldId: "wrzosowiska",
         draw: 0,
         drawn: [],
@@ -43,7 +52,9 @@ const duel = (over: { eqMode?: "slots" | "classic"; theirGold?: number } = {}) =
       aSeat({ id: "seat-a", seat_index: 0, character_id: asSeatCharacter("awanturnik"), field_id: "wrzosowiska", gold: 1 }),
       aSeat({ id: "seat-b", seat_index: 1, character_id: asSeatCharacter("elf"), field_id: "wrzosowiska", life: 4, gold: over.theirGold ?? 2 }),
     ],
-    holdings: [aHolding({ id: "h1", seat_id: "seat-b", card_id: "miecz", kind: "item" })],
+    holdings: over.theirs ?? [
+      aHolding({ id: "h1", seat_id: "seat-b", card_id: "miecz", kind: "item" }),
+    ],
   });
 
 const settle = async (table: ReturnType<typeof duel>, spoils?: Parameters<typeof resolveFight>[1]) =>
@@ -105,6 +116,72 @@ describe("what the winner of a duel takes (17.9)", () => {
  * real table on Płaskowyż Mgieł: two Wrogowie beaten together under 17.5, both
  * still standing in the Obszar's window afterwards.
  */
+/* ==========================================================================
+ * The one Przedmiot 17.9's parenthesis is about.
+ * ======================================================================= */
+
+describe("the DIAMENT KRÓLÓW pays for a lost duel (17.9)", () => {
+  const carrying = (seatId: string) => [
+    aHolding({ id: "d1", seat_id: seatId, card_id: "diament-krolow", kind: "item" }),
+  ];
+
+  /**
+   * "Jeżeli przegrasz walkę z inną Postacią, będzie ci musiała odebrać Diament,
+   * dzięki czemu nie utracisz 1 punktu Życia."
+   *
+   * „Musiała" is compulsion on the winner, so the Życie is not hers to insist
+   * on — and the Diament goes over rather than being destroyed, like any other
+   * 17.9 Przedmiot.
+   */
+  it("goes to the winner instead of the punkt Życia", async () => {
+    const after = await settle(duel({ theirs: carrying("seat-b") }));
+    expect(seat(after, "seat-b")?.life).toBe(4);
+    expect(after.holdings.find((one) => one.id === "d1")?.seat_id).toBe("seat-a");
+  });
+
+  /**
+   * And without the winner asking, which is the half that makes it a rule
+   * rather than an option: 17.9's choice is the winner's, and this is not one
+   * of the three she chooses between.
+   */
+  it("fires whether or not the winner named the Życie", async () => {
+    const asked = await settle(duel({ theirs: carrying("seat-b") }), {
+      spoils: { take: "zycie" },
+    });
+    expect(seat(asked, "seat-b")?.life).toBe(4);
+    expect(asked.holdings.find((one) => one.id === "d1")?.seat_id).toBe("seat-a");
+  });
+
+  /**
+   * Only on the Życie spoil, which is the reading the card's own second clause
+   * settles: "dzięki czemu nie utracisz 1 punktu Życia" says nothing at all if
+   * a punkt Życia was not otherwise going to be lost, and a winner taking the
+   * gold was never taking one.
+   */
+  it("leaves the Diament alone where the winner takes something else", async () => {
+    const after = await settle(
+      duel({ theirs: carrying("seat-b"), theirGold: 2 }),
+      { spoils: { take: "zloto" } },
+    );
+    expect(after.holdings.find((one) => one.id === "d1")?.seat_id).toBe("seat-b");
+    expect(seat(after, "seat-b")?.gold).toBe(1);
+  });
+
+  /**
+   * Both directions. 17.9's choice is only offered to the asker, but the
+   * Diament is not a choice — a drawer who loses their own duel while carrying
+   * it pays with it just the same, and this is the first thing in the app the
+   * opponent takes on somebody else's turn.
+   */
+  it("pays the other way too, when the asker is the one who lost", async () => {
+    const after = await settle(
+      duel({ theirs: carrying("seat-a"), outcome: "przegrana" }),
+    );
+    expect(seat(after, "seat-a")?.life).toBe(4);
+    expect(after.holdings.find((one) => one.id === "d1")?.seat_id).toBe("seat-b");
+  });
+});
+
 describe("a beaten Wróg leaves the Obszar (16.2)", () => {
   const won = (over: { cardId?: string; fought?: string[]; drawn?: unknown[] } = {}) =>
     aTable({

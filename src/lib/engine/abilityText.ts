@@ -314,6 +314,8 @@ export function describeAbility(ability: Ability): string {
     // Colon rather than a preposition, exactly as `bez-oplaty` two cases up:
     // an Obszar's name is printed on the board and goes in verbatim, so nothing
     // here can decline it and „w Zamek" is what asking would produce.
+    case "placi-za-przegrana":
+      return "przegraną walkę z Postacią płacisz tą Kartą, nie punktem Życia";
     case "sprzedaj-w":
       return `sprzedasz za ${ability.cena} Sz. Z.: ${fieldNames(ability.fields)}`;
     case "przeprawa-wszedzie":
