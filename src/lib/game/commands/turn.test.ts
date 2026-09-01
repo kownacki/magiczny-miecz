@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
-import { only } from "@/lib/engine/stack";
-import { aSeat, aTable } from "../fixture";
-import { leaveCardsBehind, passTurn, tickEffects } from "./turn";
+import { only, top } from "@/lib/engine/stack";
+import { aHolding, aSeat, aTable } from "../fixture";
+import { apply } from "../change";
+import { finishTurn, leaveCardsBehind, passTurn, tickEffects } from "./turn";
 
 const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
   aTable({
@@ -236,5 +237,109 @@ describe("what is left on the Obszar at the end of a turn", () => {
   it("tells the two apart in the same handful", () => {
     const writes = leaving("najemnik", "tragarz", "pasterz");
     expect(writes.fieldCards?.insert?.map((row) => row.card_id)).toEqual(["najemnik", "pasterz"]);
+  });
+});
+
+/**
+ * `endturn force`: the test console handing the turn on over a rule.
+ *
+ * Every refusal below is right for a game and wrong for a table being built by
+ * hand — a surplus dealt in, a Tarcza put on, a Karta half-resolved by a script
+ * nobody wants to finish. Without the flag the only way past them was to undo
+ * what had just been set up, which is the setup happening twice.
+ */
+describe("handing the turn on anyway (the test console's `force`)", () => {
+  /** Klasyczny counts everything and 5.4's limit is four; five is one over. */
+  const FIVE = ["helm", "zbroja", "miecz", "sztylet", "latarnia"];
+
+  const overloaded = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        round: 3,
+        eq_mode: "classic",
+        turn_state: only({
+          phase: "field",
+          fieldId: asFieldId("mroczna-polana")!,
+          from: null,
+          draw: 0,
+          drawn: [],
+        }),
+        ...(over.game ?? {}),
+      },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, character_id: "goblin" }),
+        aSeat({ id: "seat-b", seat_index: 1, character_id: "elf" }),
+      ],
+      holdings: (over.holdings ?? FIVE).map((card, at) =>
+        typeof card === "string"
+          ? aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: card })
+          : card,
+      ),
+    });
+
+  it("holds the turn on a surplus, as 5.6 asks", () => {
+    const outcome = finishTurn(overloaded());
+    expect(outcome.result).toBe("held");
+    expect(top(apply(overloaded(), outcome.writes).game.turn_state)).toMatchObject({
+      phase: "overflow",
+      seatId: "seat-a",
+    });
+  });
+
+  it("passes over the surplus when forced, and leaves no frame behind", () => {
+    const at = overloaded();
+    const outcome = finishTurn(at, { force: true });
+    expect(outcome.result).toBe("passed");
+    const after = apply(at, outcome.writes);
+    expect(after.game.active_seat).toBe(1);
+    // The whole stack is written over by the pass, so the surplus is not
+    // waiting under the next seat's turn.
+    expect(after.game.turn_state.stack).toEqual([{ phase: "roll" }]);
+  });
+
+  /**
+   * The frame already up is the same answer.
+   *
+   * A table that has been sitting in the surplus is the state somebody is most
+   * likely to be typing `force` at — it is what the refusal in the screenshot
+   * was — and `refuseWhileOverflow` throws rather than returning, so this is a
+   * different code path from the one above.
+   */
+  it("passes over a surplus frame that is already waiting", () => {
+    const at = overloaded({
+      game: {
+        turn_state: only({ phase: "overflow", seatId: "seat-a", what: "przedmioty" }),
+      },
+    });
+    expect(() => finishTurn(at)).toThrow(/limitu/);
+    expect(finishTurn(at, { force: true }).result).toBe("passed");
+  });
+
+  /**
+   * A Karta half-resolved, which has no verb of its own.
+   *
+   * `endfight` drops a fight, so the fight phase always had a way out. A
+   * `script` frame and a question owed had none: the console refused the turn
+   * and offered nothing else, which is the deadlock `resolve.ts` describes.
+   */
+  it("passes over a Karta the turn never finished", () => {
+    // Inside 5.4's four, so the only thing in the way is the frame.
+    const at = overloaded({
+      holdings: [],
+      game: {
+        turn_state: only({
+          phase: "script",
+          seatId: "seat-a",
+          cardId: "targowisko",
+          reason: "TARGOWISKO",
+          effect: { op: "kup", towar: [{ co: "helm", cena: 1 }] },
+          cursor: [],
+        }),
+      },
+    });
+    expect(() => finishTurn(at)).toThrow(/TARGOWISKO/);
+    const after = apply(at, finishTurn(at, { force: true }).writes);
+    expect(after.game.active_seat).toBe(1);
   });
 });

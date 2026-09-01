@@ -56,7 +56,17 @@ suite("reading a line", () => {
   });
 
   it("does not care about case or spacing", () => {
-    expect(ok("   ENDTURN   ")).toEqual({ kind: "endturn" });
+    expect(ok("   ENDTURN   ")).toEqual({ kind: "endturn", force: false });
+  });
+
+  /**
+   * `force` is the only word on this line, so anything else is a typo rather
+   * than an argument — and a turn handed on by accident cannot be handed back.
+   */
+  it("reads the one word `endturn` takes, and refuses any other", () => {
+    expect(ok("endturn force")).toEqual({ kind: "endturn", force: true });
+    expect(ok("PASS Force")).toEqual({ kind: "endturn", force: true });
+    expect(err("endturn now")).toMatch(/force/);
   });
 
   it("says so when there is nothing to read", () => {
@@ -407,7 +417,7 @@ suite("the rest of the vocabulary", () => {
     expect(ok("kill Ola")).toEqual({ kind: "kill", who: "Ola" });
     expect(ok("spell")).toEqual({ kind: "spell", who: null, wand: false });
     expect(ok("endfight")).toEqual({ kind: "endfight" });
-    expect(ok("pass")).toEqual({ kind: "endturn" });
+    expect(ok("pass")).toEqual({ kind: "endturn", force: false });
   });
 });
 
@@ -598,6 +608,25 @@ suite("playing the game, and overruling it", () => {
       expect(permits(ok(line), { testmode: false }).ok, line).toBe(false);
       expect(permits(ok(line), { testmode: true }).ok, line).toBe(true);
     }
+  });
+
+  /**
+   * One verb, two capabilities — the flag carries the difference.
+   *
+   * `endturn` is 10.1 and belongs to everybody. `endturn force` walks past
+   * 5.6, 14.7 and a Karta the turn has not finished, so it is the console
+   * overruling the rules and needs the same key `kill` does. A second verb
+   * would have said the same thing in a word nobody would think to look for.
+   */
+  it("locks the flag rather than the verb", () => {
+    expect(permits(ok("endturn"), { testmode: false }).ok).toBe(true);
+    expect(permits(ok("pass"), { testmode: false }).ok).toBe(true);
+    const refused = permits(ok("endturn force"), { testmode: false });
+    expect(refused.ok).toBe(false);
+    // Naming the verb alone would send somebody looking for what is wrong with
+    // a line they can type perfectly well.
+    if (!refused.ok) expect(refused.why).toContain("endturn force");
+    expect(permits(ok("endturn force"), { testmode: true }).ok).toBe(true);
   });
 
   it("allows everything once testmode is on", () => {
@@ -969,7 +998,19 @@ suite("finishing a half-typed line", () => {
   });
 
   it("takes nothing where nothing goes", () => {
-    expect(tab("endturn ").options).toEqual([]);
+    expect(tab("roll ").options).toEqual([]);
+  });
+
+  /**
+   * `force` is typed at a console that has just refused you, which is the
+   * worst moment to be remembering a word. So Tab finishes it, the way it
+   * finishes `gold +5 force`.
+   */
+  it("finishes the one word `endturn` takes", () => {
+    expect(tab("endturn ").line).toBe("endturn force ");
+    expect(tab("pass fo").line).toBe("pass force ");
+    // And not where it would be refused anyway.
+    expect(complete("endturn ", [], { testmode: false }).line).toBe("endturn ");
   });
 });
 
@@ -1072,7 +1113,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },
-  endturn: { line: "endturn", becomes: { kind: "endturn" } },
+  endturn: { line: "endturn", becomes: { kind: "endturn", force: false } },
   spell: { line: "spell Ola", becomes: { kind: "spell", who: "Ola", wand: false } },
 };
 

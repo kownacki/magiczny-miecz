@@ -177,6 +177,14 @@ Everything the console has today: `kill` · `revive` · `remove` · `deal` ·
 `gold`/`miecz`/`magia`/`tury` · `turn` · `spell` · `pick` · `seat` · `unseat` · `kick` ·
 `host` · `rename`
 
+…and one flag rather than a verb: **`endturn force`**. `endturn` is 10.1 and
+belongs to everybody; `force` walks past 5.6's surplus, 14.7's Bestia and a
+Karta the turn never finished, so it is the console overruling the rules and
+needs the same key `kill` does. The capability comes off the flag rather than
+off a second word — `gold +5 force` set the pattern — and it earns its place
+because a table built by hand goes over 5.4's four the moment the fifth `deal`
+lands, and from there the only lawful way on is to undo the setup.
+
 **Settled:** `go` is now `teleport` and has lost its `move` alias; `place` has
 lost `drop`. Both freed words belong to the lawful vocabulary, and neither can
 also mean its testmode namesake.

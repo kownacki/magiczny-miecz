@@ -303,7 +303,15 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     return { ok: { kind: "spoils", take: "zycie", card: said } };
   }
   if (word === "endfight") return { ok: { kind: "endfight" } };
-  if (word === "endturn" || word === "pass") return { ok: { kind: "endturn" } };
+  if (word === "endturn" || word === "pass") {
+    // Bare and last, the way `gold`'s and `nature`'s are — there is nothing
+    // else on this line for it to be confused with.
+    const said = tail.trim().toLowerCase();
+    if (said && said !== "force") {
+      return { error: `\`${tail.trim()}\`? \`endturn\` takes only \`force\`.` };
+    }
+    return { ok: { kind: "endturn", force: said === "force" } };
+  }
 
   if (word === "deal") {
     // Bare, it is a question rather than a mistake: "what can I ask for?" is

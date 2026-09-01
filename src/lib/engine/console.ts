@@ -69,6 +69,16 @@ export function complete(
     // takes its one argument straight away.
     if (stat) return { pool: [...players, "force"], at: 2 };
     /**
+     * The one word `endturn` takes, and only where it would be allowed.
+     *
+     * Offered rather than left to be remembered, because `force` is a word you
+     * type at a console that has just refused you, and a refusal that does not
+     * say what to type next is a refusal you argue with.
+     */
+    if (verb === "endturn" || verb === "pass") {
+      return { pool: offering.testmode === false ? [] : ["force"], at: 1 };
+    }
+    /**
      * Only what `give` will accept, in the order `GIVEABLE` groups them.
      *
      * `ordered`, or the sort below would put ALCHEMIK between 2 SZTUKI ZŁOTA

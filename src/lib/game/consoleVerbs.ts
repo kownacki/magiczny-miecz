@@ -1288,12 +1288,15 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     return "Fight dropped.";
   },
 
-  endturn: async (ctx) => {
+  endturn: async (ctx, command) => {
     const { gameId } = ctx;
     // The turn does not always pass: a surplus opens a frame instead, and
     // saying "Turn passed" over one would be the console announcing the
-    // opposite of what it just did.
-    if ((await finishTurn(gameId)) === "passed") return "Turn passed.";
+    // opposite of what it just did. Forced, it always passes — that is what
+    // the word buys — so the frame is never the answer.
+    if ((await finishTurn(gameId, command.force)) === "passed") {
+      return command.force ? "Turn passed — forced." : "Turn passed.";
+    }
     return overflowLines(await activeStore().load(gameId)).join("\n");
   },
 

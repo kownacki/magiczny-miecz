@@ -119,3 +119,38 @@ describe("taking what a won duel owes", () => {
     });
   });
 });
+
+/**
+ * The line somebody types at a console that has just refused them.
+ *
+ * A table set up by hand goes over 5.4's four the moment the fifth `deal`
+ * lands, and from there the turn will not move: the refusal is right, and the
+ * remedy — drop a Karta, spend one, put one on — is undoing the setup. `force`
+ * is the way out, and it is the console's alone.
+ */
+describe("handing the turn on over a surplus", () => {
+  const overloaded = async () => {
+    const table = await playing("classic");
+    for (const card of ["helm", "zbroja", "miecz", "sztylet", "latarnia"]) {
+      await grantCard(table.gameId, table.seat, card);
+    }
+    return table;
+  };
+
+  it("will not move the turn, and says what is in the way", async () => {
+    const { gameId, actor } = await overloaded();
+    // The fifth `deal` opened the frame where it happened (5.6's
+    // "natychmiast"), so this is the refusal rather than the hold — which is
+    // the state a console actually sits in when somebody types `force`.
+    await expect(
+      runCommand(gameId, actor, { kind: "endturn", force: false }),
+    ).rejects.toThrow(/Najpierw zejdź do limitu/);
+  });
+
+  it("passes it when forced, and says that is what it did", async () => {
+    const { gameId, actor } = await overloaded();
+    expect(await runCommand(gameId, actor, { kind: "endturn", force: true })).toBe(
+      "Turn passed — forced.",
+    );
+  });
+});

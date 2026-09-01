@@ -243,7 +243,16 @@ export type Command =
   | { kind: "clear"; fieldId: FieldId | null; cardId: string | null }
   /** Test mode: what is left in a pile, and what has been used (9.5, 16.8). */
   | { kind: "pile"; pile: "events" | "spells" | null }
-  | { kind: "endturn" }
+  /**
+   * The turn handed on — or, with `force`, handed on anyway.
+   *
+   * `endturn` is the game and everybody has it. `force` is the test console's,
+   * because everything it walks past is a rule: 5.6's surplus, 14.7's Bestia,
+   * and a Karta or a question the turn has not finished. So the capability
+   * comes off the flag rather than off a second verb, the way `gold +5 force`
+   * does — one line, two commands.
+   */
+  | { kind: "endturn"; force: boolean }
   /* Playing. These are the game as printed: you roll, you walk it out, you meet
      what is on the Obszar, you hand the turn on. */
   | { kind: "roll" }
@@ -974,8 +983,8 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "endturn",
     aliases: ["pass"],
-    usage: "endturn",
-    summary: "hand the turn on",
+    usage: "endturn [force]",
+    summary: "hand the turn on — `force` hands it on over a surplus or an unfinished Karta",
     // Anything but the poczekalnia, where there is no turn to hand on.
     when: PLAYING,
     needs: "play",
@@ -1075,6 +1084,9 @@ const NEEDS: Record<Command["kind"], Capability> = {
 };
 
 export function needsOf(command: Command): Capability {
+  // `endturn` is the game; `endturn force` overrules it. What needs test mode
+  // is the flag, not the verb, so this one answer cannot be read off `NEEDS`.
+  if (command.kind === "endturn" && command.force) return "testmode";
   return NEEDS[command.kind];
 }
 
@@ -1134,9 +1146,13 @@ export function permits(
   at: { testmode: boolean },
 ): { ok: true } | { ok: false; why: string } {
   if (needsOf(command) === "play" || at.testmode) return { ok: true };
+  // The flag, where the flag is what is locked: „`endturn` overrules the rules"
+  // is a lie about a verb everybody has, and the reader would go looking for
+  // the wrong thing to turn on.
+  const said = command.kind === "endturn" ? "endturn force" : command.kind;
   return {
     ok: false,
-    why: `\`${command.kind}\` overrules the rules — turn testmode on first.`,
+    why: `\`${said}\` overrules the rules — turn testmode on first.`,
   };
 }
 

@@ -204,7 +204,7 @@ export function leaveCardsBehind(
  * which throws: a table with nobody to play is exactly the state this has to be
  * able to work its way out of, and refusing to run is what kept it stuck.
  */
-export function passTurn(snapshot: Snapshot): Changeset {
+export function passTurn(snapshot: Snapshot, force = false): Changeset {
   const game = snapshot.game;
   const seat = snapshot.seats.find((row) => row.seat_index === game.active_seat) ?? null;
 
@@ -241,8 +241,15 @@ export function passTurn(snapshot: Snapshot): Changeset {
   // A turn cannot be put down mid-sentence: a running fight or a Karta
   // suspended half-resolved is the turn's own unfinished business, and passing
   // over it would strand a frame no future turn owns.
-  if (state.phase === "fight") throw new Error("Najpierw dokończcie walkę (17.4).");
-  if (state.phase === "script") {
+  //
+  // `force` is the test console's way past all three, and the only way past the
+  // last two: `endfight` drops a fight, but a Karta half-resolved and a
+  // question owed have no verb of their own, and a table wedged in one has
+  // nothing left to type. Nothing is stranded by going anyway — the pass writes
+  // `only(startTurn())` over the whole stack, so a forced pass throws the frame
+  // away rather than leaving it behind.
+  if (state.phase === "fight" && !force) throw new Error("Najpierw dokończcie walkę (17.4).");
+  if (state.phase === "script" && !force) {
     throw new Error(`Najpierw dokończ: ${state.reason} — Karta jest w trakcie rozpatrywania.`);
   }
   /**
@@ -257,7 +264,7 @@ export function passTurn(snapshot: Snapshot): Changeset {
    * be the seat playing (law 5), and that is precisely the case where nobody
    * would notice.
    */
-  if (state.phase === "ask") {
+  if (state.phase === "ask" && !force) {
     throw new Error(`Najpierw odpowiedz: ${state.reason} — ktoś jeszcze wybiera.`);
   }
   const left =
@@ -433,8 +440,20 @@ export function addEffect(
  * `passTurn` itself is left alone. Half the game passes the turn as a
  * consequence of something else — a death, a lost turn, a fall off the Most —
  * and none of those is a player choosing to walk away from a rule.
+ *
+ * `force` is `endturn force`, and it is the test console's alone: every guard
+ * above it is a rule of the game, so the capability comes off the flag rather
+ * than off a second verb (`gold +5 force` set the pattern). It exists because
+ * the refusals are exactly right for a game and exactly wrong for a table being
+ * set up by hand — a surplus dealt in with `deal`, a Tarcza put on with
+ * `equip`, a Karta half-resolved by a script nobody wants to finish — where the
+ * one thing the tester needs is the next turn, and the honest way out was to
+ * undo what they had just built.
  */
-export function finishTurn(snapshot: Snapshot): Outcome<"passed" | "held"> {
+export function finishTurn(
+  snapshot: Snapshot,
+  command: { force: boolean } = { force: false },
+): Outcome<"passed" | "held"> {
   const seat = snapshot.seats.find((row) => row.seat_index === snapshot.game.active_seat);
   /**
    * A frame already up is refused, not re-opened.
@@ -446,11 +465,13 @@ export function finishTurn(snapshot: Snapshot): Outcome<"passed" | "held"> {
    * with the rest of the stack: the one thing the table was waiting for,
    * deleted by the button it was blocking.
    */
-  refuseWhileOverflow(snapshot, seat?.id ?? null);
+  if (!command.force) {
+    refuseWhileOverflow(snapshot, seat?.id ?? null);
 
-  const held = holdOverflow(snapshot);
-  if (held.game) return { writes: held, result: "held" };
+    const held = holdOverflow(snapshot);
+    if (held.game) return { writes: held, result: "held" };
 
-  if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
-  return { writes: passTurn(snapshot), result: "passed" };
+    if (seat) refuseWhileBeastAwaits(snapshot, seat.id);
+  }
+  return { writes: passTurn(snapshot, command.force), result: "passed" };
 }

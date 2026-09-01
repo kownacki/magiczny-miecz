@@ -204,7 +204,7 @@ describe("an effect that ends with the turn itself", () => {
     await potion(gameId, second);
     expect(await runCommand(gameId, actor, { kind: "me", who: "2" })).toContain("+2 Miecza");
 
-    await runCommand(gameId, actor, { kind: "endturn" });
+    await runCommand(gameId, actor, { kind: "endturn", force: false });
     expect(await runCommand(gameId, actor, { kind: "me", who: "2" })).not.toContain("+2 Miecza");
   });
 

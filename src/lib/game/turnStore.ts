@@ -1058,8 +1058,12 @@ export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
  * the opposite of what happened. It is a return value rather than a throw
  * because a throw discards the writes, and the frame *is* the write.
  */
-export async function finishTurn(gameId: string): Promise<"passed" | "held"> {
-  return change(gameId, finishTurnOn, undefined);
+export async function finishTurn(
+  gameId: string,
+  /** `endturn force`, which is the test console's and always answers "passed". */
+  force = false,
+): Promise<"passed" | "held"> {
+  return change(gameId, finishTurnOn, { force });
 }
 
 /**
