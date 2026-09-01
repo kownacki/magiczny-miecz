@@ -15,7 +15,8 @@ const frameIn = (writes: { game?: { turn_state?: TurnState } }) =>
   top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "script" }>;
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply } from "../change";
-import { applyEffect, resolveDrawnCard, resolveFieldOffer, spendHolding } from "./effects";
+import { applyEffect } from "./effects";
+import { resolveDrawnCard, resolveFieldOffer, spendHolding } from "./resolving";
 import { EVENT_COPIES } from "../decks";
 import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";

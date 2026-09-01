@@ -39,15 +39,8 @@ import {
 } from "./commands/turn";
 import { healSeat as healCommand } from "./commands/life";
 import { fightBeast as fightBeastCommand } from "./commands/beast";
-import {
-  applyEffect as applyEffectOn,
-  resolveDrawnCard as resolveDrawnCardOn,
-  resolveFieldOffer as resolveFieldOfferOn,
-  spendHolding as spendHoldingOn,
-  type Decisions,
-  type Resolution,
-  type UseResult,
-} from "./commands/effects";
+import { applyEffect as applyEffectOn, type Decisions, type Resolution } from "./commands/effects";
+import { resolveDrawnCard as resolveDrawnCardOn, resolveFieldOffer as resolveFieldOfferOn, spendHolding as spendHoldingOn, type UseResult } from "./commands/resolving";
 import {
   breakFree as breakFreeOn,
   claimMission as claimMissionOn,

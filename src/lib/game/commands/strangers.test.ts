@@ -4,7 +4,7 @@ import { apply } from "../change";
 import { aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { buildDeck } from "@/lib/engine/deck";
-import { resolveDrawnCard } from "./effects";
+import { resolveDrawnCard } from "./resolving";
 import { attackSeat } from "./fight";
 import { statusesOf } from "./turn";
 import { hasAttacked, movementCap } from "@/lib/engine/status";

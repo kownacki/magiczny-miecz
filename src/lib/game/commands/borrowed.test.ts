@@ -7,7 +7,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { aSeat, aTable, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
-import { resolveDrawnCard } from "./effects";
+import { resolveDrawnCard } from "./resolving";
 
 /**
  * The two Kapliczki, which borrow a Świątynia's table (`jak-pole`).

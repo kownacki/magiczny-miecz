@@ -11,7 +11,7 @@ import { beginFight, fightRoll } from "./fight";
 import { resolveFight } from "./spoils";
 import { castSpell } from "./spells";
 import { claimFloor } from "./spellFloor";
-import { resolveDrawnCard } from "./effects";
+import { resolveDrawnCard } from "./resolving";
 import { moveTo, rollForMove } from "./movement";
 import { finishTurn } from "./turn";
 

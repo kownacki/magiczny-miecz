@@ -5,7 +5,7 @@ import { scriptFor } from "@/lib/engine/cardScript";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { aSeat, aTable, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
-import { resolveDrawnCard } from "./effects";
+import { resolveDrawnCard } from "./resolving";
 
 /**
  * LEWIATAN, who has to be put down somewhere nobody is standing.

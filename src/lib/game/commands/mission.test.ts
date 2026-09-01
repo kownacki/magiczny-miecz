@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
-import { resolveFieldOffer } from "./effects";
+import { resolveFieldOffer } from "./resolving";
 import { claimMission } from "./friends";
 import { resolveFight } from "./spoils";
 import { statusesOf } from "./turn";

@@ -2,7 +2,7 @@ import { only } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
-import { resolveDrawnCard, resolveFieldOffer } from "./effects";
+import { resolveDrawnCard, resolveFieldOffer } from "./resolving";
 import { settleCrossing } from "./bridge";
 import { takeCard } from "./holdings";
 import { statusesOf } from "./turn";
