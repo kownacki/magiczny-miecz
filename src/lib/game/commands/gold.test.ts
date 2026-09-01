@@ -6,7 +6,7 @@ import { asFieldId } from "@/lib/engine/board";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { killSeat } from "./life";
 import { turnToStone } from "./stone";
-import { clearField, placeGold, takeFieldGold } from "./holdings";
+import { clearField, placeGold, takeCard, takeFieldGold } from "./holdings";
 import { RULE_FOR } from "@/lib/engine/journalRules";
 
 const HERE = asFieldId("mroczna-polana")!;
@@ -120,6 +120,46 @@ describe("taking gold off an Obszar (12.1)", () => {
       fieldCards: [{ id: "fc1", field_id: HERE, card_id: "wilk", granted: false, pool: null }],
     });
     expect(() => takeFieldGold(guarded, { seatId: "seat-a", gold: 1 })).toThrow(/12\.1a/);
+  });
+
+  /**
+   * The case the two guards used to disagree about, and the reason there is
+   * now one of them.
+   *
+   * A Karta lies in one of two places depending on nothing a player can see:
+   * arriving lifts every `field_cards` row into the turn's frame, and the end
+   * of the turn writes back what nobody took. 12.1a was written twice, once
+   * against each list — so a Przedmiot was correctly refused over an unfought
+   * Wilk's head while the gold beside it was handed over, on the one turn the
+   * rule is actually about.
+   */
+  it("refuses over a Wróg the turn is holding, not only one lying on the board", () => {
+    const wilk = { cardId: "wilk", cardClass: "foe" as const, granted: false };
+    const mid = table({
+      fieldGold: [{ id: "fg1", field_id: HERE, gold: 3 }],
+      game: { active_seat: 0, turn_state: only(arrived({ drawn: [wilk] })) },
+    });
+    expect(() => takeFieldGold(mid, { seatId: "seat-a", gold: 1 })).toThrow(/WILK/);
+    // And the Przedmiot beside it refuses for the same reason and in the same
+    // words, which is the whole point of there being one guard.
+    expect(() => takeCard(mid, { seatId: "seat-a", cardId: "miecz" })).toThrow(/WILK/);
+  });
+
+  const wilkDrawn = { cardId: "wilk", cardClass: "foe" as const, granted: false };
+
+  /** Beaten or fled, 17.4 settles him and the loot is loose (16.2). */
+  it("lets both through once he is settled", () => {
+    const settled = table({
+      fieldGold: [{ id: "fg1", field_id: HERE, gold: 3 }],
+      game: {
+        active_seat: 0,
+        turn_state: only(
+          arrived({ drawn: [wilkDrawn], fought: ["wilk"] }),
+        ),
+      },
+    });
+    expect(takeFieldGold(settled, { seatId: "seat-a", gold: 1 }).result.took).toBe(1);
+    expect(() => takeCard(settled, { seatId: "seat-a", cardId: "miecz" })).not.toThrow();
   });
 
   /** 12.1b — and the same one about a square that still owes Karty. */

@@ -99,9 +99,15 @@ export interface FieldCardHere {
    * anybody is looking.
    *
    * These are those Karty. They are on the Obszar in every sense the player
-   * cares about; what they do not have is a row id, so `take-field` cannot name
-   * them and the "weź" button belongs to the sheet that is working through them
-   * rather than to this list.
+   * cares about; what they do not have is a `field_cards` row id, so
+   * `take-field` cannot name them and the take goes by card id instead —
+   * `onTakeDrawn` rather than `onTake`.
+   *
+   * The "weź" button used to be hidden on them for that reason, which made the
+   * filing system visible: on the one turn anybody is standing here, every
+   * Karta on the square is one of these, so the window offered the loose gold
+   * and none of the loot beside it. 12.1 names both in one breath and neither
+   * of the two ids is a thing a player can see.
    */
   viaTurn?: boolean;
   /** What is left beside a Miejsce that lays out points (16.7). */
@@ -170,6 +176,7 @@ export function FieldModal({
   revealing = false,
   onDealSeen,
   onTake,
+  onTakeDrawn,
   gold = 0,
   onTakeGold,
   standing = [],
@@ -283,6 +290,13 @@ export function FieldModal({
   onPickSeat?: (seatId: string) => void;
   busy: boolean;
   onTake: (fieldCardId: string) => void;
+  /**
+   * The same act on a Karta the turn is holding, which has no row to name.
+   *
+   * Two doors because there are two ids, not because there are two rules: the
+   * command behind each checks the same 12.1, down to `refuseOverAFoe`.
+   */
+  onTakeDrawn?: (cardId: CardId, at: string) => void;
   /**
    * Sztuki Złota lying loose on the Obszar, which are not Karty and never were.
    *
@@ -644,7 +658,11 @@ export function FieldModal({
                               dimmed={asked.includes(lying.id)}
                               onClick={() => onInspect(lying.cardId)}
                             >
-                              {takeable && !lying.viaTurn && standingHere && canAct && arrived && (
+                              {takeable &&
+                                standingHere &&
+                                canAct &&
+                                arrived &&
+                                (!lying.viaTurn || onTakeDrawn !== undefined) && (
                                 <button
                                   /* Only this card's own ask, never the table's
                                      `busy`: what is lying on one Obszar is several
@@ -652,7 +670,11 @@ export function FieldModal({
                                      because one is out makes a player wait a round
                                      trip per card for no reason the rules give. */
                                   disabled={asked.includes(lying.id)}
-                                  onClick={() => onTake(lying.id)}
+                                  onClick={() =>
+                                    lying.viaTurn
+                                      ? onTakeDrawn?.(lying.cardId, lying.id)
+                                      : onTake(lying.id)
+                                  }
                                   className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
                                 >
                                   weź

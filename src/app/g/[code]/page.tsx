@@ -1375,6 +1375,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           onTake={(fieldCardId) =>
             void askFor(fieldCardId, () => post("holdings", { action: "take-field", fieldCardId }))
           }
+          /* A Karta the turn is holding has no `field_cards` row, so it is
+             taken by name — the same door the sheet's own "weź" goes through.
+             Both end in `takeCard`, under the same 12.1. */
+          onTakeDrawn={(cardId, at) =>
+            void askFor(at, () => post("holdings", { action: "take", cardId }))
+          }
           /* Loose Sztuki Złota, which are a row on the Obszar rather than a
              Karta on it — dropped by a character who died here (4.4), by one
              turned to stone, or by a Karta that pays out on a square. */

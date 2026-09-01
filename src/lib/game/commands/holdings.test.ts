@@ -278,7 +278,7 @@ describe("taking a card", () => {
       },
     });
     expect(() => takeCard(guarded, { seatId: "seat-a", cardId: "helm" })).toThrow(
-      "Najpierw CYKLOP — dopiero potem zbieranie (12.1).",
+      "Najpierw CYKLOP — dopiero potem zbieranie (12.1a).",
     );
   });
 
@@ -713,7 +713,7 @@ describe("picking something up off the Obszar (12.1)", () => {
       fieldCards: [lying, { id: "fc2", field_id: HERE, card_id: "cyklop", granted: false, pool: null }],
     });
     expect(() => takeFromField(guarded, { seatId: "seat-a", fieldCardId: "fc1" })).toThrow(
-      "Najpierw pokonaj Wrogów albo im ucieknij (12.1a).",
+      "Najpierw CYKLOP — dopiero potem zbieranie (12.1a).",
     );
   });
 

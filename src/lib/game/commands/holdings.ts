@@ -1,7 +1,6 @@
 /** What a character is carrying: picking it up (12.1, 16.6, 21.1), putting it down (5.5, 6.4, 9.4), and the two test shortcuts that conjure a card. Where it is worn is ./wearing. */
 
 import items from "@/data/items.json";
-import { isFoeClass } from "@/data/types";
 import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
@@ -202,6 +201,56 @@ function grantedHere(snapshot: Snapshot, seatId: string, cardId: string): boolea
   );
 }
 
+/**
+ * 12.1a, asked of both places a Karta can be lying on an Obszar.
+ *
+ * "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec" —
+ * the loot waits until the fight is settled, and 16.4 says the same thing from
+ * the ordering side.
+ *
+ * # Why it reads two lists
+ *
+ * A Karta lies in one of two places depending on nothing a player can see:
+ * arriving lifts every `field_cards` row into the turn's frame
+ * (`liftFieldCards`) and the end of the turn writes back whatever nobody took
+ * (`leaveCardsBehind`). This rule was written twice, once against each, and so
+ * fired in exactly the half of the game the other one covered:
+ *
+ * - `takeCard` read `state.drawn` and refused a Przedmiot over a Wilk's head,
+ *   which is right on the turn you land there and blind afterwards.
+ * - `refuseUnlessCollectable` read `snapshot.fieldCards`, which is empty for
+ *   the square you are standing on — so taking **gold** over that same Wilk's
+ *   head was allowed, every time.
+ *
+ * That is the app's filing system leaking into the game, the same leak
+ * `clearField` has a note about. One rule, both lists, and the two acts 12.1
+ * names in one breath cannot come apart again.
+ *
+ * `exempt` is the Wróg himself: beating one is how you take his Karta (16.2),
+ * so he cannot be the reason you may not.
+ */
+function refuseOverAFoe(snapshot: Snapshot, seatId: string, exempt?: string): void {
+  const seat = snapshot.seats.find((one) => one.id === seatId);
+  const state = top(snapshot.game.turn_state);
+  const inTurn = state.phase === "field" ? state.drawn : [];
+  const settled = state.phase === "field" ? (state.fought ?? []) : [];
+  const onBoard = snapshot.fieldCards.filter((row) => row.field_id === seat?.field_id);
+
+  const standing = [...inTurn, ...onBoard.map((row) => ({ cardId: row.card_id }))].find(
+    (entry) => {
+      if (entry.cardId === exempt || settled.includes(entry.cardId)) return false;
+      const foe = EVENTS.find((one) => one.id === entry.cardId);
+      return foe !== undefined && combatValueOf(foe) !== null;
+    },
+  );
+  if (!standing) return;
+
+  const foe = EVENTS.find((one) => one.id === standing.cardId);
+  // The letter is 12.1's own: it prints "a) Na Obszarze leżą Karty Wrogów" and
+  // "b) Jest to Obszar, na który ciągnięte są Karty", and this is a).
+  throw new Error(`Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1a).`);
+}
+
 export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> {
   const { seatId, cardId } = command;
   /**
@@ -287,20 +336,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   }
 
   // 12.1a: nothing is picked up while a Wróg is still standing on the field.
-  // "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec" —
-  // the loot waits until the fight is settled.
-  const state = top(snapshot.game.turn_state);
-  if (state.phase === "field") {
-    const settled = state.fought ?? [];
-    const standing = state.drawn.find((entry) => {
-      const foe = EVENTS.find((c) => c.id === entry.cardId);
-      return foe && combatValueOf(foe) && !settled.includes(entry.cardId);
-    });
-    if (standing && standing.cardId !== cardId) {
-      const foe = EVENTS.find((c) => c.id === standing.cardId);
-      throw new Error(`Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1).`);
-    }
-  }
+  refuseOverAFoe(snapshot, seatId, cardId);
 
   /**
    * "Miecza nie można otrzymać w Krainie Dolnego Kręgu."
@@ -634,14 +670,7 @@ function refuseUnlessCollectable(snapshot: Snapshot, seat: SeatRow): void {
     "Zabierać można tylko po zakończeniu ruchu na tym Obszarze (12.1).",
   );
 
-  const fought = state.fought ?? [];
-  const guarded = snapshot.fieldCards.some(
-    (row) =>
-      row.field_id === seat.field_id &&
-      isFoeClass(EVENTS.find((card) => card.id === row.card_id)?.cardClass) &&
-      !fought.includes(row.card_id),
-  );
-  if (guarded) throw new Error("Najpierw pokonaj Wrogów albo im ucieknij (12.1a).");
+  refuseOverAFoe(snapshot, seat.id);
   // `draw` is what is *still* owed — see `afterMove`.
   if (state.draw > 0) {
     throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
