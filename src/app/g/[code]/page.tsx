@@ -1536,6 +1536,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 }}
                 nameOf={cardOfRef}
                 stock={stock}
+                /* The hover on the top used card says what it says everywhere
+                   else — which place a Przedmiot is worn in, and whether the
+                   reader's own Natura may use it. */
+                eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+                nature={asNature(mySeat?.nature)}
                 onInspect={setInspectingCard}
                 onClose={closeDrawer}
               />

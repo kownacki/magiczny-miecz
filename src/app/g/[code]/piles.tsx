@@ -26,6 +26,9 @@ import { Rules } from "./rule-ref";
 import Image from "next/image";
 import { cardImageUrl } from "@/lib/view/cardImages";
 import { Drawer } from "./drawer";
+import { useCardPreview } from "./card-preview";
+import type { EqMode } from "@/lib/engine/slots";
+import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
 
 /**
@@ -144,6 +147,8 @@ export function PilesDrawer({
   printed,
   backs,
   nameOf,
+  eqMode,
+  nature,
   onInspect,
   onClose,
   stock,
@@ -157,6 +162,9 @@ export function PilesDrawer({
   backs: { events: string; spells: string };
   /** The card a slice ref belongs to, for the faces on a used pile. */
   nameOf: (ref: string) => TileCard | null;
+  /** For the hover on the top used card, which reads the same here as anywhere. */
+  eqMode: EqMode;
+  nature: Nature | null;
   onInspect: (card: TileCard) => void;
   onClose: () => void;
 }) {
@@ -175,6 +183,8 @@ export function PilesDrawer({
           used={used.events}
           spent={counts.events.discard}
           nameOf={nameOf}
+          eqMode={eqMode}
+          nature={nature}
           onInspect={onInspect}
           note="Ciągnięte z wierzchu na Obszarze, który tego wymaga (13.4)."
         />
@@ -186,6 +196,8 @@ export function PilesDrawer({
           used={used.spells}
           spent={counts.spells.discard}
           nameOf={nameOf}
+          eqMode={eqMode}
+          nature={nature}
           onInspect={onInspect}
           note="Gdy stos się wyczerpie, zużyte tasuje się i bierze ponownie (9.5)."
         />
@@ -204,6 +216,8 @@ function Deck({
   used,
   spent,
   nameOf,
+  eqMode,
+  nature,
   onInspect,
   note,
 }: {
@@ -216,6 +230,8 @@ function Deck({
   /** How many are under it. */
   spent: number;
   nameOf: (ref: string) => TileCard | null;
+  eqMode: EqMode;
+  nature: Nature | null;
   onInspect: (card: TileCard) => void;
   note: string;
 }) {
@@ -241,7 +257,14 @@ function Deck({
 
       <div className="flex items-start gap-6 pt-1">
         <Pile label="stos" count={draw} of={printed} back={back} />
-        <Used top={used} count={spent} nameOf={nameOf} onInspect={onInspect} />
+        <Used
+          top={used}
+          count={spent}
+          nameOf={nameOf}
+          eqMode={eqMode}
+          nature={nature}
+          onInspect={onInspect}
+        />
       </div>
 
       <p className="mt-2 text-[10px] leading-snug text-muted/80">
@@ -342,15 +365,31 @@ function Used({
   top,
   count,
   nameOf,
+  eqMode,
+  nature,
   onInspect,
 }: {
   top: string | null;
   count: number;
   nameOf: (ref: string) => TileCard | null;
+  eqMode: EqMode;
+  /** Who is looking, so a 5.3 requirement can say whether THEY pass it. */
+  nature: Nature | null;
   onInspect: (card: TileCard) => void;
 }) {
   const card = top ? nameOf(top) : null;
   const leaves = Math.min(count, LEAVES);
+  /**
+   * The same hover every other card in the app has.
+   *
+   * This one was a `title` — the card's name, and nothing else — on the one
+   * card in the game a player is most likely to be looking up: the last thing
+   * spent, which is usually the thing that just happened to somebody. Clicking
+   * opened the whole Karta, which is the right answer to "let me read this"
+   * and the wrong one to "what was that": it covers the piles you came here to
+   * look at, and you have to close it again.
+   */
+  const { handlers, preview } = useCardPreview(card, false, eqMode, nature);
 
   return (
     <div className="flex flex-col items-start gap-1">
@@ -371,6 +410,7 @@ function Used({
               <button
                 key={index}
                 onClick={() => card && onInspect(card)}
+                {...handlers}
                 title={card?.name}
                 // Sized like every other leaf, so the hover outline is the card
                 // and not whatever shape the picture happened to come out.
@@ -404,6 +444,7 @@ function Used({
         <p className="tnum text-sm text-ochre/80">{count}</p>
         <p className="text-[10px] text-muted">stos zużytych</p>
       </Caption>
+      {preview}
     </div>
   );
 }
