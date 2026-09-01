@@ -63,6 +63,13 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   "turn-end": "10.1",
   /** Rzut i ruch o tyle Obszarów, ile oczek. */
   move: "10.2",
+  /**
+   * 13.1, not 10.2: a character a Karta moves did not roll and walk, and the
+   * rule that matters about where they land is the one saying it counts —
+   * „lub na Obszarze, na który zostały przeniesione wskutek spotkania.
+   * Podobnie: tylko te Obszary mogą badać."
+   */
+  "moved-by-card": "13.1",
   "turn-lost": "16.1",
   /** What a character starts the game holding is printed on its own Karta. */
   "starting-kit": "8.1",

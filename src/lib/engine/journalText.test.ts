@@ -308,11 +308,28 @@ suite("Polish agreement", () => {
     expect(text("bridge-cerberus", { loss: 22 })).toContain("22 Życia");
   });
 
+  /**
+   * The two ways a figure ends up somewhere it did not walk to, told apart.
+   *
+   * They were one line and one kind, so the Koszmar granting a wish read as
+   * somebody reaching into the app — ochre, and tagged „tryb testowy". The
+   * words are the box's own: a Karta „przenosi się natychmiast na Równinę
+   * Traw", and a hand przestawia a figure.
+   */
+  it("tells a Karta moving somebody from a hand moving a figure", () => {
+    expect(text("moved-by-card", { to: "rownina-traw", reason: "ZAKLĘTA ŚCIEŻKA" })).toBe(
+      "Michał (GOBLIN) przenosi się na Równina Traw — ZAKLĘTA ŚCIEŻKA.",
+    );
+    expect(text("moved-by-hand", { to: "rownina-traw", reason: null })).toBe(
+      "Michał (GOBLIN) — przestawienie na Równina Traw.",
+    );
+  });
+
   it("never uses a gendered past tense", () => {
     // Player names carry no gender, and Polish past tense does. Every sentence
     // is third-person present so it reads correctly for anyone at the table.
     const kinds = [
-      "move", "bridge-attempt", "moved-by-hand", "crossing", "crossing-failed",
+      "move", "bridge-attempt", "moved-by-card", "moved-by-hand", "crossing", "crossing-failed",
       "ferry", "ferry-refused", "bridge-entry", "bridge-failed",
       "guardian-start", "guardian-end", "bridge-cerberus", "bridge-trap",
       "fight-start", "fight-end", "duel", "escape", "escape-failed",

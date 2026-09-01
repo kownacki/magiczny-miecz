@@ -253,7 +253,7 @@ describe("przestawienie figury", () => {
     });
 
   it("moves the figure and files it as a manual correction", () => {
-    const { writes } = placeSeat(table(), { seatId: "seat-a", target: "osada", reason: "test" });
+    const { writes } = placeSeat(table(), { seatId: "seat-a", target: "osada", reason: "test", by: "korekta" });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { field_id: "osada" } }]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "moved-by-hand",
@@ -267,6 +267,7 @@ describe("przestawienie figury", () => {
       seatId: "seat-a",
       target: "grod",
       reason: null,
+      by: "korekta",
     });
     expect(writes.game).toBeUndefined();
   });
@@ -284,7 +285,7 @@ describe("przestawienie figury", () => {
         },
       },
     });
-    const { writes } = placeSeat(mid, { seatId: "seat-a", target: "grod", reason: null });
+    const { writes } = placeSeat(mid, { seatId: "seat-a", target: "grod", reason: null, by: "korekta" });
     expect(writes.game?.turn_state).toEqual(
       only({
         phase: "field",
@@ -300,7 +301,7 @@ describe("przestawienie figury", () => {
   /** The commonest reason to reach for this is a table stuck mid-something. */
   it("drags a turn stuck past the roll onto the new Obszar too", () => {
     const stuck = table({ game: { turn_state: { phase: "move", roll: 4, options: [] } } });
-    const { writes } = placeSeat(stuck, { seatId: "seat-a", target: "grod", reason: null });
+    const { writes } = placeSeat(stuck, { seatId: "seat-a", target: "grod", reason: null, by: "korekta" });
     expect(top(writes.game!.turn_state!)).toMatchObject({ phase: "field", fieldId: "grod" });
   });
 
@@ -319,7 +320,7 @@ describe("przestawienie figury", () => {
       },
       seats: [aSeat({ seat_index: 0 }), aSeat({ id: "seat-b", seat_index: 1 })],
     });
-    const { writes } = placeSeat(other, { seatId: "seat-a", target: "osada", reason: null });
+    const { writes } = placeSeat(other, { seatId: "seat-a", target: "osada", reason: null, by: "korekta" });
     expect(writes.game).toBeUndefined();
   });
 
@@ -350,12 +351,53 @@ describe("przestawienie figury", () => {
     const { writes } = placeSeat(mid, {
       seatId: "seat-a",
       target: "bezdroza",
-      reason: null,
-      arriving: true,
+      reason: "KOSZMAR",
+      by: "karta",
     });
     expect(writes.game?.turn_state).toEqual(
       only({ phase: "field", fieldId: "bezdroza", from: null, draw: 2, drawn: [] }),
     );
+  });
+
+  /**
+   * And the journal says which of the two it was.
+   *
+   * One kind served all three callers, so a Karta doing what it prints was
+   * painted as an override and tagged „tryb testowy" — the journal is opened
+   * to settle arguments, and this one accused somebody of cheating.
+   */
+  it("files a Karta's move as the game and a hand's as an override", () => {
+    const mid = table({
+      game: {
+        turn_state: {
+          phase: "field",
+          fieldId: "mroczna-polana",
+          from: null,
+          draw: 0,
+          drawn: [],
+          fought: [],
+        },
+      },
+    });
+    const byCard = placeSeat(mid, {
+      seatId: "seat-a",
+      target: "bezdroza",
+      reason: "KOSZMAR",
+      by: "karta",
+    });
+    expect(byCard.writes.journal?.[0]).toMatchObject({
+      kind: "moved-by-card",
+      manual: false,
+      payload: { to: "bezdroza", reason: "KOSZMAR" },
+    });
+
+    for (const by of ["konsola", "korekta"] as const) {
+      const byHand = placeSeat(mid, { seatId: "seat-a", target: "bezdroza", reason: null, by });
+      expect(byHand.writes.journal?.[0], by).toMatchObject({
+        kind: "moved-by-hand",
+        manual: true,
+      });
+    }
   });
 
   /**
@@ -382,8 +424,8 @@ describe("przestawienie figury", () => {
     const { writes } = placeSeat(mid, {
       seatId: "seat-a",
       target: "bezdroza",
-      reason: null,
-      arriving: true,
+      reason: "KOSZMAR",
+      by: "karta",
     });
     const landed = top(writes.game!.turn_state!);
     expect(landed).toMatchObject({ phase: "field", fieldId: "bezdroza", draw: 1 });
@@ -397,7 +439,7 @@ describe("przestawienie figury", () => {
 
   it("refuses an Obszar that is not on the board", () => {
     expect(() =>
-      placeSeat(table(), { seatId: "seat-a", target: "step", reason: null }),
+      placeSeat(table(), { seatId: "seat-a", target: "step", reason: null, by: "korekta" }),
     ).toThrow(/nie ma takiego Obszaru/);
   });
 });

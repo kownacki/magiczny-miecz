@@ -19,6 +19,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         String(body.seatId),
         String(body.fieldId),
         typeof body.reason === "string" ? body.reason : null,
+        // A correction, not a move: the figure is being put where it already
+        // is on the physical board, so the Obszar is not arrived at and draws
+        // nothing (13.4). `teleport` is the other reading.
+        "korekta",
       );
       return NextResponse.json({ ok: true });
     }

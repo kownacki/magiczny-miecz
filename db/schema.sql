@@ -451,7 +451,7 @@ create table if not exists magiczny_miecz.moves (
     'fight-roll', 'fight-start', 'guardian-end', 'guardian-start',
     'guardian-strength', 'healed', 'healing', 'joined', 'joined-table',
     'left-behind', 'left-seat', 'left-table', 'new-host',
-    'lost-card', 'move', 'moved-by-hand', 'nature-change', 'new-character',
+    'lost-card', 'move', 'moved-by-card', 'moved-by-hand', 'nature-change', 'new-character',
     'override', 'paid-friend', 'points', 'reshuffle', 'roll', 'shielded', 'sold', 'spell',
     'start', 'starting-kit', 'stone', 'taken', 'test-card',
     'table-opened', 'test-card-field', 'test-deal', 'test-fight-end', 'test-stack',

@@ -932,7 +932,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       seatId,
       target: effect.to.fieldId,
       reason,
-      arriving: true,
+      by: "karta",
     });
     return {
       writes: moved.writes,

@@ -270,40 +270,41 @@ export function changeNature(
  * ----------------------------------------------------------------------- */
 
 /**
+ * Who moved the figure, which decides both things that follow from it.
+ *
+ * Three callers and three answers, and the two questions they settle do not
+ * line up — which is why this is one field and not two booleans that could be
+ * set to a combination that does not exist:
+ *
+ * - **`karta`** — a Zaklęcie or a Karta Zdarzeń („przenosi się natychmiast na
+ *   Równinę Traw"). The character *arrives*: 13.1 says an Obszar „na który
+ *   zostały przeniesione wskutek spotkania" may be explored, so what lies
+ *   there joins the turn (16.8) and what it prints is owed (13.4). And it is
+ *   the game happening, so the journal reads like a move rather than like an
+ *   override.
+ * - **`konsola`** — `teleport`, and the same button in the browser's test
+ *   mode. Arrives for the same reason a card's move does — the point of
+ *   standing on an Obszar is to see what it does — but nothing in the box put
+ *   the figure there, so the line is marked as the test mode's.
+ * - **`korekta`** — the position override, a hand fixing a desync. Not an
+ *   arrival: drawing would spend Karty on a move nobody made in the game.
+ */
+export type MovedBy = "karta" | "konsola" | "korekta";
+
+/**
  * Puts a figure on an Obszar because somebody said so.
  *
  * The manual override for position, and the one every card path that teleports
  * a character borrows. `requireFieldId` is the check that used to be spelled
  * out here by hand, and now every caller gets the narrow type.
  *
- * Two acts share it, and `arriving` is the difference: a character the *game*
- * moved goes on with their turn where they land (13.1), and a figure somebody
- * *corrected* into place has not moved at all. Everything else — the cut, the
- * Karty left behind, the restage — is the same either way.
+ * Three acts share it and `by` is the difference — see `MovedBy`. Everything
+ * else — the cut, the Karty left behind on the old Obszar, the restage — is
+ * the same whoever moved the figure.
  */
 export function placeSeat(
   snapshot: Snapshot,
-  command: {
-    seatId: string;
-    target: string;
-    reason: string | null;
-    /**
-     * Whether the turn goes on as if the move had ended here (13.1).
-     *
-     * The rulebook's own words about a character a Karta sends somewhere else:
-     * „Obbol jednak musi kontynuować turę, czyli zachować się tak, jakby jego
-     * ruch zakończył się na Równinie Traw" — and 13.1 says a character may
-     * explore „Obszar, na który zostały przeniesione wskutek spotkania" in as
-     * many words. So the new Obszar is a proper arrival: what lies on it comes
-     * into the turn (16.8) and what it prints is owed (13.4).
-     *
-     * Off, and the figure is only *put* somewhere: the position override
-     * correcting a desync, where drawing would spend Karty on a mistake nobody
-     * made in the game. That was the only reading this had, and it was the
-     * wrong one for every card that moves you.
-     */
-    arriving?: boolean;
-  },
+  command: { seatId: string; target: string; reason: string | null; by: MovedBy },
 ): Outcome<void> {
   const seat = seatById(snapshot, command.seatId);
   const fieldId = requireFieldId(command.target, "Przestawienie");
@@ -368,7 +369,7 @@ export function placeSeat(
    * delete a row it is inserting in the same breath, and going in a circle is
    * not the case this is for.
    */
-  const arriving = moving && command.arriving === true;
+  const arriving = moving && command.by !== "korekta";
   const lifted = arriving ? liftFieldCards(snapshot, fieldId) : null;
 
   const restage: Changeset = moving
@@ -408,13 +409,15 @@ export function placeSeat(
           {
             seatId: seat.id,
             round: snapshot.game.round,
-            kind: "moved-by-hand",
+            // The game moving somebody is not a hand correcting the app, and
+            // the journal painted both ochre and tagged them „tryb testowy".
+            kind: command.by === "karta" ? "moved-by-card" : "moved-by-hand",
             payload: {
               from: seat.field_id,
               to: fieldId,
               reason: command.reason,
             },
-            manual: true,
+            manual: command.by !== "karta",
           },
         ],
       }),

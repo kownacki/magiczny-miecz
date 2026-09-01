@@ -74,6 +74,16 @@ export const JOURNAL_KINDS = [
   "left-behind",
   "lost-card",
   "move",
+  /**
+   * A Karta moved the character, which is the game happening and not a hand
+   * correcting it (13.1).
+   *
+   * The distinction the journal could not make: every teleport was
+   * `moved-by-hand`, so the Koszmar granting a wish was painted as an override
+   * and tagged "tryb testowy" — a card doing exactly what it prints, filed as
+   * somebody cheating.
+   */
+  "moved-by-card",
   "moved-by-hand",
   "nature-change",
   "new-character",

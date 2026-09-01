@@ -100,6 +100,7 @@ import {
   changeNature as changeNatureOn,
   dealCharacters as dealCharactersOn,
   placeSeat as placeSeatOn,
+  type MovedBy,
   takeNewCharacter as takeNewCharacterOn,
 } from "./commands/character";
 import { STONE_TURNS, turnToStone as turnToStoneOn } from "./commands/stone";
@@ -1283,10 +1284,10 @@ export async function placeSeat(
   seatId: string,
   target: string,
   reason: string | null,
-  /** Whether the turn goes on as if the move had ended there (13.1) — see `placeSeat`. */
-  arriving = false,
+  /** Who moved the figure, which decides the arrival and the journal — see `MovedBy`. */
+  by: MovedBy,
 ): Promise<void> {
-  await change(gameId, placeSeatOn, { seatId, target, reason, arriving });
+  await change(gameId, placeSeatOn, { seatId, target, reason, by });
 }
 
 /**

@@ -329,6 +329,20 @@ export function describe(
     // entrance's guardian can refuse, so it is worth saying differently.
     case "bridge-attempt":
       return line(`${who} próbuje wejść na Most przez ${field(data.from)}.`);
+    /**
+     * „przenosi się" is the Instrukcja's own word for it — „przenosi się
+     * natychmiast na Równinę Traw" — and it is the game moving somebody, so
+     * the line reads like the move it is rather than like a correction. The
+     * Karta that did it is named, because that is the answer to the question
+     * anybody reading this line has.
+     */
+    case "moved-by-card":
+      return line(
+        `${who} przenosi się na ${field(data.to)}${data.reason ? ` — ${data.reason}` : ""}.`,
+      );
+    // A figure picked up and put down: the console's `teleport`, or the
+    // position override. „Przestawienie" is a piece being moved, not a
+    // character travelling.
     case "moved-by-hand":
       return line(
         `${who} — przestawienie na ${field(data.to)}${data.reason ? `, ${data.reason}` : ""}.`,

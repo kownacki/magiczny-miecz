@@ -575,7 +575,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
   teleport: async (ctx, command) => {
     const { gameId, seatOf, named } = ctx;
     const seat = seatOf(null);
-    await placeSeat(gameId, seat.id, command.fieldId, null, true);
+    await placeSeat(gameId, seat.id, command.fieldId, null, "konsola");
     return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
   },
 
