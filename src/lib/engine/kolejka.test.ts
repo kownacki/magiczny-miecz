@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { kolejkaFor, nextFrame, offeredNotQueued, owesAFrame } from "./kolejka";
+import { isSpent, kolejkaFor, leavesWhenResolved, nextFrame, offeredNotQueued, owesAFrame } from "./kolejka";
 import { resolutionOrder, type TurnCard } from "./state";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
@@ -173,5 +173,50 @@ describe("offeredNotQueued", () => {
     const offered = offeredNotQueued(cards).map((c) => c.cardId);
     expect([...queued, ...offered].sort()).toEqual(cards.map((c) => c.cardId).sort());
     expect(offered).toEqual(["cudotworca", "helm", "rycerz", "grota"]);
+  });
+});
+
+describe("what is spent by being read (16.1, 16.5, 16.7)", () => {
+  const one = (cardId: string) => onField(cardId)[0];
+
+  /** "Po osądzeniu cię, Bóstwo znika - odłóż jego Kartę." */
+  it("is a Spotkanie, Nieznajomy or Miejsce whose own text says odłóż", () => {
+    expect(leavesWhenResolved(one("dobre-bostwo"))).toBe(true);
+    expect(leavesWhenResolved(one("kuglarz"))).toBe(true);
+    expect(leavesWhenResolved(one("burza-siedmiu-slonc"))).toBe(true);
+  });
+
+  /**
+   * A Spotkanie is not automatically spent: the MGŁA is `po-turach`, lying on
+   * the table for two turns before it goes — "Potem Mgła rozpływa się - odłóż
+   * jej Kartę". The disposition is what decides, not the class.
+   */
+  it("is not a Spotkanie that lingers", () => {
+    expect(leavesWhenResolved(one("mgla"))).toBe(false);
+  });
+
+  /** A resident stays whatever you do with it — "do końca rozgrywki". */
+  it("is not one that lives on the Obszar", () => {
+    expect(leavesWhenResolved(one("czarodziej"))).toBe(false);
+    expect(leavesWhenResolved(one("targowisko"))).toBe(false);
+    expect(leavesWhenResolved(one("labirynt"))).toBe(false);
+  });
+
+  /** 16.8 leaves a Przedmiot lying there until somebody picks it up. */
+  it("is never a Przedmiot, a Przyjaciel or a Wróg", () => {
+    expect(leavesWhenResolved(one("helm"))).toBe(false);
+    expect(leavesWhenResolved(one("rycerz"))).toBe(false);
+    expect(leavesWhenResolved(one("wilk"))).toBe(false);
+  });
+
+  /**
+   * Spent is the pair: gone *because* it was read. Until it is resolved it is
+   * still on the Obszar, and a Karta that never leaves is never spent however
+   * settled it is.
+   */
+  it("needs both halves", () => {
+    expect(isSpent(one("dobre-bostwo"), [])).toBe(false);
+    expect(isSpent(one("dobre-bostwo"), ["dobre-bostwo"])).toBe(true);
+    expect(isSpent(one("czarodziej"), ["czarodziej"])).toBe(false);
   });
 });

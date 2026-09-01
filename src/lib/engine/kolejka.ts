@@ -76,6 +76,42 @@ function mayWalkPast(cardId: string): boolean {
 }
 
 /**
+ * The classes whose Karta is used up by being read.
+ *
+ * A Spotkanie, a Nieznajomy and a Miejsce whose own text ends "odłóż tę Kartę"
+ * have done their work the moment they are resolved — 16.1 and 16.5 make
+ * obeying the instruction compulsory, so there is nothing left of them
+ * afterwards. A Przedmiot is not like that: it lies there until somebody picks
+ * it up (16.8).
+ */
+const SPENT_BY_READING = new Set<CardClass>(["encounter", "stranger", "place"]);
+
+/**
+ * Whether resolving this Karta takes it off the Obszar for good.
+ *
+ * The DOBRE BÓSTWO says it outright — "Po osądzeniu cię, Bóstwo znika - odłóż
+ * jego Kartę" — and once it has judged you it is not on the square any more,
+ * whatever the window drawing the square still shows.
+ *
+ * Here rather than only inside `leaveCardsBehind`, which was the one place that
+ * knew it and knew it at the end of the turn. Three things need the same
+ * answer at the same moment: the pile the Karta joins, the list of what is on
+ * the Obszar (it is not), and the kolejka, which keeps it in the row struck
+ * through — a record of what was dealt with, and the difference between "settled
+ * and still lying here" and "settled and gone".
+ */
+export function leavesWhenResolved(card: TurnCard): boolean {
+  return (
+    SPENT_BY_READING.has(card.cardClass) && scriptFor(card.cardId)?.disposition.kind === "odloz"
+  );
+}
+
+/** Settled this turn *and* gone from the Obszar because of it. */
+export function isSpent(card: TurnCard, settled: readonly string[]): boolean {
+  return leavesWhenResolved(card) && settled.includes(card.cardId);
+}
+
+/**
  * Whether this Karta stops the turn, or merely offers itself.
  *
  * Exported because the Obszar's window needs the same answer from the other

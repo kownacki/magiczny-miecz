@@ -5,7 +5,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { CardTile } from "./card-tile";
 import { tileFor } from "./table";
-import { kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
+import { isSpent, kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
 import type { TurnCard } from "@/lib/engine/state";
 import { WithRules } from "./rule-ref";
 
@@ -204,6 +204,11 @@ export function KolejkaStrip({
                   granted: chip.card.granted,
                 })}
                 dimmed={chip.done}
+                /* Two kinds of done, and the row is the only place that can
+                   tell them apart: dimmed is settled and still lying here,
+                   struck is settled and gone — a DOBRE BÓSTWO that has judged
+                   you is on the used pile, not on the Obszar. */
+                struck={isSpent(chip.card, settled)}
                 /* "You are here", in the paint the trofea already use for a
                    card picked out of a row. It was a ring round the whole
                    `<li>`, which drew a second frame outside the tile's own and
@@ -212,7 +217,7 @@ export function KolejkaStrip({
                 /* 12.1 gives these the run of the turn, so they are in the row
                    to be seen and not to be got past. The badge says which is
                    which in the one word the cards themselves use. */
-                badge={chip.done ? "gotowe" : chip.stops ? undefined : "możesz"}
+                badge={chip.done ? undefined : chip.stops ? undefined : "możesz"}
                 eqMode={eqMode}
                 nature={nature}
                 onClick={onInspect ? () => onInspect(chip.card.cardId as CardId) : undefined}

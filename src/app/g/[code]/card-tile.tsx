@@ -91,6 +91,7 @@ export function CardTile({
   size = "sm",
   dimmed = false,
   chosen = false,
+  struck = false,
   badge,
   onClick,
   onDoubleClick,
@@ -119,6 +120,15 @@ export function CardTile({
    * second frame outside the tile's own and put the caption inside it.
    */
   chosen?: boolean;
+  /**
+   * Done with and gone — the same two strokes `ItemSlot` puts on a spent trophy.
+   *
+   * Across the picture rather than over the whole tile, so the name below stays
+   * readable: this says the Karta is gone, not that the tile is unreadable. Two
+   * lines rather than one, because a bar across a picture reads as a redaction
+   * and an X is the mark somebody puts on a thing that is finished.
+   */
+  struck?: boolean;
   /** A short flag drawn over the corner — a price, a count, "zakryte". */
   badge?: string;
   onClick?: (event: React.MouseEvent) => void;
@@ -204,6 +214,12 @@ export function CardTile({
             aria-hidden
             className="pointer-events-none absolute inset-0 bg-ochre/75 mix-blend-multiply"
           />
+        )}
+        {struck && (
+          <span aria-hidden className="pointer-events-none absolute inset-0">
+            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-ochre/60" />
+            <span className="absolute left-1/2 top-1/2 h-0.5 w-[140%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-ochre/60" />
+          </span>
         )}
         {/* Conjured rather than dealt, marked on the tile and not only on the
             Karta it opens into: a tile is what a player actually scans, and a

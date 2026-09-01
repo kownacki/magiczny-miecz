@@ -2,8 +2,8 @@
 
 import { nextSeat, startTurn } from "@/lib/engine/turn";
 import { afterAnyTurn, afterTurn, playsAgain, type Status } from "@/lib/engine/status";
-import { scriptFor } from "@/lib/engine/cardScript";
 import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
+import { leavesWhenResolved } from "@/lib/engine/kolejka";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
 import { only, top, topIf } from "@/lib/engine/stack";
@@ -160,7 +160,6 @@ export function tickEffects(snapshot: Snapshot, seatId: string): Changeset {
  * its work by the end of the turn, because 16.1 and 16.5 make obeying it
  * compulsory. A Przedmiot is not like that.
  */
-const CONSUMED_BY_READING = new Set(["encounter", "stranger", "place"]);
 
 export function leaveCardsBehind(
   snapshot: Snapshot,
@@ -172,9 +171,11 @@ export function leaveCardsBehind(
     round: number;
   },
 ): Changeset {
-  const spentByReading = (card: TurnCard) =>
-    CONSUMED_BY_READING.has(card.cardClass) &&
-    scriptFor(card.cardId)?.disposition.kind === "odloz";
+  // `leavesWhenResolved` is the same question the Obszar's window and the
+  // kolejka ask, and it used to be answered only here and only at the end of
+  // the turn — which is why a DOBRE BÓSTWO that had already judged somebody
+  // still showed as lying on the square for the rest of it.
+  const spentByReading = leavesWhenResolved;
   /**
    * The one friend who does not wait to be picked up.
    *

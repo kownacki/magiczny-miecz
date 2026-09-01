@@ -43,6 +43,7 @@ import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
 import { factsIn, turnSteps, windowsFor } from "@/lib/engine/turnWindows";
 import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "@/lib/engine/duties";
+import { isSpent } from "@/lib/engine/kolejka";
 import { Journal } from "./journal";
 import { TableSettings } from "./table-settings";
 import { momentsIn, spellScript } from "@/lib/engine/spells";
@@ -1220,15 +1221,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               .filter((card) => card.fieldId === inspecting)
               .map((card) => ({ id: card.id, cardId: card.cardId, granted: card.granted })),
             ...(onField && myTurn && mySeat?.field_id === inspecting
-              ? onField.drawn.map((card, at) => ({
+              ? onField.drawn
+                  /**
+                   * A Karta spent by being read is not on the Obszar any more.
+                   *
+                   * "Po osądzeniu cię, Bóstwo znika - odłóż jego Kartę" — and
+                   * once it has judged you, listing it under "Na tym Obszarze"
+                   * is the window saying something that is not true. It stays
+                   * in the kolejka, struck through, because that row is the
+                   * turn's record of what was dealt with.
+                   */
+                  .filter(
+                    (card) =>
+                      !isSpent(card, [
+                        ...(onField.resolved ?? []),
+                        ...(onField.fought ?? []),
+                      ]),
+                  )
+                  .map((card, at) => ({
                   // No row to name, so the key is the turn's own position. See
                   // `viaTurn` — it is also what hides the "weź" button, which
                   // needs a `field_cards` id this Karta does not have.
-                  id: `tura-${at}-${card.cardId}`,
-                  cardId: card.cardId as CardId,
-                  granted: card.granted,
-                  viaTurn: true as const,
-                }))
+                    id: `tura-${at}-${card.cardId}`,
+                    cardId: card.cardId as CardId,
+                    granted: card.granted,
+                    viaTurn: true as const,
+                  }))
               : []),
           ]}
           standingHere={mySeat?.field_id === inspecting}
