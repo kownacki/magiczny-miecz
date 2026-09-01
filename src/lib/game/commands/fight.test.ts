@@ -10,7 +10,7 @@ import { pointsOf } from "./seat";
 import { hasAttacked } from "@/lib/engine/status";
 import { statusesOf } from "./turn";
 import { apply } from "../change";
-import { attackSeat, beginFight, escape, fightRoll, setFightPlayerTotal, shieldSaves } from "./fight";
+import { attackSeat, beginFight, closeFightFrame, escape, fightRoll, setFightPlayerTotal, shieldSaves } from "./fight";
 import { resolveFight } from "./spoils";
 import { castSpell, settleSpell } from "./spells";
 
@@ -222,6 +222,62 @@ describe("otwarcie walki (17.4, 17.5)", () => {
  * 16.8's own worked example has a Spotkanie carry Obbol off the Obszar before
  * he ever fights the Niedźwiedź he had already turned over.
  */
+/**
+ * What the Obszar knew before the fight, still known after it.
+ *
+ * Found at a real table on Bezdroża: SŁUP OGNIA resolved — its Natura change
+ * already applied — then the WILK beaten, and the Spotkanie came back offering
+ * "Rozpatrz" as though nothing had happened.
+ *
+ * `closeFightFrame` rebuilt the field frame out of the five things the Fight
+ * carries rather than merging into the one underneath, so everything else the
+ * Obszar knew went out with the fight. `resolved` was the casualty; the next
+ * field added to that frame would have been the next.
+ */
+describe("closing a fight leaves the Obszar as it found it", () => {
+  const settledOne = () =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", field_id: asFieldId("bezdroza")! })],
+      game: {
+        turn_state: only({
+          phase: "field",
+          fieldId: asFieldId("bezdroza")!,
+          from: null,
+          draw: 0,
+          drawn: [
+            { cardId: "slup-ognia", cardClass: "encounter" },
+            { cardId: "wilk", cardClass: "foe" },
+          ],
+          resolved: ["slup-ognia"],
+        } as never),
+      },
+    });
+
+  it("keeps a Karta settled before the fight settled after it", () => {
+    const opened = apply(settledOne(), beginFight(settledOne(), { cardIds: ["wilk"] }).writes);
+    const fight = top(opened.game.turn_state);
+    expect(fight.phase).toBe("fight");
+    const closed = top(
+      closeFightFrame(opened.game.turn_state, fight as Extract<TurnPhase, { phase: "fight" }>),
+    ) as Extract<TurnPhase, { phase: "field" }>;
+    expect(closed.phase).toBe("field");
+    expect(closed.resolved).toEqual(["slup-ognia"]);
+  });
+
+  it("still brings back what the fight itself settled (17.4)", () => {
+    const opened = apply(settledOne(), beginFight(settledOne(), { cardIds: ["wilk"] }).writes);
+    const fight = top(opened.game.turn_state) as Extract<TurnPhase, { phase: "fight" }>;
+    const closed = top(
+      closeFightFrame(opened.game.turn_state, {
+        ...fight,
+        fight: { ...fight.fight, fought: ["wilk"] },
+      }),
+    ) as Extract<TurnPhase, { phase: "field" }>;
+    expect(closed.fought).toEqual(["wilk"]);
+    expect(closed.resolved).toEqual(["slup-ognia"]);
+  });
+});
+
 describe("the deal comes before the reading (13.4)", () => {
   const midDeal = () =>
     aTable({

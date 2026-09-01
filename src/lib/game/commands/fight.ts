@@ -176,7 +176,36 @@ export function closeFightFrame(
 ): TurnState {
   if (state.stack.length < 2) return only(endFight(fight));
   const below = state.stack[state.stack.length - 2];
-  return below.phase === "field" ? replaceTop(pop(state), endFight(fight)) : pop(state);
+  if (below.phase !== "field") return pop(state);
+
+  /**
+   * Merged into the Obszar as it stands, not rebuilt from the Fight's copies.
+   *
+   * This is what the paragraph above always said it did — "the pop reveals the
+   * field as it was when the fight opened, and `endFight` merges in what the
+   * fight settled" — and it was not what happened. `endFight` builds a *fresh*
+   * field frame out of the five things the Fight carries (`fieldId`, `draw`,
+   * `drawn`, `fought`, `met`) and that frame replaced the live one, so
+   * everything else the Obszar knew was thrown away on the way out.
+   *
+   * `resolved` is the thing it threw away, and it is not a small one: a
+   * Spotkanie settled before the Wróg was fought came back unsettled after the
+   * win, offering "Rozpatrz" on a Karta whose Natura change had already
+   * happened. Found at a real table on Bezdroża — SŁUP OGNIA resolved, WILK
+   * beaten, SŁUP OGNIA asking again.
+   *
+   * Merging rather than adding `resolved` to the Fight's copies, because the
+   * next field to grow a field would have gone the same way. What the *fight*
+   * settled is exactly two things and they are named here; everything else on
+   * the Obszar belongs to the Obszar.
+   */
+  const closed = endFight(fight);
+  if (closed.phase !== "field") return pop(state);
+  return replaceTop(pop(state), {
+    ...below,
+    fought: closed.fought ?? [],
+    ...(closed.met ? { met: true as const } : {}),
+  });
 }
 
 /**

@@ -154,10 +154,15 @@ const PATHS: Record<Glyph, React.ReactNode> = {
    */
   shrink: (
     <>
-      <path d="M9 4h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
-      <path d="M15 9l-5 5" />
-      <path d="M10 11v3h3" />
-      <rect x="3" y="15" width="6" height="6" rx="1.5" />
+      {/* A corner of the frame rather than all four sides. At sixteen pixels a
+          whole rounded square, an arrow and a second square inside it is more
+          strokes than the box can hold — the first drawing of this looked
+          clipped because it was simply too full. Two sides say "frame" and
+          leave the arrow room to be read. */}
+      <path d="M10 4h8a2 2 0 0 1 2 2v8" />
+      <path d="M18 6l-5 5" />
+      <path d="M13 8v3h3" />
+      <rect x="4" y="14" width="6" height="6" rx="1.5" />
     </>
   ),
   restore: <path d="M5 16l7-7 7 7" />,
