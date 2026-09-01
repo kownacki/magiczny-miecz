@@ -533,7 +533,7 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
  * would otherwise be picked up again by everyone who ever stopped here — but it
  * has no class to be resolved in 15.2 order, so it cannot join the turn.
  */
-function liftFieldCards(
+export function liftFieldCards(
   snapshot: Snapshot,
   fieldId: FieldId,
 ): { writes: Changeset; cards: TurnCard[] } {

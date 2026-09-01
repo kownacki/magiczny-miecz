@@ -345,14 +345,23 @@ describe("the resolution stack (docs/STACK.md)", () => {
       shuffle: asIs,
     });
 
-    // Law 2: what was above the field frame is abandoned, not queued, and a
-    // fresh field opens at the destination — "tak, jakby jego ruch zakończył
-    // się" there. `draw: 0`, because 15.1 makes drawing a consequence of
-    // arriving and she did not walk here.
+    /**
+     * Law 2: what was above the field frame is abandoned, not queued, and a
+     * fresh field opens at the destination.
+     *
+     * And the turn goes on there — „tak, jakby jego ruch zakończył się" is the
+     * whole of the sentence, and 13.1 spells out the half the cut used to
+     * drop: „Postacie mogą spotykać się tylko na Obszarze, na którym
+     * zakończyły swój ruch **lub na Obszarze, na który zostały przeniesione
+     * wskutek spotkania. Podobnie: tylko te Obszary mogą badać**." Las
+     * Błędnych Ogni prints one Karta and nothing is lying on it, so one is
+     * owed. It read `draw: 0` here, on 15.1 — which is about drawing on
+     * arrival, and being przeniesiony *is* one.
+     */
     expect(play.phases).toEqual(["field"]);
     const landed = play.frame("field");
     expect(landed.fieldId).toBe("las-blednych-ogni");
-    expect(landed.draw).toBe(0);
+    expect(landed.draw).toBe(1);
     expect(landed.drawn).toEqual([]);
     expect(play.snapshot.seats[2].field_id).toBe("las-blednych-ogni");
   });

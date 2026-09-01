@@ -247,6 +247,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
 describe("przestawienie figury", () => {
   const table = (over: Parameters<typeof aTable>[0] = {}) =>
     aTable({
+      ...over,
       game: { active_seat: 0, ...(over.game ?? {}) },
       seats: over.seats ?? [aSeat({ seat_index: 0 })],
     });
@@ -270,7 +271,7 @@ describe("przestawienie figury", () => {
     expect(writes.game).toBeUndefined();
   });
 
-  it("restages the turn on the new Obszar, with nothing drawn there yet (15.1)", () => {
+  it("restages a correction on the new Obszar owing nothing (15.1)", () => {
     const mid = table({
       game: {
         turn_state: {
@@ -320,6 +321,78 @@ describe("przestawienie figury", () => {
     });
     const { writes } = placeSeat(other, { seatId: "seat-a", target: "osada", reason: null });
     expect(writes.game).toBeUndefined();
+  });
+
+  /**
+   * The other reading of the same act, and the one every card that moves you
+   * needs (13.1).
+   *
+   * „Postacie mogą spotykać się tylko na Obszarze, na którym zakończyły swój
+   * ruch lub na Obszarze, na który zostały przeniesione wskutek spotkania.
+   * Podobnie: tylko te Obszary mogą badać." So an arrival owes what the Obszar
+   * prints, and `draw` and the Obszar's own offer both work when you get there
+   * — which they did not, because the frame said nothing was owed.
+   */
+  it("arrives properly when the move is one the game made (13.1, 13.4)", () => {
+    const mid = table({
+      game: {
+        turn_state: {
+          phase: "field",
+          fieldId: "mroczna-polana",
+          from: null,
+          draw: 0,
+          drawn: [],
+          fought: [],
+        },
+      },
+    });
+    // Bezdroża prints two Karty.
+    const { writes } = placeSeat(mid, {
+      seatId: "seat-a",
+      target: "bezdroza",
+      reason: null,
+      arriving: true,
+    });
+    expect(writes.game?.turn_state).toEqual(
+      only({ phase: "field", fieldId: "bezdroza", from: null, draw: 2, drawn: [] }),
+    );
+  });
+
+  /**
+   * 16.8's Karty are the arriving character's to deal with, and they count
+   * against 13.4's tally — the same subtraction an ordinary move makes,
+   * because it is the same function.
+   */
+  it("picks up what is lying on the Obszar it arrives at (16.8, 13.4)", () => {
+    const mid = table({
+      game: {
+        turn_state: {
+          phase: "field",
+          fieldId: "mroczna-polana",
+          from: null,
+          draw: 0,
+          drawn: [],
+          fought: [],
+        },
+      },
+      fieldCards: [
+        { id: "fc-1", field_id: "bezdroza", card_id: "cyklop", granted: false },
+      ],
+    });
+    const { writes } = placeSeat(mid, {
+      seatId: "seat-a",
+      target: "bezdroza",
+      reason: null,
+      arriving: true,
+    });
+    const landed = top(writes.game!.turn_state!);
+    expect(landed).toMatchObject({ phase: "field", fieldId: "bezdroza", draw: 1 });
+    expect((landed as { drawn: { cardId: string }[] }).drawn.map((one) => one.cardId)).toEqual([
+      "cyklop",
+    ]);
+    // Off the board and into the turn, or the next character would find it
+    // still lying there.
+    expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
   });
 
   it("refuses an Obszar that is not on the board", () => {

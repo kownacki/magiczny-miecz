@@ -82,7 +82,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         break;
       case "teleport":
         if (!seatId) return mustBeSeated();
-        await placeSeat(game.id, seatId, String(body.fieldId), "tryb testowy");
+        // The console's `teleport`, from a button: an arrival, so the Obszar
+        // is there to be explored (13.1). The position override in
+        // `adjust/route.ts` is the correction and stays one.
+        await placeSeat(game.id, seatId, String(body.fieldId), "tryb testowy", true);
         break;
       case "fight":
         // Picks a fight with a named Wróg. Reaching one legitimately means

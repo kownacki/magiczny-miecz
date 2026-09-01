@@ -925,7 +925,15 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
   przenies: (ctx, effect) => {
     const { snapshot, seatId, reason, path } = ctx;
     if (effect.to.kind !== "pole") return owedAt(effect, path);
-    const moved = placeSeat(snapshot, { seatId, target: effect.to.fieldId, reason });
+    // 13.1 and the Instrukcja's own example: „Obbol jednak musi kontynuować
+    // turę, czyli zachować się tak, jakby jego ruch zakończył się na Równinie
+    // Traw." The Obszar he lands on is his to explore, and it draws.
+    const moved = placeSeat(snapshot, {
+      seatId,
+      target: effect.to.fieldId,
+      reason,
+      arriving: true,
+    });
     return {
       writes: moved.writes,
       result: {

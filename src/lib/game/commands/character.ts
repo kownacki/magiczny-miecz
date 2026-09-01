@@ -3,7 +3,7 @@
 import charactersData from "@/data/characters.json";
 import { leaveCardsBehind } from "./turn";
 import type { Character, EventCard, Nature } from "@/data/types";
-import { requireFieldId, fieldByName, type FieldId } from "@/lib/engine/board";
+import { FIELDS, requireFieldId, fieldByName, type FieldId } from "@/lib/engine/board";
 import {
   RANDOM_CHARACTER_ID,
   abilitiesOfCharacter,
@@ -27,11 +27,11 @@ import {
 } from "../change";
 import type { SeatRow } from "../store";
 import { driverOf } from "./lobby";
-import type { OwedSpells } from "./movement";
+import { liftFieldCards, type OwedSpells } from "./movement";
 import { eqModeOf, seatById } from "./seat";
 import type { Slot } from "@/lib/engine/slots";
 import { slotsOnArrival } from "@/lib/engine/holdings";
-import { startTurn } from "@/lib/engine/turn";
+import { afterMove, startTurn } from "@/lib/engine/turn";
 import { only, top } from "@/lib/engine/stack";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 
@@ -275,10 +275,35 @@ export function changeNature(
  * The manual override for position, and the one every card path that teleports
  * a character borrows. `requireFieldId` is the check that used to be spelled
  * out here by hand, and now every caller gets the narrow type.
+ *
+ * Two acts share it, and `arriving` is the difference: a character the *game*
+ * moved goes on with their turn where they land (13.1), and a figure somebody
+ * *corrected* into place has not moved at all. Everything else — the cut, the
+ * Karty left behind, the restage — is the same either way.
  */
 export function placeSeat(
   snapshot: Snapshot,
-  command: { seatId: string; target: string; reason: string | null },
+  command: {
+    seatId: string;
+    target: string;
+    reason: string | null;
+    /**
+     * Whether the turn goes on as if the move had ended here (13.1).
+     *
+     * The rulebook's own words about a character a Karta sends somewhere else:
+     * „Obbol jednak musi kontynuować turę, czyli zachować się tak, jakby jego
+     * ruch zakończył się na Równinie Traw" — and 13.1 says a character may
+     * explore „Obszar, na który zostały przeniesione wskutek spotkania" in as
+     * many words. So the new Obszar is a proper arrival: what lies on it comes
+     * into the turn (16.8) and what it prints is owed (13.4).
+     *
+     * Off, and the figure is only *put* somewhere: the position override
+     * correcting a desync, where drawing would spend Karty on a mistake nobody
+     * made in the game. That was the only reading this had, and it was the
+     * wrong one for every card that moves you.
+     */
+    arriving?: boolean;
+  },
 ): Outcome<void> {
   const seat = seatById(snapshot, command.seatId);
   const fieldId = requireFieldId(command.target, "Przestawienie");
@@ -333,21 +358,42 @@ export function placeSeat(
         })
       : {};
 
+  /**
+   * And what is lying on the *new* Obszar, into the turn that has just reached
+   * it (16.8) — the other half of `moveTo`, and only for an arrival.
+   *
+   * Read off the snapshot rather than off `left`, which is why teleporting
+   * onto the Obszar you are already standing on leaves this turn's drawn Karty
+   * lying there instead of picking them straight back up. A changeset cannot
+   * delete a row it is inserting in the same breath, and going in a circle is
+   * not the case this is for.
+   */
+  const arriving = moving && command.arriving === true;
+  const lifted = arriving ? liftFieldCards(snapshot, fieldId) : null;
+
   const restage: Changeset = moving
     ? {
         game: {
-          // Freshly arrived: whatever was drawn belonged to the old field, and
-          // the new one has not been resolved at all. `draw: 0` rather than the
-          // field's printed count, because a figure put here did not walk here,
-          // and 15.1 makes drawing a consequence of arriving.
-          turn_state: only({
-            phase: "field",
-            fieldId,
-            from: null,
-            draw: 0,
-            drawn: [],
-            fought: [],
-          }),
+          /**
+           * Whatever was drawn belonged to the old field, so the frame is a
+           * fresh one either way. What differs is what the new Obszar owes.
+           *
+           * Arriving, that is 13.4's count against what already lies there —
+           * `afterMove` is the same function an ordinary move goes through, so
+           * a Karta reached by teleport is reached on the same terms.
+           *
+           * Being put here, it owes nothing: 15.1 makes drawing a consequence
+           * of arriving, and a figure corrected into place did not arrive.
+           *
+           * `from` stays null in both. It is where the *move* began, and the
+           * Przeprawa sends a failed crossing back to it — there is no such
+           * square when nobody walked.
+           */
+          turn_state: only(
+            arriving
+              ? afterMove(FIELDS.get(fieldId)!, null, lifted?.cards ?? [])
+              : { phase: "field", fieldId, from: null, draw: 0, drawn: [], fought: [] },
+          ),
         },
       }
     : {};
@@ -356,6 +402,7 @@ export function placeSeat(
     writes: mergeAll(
       { seats: [{ id: seat.id, patch: { field_id: fieldId } }] },
       left,
+      lifted?.writes ?? {},
       merge(restage, {
         journal: [
           {

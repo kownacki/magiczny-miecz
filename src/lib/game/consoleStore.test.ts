@@ -4,7 +4,9 @@ import { parseCommand } from "@/lib/engine/console";
 import { emptyTables, memoryHandle, memoryStore, resetStore, setStore } from "./gameStore";
 import { createGame } from "./store";
 import { setReady } from "./lobbyStore";
-import { grantCard, startGame, takeNewCharacter } from "./turnStore";
+import { grantCard, rollForMove, startGame, takeNewCharacter } from "./turnStore";
+import { activeStore } from "./gameStore";
+import { top } from "@/lib/engine/stack";
 
 /**
  * How a pack reads, which is not how it is stored.
@@ -177,5 +179,44 @@ describe("the catalogue a bare command prints", () => {
     const { gameId, actor } = await playing();
     const said = await runCommand(gameId, actor, { kind: "deal", cardId: null });
     expect(said).toContain("Zaklęcia (");
+  });
+});
+
+/**
+ * `teleport` puts the figure where you want it — and the turn goes on there.
+ *
+ * 13.1: „Postacie mogą spotykać się tylko na Obszarze, na którym zakończyły
+ * swój ruch lub na Obszarze, na który zostały przeniesione wskutek spotkania.
+ * Podobnie: tylko te Obszary mogą badać." The frame said the new Obszar owed
+ * nothing, so the commonest thing a tester does — stand on the square they
+ * want to see — was followed by `draw` refusing outright.
+ */
+describe("teleporting into a turn that goes on", () => {
+  /** Past the roll, because a figure that has not moved yet is not restaged. */
+  const midTurn = async () => {
+    const table = await playing();
+    await rollForMove(table.gameId, null);
+    return table;
+  };
+
+  it("owes what the Obszar prints, and draws it", async () => {
+    const { gameId, actor } = await midTurn();
+    // Bezdroża prints two Karty and nothing is lying on it.
+    await runCommand(gameId, actor, { kind: "teleport", fieldId: "bezdroza" });
+    expect(top((await activeStore().load(gameId)).game.turn_state)).toMatchObject({
+      phase: "field",
+      fieldId: "bezdroza",
+      draw: 2,
+    });
+    expect(await runCommand(gameId, actor, { kind: "draw" })).toMatch(/Drawn:/);
+  });
+
+  it("owes nothing where the Obszar prints nothing", async () => {
+    const { gameId, actor } = await midTurn();
+    // The Karczma draws no Karty; it has an instruction instead.
+    await runCommand(gameId, actor, { kind: "teleport", fieldId: "karczma" });
+    await expect(runCommand(gameId, actor, { kind: "draw" })).rejects.toThrow(
+      /nie ciągnie się Kart/,
+    );
   });
 });

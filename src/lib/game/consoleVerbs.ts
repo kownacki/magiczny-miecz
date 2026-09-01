@@ -560,10 +560,22 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     return `${named(seat)}: ${label}.`;
   },
 
+  /**
+   * Somewhere else on the board, and the turn goes on there (13.1).
+   *
+   * An arrival rather than a correction: what lies on the Obszar comes into
+   * the turn and what it prints is owed, so `draw` works and the Obszar can be
+   * explored. Otherwise the commonest thing a tester does — put the figure on
+   * the square they want to see — left them standing on it with `draw`
+   * refusing, „ten Obszar daje 1 — tyle już tu leży albo wyciągnięto".
+   *
+   * The position *override* is the other reading and keeps it: correcting a
+   * desync must not spend Karty on a move nobody made.
+   */
   teleport: async (ctx, command) => {
     const { gameId, seatOf, named } = ctx;
     const seat = seatOf(null);
-    await placeSeat(gameId, seat.id, command.fieldId, null);
+    await placeSeat(gameId, seat.id, command.fieldId, null, true);
     return `${named(seat)} stands on ${FIELDS.get(command.fieldId)?.name ?? command.fieldId}.`;
   },
 

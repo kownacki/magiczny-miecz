@@ -1283,8 +1283,10 @@ export async function placeSeat(
   seatId: string,
   target: string,
   reason: string | null,
+  /** Whether the turn goes on as if the move had ended there (13.1) — see `placeSeat`. */
+  arriving = false,
 ): Promise<void> {
-  await change(gameId, placeSeatOn, { seatId, target, reason });
+  await change(gameId, placeSeatOn, { seatId, target, reason, arriving });
 }
 
 /**

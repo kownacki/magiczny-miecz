@@ -406,7 +406,8 @@ async function walk(
   if (effect.op === "przenies" && effect.to.kind !== "pole") {
     const where = decided.destination;
     if (!where) return owed();
-    const moved = placeSeat(snapshot, { seatId, target: where, reason });
+    // An arrival, as 13.1 has it — the same as the settled destination above.
+    const moved = placeSeat(snapshot, { seatId, target: where, reason, arriving: true });
     return {
       writes: moved.writes,
       result: {

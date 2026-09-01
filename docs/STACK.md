@@ -127,8 +127,23 @@ Płaskowyż Mgieł, Zaklęta Ścieżka moves him, and the rulebook says outright
 will *not* fight the Niedźwiedź and will *not* take the gold — they stay face up
 for the next character — and he continues "tak, jakby jego ruch zakończył się
 na Równinie Traw". So `przenies` pops down to and including the `field` frame
-and pushes a new one at the destination with `draw: 0`. What was above is
-abandoned, not queued. No card in 677 wants the opposite ("go there, come back
+and pushes a new one at the destination. What was above is abandoned, not
+queued.
+
+The destination is a **real arrival**, which this said the opposite of for a
+while: the new frame was pushed with `draw: 0` on the reading that 15.1 makes
+drawing a consequence of arriving and nobody walked here. 13.1 settles it the
+other way, and says so in as many words — "Postacie mogą spotykać się tylko na
+Obszarze, na którym zakończyły swój ruch **lub na Obszarze, na który zostały
+przeniesione wskutek spotkania**. Podobnie: tylko te Obszary mogą badać." Being
+przeniesiony *is* arriving. Równina Traw prints "wyciągnij 1 kartę" and the
+example has Obbol continue his turn there, so he draws it. `placeSeat` goes
+through the same `afterMove` an ordinary move does, which is also what makes
+16.8's Karty on the destination count against the draw (13.4).
+
+The one caller that does not arrive is the position **override** — a figure
+corrected into place did not move, and drawing there would spend Karty on a
+mistake nobody made in the game. No card in 677 wants the opposite ("go there, come back
 and finish"); if one turns up it pushes a field frame instead of cutting, and it
 is a different op.
 
