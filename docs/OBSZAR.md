@@ -5,13 +5,11 @@ Instrukcja spreads this across 12.1, 13.1–13.5, 15.1–15.2 and 16.1–16.8, a
 none of those sections states the whole sequence — so this is the reading the
 referee enforces, with every departure from the printed text marked.
 
-**Model B is the one adopted.** Model A — free interleaving, with only
-compulsory Karty gating the square — is recorded at the bottom, because the
-argument that beat it is worth keeping.
+**The shape of it:** one pass through everything on the square, in the order
+15.2 gives, and then the square stands open until the turn ends. What it is
+enforced by is `whyQueuedHere` in `src/lib/engine/holdings.ts`.
 
 ---
-
-## Model B
 
 ### 1. Arrive, and merge what is there
 
@@ -88,7 +86,7 @@ Every remaining Karta gets exactly one moment, in order. At its moment:
   Declining is not forfeiting *if the card stays*; see point 5.
 
 Nothing outside the queue is available while the queue is running. This is the
-whole of Model B, and the one addendum below is what says it.
+whole of the model, and the one addendum below is what says it.
 
 ### 5. Then the square is open until the turn ends
 
@@ -144,11 +142,10 @@ frees „w każdej chwili" what 15.2 binds with „Konieczne jest" — and once 
 were added to 12.1's list, the overlap is total: IV, V and VI, which is the
 whole of „pozostałe Karty Zdarzeń". The book never says which one yields.
 
-**Model B separates them by time rather than by kind.** 15.2 governs the pass;
+**This model separates them by time rather than by kind.** 15.2 governs the pass;
 12.1 governs what follows it. Both rules stay true in full, neither is narrowed,
 and the question „which class may be used when" never has to be asked — which is
-also why it is the cheaper of the two models to implement and to explain at a
-table.
+also why it is cheap to implement and easy to explain at a table.
 
 Two `addenda.ts` entries are all it takes:
 
@@ -166,32 +163,13 @@ visits.
 
 ---
 
-## Model A, and why it lost
-
-A let the two phases interleave: only a *compulsory* unresolved Karta held the
-square shut, and anything that merely offered could be used the moment you
-arrived. It needed four addenda — the Miejsce one, a third exception c) to 12.1,
-a limb added to 12.1's cure sentence to discharge c), and a sentence in 15.2
-freeing offering Karty from the numeral order.
-
-Three things sank it. The line it drew — compulsory against optional — **is not
-in the book**, so every one of those four sentences was ours. It needed a rule
-about a rule (c) and then a remedy for that rule, which is the shape of a patch
-rather than of a missing sentence. And it left a resident you had walked past
-ambiguous: open, closed, or open only if you had not yet declined it.
-
-B costs one thing A did not: a card spent when read is decided at its numeral,
-so a VI Miejsce that would have helped against a IV Nieznajomy cannot be reached
-in time. Every case checked below survives that, because the cards it would hurt
-all stay.
-
 ## What is ours, not the box's
 
 **Skipping a staying Karta in the pass is resolving it.** „Rozpatrzenie" of a
 TARGOWISKO or a CZARODZIEJ you do not want is reading it and declining — instant
 and unblockable — so the free phase in practice begins once every *compulsory*
-Karta is done. That is model A's c) arrived at without inventing A's
-compulsory/optional line: our sentence says „wszystkich", and each card's own
+Karta is done. No addendum draws the compulsory/optional line
+by hand: our sentence says „wszystkich", and each card's own
 text decides what resolving it costs (16.5/16.7 „konieczne jest wykonanie"
 against 13.5 „do innych może, jeśli ma ochotę").
 
@@ -236,7 +214,7 @@ or a crossing rule that fires on departure (Trzęsawiska, and the Kamienny Most
 guardians — „Nim wkroczysz na Most musisz pokonać…"). Not one of them is a shop
 or a visit. So the question „when does the square's own instruction happen"
 only ever arises on a 13.5 square, and 13.5 answers it in its own sentence
-order. That is why Model B needs nothing said about it.
+order. That is why nothing needs saying about it.
 
 **`przyzwij`: no card in the base game summons a Wróg.** So the Wrogowie gate
 can never re-close once passed. True of this box only — an expansion could
@@ -296,12 +274,10 @@ so far that names no number, and it is bounded instead by 5.4 and 21.2.
 ## Two interactions worth keeping in mind
 
 **ZŁODZIEJ DOBROCZYŃCA** — „Jeżeli masz złoto, ukradnie ci 1 Sztukę, lecz jeśli
-go nie masz, włoży ci 1 Sztukę do kieszeni." Under Model A the trick was to
-empty your purse at the Płatnerz first and be paid instead. **Under B it is
-gone**: he is a IV and is resolved in the pass, while every way to spend — the
+go nie masz, włoży ci 1 Sztukę do kieszeni." There is no way to arrange it: he is a IV and is resolved in the pass, while every way to spend — the
 board's desks, a TARGOWISKO (VI), the free phase — comes after him. If you
-arrive with gold, he takes a Sztuka. That is the clearest thing B costs, and it
-is the price of not having to ask which class of Karta may be used when.
+arrive with gold, he takes a Sztuka. That is the clearest thing this model costs, and it is the price of not having
+to ask which class of Karta may be used when.
 
 **KUGLARZ then CZARODZIEJ** — both IV. The Kuglarz is spent when read and swaps
 Miecz for Magia; the Czarodziej stays and is Magia-gated. Meet the Czarodziej

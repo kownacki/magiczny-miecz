@@ -8,7 +8,8 @@ import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
 import { STORAGE, inPlayAt, isWearable, slotsFor, type Slot } from "./slots";
-import type { Holding } from "./state";
+import { nextFrame } from "./kolejka";
+import { resolutionOrder, type Holding, type TurnCard } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
 
@@ -48,22 +49,78 @@ export type HoldingKind = Holding["kind"];
 export function whyNotCollectHere(
   /** Everything lying on the Obszar, both lists together. */
   lying: readonly { cardId: string }[],
-  /** Wrogowie already fought or fled this turn, who are no longer standing. */
+  /** Karty already settled this turn — fought, fled from, or worked through. */
   settled: readonly string[],
   /** Karty the Obszar still owes (13.4). */
   owed: number,
 ): string | null {
-  const standing = lying.find((one) => {
+  const foe = whyFoeStandsHere(lying, settled);
+  if (foe) return foe;
+  if (owed > 0) return "Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).";
+  return whyQueuedHere(lying, settled);
+}
+
+/**
+ * 12.1a alone: the one exception that names a creature rather than a queue.
+ *
+ * Its own door, because the server asks this question in a place where the
+ * kolejka must not be asked — a Karta handed over by a script, spoils after a
+ * fight, a starting kit. None of those is somebody collecting off a square, and
+ * only 12.1a follows a character everywhere, because a Wróg who is still
+ * standing is attacking them (16.2).
+ */
+export function whyFoeStandsHere(
+  lying: readonly { cardId: string }[],
+  settled: readonly string[],
+): string | null {
+  const found = lying.find((one) => {
     if (settled.includes(one.cardId)) return false;
     const foe = EVENTS.find((card) => card.id === one.cardId);
     return foe !== undefined && combatValueOf(foe) !== null;
   });
-  if (standing) {
-    const foe = EVENTS.find((card) => card.id === standing.cardId);
-    return `Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1a).`;
+  if (!found) return null;
+  return `Najpierw ${nameOf(found.cardId)} — dopiero potem zbieranie (12.1a).`;
+}
+
+const nameOf = (cardId: string) => EVENTS.find((card) => card.id === cardId)?.name ?? cardId;
+
+/**
+ * The rest of 12.1's window, closed while the Obszar's kolejka is unfinished.
+ *
+ * This is the uzupełnienie under 12.1 — „Zasada ta działa dopiero po
+ * rozpatrzeniu wszystkich Kart Zdarzeń znajdujących się lub wyciągniętych na
+ * danym Obszarze (15.2)" — and it is the whole of the model the referee plays:
+ * one pass through the Obszar in 15.1/15.2 order, and only then the free
+ * window 12.1 grants to the end of the turn. See docs/OBSZAR.md.
+ *
+ * 12.1a and 12.1b are not separate rules under it, only the two cases the book
+ * happened to write down: a standing Wróg *is* an unfinished kolejka, and a
+ * Karta still owed is one that has not been dealt yet. They keep their own
+ * sentences above because 12.1 prints them with letters and a player told
+ * „12.1a" can go and read a) — but if the two ever disagreed with this, this is
+ * the one that is right.
+ *
+ * **Walking past is finishing.** A Karta that only offers earns no frame at all
+ * (`owesAFrame`), so reading a Targowisko and declining it costs nothing and
+ * blocks nothing. What is left in the kolejka is what the box makes compulsory,
+ * which is why this is not the compulsory/optional line drawn again by hand:
+ * each Karta's own text decides, through `mayWalkPast`.
+ */
+export function whyQueuedHere(
+  lying: readonly { cardId: string }[],
+  settled: readonly string[],
+): string | null {
+  const cards: TurnCard[] = [];
+  for (const one of lying) {
+    const card = EVENTS.find((event) => event.id === one.cardId);
+    if (card) cards.push({ cardId: card.id, cardClass: card.cardClass });
   }
-  if (owed > 0) return "Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).";
-  return null;
+  const frame = nextFrame(resolutionOrder(cards), settled);
+  if (!frame) return null;
+  // A pack of Wrogowie is one frame and fought as one (17.5), so it is named as
+  // one thing here too.
+  const names = frame.cards.map((one) => nameOf(one.cardId)).join(" + ");
+  return `Najpierw ${names} — dopiero potem reszta Obszaru (12.1).`;
 }
 
 export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | null {

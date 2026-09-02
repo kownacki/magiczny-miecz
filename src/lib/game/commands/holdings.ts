@@ -14,7 +14,9 @@ import {
   CLASS_NAME,
   kindForCard,
   slotOnArrival,
+  whyFoeStandsHere,
   whyNotCollectHere,
+  whyQueuedHere,
   whyPackIsFull,
 } from "@/lib/engine/holdings";
 import { type Slot } from "@/lib/engine/slots";
@@ -277,16 +279,16 @@ function refuseOverAFoe(snapshot: Snapshot, seatId: string, exempt?: string): vo
   const settled = state.phase === "field" ? (state.fought ?? []) : [];
   const onBoard = snapshot.fieldCards.filter((row) => row.field_id === seat?.field_id);
 
-  // The sentence is `whyNotCollectHere`'s, in the engine, because the browser
-  // says the same one before it draws a shop it knows is shut. Owing is asked
-  // separately below — `refuseWhileOwing` is silent outside a field frame and
-  // this is not — so nothing is owed as far as this call is concerned.
-  const why = whyNotCollectHere(
+  // The sentence is the engine's, because the browser says the same one before
+  // it draws a shop it knows is shut. 12.1a *only*: owing and the kolejka are
+  // asked separately below, both of them silent outside a field frame where
+  // this one is not, because a Wróg still standing is attacking you (16.2)
+  // wherever the card you are reaching for came from.
+  const why = whyFoeStandsHere(
     [...inTurn, ...onBoard.map((row) => ({ cardId: row.card_id }))].filter(
       (entry) => entry.cardId !== exempt,
     ),
     settled,
-    0,
   );
   if (why) throw new Error(why);
 }
@@ -305,6 +307,34 @@ function refuseOverAFoe(snapshot: Snapshot, seatId: string, exempt?: string): vo
  * effect that hands you something are not somebody collecting off a square,
  * and none of them has a field frame on top to be owed anything.
  */
+/**
+ * The uzupełnienie under 12.1: nothing off the square while the kolejka runs.
+ *
+ * „Zasada ta działa dopiero po rozpatrzeniu wszystkich Kart Zdarzeń
+ * znajdujących się lub wyciągniętych na danym Obszarze (15.2)." One pass
+ * through the Obszar, then the free window — docs/OBSZAR.md has the argument.
+ *
+ * Both lists, for the reason every other rule here reads both. Silent outside a
+ * field frame like `refuseWhileOwing`, and for the same reason: a card handed
+ * over by a script, spoils after a fight and a starting kit are not somebody
+ * collecting off a square, and none of them has an Obszar to be queued on.
+ */
+function refuseWhileQueued(snapshot: Snapshot, seatId: string): void {
+  const state = top(snapshot.game.turn_state);
+  if (state.phase !== "field") return;
+  const seat = snapshot.seats.find((one) => one.id === seatId);
+  const why = whyQueuedHere(
+    [
+      ...state.drawn,
+      ...snapshot.fieldCards
+        .filter((row) => row.field_id === seat?.field_id)
+        .map((row) => ({ cardId: row.card_id })),
+    ],
+    [...(state.resolved ?? []), ...(state.fought ?? []), ...(state.beaten ?? [])],
+  );
+  if (why) throw new Error(why);
+}
+
 function refuseWhileOwing(snapshot: Snapshot): void {
   const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") return;
@@ -357,7 +387,10 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
    * all comes before which card it is.
    */
   refuseOverAFoe(snapshot, seatId, cardId);
-  if (lyingHere(snapshot, seatId, cardId)) refuseWhileOwing(snapshot);
+  if (lyingHere(snapshot, seatId, cardId)) {
+    refuseWhileOwing(snapshot);
+    refuseWhileQueued(snapshot, seatId);
+  }
 
   // Everything on the Wyposażenie sheet is a Przedmiot; only the event deck
   // needs its class read to tell an item from a friend from a trophy.
@@ -761,6 +794,7 @@ export function refuseUnlessSettledHere(snapshot: Snapshot, seat: SeatRow, why: 
 
   refuseOverAFoe(snapshot, seat.id);
   refuseWhileOwing(snapshot);
+  refuseWhileQueued(snapshot, seat.id);
 }
 
 /** 12.1's own sentence, for the two doors that take things off a square. */

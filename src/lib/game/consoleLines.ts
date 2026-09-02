@@ -191,6 +191,12 @@ export function waitingOn(frame: TurnPhase): string[] {
    * Nieznajomego, zabrać leżące złoto, Przedmioty lub Przyjaciół". Printing
    * them as one list said a Cudotwórca and a Wilkołak were the same kind of
    * problem.
+   *
+   * They are still two lists, but the second one waits for the first: 12.1's
+   * window opens "dopiero po rozpatrzeniu wszystkich Kart Zdarzeń znajdujących
+   * się lub wyciągniętych na danym Obszarze" (docs/OBSZAR.md). So the offers
+   * are printed either way — the table can see what is coming — and say so when
+   * they are shut, which is what the browser's greyed shop says too.
    */
   const frames = kolejkaFor(state.drawn ?? [], settled).filter((frame) => !frame.done);
   const offered = offeredNotQueued(state.drawn ?? []).filter(
@@ -211,7 +217,10 @@ export function waitingOn(frame: TurnPhase): string[] {
         ]
       : []),
     ...(offered.length
-      ? [`Offered: ${offered.map((one) => cardName(one.cardId)).join(", ")}`]
+      ? [
+          `Offered${frames.length ? " (zamknięte, dopóki trwa kolejka)" : ""}: ` +
+            offered.map((one) => cardName(one.cardId)).join(", "),
+        ]
       : []),
     /**
      * The Obszar's own instruction comes last, and used to be printed first.

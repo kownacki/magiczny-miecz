@@ -534,6 +534,48 @@ describe("when a character may trade at all (12.1, 13.1)", () => {
   });
 
   /**
+   * The uzupełnienie under 12.1, at the trading doors: a WŁADCA ZDARZEŃ can put
+   * a LABIRYNT on the Osada, and while it lies there unresolved the Płatnerz is
+   * not open over its head. This is the whole of docs/OBSZAR.md's model —
+   * one pass through the Obszar first, then the free window.
+   */
+  it("refuses while a compulsory Karta on the square is unresolved", () => {
+    const labirynt = { cardId: "labirynt", cardClass: "place" as const, granted: false };
+    for (const [what, field, run] of DOORS) {
+      const queued = shop(field, { ...arrived(field), drawn: [labirynt] } as TurnPhase);
+      expect(() => run(queued, "seat-a"), what).toThrow(/LABIRYNT/);
+      // And open again the moment it has been dealt with.
+      const done = shop(field, {
+        ...arrived(field),
+        drawn: [labirynt],
+        resolved: ["labirynt"],
+      } as TurnPhase);
+      try {
+        run(done, "seat-a");
+      } catch (refused) {
+        expect((refused as Error).message, what).not.toMatch(/LABIRYNT/);
+      }
+    }
+  });
+
+  /**
+   * The other half, and the reason this is not the compulsory/optional line
+   * drawn by hand: a TARGOWISKO offers and never commands, so it earns no place
+   * in the kolejka and shuts nothing. Reading it and walking on is resolving it.
+   */
+  it("is not closed by a Karta that only offers", () => {
+    const targowisko = { cardId: "targowisko", cardClass: "place" as const, granted: false };
+    for (const [what, field, run] of DOORS) {
+      const table = shop(field, { ...arrived(field), drawn: [targowisko] } as TurnPhase);
+      try {
+        run(table, "seat-a");
+      } catch (refused) {
+        expect((refused as Error).message, what).not.toMatch(/12\.1|TARGOWISKO/);
+      }
+    }
+  });
+
+  /**
    * And through, in the window itself.
    *
    * Asserted as "not refused by the gate" rather than "does not throw": each of

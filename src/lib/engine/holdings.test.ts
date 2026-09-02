@@ -297,6 +297,39 @@ describe("whyNotCollectHere", () => {
   it("names the Wróg first when both are true", () => {
     expect(whyNotCollectHere([{ cardId: "wilk" }], [], 3)).toContain("12.1a");
   });
+
+  /**
+   * The uzupełnienie under 12.1, and the whole of the model in docs/OBSZAR.md:
+   * one pass through the Obszar first, then the free window to the end of the
+   * turn. A LABIRYNT is „Każdy, kto tu trafi" — you do not walk past it.
+   */
+  it("refuses while a compulsory Karta is still unresolved (12.1)", () => {
+    expect(whyNotCollectHere([{ cardId: "labirynt" }, ...item], [], 0)).toBe(
+      "Najpierw LABIRYNT — dopiero potem reszta Obszaru (12.1).",
+    );
+  });
+
+  it("opens the Obszar once it has been resolved", () => {
+    expect(whyNotCollectHere([{ cardId: "labirynt" }, ...item], ["labirynt"], 0)).toBeNull();
+  });
+
+  /**
+   * The half that keeps this from being the compulsory/optional line drawn by
+   * hand: a Karta that only offers earns no place in the kolejka at all, so
+   * reading a TARGOWISKO and declining it blocks nothing. Each card's own verb
+   * decides — see `mayWalkPast`.
+   */
+  it("is not closed by a Karta that only offers", () => {
+    expect(whyNotCollectHere([{ cardId: "targowisko" }, ...item], [], 0)).toBeNull();
+    expect(whyNotCollectHere([{ cardId: "czarodziej" }, ...item], [], 0)).toBeNull();
+  });
+
+  /** 15.2's order decides which one is named, not the order they are passed in. */
+  it("names the lowest numeral first", () => {
+    expect(
+      whyNotCollectHere([{ cardId: "labirynt" }, { cardId: "medrzec" }], [], 0),
+    ).toContain("MĘDRZEC");
+  });
 });
 
 describe("whyPackIsFull", () => {

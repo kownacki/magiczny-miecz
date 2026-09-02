@@ -33,6 +33,20 @@ import type { TurnCard } from "./state";
  * The table still sees every Karta: that is what the reveal on arrival is for,
  * where the whole deal is shown at once before anything is resolved. A frame is
  * an obligation, not an announcement.
+ *
+ * # And when the window opens
+ *
+ * Not on arrival. 12.1's freedom runs "dopiero po rozpatrzeniu wszystkich Kart
+ * Zdarzeń znajdujących się lub wyciągniętych na danym Obszarze" — one pass
+ * through the Obszar, then the rest of the turn free. The argument is in
+ * docs/OBSZAR.md and the enforcement is `whyQueuedHere`, which is this file
+ * asked as a yes or no.
+ *
+ * Which is why the two halves above are still the right split rather than one
+ * list with a phase number on each entry: what the kolejka holds is exactly
+ * what can *keep* the window shut, and it is each Karta's own verb that decides
+ * (`mayWalkPast`), not a rule about classes written out by hand. Reading a
+ * Targowisko and walking on is resolving it, and it never had a frame to leave.
  */
 
 export type FrameKind =
@@ -237,7 +251,9 @@ export function nextFrame(
  *
  * The other half of `owesAFrame`, said here so the two cannot drift into
  * disagreeing about a card and either queueing it twice or losing it. 12.1's
- * "w każdej chwili" is what makes this a list rather than a sequence.
+ * "w każdej chwili" is what makes this a list rather than a sequence — but a
+ * list that waits: nothing here is reachable until the kolejka is empty, which
+ * is `whyQueuedHere`'s job, not this one's.
  */
 export function offeredNotQueued(cards: readonly TurnCard[]): TurnCard[] {
   return cards.filter((card) => !owesAFrame(card));
