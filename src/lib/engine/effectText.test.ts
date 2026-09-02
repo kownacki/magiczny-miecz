@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SCRIPTS } from "./cardScript";
 import {
   andWhom,
   describeCondition,
@@ -400,5 +401,24 @@ describe("naming the target a panel is talking about", () => {
       expect(said.startsWith(" — ")).toBe(true);
       expect(said.length).toBeGreaterThan(4);
     }
+  });
+});
+
+/**
+ * A choice is a list, and it reads like one. The six-way wish used to come out
+ * as a paragraph in which every option said its own subject twice.
+ */
+describe("a choice, described", () => {
+  it("prints the labels and nothing else", () => {
+    expect(describeEffect(SCRIPTS["krol-lasu"]!.effect)).toBe(
+      "do wyboru: 1 punkt Miecza · 1 punkt Magii · 1 punkt Życia · " +
+        "1 Zaklęcie · 1 Sztuka Złota · przeniesienie w tym Kręgu",
+    );
+  });
+
+  it("reads the same behind a condition", () => {
+    expect(describeEffect(SCRIPTS["wrozka"]!.effect)).toContain(
+      "do wyboru: 1 punkt Miecza · ",
+    );
   });
 });

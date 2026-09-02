@@ -145,10 +145,21 @@ export function describeEffect(effect: Effect): string {
     case "po-kolei":
       return effect.steps.map(describeEffect).join("; ");
 
+    /**
+     * The labels alone.
+     *
+     * Every label in the box is already the outcome in the card's own words —
+     * „1 punkt Miecza", „1 Zaklęcie", „przeniesienie w tym Kręgu" — because
+     * they are written to go on the buttons a player presses. Pairing each with
+     * a description of its effect gave „1 punkt Miecza: +1 Miecza / 1 punkt
+     * Magii: +1 Magii / …": six clauses, each saying its own subject twice, run
+     * together into a paragraph nobody reads.
+     *
+     * Middots and not „albo", which is the box's word for it: six of those in
+     * one line is the same run-on by another route, and a list is what this is.
+     */
     case "wybor":
-      return `wybierasz — ${effect.options
-        .map((option) => `${option.label}: ${describeEffect(option.effect)}`)
-        .join(" / ")}`;
+      return `do wyboru: ${effect.options.map((option) => option.label).join(" · ")}`;
 
     case "rzut":
       return `rzut kostką: ${dieTable(effect.faces)}`;
