@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_SCRIPTS, compulsoryOffer, fieldScriptFor, offerKey, trades } from "./fieldScript";
+import {
+  FIELD_SCRIPTS,
+  compulsoryOffer,
+  fieldScriptFor,
+  offerKey,
+  touchesGold,
+  trades,
+  tradesForGold,
+} from "./fieldScript";
 import { goodsId } from "./goods";
 import { FIELDS, asFieldId, type FieldId } from "./board";
-import type { Effect } from "./cardScript";
+import { scriptFor, type Effect } from "./cardScript";
 import { fieldTextBesidesOffers, fieldWithText, offerText } from "@/lib/view/fieldText";
 
 /** Every effect in a field's offers, flattened. */
@@ -339,5 +347,56 @@ describe("what is left of an Obszar's text once its offers take their lines", ()
     // The Pustelnia prints the Pustelnik's paragraph and nothing about the
     // Egzorcyzm, so the paragraph goes to his button and nothing is left.
     expect(fieldTextBesidesOffers(asFieldId("pustelnia")!)).toBeNull();
+  });
+});
+
+/**
+ * The satchel on the map claims there is a merchant on a square, so the
+ * question behind it is narrower than "does gold come into this".
+ */
+describe("tradesForGold", () => {
+  const offer = (fieldId: string, name: string) => {
+    const found = fieldScriptFor(asFieldId(fieldId)!)?.offers.find((one) => one.name === name);
+    if (!found) throw new Error(`${fieldId} has no ${name} — read fieldScript.ts`);
+    return found.effect;
+  };
+
+  it("counts a desk that charges or pays", () => {
+    expect(tradesForGold(offer("osada", "Płatnerz"))).toBe(true);
+    expect(tradesForGold(offer("grod", "Lichwiarz"))).toBe(true);
+    expect(tradesForGold(offer("osada", "Medyk"))).toBe(true);
+    // A `po-kolei` whose first step is the price, and whose second is the die
+    // that may undo it — the Zamek's is the one healer that can go wrong.
+    expect(tradesForGold(offer("zamek", "Nadworny Medyk"))).toBe(true);
+  });
+
+  it("counts a Karta that settled here and sells", () => {
+    expect(tradesForGold(scriptFor("targowisko")!.effect)).toBe(true);
+    expect(tradesForGold(scriptFor("sztukmistrz")!.effect)).toBe(true);
+  });
+
+  it("does not count healing that asks nothing", () => {
+    // The CUDOTWÓRCA gives two punkty Życia „podczas każdych odwiedzin" and
+    // names no price. A satchel over him would send somebody with an empty
+    // purse past him rather than to him.
+    expect(tradesForGold(scriptFor("cudotworca")!.effect)).toBe(false);
+  });
+
+  it("does not count gold a die table happens to move", () => {
+    // The Karczma can take a Sztuka Złota and the Twierdza's Misja can bring
+    // three, and neither is a counter you walk up to. `touchesGold` says yes to
+    // both, which is right for showing a purse and wrong for a map.
+    const karczma = offer("karczma", "Karczma");
+    expect(touchesGold(karczma)).toBe(true);
+    expect(tradesForGold(karczma)).toBe(false);
+    expect(tradesForGold(offer("twierdza-strzegaca-drog", "Misja"))).toBe(false);
+  });
+
+  it("does not count a wish that may be a coin", () => {
+    // Magiczne Wrota offers „1 Sztuka Złota" among four wishes. A purse is
+    // worth showing there; a merchant is not what is standing there.
+    const wish = offer("magiczne-wrota", "Życzenie");
+    expect(touchesGold(wish)).toBe(true);
+    expect(tradesForGold(wish)).toBe(false);
   });
 });

@@ -3,7 +3,12 @@
 /** What an Obszar offers: the list you pick from, and the one you walked into. */
 
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { fieldScriptFor, offersFromCard, touchesGold } from "@/lib/engine/fieldScript";
+import {
+  fieldScriptFor,
+  offersFromCard,
+  touchesGold,
+  tradesForGold,
+} from "@/lib/engine/fieldScript";
 import { offerText } from "@/lib/view/fieldText";
 import { cardName, plural } from "@/lib/engine/polish";
 import { drawsFromPool, startingPool } from "@/lib/engine/pools";
@@ -56,6 +61,8 @@ export interface Offer {
   granted?: boolean;
   /** Whether a purse is any part of it — see `touchesGold`. */
   gold: boolean;
+  /** Whether somebody here deals in gold — see `tradesForGold`. */
+  trade: boolean;
   effect: Effect;
 }
 
@@ -86,6 +93,7 @@ export function offersHere(
         text: offerText(fieldId, offer),
         cardId: null,
         gold: touchesGold(offer.effect),
+        trade: tradesForGold(offer.effect),
         effect: offer.effect,
       }));
 
@@ -112,6 +120,7 @@ export function offersHere(
         cardId,
         granted,
         gold: touchesGold(script.effect),
+        trade: tradesForGold(script.effect),
         /**
          * A Karta's own words are on the Karta, one hover away, and it is a
          * picture rather than a line of board text. Quoting it into the

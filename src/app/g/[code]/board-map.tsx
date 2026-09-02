@@ -7,6 +7,8 @@ import { cardArtUrl } from "@/lib/view/cardImages";
 import { useState } from "react";
 import { BRIDGE_LINKS, CELLS, CELL_BY_ID, VIEW, dotPositions, type Cell, seatColour } from "@/lib/view/boardMap";
 import { FIELDS } from "@/lib/engine/board";
+import { SLOT_ICON } from "@/lib/view/slotIcons";
+import { offersHere } from "./field-offers";
 import { CARD_RATIO } from "@/lib/view/cardImages";
 
 export interface MapSeat {
@@ -96,6 +98,9 @@ export function BoardMap({
           onEnter={() => setHovered(cell.id)}
           onLeave={() => setHovered((at) => (at === cell.id ? null : at))}
           onPick={onPick}
+          /* What has settled here, because a shop is as often a Karta lying on
+             a square as a desk the board printed (21.1). */
+          lying={cardsOnFields[cell.id]}
         />
       ))}
 
@@ -212,6 +217,7 @@ function FieldShape({
   onEnter,
   onLeave,
   onPick,
+  lying,
 }: {
   cell: Cell;
   active: boolean;
@@ -220,6 +226,7 @@ function FieldShape({
   onEnter: () => void;
   onLeave: () => void;
   onPick?: (fieldId: FieldId) => void;
+  lying?: { id: string; cardId: CardId }[];
 }) {
   const stroke = active
     ? "#d9a441"
@@ -246,7 +253,7 @@ function FieldShape({
         stroke={stroke}
         strokeWidth={active || highlighted ? 4 : 1.5}
       />
-      <Label cell={cell} />
+      <Label cell={cell} lying={lying} />
       <title>{cell.name}</title>
     </g>
   );
@@ -267,7 +274,7 @@ const PER_CHAR = 0.54;
  * is the part that matters: a word cannot be broken, so it is what actually
  * sets the floor.
  */
-function Label({ cell }: { cell: Cell }) {
+function Label({ cell, lying }: { cell: Cell; lying?: { cardId: CardId }[] }) {
   const inner = cell.w - 12;
   const longest = Math.max(...cell.name.split(" ").map((word) => word.length));
   const size = Math.max(9, Math.min(19, inner / (longest * PER_CHAR)));
@@ -297,6 +304,15 @@ function Label({ cell }: { cell: Cell }) {
    * square's name.
    */
   const draw = FIELDS.get(cell.id)?.draw ?? 0;
+  /**
+   * Whether anybody on this square deals in gold — see `tradesForGold`.
+   *
+   * Through `offersHere` rather than the field's script directly, because a
+   * shop is as often a Karta that settled here (21.1) as a desk the board
+   * printed, and because that is where „MUSISZ" is already filtered out: the
+   * Karczma can take a coin off you and is not a place you go shopping.
+   */
+  const trades = offersHere(cell.id, lying ?? []).some((offer) => offer.trade);
   const back = Math.min(34, cell.w / 2.4) * (323 / 370);
   const backW = back / CARD_RATIO;
   const dealY = top + (lines.length - 1) * lineHeight + size * 0.4;
@@ -313,11 +329,20 @@ function Label({ cell }: { cell: Cell }) {
    * group has to be centred on the cell, so its width has to be known before
    * it is drawn, and this only has to stay inside a box rather than typeset.
    */
-  const tally = `${draw}×`;
   const dealSize = back * 0.62;
+  /**
+   * „, 3×" where both are here, „3×" where only the deal is.
+   *
+   * The comma rides on the tally rather than being drawn as a third thing,
+   * which is what it is: one line reading „[sakwa], 3× [karty]" — there is a
+   * merchant here, and the square deals three.
+   */
+  const tally = draw > 0 ? `${trades ? ", " : ""}${draw}×` : "";
   const tallyW = tally.length * dealSize * PER_CHAR;
-  const fanW = (backW * (draw + 1)) / 2;
-  const dealX = cell.cx - (tallyW + backW * 0.3 + fanW) / 2;
+  const fanW = draw > 0 ? (backW * (draw + 1)) / 2 + backW * 0.3 : 0;
+  const purseW = trades ? back : 0;
+  const dealX = cell.cx - (purseW + tallyW + fanW) / 2;
+  const fanX = dealX + purseW + tallyW + backW * 0.3;
 
   return (
     <g style={{ pointerEvents: "none" }}>
@@ -328,10 +353,42 @@ function Label({ cell }: { cell: Cell }) {
           </tspan>
         ))}
       </text>
+      {/**
+        * The sakwa, drawn as a mask so it takes a colour.
+        *
+        * The file is a black silhouette on nothing — `card-mark.tsx` uses it
+        * the same way through CSS, and on a dark cell an `<image>` of it would
+        * be a black shape on a nearly black square. `mask-type: alpha` is what
+        * makes the *shape* the mask rather than its brightness, which for an
+        * all-black drawing would mask everything away.
+        */}
+      {trades && (
+        <>
+          <mask
+            id={`sakwa-${cell.id}`}
+            maskUnits="userSpaceOnUse"
+            x={dealX}
+            y={dealY}
+            width={back}
+            height={back}
+            style={{ maskType: "alpha" }}
+          >
+            <image href={SLOT_ICON.pouch} x={dealX} y={dealY} width={back} height={back} />
+          </mask>
+          <rect
+            x={dealX}
+            y={dealY}
+            width={back}
+            height={back}
+            fill="#d9a441"
+            mask={`url(#sakwa-${cell.id})`}
+          />
+        </>
+      )}
       {draw > 0 && (
         <>
           <text
-            x={dealX}
+            x={dealX + purseW}
             y={dealY + back * 0.74}
             fontSize={dealSize}
             fill="#7f8aa8"
@@ -345,7 +402,7 @@ function Label({ cell }: { cell: Cell }) {
               href="/cards/back-zdarzenie.jpg"
               /* Overlapped by half: at four Karty the fan is two and a half
                  cards wide, which fits the narrowest cell on the board. */
-              x={dealX + tallyW + backW * 0.3 + (at * backW) / 2}
+              x={fanX + (at * backW) / 2}
               y={dealY}
               width={backW}
               height={back}

@@ -956,6 +956,47 @@ export function touchesGold(effect: Effect): boolean {
   }
 }
 
+/**
+ * Whether somebody here deals in gold — a desk you can spend at or sell to.
+ *
+ * Narrower than `touchesGold` on purpose, and the two answer different
+ * questions. That one asks "does a purse come into this at all", which is what
+ * decides whether an open offer shows you yours; the Magiczne Wrota's wish can
+ * hand you a Sztuka Złota and the number is worth seeing. This one asks "is
+ * there a merchant on this square", which is what a mark on the *map* claims —
+ * and a wish is not a merchant. So a price is required: `kup` and `sprzedaj`
+ * are trades by definition, and healing or a Zaklęcie only where one is
+ * charged, which is what separates the Osada's Medyk from the CUDOTWÓRCA who
+ * asks nothing.
+ *
+ * A die table is not walked into, unlike `touchesGold`. The Karczma can take a
+ * coin off you and the Twierdza's Misja can bring you three, but neither is a
+ * counter you walk up to — they are things that happen when the die lands, and
+ * a satchel on the map would send somebody to a Karczma expecting to shop.
+ * (The Karczma is `obowiazkowe` and never reaches here anyway; the Misja is
+ * not, and would.)
+ */
+export function tradesForGold(effect: Effect): boolean {
+  switch (effect.op) {
+    case "kup":
+    case "sprzedaj":
+      return true;
+    case "uzdrow":
+    case "zaklecie":
+      return (effect.cena ?? 0) > 0;
+    case "po-kolei":
+      return effect.steps.some(tradesForGold);
+    case "wybor":
+      return effect.options.some((one) => tradesForGold(one.effect));
+    case "gdy":
+      return (
+        tradesForGold(effect.to) || (effect.inaczej ? tradesForGold(effect.inaczej) : false)
+      );
+    default:
+      return false;
+  }
+}
+
 export function trades(effect: Effect): boolean {
   if (effect.op === "kup" || effect.op === "sprzedaj" || effect.op === "uzdrow") return true;
   if (effect.op === "po-kolei") return effect.steps.some(trades);
