@@ -43,6 +43,14 @@ export interface Addendum {
   text: string;
   /** Why the hole is real and why this fills it. Shown under the rule. */
   because: string;
+  /**
+   * Renders as its own paragraph after the anchor, rather than inside it.
+   *
+   * For an addition that is a *clause of a list* — 12.1's exceptions are three
+   * paragraphs, a), b) and now c), and a c) run onto the end of b) reads as
+   * part of b).
+   */
+  own?: true;
 }
 
 export const ADDENDA: readonly Addendum[] = [
@@ -91,6 +99,24 @@ export const ADDENDA: readonly Addendum[] = [
       "Bez niego 15.2 i 12.1 przeczą sobie wprost: jedno każe trzymać " +
       "kolejność Kart IV-VI, drugie pozwala z nich korzystać „w każdej chwili”.",
   },
+  {
+    rule: "12.1",
+    after: "b) Jest to Obszar, na który ciągnięte są Karty (13.4).",
+    own: true,
+    text:
+      "c) Na Obszarze leżą Karty, do których instrukcji Postać musi się " +
+      "zastosować (16.5, 16.7).",
+    because:
+      "a) i b) mówią to samo dwa razy: Obszar coś Postaci zadał i póki tego nie " +
+      "załatwi, niczego stąd nie bierze — raz o Wrogach, raz o Kartach do " +
+      "wyciągnięcia. Trzeciego przypadku Instrukcja nie wypisała, choć jest " +
+      "tego samego rodzaju: na Obszarze leży LABIRYNT albo UROCZA DIABLICA, " +
+      "czyli Karta, której instrukcji trzeba się zastosować. Sam podział jest " +
+      "w książce — 13.5: „Do niektórych instrukcji Postać musi się zastosować, " +
+      "do innych może, jeśli ma ochotę”. Bez c) wychodzi, że można " +
+      "spokojnie kupować u Płatnerza, mając nad głową nierozpatrzoną Kartę, " +
+      "która każe.",
+  },
 ];
 
 /** One piece of a rule's paragraph: printed, or ours. */
@@ -110,7 +136,9 @@ export interface Segment {
  * `addendaFor` is how a caller notices it did nothing.
  */
 export function withAddenda(rule: string | null, para: string): Segment[] {
-  const mine = ADDENDA.filter((one) => one.rule === rule && para.includes(one.after));
+  const mine = ADDENDA.filter(
+    (one) => !one.own && one.rule === rule && para.includes(one.after),
+  );
   if (mine.length === 0) return [{ text: para, added: false }];
 
   let rest = para;
@@ -123,6 +151,11 @@ export function withAddenda(rule: string | null, para: string): Segment[] {
   }
   if (rest) out.push({ text: rest, added: false });
   return out;
+}
+
+/** Additions that stand as their own paragraph after this one — see `own`. */
+export function afterParagraph(rule: string | null, para: string): Addendum[] {
+  return ADDENDA.filter((one) => one.own && one.rule === rule && para.includes(one.after));
 }
 
 /** The addenda that actually landed in this paragraph, for the note under it. */
@@ -149,9 +182,10 @@ export function addendumId(addendum: Addendum): string {
 export function asShown(rule: string | null, paras: readonly string[]): string {
   return paras
     .map((para) =>
-      withAddenda(rule, asRead(para))
-        .map((segment) => segment.text)
-        .join(""),
+      [
+        ...withAddenda(rule, asRead(para)).map((segment) => segment.text),
+        ...afterParagraph(rule, para).map((one) => ` ${one.text}`),
+      ].join(""),
     )
     .join(" ");
 }

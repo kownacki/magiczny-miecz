@@ -20,7 +20,13 @@ import { fold } from "@/lib/engine/search";
 import { Fold } from "./fold";
 import { OpenRule, WithRules } from "./rule-ref";
 import { asRead, misprintsIn } from "@/lib/view/misprints";
-import { addendaFor, addendumId, asShown, withAddenda } from "@/lib/view/addenda";
+import {
+  addendaFor,
+  addendumId,
+  afterParagraph,
+  asShown,
+  withAddenda,
+} from "@/lib/view/addenda";
 
 interface Rule {
   id: string | null;
@@ -184,6 +190,30 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                       <p className="mb-2 text-[13px] leading-relaxed text-ink/90">
                         <Prose raw={para} rule={rule.id} />
                       </p>
+                      {/* An addition that is a clause of a list rather than of
+                          a sentence — 12.1's exceptions are a), b) and now c),
+                          and a c) run onto the end of b) reads as part of b). */}
+                      {afterParagraph(rule.id, para).map((addendum) => (
+                        <p
+                          key={addendum.text}
+                          className="mb-2 text-[13px] italic leading-relaxed text-ochre"
+                        >
+                          <WithRules text={addendum.text} />
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              document
+                                .getElementById(addendumId(addendum))
+                                ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                            }}
+                            title="Uzupełnienie — zdanie, którego nie ma w Instrukcji. Kliknij, żeby przeczytać dlaczego."
+                            className="ml-1 cursor-pointer align-baseline text-[10px] not-italic underline decoration-dotted underline-offset-2 transition hover:text-ink"
+                          >
+                            (uzupełnienie)
+                          </button>
+                        </p>
+                      ))}
                       {/* Where it was printed. 2.6's first paragraph ends "w
                           następujący sposób:" and the table is what follows it,
                           so hanging it under the whole rule left the colon
@@ -229,7 +259,10 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                       should have had. „Uzupełnienie zasad" is the ordinary
                       Polish for filling in what a ruleset left out. */}
                   {[...rule.paras, ...rule.examples]
-                    .flatMap((para) => addendaFor(rule.id, para))
+                    .flatMap((para) => [
+                      ...addendaFor(rule.id, para),
+                      ...afterParagraph(rule.id, para),
+                    ])
                     .map((addendum) => (
                       <p
                         key={addendum.after}

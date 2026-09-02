@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ADDENDA, addendaFor, asShown, withAddenda } from "./addenda";
+import { ADDENDA, addendaFor, afterParagraph, asShown, withAddenda } from "./addenda";
 
 /**
  * An addendum is the app putting words in the book's mouth. That is defensible
@@ -77,6 +77,22 @@ describe("addenda", () => {
 
     const fifteen = withAddenda("15.2", "Konieczne jest przy tym zachowanie kolejności zgodnej z numeracją Kart (numer znajduje się u góry każdej Karty) - Karta o najniższym numerze rozpatrywana jest jako pierwsza.");
     expect(fifteen.filter((s) => s.added)[0].text).toContain("jedynie coś oferują");
+  });
+
+  /**
+   * 12.1's third exception. It is a clause of a list, so it stands as its own
+   * paragraph beside a) and b) rather than running onto the end of b).
+   */
+  it("adds 12.1's third exception as its own paragraph", () => {
+    const b = "b) Jest to Obszar, na który ciągnięte są Karty (13.4).";
+    // Nothing inserted into b) itself…
+    expect(withAddenda("12.1", b)).toEqual([{ text: b, added: false }]);
+    // …and c) standing after it.
+    const own = afterParagraph("12.1", b);
+    expect(own).toHaveLength(1);
+    expect(own[0].text).toMatch(/^c\) Na Obszarze leżą Karty/);
+    // Findable, like every other addition.
+    expect(asShown("12.1", [b])).toContain("do których instrukcji Postać musi się zastosować");
   });
 
   it("carries an argument", () => {

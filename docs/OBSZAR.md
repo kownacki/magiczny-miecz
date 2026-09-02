@@ -39,8 +39,8 @@ This is a **draw-time** rule. The parenthesis scopes the whole of it to the turn
 the card was turned over; once it has landed, it is an ordinary Karta on its new
 square, queued by numeral like anything else. Two cards do it: UPIÓR, EREMITA.
 
-**Then Spotkania and Wrogowie.** All three gate-rules in the book name these and
-nothing else:
+**Then everything the square has already put on you.** The book's own gates name
+Spotkania and Wrogowie:
 
 > **16.4** — „Dopiero po rozpatrzeniu skutków wszystkich Spotkań i pokonaniu
 > wszystkich Wrogów… może przystąpić do rozpatrzenia pozostałych Kart Zdarzeń."
@@ -53,11 +53,25 @@ nothing else:
 On a square that draws, **12.1b** also holds until the deal has been dealt with;
 its own cure names what that means: „rozpatrzeć treść wyciągniętych Kart."
 
+And **12.1c** — an addendum — extends the same idea to the third case the book
+left out: „Na Obszarze leżą Karty, do których instrukcji Postać musi się
+zastosować (16.5, 16.7)." a) and b) both say *the square has set you something
+and until you settle it you take nothing from here* — once about Wrogów, once
+about Karty owed. A LABIRYNT or an UROCZA DIABLICA lying unresolved is the same
+kind of thing, and 13.5 already draws the distinction the clause needs: „Do
+niektórych instrukcji Postać musi się zastosować, do innych może, jeśli ma
+ochotę."
+
+**So an unresolved compulsory Karta gates everything**, and the Płatnerz is not
+open over a Labirynt's head. This reverses the reading Model A first took, and
+it does so from inside the rulebook rather than from Talisman practice.
+
 ### 3. Walk the queue, unlocking as you go
 
 15.1's cards, then ascending numeral. At each card:
 
-- **Compulsory** — resolved there, at its position. No deferring.
+- **Compulsory** — resolved there, at its position. No deferring, and nothing
+  else on the square is available while one is outstanding (12.1c).
 - **Optional and spent when read** — decide now or lose it. The card says so
   itself: „Bez względu na to, czy skorzystasz z propozycji… odłóż jego Kartę."
 - **Optional and staying** — it becomes part of the Obszar and is visitable at
@@ -121,13 +135,13 @@ to put in a queue.
 
 So the line is **compulsory against optional**, not one class against another —
 and the book never draws it, because 15.2 was written as though every Karta
-were an event and 12.1 as though none were compulsory. Three `addenda.ts`
-entries draw it, one from each side:
+were an event and 12.1 as though none were compulsory. Four `addenda.ts` entries draw it, from both sides:
 
 | rule | what it adds | why |
 | --- | --- | --- |
 | **12.1** | „lub Miejsce (16.7)" | no rule said when a Miejsce may be used at all |
 | **12.1** | „Swoboda ta dotyczy chwili, a nie wyboru…" | „może odwiedzić" otherwise makes the LABIRYNT and the DIABLICA optional |
+| **12.1** | „c) …Karty, do których instrukcji Postać musi się zastosować" | a) and b) are the same idea twice; the third case is unwritten |
 | **15.2** | „Kolejność ta wiąże Karty, których instrukcję trzeba wykonać…" | otherwise a shop has to wait its numeral |
 
 Each is a genuine silence rather than a disagreement, which is what keeps them
