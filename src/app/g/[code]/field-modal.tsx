@@ -585,17 +585,21 @@ export function FieldModal({
       title={field.name}
       onClose={onClose}
       /**
-       * The way back, under the Obszar's own name.
+       * The way back, in a strip of its own under the Obszar's name.
        *
-       * Two levels and one bar between them: the drawer's title says where you
+       * Two levels and a rule between them: the drawer's header says where you
        * are on the board and never changes, this says which of its offers you
-       * have walked up to. The arrow is on the left because that is where a
-       * reader looks for the way back out of somewhere, and the name is beside
-       * it rather than centred so the two read as one sentence — ← Płatnerz.
+       * have walked up to. `beneath` and not `head` — inside the header box the
+       * two sat under one border and read as a title that had wrapped, which is
+       * the opposite of what a back button is for.
+       *
+       * The arrow is on the left because that is where a reader looks for the
+       * way out of somewhere, and the name is beside it rather than centred so
+       * the two read as one sentence — ← Płatnerz.
        */
-      head={
+      beneath={
         open ? (
-          <div className="mt-1 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setOpenOffer(null)}
               title={`Wróć do: ${field.name}`}
@@ -694,6 +698,22 @@ export function FieldModal({
             </section>
           )}
 
+          {/**
+           * What there is to go and do here, one button each.
+           *
+           * Above what is lying on the Obszar, because it is the shorter list
+           * and the one that is *about* the square rather than about what
+           * happens to be on it this turn. An Osada with three Karty dealt onto
+           * it pushed its own Płatnerz below three shelves of cardboard, so the
+           * thing that is permanently true about the Obszar read as an
+           * afterthought to the thing that is true until somebody picks it up.
+           *
+           * Drawn for anybody reading the window — a shop is part of what an
+           * Obszar *is*, and knowing the Osada has a Płatnerz is how you decide
+           * to walk there. What 13.1 shuts is inside.
+           */}
+          <OfferList offers={offers} onOpen={setOpenOffer} />
+
           <section>
             {/* "Leży tutaj" was the old heading and it said the wrong thing
                 twice: a Karta gets here by being *placed* as often as by being
@@ -703,7 +723,7 @@ export function FieldModal({
                 here to the end of the game is not. What they all have in common
                 is the Obszar, so the heading says that and nothing else. */}
             <h3 className="mb-2 text-[11px] uppercase tracking-widest text-muted">
-              Na tym Obszarze
+              Karty i zasoby na tym Obszarze
             </h3>
             {groups.length === 0 && goldAt === null && players === null ? (
               <p className="text-xs text-muted/70">Nic — Obszar jest pusty.</p>
@@ -723,7 +743,7 @@ export function FieldModal({
                       title={group.title}
                       tally={group.cards.length}
                       first={at === 0 && goldAt !== 0 && players === null}
-                      /* A step below "Na tym Obszarze", which is the same size and
+                      /* A step below the section heading, which is the same size and
                          the same small capitals — two headings at one weight read
                          as two unrelated blocks rather than a heading and the
                          groups under it. `tone` is the knob `Fold` already has for
@@ -836,18 +856,6 @@ export function FieldModal({
               </p>
             )}
           </section>
-
-          {/**
-           * What there is to go and do here, one button each.
-           *
-           * Below what is lying on the Obszar and above the crossings, which is
-           * the order a turn is played in: you look at what came up, you visit
-           * whoever keeps a shop, you decide whether to cross. Drawn for
-           * anybody reading the window — a shop is part of what an Obszar *is*,
-           * and knowing the Osada has a Płatnerz is how you decide to walk
-           * there. What 13.1 shuts is inside.
-           */}
-          <OfferList offers={offers} onOpen={setOpenOffer} />
 
           {/* Last of what the reveal is: you have seen the deal and what was
               already here, and this is the way on. At the foot of the two

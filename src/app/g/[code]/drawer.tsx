@@ -30,6 +30,7 @@ export function Drawer({
   /** Tailwind max-width. The cards want more room than the players do. */
   width = "max-w-sm",
   head,
+  beneath,
   onClose,
   children,
 }: {
@@ -38,6 +39,18 @@ export function Drawer({
   width?: string;
   /** A row under the title — a search box, a tally, whatever the surface needs. */
   head?: React.ReactNode;
+  /**
+   * A strip of the surface's own chrome, under the header and above what
+   * scrolls.
+   *
+   * Not `head`, which sits *inside* the header box and reads as part of the
+   * title: the Obszar's way back out of an offer — ← Płatnerz — is a second
+   * place, not a second line about the first, and putting it in with the name
+   * made two levels look like one heading that had wrapped. And not a child,
+   * because a way back that scrolls off the top is a way back you cannot find
+   * from the bottom of a shop.
+   */
+  beneath?: React.ReactNode;
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -117,6 +130,10 @@ export function Drawer({
       >
         {head}
       </SurfaceHead>
+
+      {beneath && (
+        <div className="shrink-0 border-b border-edge px-3 py-1.5">{beneath}</div>
+      )}
 
       {/* The scrollbar takes its room when there is a scrollbar, and not
           before.
