@@ -226,9 +226,11 @@ export function describeEffect(effect: Effect): string {
       const many = `${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
       // The Sztukmistrz sells; everybody else gives. A price left unsaid is the
       // one thing a player would want to have known first.
-      return effect.cena
-        ? `kupujesz ${many} za ${plural(effect.cena * effect.count, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}`
-        : `bierzesz ${many}`;
+      if (effect.cena) {
+        return `kupujesz ${many} za ${plural(effect.cena * effect.count, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}`;
+      }
+      // „Możesz je wybrać ze stosu" — the Półbóg's, and the reason to meet him.
+      return effect.zeStosu ? `wybierasz ${many} ze stosu` : `bierzesz ${many}`;
     }
 
     case "zaklecia-do-limitu":
@@ -351,7 +353,7 @@ export function summariseEffect(effect: Effect): string {
         : "przenieś się na dowolny Obszar w tym Kręgu";
 
     case "zaklecie":
-      return `+${effect.count} Zaklęcie`;
+      return effect.zeStosu ? `${effect.count} Zaklęcie ze stosu` : `+${effect.count} Zaklęcie`;
 
     case "kamien":
       return "Zamiana w Kamień (20.1)";

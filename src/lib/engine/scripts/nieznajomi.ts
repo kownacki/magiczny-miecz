@@ -48,8 +48,9 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     },
     disposition: { kind: "odloz" },
   },
+  // „Półbóg ofiaruje ci 1 Zaklęcie. Możesz je wybrać ze stosu."
   polbog: {
-    effect: { op: "zaklecie", count: 1 },
+    effect: { op: "zaklecie", count: 1, zeStosu: true },
     disposition: { kind: "odloz" },
   },
   /**

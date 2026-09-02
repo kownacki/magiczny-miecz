@@ -229,7 +229,20 @@ export function itemProfile(cardId: string, eqMode: EqMode = "classic"): ItemPro
 function specialOf(cardId: string): string[] {
   const script = scriptFor(cardId);
   if (!script) return [];
-  const lines = [describeEffect(script.effect)];
+  /**
+   * The Natura gate is not described here, because the requirement line above
+   * has just said it. „Tylko Postać: dobra" with „Jeśli dobra: do wyboru…"
+   * under it is the same condition twice, and the second copy pushes the six
+   * gifts a clause further from the eye. `servedNatures` reads exactly this
+   * shape — a `gdy natura` with no `inaczej` — so the two cannot come apart.
+   */
+  const body =
+    script.effect.op === "gdy" &&
+    script.effect.warunek.is === "natura" &&
+    script.effect.inaczej === undefined
+      ? script.effect.to
+      : script.effect;
+  const lines = [describeEffect(body)];
   /**
    * Only worth saying when the card does not simply stay with you — and not at
    * all where `staysAs` has already said it. On a Nieznajomy the two ran one

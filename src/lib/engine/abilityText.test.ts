@@ -253,3 +253,20 @@ describe("what a Karta asks of the character in front of it", () => {
     expect(forbiddenNatures("wrozka")).toBeUndefined();
   });
 });
+
+describe("what the summary beside the picture leaves out", () => {
+  /**
+   * The requirement line has already said „tylko Postać: dobra"; saying it
+   * again as „Jeśli dobra:" pushes the six gifts a clause further from the eye.
+   */
+  it("does not repeat the Natura the requirement line states", () => {
+    const wrozka = itemProfile("wrozka").special.join(" ");
+    expect(wrozka).not.toContain("dobra:");
+    expect(wrozka).toContain("do wyboru: 1 punkt Miecza");
+  });
+
+  /** „Możesz je wybrać ze stosu" — the one Zaklęcie in the box that is chosen. */
+  it("says the Półbóg's Zaklęcie is picked, not dealt", () => {
+    expect(itemProfile("polbog").special.join(" ")).toContain("wybierasz 1 Zaklęcie ze stosu");
+  });
+});

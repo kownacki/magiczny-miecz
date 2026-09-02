@@ -224,7 +224,21 @@ export type Effect =
    * matters: a Postać whose Magia allows no Zaklęcia must not pay to be told
    * so.
    */
-  | { op: "zaklecie"; count: number; cena?: number }
+  | {
+      op: "zaklecie";
+      count: number;
+      cena?: number;
+      /**
+       * Chosen off the pile rather than taken off the top.
+       *
+       * The PÓŁBÓG alone: „Możesz je wybrać ze stosu. Po wybraniu Karty
+       * Zaklęcia, potasuj resztę Kart." Every other Zaklęcie in the box comes
+       * off the top, and the difference is the whole of what makes him worth
+       * meeting — a Zaklęcie you pick is not the same gift as one you are
+       * dealt.
+       */
+      zeStosu?: true;
+    }
   /** "taką liczbę Zaklęć, na jaką pozwala ci twoja Magia" (Magiczna Tablica). */
   | { op: "zaklecia-do-limitu" }
   | { op: "przenies"; to: Destination }
