@@ -56,7 +56,13 @@ export function CardFacts({
           kind of statement: not what the card gives, but when it applies. */}
       {profile.visit.length > 0 && (
         <p className="border-t border-edge/60 pt-2 text-[11px] leading-snug text-magia/80">
-          <WithRules text={sentence(profile.visit.join(" · "))} />
+          {/* Each, and not the join. The middot separates two *independent*
+              labels — „Do wyboru (13.5) · Teraz albo wcale" is 13.5's choice
+              and the Karta's own deadline, neither inside the other — so both
+              of them start. `fact.when` below joins on a comma instead, which
+              is punctuation within one clause, and there only the first
+              starts. The mark between them is what says which. */}
+          <WithRules text={profile.visit.map(sentence).join(" · ")} />
         </p>
       )}
 

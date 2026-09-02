@@ -289,6 +289,13 @@ export function sztuki(n: number): string {
  * Not for a value that follows a label. „Kiedy: w dowolnej chwili" and „Slot:
  * ręka główna" are one sentence with a colon in the middle, and the half after
  * it does not start again.
+ *
+ * A caller joining several of these has to decide what its separator means
+ * before deciding where the capitals go, and the two in `CardFacts` mean
+ * different things: a middot stands between independent labels and each of them
+ * starts, a comma is punctuation inside one clause and only the first does.
+ * Capitalising the joined string is right for the second and wrong for the
+ * first — „Do wyboru (13.5) · teraz albo wcale" was how that showed.
  */
 export function sentence(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
