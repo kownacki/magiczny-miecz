@@ -411,7 +411,10 @@ export function ItemSlot({
             onDoubleClick={onDoubleClick}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
-            title={item ? item.card.name : label}
+            // The place's name where the place is empty, and nothing where a
+            // Karta is in it: that one has a preview, and the tooltip would
+            // land over it saying less. See `effect-mark.tsx`.
+            title={item ? undefined : label}
             className={`block h-full w-full transition ${
               draggable
                 ? "cursor-grab active:cursor-grabbing"

@@ -204,7 +204,12 @@ export function CardTile({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         {...handlers}
-        title={card.name}
+        // The native tooltip only where there is no Karta to open instead —
+        // `effect-mark.tsx` reached this first: two things appearing at once
+        // over the same picture is one too many, and the OS one is a grey slab
+        // that lands over the preview it is redundant with. The preview says
+        // the name, the printed text and the app's reading of it; a tooltip
+        // repeating the first of those cannot be worth covering the other two.
         style={{ width, height }}
         className={`relative overflow-hidden rounded border ${ART_BORDER} bg-raised transition ${
           draggable ? "cursor-grab active:cursor-grabbing" : onClick ? "cursor-pointer" : "cursor-default"
@@ -275,7 +280,6 @@ export function CardTile({
         <figcaption
           style={{ width }}
           className="truncate text-center text-[9px] leading-tight text-muted"
-          title={card.name}
         >
           {card.name}
         </figcaption>

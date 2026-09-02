@@ -411,7 +411,8 @@ function Used({
                 key={index}
                 onClick={() => card && onInspect(card)}
                 {...handlers}
-                title={card?.name}
+                // Nothing: this leaf has a preview, and a tooltip naming the
+                // card would sit over it. See `effect-mark.tsx`.
                 // Sized like every other leaf, so the hover outline is the card
                 // and not whatever shape the picture happened to come out.
                 style={place}
