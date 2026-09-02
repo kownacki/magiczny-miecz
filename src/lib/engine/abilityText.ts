@@ -130,9 +130,9 @@ export function staysAs(cardId: string): string | null {
       return `czeka tu na pierwszą ${NATURE_LABEL_ACC[only[0]] ?? only[0]} Postać`;
     }
     case "zostaje":
-      return "zostaje tu do końca gry";
+      return "zostaje na Obszarze do końca gry";
     case "zostaje-z-pula":
-      return "zostaje tu, dopóki starczy punktów";
+      return "zostaje na Obszarze, dopóki się nie wyczerpie";
     case "po-turach":
       return `działa przez ${disposition.turns} ${disposition.turns === 1 ? "turę" : "tury"}`;
     case "wraca-do-stosu":

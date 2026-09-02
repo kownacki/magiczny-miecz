@@ -189,9 +189,9 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
     // „Pierwszej Postaci, Eremita ofiaruje do wyboru" — anybody's, so no Natura.
     expect(staysAs("eremita")).toBe("czeka tu na pierwszą Postać");
     // „Cudotwórca będzie mieszkał na tym Obszarze do końca rozgrywki."
-    expect(staysAs("cudotworca")).toBe("zostaje tu do końca gry");
+    expect(staysAs("cudotworca")).toBe("zostaje na Obszarze do końca gry");
     // „połóż przy nim 4 punkty Życia… Po wykorzystaniu 4 punktów, Drzewo usycha."
-    expect(staysAs("drzewo-zycia")).toBe("zostaje tu, dopóki starczy punktów");
+    expect(staysAs("drzewo-zycia")).toBe("zostaje na Obszarze, dopóki się nie wyczerpie");
   });
 
   it("says nothing about a class the question does not fit", () => {
@@ -200,7 +200,7 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
   });
 
   it("is carried on the profile, for the panel beside the picture", () => {
-    expect(itemProfile("targowisko").visit).toBe("zostaje tu do końca gry");
+    expect(itemProfile("targowisko").visit).toBe("zostaje na Obszarze do końca gry");
   });
 });
 
