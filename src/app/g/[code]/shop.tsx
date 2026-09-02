@@ -128,16 +128,27 @@ export function Shop({
                 >
                   kup
                 </button>
-              ) : (
+              ) : gone || poor || full ? (
+                /**
+                 * Why *this* one cannot be had, where the reason is this one's.
+                 *
+                 * Nothing at all when the shop itself is shut — 12.1a's Wróg,
+                 * 13.1's window — because that is said once above the shelf and
+                 * repeating it under every tile is the same sentence three
+                 * times in a row. An em dash there was worse than repetition:
+                 * it looked like a price the app had failed to work out. The
+                 * Obszar's own Karty already do this, where "weź" is simply
+                 * absent on a turn you may not take.
+                 */
                 <span
                   className="text-[9px] text-muted/70"
-                  /* The whole sentence on the hover, because the tile has room
-                     for two words and 5.4's refusal is a instruction. */
+                  /* The whole sentence on the hover: the tile has room for two
+                     words and 5.4's refusal is an instruction. */
                   title={full ?? undefined}
                 >
-                  {gone ? "brak (21.2)" : poor ? "za drogo" : full ? "pełny plecak" : "—"}
+                  {gone ? "brak (21.2)" : poor ? "za drogo" : "pełny plecak"}
                 </span>
-              )}
+              ) : null}
             </CardTile>
           );
         })}
