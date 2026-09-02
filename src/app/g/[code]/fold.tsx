@@ -73,25 +73,20 @@ export function Fold({
    */
   const outside = first ? "" : "mt-3 border-t border-edge pt-3";
   const heading = `text-[11px] uppercase tracking-widest ${tone}`;
-  /**
-   * `width` is the caller's because the two branches want different things: a
-   * heading that does not fold fills its line, and one that does is only as
-   * wide as what it says — see the summary below.
-   */
-  const row = (width: string) => (
-    <span className={`inline-flex ${width} items-center gap-3 align-middle`}>
-      <span className="shrink-0">
+  const row = (
+    <>
+      <span>
         {title}
         {tally !== undefined && <span className="ml-2 text-muted/70">{tally}</span>}
       </span>
       {aside}
-    </span>
+    </>
   );
 
   if (!onToggle) {
     return (
       <div className={outside}>
-        <p className={heading}>{row("w-[calc(100%-1.25rem)]")}</p>
+        <p className={`${heading} flex items-center gap-3`}>{row}</p>
         <div className="mt-2">{children}</div>
       </div>
     );
@@ -100,6 +95,22 @@ export function Fold({
   return (
     <details open={open} className={outside}>
       <summary
+        /**
+         * Full width, and not the hit area.
+         *
+         * A `<summary>` is a block and takes the whole line, so every one of
+         * these folded on a click anywhere across the panel — including the
+         * empty half to the right of a short name, which is nobody's idea of a
+         * button. Shrinking the summary itself is the obvious fix and is a
+         * trap: its width would then depend on its content, and the `max-width`
+         * percentages inside it resolve against *that*, which is circular. The
+         * result was headings wrapping a word early — „PLECAK 0 /" and then the
+         * „4" underneath — and asides that stopped truncating.
+         *
+         * So the summary keeps a width nothing has to guess at, and the span
+         * inside it is what shrink-wraps and what is clicked.
+         */
+        className="list-none [&::-webkit-details-marker]:hidden"
         onClick={(event) => {
           // Controlled outright: the browser's own toggling and a piece of
           // React state both setting one attribute agree right up until they
@@ -107,35 +118,36 @@ export function Fold({
           // to be open (see the pack, which holds itself open for a card in
           // the air).
           event.preventDefault();
-          onToggle();
         }}
-        /**
-         * `w-fit`, so the hit area is the heading and not the line it sits on.
-         *
-         * A `<summary>` is a block and takes the whole width, so every one of
-         * these used to fold on a click anywhere across the panel — including
-         * the empty half to the right of a short name, which is nobody's idea
-         * of a button. It is `width: fit-content` now: the marker, the name,
-         * the tally and whatever rides on the bar, and nothing after them.
-         *
-         * `max-w-full` is what keeps that honest in the other direction. The
-         * bar carries an `aside` when it is shut — the Karty a group is hiding,
-         * truncated — and a box that only ever fits its content would grow to
-         * whatever that says and push the panel sideways. Capped, the aside
-         * truncates as it always did.
-         *
-         * `display` is left alone on purpose. A summary is a `list-item` and
-         * that is what draws the triangle; laying it out as a flex box or an
-         * inline-block takes the marker away, which is why the row inside does
-         * the aligning instead.
-         */
-        className={`w-fit max-w-full cursor-pointer ${heading}`}
       >
-        {/* One flex line, so the name, the tally and whatever rides on the bar
-            are centred on each other rather than each sitting on the summary's
-            own baseline. `align-middle` puts the line itself next to the
-            marker, which stays outside it. */}
-        {row("max-w-full")}
+        {/**
+         * The marker is drawn here rather than left to the browser.
+         *
+         * It used to be the `::marker`, which was the right call while the
+         * whole summary was the button — a marker outside the content costs
+         * nothing when everything is clickable. Now that the hit area is this
+         * span, a marker outside it would be the one part of the heading that
+         * looks like a control and is not one, and it is the part most people
+         * aim at.
+         *
+         * One flex line, so the triangle, the name, the tally and whatever
+         * rides on the bar are centred on each other rather than each sitting
+         * on their own baseline.
+         */}
+        <span
+          onClick={onToggle}
+          className={`inline-flex w-fit max-w-full cursor-pointer items-center gap-3 ${heading}`}
+        >
+          <span
+            aria-hidden
+            className={`shrink-0 text-[9px] leading-none transition-transform ${
+              open ? "rotate-90" : ""
+            }`}
+          >
+            ▶
+          </span>
+          {row}
+        </span>
       </summary>
       {/* The gap belongs to what is inside, not to the heading: a margin under
           the summary is height a *shut* section is still paying for, and that
