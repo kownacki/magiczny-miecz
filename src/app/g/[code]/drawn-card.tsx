@@ -6,7 +6,7 @@ import { dismissableOpen } from "./overlay";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
-import { combatValueOf, roundsOf } from "@/lib/engine/cards";
+import { combatValueOf, numeralMeaning, numeralOf, roundsOf } from "@/lib/engine/cards";
 import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
@@ -205,6 +205,11 @@ export function DrawnCard({
     <DrawSheet
       {...chrome}
       label={known.name}
+      /* The bar names the window, not the Karta: what is being worked through
+         is the Obszar's kolejka, and the Karta's own name now stands at the
+         head of the column beside its picture, where the scan is right there
+         to be compared against it. */
+      heading="Karty do rozpatrzenia"
       art={art}
       granted={card.granted === true}
       watching={`${who} ciągnie Kartę`}
@@ -242,20 +247,33 @@ export function DrawnCard({
           all of it again beside the picture was two of everything and pushed
           the buttons off the bottom. What is left is this app's reading of the
           card and the things you can do about it. */}
-      {!art && (
-        <header>
-          <p className="text-[11px] uppercase tracking-widest text-muted">
-            Wyciągnięto {label}
-          </p>
-          <h2 className="font-[family-name:var(--font-display)] text-2xl text-ochre">
-            {known.name}
-          </h2>
+      {/* Whose Karta this is, at the head of the column — with or without a
+          scan. It used to be here only when there was no picture, on the
+          reasoning that the scan carries its own title band; true, in a
+          nineteen-nineties display face at the size the print was, next to a
+          window whose own bar was carrying the name instead. Now the bar names
+          the window and this names the Karta. */}
+      <header>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-ochre">
+          {known.name}
+        </h2>
+        <p className="text-[11px] uppercase tracking-widest text-muted">
+          {label}
+          {numeralOf(known.id) && (
+            <>
+              {" · "}
+              <span title={numeralMeaning(known.id) ?? undefined}>{numeralOf(known.id)}</span>
+            </>
+          )}
+        </p>
+        {/* The prose only where the picture is not: the scan says it better,
+            in the type it was set in. */}
+        {!art && (
           <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-muted">
             {known.text}
           </p>
-        </header>
-      )}
-
+        )}
+      </header>
 
       {/* Two lines about the Karta rather than about what it says: whether you
           have to use it at all, and how long it is here. The first is the one

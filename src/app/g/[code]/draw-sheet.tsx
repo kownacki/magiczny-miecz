@@ -50,6 +50,7 @@ export interface SheetChrome {
 
 export function DrawSheet({
   label,
+  heading,
   art,
   granted = false,
   canAct,
@@ -62,6 +63,16 @@ export function DrawSheet({
   children,
 }: SheetChrome & {
   label: string;
+  /**
+   * What the bar across the top says, when that is not the label.
+   *
+   * `label` is the thing on the sheet — it names the picture and is its `alt`.
+   * The two came apart when the card's own name moved into the column beside
+   * the scan: the bar then names the *window* („Karty do rozpatrzenia") while
+   * the picture is still of the Wróżka, and a screen reader must be told the
+   * second, not the first.
+   */
+  heading?: string;
   art: string | null;
   /** Staged by the test shortcut rather than drawn — marked on the card. */
   granted?: boolean;
@@ -121,7 +132,7 @@ export function DrawSheet({
         <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-edge/60 pb-2">
           <div className="flex min-w-0 items-baseline gap-2">
             <h2 className="truncate font-[family-name:var(--font-display)] text-lg text-ochre">
-              {label}
+              {heading ?? label}
             </h2>
             {!canAct && (
               <span className="truncate text-[11px] uppercase tracking-wide text-muted">
