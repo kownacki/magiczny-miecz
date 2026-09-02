@@ -453,7 +453,7 @@ export function TestConsole({
        * console is the table's own surface in the same sense the panels are, so
        * it takes the panels' share of the width and leaves the map alone.
        */
-      className={`fixed bottom-0 right-0 w-full lg:w-[61.8%] ${LAYER.console} border-t border-l border-vermilion/40 bg-night/95 shadow-[-4px_-8px_30px_rgba(0,0,0,0.6)]`}
+      className={`fixed bottom-0 right-0 w-full lg:w-[min(61.8%,calc(100%-var(--shelf-w)))] ${LAYER.console} border-t border-l border-vermilion/40 bg-night/95 shadow-[-4px_-8px_30px_rgba(0,0,0,0.6)]`}
     >
       <SurfaceHead
         title="tryb testowy — konsola"

@@ -41,6 +41,17 @@
 
 html {
   color-scheme: dark;
+
+  /* How wide a left-hand drawer is, and therefore how narrow the board column
+     is allowed to get: five card tiles across plus the room around them.
+
+     Here rather than on the layout's own element because the test console is
+     `fixed` and rendered outside it, and the console has to end exactly where
+     the right-hand column ends — the two are the same strip of screen. The
+     arithmetic and the reason each term is what it is live on `SHELF_WIDTH` in
+     `cardImages.ts`, which is the source; `shelfWidth.test.ts` fails the build
+     if this number and that one drift apart. */
+  --shelf-w: 518px;
 }
 
 body {
