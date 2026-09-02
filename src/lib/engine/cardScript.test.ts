@@ -77,9 +77,18 @@ describe("the card that prompted the vocabulary", () => {
     // Kręgu. Bez względu na to, czy skorzystasz z propozycji, Jednorożec
     // oddala się - odłóż jego Kartę."
     const script = scriptFor("jednorozec")!;
-    expect(script.effect).toEqual({ op: "przenies", to: { kind: "dowolne-w-kregu" } });
-    // The ride is a choice; his leaving is not.
-    expect(script.optional).toBe(true);
+    // The ride is a choice — and „bez względu na to, czy skorzystasz" is the
+    // card contemplating the refusal, so the refusal is one of its own two
+    // answers rather than a way of walking past it (16.5).
+    expect(script.effect).toEqual({
+      op: "wybor",
+      options: [
+        { label: "Przenieś się", effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } } },
+        { label: "Nie", effect: { op: "nic" } },
+      ],
+    });
+    expect(script.optional).toBeUndefined();
+    // His leaving is not a choice, and neither answer changes it.
     expect(script.disposition).toEqual({ kind: "odloz" });
   });
 });

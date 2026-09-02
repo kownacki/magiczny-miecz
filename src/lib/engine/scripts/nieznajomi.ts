@@ -11,16 +11,41 @@ import { WISH } from "./wish";
  * and the players apply it, exactly as before.
  */
 export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
-  // The card that prompted all of this: a ride anywhere in your own Krąg, and
-  // then he is gone whether or not you took it.
+  /**
+   * The three that ask before they act, and the "nie" is inside the Karta.
+   *
+   * „Jednorożec może natychmiast przewieźć cię do dowolnego Obszaru w tym
+   * Kręgu. **Bez względu na to, czy skorzystasz z propozycji**, Jednorożec
+   * oddala się - odłóż jego Kartę." The Rumak and the Kuglarz say the same in
+   * their own words. That sentence is doing two things at once: it contemplates
+   * refusing, and it says refusing costs the card anyway.
+   *
+   * So they are not `optional`. Refusing is not walking past the Karta — 16.5
+   * binds every Nieznajomy and these are resolved at their place in the kolejka
+   * like the rest. It is one of the two answers the instruction offers, and
+   * either answer discards the card, which is exactly what `odloz` already did.
+   */
   jednorozec: {
-    optional: true,
-    effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
+    effect: {
+      op: "wybor",
+      options: [
+        {
+          label: "Przenieś się",
+          effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
+        },
+        { label: "Nie", effect: { op: "nic" } },
+      ],
+    },
     disposition: { kind: "odloz" },
   },
   "dziki-rumak": {
-    optional: true,
-    effect: { op: "ruch-dodatkowy" },
+    effect: {
+      op: "wybor",
+      options: [
+        { label: "Weź dodatkowy ruch", effect: { op: "ruch-dodatkowy" } },
+        { label: "Nie", effect: { op: "nic" } },
+      ],
+    },
     disposition: { kind: "odloz" },
   },
   polbog: {
@@ -178,8 +203,13 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    * what makes the trade a real decision rather than free.
    */
   kuglarz: {
-    effect: { op: "zamien-punkty" },
-    optional: true,
+    effect: {
+      op: "wybor",
+      options: [
+        { label: "Zamień punkty", effect: { op: "zamien-punkty" } },
+        { label: "Nie", effect: { op: "nic" } },
+      ],
+    },
     disposition: { kind: "odloz" },
   },
 
