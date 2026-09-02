@@ -242,12 +242,60 @@ function specialOf(cardId: string): string[] {
  * disagree about it.
  */
 export function forbiddenNatures(cardId: string): readonly Nature[] | undefined {
+  // 5.3 only, so this stays on the abilities: whom a card may be *held* by is a
+  // different question from whom a Nieznajomy serves, and `servedNatures`
+  // deliberately answers both for the sheet.
   const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
   const only = abilities.find((ability) => ability.kind === "tylko-natura");
   if (!only || only.kind !== "tylko-natura") return undefined;
   return (["good", "evil", "chaotic"] as const).filter(
     (nature) => !only.natury.includes(nature),
   );
+}
+
+/**
+ * The Natury a card is for, from either place one can be written.
+ *
+ * A Przedmiot says it as a `tylko-natura` ability, which is 5.3: you may not
+ * even hold the card. Three Nieznajomi say it as the condition on their own
+ * script — „Pierwszej **Dobrej** Postaci, która do niej zawita" — which is not
+ * 5.3 at all: the WRÓŻKA is happily met by a Zła Postać, she simply does
+ * nothing and waits for somebody else.
+ *
+ * Different rules, same question for the person reading the card, and the
+ * answer has to come from one place or the sheet says „tylko Dobra Postać" for
+ * the Talizman and nothing for the Wróżka.
+ */
+function servedNatures(cardId: string): readonly Nature[] | undefined {
+  const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
+  const only = abilities.find((ability) => ability.kind === "tylko-natura");
+  if (only && only.kind === "tylko-natura") return only.natury;
+  const gate = scriptFor(cardId)?.effect;
+  if (gate?.op === "gdy" && gate.warunek.is === "natura" && gate.inaczej === undefined) {
+    return gate.warunek.jedna_z;
+  }
+  return undefined;
+}
+
+/**
+ * What the Karta asks of the character before it does anything, or null.
+ *
+ * The same line a Przedmiot prints, in the same words and read the same way —
+ * green where the reader passes, red where they do not. On a Nieznajomy it
+ * answers the question the sheet was silent about: a Zła Postać standing in
+ * front of the WRÓŻKA saw six gift buttons she could not press.
+ */
+export function requirementOf(
+  cardId: string,
+  /** Who is reading it. Null outside a game, where the answer is nobody's. */
+  nature: Nature | null,
+): { text: string; met: boolean | null } | null {
+  const only = servedNatures(cardId);
+  if (!only) return null;
+  return {
+    text: `tylko Postać: ${only.map((one) => NATURE_LABEL[one] ?? one).join(" lub ")}`,
+    met: nature === null ? null : only.includes(nature),
+  };
 }
 
 /**

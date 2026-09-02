@@ -11,7 +11,7 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
-import { staysAs } from "@/lib/engine/abilityText";
+import { requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import type { Nature } from "@/data/types";
@@ -202,6 +202,9 @@ export function DrawnCard({
    * WRÓŻKA met by a Zła Postać. Resolving it is a no-op, so „Pomiń" says what
    * is happening and „Rozpatrz, co się da" does not.
    */
+  /** What this Karta asks of the character in front of it, and whether they pass. */
+  const needs = requirementOf(known.id, nature);
+
   const skippable =
     (classOf(known.id) !== "stranger" && mayWalkPast(known.id)) ||
     (script !== null && inertFor(script.effect, nature));
@@ -279,6 +282,24 @@ export function DrawnCard({
           </p>
         )}
       </header>
+
+      {/* What the Karta asks before it does anything, read for the person in
+          front of it — the same line and the same two colours a Przedmiot uses
+          for 5.3. It answers what the sheet was silent about: a Zła Postać
+          standing before the WRÓŻKA saw six gift buttons she could not press.
+
+          Green or red rather than neutral, because the useful question is not
+          „does this card have a restriction" but „does it shut me out", and on
+          a turn that is being taken the answer is known. */}
+      {needs && (
+        <p
+          className={`text-[11px] ${
+            needs.met === null ? "text-muted" : needs.met ? "text-verdigris" : "text-vermilion"
+          }`}
+        >
+          {sentence(needs.text)}
+        </p>
+      )}
 
       {/* How long the Karta is here — for a Nieznajomy and a Miejsce the whole
           of what varies, since 16.5 and 16.7 make the instruction binding on
