@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 
-import { fieldTextBesidesOffers, fieldWithText } from "@/lib/view/fieldText";
+import { fieldWithText } from "@/lib/view/fieldText";
 import { dealtOn, marksFor } from "@/lib/view/fieldMarks";
 import { FieldMarks } from "./field-marks";
 import { CardTile } from "./card-tile";
@@ -128,7 +128,7 @@ export interface FieldCardHere {
  * and loose gold is not a card to sort. It is a shelf all the same, folding and
  * tallying like the rest, so the key type is the groups' plus it.
  */
-type ShelfKey = FieldGroupKey | "zloto" | "gracze";
+type ShelfKey = FieldGroupKey | "zloto" | "gracze" | "opis";
 
 /**
  * Where the Złoto shelf stands: at the head of what may be taken.
@@ -332,13 +332,19 @@ export function FieldModal({
   /**
    * Which groups the reader has shut, by key.
    *
-   * Shut rather than open, so the default needs no seeding and a group that
-   * appears mid-turn — somebody drops a Miecz on the Obszar you are reading —
-   * arrives open like the rest. Local to the window on purpose: this is one
-   * reader tidying one Obszar, not a preference about how the app looks, and
-   * `preferences.ts` is for the second kind.
+   * Shut rather than open, so a group that appears mid-turn — somebody drops a
+   * Miecz on the Obszar you are reading — arrives open like the rest. Local to
+   * the window on purpose: this is one reader tidying one Obszar, not a
+   * preference about how the app looks, and `preferences.ts` is for the second
+   * kind.
+   *
+   * „opis" is the one seeded shut, and is the exception that shows why the set
+   * is the shut ones. The board's own paragraph is there to be checked against
+   * rather than read — everything a player acts on is already downstairs in a
+   * form they can act on — so it opens closed and every shelf of actual Karty
+   * opens open.
    */
-  const [shut, setShut] = useState<ReadonlySet<ShelfKey>>(() => new Set());
+  const [shut, setShut] = useState<ReadonlySet<ShelfKey>>(() => new Set(["opis"]));
   /**
    * Which offer is open, by its key, or null in the Obszar's own view.
    *
@@ -408,8 +414,6 @@ export function FieldModal({
     cards.map((card) => ({ cardId: card.cardId, pool: card.pool, granted: card.granted })),
   );
   const open = offers.find((offer) => offer.key === openOffer) ?? null;
-  /** The Obszar's own words, minus the lines its offers have taken. */
-  const besides = fieldTextBesidesOffers(fieldId);
 
   /**
    * Why an offer cannot be acted on, in the order the refusals arrive.
@@ -592,11 +596,11 @@ export function FieldModal({
            * player who has learnt the map has learnt this.
            *
            * Sized to the bar rather than the bar to them: `SurfaceHead` is a
-           * fixed 32 now, so 20 sits inside it with room either side and
+           * fixed 32 now, so 16 sits inside it with room either side and
            * nothing about this row can move the strip.
            */}
           <span className="shrink-0 text-muted/80">
-            <FieldMarks marks={marksFor(fieldId, cards)} draw={dealtOn(fieldId)} size={20} />
+            <FieldMarks marks={marksFor(fieldId, cards)} draw={dealtOn(fieldId)} size={16} />
           </span>
         </span>
       }
@@ -679,28 +683,33 @@ export function FieldModal({
             )}
 
             {/**
-             * What the board says about the Obszar itself.
+             * The board's own words, whole and unedited, on every Obszar.
              *
-             * Not everything it prints: the Osada and the Gród itemise their
-             * offers, and each of those lines has gone to the button that opens
-             * it — see `fieldTextBesidesOffers`. What was left up here was the
-             * Czarownica's die table three inches above the button that throws
-             * it, and the Płatnerz's prices above a shelf that already shows
-             * them.
+             * Folded, and folded by default. The pieces of it a player acts on
+             * are already downstairs where they can be acted on — each offer's
+             * line is on the button that opens it, the prices are on the shelf,
+             * the count of Karty is under the name — so the paragraph up here
+             * is not how the square is read. It is how the square is *checked*:
+             * a referee that has misread the board is exactly what a player
+             * wants to catch, and they can only catch it against the printed
+             * text.
              *
-             * Silent rather than "brak tekstu" where nothing is left, because
-             * on those two Obszary nothing is missing: the whole of what the
-             * board prints is downstairs, on the buttons.
+             * Verbatim and complete, including the „MOŻESZ TU ODWIEDZIĆ:"
+             * heading and the lines the buttons carry. A quotation with the
+             * quoted parts removed is not a thing you can check anything
+             * against, which is the whole reason it is here.
              */}
-            {besides !== null ? (
+            <Fold
+              title="Oryginalny opis"
+              first
+              tone="text-muted/70"
+              open={!shut.has("opis")}
+              onToggle={() => toggle("opis")}
+            >
               <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
-                {besides}
+                {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
               </p>
-            ) : offers.length === 0 ? (
-              <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
-                Brak przepisanego tekstu dla tego Obszaru.
-              </p>
-            ) : null}
+            </Fold>
           </section>
 
           {/**

@@ -11,7 +11,7 @@ import {
 import { goodsId } from "./goods";
 import { FIELDS, asFieldId, type FieldId } from "./board";
 import { scriptFor, type Effect } from "./cardScript";
-import { fieldTextBesidesOffers, fieldWithText, offerText } from "@/lib/view/fieldText";
+import { fieldWithText, offerText } from "@/lib/view/fieldText";
 
 /** Every effect in a field's offers, flattened. */
 function every(effect: Effect): Effect[] {
@@ -321,32 +321,6 @@ describe("an offer's printed line", () => {
         expect(offerText(id as FieldId, offer), `${id} — ${offer.name}`).not.toBeNull();
       }
     }
-  });
-});
-
-/**
- * The paragraph at the top of an Obszar and the buttons under it must not both
- * carry the same sentence.
- */
-describe("what is left of an Obszar's text once its offers take their lines", () => {
-  it("is nothing at all where the whole text is the list", () => {
-    // Both fields print "MOŻESZ TU ODWIEDZIĆ:" and then a line per offer, so
-    // once each line is on its own button the heading is the list's own.
-    expect(fieldTextBesidesOffers(asFieldId("osada")!)).toBeNull();
-    expect(fieldTextBesidesOffers(asFieldId("grod")!)).toBeNull();
-  });
-
-  it("keeps the whole paragraph where the Obszar makes one offer", () => {
-    // `offerText` falls back to the field's own text there, and stripping it
-    // would leave the square undescribed and the button holding a die table.
-    const zamek = fieldTextBesidesOffers(asFieldId("zamek")!);
-    expect(zamek).toContain("Nadworny Medyk");
-  });
-
-  it("keeps what the board says beyond the offer it itemised", () => {
-    // The Pustelnia prints the Pustelnik's paragraph and nothing about the
-    // Egzorcyzm, so the paragraph goes to his button and nothing is left.
-    expect(fieldTextBesidesOffers(asFieldId("pustelnia")!)).toBeNull();
   });
 });
 

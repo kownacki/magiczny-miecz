@@ -197,8 +197,9 @@ export function OfferList({
                   <span className="block truncate">{offer.label}</span>
                   {/* What the board says about this one, on the button that
                       opens it. It used to be in a paragraph at the top of the
-                      window with the other offers' lines, three inches from the
-                      control it describes — see `fieldTextBesidesOffers`. */}
+                      window with every other offer's line, three inches from
+                      the control it describes; the board's whole text is a
+                      fold up there now, for checking rather than reading. */}
                   {offer.text && (
                     <span className="mt-0.5 block text-[11px] leading-snug text-muted">
                       {offer.text}
