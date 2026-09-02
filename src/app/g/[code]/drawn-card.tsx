@@ -11,6 +11,8 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
+import { visitWhen } from "@/lib/engine/abilityText";
+import { WithRules } from "./rule-ref";
 import { isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
@@ -233,6 +235,16 @@ export function DrawnCard({
       )}
 
 
+      {/* Two lines about the Karta rather than about what it says: whether you
+          have to use it at all, and how long it is here. The first is the one
+          the player is about to act on — "Rozpatrz, co się da" under a WRÓŻKA
+          and under an UROCZA DIABLICA is the same button doing two very
+          different things. */}
+      {visitWhen(known.id).length > 0 && (
+        <p className="text-[11px] text-magia/80">
+          <WithRules text={visitWhen(known.id).join(" · ")} />
+        </p>
+      )}
       {script && (
         <p className="text-[11px] text-ochre/80">
           {describeDisposition(script.disposition)}

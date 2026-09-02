@@ -74,6 +74,10 @@ export interface KolejkaFrame {
 /**
  * Whether the character may simply walk past this Karta.
  *
+ * Exported because the label beside the picture has to be the same answer —
+ * see `visitWhen`. A card marked „do wyboru" that the kolejka then stops the
+ * turn for is worse than no label at all.
+ *
  * `optional` has been on `CardScript` since the cards were transcribed and read
  * by nothing — this is its first caller. It is set from the verb the card
  * itself uses, which is the distinction the box draws and draws consistently:
@@ -85,7 +89,7 @@ export interface KolejkaFrame {
  * the instruction must be carried out, and an untranscribed card is one nobody
  * has checked — skipping it silently is the worse of the two mistakes.
  */
-function mayWalkPast(cardId: string): boolean {
+export function mayWalkPast(cardId: string): boolean {
   return scriptFor(cardId)?.optional === true;
 }
 

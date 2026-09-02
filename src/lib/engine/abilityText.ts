@@ -4,6 +4,8 @@ import type { Nature } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
 import { describeDisposition, scriptFor } from "./cardScript";
+import { classOf } from "./cards";
+import { leavesWhenResolved, mayWalkPast } from "./kolejka";
 import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
 import { NATURE_LABEL, cardName, fieldName, plural } from "./polish";
@@ -93,6 +95,54 @@ export function whenApplies(
   return when;
 }
 
+/**
+ * What a Nieznajomy or a Miejsce asks of the Postać who stops on its Obszar.
+ *
+ * The same idea as `AbilityWhen` and for the same reason: a Przedmiot's line
+ * says *when its bonus counts*, and these say *when you may — or must — use the
+ * Karta*. Both are derived, never stored, so they cannot drift from the rules
+ * that act on them.
+ *
+ * 13.5 draws the line and the app already reads it: „Do niektórych instrukcji
+ * Postać musi się zastosować, do innych może, jeśli ma ochotę." Which side a
+ * Karta falls on is `mayWalkPast`, read off the verb the card itself uses.
+ *
+ * Two labels where there is a choice, because two different things could be
+ * lost. „teraz albo wcale" is the Karta going away when it is read — a KUGLARZ
+ * or a JEDNOROŻEC, „odłóż jego Kartę" whether you took the offer or not.
+ * „w każdej chwili tury" is the one that stays, so declining it in the kolejka
+ * costs nothing and 12.1's window has it again afterwards.
+ */
+export type VisitWhen =
+  /** 16.5: „konieczne jest wykonanie zawartej w Karcie instrukcji". */
+  | "obowiązkowe (16.5)"
+  /** 16.7, the same sentence for a Miejsce. */
+  | "obowiązkowe (16.7)"
+  | "do wyboru (13.5)"
+  | "teraz albo wcale"
+  | "w każdej chwili tury (12.1)";
+
+/**
+ * The labels for one Karta, or none for a class the question does not fit.
+ *
+ * Only Nieznajomi and Miejsca. A Spotkanie and a Wróg are never a choice — 16.1
+ * and 16.2 are plain, and a label on all 40 of them saying so is the same word
+ * printed 40 times. A Przedmiot has its own two lines already.
+ */
+export function visitWhen(cardId: string): VisitWhen[] {
+  const cardClass = classOf(cardId);
+  if (cardClass !== "stranger" && cardClass !== "place") return [];
+  if (!mayWalkPast(cardId)) {
+    return [cardClass === "stranger" ? "obowiązkowe (16.5)" : "obowiązkowe (16.7)"];
+  }
+  return [
+    "do wyboru (13.5)",
+    leavesWhenResolved({ cardId, cardClass })
+      ? "teraz albo wcale"
+      : "w każdej chwili tury (12.1)",
+  ];
+}
+
 /** One formalised line: what it gives, and when it gives it. */
 export interface AbilityFact {
   kind: Ability["kind"];
@@ -103,6 +153,13 @@ export interface AbilityFact {
 
 /** Everything the app carries about one card, ready to be shown. */
 export interface ItemProfile {
+  /**
+   * Whether the Karta must be used and when it may be — see `visitWhen`.
+   *
+   * Empty for everything but a Nieznajomy and a Miejsce, which is most of the
+   * box: nobody needs telling that a Wilk is not optional.
+   */
+  visit: VisitWhen[];
   /** Where it may be worn. Empty when it is only ever carried. */
   slots: readonly Slot[];
   slotLabel: string | null;
@@ -159,6 +216,7 @@ export function itemProfile(cardId: string, eqMode: EqMode = "classic"): ItemPro
     },
   }));
   return {
+    visit: visitWhen(cardId),
     slots,
     slotLabel: slots.length > 0 ? slots.map((slot) => SLOT_LABEL[slot]).join(" / ") : null,
     facts: lines
@@ -219,6 +277,8 @@ export function characterProfile(characterId: string): ItemProfile {
   const known = asCharacterId(characterId);
   const abilities = known ? abilitiesOfCharacter(known) : [];
   return {
+    // A Postać is not a Karta lying on an Obszar; there is nothing to visit.
+    visit: [],
     slots: [],
     slotLabel: null,
     requirements: [],

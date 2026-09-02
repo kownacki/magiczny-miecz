@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { forbiddenNatures, itemProfile, whenApplies } from "./abilityText";
+import { forbiddenNatures, itemProfile, visitWhen, whenApplies } from "./abilityText";
+import { owesAFrame } from "./kolejka";
+import { classOf } from "./cards";
+import events from "@/data/events.json";
+import type { EventCard } from "@/data/types";
 
 describe("what an item gives, and when", () => {
   /**
@@ -171,5 +175,56 @@ describe("what using a card does", () => {
 
   it("says nothing at all for a card with no script", () => {
     expect(itemProfile("miecz").special).toEqual([]);
+  });
+});
+
+/**
+ * 13.5's line, said beside the picture: „Do niektórych instrukcji Postać musi
+ * się zastosować, do innych może, jeśli ma ochotę."
+ */
+describe("what a Nieznajomy or a Miejsce asks of you", () => {
+  it("marks a Karta whose instruction is binding", () => {
+    // "Jeżeli do niej trafisz, będziesz musiał rzucić kostką" — no choice in it.
+    expect(visitWhen("urocza-diablica")).toEqual(["obowiązkowe (16.5)"]);
+    // A Miejsce says the same thing under its own number.
+    expect(visitWhen("labirynt")).toEqual(["obowiązkowe (16.7)"]);
+  });
+
+  /**
+   * The two ways a choice can be lost, which is why there is a second label.
+   * A CZARODZIEJ stays on the Obszar to the end of the game, so declining him
+   * in the kolejka costs nothing; a KUGLARZ is "odłóż jego Kartę" whether you
+   * took the offer or not.
+   */
+  it("says which kind of choice it is", () => {
+    expect(visitWhen("czarodziej")).toEqual(["do wyboru (13.5)", "w każdej chwili tury (12.1)"]);
+    expect(visitWhen("kuglarz")).toEqual(["do wyboru (13.5)", "teraz albo wcale"]);
+  });
+
+  /** Every other class: 16.1 and 16.2 are plain, and a Przedmiot has its own lines. */
+  it("says nothing about a class the question does not fit", () => {
+    expect(visitWhen("wilk")).toEqual([]);
+    expect(visitWhen("miecz")).toEqual([]);
+  });
+
+  it("is carried on the profile, for the panel beside the picture", () => {
+    expect(itemProfile("targowisko").visit[0]).toBe("do wyboru (13.5)");
+  });
+
+  /**
+   * The invariant, and the reason `mayWalkPast` is exported rather than copied:
+   * a label reading „do wyboru" on a Karta the kolejka then stops the turn for
+   * is worse than no label at all.
+   */
+  it("agrees with the kolejka on every Karta in the box", () => {
+    for (const card of events as EventCard[]) {
+      const labels = visitWhen(card.id);
+      if (labels.length === 0) continue;
+      const cardClass = classOf(card.id);
+      if (!cardClass) continue;
+      expect(owesAFrame({ cardId: card.id, cardClass }), card.name).toBe(
+        labels[0].startsWith("obowiązkowe"),
+      );
+    }
   });
 });
