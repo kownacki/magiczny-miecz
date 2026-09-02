@@ -65,7 +65,15 @@ export function TurnQueue({
       aria-label="Kolejność tur"
       // Sits at the top of the right-hand column, so the rule goes underneath:
       // it separates the bar from the controls it sits above.
-      className="flex w-full items-stretch gap-2 overflow-x-auto border-b border-edge/60 pb-3"
+      //
+      // `min-w-0` is what makes `overflow-x-auto` mean anything here. This is a
+      // flex item beside the „teraz" box, and a flex item's `min-width` is
+      // `auto` — it will not shrink below its own content, so the row grew past
+      // the column and was cut off by it rather than scrolling inside it. It
+      // only showed once the two columns held down to 740: above 1024 there was
+      // always room for the queue, and below it the layout used to stack and
+      // hand the row the whole window.
+      className="flex w-full min-w-0 items-stretch gap-2 overflow-x-auto border-b border-edge/60 pb-3"
     >
       {queue.map((entry, at) => (
         <QueueChip

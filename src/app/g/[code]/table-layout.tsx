@@ -17,6 +17,13 @@ import type { Seat } from "./table";
  * So the frame is exactly the viewport, the two columns are independent, and only
  * the right-hand column scrolls — the board never moves out from under you.
  *
+ * They are two columns at every width the table is drawn at. There used to be a
+ * stacked mode below `lg`, and it was the one arrangement this component exists
+ * to avoid: the map took the whole width and pushed your Postać, your purse and
+ * every button below the fold, so deciding where to move meant scrolling away
+ * from the board to read the thing you were deciding with. Under
+ * `--breakpoint-game` there is no layout at all — see `TooNarrow`.
+ *
  * They are not halves. The board is square and sized by whichever of its two
  * axes runs out first, which on any laptop is the height — so half the width
  * was more than it could ever use, and the slack sat as empty gutter beside it
@@ -61,19 +68,19 @@ export function TableBar({ children }: { children: React.ReactNode }) {
  * columns — gives everybody something broken rather than one honest sentence,
  * so this is the sentence.
  *
- * **The bar and the console stay.** Both are deliberate. The bar carries the
- * join code, the roster and the way out, which is exactly what somebody on a
- * phone wants — they are usually looking to see who is at the table, not to
- * play from it. And the console is text: it is the same vocabulary the browser
- * drives the game with (docs/TERMINAL.md), it is `fixed` to the bottom on its
- * own, and it works at any width at all. So a narrow window is not locked out
- * of the game, only out of the picture of it.
+ * **The bar stays**, and so does the console where there is one. The bar
+ * carries the join code, the roster and the way out, which is most of what
+ * somebody arriving on a phone actually wants — they are looking to see who is
+ * at the table, not to play from it. The console is `fixed` and rendered
+ * outside this component, so it survives on its own; it is not advertised here
+ * because it only exists in test mode, and a notice cannot promise a way to
+ * carry on that most tables do not have.
  *
  * CSS and not a measurement, so there is no resize listener, no hydration
  * mismatch and nothing to get out of step: the two halves are the same
  * breakpoint read in opposite directions.
  */
-function TooNarrow({ hasConsole }: { hasConsole: boolean }) {
+function TooNarrow() {
   return (
     <div
       // Clear of the console, which is docked to the bottom and full-width
@@ -88,14 +95,6 @@ function TooNarrow({ hasConsole }: { hasConsole: boolean }) {
         Stół potrzebuje co najmniej <span className="tnum text-ink">740</span> pikseli
         szerokości. Obróć urządzenie albo poszerz okno.
       </p>
-      {/* Only where there is one to point at. The console is test mode's, not
-          every table's, and a sentence promising a way to carry on that is not
-          on the screen is worse than the silence it replaced. */}
-      {hasConsole && (
-        <p className="max-w-xs text-xs text-muted/70">
-          Konsola na dole działa mimo to — całą grę można prowadzić z niej.
-        </p>
-      )}
     </div>
   );
 }
@@ -105,19 +104,10 @@ export function TableLayout({
   map,
   right,
   drawer,
-  hasConsole = false,
 }: {
   header: React.ReactNode;
   map: React.ReactNode;
   right: React.ReactNode;
-  /**
-   * Whether the console is on the screen, which decides one sentence.
-   *
-   * It is `fixed` and rendered outside this component, so a window too narrow
-   * for the table keeps it either way — but it only exists in test mode, and
-   * `TooNarrow` should not offer a way out that most tables do not have.
-   */
-  hasConsole?: boolean;
   /** Laid over the columns, below the bar — see the note on the row below. */
   drawer?: React.ReactNode;
 }) {
@@ -139,8 +129,8 @@ export function TableLayout({
           own header level with the bar's right-hand end and hid Karty and the
           console behind it — the same mistake as the bar covering the Karty
           library, made the other way round. */}
-      <TooNarrow hasConsole={hasConsole} />
-      <div className="relative hidden min-h-0 flex-1 flex-col game:flex lg:flex-row">
+      <TooNarrow />
+      <div className="relative hidden min-h-0 flex-1 game:flex">
         {/* The short side of the ratio, and the board is sized to fill it
             rather than to a fixed width: on a laptop the height is what runs
             out first, so this is a ceiling the board rarely reaches. */}
@@ -152,8 +142,14 @@ export function TableLayout({
             column is what the Obszar and the Księga cover, and without a floor
             a narrow window let them spill across the column that holds your
             Postać, your purse and the Plecak — which is exactly the column you
-            open an Obszar to compare against. */}
-        <section className="flex min-h-0 shrink-0 items-center justify-center border-edge px-3 pt-3 lg:h-full lg:w-[38.2%] lg:min-w-[var(--shelf-w)] lg:shrink lg:border-r">
+            open an Obszar to compare against.
+
+            From `lg` only. Below it the floor is wider than 38.2% of the
+            window and would eat the right-hand column instead of protecting
+            it — 518 of a 740-pixel table leaves 222, which is not a panel. The
+            drawer is capped to the column there rather than the column raised
+            to the drawer. */}
+        <section className="flex h-full min-h-0 w-[38.2%] shrink items-center justify-center border-r border-edge px-3 pt-3 lg:min-w-[var(--shelf-w)]">
           {map}
         </section>
         {/* Two things park over the foot of this column and both publish what
@@ -176,7 +172,7 @@ export function TableLayout({
           style={{
             paddingBottom: "calc(0.75rem + var(--console-h, 0px) + var(--fab-h, 0px))",
           }}
-          className="min-h-0 flex-1 overflow-y-auto p-3 lg:w-[61.8%]"
+          className="min-h-0 w-[61.8%] flex-1 overflow-y-auto p-3"
         >
           {right}
         </section>

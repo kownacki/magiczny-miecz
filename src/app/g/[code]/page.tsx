@@ -1771,7 +1771,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     <>
       {overlays}
       <TableLayout
-        hasConsole={testing || failure !== null}
         drawer={
           <>
             {fieldDrawer}
@@ -2065,8 +2064,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             {/* First thing in the column, above everything a player acts on.
                 Two questions side by side: "now" on the left, in a box that
                 never changes size, and "when" to the right of it — the queue
-                gives up the width, since it already scrolls. */}
-            <div className="flex items-stretch gap-3">
+                gives up the width, since it already scrolls.
+
+                Side by side only where there is room for both. The queue is the
+                one that gives, and on a narrow table it gave everything: 154
+                pixels beside a „teraz" box that does not shrink, which is one
+                chip and half of the next one's name. Scrolling is not the same
+                as being readable. Under `lg` they stack instead, and the queue
+                gets the column's whole width. */}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
               {active && (
                 <NowBox
                   playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
