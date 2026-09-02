@@ -9,6 +9,26 @@ Transcribed by reading the page scans; the PDFs have no text layer. Oddities in
 the original are preserved and flagged in HTML comments rather than corrected —
 there are several, including two cross-references to rules that do not exist.
 
+**Nothing here is ever repaired or extended.** A transcription that quietly
+corrected the paper is one nobody can check against the paper, which is the
+whole reason to keep one. The book's defects are handled a layer above instead,
+and both layers show themselves in the Księga Tolimana rather than working
+silently:
+
+- **A misprint** — the book says something, and says it wrongly. 16.6 cites a
+  rule 58 that does not exist. `src/lib/view/misprints.ts` holds the settled
+  reading; the Księga shows it and prints „Błąd druku" underneath with the
+  argument.
+- **An addendum** — the book says nothing, and a referee cannot say nothing.
+  12.1 lists what may be visited „w każdej chwili" and omits Miejsca, so no rule
+  anywhere states when a TARGOWISKO may be used. `src/lib/view/addenda.ts` adds
+  the missing words, in the book's own register; the Księga draws them in ochre
+  — the colour it uses for its own voice everywhere else — and prints „Dodatek"
+  underneath with the argument.
+
+The test beside each table fails if an entry stops matching the transcription,
+or if one is ever written into it.
+
 # INSTRUKCJA
 
 ## CO NALEŻY ZABRAĆ NA WYPRAWĘ

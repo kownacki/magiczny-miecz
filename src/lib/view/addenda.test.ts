@@ -1,0 +1,59 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { ADDENDA, addendaFor, withAddenda } from "./addenda";
+
+/**
+ * An addendum is the app putting words in the book's mouth. That is defensible
+ * exactly as long as it is visible, argued, and anchored to text that is really
+ * there — so all three are pinned here.
+ */
+describe("addenda", () => {
+  const rule12_1 =
+    "Postać, której ruch kończy się na danym Obszarze w każdej chwili, aż do końca " +
+    "swojej tury może odwiedzić znajdującego się tam Nieznajomego, zabrać leżące " +
+    "złoto, Przedmioty (5.4.) lub Przyjaciół z wyjątkiem sytuacji, w której:";
+
+  it("adds Miejsca to 12.1's list of what may be visited", () => {
+    const segments = withAddenda("12.1", rule12_1);
+    const added = segments.filter((s) => s.added).map((s) => s.text);
+    expect(added).toEqual([" lub Miejsce (16.7)"]);
+    // And the printed words survive intact around it.
+    expect(segments.map((s) => s.text).join("")).toBe(
+      rule12_1.replace(
+        "znajdującego się tam Nieznajomego",
+        "znajdującego się tam Nieznajomego lub Miejsce (16.7)",
+      ),
+    );
+  });
+
+  it("leaves every other rule exactly as printed", () => {
+    const other = "Postać ma prawo w dowolnym momencie odrzucić posiadany Przedmiot.";
+    expect(withAddenda("5.5", other)).toEqual([{ text: other, added: false }]);
+    expect(addendaFor("5.5", other)).toEqual([]);
+  });
+
+  /**
+   * The anchor has to exist in the transcription, or the addendum silently
+   * stops applying and the Księga quietly loses a rule nobody notices is gone.
+   */
+  it("anchors on text that is really in the book", () => {
+    const rules = readFileSync("docs/RULES.md", "utf8");
+    for (const addendum of ADDENDA) {
+      expect(rules, `${addendum.rule}: "${addendum.after}"`).toContain(addendum.after);
+    }
+  });
+
+  /** Never written into the transcription — it is ours and must look it. */
+  it("is not in the transcription", () => {
+    const rules = readFileSync("docs/RULES.md", "utf8");
+    const json = readFileSync("src/data/rules.json", "utf8");
+    for (const addendum of ADDENDA) {
+      expect(rules).not.toContain(addendum.text.trim());
+      expect(json).not.toContain(addendum.text.trim());
+    }
+  });
+
+  it("carries an argument", () => {
+    for (const addendum of ADDENDA) expect(addendum.because.length).toBeGreaterThan(80);
+  });
+});

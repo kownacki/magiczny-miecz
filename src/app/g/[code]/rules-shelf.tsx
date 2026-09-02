@@ -20,6 +20,7 @@ import { fold } from "@/lib/engine/search";
 import { Fold } from "./fold";
 import { OpenRule, WithRules } from "./rule-ref";
 import { asRead, misprintsIn } from "@/lib/view/misprints";
+import { addendaFor, withAddenda } from "@/lib/view/addenda";
 
 interface Rule {
   id: string | null;
@@ -177,7 +178,7 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                   {rule.paras.map((para, n) => (
                     <Fragment key={n}>
                       <p className="mb-2 text-[13px] leading-relaxed text-ink/90">
-                        <Prose raw={para} />
+                        <Prose raw={para} rule={rule.id} />
                       </p>
                       {/* Where it was printed. 2.6's first paragraph ends "w
                           następujący sposób:" and the table is what follows it,
@@ -196,7 +197,7 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                       className="mb-2 border-l-2 border-edge pl-3 text-[12px] leading-relaxed text-muted"
                     >
                       <span className="text-ochre/70">Przykład: </span>
-                      <Prose raw={example} />
+                      <Prose raw={example} rule={rule.id} />
                     </p>
                   ))}
                   {/* What the book prints, where the Księga shows something
@@ -212,6 +213,20 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                       >
                         <span className="text-muted/50">Błąd druku: </span>
                         w Instrukcji wydrukowano {misprint.printed}. {misprint.because}
+                      </p>
+                    ))}
+                  {/* Why a sentence that is not in the book is on the page.
+                      Ochre like the sentence itself, so the claim and its
+                      justification read as one voice — ours. */}
+                  {[...rule.paras, ...rule.examples]
+                    .flatMap((para) => addendaFor(rule.id, para))
+                    .map((addendum) => (
+                      <p
+                        key={addendum.after}
+                        className="mt-2 text-[11px] leading-snug text-ochre/70"
+                      >
+                        <span className="text-ochre/50">Dodatek: </span>
+                        {addendum.because}
                       </p>
                     ))}
                   {rule.notes.map((note, n) => (
@@ -279,7 +294,7 @@ function RuleTable({ rows }: { rows: string[][] }) {
  * its own file format to a player. So the bold is bold, and each half still
  * goes through `WithRules`, because a rule number can fall on either side of it.
  */
-function Prose({ raw }: { raw: string }) {
+function Prose({ raw, rule = null }: { raw: string; rule?: string | null }) {
   /**
    * The Instrukcja as a reader uses it, which is not quite as it was printed.
    *
@@ -290,6 +305,33 @@ function Prose({ raw }: { raw: string }) {
    * has to take it on trust. The transcription itself keeps the printed form.
    */
   const text = asRead(raw);
+  /**
+   * What the book printed, and what we added to it — see `addenda.ts`.
+   *
+   * Ochre, because that is this app's colour for its own voice: every rule
+   * number, every refusal it writes, every heading it invents. A reader has to
+   * be able to see at a glance which words are the box's and which are ours,
+   * and on a page that is otherwise a transcription, the only honest way to add
+   * a sentence is to make it look added.
+   */
+  const segments = withAddenda(rule, text);
+  return (
+    <>
+      {segments.map((segment, s) =>
+        segment.added ? (
+          <span key={`add-${s}`} className="text-ochre" title="Dodatek — nie ma tego w Instrukcji">
+            <WithRules text={segment.text} />
+          </span>
+        ) : (
+          <Bold key={`said-${s}`} text={segment.text} />
+        ),
+      )}
+    </>
+  );
+}
+
+/** The `**bold**` the transcription uses, which survives the split above. */
+function Bold({ text }: { text: string }) {
   const parts = text.split(/\*\*/);
   if (parts.length === 1) return <WithRules text={text} />;
   return (
