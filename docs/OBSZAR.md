@@ -26,18 +26,26 @@ Lying and drawn become one queue.
 > **15.2** — „…rozpatrywane są pozostałe Karty Zdarzeń… **znajdujące się lub
 > wyciągnięte** na danym Obszarze."
 
-### 2. The field's own instruction, first
+### 2. The field's own instruction splits in two
 
-13.5 states its own order, and the square's printed instruction leads it:
+13.5 states its own order, and it puts the square's two kinds of instruction on
+opposite sides of the same „Następnie":
 
 > **13.5** — „Postać stosuje się do instrukcji wydrukowanej na Obszarze, na
 > którym się znalazła. Jeżeli są tam jacyś Wrogowie (16.2-3) muszą oni najpierw
-> zostać pokonani… lub należy im uciec. Następnie Postać może odwiedzić
-> Nieznajomych, zabrać złoto, Przedmioty (5.4.) i Przyjaciół."
+> zostać pokonani… lub należy im uciec. **Następnie** Postać może odwiedzić
+> Nieznajomych, zabrać złoto, Przedmioty (5.4.) i Przyjaciół. Do niektórych
+> instrukcji Postać musi się zastosować, do innych może, jeśli ma ochotę."
 
-Only the Wrogowie are said to interrupt it. So the Karczma's die is owed on
-arrival and the Osada's desks are open on arrival — which is what makes the
-ZŁODZIEJ DOBROCZYŃCA interaction below reachable at all.
+**Compulsory — owed on arrival.** „Postać stosuje się do instrukcji
+wydrukowanej" is the first sentence, and only the Wrogowie are said to
+interrupt it. The Karczma's die is due before anything else.
+
+**Optional — in the free phase.** The permission („do innych może, jeśli ma
+ochotę") is the last sentence, after „Następnie", and reads as one more thing
+you *may* do alongside visiting a Nieznajomy and picking up gold. So the Osada's
+desks open when the rest of the square does, and 21.1 already refuses to
+distinguish a shop printed on the board from one that walked in.
 
 ### 3. Two gates, and only two
 
@@ -179,13 +187,20 @@ all stay.
 
 ## What is ours, not the box's
 
+**Skipping a staying Karta in the pass is resolving it.** „Rozpatrzenie" of a
+TARGOWISKO or a CZARODZIEJ you do not want is reading it and declining — instant
+and unblockable — so the free phase in practice begins once every *compulsory*
+Karta is done. That is model A's c) arrived at without inventing A's
+compulsory/optional line: our sentence says „wszystkich", and each card's own
+text decides what resolving it costs (16.5/16.7 „konieczne jest wykonanie"
+against 13.5 „do innych może, jeśli ma ochotę").
+
 **A resident you declined in the pass is still open afterwards.** Read off the
 cards' own words — „podczas każdych odwiedzin", „Każdy, kto tu zawędruje",
 „która tu zawita" — none of which spends the card, against „Bez względu na to,
 czy skorzystasz z propozycji… odłóż jego Kartę", which does. **The field's own
-printed desk is not a queue entry at all**, by 13.5's sentence order, and 21.1
-makes no distinction between a shop printed on the board and one that walked
-in.
+printed desk is not a queue entry at all** — it belongs to the free phase, on
+the far side of 13.5's „Następnie".
 
 **Arrival order breaks a tie within one numeral.** 15.2 orders by numeral and
 stops. Talisman's later edition fills the gap with „the order they were drawn",
@@ -281,9 +296,12 @@ so far that names no number, and it is bounded instead by 5.4 and 21.2.
 ## Two interactions worth keeping in mind
 
 **ZŁODZIEJ DOBROCZYŃCA** — „Jeżeli masz złoto, ukradnie ci 1 Sztukę, lecz jeśli
-go nie masz, włoży ci 1 Sztukę do kieszeni." Spend everything at the desk first
-and he pays you instead. Only reachable because the field's instruction unlocks
-ahead of the IV cards.
+go nie masz, włoży ci 1 Sztukę do kieszeni." Under Model A the trick was to
+empty your purse at the Płatnerz first and be paid instead. **Under B it is
+gone**: he is a IV and is resolved in the pass, while every way to spend — the
+board's desks, a TARGOWISKO (VI), the free phase — comes after him. If you
+arrive with gold, he takes a Sztuka. That is the clearest thing B costs, and it
+is the price of not having to ask which class of Karta may be used when.
 
 **KUGLARZ then CZARODZIEJ** — both IV. The Kuglarz is spent when read and swaps
 Miecz for Magia; the Czarodziej stays and is Magia-gated. Meet the Czarodziej
