@@ -488,7 +488,7 @@ Dopiero po rozpatrzeniu skutków wszystkich Spotkań i pokonaniu wszystkich Wrog
 NIEZNAJOMI - konieczne jest wykonanie zawartej w Karcie instrukcji.
 
 ### 16.6
-<!-- Citation printed exactly as "(58.3-4.)". No rule 58 exists elsewhere in this document; the carrying-limit rule is cited elsewhere as "(5.4.)" (see 12.1, 13.5). Likely a printing error for "(5.3-4.)" but transcribed verbatim, not corrected. -->
+<!-- Citation printed exactly as "(58.3-4.)". A printing error for "(5.3-4.)", and the reading is settled rather than likely: chapter 8 ends at 8.2, so there is no 8.3-4 to cite, and 5.3 (a Przedmiot one is not allowed to use) together with 5.4 (no more than four) are exactly the two conditions on "jeżeli tylko wolno jej to zrobić" — which is why the citation is a range. 12.1 and 13.5 send you to chapter 5 for the same act. Kept as printed here, because a transcription that quietly repaired the paper is one nobody can check against the paper. The Księga shows it corrected and says so — see src/lib/view/misprints.ts. -->
 PRZEDMIOTY, PRZEDMIOTY MAGICZNE I PRZYJACIELE - Postać może zabrać te Karty ze sobą, jeżeli tylko wolno jej to zrobić (58.3-4.). Jeżeli Postać wyciągnie Magiczny Miecz lub Tarczę Tolimana musi je zamienić na identyczne z Wyposażenia, a wyciągnięte odłożyć na stos zużytych.
 
 ### 16.7

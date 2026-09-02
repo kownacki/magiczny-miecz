@@ -19,6 +19,7 @@ import { ENDLESS_STOCK_CHANGE, VARIANT_CHANGES, type EqMode } from "@/lib/engine
 import { fold } from "@/lib/engine/search";
 import { Fold } from "./fold";
 import { OpenRule, WithRules } from "./rule-ref";
+import { asRead, misprintsIn } from "@/lib/view/misprints";
 
 interface Rule {
   id: string | null;
@@ -176,7 +177,7 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                   {rule.paras.map((para, n) => (
                     <Fragment key={n}>
                       <p className="mb-2 text-[13px] leading-relaxed text-ink/90">
-                        <Prose text={para} />
+                        <Prose raw={para} />
                       </p>
                       {/* Where it was printed. 2.6's first paragraph ends "w
                           następujący sposób:" and the table is what follows it,
@@ -195,9 +196,24 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                       className="mb-2 border-l-2 border-edge pl-3 text-[12px] leading-relaxed text-muted"
                     >
                       <span className="text-ochre/70">Przykład: </span>
-                      <Prose text={example} />
+                      <Prose raw={example} />
                     </p>
                   ))}
+                  {/* What the book prints, where the Księga shows something
+                      else. Under the rule rather than in a tooltip: a reader
+                      holding the Instrukcja next to the screen is exactly who
+                      needs to know the two differ, and why. */}
+                  {[...rule.paras, ...rule.examples]
+                    .flatMap((para) => misprintsIn(para))
+                    .map((misprint) => (
+                      <p
+                        key={misprint.printed}
+                        className="mt-2 text-[11px] leading-snug text-muted/70"
+                      >
+                        <span className="text-muted/50">Błąd druku: </span>
+                        w Instrukcji wydrukowano {misprint.printed}. {misprint.because}
+                      </p>
+                    ))}
                   {rule.notes.map((note, n) => (
                     <p key={`note-${n}`} className="mt-2 text-[11px] leading-snug text-muted/70">
                       <span className="text-muted/50">Uwaga do transkrypcji: </span>
@@ -263,7 +279,17 @@ function RuleTable({ rows }: { rows: string[][] }) {
  * its own file format to a player. So the bold is bold, and each half still
  * goes through `WithRules`, because a rule number can fall on either side of it.
  */
-function Prose({ text }: { text: string }) {
+function Prose({ raw }: { raw: string }) {
+  /**
+   * The Instrukcja as a reader uses it, which is not quite as it was printed.
+   *
+   * One citation in the book leads nowhere — 16.6's „(58.3-4.)" — and every
+   * number in this drawer is a link, so leaving it would be a dead reference in
+   * the one place a reader has come to follow references. `asRead` swaps it for
+   * what the book meant; `misprintsIn` puts the swap under the rule, so nobody
+   * has to take it on trust. The transcription itself keeps the printed form.
+   */
+  const text = asRead(raw);
   const parts = text.split(/\*\*/);
   if (parts.length === 1) return <WithRules text={text} />;
   return (
