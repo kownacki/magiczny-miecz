@@ -926,6 +926,53 @@ export function tollIsWaived(abilities: readonly Ability[], fieldId: FieldId): b
   );
 }
 
+/**
+ * Who will buy this Przedmiot where its owner is standing, and for how much.
+ *
+ * Three buyers, in the order the sale is offered, and the order is the rule:
+ *
+ * 1. **The card's own.** "Może zostać sprzedany w Zamku za 5 Sztuk Złota" —
+ *    one Karta, one price, one named Obszar, and the DIAMENT KRÓLÓW is the only
+ *    thing in the box that has one. Asked first because a card that names its
+ *    buyer has said what it is worth to him; asked *only where it names*, so at
+ *    the Gród the Diament is not the Zamek's business and falls through to the
+ *    Lichwiarz's flat 1 — a bad trade the rules plainly allow.
+ * 2. **The Obszar's desk.** `sprzedaj`, printed on the board or arrived on a
+ *    Karta that stayed; the caller has already looked, because looking needs a
+ *    list of what is lying here and that is not this file's business.
+ * 3. **A desk you brought with you.** The ALCHEMIK is a Lichwiarz in your bag
+ *    and works wherever you happen to be standing.
+ *
+ * Written once, here, because two callers need the same answer and the answer
+ * *is* the rule: `sellHolding` spends it and the browser draws it, and a
+ * button offering 1 Sz. Z. for something the command sells for 5 is worse than
+ * no button at all.
+ *
+ * Says nothing about whether the seller may trade at all — that is 12.1 and
+ * 13.1, and `standingShopper`'s. This answers only "what is it worth here".
+ */
+export function buyerFor(
+  cardId: string,
+  /** Where the seller is standing; null before anybody has been placed. */
+  fieldId: FieldId | null,
+  /** What this Obszar's desk pays for anything, or null where there is none. */
+  desk: number | null,
+  /** Every Karta the seller is carrying, for a desk they are carrying too. */
+  carrying: readonly string[],
+): { price: number; from: "karta" | "obszar" | "sakwa" } | null {
+  const named =
+    fieldId === null
+      ? undefined
+      : abilitiesOf(cardId).find(
+          (ability): ability is Extract<Ability, { kind: "sprzedaj-w" }> =>
+            ability.kind === "sprzedaj-w" && ability.fields.includes(fieldId),
+        );
+  if (named) return { price: named.cena, from: "karta" };
+  if (desk !== null) return { price: desk, from: "obszar" };
+  const pouch = heldAbilities(carrying).find((ability) => ability.kind === "skup");
+  return pouch?.kind === "skup" ? { price: pouch.cena, from: "sakwa" } : null;
+}
+
 /** Cards this character may never hold (its own Charakterystyka, 8.1). */
 export function isForbidden(abilities: readonly Ability[], cardId: string): boolean {
   return abilities.some(

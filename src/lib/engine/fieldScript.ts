@@ -888,3 +888,37 @@ export function trades(effect: Effect): boolean {
   if (effect.op === "wybor") return effect.options.some((option) => trades(option.effect));
   return false;
 }
+
+/**
+ * What this Obszar offers of a given kind, counting the Karty lying on it.
+ *
+ * A shop can be printed on the board or can have walked in as a Karta and
+ * stayed (16.8), and 21.1 makes no distinction between them — so both are
+ * walked, and a `po-kolei` or a `wybor` is walked into.
+ *
+ * Takes the Karty as a plain list rather than reading them, because the two
+ * callers hold them in different shapes and neither shape belongs in the
+ * engine: the server merges `field_cards` with the turn's own `drawn` (see
+ * `offerOn`, which is where that trap is written down), and the browser has
+ * already merged the same two for the window it is drawing.
+ */
+export function offerAmong<K extends Effect["op"]>(
+  fieldId: FieldId,
+  lying: readonly string[],
+  op: K,
+): Extract<Effect, { op: K }> | null {
+  const found: Effect[] = [];
+  const walk = (effect: Effect) => {
+    if (effect.op === op) found.push(effect);
+    if (effect.op === "po-kolei") effect.steps.forEach(walk);
+    if (effect.op === "wybor") effect.options.forEach((one) => walk(one.effect));
+  };
+
+  for (const offer of fieldScriptFor(fieldId)?.offers ?? []) walk(offer.effect);
+  for (const cardId of lying) {
+    const script = scriptFor(cardId);
+    if (script) walk(script.effect);
+  }
+
+  return (found[0] as Extract<Effect, { op: K }>) ?? null;
+}

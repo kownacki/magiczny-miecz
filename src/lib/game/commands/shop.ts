@@ -1,9 +1,9 @@
 /** The establishments: trading trophies for Miecz (1.4), and the desks that buy, sell and heal (21.2, 4.7). */
 
 import { trophyPointsOf } from "@/lib/engine/trophies";
-import { abilitiesOf, heldAbilities, type Ability } from "@/lib/engine/abilities";
-import { scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { fieldScriptFor } from "@/lib/engine/fieldScript";
+import { buyerFor } from "@/lib/engine/abilities";
+import type { Effect } from "@/lib/engine/cardScript";
+import { offerAmong } from "@/lib/engine/fieldScript";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import { goodsId } from "@/lib/engine/goods";
 import type { FieldId } from "@/lib/engine/board";
@@ -27,10 +27,12 @@ import { pointsOf, seatById } from "./seat";
 export { TROPHY_RATE, offerFor, offersFor };
 
 /**
- * What this Obszar offers of a given kind, counting the cards lying on it.
+ * What this Obszar offers of a given kind — the board's own desks and whatever
+ * has settled here.
  *
- * A shop can be printed on the board or can have walked in as a Karta and
- * stayed (16.8), and 21.1 makes no distinction between them.
+ * The walk itself is `offerAmong`'s, in the engine, so the browser can ask the
+ * same question of the same square. What is left here is the half that reads a
+ * snapshot, and it is the half with the trap in it.
  *
  * # Why it reads two lists
  *
@@ -51,15 +53,6 @@ export function offerOn<K extends Effect["op"]>(
   fieldId: FieldId,
   op: K,
 ): Extract<Effect, { op: K }> | null {
-  const found: Effect[] = [];
-  const walk = (effect: Effect) => {
-    if (effect.op === op) found.push(effect);
-    if (effect.op === "po-kolei") effect.steps.forEach(walk);
-    if (effect.op === "wybor") effect.options.forEach((o) => walk(o.effect));
-  };
-
-  for (const offer of fieldScriptFor(fieldId)?.offers ?? []) walk(offer.effect);
-
   const state = top(snapshot.game.turn_state);
   const inTurn =
     state.phase === "field" && state.fieldId === fieldId
@@ -69,12 +62,7 @@ export function offerOn<K extends Effect["op"]>(
     .filter((c) => c.field_id === fieldId)
     .map((c) => c.card_id);
 
-  for (const cardId of [...onBoard, ...inTurn]) {
-    const script = scriptFor(cardId);
-    if (script) walk(script.effect);
-  }
-
-  return (found[0] as Extract<Effect, { op: K }>) ?? null;
+  return offerAmong(fieldId, [...onBoard, ...inTurn], op);
 }
 
 /**
@@ -348,18 +336,16 @@ export function sellHolding(
   const held = mine.find((h) => h.id === command.holdingId);
   if (!held) throw new Error("Nie masz tej karty.");
 
-  // The card's own buyer, where it names one and you are standing there.
-  const named = abilitiesOf(held.card_id).find(
-    (ability): ability is Extract<Ability, { kind: "sprzedaj-w" }> =>
-      ability.kind === "sprzedaj-w" && ability.fields.includes(seat.field_id as FieldId),
+  // Whose desk it is and what he pays is `buyerFor`'s, so the button the
+  // browser draws and the sale this makes cannot disagree about the price.
+  const buyer = buyerFor(
+    held.card_id,
+    seat.field_id as FieldId,
+    offerOn(snapshot, seat.field_id as FieldId, "sprzedaj")?.cena ?? null,
+    mine.map((h) => h.card_id),
   );
-  const desk = offerOn(snapshot, seat.field_id as FieldId, "sprzedaj");
-  const alchemist = heldAbilities(mine.map((h) => h.card_id)).find(
-    (ability) => ability.kind === "skup",
-  );
-  const price =
-    named?.cena ?? desk?.cena ?? (alchemist?.kind === "skup" ? alchemist.cena : null);
-  if (price === null) throw new Error("Nikt tu nie skupuje Przedmiotów.");
+  if (!buyer) throw new Error("Nikt tu nie skupuje Przedmiotów.");
+  const price = buyer.price;
   // A Przyjaciel is a person and a trophy is a memory; neither is something the
   // Lichwiarz deals in. 5.4 counts only Przedmioty and so does he.
   if (held.kind !== "item") throw new Error("Lichwiarz kupuje tylko Przedmioty.");

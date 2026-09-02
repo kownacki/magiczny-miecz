@@ -20,6 +20,7 @@ import {
   spellsOverLimit,
   skipsRollAt,
   bestShield,
+  buyerFor,
 } from "./abilities";
 import { abilitiesOfCharacter } from "./characters";
 
@@ -293,5 +294,42 @@ describe("osłona against the point of Życie (17.4)", () => {
     expect(bestShield(abilitiesOf("zbroja"))).toBe(3);
     expect(bestShield(heldAbilities(["helm", "tarcza", "zbroja"]))).toBe(3);
     expect(bestShield(heldAbilities(["helm", "tarcza"]))).toBe(2);
+  });
+});
+
+/**
+ * The order the three buyers are asked in, which is the rule rather than a
+ * preference — `sellHolding` spends this answer and the browser draws it.
+ */
+describe("buyerFor", () => {
+  it("prefers the buyer the card names, where the card names him", () => {
+    expect(buyerFor("diament-krolow", "zamek", null, ["diament-krolow"])).toEqual({
+      price: 5,
+      from: "karta",
+    });
+  });
+
+  it("falls through to the desk anywhere the card does not name", () => {
+    // The Gród's Lichwiarz pays his flat 1 for a Diament — a bad trade the
+    // rules plainly allow, and not the engine's place to prevent.
+    expect(buyerFor("diament-krolow", "grod", 1, ["diament-krolow"])).toEqual({
+      price: 1,
+      from: "obszar",
+    });
+  });
+
+  it("sells to an Alchemik in the bag where the Obszar has no desk", () => {
+    expect(buyerFor("miecz", "step-1", null, ["miecz", "alchemik"])).toEqual({
+      price: 1,
+      from: "sakwa",
+    });
+  });
+
+  it("prefers the Obszar's desk to the one you are carrying", () => {
+    expect(buyerFor("miecz", "grod", 1, ["miecz", "alchemik"])?.from).toBe("obszar");
+  });
+
+  it("answers nothing where nobody buys", () => {
+    expect(buyerFor("miecz", "step-1", null, ["miecz"])).toBeNull();
   });
 });
