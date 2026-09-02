@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 
-import { fieldWithText } from "@/lib/view/fieldText";
+import { fieldTextBesidesOffers, fieldWithText } from "@/lib/view/fieldText";
 import { CardTile } from "./card-tile";
 import { TileRow } from "./tile-row";
 import { tileFor } from "./table";
@@ -408,6 +408,8 @@ export function FieldModal({
     cards.map((card) => ({ cardId: card.cardId, pool: card.pool })),
   );
   const open = offers.find((offer) => offer.key === openOffer) ?? null;
+  /** The Obszar's own words, minus the lines its offers have taken. */
+  const besides = fieldTextBesidesOffers(fieldId);
 
   /**
    * Why an offer cannot be acted on, in the order the refusals arrive.
@@ -619,7 +621,7 @@ export function FieldModal({
              * here it is out of the way of the goods while staying on screen
              * the whole time you are deciding.
              */}
-            {purse && (
+            {purse && open.gold && (
               <span className="ml-auto shrink-0 text-[11px] text-muted">
                 Twoje Złoto: <span className="tnum text-zloto">{purse.gold}</span>
               </span>
@@ -669,9 +671,29 @@ export function FieldModal({
               </button>
             )}
 
-            <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
-              {field.text ?? "Brak przepisanego tekstu dla tego Obszaru."}
-            </p>
+            {/**
+             * What the board says about the Obszar itself.
+             *
+             * Not everything it prints: the Osada and the Gród itemise their
+             * offers, and each of those lines has gone to the button that opens
+             * it — see `fieldTextBesidesOffers`. What was left up here was the
+             * Czarownica's die table three inches above the button that throws
+             * it, and the Płatnerz's prices above a shelf that already shows
+             * them.
+             *
+             * Silent rather than "brak tekstu" where nothing is left, because
+             * on those two Obszary nothing is missing: the whole of what the
+             * board prints is downstairs, on the buttons.
+             */}
+            {besides !== null ? (
+              <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
+                {besides}
+              </p>
+            ) : offers.length === 0 ? (
+              <p className="whitespace-pre-line text-xs leading-relaxed text-muted">
+                Brak przepisanego tekstu dla tego Obszaru.
+              </p>
+            ) : null}
           </section>
 
           {/**

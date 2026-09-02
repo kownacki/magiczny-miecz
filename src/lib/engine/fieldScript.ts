@@ -918,6 +918,44 @@ export function residesOn(cardId: string): boolean {
   return stays && script.optional === true;
 }
 
+/**
+ * Whether a purse is any part of what this offer does.
+ *
+ * Asked so a subview can say what you have to spend only where spending is on
+ * the table. „Twoje Złoto: 6" above the Czarownica's die table is a number with
+ * nothing to do with the decision, and a figure that is always there is a
+ * figure nobody reads by the third Obszar.
+ *
+ * Both directions count, because both are transactions a player checks their
+ * purse over: the Płatnerz takes coins, the Lichwiarz gives them, and the
+ * Magiczne Wrota's wish is a Sztuka Złota you may pick. Walked all the way
+ * down, unlike `trades` — a price hidden in the fourth face of a die table is
+ * still a price, and the reader has no way to know it is coming.
+ */
+export function touchesGold(effect: Effect): boolean {
+  switch (effect.op) {
+    case "kup":
+    case "sprzedaj":
+      return true;
+    case "uzdrow":
+      return (effect.cena ?? 0) > 0;
+    case "zaklecie":
+      return (effect.cena ?? 0) > 0;
+    case "punkty":
+      return effect.stat === "gold";
+    case "po-kolei":
+      return effect.steps.some(touchesGold);
+    case "wybor":
+      return effect.options.some((one) => touchesGold(one.effect));
+    case "rzut":
+      return Object.values(effect.faces).some(touchesGold);
+    case "gdy":
+      return touchesGold(effect.to) || (effect.inaczej ? touchesGold(effect.inaczej) : false);
+    default:
+      return false;
+  }
+}
+
 export function trades(effect: Effect): boolean {
   if (effect.op === "kup" || effect.op === "sprzedaj" || effect.op === "uzdrow") return true;
   if (effect.op === "po-kolei") return effect.steps.some(trades);

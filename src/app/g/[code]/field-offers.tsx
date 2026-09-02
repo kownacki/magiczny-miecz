@@ -3,11 +3,13 @@
 /** What an Obszar offers: the list you pick from, and the one you walked into. */
 
 import { scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { fieldScriptFor, offersFromCard } from "@/lib/engine/fieldScript";
+import { fieldScriptFor, offersFromCard, touchesGold } from "@/lib/engine/fieldScript";
 import { offerText } from "@/lib/view/fieldText";
 import { cardName, plural } from "@/lib/engine/polish";
 import { drawsFromPool, startingPool } from "@/lib/engine/pools";
 import type { FieldId } from "@/lib/engine/board";
+import Image from "next/image";
+import { cardArtUrl, TILE_ART_HEIGHT, TILE_WIDTH } from "@/lib/view/cardImages";
 
 /** What the three wells lay out, in the case the sentence needs. */
 const POOL_OF: Record<"life" | "sword" | "magic", string> = {
@@ -37,6 +39,18 @@ export interface Offer {
   label: string;
   /** The board's own sentence for this one, where the board prints one. */
   text: string | null;
+  /**
+   * The Karta this offer walked in on, where it walked in on one.
+   *
+   * So the button can carry its illustration. A TARGOWISKO is on the Obszar
+   * twice over — a thing lying there and a thing to go and do — and those are
+   * two honest questions about one object (16.8 makes it public, 13.4 counts
+   * it, and 21.1 makes it a shop). Two entries with nothing in common but a
+   * name read as two objects; the same picture in both says they are one.
+   */
+  cardId: string | null;
+  /** Whether a purse is any part of it — see `touchesGold`. */
+  gold: boolean;
   effect: Effect;
 }
 
@@ -65,6 +79,8 @@ export function offersHere(
         key: offer.name,
         label: offer.name,
         text: offerText(fieldId, offer),
+        cardId: null,
+        gold: touchesGold(offer.effect),
         effect: offer.effect,
       }));
 
@@ -88,6 +104,8 @@ export function offersHere(
       {
         key: cardName(cardId),
         label: beside === null ? cardName(cardId) : `${cardName(cardId)} — ${beside}`,
+        cardId,
+        gold: touchesGold(script.effect),
         /**
          * A Karta's own words are on the Karta, one hover away, and it is a
          * picture rather than a line of board text. Quoting it into the
@@ -125,22 +143,55 @@ export function OfferList({
         Możesz tu odwiedzić
       </h3>
       <ul className="flex flex-col gap-1">
-        {offers.map((offer) => (
-          <li key={offer.key}>
-            <button
-              onClick={() => onOpen(offer.key)}
-              className="flex w-full items-center justify-between gap-2 rounded border border-edge bg-night/40 px-2 py-2 text-left text-xs text-ink transition hover:border-ochre hover:bg-edge"
-            >
-              <span className="min-w-0 truncate">{offer.label}</span>
-              {/* The direction of travel, not an ornament: this is the one
-                  control in the window that replaces what is under it rather
-                  than doing something to the game. */}
-              <span aria-hidden className="shrink-0 text-ochre/70">
-                →
-              </span>
-            </button>
-          </li>
-        ))}
+        {offers.map((offer) => {
+          const art = offer.cardId ? cardArtUrl(offer.cardId) : null;
+          return (
+            <li key={offer.key}>
+              <button
+                onClick={() => onOpen(offer.key)}
+                className="flex w-full items-center gap-2 rounded border border-edge bg-night/40 p-2 text-left text-xs text-ink transition hover:border-ochre hover:bg-edge"
+              >
+                {/* The Karta's own illustration at the size every other card
+                    in the app is drawn at (`TILE_WIDTH`), so the TARGOWISKO on
+                    this button and the TARGOWISKO on the shelf below are
+                    recognisably one object rather than two entries sharing a
+                    name. A thumbnail was the first try and it was the worst of
+                    both: too small to recognise, big enough to make the
+                    board-printed offers beside it look like a list with holes
+                    in it. */}
+                {art && (
+                  <Image
+                    src={art}
+                    alt=""
+                    width={TILE_WIDTH}
+                    height={TILE_ART_HEIGHT}
+                    unoptimized
+                    className="shrink-0 rounded-sm border border-edge object-cover"
+                    style={{ width: TILE_WIDTH, height: TILE_ART_HEIGHT }}
+                  />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{offer.label}</span>
+                  {/* What the board says about this one, on the button that
+                      opens it. It used to be in a paragraph at the top of the
+                      window with the other offers' lines, three inches from the
+                      control it describes — see `fieldTextBesidesOffers`. */}
+                  {offer.text && (
+                    <span className="mt-0.5 block text-[11px] leading-snug text-muted">
+                      {offer.text}
+                    </span>
+                  )}
+                </span>
+                {/* The direction of travel, not an ornament: this is the one
+                    control in the window that replaces what is under it rather
+                    than doing something to the game. */}
+                <span aria-hidden className="shrink-0 text-ochre/70">
+                  →
+                </span>
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

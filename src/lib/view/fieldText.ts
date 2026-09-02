@@ -64,3 +64,47 @@ export function offerText(fieldId: FieldId, offer: FieldOffer): string | null {
   if (script && script.offers.length === 1) return fieldWithText(fieldId)?.text ?? null;
   return null;
 }
+
+/**
+ * The heading the two itemised Obszary print above their list.
+ *
+ * `OfferList` draws its own, so leaving this in the paragraph above it prints
+ * the same three words twice, a finger apart.
+ */
+const VISITING_HEADING = "MOŻESZ TU ODWIEDZIĆ:";
+
+/**
+ * What the Obszar's text still says once its offers have taken their own lines.
+ *
+ * The Osada prints „MOŻESZ TU ODWIEDZIĆ:" and then a line each for the
+ * Czarownica, the Płatnerz and the Medyk — and the window was showing all
+ * three at the top *and* a button for each underneath, so the die table you
+ * were deciding about sat in a paragraph three inches above the button that
+ * throws it. The lines belong to their offers; each one goes on its own button
+ * and into its own subview, and what is left up here is whatever the board says
+ * about the Obszar itself.
+ *
+ * For the Osada and the Gród that is nothing at all, and this answers null —
+ * the whole of their text is the list. Everywhere else the Obszar makes one
+ * offer, `offerText` falls back to the entire paragraph, and taking it away
+ * would leave the square with no description and a button holding a twelve-row
+ * die table. So the fallback is deliberately not stripped: only a line the
+ * board itself itemised moves.
+ */
+export function fieldTextBesidesOffers(fieldId: FieldId): string | null {
+  const printed = fieldWithText(fieldId)?.text;
+  if (!printed) return null;
+  const taken = new Set(
+    (fieldScriptFor(fieldId)?.offers ?? [])
+      .map((offer) => offer.text)
+      .filter((text): text is string => text !== undefined),
+  );
+  if (taken.size === 0) return printed;
+
+  const left = printed
+    .split("\n")
+    .filter((line) => !taken.has(line.trim()) && line.trim() !== VISITING_HEADING)
+    .join("\n")
+    .trim();
+  return left.length > 0 ? left : null;
+}
