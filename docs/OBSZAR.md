@@ -214,6 +214,15 @@ have to.
 
 ## Checked against the card set
 
+**No drawing Obszar carries an optional service.** Checked across all 57: the
+printed text of every square with a draw number is the draw instruction itself,
+a standing modifier (Wrogowie „dodaje 2 punkty", „nie możesz tu używać Zaklęć"),
+or a crossing rule that fires on departure (Trzęsawiska, and the Kamienny Most
+guardians — „Nim wkroczysz na Most musisz pokonać…"). Not one of them is a shop
+or a visit. So the question „when does the square's own instruction happen"
+only ever arises on a 13.5 square, and 13.5 answers it in its own sentence
+order. That is why Model B needs nothing said about it.
+
 **`przyzwij`: no card in the base game summons a Wróg.** So the Wrogowie gate
 can never re-close once passed. True of this box only — an expansion could
 break it, and the assumption should be a comment rather than a silence.
