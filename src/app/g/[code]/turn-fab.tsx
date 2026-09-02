@@ -42,6 +42,7 @@ export function TurnFab({
   playerName,
   seatIndex,
   owed,
+  besideDrawer,
   onOpen,
 }: {
   /** Whether the viewer is the one being asked. Changes the words and the weight. */
@@ -68,6 +69,8 @@ export function TurnFab({
    * one you press by accident on the way past.
    */
   owed: string | null;
+  /** A left drawer is laid over the board column, so make room for it. */
+  besideDrawer?: boolean;
   onOpen: () => void;
 }) {
   const colour = seatColour(seatIndex);
@@ -142,14 +145,37 @@ export function TurnFab({
        * the lift is right for all three of its states and zero when it is
        * closed.
        */
-      style={{ bottom: `calc(${RESERVED_ABOVE}px + var(--console-h, 0px))` }}
+      /**
+       * Centred on the board column, or on what is left of the window beside an
+       * open drawer.
+       *
+       * The drawer is laid over the board column at `--shelf-w` and sits at
+       * `z-[70]` to this pill's `z-40`, so a pill centred on the *window* is
+       * behind it on any table narrow enough for the middle of the screen to
+       * fall inside 518 pixels — which is every table under about 1040. Half a
+       * shelf to the right is the middle of the rest, the same region the
+       * console docks itself to.
+       *
+       * And narrower while it is there, or the arithmetic that clears the
+       * drawer runs it off the other edge: at the game breakpoint there are
+       * about 220 pixels beside a 518-pixel shelf, and half of a 448-pixel pill
+       * centred in them hangs 60 past the window. The `min()` keeps whichever
+       * of the three is smallest, so nothing changes on a wide table.
+       */
+      style={{
+        bottom: `calc(${RESERVED_ABOVE}px + var(--console-h, 0px))`,
+        left: besideDrawer ? "calc(50% + var(--shelf-w) / 2)" : "50%",
+        ...(besideDrawer
+          ? { maxWidth: "min(90vw, 28rem, calc(100% - var(--shelf-w) - 1.5rem))" }
+          : {}),
+      }}
       /* `hover:bg-raised` and not a tint. A tinted background *replaces* the
          one it is written next to rather than laying over it, so hovering this
          turned an opaque pill ninety percent transparent and the board showed
          through the words. Anything that sits over the game hovers to another
          solid colour; tints are for buttons with no background of their own,
          where there is nothing to see through to. */
-      className={`fixed left-1/2 z-40 flex max-w-[min(90vw,28rem)] -translate-x-1/2 items-center gap-2 rounded-full border bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition hover:bg-raised ${
+      className={`fixed z-40 flex max-w-[min(90vw,28rem)] -translate-x-1/2 items-center gap-2 rounded-full border bg-panel px-4 py-2 text-xs text-ink shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition hover:bg-raised ${
         mine ? "border-ochre" : "border-ochre/40 hover:border-ochre/70"
       }`}
     >

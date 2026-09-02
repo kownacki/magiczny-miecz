@@ -917,8 +917,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * What the FAB is the absence of: while a window is open there is no need for
    * a way back into one, and while none is, there has to be — on a quiet Obszar
    * nothing opens by itself and ending the turn is inside the Obszar's window.
+   *
+   * The Obszar used to count, and stopped when it became a drawer. A modal over
+   * the table really is the turn being on screen; a drawer beside the board is
+   * one panel among three, and it can be showing any square on the map rather
+   * than the one the turn is on. So the pill went away exactly when a player
+   * wandered off to read about somewhere else — the moment it is most useful,
+   * because pressing it is what brings them back (`openField(active.field_id)`).
    */
-  const turnWindowOpen = (sheetApplies && !folded) || inspecting !== null;
+  const turnWindowOpen = sheetApplies && !folded;
   // Only the "pole" phase has a stack of drawn cards. Narrowed once here for
   // the controls further down that ask how much of the draw is left; what the
   // turn is *offering* is `factsIn`'s reading, not this one.
@@ -1399,6 +1406,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             turnWindows,
             turnState.phase === "fight" ? turnState.fight.cardName : null,
           )}
+          besideDrawer={inspecting !== null || leftDrawer !== null}
           onOpen={() => {
             /**
              * Back to whatever the turn is on, and never to nothing.
