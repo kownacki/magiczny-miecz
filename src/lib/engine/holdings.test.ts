@@ -6,8 +6,11 @@ import {
   inEffect,
   kindForCard,
   visibleTo,
+  whyNotCollectHere,
+  whyPackIsFull,
 } from "./holdings";
 import type { Holding } from "./state";
+import type { Slot } from "./slots";
 
 const held = (cardId: string, kind: Holding["kind"], face: Holding["face"] = "open"): Holding => ({
   cardId,
@@ -256,5 +259,92 @@ describe("the two figures a character has (1.5)", () => {
     expect(bonusFromHoldings(printed, "classic", "parametr")).toEqual(
       bonusFromHoldings(printed, "classic", "walka"),
     );
+  });
+});
+
+/**
+ * 12.1's two exceptions and 5.4's limit, said once for both surfaces.
+ *
+ * These exist because the sentence used to live inside the command that throws
+ * it, where the browser could not reach it — so a shop drew a live `kup` over
+ * an unfought Wilk's head and the refusal only arrived after the click. Both
+ * are now the engine's, and the tests here are what keeps the two in step.
+ */
+describe("whyNotCollectHere", () => {
+  const item = [{ cardId: "miecz" }];
+
+  it("says nothing where the Obszar is clear", () => {
+    expect(whyNotCollectHere(item, [], 0)).toBeNull();
+  });
+
+  it("names the Wróg still standing (12.1a)", () => {
+    expect(whyNotCollectHere([{ cardId: "wilk" }, ...item], [], 0)).toBe(
+      "Najpierw WILK — dopiero potem zbieranie (12.1a).",
+    );
+  });
+
+  it("lets a settled Wróg go — 17.4 ends him when the dice are compared", () => {
+    expect(whyNotCollectHere([{ cardId: "wilk" }], ["wilk"], 0)).toBeNull();
+  });
+
+  it("refuses while the Obszar still owes Karty (12.1b)", () => {
+    expect(whyNotCollectHere(item, [], 2)).toBe(
+      "Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).",
+    );
+  });
+
+  /** 12.1a before 12.1b, because a Wilk does not wait while you deal. */
+  it("names the Wróg first when both are true", () => {
+    expect(whyNotCollectHere([{ cardId: "wilk" }], [], 3)).toContain("12.1a");
+  });
+});
+
+describe("whyPackIsFull", () => {
+  const inPack = (cardId: string, slot: Slot | null = null) => ({
+    cardId,
+    kind: "item" as const,
+    face: "open" as const,
+    slot,
+  });
+  const arriving = { cardId: "miecz", kind: "item" as const, nature: null };
+
+  it("says nothing while there is room", () => {
+    expect(
+      whyPackIsFull({ ...arriving, eqMode: "classic" }, [inPack("helm")], {
+        carried: 1,
+        limit: 4,
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a full pack, naming the limit the seat actually has", () => {
+    // A Koń raises it past 5.4's four, and the sentence used to say "4" anyway
+    // while refusing at eight.
+    expect(
+      whyPackIsFull({ ...arriving, eqMode: "classic" }, [], { carried: 8, limit: 8 }),
+    ).toBe("Postać może nieść najwyżej 8 Przedmiotów (5.4). Odrzuć coś najpierw.");
+  });
+
+  /**
+   * The variant's whole claim: what is worn is not carried, so a full Plecak
+   * has nothing to say about a Hełm going on an empty head.
+   */
+  it("lets a wearable through a full pack in slotowy", () => {
+    expect(
+      whyPackIsFull({ cardId: "helm", kind: "item", nature: null, eqMode: "slots" }, [], {
+        carried: 4,
+        limit: 4,
+      }),
+    ).toBeNull();
+  });
+
+  it("still refuses one with nowhere to be worn", () => {
+    expect(
+      whyPackIsFull(
+        { cardId: "helm", kind: "item", nature: null, eqMode: "slots" },
+        [inPack("helm", "head")],
+        { carried: 4, limit: 4 },
+      ),
+    ).toContain("(5.4)");
   });
 });

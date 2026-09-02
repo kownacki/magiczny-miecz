@@ -7,11 +7,16 @@ import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engi
 import { barredFromFriends } from "@/lib/engine/status";
 import { storedStatuses } from "./turn";
 import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
-import { combatValueOf } from "@/lib/engine/cards";
 import { drawFrom } from "@/lib/engine/deck";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
-import { BASE_CARRY_LIMIT, carriedCount, carryLimit, mayHold } from "@/lib/engine/derive";
-import { CLASS_NAME, kindForCard, slotOnArrival } from "@/lib/engine/holdings";
+import { carriedCount, carryLimit, mayHold } from "@/lib/engine/derive";
+import {
+  CLASS_NAME,
+  kindForCard,
+  slotOnArrival,
+  whyNotCollectHere,
+  whyPackIsFull,
+} from "@/lib/engine/holdings";
 import { type Slot } from "@/lib/engine/slots";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
@@ -259,19 +264,18 @@ function refuseOverAFoe(snapshot: Snapshot, seatId: string, exempt?: string): vo
   const settled = state.phase === "field" ? (state.fought ?? []) : [];
   const onBoard = snapshot.fieldCards.filter((row) => row.field_id === seat?.field_id);
 
-  const standing = [...inTurn, ...onBoard.map((row) => ({ cardId: row.card_id }))].find(
-    (entry) => {
-      if (entry.cardId === exempt || settled.includes(entry.cardId)) return false;
-      const foe = EVENTS.find((one) => one.id === entry.cardId);
-      return foe !== undefined && combatValueOf(foe) !== null;
-    },
+  // The sentence is `whyNotCollectHere`'s, in the engine, because the browser
+  // says the same one before it draws a shop it knows is shut. Owing is asked
+  // separately below — `refuseWhileOwing` is silent outside a field frame and
+  // this is not — so nothing is owed as far as this call is concerned.
+  const why = whyNotCollectHere(
+    [...inTurn, ...onBoard.map((row) => ({ cardId: row.card_id }))].filter(
+      (entry) => entry.cardId !== exempt,
+    ),
+    settled,
+    0,
   );
-  if (!standing) return;
-
-  const foe = EVENTS.find((one) => one.id === standing.cardId);
-  // The letter is 12.1's own: it prints "a) Na Obszarze leżą Karty Wrogów" and
-  // "b) Jest to Obszar, na który ciągnięte są Karty", and this is a).
-  throw new Error(`Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1a).`);
+  if (why) throw new Error(why);
 }
 
 /**
@@ -290,8 +294,9 @@ function refuseOverAFoe(snapshot: Snapshot, seatId: string, exempt?: string): vo
  */
 function refuseWhileOwing(snapshot: Snapshot): void {
   const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field" || state.draw <= 0) return;
-  throw new Error("Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).");
+  if (state.phase !== "field") return;
+  const why = whyNotCollectHere([], [], state.draw);
+  if (why) throw new Error(why);
 }
 
 export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> {
@@ -466,11 +471,16 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
      * pack, and the variant's own claim is that wearing is not carrying.
      */
     const variant = eqModeOf(snapshot.game);
-    if (worn === null && carriedCount(mine, variant) >= carryLimit(mine, variant)) {
-      throw new Error(
-        `Postać może nieść najwyżej ${BASE_CARRY_LIMIT} Przedmioty (5.4). Odrzuć coś najpierw.`,
-      );
-    }
+    // The sentence and the three subtleties behind it are `whyPackIsFull`'s, so
+    // the shop greys its `kup` on exactly what this throws. It re-asks
+    // `slotOnArrival` rather than reading `worn` above, which is the same
+    // question and the one thing that must not be answered twice differently.
+    const full = whyPackIsFull(
+      { cardId, kind, eqMode: variant, nature: (taker?.nature ?? null) as Nature | null },
+      mine,
+      { carried: carriedCount(mine, variant), limit: carryLimit(mine, variant) },
+    );
+    if (full) throw new Error(full);
   }
 
   /**

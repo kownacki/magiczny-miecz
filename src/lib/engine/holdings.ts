@@ -2,7 +2,7 @@
 
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
-import { bonusOf, isMagicalItem } from "./cards";
+import { bonusOf, combatValueOf, isMagicalItem } from "./cards";
 import { ABILITIES } from "./abilities";
 import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
@@ -25,6 +25,47 @@ export type HoldingKind = Holding["kind"];
  * not add its Miecz to the holder, or beating a Cyklop would make you six
  * points stronger.
  */
+/**
+ * 12.1's two exceptions, in the words the refusal uses.
+ *
+ * "z wyjątkiem sytuacji, w której: a) Na Obszarze leżą Karty Wrogów (13.5.)
+ * lub b) Jest to Obszar, na który ciągnięte są Karty (13.4)." The letters are
+ * 12.1's own and so are the sentences.
+ *
+ * Here, in the engine, rather than inside the guards that throw them, because
+ * two surfaces need the same answer and only one of them can throw. The
+ * server's `refuseOverAFoe` and `refuseWhileOwing` raise these; the browser
+ * asks the same question before it draws a button, so a shop that cannot be
+ * used says why instead of looking broken. A second copy of the sentence in
+ * the interface is how the two come to disagree — and 12.1 is precisely the
+ * rule that has already been written twice and fired in the wrong half.
+ *
+ * Takes the Karty as one merged list on purpose. Which of the two places a
+ * Karta is filed in — a `field_cards` row, or the turn's own `drawn` — is
+ * nothing a player can see, and every bug in this rule has come from asking
+ * only one of them. The caller merges; this counts.
+ */
+export function whyNotCollectHere(
+  /** Everything lying on the Obszar, both lists together. */
+  lying: readonly { cardId: string }[],
+  /** Wrogowie already fought or fled this turn, who are no longer standing. */
+  settled: readonly string[],
+  /** Karty the Obszar still owes (13.4). */
+  owed: number,
+): string | null {
+  const standing = lying.find((one) => {
+    if (settled.includes(one.cardId)) return false;
+    const foe = EVENTS.find((card) => card.id === one.cardId);
+    return foe !== undefined && combatValueOf(foe) !== null;
+  });
+  if (standing) {
+    const foe = EVENTS.find((card) => card.id === standing.cardId);
+    return `Najpierw ${foe?.name ?? standing.cardId} — dopiero potem zbieranie (12.1a).`;
+  }
+  if (owed > 0) return "Najpierw wyciągnij Karty, które ten Obszar każe ciągnąć (12.1b).";
+  return null;
+}
+
 export function kindForCard(card: Pick<EventCard, "cardClass">): HoldingKind | null {
   switch (card.cardClass) {
     case "item":
@@ -449,4 +490,42 @@ export function slotsOnArrival(
     if (slot !== null) worn.push(slot);
     return slot;
   });
+}
+
+/**
+ * 5.4's limit, asked of one card about to arrive, in the words the take refuses with.
+ *
+ * Three things make this more than `carried >= 4`, and every one of them is a
+ * button that would otherwise be greyed over a purchase the server allows:
+ *
+ * - **The limit is not always four.** A Koń or a Tragarz raises it, which is
+ *   `carryLimit`'s business and not a constant's. The refusal used to name
+ *   `BASE_CARRY_LIMIT` outright, so a character with a Koń was told "najwyżej
+ *   4 Przedmioty" while being refused at eight.
+ * - **In slotowy, a worn thing is not carried.** A full Plecak must not stop a
+ *   Hełm reaching an empty head — that is the whole claim of the variant — so
+ *   the question is asked of *this* card, which may not be going into the pack
+ *   at all.
+ * - **Both surfaces need the same answer.** `takeCard` throws it and a shop
+ *   greys its `kup` on it, and a shelf that refuses what the command would sell
+ *   is worse than one that lets the server say no.
+ */
+export function whyPackIsFull(
+  arriving: {
+    cardId: string;
+    kind: HoldingKind;
+    eqMode: EqMode;
+    nature: Nature | null;
+  },
+  /** Everything this seat holds, for the places already taken. */
+  mine: readonly Holding[],
+  /** `carriedCount` and `carryLimit`, which live in `derive` and would be a cycle here. */
+  pack: { carried: number; limit: number },
+): string | null {
+  const worn = slotOnArrival({ ...arriving, worn: mine.map((one) => one.slot ?? null) });
+  if (worn !== null) return null;
+  if (pack.carried < pack.limit) return null;
+  return `Postać może nieść najwyżej ${pack.limit} ${
+    pack.limit === 1 ? "Przedmiot" : pack.limit < 5 ? "Przedmioty" : "Przedmiotów"
+  } (5.4). Odrzuć coś najpierw.`;
 }
