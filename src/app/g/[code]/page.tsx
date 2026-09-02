@@ -1149,13 +1149,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             setAskedAbout(seatId);
             setRightDrawer("gracze");
           }}
-          onInspect={(cardId) =>
-            setInspectingCard({
-              cardId,
-              name: CARD_NAMES.get(cardId) ?? cardId,
-              text: CARD_TEXTS.get(cardId),
-            })
-          }
           /* What the box has left of each Wyposażenie card (21.2), what this
              seat carries against 5.4, what it has to spend and what it could
              sell.

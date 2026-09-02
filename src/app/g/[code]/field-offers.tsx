@@ -8,8 +8,11 @@ import { offerText } from "@/lib/view/fieldText";
 import { cardName, plural } from "@/lib/engine/polish";
 import { drawsFromPool, startingPool } from "@/lib/engine/pools";
 import type { FieldId } from "@/lib/engine/board";
-import Image from "next/image";
-import { cardArtUrl, TILE_ART_HEIGHT, TILE_WIDTH } from "@/lib/view/cardImages";
+import { CardTile } from "./card-tile";
+import { tileFor } from "./table";
+import type { CardId } from "@/data/ids";
+import type { EqMode } from "@/lib/engine/slots";
+import type { Nature } from "@/data/types";
 
 /** What the three wells lay out, in the case the sentence needs. */
 const POOL_OF: Record<"life" | "sword" | "magic", string> = {
@@ -49,6 +52,8 @@ export interface Offer {
    * name read as two objects; the same picture in both says they are one.
    */
   cardId: string | null;
+  /** Conjured by the test shortcut — the wrench belongs on this tile too. */
+  granted?: boolean;
   /** Whether a purse is any part of it — see `touchesGold`. */
   gold: boolean;
   effect: Effect;
@@ -70,7 +75,7 @@ export interface Offer {
 export function offersHere(
   fieldId: FieldId,
   /** The Karty lying here, with what is left beside a well. */
-  fieldCards: readonly { cardId: string; pool?: number }[],
+  fieldCards: readonly { cardId: string; pool?: number; granted?: boolean }[],
 ): Offer[] {
   const script = fieldScriptFor(fieldId);
   const printed: Offer[] = script?.obowiazkowe
@@ -84,7 +89,7 @@ export function offersHere(
         effect: offer.effect,
       }));
 
-  const settled = fieldCards.flatMap(({ cardId, pool }) => {
+  const settled = fieldCards.flatMap(({ cardId, pool, granted }) => {
     const script = scriptFor(cardId);
     if (!script || !offersFromCard(cardId)) return [];
     /**
@@ -105,6 +110,7 @@ export function offersHere(
         key: cardName(cardId),
         label: beside === null ? cardName(cardId) : `${cardName(cardId)} — ${beside}`,
         cardId,
+        granted,
         gold: touchesGold(script.effect),
         /**
          * A Karta's own words are on the Karta, one hover away, and it is a
@@ -131,9 +137,14 @@ export function offersHere(
  */
 export function OfferList({
   offers,
+  eqMode,
+  nature,
   onOpen,
 }: {
   offers: readonly Offer[];
+  /** Passed through to the tile's hover, which says where a Przedmiot is worn. */
+  eqMode?: EqMode;
+  nature?: Nature | null;
   onOpen: (key: string) => void;
 }) {
   if (offers.length === 0) return null;
@@ -143,32 +154,35 @@ export function OfferList({
         Możesz tu odwiedzić
       </h3>
       <ul className="flex flex-col gap-1">
-        {offers.map((offer) => {
-          const art = offer.cardId ? cardArtUrl(offer.cardId) : null;
-          return (
+        {offers.map((offer) => (
             <li key={offer.key}>
               <button
                 onClick={() => onOpen(offer.key)}
                 className="flex w-full items-center gap-2 rounded border border-edge bg-night/40 p-2 text-left text-xs text-ink transition hover:border-ochre hover:bg-edge"
               >
-                {/* The Karta's own illustration at the size every other card
-                    in the app is drawn at (`TILE_WIDTH`), so the TARGOWISKO on
-                    this button and the TARGOWISKO on the shelf below are
-                    recognisably one object rather than two entries sharing a
-                    name. A thumbnail was the first try and it was the worst of
-                    both: too small to recognise, big enough to make the
-                    board-printed offers beside it look like a list with holes
-                    in it. */}
-                {art && (
-                  <Image
-                    src={art}
-                    alt=""
-                    width={TILE_WIDTH}
-                    height={TILE_ART_HEIGHT}
-                    unoptimized
-                    className="shrink-0 rounded-sm border border-edge object-cover"
-                    style={{ width: TILE_WIDTH, height: TILE_ART_HEIGHT }}
-                  />
+                {/* The Karta itself, drawn the way every card in this app is
+                    drawn — so the TARGOWISKO on this button and the TARGOWISKO
+                    on the shelf below are recognisably one object rather than
+                    two entries sharing a name.
+
+                    `CardTile` and not a bare picture, because the tile is more
+                    than the picture: the wrench that says a Karta was conjured,
+                    the strike, the badge, and the hover that opens the whole
+                    thing. A hand-rolled `<Image>` here was a second kind of
+                    tile that would have quietly stopped agreeing with the first
+                    the next time a mark was added to it.
+
+                    `inControl` because the row is the button — see the note on
+                    the prop. */}
+                {offer.cardId && (
+                  <span className="shrink-0">
+                    <CardTile
+                      card={tileFor({ cardId: offer.cardId as CardId, granted: offer.granted })}
+                      eqMode={eqMode}
+                      nature={nature}
+                      inControl
+                    />
+                  </span>
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{offer.label}</span>
@@ -190,8 +204,7 @@ export function OfferList({
                 </span>
               </button>
             </li>
-          );
-        })}
+        ))}
       </ul>
     </section>
   );

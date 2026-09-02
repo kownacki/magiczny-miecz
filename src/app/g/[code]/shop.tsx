@@ -7,7 +7,6 @@ import { cardName } from "@/lib/engine/polish";
 import { whyPackIsFull } from "@/lib/engine/holdings";
 import type { Holding } from "@/lib/engine/state";
 import type { Effect } from "@/lib/engine/cardScript";
-import type { CardId } from "@/data/ids";
 import { CardTile } from "./card-tile";
 import { TileRow } from "./tile-row";
 import { tileFor } from "./table";
@@ -49,7 +48,6 @@ export function Shop({
   busy,
   eqMode,
   nature,
-  onInspect,
   onAsk,
   onService,
 }: {
@@ -68,7 +66,6 @@ export function Shop({
   busy: boolean;
   eqMode?: EqMode;
   nature?: Nature | null;
-  onInspect: (cardId: CardId) => void;
   /** Spending is irreversible, so it is asked first — see `askToBuy`. */
   onAsk: (ask: Confirmation) => void;
   /** Absent on an Obszar being read about rather than stood on, where `blocked` already says so. */
@@ -112,7 +109,6 @@ export function Shop({
               dimmed={gone || poor}
               eqMode={eqMode}
               nature={nature}
-              onClick={cardId ? () => onInspect(cardId) : undefined}
             >
               {can ? (
                 <button

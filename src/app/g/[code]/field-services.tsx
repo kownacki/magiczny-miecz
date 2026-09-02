@@ -6,7 +6,6 @@ import { useState } from "react";
 import type { Effect } from "@/lib/engine/cardScript";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import { cardName } from "@/lib/engine/polish";
-import type { CardId } from "@/data/ids";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { Holding } from "@/lib/engine/state";
@@ -49,7 +48,6 @@ export interface OfferContext {
   blocked: string | null;
   eqMode?: EqMode;
   nature?: Nature | null;
-  onInspect: (cardId: CardId) => void;
   /** Raises the app's one "are you sure?" — spending is irreversible. */
   onAsk: (ask: Confirmation) => void;
   onSuggestion: OnSuggestion;
@@ -131,7 +129,6 @@ function ServiceEffect({
         busy={ctx.busy}
         eqMode={ctx.eqMode}
         nature={ctx.nature}
-        onInspect={ctx.onInspect}
         onAsk={ctx.onAsk}
         onService={ctx.onService}
       />

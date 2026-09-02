@@ -101,6 +101,7 @@ export function CardTile({
   children,
   eqMode = "classic",
   nature = null,
+  inControl = false,
 }: {
   card: TileCard;
   size?: "sm" | "md";
@@ -143,6 +144,26 @@ export function CardTile({
   /** Which variant the table plays, so the hover can say where a card must be. */
   eqMode?: EqMode;
   nature?: Nature | null;
+  /**
+   * This tile sits inside something else that is the control.
+   *
+   * A tile is normally its own button — that is how it is clicked and, more to
+   * the point, how it is *focused*, which is how the picture gets a hover at
+   * all. An offer's row is a button too, and a button inside a button is not
+   * something a browser will render: it closes the outer one where the inner
+   * begins, so the row falls apart and the half after the picture stops being
+   * clickable.
+   *
+   * Set here, the tile draws as a `<span>`. It keeps the hover — those are
+   * pointer handlers and they work on anything — and gives up being a control,
+   * which it was not: the whole row is.
+   *
+   * It also gives up its caption, for the same reason and not as a separate
+   * decision: a control that contains a tile has named the thing itself, and
+   * the offer row read „TARGOWISKO" twice, once under the picture and once
+   * beside it.
+   */
+  inControl?: boolean;
 }) {
   // The illustration, not the whole card. A card shrunk to tile size is a grey
   // smear with a four-pixel title; the picture is the thing a player actually
@@ -155,13 +176,17 @@ export function CardTile({
   // component draws both.
   const height = Math.round(width / (card.character ? CHARACTER_ART_RATIO : ART_RATIO));
   const { handlers, preview } = useCardPreview(card, false, eqMode, nature);
+  const Root = inControl ? "span" : "button";
 
   return (
     <figure className="flex flex-col items-center gap-1">
-      <button
-        type="button"
-        onClick={onClick}
-        onDoubleClick={onDoubleClick}
+      {/* A `<span>` where something around it is the control — see `inControl`.
+          `Root` rather than two copies of the tile, so a mark, a badge or a
+          strike-through cannot be added to one and forgotten on the other. */}
+      <Root
+        {...(inControl ? {} : { type: "button" as const })}
+        onClick={inControl ? undefined : onClick}
+        onDoubleClick={inControl ? undefined : onDoubleClick}
         /**
          * `aria-disabled`, not `disabled`.
          *
@@ -174,7 +199,7 @@ export function CardTile({
          * Screen readers are told the same thing either way. What changes is
          * that the pointer is now allowed to ask what the picture is.
          */
-        aria-disabled={onClick ? undefined : true}
+        aria-disabled={inControl || onClick ? undefined : true}
         draggable={draggable}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
@@ -244,15 +269,17 @@ export function CardTile({
             {badge}
           </span>
         )}
-      </button>
+      </Root>
       {preview}
-      <figcaption
-        style={{ width }}
-        className="truncate text-center text-[9px] leading-tight text-muted"
-        title={card.name}
-      >
-        {card.name}
-      </figcaption>
+      {!inControl && (
+        <figcaption
+          style={{ width }}
+          className="truncate text-center text-[9px] leading-tight text-muted"
+          title={card.name}
+        >
+          {card.name}
+        </figcaption>
+      )}
       {children}
     </figure>
   );

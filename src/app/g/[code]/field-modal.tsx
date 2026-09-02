@@ -182,7 +182,6 @@ export function FieldModal({
   standing = [],
   onPickSeat,
   asked = [],
-  onInspect,
   onClose,
   notice,
   phase,
@@ -326,7 +325,6 @@ export function FieldModal({
   onTakeGold?: (gold: number) => void;
   /** Cards whose take the server has not answered yet — see `asked` in the table. */
   asked?: readonly string[];
-  onInspect: (cardId: CardId) => void;
   onClose: () => void;
 }) {
   /**
@@ -405,7 +403,7 @@ export function FieldModal({
    */
   const offers = offersHere(
     fieldId,
-    cards.map((card) => ({ cardId: card.cardId, pool: card.pool })),
+    cards.map((card) => ({ cardId: card.cardId, pool: card.pool, granted: card.granted })),
   );
   const open = offers.find((offer) => offer.key === openOffer) ?? null;
   /** The Obszar's own words, minus the lines its offers have taken. */
@@ -445,7 +443,6 @@ export function FieldModal({
     blocked: shutBecause,
     eqMode,
     nature,
-    onInspect,
     onAsk: onAsk ?? (() => {}),
     onSuggestion: onSuggestion ?? (() => {}),
     onService,
@@ -727,7 +724,6 @@ export function FieldModal({
                     card={tileFor({ cardId: card.cardId, granted: card.granted })}
                     eqMode={eqMode}
                     nature={nature}
-                    onClick={() => onInspect(card.cardId)}
                   />
                 ))}
               </TileRow>
@@ -748,7 +744,7 @@ export function FieldModal({
            * Obszar *is*, and knowing the Osada has a Płatnerz is how you decide
            * to walk there. What 13.1 shuts is inside.
            */}
-          <OfferList offers={offers} onOpen={setOpenOffer} />
+          <OfferList offers={offers} eqMode={eqMode} nature={nature} onOpen={setOpenOffer} />
 
           <section>
             {/* "Leży tutaj" was the old heading and it said the wrong thing
@@ -837,7 +833,6 @@ export function FieldModal({
                                  on the same Obszar — so the card greys where it
                                  lies and moves once the server says it moved. */
                               dimmed={asked.includes(lying.id)}
-                              onClick={() => onInspect(lying.cardId)}
                             >
                               {takeable &&
                                 standingHere &&
