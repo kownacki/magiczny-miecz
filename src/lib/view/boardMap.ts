@@ -19,8 +19,24 @@ import { GORNY_KRAG, SRODKOWY_KRAG } from "@/lib/engine/rings";
  * sides against the ring arrays so the two cannot drift apart.
  */
 
-/** The drawing surface. Portrait, in the proportion of the printed board. */
-export const VIEW = { width: 1000, height: 1420 } as const;
+/**
+ * The drawing surface. Portrait, near the proportion of the printed board.
+ *
+ * A tenth wider than the board actually is, and on purpose. Every ring is a
+ * rectangle of cells and the top and bottom rows divide this width between
+ * them, so the number decides how much room a name has — and half the fields
+ * are called things like „Strażnik Magicznych Wrót", which `Label` answers by
+ * shrinking the type until the longest *word* fits. At the printed 1000 that
+ * floor was doing the work on a dozen cells at once, and now they carry their
+ * marks underneath as well.
+ *
+ * The height is untouched, which is what makes this cost nothing: the board is
+ * sized by whichever axis runs out first and on any laptop that is the height
+ * (see `table-layout.tsx`), so the extra width comes out of gutter that was
+ * empty anyway. Nothing is stretched — the cells are laid out from this, not
+ * scaled to it.
+ */
+export const VIEW = { width: 1100, height: 1420 } as const;
 
 export interface Cell {
   id: FieldId;

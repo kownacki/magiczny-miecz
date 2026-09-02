@@ -275,7 +275,14 @@ const PER_CHAR = 0.54;
 function Label({ cell, lying }: { cell: Cell; lying?: { cardId: CardId }[] }) {
   const inner = cell.w - 12;
   const longest = Math.max(...cell.name.split(" ").map((word) => word.length));
-  const size = Math.max(9, Math.min(19, inner / (longest * PER_CHAR)));
+  /**
+   * A tenth larger than the width alone asks for.
+   *
+   * The floor and the ceiling both: a name is read across a room from the
+   * player whose turn it is, and the cells got a tenth wider (`VIEW`) without
+   * the type following, which is a wider cell holding the same small words.
+   */
+  const size = Math.max(10, Math.min(21, (inner / (longest * PER_CHAR)) * 1.1));
   const perLine = Math.max(longest, Math.floor(inner / (size * PER_CHAR)));
   const lines = wrap(cell.name, perLine);
   const lineHeight = size * 1.12;
@@ -318,7 +325,7 @@ function Label({ cell, lying }: { cell: Cell; lying?: { cardId: CardId }[] }) {
   const back = Math.min(34, cell.w / 2.4) * (323 / 370);
   const backW = back / CARD_RATIO;
   const dealY = top + (lines.length - 1) * lineHeight + size * 0.4;
-  const dealSize = back * 0.62;
+  const dealSize = back * 0.68;
   const gap = back * 0.22;
   /**
    * „3×" beside the fan, because two backs and three backs are one glance apart
