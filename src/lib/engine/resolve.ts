@@ -3,6 +3,7 @@
 import { takesEverything } from "./losses";
 import { FIELD_SCRIPTS } from "./fieldScript";
 import type { Effect } from "./cardScript";
+import type { Nature } from "@/data/types";
 
 /**
  * An effect is *settled* when nothing about it is left for a person to say.
@@ -204,8 +205,20 @@ export function isSettled(effect: Effect): boolean {
  * `Decisions` travels in. The copy is taken here so that asking a question does
  * not consume the caller's answers.
  */
-export function pendingIn(effect: Effect, choices: readonly number[]): Effect | null {
-  return owedIn(effect, [...choices]);
+export function pendingIn(
+  effect: Effect,
+  choices: readonly number[],
+  /**
+   * The Natura of the character the card is being resolved for, when known.
+   *
+   * Narrows divergence one below. Everything else a `gdy` can test lives in a
+   * Snapshot the browser is never sent; a Natura is on the seat and on the
+   * screen, so the one condition that gates three of the Nieznajomi need not be
+   * a blind spot.
+   */
+  natura?: Nature | null,
+): Effect | null {
+  return owedIn(effect, [...choices], natura ?? null);
 }
 
 /**
@@ -248,13 +261,13 @@ export function nodeAt(effect: Effect, cursor: readonly number[]): Effect | null
   return at;
 }
 
-function owedIn(effect: Effect, queue: number[]): Effect | null {
+function owedIn(effect: Effect, queue: number[], natura: Nature | null = null): Effect | null {
   if (effect.op === "wybor") {
     const pick = queue.shift();
     const option = pick === undefined ? undefined : effect.options[pick];
     // Nothing picked yet, or a pick that names no option: the choice itself is
     // what is owed. Otherwise the branch already taken is where to look.
-    return option ? owedIn(option.effect, queue) : effect;
+    return option ? owedIn(option.effect, queue, natura) : effect;
   }
 
   // A destination the card names needs nobody. "dowolny Obszar w tym Kręgu" is
@@ -267,16 +280,35 @@ function owedIn(effect: Effect, queue: number[]): Effect | null {
   // out of its own order.
   if (effect.op === "po-kolei") {
     for (const step of effect.steps) {
-      const owed = owedIn(step, queue);
+      const owed = owedIn(step, queue, natura);
       if (owed) return owed;
     }
     return null;
   }
 
-  // Divergence one: the condition is the seat's, and the browser has no
-  // Snapshot to test it against. If either branch needs asking, the server says
-  // so when it gets there.
-  if (effect.op === "gdy") return null;
+  /**
+   * Divergence one, and it is narrower than it was.
+   *
+   * The condition is the seat's and the browser has no Snapshot — except for a
+   * Natura, which is on the seat row and already on the screen. Three
+   * Nieznajomi are a `gdy natura` wrapped round a six-way wish (the WRÓŻKA, the
+   * KOSZMAR), and with the branch untaken the sheet could not see the choice
+   * inside: it offered "Rozpatrz, co się da" and the six options only appeared
+   * after a round trip, on a card whose whole content is the choice.
+   *
+   * Descending also keeps the answer queue honest. `applyEffect` walks into the
+   * branch and spends a decision on the `wybor` there; stopping here spent
+   * none, so any card with something after a `gdy` counted its own answers
+   * differently on the two sides.
+   *
+   * Every other condition still stops here. If either branch needs asking, the
+   * server says so when it gets there.
+   */
+  if (effect.op === "gdy") {
+    if (effect.warunek.is !== "natura" || !natura) return null;
+    const branch = effect.warunek.jedna_z.includes(natura) ? effect.to : effect.inaczej;
+    return branch ? owedIn(branch, queue, natura) : null;
+  }
 
   // Divergence two: a die table is not a question — the app rolls it — so what
   // it lands on is asked about after the roll, from the server's answer.
@@ -288,7 +320,7 @@ function owedIn(effect: Effect, queue: number[]): Effect | null {
   // player could only ever leave for later.
   if (effect.op === "jak-pole") {
     const borrowed = FIELD_SCRIPTS[effect.fieldId]?.offers[0];
-    return borrowed ? owedIn(borrowed.effect, queue) : null;
+    return borrowed ? owedIn(borrowed.effect, queue, natura) : null;
   }
 
   /**

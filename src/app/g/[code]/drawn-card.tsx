@@ -12,6 +12,8 @@ import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { visitWhen } from "@/lib/engine/abilityText";
+import { mayWalkPast } from "@/lib/engine/kolejka";
+import type { Nature } from "@/data/types";
 import { WithRules } from "./rule-ref";
 import { isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -53,6 +55,7 @@ export function DrawnCard({
   ring,
   occupied = [],
   mySword,
+  nature,
   busy,
   onResolve,
   onFight,
@@ -87,6 +90,12 @@ export function DrawnCard({
    * przeciwnik", so the button cannot say how strong he is without it.
    */
   mySword: number;
+  /**
+   * The active character's Natura, for the three Nieznajomi whose whole content
+   * is behind a `gdy natura` — see `pendingIn`. Null while it is unknown, which
+   * only puts the sheet back where it was.
+   */
+  nature: Nature | null;
   busy: boolean;
   onResolve: (
     cardId: string,
@@ -177,7 +186,20 @@ export function DrawnCard({
 
   // What the card is still asking, walked down through the choices already
   // made. Null when there is nothing left to ask and the app can simply do it.
-  const asking = script ? pendingIn(script.effect, choices) : null;
+  const asking = script ? pendingIn(script.effect, choices, nature) : null;
+
+  /**
+   * Whether walking away is one of the answers.
+   *
+   * 13.5's line, and the same `mayWalkPast` the kolejka reads, so a Karta
+   * labelled „do wyboru" beside its own picture has a control to match. There
+   * was one before, but only while something was being asked — so a WRÓŻKA,
+   * whose question is hidden behind a `gdy`, had exactly one button and it was
+   * "Rozpatrz, co się da". A card the rules let you ignore should never be a
+   * card the app makes you press.
+   */
+  const skippable = mayWalkPast(known.id);
+  const perishes = visitWhen(known.id).includes("teraz albo wcale");
 
   return (
     <DrawSheet
@@ -422,14 +444,23 @@ export function DrawnCard({
         {/* 16.8 lets a card stay where it fell — but not a Wróg. Rule 11 is
             explicit that creatures present "muszą najpierw zostać pokonani ...
             lub należy im uciec", so a fight is fought or fled, never shelved.
-            16.8 is about what is left when a turn ends, not a way out of one. */}
-        {canAct && asking && (
+            16.8 is about what is left when a turn ends, not a way out of one.
+
+            Two reasons to offer it and they say different things. A Karta the
+            rules let you walk past (13.5) is *skipped* — that is an answer, and
+            for one that stays it costs nothing, which the wording says. A Karta
+            that is merely mid-question is *shelved*, and may be come back to. */}
+        {canAct && !foe && (skippable || asking) && (
           <button
             disabled={busy}
             onClick={() => onLeave(known.id)}
             className="self-start text-[11px] text-muted underline transition hover:text-ink"
           >
-            zostaw na później
+            {skippable
+              ? perishes
+                ? "Pomiń (13.5) — Karta przepadnie"
+                : "Pomiń (13.5) — wrócisz do niej w tej turze"
+              : "zostaw na później"}
           </button>
         )}
       </div>

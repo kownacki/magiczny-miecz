@@ -10,6 +10,7 @@ import { SpellHand, type HeldSpell } from "./spell-hand";
 import type { TileCard } from "./card-tile";
 import type { OnAction, Simulated } from "./turn-controls";
 import type { Effect } from "@/lib/engine/cardScript";
+import type { Nature } from "@/data/types";
 import type { FieldId } from "@/lib/engine/board";
 import type { SpellTiming } from "@/lib/engine/spells";
 import type { Fight, TurnMoveOption } from "@/lib/engine/turn";
@@ -61,6 +62,7 @@ export function DrawModal({
   ring,
   occupied,
   mySword,
+  nature,
   busy,
   onAction,
   onResolve,
@@ -144,6 +146,8 @@ export function DrawModal({
   occupied?: FieldId[];
   /** What the character fights with (1.5) — the Sobowtór's own strength. */
   mySword: number;
+  /** The active character's Natura — see `DrawnCard`. */
+  nature: Nature | null;
   busy: boolean;
   onAction: OnAction;
   onResolve: (
@@ -243,6 +247,7 @@ export function DrawModal({
       ring={ring}
       occupied={occupied}
       mySword={mySword}
+      nature={nature}
       busy={busy}
       onResolve={onResolve}
       onFight={onFight}

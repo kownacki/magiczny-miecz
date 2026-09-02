@@ -278,3 +278,35 @@ describe("nodeAt — the node a script frame's cursor stands on", () => {
     expect(nodeAt(card, [0, 0])).toBeNull();
   });
 });
+
+/**
+ * Divergence one, narrowed. Three Nieznajomi are a six-way wish behind a
+ * `gdy natura`, and with the branch untaken the sheet saw no question at all.
+ */
+describe("a condition the browser can test for itself", () => {
+  const wrozka = SCRIPTS["wrozka"]!.effect;
+
+  it("finds the wish inside a Natura the reader knows", () => {
+    expect(pendingIn(wrozka, [], "good")?.op).toBe("wybor");
+  });
+
+  it("finds nothing for a character the card is not for", () => {
+    // "Pierwszej Dobrej Postaci" — a Zła Postać is asked nothing, and there is
+    // no `inaczej` branch to walk into.
+    expect(pendingIn(wrozka, [], "evil")).toBeNull();
+  });
+
+  it("still stops at a `gdy` it cannot answer", () => {
+    // The Złodziej tests the purse, which is a Snapshot the browser never sees.
+    expect(pendingIn(SCRIPTS["zlodziej-dobroczynca"]!.effect, [], "good")).toBeNull();
+  });
+
+  it("stops where it always did when no Natura is known", () => {
+    expect(pendingIn(wrozka, [])).toBeNull();
+  });
+
+  /** The pick is spent inside the branch, the way the server spends it. */
+  it("walks past a choice already made", () => {
+    expect(pendingIn(wrozka, [0], "good")).toBeNull();
+  });
+});
