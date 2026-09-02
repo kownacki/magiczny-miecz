@@ -64,7 +64,7 @@ export function SurfaceHead({
   return (
     <header
       onClick={onExpand}
-      className={`shrink-0 border-b border-edge px-3 py-1.5 ${
+      className={`shrink-0 border-b border-edge px-3 ${
         onExpand ? "cursor-pointer transition hover:bg-panel/40" : ""
       }`}
     >
@@ -72,8 +72,18 @@ export function SurfaceHead({
           has none, so the browser falls back to the bottom edge of the button
           box — which sat the glyphs a few pixels above the words they share the
           row with. The middle is the one thing a glyph and a word both have. */}
-      <div className="flex items-center justify-between gap-3">
-        <h2 className={`shrink-0 text-[11px] uppercase tracking-widest ${tone}`}>{title}</h2>
+      {/**
+       * A fixed 32, and the border is the 33rd pixel.
+       *
+       * It was `py-1.5` around whatever the title happened to be, so the bar
+       * was as tall as its tallest word — which is fine until something else
+       * goes in it. The Obszar's name carries the square's marks beside it now,
+       * and a strip that grows by half a pixel when a Karta settles somewhere
+       * is a strip that moves for reasons nobody can see. Height first, and
+       * what goes in it fits.
+       */}
+      <div className="flex h-8 items-center justify-between gap-3">
+        <h2 className={`shrink-0 text-[13px] uppercase tracking-widest ${tone}`}>{title}</h2>
         {aside}
         {/* Their own clicks stop here. The bar restores the surface and the
             buttons on it do their own thing; without this, `zamknij` on a
@@ -85,7 +95,10 @@ export function SurfaceHead({
           {controls}
         </div>
       </div>
-      {children}
+      {/* Below the fixed row, and carrying the padding the header gave up: a
+          search box or a rank of shelves is the surface's own content and may
+          be any height it likes. */}
+      {children && <div className="pb-1.5">{children}</div>}
     </header>
   );
 }

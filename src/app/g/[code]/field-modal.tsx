@@ -584,20 +584,19 @@ export function FieldModal({
       side="left"
       width="max-w-[var(--shelf-w)]"
       title={
-        <span className="flex items-baseline gap-2">
+        <span className="flex items-center gap-2">
           <span className="min-w-0 truncate">{field.name}</span>
           {/**
            * The same row the map draws under this square, from the same
            * `marksFor`: what is here, said the same way in both places, so a
            * player who has learnt the map has learnt this.
            *
-           * 15 is the largest the bar takes for nothing. Measured rather than
-           * guessed — the header is a `text-lg` title on `py-1.5`, so its line
-           * box has 15px of slack over the type and 16 starts pushing the whole
-           * strip down half a pixel at a time.
+           * Sized to the bar rather than the bar to them: `SurfaceHead` is a
+           * fixed 32 now, so 20 sits inside it with room either side and
+           * nothing about this row can move the strip.
            */}
           <span className="shrink-0 text-muted/80">
-            <FieldMarks marks={marksFor(fieldId, cards)} draw={dealtOn(fieldId)} size={15} />
+            <FieldMarks marks={marksFor(fieldId, cards)} draw={dealtOn(fieldId)} size={20} />
           </span>
         </span>
       }

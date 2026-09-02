@@ -2015,12 +2015,51 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               eliminated: seat.eliminated,
             }))}
             activeSeatIndex={game.active_seat}
-            cardsOnFields={fieldCards.reduce<
-              Partial<Record<FieldId, { id: string; cardId: CardId }[]>>
-            >((byField, card) => {
-              (byField[card.fieldId] ??= []).push({ id: card.id, cardId: card.cardId });
-              return byField;
-            }, {})}
+            /**
+             * What is lying on each Obszar — from both places a Karta can be.
+             *
+             * Arriving lifts every `field_cards` row on a square into the
+             * turn's own frame (`liftFieldCards`) and the end of the turn
+             * writes back whatever nobody took, so for the whole turn somebody
+             * is standing there the square looks empty to anything that asks
+             * the table. This asked the table. The map dropped the picture of
+             * what was lying there and, now that it draws them, the square's
+             * marks with it — a TARGOWISKO's sakwa vanishing off the Osada for
+             * exactly as long as somebody is shopping at it.
+             *
+             * The Obszar's own window merges the same two lists and says so at
+             * length; this is the fifth thing to need it. See `offerOn`.
+             */
+            cardsOnFields={[
+              ...fieldCards.map((card) => ({
+                fieldId: card.fieldId,
+                id: card.id,
+                cardId: card.cardId,
+              })),
+              ...(active && onField
+                ? onField.drawn
+                    .filter(
+                      (card) =>
+                        !isSpent(
+                          card,
+                          [...(onField.resolved ?? []), ...(onField.fought ?? [])],
+                          onField.beaten ?? [],
+                        ),
+                    )
+                    .map((card, at) => ({
+                      fieldId: asFieldId(active.field_id),
+                      // No row to name — the turn is holding it. See `viaTurn`.
+                      id: `tura-${at}-${card.cardId}`,
+                      cardId: card.cardId as CardId,
+                    }))
+                : []),
+            ].reduce<Partial<Record<FieldId, { id: string; cardId: CardId }[]>>>(
+              (byField, card) => {
+                if (card.fieldId) (byField[card.fieldId] ??= []).push(card);
+                return byField;
+              },
+              {},
+            )}
             highlight={
               turnState.phase === "move"
                 ? turnState.options.map((option) => option.fieldId)
