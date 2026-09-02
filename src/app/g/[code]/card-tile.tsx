@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ART_BORDER, PICKABLE } from "./pickable";
+import { ART_BORDER, ASKABLE, PICKABLE } from "./pickable";
 import { WithRules } from "./rule-ref";
 import {
   ART_RATIO,
@@ -212,7 +212,18 @@ export function CardTile({
         // repeating the first of those cannot be worth covering the other two.
         style={{ width, height }}
         className={`relative overflow-hidden rounded border ${ART_BORDER} bg-raised transition ${
-          draggable ? "cursor-grab active:cursor-grabbing" : onClick ? "cursor-pointer" : "cursor-default"
+          /* Draggable, clickable, or readable — see `ASKABLE`. The last was
+             `cursor-default`, which is the page's own arrow: it said nothing
+             happens here, over a picture that opens the whole Karta the moment
+             you point at it. Five rows draw tiles this way — a Postać's
+             starting kit inside a preview, the Obszar's reveal, an offer, the
+             kolejka, a shop's stock — and all five were denying the one thing
+             they do. */
+          draggable
+            ? "cursor-grab active:cursor-grabbing"
+            : onClick
+              ? "cursor-pointer"
+              : ASKABLE
         } ${PICKABLE} ${dimmed ? "opacity-45" : ""}`}
       >
         {src ? (

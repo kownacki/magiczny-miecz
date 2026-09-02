@@ -23,7 +23,7 @@ import type { Character } from "@/data/types";
 import { STONE_CARD, figureUrl } from "@/lib/view/cardImages";
 import { characterKind } from "@/lib/engine/polish";
 import { useCardPreview } from "./card-preview";
-import { ART_BORDER, PICKABLE } from "./pickable";
+import { ART_BORDER, ASKABLE, PICKABLE } from "./pickable";
 import type { TileCard } from "./card-tile";
 
 const CHARACTERS = charactersData as Character[];
@@ -123,9 +123,16 @@ export function SeatFigure({
   const box = (
     <span
       style={{ width, height, ...(colour ? { borderColor: colour } : {}) }}
+      /* What the pointer does here, said by the pointer. A figure that opens
+         the roster is a control; one that only opens the Karta behind it is
+         something to read (`ASKABLE`); one that is neither — a seat with
+         nobody in it — keeps the page's own arrow. The Obszar's shelf had no
+         cursor at all on a square that opens a drawer. */
       className={`relative block overflow-hidden rounded border ${
         colour ? "" : ART_BORDER
-      } bg-panel ${onClick ? PICKABLE : ""} ${dimmed ? "opacity-55" : ""}`}
+      } bg-panel ${onClick ? `cursor-pointer ${PICKABLE}` : lookup ? ASKABLE : ""} ${
+        dimmed ? "opacity-55" : ""
+      }`}
     >
       {src ? (
         <Image

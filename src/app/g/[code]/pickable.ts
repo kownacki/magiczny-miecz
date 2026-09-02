@@ -46,3 +46,23 @@ export const ART_BORDER = "border-ochre/60";
  * instead leaves the border to answer the pointer and nothing else, which is
  * what it does everywhere else in the app.
  */
+
+/**
+ * The cursor for a square you may *ask about* but not act on.
+ *
+ * The other half of `PICKABLE`, and the pair is the whole vocabulary: gold says
+ * you can reach this, and the pointer says what reaching it does. A tile that
+ * opens the Karta on hover and does nothing on click is not disabled and is not
+ * a button — it is a thing to read — and `cursor-default` says the opposite of
+ * that, because an arrow is what the page says about the page.
+ *
+ * `?` is already the app's word for it: a rule number, a Natura line, a name in
+ * the Księga, an effect mark beside a seat. Every one of those is text you can
+ * point at and learn something from, and an art tile with a preview behind it is
+ * the same offer made with a picture.
+ *
+ * Not for a square that is genuinely inert. A `disabled` button dispatches no
+ * mouse event at all — `item-slot.tsx` has the note, learnt the hard way — so a
+ * disabled slot has no hover to explain and keeps the arrow.
+ */
+export const ASKABLE = "cursor-help";
