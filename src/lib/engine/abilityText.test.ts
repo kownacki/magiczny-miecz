@@ -189,7 +189,7 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
     // „Bez względu na to, czy skorzystasz z propozycji… odłóż jego Kartę."
     expect(staysAs("kuglarz")).toBe("jednorazowa — potem wraca na stos");
     // Whom it waits for is the requirement line's, on its own row underneath.
-    expect(staysAs("wrozka")).toBe("czeka tu na pierwszą Postać");
+    expect(staysAs("wrozka")).toBe("czeka tu na pierwszą Postać — potem wraca na stos");
     // „Cudotwórca będzie mieszkał na tym Obszarze do końca rozgrywki."
     expect(staysAs("cudotworca")).toBe("zostaje na Obszarze do końca gry");
     // „połóż przy nim 4 punkty Życia… Po wykorzystaniu 4 punktów, Drzewo usycha."
@@ -232,7 +232,7 @@ describe("what a Karta asks of the character in front of it", () => {
   /** Said once: the disposition drops out of `special` where `staysAs` covers it. */
   it("does not print the disposition twice on a Nieznajomy", () => {
     expect(itemProfile("wrozka").special.join(" ")).not.toContain("czeka tu");
-    expect(itemProfile("wrozka").visit).toBe("czeka tu na pierwszą Postać");
+    expect(itemProfile("wrozka").visit).toBe("czeka tu na pierwszą Postać — potem wraca na stos");
   });
 
   it("still reads 5.3 off a Przedmiot", () => {
