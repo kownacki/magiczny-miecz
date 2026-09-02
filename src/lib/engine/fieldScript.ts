@@ -997,6 +997,94 @@ export function tradesForGold(effect: Effect): boolean {
   }
 }
 
+/**
+ * Whether this offer puts a die in your hand.
+ *
+ * Unlike the sakwa, a compulsory table counts — the Karczma is exactly the
+ * square a player wants warning about, and „MUSISZ RZUCIĆ KOSTKĄ" is a warning
+ * rather than an exclusion. So the caller asks this of the field's script
+ * directly rather than through `offersHere`, which drops the compulsory ones.
+ *
+ * Walked all the way down: a die inside a `wybor` or behind a `gdy` is still a
+ * die, and the Studnia Wieczności hides one behind „Jeżeli jesteś Dobry".
+ */
+export function rollsHere(effect: Effect): boolean {
+  switch (effect.op) {
+    case "rzut":
+    case "rzut-za-kazdego":
+      return true;
+    case "po-kolei":
+      return effect.steps.some(rollsHere);
+    case "wybor":
+      return effect.options.some((one) => rollsHere(one.effect));
+    case "gdy":
+      return rollsHere(effect.to) || (effect.inaczej ? rollsHere(effect.inaczej) : false);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Whether this offer puts you somewhere else.
+ *
+ * The board's own two ways over a boundary are not effects at all — 11.2's
+ * Przeprawa is a toll on a river and 11.3-11.6's crossings are the Trzęsawiska
+ * and the Lodowy Las — so the caller adds those; this is the third way, a Karta
+ * or a desk whose instruction relocates you. The TAJEMNE PRZEJŚCIE is the one
+ * that matters: a Miejsce that settles on a square and is a door from then on.
+ */
+export function movesYou(effect: Effect): boolean {
+  switch (effect.op) {
+    case "przenies":
+      return true;
+    case "po-kolei":
+      return effect.steps.some(movesYou);
+    case "wybor":
+      return effect.options.some((one) => movesYou(one.effect));
+    case "rzut":
+      return Object.values(effect.faces).some(movesYou);
+    case "gdy":
+      return movesYou(effect.to) || (effect.inaczej ? movesYou(effect.inaczej) : false);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Whether this offer changes what your Postać *is*, for nothing.
+ *
+ * Miecz, Magia, Życie, a Zaklęcie, a Natura — the things the Karta Postaci
+ * tracks — given or taken by the square itself rather than sold to you. The
+ * price is what separates this from the sakwa: the Osada's Medyk charges and
+ * the CUDOTWÓRCA does not, and a mark that covered both would say nothing.
+ *
+ * Not walked into a die table. A face that grants a punkt Miecza is a thing
+ * that may happen to you, not a thing on offer, and the die already has its own
+ * mark saying so — a star over every table on the board would mark two thirds
+ * of the map and mean nothing anywhere.
+ */
+export function changesYou(effect: Effect): boolean {
+  switch (effect.op) {
+    case "punkty":
+    case "zamien-punkty":
+    case "natura":
+    case "ruch-dodatkowy":
+    case "uwolnij":
+      return true;
+    case "uzdrow":
+    case "zaklecie":
+      return (effect.cena ?? 0) === 0;
+    case "po-kolei":
+      return effect.steps.some(changesYou);
+    case "wybor":
+      return effect.options.some((one) => changesYou(one.effect));
+    case "gdy":
+      return changesYou(effect.to) || (effect.inaczej ? changesYou(effect.inaczej) : false);
+    default:
+      return false;
+  }
+}
+
 export function trades(effect: Effect): boolean {
   if (effect.op === "kup" || effect.op === "sprzedaj" || effect.op === "uzdrow") return true;
   if (effect.op === "po-kolei") return effect.steps.some(trades);

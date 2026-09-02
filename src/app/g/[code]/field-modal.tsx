@@ -3,6 +3,8 @@
 import { Fragment, useState } from "react";
 
 import { fieldTextBesidesOffers, fieldWithText } from "@/lib/view/fieldText";
+import { dealtOn, marksFor } from "@/lib/view/fieldMarks";
+import { FieldMarks } from "./field-marks";
 import { CardTile } from "./card-tile";
 import { TileRow } from "./tile-row";
 import { tileFor } from "./table";
@@ -581,7 +583,17 @@ export function FieldModal({
     <Drawer
       side="left"
       width="max-w-[var(--shelf-w)]"
-      title={field.name}
+      title={
+        <span className="flex items-baseline gap-2">
+          <span className="min-w-0 truncate">{field.name}</span>
+          {/* The same row the map draws under this square, from the same
+              `marksFor`: what is here, said the same way in both places, so a
+              player who has learnt the map has learnt this. */}
+          <span className="shrink-0 text-muted/80">
+            <FieldMarks marks={marksFor(fieldId, cards)} draw={dealtOn(fieldId)} size={13} />
+          </span>
+        </span>
+      }
       onClose={onClose}
       /**
        * The way back, in a strip of its own under the Obszar's name.

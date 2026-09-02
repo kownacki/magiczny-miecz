@@ -6,9 +6,7 @@ import { cardArtUrl } from "@/lib/view/cardImages";
 
 import { useState } from "react";
 import { BRIDGE_LINKS, CELLS, CELL_BY_ID, VIEW, dotPositions, type Cell, seatColour } from "@/lib/view/boardMap";
-import { FIELDS } from "@/lib/engine/board";
-import { SLOT_ICON } from "@/lib/view/slotIcons";
-import { offersHere } from "./field-offers";
+import { MARK_ICON, dealtOn, marksFor } from "@/lib/view/fieldMarks";
 import { CARD_RATIO } from "@/lib/view/cardImages";
 
 export interface MapSeat {
@@ -303,46 +301,38 @@ function Label({ cell, lying }: { cell: Cell; lying?: { cardId: CardId }[] }) {
    * player dots and the bottom-right to the loot, and this is a caption on the
    * square's name.
    */
-  const draw = FIELDS.get(cell.id)?.draw ?? 0;
   /**
-   * Whether anybody on this square deals in gold — see `tradesForGold`.
+   * What this square is, before anybody walks onto it.
    *
-   * Through `offersHere` rather than the field's script directly, because a
-   * shop is as often a Karta that settled here (21.1) as a desk the board
-   * printed, and because that is where „MUSISZ" is already filtered out: the
-   * Karczma can take a coin off you and is not a place you go shopping.
+   * Somebody to trade with, a way across, a die, a boon, and the count of Karty
+   * it deals — the five things worth knowing while you are still deciding where
+   * to move, which is the whole point of a map. `marksFor` decides which of
+   * them a square earns, and the Obszar's own drawer asks the same function, so
+   * the two cannot come to disagree about what a place is.
+   *
+   * The order is `marksFor`'s and is deliberate: a row of four has to read the
+   * same way every time or it stops being scannable.
    */
-  const trades = offersHere(cell.id, lying ?? []).some((offer) => offer.trade);
+  const marks = marksFor(cell.id, lying ?? []);
+  const draw = dealtOn(cell.id);
   const back = Math.min(34, cell.w / 2.4) * (323 / 370);
   const backW = back / CARD_RATIO;
   const dealY = top + (lines.length - 1) * lineHeight + size * 0.4;
-  /**
-   * The count as a numeral as well as as a fan.
-   *
-   * Two backs and three backs are one glance apart at this size and one of
-   * them is a whole extra Karta, so the picture alone asks the reader to count
-   * overlapping rectangles four pixels wide. The numeral says it outright and
-   * the fan says what kind of thing is being counted; neither does the other's
-   * job.
-   *
-   * Measured with `Label`'s own `PER_CHAR`, for the same reason it exists: the
-   * group has to be centred on the cell, so its width has to be known before
-   * it is drawn, and this only has to stay inside a box rather than typeset.
-   */
   const dealSize = back * 0.62;
+  const gap = back * 0.22;
   /**
-   * „, 3×" where both are here, „3×" where only the deal is.
-   *
-   * The comma rides on the tally rather than being drawn as a third thing,
-   * which is what it is: one line reading „[sakwa], 3× [karty]" — there is a
-   * merchant here, and the square deals three.
+   * „3×" beside the fan, because two backs and three backs are one glance apart
+   * at this size and one of them is a whole extra Karta. Measured with
+   * `Label`'s own `PER_CHAR`: the row is centred on the cell, so its width has
+   * to be known before it is drawn.
    */
-  const tally = draw > 0 ? `${trades ? ", " : ""}${draw}×` : "";
+  const tally = draw > 0 ? `${draw}×` : "";
   const tallyW = tally.length * dealSize * PER_CHAR;
-  const fanW = draw > 0 ? (backW * (draw + 1)) / 2 + backW * 0.3 : 0;
-  const purseW = trades ? back : 0;
-  const dealX = cell.cx - (purseW + tallyW + fanW) / 2;
-  const fanX = dealX + purseW + tallyW + backW * 0.3;
+  const fanW = draw > 0 ? (backW * (draw + 1)) / 2 + tallyW + gap : 0;
+  const marksW = marks.length * back + Math.max(0, marks.length - 1) * gap;
+  const rowW = marksW + (marks.length > 0 && draw > 0 ? gap : 0) + fanW;
+  const rowX = cell.cx - rowW / 2;
+  const fanX = rowX + marksW + (marks.length > 0 ? gap : 0);
 
   return (
     <g style={{ pointerEvents: "none" }}>
@@ -354,41 +344,45 @@ function Label({ cell, lying }: { cell: Cell; lying?: { cardId: CardId }[] }) {
         ))}
       </text>
       {/**
-        * The sakwa, drawn as a mask so it takes a colour.
+        * Each mark, drawn as an SVG mask so it takes a colour.
         *
-        * The file is a black silhouette on nothing — `card-mark.tsx` uses it
-        * the same way through CSS, and on a dark cell an `<image>` of it would
+        * The files are black silhouettes on nothing — `card-mark.tsx` uses the
+        * same ones through CSS — and on a dark cell an `<image>` of one would
         * be a black shape on a nearly black square. `mask-type: alpha` is what
         * makes the *shape* the mask rather than its brightness, which for an
         * all-black drawing would mask everything away.
         */}
-      {trades && (
-        <>
-          <mask
-            id={`sakwa-${cell.id}`}
-            maskUnits="userSpaceOnUse"
-            x={dealX}
-            y={dealY}
-            width={back}
-            height={back}
-            style={{ maskType: "alpha" }}
-          >
-            <image href={SLOT_ICON.pouch} x={dealX} y={dealY} width={back} height={back} />
-          </mask>
-          <rect
-            x={dealX}
-            y={dealY}
-            width={back}
-            height={back}
-            fill="#d9a441"
-            mask={`url(#sakwa-${cell.id})`}
-          />
-        </>
-      )}
+      {marks.map((mark, at) => {
+        const x = rowX + at * (back + gap);
+        const id = `mark-${cell.id}-${mark}`;
+        return (
+          <g key={mark}>
+            <mask
+              id={id}
+              maskUnits="userSpaceOnUse"
+              x={x}
+              y={dealY}
+              width={back}
+              height={back}
+              style={{ maskType: "alpha" }}
+            >
+              <image href={MARK_ICON[mark]} x={x} y={dealY} width={back} height={back} />
+            </mask>
+            <rect
+              x={x}
+              y={dealY}
+              width={back}
+              height={back}
+              fill="#8e97b4"
+              mask={`url(#${id})`}
+            />
+          </g>
+        );
+      })}
       {draw > 0 && (
         <>
           <text
-            x={dealX + purseW}
+            x={fanX}
             y={dealY + back * 0.74}
             fontSize={dealSize}
             fill="#7f8aa8"
@@ -402,7 +396,7 @@ function Label({ cell, lying }: { cell: Cell; lying?: { cardId: CardId }[] }) {
               href="/cards/back-zdarzenie.jpg"
               /* Overlapped by half: at four Karty the fan is two and a half
                  cards wide, which fits the narrowest cell on the board. */
-              x={fanX + (at * backW) / 2}
+              x={fanX + tallyW + gap + (at * backW) / 2}
               y={dealY}
               width={backW}
               height={back}

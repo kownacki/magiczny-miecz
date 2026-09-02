@@ -1,7 +1,9 @@
-# Znaczniki na kartach
+# Znaczniki
 
-Dwa oznaczenia, które mogą pojawić się na rogu obrazka karty: `trofeum.svg`
-(pokonany Wróg, 1.4) i `granted.svg` (karta z trybu testowego).
+Dwa oznaczenia na rogu obrazka karty — `trofeum.svg` (pokonany Wróg, 1.4)
+i `granted.svg` (karta z trybu testowego) — oraz cztery znaczniki Obszaru,
+rysowane pod jego nazwą na mapie i obok niej w szufladzie: co ten Obszar
+oferuje, zanim się na niego wejdzie (`src/lib/view/fieldMarks.ts`).
 
 Ten sam zestaw i ta sama technika co ikony pustych miejsc w `public/slots/`:
 sylwetki z [game-icons.net](https://game-icons.net), na licencji
@@ -13,6 +15,16 @@ w czym stoi. Ochra dla trofeum, czerwień dla znacznika testowego.
 | --- | --- | --- |
 | `granted.svg` | Spanner | Lorc |
 | `trofeum.svg` | Trophy | Lorc |
+| `sakwa.svg` | Swap bag | Lorc |
+| `przeprawa.svg` | Sailboat | Delapouite |
+| `kostka.svg` | Perspective dice six faces random | Delapouite |
+| `gwiazda.svg` | Star swirl | Lorc |
+
+`sakwa.svg` to ta sama sylwetka co `slots/sakwa.svg` i to samo pobranie —
+skopiowana, a nie zaimportowana, bo mówi tu co innego: tam jest to *miejsce*
+na ciele Postaci, tutaj *kupiec stojący na Obszarze*. Jeden plik dla dwóch
+znaczeń byłby oszczędnością, która wiąże ze sobą dwie rzeczy mogące się
+rozejść.
 
 Emoji tego nie potrafi — niesie własne kolory — i to było powodem przejścia na
 maski. Rysowanie tych dwóch ręcznie też nie: znak, który jest czytelny przy 48
