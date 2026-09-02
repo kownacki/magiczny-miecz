@@ -67,14 +67,11 @@ describe("addenda", () => {
   });
 
   /**
-   * The two halves of one line, and they have to stay a pair: 12.1 alone reads
-   * as making a compulsory Karta optional, 15.2 alone reads as sequencing a
-   * shop. Each is the other's answer.
+   * 15.2's half of the compulsory/optional line. 12.1's half is 12.1c, which
+   * gates rather than explains — with an unresolved compulsory Karta blocking
+   * everything, nothing more needs saying about whether it may be declined.
    */
-  it("draws the compulsory/optional line from both sides", () => {
-    const twelve = withAddenda("12.1", "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych Kart.");
-    expect(twelve.filter((s) => s.added)[0].text).toContain("chwili, a nie wyboru");
-
+  it("frees a Karta that only offers from 15.2's order", () => {
     const fifteen = withAddenda("15.2", "Konieczne jest przy tym zachowanie kolejności zgodnej z numeracją Kart (numer znajduje się u góry każdej Karty) - Karta o najniższym numerze rozpatrywana jest jako pierwsza.");
     expect(fifteen.filter((s) => s.added)[0].text).toContain("jedynie coś oferują");
   });

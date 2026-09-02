@@ -135,12 +135,11 @@ to put in a queue.
 
 So the line is **compulsory against optional**, not one class against another —
 and the book never draws it, because 15.2 was written as though every Karta
-were an event and 12.1 as though none were compulsory. Four `addenda.ts` entries draw it, from both sides:
+were an event and 12.1 as though none were compulsory. Three `addenda.ts` entries draw it, from both sides:
 
 | rule | what it adds | why |
 | --- | --- | --- |
 | **12.1** | „lub Miejsce (16.7)" | no rule said when a Miejsce may be used at all |
-| **12.1** | „Swoboda ta dotyczy chwili, a nie wyboru…" | „może odwiedzić" otherwise makes the LABIRYNT and the DIABLICA optional |
 | **12.1** | „c) …Karty, do których instrukcji Postać musi się zastosować" | a) and b) are the same idea twice; the third case is unwritten |
 | **15.2** | „Kolejność ta wiąże Karty, których instrukcję trzeba wykonać…" | otherwise a shop has to wait its numeral |
 

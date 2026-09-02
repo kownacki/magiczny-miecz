@@ -72,19 +72,6 @@ export const ADDENDA: readonly Addendum[] = [
       "skorzystać, a nie CZY trzeba.",
   },
   {
-    rule: "12.1",
-    after: "lub rozpatrzeć treść wyciągniętych Kart.",
-    text:
-      " Swoboda ta dotyczy chwili, a nie wyboru: Kartę, której instrukcja każe " +
-      "(16.5, 16.7), trzeba rozpatrzyć przed końcem tury.",
-    because:
-      "12.1 mówi „może odwiedzić”, więc czyta się jak zgoda na to, żeby nie " +
-      "odwiedzać wcale — a UROCZA DIABLICA i LABIRYNT zostają na Obszarze i " +
-      "każą („będziesz musiał”, „Każdy, kto tu trafi”). Bez tego zdania " +
-      "wychodzi, że 12.1 znosi ich przymus, czego nie robi: daje wolność " +
-      "chwili, nie wyboru. Druga połowa tej samej granicy stoi przy 15.2.",
-  },
-  {
     rule: "15.2",
     after: "Karta o najniższym numerze rozpatrywana jest jako pierwsza.",
     text:
