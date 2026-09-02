@@ -27,7 +27,15 @@ function chunk(type, body) {
   return Buffer.concat([head, typed, crc]);
 }
 
-/** `comps` is 1 for greyscale or 3 for RGB; anything else is not produced by these scans. */
+/**
+ * `comps` is 1 for greyscale, 3 for RGB or 4 for RGBA.
+ *
+ * The scans themselves are all RGB — there is no transparency anywhere in the
+ * box. The fourth channel is here because the parchment scraps are cut *out* of
+ * the painting along a torn contour, and a torn edge on an opaque rectangle is
+ * just a picture of a torn edge with the neighbouring field's artwork still
+ * attached to it.
+ */
 export function encodePng({ width, height, comps, data }) {
   const stride = width * comps;
   const raw = Buffer.alloc((stride + 1) * height);
@@ -39,7 +47,8 @@ export function encodePng({ width, height, comps, data }) {
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
   ihdr[8] = 8;
-  ihdr[9] = comps === 3 ? 2 : 0;
+  ihdr[9] = { 1: 0, 3: 2, 4: 6 }[comps];
+  if (ihdr[9] === undefined) throw new Error(`cannot encode ${comps} components`);
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk("IHDR", ihdr),

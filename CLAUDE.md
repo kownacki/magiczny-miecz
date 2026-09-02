@@ -305,6 +305,42 @@ that other title across; Times New Roman condensed to the measured 0.92,
 scaled by cap height and placed on the printed baseline. Needs Pillow, like
 `make-random-card.py` and for the same reason.
 
+**The board is a painting with 57 torn parchment scraps printed over it**, one
+per Obszar, and three scripts share `scripts/lib/parchment.mjs`, which draws the
+line between the two. It does **not** find the scraps by brightness: the paper
+is pure white and unsaturated, and so are the snow, the cloud, the slabs of the
+Kamienny Most and every highlight — 23% of the board passes a threshold tight
+enough to throw away a third of the real paper, and the first attempt called
+53.7% of the board parchment. Instead it floods outward from inside each of the
+57 rectangles in `src/data/field-text-boxes.json`, and the drawn contour stops
+the fill at the tear. So those boxes are load-bearing twice over: they say where
+each description is, and they are the only record of a point that is certainly
+paper. `src/data/field-cells.json` is the other half of the measurement — each
+field's own square, read off the printed separator lines.
+
+`node scripts/export-field-text.mjs` cuts the 57 descriptions out, de-rotated
+and on a transparent ground, into `assets/extracted/field-text/`, and keeps the
+masks in `assets/extracted/field-masks/`. Both are gitignored, and deliberately:
+nothing renders them yet and the boxes regenerate them in seconds.
+`node scripts/export-field-art.mjs` measures the complement — the largest
+rectangle of each cell with no parchment in it — into the committed
+`src/data/field-art-windows.json`, worst-first, with the crops in
+`assets/extracted/field-art/`. The median cell is 39.6% clean, but the number to
+act on is the *shape*: a third of the board gives dialog-ready art outright, a
+third needs a lossy crop, and six are letterboxes at 8:1 that no crop rescues.
+
+`node scripts/export-parchment.mjs` harvests the torn edge itself into
+`public/parchment/`, which **is** committed, on the same reasoning as
+`public/cards`. The point is to set the transcription we already have inside a
+scrap we assemble, rather than ship 57 pictures of printed text that cannot
+resize. It works because the edges are not a repeated stamp — every blob was
+drawn separately, same hand and same idiom, no two sequences alike — so there is
+no canonical corner to look for and no pattern an assembled edge could be caught
+deviating from. The one constraint that makes the pieces a *library*: every one
+is cut where its contour crosses the baseline **on the way out**, so any end
+butts against any other without a step. `fieldBoards.test.ts` pins that every
+run shares one height, which is what puts every baseline on the same row.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

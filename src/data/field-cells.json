@@ -1,0 +1,410 @@
+{
+ "$cells": {
+  "source": "assets/extracted/board/board.png, 4916x6798, the scan at native size",
+  "what": "the field's own square on the board: bounded along its ring by the two printed separator lines that flank it, and across the ring by the ring band's inner and outer edge",
+  "how": "separator positions read off the scan by looking for rows and columns that are a dark local minimum along most of their length; band edges from where one ring's separator set gives way to the next's as the search window slides across",
+  "kamienny-most": "nine painted slabs with no ruled boundaries, so those cells are split at the midpoints between consecutive slab captions",
+  "caveat": "the board is drawn, not ruled: opposite sides disagree by up to 200px at the corners, and a scrap may overhang its own boundary. Good to a few tens of pixels, which is what the art-window survey needs"
+ },
+ "cells": [
+  {
+   "id": "urwisko-1",
+   "x0": 0,
+   "y0": 0,
+   "x1": 1348,
+   "y1": 700
+  },
+  {
+   "id": "ruiny-twierdzy",
+   "x0": 1348,
+   "y0": 0,
+   "x1": 3334,
+   "y1": 700
+  },
+  {
+   "id": "swiatynia-tolimana",
+   "x0": 3334,
+   "y0": 0,
+   "x1": 4916,
+   "y1": 700
+  },
+  {
+   "id": "dolina-czaszek",
+   "x0": 4245,
+   "y0": 700,
+   "x1": 4916,
+   "y1": 1812
+  },
+  {
+   "id": "bagna-1",
+   "x0": 4245,
+   "y0": 1812,
+   "x1": 4916,
+   "y1": 2685
+  },
+  {
+   "id": "ruchome-skaly-1",
+   "x0": 4245,
+   "y0": 2685,
+   "x1": 4916,
+   "y1": 3347
+  },
+  {
+   "id": "urwisko-2",
+   "x0": 4245,
+   "y0": 3347,
+   "x1": 4916,
+   "y1": 4251
+  },
+  {
+   "id": "rownina-traw",
+   "x0": 4245,
+   "y0": 4251,
+   "x1": 4916,
+   "y1": 5226
+  },
+  {
+   "id": "rozstajne-drogi-1",
+   "x0": 4245,
+   "y0": 5226,
+   "x1": 4916,
+   "y1": 6145
+  },
+  {
+   "id": "zamek",
+   "x0": 3354,
+   "y0": 6145,
+   "x1": 4916,
+   "y1": 6798
+  },
+  {
+   "id": "wymarle-miasto",
+   "x0": 860,
+   "y0": 6145,
+   "x1": 3354,
+   "y1": 6798
+  },
+  {
+   "id": "ruchome-skaly-2",
+   "x0": 0,
+   "y0": 6145,
+   "x1": 860,
+   "y1": 6798
+  },
+  {
+   "id": "bagna-2",
+   "x0": 0,
+   "y0": 5293,
+   "x1": 655,
+   "y1": 6145
+  },
+  {
+   "id": "krypta-upiorow",
+   "x0": 0,
+   "y0": 4373,
+   "x1": 655,
+   "y1": 5293
+  },
+  {
+   "id": "rownina-snu",
+   "x0": 0,
+   "y0": 3447,
+   "x1": 655,
+   "y1": 4373
+  },
+  {
+   "id": "rozstajne-drogi-2",
+   "x0": 0,
+   "y0": 2546,
+   "x1": 655,
+   "y1": 3447
+  },
+  {
+   "id": "kamienny-las",
+   "x0": 0,
+   "y0": 1615,
+   "x1": 655,
+   "y1": 2546
+  },
+  {
+   "id": "wilczy-parow",
+   "x0": 0,
+   "y0": 700,
+   "x1": 655,
+   "y1": 1615
+  },
+  {
+   "id": "twierdza-strzegaca-drog",
+   "x0": 655,
+   "y0": 700,
+   "x1": 2420,
+   "y1": 1290
+  },
+  {
+   "id": "przelecz-wichrow",
+   "x0": 2420,
+   "y0": 700,
+   "x1": 4245,
+   "y1": 1290
+  },
+  {
+   "id": "straznik-magicznych-wrot",
+   "x0": 3560,
+   "y0": 4058,
+   "x1": 4245,
+   "y1": 4813
+  },
+  {
+   "id": "magiczne-wrota",
+   "x0": 3560,
+   "y0": 4813,
+   "x1": 4245,
+   "y1": 5520
+  },
+  {
+   "id": "plaskowyz-mgiel",
+   "x0": 2319,
+   "y0": 5560,
+   "x1": 4245,
+   "y1": 6145
+  },
+  {
+   "id": "swiatynia-bogini-nemed",
+   "x0": 655,
+   "y0": 5560,
+   "x1": 2319,
+   "y1": 6145
+  },
+  {
+   "id": "zaczarowane-wzgorza",
+   "x0": 655,
+   "y0": 4805,
+   "x1": 1340,
+   "y1": 5520
+  },
+  {
+   "id": "las-blednych-ogni",
+   "x0": 655,
+   "y0": 4067,
+   "x1": 1340,
+   "y1": 4805
+  },
+  {
+   "id": "pustelnia",
+   "x0": 655,
+   "y0": 3351,
+   "x1": 1340,
+   "y1": 4067
+  },
+  {
+   "id": "rownina-samotnych-skal",
+   "x0": 655,
+   "y0": 2697,
+   "x1": 1340,
+   "y1": 3351
+  },
+  {
+   "id": "przeprawa-2",
+   "x0": 655,
+   "y0": 1961,
+   "x1": 1340,
+   "y1": 2697
+  },
+  {
+   "id": "mroczna-polana",
+   "x0": 655,
+   "y0": 1290,
+   "x1": 1340,
+   "y1": 1961
+  },
+  {
+   "id": "karczma",
+   "x0": 1340,
+   "y0": 4582,
+   "x1": 2350,
+   "y1": 5560
+  },
+  {
+   "id": "uroczysko",
+   "x0": 1340,
+   "y0": 3967,
+   "x1": 2060,
+   "y1": 4832
+  },
+  {
+   "id": "step-2",
+   "x0": 1340,
+   "y0": 3380,
+   "x1": 2060,
+   "y1": 3967
+  },
+  {
+   "id": "mokradla-2",
+   "x0": 1340,
+   "y0": 2800,
+   "x1": 2060,
+   "y1": 3380
+  },
+  {
+   "id": "kurhan",
+   "x0": 1340,
+   "y0": 2212,
+   "x1": 2060,
+   "y1": 2800
+  },
+  {
+   "id": "osada",
+   "x0": 1340,
+   "y0": 1290,
+   "x1": 2501,
+   "y1": 2212
+  },
+  {
+   "id": "step-1",
+   "x0": 2501,
+   "y0": 1290,
+   "x1": 3200,
+   "y1": 2212
+  },
+  {
+   "id": "mokradla-1",
+   "x0": 3200,
+   "y0": 1290,
+   "x1": 3560,
+   "y1": 2212
+  },
+  {
+   "id": "czarci-mlyn",
+   "x0": 2820,
+   "y0": 2212,
+   "x1": 3560,
+   "y1": 2637
+  },
+  {
+   "id": "krag-mocy",
+   "x0": 2820,
+   "y0": 2637,
+   "x1": 3560,
+   "y1": 3279
+  },
+  {
+   "id": "studnia-wiecznosci",
+   "x0": 2820,
+   "y0": 3279,
+   "x1": 3560,
+   "y1": 3969
+  },
+  {
+   "id": "bezdroza",
+   "x0": 2820,
+   "y0": 3969,
+   "x1": 3560,
+   "y1": 4582
+  },
+  {
+   "id": "grod",
+   "x0": 3200,
+   "y0": 4582,
+   "x1": 3560,
+   "y1": 5560
+  },
+  {
+   "id": "mrozne-pustkowie",
+   "x0": 2350,
+   "y0": 4582,
+   "x1": 3200,
+   "y1": 5560
+  },
+  {
+   "id": "wejscie-na-most-a",
+   "x0": 2030,
+   "y0": 590,
+   "x1": 2530,
+   "y1": 1454
+  },
+  {
+   "id": "pulapka",
+   "x0": 2030,
+   "y0": 1454,
+   "x1": 2530,
+   "y1": 2082
+  },
+  {
+   "id": "gra-ze-smiercia",
+   "x0": 2030,
+   "y0": 2082,
+   "x1": 2530,
+   "y1": 2570
+  },
+  {
+   "id": "demon-zaglady",
+   "x0": 2030,
+   "y0": 2570,
+   "x1": 2530,
+   "y1": 3214
+  },
+  {
+   "id": "monstrum",
+   "x0": 2030,
+   "y0": 3789,
+   "x1": 2530,
+   "y1": 4227
+  },
+  {
+   "id": "cerber",
+   "x0": 2030,
+   "y0": 4227,
+   "x1": 2530,
+   "y1": 4787
+  },
+  {
+   "id": "magiczna-pulapka",
+   "x0": 2030,
+   "y0": 4787,
+   "x1": 2530,
+   "y1": 5435
+  },
+  {
+   "id": "wejscie-na-most-b",
+   "x0": 2030,
+   "y0": 5435,
+   "x1": 2530,
+   "y1": 6045
+  },
+  {
+   "id": "przeprawa-1",
+   "x0": 3560,
+   "y0": 1290,
+   "x1": 4245,
+   "y1": 1938
+  },
+  {
+   "id": "dolina-cienia",
+   "x0": 3560,
+   "y0": 1938,
+   "x1": 4245,
+   "y1": 2655
+  },
+  {
+   "id": "wrzosowiska",
+   "x0": 3560,
+   "y0": 2655,
+   "x1": 4245,
+   "y1": 3392
+  },
+  {
+   "id": "wieza-przeznaczenia",
+   "x0": 3560,
+   "y0": 3392,
+   "x1": 4245,
+   "y1": 4058
+  },
+  {
+   "id": "zamek-bestii",
+   "x0": 2030,
+   "y0": 3214,
+   "x1": 2530,
+   "y1": 3789
+  }
+ ]
+}

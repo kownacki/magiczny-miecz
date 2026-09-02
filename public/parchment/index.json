@@ -1,0 +1,205 @@
+{
+ "$note": {
+  "what": "Pieces of the board's own torn parchment edge, cut at the scan's native resolution.",
+  "baseline": "Every piece is cut where its torn contour crosses the baseline on the way out, so any end butts against any other without a step. In a run the baseline is row 40 from the top and the paper fills the 48 rows below it; a corner has a baseline on each of its two open ends, at the same offset.",
+  "orientation": "Runs read left to right with the paper below. Corners are a scrap's top-left: both arms leave the corner along +x and +y with the paper in the quadrant between them, and the corner itself is at (36, 36). Rotate at composition time.",
+  "paper": "Mean paper colour rgb(249, 251, 248). Averaged over 16 regions of the board the paper's luminance runs 249 to 252, which is flat enough that one fill matches everywhere. paper.png is a 96px square of clean paper to tile.",
+  "provenance": "Every pixel is off assets/extracted/board/board.png. Nothing here is drawn, generated or filled in."
+ },
+ "baseline": {
+  "out": 40,
+  "paper": 48
+ },
+ "pieces": [
+  {
+   "file": "run-01.png",
+   "kind": "run",
+   "width": 335,
+   "height": 88,
+   "from": [
+    206,
+    5488
+   ]
+  },
+  {
+   "file": "run-02.png",
+   "kind": "run",
+   "width": 263,
+   "height": 88,
+   "from": [
+    4292,
+    2732
+   ]
+  },
+  {
+   "file": "run-03.png",
+   "kind": "run",
+   "width": 305,
+   "height": 88,
+   "from": [
+    1230,
+    6233
+   ]
+  },
+  {
+   "file": "run-04.png",
+   "kind": "run",
+   "width": 325,
+   "height": 88,
+   "from": [
+    648,
+    2903
+   ]
+  },
+  {
+   "file": "run-05.png",
+   "kind": "run",
+   "width": 271,
+   "height": 88,
+   "from": [
+    4287,
+    1779
+   ]
+  },
+  {
+   "file": "run-06.png",
+   "kind": "run",
+   "width": 271,
+   "height": 88,
+   "from": [
+    4733,
+    4102
+   ]
+  },
+  {
+   "file": "run-07.png",
+   "kind": "run",
+   "width": 323,
+   "height": 88,
+   "from": [
+    48,
+    3897
+   ]
+  },
+  {
+   "file": "run-08.png",
+   "kind": "run",
+   "width": 331,
+   "height": 88,
+   "from": [
+    3847,
+    895
+   ]
+  },
+  {
+   "file": "run-09.png",
+   "kind": "run",
+   "width": 321,
+   "height": 88,
+   "from": [
+    1156,
+    195
+   ]
+  },
+  {
+   "file": "run-10.png",
+   "kind": "run",
+   "width": 332,
+   "height": 88,
+   "from": [
+    4276,
+    5497
+   ]
+  },
+  {
+   "file": "run-11.png",
+   "kind": "run",
+   "width": 257,
+   "height": 88,
+   "from": [
+    1589,
+    3562
+   ]
+  },
+  {
+   "file": "run-12.png",
+   "kind": "run",
+   "width": 282,
+   "height": 88,
+   "from": [
+    2132,
+    2368
+   ]
+  },
+  {
+   "file": "corner-01.png",
+   "kind": "corner",
+   "width": 88,
+   "height": 76,
+   "from": [
+    1918,
+    1067
+   ]
+  },
+  {
+   "file": "corner-02.png",
+   "kind": "corner",
+   "width": 107,
+   "height": 87,
+   "from": [
+    2163,
+    3106
+   ]
+  },
+  {
+   "file": "corner-03.png",
+   "kind": "corner",
+   "width": 76,
+   "height": 79,
+   "from": [
+    2163,
+    3607
+   ]
+  },
+  {
+   "file": "corner-04.png",
+   "kind": "corner",
+   "width": 76,
+   "height": 98,
+   "from": [
+    3150,
+    2588
+   ]
+  },
+  {
+   "file": "corner-05.png",
+   "kind": "corner",
+   "width": 88,
+   "height": 91,
+   "from": [
+    1331,
+    345
+   ]
+  },
+  {
+   "file": "corner-06.png",
+   "kind": "corner",
+   "width": 110,
+   "height": 90,
+   "from": [
+    1903,
+    5998
+   ]
+  },
+  {
+   "file": "corner-07.png",
+   "kind": "corner",
+   "width": 90,
+   "height": 95,
+   "from": [
+    933,
+    3377
+   ]
+  }
+ ]
+}
