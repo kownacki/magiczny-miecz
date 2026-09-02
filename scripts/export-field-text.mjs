@@ -3,8 +3,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { encodePng } from "./lib/png.mjs";
-import { componentAt, cutRotated, loadBoard, maskReader, scrapMask } from "./lib/parchment.mjs";
+import { cutRotated, fieldScraps, loadBoard, maskReader } from "./lib/parchment.mjs";
 import boxes from "../src/data/field-text-boxes.json" with { type: "json" };
+import cells from "../src/data/field-cells.json" with { type: "json" };
 
 /**
  * The 57 instructions are printed on torn scraps of parchment laid over the
@@ -30,7 +31,7 @@ const TEXT = "assets/extracted/field-text";
 const MASKS = "assets/extracted/field-masks";
 
 const board = loadBoard();
-const mask = scrapMask(board, boxes.boxes);
+const scraps = fieldScraps(board, boxes.boxes, cells.cells);
 
 fs.rmSync(TEXT, { recursive: true, force: true });
 fs.rmSync(MASKS, { recursive: true, force: true });
@@ -40,42 +41,40 @@ fs.mkdirSync(MASKS, { recursive: true });
 /**
  * The whole board's mask, kept as one image.
  *
- * The per-field masks below are what cut the scraps; this is their complement,
- * which is every square inch of the painting the scraps are not covering. That
- * is what the clean-art windows are measured against, and what anything wanting
- * to know where the paper *isn't* needs, so it is worth the one file rather than
- * making the next reader rebuild it.
+ * The per-field masks below are what cut the scraps; this is their union, and
+ * its complement is every square inch of painting the scraps are not covering.
+ * That is what the clean-art windows are measured against, so it is worth the
+ * one file rather than making the next reader rebuild it.
  */
+const whole = new Uint8Array(board.width * board.height);
+for (const part of scraps.values()) {
+  for (let y = 0; y < part.height; y++) {
+    for (let x = 0; x < part.width; x++) {
+      if (part.data[y * part.width + x]) {
+        whole[(part.y + y) * board.width + part.x + x] = 1;
+      }
+    }
+  }
+}
 fs.writeFileSync(
   path.join(MASKS, "board.png"),
   encodePng({
     width: board.width,
     height: board.height,
     comps: 1,
-    data: Buffer.from(mask.map((v) => (v ? 255 : 0))),
+    data: Buffer.from(whole.map((v) => (v ? 255 : 0))),
   }),
 );
 
-// One flood-fill scratch buffer for all 57: `componentAt` leaves it as it found
-// it, and allocating a board-sized array per field would allocate two gigabytes.
-const scratch = new Uint8Array(board.width * board.height);
 const index = [];
 let missed = 0;
 
 for (const box of boxes.boxes) {
-  const part = componentAt(
-    mask,
-    board.width,
-    board.height,
-    Math.round(box.cx),
-    Math.round(box.cy),
-    scratch,
-  );
+  const part = scraps.get(box.id);
   if (!part) {
-    // The nine Kamienny Most captions are lettered straight onto grey stone
-    // rather than onto a scrap, so there is nothing for the mask to find under
-    // the middle of the box. Those are cut opaque, which is right: there is no
-    // torn edge on them to cut round.
+    // Nothing printed on paper anywhere in the box. Cut opaque rather than
+    // blank: there is no torn edge to cut round, and an honest rectangle is
+    // better than an empty file.
     missed++;
     fs.writeFileSync(
       path.join(TEXT, `${box.id}.png`),
@@ -111,9 +110,9 @@ fs.writeFileSync(
       $note: {
         what: "One mask per Obszar: 255 where the board is parchment — paper, lettering and torn outline — and 0 where it is painting.",
         placing:
-          "Each mask is cropped to its scrap's bounding box; `scrap` gives that box in board pixels, so the mask drops back onto assets/extracted/board/board.png exactly. board.png here is the same mask for the whole board, uncropped.",
+          "Each mask is cropped to its scrap's bounding box; `scrap` gives that box in board pixels, so the mask drops back onto assets/extracted/board/board.png exactly. board.png here is their union over the whole board.",
         missing:
-          "`scrap: null` means the mask found nothing under the box's middle. That is the nine Kamienny Most slabs, whose captions are lettered onto stone rather than onto a scrap.",
+          "`scrap: null` means no lettering-bearing paper was found anywhere in the box, and the description was cut opaque instead.",
       },
       fields: index,
     },

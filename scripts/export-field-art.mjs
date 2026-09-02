@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { encodePng } from "./lib/png.mjs";
 import { BOARD, loadBoard, scrapMask } from "./lib/parchment.mjs";
+import cellData from "../src/data/field-cells.json" with { type: "json" };
 import boxes from "../src/data/field-text-boxes.json" with { type: "json" };
 
 /**
@@ -130,6 +131,45 @@ function cutRgb(img, { x, y, w, h }) {
   return { width: w, height: h, comps: 3, data };
 }
 
+/**
+ * Turns a window the right way up for whoever is looking at it.
+ *
+ * The board is painted to be read from all four sides of a table: the top row's
+ * illustrations are upside down, the left column's lie on their side. A window
+ * cut axis-aligned out of the scan comes out the same way, so every one of them
+ * is turned by the quarter turn nearest its field's reading angle — the same
+ * angle the description is cut at, which is how we know which way up the field
+ * is meant to be seen.
+ *
+ * Quarter turns only, so this is a re-indexing and not a resampling: no pixel is
+ * interpolated and nothing is lost.
+ */
+function upright(img, angle) {
+  const turns = ((Math.round(angle / 90) % 4) + 4) % 4;
+  if (turns === 0) return img;
+  const flip = turns % 2 === 1;
+  const width = flip ? img.height : img.width;
+  const height = flip ? img.width : img.height;
+  const data = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      // Where this source pixel lands after `turns` quarter turns clockwise.
+      const [tx, ty] =
+        turns === 1
+          ? [img.height - 1 - y, x]
+          : turns === 2
+            ? [img.width - 1 - x, img.height - 1 - y]
+            : [y, img.width - 1 - x];
+      const from = (y * img.width + x) * 3;
+      const to = (ty * width + tx) * 3;
+      data[to] = img.data[from];
+      data[to + 1] = img.data[from + 1];
+      data[to + 2] = img.data[from + 2];
+    }
+  }
+  return { width, height, comps: 3, data };
+}
+
 function run() {
   const ids = fieldIds();
   const { cells } = JSON.parse(fs.readFileSync(CELLS, "utf8"));
@@ -148,14 +188,16 @@ function run() {
   // Once, for the whole board — see largestCleanWindow. The text boxes are the
   // mask's seeds: it grows the scraps outward from inside them rather than
   // guessing at them by colour, so the survey is only as complete as that file.
-  const mask = scrapMask(img, boxes.boxes);
+  const mask = scrapMask(img, boxes.boxes, cellData.cells);
   fs.mkdirSync(OUT, { recursive: true });
 
+  const angleOf = new Map(boxes.boxes.map((box) => [box.id, box.angle]));
   const found = ids.map((id) => {
     const cell = byId.get(id);
     const window = largestCleanWindow(mask, img.width, cell);
     if (window.w > 0 && window.h > 0) {
-      fs.writeFileSync(path.join(OUT, `${id}.png`), encodePng(cutRgb(img, window)));
+      const art = upright(cutRgb(img, window), -angleOf.get(id));
+      fs.writeFileSync(path.join(OUT, `${id}.png`), encodePng(art));
     } else {
       console.error(`  ${id}: no clean pixel anywhere in the cell, so no picture`);
     }
@@ -178,9 +220,10 @@ function run() {
     source: `${BOARD}, ${img.width}x${img.height}, the scan at native size`,
     what: "the largest axis-aligned rectangle inside a field's cell that holds no parchment scrap, so it is all painting",
     cells: `${CELLS}; percent is the window's area as a share of that cell's`,
-    parchment: "scrapMask() in scripts/lib/parchment.mjs, flood-filled outward from the 57 boxes in src/data/field-text-boxes.json, over the whole board at once — a neighbour's scrap overhanging this cell is avoided too",
+    parchment: "scrapMask() in scripts/lib/parchment.mjs: each scrap is flood-filled outward from inside its own box in src/data/field-text-boxes.json and bounded to its own square in src/data/field-cells.json. The union of all 57 is what a window has to avoid, so a neighbour's scrap overhanging this cell is dodged too",
     neighbours: "not cropped out: the board is one painting and the grid was ruled over it, so a window may hold artwork belonging to the field next door",
     units: "board pixels; x, y is the top-left corner and the cut is one output pixel per board pixel",
+    rotation: "the picture on disk is turned by the quarter turn nearest its field's reading angle in field-text-boxes.json, because the board is painted to be read from all four sides of a table and a window cut straight off the scan comes out on its side or upside down. x, y, w and h describe the window where it sits on the board, so on an odd quarter turn the file's width is h and its height is w",
     order: "worst first — the smallest share of its cell leads",
   };
   fs.writeFileSync(

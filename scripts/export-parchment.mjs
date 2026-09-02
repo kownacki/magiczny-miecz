@@ -5,6 +5,7 @@ import path from "node:path";
 import { encodePng } from "./lib/png.mjs";
 import { loadBoard, scrapMask, sampleInto } from "./lib/parchment.mjs";
 import boxes from "../src/data/field-text-boxes.json" with { type: "json" };
+import cells from "../src/data/field-cells.json" with { type: "json" };
 
 /**
  * Why this exists at all.
@@ -696,7 +697,7 @@ function write(dir, name, img) {
 }
 
 const board = loadBoard();
-const mask = scrapMask(board, boxes.boxes);
+const mask = scrapMask(board, boxes.boxes, cells.cells);
 const contours = traceContours(mask, board.width, board.height);
 console.log(`${contours.length} scrap outlines traced`);
 

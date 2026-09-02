@@ -311,12 +311,23 @@ line between the two. It does **not** find the scraps by brightness: the paper
 is pure white and unsaturated, and so are the snow, the cloud, the slabs of the
 Kamienny Most and every highlight — 23% of the board passes a threshold tight
 enough to throw away a third of the real paper, and the first attempt called
-53.7% of the board parchment. Instead it floods outward from inside each of the
-57 rectangles in `src/data/field-text-boxes.json`, and the drawn contour stops
-the fill at the tear. So those boxes are load-bearing twice over: they say where
-each description is, and they are the only record of a point that is certainly
-paper. `src/data/field-cells.json` is the other half of the measurement — each
-field's own square, read off the printed separator lines.
+53.7% of the board parchment. Four rules do it instead, and each is there
+because the one before it was not enough. Seed only on paper that is
+unmistakably paper (238, against the 200–225 of the pale artwork beside it);
+seed only *beside lettering*, which keeps out the snowfield by Urwisko and the
+cliff by Ruiny Twierdzy — as white as the paper, touching it, and with nothing
+printed on them; keep only fills the field's words are printed **on**, which
+keeps out the snow directly above Ruiny Twierdzy's top line; and bound every
+fill to the field's own square, without which one scrap's fill reaches the next,
+takes its box, takes its lettering and grows again.
+
+So `src/data/field-text-boxes.json` is load-bearing twice over — it says where
+each description is, and it is the only record of a point that is certainly
+paper — and `src/data/field-cells.json` is what keeps each field inside its own
+square. `fieldScraps` returns them one per field rather than as one mask,
+because two neighbouring tears very nearly touch and growing both out to their
+contours merges them: Strażnik Magicznych Wrót, Magiczne Wrota and Wieża
+Przeznaczenia all measured the same blob before they were kept apart.
 
 `node scripts/export-field-text.mjs` cuts the 57 descriptions out, de-rotated
 and on a transparent ground, into `assets/extracted/field-text/`, and keeps the
@@ -325,9 +336,12 @@ nothing renders them yet and the boxes regenerate them in seconds.
 `node scripts/export-field-art.mjs` measures the complement — the largest
 rectangle of each cell with no parchment in it — into the committed
 `src/data/field-art-windows.json`, worst-first, with the crops in
-`assets/extracted/field-art/`. The median cell is 39.6% clean, but the number to
-act on is the *shape*: a third of the board gives dialog-ready art outright, a
-third needs a lossy crop, and six are letterboxes at 8:1 that no crop rescues.
+`assets/extracted/field-art/`. Median 58.9% of the cell, worst 18.8%. Each crop
+is **turned upright** by the quarter turn nearest its field's reading angle: the
+board is painted to be read from all four sides of a table, so a window cut
+straight off the scan comes out on its side or upside down. The number to act on
+is still the *shape* rather than the area — some windows are usable art in an
+awkward frame, and a few are letterboxes no crop rescues.
 
 `node scripts/export-parchment.mjs` harvests the torn edge itself into
 `public/parchment/`, which **is** committed, on the same reasoning as
