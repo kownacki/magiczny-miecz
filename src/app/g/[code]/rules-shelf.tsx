@@ -258,14 +258,15 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                       buy — and this is the opposite, a sentence the base game
                       should have had. „Uzupełnienie zasad" is the ordinary
                       Polish for filling in what a ruleset left out. */}
+                  {/* `addendaFor` already answers for both kinds — an `own`
+                      addendum is anchored in this paragraph like any other, it
+                      just renders somewhere else. Asking `afterParagraph` as
+                      well printed 12.1's c) argument twice. */}
                   {[...rule.paras, ...rule.examples]
-                    .flatMap((para) => [
-                      ...addendaFor(rule.id, para),
-                      ...afterParagraph(rule.id, para),
-                    ])
+                    .flatMap((para) => addendaFor(rule.id, para))
                     .map((addendum) => (
                       <p
-                        key={addendum.after}
+                        key={addendumId(addendum)}
                         id={addendumId(addendum)}
                         className="mt-2 text-[11px] leading-snug text-ochre/70"
                       >

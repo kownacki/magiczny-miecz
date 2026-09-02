@@ -104,6 +104,19 @@ export const ADDENDA: readonly Addendum[] = [
       "spokojnie kupować u Płatnerza, mając nad głową nierozpatrzoną Kartę, " +
       "która każe.",
   },
+  {
+    rule: "12.1",
+    after: "rozpatrzeć treść wyciągniętych Kart",
+    text: " lub zastosować się do instrukcji Kart, które tego wymagają",
+    because:
+      "To zdanie wylicza lekarstwa w kolejności samych wyjątków: najpierw " +
+      "Wrogowie z a), potem Karty do wyciągnięcia z b). Skoro doszło c), musi " +
+      "dojść i trzecie lekarstwo — inaczej Instrukcja wymienia przeszkodę i nie " +
+      "mówi, jak ją usunąć, a to gorzej niż milczenie, bo wygląda na komplet. " +
+      "Nazwane tymi samymi słowami co sam wyjątek („zastosować się do " +
+      "instrukcji”), żeby było widać, że to ta sama rzecz raz postawiona na " +
+      "drodze, a raz z niej zdjęta.",
+  },
 ];
 
 /** One piece of a rule's paragraph: printed, or ours. */

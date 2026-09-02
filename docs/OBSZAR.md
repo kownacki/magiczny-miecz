@@ -50,8 +50,11 @@ Spotkania and Wrogowie:
 > **13.5** — „Jeżeli są tam jacyś Wrogowie (16.2-3) muszą oni najpierw zostać
 > pokonani… lub należy im uciec. Następnie…"
 
-On a square that draws, **12.1b** also holds until the deal has been dealt with;
-its own cure names what that means: „rozpatrzeć treść wyciągniętych Kart."
+On a square that draws, **12.1b** also holds until the deal has been dealt with.
+12.1 ends by naming the cure for each of its cases — „pokonać Wrogów albo im
+uciec lub rozpatrzeć treść wyciągniętych Kart" — and an addendum gives c) its
+own, since a rule that names an obstacle and not its remedy reads as a complete
+list that is missing a limb.
 
 And **12.1c** — an addendum — extends the same idea to the third case the book
 left out: „Na Obszarze leżą Karty, do których instrukcji Postać musi się
@@ -135,18 +138,19 @@ to put in a queue.
 
 So the line is **compulsory against optional**, not one class against another —
 and the book never draws it, because 15.2 was written as though every Karta
-were an event and 12.1 as though none were compulsory. Three `addenda.ts` entries draw it, from both sides:
+were an event and 12.1 as though none were compulsory. Four `addenda.ts` entries draw it, from both sides:
 
 | rule | what it adds | why |
 | --- | --- | --- |
 | **12.1** | „lub Miejsce (16.7)" | no rule said when a Miejsce may be used at all |
 | **12.1** | „c) …Karty, do których instrukcji Postać musi się zastosować" | a) and b) are the same idea twice; the third case is unwritten |
+| **12.1** | „lub zastosować się do instrukcji Kart, które tego wymagają" | c) named a third obstacle; the cure sentence listed only two |
 | **15.2** | „Kolejność ta wiąże Karty, których instrukcję trzeba wykonać…" | otherwise a shop has to wait its numeral |
 
 Each is a genuine silence rather than a disagreement, which is what keeps them
-addenda: the book does not say when a Miejsce is visited, does not say that
-12.1's freedom is about timing rather than obligation, and does not contemplate
-a Karta that only stands there.
+addenda: the book does not say when a Miejsce is visited, does not name the
+third thing that holds a square shut, does not say how that third thing is
+cleared, and does not contemplate a Karta that only stands there.
 
 ## What is ours, not the box's
 
