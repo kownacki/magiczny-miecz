@@ -6,6 +6,8 @@ import { cardArtUrl } from "@/lib/view/cardImages";
 
 import { useState } from "react";
 import { BRIDGE_LINKS, CELLS, CELL_BY_ID, VIEW, dotPositions, type Cell, seatColour } from "@/lib/view/boardMap";
+import { FIELDS } from "@/lib/engine/board";
+import { CARD_RATIO } from "@/lib/view/cardImages";
 
 export interface MapSeat {
   id: string;
@@ -250,6 +252,11 @@ function FieldShape({
   );
 }
 
+// Rough advance width of this typeface at size 1. Measured against the rendered
+// map rather than taken from the font's metrics, because a label only has to
+// stay inside a box, not typeset well.
+const PER_CHAR = 0.54;
+
 /**
  * The field's name, wrapped and sized to fit inside its cell.
  *
@@ -263,10 +270,6 @@ function FieldShape({
 function Label({ cell }: { cell: Cell }) {
   const inner = cell.w - 12;
   const longest = Math.max(...cell.name.split(" ").map((word) => word.length));
-  // Rough advance width of this typeface at size 1. Measured against the
-  // rendered map rather than taken from the font's metrics, because the label
-  // only has to stay inside a box, not typeset well.
-  const PER_CHAR = 0.54;
   const size = Math.max(9, Math.min(19, inner / (longest * PER_CHAR)));
   const perLine = Math.max(longest, Math.floor(inner / (size * PER_CHAR)));
   const lines = wrap(cell.name, perLine);
@@ -275,19 +278,85 @@ function Label({ cell }: { cell: Cell }) {
   // every cell belongs to the player dots — a name and a figure standing on it
   // are both wanted at once, and centring both puts them on top of each other.
   const top = cell.y + 8 + size;
+  /**
+   * 13.4's count, drawn as that many face-down Karty under the name.
+   *
+   * The first thing worth knowing about a square you are thinking of moving to
+   * — three Karty is a different place from none, and it decides most of what
+   * the turn there will be — and until now it was only legible once you had
+   * opened the Obszar. The whole point of the map is deciding *before* you go.
+   *
+   * The same height as the picture of what is lying here, bottom-right, so the
+   * two read as one scale: what is on this square, and what it will deal you.
+   * Backs and not a numeral because at this size a count of things is faster
+   * than a digit, and the deck's own back is the one picture that means "a
+   * Karta nobody has seen yet".
+   *
+   * Under the name rather than beside it: the bottom of a cell belongs to the
+   * player dots and the bottom-right to the loot, and this is a caption on the
+   * square's name.
+   */
+  const draw = FIELDS.get(cell.id)?.draw ?? 0;
+  const back = Math.min(34, cell.w / 2.4) * (323 / 370);
+  const backW = back / CARD_RATIO;
+  const dealY = top + (lines.length - 1) * lineHeight + size * 0.4;
+  /**
+   * The count as a numeral as well as as a fan.
+   *
+   * Two backs and three backs are one glance apart at this size and one of
+   * them is a whole extra Karta, so the picture alone asks the reader to count
+   * overlapping rectangles four pixels wide. The numeral says it outright and
+   * the fan says what kind of thing is being counted; neither does the other's
+   * job.
+   *
+   * Measured with `Label`'s own `PER_CHAR`, for the same reason it exists: the
+   * group has to be centred on the cell, so its width has to be known before
+   * it is drawn, and this only has to stay inside a box rather than typeset.
+   */
+  const tally = `${draw}×`;
+  const dealSize = back * 0.62;
+  const tallyW = tally.length * dealSize * PER_CHAR;
+  const fanW = (backW * (draw + 1)) / 2;
+  const dealX = cell.cx - (tallyW + backW * 0.3 + fanW) / 2;
+
   return (
-    <text
-      textAnchor="middle"
-      fontSize={size}
-      fill="#c9d0e4"
-      style={{ pointerEvents: "none" }}
-    >
-      {lines.map((line, i) => (
-        <tspan key={i} x={cell.cx} y={top + i * lineHeight}>
-          {line}
-        </tspan>
-      ))}
-    </text>
+    <g style={{ pointerEvents: "none" }}>
+      <text textAnchor="middle" fontSize={size} fill="#c9d0e4">
+        {lines.map((line, i) => (
+          <tspan key={i} x={cell.cx} y={top + i * lineHeight}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+      {draw > 0 && (
+        <>
+          <text
+            x={dealX}
+            y={dealY + back * 0.74}
+            fontSize={dealSize}
+            fill="#7f8aa8"
+            textAnchor="start"
+          >
+            {tally}
+          </text>
+          {Array.from({ length: draw }, (_, at) => (
+            <image
+              key={at}
+              href="/cards/back-zdarzenie.jpg"
+              /* Overlapped by half: at four Karty the fan is two and a half
+                 cards wide, which fits the narrowest cell on the board. */
+              x={dealX + tallyW + backW * 0.3 + (at * backW) / 2}
+              y={dealY}
+              width={backW}
+              height={back}
+              preserveAspectRatio="xMidYMid slice"
+              clipPath="inset(0 round 1.5)"
+              opacity={0.9}
+            />
+          ))}
+        </>
+      )}
+    </g>
   );
 }
 
