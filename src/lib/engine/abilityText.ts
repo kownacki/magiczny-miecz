@@ -241,8 +241,16 @@ function specialOf(cardId: string): string[] {
   const script = scriptFor(cardId);
   if (!script) return [];
   const lines = [describeEffect(script.effect)];
-  // Only worth saying when the card does not simply stay with you.
-  if (script.disposition.kind !== "zostaje") lines.push(describeDisposition(script.disposition));
+  /**
+   * Only worth saying when the card does not simply stay with you — and not at
+   * all where `staysAs` has already said it. On a Nieznajomy the two ran one
+   * under the other: „Czeka tu na pierwszą Dobrą Postać" and then „Karta czeka
+   * tu na pierwszą Postać, potem ją odłóż", the second being the first with
+   * the Natura dropped and an instruction to the table added.
+   */
+  if (script.disposition.kind !== "zostaje" && staysAs(cardId) === null) {
+    lines.push(describeDisposition(script.disposition));
+  }
   return lines;
 }
 

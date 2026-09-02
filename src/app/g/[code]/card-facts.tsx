@@ -16,7 +16,7 @@
  */
 
 import type { ItemProfile } from "@/lib/engine/abilityText";
-import { forbiddenNatures } from "@/lib/engine/abilityText";
+import { forbiddenNatures, requirementOf, stayNamesNature } from "@/lib/engine/abilityText";
 import type { Nature } from "@/data/types";
 import { sentence } from "@/lib/engine/polish";
 import { WithRules } from "./rule-ref";
@@ -46,14 +46,43 @@ export function CardFacts({
   // 5.3, answered for the reader rather than stated in the abstract.
   const barred = nature !== null && (forbiddenNatures(cardId)?.includes(nature) ?? false);
 
+  /**
+   * The Karta's own condition, from wherever it is written.
+   *
+   * `profile.requirements` is 5.3's, off the abilities, and a Nieznajomy's
+   * lives in its script instead — so the CZARODZIEJ, „Każda Dobra Postać,
+   * która tu zawita", said nothing here at all. One question for the reader,
+   * one answer, and the same two colours as the Przedmioty.
+   */
+  const needs = requirementOf(cardId, nature);
+  const needsOwnLine = needs !== null && !stayNamesNature(cardId);
+  const passes =
+    needs === null || needs.met === null
+      ? "text-muted"
+      : needs.met
+        ? "text-verdigris"
+        : "text-vermilion";
+
   return (
     <>
       {/* How long it is here, before anything else the Karta does. Coloured
           like an item's „gdy założony", because it is the same kind of
           statement: not what the card gives, but the terms it gives it on. */}
       {profile.visit !== null && (
-        <p className="border-t border-edge/60 pt-2 text-[11px] leading-snug text-magia/80">
+        <p
+          className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${
+            needsOwnLine || !needs ? "text-magia/80" : passes
+          }`}
+        >
           {sentence(profile.visit)}
+        </p>
+      )}
+
+      {/* The Karta's condition, where the line above has not already folded it
+          in — „czeka tu na pierwszą Dobrą Postać" says both at once. */}
+      {needsOwnLine && (
+        <p className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${passes}`}>
+          {sentence(needs!.text)}
         </p>
       )}
 

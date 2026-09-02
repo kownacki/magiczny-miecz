@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { forbiddenNatures, itemProfile, requirementOf, staysAs, whenApplies } from "./abilityText";
+import {
+  forbiddenNatures,
+  itemProfile,
+  requirementOf,
+  stayNamesNature,
+  staysAs,
+  whenApplies,
+} from "./abilityText";
 
 describe("what an item gives, and when", () => {
   /**
@@ -218,6 +225,22 @@ describe("what a Karta asks of the character in front of it", () => {
     expect(requirementOf("wrozka", "evil")?.met).toBe(false);
     // Outside a game nobody is reading it, so neither colour is earned.
     expect(requirementOf("wrozka", null)?.met).toBeNull();
+  });
+
+  /** The one whose condition is in its script and whose disposition cannot fold it in. */
+  it("gives the CZARODZIEJ a line of his own", () => {
+    // „Każda Dobra Postać, która tu zawita, otrzyma 1 Zaklęcie" — he stays for
+    // good, so there is no „czeka tu na pierwszą…" to say it inside.
+    expect(requirementOf("czarodziej", "evil")?.met).toBe(false);
+    expect(stayNamesNature("czarodziej")).toBe(false);
+    expect(stayNamesNature("wrozka")).toBe(true);
+  });
+
+  /** Said once: the disposition drops out of `special` where `staysAs` covers it. */
+  it("does not print the disposition twice on a Nieznajomy", () => {
+    expect(itemProfile("wrozka").special.join(" ")).not.toContain("czeka tu");
+    // A Przedmiot keeps its own, having no `staysAs` line at all.
+    expect(itemProfile("wrozka").visit).toBe("czeka tu na pierwszą Dobrą Postać");
   });
 
   it("still reads 5.3 off a Przedmiot", () => {
