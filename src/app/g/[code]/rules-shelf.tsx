@@ -20,7 +20,7 @@ import { fold } from "@/lib/engine/search";
 import { Fold } from "./fold";
 import { OpenRule, WithRules } from "./rule-ref";
 import { asRead, misprintsIn } from "@/lib/view/misprints";
-import { addendaFor, withAddenda } from "@/lib/view/addenda";
+import { addendaFor, addendumId, asShown, withAddenda } from "@/lib/view/addenda";
 
 interface Rule {
   id: string | null;
@@ -91,7 +91,11 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
     return CHAPTERS.map((chapter) => ({
       ...chapter,
       rules: chapter.rules.filter((rule) =>
-        fold([rule.id ?? "", ...rule.paras, ...rule.examples].join(" ")).includes(needle),
+        // What the page says, not only what the book printed — a reader
+        // searching for words they can see has to find them. See `asShown`.
+        fold(`${rule.id ?? ""} ${asShown(rule.id, [...rule.paras, ...rule.examples])}`).includes(
+          needle,
+        ),
       ),
     })).filter((chapter) => chapter.rules.length > 0);
   }, [needle]);
@@ -223,6 +227,7 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                     .map((addendum) => (
                       <p
                         key={addendum.after}
+                        id={addendumId(addendum)}
                         className="mt-2 text-[11px] leading-snug text-ochre/70"
                       >
                         <span className="text-ochre/50">Dodatek: </span>
@@ -319,8 +324,24 @@ function Prose({ raw, rule = null }: { raw: string; rule?: string | null }) {
     <>
       {segments.map((segment, s) =>
         segment.added ? (
-          <span key={`add-${s}`} className="text-ochre" title="Dodatek — nie ma tego w Instrukcji">
+          <span key={`add-${s}`} className="italic text-ochre">
             <WithRules text={segment.text} />
+            {/* What it is, and the way to why. The argument sits under the
+                rule, past the paragraphs and the examples, which is too far to
+                be an explanation of a word you are looking at. */}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                document
+                  .getElementById(segment.addendum ? addendumId(segment.addendum) : "")
+                  ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              }}
+              title="Dodatek — zdanie, którego nie ma w Instrukcji. Kliknij, żeby przeczytać dlaczego."
+              className="ml-1 cursor-pointer align-baseline text-[10px] not-italic underline decoration-dotted underline-offset-2 transition hover:text-ink"
+            >
+              (dodatek)
+            </button>
           </span>
         ) : (
           <Bold key={`said-${s}`} text={segment.text} />
@@ -566,7 +587,7 @@ export function rulesMatching(query: string, limit = 8): { found: FoundRule[]; t
       if (rule.id === null) continue;
       // Without the emphasis marks: the transcript is Markdown and a search
       // result is not the place to show it.
-      const text = [...rule.paras, ...rule.examples].join(" ").replace(/\*\*/g, "");
+      const text = asShown(rule.id, [...rule.paras, ...rule.examples]).replace(/\*\*/g, "");
       // A number is a query. Somebody who types "5.3" wants 5.3, and now that
       // the numbers are links it is the likeliest thing anybody types.
       const byNumber = fold(rule.id).startsWith(needle);

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ADDENDA, addendaFor, withAddenda } from "./addenda";
+import { ADDENDA, addendaFor, asShown, withAddenda } from "./addenda";
 
 /**
  * An addendum is the app putting words in the book's mouth. That is defensible
@@ -51,6 +51,19 @@ describe("addenda", () => {
       expect(rules).not.toContain(addendum.text.trim());
       expect(json).not.toContain(addendum.text.trim());
     }
+  });
+
+  /**
+   * The whole point of showing the addition is that a reader can read it — and
+   * a reader who reads a phrase and cannot search for it has been told the page
+   * is lying.
+   */
+  it("is findable by its own words", () => {
+    expect(asShown("12.1", [rule12_1])).toContain("lub Miejsce");
+    // And the correction is findable by the number it shows, not the misprint.
+    expect(
+      asShown("16.6", ["Postać może zabrać te Karty ze sobą, jeżeli tylko wolno jej to zrobić (58.3-4.)."]),
+    ).toContain("(5.3-4.)");
   });
 
   it("carries an argument", () => {

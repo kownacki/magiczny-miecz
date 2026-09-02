@@ -1,5 +1,7 @@
 /** Sentences this table adds to the Instrukcja where the Instrukcja leaves a hole. */
 
+import { asRead } from "./misprints";
+
 /**
  * An addition to a printed rule.
  *
@@ -63,6 +65,8 @@ export const ADDENDA: readonly Addendum[] = [
 export interface Segment {
   text: string;
   added: boolean;
+  /** Which addendum put it there, so the text can point at its own argument. */
+  addendum?: Addendum;
 }
 
 /**
@@ -82,7 +86,7 @@ export function withAddenda(rule: string | null, para: string): Segment[] {
   for (const one of mine) {
     const at = rest.indexOf(one.after) + one.after.length;
     out.push({ text: rest.slice(0, at), added: false });
-    out.push({ text: one.text, added: true });
+    out.push({ text: one.text, added: true, addendum: one });
     rest = rest.slice(at);
   }
   if (rest) out.push({ text: rest, added: false });
@@ -92,4 +96,30 @@ export function withAddenda(rule: string | null, para: string): Segment[] {
 /** The addenda that actually landed in this paragraph, for the note under it. */
 export function addendaFor(rule: string | null, para: string): Addendum[] {
   return ADDENDA.filter((one) => one.rule === rule && para.includes(one.after));
+}
+
+/** A stable handle for one addendum, so its text can point at its own argument. */
+export function addendumId(addendum: Addendum): string {
+  return `dodatek-${addendum.rule}-${ADDENDA.indexOf(addendum)}`;
+}
+
+/**
+ * A rule as the Księga shows it: misprints read, addenda composed in.
+ *
+ * For search, which was matching the printed text alone — so „lub Miejsce"
+ * found nothing, though it is on the page in front of you. A reader searching
+ * for words they can see and being told the book does not contain them is the
+ * app calling its own page a lie.
+ *
+ * Corrections too, for the same reason: somebody who reads „(5.3-4.)" in 16.6
+ * and searches for it should land on 16.6.
+ */
+export function asShown(rule: string | null, paras: readonly string[]): string {
+  return paras
+    .map((para) =>
+      withAddenda(rule, asRead(para))
+        .map((segment) => segment.text)
+        .join(""),
+    )
+    .join(" ");
 }
