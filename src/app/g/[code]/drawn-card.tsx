@@ -11,11 +11,10 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
-import { visitWhen } from "@/lib/engine/abilityText";
+import { staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import type { Nature } from "@/data/types";
-import { WithRules } from "./rule-ref";
 import { inertFor, isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
@@ -206,7 +205,6 @@ export function DrawnCard({
   const skippable =
     (classOf(known.id) !== "stranger" && mayWalkPast(known.id)) ||
     (script !== null && inertFor(script.effect, nature));
-  const perishes = visitWhen(known.id).includes("teraz albo wcale");
 
   return (
     <DrawSheet
@@ -282,24 +280,19 @@ export function DrawnCard({
         )}
       </header>
 
-      {/* Two lines about the Karta rather than about what it says: whether you
-          have to use it at all, and how long it is here. The first is the one
-          the player is about to act on — "Rozpatrz, co się da" under a WRÓŻKA
-          and under an UROCZA DIABLICA is the same button doing two very
-          different things. */}
-      {visitWhen(known.id).length > 0 && (
-        <p className="text-[11px] text-magia/80">
-          {/* Each label starts, not just the first — the middot stands between
-              two independent facts. `CardFacts` draws this same line beside the
-              picture and had the identical bug; the two do not share a
-              component, which is exactly how the second one was missed. */}
-          <WithRules text={visitWhen(known.id).map(sentence).join(" · ")} />
-        </p>
-      )}
-      {script && (
-        <p className="text-[11px] text-ochre/80">
-          {describeDisposition(script.disposition)}
-        </p>
+      {/* How long the Karta is here — for a Nieznajomy and a Miejsce the whole
+          of what varies, since 16.5 and 16.7 make the instruction binding on
+          every one of them. Said as a fact about the Karta rather than in the
+          disposition's own words, which are an instruction to the table
+          („Odłóż Kartę na stos użytych"). */}
+      {staysAs(known.id) ? (
+        <p className="text-[11px] text-magia/80">{sentence(staysAs(known.id)!)}</p>
+      ) : (
+        script && (
+          <p className="text-[11px] text-ochre/80">
+            {describeDisposition(script.disposition)}
+          </p>
+        )
       )}
 
       {coverageOf(known.id) === "brak" && (
@@ -470,32 +463,21 @@ export function DrawnCard({
           </button>
         )}
 
-        {/* 16.8 lets a card stay where it fell — but not a Wróg. Rule 11 is
-            explicit that creatures present "muszą najpierw zostać pokonani ...
-            lub należy im uciec", so a fight is fought or fled, never shelved.
-            16.8 is about what is left when a turn ends, not a way out of one.
+        {/* Walking away, where the Karta itself allows it.
 
-            Two reasons to offer it and they say different things. A Karta the
-            rules let you walk past (13.5) is *skipped* — that is an answer, and
-            for one that stays it costs nothing, which the wording says.
-
-            A compulsory one is only *shelved*, and the wording has to say that
-            too, or „zostaw na później" under „obowiązkowe (16.5)" reads as a
-            way out of the obligation. It is not one: nothing else on the Obszar
-            opens while it is outstanding and the turn cannot end (12.1). What
-            it buys is an order — cast a Zaklęcie first, read the next Karta —
-            and nothing else. */}
-        {canAct && !foe && (skippable || asking) && (
+            Only where it does. „zostaw na później" used to show on anything
+            mid-question, which put a way out under a Karta that has none — a
+            Nieznajomy is carried out at its place in the kolejka (16.5) and a
+            Wróg is fought or fled (13.5), never shelved. What is left is a
+            Miejsce whose own text asks first („Jeżeli chcesz do niej wejść"),
+            and a Karta that has nothing for this character at all. */}
+        {canAct && !foe && skippable && (
           <button
             disabled={busy}
             onClick={() => onLeave(known.id)}
             className="self-start text-[11px] text-muted underline transition hover:text-ink"
           >
-            {skippable
-              ? perishes
-                ? "Pomiń (13.5) — Karta przepadnie"
-                : "Pomiń (13.5) — wrócisz do niej w tej turze"
-              : "zostaw na później — wrócisz do niej przed końcem tury"}
+            Pomiń
           </button>
         )}
       </div>

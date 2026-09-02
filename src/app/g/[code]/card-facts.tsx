@@ -25,7 +25,7 @@ import { WithRules } from "./rule-ref";
 export function hasFacts(profile: ItemProfile | null): boolean {
   if (!profile) return false;
   return (
-    profile.visit.length > 0 ||
+    profile.visit !== null ||
     profile.facts.length > 0 ||
     profile.requirements.length > 0 ||
     profile.special.length > 0 ||
@@ -48,21 +48,12 @@ export function CardFacts({
 
   return (
     <>
-      {/* Must you, and when may you — 13.5's line, before anything else the
-          Karta does. For a Nieznajomy it is the first question a player has:
-          the WRÓŻKA offers a gift and the UROCZA DIABLICA makes you roll, and
-          the two are the same class, the same numeral and the same picture
-          frame. Coloured like an item's „gdy założony", because it is the same
-          kind of statement: not what the card gives, but when it applies. */}
-      {profile.visit.length > 0 && (
+      {/* How long it is here, before anything else the Karta does. Coloured
+          like an item's „gdy założony", because it is the same kind of
+          statement: not what the card gives, but the terms it gives it on. */}
+      {profile.visit !== null && (
         <p className="border-t border-edge/60 pt-2 text-[11px] leading-snug text-magia/80">
-          {/* Each, and not the join. The middot separates two *independent*
-              labels — „Do wyboru (13.5) · Teraz albo wcale" is 13.5's choice
-              and the Karta's own deadline, neither inside the other — so both
-              of them start. `fact.when` below joins on a comma instead, which
-              is punctuation within one clause, and there only the first
-              starts. The mark between them is what says which. */}
-          <WithRules text={profile.visit.map(sentence).join(" · ")} />
+          {sentence(profile.visit)}
         </p>
       )}
 

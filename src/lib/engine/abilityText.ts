@@ -5,7 +5,6 @@ import { FIELDS, type FieldId } from "./board";
 import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
 import { describeDisposition, scriptFor } from "./cardScript";
 import { classOf } from "./cards";
-import { leavesWhenResolved, mayWalkPast } from "./kolejka";
 import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
 import { NATURE_LABEL, cardName, fieldName, plural } from "./polish";
@@ -96,51 +95,40 @@ export function whenApplies(
 }
 
 /**
- * What a Nieznajomy or a Miejsce asks of the Postać who stops on its Obszar.
+ * How long a Nieznajomy or a Miejsce is here, in a phrase.
  *
- * The same idea as `AbilityWhen` and for the same reason: a Przedmiot's line
- * says *when its bonus counts*, and these say *when you may — or must — use the
- * Karta*. Both are derived, never stored, so they cannot drift from the rules
- * that act on them.
+ * Which is the only thing that varies between them worth saying beside the
+ * picture. Whether the instruction is binding is not: 16.5 and 16.7 both say
+ * „konieczne jest wykonanie zawartej w Karcie instrukcji", so every one of them
+ * is carried out at its place in the kolejka, and a label repeating that on all
+ * thirty is a word that says nothing.
  *
- * 13.5 draws the line and the app already reads it: „Do niektórych instrukcji
- * Postać musi się zastosować, do innych może, jeśli ma ochotę." Which side a
- * Karta falls on is `mayWalkPast`, read off the verb the card itself uses.
- *
- * Two labels where there is a choice, because two different things could be
- * lost. „teraz albo wcale" is the Karta going away when it is read — a KUGLARZ
- * or a JEDNOROŻEC, „odłóż jego Kartę" whether you took the offer or not.
- * „w każdej chwili tury" is the one that stays, so declining it in the kolejka
- * costs nothing and 12.1's window has it again afterwards.
+ * What a player actually needs to know is whether the Karta will still be there
+ * — the CUDOTWÓRCA for the rest of the game, the WRÓŻKA until the first Dobra
+ * Postać takes her wish, the KUGLARZ not even until the end of this turn. Read
+ * off the disposition, which is where that fact already lives.
  */
-export type VisitWhen =
-  /** 16.5: „konieczne jest wykonanie zawartej w Karcie instrukcji". */
-  | "obowiązkowe (16.5)"
-  /** 16.7, the same sentence for a Miejsce. */
-  | "obowiązkowe (16.7)"
-  | "do wyboru (13.5)"
-  | "teraz albo wcale"
-  | "w każdej chwili tury (12.1)";
-
-/**
- * The labels for one Karta, or none for a class the question does not fit.
- *
- * Only Nieznajomi and Miejsca. A Spotkanie and a Wróg are never a choice — 16.1
- * and 16.2 are plain, and a label on all 40 of them saying so is the same word
- * printed 40 times. A Przedmiot has its own two lines already.
- */
-export function visitWhen(cardId: string): VisitWhen[] {
+export function staysAs(cardId: string): string | null {
   const cardClass = classOf(cardId);
-  if (cardClass !== "stranger" && cardClass !== "place") return [];
-  if (!mayWalkPast(cardId)) {
-    return [cardClass === "stranger" ? "obowiązkowe (16.5)" : "obowiązkowe (16.7)"];
+  if (cardClass !== "stranger" && cardClass !== "place") return null;
+  const disposition = scriptFor(cardId)?.disposition;
+  if (!disposition) return null;
+  switch (disposition.kind) {
+    case "odloz":
+      return "jednorazowa — potem wraca na stos";
+    case "do-pierwszej":
+      return "czeka tu na pierwszą Postać";
+    case "zostaje":
+      return "zostaje tu do końca gry";
+    case "zostaje-z-pula":
+      return "zostaje tu, dopóki starczy punktów";
+    case "po-turach":
+      return `działa przez ${disposition.turns} ${disposition.turns === 1 ? "turę" : "tury"}`;
+    case "wraca-do-stosu":
+      return "wraca do stosu";
+    case "bierzesz":
+      return "bierzesz ją ze sobą";
   }
-  return [
-    "do wyboru (13.5)",
-    leavesWhenResolved({ cardId, cardClass })
-      ? "teraz albo wcale"
-      : "w każdej chwili tury (12.1)",
-  ];
 }
 
 /** One formalised line: what it gives, and when it gives it. */
@@ -154,12 +142,10 @@ export interface AbilityFact {
 /** Everything the app carries about one card, ready to be shown. */
 export interface ItemProfile {
   /**
-   * Whether the Karta must be used and when it may be — see `visitWhen`.
-   *
-   * Empty for everything but a Nieznajomy and a Miejsce, which is most of the
-   * box: nobody needs telling that a Wilk is not optional.
+   * How long this Karta is here — see `staysAs`. Null for every class but a
+   * Nieznajomy and a Miejsce, which is most of the box.
    */
-  visit: VisitWhen[];
+  visit: string | null;
   /** Where it may be worn. Empty when it is only ever carried. */
   slots: readonly Slot[];
   slotLabel: string | null;
@@ -216,7 +202,7 @@ export function itemProfile(cardId: string, eqMode: EqMode = "classic"): ItemPro
     },
   }));
   return {
-    visit: visitWhen(cardId),
+    visit: staysAs(cardId),
     slots,
     slotLabel: slots.length > 0 ? slots.map((slot) => SLOT_LABEL[slot]).join(" / ") : null,
     facts: lines
@@ -277,8 +263,8 @@ export function characterProfile(characterId: string): ItemProfile {
   const known = asCharacterId(characterId);
   const abilities = known ? abilitiesOfCharacter(known) : [];
   return {
-    // A Postać is not a Karta lying on an Obszar; there is nothing to visit.
-    visit: [],
+    // A Postać is not a Karta lying on an Obszar.
+    visit: null,
     slots: [],
     slotLabel: null,
     requirements: [],
