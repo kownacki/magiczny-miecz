@@ -73,8 +73,13 @@ export function Fold({
    */
   const outside = first ? "" : "mt-3 border-t border-edge pt-3";
   const heading = `text-[11px] uppercase tracking-widest ${tone}`;
-  const inside = (
-    <span className="inline-flex w-[calc(100%-1.25rem)] items-center gap-3 align-middle">
+  /**
+   * `width` is the caller's because the two branches want different things: a
+   * heading that does not fold fills its line, and one that does is only as
+   * wide as what it says — see the summary below.
+   */
+  const row = (width: string) => (
+    <span className={`inline-flex ${width} items-center gap-3 align-middle`}>
       <span className="shrink-0">
         {title}
         {tally !== undefined && <span className="ml-2 text-muted/70">{tally}</span>}
@@ -86,7 +91,7 @@ export function Fold({
   if (!onToggle) {
     return (
       <div className={outside}>
-        <p className={heading}>{inside}</p>
+        <p className={heading}>{row("w-[calc(100%-1.25rem)]")}</p>
         <div className="mt-2">{children}</div>
       </div>
     );
@@ -104,13 +109,33 @@ export function Fold({
           event.preventDefault();
           onToggle();
         }}
-        className={`cursor-pointer ${heading}`}
+        /**
+         * `w-fit`, so the hit area is the heading and not the line it sits on.
+         *
+         * A `<summary>` is a block and takes the whole width, so every one of
+         * these used to fold on a click anywhere across the panel — including
+         * the empty half to the right of a short name, which is nobody's idea
+         * of a button. It is `width: fit-content` now: the marker, the name,
+         * the tally and whatever rides on the bar, and nothing after them.
+         *
+         * `max-w-full` is what keeps that honest in the other direction. The
+         * bar carries an `aside` when it is shut — the Karty a group is hiding,
+         * truncated — and a box that only ever fits its content would grow to
+         * whatever that says and push the panel sideways. Capped, the aside
+         * truncates as it always did.
+         *
+         * `display` is left alone on purpose. A summary is a `list-item` and
+         * that is what draws the triangle; laying it out as a flex box or an
+         * inline-block takes the marker away, which is why the row inside does
+         * the aligning instead.
+         */
+        className={`w-fit max-w-full cursor-pointer ${heading}`}
       >
         {/* One flex line, so the name, the tally and whatever rides on the bar
             are centred on each other rather than each sitting on the summary's
             own baseline. `align-middle` puts the line itself next to the
             marker, which stays outside it. */}
-        {inside}
+        {row("max-w-full")}
       </summary>
       {/* The gap belongs to what is inside, not to the heading: a margin under
           the summary is height a *shut* section is still paying for, and that
