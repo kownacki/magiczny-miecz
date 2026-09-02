@@ -22,13 +22,17 @@ import { asRead } from "./misprints";
  * word for the thing, use that word.
  *
  * **Argued, and the argument shown.** Every addendum carries `because`, and the
- * Księga prints it under the rule. A reader holding the Instruktja next to the
+ * Księga prints it under the rule. A reader holding the Instrukcja next to the
  * screen has to be able to see exactly what we added and why — otherwise the
  * referee is quietly making up rules, which is the one thing it may never do.
  *
  * **Never in the transcription.** `docs/RULES.md` and `rules.json` keep only
  * what was printed. The addition lives here and is composed in at render time,
  * drawn in ochre so it is visibly ours.
+ *
+ * Shown as „Uzupełnienie", never „dodatek" — that word already means an
+ * expansion box (docs/EXPANSIONS.md), and this is its opposite: a sentence the
+ * base game should have had.
  */
 export interface Addendum {
   /** The rule it joins, as the book numbers it. */
@@ -56,7 +60,7 @@ export const ADDENDA: readonly Addendum[] = [
       "Instrukcja nazywa Miejsca odwiedzanymi (opisy Miejsc, które odwiedzą " +
       "podczas wędrówki — z opisu Kart Zdarzeń), więc dopisujemy je tam, gdzie " +
       "już powinny były być. Nie zmienia to 16.7: Miejsce, którego Karta każe " +
-      "(LABIRYNT), pozostaje obowiązkowe. Dodatek mówi tylko, KIEDY wolno " +
+      "(LABIRYNT), pozostaje obowiązkowe. Uzupełnienie mówi tylko, KIEDY wolno " +
       "skorzystać, a nie CZY trzeba.",
   },
 ];
@@ -100,7 +104,7 @@ export function addendaFor(rule: string | null, para: string): Addendum[] {
 
 /** A stable handle for one addendum, so its text can point at its own argument. */
 export function addendumId(addendum: Addendum): string {
-  return `dodatek-${addendum.rule}-${ADDENDA.indexOf(addendum)}`;
+  return `uzupelnienie-${addendum.rule}-${ADDENDA.indexOf(addendum)}`;
 }
 
 /**

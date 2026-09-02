@@ -23,8 +23,9 @@ silently:
   12.1 lists what may be visited „w każdej chwili" and omits Miejsca, so no rule
   anywhere states when a TARGOWISKO may be used. `src/lib/view/addenda.ts` adds
   the missing words, in the book's own register; the Księga draws them in ochre
-  — the colour it uses for its own voice everywhere else — and prints „Dodatek"
-  underneath with the argument.
+  — the colour it uses for its own voice everywhere else — and prints
+  „Uzupełnienie" underneath with the argument. Not „dodatek": that word means an
+  expansion box, and this is its opposite.
 
 The test beside each table fails if an entry stops matching the transcription,
 or if one is ever written into it.

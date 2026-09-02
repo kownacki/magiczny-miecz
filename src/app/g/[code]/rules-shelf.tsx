@@ -221,7 +221,13 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                     ))}
                   {/* Why a sentence that is not in the book is on the page.
                       Ochre like the sentence itself, so the claim and its
-                      justification read as one voice — ours. */}
+                      justification read as one voice — ours.
+
+                      „Uzupełnienie" and not „dodatek": that word is taken. A
+                      dodatek is Labirynt Magów or Krypta Upiorów — a box you
+                      buy — and this is the opposite, a sentence the base game
+                      should have had. „Uzupełnienie zasad" is the ordinary
+                      Polish for filling in what a ruleset left out. */}
                   {[...rule.paras, ...rule.examples]
                     .flatMap((para) => addendaFor(rule.id, para))
                     .map((addendum) => (
@@ -230,7 +236,7 @@ function Manual({ focus, query }: { focus: string | null; query: string }) {
                         id={addendumId(addendum)}
                         className="mt-2 text-[11px] leading-snug text-ochre/70"
                       >
-                        <span className="text-ochre/50">Dodatek: </span>
+                        <span className="text-ochre/50">Uzupełnienie: </span>
                         {addendum.because}
                       </p>
                     ))}
@@ -337,10 +343,10 @@ function Prose({ raw, rule = null }: { raw: string; rule?: string | null }) {
                   .getElementById(segment.addendum ? addendumId(segment.addendum) : "")
                   ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
               }}
-              title="Dodatek — zdanie, którego nie ma w Instrukcji. Kliknij, żeby przeczytać dlaczego."
+              title="Uzupełnienie — zdanie, którego nie ma w Instrukcji. Kliknij, żeby przeczytać dlaczego."
               className="ml-1 cursor-pointer align-baseline text-[10px] not-italic underline decoration-dotted underline-offset-2 transition hover:text-ink"
             >
-              (dodatek)
+              (uzupełnienie)
             </button>
           </span>
         ) : (
