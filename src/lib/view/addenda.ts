@@ -81,18 +81,19 @@ export const ADDENDA: readonly Addendum[] = [
       "Zasada ta działa dopiero po rozpatrzeniu wszystkich Kart Zdarzeń " +
       "znajdujących się lub wyciągniętych na danym Obszarze (15.2).",
     because:
-      "12.1 i 15.2 mówią o tych samych Kartach i mówią coś przeciwnego: jedno " +
-      "pozwala z nich korzystać „w każdej chwili”, drugie każe zachować " +
-      "kolejność numerów i nazywa to koniecznym. Która reguła ustępuje, " +
-      "Instrukcja nie rozstrzyga. To zdanie rozstrzyga to czasem, a nie " +
-      "rodzajem Karty: najpierw jedno przejście przez wszystko, co na Obszarze " +
-      "leży i co zostało wyciągnięte, w kolejności z 15.2 — a swoboda z 12.1 " +
-      "zaczyna się po nim i trwa do końca tury. Dzięki temu obie reguły są " +
-      "prawdziwe, każda w swoim czasie, i żadnej nie trzeba naginać. Sam zwrot " +
-      "jest książki: 16.4 bramkuje Karty dokładnie tak samo — „Dopiero po " +
-      "rozpatrzeniu skutków wszystkich Spotkań i pokonaniu wszystkich " +
-      "Wrogów… może przystąpić do rozpatrzenia pozostałych Kart Zdarzeń” — " +
-      "więc dopisujemy to samo o odwiedzinach, o których 16.4 milczy.",
+      "12.1 i 15.2 mówią o tych samych Kartach coś przeciwnego: pierwsza " +
+      "pozwala z nich korzystać „w każdej chwili”, druga każe zachować " +
+      "kolejność numerów i nazywa to koniecznym. Która ustępuje, Instrukcja " +
+      "nie rozstrzyga. Rozstrzygamy to czasem, a nie rodzajem Karty: najpierw " +
+      "jedno przejście przez wszystko, co na Obszarze leży i co zostało " +
+      "wyciągnięte, w kolejności z 15.2 — a swoboda z 12.1 zaczyna się po nim " +
+      "i trwa do końca tury. Dzięki temu obie reguły zostają prawdziwe, każda " +
+      "w swoim czasie, i żadnej nie trzeba naginać. Sam zwrot pochodzi z " +
+      "Instrukcji: 16.4 w ten właśnie sposób wstrzymuje jedne Karty do czasu " +
+      "rozpatrzenia innych — „Dopiero po rozpatrzeniu skutków wszystkich " +
+      "Spotkań i pokonaniu wszystkich Wrogów… może przystąpić do rozpatrzenia " +
+      "pozostałych Kart Zdarzeń” — a o odwiedzinach milczy, więc to samo " +
+      "zdanie dopisujemy tam, gdzie go brakuje.",
   },
 ];
 
