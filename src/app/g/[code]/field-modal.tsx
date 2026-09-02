@@ -889,9 +889,13 @@ export function FieldModal({
                 {goldAt === groups.length && goldShelf(groups.length === 0 && players === null)}
               </>
             )}
-            {/* 13.1 and 12.1: things happen on the field your move ended on, so
-                a player reading about somewhere else is told why there is no
-                button rather than left to wonder. */}
+            {/* Two notices, and only two: 13.1's pair, which are about *where*
+                the reader is standing and cannot be worked out from anything on
+                screen. 12.1's window being shut is not one of them — the Karta
+                holding it shut is in this very list, lit in the kolejka, and a
+                sentence naming it under its own picture is the app reading its
+                own screen aloud. What is missing is the „weź", and that is the
+                same answer the kolejka is already giving. */}
             {/* Standing on it is not enough: 12.1 gives this to the character
                 whose move ENDS here, and only until the end of that turn. Said
                 rather than left as a missing button, because a player looking
@@ -910,16 +914,6 @@ export function FieldModal({
               </p>
             )}
 
-            {/* The 12.1 window itself, shut. Standing here on your own turn
-                having ended your move, and still nothing to press: a Wróg is
-                up, the deal is unfinished, or the kolejka has something in it.
-                The sentence is the engine's, so it is word for word what the
-                server would have refused with. */}
-            {(cards.length > 0 || gold > 0) && standingHere && canAct && arrived && blocked && (
-              <p className="mt-2 text-[11px] text-muted/70">
-                <WithRules text={blocked} />
-              </p>
-            )}
           </section>
 
           {/* Last of what the reveal is: you have seen the deal and what was
