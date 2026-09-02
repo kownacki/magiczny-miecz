@@ -18,6 +18,7 @@
 import type { ItemProfile } from "@/lib/engine/abilityText";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import type { Nature } from "@/data/types";
+import { sentence } from "@/lib/engine/polish";
 import { WithRules } from "./rule-ref";
 
 /** Whether there is any formalised line at all, or only the printed prose. */
@@ -55,7 +56,7 @@ export function CardFacts({
           kind of statement: not what the card gives, but when it applies. */}
       {profile.visit.length > 0 && (
         <p className="border-t border-edge/60 pt-2 text-[11px] leading-snug text-magia/80">
-          <WithRules text={profile.visit.join(" · ")} />
+          <WithRules text={sentence(profile.visit.join(" · "))} />
         </p>
       )}
 
@@ -75,7 +76,7 @@ export function CardFacts({
                 nature === null ? "text-muted" : barred ? "text-vermilion" : "text-verdigris"
               }`}
             >
-              <WithRules text={need.what} />
+              <WithRules text={sentence(need.what)} />
             </li>
           ))}
         </ul>
@@ -86,7 +87,7 @@ export function CardFacts({
           {profile.facts.map((fact, at) => (
             <li key={at} className="flex flex-col text-[11px] leading-snug">
               <span className="text-ink">
-                <WithRules text={fact.what} />
+                <WithRules text={sentence(fact.what)} />
               </span>
               {/* Only where there is a condition to meet, and there can be
                   two: a MIECZ has to be in your hand *and* only counts in a
@@ -95,7 +96,7 @@ export function CardFacts({
                   time said nothing. */}
               {fact.when.length > 0 && (
                 <span className="text-magia/80">
-                  <WithRules text={fact.when.join(", ")} />
+                  <WithRules text={sentence(fact.when.join(", "))} />
                 </span>
               )}
             </li>
@@ -108,7 +109,7 @@ export function CardFacts({
         <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
           {profile.special.map((line, at) => (
             <li key={at} className="text-[11px] leading-snug text-ochre/90">
-              <WithRules text={line} />
+              <WithRules text={sentence(line)} />
             </li>
           ))}
         </ul>
@@ -120,7 +121,7 @@ export function CardFacts({
         <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
           {profile.notes.map((note, at) => (
             <li key={at} className="text-[11px] leading-snug text-ochre/90">
-              <WithRules text={note} />
+              <WithRules text={sentence(note)} />
               {at === 0 && <span className="ml-1 text-[10px] text-muted/70">· pilnujesz sam</span>}
             </li>
           ))}

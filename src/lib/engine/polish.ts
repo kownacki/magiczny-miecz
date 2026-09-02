@@ -269,3 +269,27 @@ export function characterTitle(character: {
 export function sztuki(n: number): string {
   return `${n} ${plural(n, "Sztukę", "Sztuki", "Sztuk")} Złota`;
 }
+
+/**
+ * A line that stands on its own, starting the way a line does.
+ *
+ * The formalised lines beside a Karta are *composed*, not written: `abilityText`
+ * builds them out of fragments that nest — „jeśli zła: +1 Magii; w przeciwnym
+ * razie: Natura: zła" is four pieces, and three of them appear mid-sentence
+ * inside other lines. So the fragments stay lowercase, which is what they are,
+ * and the capital goes on at the moment one of them becomes the *first* thing
+ * on a line. Capitalising at the source would have put one in the middle of
+ * every line that quotes another.
+ *
+ * Only the first character, and only where there is a letter to change: a line
+ * that opens „+1 Złota" or „−1 Życia" is left exactly as it is. `toUpperCase`
+ * is safe on Polish here because every letter these lines can begin with —
+ * ł, ś, ż, ź, ć, ń, ó, ą, ę — has a single-character upper case.
+ *
+ * Not for a value that follows a label. „Kiedy: w dowolnej chwili" and „Slot:
+ * ręka główna" are one sentence with a colon in the middle, and the half after
+ * it does not start again.
+ */
+export function sentence(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
