@@ -72,50 +72,27 @@ export const ADDENDA: readonly Addendum[] = [
       "skorzystać, a nie CZY trzeba.",
   },
   {
-    rule: "15.2",
-    after: "Karta o najniższym numerze rozpatrywana jest jako pierwsza.",
-    text:
-      " Kolejność ta wiąże Karty, których instrukcję trzeba wykonać; z Kart, " +
-      "które jedynie coś oferują, wolno skorzystać w dowolnej chwili (12.1).",
-    because:
-      "15.2 każe rozpatrywać „pozostałe Karty Zdarzeń” po kolei, tak jakby " +
-      "każda Karta była zdarzeniem. Nie każda jest: instrukcją TARGOWISKA jest " +
-      "„może kupić”, a wykonanie takiej instrukcji to po prostu otwarty " +
-      "kram — nie ma tu czego ustawiać w kolejce. Instrukcja nie przewiduje " +
-      "Karty, która niczego nie robi, tylko stoi; to zdanie ją przewiduje. " +
-      "Bez niego 15.2 i 12.1 przeczą sobie wprost: jedno każe trzymać " +
-      "kolejność Kart IV-VI, drugie pozwala z nich korzystać „w każdej chwili”.",
-  },
-  {
     rule: "12.1",
-    after: "b) Jest to Obszar, na który ciągnięte są Karty (13.4).",
+    after:
+      "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im " +
+      "uciec lub rozpatrzeć treść wyciągniętych Kart.",
     own: true,
     text:
-      "c) Na Obszarze leżą Karty, do których instrukcji Postać musi się " +
-      "zastosować (16.5, 16.7).",
+      "Zasada ta działa dopiero po rozpatrzeniu wszystkich Kart Zdarzeń " +
+      "znajdujących się lub wyciągniętych na danym Obszarze (15.2).",
     because:
-      "a) i b) mówią to samo dwa razy: Obszar coś Postaci zadał i póki tego nie " +
-      "załatwi, niczego stąd nie bierze — raz o Wrogach, raz o Kartach do " +
-      "wyciągnięcia. Trzeciego przypadku Instrukcja nie wypisała, choć jest " +
-      "tego samego rodzaju: na Obszarze leży LABIRYNT albo UROCZA DIABLICA, " +
-      "czyli Karta, której instrukcji trzeba się zastosować. Sam podział jest " +
-      "w książce — 13.5: „Do niektórych instrukcji Postać musi się zastosować, " +
-      "do innych może, jeśli ma ochotę”. Bez c) wychodzi, że można " +
-      "spokojnie kupować u Płatnerza, mając nad głową nierozpatrzoną Kartę, " +
-      "która każe.",
-  },
-  {
-    rule: "12.1",
-    after: "rozpatrzeć treść wyciągniętych Kart",
-    text: " lub zastosować się do instrukcji Kart, które tego wymagają",
-    because:
-      "To zdanie wylicza lekarstwa w kolejności samych wyjątków: najpierw " +
-      "Wrogowie z a), potem Karty do wyciągnięcia z b). Skoro doszło c), musi " +
-      "dojść i trzecie lekarstwo — inaczej Instrukcja wymienia przeszkodę i nie " +
-      "mówi, jak ją usunąć, a to gorzej niż milczenie, bo wygląda na komplet. " +
-      "Nazwane tymi samymi słowami co sam wyjątek („zastosować się do " +
-      "instrukcji”), żeby było widać, że to ta sama rzecz raz postawiona na " +
-      "drodze, a raz z niej zdjęta.",
+      "12.1 i 15.2 mówią o tych samych Kartach i mówią coś przeciwnego: jedno " +
+      "pozwala z nich korzystać „w każdej chwili”, drugie każe zachować " +
+      "kolejność numerów i nazywa to koniecznym. Która reguła ustępuje, " +
+      "Instrukcja nie rozstrzyga. To zdanie rozstrzyga to czasem, a nie " +
+      "rodzajem Karty: najpierw jedno przejście przez wszystko, co na Obszarze " +
+      "leży i co zostało wyciągnięte, w kolejności z 15.2 — a swoboda z 12.1 " +
+      "zaczyna się po nim i trwa do końca tury. Dzięki temu obie reguły są " +
+      "prawdziwe, każda w swoim czasie, i żadnej nie trzeba naginać. Sam zwrot " +
+      "jest książki: 16.4 bramkuje Karty dokładnie tak samo — „Dopiero po " +
+      "rozpatrzeniu skutków wszystkich Spotkań i pokonaniu wszystkich " +
+      "Wrogów… może przystąpić do rozpatrzenia pozostałych Kart Zdarzeń” — " +
+      "więc dopisujemy to samo o odwiedzinach, o których 16.4 milczy.",
   },
 ];
 

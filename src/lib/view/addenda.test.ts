@@ -67,29 +67,21 @@ describe("addenda", () => {
   });
 
   /**
-   * 15.2's half of the compulsory/optional line. 12.1's half is 12.1c, which
-   * gates rather than explains — with an unresolved compulsory Karta blocking
-   * everything, nothing more needs saying about whether it may be declined.
+   * The one that settles 12.1 against 15.2, and the reason there is no longer
+   * a compulsory/optional addendum: the two rules are separated by *time*, so
+   * neither has to be narrowed by card kind.
    */
-  it("frees a Karta that only offers from 15.2's order", () => {
-    const fifteen = withAddenda("15.2", "Konieczne jest przy tym zachowanie kolejności zgodnej z numeracją Kart (numer znajduje się u góry każdej Karty) - Karta o najniższym numerze rozpatrywana jest jako pierwsza.");
-    expect(fifteen.filter((s) => s.added)[0].text).toContain("jedynie coś oferują");
-  });
-
-  /**
-   * 12.1's third exception. It is a clause of a list, so it stands as its own
-   * paragraph beside a) and b) rather than running onto the end of b).
-   */
-  it("adds 12.1's third exception as its own paragraph", () => {
-    const b = "b) Jest to Obszar, na który ciągnięte są Karty (13.4).";
-    // Nothing inserted into b) itself…
-    expect(withAddenda("12.1", b)).toEqual([{ text: b, added: false }]);
-    // …and c) standing after it.
-    const own = afterParagraph("12.1", b);
+  it("opens 12.1's freedom only after the queue", () => {
+    const cure =
+      "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im " +
+      "uciec lub rozpatrzeć treść wyciągniętych Kart.";
+    // Nothing inserted into the printed sentence…
+    expect(withAddenda("12.1", cure)).toEqual([{ text: cure, added: false }]);
+    // …and ours standing after it, before the przykład.
+    const own = afterParagraph("12.1", cure);
     expect(own).toHaveLength(1);
-    expect(own[0].text).toMatch(/^c\) Na Obszarze leżą Karty/);
-    // Findable, like every other addition.
-    expect(asShown("12.1", [b])).toContain("do których instrukcji Postać musi się zastosować");
+    expect(own[0].text).toContain("dopiero po rozpatrzeniu wszystkich Kart Zdarzeń");
+    expect(asShown("12.1", [cure])).toContain("znajdujących się lub wyciągniętych");
   });
 
   it("carries an argument", () => {

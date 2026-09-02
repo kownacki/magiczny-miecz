@@ -5,12 +5,13 @@ Instrukcja spreads this across 12.1, 13.1–13.5, 15.1–15.2 and 16.1–16.8, a
 none of those sections states the whole sequence — so this is the reading the
 referee enforces, with every departure from the printed text marked.
 
-Two models are being weighed. **Model A** is below. **Model B** is the stricter
-one — no interleaving at all — and is not written up yet.
+**Model B is the one adopted.** Model A — free interleaving, with only
+compulsory Karty gating the square — is recorded at the bottom, because the
+argument that beat it is worth keeping.
 
 ---
 
-## Model A
+## Model B
 
 ### 1. Arrive, and merge what is there
 
@@ -25,7 +26,20 @@ Lying and drawn become one queue.
 > **15.2** — „…rozpatrywane są pozostałe Karty Zdarzeń… **znajdujące się lub
 > wyciągnięte** na danym Obszarze."
 
-### 2. Two gates, and only two
+### 2. The field's own instruction, first
+
+13.5 states its own order, and the square's printed instruction leads it:
+
+> **13.5** — „Postać stosuje się do instrukcji wydrukowanej na Obszarze, na
+> którym się znalazła. Jeżeli są tam jacyś Wrogowie (16.2-3) muszą oni najpierw
+> zostać pokonani… lub należy im uciec. Następnie Postać może odwiedzić
+> Nieznajomych, zabrać złoto, Przedmioty (5.4.) i Przyjaciół."
+
+Only the Wrogowie are said to interrupt it. So the Karczma's die is owed on
+arrival and the Osada's desks are open on arrival — which is what makes the
+ZŁODZIEJ DOBROCZYŃCA interaction below reachable at all.
+
+### 3. Two gates, and only two
 
 **15.1's self-placing cards first**, whatever their numeral, and they do not
 touch the character who drew them that turn.
@@ -39,67 +53,60 @@ This is a **draw-time** rule. The parenthesis scopes the whole of it to the turn
 the card was turned over; once it has landed, it is an ordinary Karta on its new
 square, queued by numeral like anything else. Two cards do it: UPIÓR, EREMITA.
 
-**Then everything the square has already put on you.** The book's own gates name
-Spotkania and Wrogowie:
+**Then the Spotkania and the Wrogowie**, which the book gates explicitly:
 
 > **16.4** — „Dopiero po rozpatrzeniu skutków wszystkich Spotkań i pokonaniu
-> wszystkich Wrogów… może przystąpić do rozpatrzenia pozostałych Kart Zdarzeń."
+> wszystkich Wrogów… albo wymknięciu się tym Wrogom (19.1-2.), może przystąpić
+> do rozpatrzenia pozostałych Kart Zdarzeń."
+
+Note **„albo wymknięciu się"**: a successful ucieczka (19.1) discharges the gate
+exactly as a kill does, and 12.1's own cure says the same — „pokonać Wrogów albo
+im uciec". The Wróg's Karta stays on the square face up (16.8) and is undischarged
+again for the next Postać, and for you next turn; the gate is *an unsettled
+Wróg*, not *a Wróg present*. That is the same shape as 12.1b, where the square
+never stops being one that draws and yet „rozpatrzeć" clears it.
+
+### 4. One pass through the rest, in numeral order
+
+> **15.2** — „Konieczne jest przy tym zachowanie kolejności zgodnej z numeracją
+> Kart… Karta o najniższym numerze rozpatrywana jest jako pierwsza."
+
+Every remaining Karta gets exactly one moment, in order. At its moment:
+
+- **Compulsory** (LABIRYNT, UROCZA DIABLICA, MĘDRZEC) — carried out there. 13.5
+  names the distinction: „Do niektórych instrukcji Postać musi się zastosować,
+  do innych może, jeśli ma ochotę."
+- **Optional** (TARGOWISKO, CZARODZIEJ, DZIKI RUMAK) — used or declined there.
+  Declining is not forfeiting *if the card stays*; see point 5.
+
+Nothing outside the queue is available while the queue is running. This is the
+whole of Model B, and the one addendum below is what says it.
+
+### 5. Then the square is open until the turn ends
+
+> **12.1** — „Postać, której ruch kończy się na danym Obszarze **w każdej
+> chwili, aż do końca swojej tury** może odwiedzić znajdującego się tam
+> Nieznajomego *lub Miejsce (16.7)*, zabrać leżące złoto, Przedmioty (5.4.) lub
+> Przyjaciół…"
 >
-> **12.1a** — „Na Obszarze leżą Karty Wrogów (13.5.)"
->
-> **13.5** — „Jeżeli są tam jacyś Wrogowie (16.2-3) muszą oni najpierw zostać
-> pokonani… lub należy im uciec. Następnie…"
+> *Zasada ta działa dopiero po rozpatrzeniu wszystkich Kart Zdarzeń
+> znajdujących się lub wyciągniętych na danym Obszarze (15.2).*
 
-On a square that draws, **12.1b** also holds until the deal has been dealt with.
-12.1 ends by naming the cure for each of its cases — „pokonać Wrogów albo im
-uciec lub rozpatrzeć treść wyciągniętych Kart" — and an addendum gives c) its
-own, since a rule that names an obstacle and not its remedy reads as a complete
-list that is missing a limb.
+Everything that **stays** on the square is now reachable in any order, as often
+as its own numbers allow — the residents you declined in the pass included.
+Bounded by the purse, by 5.4's four Przedmioty and by 21.2's stock.
 
-And **12.1c** — an addendum — extends the same idea to the third case the book
-left out: „Na Obszarze leżą Karty, do których instrukcji Postać musi się
-zastosować (16.5, 16.7)." a) and b) both say *the square has set you something
-and until you settle it you take nothing from here* — once about Wrogów, once
-about Karty owed. A LABIRYNT or an UROCZA DIABLICA lying unresolved is the same
-kind of thing, and 13.5 already draws the distinction the clause needs: „Do
-niektórych instrukcji Postać musi się zastosować, do innych może, jeśli ma
-ochotę."
+This is what saves the interactions the numerals would otherwise ruin. The
+ZAKLĘTE ŹRÓDŁO (VI, +1 Magii) comes after the SZTUKMISTRZ (IV, „którym pozwala
+na to ich Magia") in the pass, so a character one point short meets him too
+early — and reaches him again in the free phase, because he stays. Same for
+KUGLARZ then CZARODZIEJ.
 
-**So an unresolved compulsory Karta gates everything**, and the Płatnerz is not
-open over a Labirynt's head. This reverses the reading Model A first took, and
-it does so from inside the rulebook rather than from Talisman practice.
+What it does **not** save is a card spent when read: „Bez względu na to, czy
+skorzystasz z propozycji… odłóż jego Kartę." Those are decided at their moment
+or lost, which is what their own text says.
 
-### 3. Walk the queue, unlocking as you go
-
-15.1's cards, then ascending numeral. At each card:
-
-- **Compulsory** — resolved there, at its position. No deferring, and nothing
-  else on the square is available while one is outstanding (12.1c).
-- **Optional and spent when read** — decide now or lose it. The card says so
-  itself: „Bez względu na to, czy skorzystasz z propozycji… odłóż jego Kartę."
-- **Optional and staying** — it becomes part of the Obszar and is visitable at
-  any moment for the rest of the turn.
-
-**The field's own instruction unlocks here too, as if it were the first IV card**
-— that is, after Spotkania and Wrogowie, before every other card. Optional
-instructions (the Osada's desks) become offers; compulsory ones (the Karczma's
-die) are owed.
-
-Nothing that has unlocked ever closes again before the turn ends.
-
-### 4. Then everything open at once
-
-Resident Nieznajomi and Miejsca, the field's desks, loot and gold — any order,
-as often as each card's own numbers allow. Bounded by the purse, by 5.4's four
-Przedmioty and by 21.2's stock.
-
-Optional things are **not** sequenced among themselves, because order only earns
-its keep where one thing can prevent another — and where it does matter, the
-class numbers point the wrong way. The ZAKLĘTE ŹRÓDŁO (VI, +1 Magii) must
-precede the SZTUKMISTRZ (IV, „którym pozwala na to ich Magia") to cross 2.6's
-threshold, and only a free choice gets that right.
-
-### 5. Two things end or restart it
+### 6. Two things end or restart it
 
 **Losing the turn stops everything**, whether it came from an obligation or from
 an optional visit you chose (GROTA).
@@ -122,44 +129,63 @@ explore, not both.
 
 ---
 
-## The 12.1 / 15.2 contradiction, and the three sentences that close it
+## The 12.1 / 15.2 contradiction, and the sentence that closes it
 
 Read flat, the two rules cover the same cards and say opposite things. 12.1
 frees „w każdej chwili" what 15.2 binds with „Konieczne jest" — and once Miejsca
 were added to 12.1's list, the overlap is total: IV, V and VI, which is the
-whole of „pozostałe Karty Zdarzeń".
+whole of „pozostałe Karty Zdarzeń". The book never says which one yields.
 
-They come apart on their verbs. **15.2 sequences what a Karta does to you** —
-„wykonywane są zawarte w nich instrukcje". **12.1 frees what you do** —
-„odwiedzić", „zabrać". For a compulsory Karta those are one event, so it has a
-position. For an optional one they are not: the TARGOWISKO's instruction is
-„może kupić", and carrying it out *is* the shop standing open. There is nothing
-to put in a queue.
+**Model B separates them by time rather than by kind.** 15.2 governs the pass;
+12.1 governs what follows it. Both rules stay true in full, neither is narrowed,
+and the question „which class may be used when" never has to be asked — which is
+also why it is the cheaper of the two models to implement and to explain at a
+table.
 
-So the line is **compulsory against optional**, not one class against another —
-and the book never draws it, because 15.2 was written as though every Karta
-were an event and 12.1 as though none were compulsory. Four `addenda.ts` entries draw it, from both sides:
+Two `addenda.ts` entries are all it takes:
 
 | rule | what it adds | why |
 | --- | --- | --- |
 | **12.1** | „lub Miejsce (16.7)" | no rule said when a Miejsce may be used at all |
-| **12.1** | „c) …Karty, do których instrukcji Postać musi się zastosować" | a) and b) are the same idea twice; the third case is unwritten |
-| **12.1** | „lub zastosować się do instrukcji Kart, które tego wymagają" | c) named a third obstacle; the cure sentence listed only two |
-| **15.2** | „Kolejność ta wiąże Karty, których instrukcję trzeba wykonać…" | otherwise a shop has to wait its numeral |
+| **12.1** | „Zasada ta działa dopiero po rozpatrzeniu wszystkich Kart Zdarzeń znajdujących się lub wyciągniętych na danym Obszarze (15.2)." | the book leaves 12.1 and 15.2 flatly opposed and picks neither |
 
-Each is a genuine silence rather than a disagreement, which is what keeps them
-addenda: the book does not say when a Miejsce is visited, does not name the
-third thing that holds a square shut, does not say how that third thing is
-cleared, and does not contemplate a Karta that only stands there.
+Both are genuine silences rather than disagreements, which is what keeps them
+addenda: the book does not say when a Miejsce is visited, and does not say which
+of its own two rules yields to the other. The second borrows 16.4's own
+construction — „Dopiero po rozpatrzeniu… może przystąpić do…" — because 16.4
+already gates Karty behind Karty in exactly that shape, and says nothing about
+visits.
+
+---
+
+## Model A, and why it lost
+
+A let the two phases interleave: only a *compulsory* unresolved Karta held the
+square shut, and anything that merely offered could be used the moment you
+arrived. It needed four addenda — the Miejsce one, a third exception c) to 12.1,
+a limb added to 12.1's cure sentence to discharge c), and a sentence in 15.2
+freeing offering Karty from the numeral order.
+
+Three things sank it. The line it drew — compulsory against optional — **is not
+in the book**, so every one of those four sentences was ours. It needed a rule
+about a rule (c) and then a remedy for that rule, which is the shape of a patch
+rather than of a missing sentence. And it left a resident you had walked past
+ambiguous: open, closed, or open only if you had not yet declined it.
+
+B costs one thing A did not: a card spent when read is decided at its numeral,
+so a VI Miejsce that would have helped against a IV Nieznajomy cannot be reached
+in time. Every case checked below survives that, because the cards it would hurt
+all stay.
 
 ## What is ours, not the box's
 
-**Optional residents and the field's desks are offers, not queue entries.** Read
-off the cards' own words — „podczas każdych odwiedzin", „Każdy, kto tu
-zawędruje", „która tu zawita" — and from 21.1 making no distinction between a
-shop printed on the board and one that walked in. The Instrukcja never says when
-a Miejsce or a printed desk may be used; 12.1's „w każdej chwili" covers only
-Nieznajomi and loot.
+**A resident you declined in the pass is still open afterwards.** Read off the
+cards' own words — „podczas każdych odwiedzin", „Każdy, kto tu zawędruje",
+„która tu zawita" — none of which spends the card, against „Bez względu na to,
+czy skorzystasz z propozycji… odłóż jego Kartę", which does. **The field's own
+printed desk is not a queue entry at all**, by 13.5's sentence order, and 21.1
+makes no distinction between a shop printed on the board and one that walked
+in.
 
 **Arrival order breaks a tie within one numeral.** 15.2 orders by numeral and
 stops. Talisman's later edition fills the gap with „the order they were drawn",
