@@ -1,6 +1,7 @@
 "use client";
 
 import { LAYER } from "./layers";
+import { SHELF_WIDTH } from "@/lib/view/cardImages";
 import type { SeatCharacter } from "@/lib/engine/characters";
 import type { TileCard } from "./card-tile";
 import type { Seat } from "./table";
@@ -65,7 +66,22 @@ export function TableLayout({
   drawer?: React.ReactNode;
 }) {
   return (
-    <main className="flex h-[100dvh] flex-col overflow-hidden">
+    <main
+      /**
+       * The width of a left-hand drawer, published so the column under it can
+       * refuse to be narrower.
+       *
+       * A custom property rather than the number written into two Tailwind
+       * classes, because the floor and the drawer are the same measurement —
+       * `SHELF_WIDTH`, five tiles across — and a floor that drifts from the
+       * thing standing on it is worse than no floor. It is a variable and not
+       * an inline `minWidth` because the rule only applies from `lg`: below
+       * that the columns stack and the drawer covers the screen, which is
+       * right, and a 518px floor on a phone is a horizontal scrollbar.
+       */
+      style={{ "--shelf-w": `${SHELF_WIDTH}px` } as React.CSSProperties}
+      className="flex h-[100dvh] flex-col overflow-hidden"
+    >
       {/* Above the modals, and opaque.
           
           A fight owns the game; it does not own the table. The bar carries the
@@ -89,7 +105,12 @@ export function TableLayout({
         {/* No padding under this one: the journal is the last thing in it and
             sits on the bottom edge, so twelve pixels of panel below a panel is
             just a strip of nothing at the bottom of the screen. */}
-        <section className="flex min-h-0 shrink-0 items-center justify-center border-edge px-3 pt-3 lg:h-full lg:w-[38.2%] lg:shrink lg:border-r">
+        {/* Never narrower than the drawer laid over it (`--shelf-w`). The board
+            column is what the Obszar and the Księga cover, and without a floor
+            a narrow window let them spill across the column that holds your
+            Postać, your purse and the Plecak — which is exactly the column you
+            open an Obszar to compare against. */}
+        <section className="flex min-h-0 shrink-0 items-center justify-center border-edge px-3 pt-3 lg:h-full lg:w-[38.2%] lg:min-w-[var(--shelf-w)] lg:shrink lg:border-r">
           {map}
         </section>
         {/* Two things park over the foot of this column and both publish what

@@ -30,8 +30,7 @@ import { fieldGroups, type FieldGroupKey } from "@/lib/view/fieldGroups";
 import { seatColour } from "@/lib/view/boardMap";
 import { TILE_WIDTH } from "@/lib/view/cardImages";
 import { SeatFigure } from "./seat-figure";
-import { Overlay } from "./overlay";
-import { CloseButton } from "./chrome";
+import { Drawer } from "./drawer";
 
 const EVENTS = events as EventCard[];
 
@@ -564,26 +563,39 @@ export function FieldModal({
   );
 
   return (
-    <Overlay label={field.name} onDismiss={onClose} tone="bg-night/80">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
-        <header className="flex items-baseline justify-between gap-3 border-b border-edge px-4 py-3">
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-ochre">
-            {field.name}
-          </h2>
-          <CloseButton onClose={onClose} />
-        </header>
-
-        {/**
-         * The way back, under the Obszar's own name.
-         *
-         * Two levels and one bar between them: the header says where you are on
-         * the board and never changes, this says which of its offers you have
-         * walked up to. The arrow is on the left because that is where a reader
-         * looks for the way back out of somewhere, and the name is beside it
-         * rather than centred so the two read as one sentence — ← Płatnerz.
-         */}
-        {open && (
-          <div className="flex items-center gap-2 border-b border-edge px-4 py-2">
+    /**
+     * A drawer over the board, not a window over the table.
+     *
+     * An Obszar is read *against* your own column: how much gold have I, how
+     * much room is left in the Plecak, is this Miecz better than the one I am
+     * holding. A modal centred on the screen covered exactly the panel holding
+     * the answers, so every one of those questions cost a close and a reopen —
+     * and the Księga next door had already solved it, which is why a card you
+     * look up mid-fight is a drawer and not a window.
+     *
+     * Left, over the board, for the same reason the Księga takes that side:
+     * the board is what the Obszar *is*, so covering it costs nothing while
+     * reading about it, and the right-hand column — your Postać — stays whole.
+     * `table-layout.tsx` gives the board column a floor of the same width so a
+     * narrow window cannot let this spill across it.
+     */
+    <Drawer
+      side="left"
+      width="max-w-[var(--shelf-w)]"
+      title={field.name}
+      onClose={onClose}
+      /**
+       * The way back, under the Obszar's own name.
+       *
+       * Two levels and one bar between them: the drawer's title says where you
+       * are on the board and never changes, this says which of its offers you
+       * have walked up to. The arrow is on the left because that is where a
+       * reader looks for the way back out of somewhere, and the name is beside
+       * it rather than centred so the two read as one sentence — ← Płatnerz.
+       */
+      head={
+        open ? (
+          <div className="mt-1 flex items-center gap-2">
             <button
               onClick={() => setOpenOffer(null)}
               title={`Wróć do: ${field.name}`}
@@ -595,9 +607,10 @@ export function FieldModal({
               {open.label}
             </span>
           </div>
-        )}
-
-        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 py-3">
+        ) : undefined
+      }
+    >
+        <div className="flex flex-col gap-4 px-4 py-3">
           {/* Above the fork, so a die thrown inside an offer is answered inside
               it — the throw happens in here and the result belongs in here. */}
           {notice && (
@@ -984,7 +997,6 @@ export function FieldModal({
           </>
           )}
         </div>
-      </div>
-    </Overlay>
+    </Drawer>
   );
 }

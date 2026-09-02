@@ -32,6 +32,27 @@ export const ART_RATIO = 240 / 209;
  * art's height derived from it rather than written down beside it.
  */
 export const TILE_WIDTH = 86;
+
+/**
+ * How wide a left-hand drawer is: five tiles across, and the room around them.
+ *
+ * 5 x `TILE_WIDTH` + 4 x 8 (`TILE_GAP.card`) = 462, + 32 for the padding either
+ * side, + 1 for the border = 495 before the scrollbar. The last term is the one
+ * that cannot be a measurement: a scrollbar is reserved in *device* pixels, so
+ * its size in the CSS pixels this sum is written in grows as the reader zooms
+ * out — 15 at 100%, 16.7 at 90%, 18.75 at 80%, 22.4 at 67%. At 511 the shelf
+ * would be exactly right at 100% and one tile too narrow at 90%, which is not a
+ * width so much as arithmetic that holds at one zoom level. 23 covers it down to
+ * about 65%, and what is left at 100% is 8px — the row's own gap, once, past
+ * the last tile, which is the least it can be while still being a margin.
+ *
+ * Named here, beside the tile it is five of, because three things now need the
+ * same number and it was written out once as 518: the Księga's shelf, the
+ * Obszar drawer beside it, and the board column's floor — the map may not be
+ * narrower than the drawer laid over it, or a drawer opened on a small window
+ * eats the column that holds your Postać and your purse.
+ */
+export const SHELF_WIDTH = 5 * TILE_WIDTH + 4 * 8 + 32 + 1 + 23;
 export const TILE_ART_HEIGHT = Math.round(TILE_WIDTH / ART_RATIO);
 
 /**

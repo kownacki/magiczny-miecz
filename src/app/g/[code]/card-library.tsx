@@ -373,33 +373,16 @@ export function CardLibrary({
       <Drawer
         side="left"
         /**
-         * Sized to the shelf, plus a scrollbar, plus one gap.
+         * Sized to the shelf: five tiles across, which is what the section
+         * headings are laid out for.
          *
-         * Five tiles across, which is what the section headings are laid out
-         * for: 5 x 86 (`TILE_WIDTH`, shared with the Plecak and the paper
-         * doll) + 4 x 8 (`TILE_GAP.card`, shared with them too) = 462, + 32
-         * for the padding either side, + 1 for the border = 495 before the
-         * scrollbar.
-         *
-         * The last term is the one that cannot be a measurement. A scrollbar
-         * is reserved in *device* pixels, so its size in the CSS pixels this
-         * sum is written in grows as the reader zooms out: 15 at 100%, 16.7 at
-         * 90%, 18.75 at 80%, 22.4 at 67%. At 511 the shelf would be exactly
-         * right at 100% and one tile too narrow at 90%, which is not a width
-         * so much as arithmetic that holds at one zoom level.
-         *
-         * 23 covers it down to about 65%, and what is left over at 100% is
-         * 8px — the row's own gap, once, past the last tile. That is the least
-         * it can be while still being a margin: any smaller and the fifth
-         * column is the first thing a zoom level takes.
-         *
-         * It has come down from 572 and then 526. The tile had a width of its
-         * own and the shelf had a gap of its own, neither with any business
-         * differing from the Plecak's; and the panel was budgeted for a
-         * scrollbar at 50% zoom, which bought a rare zoom level with a strip of
-         * dead panel everybody else looks at.
+         * `SHELF_WIDTH` carries the arithmetic and the reason the scrollbar's
+         * term cannot be a measurement. It arrives as a custom property from
+         * `table-layout.tsx`, which needs the same number for the board
+         * column's floor — the map may not be narrower than what is laid over
+         * it.
          */
-        width="max-w-[518px]"
+        width="max-w-[var(--shelf-w)]"
         /**
          * No reserved gutter, because there is nothing left to hold still.
          *
