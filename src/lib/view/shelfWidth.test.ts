@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { SHELF_WIDTH } from "./cardImages";
+import { OBSZAR_WIDTH, SHELF_WIDTH } from "./cardImages";
 
 /**
  * The drawer's width is one measurement and it is written down twice.
@@ -16,11 +16,33 @@ import { SHELF_WIDTH } from "./cardImages";
  * only below a particular window width, which is the kind of thing nobody sees
  * until somebody plays on a laptop.
  */
-describe("--shelf-w", () => {
-  it("matches SHELF_WIDTH", () => {
-    const css = readFileSync("src/app/globals.css", "utf8");
-    const declared = /--shelf-w:\s*(\d+)px/.exec(css);
-    expect(declared, "globals.css should declare --shelf-w").not.toBeNull();
-    expect(Number(declared![1])).toBe(SHELF_WIDTH);
+const declared = (name: string): number | null => {
+  const css = readFileSync("src/app/globals.css", "utf8");
+  const found = new RegExp(`--${name}:\\s*(\\d+)px`).exec(css);
+  return found ? Number(found[1]) : null;
+};
+
+describe("the drawer widths", () => {
+  it("declares --shelf-w as SHELF_WIDTH", () => {
+    expect(declared("shelf-w"), "globals.css should declare --shelf-w").not.toBeNull();
+    expect(declared("shelf-w")).toBe(SHELF_WIDTH);
+  });
+
+  /**
+   * The Obszar is the narrow one, and it is written down twice for the same
+   * reason: the class that applies it takes a literal.
+   */
+  it("declares --obszar-w as OBSZAR_WIDTH", () => {
+    expect(declared("obszar-w"), "globals.css should declare --obszar-w").not.toBeNull();
+    expect(declared("obszar-w")).toBe(OBSZAR_WIDTH);
+  });
+
+  /**
+   * And the floor really is a floor. The board column is held at `--shelf-w`
+   * so no drawer laid over it can eat the column holding your Postać — which
+   * only works while every drawer is that wide *or narrower*.
+   */
+  it("keeps every drawer inside the board column's floor", () => {
+    expect(OBSZAR_WIDTH).toBeLessThanOrEqual(SHELF_WIDTH);
   });
 });

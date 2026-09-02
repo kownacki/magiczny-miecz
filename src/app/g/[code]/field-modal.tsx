@@ -583,7 +583,10 @@ export function FieldModal({
      */
     <Drawer
       side="left"
-      width="max-w-[var(--shelf-w)]"
+      /* Three tiles, not the Księga's five — see `OBSZAR_WIDTH`. The board
+         column keeps its floor at `--shelf-w`, which is the widest drawer that
+         can be laid over it, so a narrower one costs that guarantee nothing. */
+      width="max-w-[var(--obszar-w)]"
       title={
         <span className="flex items-center gap-2">
           <span className="min-w-0 truncate">{field.name}</span>

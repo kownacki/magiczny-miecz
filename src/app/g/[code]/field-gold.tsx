@@ -3,7 +3,7 @@
 /** Sztuki Złota lying on an Obszar: the pile, and how much of it you are taking (12.1). */
 
 import { useState } from "react";
-import { TILE_ART_HEIGHT, TILE_GAP_PX, TILE_WIDTH, tilesAcross } from "@/lib/view/cardImages";
+import { OBSZAR_TILES, TILE_ART_HEIGHT, TILE_GAP_PX, TILE_WIDTH } from "@/lib/view/cardImages";
 import { clampCoins, stackOverlap } from "@/lib/view/tokens";
 import { CoinStack } from "./token-pile";
 
@@ -36,15 +36,18 @@ const OVERLAP = stackOverlap(TILE_ART_HEIGHT, COIN, PER_STACK);
 /**
  * How wide the panel this sits in is, in Karta tiles.
  *
- * The Obszar's window is `max-w-lg` with `px-4` — 512 less sixteen a side — and
- * five tiles is 462 of that 480. Derived rather than written down, so a panel
- * that changes width takes the pile with it.
+ * The Obszar's drawer, which is three tiles across by construction — so the
+ * count is taken from the same constant the drawer's width is built out of
+ * rather than measured back out of a pixel figure. It used to be
+ * `tilesAcross(512 - 32)`: the right answer, reached by re-deriving a number
+ * that already existed, and stale about which panel it was describing within a
+ * day of being written.
  *
- * It is the *caller's* number and not this file's, which is why it is a prop:
- * this component knows how a pile is drawn and nothing about the box it is
- * drawn in.
+ * It is the *caller's* number and not this file's, which is why it is still a
+ * prop: this component knows how a pile is drawn and nothing about the box it
+ * is drawn in. The default is the one box that draws one today.
  */
-const PANEL_TILES = tilesAcross(512 - 32);
+const PANEL_TILES = OBSZAR_TILES;
 
 /**
  * What is lying here, and the one control that takes it.
@@ -72,11 +75,11 @@ export function FieldGold({
    * How many Karta tiles the container is wide, which is what the pile may fill
    * before it stops counting.
    *
-   * A full row is thirty — five tiles, ten columns, three deep — and thirty
-   * Sztuki Złota is a fortune in this game: a Miecz is one, the most expensive
-   * thing the Targowisko sells is three, and a Medyk charges one a wound. Past
-   * that the last coin stands down and says so, and the numeral in the heading
-   * goes on being exact.
+   * A full row is eighteen — three tiles, six columns, three deep — and
+   * eighteen Sztuki Złota is a fortune in this game: a Miecz is one, the most
+   * expensive thing the Targowisko sells is three, and a Medyk charges one a
+   * wound. Past that the last coin stands down and says so, and the numeral in
+   * the heading goes on being exact.
    *
    * A row rather than an arbitrary ceiling, because that is the thing a reader
    * can actually see: the coins stop where the panel does.

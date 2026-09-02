@@ -34,25 +34,61 @@ export const ART_RATIO = 240 / 209;
 export const TILE_WIDTH = 86;
 
 /**
- * How wide a left-hand drawer is: five tiles across, and the room around them.
+ * The space a row leaves between two tiles, as a number.
  *
- * 5 x `TILE_WIDTH` + 4 x 8 (`TILE_GAP.card`) = 462, + 32 for the padding either
- * side, + 1 for the border = 495 before the scrollbar. The last term is the one
- * that cannot be a measurement: a scrollbar is reserved in *device* pixels, so
- * its size in the CSS pixels this sum is written in grows as the reader zooms
- * out — 15 at 100%, 16.7 at 90%, 18.75 at 80%, 22.4 at 67%. At 511 the shelf
- * would be exactly right at 100% and one tile too narrow at 90%, which is not a
- * width so much as arithmetic that holds at one zoom level. 23 covers it down to
- * about 65%, and what is left at 100% is 8px — the row's own gap, once, past
- * the last tile, which is the least it can be while still being a margin.
- *
- * Named here, beside the tile it is five of, because three things now need the
- * same number and it was written out once as 518: the Księga's shelf, the
- * Obszar drawer beside it, and the board column's floor — the map may not be
- * narrower than the drawer laid over it, or a drawer opened on a small window
- * eats the column that holds your Postać and your purse.
+ * `TILE_GAP.card` in `tile-row.tsx` is the same eight pixels as the Tailwind
+ * class `gap-2`, and a class name cannot be divided into. Here beside the width
+ * it is measured against, because the two are one fact: a row of N tiles is
+ * `N * TILE_WIDTH + (N - 1) * TILE_GAP_PX` wide, and everything that has to fit
+ * that row — the gold pile most of all — needs both halves.
  */
-export const SHELF_WIDTH = 5 * TILE_WIDTH + 4 * 8 + 32 + 1 + 23;
+export const TILE_GAP_PX = 8;
+
+/**
+ * How wide a left-hand drawer holding N tiles across is.
+ *
+ * N x `TILE_WIDTH` + (N-1) x `TILE_GAP_PX` for the row itself, + 32 for the
+ * padding either side, + 1 for the border, + the scrollbar. That last term is
+ * the one that cannot be a measurement: a scrollbar is reserved in *device*
+ * pixels, so its size in the CSS pixels this sum is written in grows as the
+ * reader zooms out — 15 at 100%, 16.7 at 90%, 18.75 at 80%, 22.4 at 67%. A
+ * width that just cleared it at 100% would be one tile too narrow at 90%, which
+ * is not a width so much as arithmetic that holds at one zoom level. 23 covers
+ * it down to about 65%, and what is left at 100% is 8px — the row's own gap,
+ * once, past the last tile, which is the least it can be while still being a
+ * margin.
+ */
+export function shelfWidth(tiles: number): number {
+  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + 32 + 1 + 23;
+}
+
+/**
+ * Five across: the Księga's shelf, and the board column's floor.
+ *
+ * The catalogue is the reason for five. It is 267 cards read by scanning, and
+ * how many fit on a line is the whole of how fast that goes. The board column
+ * takes the same number because the map may not be narrower than the widest
+ * drawer laid over it, or a drawer opened on a small window eats the column
+ * that holds your Postać and your purse.
+ */
+export const SHELF_WIDTH = shelfWidth(5);
+
+/**
+ * Three across: the Obszar.
+ *
+ * It is not a catalogue. What an Obszar holds is a handful — 13.4 deals three
+ * Karty at the most and the shelves under "Na tym Obszarze" are rarely more
+ * than a row — so five tiles' worth of width was mostly empty, on a drawer laid
+ * over the board the whole time you are reading it. Three fits what is
+ * genuinely there and gives the map back two tiles of screen.
+ *
+ * The count is exported and not only the width, because things drawn *inside*
+ * the drawer are measured in tiles rather than pixels: the gold pile fills the
+ * row it is in, and a row of three is eighteen coins where a row of five was
+ * thirty. See `FieldGold`.
+ */
+export const OBSZAR_TILES = 3;
+export const OBSZAR_WIDTH = shelfWidth(OBSZAR_TILES);
 export const TILE_ART_HEIGHT = Math.round(TILE_WIDTH / ART_RATIO);
 
 /**
@@ -74,17 +110,6 @@ export const MARK_ART_HEIGHT = Math.round(MARK_WIDTH * (TILE_ART_HEIGHT / TILE_W
  * anything drawing one needs this shape and not that one.
  */
 export const CARD_RATIO = 154 / 92;
-
-/**
- * The space a row leaves between two tiles, as a number.
- *
- * `TILE_GAP.card` in `tile-row.tsx` is the same eight pixels as the Tailwind
- * class `gap-2`, and a class name cannot be divided into. Here beside the width
- * it is measured against, because the two are one fact: a row of N tiles is
- * `N * TILE_WIDTH + (N - 1) * TILE_GAP_PX` wide, and everything that has to fit
- * that row — the gold pile most of all — needs both halves.
- */
-export const TILE_GAP_PX = 8;
 
 /**
  * How many Karta tiles fit across a box, which is the unit a panel's width is

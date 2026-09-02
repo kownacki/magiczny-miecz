@@ -52,6 +52,12 @@ html {
      `cardImages.ts`, which is the source; `shelfWidth.test.ts` fails the build
      if this number and that one drift apart. */
   --shelf-w: 518px;
+
+  /* The same measurement for the Obszar, which is three tiles and not five —
+     it holds a handful of Karty rather than a catalogue, and it lies over the
+     board the whole time you are reading it. `OBSZAR_WIDTH` in `cardImages.ts`
+     is the source, and `shelfWidth.test.ts` pins this to it as well. */
+  --obszar-w: 330px;
 }
 
 @theme {
