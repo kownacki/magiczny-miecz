@@ -483,6 +483,25 @@ the engine gets wrong or does not have, not a missing feature.
 
 ## Findings worth keeping
 
+- **Ring-to-ring adjacency is not geometry, and `boardMap.ts` cannot answer it.**
+  Somebody probed whether the field across the water from a given one could be
+  derived by intersecting the schematic `CELLS` rectangles — Dolny against
+  Środkowy, Środkowy against Górny. It cannot: 10 of 14 and 13 of 16 overlap
+  either two neighbours or none, because the rings have different cell counts
+  and nothing lines up.
+
+  The probe was chasing a question the box does not ask. **Crossings are four
+  named pairs, printed on the board** — Uroczysko ↔ Las Błędnych Ogni through
+  the Trzęsawiska, Przełęcz Wichrów ↔ Dolina Czaszek through the Lodowy Las —
+  and they live in `CROSSINGS` in `rings.ts` with the test each one demands.
+  Movement otherwise runs *around* a ring (`ringFields` returns the whole ring,
+  which is also the Poszukiwacz's range), and the only other links between rings
+  are `BRIDGE_LINKS`, on and off the Kamienny Most.
+
+  The reusable half: `src/lib/view/boardMap.ts` is a schematic for **drawing**
+  the board and is not a source of truth about what neighbours what. It is in
+  `view/` for that reason. Recorded so nobody runs the probe a second time.
+
 - **A card never leaves the game.** Nineteen places in `commands/` delete a
   holding and every one of them pairs the delete with a return — `putOnPile`,
   `trophiesToPile`, or an insert onto the Obszar — because a deleted card has
