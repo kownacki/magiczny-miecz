@@ -985,6 +985,25 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   const fieldDrawer = inspecting && (
         <FieldModal
+          /**
+           * Keyed by the Obszar, so opening a second one is a second drawer.
+           *
+           * Two things depended on this and both were wrong without it.
+           *
+           * A click on the map while this is open used to *close* it rather
+           * than move it. `useDismissable` already knows that a click which
+           * opened something is not a click away from something — it waits a
+           * turn of the loop and looks for a surface that was not there before
+           * — but with the drawer merely re-rendered under a new `fieldId`
+           * there is no new surface to find, so the click read as "away" and
+           * the Obszar you asked for shut the one you were looking at.
+           *
+           * And the window's own state is about *an* Obszar: which shelves the
+           * reader folded away, which offer they walked into. Carried across a
+           * change of square that is somebody else's Płatnerz, and a shelf
+           * shut on a Bezdroża staying shut on the Osada.
+           */
+          key={inspecting}
           eqMode={eqMode}
           nature={asNature(mySeat?.nature)}
           fieldId={inspecting}

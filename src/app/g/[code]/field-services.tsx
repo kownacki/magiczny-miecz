@@ -12,7 +12,6 @@ import type { Nature } from "@/data/types";
 import type { Holding } from "@/lib/engine/state";
 import { EffectControls } from "./effect-controls";
 import { Shop } from "./shop";
-import { RailStat } from "./token-rail";
 import type { Confirmation } from "./confirm";
 import type { Offer } from "./field-offers";
 import type { OnService, OnSuggestion } from "./turn-controls";
@@ -68,24 +67,25 @@ export interface OfferContext {
 export function FieldService({ offer, ctx }: { offer: Offer; ctx: OfferContext }) {
   return (
     <div className="flex flex-col gap-3">
+      {/**
+       * Why nothing here can be done, said once and said first.
+       *
+       * It used to hang off each control — over the shop's shelf, over the
+       * healer's wounds, over a die table — which on the Zamek's Nadworny Medyk
+       * is one `po-kolei` of two steps and so the same sentence twice, in a
+       * row, about one refusal. It is a fact about the whole visit: 13.1 shuts
+       * the Obszar and 12.1's exceptions shut everything on it. So it belongs
+       * under the name of whoever you walked up to, above what they offer,
+       * where it reads as the answer to "why are these dead" before the reader
+       * has had to ask.
+       */}
+      {ctx.blocked && <p className="text-[11px] text-vermilion/90">{ctx.blocked}</p>}
+
       {/* The board, before the app's reading of it. A player who thinks the
           referee has it wrong can check without leaving the shop. */}
       {offer.text && (
         <p className="whitespace-pre-line text-xs leading-relaxed text-muted">{offer.text}</p>
       )}
-
-      {/**
-       * What you have to spend, as the żetony on your own Karta.
-       *
-       * The same `RailStat` the roster draws, rather than a sentence saying the
-       * number: a purse is a pile of coins at this table and it is a pile of
-       * coins here. `canAdjust` is false in both surfaces of a simulation —
-       * nothing is entered by hand — and a shop is not where a physical table
-       * would correct it either.
-       */}
-      <div className="flex items-start gap-4">
-        <RailStat label="Złoto" value={ctx.gold} stat="gold" canAdjust={false} onAdjust={() => {}} />
-      </div>
 
       <ServiceEffect effect={offer.effect} name={offer.label} ctx={ctx} />
     </div>
@@ -144,7 +144,6 @@ function ServiceEffect({
     }
     return (
       <div className="flex flex-col gap-2">
-        {ctx.blocked && <p className="text-[11px] text-vermilion/90">{ctx.blocked}</p>}
         <ul className="flex flex-wrap gap-1">
           {ctx.sellable.map((held) => (
             <li key={held.id}>
@@ -186,7 +185,6 @@ function ServiceEffect({
     }
     return (
       <div>
-        {ctx.blocked && <p className="mb-1 text-[11px] text-vermilion/90">{ctx.blocked}</p>}
         <p className="mb-1 text-[11px] text-muted">
           {price > 0 ? `${price} Sz. Z. za punkt Życia` : "leczenie za darmo"} — brakuje ci{" "}
           <span className="tnum text-zycie">{missing}</span>
@@ -259,7 +257,6 @@ function ScriptedRoll({
 
   return (
     <div>
-      {ctx.blocked && <p className="mb-1 text-[11px] text-vermilion/90">{ctx.blocked}</p>}
       <div className="mb-1 flex flex-wrap items-center gap-1">
         <span className="mr-1 text-[11px] text-muted">Rzuć kostką:</span>
         <button

@@ -132,7 +132,7 @@ export function Drawer({
       </SurfaceHead>
 
       {beneath && (
-        <div className="shrink-0 border-b border-edge px-3 py-1.5">{beneath}</div>
+        <div className="shrink-0 px-3 py-1.5">{beneath}</div>
       )}
 
       {/* The scrollbar takes its room when there is a scrollbar, and not

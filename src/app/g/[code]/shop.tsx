@@ -38,7 +38,13 @@ export function Shop({
   gold,
   stock,
   pack,
-  /** Null while the shop is open to you; the rule that shuts it, when it is not. */
+  /**
+   * Null while the shop is open to you; the rule that shuts it, when it is not.
+   *
+   * Read here only to grey the prices. The sentence itself is said once at the
+   * top of the offer (`FieldService`), because it is a fact about the whole
+   * visit rather than about this shelf.
+   */
   blocked,
   busy,
   eqMode,
@@ -70,16 +76,6 @@ export function Shop({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      {/**
-       * Why nothing can be bought, said before anything is pressed.
-       *
-       * 12.1a and 12.1b shut the whole Obszar, not one item — "należy najpierw
-       * pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych Kart" —
-       * and 5.4 shuts the whole shelf. All three used to be a server refusal
-       * arriving after the click, which is the app knowing the answer and
-       * making the player guess it.
-       */}
-      {blocked && <p className="text-[11px] text-vermilion/90">{blocked}</p>}
 
       <TileRow frame={false}>
         {effect.towar.map((towar) => {

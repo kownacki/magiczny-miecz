@@ -599,7 +599,7 @@ export function FieldModal({
        */
       beneath={
         open ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-baseline gap-2">
             <button
               onClick={() => setOpenOffer(null)}
               title={`Wróć do: ${field.name}`}
@@ -610,6 +610,20 @@ export function FieldModal({
             <span className="min-w-0 truncate font-[family-name:var(--font-display)] text-sm tracking-wide text-ink">
               {open.label}
             </span>
+            {/**
+             * What you have to spend, beside the name of whoever is asking.
+             *
+             * It was a `RailStat` inside the subview — the żetony from the
+             * Karta Postaci — and a pile of nine coins is a tall, loud thing to
+             * put above three prices. The figure is all a shop needs, and up
+             * here it is out of the way of the goods while staying on screen
+             * the whole time you are deciding.
+             */}
+            {purse && (
+              <span className="ml-auto shrink-0 text-[11px] text-muted">
+                Twoje Złoto: <span className="tnum text-zloto">{purse.gold}</span>
+              </span>
+            )}
           </div>
         ) : undefined
       }
