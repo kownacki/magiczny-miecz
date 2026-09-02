@@ -1385,7 +1385,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           the screen and no way in to look. Whose turn it is changes the words
           here; what may be pressed is decided inside the window, where the
           rules for it already live. */}
+      {/* Hidden with the rest of the table below `--breakpoint-game`: a pill
+          offering to act on a turn is no use beside a notice saying the table
+          cannot be drawn. `contents` so the wrapper leaves the pill's own
+          `fixed` positioning alone. */}
       {active && !turnWindowOpen && (
+        <div className="hidden game:contents">
         <TurnFab
           mine={myTurn}
           playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
@@ -1414,6 +1419,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             if (!sheetApplies) openField(active.field_id);
           }}
         />
+        </div>
       )}
 
       {/* The card you just turned over, at a size you can read, with exactly
@@ -1765,6 +1771,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     <>
       {overlays}
       <TableLayout
+        hasConsole={testing || failure !== null}
         drawer={
           <>
             {fieldDrawer}

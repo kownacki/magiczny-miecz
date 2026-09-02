@@ -54,6 +54,23 @@ html {
   --shelf-w: 518px;
 }
 
+@theme {
+  /**
+   * The narrowest window this table is drawn on: an iPad mini in portrait.
+   *
+   * 744 CSS pixels is the smallest screen anybody is likely to bring, and the
+   * board column's own floor is 518 — so below roughly this there is no
+   * arrangement of a map, a Karta Postaci and a Plecak that is worth looking
+   * at, and pretending otherwise gives everybody a broken one instead of one
+   * honest sentence.
+   *
+   * The variants it makes are `game:` (wide enough) and `max-game:` (not), and
+   * `table-layout.tsx` is the only thing that should use them: this is a
+   * statement about whether the *game screen* fits, not a general breakpoint.
+   */
+  --breakpoint-game: 740px;
+}
+
 body {
   background: var(--color-night);
   color: var(--color-ink);

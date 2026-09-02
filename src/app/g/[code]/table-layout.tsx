@@ -52,15 +52,72 @@ export function TableBar({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * What a window narrower than the game gets instead of the game.
+ *
+ * The board column alone has a floor of 518 (`--shelf-w`), and below about 740
+ * there is no arrangement of a map, a Karta Postaci and a Plecak worth looking
+ * at. Every other answer — reflowing, scaling the board down, stacking three
+ * columns — gives everybody something broken rather than one honest sentence,
+ * so this is the sentence.
+ *
+ * **The bar and the console stay.** Both are deliberate. The bar carries the
+ * join code, the roster and the way out, which is exactly what somebody on a
+ * phone wants — they are usually looking to see who is at the table, not to
+ * play from it. And the console is text: it is the same vocabulary the browser
+ * drives the game with (docs/TERMINAL.md), it is `fixed` to the bottom on its
+ * own, and it works at any width at all. So a narrow window is not locked out
+ * of the game, only out of the picture of it.
+ *
+ * CSS and not a measurement, so there is no resize listener, no hydration
+ * mismatch and nothing to get out of step: the two halves are the same
+ * breakpoint read in opposite directions.
+ */
+function TooNarrow({ hasConsole }: { hasConsole: boolean }) {
+  return (
+    <div
+      // Clear of the console, which is docked to the bottom and full-width
+      // here. The same variable the right-hand column reserves against.
+      style={{ paddingBottom: "calc(1.5rem + var(--console-h, 0px))" }}
+      className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center game:hidden"
+    >
+      <p className="font-[family-name:var(--font-display)] text-lg text-ochre">
+        Okno jest za wąskie
+      </p>
+      <p className="max-w-xs text-sm text-muted">
+        Stół potrzebuje co najmniej <span className="tnum text-ink">740</span> pikseli
+        szerokości. Obróć urządzenie albo poszerz okno.
+      </p>
+      {/* Only where there is one to point at. The console is test mode's, not
+          every table's, and a sentence promising a way to carry on that is not
+          on the screen is worse than the silence it replaced. */}
+      {hasConsole && (
+        <p className="max-w-xs text-xs text-muted/70">
+          Konsola na dole działa mimo to — całą grę można prowadzić z niej.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function TableLayout({
   header,
   map,
   right,
   drawer,
+  hasConsole = false,
 }: {
   header: React.ReactNode;
   map: React.ReactNode;
   right: React.ReactNode;
+  /**
+   * Whether the console is on the screen, which decides one sentence.
+   *
+   * It is `fixed` and rendered outside this component, so a window too narrow
+   * for the table keeps it either way — but it only exists in test mode, and
+   * `TooNarrow` should not offer a way out that most tables do not have.
+   */
+  hasConsole?: boolean;
   /** Laid over the columns, below the bar — see the note on the row below. */
   drawer?: React.ReactNode;
 }) {
@@ -82,7 +139,8 @@ export function TableLayout({
           own header level with the bar's right-hand end and hid Karty and the
           console behind it — the same mistake as the bar covering the Karty
           library, made the other way round. */}
-      <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row">
+      <TooNarrow hasConsole={hasConsole} />
+      <div className="relative hidden min-h-0 flex-1 flex-col game:flex lg:flex-row">
         {/* The short side of the ratio, and the board is sized to fill it
             rather than to a fixed width: on a laptop the height is what runs
             out first, so this is a ceiling the board rarely reaches. */}
