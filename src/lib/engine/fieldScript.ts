@@ -37,6 +37,23 @@ export interface FieldOffer {
   /** Who or what is being visited, as the board names them. */
   name: string;
   effect: Effect;
+  /**
+   * The board's own sentence for *this* offer, where the Obszar prints several.
+   *
+   * Only three fields need it. The Osada and the Gród head their text with
+   * "MOŻESZ TU ODWIEDZIĆ:" and then give a line each — "Płatnerza: możesz u
+   * niego kupić: za 2 Sz. Z. miecz…" — and the Pustelnia prints a paragraph
+   * about the Pustelnik and nothing at all about the Egzorcyzm, whose text is
+   * on the ZŁY DUCH's Karta rather than on the square. Everywhere else the
+   * Obszar has exactly one offer and its whole text *is* that offer's, which
+   * `offerText` falls back to rather than copying six paragraphs into this file
+   * to be kept in step by hand.
+   *
+   * Verbatim, and `fieldScript.test.ts` checks that it still appears inside the
+   * Obszar's own transcription — a line that has drifted from the board is
+   * worse than no line, because it looks like the board.
+   */
+  text?: string;
 }
 
 /**
@@ -102,9 +119,14 @@ const BAGNA: Effect = {
 export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   osada: {
     offers: [
-      { name: "Czarownica", effect: CZAROWNICA },
+      {
+        name: "Czarownica",
+        text: "Czarownicę: rzuć kostką 1-2 - tracisz 1 punkt Miecza; 2 - zyskujesz 1 punkt Miecza lub 1 punkt Magii, 3,4 - zyskujesz 1 punkt Magii lub 1 punkt Miecza; 5 - zyskujesz 1 Zaklęcie; 6 - zostajesz zignorowany.",
+        effect: CZAROWNICA,
+      },
       {
         name: "Płatnerz",
+        text: "Płatnerza: możesz u niego kupić: za 2 Sz. Z. miecz; sztylet za 3 Sz. Z.; hełm - 1 Sz. Z.",
         effect: {
           op: "kup",
           towar: [
@@ -117,7 +139,11 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       // "za każdą Sztukę Złota przywróci ci 1 punkt Życia" — no die and no cap
       // beyond 4.7's, which is what makes it the reliable one of the three
       // healers and worth the walk.
-      { name: "Medyk", effect: { op: "uzdrow", upTo: 4, cena: 1 } },
+      {
+        name: "Medyk",
+        text: "Medyka: za każdą Sztukę Złota przywróci ci 1 punkt Życia.",
+        effect: { op: "uzdrow", upTo: 4, cena: 1 },
+      },
     ],
   },
 
@@ -125,6 +151,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
     offers: [
       {
         name: "Wróżbita",
+        text: "Wróżbitę: rzuć kostką 1 - zyskujesz 1 Zaklęcie; 2 - zostajesz Zaklęty w Kamień; 3 - jeżeli jesteś Zły stajesz się Dobry. Jeżeli jesteś Chaotyczny stajesz się Zły; 4-6 zostałeś zignorowany.",
         effect: {
           op: "rzut",
           faces: {
@@ -150,7 +177,11 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
           },
         },
       },
-      { name: "Lichwiarz", effect: { op: "sprzedaj", cena: 1 } },
+      {
+        name: "Lichwiarz",
+        text: "Lichwiarza - możesz wymienić dowolne Przedmioty na złoto (odłóż ich Karty i weź po 1 Sz.Z. za każdy).",
+        effect: { op: "sprzedaj", cena: 1 },
+      },
     ],
   },
 
@@ -207,7 +238,11 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       // "pod warunkiem, że wyrzekniesz się bogactwa" — the price is the same
       // Sztuka Złota per wound as the Osada's Medyk; the renunciation is the
       // flavour on it.
-      { name: "Pustelnik", effect: { op: "uzdrow", upTo: 4, cena: 1 } },
+      {
+        name: "Pustelnik",
+        text: "Pustelnik może z pomocą ziół przywrócić ci punkty Życia z początku wędrówki pod warunkiem, że wyrzekniesz się bogactwa. Musisz odrzucić 1 Sz. Z. za każdą wyleczoną ranę.",
+        effect: { op: "uzdrow", upTo: 4, cena: 1 },
+      },
       /**
        * "Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od
        * niego, odwiedzając Pustelnię."

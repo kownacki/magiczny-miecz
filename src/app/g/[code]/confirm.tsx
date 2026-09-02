@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Overlay } from "./overlay";
+import { LAYER } from "./layers";
 import { WithRules } from "./rule-ref";
 
 /**
@@ -54,7 +55,7 @@ export function ConfirmDialog({
   const grave = ask.tone === "grave";
 
   return (
-    <Overlay label={ask.title} onDismiss={onCancel} tone="bg-night/80">
+    <Overlay label={ask.title} onDismiss={onCancel} tone="bg-night/80" layer={LAYER.confirm}>
       <div className="w-full max-w-sm rounded-lg border border-edge bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
         <h2 className="mb-1 font-[family-name:var(--font-display)] text-lg text-ink">
           {ask.title}

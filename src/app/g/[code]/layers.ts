@@ -67,6 +67,24 @@ export const LAYER = {
    * picture behind the shelf it was picked from.
    */
   card: "z-[90]",
+  /**
+   * "Are you sure?", which must cover whatever asked it.
+   *
+   * It was `modal`, level with the fight and the Obszar, so the order came
+   * down to which happened to be written first in `page.tsx` — and the
+   * confirmations were. That cost nothing while every question was raised by a
+   * control on the page itself; the moment an Obszar's shop asked one, the
+   * answer to "spend 2 Sz. Z.?" was painted over by the shop that asked it,
+   * leaving a darkened board and no way to say yes.
+   *
+   * Above `card` too: a Karta opened to be read is one of the things a player
+   * decides to drop or use *from*.
+   *
+   * Below the console, which is the one thing this must not bury — it is the
+   * way out of everything, and a way out you cannot reach because a dialog is
+   * over it is not a way out.
+   */
+  confirm: "z-[95]",
   /** The test console, which exists to escape everything above. */
   console: "z-[110]",
   /**

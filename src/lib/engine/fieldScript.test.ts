@@ -3,6 +3,7 @@ import { FIELD_SCRIPTS, compulsoryOffer, fieldScriptFor, offerKey, trades } from
 import { goodsId } from "./goods";
 import { FIELDS, type FieldId } from "./board";
 import type { Effect } from "./cardScript";
+import { fieldWithText, offerText } from "@/lib/view/fieldText";
 
 /** Every effect in a field's offers, flattened. */
 function every(effect: Effect): Effect[] {
@@ -270,5 +271,47 @@ describe("the cards that are shops", () => {
     // distinction this predicate draws.
     expect(fieldScriptFor("osada")!.offers.some((offer) => trades(offer.effect))).toBe(true);
     expect(fieldScriptFor("karczma")!.offers.some((offer) => trades(offer.effect))).toBe(false);
+  });
+});
+
+/**
+ * A quoted line is a promise about the board, the same as a rule number is a
+ * promise about the Instrukcja.
+ *
+ * `FieldOffer.text` exists so a subview can show the board's words for the one
+ * offer being visited rather than the whole square's. That is only worth doing
+ * while the two agree: a sentence that has drifted from the transcription is
+ * worse than none, because it still looks like the board. So every one of them
+ * has to be findable, verbatim, inside the Obszar's own text.
+ */
+describe("an offer's printed line", () => {
+  it("appears verbatim in the Obszar's own transcription", () => {
+    for (const [id, script] of Object.entries(FIELD_SCRIPTS)) {
+      for (const offer of script?.offers ?? []) {
+        if (offer.text === undefined) continue;
+        const printed = fieldWithText(id as FieldId)?.text ?? "";
+        expect(printed, `${id} — ${offer.name}`).toContain(offer.text);
+      }
+    }
+  });
+
+  /**
+   * The other half: an Obszar with several offers must say which is which, or
+   * `offerText` falls back to the whole square's text and puts the Czarownica's
+   * die table above the Płatnerz's prices.
+   */
+  it("is present wherever an Obszar makes more than one, except the Egzorcyzm", () => {
+    for (const [id, script] of Object.entries(FIELD_SCRIPTS)) {
+      if (!script || script.obowiazkowe || script.offers.length < 2) continue;
+      for (const offer of script.offers) {
+        // The one offer the board is silent about: the ZŁY DUCH's own Karta
+        // carries the words, and the Pustelnia prints only the herbs.
+        if (offer.name === "Egzorcyzm") {
+          expect(offerText(id as FieldId, offer)).toBeNull();
+          continue;
+        }
+        expect(offerText(id as FieldId, offer), `${id} — ${offer.name}`).not.toBeNull();
+      }
+    }
   });
 });

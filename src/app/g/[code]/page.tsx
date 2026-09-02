@@ -44,6 +44,9 @@ import { NowBox } from "./now-box";
 import { factsIn, turnSteps, windowsFor } from "@/lib/engine/turnWindows";
 import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "@/lib/engine/duties";
 import { isSpent } from "@/lib/engine/kolejka";
+import { whyNotCollectHere } from "@/lib/engine/holdings";
+import { carriedCount, carryLimit } from "@/lib/engine/derive";
+import type { EqMode } from "@/lib/engine/slots";
 import { Journal } from "./journal";
 import { TableSettings } from "./table-settings";
 import { momentsIn, spellScript } from "@/lib/engine/spells";
@@ -919,6 +922,41 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       }
     : null;
 
+  /**
+   * Which equipment variant the table plays, named once.
+   *
+   * Written out as a ternary in four places, because `games.eq_mode` is a
+   * database column and so a `string`. Narrowed here, at the one boundary it
+   * crosses, the way every other id in this codebase is.
+   */
+  const eqMode: EqMode = game?.eq_mode === "slots" ? "slots" : "classic";
+
+  /**
+   * 12.1's two exceptions, for the Obszar the active character is standing on.
+   *
+   * Computed here rather than in the window because both lists live here, and
+   * reading one of them is how this rule has been got wrong four times: a Karta
+   * on the square you are standing on is lifted out of `field_cards` into the
+   * turn's own `drawn` for the length of that turn, and which of the two it is
+   * in is nothing a player can see. `whyNotCollectHere` counts; this merges.
+   *
+   * The sentence is the engine's, so the greyed shop says exactly what the
+   * server would have refused with.
+   */
+  const blockedHere =
+    active && onField
+      ? whyNotCollectHere(
+          [
+            ...fieldCards
+              .filter((card) => card.fieldId === active.field_id)
+              .map((card) => ({ cardId: card.cardId })),
+            ...onField.drawn.map((card) => ({ cardId: card.cardId })),
+          ],
+          [...(onField.resolved ?? []), ...(onField.fought ?? []), ...(onField.beaten ?? [])],
+          onField.draw,
+        )
+      : null;
+
   const overlays = (
     <>
       {/* Drawn in test mode, and — folded to one line — whenever something has
@@ -1270,7 +1308,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           side where nobody looked. */}
       {inspecting && (
         <FieldModal
-          eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+          eqMode={eqMode}
           nature={asNature(mySeat?.nature)}
           fieldId={inspecting}
           /**
@@ -1422,6 +1460,44 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               text: CARD_TEXTS.get(cardId),
             })
           }
+          /* What the box has left of each Wyposażenie card (21.2), what this
+             seat carries against 5.4, what it has to spend and what it could
+             sell.
+
+             Outside the standing-here spread on purpose. An Obszar you are only
+             reading about still keeps its shop, and "could I afford the Osada's
+             Miecz if I walked there" is the question that decides the walk — a
+             shelf that cannot say what is left on it, or a purse that reads
+             zero because you are standing somewhere else, is worse than no
+             shelf. What 13.1 shuts is the buttons, and `blocked` says so. */
+          stock={stock}
+          purse={active ? { gold: active.gold, life: active.life } : undefined}
+          sellable={active?.holdings
+            .filter((holding) => holding.kind === "item")
+            .map((holding) => ({ id: holding.id, cardId: holding.cardId }))}
+          pack={
+            active
+              ? {
+                  holdings: active.holdings,
+                  carried: carriedCount(active.holdings, eqMode),
+                  limit: carryLimit(active.holdings, eqMode),
+                  eqMode,
+                }
+              : undefined
+          }
+          blocked={blockedHere}
+          /* The dialog clears itself here rather than in every caller: a
+             question that stays on screen after it has been answered is the
+             one bug this component cannot have. */
+          onAsk={(question) =>
+            setAsk({
+              ...question,
+              onConfirm: () => {
+                setAsk(null);
+                question.onConfirm();
+              },
+            })
+          }
           // Everything the Obszar can be *done* about, which used to live in a
           // panel down the page. Only passed for the field the active character
           // is standing on: reading about somewhere else is the other half of
@@ -1468,11 +1544,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   post("adjust", { seatId: active.id, stat, delta, reason }),
                 onService: (body: Record<string, unknown>) =>
                   post("holdings", { ...body, seatId: active.id }),
-                purse: { gold: active.gold, life: active.life },
-                stock,
-                sellable: active.holdings
-                  .filter((holding) => holding.kind === "item")
-                  .map((holding) => ({ id: holding.id, cardId: holding.cardId })),
               }
             : {})}
           notice={error ? null : notice}
@@ -1506,7 +1577,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         openRule={rule?.id ?? null}
         openShelf={rule?.shelf ?? null}
         endlessStock={game.endless_stock}
-        eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+        eqMode={eqMode}
         nature={asNature(mySeat?.nature)}
         onInspect={setInspectingCard}
         // "walcz" and the Obszary chips became `fight` and `go` in the console;
@@ -1563,7 +1634,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             // pressed by whoever misreads it first. Everybody else sees what
             // the table has settled on, which is the part that matters to them.
             <TableSettings
-              eqMode={game.eq_mode === "classic" ? "classic" : "slots"}
+              eqMode={eqMode}
               endlessStock={game.endless_stock}
               started={game.status === "playing"}
               canChange={amHost}
@@ -1674,7 +1745,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 /* The hover on the top used card says what it says everywhere
                    else — which place a Przedmiot is worn in, and whether the
                    reader's own Natura may use it. */
-                eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+                eqMode={eqMode}
                 nature={asNature(mySeat?.nature)}
                 onInspect={setInspectingCard}
                 onClose={closeDrawer}
@@ -1683,7 +1754,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             {rightDrawer === "ustawienia" ? (
               <Settings
                 onClose={() => setRightDrawer(null)}
-                eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+                eqMode={eqMode}
                 endlessStock={game.endless_stock}
                 /**
                  * Asked before it is done, because it cannot be undone. The
@@ -1917,7 +1988,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             <Journal
               code={code}
               revision={game.revision}
-              eqMode={game.eq_mode === "slots" ? "slots" : "classic"}
+              eqMode={eqMode}
             />
           </div>
         }

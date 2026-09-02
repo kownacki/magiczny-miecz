@@ -4,6 +4,7 @@ import dolnyTexts from "@/data/dolny-fields.json";
 import mostTexts from "@/data/most-fields.json";
 import ringTexts from "@/data/ring-fields.json";
 import { FIELDS, type BoardField, type FieldId } from "@/lib/engine/board";
+import { fieldScriptFor, type FieldOffer } from "@/lib/engine/fieldScript";
 
 interface FieldText {
   id: string;
@@ -39,4 +40,27 @@ export function fieldWithText(fieldId: FieldId): BoardField | null {
   if (!field) return null;
   const extra = TEXTS.get(fieldId);
   return extra ? { ...field, text: extra.text } : field;
+}
+
+/**
+ * The board's own words for one offer, or null where the board has none.
+ *
+ * Two shapes on the printed board and this reconciles them. The Osada and the
+ * Gród head their text "MOŻESZ TU ODWIEDZIĆ:" and then print a line each, so
+ * each offer carries its own; everywhere else the Obszar makes exactly one
+ * offer and its whole text is that offer's, which is taken rather than copied
+ * into `fieldScript.ts` — six paragraphs transcribed twice is six chances for
+ * the two to disagree, and the one on screen would look like the board.
+ *
+ * Null is a real answer and the Pustelnia's Egzorcyzm is why: freeing yourself
+ * of the ZŁY DUCH is something you come to the Pustelnia to do, but the words
+ * for it are printed on his Karta and not on the square. Falling back to the
+ * field's text there would put the Pustelnik's herbs above a button that has
+ * nothing to do with them.
+ */
+export function offerText(fieldId: FieldId, offer: FieldOffer): string | null {
+  if (offer.text) return offer.text;
+  const script = fieldScriptFor(fieldId);
+  if (script && script.offers.length === 1) return fieldWithText(fieldId)?.text ?? null;
+  return null;
 }

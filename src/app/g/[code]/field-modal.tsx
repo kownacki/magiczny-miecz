@@ -13,9 +13,10 @@ import { kindForCard } from "@/lib/engine/holdings";
 import type { FieldId } from "@/lib/engine/board";
 import { crossingFrom } from "@/lib/engine/rings";
 import { BRIDGE_ORDEAL } from "@/lib/engine/bridge";
-import { fieldScriptFor, offersFromCard } from "@/lib/engine/fieldScript";
 import { BridgeOrdeal, Crossing, Ferry } from "./crossing-controls";
-import { FieldServices } from "./field-services";
+import { FieldService, type OfferContext } from "./field-services";
+import { OfferList, offersHere } from "./field-offers";
+import type { Confirmation } from "./confirm";
 import { isFerry } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
@@ -194,6 +195,9 @@ export function FieldModal({
   purse,
   stock,
   sellable,
+  pack,
+  blocked = null,
+  onAsk,
   raid,
   friend,
 }: {
@@ -255,6 +259,19 @@ export function FieldModal({
   purse?: { gold: number; life: number };
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];
+  /** What this seat holds and how much room 5.4 leaves them — see `whyPackIsFull`. */
+  pack?: OfferContext["pack"];
+  /**
+   * 12.1's two exceptions, in the words the server refuses with.
+   *
+   * Computed where the turn's own lists are — see `whyNotCollectHere` — because
+   * a Karta lying on this Obszar is filed under `field_cards` or under the
+   * turn's `drawn` depending on nothing a player can see, and reading one list
+   * is how this rule has been got wrong four times.
+   */
+  blocked?: string | null;
+  /** Raises the app's one "are you sure?". Spending gold cannot be undone. */
+  onAsk?: (ask: Confirmation) => void;
   /**
    * The Poszukiwacz Przygód's wyprawa, passed in rather than built here.
    *
@@ -323,6 +340,21 @@ export function FieldModal({
    * `preferences.ts` is for the second kind.
    */
   const [shut, setShut] = useState<ReadonlySet<ShelfKey>>(() => new Set());
+  /**
+   * Which offer is open, by its key, or null in the Obszar's own view.
+   *
+   * The window is a two-level tree: what is *here*, and the one thing you have
+   * walked up to. A Płatnerz with three prices, a Medyk with four wounds and a
+   * Lichwiarz with your whole pack in it were all on the same scroll as the
+   * Karty lying on the square and the button that ends the turn, which on the
+   * Osada is four shops' worth of controls under one heading.
+   *
+   * The key and not the offer, so it survives the list being rebuilt on every
+   * poll — and so that walking off the square, or a Karta being taken off it,
+   * simply stops matching and drops the reader back to the Obszar rather than
+   * leaving them in a shop that is no longer there.
+   */
+  const [openOffer, setOpenOffer] = useState<string | null>(null);
   // Above the `!field` guard below: a hook after an early return is called on
   // some renders and not others, which is the one thing React will not have.
   const toggle = (key: ShelfKey) =>
@@ -365,6 +397,60 @@ export function FieldModal({
   const drawnNow = cards.filter((card) => card.justDrawn);
 
   /**
+   * Everything this Obszar offers, and which of them is open.
+   *
+   * Built for anybody who opened the window, not only for whoever is standing
+   * here: „co tam jest" includes who keeps a shop there, and a player deciding
+   * where to move next is asking exactly that. 13.1 governs the buttons inside
+   * an offer, and `shutBecause` is what they say instead.
+   */
+  const offers = offersHere(
+    fieldId,
+    cards.map((card) => ({ cardId: card.cardId, pool: card.pool })),
+  );
+  const open = offers.find((offer) => offer.key === openOffer) ?? null;
+
+  /**
+   * Why an offer cannot be acted on, in the order the refusals arrive.
+   *
+   * 13.1 first, because it is the widest — "w żadnym przypadku nie mogą nikogo
+   * spotkać ani wogóle podejmować żadnych czynności na Obszarze, z którego
+   * rozpoczynają ruch" — and then 12.1's two exceptions, which `blocked`
+   * carries in the words `refuseOverAFoe` and `refuseWhileOwing` throw.
+   *
+   * Null means the offer is live. Everything below reads this rather than
+   * re-deriving it, so a shop, a healer and a die table are shut by one
+   * sentence and cannot come apart the way the four takers did.
+   */
+  const shutBecause = !standingHere
+    ? "Odwiedzać można tylko Obszar, na którym się stoi (13.1)."
+    : !canAct
+      ? "To nie twoja tura (10.1)."
+      : !arrived
+        ? "Odwiedzać można dopiero po zakończeniu tu ruchu (13.1)."
+        : blocked;
+
+  /** Everything the controls under an open offer need, gathered once. */
+  const offerCtx: OfferContext = {
+    busy,
+    typedRolls,
+    onRollOffer: () =>
+      open && onAction?.({ action: "pole-tabela", offer: open.key }),
+    gold: purse?.gold ?? 0,
+    life: purse?.life ?? 0,
+    stock,
+    sellable,
+    pack,
+    blocked: shutBecause,
+    eqMode,
+    nature,
+    onInspect,
+    onAsk: onAsk ?? (() => {}),
+    onSuggestion: onSuggestion ?? (() => {}),
+    onService,
+  };
+
+  /**
    * Whether either action section has anything in it.
    *
    * Both were rendered on the gate alone — standing here, on your turn, in the
@@ -377,11 +463,7 @@ export function FieldModal({
    */
   const hasOffers =
     isFerry(fieldId) ||
-    (field.text !== undefined && parseRollTable(field.text) !== null) ||
-    fieldScriptFor(fieldId) !== null ||
-    // What has settled here counts too: the services of an Obszar are not all
-    // printed on it. See `offersFromCard`.
-    cards.some((card) => offersFromCard(card.cardId));
+    (field.text !== undefined && parseRollTable(field.text) !== null);
   const hasCrossing =
     crossingFrom(fieldId) !== undefined ||
     BRIDGE_ORDEAL.has(fieldId) ||
@@ -491,13 +573,43 @@ export function FieldModal({
           <CloseButton onClose={onClose} />
         </header>
 
+        {/**
+         * The way back, under the Obszar's own name.
+         *
+         * Two levels and one bar between them: the header says where you are on
+         * the board and never changes, this says which of its offers you have
+         * walked up to. The arrow is on the left because that is where a reader
+         * looks for the way back out of somewhere, and the name is beside it
+         * rather than centred so the two read as one sentence — ← Płatnerz.
+         */}
+        {open && (
+          <div className="flex items-center gap-2 border-b border-edge px-4 py-2">
+            <button
+              onClick={() => setOpenOffer(null)}
+              title={`Wróć do: ${field.name}`}
+              className="rounded px-1 text-sm text-ochre transition hover:bg-edge"
+            >
+              ←
+            </button>
+            <span className="min-w-0 truncate font-[family-name:var(--font-display)] text-sm tracking-wide text-ink">
+              {open.label}
+            </span>
+          </div>
+        )}
+
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 py-3">
+          {/* Above the fork, so a die thrown inside an offer is answered inside
+              it — the throw happens in here and the result belongs in here. */}
           {notice && (
             <p className="rounded border-l-2 border-ochre bg-ochre/5 px-3 py-2 text-sm text-ochre">
               <WithRules text={notice} />
             </p>
           )}
 
+          {open ? (
+            <FieldService offer={open} ctx={offerCtx} />
+          ) : (
+          <>
           <section>
             {field.draw ? (
               <p className="mb-1 text-[11px] uppercase tracking-wide text-verdigris">
@@ -712,6 +824,18 @@ export function FieldModal({
             )}
           </section>
 
+          {/**
+           * What there is to go and do here, one button each.
+           *
+           * Below what is lying on the Obszar and above the crossings, which is
+           * the order a turn is played in: you look at what came up, you visit
+           * whoever keeps a shop, you decide whether to cross. Drawn for
+           * anybody reading the window — a shop is part of what an Obszar *is*,
+           * and knowing the Osada has a Płatnerz is how you decide to walk
+           * there. What 13.1 shuts is inside.
+           */}
+          <OfferList offers={offers} onOpen={setOpenOffer} />
+
           {/* Last of what the reveal is: you have seen the deal and what was
               already here, and this is the way on. At the foot of the two
               because it follows them — a "go on" above the thing it goes on
@@ -750,23 +874,6 @@ export function FieldModal({
                   busy={busy}
                   typedRolls={typedRolls}
                   onSuggestion={onSuggestion}
-                />
-              )}
-
-              {/* The ten fields that sell, buy or mend (and the shops that
-                  arrive on a card and settle here). */}
-              {fieldScriptFor(fieldId) && (
-                <FieldServices
-                  fieldId={fieldId}
-                  fieldCards={cards.map((card) => ({ cardId: card.cardId, pool: card.pool }))}
-                  busy={busy}
-                  typedRolls={typedRolls}
-                  onRollOffer={(offer) => onAction({ action: "pole-tabela", offer })}
-                  purse={purse}
-                  stock={stock}
-                  sellable={sellable}
-                  onSuggestion={onSuggestion ?? (() => {})}
-                  onService={onService}
                 />
               )}
 
@@ -873,6 +980,8 @@ export function FieldModal({
                 </div>
               )}
             </section>
+          )}
+          </>
           )}
         </div>
       </div>
