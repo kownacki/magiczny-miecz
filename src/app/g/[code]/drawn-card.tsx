@@ -11,7 +11,7 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
-import { requirementOf, stayNamesNature, staysAs } from "@/lib/engine/abilityText";
+import { requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import type { Nature } from "@/data/types";
@@ -210,7 +210,6 @@ export function DrawnCard({
    * out as two, the second being the first with a word missing.
    */
   const needs = requirementOf(known.id, nature);
-  const needsOwnLine = needs !== null && !stayNamesNature(known.id);
   /** Green where the reader passes, red where they do not, neutral outside a game. */
   const passes =
     needs === null || needs.met === null
@@ -297,27 +296,13 @@ export function DrawnCard({
         )}
       </header>
 
-      {/* What the Karta asks before it does anything, read for the person in
-          front of it — the same line and the same two colours a Przedmiot uses
-          for 5.3. It answers what the sheet was silent about: a Zła Postać
-          standing before the WRÓŻKA saw six gift buttons she could not press.
-
-          Green or red rather than neutral, because the useful question is not
-          „does this card have a restriction" but „does it shut me out", and on
-          a turn that is being taken the answer is known. */}
-      {needsOwnLine && (
-        <p className={`text-[11px] ${passes}`}>{sentence(needs!.text)}</p>
-      )}
-
       {/* How long the Karta is here — for a Nieznajomy and a Miejsce the whole
           of what varies, since 16.5 and 16.7 make the instruction binding on
           every one of them. Said as a fact about the Karta rather than in the
           disposition's own words, which are an instruction to the table
           („Odłóż Kartę na stos użytych"). */}
       {staysAs(known.id) ? (
-        <p className={`text-[11px] ${needsOwnLine || !needs ? "text-magia/80" : passes}`}>
-          {sentence(staysAs(known.id)!)}
-        </p>
+        <p className="text-[11px] text-magia/80">{sentence(staysAs(known.id)!)}</p>
       ) : (
         script && (
           <p className="text-[11px] text-ochre/80">
@@ -325,6 +310,16 @@ export function DrawnCard({
           </p>
         )
       )}
+
+      {/* And whom it is for, under it: the same line and the same two colours a
+          Przedmiot uses for 5.3. It answers what the sheet was silent about —
+          a Zła Postać standing before the WRÓŻKA saw six gift buttons she could
+          not press.
+
+          Green or red rather than neutral, because the useful question is not
+          „does this card have a restriction" but „does it shut me out", and on
+          a turn being taken the answer is known. */}
+      {needs && <p className={`text-[11px] ${passes}`}>{sentence(needs.text)}</p>}
 
       {coverageOf(known.id) === "brak" && (
         <p className="rounded border border-edge bg-night/50 px-2 py-1 text-[11px] text-muted">

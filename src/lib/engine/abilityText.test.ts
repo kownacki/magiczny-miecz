@@ -3,7 +3,6 @@ import {
   forbiddenNatures,
   itemProfile,
   requirementOf,
-  stayNamesNature,
   staysAs,
   whenApplies,
 } from "./abilityText";
@@ -189,12 +188,8 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
   it("tells the three shapes apart", () => {
     // „Bez względu na to, czy skorzystasz z propozycji… odłóż jego Kartę."
     expect(staysAs("kuglarz")).toBe("jednorazowa — potem wraca na stos");
-    // „Pierwszej Dobrej Postaci, która do niej zawita" — one fact, one line:
-    // the Natura is folded in rather than printed again above it.
-    expect(staysAs("wrozka")).toBe("czeka tu na pierwszą Dobrą Postać");
-    expect(staysAs("koszmar")).toBe("czeka tu na pierwszą Złą Postać");
-    // „Pierwszej Postaci, Eremita ofiaruje do wyboru" — anybody's, so no Natura.
-    expect(staysAs("eremita")).toBe("czeka tu na pierwszą Postać");
+    // Whom it waits for is the requirement line's, on its own row underneath.
+    expect(staysAs("wrozka")).toBe("czeka tu na pierwszą Postać");
     // „Cudotwórca będzie mieszkał na tym Obszarze do końca rozgrywki."
     expect(staysAs("cudotworca")).toBe("zostaje na Obszarze do końca gry");
     // „połóż przy nim 4 punkty Życia… Po wykorzystaniu 4 punktów, Drzewo usycha."
@@ -232,15 +227,12 @@ describe("what a Karta asks of the character in front of it", () => {
     // „Każda Dobra Postać, która tu zawita, otrzyma 1 Zaklęcie" — he stays for
     // good, so there is no „czeka tu na pierwszą…" to say it inside.
     expect(requirementOf("czarodziej", "evil")?.met).toBe(false);
-    expect(stayNamesNature("czarodziej")).toBe(false);
-    expect(stayNamesNature("wrozka")).toBe(true);
   });
 
   /** Said once: the disposition drops out of `special` where `staysAs` covers it. */
   it("does not print the disposition twice on a Nieznajomy", () => {
     expect(itemProfile("wrozka").special.join(" ")).not.toContain("czeka tu");
-    // A Przedmiot keeps its own, having no `staysAs` line at all.
-    expect(itemProfile("wrozka").visit).toBe("czeka tu na pierwszą Dobrą Postać");
+    expect(itemProfile("wrozka").visit).toBe("czeka tu na pierwszą Postać");
   });
 
   it("still reads 5.3 off a Przedmiot", () => {

@@ -7,7 +7,7 @@ import { describeDisposition, scriptFor } from "./cardScript";
 import { classOf } from "./cards";
 import { describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
-import { NATURE_LABEL, NATURE_LABEL_ACC, cardName, fieldName, plural } from "./polish";
+import { NATURE_LABEL, cardName, fieldName, plural } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
 function fieldNames(fieldIds: readonly FieldId[]): string {
@@ -116,19 +116,8 @@ export function staysAs(cardId: string): string | null {
   switch (disposition.kind) {
     case "odloz":
       return "jednorazowa — potem wraca na stos";
-    /**
-     * Which Postać it is waiting for, when the Karta only serves one Natura.
-     *
-     * „Pierwszej **Dobrej** Postaci, która do niej zawita" is one fact and was
-     * printed as two lines — „tylko Postać: dobra" above „czeka tu na pierwszą
-     * Postać" — where the second is the first with a word missing. Said once,
-     * in the card's own words.
-     */
-    case "do-pierwszej": {
-      const only = servedNatures(cardId);
-      if (!only || only.length !== 1) return "czeka tu na pierwszą Postać";
-      return `czeka tu na pierwszą ${NATURE_LABEL_ACC[only[0]] ?? only[0]} Postać`;
-    }
+    case "do-pierwszej":
+      return "czeka tu na pierwszą Postać";
     case "zostaje":
       return "zostaje na Obszarze do końca gry";
     case "zostaje-z-pula":
@@ -294,19 +283,6 @@ function servedNatures(cardId: string): readonly Nature[] | undefined {
     return gate.warunek.jedna_z;
   }
   return undefined;
-}
-
-/**
- * Whether `staysAs` has already said which Natura the Karta serves.
- *
- * So the sheet knows not to print it twice. The merged line takes the colour
- * the separate requirement would have had — „czeka tu na pierwszą Dobrą
- * Postać" in vermilion says both halves at once to the Zła Postać reading it.
- */
-export function stayNamesNature(cardId: string): boolean {
-  if (scriptFor(cardId)?.disposition.kind !== "do-pierwszej") return false;
-  const only = servedNatures(cardId);
-  return only !== undefined && only.length === 1;
 }
 
 /**

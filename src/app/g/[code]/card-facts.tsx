@@ -16,7 +16,7 @@
  */
 
 import type { ItemProfile } from "@/lib/engine/abilityText";
-import { forbiddenNatures, requirementOf, stayNamesNature } from "@/lib/engine/abilityText";
+import { forbiddenNatures, requirementOf } from "@/lib/engine/abilityText";
 import type { Nature } from "@/data/types";
 import { sentence } from "@/lib/engine/polish";
 import { WithRules } from "./rule-ref";
@@ -55,7 +55,6 @@ export function CardFacts({
    * one answer, and the same two colours as the Przedmioty.
    */
   const needs = requirementOf(cardId, nature);
-  const needsOwnLine = needs !== null && !stayNamesNature(cardId);
   const passes =
     needs === null || needs.met === null
       ? "text-muted"
@@ -71,7 +70,7 @@ export function CardFacts({
       {profile.visit !== null && (
         <p
           className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${
-            needsOwnLine || !needs ? "text-magia/80" : passes
+            "text-magia/80"
           }`}
         >
           {sentence(profile.visit)}
@@ -80,9 +79,9 @@ export function CardFacts({
 
       {/* The Karta's condition, where the line above has not already folded it
           in — „czeka tu na pierwszą Dobrą Postać" says both at once. */}
-      {needsOwnLine && (
+      {needs && (
         <p className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${passes}`}>
-          {sentence(needs!.text)}
+          {sentence(needs.text)}
         </p>
       )}
 

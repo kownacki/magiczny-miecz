@@ -133,21 +133,6 @@ export const NATURE_LABEL: Record<string, string> = {
   any: "dowolna",
 };
 
-/**
- * The same four in the accusative, for a sentence that takes one as its object.
- *
- * „czeka tu na pierwszą **Dobrą** Postać" — Polish declines, and a lookup table
- * built for „natura: dobra" cannot be dropped into another case and left to
- * read as an error nobody notices, which is what „na pierwszą dobra Postać"
- * would be. Four words, written once.
- */
-export const NATURE_LABEL_ACC: Record<string, string> = {
-  good: "Dobrą",
-  evil: "Złą",
-  chaotic: "Chaotyczną",
-  any: "dowolną",
-};
-
 /** What a `strata` takes off you. */
 export type Loss = Extract<Effect, { op: "strata" }>["co"];
 
