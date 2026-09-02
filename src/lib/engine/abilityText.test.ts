@@ -201,6 +201,24 @@ describe("what a Nieznajomy or a Miejsce asks of you", () => {
     expect(visitWhen("kuglarz")).toEqual(["do wyboru (13.5)", "teraz albo wcale"]);
   });
 
+  /**
+   * The three wish-granting Nieznajomi, and the one that looks like them.
+   *
+   * „ofiaruje do wyboru" is an offer and „zawita" is the visiting verb, so all
+   * three wishes may be walked past. The EREMITA offers in the same words and
+   * is not one of them: his Karta places itself first (15.1), and that half is
+   * nobody's choice.
+   */
+  it("lets the three wishes be walked past, and not the EREMITA", () => {
+    for (const wish of ["krol-lasu", "wrozka", "koszmar"]) {
+      expect(visitWhen(wish), wish).toEqual([
+        "do wyboru (13.5)",
+        "w każdej chwili tury (12.1)",
+      ]);
+    }
+    expect(visitWhen("eremita")).toEqual(["obowiązkowe (16.5)"]);
+  });
+
   /** Every other class: 16.1 and 16.2 are plain, and a Przedmiot has its own lines. */
   it("says nothing about a class the question does not fit", () => {
     expect(visitWhen("wilk")).toEqual([]);

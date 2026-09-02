@@ -27,12 +27,31 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     effect: { op: "zaklecie", count: 1 },
     disposition: { kind: "odloz" },
   },
-  // Three cards word the same wish differently and mean the same six things.
+  /**
+   * Three cards word the same wish differently and mean the same six things.
+   *
+   * All three are `optional`, and it is the verb that says so: „spełni jedno
+   * życzenie pierwszej Postaci, która **zawita** do jego siedziby, **ofiarując
+   * jej do wyboru**". „zawita" is the visiting verb — the same one the
+   * CUDOTWÓRCA and the SZTUKMISTRZ use — and „ofiaruje" is an offer. None of
+   * the three can cost you anything, and a gift you are made to accept is not
+   * a gift: the EREMITA's Magiczny Miecz would land in a full Plecak (5.4) and
+   * the wish's own „przeniesienie" would move a character who did not want to
+   * be moved.
+   *
+   * The EREMITA is not one of them, though he offers in the same words. His
+   * Karta is a `po-kolei` whose first step is 15.1's own placement — „Rzuć
+   * kostką i umieść Kartę Eremity na odpowiednim Obszarze" — and that half
+   * happens whether anybody wants it or not. Marking the card optional would
+   * make the placement skippable too.
+   */
   "krol-lasu": {
+    optional: true,
     effect: WISH(),
     disposition: { kind: "do-pierwszej" },
   },
   wrozka: {
+    optional: true,
     effect: {
       op: "gdy",
       warunek: { is: "natura", jedna_z: ["good"] },
@@ -41,6 +60,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     disposition: { kind: "do-pierwszej" },
   },
   koszmar: {
+    optional: true,
     effect: {
       op: "gdy",
       warunek: { is: "natura", jedna_z: ["evil"] },

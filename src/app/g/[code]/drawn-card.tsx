@@ -466,8 +466,14 @@ export function DrawnCard({
 
             Two reasons to offer it and they say different things. A Karta the
             rules let you walk past (13.5) is *skipped* — that is an answer, and
-            for one that stays it costs nothing, which the wording says. A Karta
-            that is merely mid-question is *shelved*, and may be come back to. */}
+            for one that stays it costs nothing, which the wording says.
+
+            A compulsory one is only *shelved*, and the wording has to say that
+            too, or „zostaw na później" under „obowiązkowe (16.5)" reads as a
+            way out of the obligation. It is not one: nothing else on the Obszar
+            opens while it is outstanding and the turn cannot end (12.1). What
+            it buys is an order — cast a Zaklęcie first, read the next Karta —
+            and nothing else. */}
         {canAct && !foe && (skippable || asking) && (
           <button
             disabled={busy}
@@ -478,7 +484,7 @@ export function DrawnCard({
               ? perishes
                 ? "Pomiń (13.5) — Karta przepadnie"
                 : "Pomiń (13.5) — wrócisz do niej w tej turze"
-              : "zostaw na później"}
+              : "zostaw na później — wrócisz do niej przed końcem tury"}
           </button>
         )}
       </div>
