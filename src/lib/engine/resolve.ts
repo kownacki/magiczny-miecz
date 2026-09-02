@@ -222,6 +222,22 @@ export function pendingIn(
 }
 
 /**
+ * Whether the Karta has nothing at all for this character.
+ *
+ * Three Nieznajomi are a `gdy natura` with no `inaczej`: the WRÓŻKA serves „the
+ * first Dobra Postać", the KOSZMAR a Zła one, the CZARODZIEJ a Dobra one. Meet
+ * one as the wrong Natura and the card does not merely do less — it does
+ * nothing, and it stays lying there for whoever it was written for.
+ *
+ * The sheet needs to know, because the button it draws otherwise says "Rozpatrz,
+ * co się da" over a card that will visibly do nothing when pressed.
+ */
+export function inertFor(effect: Effect, natura: Nature | null): boolean {
+  if (effect.op !== "gdy" || effect.warunek.is !== "natura" || !natura) return false;
+  return !effect.warunek.jedna_z.includes(natura) && effect.inaczej === undefined;
+}
+
+/**
  * The node a `script` frame's cursor stands on (docs/STACK.md).
  *
  * Not `pendingIn`: that walks by *choices*, skipping every node that asks

@@ -202,21 +202,14 @@ describe("what a Nieznajomy or a Miejsce asks of you", () => {
   });
 
   /**
-   * The three wish-granting Nieznajomi, and the one that looks like them.
-   *
-   * „ofiaruje do wyboru" is an offer and „zawita" is the visiting verb, so all
-   * three wishes may be walked past. The EREMITA offers in the same words and
-   * is not one of them: his Karta places itself first (15.1), and that half is
-   * nobody's choice.
+   * No Nieznajomy is walked past, the three wish-granting ones included. 16.5
+   * is flat, and a wish is carried out by being granted — the choice the card
+   * gives is among its six gifts, not between taking them and not.
    */
-  it("lets the three wishes be walked past, and not the EREMITA", () => {
-    for (const wish of ["krol-lasu", "wrozka", "koszmar"]) {
-      expect(visitWhen(wish), wish).toEqual([
-        "do wyboru (13.5)",
-        "w każdej chwili tury (12.1)",
-      ]);
+  it("keeps every Nieznajomy in the kolejka", () => {
+    for (const one of ["krol-lasu", "wrozka", "koszmar", "eremita"]) {
+      expect(visitWhen(one), one).toEqual(["obowiązkowe (16.5)"]);
     }
-    expect(visitWhen("eremita")).toEqual(["obowiązkowe (16.5)"]);
   });
 
   /** Every other class: 16.1 and 16.2 are plain, and a Przedmiot has its own lines. */

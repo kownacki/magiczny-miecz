@@ -6,16 +6,17 @@ import { dismissableOpen } from "./overlay";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
-import { combatValueOf, numeralMeaning, numeralOf, roundsOf } from "@/lib/engine/cards";
+import { classOf, combatValueOf, numeralMeaning, numeralOf, roundsOf } from "@/lib/engine/cards";
 import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { visitWhen } from "@/lib/engine/abilityText";
+import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import type { Nature } from "@/data/types";
 import { WithRules } from "./rule-ref";
-import { isSettled, pendingIn } from "@/lib/engine/resolve";
+import { inertFor, isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 
@@ -191,14 +192,20 @@ export function DrawnCard({
   /**
    * Whether walking away is one of the answers.
    *
-   * 13.5's line, and the same `mayWalkPast` the kolejka reads, so a Karta
-   * labelled „do wyboru" beside its own picture has a control to match. There
-   * was one before, but only while something was being asked — so a WRÓŻKA,
-   * whose question is hidden behind a `gdy`, had exactly one button and it was
-   * "Rozpatrz, co się da". A card the rules let you ignore should never be a
-   * card the app makes you press.
+   * Never for a Nieznajomy. 16.5 is flat — „konieczne jest wykonanie zawartej w
+   * Karcie instrukcji" — and every one of them either gives you something or
+   * happens to you; there is nothing there a player would decline. A Miejsce is
+   * different, and says so itself: „**Jeżeli chcesz** do niej wejść, rzuć
+   * kostką" is the Grota's own sentence, and rolling it can cost a turn or
+   * start a fight.
+   *
+   * The exception is a Karta that has nothing for this character at all — the
+   * WRÓŻKA met by a Zła Postać. Resolving it is a no-op, so „Pomiń" says what
+   * is happening and „Rozpatrz, co się da" does not.
    */
-  const skippable = mayWalkPast(known.id);
+  const skippable =
+    (classOf(known.id) !== "stranger" && mayWalkPast(known.id)) ||
+    (script !== null && inertFor(script.effect, nature));
   const perishes = visitWhen(known.id).includes("teraz albo wcale");
 
   return (
@@ -282,7 +289,11 @@ export function DrawnCard({
           different things. */}
       {visitWhen(known.id).length > 0 && (
         <p className="text-[11px] text-magia/80">
-          <WithRules text={visitWhen(known.id).join(" · ")} />
+          {/* Each label starts, not just the first — the middot stands between
+              two independent facts. `CardFacts` draws this same line beside the
+              picture and had the identical bug; the two do not share a
+              component, which is exactly how the second one was missed. */}
+          <WithRules text={visitWhen(known.id).map(sentence).join(" · ")} />
         </p>
       )}
       {script && (
