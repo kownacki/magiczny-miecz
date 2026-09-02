@@ -182,8 +182,12 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
   it("tells the three shapes apart", () => {
     // „Bez względu na to, czy skorzystasz z propozycji… odłóż jego Kartę."
     expect(staysAs("kuglarz")).toBe("jednorazowa — potem wraca na stos");
-    // „Po spełnieniu życzenia Wróżka znika - odłóż jej Kartę."
-    expect(staysAs("wrozka")).toBe("czeka tu na pierwszą Postać");
+    // „Pierwszej Dobrej Postaci, która do niej zawita" — one fact, one line:
+    // the Natura is folded in rather than printed again above it.
+    expect(staysAs("wrozka")).toBe("czeka tu na pierwszą Dobrą Postać");
+    expect(staysAs("koszmar")).toBe("czeka tu na pierwszą Złą Postać");
+    // „Pierwszej Postaci, Eremita ofiaruje do wyboru" — anybody's, so no Natura.
+    expect(staysAs("eremita")).toBe("czeka tu na pierwszą Postać");
     // „Cudotwórca będzie mieszkał na tym Obszarze do końca rozgrywki."
     expect(staysAs("cudotworca")).toBe("zostaje tu do końca gry");
     // „połóż przy nim 4 punkty Życia… Po wykorzystaniu 4 punktów, Drzewo usycha."

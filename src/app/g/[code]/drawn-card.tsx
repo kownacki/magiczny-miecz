@@ -11,7 +11,7 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
-import { requirementOf, staysAs } from "@/lib/engine/abilityText";
+import { requirementOf, stayNamesNature, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import type { Nature } from "@/data/types";
@@ -202,8 +202,22 @@ export function DrawnCard({
    * WRÓŻKA met by a Zła Postać. Resolving it is a no-op, so „Pomiń" says what
    * is happening and „Rozpatrz, co się da" does not.
    */
-  /** What this Karta asks of the character in front of it, and whether they pass. */
+  /**
+   * What this Karta asks of the character in front of it, and whether they pass.
+   *
+   * Printed on its own line unless the „czeka tu na pierwszą Dobrą Postać" line
+   * has already said it — „Pierwszej Dobrej Postaci" is one fact and was coming
+   * out as two, the second being the first with a word missing.
+   */
   const needs = requirementOf(known.id, nature);
+  const needsOwnLine = needs !== null && !stayNamesNature(known.id);
+  /** Green where the reader passes, red where they do not, neutral outside a game. */
+  const passes =
+    needs === null || needs.met === null
+      ? "text-muted"
+      : needs.met
+        ? "text-verdigris"
+        : "text-vermilion";
 
   const skippable =
     (classOf(known.id) !== "stranger" && mayWalkPast(known.id)) ||
@@ -291,14 +305,8 @@ export function DrawnCard({
           Green or red rather than neutral, because the useful question is not
           „does this card have a restriction" but „does it shut me out", and on
           a turn that is being taken the answer is known. */}
-      {needs && (
-        <p
-          className={`text-[11px] ${
-            needs.met === null ? "text-muted" : needs.met ? "text-verdigris" : "text-vermilion"
-          }`}
-        >
-          {sentence(needs.text)}
-        </p>
+      {needsOwnLine && (
+        <p className={`text-[11px] ${passes}`}>{sentence(needs!.text)}</p>
       )}
 
       {/* How long the Karta is here — for a Nieznajomy and a Miejsce the whole
@@ -307,7 +315,9 @@ export function DrawnCard({
           disposition's own words, which are an instruction to the table
           („Odłóż Kartę na stos użytych"). */}
       {staysAs(known.id) ? (
-        <p className="text-[11px] text-magia/80">{sentence(staysAs(known.id)!)}</p>
+        <p className={`text-[11px] ${needsOwnLine || !needs ? "text-magia/80" : passes}`}>
+          {sentence(staysAs(known.id)!)}
+        </p>
       ) : (
         script && (
           <p className="text-[11px] text-ochre/80">
