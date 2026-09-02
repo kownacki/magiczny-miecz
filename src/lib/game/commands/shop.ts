@@ -52,7 +52,7 @@ export function offerOn<K extends Effect["op"]>(
   snapshot: Snapshot,
   fieldId: FieldId,
   op: K,
-): Extract<Effect, { op: K }> | null {
+): { from: string; effect: Extract<Effect, { op: K }> } | null {
   const state = top(snapshot.game.turn_state);
   const inTurn =
     state.phase === "field" && state.fieldId === fieldId
@@ -338,10 +338,11 @@ export function sellHolding(
 
   // Whose desk it is and what he pays is `buyerFor`'s, so the button the
   // browser draws and the sale this makes cannot disagree about the price.
+  const deskHere = offerOn(snapshot, seat.field_id as FieldId, "sprzedaj");
   const buyer = buyerFor(
     held.card_id,
     seat.field_id as FieldId,
-    offerOn(snapshot, seat.field_id as FieldId, "sprzedaj")?.cena ?? null,
+    deskHere?.effect.cena ?? null,
     mine.map((h) => h.card_id),
   );
   if (!buyer) throw new Error("Nikt tu nie skupuje Przedmiotów.");
@@ -363,7 +364,15 @@ export function sellHolding(
           seatId: seat.id,
           round: snapshot.game.round,
           kind: "sold",
-          payload: { cardId: held.card_id, price },
+          payload: {
+            cardId: held.card_id,
+            price,
+            fieldId: seat.field_id,
+            // Whoever actually took it — the card's own named buyer, the
+            // Obszar's desk, or an Alchemik in your own bag. `buyerFor` has
+            // just decided between the three and the line should not guess.
+            from: buyer.from === "obszar" ? deskHere?.from : null,
+          },
         },
       ],
     }),
@@ -377,8 +386,9 @@ export function payHealer(
   command: { seatId: string; points: number },
 ): Outcome<{ healed: number; paid: number }> {
   const seat = standingShopper(snapshot, command.seatId);
-  const cure = offerOn(snapshot, seat.field_id as FieldId, "uzdrow");
-  if (!cure) throw new Error("Na tym Obszarze nikt nie leczy.");
+  const desk = offerOn(snapshot, seat.field_id as FieldId, "uzdrow");
+  if (!desk) throw new Error("Na tym Obszarze nikt nie leczy.");
+  const cure = desk.effect;
   if (!Number.isInteger(command.points) || command.points < 1) throw new Error("Ile punktów?");
 
   const price = cure.cena ?? 0;
@@ -401,7 +411,7 @@ export function payHealer(
           seatId: seat.id,
           round: snapshot.game.round,
           kind: "healing",
-          payload: { points: wanted, paid },
+          payload: { points: wanted, paid, fieldId: seat.field_id, from: desk.from },
         },
       ],
     },
@@ -423,10 +433,10 @@ export function buyGoods(
   command: { seatId: string; cardId: string },
 ): Outcome<Taken> {
   const seat = standingShopper(snapshot, command.seatId);
-  const shop = offerOn(snapshot, seat.field_id as FieldId, "kup");
-  if (!shop) throw new Error("Na tym Obszarze nie ma czego kupić.");
+  const desk = offerOn(snapshot, seat.field_id as FieldId, "kup");
+  if (!desk) throw new Error("Na tym Obszarze nie ma czego kupić.");
 
-  const entry = shop.towar.find((t) => goodsId(t.co) === command.cardId);
+  const entry = desk.effect.towar.find((t) => goodsId(t.co) === command.cardId);
   if (!entry) throw new Error(`${cardName(command.cardId)} nie jest tu na sprzedaż.`);
   if (seat.gold < entry.cena) {
     throw new Error(`Za mało złota: ${entry.co} kosztuje ${entry.cena} Sz. Z.`);
@@ -435,7 +445,13 @@ export function buyGoods(
   // Taking it and paying for it are one changeset. `takeCard` writes holdings,
   // the turn stack and possibly the deck, and none of those is the purse, so
   // there is nothing here for the merge to overwrite.
-  const taken = takeCard(snapshot, { seatId: seat.id, cardId: command.cardId });
+  //
+  // `silent` because a purchase is one act and this is its line. `takeCard`
+  // would otherwise write its own „zdobywa: MIECZ (16.6)" above „kupuje: MIECZ
+  // za 2 Sztuki Złota (21.1)", which is the same event twice under two rules —
+  // and the wrong rule at that: 16.6 is about picking a Karta up off the
+  // Obszar, which buying one off a shelf is not.
+  const taken = takeCard(snapshot, { seatId: seat.id, cardId: command.cardId, silent: true });
   return {
     writes: merge(taken.writes, {
       seats: [{ id: seat.id, patch: { gold: seat.gold - entry.cena } }],
@@ -444,7 +460,12 @@ export function buyGoods(
           seatId: seat.id,
           round: snapshot.game.round,
           kind: "bought",
-          payload: { cardId: command.cardId, price: entry.cena },
+          payload: {
+            cardId: command.cardId,
+            price: entry.cena,
+            fieldId: seat.field_id,
+            from: desk.from,
+          },
         },
       ],
     }),

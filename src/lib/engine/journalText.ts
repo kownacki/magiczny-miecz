@@ -278,6 +278,31 @@ export function describe(
   const field = (id: unknown) => remember("field", id, fieldName(id));
 
   /**
+   * Where a transaction happened, tacked onto the end of its line.
+   *
+   * „kupuje: MIECZ za 2 Sztuki Złota" is a fact about a purse and leaves out
+   * the half a table argues about. Two vendors in this box sell a Miecz —
+   * the Osada's Płatnerz at 2 and a TARGOWISKO at 1 — and three Obszary heal
+   * at a Sztuka Złota a point, one of which then makes you roll. Which one it
+   * was is the difference between a price that looks wrong and a price that is.
+   *
+   * Both names bare and comma-separated rather than declined into a phrase.
+   * „u Płatnerza w Osadzie" needs two cases the data does not carry, and a
+   * journal that guesses at Polish grammar gets „u Nadworny Medyk" the first
+   * time an offer's name is not a masculine noun. The Obszar first, because it
+   * is the bigger place and the one the map can be searched for.
+   *
+   * The Obszar is a `field` ref, so it stays clickable the way every other
+   * place-name in the journal is. The offer is not: „Płatnerz" is not a Karta
+   * and there is nothing to open.
+   */
+  const at = (fieldId: unknown, from: unknown) => {
+    if (typeof fieldId !== "string") return "";
+    const who = typeof from === "string" && from.length > 0 ? `, ${from}` : "";
+    return ` — ${field(fieldId)}${who}`;
+  };
+
+  /**
    * Who did it: the player, and the character they are playing.
    *
    * Both, because neither is enough on its own. A journal read three turns
@@ -567,9 +592,13 @@ export function describe(
       return line(`${who} ${USE_VERB_PAST}: ${card(data.cardId)}${face}.`);
     }
     case "bought":
-      return line(`${who} kupuje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);
+      return line(
+        `${who} kupuje: ${card(data.cardId)} za ${sztuki(num(data.price))}${at(data.fieldId, data.from)}.`,
+      );
     case "sold":
-      return line(`${who} sprzedaje: ${card(data.cardId)} za ${sztuki(num(data.price))}.`);
+      return line(
+        `${who} sprzedaje: ${card(data.cardId)} za ${sztuki(num(data.price))}${at(data.fieldId, data.from)}.`,
+      );
     case "trophies-traded":
       return line(`${who} wymienia trofea — zyskuje ${num(data.gained)} Miecza.`);
     case "card":
@@ -733,7 +762,9 @@ export function describe(
     case "healed":
       return line(`${who} wraca do ${life(num(data.to))}.`);
     case "healing":
-      return line(`${who} leczy ${life(num(data.points))} za ${sztuki(num(data.paid))}.`);
+      return line(
+        `${who} leczy ${life(num(data.points))} za ${sztuki(num(data.paid))}${at(data.fieldId, data.from)}.`,
+      );
     // 7.2 puts a Karta Zmiany Natury next to the character showing the new one,
     // and the old one is what everybody has been playing against all game —
     // whether the Święta Włócznia still works, whether the Czarci Młyn heals or

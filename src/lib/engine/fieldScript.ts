@@ -1,6 +1,7 @@
 /** What the fields that offer something actually offer, in the same language the cards use. */
 
 import { scriptFor, type Effect } from "./cardScript";
+import { cardName } from "./polish";
 import type { FieldId } from "./board";
 
 /**
@@ -925,7 +926,7 @@ export function trades(effect: Effect): boolean {
 }
 
 /**
- * What this Obszar offers of a given kind, counting the Karty lying on it.
+ * Who on this Obszar offers a thing of a given kind, and what they offer.
  *
  * A shop can be printed on the board or can have walked in as a Karta and
  * stayed (16.8), and 21.1 makes no distinction between them — so both are
@@ -936,24 +937,32 @@ export function trades(effect: Effect): boolean {
  * engine: the server merges `field_cards` with the turn's own `drawn` (see
  * `offerOn`, which is where that trap is written down), and the browser has
  * already merged the same two for the window it is drawing.
+ *
+ * `from` is who it was: the board's own name for the offer — „Płatnerz",
+ * „Lichwiarz", „Nadworny Medyk" — or the Karta's, for a shop that walked in and
+ * stayed. It comes back because a journal line saying what a purse did is
+ * missing the half a table argues about, which is *where*: two vendors in this
+ * box sell a Miecz at different prices, and „kupuje MIECZ za 2" does not say
+ * which of them was standing there.
  */
 export function offerAmong<K extends Effect["op"]>(
   fieldId: FieldId,
   lying: readonly string[],
   op: K,
-): Extract<Effect, { op: K }> | null {
-  const found: Effect[] = [];
-  const walk = (effect: Effect) => {
-    if (effect.op === op) found.push(effect);
-    if (effect.op === "po-kolei") effect.steps.forEach(walk);
-    if (effect.op === "wybor") effect.options.forEach((one) => walk(one.effect));
+): { from: string; effect: Extract<Effect, { op: K }> } | null {
+  const found: { from: string; effect: Effect }[] = [];
+  const walk = (from: string, effect: Effect) => {
+    if (effect.op === op) found.push({ from, effect });
+    if (effect.op === "po-kolei") effect.steps.forEach((step) => walk(from, step));
+    if (effect.op === "wybor") effect.options.forEach((one) => walk(from, one.effect));
   };
 
-  for (const offer of fieldScriptFor(fieldId)?.offers ?? []) walk(offer.effect);
+  for (const offer of fieldScriptFor(fieldId)?.offers ?? []) walk(offer.name, offer.effect);
   for (const cardId of lying) {
     const script = scriptFor(cardId);
-    if (script) walk(script.effect);
+    if (script) walk(cardName(cardId), script.effect);
   }
 
-  return (found[0] as Extract<Effect, { op: K }>) ?? null;
+  const first = found[0];
+  return first ? { from: first.from, effect: first.effect as Extract<Effect, { op: K }> } : null;
 }

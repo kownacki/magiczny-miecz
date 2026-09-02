@@ -45,9 +45,17 @@ const standing = (
   });
 
 describe("what an Obszar is offering", () => {
-  it("finds the desk printed on the board", () => {
-    expect(offerOn(standing(GROD), GROD, "sprzedaj")).toMatchObject({ cena: 1 });
-    expect(offerOn(standing(OSADA), OSADA, "uzdrow")).toMatchObject({ cena: 1 });
+  it("finds the desk printed on the board, and says whose it is", () => {
+    // The name comes back with the offer so a journal line can say where a
+    // purse changed — two vendors in this box sell a Miecz at different prices.
+    expect(offerOn(standing(GROD), GROD, "sprzedaj")).toMatchObject({
+      from: "Lichwiarz",
+      effect: { cena: 1 },
+    });
+    expect(offerOn(standing(OSADA), OSADA, "uzdrow")).toMatchObject({
+      from: "Medyk",
+      effect: { cena: 1 },
+    });
   });
 
   it("finds nothing where there is nothing", () => {
@@ -354,7 +362,7 @@ describe("buying from a shelf (21.1)", () => {
   const forSale = () => {
     const shop = offerOn(shopping(9), OSADA, "kup");
     if (!shop) throw new Error("Osada should have a shop — read fieldScript.ts");
-    return shop.towar;
+    return shop.effect.towar;
   };
 
   it("refuses where there is no shelf", () => {
@@ -392,6 +400,26 @@ describe("buying from a shelf (21.1)", () => {
     expect(writes.holdings?.insert?.[0]).toMatchObject({ seat_id: "seat-a", card_id: cardId });
     expect(writes.seats).toContainEqual({ id: "seat-a", patch: { gold: 9 - first.cena } });
     expect(writes.journal?.map((line) => line.kind)).toContain("bought");
+  });
+
+  /**
+   * One act, one line, and it says where.
+   *
+   * `takeCard` writes its own „zdobywa (16.6)" for anything picked up off an
+   * Obszar, and a purchase used to get that as well as its own „kupuje (21.1)"
+   * — the same event twice, under two rules, the first of which is about
+   * picking a Karta up off the ground rather than buying one off a shelf.
+   */
+  it("writes one journal line, naming the Obszar and the vendor", () => {
+    const [first] = forSale();
+    const cardId = goodsId(first.co)!;
+    const { writes } = buyGoods(shopping(9), { seatId: "seat-a", cardId });
+
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["bought"]);
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "bought",
+      payload: { cardId, price: first.cena, fieldId: OSADA, from: "Płatnerz" },
+    });
   });
 });
 

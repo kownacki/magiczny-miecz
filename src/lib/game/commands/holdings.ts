@@ -89,6 +89,19 @@ export interface TakeCard {
   cardId: string;
   /** Set when this card came off a field that was holding a granted one. */
   granted?: boolean;
+  /**
+   * The caller writes the journal line, so this one does not.
+   *
+   * One act gets one line. A purchase is `bought` under 21.1 and the take
+   * inside it is not a second event — it used to write „zdobywa: MIECZ (16.6)"
+   * directly above „kupuje: MIECZ za 2 Sztuki Złota (21.1)", the same thing
+   * said twice under two rules, and 16.6 is the wrong one anyway: it is about
+   * picking a Karta up off the Obszar, which buying off a shelf is not.
+   *
+   * Only for callers that write their own line. A take with this set and
+   * nothing in its place is a take the journal never saw.
+   */
+  silent?: boolean;
 }
 
 export interface Taken {
@@ -366,7 +379,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     const script = scriptFor(cardId);
     return {
       writes: merge(liftOffField(snapshot, cardId), {
-        journal: [
+        journal: command.silent ? [] : [
           {
             seatId,
             round: snapshot.game.round,
@@ -572,9 +585,9 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
 
   return {
     writes: mergeAll(discarded, kept, lifted, {
-      journal: [
-        { seatId, round: snapshot.game.round, kind: "taken", payload: { cardId, kind } },
-      ],
+      journal: command.silent
+        ? []
+        : [{ seatId, round: snapshot.game.round, kind: "taken", payload: { cardId, kind } }],
     }),
     result: { kind, resolve: null },
   };
