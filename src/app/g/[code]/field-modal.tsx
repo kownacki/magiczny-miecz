@@ -28,7 +28,8 @@ import { Fold } from "./fold";
 import { FieldGold } from "./field-gold";
 import { fieldGroups, type FieldGroupKey } from "@/lib/view/fieldGroups";
 import { seatColour } from "@/lib/view/boardMap";
-import { TILE_WIDTH } from "@/lib/view/cardImages";
+import Image from "next/image";
+import { CARD_RATIO, MARK_ART_HEIGHT, TILE_WIDTH } from "@/lib/view/cardImages";
 import { SeatFigure } from "./seat-figure";
 import { Drawer } from "./drawer";
 
@@ -144,6 +145,58 @@ type ShelfKey = FieldGroupKey | "zloto" | "gracze";
  * its gold above them and not tacked on at the end.
  */
 const BEFORE_THE_LOOT = new Set<FieldGroupKey>(["rzeczy", "mieszkancy", "inne"]);
+
+/**
+ * How many Karty this Obszar deals, drawn as that many Karty.
+ *
+ * 13.4's number is the first thing about a square worth knowing — three Karty
+ * is a different place from none, and it is what the whole turn on it is going
+ * to be — and it was a line of small capitals saying "Wyciągnij 3 karty" among
+ * the other lines of small capitals. A count of face-down cards says it without
+ * being read: it is what the square looks like at a table before anybody turns
+ * anything over.
+ *
+ * Backs and not one back with a numeral, up to the four the board ever asks
+ * for, because three of a thing is recognised without counting. The numeral is
+ * there as well for the same reason `CardBack` carries one — a picture that
+ * says "some" beside a rule that says exactly how many is the picture being
+ * vague on purpose.
+ *
+ * Under the Obszar's name and centred, which is where a deal sits: the square
+ * is what deals, and this is a fact about the square rather than about the
+ * player standing on it. What the player still owes is the button below,
+ * because that is the part that changes as they draw.
+ */
+function Deal({ draw }: { draw: number }) {
+  return (
+    <p className="flex items-center justify-center gap-1.5 text-[11px] text-verdigris">
+      <span className="tnum">{draw}×</span>
+      <span className="flex items-center" aria-hidden>
+        {Array.from({ length: draw }, (_, at) => (
+          <Image
+            key={at}
+            src="/cards/back-zdarzenie.jpg"
+            alt=""
+            width={Math.round(MARK_ART_HEIGHT / CARD_RATIO)}
+            height={MARK_ART_HEIGHT}
+            unoptimized
+            /* Overlapped by half, so a fan of them stays the width of a couple
+               of characters and still reads as several. */
+            className="rounded-[2px] border border-edge"
+            style={{
+              width: Math.round(MARK_ART_HEIGHT / CARD_RATIO),
+              height: MARK_ART_HEIGHT,
+              marginLeft: at === 0 ? 0 : -Math.round(MARK_ART_HEIGHT / CARD_RATIO / 2),
+            }}
+          />
+        ))}
+      </span>
+      <span className="sr-only">
+        {draw === 1 ? "Wyciągnij kartę" : `Wyciągnij ${draw} karty`}
+      </span>
+    </p>
+  );
+}
 
 /**
  * A field, opened.
@@ -597,7 +650,12 @@ export function FieldModal({
        * the two read as one sentence — ← Płatnerz.
        */
       beneath={
-        open ? (
+        !open ? (
+          // `undefined` and not an element rendering null: the strip is a real
+          // box with padding, and an Obszar that deals nothing was keeping an
+          // empty one under its name.
+          field.draw ? <Deal draw={field.draw} /> : undefined
+        ) : (
           <div className="flex items-baseline gap-2">
             <button
               onClick={() => setOpenOffer(null)}
@@ -624,7 +682,7 @@ export function FieldModal({
               </span>
             )}
           </div>
-        ) : undefined
+        )
       }
     >
         <div className="flex flex-col gap-4 px-4 py-3">
@@ -641,14 +699,6 @@ export function FieldModal({
           ) : (
           <>
           <section>
-            {field.draw ? (
-              <p className="mb-1 text-[11px] uppercase tracking-wide text-verdigris">
-                Wyciągnij {field.draw} {field.draw === 1 ? "kartę" : "karty"}
-                {/* 13.4: what is already lying here counts against that number,
-                    which is why a field that has silted up draws nothing. */}
-                {cards.length > 0 && ` — leżą tu już ${cards.length}`}
-              </p>
-            ) : null}
             {/**
              * The sum done out loud, and the button that acts on it.
              *

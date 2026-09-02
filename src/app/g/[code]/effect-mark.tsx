@@ -3,16 +3,14 @@
 import Image from "next/image";
 import { type Nature } from "@/data/types";
 import { CARD_NAMES, CARD_TEXTS, type Seat } from "./table";
-import { STONE_CARD, cardArtUrl } from "@/lib/view/cardImages";
+import { MARK_ART_HEIGHT, MARK_WIDTH, STONE_CARD, cardArtUrl } from "@/lib/view/cardImages";
 import { STONE } from "@/lib/engine/status";
 import { useCardPreview } from "./card-preview";
 import { ART_BORDER, PICKABLE } from "./pickable";
 import { type TileCard } from "./card-tile";
-import { SLOT_ART_HEIGHT, SLOT_WIDTH } from "./item-slot";
 import { plural } from "@/lib/engine/polish";
 
 /** Twice what it was, and the shape every other card in the app is drawn in. */
-const MARK_WIDTH = 40;
 
 
 /**
@@ -171,7 +169,7 @@ function EffectMark({
   // 240x155 and every slot in the pack and on the body takes that ratio, so a
   // mark that took it too stopped needing to crop. A square was cutting the
   // sides off an Eliksir to make it fit a shape nothing else here uses.
-  const height = Math.round(MARK_WIDTH * (SLOT_ART_HEIGHT / SLOT_WIDTH));
+  const height = MARK_ART_HEIGHT;
   const ring =
     mark.tone === "dobry"
       ? "border-verdigris text-verdigris"

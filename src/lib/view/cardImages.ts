@@ -56,6 +56,26 @@ export const SHELF_WIDTH = 5 * TILE_WIDTH + 4 * 8 + 32 + 1 + 23;
 export const TILE_ART_HEIGHT = Math.round(TILE_WIDTH / ART_RATIO);
 
 /**
+ * A mark beside a name: the same illustration at a fraction of a tile.
+ *
+ * Lived in `effect-mark.tsx` with its height worked out beside it. Here now
+ * because a second thing wants to be "as tall as one of those" — the deal's
+ * face-down Karty under an Obszar's name — and two components deriving the
+ * same height from the same ratio in two places is how they come to differ.
+ */
+export const MARK_WIDTH = 40;
+export const MARK_ART_HEIGHT = Math.round(MARK_WIDTH * (TILE_ART_HEIGHT / TILE_WIDTH));
+
+/**
+ * A whole Karta, back or front, as the printed cards are cut.
+ *
+ * Not `ART_RATIO`, which is the framed illustration *inside* a card. A card
+ * back has no illustration and no frame — it is the whole rectangle — so
+ * anything drawing one needs this shape and not that one.
+ */
+export const CARD_RATIO = 154 / 92;
+
+/**
  * The space a row leaves between two tiles, as a number.
  *
  * `TILE_GAP.card` in `tile-row.tsx` is the same eight pixels as the Tailwind
