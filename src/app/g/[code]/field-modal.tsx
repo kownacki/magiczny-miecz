@@ -170,7 +170,6 @@ export function FieldModal({
   canAct,
   /** Ending the turn: offered here, on the Obszar the turn finishes on. */
   canEnd = false,
-  whyNotEnd,
   onEnd,
   busy,
   owed,
@@ -232,8 +231,6 @@ export function FieldModal({
   canAct: boolean;
   /** Whether the rules allow the turn to end yet — see `mayEndTurn`. */
   canEnd?: boolean;
-  /** The rule that refuses, quoted, when they do not. */
-  whyNotEnd?: string | null;
   onEnd?: () => void;
   /**
    * Everything the Obszar can be *done* about, which used to live in a panel
@@ -493,7 +490,7 @@ export function FieldModal({
         /* The same gate the Karty's own "weź" has: 12.1 gives what is lying
            here to the character whose move ENDS here, and only until that turn
            is over. */
-        canTake={standingHere && canAct && arrived && onTakeGold !== undefined}
+        canTake={standingHere && canAct && arrived && !blocked && onTakeGold !== undefined}
         busy={busy}
         onTake={(amount) => onTakeGold?.(amount)}
       />
@@ -857,6 +854,13 @@ export function FieldModal({
                                 standingHere &&
                                 canAct &&
                                 arrived &&
+                                /* 12.1's window, which is shut while the
+                                   kolejka runs and while a Wróg is standing.
+                                   The server refuses either way; this is so
+                                   the button is not there to be pressed, which
+                                   is the whole reason `blocked` is computed
+                                   from the engine's own sentence. */
+                                !blocked &&
                                 (!lying.viaTurn || onTakeDrawn !== undefined) && (
                                 <button
                                   /* Only this card's own ask, never the table's
@@ -903,6 +907,17 @@ export function FieldModal({
             {cards.length > 0 && !standingHere && (
               <p className="mt-2 text-[11px] text-muted/70">
                 Zbierać można tylko z Obszaru, na którym się stoi (12.1).
+              </p>
+            )}
+
+            {/* The 12.1 window itself, shut. Standing here on your own turn
+                having ended your move, and still nothing to press: a Wróg is
+                up, the deal is unfinished, or the kolejka has something in it.
+                The sentence is the engine's, so it is word for word what the
+                server would have refused with. */}
+            {(cards.length > 0 || gold > 0) && standingHere && canAct && arrived && blocked && (
+              <p className="mt-2 text-[11px] text-muted/70">
+                <WithRules text={blocked} />
               </p>
             )}
           </section>
@@ -1010,27 +1025,25 @@ export function FieldModal({
                   one place and finished in another. The Obszar's window is the
                   last thing a turn does, and this is the last thing in it.
 
-                  Disabled says why. `dutiesBeforeEnding` quotes the rule that
-                  refuses — 10.1's move, 14.7's Bestia — and a greyed control
-                  that does not say why is a control that looks broken. */}
+                  There is no button until the turn really can end, and nothing
+                  in its place. */}
               {onEnd && (
                 <div className="flex flex-col gap-1">
                   {/**
-                   * The button, or the reason there is no button — never both.
+                   * The button, and nothing when there is no button.
                    *
-                   * It used to be a greyed control with the refusal under it,
-                   * on the reasoning that a disabled thing which does not say
-                   * why looks broken. That was right about the sentence and
-                   * wrong about the button: now that the kolejka and the
-                   * Obszar's own instruction are duties too, the turn cannot be
-                   * ended for most of the time it is being played, so the
-                   * control was greyed nearly always and the sentence under it
-                   * was doing all the work. A button that is almost never
-                   * pressable is furniture.
+                   * Two things went before it. A greyed control, on the
+                   * reasoning that a disabled thing which does not say why
+                   * looks broken — but with the kolejka and the Obszar's own
+                   * instruction counted as duties, the turn cannot be ended for
+                   * most of the time it is being played, so it was greyed
+                   * nearly always. Then the refusal standing alone in its
+                   * place, which was the same sentence said a fourth time: the
+                   * kolejka strip names what is next, the turn's pill names it,
+                   * and the notice up beside the Karty names it under 12.1.
                    *
-                   * So the sentence stands alone until the turn really can end,
-                   * and then the button appears. Nothing is lost: the refusal
-                   * still names what is owed and the rule that owes it.
+                   * The foot of the Obszar is where a turn ends. A running
+                   * commentary on why it has not is not what it is for.
                    */}
                   {canEnd ? (
                     <button
@@ -1041,13 +1054,6 @@ export function FieldModal({
                       Zakończ turę
                     </button>
                   ) : null}
-                  {!canEnd && whyNotEnd && (
-                    <p className="text-[11px] text-muted">
-                      {/* „Najpierw: Stocz walkę z Bestią (14.7)." — the number
-                          is the refusal's evidence. */}
-                      <WithRules text={whyNotEnd} />
-                    </p>
-                  )}
                 </div>
               )}
             </section>

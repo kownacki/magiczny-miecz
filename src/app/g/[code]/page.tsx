@@ -42,7 +42,7 @@ import { TableLayout, type PublicSeat } from "./table-layout";
 import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
 import { factsIn, turnSteps, windowsFor } from "@/lib/engine/turnWindows";
-import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "@/lib/engine/duties";
+import { mayEndTurn } from "@/lib/engine/duties";
 import { isSpent } from "@/lib/engine/kolejka";
 import { whyNotCollectHere } from "@/lib/engine/holdings";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
@@ -1094,18 +1094,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             !!active &&
             !panel.blocksEnding &&
             mayEndTurn({ fieldId: active.field_id, done: [], phase: turnState.phase, onField: owedHere })
-          }
-          whyNotEnd={
-            active
-              ? whyCannotEnd(
-                  dutiesBeforeEnding({
-                    fieldId: active.field_id,
-                    done: [],
-                    phase: turnState.phase,
-                    onField: owedHere,
-                  }),
-                )
-              : null
           }
           onEnd={() => {
             setInspecting(null);
