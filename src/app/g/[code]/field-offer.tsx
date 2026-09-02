@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { summariseEffect } from "@/lib/engine/effectText";
+import { sentence } from "@/lib/engine/polish";
 import { pendingIn } from "@/lib/engine/resolve";
 import type { Effect } from "@/lib/engine/cardScript";
 
@@ -91,5 +92,10 @@ function FieldEffect({ effect }: { effect: Effect }) {
       </ol>
     );
   }
-  return <p className="text-xs text-muted">{summariseEffect(effect)}</p>;
+  // A line on its own, so it starts like one. The rows above do not: each is
+  // the value of the die face beside it, and it is the same fragment that
+  // appears mid-sentence when `CardFacts` writes the whole table out as one
+  // line — „Rzut kostką: 1 — +3 Złota; 2 — …". The two presentations of one
+  // table should be the same words.
+  return <p className="text-xs text-muted">{sentence(summariseEffect(effect))}</p>;
 }
