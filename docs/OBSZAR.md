@@ -105,6 +105,36 @@ explore, not both.
 
 ---
 
+## The 12.1 / 15.2 contradiction, and the three sentences that close it
+
+Read flat, the two rules cover the same cards and say opposite things. 12.1
+frees „w każdej chwili" what 15.2 binds with „Konieczne jest" — and once Miejsca
+were added to 12.1's list, the overlap is total: IV, V and VI, which is the
+whole of „pozostałe Karty Zdarzeń".
+
+They come apart on their verbs. **15.2 sequences what a Karta does to you** —
+„wykonywane są zawarte w nich instrukcje". **12.1 frees what you do** —
+„odwiedzić", „zabrać". For a compulsory Karta those are one event, so it has a
+position. For an optional one they are not: the TARGOWISKO's instruction is
+„może kupić", and carrying it out *is* the shop standing open. There is nothing
+to put in a queue.
+
+So the line is **compulsory against optional**, not one class against another —
+and the book never draws it, because 15.2 was written as though every Karta
+were an event and 12.1 as though none were compulsory. Three `addenda.ts`
+entries draw it, one from each side:
+
+| rule | what it adds | why |
+| --- | --- | --- |
+| **12.1** | „lub Miejsce (16.7)" | no rule said when a Miejsce may be used at all |
+| **12.1** | „Swoboda ta dotyczy chwili, a nie wyboru…" | „może odwiedzić" otherwise makes the LABIRYNT and the DIABLICA optional |
+| **15.2** | „Kolejność ta wiąże Karty, których instrukcję trzeba wykonać…" | otherwise a shop has to wait its numeral |
+
+Each is a genuine silence rather than a disagreement, which is what keeps them
+addenda: the book does not say when a Miejsce is visited, does not say that
+12.1's freedom is about timing rather than obligation, and does not contemplate
+a Karta that only stands there.
+
 ## What is ours, not the box's
 
 **Optional residents and the field's desks are offers, not queue entries.** Read

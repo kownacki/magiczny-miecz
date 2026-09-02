@@ -66,6 +66,19 @@ describe("addenda", () => {
     ).toContain("(5.3-4.)");
   });
 
+  /**
+   * The two halves of one line, and they have to stay a pair: 12.1 alone reads
+   * as making a compulsory Karta optional, 15.2 alone reads as sequencing a
+   * shop. Each is the other's answer.
+   */
+  it("draws the compulsory/optional line from both sides", () => {
+    const twelve = withAddenda("12.1", "W wymienionych przypadkach należy najpierw pokonać Wrogów albo im uciec lub rozpatrzeć treść wyciągniętych Kart.");
+    expect(twelve.filter((s) => s.added)[0].text).toContain("chwili, a nie wyboru");
+
+    const fifteen = withAddenda("15.2", "Konieczne jest przy tym zachowanie kolejności zgodnej z numeracją Kart (numer znajduje się u góry każdej Karty) - Karta o najniższym numerze rozpatrywana jest jako pierwsza.");
+    expect(fifteen.filter((s) => s.added)[0].text).toContain("jedynie coś oferują");
+  });
+
   it("carries an argument", () => {
     for (const addendum of ADDENDA) expect(addendum.because.length).toBeGreaterThan(80);
   });

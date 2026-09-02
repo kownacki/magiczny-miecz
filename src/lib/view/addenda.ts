@@ -9,7 +9,7 @@ import { asRead } from "./misprints";
  * and we show what it meant. This is the other kind of defect: the book says
  * nothing at all, and a referee cannot say nothing. Somebody is standing on an
  * Obszar waiting to be told whether they may walk up to the Targowisko, and
- * „the Instrukcja is silent" is not an answer a game can be played on.
+ * „the Instrukcja is silent” is not an answer a game can be played on.
  *
  * # The rules for adding a rule
  *
@@ -30,7 +30,7 @@ import { asRead } from "./misprints";
  * what was printed. The addition lives here and is composed in at render time,
  * drawn in ochre so it is visibly ours.
  *
- * Shown as „Uzupełnienie", never „dodatek" — that word already means an
+ * Shown as „Uzupełnienie”, never „dodatek” — that word already means an
  * expansion box (docs/EXPANSIONS.md), and this is its opposite: a sentence the
  * base game should have had.
  */
@@ -62,6 +62,34 @@ export const ADDENDA: readonly Addendum[] = [
       "już powinny były być. Nie zmienia to 16.7: Miejsce, którego Karta każe " +
       "(LABIRYNT), pozostaje obowiązkowe. Uzupełnienie mówi tylko, KIEDY wolno " +
       "skorzystać, a nie CZY trzeba.",
+  },
+  {
+    rule: "12.1",
+    after: "lub rozpatrzeć treść wyciągniętych Kart.",
+    text:
+      " Swoboda ta dotyczy chwili, a nie wyboru: Kartę, której instrukcja każe " +
+      "(16.5, 16.7), trzeba rozpatrzyć przed końcem tury.",
+    because:
+      "12.1 mówi „może odwiedzić”, więc czyta się jak zgoda na to, żeby nie " +
+      "odwiedzać wcale — a UROCZA DIABLICA i LABIRYNT zostają na Obszarze i " +
+      "każą („będziesz musiał”, „Każdy, kto tu trafi”). Bez tego zdania " +
+      "wychodzi, że 12.1 znosi ich przymus, czego nie robi: daje wolność " +
+      "chwili, nie wyboru. Druga połowa tej samej granicy stoi przy 15.2.",
+  },
+  {
+    rule: "15.2",
+    after: "Karta o najniższym numerze rozpatrywana jest jako pierwsza.",
+    text:
+      " Kolejność ta wiąże Karty, których instrukcję trzeba wykonać; z Kart, " +
+      "które jedynie coś oferują, wolno skorzystać w dowolnej chwili (12.1).",
+    because:
+      "15.2 każe rozpatrywać „pozostałe Karty Zdarzeń” po kolei, tak jakby " +
+      "każda Karta była zdarzeniem. Nie każda jest: instrukcją TARGOWISKA jest " +
+      "„może kupić”, a wykonanie takiej instrukcji to po prostu otwarty " +
+      "kram — nie ma tu czego ustawiać w kolejce. Instrukcja nie przewiduje " +
+      "Karty, która niczego nie robi, tylko stoi; to zdanie ją przewiduje. " +
+      "Bez niego 15.2 i 12.1 przeczą sobie wprost: jedno każe trzymać " +
+      "kolejność Kart IV-VI, drugie pozwala z nich korzystać „w każdej chwili”.",
   },
 ];
 
@@ -110,12 +138,12 @@ export function addendumId(addendum: Addendum): string {
 /**
  * A rule as the Księga shows it: misprints read, addenda composed in.
  *
- * For search, which was matching the printed text alone — so „lub Miejsce"
+ * For search, which was matching the printed text alone — so „lub Miejsce”
  * found nothing, though it is on the page in front of you. A reader searching
  * for words they can see and being told the book does not contain them is the
  * app calling its own page a lie.
  *
- * Corrections too, for the same reason: somebody who reads „(5.3-4.)" in 16.6
+ * Corrections too, for the same reason: somebody who reads „(5.3-4.)” in 16.6
  * and searches for it should land on 16.6.
  */
 export function asShown(rule: string | null, paras: readonly string[]): string {
