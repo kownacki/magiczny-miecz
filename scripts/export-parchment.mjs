@@ -103,7 +103,7 @@ const APEX = 24;
  * decorative dash is a bigger share of one, and there are far fewer corners on
  * the board that are straight, drawn, convex and bare all at once.
  */
-const BARE = 0.18;
+const BARE = 0.12;
 const BARE_CORNER = 0.30;
 
 /** A contour shorter than this is a speck's outline, not a scrap's. */
@@ -321,7 +321,56 @@ function render(img, mask, piece) {
       data[o + 3] = sampleMask(mask, img.width, img.height, bx, by);
     }
   }
+  defringe(data, width, height);
   return { width, height, comps: 4, data };
+}
+
+/**
+ * Takes the painted rim off the outside of a piece.
+ *
+ * The mask grows a fixed distance outward to be sure of taking the whole drawn
+ * contour in, and where that contour is thinner than the growth it also takes
+ * two or three pixels of the picture beyond it. On a whole scrap that is a rim
+ * nobody notices against the painting it was cut from; on an eighty-pixel corner
+ * that will be composited onto a parchment we made, it is a yellow halo.
+ *
+ * Only pixels on the edge of the piece are eligible, and that is the whole
+ * trick. Judged on colour alone the same test fires on the flecks of ochre
+ * inside the tear and punches the paper full of holes — a fleck is not on the
+ * edge, and a rim is.
+ */
+const RIM = 4;
+
+function defringe(data, width, height) {
+  const alpha = new Uint8Array(width * height);
+  for (let i = 0; i < width * height; i++) alpha[i] = data[i * 4 + 3];
+  const painted = (o) => {
+    const r = data[o];
+    const g = data[o + 1];
+    const b = data[o + 2];
+    const light = (r * 299 + g * 587 + b * 114) / 1000;
+    const max = Math.max(r, g, b);
+    const saturation = max === 0 ? 0 : ((max - Math.min(r, g, b)) / max) * 255;
+    return light > 120 && saturation > 90;
+  };
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      if (alpha[i] <= 128 || !painted(i * 4)) continue;
+      let open = false;
+      for (let dy = -RIM; dy <= RIM && !open; dy++) {
+        for (let dx = -RIM; dx <= RIM; dx++) {
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= width || yy >= height || alpha[yy * width + xx] <= 128) {
+            open = true;
+            break;
+          }
+        }
+      }
+      if (open) data[i * 4 + 3] = 0;
+    }
+  }
 }
 
 function sampleMask(mask, width, height, x, y) {
@@ -463,14 +512,14 @@ function findCorners(img, mask, contours) {
       // the other arm's direction reversed. Same rising-crossing rule as a run.
       const reach = (arm, paperDir) => {
         const ts = profile(points, arm.from, arm.to, corner, arm.away, flip(paperDir));
-        const usable = ts.filter((t) => t > 30);
+        const usable = ts.filter((t) => t > 24);
         if (!usable.length) return null;
         return usable.reduce((a, b) => (Math.abs(b - ARM) < Math.abs(a - ARM) ? b : a));
       };
       const reachX = reach(first, second.away);
       const reachY = reach(second, first.away);
       // Short arms carry too little tear to be worth having in the library.
-      if (!reachX || !reachY || reachX < 26 || reachY < 26) continue;
+      if (!reachX || !reachY || reachX < 20 || reachY < 20) continue;
       // A corner's arms are measured from `OUT` out, not from the corner: at the
       // corner itself the two tears meet and there is no paper yet in either
       // direction, so the first stretch of each arm is painting by construction.
@@ -510,6 +559,11 @@ function findCorners(img, mask, contours) {
  * three pieces of the Świątynia Nemed icefield got into the library looking like
  * corners. What separates them is the black line: a tear the artist drew has one
  * and a colour change does not.
+ *
+ * Looked for nine pixels either side rather than five, because the mask's
+ * boundary now sits a little outside the drawn line rather than in the middle of
+ * it — it grows a fixed distance through anything, which is what stopped it
+ * chopping the line in half — so the line is further in than it used to be.
  */
 function isDrawn(img, mask, points, from, to) {
   const darks = [];
@@ -517,8 +571,8 @@ function isDrawn(img, mask, points, from, to) {
     const x = points[i * 2];
     const y = points[i * 2 + 1];
     let darkest = 255;
-    for (let dx = -5; dx <= 5; dx++) {
-      for (let dy = -5; dy <= 5; dy++) {
+    for (let dx = -9; dx <= 9; dx++) {
+      for (let dy = -9; dy <= 9; dy++) {
         const px = x + dx;
         const py = y + dy;
         if (px < 0 || py < 0 || px >= img.width || py >= img.height) continue;
@@ -569,6 +623,12 @@ function intersect(a, b) {
  * corner is a scatter of islands — a leaf, a roof, a stray dash — with the paper
  * nowhere in particular. One shape, filling a decent part of the tile, is what a
  * corner of a scrap looks like.
+ *
+ * A tenth of the tile and not a quarter, which is what the quadrant it sits in
+ * would suggest: the arms are cut at whichever rising crossing falls nearest the
+ * target length, so a corner whose two tears both happen to bite deep at that
+ * moment is a thin wedge of paper in a square tile and still a perfectly good
+ * corner.
  */
 function isTidy(shot) {
   const { width, height, data } = shot;
@@ -580,7 +640,7 @@ function isTidy(shot) {
       total++;
     }
   }
-  if (total < width * height * 0.15) return false;
+  if (total < width * height * 0.1) return false;
   const seen = new Uint8Array(width * height);
   let biggest = 0;
   for (let start = 0; start < width * height; start++) {
@@ -712,7 +772,7 @@ for (const list of [runs, corners]) {
   });
 }
 
-const chosen = [...choose(runs, WANT_RUNS, 900), ...choose(corners, WANT_CORNERS, 350)];
+const chosen = [...choose(runs, WANT_RUNS, 900), ...choose(corners, WANT_CORNERS, 220)];
 fs.rmSync(CHOSEN, { recursive: true, force: true });
 const counts = { run: 0, corner: 0 };
 const pieces = chosen.map((piece) => {

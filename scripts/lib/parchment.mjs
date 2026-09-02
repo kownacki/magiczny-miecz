@@ -29,10 +29,10 @@ export const BOARD = "assets/extracted/board/board.png";
  *    keeps the snowfield beside Urwisko and the cliff beside Ruiny Twierdzy out:
  *    they are as white as the paper and they touch it, but nothing is printed on
  *    them. Without it a seed lands in the snow and floods it.
- * 3. The fill then grows `GROW` pixels into anything paper-ish or dark, which
- *    reaches the drawn contour and stops. It is a fixed few pixels and not
- *    another flood, so where a scrap abuts pale artwork the mask takes a thin
- *    rim of it rather than the whole cliff.
+ * 3. The fill then grows a fixed `GROW` pixels outward, through whatever is in
+ *    the way, which reaches the drawn contour and takes it in. It is a fixed few
+ *    pixels and not another flood, so where a scrap abuts pale artwork the mask
+ *    takes a thin rim of it rather than the whole cliff.
  *
  * The Kamienny Most's nine slabs are the exception that proves the shape of it:
  * their captions are lettered onto grey stone, so `CORE` finds only the white
@@ -42,10 +42,33 @@ export const BOARD = "assets/extracted/board/board.png";
 const CORE = { light: 238, saturation: 22 };
 const PAPER = { light: 175, saturation: 55 };
 const REACH = 45;
-const GROW = 7;
 
 /** A fill smaller than this is a speck of highlight, not a scrap. */
 const MIN_FILL = 400;
+
+/**
+ * How far the fill grows to reach the drawn contour, through anything at all.
+ *
+ * Through *anything* is the point, and it was not always so. The growth used to
+ * be allowed onto paper-ish or dark pixels only, and those two tests do not
+ * meet: a pixel at luminance 141, or a bright but saturated one, passes neither,
+ * and that is exactly the fringe where the printed line blends into coloured
+ * artwork. The growth died on that band where it was there and sailed through to
+ * the line where it was not, so the boundary stopped at different distances a
+ * few pixels apart — which is a stepped silhouette — and where the band lay on
+ * the line, the line came out chopped in half.
+ *
+ * A fixed number of steps that nothing can halt gives a boundary the same
+ * distance from the core everywhere, smooth by construction and always far
+ * enough out to hold the whole drawn outline. It costs a two or three pixel
+ * fringe of painting where the outline is thinner than this, which reads as part
+ * of the scan; a broken outline reads as a fault.
+ *
+ * Following the line to its far side and stopping there was tried, to get both.
+ * It is worse: "ink" is only luminance under 125, which the illustration's own
+ * brushstrokes satisfy, so the growth followed them off into the painting.
+ */
+const GROW = 10;
 
 /**
  * How far a scrap may overhang its own square before the fill gives up on it.
@@ -220,14 +243,14 @@ export function fieldScraps({ width, height, comps, data }, boxes, cells) {
     if (!found.length) continue;
 
     const kept = [...trim(found, beside, width, height)];
-    const part = grown(kept, paper, ink, width, height, letters);
+    const part = grown(kept, width, height, letters);
     if (part) scraps.set(box.id, part);
   }
   return scraps;
 }
 
 /** Grows a fill out to the drawn contour and closes its lettering back in. */
-function grown(pixels, paper, ink, width, height, letters) {
+function grown(pixels, width, height, letters) {
   const pad = GROW + 3;
   let x0 = width;
   let y0 = height;
@@ -265,11 +288,8 @@ function grown(pixels, paper, ink, width, height, letters) {
           if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
           const j = yy * w + xx;
           if (local[j]) continue;
-          const board = (y0 + yy) * width + x0 + xx;
-          if (paper[board] || ink[board]) {
-            local[j] = 1;
-            next.push(j);
-          }
+          local[j] = 1;
+          next.push(j);
         }
       }
     }

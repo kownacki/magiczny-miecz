@@ -7,464 +7,464 @@
   "alpha": "fieldScraps() in scripts/lib/parchment.mjs: the scrap this field's words are printed on, flood-filled outward from inside this box and bounded to the field's own square in field-cells.json",
   "padding": "8px of margin round the scrap; w and h are the rectangle as cut",
   "seeds": "these rectangles are also what scrapMask floods outward from, so they are load-bearing twice over: they say where each description is, and they are the only record of a point that is certainly paper",
-  "extent": "each box is the bounding rectangle, at the reading angle, of the paper within 140px of this field's lettering — the scrap around the words. Several scraps have a long blank lobe hanging off them that a picture of the description does not want; the masks in assets/extracted/field-masks carry the whole torn shape"
+  "extent": "each box is its own scrap's bounding rectangle at the reading angle, so the whole torn shape is in it and none of the neighbour's is"
  },
  "boxes": [
   {
    "id": "urwisko-1",
-   "cx": 663,
-   "cy": 167,
-   "w": 1343,
-   "h": 360,
+   "cx": 665,
+   "cy": 169,
+   "w": 1346,
+   "h": 363,
    "angle": 179.5
   },
   {
    "id": "ruiny-twierdzy",
    "cx": 2433,
    "cy": 180,
-   "w": 1766,
-   "h": 365,
+   "w": 1772,
+   "h": 371,
    "angle": 180.5
   },
   {
    "id": "swiatynia-tolimana",
    "cx": 4115,
-   "cy": 169,
-   "w": 1524,
-   "h": 355,
+   "cy": 171,
+   "w": 1530,
+   "h": 358,
    "angle": 180
   },
   {
    "id": "dolina-czaszek",
    "cx": 4800,
    "cy": 1399,
-   "w": 848,
-   "h": 243,
+   "w": 854,
+   "h": 248,
    "angle": 269.75
   },
   {
    "id": "bagna-1",
-   "cx": 4829,
-   "cy": 2259,
-   "w": 867,
-   "h": 200,
+   "cx": 4826,
+   "cy": 2260,
+   "w": 874,
+   "h": 205,
    "angle": 271
   },
   {
    "id": "ruchome-skaly-1",
-   "cx": 4811,
+   "cx": 4812,
    "cy": 3044,
-   "w": 562,
-   "h": 219,
-   "angle": 270.25
+   "w": 568,
+   "h": 223,
+   "angle": 270
   },
   {
    "id": "urwisko-2",
    "cx": 4810,
-   "cy": 3821,
-   "w": 862,
-   "h": 224,
+   "cy": 3822,
+   "w": 870,
+   "h": 229,
    "angle": 270.25
   },
   {
    "id": "rownina-traw",
-   "cx": 4800,
-   "cy": 4747,
-   "w": 957,
-   "h": 234,
+   "cx": 4801,
+   "cy": 4748,
+   "w": 966,
+   "h": 242,
    "angle": 270
   },
   {
    "id": "rozstajne-drogi-1",
    "cx": 4795,
    "cy": 5652,
-   "w": 868,
-   "h": 226,
+   "w": 875,
+   "h": 233,
    "angle": 270.5
   },
   {
    "id": "zamek",
    "cx": 4170,
-   "cy": 6677,
-   "w": 1426,
-   "h": 267,
+   "cy": 6675,
+   "w": 1432,
+   "h": 270,
    "angle": 0.5
   },
   {
    "id": "wymarle-miasto",
    "cx": 2081,
-   "cy": 6652,
-   "w": 2197,
-   "h": 310,
-   "angle": 0.25
+   "cy": 6651,
+   "w": 2205,
+   "h": 308,
+   "angle": 0
   },
   {
    "id": "ruchome-skaly-2",
-   "cx": 234,
-   "cy": 6583,
-   "w": 478,
-   "h": 198,
+   "cx": 236,
+   "cy": 6587,
+   "w": 496,
+   "h": 210,
    "angle": 46.75
   },
   {
    "id": "bagna-2",
    "cx": 114,
-   "cy": 5718,
-   "w": 833,
-   "h": 212,
+   "cy": 5720,
+   "w": 844,
+   "h": 218,
    "angle": 91.25
   },
   {
    "id": "krypta-upiorow",
-   "cx": 129,
+   "cx": 125,
    "cy": 4821,
-   "w": 893,
-   "h": 210,
+   "w": 899,
+   "h": 223,
    "angle": 90.25
   },
   {
    "id": "rownina-snu",
    "cx": 131,
    "cy": 3899,
-   "w": 898,
-   "h": 251,
+   "w": 905,
+   "h": 257,
    "angle": 89.75
   },
   {
    "id": "rozstajne-drogi-2",
    "cx": 128,
    "cy": 2989,
-   "w": 900,
-   "h": 216,
+   "w": 906,
+   "h": 223,
    "angle": 89.75
   },
   {
    "id": "kamienny-las",
    "cx": 144,
-   "cy": 2077,
-   "w": 919,
+   "cy": 2076,
+   "w": 927,
    "h": 246,
-   "angle": 90.25
+   "angle": 91
   },
   {
    "id": "wilczy-parow",
-   "cx": 155,
-   "cy": 1163,
-   "w": 909,
-   "h": 285,
-   "angle": 90
+   "cx": 154,
+   "cy": 1162,
+   "w": 915,
+   "h": 293,
+   "angle": 89.75
   },
   {
    "id": "twierdza-strzegaca-drog",
    "cx": 1269,
    "cy": 790,
-   "w": 1085,
-   "h": 307,
+   "w": 1091,
+   "h": 314,
    "angle": 181.75
   },
   {
    "id": "przelecz-wichrow",
    "cx": 3345,
    "cy": 782,
-   "w": 1787,
-   "h": 278,
+   "w": 1793,
+   "h": 285,
    "angle": 180.5
   },
   {
    "id": "straznik-magicznych-wrot",
    "cx": 4150,
-   "cy": 4434,
-   "w": 855,
-   "h": 289,
-   "angle": 270.75
+   "cy": 4435,
+   "w": 861,
+   "h": 295,
+   "angle": 270.5
   },
   {
    "id": "magiczne-wrota",
    "cx": 4150,
    "cy": 5167,
-   "w": 807,
-   "h": 291,
-   "angle": 269.75
+   "w": 813,
+   "h": 296,
+   "angle": 270
   },
   {
    "id": "plaskowyz-mgiel",
-   "cx": 2823,
-   "cy": 6081,
-   "w": 1019,
-   "h": 223,
-   "angle": 0
+   "cx": 2822,
+   "cy": 6080,
+   "w": 1025,
+   "h": 227,
+   "angle": 0.25
   },
   {
    "id": "swiatynia-bogini-nemed",
-   "cx": 995,
-   "cy": 5954,
-   "w": 1002,
-   "h": 658,
-   "angle": 17.25
+   "cx": 990,
+   "cy": 5958,
+   "w": 1014,
+   "h": 665,
+   "angle": 18.25
   },
   {
    "id": "zaczarowane-wzgorza",
    "cx": 783,
    "cy": 5163,
-   "w": 815,
-   "h": 355,
+   "w": 821,
+   "h": 361,
    "angle": 90.25
   },
   {
    "id": "las-blednych-ogni",
    "cx": 781,
-   "cy": 4439,
-   "w": 839,
-   "h": 354,
-   "angle": 91.25
+   "cy": 4438,
+   "w": 845,
+   "h": 360,
+   "angle": 91
   },
   {
    "id": "pustelnia",
-   "cx": 781,
-   "cy": 3710,
-   "w": 817,
-   "h": 351,
-   "angle": 90.5
+   "cx": 784,
+   "cy": 3713,
+   "w": 824,
+   "h": 356,
+   "angle": 92
   },
   {
    "id": "rownina-samotnych-skal",
    "cx": 807,
-   "cy": 3052,
-   "w": 701,
-   "h": 337,
+   "cy": 3051,
+   "w": 708,
+   "h": 343,
    "angle": 90.5
   },
   {
    "id": "przeprawa-2",
    "cx": 787,
    "cy": 2329,
-   "w": 836,
-   "h": 308,
+   "w": 842,
+   "h": 314,
    "angle": 90
   },
   {
    "id": "mroczna-polana",
-   "cx": 774,
+   "cx": 773,
    "cy": 1626,
-   "w": 771,
-   "h": 338,
-   "angle": 90
+   "w": 777,
+   "h": 345,
+   "angle": 90.25
   },
   {
    "id": "karczma",
-   "cx": 1707,
-   "cy": 5204,
-   "w": 676,
-   "h": 432,
+   "cx": 1708,
+   "cy": 5206,
+   "w": 688,
+   "h": 441,
    "angle": 46.75
   },
   {
    "id": "uroczysko",
    "cx": 1577,
    "cy": 4393,
-   "w": 854,
-   "h": 430,
+   "w": 860,
+   "h": 436,
    "angle": 90.25
   },
   {
    "id": "step-2",
    "cx": 1498,
    "cy": 3668,
-   "w": 559,
-   "h": 224,
+   "w": 565,
+   "h": 230,
    "angle": 90.5
   },
   {
    "id": "mokradla-2",
    "cx": 1509,
    "cy": 3092,
-   "w": 562,
-   "h": 221,
+   "w": 568,
+   "h": 227,
    "angle": 90.5
   },
   {
    "id": "kurhan",
    "cx": 1559,
    "cy": 2506,
-   "w": 576,
-   "h": 333,
+   "w": 582,
+   "h": 340,
    "angle": 90
   },
   {
    "id": "osada",
-   "cx": 1569,
-   "cy": 1777,
-   "w": 874,
-   "h": 361,
+   "cx": 1568,
+   "cy": 1774,
+   "w": 886,
+   "h": 370,
    "angle": 89.5
   },
   {
    "id": "step-1",
    "cx": 2804,
    "cy": 1463,
-   "w": 608,
-   "h": 199,
+   "w": 615,
+   "h": 207,
    "angle": 180.5
   },
   {
    "id": "mokradla-1",
    "cx": 3471,
    "cy": 1688,
-   "w": 613,
-   "h": 201,
+   "w": 619,
+   "h": 207,
    "angle": 271.25
   },
   {
    "id": "czarci-mlyn",
    "cx": 3356,
    "cy": 2399,
-   "w": 478,
-   "h": 428,
+   "w": 485,
+   "h": 434,
    "angle": 270.75
   },
   {
    "id": "krag-mocy",
    "cx": 3423,
    "cy": 2959,
-   "w": 629,
-   "h": 296,
+   "w": 635,
+   "h": 303,
    "angle": 270.75
   },
   {
    "id": "studnia-wiecznosci",
    "cx": 3415,
    "cy": 3625,
-   "w": 682,
-   "h": 279,
+   "w": 689,
+   "h": 285,
    "angle": 270.5
   },
   {
    "id": "bezdroza",
-   "cx": 3445,
-   "cy": 4278,
-   "w": 600,
-   "h": 207,
-   "angle": 270.25
+   "cx": 3443,
+   "cy": 4279,
+   "w": 607,
+   "h": 205,
+   "angle": 271.75
   },
   {
    "id": "grod",
    "cx": 3409,
-   "cy": 5052,
-   "w": 909,
-   "h": 306,
+   "cy": 5056,
+   "w": 922,
+   "h": 312,
    "angle": 270.25
   },
   {
    "id": "mrozne-pustkowie",
-   "cx": 2809,
+   "cx": 2810,
    "cy": 5404,
-   "w": 603,
-   "h": 195,
+   "w": 610,
+   "h": 202,
    "angle": 359.75
   },
   {
    "id": "wejscie-na-most-a",
    "cx": 2075,
-   "cy": 1021,
-   "w": 498,
-   "h": 166,
+   "cy": 1022,
+   "w": 506,
+   "h": 173,
    "angle": 75.25
   },
   {
    "id": "pulapka",
    "cx": 2295,
    "cy": 1855,
-   "w": 291,
-   "h": 177,
+   "w": 300,
+   "h": 184,
    "angle": 86.5
   },
   {
    "id": "gra-ze-smiercia",
    "cx": 2185,
    "cy": 2301,
-   "w": 493,
-   "h": 152,
+   "w": 499,
+   "h": 158,
    "angle": 89.75
   },
   {
    "id": "demon-zaglady",
    "cx": 2195,
    "cy": 2862,
-   "w": 501,
-   "h": 161,
+   "w": 507,
+   "h": 168,
    "angle": 89.5
   },
   {
    "id": "monstrum",
-   "cx": 2165,
-   "cy": 3968,
-   "w": 357,
-   "h": 205,
-   "angle": 77
+   "cx": 2161,
+   "cy": 3971,
+   "w": 371,
+   "h": 172,
+   "angle": 89
   },
   {
    "id": "cerber",
-   "cx": 2178,
-   "cy": 4443,
-   "w": 298,
-   "h": 189,
-   "angle": 107.75
+   "cx": 2177,
+   "cy": 4446,
+   "w": 309,
+   "h": 157,
+   "angle": 95.75
   },
   {
    "id": "magiczna-pulapka",
-   "cx": 2276,
+   "cx": 2275,
    "cy": 5070,
-   "w": 499,
-   "h": 161,
+   "w": 507,
+   "h": 169,
    "angle": 102
   },
   {
    "id": "wejscie-na-most-b",
-   "cx": 2028,
+   "cx": 2029,
    "cy": 5781,
-   "w": 477,
-   "h": 162,
-   "angle": 111.5
+   "w": 486,
+   "h": 170,
+   "angle": 111.25
   },
   {
    "id": "przeprawa-1",
-   "cx": 4154,
+   "cx": 4153,
    "cy": 1643,
-   "w": 690,
-   "h": 286,
-   "angle": 270.25
+   "w": 696,
+   "h": 291,
+   "angle": 270
   },
   {
    "id": "dolina-cienia",
    "cx": 4135,
    "cy": 2305,
-   "w": 688,
-   "h": 252,
+   "w": 694,
+   "h": 258,
    "angle": 270
   },
   {
    "id": "wrzosowiska",
-   "cx": 4139,
+   "cx": 4138,
    "cy": 3023,
-   "w": 717,
-   "h": 182,
-   "angle": 270.5
+   "w": 723,
+   "h": 191,
+   "angle": 271.5
   },
   {
    "id": "wieza-przeznaczenia",
    "cx": 4130,
-   "cy": 3701,
-   "w": 721,
-   "h": 328,
+   "cy": 3702,
+   "w": 728,
+   "h": 334,
    "angle": 270.5
   },
   {
    "id": "zamek-bestii",
    "cx": 2191,
    "cy": 3403,
-   "w": 416,
-   "h": 160,
-   "angle": 93
+   "w": 421,
+   "h": 166,
+   "angle": 90.25
   }
  ]
 }

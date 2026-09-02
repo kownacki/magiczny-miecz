@@ -343,6 +343,21 @@ straight off the scan comes out on its side or upside down. The number to act on
 is still the *shape* rather than the area — some windows are usable art in an
 awkward frame, and a few are letterboxes no crop rescues.
 
+The growth out to the drawn contour goes through **anything**, for a fixed
+number of pixels, and that is deliberate. It used to be allowed onto paper-ish
+or dark pixels only, and those two tests do not meet: a pixel at luminance 141,
+or a bright but saturated one, passes neither, and that is exactly the fringe
+where the printed line blends into coloured artwork. The growth died on that
+band where it was there and sailed through to the line where it was not, so the
+boundary stopped at different distances a few pixels apart — a stepped
+silhouette — and where the band lay on the line, the line came out chopped in
+half. A fixed number of steps nothing can halt gives a boundary the same
+distance from the core everywhere. It costs a two or three pixel rim of painting
+where the outline is thinner than that, which against the picture it was cut
+from reads as part of the scan; `export-parchment.mjs` takes that rim off its
+own pieces, because on an eighty-pixel corner composited onto a parchment we
+made it would read as a halo.
+
 `node scripts/export-parchment.mjs` harvests the torn edge itself into
 `public/parchment/`, which **is** committed, on the same reasoning as
 `public/cards`. The point is to set the transcription we already have inside a

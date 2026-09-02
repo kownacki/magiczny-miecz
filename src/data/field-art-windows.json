@@ -13,458 +13,458 @@
   {
    "id": "grod",
    "x": 3200,
-   "y": 4687,
-   "w": 76,
-   "h": 873,
-   "percent": 18.8
+   "y": 4705,
+   "w": 73,
+   "h": 855,
+   "percent": 17.7
   },
   {
    "id": "karczma",
-   "x": 1784,
-   "y": 4593,
-   "w": 443,
-   "h": 435,
-   "percent": 19.5
+   "x": 1787,
+   "y": 4596,
+   "w": 437,
+   "h": 425,
+   "percent": 18.8
   },
   {
    "id": "swiatynia-bogini-nemed",
-   "x": 1519,
+   "x": 1522,
    "y": 5560,
-   "w": 469,
+   "w": 463,
    "h": 585,
-   "percent": 28.2
+   "percent": 27.8
   },
   {
    "id": "magiczna-pulapka",
    "x": 2030,
    "y": 4787,
-   "w": 148,
+   "w": 145,
    "h": 648,
-   "percent": 29.6
+   "percent": 29
   },
   {
    "id": "osada",
-   "x": 1744,
+   "x": 1747,
    "y": 1290,
-   "w": 476,
-   "h": 773,
-   "percent": 34.4
+   "w": 470,
+   "h": 770,
+   "percent": 33.8
   },
   {
    "id": "uroczysko",
-   "x": 1785,
+   "x": 1788,
    "y": 3967,
-   "w": 275,
+   "w": 272,
    "h": 865,
-   "percent": 38.2
+   "percent": 37.8
   },
   {
    "id": "pulapka",
    "x": 2030,
    "y": 1454,
-   "w": 478,
-   "h": 265,
-   "percent": 40.3
+   "w": 474,
+   "h": 260,
+   "percent": 39.2
   },
   {
    "id": "twierdza-strzegaca-drog",
-   "x": 717,
-   "y": 935,
-   "w": 1271,
-   "h": 351,
-   "percent": 42.8
+   "x": 720,
+   "y": 938,
+   "w": 1265,
+   "h": 345,
+   "percent": 41.9
   },
   {
    "id": "ruiny-twierdzy",
    "x": 1348,
-   "y": 349,
+   "y": 352,
    "w": 1986,
-   "h": 309,
-   "percent": 44.1
+   "h": 303,
+   "percent": 43.3
   },
   {
    "id": "czarci-mlyn",
    "x": 2820,
    "y": 2212,
-   "w": 328,
+   "w": 325,
    "h": 425,
-   "percent": 44.3
+   "percent": 43.9
   },
   {
    "id": "swiatynia-tolimana",
    "x": 3334,
-   "y": 340,
+   "y": 343,
    "w": 1582,
-   "h": 318,
-   "percent": 45.4
+   "h": 312,
+   "percent": 44.6
   },
   {
    "id": "mokradla-1",
    "x": 3200,
    "y": 1290,
-   "w": 175,
-   "h": 880,
-   "percent": 46.4
+   "w": 172,
+   "h": 877,
+   "percent": 45.4
   },
   {
    "id": "ruchome-skaly-2",
-   "x": 428,
-   "y": 6188,
-   "w": 432,
-   "h": 610,
-   "percent": 46.9
+   "x": 434,
+   "y": 6191,
+   "w": 426,
+   "h": 607,
+   "percent": 46
   },
   {
    "id": "kurhan",
-   "x": 1718,
+   "x": 1722,
    "y": 2212,
-   "w": 342,
+   "w": 338,
    "h": 588,
-   "percent": 47.5
+   "percent": 46.9
   },
   {
    "id": "wymarle-miasto",
    "x": 860,
-   "y": 6188,
+   "y": 6191,
    "w": 2494,
-   "h": 320,
-   "percent": 49
+   "h": 314,
+   "percent": 48.1
   },
   {
    "id": "wilczy-parow",
-   "x": 290,
+   "x": 293,
    "y": 700,
-   "w": 323,
+   "w": 317,
    "h": 915,
-   "percent": 49.3
-  },
-  {
-   "id": "demon-zaglady",
-   "x": 2269,
-   "y": 2570,
-   "w": 261,
-   "h": 644,
-   "percent": 52.2
+   "percent": 48.4
   },
   {
    "id": "urwisko-1",
-   "x": 230,
-   "y": 217,
-   "w": 1118,
-   "h": 441,
-   "percent": 52.3
+   "x": 233,
+   "y": 221,
+   "w": 1115,
+   "h": 434,
+   "percent": 51.3
+  },
+  {
+   "id": "demon-zaglady",
+   "x": 2272,
+   "y": 2570,
+   "w": 258,
+   "h": 644,
+   "percent": 51.6
   },
   {
    "id": "zamek-bestii",
-   "x": 2264,
+   "x": 2267,
    "y": 3214,
-   "w": 266,
+   "w": 263,
    "h": 575,
-   "percent": 53.2
+   "percent": 52.6
   },
   {
    "id": "kamienny-las",
-   "x": 261,
+   "x": 264,
    "y": 1615,
-   "w": 352,
+   "w": 346,
    "h": 931,
-   "percent": 53.7
-  },
-  {
-   "id": "rownina-samotnych-skal",
-   "x": 968,
-   "y": 2697,
-   "w": 372,
-   "h": 654,
-   "percent": 54.3
+   "percent": 52.8
   },
   {
    "id": "wejscie-na-most-a",
-   "x": 2185,
+   "x": 2188,
    "y": 590,
-   "w": 274,
+   "w": 268,
    "h": 864,
-   "percent": 54.8
+   "percent": 53.6
+  },
+  {
+   "id": "rownina-samotnych-skal",
+   "x": 971,
+   "y": 2697,
+   "w": 369,
+   "h": 654,
+   "percent": 53.9
   },
   {
    "id": "gra-ze-smiercia",
-   "x": 2254,
+   "x": 2257,
    "y": 2082,
-   "w": 276,
+   "w": 273,
    "h": 488,
-   "percent": 55.2
+   "percent": 54.6
   },
   {
    "id": "rownina-snu",
-   "x": 249,
+   "x": 252,
    "y": 3447,
-   "w": 364,
+   "w": 358,
    "h": 926,
-   "percent": 55.6
+   "percent": 54.7
   },
   {
    "id": "zaczarowane-wzgorza",
-   "x": 953,
+   "x": 956,
    "y": 4805,
-   "w": 387,
+   "w": 384,
    "h": 715,
-   "percent": 56.5
-  },
-  {
-   "id": "las-blednych-ogni",
-   "x": 951,
-   "y": 4067,
-   "w": 389,
-   "h": 738,
-   "percent": 56.8
-  },
-  {
-   "id": "pustelnia",
-   "x": 950,
-   "y": 3351,
-   "w": 390,
-   "h": 716,
-   "percent": 56.9
+   "percent": 56.1
   },
   {
    "id": "cerber",
-   "x": 2245,
+   "x": 2248,
    "y": 4227,
-   "w": 285,
+   "w": 282,
    "h": 560,
-   "percent": 57
+   "percent": 56.4
+  },
+  {
+   "id": "las-blednych-ogni",
+   "x": 954,
+   "y": 4067,
+   "w": 386,
+   "h": 738,
+   "percent": 56.4
+  },
+  {
+   "id": "pustelnia",
+   "x": 953,
+   "y": 3351,
+   "w": 387,
+   "h": 716,
+   "percent": 56.5
   },
   {
    "id": "krypta-upiorow",
-   "x": 227,
+   "x": 230,
    "y": 4373,
-   "w": 386,
+   "w": 380,
    "h": 920,
-   "percent": 58.9
+   "percent": 58
   },
   {
    "id": "monstrum",
-   "x": 2235,
+   "x": 2238,
    "y": 3789,
-   "w": 295,
+   "w": 292,
    "h": 438,
-   "percent": 59
+   "percent": 58.4
   },
   {
    "id": "mroczna-polana",
-   "x": 936,
+   "x": 939,
    "y": 1290,
-   "w": 404,
+   "w": 401,
    "h": 671,
-   "percent": 59
-  },
-  {
-   "id": "przeprawa-2",
-   "x": 934,
-   "y": 1961,
-   "w": 406,
-   "h": 736,
-   "percent": 59.3
+   "percent": 58.5
   },
   {
    "id": "dolina-czaszek",
-   "x": 4288,
+   "x": 4291,
    "y": 700,
-   "w": 399,
+   "w": 393,
    "h": 1112,
-   "percent": 59.5
+   "percent": 58.6
+  },
+  {
+   "id": "przeprawa-2",
+   "x": 937,
+   "y": 1961,
+   "w": 403,
+   "h": 736,
+   "percent": 58.8
   },
   {
    "id": "rownina-traw",
-   "x": 4288,
+   "x": 4291,
    "y": 4251,
-   "w": 403,
+   "w": 397,
    "h": 975,
-   "percent": 60.1
+   "percent": 59.2
   },
   {
    "id": "rozstajne-drogi-1",
-   "x": 4286,
+   "x": 4289,
    "y": 5226,
-   "w": 403,
+   "w": 397,
    "h": 919,
-   "percent": 60.1
+   "percent": 59.2
+  },
+  {
+   "id": "bagna-2",
+   "x": 218,
+   "y": 5293,
+   "w": 392,
+   "h": 852,
+   "percent": 59.8
   },
   {
    "id": "wieza-przeznaczenia",
    "x": 3560,
    "y": 3392,
-   "w": 414,
+   "w": 411,
    "h": 666,
-   "percent": 60.4
+   "percent": 60
   },
   {
-   "id": "bagna-2",
-   "x": 215,
-   "y": 5293,
-   "w": 398,
-   "h": 852,
-   "percent": 60.8
+   "id": "wejscie-na-most-b",
+   "x": 2174,
+   "y": 5441,
+   "w": 346,
+   "h": 534,
+   "percent": 60.6
+  },
+  {
+   "id": "urwisko-2",
+   "x": 4291,
+   "y": 3347,
+   "w": 412,
+   "h": 904,
+   "percent": 61.4
   },
   {
    "id": "zamek",
    "x": 3354,
    "y": 6145,
    "w": 1562,
-   "h": 405,
-   "percent": 62
+   "h": 402,
+   "percent": 61.6
   },
   {
    "id": "mokradla-2",
-   "x": 1612,
+   "x": 1615,
    "y": 2800,
-   "w": 448,
+   "w": 445,
    "h": 580,
-   "percent": 62.2
-  },
-  {
-   "id": "urwisko-2",
-   "x": 4288,
-   "y": 3347,
-   "w": 418,
-   "h": 904,
-   "percent": 62.3
+   "percent": 61.8
   },
   {
    "id": "krag-mocy",
    "x": 2820,
    "y": 2637,
-   "w": 464,
+   "w": 461,
    "h": 642,
-   "percent": 62.7
+   "percent": 62.3
+  },
+  {
+   "id": "rozstajne-drogi-2",
+   "x": 232,
+   "y": 2546,
+   "w": 408,
+   "h": 901,
+   "percent": 62.3
   },
   {
    "id": "studnia-wiecznosci",
    "x": 2820,
    "y": 3279,
-   "w": 464,
+   "w": 461,
    "h": 690,
-   "percent": 62.7
-  },
-  {
-   "id": "wejscie-na-most-b",
-   "x": 2171,
-   "y": 5435,
-   "w": 352,
-   "h": 543,
-   "percent": 62.7
-  },
-  {
-   "id": "rozstajne-drogi-2",
-   "x": 229,
-   "y": 2546,
-   "w": 414,
-   "h": 901,
-   "percent": 63.2
+   "percent": 62.3
   },
   {
    "id": "przelecz-wichrow",
    "x": 2420,
-   "y": 916,
+   "y": 919,
    "w": 1825,
-   "h": 374,
-   "percent": 63.4
+   "h": 371,
+   "percent": 62.9
   },
   {
    "id": "step-2",
-   "x": 1602,
+   "x": 1605,
    "y": 3380,
-   "w": 458,
+   "w": 455,
    "h": 587,
-   "percent": 63.6
+   "percent": 63.2
   },
   {
    "id": "przeprawa-1",
-   "x": 3569,
+   "x": 3572,
    "y": 1290,
-   "w": 449,
+   "w": 443,
    "h": 648,
-   "percent": 65.5
+   "percent": 64.7
+  },
+  {
+   "id": "bagna-1",
+   "x": 4291,
+   "y": 1815,
+   "w": 440,
+   "h": 870,
+   "percent": 65.3
+  },
+  {
+   "id": "dolina-cienia",
+   "x": 3564,
+   "y": 1938,
+   "w": 450,
+   "h": 717,
+   "percent": 65.7
   },
   {
    "id": "magiczne-wrota",
    "x": 3560,
    "y": 4813,
-   "w": 453,
+   "w": 450,
    "h": 707,
-   "percent": 66.1
+   "percent": 65.7
   },
   {
    "id": "straznik-magicznych-wrot",
    "x": 3560,
    "y": 4058,
-   "w": 454,
+   "w": 451,
    "h": 755,
-   "percent": 66.3
-  },
-  {
-   "id": "dolina-cienia",
-   "x": 3561,
-   "y": 1938,
-   "w": 456,
-   "h": 717,
-   "percent": 66.6
-  },
-  {
-   "id": "bagna-1",
-   "x": 4288,
-   "y": 1812,
-   "w": 448,
-   "h": 873,
-   "percent": 66.8
+   "percent": 65.8
   },
   {
    "id": "step-1",
    "x": 2501,
-   "y": 1555,
-   "w": 663,
-   "h": 657,
-   "percent": 67.6
+   "y": 1559,
+   "w": 660,
+   "h": 653,
+   "percent": 66.9
   },
   {
    "id": "ruchome-skaly-1",
    "x": 4245,
    "y": 2685,
-   "w": 466,
+   "w": 463,
    "h": 662,
-   "percent": 69.4
+   "percent": 69
   },
   {
    "id": "plaskowyz-mgiel",
    "x": 2319,
-   "y": 5563,
+   "y": 5566,
    "w": 1926,
-   "h": 414,
-   "percent": 70.8
+   "h": 408,
+   "percent": 69.7
   },
   {
    "id": "bezdroza",
    "x": 2820,
    "y": 3969,
-   "w": 528,
+   "w": 525,
    "h": 613,
-   "percent": 71.4
+   "percent": 70.9
   },
   {
    "id": "wrzosowiska",
-   "x": 3561,
+   "x": 3564,
    "y": 2655,
-   "w": 495,
+   "w": 489,
    "h": 737,
-   "percent": 72.3
+   "percent": 71.4
   },
   {
    "id": "mrozne-pustkowie",
-   "x": 2376,
+   "x": 2379,
    "y": 4582,
-   "w": 824,
-   "h": 733,
-   "percent": 72.7
+   "w": 821,
+   "h": 730,
+   "percent": 72.1
   }
  ]
 }

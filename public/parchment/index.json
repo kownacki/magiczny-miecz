@@ -3,7 +3,7 @@
   "what": "Pieces of the board's own torn parchment edge, cut at the scan's native resolution.",
   "baseline": "Every piece is cut where its torn contour crosses the baseline on the way out, so any end butts against any other without a step. In a run the baseline is row 40 from the top and the paper fills the 48 rows below it; a corner has a baseline on each of its two open ends, at the same offset.",
   "orientation": "Runs read left to right with the paper below. Corners are a scrap's top-left: both arms leave the corner along +x and +y with the paper in the quadrant between them, and the corner itself is at (36, 36). Rotate at composition time.",
-  "paper": "Mean paper colour rgb(252, 253, 250). Averaged over 16 regions of the board the paper's luminance runs 251 to 253, which is flat enough that one fill matches everywhere. paper.png is a 96px square of clean paper to tile.",
+  "paper": "Mean paper colour rgb(251, 252, 248). Averaged over 16 regions of the board the paper's luminance runs 251 to 252, which is flat enough that one fill matches everywhere. paper.png is a 96px square of clean paper to tile.",
   "provenance": "Every pixel is off assets/extracted/board/board.png. Nothing here is drawn, generated or filled in."
  },
  "baseline": {
@@ -14,201 +14,151 @@
   {
    "file": "run-01.png",
    "kind": "run",
-   "width": 323,
+   "width": 289,
    "height": 88,
    "from": [
-    4749,
-    2478
+    211,
+    5507
    ]
   },
   {
    "file": "run-02.png",
    "kind": "run",
-   "width": 299,
+   "width": 277,
    "height": 88,
    "from": [
-    200,
-    5482
+    4722,
+    3141
    ]
   },
   {
    "file": "run-03.png",
    "kind": "run",
-   "width": 273,
+   "width": 253,
    "height": 88,
    "from": [
-    1109,
-    183
+    2868,
+    1551
    ]
   },
   {
    "file": "run-04.png",
    "kind": "run",
-   "width": 272,
+   "width": 290,
    "height": 88,
    "from": [
-    4893,
-    1261
+    649,
+    3444
    ]
   },
   {
    "file": "run-05.png",
    "kind": "run",
-   "width": 282,
+   "width": 278,
    "height": 88,
    "from": [
-    2212,
-    5139
+    1592,
+    3569
    ]
   },
   {
    "file": "run-06.png",
    "kind": "run",
-   "width": 268,
+   "width": 273,
    "height": 88,
    "from": [
-    272,
-    928
+    4285,
+    1763
    ]
   },
   {
    "file": "run-07.png",
    "kind": "run",
-   "width": 338,
+   "width": 282,
    "height": 88,
    "from": [
-    1417,
-    3624
+    986,
+    207
    ]
   },
   {
    "file": "run-08.png",
    "kind": "run",
-   "width": 259,
+   "width": 263,
    "height": 88,
    "from": [
-    2979,
-    281
+    4720,
+    4074
    ]
   },
   {
    "file": "run-09.png",
    "kind": "run",
-   "width": 342,
+   "width": 305,
    "height": 88,
    "from": [
-    4273,
-    4524
+    1422,
+    2479
    ]
   },
   {
    "file": "run-10.png",
    "kind": "run",
-   "width": 289,
+   "width": 254,
    "height": 88,
    "from": [
-    650,
-    2255
-   ]
-  },
-  {
-   "file": "run-11.png",
-   "kind": "run",
-   "width": 294,
-   "height": 88,
-   "from": [
-    629,
-    4368
-   ]
-  },
-  {
-   "file": "run-12.png",
-   "kind": "run",
-   "width": 296,
-   "height": 88,
-   "from": [
-    2135,
-    2373
+    1650,
+    5425
    ]
   },
   {
    "file": "corner-01.png",
    "kind": "corner",
-   "width": 76,
-   "height": 71,
+   "width": 90,
+   "height": 65,
    "from": [
-    3359,
-    5481
+    3346,
+    5487
    ]
   },
   {
    "file": "corner-02.png",
    "kind": "corner",
-   "width": 84,
-   "height": 88,
+   "width": 88,
+   "height": 115,
    "from": [
-    2200,
-    5298
+    2222,
+    4594
    ]
   },
   {
    "file": "corner-03.png",
    "kind": "corner",
-   "width": 91,
-   "height": 102,
+   "width": 120,
+   "height": 84,
    "from": [
-    2130,
-    4141
+    2156,
+    3115
    ]
   },
   {
    "file": "corner-04.png",
    "kind": "corner",
-   "width": 79,
-   "height": 89,
+   "width": 83,
+   "height": 74,
    "from": [
-    2215,
-    4587
+    988,
+    6532
    ]
   },
   {
    "file": "corner-05.png",
    "kind": "corner",
-   "width": 99,
-   "height": 71,
+   "width": 97,
+   "height": 101,
    "from": [
-    878,
-    4782
-   ]
-  },
-  {
-   "file": "corner-06.png",
-   "kind": "corner",
-   "width": 85,
-   "height": 72,
-   "from": [
-    2519,
-    1496
-   ]
-  },
-  {
-   "file": "corner-07.png",
-   "kind": "corner",
-   "width": 95,
-   "height": 89,
-   "from": [
-    3438,
-    1995
-   ]
-  },
-  {
-   "file": "corner-08.png",
-   "kind": "corner",
-   "width": 74,
-   "height": 89,
-   "from": [
-    2461,
-    781
+    3071,
+    5310
    ]
   }
  ]
