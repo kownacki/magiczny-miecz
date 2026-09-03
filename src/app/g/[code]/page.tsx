@@ -1592,6 +1592,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               name: active.player_name ?? `Miejsce ${active.seat_index + 1}`,
               characterName: characterName(active.character_id ?? ""),
               characterId: active.character_id ?? null,
+              mine: active.id === mySeat?.id,
               onOpen: () => setRightDrawer("gracze"),
             }}
             /* The ACTIVE seat's, not the reader's: the card is being resolved

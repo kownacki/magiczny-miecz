@@ -26,6 +26,7 @@ import { asCharacterId } from "@/lib/engine/characters";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import { asNature } from "./table";
 import type { PublicSeat } from "./table-layout";
+import { PlayerName } from "./player-name";
 import { Drawer } from "./drawer";
 import { Fold } from "./fold";
 import { StatFigure } from "./token-rail";
@@ -215,11 +216,14 @@ export function PlayersDrawer({
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex w-full items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                    {seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}
                     {/* Your own row is named, because a list of everybody that
                         does not say which one is you is a list you have to count
-                        your way through. */}
-                    {mine && <span className="ml-1 text-[11px] text-ochre">(ty)</span>}
+                        your way through. Shared with the sheet's actor column,
+                        which has to mark you the same way — see `PlayerName`. */}
+                    <PlayerName
+                      name={seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`}
+                      mine={mine}
+                    />
                     {seat.isHost && (
                       <span className="ml-2 text-[11px] text-ochre/80">gospodarz</span>
                     )}

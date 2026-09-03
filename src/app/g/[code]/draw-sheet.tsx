@@ -8,6 +8,7 @@ import { seatColour } from "@/lib/view/boardMap";
 import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
 import { CHARACTER_ART_RATIO, characterStandeeUrl } from "@/lib/view/cardImages";
 import { Lookable } from "./lookable";
+import { PlayerName } from "./player-name";
 import { WithRules } from "./rule-ref";
 
 /**
@@ -56,6 +57,8 @@ export interface SheetChrome {
     name: string;
     characterName: string;
     characterId: string | null;
+    /** Whether this is the seat this device drives, for „(ty)". */
+    mine?: boolean;
     /** Opens the roster — the standee is the way in. */
     onOpen?: () => void;
   };
@@ -255,13 +258,18 @@ export function DrawSheet({
                   seat's dot beside the player in the display face, the Postać
                   under it. Said the same way in both places, so a player
                   recognises themselves. */}
-              <p className="flex items-center gap-1.5 truncate font-[family-name:var(--font-display)] text-base text-ink">
+              {/* The Gracze drawer's own row: the seat's dot, the name, and
+                  „(ty)" where it is yours. Said the same way in both places, so
+                  a player recognises themselves without reading. */}
+              <p className="flex items-center gap-2 truncate text-sm text-ink">
                 <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  className="h-3 w-3 shrink-0 rounded-full"
                   style={{ background: seatColour(seatIndex ?? 0) }}
                   aria-hidden
                 />
-                <span className="truncate">{actor.name}</span>
+                <span className="truncate">
+                  <PlayerName name={actor.name} mine={actor.mine} />
+                </span>
               </p>
               {/* At the size a card's name is under its tile in the Księga, so
                   it fits under the standee without being cut. Hoverable like
