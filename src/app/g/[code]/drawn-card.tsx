@@ -11,7 +11,7 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
-import { requirementOf, staysAs } from "@/lib/engine/abilityText";
+import { itemProfile, requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader } from "./card-facts";
@@ -256,6 +256,15 @@ export function DrawnCard({
   const actor = reader?.name ?? who;
 
   /**
+   * What this Karta offers, in rows — for the people who cannot press it.
+   *
+   * `itemProfile`'s, so it is word for word the panel the hover draws and the
+   * buttons the acting player sees, rather than a third telling of the same
+   * card.
+   */
+  const offered = canAct ? [] : itemProfile(known.id).special;
+
+  /**
    * Whether walking away is one of the answers.
    *
    * Never for a Nieznajomy: 16.5 is flat and every one of them either gives you
@@ -412,8 +421,24 @@ export function DrawnCard({
       )}
 
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
-        {/* What the watchers get where the buttons are: an empty panel under a
-            Karta says the app is thinking, and it is not — somebody else is. */}
+        {/* What the watchers get where the buttons are.
+
+            The choices themselves first, because that is what a table watching
+            somebody decide wants to see — the buttons are the acting player's
+            and everyone else was left with a picture and a name. The same rows
+            the hover panel draws, from the same `itemProfile`.
+
+            Then who is deciding: an empty panel under a Karta says the app is
+            thinking, and it is not. */}
+        {!canAct && offered.length > 0 && (
+          <ul className="flex flex-col gap-1 pb-1">
+            {offered.map((row, at) => (
+              <li key={at} className="text-[11px] leading-snug text-ochre/90">
+                {sentence(row)}
+              </li>
+            ))}
+          </ul>
+        )}
         {!canAct && (
           <p className="text-[11px] text-muted">
             {inert ? `${actor} nie spełnia warunków` : `Decyzję podejmuje ${actor}`}

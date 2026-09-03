@@ -443,10 +443,19 @@ export function describeEffect(effect: Effect): string {
     case "kamien":
       return "zamiana w Kamień na 3 tury (20.1)";
 
+    /**
+     * „bazowe", because that is the only kind there is to swap.
+     *
+     * 1.2–1.5 and 2.2–2.6: a character's own Miecz and Magia are the tracked
+     * numbers, and what a Przedmiot or a Przyjaciel lends is computed at read
+     * time and belongs to the card, not to the Postać. „zamieniasz punkty
+     * Miecza" beside a rail reading Miecz 8 invites the reading that the 8 is
+     * what moves; it is the 6 underneath it.
+     */
     case "zamien-punkty":
       return effect.z === "sword"
-        ? "zamieniasz punkty Miecza na punkty Magii"
-        : "zamieniasz punkty Magii na punkty Miecza";
+        ? "zamieniasz bazowe punkty Miecza na bazowe punkty Magii"
+        : "zamieniasz bazowe punkty Magii na bazowe punkty Miecza";
 
     /**
      * The Mędrzec's riddle, said in full because every word of it is a rule.
