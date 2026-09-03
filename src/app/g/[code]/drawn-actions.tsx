@@ -761,6 +761,13 @@ export function DrawnActions({
           did. A card with no script has nothing to do but be read. */}
       {nothingLeftToAsk && !inert && (
         <div className="flex flex-col items-start gap-2">
+          {/* The same line „Wybierz jedno:" is, over the list it heads, because
+              the two are the same kind of thing: what the Karta is asking of
+              you. „Musisz", because a Nieznajomy is carried out at its place in
+              the kolejka (16.5) and there is no walking past one — and it is
+              dropped once the die is thrown, an instruction being no longer an
+              instruction when it has been obeyed. */}
+          {rolls && !said6 && <p className="text-[11px] text-muted">Musisz rzucić kostką</p>}
           {/* What the die can do, read before it is thrown — and after, with
               the face that came up standing under the list rather than over
               it. */}
