@@ -277,7 +277,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
         options: [
           { label: "tracisz 1 Sztukę Złota", effect: { op: "punkty", stat: "gold", delta: -1 } },
           {
-            label: "zostajesz tu na 1 turę",
+            label: "nie ruszysz się stąd przez 1 turę",
             effect: {
               op: "efekt",
               label: "Osądzony — nie ruszysz się stąd przez turę",

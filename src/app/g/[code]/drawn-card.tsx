@@ -245,6 +245,17 @@ export function DrawnCard({
   const inert = script !== null && inertFor(script.effect, nature);
 
   /**
+   * Whose decision this is, as the table knows them — „Test (WIEDŹMA)".
+   *
+   * Everybody at the table is looking at this sheet and only one of them can
+   * press anything, so every sentence in it has a second person and a third:
+   * „Nie spełniasz warunków" for the one being asked, and the name for
+   * everybody watching. Falling back to the player's name alone, for a device
+   * that has not been told which Postać it is.
+   */
+  const actor = reader?.name ?? who;
+
+  /**
    * Whether walking away is one of the answers.
    *
    * Never for a Nieznajomy: 16.5 is flat and every one of them either gives you
@@ -394,6 +405,13 @@ export function DrawnCard({
       )}
 
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
+        {/* What the watchers get where the buttons are: an empty panel under a
+            Karta says the app is thinking, and it is not — somebody else is. */}
+        {!canAct && (
+          <p className="text-[11px] text-muted">
+            {inert ? `${actor} nie spełnia warunków` : `Decyzję podejmuje ${actor}`}
+          </p>
+        )}
         {/* A Wróg attacks the moment it is turned over (16.2), so the two
             things you may do about it are the two the rules give you. */}
         {canAct && foe && (
