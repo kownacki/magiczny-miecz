@@ -53,7 +53,14 @@ export function RollSaid({
 }: {
   face: number;
   did: readonly string[];
-  onDone: () => void;
+  /**
+   * „Dalej", where there is anything to press.
+   *
+   * Absent when the face asked something — „tracisz Przedmiot" and then the
+   * pack to choose from — because answering *is* going on, and a „Dalej" beside
+   * a question is a second way past it that settles nothing.
+   */
+  onDone?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -69,9 +76,11 @@ export function RollSaid({
             <DieMark />
           </span>
         </p>
-        <ActionButton weight="lead" size="lg" onClick={onDone}>
-          Dalej
-        </ActionButton>
+        {onDone && (
+          <ActionButton weight="lead" size="lg" onClick={onDone}>
+            Dalej
+          </ActionButton>
+        )}
       </div>
       {did.length > 0 && (
         <ul className="flex flex-col gap-0.5">

@@ -64,6 +64,7 @@ describe("intentText", () => {
       "kladzie",
       "pomija",
       "rozpatruje",
+      "traci",
     ];
     expect([...INTENT_KINDS].sort()).toEqual([...used].sort());
   });

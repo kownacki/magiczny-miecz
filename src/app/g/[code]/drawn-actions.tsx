@@ -49,6 +49,9 @@ import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader, specialRows } from "./card-facts";
 import { DieMark } from "./die-mark";
 import { RollSaid, type Rolled } from "./roll-result";
+import { TileRow } from "./tile-row";
+import { ItemSlot } from "./item-slot";
+import { CARD_NAMES, tileFor, type Held } from "./table";
 import { effectRows } from "@/lib/engine/effectText";
 import { inertFor, pendingIn } from "@/lib/engine/resolve";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
@@ -124,6 +127,18 @@ export interface DrawnActionsProps {
   rolled?: Rolled | null;
   /** „Dalej": the player has read the face, and the kolejka may go on. */
   onRollRead?: () => void;
+  /**
+   * A loss this Karta is waiting on, and the pack it reaches into.
+   *
+   * Built by the table for every device — see `losing` in `page.tsx` — because
+   * both ends have to number the same cards in the same order: the answer is an
+   * index into this list, and the watchers read what was chosen off the same
+   * one. Null where there is no such question, or where this device cannot
+   * vouch for the list.
+   */
+  losing?: { cardId: string; kind: Held["kind"]; cards: Held[] } | null;
+  /** Which of them goes, by its place in that list. */
+  onLose?: (index: number) => void;
   /**
    * What the acting player's button is about to do, while it is still filling.
    *
@@ -202,6 +217,42 @@ function ObszarPicker({
   );
 }
 
+/**
+ * One card of the pack, in the row a loss is chosen from.
+ *
+ * The Trofea's tile, in every respect that matters — `ItemSlot` with the name
+ * under the picture, `chosen` for the one that is picked out, and the Karta a
+ * hover away whether or not the click does anything. A loss is the same gesture
+ * as a trade: a handful of cards, one of them going.
+ */
+function LosableTile({
+  held,
+  picked,
+  onPick,
+  eqMode,
+}: {
+  held: Held;
+  picked: boolean;
+  onPick?: () => void;
+  eqMode: EqMode;
+}) {
+  return (
+    <ItemSlot
+      item={{
+        holdingId: held.id,
+        cardId: held.cardId,
+        card: tileFor({ cardId: held.cardId, kind: held.kind, granted: held.granted }),
+        inert: false,
+      }}
+      label={CARD_NAMES.get(held.cardId) ?? held.cardId}
+      eqMode={eqMode}
+      tone={picked ? "chosen" : "filled"}
+      disabled={!onPick}
+      onClick={onPick}
+    />
+  );
+}
+
 export function DrawnActions({
   who,
   canAct,
@@ -219,6 +270,8 @@ export function DrawnActions({
   busy,
   rolled,
   onRollRead,
+  losing,
+  onLose,
   intent,
   onResolve,
   onFight,
@@ -261,6 +314,8 @@ export function DrawnActions({
    */
   const [sent, setSent] = useState<{ option: number | null } | null>(null);
   const [going, setGoing] = useState<FieldId | "">("");
+  /** Which of the pack the player has picked out to lose, by its place in it. */
+  const [giving, setGiving] = useState<number | null>(null);
 
   /**
    * A new Karta starts with nothing decided about it.
@@ -275,6 +330,7 @@ export function DrawnActions({
     setDecidingAbout(card.cardId);
     setSent(null);
     setGoing("");
+    setGiving(null);
   }
 
   const known = EVENTS.find((c) => c.id === card.cardId);
@@ -477,6 +533,15 @@ export function DrawnActions({
   const faces = rolls ? (effectRows(instruction) ?? []).slice(1) : [];
 
   /**
+   * The loss this Karta is waiting on, if it is this Karta's.
+   *
+   * Asked by card id for the same reason the die is: the sheet is held on the
+   * Karta the question belongs to, and a mismatch would offer one Karta's pack
+   * against another one's instruction.
+   */
+  const owing = losing && losing.cardId === card.cardId ? losing : null;
+
+  /**
    * The die thrown for *this* Karta, if it is still waiting to be read.
    *
    * Asked by card id rather than taken on trust: the sheet is held on the Karta
@@ -516,22 +581,97 @@ export function DrawnActions({
    */
   if (!canAct) {
     const offered = itemProfile(known.id, eqMode).special;
+    /**
+     * The card being given up, once there is one — and never the pack.
+     *
+     * A row of somebody else's Przedmioty laid out while they decide is an
+     * invitation to lean over and point, and the decision is 5.6's and theirs.
+     * What the table is owed is the answer, which arrives with the three
+     * seconds (`channelling.ts`) as an index into the same list this device
+     * built — see `losing` — and stands there until the loss lands.
+     */
+    const chosenCard =
+      owing && intent?.kind === "traci" && intent.option !== undefined
+        ? (owing.cards[intent.option] ?? null)
+        : null;
     return (
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
         {offered.length > 0 && (
           <ul className="flex flex-col gap-1 pb-1">{specialRows(offered)}</ul>
         )}
+        {chosenCard && (
+          <TileRow frame={false}>
+            <LosableTile held={chosenCard} picked eqMode={eqMode} />
+          </TileRow>
+        )}
         <p className="text-xs text-muted">
           {said ??
             (inert
               ? `${actor} nie spełnia warunków`
-              : rolls
+              : owing
+                ? `${actor} wybiera, co traci`
+                : rolls
                 ? /* Nothing is being decided, so „Decyzję podejmuje" was the
                      wrong sentence: the app throws and the Karta says what the
                      face means. What the table is waiting for is the die. */
-                  `${actor} rzuca kostką`
-                : `Decyzję podejmuje ${actor}`)}
+                    `${actor} rzuca kostką`
+                  : `Decyzję podejmuje ${actor}`)}
         </p>
+      </div>
+    );
+  }
+
+  /**
+   * A loss, asked where the die that caused it was thrown.
+   *
+   * On its own and before everything else, because while the Karta is
+   * suspended on this question there is nothing else to do about it: „Walcz"
+   * under a Wróg whose `przegrana` is being paid, or „Rzuć kostką" under a
+   * table already rolled, would both be a second act offered mid-sentence.
+   *
+   * The face stays above it — the same „WYPADŁO 4" the throw put there, minus
+   * its „Dalej", because answering is going on and two ways forward is one too
+   * many. The row is the kolejka's row with the pack in it: pick one, and the
+   * button beneath says which is about to go.
+   */
+  if (owing) {
+    const chosen = giving !== null ? (owing.cards[giving] ?? null) : null;
+    return (
+      <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
+        {said6 && <RollSaid face={said6.face} did={said6.did} />}
+        <p className="text-[11px] text-muted">Wybierz, co tracisz</p>
+        <TileRow frame={false}>
+          {owing.cards.map((held, index) => (
+            <LosableTile
+              key={held.id}
+              held={held}
+              picked={giving === index}
+              eqMode={eqMode}
+              onPick={busy ? undefined : () => setGiving(index)}
+            />
+          ))}
+        </TileRow>
+        <ActionButton
+          role="harm"
+          weight="lead"
+          size="lg"
+          className="self-start"
+          /* „Odrzuć", the word this app already uses for a Karta that goes to
+             the stos zużytych rather than onto the Obszar — which is where a
+             card taken by an effect goes (6.4). */
+          disabled={busy || chosen === null}
+          /* 9.3: a hand nobody else may see announces nothing. Everything else
+             is public (5.2, 6.2), so the index names a card the table is
+             already looking at — the same bargain a `wybor` makes. */
+          says={
+            owing.kind === "spell" || giving === null
+              ? undefined
+              : { kind: "traci", option: giving }
+          }
+          onClick={() => giving !== null && onLose?.(giving)}
+        >
+          {chosen ? `Odrzuć: ${CARD_NAMES.get(chosen.cardId) ?? chosen.cardId}` : "Odrzuć"}
+        </ActionButton>
       </div>
     );
   }

@@ -69,6 +69,8 @@ import { AnnouncementModal } from "./announcement";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer, offerNamed } from "@/lib/engine/fieldScript";
+import { nodeAt } from "@/lib/engine/resolve";
+import { reachableBy } from "@/lib/engine/losses";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { stillStone } from "@/lib/engine/status";
 import { Toasts } from "./toast";
@@ -1031,6 +1033,42 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const turnWindows = active ? windowsFor(factsIn(turnState, active.field_id)) : [];
 
   /**
+   * A loss the Karta is waiting on, asked on the Karta rather than over it.
+   *
+   * „Tracisz 1 Przedmiot" leaves which one to the holder, so the walk stops and
+   * the turn suspends into a `script` frame — and `ScriptFramePanel` had no
+   * control for it, which is a modal saying „answer this in the console" over a
+   * sheet that has the pack right there. It goes where the die that caused it
+   * went: in the Karta's own panel, in the place „Rzuć kostką" was standing.
+   *
+   * Built here because this is where the seats are, and built on *every*
+   * device: an index into a pack is only an answer if both ends count the same
+   * cards in the same order, and the watchers need the same list to read what
+   * was chosen off the announcement. The three ways it can fail to be that
+   * list are all refusals rather than guesses.
+   *
+   * - **A hand this device cannot see in full** (9.3). Only Zaklęcia are ever
+   *   concealed, so only a loss of one can be short — and a short list numbers
+   *   differently from the server's.
+   * - **More than one card at a time.** `chooseLosses` takes its picks against
+   *   a pool that shrinks between them, so two answers are two indices into two
+   *   different lists; no card in the box asks it, and guessing at the shape
+   *   would be worse than the console.
+   * - **Nothing of that kind to lose**, which the server settles by itself.
+   */
+  const losing = (() => {
+    if (turnState.phase !== "script" || !turnState.cardId) return null;
+    const asking = nodeAt(turnState.effect, turnState.cursor);
+    if (asking?.op !== "strata" || (asking.count ?? 1) !== 1) return null;
+    const kind = reachableBy(asking.co);
+    if (!kind) return null;
+    const seat = seats.find((one) => one.id === turnState.seatId);
+    if (!seat || (kind === "spell" && seat.hidden_count > 0)) return null;
+    const cards = seat.holdings.filter((held) => held.kind === kind);
+    return cards.length > 0 ? { cardId: turnState.cardId, kind, cards } : null;
+  })();
+
+  /**
    * Whether the turn's own sheet has anything to show.
    *
    * A fight, a direction to choose, the Most, or an Obszar with cards on it —
@@ -1042,6 +1080,16 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     active !== undefined &&
     active !== null &&
     (panel.sheet === "always" ||
+      /**
+       * Or the sheet is holding a Karta, whatever frame is on top of it.
+       *
+       * A `script` frame draws no sheet — that is what the panel over it was
+       * for — and both of these are the sheet standing in for that panel: a die
+       * whose face has not been read, and a loss being chosen against the pack.
+       * Both belong on the Karta they happened to, so the Karta stays up.
+       */
+      rolled !== null ||
+      losing !== null ||
       (panel.sheet === "when-drawn" &&
         turnState.phase === "field" &&
         /**
@@ -1062,10 +1110,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         // And not while the deal is still being looked at — see `revealing`.
         !revealing &&
         (turnState.drawn.length > 0 ||
-          compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null ||
-          // A table that has been rolled and not yet read is still on screen —
-          // its own panel is where the face stands. See `RollSaid`.
-          rolled !== null)));
+          compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null)));
 
   /**
    * Whether anything of the turn is on screen at all.
@@ -1801,6 +1846,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                sheet on the Karta it belongs to — see `RollSaid`. */
             rolled={rolled}
             onRollRead={() => setRolled(null)}
+            /* The Karta's own question, asked in the Karta's own panel. */
+            losing={losing}
+            onLose={async (index) => {
+              await post("turn", { action: "answer", choices: [index] });
+              /* The answer is the „Dalej" — the face was read while choosing
+                 against it, and holding the Karta a second time would be one
+                 acknowledgement too many. */
+              setRolled(null);
+            }}
             onAction={(body) => post("turn", body)}
             onResolve={async (cardId, decisions) => {
               showDie(cardId, await post("turn", { action: "karta-efekt", cardId, ...decisions }));
@@ -1842,7 +1896,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {/* The card the turn is suspended on — a question left over after a
           mid-card fight, or a decision the resolve was sent without. Everybody
           sees it; the frame says whose answer it is (docs/STACK.md, law 5). */}
-      {active && turnState.phase === "script" && (
+      {/* …except the one the sheet takes itself: a loss is asked on the Karta,
+          where the pack is (see `losing`), and a panel over it saying the same
+          thing would be the question twice with the answer in one of them. */}
+      {active && turnState.phase === "script" && !losing && (
         <ScriptFramePanel
           frame={turnState}
           who={

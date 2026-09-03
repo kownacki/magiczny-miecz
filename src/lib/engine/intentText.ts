@@ -48,7 +48,8 @@ export type IntentKind =
   | "przenosi-sie"
   | "kladzie"
   | "pomija"
-  | "rozpatruje";
+  | "rozpatruje"
+  | "traci";
 
 /**
  * A decision in flight: what kind, and which line of a public list won.
@@ -101,6 +102,19 @@ const SAYS: Record<IntentKind, string> = {
   kladzie: "kładzie Kartę",
   pomija: "pomija",
   rozpatruje: "rozpatruje Kartę",
+  /**
+   * 5.6's own decision, and the one place the table sees a *pack* indexed.
+   *
+   * „tracisz 1 Przedmiot" leaves which one to the holder, and until they have
+   * said, the rest of the table is looking at a player thinking. The option is
+   * an index into their Przedmioty — public by 5.2, so the same „an index into
+   * a list somebody is already looking at" holds — and a Zaklęcie, which 9.3
+   * keeps face down, announces nothing at all.
+   *
+   * Second person like the options above it, because it is the card's own word:
+   * „Tracisz 1 Przedmiot".
+   */
+  traci: "traci",
 };
 
 /**

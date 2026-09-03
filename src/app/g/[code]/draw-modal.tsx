@@ -74,6 +74,8 @@ export function DrawModal({
   busy,
   rolled,
   onRollRead,
+  losing,
+  onLose,
   intent,
   onAction,
   onResolve,
@@ -176,10 +178,11 @@ export function DrawModal({
    * fight in the same commit, and the fight sheet arriving over the unread
    * result would leave the player fighting something they never saw arrive.
    */
-  if (rolled?.cardId) {
-    const known = EVENTS.find((one) => one.id === rolled.cardId);
+  const holding = rolled?.cardId ?? losing?.cardId ?? null;
+  if (holding) {
+    const known = EVENTS.find((one) => one.id === holding);
     const held =
-      cards.find((entry) => entry.cardId === rolled.cardId) ??
+      cards.find((entry) => entry.cardId === holding) ??
       (known ? { cardId: known.id, cardClass: known.cardClass } : null);
     if (held) {
       return (
@@ -200,6 +203,8 @@ export function DrawModal({
           busy={busy}
           rolled={rolled}
           onRollRead={onRollRead}
+          losing={losing}
+          onLose={onLose}
           intent={intent}
           onResolve={onResolve}
           onFight={onFight}
@@ -326,6 +331,8 @@ export function DrawModal({
       busy={busy}
       rolled={rolled}
       onRollRead={onRollRead}
+      losing={losing}
+      onLose={onLose}
       intent={intent}
       onResolve={onResolve}
       onFight={onFight}
