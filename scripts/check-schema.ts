@@ -46,7 +46,8 @@
 
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import { tablesInFile } from "../src/lib/game/schemaFile";
+import { kindsInFile, tablesInFile } from "../src/lib/game/schemaFile";
+import { JOURNAL_KINDS } from "../src/lib/engine/journal";
 
 /** What `schema_shape()` hands back. Mirrored here so a change to one fails the other. */
 interface Shape {
@@ -54,6 +55,8 @@ interface Shape {
   rls_off: string[];
   policies: string[];
   ungranted: string[];
+  /** `moves.kind`'s closed list, as the live constraint has it. */
+  move_kinds: string[];
 }
 
 /** Wrapped rather than run at the top level: tsx loads this as CJS, where a
@@ -136,6 +139,41 @@ async function main(): Promise<never> {
         " Zaklęcia held face down (9.3)",
     );
   }
+  // --- the one check expression -------------------------------------------
+  /**
+   * `moves.kind`, compared three ways, because this is the pair that broke.
+   *
+   * The note at the top says check expressions are not compared, and for
+   * expressions anybody wrote by hand that still stands. This one is not
+   * written, it is *generated* — `JOURNAL_KINDS` is the source and both the
+   * file and the database are copies of it — so it can be compared value for
+   * value with no parsing and no false alarms.
+   *
+   * Three ways and not two, because the failure took the direction nobody was
+   * watching. The file gained `no-effect` and `placed`, the code had them all
+   * along, and the *database* was never migrated. Every journal line carrying
+   * one was refused; a turn's lines are written as one statement, so that took
+   * the whole turn's journal down with it, silently, until somebody drew the
+   * card that used it.
+   */
+  const inFile = kindsInFile(readFileSync("db/schema.sql", "utf8"));
+  const compare = (from: string, a: readonly string[], to: string, b: readonly string[]) => {
+    const missing = a.filter((one) => !b.includes(one));
+    if (missing.length > 0) {
+      drift.push(`moves.kind: in ${from}, not in ${to} — ${named(missing)}`);
+    }
+  };
+  compare("the code (JOURNAL_KINDS)", JOURNAL_KINDS, "db/schema.sql", inFile);
+  compare("db/schema.sql", inFile, "the code (JOURNAL_KINDS)", JOURNAL_KINDS);
+  compare("the code (JOURNAL_KINDS)", JOURNAL_KINDS, "the database", live.move_kinds);
+  compare("the database", live.move_kinds, "the code (JOURNAL_KINDS)", JOURNAL_KINDS);
+  if (live.move_kinds.length === 0) {
+    drift.push(
+      "moves.kind: the database has no `moves_kind_check` at all — any string would be" +
+        " accepted, and a kind the reader does not know renders as no line (see the route)",
+    );
+  }
+
   if (live.ungranted.length > 0) {
     drift.push(
       `not granted to anon/authenticated/service_role: ${named(live.ungranted)}` +

@@ -587,6 +587,25 @@ as $$
       join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'magiczny_miecz'
     ),
+    -- The one check expression worth comparing, because it is not an expression
+    -- anybody wrote by hand: `moves.kind` is a closed list generated from
+    -- JOURNAL_KINDS, so it can be read back value for value rather than parsed.
+    --
+    -- It is here because it has already cost a game. The file gained
+    -- `no-effect` and `placed` and the database was never migrated, so every
+    -- journal write carrying one was refused — and a turn's lines are inserted
+    -- as one statement, so that took the whole turn's journal down with it. The
+    -- schema file and the code agreed the entire time; only the database did
+    -- not, which is the one pair `check-schema.ts` was not comparing.
+    'move_kinds', (
+      select coalesce(jsonb_agg(m[1] order by m[1]), '[]'::jsonb)
+      from pg_constraint con
+      cross join lateral regexp_matches(
+        pg_get_constraintdef(con.oid), '''([a-z0-9-]+)''::text', 'g'
+      ) as m
+      where con.conrelid = 'magiczny_miecz.moves'::regclass
+        and con.conname = 'moves_kind_check'
+    ),
     -- A table one of the three roles cannot select from is invisible to
     -- PostgREST, which answers 401 and reads exactly like a missing table.
     'ungranted', (

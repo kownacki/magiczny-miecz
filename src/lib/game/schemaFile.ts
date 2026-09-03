@@ -95,3 +95,28 @@ export function filledInBy(sql: string, table: string): Set<string> {
   }
   return found;
 }
+
+/**
+ * `moves.kind`'s closed list, as `db/schema.sql` writes it.
+ *
+ * Read from the file rather than trusted, for the same reason `tablesInFile`
+ * exists: the file is applied by hand, so the only way to know it says what the
+ * code says is to read it. Scoped to the `moves` block, because `holdings` has
+ * a `kind` check too and its four values would otherwise arrive in the answer.
+ *
+ * Deliberately narrow. Nothing here parses SQL in general — see the note at the
+ * top of `scripts/check-schema.ts` about why check expressions are not compared
+ * — and this one is only comparable because it is generated from
+ * `JOURNAL_KINDS` rather than written.
+ */
+export function kindsInFile(sql: string): string[] {
+  const at = sql.indexOf("create table if not exists magiczny_miecz.moves");
+  if (at === -1) return [];
+  const block = sql.slice(at);
+  const check = block.indexOf("kind text not null check (kind in (");
+  if (check === -1) return [];
+  const from = check + "kind text not null check (kind in (".length;
+  const to = block.indexOf("))", from);
+  if (to === -1) return [];
+  return [...block.slice(from, to).matchAll(/'([a-z0-9-]+)'/g)].map((one) => one[1]).sort();
+}
